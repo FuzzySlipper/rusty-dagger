@@ -93,6 +93,10 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
     {
         foreach (var state in _armed) state.Ready = null;
         _armed.Clear();
+        ClearPending();
+    }
+    internal void ClearPending()
+    {
         foreach (var bundle in _pending) bundle.Delivered = true;
         _pending.Clear();
     }
@@ -130,6 +134,22 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         return Finish(DaggerfallCastOutcome.Ready);
     }
 
+    internal int? AvailableSpellCost(long casterId, string key)
+    {
+        var actor=ResolveSource(casterId,null);
+        return actor is not null && catalog.Spells.TryGetValue(key,out var spell)
+            && !spell.Name.StartsWith('!') && spell.Effects.Count>0 && TryDefinitions(spell,out _)
+            ? Quote(actor,spell) : null;
+    }
+
+    internal void RestoreReadySpell(string key)
+    {
+        if (playerKnowsSpell is not null && !playerKnowsSpell(key) || AvailableSpellCost(playerId,key) is not int cost)
+            throw new ArgumentException($"Saved ready spell '{key}' is not a known available spell.");
+        var state=Readiness(playerId)!;
+        state.Ready=new(key,null,cost,DaggerfallCastSource.Spell); _armed.Add(state);
+    }
+
     internal DaggerfallCastResult Cancel(long casterId)
     {
         var state = Readiness(casterId);
@@ -145,6 +165,8 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         if (ReadyFor(casterId) is not { } ready) return Finish(DaggerfallCastOutcome.Unready);
         Actor? actor = ResolveSource(casterId, ready.ItemId);
         if (actor is null) { if (Readiness(casterId) is { } state) { state.Ready = null; _armed.Remove(state); } return Finish(DaggerfallCastOutcome.SourceUnavailable); }
+        if (casterId==playerId && ready.ItemId is null && playerKnowsSpell is not null && !playerKnowsSpell(ready.SpellKey))
+            return Refuse(casterId,DaggerfallCastOutcome.UnknownSpell);
         if (ready.ItemId is null && effects.MagicDefenseFor(casterId).BlocksCasting)
             return Finish(DaggerfallCastOutcome.Silenced);
         if (!targetValid) return Finish(DaggerfallCastOutcome.InvalidTarget);

@@ -265,7 +265,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         ObjectDisposedException.ThrowIf(_disposed, this);
         // A modal equipment action can be saved before another playing step. Capture the worn set
         // that actually owns the items, rather than a prior frame's held stat sources.
-        Casting.ClearTransient();
+        Casting.ClearPending();
         _heldEnchantments.Refresh();
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _roster.Dynamic, _encounters,
             _sites.Deltas, _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
@@ -622,7 +622,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             Lodging: LodgingView,
             Travel: ReadTravelPresentation(),
             SiteName: Site.ActiveSite?.Name,
-            Map: _mapOpen ? ReadMapPresentation() : null, Dispel: DispelView, Detectors: ReadDetectors()));
+            Map: _mapOpen ? ReadMapPresentation() : null, Dispel: DispelView, Spells: ReadSpells(), Detectors: ReadDetectors()));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All,

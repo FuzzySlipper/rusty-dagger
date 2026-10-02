@@ -937,3 +937,29 @@ test('detectors render only resolved contacts and clear retired sources without 
     assert.equal(f.actions.length, 0);
   } finally { f.dispose(); }
 });
+
+test('spell selection uses projected known rows and sends ready unready and cast actions', () => {
+  const f=fixture();
+  try {
+    const spells={available:[{key:'spell.023',name:'Troll\'s Blood',cost:12}],ready:null,result:''};
+    f.publish({spells});
+    f.root.querySelector('[data-action="spells"]').click();
+    const panel=f.root.querySelector('.dagger-spells-root');
+    assert.equal(panel.hidden,false);
+    assert.equal(f.root.querySelector('#dagger-menu-title').textContent,'Known spells');
+    assert.equal(panel.querySelector('[data-action="spell-cast"]').disabled,true);
+    panel.querySelector('[data-spell="spell.023"]').click();
+    assert.deepEqual(f.actions.at(-1),{action:'spell-ready',key:'spell.023'});
+    assert.equal(panel.querySelector('[data-action="spell-cast"]').disabled,true);
+    f.publish({spells:{...spells,ready:'spell.023',result:'Ready'}});
+    assert.match(panel.textContent,/Ready/);assert.match(panel.textContent,/12 magicka/);
+    panel.querySelector('[data-action="spell-unready"]').click();
+    assert.deepEqual(f.actions.at(-1),{action:'spell-unready'});
+    panel.querySelector('[data-action="spell-cast"]').click();
+    assert.deepEqual(f.actions.slice(-2),[{action:'menu',open:false},{action:'spell-cast'}]);
+    f.publish({spells:{...spells,available:[],ready:null,result:'UnknownSpell'}});
+    assert.equal(panel.querySelector('[data-spell]'),null);assert.match(panel.textContent,/No available known spells/);
+    f.publish({spells:{available:[{key:'bad',name:'Bad',cost:NaN}],ready:'bad',result:''}});
+    assert.equal(panel.querySelector('[data-spell]'),null);
+  } finally {f.dispose();}
+});

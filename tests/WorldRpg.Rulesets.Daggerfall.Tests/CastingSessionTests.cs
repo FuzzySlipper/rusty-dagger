@@ -34,9 +34,9 @@ public sealed class CastingSessionTests
         var save = s.CaptureSave();
         var payload = DaggerfallSavePayload.Read(save);
         Assert.Equal(2, payload.NextCastSequence);
-        Assert.Null(s.Casting.ReadyFor(1));
+        Assert.Equal(f.Spell.Key,s.Casting.ReadyFor(1)!.SpellKey);
         using var restored = f.Restore(save);
-        Assert.Null(restored.Casting.ReadyFor(1));
+        Assert.Equal(f.Spell.Key,restored.Casting.ReadyFor(1)!.SpellKey);
         Assert.Equal(2, restored.Casting.NextSequence);
         Assert.Equal(1, f.Rounds); // Restoring the compiled contribution does not re-run MagicRound.
         Assert.Equal(s.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).Value,

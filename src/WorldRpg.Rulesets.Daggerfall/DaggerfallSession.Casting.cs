@@ -19,6 +19,35 @@ internal sealed partial class DaggerfallSession
         return Casting.Ready(State.Actors.Player.DurableId, key);
     }
 
+    private string _spellResult="";
+    internal DaggerfallSpellbookView ReadSpells()=>new(
+        State.Character.KnownSpells.Order(StringComparer.Ordinal).Select(key=>
+            Casting.AvailableSpellCost(State.Actors.Player.DurableId,key) is int cost
+            ? new DaggerfallKnownSpellView(key,_definitions.Magic.Spells[key].Name,cost) : null)
+            .OfType<DaggerfallKnownSpellView>().ToArray(),
+        Casting.ReadyFor(State.Actors.Player.DurableId) is {Source:DaggerfallCastSource.Spell} ready ? ready.SpellKey : null,_spellResult);
+    private void ChangeSpell(WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallPlayerUiAction action)
+    {
+        var result=action.Kind switch
+        {
+            WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallUiActionKind.SpellReady=>ReadyPlayerSpell(action.Key!),
+            WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallUiActionKind.SpellUnready=>Casting.Cancel(State.Actors.Player.DurableId),
+            _=>ReleaseReadySpell(State.Actors.Player.DurableId,_input.ResolveCurrentLook(State.PlayerControl).Forward),
+        };
+        _spellResult=result.Outcome.ToString();
+        Presentation.SetOutcome(result.Outcome switch
+        {
+            DaggerfallCastOutcome.Ready=>"Spell ready.",
+            DaggerfallCastOutcome.Cancelled or DaggerfallCastOutcome.Unready=>"No spell ready.",
+            DaggerfallCastOutcome.UnknownSpell=>"That spell is not known or available.",
+            DaggerfallCastOutcome.UnsupportedEffect=>"That spell has unavailable effects.",
+            DaggerfallCastOutcome.InsufficientMagicka=>"Not enough magicka.",
+            DaggerfallCastOutcome.InvalidTarget=>"Aim at a valid spell target.",
+            DaggerfallCastOutcome.Silenced=>"You cannot cast while silenced.",
+            _=>"Spell cast.",
+        });
+    }
+
     internal DaggerfallMagicTargetProfile MagicProfile(long id) => DaggerfallMagicProfiles.Create(
         (CastActor(id) ?? throw new ArgumentException($"Casting actor {id} is unavailable.")).Get<StatsComponent>(),
         _roster.Definitions.GetValueOrDefault(id), id == State.Actors.Player.DurableId ? State.Character : null,
@@ -119,3 +148,6 @@ internal sealed partial class DaggerfallSession
     private static bool ValidDirection(Vector3 value) => float.IsFinite(value.X) && float.IsFinite(value.Y)
         && float.IsFinite(value.Z) && value.LengthSquared() > .000001f;
 }
+
+internal sealed record DaggerfallKnownSpellView(string Key,string Name,int Cost);
+internal sealed record DaggerfallSpellbookView(DaggerfallKnownSpellView[] Available,string? Ready,string Result);

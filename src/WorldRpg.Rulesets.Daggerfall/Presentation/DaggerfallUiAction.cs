@@ -20,7 +20,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
 /// <summary>Every player action the <c>dagger.ui.action.v1</c> contract carries, by meaning.</summary>
 internal enum DaggerfallUiActionKind
 {
-    Begin, CinematicSkip, ArtRequest,
+    Begin, CinematicSkip, ArtRequest, SpellReady, SpellUnready, SpellCast,
     ControlsRebind, ControlsReset,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
@@ -155,6 +155,9 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.CharacterLevelAllocate, "character-level-allocate", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.CharacterLevelCommit, "character-level-commit", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.ActivationMode, "activation-mode", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.SpellReady,"spell-ready",DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.SpellUnready,"spell-unready",DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.SpellCast,"spell-cast",DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.Attack, "attack", DaggerfallUiPhases.Playing),
         new(DaggerfallUiActionKind.Loot, "loot", DaggerfallUiPhases.Playing),
         // The DOM owns its panels; these name a panel the DOM opened and the session does nothing with.
@@ -365,6 +368,10 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "revision", "note", "destination"]) && !string.IsNullOrWhiteSpace(revision)
                     && !string.IsNullOrWhiteSpace(note) && destination is >= 0
                     ? new(action, Revision: revision, Note: note, Destination: destination) : null;
+            if (action=="spell-ready")
+                return fields.SetEquals(["action","key"]) && !string.IsNullOrWhiteSpace(key) ? new(action,Key:key) : null;
+            if (action is "spell-unready" or "spell-cast")
+                return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "inventory-drop")
                 return fields.SetEquals(["action", "revision", "item", "amount"])
                     && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && amount is not null
