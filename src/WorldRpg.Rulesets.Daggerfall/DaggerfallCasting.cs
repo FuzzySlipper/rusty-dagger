@@ -181,6 +181,25 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         return Deliver(release.Bundle!, [targetId]);
     }
 
+    /// <summary>FORM-06's cost-free Spider Touch uses the one live bundle/delivery owner.</summary>
+    internal DaggerfallCastResult TriggerMonsterParalysis(long casterId, long targetId)
+    {
+        Actor? actor = ResolveSource(casterId, null);
+        if (actor is null) return Finish(DaggerfallCastOutcome.SourceUnavailable);
+        // This is source identity 66, not source ordinal 66 (which is a different spell).
+        var matches = catalog.Spells.Values.Where(value => !value.IsCustom && value.Identity == 66).ToArray();
+        if (matches.Length != 1) return Finish(DaggerfallCastOutcome.UnknownSpell);
+        var spell = matches[0];
+        if (DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType) != DaggerfallSpellTarget.ByTouch
+            || spell.Effects.Count != 1 || spell.Effects[0] is not { Type: 0, SubType: -1 }
+            || !TryDefinitions(spell, out var definitions)) return Finish(DaggerfallCastOutcome.UnsupportedEffect);
+        // The donor's noSpellPointCost also bypasses caster silence. Target defenses, chance,
+        // saves, incumbent effect state and expiry still go through ordinary delivery.
+        var release = CreateBundle(actor, casterId, new(spell.Key, null, 0, DaggerfallCastSource.Spell),
+            spell, definitions, null, null, publishRelease: false);
+        return Deliver(release.Bundle!, [targetId]);
+    }
+
     internal void RestoreReadySpell(string key)
     {
         if (playerKnowsSpell is not null && !playerKnowsSpell(key) || AvailableSpellCost(playerId,key) is not int cost)

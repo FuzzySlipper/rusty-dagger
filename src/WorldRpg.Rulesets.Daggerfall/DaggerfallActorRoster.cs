@@ -143,8 +143,7 @@ internal sealed class DaggerfallActorRoster
                 pose);
             DaggerActorFactory.RegisterActorInventory(actor, _state.InventoryStore);
             GrantSpawnLoadout(actor, spawnedDefinition);
-            if (spawnedDefinition.Kind == DaggerfallActorKinds.EnemyClass)
-                GrantClassEnemyEquipment(actor, spawnedDefinition, spawnLevel);
+            GrantStartingEquipment(actor, spawnedDefinition);
             if (spawnedDefinition.MobileId is int mobileId)
             {
                 if (!_projection().Inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
@@ -302,6 +301,7 @@ internal sealed class DaggerfallActorRoster
             if (prior is not null) actor.ApplyPose(new ActorPose(new WorldPoint(prior.X, prior.Y, prior.Z), prior.HeadingRadians));
             else if (definition.GroundOnSpawn) _grounding.Ground(actor);
             _definitionsByActor.Add(actor.DurableId, definition);
+            if (prior is null) GrantStartingEquipment(actor, definition);
             if (prior?.WabbajackDefinition is not null && definition.MobileId is int changedMobile)
             {
                 Appearance.RetireActor(actor.DurableId);
@@ -384,15 +384,27 @@ internal sealed class DaggerfallActorRoster
         return DaggerActorFactory.InitialVitals(_random, definition, durableId);
     }
 
-    private void GrantClassEnemyEquipment(ActorState actor, DaggerfallActorDefinition definition, int spawnLevel)
+    /// <summary>Initial site construction uses the same starting items as later actor admission.</summary>
+    internal void GrantInitialAuthoredEquipment()
     {
-        if (definition.MobileId is not int mobileId) throw new InvalidOperationException($"Class actor '{definition.Id.Value}' has no human mobile id.");
+        foreach (var entry in _definitionsByActor.OrderBy(entry => entry.Key))
+            if (!_dynamicActors.ContainsKey(entry.Key))
+                GrantStartingEquipment(_state.Actors.Get(entry.Key), entry.Value);
+    }
+
+    private void GrantStartingEquipment(ActorState actor, DaggerfallActorDefinition definition)
+    {
+        if (definition.Kind != DaggerfallActorKinds.EnemyClass && definition.MobileId is not (7 or 8 or 12)) return;
+        if (definition.MobileId is not int mobileId) throw new InvalidOperationException($"Class actor '{definition.Id.Value}' has no equipment mobile id.");
         MechanicsInventoryCoordinator inventory = _state.ActorInventories.InventoryFor(actor.DurableId)
             ?? throw new InvalidOperationException($"Spawned actor {actor.DurableId} has no registered inventory.");
         DaggerfallClassEnemyEquipmentPolicy.Equip(_definitions, _random, _state.ItemInstances, _uniqueItems, inventory, _state.ActorInventories.EquipmentFor(actor.DurableId),
             actor.DurableId, mobileId, _state.Progression.Level,
             _state.Character.Identity.RaceId,
-            _state.Character.Identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male");
+            _state.Character.Identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male",
+            fixedVariant: mobileId switch { 7 => 0, 8 or 12 => 1, _ => null });
+        DaggerfallClassEnemyEquipmentPolicy.CoatStartingWeapon(_random, _state.ItemInstances,
+            _state.ActorInventories.EquipmentFor(actor.DurableId), actor.DurableId, mobileId, _state.Progression.Level);
     }
 
     private void GrantSpawnLoadout(ActorState actor, DaggerfallActorDefinition definition)

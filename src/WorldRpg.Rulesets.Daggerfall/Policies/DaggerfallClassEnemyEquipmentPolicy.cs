@@ -25,7 +25,8 @@ internal static class DaggerfallClassEnemyEquipmentPolicy
         int mobileId,
         int playerLevel,
         string race,
-        string gender)
+        string gender,
+        int? fixedVariant = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(random);
@@ -36,7 +37,8 @@ internal static class DaggerfallClassEnemyEquipmentPolicy
         if (actorId <= 0 || playerLevel < 1) throw new ArgumentOutOfRangeException(actorId <= 0 ? nameof(actorId) : nameof(playerLevel));
         int itemLevel = mobileId == 146 ? 1 : playerLevel;
         DaggerfallItemFactory factory = new(definitions, random);
-        int variant = Draw(random, actorId, "variant", 0, 1);
+        if (fixedVariant is < 0 or > 2) throw new ArgumentOutOfRangeException(nameof(fixedVariant));
+        int variant = fixedVariant ?? Draw(random, actorId, "variant", 0, 1);
         int chance;
         if (variant == 0)
         {
@@ -56,7 +58,7 @@ internal static class DaggerfallClassEnemyEquipmentPolicy
             int template = Draw(random, actorId, "right-template", 122, 127);
             CreateAndEquip(factory, definitions, instances, identities, inventory, equipment, actorId, "right", template, itemLevel, race, gender,
                 WeaponSlots(definitions, template, "right-hand"));
-            chance = 75;
+            chance = variant == 1 ? 75 : 90;
         }
 
         foreach ((int template, string slot, string key) in new[]
@@ -68,11 +70,23 @@ internal static class DaggerfallClassEnemyEquipmentPolicy
                 CreateAndEquip(factory, definitions, instances, identities, inventory, equipment, actorId, key, template, itemLevel, race, gender, [slot]);
     }
 
+    /// <summary>One coating on the actual generated right-hand weapon; no independent charge state.</summary>
+    internal static void CoatStartingWeapon(IRandomService random, DaggerfallItemInstances instances,
+        MechanicsEquipmentCoordinator equipment, long actorId, int mobileId, int playerLevel)
+    {
+        if (playerLevel <= 1 || mobileId is not (>= 128 and <= 146 or 7 or 8 or 12)
+            || !equipment.Read().TryGet(new KitEquipmentSlotId("right-hand"), out KitUniqueInventoryItem weapon)) return;
+        if (!Success(random, actorId, "poison-chance", mobileId == 139 ? 60 : 5)) return;
+        ulong id = equipment.GetDurableItemId(new EntityId(weapon.EntityId)).Value;
+        var metadata = instances.RequireUnique(id);
+        instances.ReplaceUnique(id, metadata with { PoisonVariant = Draw(random, actorId, "poison-variant", 128, 135) });
+    }
+
     private static string[] WeaponSlots(DaggerfallDefinitions definitions, int template, string preferred)
     {
         DaggerfallItemDefinition item = definitions.TemplateItems.TryGetValue(new DaggerfallItemId($"template-{template}-iron"), out DaggerfallItemDefinition? found)
             ? found : throw new InvalidOperationException($"Class equipment template {template} has no iron materialization.");
-        return item.Equipment?.RequiredSlots == 3 ? ["right-hand", "left-hand"] : [preferred];
+        return item.Equipment?.RequiredSlots == 2 ? ["right-hand", "left-hand"] : [preferred];
     }
 
     private static void CreateAndEquip(DaggerfallItemFactory factory, DaggerfallDefinitions definitions, DaggerfallItemInstances instances,

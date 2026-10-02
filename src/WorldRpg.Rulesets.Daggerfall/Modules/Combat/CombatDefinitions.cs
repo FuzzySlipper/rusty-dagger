@@ -57,6 +57,7 @@ internal static class CombatRandomKey
     internal const int MonsterHitSaltBase = 20;
     internal const int MonsterDamageSaltBase = 30;
     internal const int MonsterCriticalSaltBase = 50;
+    internal const int MonsterConsequenceSaltBase = 60;
     internal const string MediaAttackAlternateScope = "daggerfall.media.attack-alternate.v1";
     internal const int MediaAttackAlternateSalt = 41;
     internal const string MediaHitCueScope = "daggerfall.media.hit-cue.v1";

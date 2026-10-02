@@ -572,6 +572,7 @@
       "xpReward": 200,
       "weight": 400,
       "team": "spiders",
+      "action": "monster-strike",
       "attacks": [
         {
           "minimumDamage": 5,
@@ -624,7 +625,7 @@
           "maximumDamage": 6
         }
       ],
-      "action": "monster-strike"
+      "action": "enemy-class-equipped-melee"
     },
     {
       "id": "centaur",
@@ -664,6 +665,7 @@
       "weight": 1200,
       "team": "centaurs",
       "lootTableKey": "C",
+      "action": "enemy-class-equipped-melee",
       "attacks": [
         {
           "minimumDamage": 5,
@@ -709,6 +711,7 @@
       "weight": 480,
       "minMetalToHit": "silver",
       "team": "werecreatures",
+      "action": "monster-strike",
       "attacks": [
         {
           "minimumDamage": 1,
@@ -763,6 +766,7 @@
       "minMetalToHit": "silver",
       "team": "nymphs",
       "lootTableKey": "C",
+      "action": "monster-strike",
       "attacks": [
         {
           "minimumDamage": 1,
@@ -852,6 +856,7 @@
       "weight": 600,
       "team": "orcs",
       "lootTableKey": "A",
+      "action": "enemy-class-equipped-melee",
       "attacks": [
         {
           "minimumDamage": 5,
@@ -943,6 +948,7 @@
       "weight": 560,
       "minMetalToHit": "silver",
       "team": "werecreatures",
+      "action": "monster-strike",
       "attacks": [
         {
           "minimumDamage": 2,
@@ -1088,6 +1094,7 @@
       "weight": 4000,
       "team": "undead",
       "lootTableKey": "G",
+      "action": "monster-strike",
       "attacks": [
         {
           "minimumDamage": 15,
@@ -1180,6 +1187,7 @@
       "minMetalToHit": "silver",
       "team": "undead",
       "lootTableKey": "E",
+      "action": "monster-strike",
       "attacks": [
         {
           "minimumDamage": 5,
@@ -1224,6 +1232,7 @@
       "xpReward": 600,
       "weight": 600,
       "team": "scorpions",
+      "action": "monster-strike",
       "attacks": [
         {
           "minimumDamage": 15,
@@ -1590,6 +1599,7 @@
       "minMetalToHit": "silver",
       "team": "undead",
       "lootTableKey": "Q",
+      "action": "monster-strike",
       "attacks": [
         {
           "minimumDamage": 20,
@@ -1682,6 +1692,7 @@
       "minMetalToHit": "mithril",
       "team": "undead",
       "lootTableKey": "Q",
+      "action": "monster-strike",
       "attacks": [
         {
           "minimumDamage": 20,
@@ -2174,6 +2185,7 @@
       "weight": 200,
       "team": "aquatic",
       "lootTableKey": "R",
+      "action": "monster-strike",
       "attacks": [
         {
           "minimumDamage": 5,

@@ -61,6 +61,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly Func<long, DaggerfallMagicDefense> _magicDefense;
     private readonly Func<long, bool> _physicalAttacksBlocked;
     private readonly Func<long, long, DaggerfallItemStrikeSource, int, int>? _itemStrike;
+    private readonly Action<DaggerfallMonsterHitExposure>? _monsterHit;
     internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
         Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallItemInstances itemInstances,
         DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity,
@@ -70,14 +71,16 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         Func<WorldPoint?>? playerPosition = null, Func<DaggerfallCharacterState?>? character = null,
         Func<DaggerfallSwingDirection>? playerSwing = null, Func<WorldPoint, WorldPoint, bool>? coverBlocksShot = null,
         Func<int>? armorValueModifier = null,
-        Action<long, ulong>? deliverWeaponPoison = null, Func<int>? attackChanceModifier = null,
+        Action<long, DaggerfallWeaponPoisonSource>? deliverWeaponPoison = null, Func<int>? attackChanceModifier = null,
         Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? transformActor = null, Func<long, DaggerfallMagicDefense>? magicDefense = null,
         Func<long, bool>? physicalAttacksBlocked = null,
-        Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)>? molagBalStrike = null, Func<long, long, DaggerfallItemStrikeSource, int, int>? itemStrike = null)
+        Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)>? molagBalStrike = null, Func<long, long, DaggerfallItemStrikeSource, int, int>? itemStrike = null,
+        Action<DaggerfallMonsterHitExposure>? monsterHit = null)
     {
         _physicalAttacksBlocked = physicalAttacksBlocked ?? (_ => false);
         _molagBalStrike = molagBalStrike;
         _itemStrike = itemStrike;
+        _monsterHit = monsterHit;
         _magicDefense = magicDefense ?? (_ => DaggerfallMagicDefense.None);
         _random = random;
         _transformActor = transformActor;
@@ -148,6 +151,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         DaggerfallStrikeFeedback feedback = StrikeFeedback(request.AttackerId);
         ulong? wabbajackSource = CaptureWabbajackSource(request.AttackerId);
         var molagBalSource = CaptureMolagBalSource(request.AttackerId);
+        var poisonSource = CaptureWeaponPoison(request.AttackerId);
         var strikeSource = DaggerfallItemCastTriggers.CaptureStrike(_catalog.Magic, _itemInstances, _actors.Entities, EquippedWeapon(request.AttackerId));
         if (request.TargetId is not long targetId)
         { prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, default, feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource); return true; }
@@ -166,12 +170,13 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         int body = DaggerfallFormulaPolicy.CalculateStruckBodyPart(Draw(explicitRequest, attacker.Id, target.Id, CombatRandomKey.BodySalt, 0, 19, enemyAttack));
         if (attacker.Definition.Kind == DaggerfallActorKinds.Monster && attack.Skill == DaggerfallMechanicsIds.HandToHand.Value)
         {
-            prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, MonsterAttackSet(participants, explicitRequest, attacker, target, attack, body, enemyAttack), feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource);
+            var outcome = MonsterAttackSet(participants, explicitRequest, attacker, target, attack, body, enemyAttack, out var slots);
+            prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, outcome, feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource, MonsterHits: slots);
             return true;
         }
         TryHitEvent hit = ResolveHit(participants, explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.ToHit, backstabChance);
         DamageEvent? damage = hit.Hit ? ResolveDamage(participants, explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.Damage, backstabChance) : null;
-        prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, body, damage?.Damage ?? 0, hit.Roll, hit.Chance), feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource);
+        prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, body, damage?.Damage ?? 0, hit.Roll, hit.Chance), feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource, WeaponPoison: poisonSource);
         return true;
     }
     public void Started(AttackRequest request, PreparedAttack attack, FactBuffer<IProductFact> facts)
@@ -197,6 +202,20 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             _skillUses?.Invoke(new DaggerfallSkillUse(DaggerfallMechanicsIds.Dodging.Value, DaggerfallSkillUseReason.DodgingEnemyAttack, DaggerfallSkillUseOutcome.Attempted));
         if (outcome.Hit && !outcome.Allowed)
         { facts.Append(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial)); return; }
+        // Natural consequences and coatings belong to positive admitted physical hits, before
+        // enchantments or health absorption can change the result or defeat the target.
+        if (outcome.Hit && attack is DaggerfallPreparedAttack accepted)
+        {
+            foreach (var slot in accepted.MonsterHits ?? [])
+            {
+                if (slot.Consequence == DaggerfallMonsterHitConsequence.Fatigue)
+                    ApplyFatigueConsequence(request.AttackerId, target, slot.Damage, request.Generation, request.SimulationStep, facts);
+                else if (slot.Consequence != DaggerfallMonsterHitConsequence.None)
+                    _monsterHit?.Invoke(new(request.AttackerId, target, request.Generation, request.SimulationStep, slot));
+            }
+            if (outcome.Damage > 0 && accepted.WeaponPoison is { } coating)
+                _deliverWeaponPoison?.Invoke(target, coating);
+        }
         // WeaponManager invokes Strikes even when contact misses. Wabbajack's replacement
         // inherits prior wounds before the removed enemy receives this strike's damage.
         if (TryTransform(request, attack, facts, out ActorTransformedFact? transformation))
@@ -594,19 +613,20 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     /// rules independently. Damage contributions and application see the combined attack once.
     /// </remarks>
     private AttackOutcome MonsterAttackSet(CombatParticipants participants, ExplicitMeleeRequest request,
-        Combatant attacker, Combatant target, DaggerfallAttackDefinition attack, int body, bool enemy)
+        Combatant attacker, Combatant target, DaggerfallAttackDefinition attack, int body, bool enemy, out DaggerfallMonsterHit[] hits)
     {
+        List<DaggerfallMonsterHit> accepted = [];
         int enemyType = EnemyTypeBonus(attacker, target);
         int reflexChance = DaggerfallFormulaPolicy.MonsterAttackReflexChance(ReadStat(PlayerCombatant(), DaggerfallMechanicsIds.Reflexes));
         int total = 0;
         bool landed = false;
         TryHitEvent? representative = null;
-        int slots = Math.Min(3, attacker.Definition.Attacks.Count);
-        for (int slot = 0; slot < slots; slot++)
+        // Classic tests all three slots; normalized definitions may omit trailing zero ranges.
+        for (int slot = 0; slot < 3; slot++)
         {
-            int slotMinimum = attacker.Definition.Attacks[slot].MinimumDamage;
-            if (slotMinimum <= 0) continue;
-            if (Draw(request, attacker.Id, target.Id, CombatRandomKey.MonsterReflexSaltBase + slot, 1, 100, enemy) > reflexChance) continue;
+            int slotMinimum = slot < attacker.Definition.Attacks.Count ? attacker.Definition.Attacks[slot].MinimumDamage : 0;
+            int reflex = Draw(request, attacker.Id, target.Id, CombatRandomKey.MonsterReflexSaltBase + slot, 1, 100, enemy);
+            if (reflex > reflexChance || slotMinimum <= 0) continue;
             TryHitEvent hit = ResolveHit(participants, request, attacker, target, attack, body, enemy, 0, 0,
                 CombatRandomKey.MonsterHitSaltBase + slot, CombatRandomKey.MonsterCriticalSaltBase + slot);
             // Retain a landed slot for the shared outcome, or the last miss when none landed.
@@ -615,7 +635,13 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             landed = true;
             int slotDamage = Draw(request, attacker.Id, target.Id, CombatRandomKey.MonsterDamageSaltBase + slot, slotMinimum, attacker.Definition.Attacks[slot].MaximumDamage, enemy);
             total = checked(total + slotDamage);
-            if (slotDamage > 0) total = checked(total + enemyType);
+            if (slotDamage > 0)
+            {
+                total = checked(total + enemyType);
+                var consequence = DaggerfallMonsterHitPolicy.Select(attacker.Definition.MobileId, target.Id == PlayerId,
+                    (low, high) => Draw(request, attacker.Id, target.Id, CombatRandomKey.MonsterConsequenceSaltBase + slot, low, high, enemy));
+                accepted.Add(new(slot, slotDamage, consequence));
+            }
         }
 
         DamageEvent? damage = landed ? Rules.Damage(participants, damage =>
@@ -623,11 +649,21 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             damage.Body = body;
             damage.Damage = Math.Max(0, total);
         }) : null;
+        hits = accepted.ToArray();
         return new(landed, damage?.Allowed ?? true, body, damage?.Damage ?? 0,
             representative?.Roll ?? 0, representative?.Chance ?? 0);
     }
 
-    private readonly Action<long, ulong>? _deliverWeaponPoison;
+    private readonly Action<long, DaggerfallWeaponPoisonSource>? _deliverWeaponPoison;
+
+    private DaggerfallWeaponPoisonSource? CaptureWeaponPoison(long attacker)
+    {
+        if (EquippedWeapon(attacker) is not { } weapon) return null;
+        ulong id = (attacker == PlayerId ? _equipment : _actorEquipment(attacker))
+            .GetDurableItemId(new EntityId(weapon.EntityId)).Value;
+        return _itemInstances.ContainsUnique(id) && _itemInstances.RequireUnique(id).PoisonVariant is int variant
+            ? new(id, variant) : null;
+    }
 
     private void ApplyDamage(CombatParticipants participants, long attacker, long target, int damage, int body, bool enemy,
         ulong generation, ulong step, DaggerfallStrikeFeedback feedback, FactBuffer<IProductFact> facts,
@@ -640,26 +676,12 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         if (emitHitFact) facts.Append(new AttackHitFact(attacker, target, applied.CalculatedDamage, applied.ActualHealthLost, body, enemy, generation, step) { Feedback = feedback });
         facts.Append(new DamageAppliedFact(attacker, target, DaggerfallDamageCause.PhysicalAttack,
             applied.CalculatedDamage, applied.ActualHealthLost, body, generation, step));
-        // The donor delivers a poisoned weapon only on a strike that actually took health, and the strike
-        // spends the dose: the coating is read and cleared by the delivery, which also owns whether the
-        // target's resistance stops it.
         if (applied.ActualHealthLost > 0)
-        {
-            if (admittedBaseDamage is not 0 && _deliverWeaponPoison is not null
-                && EquippedWeapon(attacker) is WorldRpg.Kit.Inventory.UniqueInventoryItem weapon
-                && weapon.EntityId is ulong carried)
-            {
-                _deliverWeaponPoison(target, carried);
-            }
-
             facts.Append(new ActorDamagedFact(target, attacker, DaggerfallDamageCause.PhysicalAttack,
                 applied.CalculatedDamage, applied.ActualHealthLost));
-        }
         if (applied.Defeated)
             facts.Append(new ActorDiedFact(target, attacker, DaggerfallDamageCause.PhysicalAttack,
                 applied.CalculatedDamage, applied.ActualHealthLost, generation, step));
-        if (applied.ActualHealthLost > 0d)
-            ApplyFatigueConsequence(attacker, target, applied.Damage, generation, step, facts);
         // Revalidate the admitted source before wear can break and remove it.
         bool acceptedMace = mace is { } admittedMace
             && CaptureMolagBalSource(attacker) is { } impactMace && impactMace.Identity == admittedMace.Identity;
@@ -672,13 +694,12 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     }
 
     /// <summary>
-    /// FormulaHelper applies this after a nymph hit; DFU extends the same donor helper to lamias.
+    /// FormulaHelper applies this for each positive natural nymph/lamia slot, before health damage.
     /// The separate track mutation and fact prevent a stamina consequence from being misreported as health loss.
     /// </summary>
     private void ApplyFatigueConsequence(long attacker, long target, int acceptedHealthDamage, ulong generation, ulong step, FactBuffer<IProductFact> facts)
     {
-        if (acceptedHealthDamage <= 0 || !_definitions.TryGetValue(attacker, out DaggerfallActorDefinition? source)
-            || source.Id.Value is not ("nymph" or "lamia")) return;
+        if (acceptedHealthDamage <= 0) return;
         if (!TryResolve(target, out Combatant victim)) return;
 
         Track stamina = victim.Stats.GetTrack(TrackId.Parse(StaminaTrack));
@@ -748,7 +769,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 
     internal sealed record DaggerfallPreparedAttack(double CooldownSeconds, AttackOutcome Outcome,
         DaggerfallStrikeFeedback Feedback, ulong? WabbajackSource = null, bool ReleasedProjectile = false,
-        (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? MolagBalSource = null, DaggerfallItemStrikeSource? ItemStrikeSource = null) : PreparedAttack(CooldownSeconds, Outcome);
+        (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? MolagBalSource = null, DaggerfallItemStrikeSource? ItemStrikeSource = null, DaggerfallWeaponPoisonSource? WeaponPoison = null,
+        DaggerfallMonsterHit[]? MonsterHits = null) : PreparedAttack(CooldownSeconds, Outcome);
 
     private static DaggerfallStrikeFeedback PreparedFeedback(PreparedAttack attack) => attack is DaggerfallPreparedAttack accepted
         ? accepted.Feedback : throw new InvalidOperationException("A Daggerfall strike requires its accepted source feedback; re-reading changed equipment would misidentify the strike.");

@@ -1400,6 +1400,7 @@ internal sealed record DaggerfallSiteDeltaSave(
 /// </summary>
 internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definition, float X, float Y, float Z, float HeadingRadians, DaggerfallStatsSave Stats)
 {
+    [JsonRequired] public int Level { get; init; }
     public bool WabbajackActive { get; init; }
     public bool ForcedHostile { get; init; }
     [JsonRequired] public bool MagicallyPacified { get; init; }
@@ -1412,6 +1413,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
         if (string.IsNullOrWhiteSpace(Definition))
             throw new ArgumentException("A saved dynamic actor must name its definition.", nameof(Definition));
         ArgumentNullException.ThrowIfNull(Stats);
+        if (Level < 1) throw new ArgumentOutOfRangeException(nameof(Level), "Saved actor level must be positive.");
         CorruptionOrigin?.Validate();
     }
 }
