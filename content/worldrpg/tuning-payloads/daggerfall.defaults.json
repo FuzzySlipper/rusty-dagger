@@ -114,7 +114,7 @@
   "enemyBehavior": {
     "detectionDistance": 12.0,
     "chaseSpeedUnitsPerSecond": 3.0,
-    "navigationMaximumVisited": 32,
+    "navigationMaximumVisited": 1024,
     "spawnGroundProbeLift": 0.2,
     "spawnGroundProbeDistance": 3.0
   },
