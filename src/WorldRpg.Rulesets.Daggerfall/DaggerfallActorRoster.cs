@@ -271,11 +271,11 @@ internal sealed class DaggerfallActorRoster
             DestroySiteOwnedUniqueItems(actor);
             _definitionsByActor.Remove(actor.DurableId);
             if (_dynamicActors.Remove(actor.DurableId)) Appearance.RetireActor(actor.DurableId);
-            _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(actor.DurableId));
+            _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(actor.DurableId), retireBindings: false);
             // A corpse owns a second Engine inventory/container entity. Capture has already
             // detached its durable facts, so retire that owner with the site actor rather than
             // leaving an unreachable native container alive across the transition.
-            _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(actor.DurableId));
+            _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(actor.DurableId), retireBindings: false);
             _corpseLoot.Unload(actor.DurableId);
             _state.Actors.Entities.Destroy(ActorsState.Identity(actor.DurableId));
         }

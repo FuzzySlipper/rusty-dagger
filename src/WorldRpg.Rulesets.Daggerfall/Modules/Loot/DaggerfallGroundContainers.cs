@@ -156,11 +156,19 @@ internal sealed class DaggerfallGroundContainers
 
     internal void RelocateQuestItem(DaggerfallQuestResourceBinding binding, WorldPoint position)
     {
-        DaggerfallItemOwner itemOwner = binding.UniqueItemIds.Length == 1
-            ? _instances.RequireUnique(binding.UniqueItemIds[0]).Owner : new(binding.Stacks[0].Owner.Scope, binding.Stacks[0].Owner.Id);
-        if (itemOwner.Scope != "ground" || !_ground.TryGetValue(itemOwner.Id, out var container))
-            throw new NotSupportedException("A quest item can be placed again only while its canonical owner is a ground pile.");
-        _ground[container.Id] = container with { Profile = _activeProfile, Position = position };
+        if (binding.UniqueItemIds.Length == 1 && !_instances.ContainsUnique(binding.UniqueItemIds[0])
+            || binding.UniqueItemIds.Length == 0 && binding.Stacks.Length == 0)
+            throw new NotSupportedException("A consumed quest item has no physical owner to place again.");
+        DaggerfallItemOwner[] owners = binding.UniqueItemIds.Length == 1
+            ? [_instances.RequireUnique(binding.UniqueItemIds[0]).Owner]
+            : binding.Stacks.Select(stack => new DaggerfallItemOwner(stack.Owner.Scope, stack.Owner.Id)).Distinct().ToArray();
+        if (owners.Any(owner => owner.Scope != "ground" || !_ground.ContainsKey(owner.Id)))
+            throw new NotSupportedException("A quest item can be placed again only while all its canonical owners are ground piles.");
+        foreach (var owner in owners)
+        {
+            var container = _ground[owner.Id];
+            _ground[container.Id] = container with { Profile = _activeProfile, Position = position };
+        }
     }
 
     internal InventoryStackId ResolveTakeDestination(long id, InventoryStackId source, InventoryStackId freshDestination)

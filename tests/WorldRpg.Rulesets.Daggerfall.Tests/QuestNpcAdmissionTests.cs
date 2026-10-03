@@ -44,6 +44,19 @@ public sealed class QuestNpcAdmissionTests
         Assert.False(session.State.Actors.Store.Has<InventoryComponent>(entity));
         Assert.Equal(combatants, session.State.Actors.All.Count());
         var body = session.State.Actors.Store.Get<DaggerfallNpcBody>(entity);
+        var save = DaggerfallSavePayload.Read(session.CaptureSave());
+        var quest = save.Quests.Instances.Single();
+        var forged = save with { Quests = save.Quests with { Instances = [quest with
+            { Resources = quest.Resources.Select(value => value with { Binding = DaggerfallQuestResourceBinding.Actors(2000) }).ToArray() }] } };
+        var encoded = DaggerfallSavePayload.Encode(forged);
+        Assert.Contains("NPC identity", Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition, encoded)).Message);
+        foreach (bool placedProfile in new[] { false, true })
+        {
+            var alias = save with { Npcs = save.Npcs with { Entries = save.Npcs.Entries.Select(value => value.DurableId == id
+                ? value with { DurableId = 2000, Profile = placedProfile ? value.Profile : null } : value).ToArray() } };
+            Assert.Contains("aliases", Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition,
+                DaggerfallSavePayload.Encode(alias))).Message);
+        }
         session.State.Quests.AdmitPlacements(fixture.Inputs, session);
         session.ReconcileNpcProjection();
         Assert.Single(session.State.Npcs.All, value => value.Kind == DaggerfallNpcKind.Questor);

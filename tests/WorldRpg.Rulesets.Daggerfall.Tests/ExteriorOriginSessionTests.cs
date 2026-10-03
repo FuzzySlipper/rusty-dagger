@@ -105,6 +105,8 @@ public sealed class ExteriorOriginSessionTests
             new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
         RulesetSavePayload save;
         long actorId;
+        long npcId;
+        WorldPoint npcPosition = new(1003, 1, 5);
         WorldPoint actorPosition = new(1002, 1, 5);
         WorldPoint playerPosition = new(1000, 1, 5);
         using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
@@ -112,6 +114,12 @@ public sealed class ExteriorOriginSessionTests
         {
             session.Update(new ProductUpdate(OuterUpdate(1), []));
             actorId = session.SpawnActor("rat", new ActorPose(actorPosition, .3f));
+            var address = exterior.BillboardSprites.Keys.First(value => value != (216, 0));
+            npcId = session.State.Npcs.RegisterStable(DaggerfallNpcKind.Questor, "origin-npc",
+                new(exterior.Site!.Value.Region, definitions.Locations.Records.Single(site => site.Id == exterior.Site).Name, "origin"),
+                new("Breton", "Female", address.Archive, address.Record, 1, 0), "quest person", ["talk"]);
+            session.State.Npcs.Place(npcId, exterior.ProfileKey, npcPosition);
+            session.ReconcileNpcProjection();
             session.State.PlayerControl.MoveTo(playerPosition.ToVector());
             session.State.PlayerControl.Motion = session.State.PlayerControl.Motion with
             {
@@ -155,6 +163,11 @@ public sealed class ExteriorOriginSessionTests
         Vector3 compensation = restored.Sites.LocalCompensation;
         Assert.Equal(playerPosition.ToVector() + compensation, restored.State.PlayerControl.Position!.Value.ToVector());
         Assert.Equal(actorPosition.ToVector() + compensation, restored.State.Actors.Get(actorId).Position.ToVector());
+        var npcEntity = restored.State.Actors.Entities.Resolve(ActorsState.Identity(npcId));
+        Assert.Equal(npcPosition.ToVector() + compensation,
+            restored.State.Actors.Store.Get<DaggerfallNpcBody>(npcEntity).Pose.Position.ToVector());
+        Assert.Equal(npcPosition.ToVector() + compensation,
+            restored.Dialogue.NpcTargets().Single(target => target.Identity.Value == (ulong)npcId).Position.ToVector());
         Assert.Equal(exterior.Portals[0].Position.ToVector() + compensation,
             restored.Sites.Projection.Portals.All.First().Portal.Position.ToVector());
         Assert.True(restored.TryTransitionTo(interior.ProfileKey));

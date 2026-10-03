@@ -454,6 +454,7 @@ internal sealed partial class DaggerfallSession
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
                 bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => _pendingDispel is not null, identifyOpen: () => _pendingIdentify is not null, teleportOpen: () => _pendingTeleport is not null, createItemOpen: () => _pendingCreateItem is not null);
+            itemInstances.StackChanged += State.Quests.ObserveStackChange;
             itemInstances.SourceUnavailable += item =>
             { effects.CancelItemReferences(item); Casting?.CancelItemReferences(item); if (_pendingIdentify?.SourceItem==item) _pendingIdentify=null; };
             Casting = new(definitions.Magic, effects, CastActor, MagicProfile, item => itemInstances.ContainsUnique(item)
@@ -530,6 +531,9 @@ internal sealed partial class DaggerfallSession
             if (saved?.ReadySpell is { } readyKey) Casting.RestoreReadySpell(readyKey);
             ExpireConjuredItems();
             _sites.AdmitInitialExterior(saved?.ExteriorResidency);
+            // Registry positions are profile coordinates; restore the projection after the
+            // saved origin has been admitted so dialogue and the first snapshot share its frame.
+            ReconcileNpcProjection();
             _itemCastTriggers.Refresh();
         }
         catch (Exception constructionFailure)
