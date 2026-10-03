@@ -195,6 +195,7 @@
     "dialogue": {
       "revision": "1",
       "targetLabel": "guard",
+      "questContacts": [],
       "bankAvailable": false,
       "greeting": "How can I help you, stranger?",
       "comprehendLanguagesBonus": 0,
@@ -215,6 +216,7 @@
     }
   },
   "quests": {
+    "escortFaces": [],
     "deliveries": [],
     "journal": [],
     "pending": null
@@ -581,7 +583,7 @@
     "quote": null
   },
   "inventory": {
-    "revision": "93:1:5:0:",
+    "revision": "173:1:45:0:",
     "message": "Drag items between the grid and compatible equipment slots.",
     "encumbrance": {
       "currentClassicUnits": 7025,
