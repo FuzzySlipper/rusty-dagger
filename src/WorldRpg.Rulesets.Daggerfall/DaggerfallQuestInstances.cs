@@ -122,6 +122,7 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
     [JsonRequired]
     public int PendingEndPasses { get; init; }
     public DaggerfallQuestClockState[] Clocks { get; init; } = [];
+    public DaggerfallQuestPlacementOperation[] Placements { get; init; } = [];
     /// <summary>The optional Daggerfall faction supplied by a quest giver; zero is the donor's unscoped value.</summary>
     public int FactionId { get; init; }
     /// <summary>The explicit canonical quest giver, supplied by the accepting dialogue/service caller.</summary>
@@ -178,12 +179,21 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
                 throw new ArgumentException($"Quest resource '{symbol}' has invalid selected Person meaning.");
             if (resource.SelectedPerson?.Home is { } home)
             {
-                if (home.Binding.Kind != DaggerfallQuestResourceBindingKind.Place || home.Text is null)
+                if (home.Binding.Kind != DaggerfallQuestResourceBindingKind.Place || home.Text is null || resource.Text is null)
                     throw new ArgumentException($"Quest resource '{symbol}' has invalid Person home meaning.");
                 home.Binding.Validate(symbol + ".home");
             }
             if (resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Pending && resource.SelectedItem is null && resource.SelectedFoe is null && resource.SelectedPerson is null)
                 throw new ArgumentException($"Pending quest resource '{symbol}' has no selected meaning.");
+        }
+        ArgumentNullException.ThrowIfNull(Placements);
+        HashSet<string> operations = new(StringComparer.Ordinal);
+        foreach (var placement in Placements)
+        {
+            placement.Validate();
+            if (!operations.Add(placement.Id) || !resources.Contains(placement.ResourceSymbol))
+                throw new ArgumentException($"Quest instance '{InstanceId}' has a duplicate placement or missing resource.");
+            _ = DaggerfallQuestPlacements.Destination(Resources, placement.PlaceSymbol);
         }
 
         HashSet<string> symbols = [];
@@ -404,6 +414,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         TombstoneAtSeconds = saved.TombstoneAtSeconds;
         Tasks = saved.Tasks.Select(task => new DaggerfallQuestTaskRuntimeState(task)).ToArray();
         Clocks = [.. saved.Clocks];
+        Placements = [.. saved.Placements];
     }
 
     internal string InstanceId { get; }
@@ -412,6 +423,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
     internal DaggerfallQuestLifecycle Lifecycle { get; set; }
     internal string? Outcome { get; set; }
     internal DaggerfallQuestResourceState[] Resources { get; set; }
+    internal DaggerfallQuestPlacementOperation[] Placements { get; set; }
     internal DaggerfallQuestSymbolState[] Symbols { get; set; }
     internal int? TerminalMessageId { get; set; }
     internal int PendingEndPasses { get; set; }
@@ -458,6 +470,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         Clocks = [.. Clocks],
         FactionId = FactionId,
         QuestorId = QuestorId,
+        Placements = [.. Placements],
         ParentInstanceId = ParentInstanceId,
         Succeeded = Succeeded,
         TombstoneAtSeconds = TombstoneAtSeconds,
@@ -476,7 +489,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
 }
 
 /// <summary>Session-owned quest instances and immutable admitted task programs.</summary>
-internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
+internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
 {
     private readonly DaggerfallDefinitions _definitions;
     private readonly IRandomService _random;
@@ -783,6 +796,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
         instance.Succeeded = lifecycle == DaggerfallQuestLifecycle.Completed;
         instance.PendingEndPasses = 0;
         instance.TerminalMessageId = null;
+        instance.Placements = [.. instance.Placements.Where(value => value.Applied is not null)];
         ValidateRuntime(instance);
         return instance.Capture();
     }
@@ -907,6 +921,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
                 Messages.RetainJournal(instance, _textContext);
                 instance.PendingEndPasses = 0;
                 instance.TerminalMessageId = null;
+                instance.Placements = [.. instance.Placements.Where(value => value.Applied is not null)];
                 TerminateChildren(instance);
                 instance.Lifecycle = DaggerfallQuestLifecycle.Tombstoned;
                 instance.TombstoneAtSeconds = now;
@@ -970,6 +985,7 @@ internal sealed class DaggerfallQuestInstances : IDaggerfallQuestTaskLifecycle
             child.Succeeded = false;
             child.PendingEndPasses = 0;
             child.TerminalMessageId = null;
+            child.Placements = [.. child.Placements.Where(value => value.Applied is not null)];
         }
         foreach (string id in _pendingStarts.Values.Where(start => start.ParentInstanceId == parent.InstanceId).Select(start => start.InstanceId).ToArray())
             _pendingStarts.Remove(id);

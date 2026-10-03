@@ -36,7 +36,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
 internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession,
-    IDaggerfallSiteTransitionHost
+    IDaggerfallSiteTransitionHost, IDaggerfallQuestWorldAdmission
 {
     private readonly IRandomService _random;
     private readonly IEngineContext _engine;
