@@ -13,6 +13,7 @@ using WorldRpg.Rulesets.Daggerfall.Property;
 using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -625,9 +626,12 @@ internal sealed record DaggerfallSavePayload(
         Character?.Validate(definitions);
         if (ReadySpell is { } ready && (!Enum.IsDefined(ready.Source) || ready.Cost < 0 || ready.ItemId is not null && ready.Cost != 0
             || ready.Source is DaggerfallCastSource.ItemHeld or DaggerfallCastSource.ItemStrike
-            || (ready.ItemId is null) != (ready.Source == DaggerfallCastSource.Spell)
+            || (ready.ItemId is null) != (ready.Source is DaggerfallCastSource.Spell or DaggerfallCastSource.DungeonAction)
             || !definitions.Magic.Spells.ContainsKey(ready.SpellKey)
-            || ready.ItemId is null && Character?.KnownSpells?.Contains(ready.SpellKey) != true
+            || ready.Source == DaggerfallCastSource.DungeonAction
+                && DaggerfallMagicCostPolicy.TargetForRangeType(definitions.Magic.Spells[ready.SpellKey].RangeType) != DaggerfallSpellTarget.CasterOnly
+            || ready.Source == DaggerfallCastSource.DungeonAction && ready.Cost != 0
+            || ready.Source != DaggerfallCastSource.DungeonAction && ready.ItemId is null && Character?.KnownSpells?.Contains(ready.SpellKey) != true
             || ready.ItemId is ulong item && !Inventory.UniqueItems.Any(value => value.EntityId == item
                 && value.Metadata.CurrentCondition > 0)))
             throw new ArgumentException($"Saved ready spell '{ready.SpellKey}' has an invalid spell or item source.");

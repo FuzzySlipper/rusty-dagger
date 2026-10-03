@@ -287,6 +287,8 @@ internal sealed partial class DaggerfallSession
 
     private DaggerfallDungeonActionExecution? ExecuteDungeonFamilyAction(DaggerfallDungeonActionDefinition action)
     {
+        if (action.ActionFlag == (byte)DaggerfallDungeonActionFlag.CastSpell)
+            return ExecuteDungeonSpellAction(action);
         if (DaggerfallDungeonDoorActions.Execute(action, _doors) is { } door) return door;
         if (ActivateDungeonMotion(action) is { } motion) return motion;
         ulong count = State.DungeonActions[_activeProfileKey].State[action.Id].ActivationCount;
@@ -302,6 +304,55 @@ internal sealed partial class DaggerfallSession
             return hazard.Execution;
         }
         return ExecuteDungeonTextAction(action);
+    }
+
+    private DaggerfallDungeonActionExecution ExecuteDungeonSpellAction(DaggerfallDungeonActionDefinition action)
+    {
+        if (!TryCreateDungeonActionSource(action, out DaggerfallActionCastSource source))
+            return new(action.Id, DaggerfallDungeonActionOutcome.MissingTarget,
+                Diagnostic: $"Dungeon spell action '{action.Id}' has no admitted source pose.");
+
+        DaggerfallCastResult result = Casting.TriggerDungeonAction(source, action.SoundIndex);
+        return result.Outcome switch
+        {
+            DaggerfallCastOutcome.Ready => new(action.Id, DaggerfallDungeonActionOutcome.Applied,
+                Diagnostic: $"Dungeon spell action '{action.Id}' readied the player's caster-only spell without a spell-point cost."),
+            DaggerfallCastOutcome.Released => new(action.Id, DaggerfallDungeonActionOutcome.Applied,
+                Diagnostic: $"Dungeon spell action '{action.Id}' admitted a missile from action resource {source.ResourceIdentity}."),
+            DaggerfallCastOutcome.UnknownSpell or DaggerfallCastOutcome.UnsupportedEffect => new(action.Id,
+                DaggerfallDungeonActionOutcome.UnsupportedAction,
+                Diagnostic: $"Dungeon spell action '{action.Id}' could not admit catalog ordinal {action.SoundIndex}: {result.Outcome}."),
+            DaggerfallCastOutcome.InvalidTarget or DaggerfallCastOutcome.SourceUnavailable => new(action.Id,
+                DaggerfallDungeonActionOutcome.RejectedOperation,
+                Diagnostic: $"Dungeon spell action '{action.Id}' did not admit its target/source: {result.Outcome}."),
+            _ => new(action.Id, DaggerfallDungeonActionOutcome.RejectedOperation,
+                Diagnostic: $"Dungeon spell action '{action.Id}' returned {result.Outcome} without an admitted delivery."),
+        };
+    }
+
+    private bool TryCreateDungeonActionSource(DaggerfallDungeonActionDefinition action,
+        out DaggerfallActionCastSource source)
+    {
+        Vector3? origin = action.SourcePosition;
+        if (origin is Vector3 flat && _sites.ActionTriggers.TryGetTransform(action.Id, out Transform triggerTransform))
+            origin = flat + triggerTransform.Translation;
+        if (origin is null && _sites.Projection.Motion.TryGetTransform(action.Id, out Transform transform))
+            origin = transform.Translation;
+        if (origin is null && action.DoorId is string doorId)
+        {
+            foreach (DaggerfallDoorView door in _doors.All)
+            {
+                if (!string.Equals(DaggerfallDungeonActionGraph.DoorSourceId(door.Id), doorId, StringComparison.Ordinal)) continue;
+                origin = door.Pose.Translation;
+                break;
+            }
+        }
+        source = new(action.Id,
+            DaggerfallDungeonActionTriggerRuntime.StableIdentity(_activeProfileKey.LogicalId, action.Id),
+            DaggerfallActorIdentity.PlayerEntityId,
+            origin ?? default,
+            State.Progression.Level);
+        return origin is not null && source.IsValid;
     }
 
     /// <summary>
