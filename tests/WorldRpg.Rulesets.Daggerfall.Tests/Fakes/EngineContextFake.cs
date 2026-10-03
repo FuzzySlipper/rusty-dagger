@@ -8,6 +8,8 @@ internal class EngineContextFake : DispatchProxy
     internal IEngineContext Context { get; private set; } = null!;
     internal int UiOpenCalls { get; private set; }
     internal int ClearedSkyBackgrounds => ((CameraServiceFake)(object)camera).ClearedSkyBackgrounds;
+    /// <summary>The camera the Engine would render through, or null when no camera is active.</summary>
+    internal ulong? ActiveCamera => ((CameraServiceFake)(object)camera).ActiveCamera;
     /// <summary>The diagnostics the product published, in order, as 'source/code' with their message.</summary>
     internal IReadOnlyList<string> PublishedDiagnostics => ((DiagnosticsServiceFake)(object)diagnostics).Published
         .Select(entry => $"{entry.Source}/{entry.Code}: {entry.Message}")
@@ -133,6 +135,8 @@ internal class EngineContextFake : DispatchProxy
         internal bool FailNextUpdate { get; set; }
         internal int ClearedSkyBackgrounds { get; private set; }
         internal List<Color> BackgroundColors { get; } = [];
+        internal ulong? ActiveCamera { get; private set; }
+        private ulong nextCamera = 1;
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments)
         {
@@ -143,13 +147,35 @@ internal class EngineContextFake : DispatchProxy
             }
             return method?.Name switch
             {
-                nameof(ICameraViewService.CreateCamera) => new Camera(new CameraHandle(1), () => { }),
+                nameof(ICameraViewService.CreateCamera) => NewCamera(),
+                nameof(ICameraViewService.SetActiveCamera) => SetActive(((Camera)arguments![0]!).Handle.Value),
+                nameof(ICameraViewService.ClearActiveCamera) => SetActive(null),
                 nameof(ICameraViewService.ClearSkyBackground) => ClearSkyBackground(),
                 nameof(ICameraViewService.SetBackgroundColor) => SetBackgroundColor(arguments),
-                nameof(ICameraViewService.UpdateCamera) or nameof(ICameraViewService.SetActiveCamera) or nameof(ICameraViewService.ClearActiveCamera) or nameof(ICameraViewService.SetSkyBackground) => null,
-                nameof(ICameraViewService.ReplaceCamera) => new Camera(new CameraHandle(1), () => { }),
+                nameof(ICameraViewService.UpdateCamera) or nameof(ICameraViewService.SetSkyBackground) => null,
+                nameof(ICameraViewService.ReplaceCamera) => ReplaceCamera(((CameraUpdateRequest)arguments![0]!).Camera.Handle.Value),
                 _ => throw new NotSupportedException(method?.Name),
             };
+        }
+
+        // Like the Engine, destroying the active camera clears it, and replacing it keeps the replacement active.
+        private Camera NewCamera()
+        {
+            ulong handle = nextCamera++;
+            return new Camera(new CameraHandle(handle), () => { if (ActiveCamera == handle) ActiveCamera = null; });
+        }
+
+        private Camera ReplaceCamera(ulong replaced)
+        {
+            Camera replacement = NewCamera();
+            if (ActiveCamera == replaced) ActiveCamera = replacement.Handle.Value;
+            return replacement;
+        }
+
+        private object? SetActive(ulong? camera)
+        {
+            ActiveCamera = camera;
+            return null;
         }
 
         private object? ClearSkyBackground()

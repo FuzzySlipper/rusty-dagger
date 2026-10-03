@@ -46,6 +46,20 @@ public sealed class NewGameSessionTests
     }
 
     [Fact]
+    public void A_new_game_keeps_rendering_through_its_own_camera_after_the_title_session_is_released()
+    {
+        using Fixture f = new(); Commit(f.Title, "class00");
+        ulong? titleCamera = f.TitleEngine.ActiveCamera;
+        Assert.NotNull(titleCamera);
+        using var game = Assert.IsType<DaggerfallSession>(f.Title.CreateNewGame());
+        ulong? gameCamera = f.TitleEngine.ActiveCamera;
+        Assert.NotNull(gameCamera);
+        Assert.NotEqual(titleCamera, gameCamera);
+        f.Title.Dispose();
+        Assert.Equal(gameCamera, f.TitleEngine.ActiveCamera);
+    }
+
+    [Fact]
     public void New_games_share_no_state_and_encoded_save_restore_never_regrants()
     {
         using Fixture f = new(); Commit(f.Title, "class00");
@@ -208,12 +222,14 @@ public sealed class NewGameSessionTests
         internal DaggerfallSiteProfile Inputs { get; } = ReadInputs(TestData.RepositoryRoot);
         internal DaggerfallSessionComposition Composition { get; }
         internal DaggerfallSession Title { get; }
+        internal EngineContextFake TitleEngine { get; }
         private readonly Rusty.Engine.IRandomService _random;
         internal Fixture(Rusty.Engine.IRandomService? random = null)
         {
             _random = random ?? RandomMinimum.Create();
             Composition = new(Definitions, Inputs, DaggerfallTuning.Defaults);
-            Title = DaggerfallSession.StartNew(Engine().Context, Composition);
+            TitleEngine = Engine();
+            Title = DaggerfallSession.StartNew(TitleEngine.Context, Composition);
         }
         internal EngineContextFake Engine()
         {

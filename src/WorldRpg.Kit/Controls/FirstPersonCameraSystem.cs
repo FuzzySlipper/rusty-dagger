@@ -87,13 +87,9 @@ public sealed class FirstPersonCameraSystem : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        List<Exception>? failures = null;
-        try { _cameraView.ClearActiveCamera(new ClearActiveCameraRequest(0)); }
-        catch (Exception exception) { (failures ??= []).Add(exception); }
-        try { _camera.Dispose(); }
-        catch (Exception exception) { (failures ??= []).Add(exception); }
-
-        if (failures is { Count: > 0 }) throw new AggregateException(failures);
+        // Destroying the camera clears it as the active camera only while it still is. Clearing the active
+        // camera here would also clear a replacement session's camera, which is built before this one ends.
+        _camera.Dispose();
     }
 
     private CameraDescriptor Descriptor(PlayerControlState player, float eyeHeightOffset = 0f)
