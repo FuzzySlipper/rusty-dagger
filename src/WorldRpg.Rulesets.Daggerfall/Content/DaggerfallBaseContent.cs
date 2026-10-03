@@ -286,6 +286,19 @@ internal static partial class DaggerfallBaseContent
             faces.Add(new DaggerfallFactionFaceDefinition(index, mediaId, sourceFile, palette, consumer));
         }
 
+        List<DaggerfallFactionFaceDefinition> childFaces = [];
+        foreach (JsonElement face in Array(section, "childFaces", diagnostics))
+        {
+            int index = Integer(face, "index", diagnostics);
+            string media = Text(face, "mediaId", diagnostics);
+            string source = Text(face, "sourceFile", diagnostics);
+            if (index is < 0 or > 3 || media != $"character.child-face.{index}" || source != "KIDS00I0.CIF" || !accounted.Contains(source))
+                diagnostics.Add($"Character child face {index} has invalid media/source meaning.");
+            childFaces.Add(new(index, media, source, Text(face, "palette", diagnostics), Text(face, "consumer", diagnostics)));
+        }
+        if (childFaces.Select(face => face.Index).Distinct().Count() != childFaces.Count)
+            diagnostics.Add("Character child portraits repeat a source index.");
+
         // A career's portrait is resolved by career identity, and each one's career must be one the
         // catalogs publish - a portrait for a career the pack does not have would resolve to nothing.
         HashSet<string> catalogCareers = [.. catalogs.Careers.Select(career => career.Id)];
@@ -323,7 +336,7 @@ internal static partial class DaggerfallBaseContent
             careersWithout.Add(new DaggerfallCareerWithoutPortrait(Text(entry, "careerId", diagnostics), Text(entry, "reason", diagnostics)));
         }
 
-        return new DaggerfallCharacterPresentationSet(races, [.. faces.OrderBy(face => face.Index)], careers, careersWithout, without, files);
+        return new DaggerfallCharacterPresentationSet(races, [.. faces.OrderBy(face => face.Index)], careers, careersWithout, without, files) { ChildFaces = childFaces };
     }
 
     /// <summary>

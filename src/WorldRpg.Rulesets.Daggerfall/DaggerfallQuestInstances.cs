@@ -101,6 +101,10 @@ internal sealed record DaggerfallQuestBuildingClaim(string SourceKey, int Index,
 /// <summary>Durable state belonging to one declared resource.</summary>
 internal sealed record DaggerfallQuestResourceState(string Symbol, DaggerfallQuestResourceBinding Binding, bool IsHidden = false, bool HasPlayerClicked = false)
 {
+    public bool IsQuestor { get; init; }
+    public bool IsMuted { get; init; }
+    public string? EscortFaceMedia { get; init; }
+    public long EscortFaceOrder { get; init; }
     public DaggerfallCreatedItem? SelectedItem { get; init; }
     public DaggerfallQuestFoeSelection? SelectedFoe { get; init; }
     public DaggerfallQuestPersonSelection? SelectedPerson { get; init; }
@@ -162,6 +166,11 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             if (!resources.Add(symbol)) throw new ArgumentException($"Quest instance '{InstanceId}' binds resource '{symbol}' more than once.");
             ArgumentNullException.ThrowIfNull(resource.Binding);
             resource.Binding.Validate(symbol);
+            if ((resource.IsQuestor || resource.IsMuted) && resource.SelectedPerson is null
+                || (resource.EscortFaceMedia is null ? resource.EscortFaceOrder != 0 : resource.EscortFaceOrder <= 0)
+                || resource.EscortFaceMedia is not null && (string.IsNullOrWhiteSpace(resource.EscortFaceMedia) || resource.SelectedPerson is null && resource.SelectedFoe is null)
+                || Lifecycle != DaggerfallQuestLifecycle.Active && (resource.IsQuestor || resource.IsMuted || resource.EscortFaceMedia is not null))
+                throw new ArgumentException($"Quest resource '{symbol}' has invalid NPC overlay state.");
             if (resource.SelectedItem is { } item)
             {
                 item.Metadata.Validate();
@@ -230,6 +239,8 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
         foreach (DaggerfallQuestResourceState resource in Resources)
         {
             string symbol = Canonical(resource.Symbol, $"quest instance '{InstanceId}' resource");
+            if (resource.EscortFaceMedia is { } face && !DaggerfallQuestInstances.EligibleEscortFaces(definitions, resource).Contains(face, StringComparer.Ordinal))
+                throw new ArgumentException($"Quest resource '{symbol}' has incompatible selected escort face '{face}'.");
             if (!declarations.TryGetValue(symbol, out DaggerfallQuestResourceDefinition? declared))
                 throw new ArgumentException($"Quest instance '{InstanceId}' refers to missing resource '{symbol}' in '{SourceFile}'.");
             var selectedKind = resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Pending
@@ -680,7 +691,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         DaggerfallQuestRenderedMessage? prompt = pending is null ? null
             : deliveries.SingleOrDefault(delivery => delivery.Delivery == DaggerfallQuestMessageDelivery.Prompt
                 && delivery.InstanceId == pending.InstanceId && delivery.MessageId == pending.MessageId);
-        return new(deliveries, Messages.RenderJournal(_instances.Values, context), prompt);
+        return new(deliveries, Messages.RenderJournal(_instances.Values, context), prompt) { EscortFaces = EscortFaces() };
     }
 
 
@@ -899,6 +910,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         // Selected resource identities and text remain for journal/post-quest conversation.
         // Visible actors continue under their canonical roster/registry lifetime.
         instance.Placements = [];
+        instance.Resources = instance.Resources.Select(resource => resource with { IsQuestor = false, IsMuted = false, EscortFaceMedia = null, EscortFaceOrder = 0 }).ToArray();
         _removeCarriedQuestItems?.Invoke(instance.InstanceId);
     }
 

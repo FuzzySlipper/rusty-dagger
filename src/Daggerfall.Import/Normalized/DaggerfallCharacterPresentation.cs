@@ -94,6 +94,8 @@ public sealed record DaggerfallCharacterPresentation(
     IReadOnlyList<DaggerfallRaceWithoutMedia> RacesWithoutMedia,
     IReadOnlyList<string> Sources)
 {
+    public IReadOnlyList<DaggerfallFactionFace> ChildFaces { get; init; } = [];
+
     /// <summary>
     /// Checks the section against the canvases the publication actually emitted.
     /// </summary>
@@ -118,7 +120,7 @@ public sealed record DaggerfallCharacterPresentation(
             RequireBoundReference(publishedMediaIds, layer.Binding, layer.MediaId, $"Race '{layer.Race}' layer '{layer.Layer}'");
         }
 
-        foreach (DaggerfallFactionFace face in Faces)
+        foreach (DaggerfallFactionFace face in Faces.Concat(ChildFaces))
         {
             NormalizedImportDocument.RequireLogicalId(face.MediaId, nameof(face.MediaId));
             ArgumentException.ThrowIfNullOrWhiteSpace(face.SourceFile);
@@ -283,6 +285,11 @@ public static class DaggerfallCharacterPresentationBuilder
             .OrderBy(canvas => canvas.CanvasIndex)
             .Select(canvas => new DaggerfallFactionFace(canvas.CanvasIndex, canvas.MediaId, System.IO.Path.GetFileName(canvas.Path), canvas.Palette, canvas.Binding, ConsumerOf(canvas)))];
 
+        List<DaggerfallFactionFace> childFaces = [.. set.Canvases
+            .Where(canvas => System.IO.Path.GetFileName(canvas.Path).Equals("KIDS00I0.CIF", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(canvas => canvas.CanvasIndex)
+            .Select(canvas => new DaggerfallFactionFace(canvas.CanvasIndex, canvas.MediaId, System.IO.Path.GetFileName(canvas.Path), canvas.Palette, canvas.Binding, ConsumerOf(canvas)))];
+
         // A career's portrait is the class animation named for it, which is how the classic corpus
         // stores the three it supplies; a career the corpus does not depict says so rather than
         // borrowing another class's art.
@@ -321,6 +328,7 @@ public static class DaggerfallCharacterPresentationBuilder
         [
             .. layers.Select(layer => System.IO.Path.GetFileName(layer.SourceFile)),
             .. faces.Select(face => face.SourceFile),
+            .. childFaces.Select(face => face.SourceFile),
             .. careerPortraits.Select(portrait => portrait.SourceFile),
         ];
         Dictionary<string, CharacterMediaUnavailable> unavailable = set.Unavailable.ToDictionary(entry => System.IO.Path.GetFileName(entry.Path), StringComparer.Ordinal);
@@ -356,6 +364,6 @@ public static class DaggerfallCharacterPresentationBuilder
             careersWithout,
             files,
             without,
-            [inventory.Source, .. set.Unavailable.Select(entry => entry.Path).Order(StringComparer.Ordinal)]);
+            [inventory.Source, .. set.Unavailable.Select(entry => entry.Path).Order(StringComparer.Ordinal)]) { ChildFaces = childFaces };
     }
 }

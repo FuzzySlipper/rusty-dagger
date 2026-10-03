@@ -84,7 +84,7 @@ public static class CharacterMediaReferences
     /// and publishes them in the sheet projection. Naming it here is what tells the publication which
     /// files are bound rather than leaving every file pending while its artifacts sit unread.
     /// </remarks>
-    public const string CharacterSheetConsumer = "the character sheet";
+    public const string CharacterSheetConsumer = "the character sheet and quest escort HUD";
 
     /// <summary>The palette a <c>NITE*</c> file is read with.</summary>
     public const string NightskyPalette = "NIGHTSKY.COL";
@@ -273,6 +273,8 @@ public static class CharacterMediaReferences
             return $"character.portrait.{name.ToLowerInvariant()}.{canvasIndex}";
         }
 
+        if (name == "KIDS00I0") return $"character.child-face.{canvasIndex}";
+
         if (name == "FACES")
         {
             return $"character.faction-face.{canvasIndex:00}";
@@ -358,7 +360,7 @@ public static class CharacterMediaReferences
     /// that reason, so binding only the race one actor happens to declare would leave seven races' live
     /// references labelled unclaimed.
     /// <para>
-    /// What stays unbound is what no consumer resolves: the faction face grid and the story and compass
+    /// The faction grid and child portraits also serve the quest escort HUD. What stays unbound is the story and compass
     /// families, which have no character-sheet role.
     /// </para>
     /// </remarks>
@@ -373,7 +375,7 @@ public static class CharacterMediaReferences
             // and a layer, a background names the scene a race is drawn in, and a class portrait is the
             // family the sheet's portrait lookup draws from.
             string name = System.IO.Path.GetFileNameWithoutExtension(file.Path).ToUpperInvariant();
-            if (file.Family == "CEL" || TryRaceAndGender(name, out _, out _) || IsRaceBackground(name))
+            if (file.Family == "CEL" || name is "FACES" or "KIDS00I0" || TryRaceAndGender(name, out _, out _) || IsRaceBackground(name))
             {
                 bound.Add(file.Path);
             }

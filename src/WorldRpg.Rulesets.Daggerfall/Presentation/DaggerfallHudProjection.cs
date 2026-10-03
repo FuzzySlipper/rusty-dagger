@@ -279,6 +279,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     private static uint Dialogue(UiValueBuilder builder, DaggerfallDialogueView dialogue) => builder.Object(
         ("revision", builder.String(dialogue.Revision)),
         ("targetLabel", builder.String(dialogue.TargetLabel)),
+        ("questContacts", builder.Array(dialogue.QuestContacts.Select(contact => builder.Object(
+            ("instance", builder.String(contact.InstanceId)), ("symbol", builder.String(contact.Symbol)))).ToArray())),
         ("bankAvailable", builder.Boolean(dialogue.BankAvailable)),
         ("greeting", builder.String(dialogue.Greeting)),
         ("comprehendLanguagesBonus", builder.Number(dialogue.ComprehendLanguagesBonus)),
@@ -332,6 +334,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("message", rest.Message is null ? builder.Null() : builder.String(rest.Message)));
 
     private static uint Quests(UiValueBuilder builder, DaggerfallQuestPresentation quests) => builder.Object(
+        ("escortFaces", builder.Array(quests.EscortFaces.Select(face => builder.Object(
+            ("instance", builder.String(face.InstanceId)), ("symbol", builder.String(face.Symbol)),
+            ("name", builder.String(face.Name)), ("mediaId", builder.String(face.MediaId)))).ToArray())),
         ("deliveries", builder.Array(quests.Deliveries.Select(message => QuestMessage(builder, message)).ToArray())),
         ("journal", builder.Array(quests.Journal.Select(message => QuestMessage(builder, message)).ToArray())),
         ("pending", quests.Pending is null ? builder.Null() : QuestMessage(builder, quests.Pending)));

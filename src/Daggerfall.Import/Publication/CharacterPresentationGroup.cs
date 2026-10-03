@@ -68,7 +68,7 @@ public sealed class CharacterPresentationGroup
         // The publication pass runs first over the corpus as it stands, so the artifacts exist before any
         // reference claims one. The consumer is then derived from the pack's own identity: the character
         // sheet resolves the race the player's actor declares and a portrait per career, so those files are
-        // the ones a published consumer binds and every other file stays required-pending with its artifact
+        // the ones the character sheet and escort HUD bind and every other file stays required-pending with its artifact
         // written and indexed.
         CharacterMediaInventory unbound = CharacterMediaInventory.Enumerate(sources, new HashSet<string>(StringComparer.Ordinal), corpusLabel);
         IReadOnlySet<string> suppliedPalettes = palettes.Keys.ToHashSet(StringComparer.Ordinal);

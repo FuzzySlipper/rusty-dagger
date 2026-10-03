@@ -146,3 +146,6 @@
 .dagger-entry-creation { position: absolute; inset: 4% 10%; overflow: auto; padding: 20px; color: #f6ddb0; background: rgba(8, 12, 10, .9); border: 1px solid #c6a05a; }
 .dagger-entry-parts { position: absolute; right: 0; bottom: 0; display: flex; pointer-events: none; }
 .dagger-entry-parts img { max-width: 320px; image-rendering: pixelated; }
+
+.dagger-escort-faces { display: flex; gap: .5rem; }
+.dagger-escort-faces img { width: 48px; height: 48px; object-fit: contain; image-rendering: pixelated; }

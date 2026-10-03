@@ -177,6 +177,7 @@ internal sealed partial class DaggerfallSession
         State.Quests.Advance(State.Variables, _time.Calendar);
         State.Quests.AdmitPlacements(_sites.Projection.Inputs, this);
         ReconcileNpcProjection();
+        _dialogue?.RefreshEligibility();
     }
 
     private void ApplyAttackImpacts()

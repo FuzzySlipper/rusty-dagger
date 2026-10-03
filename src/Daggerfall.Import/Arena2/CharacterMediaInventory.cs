@@ -53,6 +53,7 @@ public sealed class CharacterMediaInventory
         ("SCBG", 9, "story and cutscene backgrounds"),
         ("CEL", 3, "class portraits"),
         ("BSS", 3, "ambient story sprites"),
+        ("KIDS", 1, "child escort portraits"),
     ];
 
     private CharacterMediaInventory(string source, IReadOnlyList<CharacterMediaRecord> files)

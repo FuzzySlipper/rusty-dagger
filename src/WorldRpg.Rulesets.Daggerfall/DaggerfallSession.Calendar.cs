@@ -73,6 +73,7 @@ internal sealed partial class DaggerfallSession
         // after rest, travel, prison, or another interval, including an interval with no clock expiry.
         if (kind is DaggerfallCalendarAdvanceKind.Elapsed or DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills)
             State.Quests.Advance(State.Variables, _time.Calendar);
+        _dialogue?.RefreshEligibility();
         if (kind is DaggerfallCalendarAdvanceKind.Elapsed or DaggerfallCalendarAdvanceKind.QuestTraining)
         {
             State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());

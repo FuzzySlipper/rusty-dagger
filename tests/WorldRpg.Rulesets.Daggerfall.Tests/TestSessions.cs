@@ -194,14 +194,17 @@ internal static class TestSessions
     /// <summary>The published UI art group as admitted content: the inventory and the artifacts it names.</summary>
     internal static IEnumerable<(string Path, byte[] Bytes)> PublishedUiArt(string root)
     {
-        string inventoryPath = Path.Combine(root, "content", DaggerfallUiArt.InventoryPath);
-        byte[] inventory = File.ReadAllBytes(inventoryPath);
-        yield return (DaggerfallUiArt.InventoryPath, inventory);
-        using JsonDocument document = JsonDocument.Parse(inventory);
-        foreach (JsonElement artifact in document.RootElement.GetProperty("artifacts").EnumerateArray())
+        foreach (string identity in new[] { DaggerfallUiArt.InventoryPath, DaggerfallUiArt.CharacterInventoryPath })
         {
-            string path = artifact.GetProperty("path").GetString()!;
-            yield return (path, File.ReadAllBytes(Path.Combine(root, "content", path)));
+            string inventoryPath = Path.Combine(root, "content", identity);
+            byte[] inventory = File.ReadAllBytes(inventoryPath);
+            yield return (identity, inventory);
+            using JsonDocument document = JsonDocument.Parse(inventory);
+            foreach (JsonElement artifact in document.RootElement.GetProperty("artifacts").EnumerateArray())
+            {
+                string path = artifact.GetProperty("path").GetString()!;
+                yield return (path, File.ReadAllBytes(Path.Combine(root, "content", path)));
+            }
         }
     }
 
