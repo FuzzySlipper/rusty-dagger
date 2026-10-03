@@ -11,6 +11,55 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallGroundContainersTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Mixed_quest_placement_retires_only_emptied_source_piles(bool retainOtherContents)
+    {
+        using EntityDirectory entities = new();
+        InventoryStore store = new();
+        EntityId player = entities.Create(new(DurableIdentityKind.Actor, 1), new("player"));
+        store.RegisterInventory(new InventoryState(player));
+        entities.Store.Add(player, new InventoryComponent(store, player));
+        ItemDefinition apples = new(ItemDefinitionId.Parse("apple"), ItemKind.Fungible, 20);
+        MechanicsInventoryContainerCoordinator containers = new(store, entities,
+            new Dictionary<InventoryItemId, ItemDefinition> { [new("apple")] = apples });
+        var stack = InventoryStackId.Parse("player.apples");
+        new InventoryComponent(store, player).Grant(apples, stack, 5);
+        DaggerfallItemInstances instances = new();
+        instances.RegisterStack(DaggerfallItemOwner.Player, stack, Metadata(DaggerfallItemOwner.Player));
+        DurableIdentityAllocator identities = new(DurableIdentityKind.Container, 100);
+        DaggerfallGroundContainers ground = new(containers, instances, player, identities,
+            Profile(DaggerfallWorldProfileKind.Exterior, "charing-exterior"));
+        var old = ground.Drop(new(new("apple"), 3, stack), default, store.Revision);
+        var dropped = containers.Read(old.Owner).Stacks.Single().Id;
+        if (retainOtherContents)
+        {
+            var other = InventoryStackId.Parse("other.apples");
+            containers.Seed(old.Owner, [new(new("apple"), 1, Stack: other)]);
+            instances.RegisterStack(DaggerfallItemOwner.Ground(old.Id), other, Metadata(DaggerfallItemOwner.Ground(old.Id)));
+        }
+        var binding = DaggerfallQuestResourceBinding.Stack(new("ground", old.Id), dropped.Value) with
+        { Stacks = [new(new("ground", old.Id), dropped.Value), new(new("player", 0), stack.Value)] };
+        ground.PlaceQuestItem(binding, new(4, 0, 8), [DaggerfallItemOwner.Ground(old.Id), DaggerfallItemOwner.Player], target =>
+        {
+            var destination = entities.Resolve(new(DurableIdentityKind.Container, checked((ulong)target.Id)));
+            foreach (var source in new[] { (old.Owner, DaggerfallItemOwner.Ground(old.Id), dropped), (player, DaggerfallItemOwner.Player, stack) })
+            {
+                ulong quantity = containers.Read(source.Item1).Stacks.Single(value => value.Id == source.Item3).Quantity;
+                containers.Transfer(source.Item1, destination, new(new("apple"), quantity, source.Item3));
+                instances.TransferStack(source.Item2, target, source.Item3, source.Item3, true);
+            }
+        });
+        Assert.Equal(retainOtherContents, ground.TryGet(old.Id, out _));
+        Assert.Equal(retainOtherContents, store.TryGetInventory(old.Owner, out _));
+        Assert.Equal(retainOtherContents, entities.TryResolve(new(DurableIdentityKind.Container, checked((ulong)old.Id)), out _));
+        Assert.Equal(retainOtherContents ? DurableIdentityClassification.Live : DurableIdentityClassification.Removed,
+            identities.Classify(new(DurableIdentityKind.Container, checked((ulong)old.Id))));
+        Assert.Equal(5UL, containers.Read(ground.Persisted.Single(value => value.Id != old.Id).Owner).Stacks.Aggregate(0UL, (sum, value) => sum + value.Quantity));
+        if (retainOtherContents) Assert.Equal(1UL, ground.Read(old.Id)!.Stacks.Single().Quantity);
+    }
+
     [Fact]
     public void Drop_and_partial_take_are_engine_transfers_and_profile_scoped()
     {
@@ -69,6 +118,7 @@ public sealed class DaggerfallGroundContainersTests
         Assert.Empty(ground.All);
         Assert.Empty(ground.Persisted);
         Assert.Null(ground.Read(pile.Id));
+        Assert.False(store.TryGetInventory(pile.Owner, out _));
         Assert.Equal(DurableIdentityClassification.Removed,
             identities.Classify(new DurableIdentityReference(DurableIdentityKind.Container, (ulong)pile.Id)));
     }
