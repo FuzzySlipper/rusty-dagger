@@ -139,17 +139,20 @@ internal sealed record DaggerfallDungeonPoisonAction(string SourceRecord, string
     }
 }
 
-/// <summary>One durable action node state, relative to the graph's admitted timeline.</summary>
+/// <summary>Durable action state, including elapsed-time cooldown and the source spell activation counter.</summary>
 internal sealed record DaggerfallDungeonActionNodeSave(
     string Id,
     ulong ActivationCount,
-    double RemainingCooldownSeconds)
+    double RemainingCooldownSeconds,
+    float RemainingSpellCooldown = 0f)
 {
     internal DaggerfallDungeonActionNodeSave Validate()
     {
         if (string.IsNullOrWhiteSpace(Id)) throw new ArgumentException("A saved dungeon action state requires an id.", nameof(Id));
         if (!double.IsFinite(RemainingCooldownSeconds) || RemainingCooldownSeconds < 0d)
             throw new ArgumentOutOfRangeException(nameof(RemainingCooldownSeconds));
+        if (!float.IsFinite(RemainingSpellCooldown) || RemainingSpellCooldown < 0f || RemainingSpellCooldown > 1000f)
+            throw new ArgumentOutOfRangeException(nameof(RemainingSpellCooldown));
         return this;
     }
 }
@@ -334,7 +337,7 @@ internal sealed class DaggerfallDungeonActionGraph
             .Select(id =>
             {
                 NodeState state = _states[id];
-                return new DaggerfallDungeonActionNodeSave(id, state.ActivationCount, state.RemainingCooldownSeconds);
+                return new DaggerfallDungeonActionNodeSave(id, state.ActivationCount, state.RemainingCooldownSeconds, state.RemainingSpellCooldown);
             })
             .ToArray();
         return new(_profileId, nodes);
@@ -411,6 +414,18 @@ internal sealed class DaggerfallDungeonActionGraph
 
     private DaggerfallDungeonActionExecution Apply(DaggerfallDungeonActionDefinition definition, bool missingTarget)
     {
+        if (definition.ActionFlag == (byte)DaggerfallDungeonActionFlag.CastSpell)
+        {
+            // DaggerfallAction.CastSpell decrements on each matching activation, after Play's
+            // linked action has already run. This counter is not elapsed seconds; even an
+            // unavailable spell resets it once the source attempt becomes eligible.
+            NodeState state = _states[definition.Id];
+            state.RemainingSpellCooldown -= 45.454546f;
+            if (state.RemainingSpellCooldown > 0f)
+                return new(definition.Id, DaggerfallDungeonActionOutcome.Cooldown,
+                    Diagnostic: $"Dungeon spell action '{definition.Id}' remains on source activation cooldown.");
+            state.RemainingSpellCooldown = 1000f;
+        }
         if (definition.Poison is { } poison)
             return new(definition.Id, DaggerfallDungeonActionOutcome.UnsupportedAction,
                 Diagnostic: $"Dungeon Poison action '{definition.Id}' at {poison.SourceRecord}:{definition.SourceOffset} is source-unresolved: no poison variant or effect is established; the owner-approved source-record exclusion preserves raw/link/sound facts without delivering poison.");
@@ -481,6 +496,9 @@ internal sealed class DaggerfallDungeonActionGraph
                 throw new ArgumentException($"Dungeon action snapshot repeats '{saved.Id}'.", nameof(snapshot));
             state.ActivationCount = saved.ActivationCount;
             state.RemainingCooldownSeconds = saved.RemainingCooldownSeconds;
+            if (saved.RemainingSpellCooldown != 0f && _definitions[saved.Id].ActionFlag != (byte)DaggerfallDungeonActionFlag.CastSpell)
+                throw new ArgumentException($"Dungeon action '{saved.Id}' is not a spell action but carries spell cooldown state.", nameof(snapshot));
+            state.RemainingSpellCooldown = saved.RemainingSpellCooldown;
         }
 
         if (seen.Count != _states.Count)
@@ -537,6 +555,7 @@ internal sealed class DaggerfallDungeonActionGraph
     {
         internal ulong ActivationCount { get; set; }
         internal double RemainingCooldownSeconds { get; set; }
+        internal float RemainingSpellCooldown { get; set; }
     }
 
     private static string? PlacementActionId(string placementId)
