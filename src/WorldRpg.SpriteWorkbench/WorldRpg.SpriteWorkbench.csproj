@@ -14,12 +14,12 @@
     <RustyEngineProductEntryType>WorldRpg.SpriteWorkbench.SpriteWorkbenchProduct</RustyEngineProductEntryType>
     <RustyEngineProductId>worldrpg-sprite-workbench</RustyEngineProductId>
     <RustyEngineProductTitle>WorldRpg Sprite Workbench</RustyEngineProductTitle>
-    <RustyEngineProductUiRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../sprite-ui/generated'))</RustyEngineProductUiRoot>
+    <RustyEngineProductUiRoot>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(BaseIntermediateOutputPath)', 'product-ui'))</RustyEngineProductUiRoot>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)workbench-content'))</RustyEngineProductContentRoot>
     <RustyEngineProductUiEntry>workbench.js</RustyEngineProductUiEntry>
     <!-- The SDK reruns tsc only when ../sprite-ui or a listed input changes. -->
     <RustyEngineProductUiSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../sprite-ui'))</RustyEngineProductUiSourceRoot>
-    <RustyEngineProductUiBuildCommand>npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc -p &quot;$(MSBuildThisFileDirectory)../sprite-ui/tsconfig.json&quot; --outDir &quot;$(RustyEngineProductUiRoot)&quot;</RustyEngineProductUiBuildCommand>
+    <RustyEngineProductUiBuildCommand>node &quot;$(MSBuildThisFileDirectory)../../node_modules/typescript/bin/tsc&quot; -p &quot;$(MSBuildThisFileDirectory)../sprite-ui/tsconfig.json&quot; --outDir &quot;$(RustyEngineProductUiRoot)&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductUiProjectionStream>worldrpg.sprite-workbench</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>worldrpg.sprite-workbench.snapshot.v1</RustyEngineProductUiProjectionContract>
     <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
