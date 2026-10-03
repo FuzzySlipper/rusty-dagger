@@ -41,6 +41,7 @@ public sealed class NewGameSessionTests
         ulong biographyGold = choice.Background!.StartingGrants.Where(item => item.ItemId == "template-276")
             .Aggregate(0UL, (total, item) => total + item.Quantity);
         Assert.Equal((ulong)f.Definitions.NewGame.Gold + biographyGold, Gold(game));
+        Assert.Equal(Gold(game), Assert.Single(inventory.Stacks, stack => stack.Definition.Value == "template-276").Quantity);
         Assert.DoesNotContain(inventory.UniqueItems, item => item.Definition.Value == "iron-longsword");
         Assert.NotNull(f.Title.State.Character.ReadCreation().Summary);
     }
@@ -73,6 +74,7 @@ public sealed class NewGameSessionTests
         using var restored = DaggerfallSession.Restore(f.Engine().Context, f.Composition, first.CaptureSave());
         Assert.Equal(1, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
         Assert.Equal(Gold(first), Gold(restored));
+        Assert.Equal(Gold(first), Assert.Single(restored.State.Inventory.Read().Stacks, stack => stack.Definition.Value == "template-276").Quantity);
         Assert.Equal(inventory.UniqueItems.Count, restored.State.Inventory.Read().UniqueItems.Count);
         Assert.Equal(first.State.Character.KnownSpells.Order(), restored.State.Character.KnownSpells.Order());
         Assert.Throws<ArgumentException>(() => restored.CreateNewGame());

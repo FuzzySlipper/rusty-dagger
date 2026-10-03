@@ -22,11 +22,9 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
   const heading = document.createElement('h2');
   const rows = document.createElement('ul');
   rows.className = 'dagger-loot-items';
-  const empty = document.createElement('p');
-  empty.textContent = 'Empty. This container remains open until Exit.';
   const status = document.createElement('p');
   status.setAttribute('role', 'status');
-  shell.append(heading, rows, empty, status);
+  shell.append(heading, rows, status);
   root.append(shell);
   let current: LootProjection | null = null;
   const entries = new Map<string, { element: HTMLLIElement; label: HTMLElement; detail: HTMLElement; quantity: HTMLInputElement; button: HTMLButtonElement; icon: HTMLImageElement }>();
@@ -57,7 +55,6 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
 
     heading.textContent = value.title;
     status.textContent = value.message;
-    empty.hidden = value.items.length !== 0;
     if (current?.revision === value.revision) { current = value; return; }
     current = value;
     const keys = new Set(value.items.map(item => item.key));

@@ -45,7 +45,7 @@ export function image(id: string | null): string | null {
   return id === null ? null : images.get(id) ?? null;
 }
 
-let lastReportedMissing = '\0unset';
+const lastReportedMissing = new Map<string, string>();
 
 /**
  * Reports missing frame art only when the missing set changes and is non-empty. Steady-state
@@ -54,9 +54,11 @@ let lastReportedMissing = '\0unset';
  * data-art-missing attributes current on every render regardless.
  */
 export function reportMissingArt(context: string, missing: readonly string[]): void {
+  // Mount precedes the first art publication; awaiting that block is ordinary startup.
+  if (revision.length === 0) return;
   const key = [...missing].sort().join('\0');
-  if (key === lastReportedMissing) return;
-  lastReportedMissing = key;
+  if (key === lastReportedMissing.get(context)) return;
+  lastReportedMissing.set(context, key);
   if (missing.length !== 0) console.warn(`${context} frame art is not published by this session: ${[...missing].sort().join(', ')}`);
 }
 

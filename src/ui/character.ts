@@ -536,16 +536,27 @@ function backgroundEditor(value: CharacterBackground | null): { readonly element
   });
   const attributes = allocationEditor('Attributes', value.attributes.map(attribute => ({ id: attribute.id, label: `${attribute.label}: ${attribute.value}`, allocated: attribute.allocated, canAllocate: attribute.canAllocate })));
   const skills = allocationEditor('Skills', value.skills.map(skill => ({ id: skill.id, label: `${skill.id} (${skill.tier}): ${skill.value}`, allocated: skill.allocated, canAllocate: skill.canAllocate })));
-  const pools = document.createElement('p'); pools.textContent = `${value.remainingAttributePoints} of ${value.attributeBonusPool} attribute points remain; ${value.primarySkillPoints}/${value.majorSkillPoints}/${value.minorSkillPoints} primary/major/minor skill points remain.`; element.append(pools, attributes.element, skills.element);
+  const pools = document.createElement('p'); pools.dataset.testid = 'character-allocation-pools'; pools.setAttribute('aria-live', 'polite');
+  const updatePools = (): void => {
+    const remainingAttributes = value.remainingAttributePoints + value.attributes.reduce((total, attribute) => total + attribute.allocated, 0) - [...attributes.allocations().values()].reduce((total, points) => total + points, 0);
+    const skillAllocations = skills.allocations();
+    const remainingSkills = (tier: string, remaining: number): number => remaining + value.skills.filter(skill => skill.tier === tier)
+      .reduce((total, skill) => total + skill.allocated - (skillAllocations.get(skill.id) ?? 0), 0);
+    pools.textContent = `${remainingAttributes} of ${value.attributeBonusPool} attribute points remain; ${remainingSkills('primary', value.primarySkillPoints)}/${remainingSkills('major', value.majorSkillPoints)}/${remainingSkills('minor', value.minorSkillPoints)} primary/major/minor skill points remain.`;
+  };
+  element.addEventListener('input', updatePools);
+  updatePools();
+  element.append(pools, attributes.element, skills.element);
   if (value.startingGrants.length !== 0) { const grants = document.createElement('p'); grants.dataset.testid = 'character-starting-grants'; grants.textContent = `Starting grants: ${value.startingGrants.map(grant => `${grant.quantity} × ${grant.label}`).join(', ')}.`; element.append(grants); }
   if (value.unsupportedEffects.length !== 0) { const unsupported = document.createElement('p'); unsupported.dataset.testid = 'character-background-unsupported-effects'; unsupported.textContent = `Recorded effects: ${value.unsupportedEffects.join(' ')}`; element.append(unsupported); }
   return { element, values: () => ({ backgroundAnswers: answers.map(answer => `${answer.question}:${answer.input.value}`).join(','), attributeAllocations: attributes.values(), skillAllocations: skills.values() }) };
 }
 
-function allocationEditor(title: string, values: readonly { readonly id: string; readonly label: string; readonly allocated: number; readonly canAllocate: boolean }[]): { readonly element: HTMLElement; readonly values: () => string } {
+function allocationEditor(title: string, values: readonly { readonly id: string; readonly label: string; readonly allocated: number; readonly canAllocate: boolean }[]): { readonly element: HTMLElement; readonly values: () => string; readonly allocations: () => ReadonlyMap<string, number> } {
   const element = document.createElement('fieldset'); const legend = document.createElement('legend'); legend.textContent = title; element.append(legend);
   const inputs = values.map(value => { const label = document.createElement('label'); label.textContent = value.label; const input = document.createElement('input'); input.type = 'number'; input.min = '0'; input.value = String(value.allocated); input.disabled = !value.canAllocate && value.allocated === 0; input.setAttribute('aria-label', `${title} ${value.id}`); label.append(input); element.append(label); return { id: value.id, input }; });
-  return { element, values: () => inputs.map(value => `${value.id}:${Math.max(0, Number(value.input.value) || 0)}`).filter(value => !value.endsWith(':0')).join(',') };
+  const allocations = (): ReadonlyMap<string, number> => new Map(inputs.map(value => [value.id, Math.max(0, Number(value.input.value) || 0)]));
+  return { element, allocations, values: () => [...allocations()].filter(([, points]) => points !== 0).map(([id, points]) => `${id}:${points}`).join(',') };
 }
 
 function renderLevelUp(root: HTMLElement, value: CharacterLevelUp | null, send?: (action: CharacterAction) => void): void {

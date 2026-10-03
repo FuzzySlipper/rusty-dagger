@@ -21,6 +21,7 @@ for (const file of await readdir(new URL('../../src/ui/', import.meta.url))) {
 }
 await writeFile(join(output, 'debug-stub.js'), 'export async function mountLiveDebugPanel() { return { dispose() {} }; }');
 const { mountProductUi } = await import(pathToFileURL(join(output, 'main.js')));
+const art = await import(pathToFileURL(join(output, 'art.js')));
 after(() => rm(output, { recursive: true, force: true }));
 
 function fixture() {
@@ -417,21 +418,62 @@ test('title creation renders normalized questions and sends the selected backgro
       name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true,
       creation: { editing: true, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
         races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }], faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
-        background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 6, remainingAttributePoints: 6, primarySkillPoints: 6, majorSkillPoints: 6, minorSkillPoints: 6,
+        background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 6, remainingAttributePoints: 4, primarySkillPoints: 5, majorSkillPoints: 6, minorSkillPoints: 6,
           questions: [{ number: 1, text: 'Where did you study?', selectedLetter: 'a', answers: [{ letter: 'a', text: 'At home.' }, { letter: 'b', text: 'At court.' }] }],
-          attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 0, value: 50, canAllocate: true }],
-          skills: [{ id: 'medical', tier: 'primary', rolled: 28, allocated: 0, biographyBonus: 0, value: 28, canAllocate: true }],
+          attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 2, value: 52, canAllocate: true }],
+          skills: [{ id: 'medical', tier: 'primary', rolled: 28, allocated: 1, biographyBonus: 0, value: 29, canAllocate: true }],
           startingGrants: [{ itemId: 'template-113-iron', label: 'Longsword', templateIndex: 113, quantity: 1, sourceEffect: 'IT 3 0 0' }], unsupportedEffects: ['The source retains this fatigue background effect without a gameplay consequence.'] },
       },
     } });
     assert.match(f.root.querySelector('[data-testid="character-biography"]').textContent, /readable biography/);
     assert.equal(f.root.querySelector('[data-testid="character-starting-grants"]').textContent, 'Starting grants: 1 × Longsword.');
     assert.match(f.root.querySelector('[data-testid="character-background-unsupported-effects"]').textContent, /fatigue background effect/);
+    const pools = f.root.querySelector('[data-testid="character-allocation-pools"]');
+    assert.match(pools.textContent, /^4 of 6 attribute points remain; 5\/6\/6/);
+    const actionsBeforeTyping = f.actions.length;
     f.root.querySelector('[aria-label="Attributes strength"]').value = '6';
+    f.root.querySelector('[aria-label="Attributes strength"]').dispatchEvent(new window.Event('input', { bubbles: true }));
+    assert.match(pools.textContent, /^0 of 6 attribute points remain; 5\/6\/6/);
     f.root.querySelector('[aria-label="Skills medical"]').value = '6';
+    f.root.querySelector('[aria-label="Skills medical"]').dispatchEvent(new window.Event('input', { bubbles: true }));
+    assert.match(pools.textContent, /^0 of 6 attribute points remain; 0\/6\/6/);
+    assert.equal(f.actions.length, actionsBeforeTyping, 'Draft counters do not submit gameplay changes.');
     f.root.querySelector('[data-testid="character-background-reroll"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'character-background-reroll', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:a', attributeAllocations: 'strength:6', skillAllocations: 'medical:6' });
   } finally { f.dispose(); }
+});
+
+test('an empty loot panel presents its owner message exactly once', () => {
+  const f = fixture();
+  try {
+    const message = 'Empty. This container remains open until Exit.';
+    f.publish({ mode: 'modal', loot: { container: '2000:1', revision: '1', title: 'Rat — loot', items: [], message } });
+    const panel = f.root.querySelector('.dagger-loot');
+    assert.equal(panel.textContent.split(message).length - 1, 1);
+    f.publish({ mode: 'modal', loot: { container: '2000:1', revision: '2', title: 'Rat — loot', items: [], message: 'Loot changed. Choose the item again.' } });
+    assert.match(panel.textContent, /Loot changed/);
+    assert.doesNotMatch(panel.textContent, /Empty\./);
+  } finally { f.dispose(); }
+});
+
+test('frame art awaits the first publication and reports unchanged missing sets once per panel', () => {
+  const warnings = [];
+  const warn = console.warn;
+  console.warn = message => warnings.push(message);
+  try {
+    art.adopt({ revision: '', images: [] });
+    art.reportMissingArt('test-inventory', ['panel', 'slot']);
+    assert.equal(warnings.length, 0);
+    art.adopt({ revision: 'partial-publication', images: [] });
+    for (let frame = 0; frame < 4; frame++) {
+      art.reportMissingArt('test-inventory', ['slot', 'panel']);
+      art.reportMissingArt('test-loot', ['panel']);
+    }
+    assert.equal(warnings.length, 2);
+    art.reportMissingArt('test-inventory', []);
+    art.reportMissingArt('test-inventory', ['slot']);
+    assert.equal(warnings.length, 3);
+  } finally { console.warn = warn; art.adopt({ revision: '', images: [] }); }
 });
 
 test('pending level up shows permanent and live values and sends guarded semantic choices', () => {
