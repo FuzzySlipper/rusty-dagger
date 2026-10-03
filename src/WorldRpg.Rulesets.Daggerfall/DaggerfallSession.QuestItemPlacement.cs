@@ -17,6 +17,10 @@ internal sealed partial class DaggerfallSession
             : new(new(Stack!.ItemId), Stack.Quantity, Stack: InventoryStackId.Parse(Stack.StackId));
     }
 
+    private static HashSet<string> RemovedEffectInstances(DaggerfallSiteRuntimeDelta delta, long actorId, IReadOnlySet<ulong> items) =>
+        delta.Effects.Where(effect => effect.TargetId == actorId && effect.ItemId is ulong id && items.Contains(id))
+            .Select(effect => effect.Instance).ToHashSet(StringComparer.Ordinal);
+
     /// <summary>Rejoins retained site values with canonical live containment in one Engine admission.</summary>
     private DaggerfallQuestResourceBinding PlaceBoundQuestItem(DaggerfallQuestResourceBinding binding, WorldPoint position)
     {
@@ -54,12 +58,19 @@ internal sealed partial class DaggerfallSession
         }
         var uniqueIds = retained.Where(value => value.Unique is not null).Select(value => value.Unique!.EntityId).ToHashSet();
         var stackIds = retained.Where(value => value.Stack is not null).Select(value => (value.Owner, value.Stack!.StackId)).ToHashSet();
-        var deltas = _sites.Deltas.Where(entry => entry.Value.ActorInventories.Any(value => value.Inventory.UniqueItems.Any(item => uniqueIds.Contains(item.EntityId))
+        var movedUniqueIds = binding.UniqueItemIds.ToHashSet();
+        var deltas = _sites.Deltas.Where(entry => entry.Value.Effects.Any(effect => effect.ItemId is ulong id && movedUniqueIds.Contains(id))
+            || entry.Value.ActorInventories.Any(value => value.Inventory.UniqueItems.Any(item => uniqueIds.Contains(item.EntityId))
                 || value.Inventory.Stacks.Any(item => stackIds.Contains((DaggerfallItemOwner.Actor(value.EntityId), item.StackId))))
             || entry.Value.Corpses.Any(value => value.UniqueItems.Any(item => uniqueIds.Contains(item.EntityId))
                 || value.Stacks.Any(item => stackIds.Contains((DaggerfallItemOwner.Corpse(value.ActorId), item.StackId)))))
             .ToDictionary(entry => entry.Key, entry => entry.Value with
         {
+            Effects = entry.Value.Effects.Where(effect => effect.ItemId is not ulong id || !movedUniqueIds.Contains(id)).ToArray(),
+            Actors = entry.Value.Actors.Select(actor => actor with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(actor.Stats,
+                RemovedEffectInstances(entry.Value, actor.EntityId, movedUniqueIds)) }).ToArray(),
+            DynamicActors = entry.Value.DynamicActors.Select(actor => actor with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(actor.Stats,
+                RemovedEffectInstances(entry.Value, actor.EntityId, movedUniqueIds)) }).ToArray(),
             ActorInventories = entry.Value.ActorInventories.Select(value => value with { Inventory = value.Inventory with
             {
                 UniqueItems = value.Inventory.UniqueItems.Where(item => !uniqueIds.Contains(item.EntityId)).ToArray(),
@@ -80,11 +91,10 @@ internal sealed partial class DaggerfallSession
             State.QuestItems.MoveBoundItem(binding, destination, seeds, stackIds);
             foreach (var item in retained)
             {
-                if (item.Unique is { } unique) State.ItemInstances.RegisterUnique(unique.EntityId, item.Metadata with { Owner = destination });
+                if (item.Unique is { } unique) State.ItemInstances.AdmitRetainedUnique(unique.EntityId, item.Metadata, destination);
                 else State.ItemInstances.AdmitRetainedStack(item.Owner, destination, InventoryStackId.Parse(item.Stack!.StackId), item.Metadata);
             }
-            if (retained.Count > 0)
-                foreach (var delta in deltas) _sites.ReplaceDelta(delta.Key, delta.Value);
+            foreach (var delta in deltas) _sites.ReplaceDelta(delta.Key, delta.Value);
         });
     }
 }

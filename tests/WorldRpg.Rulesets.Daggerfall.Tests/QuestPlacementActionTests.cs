@@ -135,11 +135,12 @@ public sealed class QuestPlacementActionTests
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    public void Placement_reclaims_the_same_bound_item_from_inactive_actor_or_corpse_without_moving_or_duplicating_the_actor(bool stackable, bool corpse)
+    [InlineData(false, false, false)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(true, true, false)]
+    [InlineData(true, false, true)]
+    public void Placement_reclaims_the_same_bound_item_from_inactive_actor_or_corpse_without_moving_or_duplicating_the_actor(bool stackable, bool corpse, bool mixed)
     {
         var definitions = QuestWorldAdmissionTests.Definitions(stackable: stackable, actions: ["place item _gift_ at _location_ questmarker 0"]);
         using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
@@ -148,6 +149,11 @@ public sealed class QuestPlacementActionTests
         f.Session.AdmitSiteProfiles(profiles);
         var started = Start(f, definitions, castle);
         var state = f.Session.State;
+        if (mixed)
+        {
+            var selected = started.Resources.Single(value => value.Symbol == "gift");
+            state.Quests.SetResource(started.InstanceId, selected with { SelectedItem = selected.SelectedItem! with { Quantity = 2 } });
+        }
         state.Quests.GrantItem(started.InstanceId, "gift");
         var resource = state.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == "gift");
         var actor = state.Actors.Get(f.Enemy);
@@ -161,12 +167,14 @@ public sealed class QuestPlacementActionTests
         }
         var actorOwner = corpse ? actor.Actor.Get<CorpseLootComponent>().Owner : actor.Actor.Entity;
         var itemOwner = corpse ? DaggerfallItemOwner.Corpse(f.Enemy) : DaggerfallItemOwner.Actor(f.Enemy);
+        ulong originalQuantity = 0;
         if (stackable)
         {
             var id = Rusty.Engine.Mechanics.InventoryStackId.Parse(resource.Binding.Stacks.Single().StackId);
-            ulong quantity = state.Inventory.Read().Stacks.Single(value => value.Id == id).Quantity;
-            state.Containers.Transfer(state.Actors.Player.Actor.Entity, actorOwner, new(resource.SelectedItem!.Item, quantity, Stack: id));
-            state.ItemInstances.TransferStack(DaggerfallItemOwner.Player, itemOwner, id, id, true);
+            originalQuantity = state.Inventory.Read().Stacks.Single(value => value.Id == id).Quantity;
+            ulong quantity = mixed ? originalQuantity - 1 : originalQuantity;
+            state.Containers.Transfer(state.Actors.Player.Actor.Entity, actorOwner, new(resource.SelectedItem!.Item, quantity, Stack: id, DestinationStack: id));
+            state.ItemInstances.TransferStack(DaggerfallItemOwner.Player, itemOwner, id, id, !mixed);
         }
         else
         {
@@ -186,6 +194,9 @@ public sealed class QuestPlacementActionTests
         {
             Assert.Equal(resource.Binding.Stacks.Single().StackId, item.Stacks.Single().StackId);
             Assert.Equal("ground", item.Stacks.Single().Owner.Scope);
+            var groundOwner = inactive.State.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container,
+                checked((ulong)item.Stacks.Single().Owner.Id)));
+            Assert.Equal(originalQuantity, inactive.State.Containers.Read(groundOwner).Stacks.Single(value => value.Id.Value == item.Stacks.Single().StackId).Quantity);
         }
         else
         {
@@ -233,6 +244,77 @@ public sealed class QuestPlacementActionTests
         f.Update();
         Assert.Equal(DaggerfallNpcPresence.Removed, f.Session.State.Npcs.Require(id).Presence);
         Assert.False(f.Session.State.Actors.Entities.TryResolve(WorldRpg.Kit.Actors.ActorsState.Identity(id), out _));
+    }
+
+    [Theory]
+    [InlineData("place item _gift_ at _location_")]
+    [InlineData("place item _gift_ at _location_ anymarker")]
+    public void Rearmed_no_index_source_placement_retains_actual_marker_through_pending_encoded_restore(string action)
+    {
+        var definitions = QuestWorldAdmissionTests.Definitions(rearmPlacement: true, actions: [action, "clear headless.1"]);
+        using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: QuestWorldAdmissionTests.WithMarker);
+        Start(f, definitions, f.Inputs);
+        f.Update();
+        var applied = f.Session.State.Quests.Capture().Instances.Single().Placements.Single();
+        Assert.NotNull(applied.Applied);
+        f.Session.State.Quests.Advance(f.Session.State.Variables, DaggerfallCalendar.Start);
+        var pending = f.Session.State.Quests.Capture().Instances.Single().Placements.Single();
+        Assert.True(pending.PendingReapplication);
+        Assert.Equal(applied.Applied, pending.Applied);
+        using var restored = f.Restore();
+        restored.Update(new ProductUpdate(OuterUpdate(1), []));
+        var repeated = restored.State.Quests.Capture().Instances.Single().Placements.Single();
+        Assert.False(repeated.PendingReapplication);
+        Assert.Equal(applied.Applied, repeated.Applied);
+        Assert.Equal(f.Session.State.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == "gift").Binding.UniqueItemIds,
+            restored.State.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == "gift").Binding.UniqueItemIds);
+    }
+
+    [Fact]
+    public void Retained_equipped_enchanted_item_rehoming_clears_held_cast_and_all_detached_source_effects()
+    {
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: ["place item _gift_ at _location_ anymarker"]);
+        using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0035", definitions: definitions);
+        var castle = QuestWorldAdmissionTests.WithMarker(f.Castle);
+        var profiles = new DaggerfallSiteProfiles([f.Inputs, castle]);
+        f.Session.AdmitSiteProfiles(profiles);
+        var started = Start(f, definitions, castle);
+        var state = f.Session.State;
+        var resource = started.Resources.Single(value => value.Symbol == "gift");
+        var metadata = state.ItemInstances.RequireUnique(f.Source) with { QuestId = started.InstanceId, QuestItemSymbol = "gift" };
+        state.ItemInstances.ReplaceUnique(f.Source, metadata);
+        state.Quests.SetResource(started.InstanceId, resource with
+        {
+            Binding = DaggerfallQuestResourceBinding.UniqueItem(f.Source),
+            SelectedItem = resource.SelectedItem! with { Item = new(f.Item.Definition.Value), Metadata = metadata }
+        });
+        var actor = state.Actors.Get(f.Enemy);
+        state.Containers.Transfer(state.Actors.Player.Actor.Entity, actor.Actor.Entity,
+            new(f.Item.Definition, 1, UniqueEntityId: f.Item.EntityId));
+        state.ItemInstances.MoveUnique(f.Source, DaggerfallItemOwner.Actor(f.Enemy));
+        var equipment = state.ActorInventories.EquipmentFor(f.Enemy);
+        foreach (var item in equipment.Read().Assignments.Select(value => value.Item).Distinct()) equipment.Unequip(item);
+        var definition = definitions.RequireItem(new(f.Item.Definition.Value));
+        var slot = definitions.EquipmentSlots.Values.First(value => value.AllowedClassifications.Intersect(definition.Equipment!.Classifications).Any());
+        equipment.Equip(f.Item, [new(slot.Id.Value)]);
+        f.Update();
+        Assert.NotNull(state.ItemInstances.RequireUnique(f.Source).HeldCast);
+        Assert.Contains(state.Effects.Capture(), effect => effect.ItemId == f.Source);
+        Assert.True(f.Session.TryTransitionTo(castle.ProfileKey));
+        var saved = DaggerfallSavePayload.Read(f.Session.CaptureSave());
+        Assert.Contains(saved.SiteDeltas.SelectMany(value => value.Effects), effect => effect.ItemId == f.Source);
+        using var inactive = f.Restore(profiles);
+        inactive.Update(new ProductUpdate(OuterUpdate(1), []));
+        var moved = inactive.State.ItemInstances.RequireUnique(f.Source);
+        Assert.Equal("ground", moved.Owner.Scope);
+        Assert.Null(moved.HeldCast);
+        var after = DaggerfallSavePayload.Read(inactive.CaptureSave());
+        Assert.DoesNotContain(after.SiteDeltas.SelectMany(value => value.Effects), effect => effect.ItemId == f.Source);
+        Assert.DoesNotContain(after.ActiveEffects, effect => effect.ItemId == f.Source);
+        Assert.True(inactive.TryTransitionTo(f.Inputs.ProfileKey));
+        Assert.DoesNotContain(inactive.State.Effects.Capture(), effect => effect.ItemId == f.Source);
+        using var restored = DaggerfallSession.Restore(f.Engine.Context, f.Composition with { Profiles = profiles }, inactive.CaptureSave());
+        Assert.Null(restored.State.ItemInstances.RequireUnique(f.Source).HeldCast);
     }
 
     private sealed class DefeatingHit : ICombatContribution

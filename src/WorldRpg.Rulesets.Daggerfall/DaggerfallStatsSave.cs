@@ -76,6 +76,23 @@ internal static class DaggerfallStatsSaveBoundary
         return new(snapshot, [.. sources]);
     }
 
+    /// <summary>Ends detached effect-owned inputs when their canonical item source changes owner.</summary>
+    internal static DaggerfallStatsSave WithoutEffects(DaggerfallStatsSave saved, IReadOnlySet<string> instances)
+    {
+        if (instances.Count == 0) return saved;
+        var sources = saved.Sources.Where(source => source.Identity.Kind != DaggerfallStatSourceIdentityKind.Effect
+            || !instances.Contains(source.Identity.InstanceId)).ToArray();
+        return saved with
+        {
+            Sources = sources,
+            Snapshot = saved.Snapshot with
+            {
+                Stats = saved.Snapshot.Stats.Select(stat => stat.Id == DaggerfallMechanicsIds.Strength.Value
+                    ? stat with { Maximum = DaggerfallMolagBalEffects.SavedStrengthMaximum(sources) } : stat).ToArray()
+            }
+        };
+    }
+
     internal static DaggerfallRestoredStats Restore(DaggerfallStatsSave saved, EntityId actor)
     {
         ArgumentNullException.ThrowIfNull(saved);
