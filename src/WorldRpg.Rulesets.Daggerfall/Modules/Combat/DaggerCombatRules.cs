@@ -430,21 +430,27 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy, shooterId));
             return false;
         }
-        if (!quiver.Read().Stacks.Any(stack => stack.Definition.Value == ArrowItemId && stack.Quantity > 0))
+        if (!quiver.Read().Stacks.Any(stack => IsArrow(stack) && stack.Quantity > 0))
         {
             facts.Append(new AttackRejectedFact(AttackRejection.EmptyQuiver, shooterId));
             return false;
         }
         InventoryStackId stack = quiver.Read().Stacks
-            .Where(value => value.Definition.Value == ArrowItemId)
+            .Where(IsArrow)
             .OrderBy(value => value.Id.Value, StringComparer.Ordinal)
             .Select(value => value.Id)
             .FirstOrDefault()
             ?? throw new InvalidOperationException("The archer's selected arrow stack disappeared before the shot could consume it.");
         InventoryMutationReceipt receipt = quiver.Consume(new InventoryConsume(stack, 1));
         if (receipt.AfterQuantity == 0)
-            _itemInstances.RemoveStack(DaggerfallItemOwner.Actor(shooterId), stack);
+            _itemInstances.RemoveStack(shooterId == PlayerId ? DaggerfallItemOwner.Player : DaggerfallItemOwner.Actor(shooterId), stack);
         return true;
+    }
+
+    private bool IsArrow(InventoryStack stack)
+    {
+        DaggerfallItemDefinition definition = _catalog.RequireItem(new DaggerfallItemId(stack.Definition.Value));
+        return definition.Id.Value == ArrowItemId || definition.Template?.Index == 131;
     }
 
     private bool TryReadPlayerAttackPolicy(Combatant player, string? requested,
@@ -474,7 +480,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         {
             var quiver = _actorInventories(PlayerId);
             if (quiver is null) return AttackRejection.NoAttackPolicy;
-            if (!quiver.Read().Stacks.Any(stack => stack.Definition.Value == ArrowItemId && stack.Quantity > 0))
+            if (!quiver.Read().Stacks.Any(stack => IsArrow(stack) && stack.Quantity > 0))
                 return AttackRejection.EmptyQuiver;
         }
         return player.Stats.GetTrack(TrackId.Parse(StaminaTrack)).Current < action.StaminaCost!.Value
