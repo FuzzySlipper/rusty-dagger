@@ -100,13 +100,11 @@ public sealed class DaggerfallDialogueTests
         {
             DaggerfallSiteRecord site = session.Site.ActiveSite
                 ?? throw new InvalidOperationException("The focused talk test needs the admitted fixture site.");
-            const long id = 2000;
-            DaggerfallNpc npc = new(id, DaggerfallNpcKind.Static, "dialogue-test-guard",
+            long id = session.State.Npcs.RegisterCivilian(
                 new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
-                new DaggerfallNpcAppearance("Breton", "Female", 0, 0, 0, 0), "guard", ["talk"],
-                DaggerfallNpcPresence.Active, null, null, null);
-            session.State.Npcs.Restore([npc]);
-            Npc = npc;
+                new DaggerfallNpcAppearance("Breton", "Female", 0, 0, 0, 0), "guard", ["talk"]);
+            session.MaterializeNpcActor(id, session.State.Actors.Get(2000).Pose);
+            Npc = session.State.Npcs.Require(id);
             Actor = session.State.Actors.Get(id);
             Service = new DaggerfallDialogueService(
                 session.State.Npcs,

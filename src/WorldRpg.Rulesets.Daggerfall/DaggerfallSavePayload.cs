@@ -583,7 +583,7 @@ internal sealed record DaggerfallSavePayload(
         }
         foreach (var storage in Property.Storage)
             AddQuestStacks(questStacks, DaggerfallItemOwner.Property(storage.ContainerId), storage.Inventory.Stacks);
-        Quests.ValidateBindings(combatants, savedLedger, locations, questStacks, savedNpcs.Keys.ToHashSet(), definitions);
+        Quests.ValidateBindings(combatants, savedLedger, locations, questStacks, savedNpcs, definitions);
         DaggerfallActiveEffectSave[] allEffects = [.. ActiveEffects, .. SiteDeltas.SelectMany(delta => delta.Effects)];
         if (uniqueItems.Values.Any(item => item.HealthLeechLastUsedMinute > new World.DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).ToAbsoluteSeconds() / 60))
             throw new ArgumentException("Saved health-leech last use is later than the current calendar.");

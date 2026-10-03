@@ -57,6 +57,21 @@ public sealed class QuestNpcAdmissionTests
             Assert.Contains("aliases", Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition,
                 DaggerfallSavePayload.Encode(alias))).Message);
         }
+        var wrongKind = save with { Npcs = save.Npcs with { Entries = save.Npcs.Entries.Select(value => value.DurableId == id
+            ? value with { Kind = (int)DaggerfallNpcKind.Static } : value).ToArray() } };
+        Assert.Contains("Questor", Assert.Throws<ArgumentException>(() => wrongKind.ResolveRestore(definitions, fixture.Inputs, null, DaggerfallTuning.Defaults)).Message);
+        // An explicitly selected existing giver may be static; hidden people retain their
+        // durable binding and text while the canonical registry suppresses projection.
+        var explicitGiver = wrongKind with { Quests = save.Quests with { Instances = [quest with
+            { Resources = quest.Resources.Select(value => value with { SelectedPerson = value.SelectedPerson! with { QuestorId = id } }).ToArray() }] } };
+        _ = explicitGiver.ResolveRestore(definitions, fixture.Inputs, null, DaggerfallTuning.Defaults);
+        var hidden = save with { Npcs = save.Npcs with { Entries = save.Npcs.Entries.Select(value => value.DurableId == id
+            ? value with { Presence = (int)DaggerfallNpcPresence.Hidden } : value).ToArray() } };
+        _ = hidden.ResolveRestore(definitions, fixture.Inputs, null, DaggerfallTuning.Defaults);
+        var changedGiver = explicitGiver with { Quests = explicitGiver.Quests with { Instances = [explicitGiver.Quests.Instances.Single() with
+            { Resources = explicitGiver.Quests.Instances.Single().Resources.Select(value => value with
+                { SelectedPerson = value.SelectedPerson! with { QuestorId = id + 1 } }).ToArray() }] } };
+        Assert.Contains("selected Person meaning", Assert.Throws<ArgumentException>(() => changedGiver.ResolveRestore(definitions, fixture.Inputs, null, DaggerfallTuning.Defaults)).Message);
         session.State.Quests.AdmitPlacements(fixture.Inputs, session);
         session.ReconcileNpcProjection();
         Assert.Single(session.State.Npcs.All, value => value.Kind == DaggerfallNpcKind.Questor);
@@ -108,12 +123,70 @@ public sealed class QuestNpcAdmissionTests
         Assert.Single(fixture.Session.State.Npcs.All, value => value.Kind == DaggerfallNpcKind.Questor);
     }
 
-    private static DaggerfallDefinitions Definitions()
+    [Fact]
+    public void Explicit_civilian_giver_relocates_from_an_inactive_profile_without_duplicate_social_or_actor_identity()
+    {
+        var definitions = Definitions(explicitGiver: true);
+        using var fixture = new SanguineRoseSessionTests.Fixture(definitions: definitions);
+        var session = fixture.Session;
+        var state = session.State;
+        var faction = definitions.Factions.Factions.Values.First(value => value.FlatVisuals.Count > 0
+            && fixture.Inputs.BillboardSprites.ContainsKey((value.FlatVisuals[0].Archive, value.FlatVisuals[0].Record)));
+        var flat = faction.FlatVisuals[0];
+        var site = definitions.Locations.Records.Single(value => value.Id == fixture.Inputs.Site);
+        long id = state.Npcs.RegisterCivilian(new(site.Region, site.Name, ""), new("breton", "Male", flat.Archive, flat.Record, 17, faction.Id), "quest giver", ["talk"]);
+        state.Npcs.SetDisplayName(id, "Existing Giver");
+        session.MaterializeNpcActor(id, new(new(2, 3, 4), .25f));
+        state.Npcs.Place(id, fixture.Inputs.ProfileKey, new(2, 3, 4));
+        state.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).SetCurrent(2, clamp: true);
+        double health = state.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current;
+        var started = state.Quests.Start(new("giver", "npc.txt", "npc", DaggerfallQuestLifecycle.Active, null, [], []) { QuestorId = id });
+        var person = started.Resources.Single();
+        Assert.Equal(id, person.SelectedPerson!.QuestorId);
+        Assert.Equal("Existing Giver", person.Text!.Name);
+        // Fixture composition shares the actual published NPC sprite catalog, while retaining
+        // the destination's own normalized world, geometry and source quest markers.
+        var source = QuestWorldAdmissionTests.WithMarker(fixture.Castle);
+        var castle = new DaggerfallSiteProfile(source.Project, source.SpatialArtifact, source.StaticMesh, source.WorldAppearance,
+            source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites, source.Audio, source.ClassicPresentation,
+            source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId, source.Portals, source.Anchors.Values.ToArray(),
+            source.Lights, source.GroundContainerSprite, source.DungeonMap, source.DungeonActions, source.DungeonActionModels,
+            source.InteriorBuilding, source.Music, source.AudioBundle, source.QuestMarkers, fixture.Inputs.BillboardSprites);
+        Assert.NotEmpty(castle.QuestMarkers);
+        var target = definitions.Locations.Records.Single(value => value.Id == castle.Site);
+        var destination = DaggerfallQuestResourceBinding.Place(new(target.Region, target.Index)) with
+            { PlaceSelection = new(castle.ProfileKind, target.MapId, null, 0) };
+        state.Quests.SetResource(started.InstanceId, person with { SelectedPerson = person.SelectedPerson with
+            { Home = new(destination, new(Name: target.Name)) } });
+        state.Quests.RequestPlacement(started.InstanceId, "relocate-giver", person.Symbol, person.Symbol + ".home");
+        var profiles = new DaggerfallSiteProfiles([fixture.Inputs, castle]);
+        session.AdmitSiteProfiles(profiles);
+        Assert.True(session.TryTransitionTo(castle.ProfileKey));
+        Assert.False(state.Actors.TryGet(id, out _));
+        using var restored = fixture.Restore(profiles);
+        restored.State.Quests.AdmitPlacements(castle, restored);
+        restored.State.Quests.AdmitPlacements(castle, restored);
+        Assert.Equal(health, restored.State.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current);
+        Assert.Equal(castle.ProfileKey, restored.State.Npcs.Require(id).Profile);
+        Assert.Equal(state.Npcs.Require(id).Site, restored.State.Npcs.Require(id).Site); // stable social origin
+        Assert.Single(restored.State.Npcs.All, value => value.DurableId == id);
+        Assert.Equal(id, restored.State.Quests.Capture().Instances.Single().Resources.Single().Binding.ActorIds.Single());
+        Assert.True(restored.TryTransitionTo(fixture.Inputs.ProfileKey));
+        Assert.False(restored.State.Actors.TryGet(id, out _));
+        Assert.Empty(restored.MaterializeNpcActors(default));
+        using var inactive = DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition with { Profiles = profiles }, restored.CaptureSave());
+        Assert.True(inactive.TryTransitionTo(castle.ProfileKey));
+        Assert.Equal(health, inactive.State.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current);
+        Assert.Single(DaggerfallSavePayload.Read(inactive.CaptureSave()).DynamicActors, value => value.EntityId == id);
+    }
+
+    private static DaggerfallDefinitions Definitions(bool explicitGiver = false)
     {
         var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
         var person = declarations.First(value => value!["kind"]!.GetValue<string>() == "person"
-            && value["person"]!["named"] is not null && value["person"]!["atHome"]!.GetValue<bool>())!.DeepClone();
+            && (explicitGiver ? value["person"]!["group"]?.GetValue<string>() == "Questor"
+                : value["person"]!["named"] is not null && value["person"]!["atHome"]!.GetValue<bool>()))!.DeepClone();
         person["quest"] = "npc"; person["sourceFile"] = "npc.txt";
         person["person"]!["gender"] = "female";
         declarations.Add(person);

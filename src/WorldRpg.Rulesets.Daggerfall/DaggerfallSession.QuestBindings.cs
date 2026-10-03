@@ -16,9 +16,7 @@ internal sealed partial class DaggerfallSession
             {
                 foreach (long id in resource.Binding.ActorIds)
                 {
-                    if (!State.Actors.TryGet(id, out var actor))
-                        throw new NotSupportedException($"Quest foe {id} must be admitted before it can be relocated.");
-                    actor.ApplyPose(new(position, actor.Pose.HeadingYawRadians));
+                    RelocateQuestActor(id, position);
                 }
                 return resource.Binding;
             }
@@ -39,4 +37,36 @@ internal sealed partial class DaggerfallSession
         if (resource.SelectedPerson is not null) return PlaceQuestPerson(instanceId, resource, profile, position);
         throw new ArgumentException($"Quest resource '{resource.Symbol}' has no selected physical meaning.");
     }
+    /// <summary>Transfers an unloaded actor's retained values between the existing site and roster owners.</summary>
+    private void RelocateQuestActor(long id, WorldPoint position)
+    {
+        if (State.Actors.TryGet(id, out var live))
+        {
+            live.ApplyPose(new(position, live.HeadingYawRadians));
+            return;
+        }
+        var owners = _sites.Deltas.Where(entry => entry.Value.DynamicActors.Any(actor => actor.EntityId == id)).ToArray();
+        if (owners.Length != 1)
+            throw new InvalidOperationException($"Quest actor {id} requires one retained site owner, found {owners.Length}.");
+        var source = owners[0];
+        var saved = source.Value.DynamicActors.Single(actor => actor.EntityId == id);
+        var incoming = new DaggerfallSiteRuntimeDelta([], [saved with { X = position.X, Y = position.Y, Z = position.Z }],
+            source.Value.ActorInventories.Where(value => value.EntityId == id).ToArray(),
+            source.Value.Corpses.Where(value => value.ActorId == id).ToArray(), [],
+            source.Value.Effects.Where(value => value.TargetId == id).ToArray());
+        try
+        {
+            _roster.MaterializeRetainedActor(incoming.DynamicActors.Single());
+            _persistence.RestoreSiteDelta(incoming);
+        }
+        catch { _roster.UnloadActor(id); throw; }
+        _sites.ReplaceDelta(source.Key, source.Value with
+        {
+            DynamicActors = source.Value.DynamicActors.Where(value => value.EntityId != id).ToArray(),
+            ActorInventories = source.Value.ActorInventories.Where(value => value.EntityId != id).ToArray(),
+            Corpses = source.Value.Corpses.Where(value => value.ActorId != id).ToArray(),
+            Effects = source.Value.Effects.Where(value => value.TargetId != id).ToArray(),
+        });
+    }
+
 }

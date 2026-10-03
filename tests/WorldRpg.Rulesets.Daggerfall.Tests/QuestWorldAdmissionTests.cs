@@ -292,6 +292,66 @@ public sealed class QuestWorldAdmissionTests
         _ = saved.ResolveRestore(definitions, fixture.Inputs, profiles);
     }
 
+    [Fact]
+    public void Queued_foe_relocation_reuses_the_inactive_actor_inventory_and_stats_once_across_both_profiles()
+    {
+        var definitions = Definitions(stackable: true, secondPlace: true);
+        using var fixture = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: WithMarker);
+        var session = fixture.Session;
+        var state = session.State;
+        var castle = WithMarker(fixture.Castle);
+        var profiles = new DaggerfallSiteProfiles([fixture.Inputs, castle]);
+        session.AdmitSiteProfiles(profiles);
+        var origin = definitions.Locations.Records.Single(value => value.Id == fixture.Inputs.Site);
+        var destination = definitions.Locations.Records.Single(value => value.Id == castle.Site);
+        var started = state.Quests.Start(new("relocation", "world-test.txt", "world-test", DaggerfallQuestLifecycle.Active, null,
+            [new("location", DaggerfallQuestResourceBinding.Place(new(origin.Region, origin.Index)) with
+                { PlaceSelection = new(fixture.Inputs.ProfileKind, origin.MapId, null, 0) }),
+             new("destination", DaggerfallQuestResourceBinding.Place(new(destination.Region, destination.Index)) with
+                { PlaceSelection = new(castle.ProfileKind, destination.MapId, null, 0) })], []));
+        var foe = started.Resources.Single(value => value.SelectedFoe is not null);
+        var item = started.Resources.Single(value => value.SelectedItem is not null);
+        state.Quests.RequestPlacement(started.InstanceId, "foe", foe.Symbol, "location");
+        state.Quests.RequestPlacement(started.InstanceId, "item", item.Symbol, "location");
+        state.Quests.AdmitPlacements(fixture.Inputs, session);
+        var admitted = state.Quests.Capture().Instances.Single();
+        long id = admitted.Resources.Single(value => value.Symbol == foe.Symbol).Binding.ActorIds.Single();
+        var actor = state.Actors.Get(id);
+        actor.Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).SetCurrent(3, clamp: true);
+        double health = actor.Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current;
+        var stack = admitted.Resources.Single(value => value.Symbol == item.Symbol).Binding.Stacks.Single();
+        var source = new DaggerfallItemOwner(stack.Owner.Scope, stack.Owner.Id);
+        var owner = state.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)source.Id)));
+        var sourceStack = Rusty.Engine.Mechanics.InventoryStackId.Parse(stack.StackId);
+        var carried = Rusty.Engine.Mechanics.InventoryStackId.Parse("relocated.quest-stack");
+        ulong quantity = state.Containers.Read(owner).Stacks.Single(value => value.Id == sourceStack).Quantity;
+        state.Containers.Transfer(owner, actor.Actor.Entity, new(item.SelectedItem!.Item, quantity, sourceStack, carried));
+        state.ItemInstances.TransferStack(source, DaggerfallItemOwner.Actor(id), sourceStack, carried, sourceWasExhausted: true);
+        state.Quests.RequestPlacement(started.InstanceId, "relocate", foe.Symbol, "destination");
+        Assert.True(session.TryTransitionTo(castle.ProfileKey));
+        Assert.False(state.Actors.TryGet(id, out _));
+        using var restored = fixture.Restore(profiles);
+        var pending = restored.State.Quests.Capture().Instances.Single().Placements.Single(value => value.Id == "relocate");
+        Assert.Null(pending.Applied);
+        restored.State.Quests.AdmitPlacements(castle, restored);
+        restored.State.Quests.AdmitPlacements(castle, restored);
+        var moved = restored.State.Actors.Get(id);
+        Assert.Equal(health, moved.Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current);
+        Assert.Equal(castle.QuestMarkers.Single().Position, moved.Position);
+        Assert.Equal(quantity, restored.State.ActorInventories.InventoryFor(id)!.Read().Stacks.Single(value => value.Id == carried).Quantity);
+        var after = DaggerfallSavePayload.Read(restored.CaptureSave());
+        Assert.Single(after.DynamicActors, value => value.EntityId == id);
+        Assert.DoesNotContain(after.SiteDeltas.SelectMany(value => value.DynamicActors), value => value.EntityId == id);
+        Assert.True(restored.TryTransitionTo(fixture.Inputs.ProfileKey));
+        Assert.False(restored.State.Actors.TryGet(id, out _));
+        using var inactive = DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition with { Profiles = profiles }, restored.CaptureSave());
+        Assert.True(inactive.TryTransitionTo(castle.ProfileKey));
+        inactive.State.Quests.AdmitPlacements(castle, inactive);
+        Assert.Equal(health, inactive.State.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current);
+        Assert.Equal(quantity, inactive.State.ActorInventories.InventoryFor(id)!.Read().Stacks.Single(value => value.Id == carried).Quantity);
+        Assert.Single(DaggerfallSavePayload.Read(inactive.CaptureSave()).DynamicActors, value => value.EntityId == id);
+    }
+
     private static DaggerfallQuestInstanceSave Start(SanguineRoseSessionTests.Fixture fixture, DaggerfallDefinitions definitions)
     {
         var inputs = fixture.Inputs;
@@ -301,7 +361,7 @@ public sealed class QuestWorldAdmissionTests
                 { PlaceSelection = new(inputs.ProfileKind, site.MapId, null, 0) })], []));
     }
 
-    private static DaggerfallDefinitions Definitions(bool stackable = false, bool gold = false)
+    private static DaggerfallDefinitions Definitions(bool stackable = false, bool gold = false, bool secondPlace = false)
     {
         var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
@@ -314,13 +374,19 @@ public sealed class QuestWorldAdmissionTests
         foreach (var row in new[] { foe, item, place })
         { row["sourceFile"] = "world-test.txt"; row["quest"] = "world-test"; declarations.Add(row); }
         place["symbol"]!["canonicalId"] = "location"; place["symbol"]!["sourceSpelling"] = "_location_";
+        if (secondPlace)
+        {
+            var destination = place.DeepClone();
+            destination["symbol"]!["canonicalId"] = "destination"; destination["symbol"]!["sourceSpelling"] = "_destination_";
+            declarations.Add(destination);
+        }
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
             {"name":"world-test","displayName":"","sourceFile":"world-test.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[]}
             """));
         return DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
     }
 
-    private static DaggerfallSiteProfile WithMarker(DaggerfallSiteProfile source)
+    internal static DaggerfallSiteProfile WithMarker(DaggerfallSiteProfile source)
     {
         var site = TestPayload.Definitions.Locations.Records.Single(value => value.Id == source.Site);
         var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
