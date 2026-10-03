@@ -30,6 +30,8 @@ internal sealed class CapturingDaggerfallRuleset : ISaveableGameRuleset
         IPlayerDefeatOutcomeSession, IPlaytestGameSession
     {
         public bool RequiresCharacterInitialization => inner.RequiresCharacterInitialization;
+        public bool HasCommittedCharacter => inner.HasCommittedCharacter;
+        public void OpenCharacterCreation() => inner.OpenCharacterCreation();
         public IGameSession CreateNewGame() => owner.Capture(inner.CreateNewGame());
         public void PublishInitial() => inner.PublishInitial();
         public ProductUpdateResult Update(ProductUpdate update) => inner.Update(update);

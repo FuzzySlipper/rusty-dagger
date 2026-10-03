@@ -263,7 +263,8 @@ runs every test project under `tests/` (an architecture law keeps that list
 complete), and stages the CoreCLR product. Options:
 
 - `--play` also starts the product on its runtime, presses Begin in a headless
-  Chromium and passes once the game reaches ordinary play with no error or
+  Chromium, creates and commits a character, begins the new game and passes
+  once the game reaches ordinary play with no error or
   terminal diagnostic (about four minutes, most of it the opening cinematics);
 - `--aot` also runs the NativeAOT fidelity publish;
 - `--record` attaches the green run's summary to `HEAD` as a git note in

@@ -268,6 +268,13 @@ public interface IGameSession : IDisposable { void PublishInitial(); ProductUpda
 public interface ICharacterCreationSession
 {
     bool RequiresCharacterInitialization { get; }
+
+    /// <summary>Whether a committed character is ready for <see cref="CreateNewGame"/>.</summary>
+    bool HasCommittedCharacter { get; }
+
+    /// <summary>Opens the ruleset's character creation from the entry screen; it stays open when it already is.</summary>
+    void OpenCharacterCreation();
+
     IGameSession CreateNewGame();
 }
 
