@@ -15,7 +15,11 @@ public sealed record Arena2SiteMedia(
     IReadOnlyList<string> RuntimeActorResources,
     Arena2ClassicMediaProfile ClassicMedia,
     IReadOnlyList<ClassicMusicRecord> Music,
-    IReadOnlyList<AuthoredMediaOverlay> DungeonOverlays);
+    IReadOnlyList<AuthoredMediaOverlay> DungeonOverlays)
+{
+    /// <summary>Normalized faction and NPC flats available to quest admission at this site.</summary>
+    public IReadOnlyList<string> RuntimeNpcResources { get; init; } = [];
+}
 
 /// <summary>
 /// Builds one site closure: the normalized RDB dungeon or RMB profile, the geometry and world visuals it
@@ -46,6 +50,24 @@ public static class Arena2SitePublication
             .Select(mobile => mobile.GetProperty("donorId").GetInt32())
             .Order()
             .Select(id => $"actor/mobile-{id}")];
+    }
+
+    /// <summary>Uses already decoded faction/NPC addresses; no source flat decoder runs at site publication.</summary>
+    public static IReadOnlyList<string> RuntimeNpcResources(string importedPayloadJson)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(importedPayloadJson);
+        using JsonDocument document = JsonDocument.Parse(importedPayloadJson);
+        if (!document.RootElement.TryGetProperty("factions", out JsonElement section)
+            || !section.TryGetProperty("factions", out JsonElement factions)
+            || !section.TryGetProperty("npcCaptions", out JsonElement captions))
+            throw new InvalidOperationException("The imported payload carries no normalized faction/NPC flat catalog: run the factions command first.");
+        return [.. factions.EnumerateArray().SelectMany(faction => faction.GetProperty("flatVisuals").EnumerateArray())
+            .Concat(captions.EnumerateArray())
+            .Select(flat => (Archive: flat.GetProperty("archive").GetInt32(), Record: flat.GetProperty("record").GetInt32()))
+            .Distinct().OrderBy(flat => flat.Archive).ThenBy(flat => flat.Record)
+            .Select(flat => flat.Archive is < 0 or > ushort.MaxValue || flat.Record is < 0 or > 127
+                ? throw new InvalidOperationException($"Normalized NPC flat {flat.Archive}/{flat.Record} has an invalid address.")
+                : $"sprite/texture-{flat.Archive}-{flat.Record}")];
     }
 
     /// <summary>Publishes one RDB dungeon site, loading the texture leaves its closure names on demand.</summary>
@@ -112,7 +134,7 @@ public static class Arena2SitePublication
             Arena2DungeonMediaRequest.Create(document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources)) with
             {
                 RuntimeActorResources = media.RuntimeActorResources,
-                RuntimeBillboardResources = [GroundContainerBillboard],
+                RuntimeBillboardResources = [.. media.RuntimeNpcResources, GroundContainerBillboard],
                 AuthoredOverlays = media.DungeonOverlays,
                 TextureLeaves = textureLeaves,
                 TextureLeafConsumer = textureLeafConsumer,

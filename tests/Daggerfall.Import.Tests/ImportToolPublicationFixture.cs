@@ -79,7 +79,8 @@ internal sealed partial class ImportToolFixture
             case "sprite-overlay-write": result.Add(At("writer-authoring/sprites/test.json"), File.ReadAllBytes(OverlayFile)); break;
             case "write":
             case "rmb-spatial":
-                var siteMedia = new Arena2SiteMedia(Arena2SitePublication.RuntimeActorResources(File.ReadAllText(Pack)), ClassicProfile(), [], []);
+                var siteMedia = new Arena2SiteMedia(Arena2SitePublication.RuntimeActorResources(File.ReadAllText(Pack)), ClassicProfile(), [], [])
+                { RuntimeNpcResources = Arena2SitePublication.RuntimeNpcResources(File.ReadAllText(Pack)) };
                 ImportPublicationPlan plan = name == "write"
                     ? Arena2SitePublication.Dungeon(Arena2SiteSources.ForSite(Arena2), 17, "Privateer's Hold", DungeonTextureTableMode.Classic, siteMedia)
                     : Arena2SitePublication.Rmb(Arena2SiteSources.ForSite(Arena2), RmbRegion, RmbLocation, Interior ? new RmbBuildingSelection(1, 1, 0) : null, siteMedia).Item1;

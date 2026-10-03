@@ -33,11 +33,13 @@ internal static class SiteInputs
     /// What the site publishes beyond its spatial selection: the actors the imported mobile catalog says the
     /// runtime may spawn, the authored UI art, the music cues and any dungeon sprite overlays.
     /// </summary>
-    public static Arena2SiteMedia Media(CommandArguments args, Arena2ClassicMediaProfile classicMedia, IReadOnlyList<AuthoredMediaOverlay>? dungeonOverlays = null) => new(
-        Arena2SitePublication.RuntimeActorResources(PayloadFiles.ReadGeneratedText(args[Options.Pack.Name])),
-        classicMedia,
-        MusicRecords(args.Optional(MusicManifest.Name)),
-        dungeonOverlays ?? []);
+    public static Arena2SiteMedia Media(CommandArguments args, Arena2ClassicMediaProfile classicMedia, IReadOnlyList<AuthoredMediaOverlay>? dungeonOverlays = null)
+    {
+        string imported = PayloadFiles.ReadGeneratedText(args[Options.Pack.Name]);
+        return new(Arena2SitePublication.RuntimeActorResources(imported), classicMedia,
+            MusicRecords(args.Optional(MusicManifest.Name)), dungeonOverlays ?? [])
+        { RuntimeNpcResources = Arena2SitePublication.RuntimeNpcResources(imported) };
+    }
 
     /// <summary>
     /// The cue list a site publication records, from the manifest the music publication wrote. A site names
