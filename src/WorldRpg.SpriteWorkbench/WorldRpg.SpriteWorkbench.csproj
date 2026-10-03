@@ -52,9 +52,20 @@
     <Copy SourceFiles="../sprite-ui/workbench.css" DestinationFolder="$(RustyEngineProductUiRoot)" Condition="Exists('../sprite-ui/workbench.css')" SkipUnchangedFiles="true" />
   </Target>
   <!-- The UI compiles against the pair's declarations, copied beside its
-       sources; copying is MSBuild's, so the command above runs the same under
-       cmd.exe and sh. -->
+       sources. The copy is made only when their content differs, so machines
+       sharing a checkout (whose package caches give the file different times)
+       do not rewrite it for each other. MSBuild copies, so the command above
+       runs the same under cmd.exe and sh. -->
   <Target Name="CopyEngineUiTypes" BeforeTargets="BuildRustyEngineProductUi">
-    <Copy SourceFiles="$(RustyEngineProductUiTypes)" DestinationFolder="$(MSBuildThisFileDirectory)../sprite-ui/engine-types" SkipUnchangedFiles="true" />
+    <PropertyGroup>
+      <_EngineUiTypesCopy>$(MSBuildThisFileDirectory)../sprite-ui/engine-types/rusty-engine-product-ui.d.ts</_EngineUiTypesCopy>
+    </PropertyGroup>
+    <GetFileHash Files="$(RustyEngineProductUiTypes)">
+      <Output TaskParameter="Hash" PropertyName="_EngineUiTypesHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_EngineUiTypesCopy)" Condition="Exists('$(_EngineUiTypesCopy)')">
+      <Output TaskParameter="Hash" PropertyName="_EngineUiTypesCopyHash" />
+    </GetFileHash>
+    <Copy SourceFiles="$(RustyEngineProductUiTypes)" DestinationFiles="$(_EngineUiTypesCopy)" Condition="'$(_EngineUiTypesHash)' != '$(_EngineUiTypesCopyHash)'" />
   </Target>
 </Project>
