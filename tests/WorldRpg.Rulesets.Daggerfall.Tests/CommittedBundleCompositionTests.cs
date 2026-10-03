@@ -51,6 +51,7 @@ public sealed class CommittedBundleCompositionTests
         using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId(bundleId)))
         {
             product.Start();
+            NewGameSessionTests.Commit(ruleset.RequireSession());
             product.Begin();
             Assert.Equal(ProductMode.Playing, product.Mode);
             ProductUpdateFacts facts = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);

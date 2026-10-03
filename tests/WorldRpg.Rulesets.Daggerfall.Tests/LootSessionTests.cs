@@ -321,6 +321,7 @@ public sealed class LootSessionTests
         using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold")))
         {
             product.Start();
+            NewGameSessionTests.Commit(ruleset.RequireSession());
             product.Begin();
             DaggerfallSession session = ruleset.RequireSession();
 
