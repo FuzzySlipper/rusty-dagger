@@ -83,6 +83,25 @@ public sealed class InteractionTargetingServiceTests
         Assert.Equal(live.Entity, current);
     }
 
+    [Theory]
+    [InlineData(true)] [InlineData(false)]
+    public void Larger_authored_reach_expands_the_query_but_keeps_default_target_reach(bool authored)
+    {
+        using ActorsState actors = Actors();
+        PerceptionDouble perception = PerceptionDouble.Create();
+        perception.Receipt = Receipt(new PerceptionPair(1, 2, 3d, 1d, PerceptionPairKind.Visible, 3d));
+        using SpatialMovementSystem spatial = Spatial();
+        InteractionTargetingService targeting = new(perception.Service, spatial, actors.Entities);
+        var ordinary = Candidate(actors, 2, 0) with { Position = new WorldPoint(3, 0, 0) };
+        var extended = Candidate(actors, 3, 1) with { Position = new WorldPoint(3.1f, 0, 0), ReachDistance = 3.2d };
+        InteractionUseReceipt use = targeting.Activate(actors.Player.Actor.Entity, new WorldPoint(0, 0, 0),
+            Vector3.UnitX, 2.25d, .5d, [authored ? ordinary with { ReachDistance = 3.2d } : ordinary, extended],
+            _ => new(true, "Admitted."));
+        Assert.Equal(authored, use.Performed);
+        Assert.Equal(3.2d, Assert.Single(perception.Requests).Observers.Span[0].MaximumDistance, precision: 6);
+        Assert.Equal(3.2f, targeting.LastEvidence!.Query.MaximumDistance);
+    }
+
     private static InteractionTargetCandidate Candidate(ActorsState actors, long durableId, int precedence)
     {
         ActorState actor = actors.Get(durableId);

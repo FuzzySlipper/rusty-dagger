@@ -141,11 +141,17 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
         private readonly WorldPoint _origin = origin;
         private readonly InteractionTargetCandidate[] _declared = declared;
         private readonly InteractionTargetingAction? _action = action;
-        private readonly InteractionQuery _query = new(
-            origin.ToVector(), forward,
-            MathF.Acos(minimumFacingCosine), MathF.Acos(minimumFacingCosine),
-            maximumDistance, maximumDistance,
-            AngularWeight: 1, DistanceWeight: 1);
+        private readonly InteractionQuery _query = Query(origin, forward, maximumDistance, minimumFacingCosine, declared);
+        private static InteractionQuery Query(WorldPoint origin, Vector3 forward, float defaultReach,
+            float minimumFacingCosine, InteractionTargetCandidate[] candidates)
+        {
+            // Visibility/focus must cover the authored reach of every target. A target without
+            // an override still uses the ordinary default in ToEngineCandidate below.
+            float queryReach = Math.Max(defaultReach,
+                candidates.Select(candidate => (float)(candidate.ReachDistance ?? defaultReach)).DefaultIfEmpty(defaultReach).Max());
+            float angle = MathF.Acos(minimumFacingCosine);
+            return new(origin.ToVector(), forward, angle, angle, queryReach, queryReach, AngularWeight: 1, DistanceWeight: 1);
+        }
         private PerceptionQueryRequest? _request;
         private PerceptionReadoutResult? _receipt;
         private Dictionary<ulong, InteractionVisibility>? _visibility;
@@ -187,7 +193,7 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
             InteractionTargetCandidate[] loaded = _declared.Where(IsCurrent).ToArray();
             _request = new PerceptionQueryRequest(
                 _spatial.Session,
-                new PerceptionObserver[] { new(_observer.Value, _origin.ToVector(), _query.Direction, maximumDistance, minimumFacingCosine, 1d) },
+                new PerceptionObserver[] { new(_observer.Value, _origin.ToVector(), _query.Direction, _query.MaximumDistance, minimumFacingCosine, 1d) },
                 loaded.Select(candidate => new PerceptionTarget(candidate.QueryIdentity, candidate.Position.ToVector())).ToArray(),
                 ReadOnlyMemory<SpatialEntityCollider>.Empty,
                 0,
