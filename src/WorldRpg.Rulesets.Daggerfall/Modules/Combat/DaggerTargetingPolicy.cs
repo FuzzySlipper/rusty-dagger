@@ -32,7 +32,7 @@ internal sealed class DaggerTargetingPolicy(IReadOnlyDictionary<long, Daggerfall
     public double MaximumDistance(double? actionReach)
     {
         if (actionReach is not double reach) return tuning.MaximumDistance;
-        if (!double.IsFinite(reach) || reach <= 0d) throw new InvalidOperationException("Player melee action reach must be a positive finite authored value.");
-        return Math.Min(tuning.MaximumDistance, reach);
+        if (!double.IsFinite(reach) || reach <= 0d) throw new InvalidOperationException("Player action reach must be a positive finite authored value.");
+        return reach;
     }
 }

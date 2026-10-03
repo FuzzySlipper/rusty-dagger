@@ -15,7 +15,8 @@ internal sealed class DaggerfallActorInventories(ActorsState actors, IReadOnlyDi
 
     /// <summary>The actor's inventory, or null when no live actor has that durable identity.</summary>
     internal MechanicsInventoryCoordinator? InventoryFor(long durableActorId) =>
-        actors.TryGet(durableActorId, out var actor) ? new(actor.Inventory, actors.Entities, items) : null;
+        durableActorId == actors.Player.DurableId ? new(actors.Player.Inventory, actors.Entities, items)
+        : actors.TryGet(durableActorId, out var actor) ? new(actor.Inventory, actors.Entities, items) : null;
 
     internal MechanicsEquipmentCoordinator EquipmentFor(long durableActorId)
     {
