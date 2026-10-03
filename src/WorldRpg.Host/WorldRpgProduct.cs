@@ -143,6 +143,12 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
         if (_session is ICharacterCreationSession { RequiresCharacterInitialization: true } creation)
         {
+            // A new game begins with a character; asking before there is one opens its creation.
+            if (!creation.HasCommittedCharacter)
+            {
+                creation.OpenCharacterCreation();
+                return Record(new(_mode, _mode, ProductModeChangeOutcome.AlreadyInMode, "the entry screen opened character creation"));
+            }
             try
             {
                 ReplaceSession(creation.CreateNewGame(), ProductMode.Title, "the product initialized the committed character");

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // The real-Engine smoke: the product is started on its pinned runtime, a browser presses the entry
-// screen's Begin button the way a player does, and the run passes only when the product reaches
-// ordinary play with no error or terminal diagnostic on the way. Every other suite proves its paths
+// screen's Begin button the way a player does, spends the new character's points, commits it and
+// begins the new game, and the run passes only when the product reaches ordinary play with no error
+// or terminal diagnostic on the way. Every other suite proves its paths
 // against fakes that do not enforce Engine ownership rules; this is the one stage that does not.
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -182,31 +183,78 @@ function cdp(method, params = {}) {
 await cdp('Page.navigate', { url: origin });
 log('page opened');
 
-// The entry screen accepts a pointer press on its Begin button; a synthetic element click does not
-// reach the product's intent path, so the smoke presses where a player would.
-let begin = null;
-for (let attempt = 0; attempt < 120 && begin === null; attempt++) {
-  await sleep(500);
+// The entry screen accepts a pointer press on its buttons; a synthetic element click does not reach
+// the product's intent path, so the smoke presses where a player would.
+async function visibleCenter(selector) {
   const { result } = await cdp('Runtime.evaluate', {
     returnByValue: true,
     expression: `(() => {
-      const button = document.querySelector('button.dagger-entry-begin');
-      if (!button || button.closest('[hidden]')) return null;
-      const box = button.getBoundingClientRect();
+      const element = document.querySelector(${JSON.stringify(selector)});
+      if (!element || element.closest('[hidden]') || element.disabled) return null;
+      element.scrollIntoView({ block: 'center' });
+      const box = element.getBoundingClientRect();
       return box.width > 0 ? { x: box.x + box.width / 2, y: box.y + box.height / 2 } : null;
     })()`,
   });
-  begin = result.value ?? null;
+  return result.value ?? null;
 }
-if (begin === null) fail('the entry screen never showed its Begin button');
-for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased'])
-  await cdp('Input.dispatchMouseEvent', { type, x: begin.x, y: begin.y, button: 'left', clickCount: 1 });
+async function pageText(selector) {
+  const { result } = await cdp('Runtime.evaluate', {
+    returnByValue: true,
+    expression: `[...document.querySelectorAll(${JSON.stringify(selector)})].map(element => element.textContent.trim()).filter(Boolean).join(' | ')`,
+  });
+  return result.value ?? '';
+}
+async function waitFor(selector, what, attempts = 120) {
+  let target = null;
+  for (let attempt = 0; attempt < attempts && target === null; attempt++) {
+    await sleep(500);
+    target = await visibleCenter(selector);
+  }
+  if (target === null) fail(`the product never offered ${what}; it last said: ${await pageText('[aria-live], [role=status], .dagger-status')}`);
+  return target;
+}
+async function press(selector, what, attempts = 120) {
+  const target = await waitFor(selector, what, attempts);
+  for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased'])
+    await cdp('Input.dispatchMouseEvent', { type, x: target.x, y: target.y, button: 'left', clickCount: 1 });
+  log(`pressed ${what}`);
+}
+
+// Begin with no character opens character creation. The smoke spends every point the rolled
+// background offers on the first field that accepts it, then commits the character.
+await press('button.dagger-entry-begin', 'Begin');
+await waitFor('[data-testid="character-commit"]', 'character creation');
+const { result: spent } = await cdp('Runtime.evaluate', {
+  returnByValue: true,
+  expression: `(() => {
+    const background = document.querySelector('[data-testid="character-background"]');
+    const pools = background && [...background.querySelectorAll('p')].map(p => p.textContent)
+      .map(text => /(\\d+) of \\d+ attribute points remain; (\\d+)\\/(\\d+)\\/(\\d+) primary\\/major\\/minor/.exec(text)).find(Boolean);
+    if (!pools) return 'the character background states no point pools';
+    const spend = (inputs, points) => {
+      const input = inputs.find(candidate => !candidate.disabled);
+      if (points > 0 && !input) return false;
+      if (points > 0) input.value = String(points);
+      return true;
+    };
+    const fields = title => [...background.querySelectorAll('input[type=number]')].filter(input => input.getAttribute('aria-label').startsWith(title + ' '));
+    const skill = tier => fields('Skills').filter(input => input.closest('label').textContent.includes('(' + tier + ')'));
+    const [, attributes, primary, major, minor] = pools.map(Number);
+    if (!spend(fields('Attributes'), attributes)) return 'no attribute accepts the bonus points';
+    for (const [tier, points] of [['primary', primary], ['major', major], ['minor', minor]])
+      if (!spend(skill(tier), points)) return 'no ' + tier + ' skill accepts its points';
+    return null;
+  })()`,
+});
+if (spent.value) fail(spent.value);
+await press('[data-testid="character-commit"]', 'Commit character');
+await press('[data-testid="new-game-launch"]', 'Begin new game');
 const pressed = Date.now();
-log('pressed Begin');
 
 let mode = await observedMode();
 while (mode !== 'Playing') {
-  if (Date.now() - pressed > playDeadlineMs) fail(`the product stayed in ${mode} for ${playDeadlineMs / 1000}s after Begin`);
+  if (Date.now() - pressed > playDeadlineMs) fail(`the product stayed in ${mode} for ${playDeadlineMs / 1000}s after Begin new game`);
   await readDiagnostics();
   if (faults.length > 0) fail(`diagnostics before play:\n  ${faults.join('\n  ')}`);
   await sleep(2_000);
@@ -219,11 +267,21 @@ if (faults.length > 0) fail(`diagnostics in play:\n  ${faults.join('\n  ')}`);
 mode = await observedMode();
 if (mode !== 'Playing') fail(`the product left play for ${mode} within ${settleMs / 1000}s`);
 
+// A session that reaches play without an active camera draws only its interface over the clear colour.
+const { status: presentationStatus, text: presentationText } = await post('/__rusty/product/runtime/debug/execute',
+  'engine.renderer.presentation', 'text/plain; charset=utf-8');
+const presentation = presentationStatus === 200 ? JSON.parse(presentationText) : null;
+const drawnCameras = presentation?.presentation?.submitted?.views?.cameras?.length ?? 0;
+if (presentation?.available !== true)
+  log(`warning: no drawn frame to check for a camera (engine.renderer.presentation returned ${presentationStatus})`);
+else if (drawnCameras === 0)
+  fail('ordinary play drew its last frame through no camera, so the world is not rendered');
+
 const latest = telemetry?.updateAttribution?.latest ?? {};
 const characterSteps = Number(latest.characterStepCalls ?? 0);
 if (characterSteps <= 0) fail('ordinary play admitted no character step in its latest update');
 if (!cueStarted) log('warning: no daggerfall.music cue.started diagnostic was observed');
-log(`passed: mode Playing, characterStepCalls ${characterSteps}, voxelResidencyCalls ${latest.voxelResidencyCalls ?? 'absent'}, `
+log(`passed: mode Playing, drawn cameras ${drawnCameras}, characterStepCalls ${characterSteps}, voxelResidencyCalls ${latest.voxelResidencyCalls ?? 'absent'}, `
   + `music cue ${cueStarted ? 'started' : 'not observed'}`);
 stopping = true;
 socket.close();

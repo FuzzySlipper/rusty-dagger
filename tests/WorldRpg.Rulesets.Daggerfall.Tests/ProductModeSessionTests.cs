@@ -56,6 +56,35 @@ public sealed class ProductModeSessionTests
     }
 
     [Fact]
+    public void Beginning_without_a_committed_character_opens_character_creation_then_the_committed_character_begins_play()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        CapturingDaggerfallRuleset ruleset = new(videosEnabled: false);
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold"));
+
+        product.Start();
+        DaggerfallSession title = ruleset.RequireSession();
+        ProductModeChange opened = product.Begin();
+        Assert.Equal(ProductMode.Title, product.Mode);
+        Assert.Equal(ProductModeChangeOutcome.AlreadyInMode, opened.Outcome);
+        Assert.Contains("opened character creation", opened.Reason, StringComparison.Ordinal);
+        Assert.NotNull(title.State.Character.Pending);
+        Assert.Equal(ProductModeChangeOutcome.AlreadyInMode, product.Begin().Outcome);
+
+        title.State.Character.AbandonCreation();
+        NewGameSessionTests.Commit(title);
+        product.Begin();
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        Assert.NotSame(title, ruleset.RequireSession());
+    }
+
+    [Fact]
     public void Enabled_production_opening_refuses_to_begin_when_its_admitted_cinematic_bundle_is_missing()
     {
         string root = TestData.RepositoryRoot;

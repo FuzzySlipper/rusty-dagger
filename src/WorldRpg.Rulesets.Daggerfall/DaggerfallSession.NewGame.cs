@@ -15,6 +15,15 @@ internal sealed partial class DaggerfallSession
     private bool _newGameInitialized;
     public bool RequiresCharacterInitialization => !_newGameInitialized;
 
+    public bool HasCommittedCharacter => !_newGameInitialized && State.Character.Pending is null && State.Character.Background is not null;
+
+    public void OpenCharacterCreation()
+    {
+        if (_newGameInitialized || State.Character.Pending is not null) return;
+        State.Character.BeginFreshChoices(_random);
+        Presentation.SetOutcome("Character choices opened.");
+    }
+
     public IGameSession CreateNewGame()
     {
         if (_newGameInitialized || State.Character.Pending is not null || State.Character.Background is null)
