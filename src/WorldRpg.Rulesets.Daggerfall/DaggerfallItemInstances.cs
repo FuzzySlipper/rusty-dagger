@@ -281,6 +281,13 @@ internal sealed class DaggerfallItemInstances
             SourceUnavailable?.Invoke(itemId);
     }
 
+    /// <summary>Rejoins retained meaning before applying the canonical source-owner change.</summary>
+    internal void AdmitRetainedUnique(ulong itemId, DaggerfallItemInstanceMetadata metadata, DaggerfallItemOwner destination)
+    {
+        RegisterUnique(itemId, metadata);
+        MoveUnique(itemId, destination);
+    }
+
     internal void MoveUnique(ulong itemId, DaggerfallItemOwner owner)
     {
         var previous = RequireUnique(itemId);

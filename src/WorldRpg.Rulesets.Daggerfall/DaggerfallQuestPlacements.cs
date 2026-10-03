@@ -13,6 +13,7 @@ internal sealed record DaggerfallQuestPlacementOperation(string Id, string Resou
     int? MarkerIndex = null, DaggerfallQuestMarkerPreference Preference = DaggerfallQuestMarkerPreference.Default)
 {
     public DaggerfallQuestAdmittedPlacement? Applied { get; init; }
+    [JsonRequired] public bool PendingReapplication { get; init; }
     [JsonRequired] public bool AutomaticHome { get; init; }
     internal void Validate()
     {
@@ -21,6 +22,8 @@ internal sealed record DaggerfallQuestPlacementOperation(string Id, string Resou
             || DaggerfallQuestInstanceSave.Canonical(PlaceSymbol, "placement place") != PlaceSymbol
             || MarkerIndex is < 0 || !Enum.IsDefined(Preference))
             throw new ArgumentException($"Quest placement '{Id}' carries invalid source references.");
+        if (PendingReapplication && Applied is null)
+            throw new ArgumentException($"Quest placement '{Id}' cannot reapply without its previous admitted marker.");
         if (Applied is { } applied)
         {
             applied.Profile.Validate();
@@ -114,12 +117,13 @@ internal sealed partial class DaggerfallQuestInstances
             throw new ArgumentException($"Quest Place '{place}' requires its selected profile kind before placement.");
         if (instance.Placements.SingleOrDefault(value => value.Id == operationId) is { } existing)
         {
-            if (existing with { Applied = null } != operation)
+            if (existing with { Applied = null, PendingReapplication = false } != operation)
                 throw new ArgumentException($"Quest placement '{operationId}' already names a different operation.");
             // A retry of pending work is idempotent. An action the task runner has
-            // explicitly rearmed repeats assignment through this same queue entry.
+            // explicitly rearmed repeats assignment through this same queue entry,
+            // retaining the last actual marker for subsequent no-index assignment.
             if (reapply && existing.Applied is not null)
-                instance.Placements = instance.Placements.Select(value => value.Id == operationId ? operation : value).ToArray();
+                instance.Placements = instance.Placements.Select(value => value.Id == operationId ? existing with { PendingReapplication = true } : value).ToArray();
             return;
         }
         if (!automaticHome)
@@ -134,7 +138,7 @@ internal sealed partial class DaggerfallQuestInstances
             for (int index = 0; index < instance.Placements.Length; index++)
             {
                 var operation = instance.Placements[index];
-                if (operation.Applied is not null) continue;
+                if (operation.Applied is not null && !operation.PendingReapplication) continue;
                 var destination = DaggerfallQuestPlacements.Destination(instance.Resources, operation.PlaceSymbol);
                 if (!DaggerfallQuestPlacements.Matches(destination, profile)) continue;
                 var resource = instance.Resources.Single(value => DaggerfallQuestInstanceSave.Canonical(value.Symbol, "placement resource") == operation.ResourceSymbol);
@@ -151,7 +155,7 @@ internal sealed partial class DaggerfallQuestInstances
                 if (binding.Kind != (resource.SelectedItem is null ? DaggerfallQuestResourceBindingKind.Actor : DaggerfallQuestResourceBindingKind.Item))
                     throw new InvalidOperationException($"Quest resource '{resource.Symbol}' was not admitted to its actual world owner.");
                 instance.Resources = instance.Resources.Select(value => value.Symbol == resource.Symbol ? value with { Binding = binding } : value).ToArray();
-                instance.Placements[index] = operation with { Applied = new(profile.ProfileKey, marker.Id) };
+                instance.Placements[index] = operation with { Applied = new(profile.ProfileKey, marker.Id), PendingReapplication = false };
             }
     }
 

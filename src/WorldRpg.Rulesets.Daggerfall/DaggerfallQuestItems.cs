@@ -209,7 +209,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
                 edit.TransferUnique(entity, source, target);
             }
             for (int index = 0; index < stacks.Length; index++)
-                edit.TransferFungible(ownerEntity(stacks[index].Owner), target, stacks[index].Stack, quantities[index]);
+                edit.TransferFungible(ownerEntity(stacks[index].Owner), target, stacks[index].Stack, stacks[index].Stack, quantities[index]);
             foreach (var item in discardedUnique)
             {
                 var entity = state.Actors.Entities.Resolve(new(DurableIdentityKind.Item, item.Key));
