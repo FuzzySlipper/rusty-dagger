@@ -89,6 +89,91 @@ public sealed class QuestWorldAdmissionTests
         Assert.Equal(actorCount, fixture.Session.State.Actors.All.Count());
     }
 
+    [Fact]
+    public void Current_save_rejects_missing_queue_and_receipts_without_world_bindings_or_destination_profiles()
+    {
+        var definitions = Definitions();
+        using var fixture = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: WithMarker);
+        var instance = Start(fixture, definitions);
+        var quests = fixture.Session.State.Quests;
+        string foe = instance.Resources.Single(value => value.SelectedFoe is not null).Symbol;
+        quests.RequestPlacement(instance.InstanceId, "foe", foe, "location");
+        var saved = quests.Capture();
+        var encoded = JsonNode.Parse(JsonSerializer.Serialize(saved, DaggerfallSaveJsonContext.Default.DaggerfallQuestInstancesSave))!;
+        encoded["Instances"]![0]!.AsObject().Remove("Placements");
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize(encoded.ToJsonString(), DaggerfallSaveJsonContext.Default.DaggerfallQuestInstancesSave));
+        var pending = saved.Instances.Single();
+        var noProfile = pending with { Resources = pending.Resources.Select(value => value.Symbol == "location"
+            ? value with { Binding = value.Binding with { PlaceSelection = null } } : value).ToArray() };
+        Assert.Contains("destination profile", Assert.Throws<ArgumentException>(() => noProfile.ValidateShape()).Message);
+        var forgedReceipt = pending with { Placements = [pending.Placements.Single() with
+            { Applied = new(fixture.Inputs.ProfileKey, fixture.Inputs.QuestMarkers.Single().Id) }] };
+        Assert.Contains("world binding", Assert.Throws<ArgumentException>(() => forgedReceipt.ValidateShape()).Message);
+        quests.AdmitPlacements(fixture.Inputs, fixture.Session);
+        quests.Capture().Instances.Single().ValidateShape();
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(0)]
+    public void Initial_marker_fallback_ignores_static_index_when_preferred_pool_is_absent_or_any(int preferenceValue)
+    {
+        var definitions = Definitions();
+        using var fixture = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: WithMarker);
+        var instance = Start(fixture, definitions);
+        string item = instance.Resources.Single(value => value.SelectedItem is not null).Symbol;
+        Assert.Equal(DaggerfallSiteMarkerKind.QuestSpawn, fixture.Inputs.QuestMarkers.Single().Kind);
+        fixture.Session.State.Quests.RequestPlacement(instance.InstanceId, "item", item, "location", markerIndex: 99, preference: (DaggerfallQuestMarkerPreference)preferenceValue);
+        fixture.Session.State.Quests.AdmitPlacements(fixture.Inputs, fixture.Session);
+        Assert.Equal(fixture.Inputs.QuestMarkers.Single().Id,
+            fixture.Session.State.Quests.Capture().Instances.Single().Placements.Single().Applied!.MarkerId);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void Failed_ground_creation_retires_allocated_identities_before_or_after_seed(bool stackable, bool failAfterSeed)
+    {
+        var definitions = Definitions(stackable);
+        using var fixture = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: WithMarker);
+        var state = fixture.Session.State;
+        var instance = Start(fixture, definitions);
+        var created = instance.Resources.Single(value => value.SelectedItem is not null).SelectedItem!;
+        var identities = new WorldRpg.Kit.World.DurableIdentityAllocator(WorldRpg.Kit.World.DurableIdentityKind.Container, 9000000);
+        var unique = new DaggerfallUniqueItemAllocator(90000000);
+        var itemDefinitions = new Dictionary<WorldRpg.Kit.Inventory.InventoryItemId, Rusty.Engine.Mechanics.ItemDefinition>();
+        if (failAfterSeed)
+        {
+            itemDefinitions.Add(created.Item, new(Rusty.Engine.Mechanics.ItemDefinitionId.Parse(created.Item.Value),
+                stackable ? Rusty.Engine.Mechanics.ItemKind.Fungible : Rusty.Engine.Mechanics.ItemKind.Unique,
+                maximumQuantity: stackable ? ulong.MaxValue : 1));
+            created = created with { Metadata = created.Metadata with { CurrentCondition = -1 } };
+        }
+        var coordinator = new WorldRpg.Kit.Inventory.MechanicsInventoryContainerCoordinator(state.InventoryStore,
+            state.Actors.Entities, itemDefinitions);
+        var ground = new WorldRpg.Rulesets.Daggerfall.Modules.Loot.DaggerfallGroundContainers(coordinator, state.ItemInstances,
+            state.Actors.Player.Actor.Entity, identities, fixture.Inputs.ProfileKey);
+        var before = state.InventoryStore.View(state.Actors.Player.Actor.Entity);
+        Assert.ThrowsAny<Exception>(() => ground.CreateQuestItem(created, default, unique));
+        Assert.Empty(ground.Persisted);
+        Assert.Empty(identities.ReservedIdentities(WorldRpg.Kit.World.DurableIdentityKind.Container));
+        Assert.Empty(unique.ReservedEntityIds);
+        Assert.False(state.Actors.Entities.TryResolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container, 9000000), out _));
+        Assert.Equal(before.UniqueItems.Count, state.InventoryStore.View(state.Actors.Player.Actor.Entity).UniqueItems.Count);
+        Assert.Equal(before.Stacks.Count, state.InventoryStore.View(state.Actors.Player.Actor.Entity).Stacks.Count);
+    }
+
+    private static DaggerfallQuestInstanceSave Start(SanguineRoseSessionTests.Fixture fixture, DaggerfallDefinitions definitions)
+    {
+        var inputs = fixture.Inputs;
+        var site = definitions.Locations.Records.Single(value => value.Id == inputs.Site);
+        return fixture.Session.State.Quests.Start(new("world-test", "world-test.txt", "world-test", DaggerfallQuestLifecycle.Active, null,
+            [new("location", DaggerfallQuestResourceBinding.Place(new(site.Region, site.Index)) with
+                { PlaceSelection = new(inputs.ProfileKind, site.MapId, null, 0) })], []));
+    }
+
     private static DaggerfallDefinitions Definitions(bool stackable = false)
     {
         var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
