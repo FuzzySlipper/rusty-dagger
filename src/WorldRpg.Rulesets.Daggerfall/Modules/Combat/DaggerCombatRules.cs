@@ -897,6 +897,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         ?? DaggerfallMechanicsIds.HandToHand.Value;
     private int HitChance(ExplicitMeleeRequest request, Combatant attacker, Combatant target, DaggerfallAttackDefinition attack, int body, bool enemy, int attackToHitMod, int backstabChance, int criticalSalt)
     {
+        // WeaponManager.WeaponDamage handles mobile civilians before the enemy-only hit
+        // formula. Their lightweight actor definition does not carry enemy combat skills.
+        if (target.Definition.Kind == DaggerfallActorKinds.Civilian) return 100;
         int critical = ReadStat(attacker, new DaggerfallStatId("critical-strike"));
         bool criticalSucceeded = Draw(request, attacker.Id, target.Id, criticalSalt, 1, 100, enemy) <= critical;
         DaggerfallAdrenalineRush attackerRush = _adrenalineRush(attacker.Id), targetRush = _adrenalineRush(target.Id);
