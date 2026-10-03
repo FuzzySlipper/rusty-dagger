@@ -150,7 +150,7 @@ public sealed class SocialMagicSessionTests
                 definitions.Locations, definitions.Text, definitions.Magic with {Spells=new Dictionary<string,DaggerfallSpellDefinition>(definitions.Magic.Spells){{constructed.Key,constructed}}},
                 definitions.Mobiles, definitions.Names, definitions.Rumors, definitions.Biographies, definitions.Grids, definitions.Books,
                 definitions.Factions, definitions.Terrain, definitions.ItemTemplateCatalog, definitions.QuestSources, definitions.Cinematics, definitions.Encounters)
-                {BuildingNames=definitions.BuildingNames};
+                {BuildingNames=definitions.BuildingNames,NewGame=definitions.NewGame};
             composition=new(definitions,ReadInputs(TestData.RepositoryRoot),DaggerfallTuning.Defaults);
             Engine=CreateEngine();Session=DaggerfallSession.StartNew(Engine.Context,composition);
         }
