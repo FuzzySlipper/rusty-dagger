@@ -155,7 +155,7 @@ public sealed class QuestNpcOverlayTests
         var malformed = save with { Instances = [quest with { Resources = [resource with { EscortFaceMedia = "character.head.female.00.0" }] }] };
         string json = JsonSerializer.Serialize(malformed, typeof(DaggerfallQuestInstancesSave), DaggerfallSaveJsonContext.Default);
         var decoded = (DaggerfallQuestInstancesSave)JsonSerializer.Deserialize(json, typeof(DaggerfallQuestInstancesSave), DaggerfallSaveJsonContext.Default)!;
-        var owner = new DaggerfallQuestInstances(definitions, TestSessions.RandomMinimum.Create());
+        var owner = new DaggerfallQuestInstances(definitions, RandomMinimum.Create());
         Assert.Contains("incompatible selected escort face", Assert.Throws<ArgumentException>(() => owner.Restore(decoded)).Message);
     }
 
