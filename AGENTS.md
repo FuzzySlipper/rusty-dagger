@@ -25,7 +25,7 @@ an evolving mainline product path, not a spike or a compatibility exercise.
 - coverage direction and task planning: `docs/daggerfall-coverage-plan.md`
 - coverage scope contract and decision register (DEC-01–11): `docs/daggerfall-task-preparation.md`
 - stable inventory IDs and dispositions: `docs/coverage/` (feature ledger F001–F141 and specialist inventories)
-- coverage backlog: Den campaign #7922; Den owns tasks, their inventory-ID mapping, live status and dependencies
+- coverage backlog: Den feature parents, indexed in `[doc: rusty-dagger/feature-backlog-ordering]`; Den owns tasks, their inventory-ID mapping, live status and dependencies
 - archived planning snapshots (task index, feature map, preparation packet, ledger): Den documents `[doc: rusty-dagger/daggerfall-task-index-2026-09]`, `[doc: rusty-dagger/daggerfall-feature-map-2026-09]`, `[doc: rusty-dagger/daggerfall-task-preparation-2026-09]`, `[doc: rusty-dagger/daggerfall-feature-ledger-2026-09]`
 
 Before substantial work, resolve the current Den task and project guidance, then
