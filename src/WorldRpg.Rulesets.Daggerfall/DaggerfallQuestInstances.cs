@@ -166,7 +166,7 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             {
                 item.Metadata.Validate();
                 if (resource.SelectedFoe is not null || resource.SelectedPerson is not null || item.Quantity == 0 || item.TemplateIndex is < 0 or > 287
-                    || item.Item.Value != item.Metadata.ItemId || item.Metadata.QuestId != InstanceId || item.Metadata.QuestItemSymbol != symbol)
+                    || item.Item.Value != item.Metadata.ItemId || item.Metadata.QuestId is not null && (item.Metadata.QuestId != InstanceId || item.Metadata.QuestItemSymbol != symbol))
                     throw new ArgumentException($"Quest resource '{symbol}' has invalid selected item meaning.");
             }
             if (resource.SelectedFoe is { } foe && (resource.SelectedPerson is not null || string.IsNullOrWhiteSpace(foe.Definition) || foe.Count is < 1 or > 8))
@@ -355,12 +355,15 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
     }
 
     internal void ValidateBindings(IReadOnlySet<long> actorIds, DurableIdentityAllocator identities, IReadOnlySet<(int Region, int Index)> locations,
-        IReadOnlySet<(string Scope, long OwnerId, string StackId)> stacks, IReadOnlyDictionary<long, DaggerfallNpcEntry> npcs, DaggerfallDefinitions definitions)
+        IReadOnlyDictionary<(string Scope, long OwnerId, string StackId), DaggerfallStackSave> stacks, IReadOnlyDictionary<ulong, DaggerfallUniqueSave> items,
+        IReadOnlyDictionary<long, string> custody, IReadOnlyDictionary<long, DaggerfallNpcEntry> npcs, DaggerfallDefinitions definitions)
     {
         ArgumentNullException.ThrowIfNull(actorIds);
         ArgumentNullException.ThrowIfNull(identities);
         ArgumentNullException.ThrowIfNull(locations);
         ArgumentNullException.ThrowIfNull(stacks);
+        foreach (var item in items.Values) ValidateQuestItemReference(item.ItemId, item.Metadata);
+        foreach (var stack in stacks.Values) ValidateQuestItemReference(stack.ItemId, stack.Metadata);
         foreach (DaggerfallQuestInstanceSave instance in Instances)
         foreach (DaggerfallQuestResourceState resource in instance.Resources)
         {
@@ -395,12 +398,20 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
                         // Only an allocator tombstone proves removal; unknown identities still reject.
                         if (identity is not (DurableIdentityClassification.Live or DurableIdentityClassification.Removed))
                             throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to non-live unique item {itemId}.");
+                        if (identity == DurableIdentityClassification.Live && resource.SelectedItem is not null)
+                        {
+                            if (!items.TryGetValue(itemId, out var item)) throw new ArgumentException($"Quest item {itemId} has no actual inventory owner.");
+                            ValidateItemRelation(instance, resource, item.ItemId, item.Metadata, custody);
+                        }
                     }
                     else
                     {
                         foreach (DaggerfallQuestStackBinding stack in resource.Binding.Stacks)
-                            if (!stacks.Contains((stack.Owner.Scope, stack.Owner.Id, stack.StackId)))
+                        {
+                            if (!stacks.TryGetValue((stack.Owner.Scope, stack.Owner.Id, stack.StackId), out var item))
                                 throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to missing item stack '{stack.StackId}' for {stack.Owner.Scope} {stack.Owner.Id}.");
+                            if (resource.SelectedItem is not null) ValidateItemRelation(instance, resource, item.ItemId, item.Metadata, custody);
+                        }
                     }
                     break;
                 case DaggerfallQuestResourceBindingKind.Place:
@@ -410,6 +421,31 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
                     break;
             }
         }
+    }
+
+    private void ValidateQuestItemReference(string itemId, DaggerfallItemMetadataSave metadata)
+    {
+        if (metadata.QuestId is null) return;
+        var quest = Instances.SingleOrDefault(value => value.InstanceId == metadata.QuestId);
+        // World/actor/transferred items outlive the existing seven-day quest-runtime retirement.
+        // Their retained tag cannot authorize an action: actions require an active instance.
+        if (quest is null) return;
+        var resource = quest.Resources.SingleOrDefault(value => value.Symbol == DaggerfallQuestInstanceSave.Canonical(metadata.QuestItemSymbol!, "item provenance"))
+            ?? throw new ArgumentException($"Item refers to unknown quest resource '{metadata.QuestItemSymbol}'.");
+        if (resource.Binding.Kind is not (DaggerfallQuestResourceBindingKind.Item or DaggerfallQuestResourceBindingKind.Pending)
+            || resource.SelectedItem is { } prototype && prototype.Item.Value != itemId)
+            throw new ArgumentException("Item quest provenance does not name its actual Item resource.");
+    }
+
+    private static void ValidateItemRelation(DaggerfallQuestInstanceSave instance, DaggerfallQuestResourceState resource,
+        string itemId, DaggerfallItemMetadataSave metadata, IReadOnlyDictionary<long, string> custody)
+    {
+        var prototype = resource.SelectedItem!;
+        bool linked = metadata.QuestId == instance.InstanceId && metadata.QuestItemSymbol == DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "item binding");
+        bool permanent = prototype.Metadata.QuestId is null && metadata.QuestId is null && metadata.QuestItemSymbol is null;
+        if (itemId != prototype.Item.Value || !linked && !permanent
+            || metadata.Owner.Scope == "quest" && (!custody.TryGetValue(metadata.Owner.Id, out var owner) || owner != instance.InstanceId))
+            throw new ArgumentException($"Quest resource '{resource.Symbol}' does not match its actual item provenance or custody owner.");
     }
 }
 
@@ -523,6 +559,31 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     private readonly Dictionary<string, DaggerfallQuestRuntimeInstance> _instances = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DaggerfallQuestStartSave> _pendingStarts = new(StringComparer.Ordinal);
     private DaggerfallQuestRuntime? _runtime;
+    private DaggerfallQuestItems? _items;
+    internal void BindItems(DaggerfallQuestItems items) => _items = items;
+    internal bool HasItem(string instanceId, string symbol) => Items.Have(Active(instanceId), symbol);
+    internal DaggerfallQuestItemResult GrantItem(string instanceId, string symbol) => Items.Get(Active(instanceId), symbol);
+    internal DaggerfallQuestItemResult TakeItem(string instanceId, string symbol) => Items.Take(Active(instanceId), symbol);
+    internal DaggerfallQuestItemResult MakeItemPermanent(string instanceId, string symbol) => Items.MakePermanent(Active(instanceId), symbol);
+    internal int? ItemUsedMessage(string instanceId, string symbol) => ItemUsedMessage(Active(instanceId), symbol);
+    internal int? ItemGrantNotification(string instanceId, DaggerfallQuestTaskOperation operation) => ItemGrantNotification(Active(instanceId), operation);
+    /// <summary>Resolves retained source letter-use text for the item-use executor without publishing it.</summary>
+    internal int? ItemUsedMessage(DaggerfallQuestRuntimeInstance instance, string symbol)
+    {
+        string canonical = DaggerfallQuestInstanceSave.Canonical(symbol, "item message");
+        var declaration = _definitions.QuestSources.Resources.SingleOrDefault(value => value.SourceFile == instance.SourceFile && value.Kind == "item" && value.CanonicalId == canonical)
+            ?? throw new ArgumentException($"Quest '{instance.SourceFile}' has no Item '{symbol}'.");
+        return ResolveItemMessage(instance, declaration.Item?.UsedMessage);
+    }
+    /// <summary>#8133 consumes the compiler's exact give-pc notify operand after accepted mutation.</summary>
+    internal int? ItemGrantNotification(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => ResolveItemMessage(instance, operation.MessageAlias);
+    private int? ResolveItemMessage(DaggerfallQuestRuntimeInstance instance, string? reference)
+    {
+        if (reference is null) return null;
+        if (!Messages.TryResolveMessage(instance, int.TryParse(reference, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int direct) ? direct : null, reference, out int message, out var diagnostic))
+            throw new ArgumentException($"Quest item message in '{instance.SourceFile}': {diagnostic}");
+        return message;
+    }
     private Func<DaggerfallSiteId, long>? _travelMinutes;
     private Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> _textContext = _ => DaggerfallQuestMessageContext.Empty;
     private Action<string, string>? _appendNote;
@@ -890,6 +951,16 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         state.OperationState[operationIndex] = receipt with { PickedTarget = target };
         return target;
     }
+
+    bool IDaggerfallQuestTaskLifecycle.HaveItem(DaggerfallQuestRuntimeInstance instance, string symbol) => Items.Have(instance, symbol);
+    DaggerfallQuestItemResult IDaggerfallQuestTaskLifecycle.ItemAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => operation.Kind switch
+    {
+        DaggerfallQuestTaskOperationKind.GetItem => Items.Get(instance, operation.Targets[0]),
+        DaggerfallQuestTaskOperationKind.TakeItem => Items.Take(instance, operation.Targets[0]),
+        DaggerfallQuestTaskOperationKind.MakePermanent => Items.MakePermanent(instance, operation.Targets[0]),
+        _ => throw new ArgumentException("Not an item mutation."),
+    };
+    private DaggerfallQuestItems Items => _items ?? throw new InvalidOperationException("Quest items require the session inventory owner.");
 
     bool IDaggerfallQuestTaskLifecycle.IsLevelCompleted(int minimum) => Runtime.IsLevelCompleted(minimum);
     bool IDaggerfallQuestTaskLifecycle.IsAttributeAtLeast(string attribute, int minimum) => Runtime.IsAttributeAtLeast(attribute, minimum);
