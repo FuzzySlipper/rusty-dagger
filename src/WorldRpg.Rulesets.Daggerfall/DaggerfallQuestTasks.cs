@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
@@ -44,7 +44,8 @@ internal sealed class DaggerfallQuestTaskRuntimeState
 
 internal sealed record DaggerfallQuestTaskCondition(DaggerfallQuestTaskConditionOperator Operator, string Symbol);
 internal sealed record DaggerfallQuestTaskOperation(DaggerfallQuestTaskOperationKind Kind, int SourceLine, string Source,
-    string[] Targets, DaggerfallQuestTaskCondition[] Conditions, int? MessageId, int? Step = null, string? MessageAlias = null, DaggerfallQuestPromptOption[]? PromptOptions = null);
+    string[] Targets, DaggerfallQuestTaskCondition[] Conditions, int? MessageId, int? Step = null, string? MessageAlias = null, DaggerfallQuestPromptOption[]? PromptOptions = null,
+    int? MarkerIndex = null, DaggerfallQuestMarkerPreference MarkerPreference = DaggerfallQuestMarkerPreference.Default);
 internal sealed record DaggerfallQuestTaskDefinition(string Symbol, DaggerfallQuestTaskKind Kind, string? PersistUntilTarget,
     string? GlobalName, IReadOnlyList<DaggerfallQuestTaskOperation> Operations);
 internal sealed class DaggerfallQuestTaskProgram
@@ -62,6 +63,9 @@ internal sealed class DaggerfallQuestTaskProgram
 /// <summary>Compiles the retained task forms into concrete ruleset operations; it has no runtime registry.</summary>
 internal static partial class DaggerfallQuestTaskCompiler
 {
+    private static readonly Regex ReservePlace = Header(@"^create\s+npc\s+at\s+(?<place>[a-zA-Z0-9_.-]+)$");
+    private static readonly Regex PlaceActor = Header(@"^place\s+(?<kind>foe|npc)\s+(?<symbol>[a-zA-Z0-9_.-]+)\s+at\s+(?<place>[a-zA-Z0-9_.-]+)(?:\s+marker\s+(?<marker>\d+))?$");
+    private static readonly Regex PlaceItem = Header(@"^place\s+item\s+(?<symbol>[a-zA-Z0-9_.-]+)\s+at\s+(?<place>[a-zA-Z0-9_.-]+)(?:\s+(?:(?<markerKind>marker|questmarker)\s+(?<marker>\d+)|(?<any>anymarker)))?$");
     private static readonly Regex GetItem = Header(@"^get\s+item\s+(?<symbol>[a-zA-Z0-9_.-]+)(?:\s+from\s+[a-zA-Z0-9_.-]+)?(?:\s+saying\s+(?<message>\d+))?$");
     private static readonly Regex TakeItem = Header(@"^take\s+(?<symbol>[a-zA-Z0-9_.-]+)\s+from\s+pc(?:\s+saying\s+(?<message>\d+))?$");
     private static readonly Regex HaveItem = Header(@"^have\s+(?<symbol>[a-zA-Z0-9_.-]+)\s+set\s+(?<task>[a-zA-Z0-9_.-]+)$");
@@ -219,6 +223,19 @@ internal static partial class DaggerfallQuestTaskCompiler
 
     private static DaggerfallQuestTaskOperation CompileOperation(string line, int sourceLine)
     {
+        if (ReservePlace.Match(line) is { Success: true } reserve)
+            return new(DaggerfallQuestTaskOperationKind.ReservePlace, sourceLine, line, [Canonical(reserve.Groups["place"].Value)], [], null);
+        foreach (var pattern in new[] { PlaceActor, PlaceItem })
+            if (pattern.Match(line) is { Success: true } placement)
+            {
+                var kind = pattern == PlaceItem ? DaggerfallQuestTaskOperationKind.PlaceItem
+                    : placement.Groups["kind"].Value.Equals("foe", StringComparison.OrdinalIgnoreCase) ? DaggerfallQuestTaskOperationKind.PlaceFoe : DaggerfallQuestTaskOperationKind.PlaceNpc;
+                int? marker = placement.Groups["marker"].Success ? Step(placement.Groups["marker"].Value, sourceLine) : null;
+                var preference = placement.Groups["any"].Success ? DaggerfallQuestMarkerPreference.Any
+                    : placement.Groups["markerKind"].Value.Equals("questmarker", StringComparison.OrdinalIgnoreCase) ? DaggerfallQuestMarkerPreference.QuestSpawn : DaggerfallQuestMarkerPreference.Default;
+                return new(kind, sourceLine, line, [Canonical(placement.Groups["symbol"].Value), Canonical(placement.Groups["place"].Value)], [], null,
+                    MarkerIndex: marker, MarkerPreference: preference);
+            }
         foreach (var (pattern, kind) in new[] { (GetItem, DaggerfallQuestTaskOperationKind.GetItem), (TakeItem, DaggerfallQuestTaskOperationKind.TakeItem), (Permanent, DaggerfallQuestTaskOperationKind.MakePermanent) })
             if (pattern.Match(line) is { Success: true } item)
                 return new(kind, sourceLine, line, [Canonical(item.Groups["symbol"].Value)], [], item.Groups["message"].Success ? Message(item.Groups["message"].Value) : null);
@@ -359,6 +376,7 @@ internal static partial class DaggerfallQuestTaskCompiler
 /// <summary>Runs only the retained source-order task transitions over one mutable active quest instance.</summary>
 internal interface IDaggerfallQuestTaskLifecycle
 {
+    void PlaceResource(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, string task, int operationIndex);
     bool HaveItem(DaggerfallQuestRuntimeInstance instance, string symbol);
     DaggerfallQuestItemResult ItemAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation);
     bool IsLevelCompleted(int minimum);
@@ -434,6 +452,13 @@ internal static class DaggerfallQuestTaskRunner
                 if (!state.IsSet || state.OperationCompleted[operationIndex]) continue;
                 switch (operation.Kind)
                 {
+                    case DaggerfallQuestTaskOperationKind.ReservePlace:
+                    case DaggerfallQuestTaskOperationKind.PlaceFoe:
+                    case DaggerfallQuestTaskOperationKind.PlaceItem:
+                    case DaggerfallQuestTaskOperationKind.PlaceNpc:
+                        lifecycle.PlaceResource(instance, operation, task.Symbol, operationIndex);
+                        MarkCompleted(state, operationIndex);
+                        break;
                     case DaggerfallQuestTaskOperationKind.HaveItem:
                         if (lifecycle.HaveItem(instance, operation.Targets[0])) Start(operation.Targets[1], states, indexes, program.Tasks, variables, instance.InstanceId, operation);
                         break; // Donor Have is ongoing, including after its first successful read.

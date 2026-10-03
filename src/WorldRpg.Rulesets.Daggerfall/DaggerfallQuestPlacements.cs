@@ -32,7 +32,7 @@ internal sealed record DaggerfallQuestPlacementOperation(string Id, string Resou
 /// <summary>The session's canonical world owners apply a quest placement inside an admitted update.</summary>
 internal interface IDaggerfallQuestWorldAdmission
 {
-    DaggerfallQuestResourceBinding Place(string instanceId, DaggerfallQuestResourceState resource,
+    DaggerfallQuestResourceBinding? Place(string instanceId, DaggerfallQuestResourceState resource,
         DaggerfallSiteProfile profile, DaggerfallSiteMarker marker);
 }
 
@@ -62,9 +62,44 @@ internal static class DaggerfallQuestPlacements
 
 internal sealed partial class DaggerfallQuestInstances
 {
+    private DaggerfallNpcRegistry? _placementNpcs;
+    internal void BindPlacementNpcs(DaggerfallNpcRegistry npcs) => _placementNpcs = npcs;
+    void IDaggerfallQuestTaskLifecycle.PlaceResource(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, string task, int operationIndex)
+    {
+        if (operation.Kind == DaggerfallQuestTaskOperationKind.ReservePlace)
+        {
+            // Place allocation already owns the actual site/building claim. The legacy
+            // reservation leaf validates that selection instead of creating a second registry.
+            if (DaggerfallQuestPlacements.Destination(instance.Resources, operation.Targets.Single()).PlaceSelection is null)
+                throw new ArgumentException($"Quest action at line {operation.SourceLine} has no selected Place profile.");
+            return;
+        }
+        string symbol = operation.Targets[0];
+        var resource = instance.Resources.SingleOrDefault(value => value.Symbol == symbol)
+            ?? throw new ArgumentException($"Quest placement at line {operation.SourceLine} has no resource '{symbol}'.");
+        bool correctKind = operation.Kind switch
+        {
+            DaggerfallQuestTaskOperationKind.PlaceFoe => resource.SelectedFoe is not null,
+            DaggerfallQuestTaskOperationKind.PlaceItem => resource.SelectedItem is not null,
+            DaggerfallQuestTaskOperationKind.PlaceNpc => resource.SelectedPerson is not null,
+            _ => false,
+        };
+        if (!correctKind) throw new ArgumentException($"Quest placement at line {operation.SourceLine} does not name the required resource kind.");
+        if (resource.SelectedPerson is not null && resource.Binding.ActorIds.Length == 1
+            && _placementNpcs?.Require(resource.Binding.ActorIds[0]).Presence == DaggerfallNpcPresence.Removed) return;
+        if (resource.SelectedPerson?.Individual == true && _definitions.QuestSources.Resources.Single(value => value.SourceFile == instance.SourceFile
+            && value.CanonicalId == symbol && value.Kind == "person").Person?.AtHome == true)
+        {
+            System.Diagnostics.Trace.TraceWarning($"Quest placement at line {operation.SourceLine} retains individual Person '{symbol}' at its declared Home.");
+            return;
+        }
+        RequestPlacement(instance.InstanceId, $"task:{task}:{operationIndex}", symbol, operation.Targets[1], operation.MarkerIndex, operation.MarkerPreference, reapply: true);
+        if (resource.SelectedPerson is not null && resource.IsHidden) SetResource(instance.InstanceId, resource with { IsHidden = false });
+    }
+
     /// <summary>Task actions and Person homes use this same durable queue before their target site exists.</summary>
     internal void RequestPlacement(string instanceId, string operationId, string resourceSymbol, string placeSymbol,
-        int? markerIndex = null, DaggerfallQuestMarkerPreference preference = DaggerfallQuestMarkerPreference.Default, bool automaticHome = false)
+        int? markerIndex = null, DaggerfallQuestMarkerPreference preference = DaggerfallQuestMarkerPreference.Default, bool automaticHome = false, bool reapply = false)
     {
         var instance = Active(instanceId);
         string resource = DaggerfallQuestInstanceSave.Canonical(resourceSymbol, "placement resource");
@@ -81,6 +116,10 @@ internal sealed partial class DaggerfallQuestInstances
         {
             if (existing with { Applied = null } != operation)
                 throw new ArgumentException($"Quest placement '{operationId}' already names a different operation.");
+            // A retry of pending work is idempotent. An action the task runner has
+            // explicitly rearmed repeats assignment through this same queue entry.
+            if (reapply && existing.Applied is not null)
+                instance.Placements = instance.Placements.Select(value => value.Id == operationId ? operation : value).ToArray();
             return;
         }
         if (!automaticHome)
@@ -101,6 +140,13 @@ internal sealed partial class DaggerfallQuestInstances
                 var resource = instance.Resources.Single(value => DaggerfallQuestInstanceSave.Canonical(value.Symbol, "placement resource") == operation.ResourceSymbol);
                 var marker = SelectPlacementMarker(instance, operation, resource, profile);
                 var binding = world.Place(instance.InstanceId, resource, profile, marker);
+                if (binding is null)
+                {
+                    // A known removed Person is intentionally absent, never an applied placement.
+                    instance.Placements = instance.Placements.Where(value => value.Id != operation.Id).ToArray();
+                    index--;
+                    continue;
+                }
                 binding.Validate(resource.Symbol);
                 if (binding.Kind != (resource.SelectedItem is null ? DaggerfallQuestResourceBindingKind.Actor : DaggerfallQuestResourceBindingKind.Item))
                     throw new InvalidOperationException($"Quest resource '{resource.Symbol}' was not admitted to its actual world owner.");

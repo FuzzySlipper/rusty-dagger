@@ -161,7 +161,7 @@ public sealed class MechanicsInventoryContainerCoordinator
     /// Materializes mixed fungible and unique contents on one detached candidate.
     /// Newly created unique entities are destroyed if the candidate cannot publish.
     /// </summary>
-    public InventoryContainerSeedReceipt Seed(EntityId owner, IEnumerable<InventoryContainerSeed> seeds)
+    public InventoryContainerSeedReceipt Seed(EntityId owner, IEnumerable<InventoryContainerSeed> seeds, Action<InventoryEdit>? additionalChanges = null)
     {
         RequireRegistered(owner, nameof(owner));
         ArgumentNullException.ThrowIfNull(seeds);
@@ -190,6 +190,9 @@ public sealed class MechanicsInventoryContainerCoordinator
                 }
                 else candidate.Grant(owner, definition, seed.Stack!, seed.Quantity);
             }
+            // Retained items can be admitted in the same publication as current
+            // containment moves; this owner still cleans created entities on failure.
+            additionalChanges?.Invoke(candidate);
             candidate.Publish();
         }
         catch

@@ -136,6 +136,17 @@ internal sealed record DaggerfallStackChange(DaggerfallItemOwner SourceOwner, In
 internal sealed class DaggerfallItemInstances
 {
     internal event Action<DaggerfallStackChange>? StackChanged;
+
+    /// <summary>Completes admission from a detached site's saved owner after Engine publication.</summary>
+    internal void AdmitRetainedStack(DaggerfallItemOwner source, DaggerfallItemOwner destination, InventoryStackId id, DaggerfallItemInstanceMetadata metadata)
+    {
+        if (ContainsStack(destination, id))
+        {
+            if (!RequireStack(destination, id).IsStackCompatibleWith(metadata)) throw new InvalidOperationException("Retained stack admission would combine distinct item meanings.");
+        }
+        else RegisterStack(destination, id, metadata with { Owner = destination });
+        StackChanged?.Invoke(new(source, id, destination, id));
+    }
     internal event Action<ulong>? SourceUnavailable;
     internal IEnumerable<KeyValuePair<ulong, DaggerfallItemInstanceMetadata>> UniqueItems => _unique;
     internal IEnumerable<(DaggerfallItemOwner Owner, InventoryStackId Stack, DaggerfallItemInstanceMetadata Metadata)> StackItems =>

@@ -6,7 +6,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed partial class DaggerfallSession
 {
-    DaggerfallQuestResourceBinding IDaggerfallQuestWorldAdmission.Place(string instanceId, DaggerfallQuestResourceState resource,
+    DaggerfallQuestResourceBinding? IDaggerfallQuestWorldAdmission.Place(string instanceId, DaggerfallQuestResourceState resource,
         DaggerfallSiteProfile profile, DaggerfallSiteMarker marker)
     {
         var position = _sites.ProfileToLocal(marker.Position);
@@ -29,12 +29,15 @@ internal sealed partial class DaggerfallSession
         {
             if (resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Item)
             {
-                _groundContainers.RelocateQuestItem(resource.Binding, position);
-                return resource.Binding;
+                return PlaceBoundQuestItem(resource.Binding, position);
             }
             return _groundContainers.CreateQuestItem(item, position, _uniqueItems);
         }
-        if (resource.SelectedPerson is not null) return PlaceQuestPerson(instanceId, resource, profile, position);
+        if (resource.SelectedPerson is not null)
+        {
+            if (resource.Binding.ActorIds.Length == 1 && State.Npcs.Require(resource.Binding.ActorIds[0]).Presence == DaggerfallNpcPresence.Removed) return null;
+            return PlaceQuestPerson(instanceId, resource, profile, position);
+        }
         throw new ArgumentException($"Quest resource '{resource.Symbol}' has no selected physical meaning.");
     }
     /// <summary>Transfers an unloaded actor's retained values between the existing site and roster owners.</summary>
