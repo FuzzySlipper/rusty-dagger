@@ -226,6 +226,47 @@ public sealed class DaggerfallDungeonActionGraphTests
     }
 
     [Fact]
+    public void Spell_source_cooldown_counts_matching_activations_after_links_and_survives_encoded_save()
+    {
+        DaggerfallDungeonActionDefinition spell = new("spell", 10, 2, 0x09, 0, 0, 0, 20, "child");
+        DaggerfallDungeonActionDefinition child = new("child", 20, 0, 0x1F, 7, 0, 0, -1, null);
+        int attempts = 0;
+        DaggerfallDungeonActionExecution? Attempt(DaggerfallDungeonActionDefinition action)
+        {
+            Assert.Equal("spell", action.Id);
+            attempts++;
+            return new(action.Id, DaggerfallDungeonActionOutcome.RejectedOperation, Diagnostic: "Immune target.");
+        }
+        DaggerfallDungeonActionGraph graph = new("profile", [spell, child], Variables(), executeFamilyAction: Attempt);
+        var first = graph.Trigger("spell", DaggerfallDungeonActionEvent.Direct);
+        Assert.Equal(["child", "spell"], first.Executions.Select(execution => execution.ActionId));
+        Assert.Equal(DaggerfallDungeonActionOutcome.RejectedOperation, first.Executions[1].Outcome);
+        Assert.Equal(1000f, Assert.Single(graph.Capture().Nodes, node => node.Id == "spell").RemainingSpellCooldown);
+        graph.Advance(10000d);
+        Assert.Equal(1000f, Assert.Single(graph.Capture().Nodes, node => node.Id == "spell").RemainingSpellCooldown);
+        Assert.Equal(DaggerfallDungeonActionOutcome.RejectedTrigger, Assert.Single(graph.Trigger("spell", DaggerfallDungeonActionEvent.Attack).Executions).Outcome);
+        var cooling = graph.Trigger("spell", DaggerfallDungeonActionEvent.Direct);
+        Assert.Equal(["child", "spell"], cooling.Executions.Select(execution => execution.ActionId));
+        Assert.Equal(DaggerfallDungeonActionOutcome.Cooldown, cooling.Executions[1].Outcome);
+        Assert.Equal(2UL, graph.State["child"].ActivationCount);
+        Assert.Equal(1, attempts);
+
+        byte[] encoded = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(graph.Capture(), DaggerfallSaveJsonContext.Default.DaggerfallDungeonActionGraphSnapshot);
+        DaggerfallDungeonActionGraphSnapshot saved = System.Text.Json.JsonSerializer.Deserialize(encoded, DaggerfallSaveJsonContext.Default.DaggerfallDungeonActionGraphSnapshot)!;
+        DaggerfallDungeonActionGraph restored = new("profile", [spell, child], Variables(), saved, Attempt);
+        float sourceCounter = saved.Nodes.Single(node => node.Id == "spell").RemainingSpellCooldown;
+        for (int activation = 0; activation < 30 && attempts == 1; activation++)
+        {
+            sourceCounter -= 45.454546f;
+            DaggerfallDungeonActionOutcome expected = sourceCounter > 0f ? DaggerfallDungeonActionOutcome.Cooldown : DaggerfallDungeonActionOutcome.RejectedOperation;
+            Assert.Equal(expected, restored.Trigger("spell", DaggerfallDungeonActionEvent.Direct).Executions[1].Outcome);
+        }
+        Assert.Equal(2, attempts);
+        Assert.Equal(1000f, Assert.Single(restored.Capture().Nodes, node => node.Id == "spell").RemainingSpellCooldown);
+        Assert.Equal(restored.State["spell"].ActivationCount, restored.State["child"].ActivationCount);
+    }
+
+    [Fact]
     public void Unknown_actions_and_invalid_global_parameters_are_diagnostics_not_success()
     {
         DaggerfallDungeonActionDefinition unknown = new("unknown", 1, 2, 0x7E, 0, 0, 0, -1, null);
