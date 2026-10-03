@@ -31,7 +31,7 @@ public sealed class DaggerfallLevitationPolicyTests
     }
 
     [Fact]
-    public void Climbing_owns_motion_without_erasing_the_effect_grant()
+    public void Climbing_and_swimming_own_motion_without_erasing_the_effect_grant()
     {
         DaggerfallLevitationStep climbing = _policy.Resolve(Context(Granted: true, Swimming: true, Climbing: true, UpHeld: true));
         DaggerfallLevitationStep released = _policy.Resolve(Context(Granted: true, Swimming: true));
@@ -40,8 +40,8 @@ public sealed class DaggerfallLevitationPolicyTests
         Assert.False(climbing.IsLevitating);
         Assert.Equal(DaggerfallVerticalMovementMode.Climbing, climbing.Mode);
         Assert.Null(climbing.VerticalVelocity);
-        Assert.Equal(DaggerfallVerticalMovementMode.Levitation, released.Mode);
-        Assert.Equal(0f, released.VerticalVelocity);
+        Assert.Equal(DaggerfallVerticalMovementMode.Swimming, released.Mode);
+        Assert.Null(released.VerticalVelocity);
     }
 
     [Fact]

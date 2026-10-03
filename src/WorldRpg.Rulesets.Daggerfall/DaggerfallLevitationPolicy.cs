@@ -49,10 +49,10 @@ internal sealed class DaggerfallLevitationPolicy
 
         DaggerfallVerticalMovementMode mode = context.Climbing
             ? DaggerfallVerticalMovementMode.Climbing
-            : context.Granted
-                ? DaggerfallVerticalMovementMode.Levitation
-                : context.Swimming
-                    ? DaggerfallVerticalMovementMode.Swimming
+            : context.Swimming
+                ? DaggerfallVerticalMovementMode.Swimming
+                : context.Granted
+                    ? DaggerfallVerticalMovementMode.Levitation
                     : DaggerfallVerticalMovementMode.Gravity;
 
         float? verticalVelocity = mode == DaggerfallVerticalMovementMode.Levitation
