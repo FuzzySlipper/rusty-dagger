@@ -17,6 +17,49 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class HostSaveSlotTests
 {
     [Fact]
+    public void The_title_screen_loads_a_named_save_without_beginning_character_creation()
+    {
+        string root = TestData.RepositoryRoot;
+        var inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        InMemoryPersistenceService persistence = new();
+        var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), persistence: persistence);
+        using WorldRpgSaveSlots slots = new(engine.Context, "worldrpg.saves");
+        using (var creation = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults)))
+        {
+            NewGameSessionTests.Commit(creation, "class13");
+            using var game = Assert.IsType<DaggerfallSession>(creation.CreateNewGame());
+            game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(7);
+            slots.SaveSlot("slot-archer", "Archer", new GameSaveEnvelope(game.CaptureSave()));
+        }
+
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        CapturingDaggerfallRuleset ruleset = new();
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset,
+            new GameBundleId("daggerfall.privateers-hold"));
+        product.Start();
+        var title = ruleset.RequireSession();
+        Assert.Equal(ProductMode.Title, product.Mode);
+
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"load-slot\",\"key\":\"missing\"}")]));
+        Assert.Same(title, ruleset.RequireSession());
+        Assert.Equal(ProductMode.Title, product.Mode);
+        Assert.Contains("No save is indexed under 'missing'.", engine.PublishedField("lastOutcome"));
+
+        product.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-archer\"}")]));
+        var restored = ruleset.RequireSession();
+        Assert.NotSame(title, restored);
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        Assert.Equal("class13", restored.State.Character.Identity.CareerId);
+        Assert.Equal(7, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
+        Assert.False(restored.RequiresCharacterInitialization);
+        Assert.Null(restored.State.Character.Pending);
+    }
+
+    [Fact]
     public void Slot_save_close_reopen_resumes_a_fresh_daggerfall_session_with_current_state()
     {
         string root = TestData.RepositoryRoot;
