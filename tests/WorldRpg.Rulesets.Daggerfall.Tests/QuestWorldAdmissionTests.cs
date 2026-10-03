@@ -157,7 +157,7 @@ public sealed class QuestWorldAdmissionTests
             state.Actors.Player.Actor.Entity, identities, fixture.Inputs.ProfileKey);
         var before = state.InventoryStore.View(state.Actors.Player.Actor.Entity);
         Assert.ThrowsAny<Exception>(() => ground.CreateQuestItem(created, default, unique));
-        Assert.Empty(ground.Persisted);
+        Assert.Empty(ground.Capture());
         Assert.Empty(identities.ReservedIdentities(WorldRpg.Kit.World.DurableIdentityKind.Container));
         Assert.Empty(unique.ReservedEntityIds);
         Assert.False(state.Actors.Entities.TryResolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container, 9000000), out _));
@@ -350,6 +350,53 @@ public sealed class QuestWorldAdmissionTests
         Assert.Equal(health, inactive.State.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current);
         Assert.Equal(quantity, inactive.State.ActorInventories.InventoryFor(id)!.Read().Stacks.Single(value => value.Id == carried).Quantity);
         Assert.Single(DaggerfallSavePayload.Read(inactive.CaptureSave()).DynamicActors, value => value.EntityId == id);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Queued_item_relocation_rejoins_unloaded_ground_contents_after_an_encoded_save(bool stackable)
+    {
+        var definitions = Definitions(stackable: stackable, secondPlace: true);
+        using var fixture = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: WithMarker);
+        var session = fixture.Session;
+        var castle = WithMarker(fixture.Castle);
+        var profiles = new DaggerfallSiteProfiles([fixture.Inputs, castle]);
+        session.AdmitSiteProfiles(profiles);
+        var origin = definitions.Locations.Records.Single(value => value.Id == fixture.Inputs.Site);
+        var destination = definitions.Locations.Records.Single(value => value.Id == castle.Site);
+        var started = session.State.Quests.Start(new("ground-relocation", "world-test.txt", "world-test", DaggerfallQuestLifecycle.Active, null,
+            [new("location", DaggerfallQuestResourceBinding.Place(new(origin.Region, origin.Index)) with
+                { PlaceSelection = new(fixture.Inputs.ProfileKind, origin.MapId, null, 0) }),
+             new("destination", DaggerfallQuestResourceBinding.Place(new(destination.Region, destination.Index)) with
+                { PlaceSelection = new(castle.ProfileKind, destination.MapId, null, 0) })], []));
+        var item = started.Resources.Single(value => value.SelectedItem is not null);
+        session.State.Quests.RequestPlacement(started.InstanceId, "item", item.Symbol, "location");
+        session.State.Quests.AdmitPlacements(fixture.Inputs, session);
+        var before = DaggerfallSavePayload.Read(session.CaptureSave()).GroundContainers.Single();
+        var identity = new WorldRpg.Kit.World.DurableIdentityReference(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)before.Id));
+        var oldEntity = session.State.Actors.Entities.Resolve(identity);
+        session.State.Quests.RequestPlacement(started.InstanceId, "relocate-item", item.Symbol, "destination");
+        Assert.True(session.TryTransitionTo(castle.ProfileKey));
+        Assert.False(session.State.InventoryStore.TryGetInventory(oldEntity, out _));
+        Assert.Equal(WorldRpg.Kit.World.DurableEntityResolution.Unloaded,
+            session.State.Actors.Entities.Classify(identity, session.State.Npcs.Identities!));
+        using var restored = fixture.Restore(profiles);
+        Assert.False(restored.State.Actors.Entities.TryResolve(identity, out _));
+        restored.State.Quests.AdmitPlacements(castle, restored);
+        var after = DaggerfallSavePayload.Read(restored.CaptureSave()).GroundContainers.Single();
+        Assert.Equal(castle.ProfileKey, after.Profile.Require());
+        Assert.Equal(WorldRpg.Kit.World.DurableIdentityClassification.Removed, restored.State.Npcs.Identities!.Classify(identity));
+        Assert.Equal(before.Inventory.Stacks.Select(value => value.Quantity), after.Inventory.Stacks.Select(value => value.Quantity));
+        Assert.Equal(before.Inventory.UniqueItems.Select(value => value.EntityId), after.Inventory.UniqueItems.Select(value => value.EntityId));
+        var owner = restored.State.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)after.Id)));
+        var inventory = restored.State.Containers.Read(owner);
+        Assert.Equal(stackable ? 1 : 0, inventory.Stacks.Count);
+        Assert.Equal(stackable ? 0 : 1, inventory.UniqueItems.Count);
+        restored.State.Quests.AdmitPlacements(castle, restored);
+        Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).GroundContainers);
+        Assert.True(restored.TryTransitionTo(fixture.Inputs.ProfileKey));
+        Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).GroundContainers);
     }
 
     [Theory]

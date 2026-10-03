@@ -28,6 +28,12 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         if (_ground is long groundId)
         {
             contents = ground?.Read(groundId);
+            if (contents is null)
+            {
+                _ground = null;
+                Message = "That dropped item pile is no longer available.";
+                return null;
+            }
             owner = DaggerfallItemOwner.Ground(groundId);
             title = "Dropped items — loot";
         }

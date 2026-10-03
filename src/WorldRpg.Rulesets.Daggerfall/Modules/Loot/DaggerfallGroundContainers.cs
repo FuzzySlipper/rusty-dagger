@@ -4,10 +4,11 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 
-/// <summary>One durable dropped-item container. Its contents remain in the shared Engine inventory store.</summary>
+/// <summary>One materialized dropped-item container in the shared Engine inventory store.</summary>
 internal sealed record DaggerfallGroundContainer(DaggerfallWorldProfileKey Profile, long Id, EntityId Owner, WorldPoint Position);
 
 /// <summary>
@@ -22,7 +23,10 @@ internal sealed class DaggerfallGroundContainers
     private readonly EntityId _player;
     private readonly DurableIdentityAllocator _identities;
     private readonly Dictionary<long, DaggerfallGroundContainer> _ground = [];
+    private readonly Dictionary<long, DaggerfallGroundContainerSave> _unloaded = [];
     private DaggerfallWorldProfileKey _activeProfile;
+    private HashSet<DaggerfallExteriorCellId>? _residentCells;
+    private DaggerfallExteriorWorldOrigin _origin;
 
     internal DaggerfallGroundContainers(MechanicsInventoryContainerCoordinator containers, DaggerfallItemInstances instances,
         EntityId player, DurableIdentityAllocator identities, DaggerfallWorldProfileKey activeProfile)
@@ -44,11 +48,104 @@ internal sealed class DaggerfallGroundContainers
     {
         foreach (DaggerfallGroundContainer container in All.Values)
             _ground[container.Id] = container with { Position = DaggerfallExteriorSessionOrigin.Shift(container.Position, delta) };
+        foreach (var value in _unloaded.Values.Where(value => value.Profile.Require() == _activeProfile).ToArray())
+            _unloaded[value.Id] = value with { X = value.X + delta.X, Y = value.Y + delta.Y, Z = value.Z + delta.Z };
     }
-    /// <summary>All loaded pile state for save capture. Off-profile owners remain Engine-backed but inaccessible.</summary>
-    internal IReadOnlyCollection<DaggerfallGroundContainer> Persisted => _ground.Values.ToArray();
 
-    internal void SwitchProfile(DaggerfallWorldProfileKey profile) => _activeProfile = profile.Validate();
+    /// <summary>Detached values for issued piles with no current Engine owner.</summary>
+    internal IReadOnlyCollection<DaggerfallGroundContainerSave> Unloaded => _unloaded.Values.ToArray();
+
+    /// <summary>Completes a committed quest transfer from detached containment values.</summary>
+    internal void RemoveRetainedContents(IReadOnlySet<ulong> uniqueItems, IReadOnlySet<(DaggerfallItemOwner Owner, string StackId)> stacks)
+    {
+        foreach (var value in _unloaded.Values.ToArray())
+        {
+            if (!value.Inventory.UniqueItems.Any(item => uniqueItems.Contains(item.EntityId))
+                && !value.Inventory.Stacks.Any(item => stacks.Contains((DaggerfallItemOwner.Ground(value.Id), item.StackId)))) continue;
+            var inventory = value.Inventory with
+            {
+                UniqueItems = value.Inventory.UniqueItems.Where(item => !uniqueItems.Contains(item.EntityId)).ToArray(),
+                Stacks = value.Inventory.Stacks.Where(item => !stacks.Contains((DaggerfallItemOwner.Ground(value.Id), item.StackId))).ToArray(),
+            };
+            if (inventory.Stacks.Length == 0 && inventory.UniqueItems.Length == 0)
+            {
+                _unloaded.Remove(value.Id);
+                _identities.Remove(new(DurableIdentityKind.Container, checked((ulong)value.Id)));
+            }
+            else _unloaded[value.Id] = value with { Inventory = inventory };
+        }
+    }
+
+    internal DaggerfallGroundContainerSave[] Capture() => _ground.Values.Select(Capture)
+        .Concat(_unloaded.Values).OrderBy(value => value.Id).ToArray();
+
+    internal void SwitchProfile(DaggerfallWorldProfileKey profile)
+    {
+        profile.Validate();
+        if (profile == _activeProfile) return;
+        foreach (var container in _ground.Values.Where(value => value.Profile != profile).ToArray()) Unload(container);
+        _activeProfile = profile;
+        _residentCells = null;
+        Reconcile();
+    }
+
+    /// <summary>Loose piles share the existing terrain window and the Engine's current origin.</summary>
+    internal void ReconcileExteriorResidency(IReadOnlyCollection<DaggerfallExteriorCellId> cells, DaggerfallExteriorWorldOrigin origin)
+    {
+        if (_activeProfile.Kind != DaggerfallWorldProfileKind.Exterior)
+            throw new InvalidOperationException("Only an exterior profile has cell-owned ground piles.");
+        _residentCells = cells.ToHashSet();
+        _origin = origin;
+        Reconcile();
+    }
+
+    private bool ShouldMaterialize(DaggerfallWorldProfileKey profile, WorldPoint position)
+    {
+        if (profile != _activeProfile) return false;
+        if (_residentCells is null) return true;
+        return _residentCells.Contains(DaggerfallExteriorSessionOrigin.CellForLocalPosition(
+            position, _origin, DaggerfallExteriorWorldBounds.Daggerfall));
+    }
+
+    private void Reconcile()
+    {
+        foreach (var container in _ground.Values.Where(value => !ShouldMaterialize(value.Profile, value.Position)).ToArray()) Unload(container);
+        foreach (var value in _unloaded.Values.Where(value => ShouldMaterialize(value.Profile.Require(), new(value.X, value.Y, value.Z))).ToArray())
+        {
+            Materialize(value);
+            _unloaded.Remove(value.Id);
+        }
+    }
+
+    private DaggerfallGroundContainerSave Capture(DaggerfallGroundContainer container)
+    {
+        var (stacks, uniques) = DaggerfallInventorySaveBoundary.CaptureContents(_containers.Read(container.Owner),
+            DaggerfallItemOwner.Ground(container.Id), _instances, _containers.Entities);
+        return new(DaggerfallWorldProfileKeySave.Capture(container.Profile), container.Id,
+            container.Position.X, container.Position.Y, container.Position.Z, new(stacks, uniques, []));
+    }
+
+    private void Unload(DaggerfallGroundContainer container)
+    {
+        DaggerfallGroundContainerSave saved = Capture(container);
+        InventoryView contents = _containers.Read(container.Owner);
+        using (var edit = _containers.Entities.Store.Get<InventoryComponent>(container.Owner).Store.Prepare())
+        {
+            foreach (var stack in contents.Stacks) edit.Consume(container.Owner, stack.Id, stack.Quantity);
+            foreach (var item in contents.UniqueItems) edit.DestroyUnique(item.Entity);
+            edit.RetireOwner(container.Owner);
+            edit.Publish();
+        }
+        _unloaded.Add(container.Id, saved);
+        _ground.Remove(container.Id);
+        _instances.RemoveOwner(DaggerfallItemOwner.Ground(container.Id), retireBindings: false);
+        foreach (var item in saved.Inventory.UniqueItems)
+        {
+            _instances.RemoveUnique(item.EntityId);
+            _containers.Entities.Destroy(new(DurableIdentityKind.Item, item.EntityId));
+        }
+        _containers.Entities.Destroy(new(DurableIdentityKind.Container, checked((ulong)container.Id)));
+    }
 
     /// <summary>Moves a current player selection into a new, positioned world pile.</summary>
     internal DaggerfallGroundContainer Drop(InventoryContainerSelection selection, WorldPoint position, ulong expectedWorldRevision)
@@ -269,7 +366,18 @@ internal sealed class DaggerfallGroundContainers
             DurableIdentityReference identity = new(DurableIdentityKind.Container, checked((ulong)value.Id));
             if (_identities.Classify(identity) != DurableIdentityClassification.Live)
                 throw new ArgumentException($"Saved ground container {value.Id} is not live in the persisted identity ledger.");
-            EntityId owner = _containers.Entities.Create(identity, GroundContainerType);
+            _unloaded.Add(value.Id, value);
+        }
+        Reconcile();
+    }
+
+    private void Materialize(DaggerfallGroundContainerSave value)
+    {
+        DurableIdentityReference identity = new(DurableIdentityKind.Container, checked((ulong)value.Id));
+        EntityId owner = _containers.Entities.Create(identity, GroundContainerType);
+        bool seeded = false;
+        try
+        {
             _containers.RegisterOwner(owner);
             if (value.Inventory.Stacks.Length != 0 || value.Inventory.UniqueItems.Length != 0)
             {
@@ -279,9 +387,34 @@ internal sealed class DaggerfallGroundContainers
                         new InventoryItemId(unique.ItemId), UniqueItem: new DurableIdentityReference(DurableIdentityKind.Item, unique.EntityId))))
                     .ToArray();
                 _containers.Seed(owner, seeds);
+                seeded = true;
                 RegisterMetadata(value);
             }
             _ground.Add(value.Id, new DaggerfallGroundContainer(value.Profile.Require(), value.Id, owner, new WorldPoint(value.X, value.Y, value.Z)));
+        }
+        catch
+        {
+            var store = _containers.Entities.Store.Get<InventoryComponent>(_player).Store;
+            if (store.TryGetInventory(owner, out _))
+            {
+                InventoryView contents = store.Read(owner);
+                using var edit = store.Prepare();
+                foreach (var stack in contents.Stacks) edit.Consume(owner, stack.Id, stack.Quantity);
+                foreach (var item in contents.UniqueItems) edit.DestroyUnique(item.Entity);
+                edit.RetireOwner(owner);
+                edit.Publish();
+            }
+            if (seeded)
+            {
+                _instances.RemoveOwner(DaggerfallItemOwner.Ground(value.Id), retireBindings: false);
+                foreach (var item in value.Inventory.UniqueItems)
+                {
+                    _instances.RemoveUnique(item.EntityId);
+                    _containers.Entities.Destroy(new(DurableIdentityKind.Item, item.EntityId));
+                }
+            }
+            _containers.Entities.Destroy(identity);
+            throw;
         }
     }
 

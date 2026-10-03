@@ -30,7 +30,8 @@ internal sealed partial class DaggerfallSession
         {
             if (State.ItemInstances.ContainsUnique(id)) { owners.Add(State.ItemInstances.RequireUnique(id).Owner); continue; }
             var matches = _sites.Deltas.Values.SelectMany(delta => delta.ActorInventories.SelectMany(value => value.Inventory.UniqueItems)
-                .Concat(delta.Corpses.SelectMany(value => value.UniqueItems))).Where(value => value.EntityId == id).ToArray();
+                .Concat(delta.Corpses.SelectMany(value => value.UniqueItems)))
+                .Concat(_groundContainers.Unloaded.SelectMany(value => value.Inventory.UniqueItems)).Where(value => value.EntityId == id).ToArray();
             if (matches.Length != 1) throw new NotSupportedException($"Quest item {id} requires one retained physical owner, found {matches.Length}.");
             var item = matches[0];
             retained.Add(new(new(item.Metadata.Owner.Scope, item.Metadata.Owner.Id), item, null));
@@ -45,6 +46,7 @@ internal sealed partial class DaggerfallSession
             var matches = _sites.Deltas.Values.SelectMany(delta => owner.Scope == "actor"
                 ? delta.ActorInventories.Where(section => section.EntityId == owner.Id).SelectMany(section => section.Inventory.Stacks)
                 : delta.Corpses.Where(corpse => owner.Scope == "corpse" && corpse.ActorId == owner.Id).SelectMany(corpse => corpse.Stacks))
+                .Concat(_groundContainers.Unloaded.Where(pile => owner.Scope == "ground" && pile.Id == owner.Id).SelectMany(pile => pile.Inventory.Stacks))
                 .Where(stack => stack.StackId == value.StackId).ToArray();
             if (matches.Length != 1) throw new NotSupportedException($"Quest stack '{value.StackId}' requires one retained physical owner, found {matches.Length}.");
             retained.Add(new(owner, null, matches[0]));
@@ -95,6 +97,7 @@ internal sealed partial class DaggerfallSession
                 else State.ItemInstances.AdmitRetainedStack(item.Owner, destination, InventoryStackId.Parse(item.Stack!.StackId), item.Metadata);
             }
             foreach (var delta in deltas) _sites.ReplaceDelta(delta.Key, delta.Value);
+            _groundContainers.RemoveRetainedContents(uniqueIds, stackIds);
         });
     }
 }

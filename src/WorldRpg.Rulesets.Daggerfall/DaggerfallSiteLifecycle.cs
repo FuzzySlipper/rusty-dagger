@@ -513,6 +513,7 @@ internal sealed class DaggerfallSiteLifecycle
             ? residency.Origin
             : DaggerfallExteriorWorldOrigin.At(ActiveExteriorCell());
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin);
+        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, residency.Origin);
         ReconcileExteriorTerrainAppearance(residency);
         return update;
     }
@@ -530,6 +531,7 @@ internal sealed class DaggerfallSiteLifecycle
             : ActiveExteriorCell();
         DaggerfallExteriorCellResidency residency = EnsureExteriorResidency();
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin);
+        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, residency.Origin);
         ReconcileExteriorTerrainAppearance(residency);
         return update;
     }
@@ -565,6 +567,7 @@ internal sealed class DaggerfallSiteLifecycle
         }
         DaggerfallExteriorCellResidency residency = EnsureExteriorResidency();
         DaggerfallExteriorCellResidencyUpdate update = residency.Restore(save);
+        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, residency.Origin);
         ReconcileExteriorTerrainAppearance(residency);
         return update;
     }
@@ -682,6 +685,7 @@ internal sealed class DaggerfallSiteLifecycle
         // snapshot.
         _camera.Update(_state.PlayerControl);
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(CurrentExteriorCell(), residency.Origin);
+        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, residency.Origin);
         ReconcileExteriorTerrainAppearance(residency);
         return update;
     }
