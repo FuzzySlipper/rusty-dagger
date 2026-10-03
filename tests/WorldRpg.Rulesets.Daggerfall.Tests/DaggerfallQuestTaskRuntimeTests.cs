@@ -980,6 +980,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
 
     internal sealed class LifecycleFake(string? pick = null, string? childBranch = null) : IDaggerfallQuestTaskLifecycle
     {
+        public void PlaceResource(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, string task, int operationIndex) => throw new NotSupportedException("Use the real quest placement queue.");
         public bool HaveItem(DaggerfallQuestRuntimeInstance instance, string symbol) => throw new NotSupportedException("Use a real session inventory for item actions.");
         public DaggerfallQuestItemResult ItemAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("Use a real session inventory for item actions.");
         internal string? ChildBranch { get; set; } = childBranch;

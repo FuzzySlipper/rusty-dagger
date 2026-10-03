@@ -184,7 +184,8 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
     private void Move(KeyValuePair<ulong, DaggerfallItemInstanceMetadata>[] unique,
         (DaggerfallItemOwner Owner, InventoryStackId Stack, DaggerfallItemInstanceMetadata Metadata)[] stacks, DaggerfallItemOwner destination,
         KeyValuePair<ulong, DaggerfallItemInstanceMetadata>[]? discardedUnique = null,
-        (DaggerfallItemOwner Owner, InventoryStackId Stack, DaggerfallItemInstanceMetadata Metadata)[]? discardedStacks = null)
+        (DaggerfallItemOwner Owner, InventoryStackId Stack, DaggerfallItemInstanceMetadata Metadata)[]? discardedStacks = null,
+        InventoryContainerSeed[]? retainedSeeds = null)
     {
         discardedUnique ??= [];
         discardedStacks ??= [];
@@ -197,7 +198,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         foreach (var stack in stacks) state.ItemInstances.EnsureTransferCompatible(stack.Owner, destination, stack.Stack, stack.Stack);
         // Equipment removal and every selected copy transfer publish together. A failure
         // leaves the player's inventory/equipment and metadata untouched.
-        using (var edit = state.InventoryStore.Prepare())
+        void Apply(InventoryEdit edit)
         {
             foreach (var item in unique)
             {
@@ -218,6 +219,12 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
             }
             foreach (var stack in discardedStacks)
                 edit.Consume(ownerEntity(stack.Owner), stack.Stack, state.Containers.Read(ownerEntity(stack.Owner)).Stacks.Single(value => value.Id == stack.Stack).Quantity);
+        }
+        if (retainedSeeds is { Length: > 0 }) state.Containers.Seed(target, retainedSeeds, Apply);
+        else
+        {
+            using var edit = state.InventoryStore.Prepare();
+            Apply(edit);
             edit.Publish();
         }
         foreach (var item in unique) state.ItemInstances.MoveUnique(item.Key, destination);
@@ -246,6 +253,20 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         foreach (var item in state.ItemInstances.UniqueItems.Where(value => value.Value.Owner == owner).ToArray()) destroyUnique(item.Key);
         foreach (var stack in state.ItemInstances.StackItems.Where(value => value.Owner == owner).ToArray()) consumeStack(owner, stack.Stack);
         RetireCustody(custody);
+    }
+
+    /// <summary>Moves a live bound item into its admitted world owner without reminting it.</summary>
+    internal void MoveBoundItem(DaggerfallQuestResourceBinding binding, DaggerfallItemOwner destination, InventoryContainerSeed[]? retainedSeeds = null,
+        IReadOnlySet<(DaggerfallItemOwner Owner, string StackId)>? retainedStacks = null)
+    {
+        retainedSeeds ??= [];
+        var unique = binding.UniqueItemIds.Where(id => !retainedSeeds.Any(seed => seed.UniqueItem?.Value == id))
+            .Select(id => new KeyValuePair<ulong, DaggerfallItemInstanceMetadata>(id, state.ItemInstances.RequireUnique(id))).ToArray();
+        var stacks = binding.Stacks.Select(value => (Owner: new DaggerfallItemOwner(value.Owner.Scope, value.Owner.Id), Stack: InventoryStackId.Parse(value.StackId)))
+            .Where(value => retainedStacks?.Contains((value.Owner, value.Stack.Value)) != true)
+            .Select(value => (value.Owner, value.Stack, Metadata: state.ItemInstances.RequireStack(value.Owner, value.Stack))).ToArray();
+        if (unique.Length == 0 && stacks.Length == 0 && retainedSeeds.Length == 0) throw new NotSupportedException("A consumed quest item has no physical owner to place again.");
+        Move(unique, stacks, destination, retainedSeeds: retainedSeeds);
     }
 
     private void RetireCustody(DaggerfallQuestCustody custody)

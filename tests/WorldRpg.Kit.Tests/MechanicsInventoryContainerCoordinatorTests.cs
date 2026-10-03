@@ -97,6 +97,43 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
         Assert.Equal(destinationBefore.Stacks, containers.Read(destination).Stacks);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Retained_seed_and_live_transfer_publish_together_or_leave_both_owners_unchanged(bool reject)
+    {
+        EntityDirectory entities = new();
+        InventoryStore store = new();
+        var containers = CreateCoordinator(store, entities);
+        var source = CreateOwner(entities, 10);
+        var destination = CreateOwner(entities, 20);
+        containers.RegisterOwner(source);
+        containers.RegisterOwner(destination);
+        containers.Seed(source, [new(new("sword"), UniqueItem: Item(40))]);
+        var live = Assert.Single(containers.Read(source).UniqueItems).Entity;
+        void SeedAndTransfer() => containers.Seed(destination, [new(new("sword"), UniqueItem: Item(41))], edit =>
+        {
+            edit.TransferUnique(live, source, destination);
+            if (reject) edit.Grant(destination, Fungible("gold", 10), Stack("overflow"), 11);
+        });
+        if (reject)
+        {
+            Assert.Throws<MechanicsException>(SeedAndTransfer);
+            Assert.Equal(live, Assert.Single(containers.Read(source).UniqueItems).Entity);
+            Assert.Empty(containers.Read(destination).UniqueItems);
+            Assert.Empty(containers.Read(destination).Stacks);
+            Assert.False(entities.TryResolve(Item(41), out _));
+        }
+        else
+        {
+            SeedAndTransfer();
+            Assert.Empty(containers.Read(source).UniqueItems);
+            Assert.Equal(2, containers.Read(destination).UniqueItems.Count);
+            Assert.Contains(containers.Read(destination).UniqueItems, item => item.Entity == live);
+            Assert.True(entities.TryResolve(Item(41), out _));
+        }
+    }
+
     [Fact]
     public void Register_owner_requires_an_existing_engine_entity()
     {

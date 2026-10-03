@@ -154,7 +154,48 @@ internal sealed class DaggerfallGroundContainers
         }
     }
 
-    internal void RelocateQuestItem(DaggerfallQuestResourceBinding binding, WorldPoint position)
+    internal DaggerfallQuestResourceBinding PlaceQuestItem(DaggerfallQuestResourceBinding binding, WorldPoint position, DaggerfallItemOwner[] owners, Action<DaggerfallItemOwner> transfer)
+    {
+        if (owners.Length == 0) throw new NotSupportedException("A consumed quest item has no physical owner to place again.");
+        if (owners.All(owner => owner.Scope == "ground" && _ground.ContainsKey(owner.Id)))
+        {
+            RelocateQuestItem(binding, position);
+            return binding;
+        }
+        var identity = _identities.Allocate(DurableIdentityKind.Container);
+        long id = checked((long)identity.Value);
+        try
+        {
+            var owner = _containers.Entities.Create(identity, GroundContainerType);
+            _containers.RegisterOwner(owner);
+            transfer(DaggerfallItemOwner.Ground(id));
+            _ground.Add(id, new(_activeProfile, id, owner, position));
+            return binding.UniqueItemIds.Length > 0 ? binding : binding with
+                { Stacks = binding.Stacks.Select(stack => stack with { Owner = new("ground", id) }).Distinct().ToArray() };
+        }
+        catch
+        {
+            if (_containers.Entities.TryResolve(identity, out var owner))
+            {
+                // RegisterOwner registers the inventory before attaching its component.
+                // A failed attachment still needs its native owner retired.
+                var store = _containers.Entities.Store;
+                var inventoryStore = store.TryGet<InventoryComponent>(owner, out var inventory) ? inventory.Store
+                    : store.Get<InventoryComponent>(_player).Store;
+                if (inventoryStore.TryGetInventory(owner, out _))
+                {
+                    using var edit = inventoryStore.Prepare();
+                    edit.RetireOwner(owner);
+                    edit.Publish();
+                }
+                _containers.Entities.Destroy(identity);
+            }
+            _identities.Remove(identity);
+            throw;
+        }
+    }
+
+    private void RelocateQuestItem(DaggerfallQuestResourceBinding binding, WorldPoint position)
     {
         if (binding.UniqueItemIds.Length == 1 && !_instances.ContainsUnique(binding.UniqueItemIds[0])
             || binding.UniqueItemIds.Length == 0 && binding.Stacks.Length == 0)
@@ -164,6 +205,14 @@ internal sealed class DaggerfallGroundContainers
             : binding.Stacks.Select(stack => new DaggerfallItemOwner(stack.Owner.Scope, stack.Owner.Id)).Distinct().ToArray();
         if (owners.Any(owner => owner.Scope != "ground" || !_ground.ContainsKey(owner.Id)))
             throw new NotSupportedException("A quest item can be placed again only while all its canonical owners are ground piles.");
+        foreach (var stack in binding.Stacks)
+        {
+            var owner = new DaggerfallItemOwner(stack.Owner.Scope, stack.Owner.Id);
+            var id = InventoryStackId.Parse(stack.StackId);
+            var metadata = _instances.RequireStack(owner, id);
+            if (!_containers.Read(_ground[owner.Id].Owner).Stacks.Any(value => value.Id == id && value.Definition.Value == metadata.ItemId && value.Quantity > 0))
+                throw new NotSupportedException($"Quest stack '{stack.StackId}' has no actual ground contents to place.");
+        }
         foreach (var owner in owners)
         {
             var container = _ground[owner.Id];

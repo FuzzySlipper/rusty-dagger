@@ -521,7 +521,8 @@ public sealed class QuestWorldAdmissionTests
                 { PlaceSelection = new(inputs.ProfileKind, site.MapId, null, 0) })], []));
     }
 
-    private static DaggerfallDefinitions Definitions(bool stackable = false, bool gold = false, bool secondPlace = false, bool endSource = false, bool secondItem = false)
+    internal static DaggerfallDefinitions Definitions(bool stackable = false, bool gold = false, bool secondPlace = false, bool endSource = false, bool secondItem = false,
+        string[]? actions = null, bool person = false, bool atHome = false, bool rearmPlacement = false)
     {
         var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
@@ -534,6 +535,16 @@ public sealed class QuestWorldAdmissionTests
         foreach (var row in new[] { foe, item, place })
         { row["sourceFile"] = "world-test.txt"; row["quest"] = "world-test"; declarations.Add(row); }
         place["symbol"]!["canonicalId"] = "location"; place["symbol"]!["sourceSpelling"] = "_location_";
+        item["symbol"]!["canonicalId"] = "gift"; item["symbol"]!["sourceSpelling"] = "_gift_";
+        foe["symbol"]!["canonicalId"] = "enemy"; foe["symbol"]!["sourceSpelling"] = "_enemy_";
+        if (person)
+        {
+            var npc = declarations.First(value => value!["kind"]!.GetValue<string>() == "person" && value["person"]!["named"] is not null && value["person"]!["atHome"]!.GetValue<bool>())!.DeepClone();
+            npc["quest"] = "world-test"; npc["sourceFile"] = "world-test.txt";
+            npc["symbol"]!["canonicalId"] = "person"; npc["symbol"]!["sourceSpelling"] = "_person_";
+            npc["person"]!["atHome"] = atHome; npc["person"]!["gender"] = "female";
+            declarations.Add(npc);
+        }
         if (secondItem)
         {
             var extraItem = item.DeepClone();
@@ -553,6 +564,19 @@ public sealed class QuestWorldAdmissionTests
             root["questSources"]!["quests"]!.AsArray().Last()!["blocks"] = JsonNode.Parse("""
                 [{"kind":"headless","firstLine":1,"lines":["end quest"],"global":null}]
                 """);
+        if (actions is not null)
+            root["questSources"]!["quests"]!.AsArray().Last()!["blocks"] = new JsonArray(new JsonObject
+                { ["kind"] = "headless", ["firstLine"] = 1, ["lines"] = JsonSerializer.SerializeToNode(actions), ["global"] = null });
+        if (rearmPlacement)
+        {
+            var blocks = root["questSources"]!["quests"]!.AsArray().Last()!["blocks"]!.AsArray();
+            blocks.Insert(0, JsonNode.Parse("""
+                {"kind":"task","firstLine":100,"lines":["until _stop_ performed:","start task headless.1"],"global":null}
+                """));
+            blocks.Insert(0, JsonNode.Parse("""
+                {"kind":"variable","firstLine":99,"lines":["variable _stop_"],"global":null}
+                """));
+        }
         return DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
     }
 
