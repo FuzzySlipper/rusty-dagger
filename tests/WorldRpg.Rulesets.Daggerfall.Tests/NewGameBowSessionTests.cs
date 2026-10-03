@@ -8,6 +8,7 @@ using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Targeting;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using UniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 using EquipmentSlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
 using Xunit;
@@ -74,6 +75,26 @@ public sealed class NewGameBowSessionTests
     }
 
     [Fact]
+    public void The_starting_bow_plays_its_admitted_animation_and_releases_the_shared_arrow_flight()
+    {
+        using Fixture f = new(4);
+        f.Attack();
+        var bow = f.Inputs.ClassicPresentation.Weapons["weapon.bow"];
+        var strike = bow.Actions["strikeDown"];
+        Assert.Equal(strike.Sequence ?? Enumerable.Range(strike.FrameStart, strike.FrameCount).ToArray(),
+            f.Appearance.PlaybackRequests.Last().Frames.ToArray().Select(frame => (int)frame.FrameId));
+
+        uint releaseFrame = DaggerfallFormulaPolicy.BowWeaponHitFrame;
+        f.Appearance.AdvanceReceiptForAll = Reading(
+            f.Appearance.PlaybackRequests.Last().Frames.Span[(int)releaseFrame].FrameId, releaseFrame);
+        f.Game.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.Null(f.Game.State.Actors.Player.Attack.Pending);
+        var arrow = Assert.Single(f.Inputs.ClassicPresentation.WorldVisuals, visual => visual.MediaId == "visual.missile.arrow");
+        Assert.Contains(f.Appearance.Snapshots.Last(), fact => ReferenceEquals(fact.Appearance, f.Appearance.StaticMeshByPath[arrow.Path]));
+        Assert.Equal(23UL, f.Arrows().Quantity);
+    }
+
+    [Fact]
     public void The_last_normalized_starting_arrow_retires_its_player_metadata()
     {
         using Fixture f = new(4);
@@ -93,11 +114,14 @@ public sealed class NewGameBowSessionTests
     {
         internal const long Target = 2008;
         internal DaggerfallSession Game { get; }
+        internal DaggerfallSiteProfile Inputs { get; }
+        internal AppearanceFake Appearance { get; }
         private readonly DaggerfallSession title;
 
         internal Fixture(double distance)
         {
             var inputs = ReadInputs(TestData.RepositoryRoot);
+            Inputs = inputs;
             List<string> releases = [];
             ContentFake content = new(releases);
             PopulateContent(content, inputs);
@@ -116,7 +140,8 @@ public sealed class NewGameBowSessionTests
                     ? Receipt(new PerceptionPair(observer.Entity, target.Entity, separation, 1, PerceptionPairKind.Visible, separation))
                     : Receipt();
             };
-            var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service,
+            Appearance = new AppearanceFake(releases);
+            var engine = EngineContextFake.Create(content, spatial.Service, Appearance, perception.Service,
                 random: RandomMinimum.Create());
             title = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
             NewGameSessionTests.Commit(title, "class13");
@@ -132,12 +157,14 @@ public sealed class NewGameBowSessionTests
                 WorldPoint.From(origin - Vector3.UnitZ * (float)distance - Vector3.UnitY * bodyHeight), 0));
             Game.State.PlayerControl.YawRadians = 0;
             Game.State.PlayerControl.PitchRadians = 0;
+            // The ordinary equipment action has its own admitted update before attack input.
+            Game.Update(new ProductUpdate(OuterUpdate(1), []));
         }
 
         internal InventoryStack Arrows() => Assert.Single(Game.State.Inventory.Read().Stacks,
             item => item.Definition.Value == "template-131");
 
-        internal void Attack() => Game.Update(new ProductUpdate(OuterUpdate(1),
+        internal void Attack() => Game.Update(new ProductUpdate(OuterUpdate(2),
             [Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack")]));
 
         public void Dispose() { Game.Dispose(); title.Dispose(); }
