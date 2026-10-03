@@ -76,9 +76,9 @@ internal static partial class DaggerfallQuestTaskCompiler
     private static readonly Regex PersistHeader = Header("^until\\s+(?<symbol>[a-zA-Z0-9_.]+)\\s+performed:$");
     private static readonly Regex GlobalHeader = Header("^(?<global>[a-zA-Z0-9_.]+)\\s+(?<symbol>[a-zA-Z0-9_.]+)$");
     private static readonly Regex Start = Header("^(?:start\\s+task|setvar)\\s+(?<symbol>[a-zA-Z0-9_.]+)$");
-    private static readonly Regex Questor = Header("^(?<verb>add|drop)\\s+(?<symbol>[a-zA-Z0-9_.]+)\\s+as\\s+questor$");
-    private static readonly Regex Face = Header("^(?<verb>add|drop)\\s+(?<foe>foe\\s+)?(?<symbol>[a-zA-Z0-9_.]+)\\s+face(?:\\s+saying\\s+(?<message>[0-9]+))?$");
-    private static readonly Regex Mute = Header("^mute\\s+npc\\s+(?<symbol>[a-zA-Z0-9_.]+)$");
+    private static readonly Regex Questor = Header("^(?<verb>add|drop)\\s+(?<symbol>[a-zA-Z0-9_.-]+)\\s+as\\s+questor$");
+    private static readonly Regex Face = Header("^(?<verb>add|drop)\\s+(?<foe>foe\\s+)?(?<symbol>[a-zA-Z0-9_.-]+)\\s+face(?:\\s+saying\\s+(?<message>[0-9]+))?$");
+    private static readonly Regex Mute = Header("^mute\\s+npc\\s+(?<symbol>[a-zA-Z0-9_.-]+)$");
     private static readonly Regex Clear = Header("^clear\\s+(?<symbols>[a-zA-Z0-9_.]+(?:\\s+[a-zA-Z0-9_.]+)*)$");
     private static readonly Regex Unset = Header("^unset\\s+(?<symbols>[a-zA-Z0-9_.]+(?:\\s+[a-zA-Z0-9_.]+)*)$");
     private static readonly Regex End = Header("^end\\s+quest(?:\\s+saying\\s+(?<message>\\d+))?$");
