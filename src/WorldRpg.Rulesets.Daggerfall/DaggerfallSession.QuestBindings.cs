@@ -36,6 +36,7 @@ internal sealed partial class DaggerfallSession
             }
             return _groundContainers.CreateQuestItem(item, position, _uniqueItems);
         }
-        throw new NotSupportedException("Quest Person world admission requires its canonical NPC projection owner.");
+        if (resource.SelectedPerson is not null) return PlaceQuestPerson(instanceId, resource, profile, position);
+        throw new ArgumentException($"Quest resource '{resource.Symbol}' has no selected physical meaning.");
     }
 }

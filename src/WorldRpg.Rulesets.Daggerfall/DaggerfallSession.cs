@@ -149,7 +149,11 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
     void IDaggerfallSiteTransitionHost.RelocatePlayer(WorldPoint position, float yawRadians, float pitchRadians) =>
         ApplyRelocation(position, yawRadians, pitchRadians);
 
-    void IDaggerfallSiteTransitionHost.RebuildActivation() => InitializeActivation(_engine, _tuning.LootInteraction);
+    void IDaggerfallSiteTransitionHost.RebuildActivation()
+    {
+        ReconcileNpcProjection();
+        InitializeActivation(_engine, _tuning.LootInteraction);
+    }
 
     void IDaggerfallSiteTransitionHost.RebaseTransientWorld(Vector3 delta)
     {
@@ -157,6 +161,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         Casting.Rebase(delta);
         _encounters.RebasePending(_activeProfileKey.LogicalId, delta);
         _dialogue?.Rebase(delta);
+        foreach (var entry in State.Actors.Store.Query<DaggerfallNpcBody>())
+            entry.Value.Pose = new(DaggerfallExteriorSessionOrigin.Shift(entry.Value.Pose.Position, delta), 0);
         // Ship return pose is detached in the land profile; active-world origin moves do not own it.
     }
 
@@ -662,7 +668,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
         _appearance.Publish(State.Actors, _groundContainers.All,
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],
-            _tuning.Camera.EyeHeight, State.Effects.PerceptionFor);
+            _tuning.Camera.EyeHeight, State.Effects.PerceptionFor, ReadNpcViews());
     }
 
     /// <summary>The panel the player asked for through a device the DOM has no channel of its own for.</summary>

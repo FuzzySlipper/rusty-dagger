@@ -16,12 +16,14 @@ public sealed class QuestNpcMediaSelectionTests
             Arena2SitePublication.RuntimeNpcResources(payload));
     }
 
-    [Fact]
-    public void Missing_source_meaning_or_malformed_addresses_do_not_publish_an_incomplete_npc_catalog()
+    [Theory]
+    [InlineData(180, 128)]
+    [InlineData(1000, 0)]
+    public void Missing_source_meaning_or_malformed_addresses_do_not_publish_an_incomplete_npc_catalog(int archive, int record)
     {
         Assert.Throws<InvalidOperationException>(() => Arena2SitePublication.RuntimeNpcResources("{}"));
-        Assert.Throws<InvalidOperationException>(() => Arena2SitePublication.RuntimeNpcResources("""
-            {"factions":{"factions":[],"npcCaptions":[{"archive":180,"record":128}]}}
-            """));
+        Assert.Throws<InvalidOperationException>(() => Arena2SitePublication.RuntimeNpcResources(
+            System.Text.Json.JsonSerializer.Serialize(new { factions = new { factions = Array.Empty<object>(),
+                npcCaptions = new[] { new { archive, record } } } })));
     }
 }

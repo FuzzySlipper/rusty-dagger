@@ -673,6 +673,9 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
             return new DaggerfallQuestClockState(clock.Symbol, duration, duration, clock.Flag, clock.MinRange, clock.MaxRange, false, false);
         })] }, program) { TravelClockSeconds = ResolveTravelClockSeconds };
         if (!_instances.TryAdd(started.InstanceId, started)) throw new ArgumentException($"Quest instance '{started.InstanceId}' already exists.");
+        foreach (var resource in started.Resources.Where(value => value.SelectedPerson?.Home is not null))
+            RequestPlacement(started.InstanceId, "person-home:" + DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "Person home"), resource.Symbol,
+                DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "Person home") + ".home", automaticHome: true);
         return started.Capture();
     }
 

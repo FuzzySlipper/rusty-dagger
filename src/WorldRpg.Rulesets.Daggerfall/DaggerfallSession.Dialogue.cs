@@ -103,11 +103,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (site is null) yield break;
         foreach (DaggerfallNpc npc in _npcs.All)
         {
-            if (!IsTalkableAt(npc, site) || !_actors.TryGet(npc.DurableId, out ActorState actor)) continue;
+            if (!TryReadLiveNpc(npc.DurableId, out _, out DaggerfallDialogueNpc? actor)) continue;
             yield return new(
                 DaggerfallActivationTargetKind.Npc,
                 ActorsState.Identity(npc.DurableId),
-                actor.Actor.Entity,
+                actor!.Entity,
                 checked((ulong)npc.DurableId),
                 actor.Position,
                 Precedence: 1,
@@ -121,9 +121,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (selection.Mode != DaggerfallActivationMode.Talk)
             return new(false, "Select Talk mode to speak with someone.");
         if (selection.Target.Kind != DaggerfallActivationTargetKind.Npc
-            || !TryReadLiveNpc(checked((long)selection.Target.Identity.Value), out DaggerfallNpc? npc, out ActorState? actor)
+            || !TryReadLiveNpc(checked((long)selection.Target.Identity.Value), out DaggerfallNpc? npc, out DaggerfallDialogueNpc? actor)
             || actor is null
-            || actor.Actor.Entity != selection.Target.Entity)
+            || actor.Entity != selection.Target.Entity)
             return new(false, "That person is no longer available here.");
 
         Open(npc!, actor!);
@@ -142,7 +142,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
         if (action.Kind is not (DaggerfallUiActionKind.DialogueTone or DaggerfallUiActionKind.DialogueTopic) || !MatchesRevision(action.Revision))
             return Reject("That conversation choice is no longer current.");
-        if (!ValidateCurrent(out DaggerfallNpc? npc, out ActorState? actor, out DaggerfallSiteRecord? site))
+        if (!ValidateCurrent(out DaggerfallNpc? npc, out DaggerfallDialogueNpc? actor, out DaggerfallSiteRecord? site))
         {
             Close();
             return Reject("That person has moved or is no longer available.");
@@ -180,7 +180,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _publish(null);
     }
 
-    private void Open(DaggerfallNpc npc, ActorState actor)
+    private void Open(DaggerfallNpc npc, DaggerfallDialogueNpc actor)
     {
         DaggerfallFactionReaction reaction = _social.ReactionForNpc(npc);
         int greetingId = reaction.Value >= 30 ? 7209 : reaction.Value >= 10 ? 7208 : reaction.Value >= 0 ? 7207 : 7206;
@@ -193,7 +193,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             run => !run.Contains("%oth", StringComparison.Ordinal) || greetingContext.Faction.Oath is not null);
 
         string revision = checked(++_nextRevision).ToString(CultureInfo.InvariantCulture);
-        _current = new TalkSession(npc.DurableId, actor.Actor.Entity, actor.Position, npc.Site, revision, greeting)
+        _current = new TalkSession(npc.DurableId, actor.Entity, actor.Position, npc.Site, revision, greeting)
         {
             Tone = DaggerfallDialogueTone.Normal,
         };
@@ -204,7 +204,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Publish(npc, _activeSite());
     }
 
-    private DaggerfallActivationOutcome ResolveTopic(DaggerfallNpc npc, ActorState actor, DaggerfallSiteRecord site, DaggerfallDialogueTopic topic)
+    private DaggerfallActivationOutcome ResolveTopic(DaggerfallNpc npc, DaggerfallDialogueNpc actor, DaggerfallSiteRecord site, DaggerfallDialogueTopic topic)
     {
         TalkSession session = _current!;
         int socialGroup = ResolveSocialGroup(npc);
@@ -403,7 +403,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         return (rendered.Text, [.. rendered.Diagnostics.Select(diagnostic => $"{diagnostic.Kind}: {diagnostic.Detail}")]);
     }
 
-    private bool ValidateCurrent(out DaggerfallNpc? npc, out ActorState? actor, out DaggerfallSiteRecord? site)
+    private bool ValidateCurrent(out DaggerfallNpc? npc, out DaggerfallDialogueNpc? actor, out DaggerfallSiteRecord? site)
     {
         npc = null;
         actor = null;
@@ -411,11 +411,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         TalkSession? session = _current;
         if (session is null || site is null || !TryReadLiveNpc(session.TargetId, out npc, out actor)) return false;
         return npc!.Site == session.Site
-            && actor!.Actor.Entity == session.Actor
+            && actor!.Entity == session.Actor
             && actor.Position == session.Position;
     }
 
-    private bool TryReadLiveNpc(long id, out DaggerfallNpc? npc, out ActorState? actor)
+    private bool TryReadLiveNpc(long id, out DaggerfallNpc? npc, out DaggerfallDialogueNpc? actor)
     {
         npc = null;
         actor = null;
@@ -423,16 +423,20 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (site is null) return false;
         try { npc = _npcs.Require(id); }
         catch (InvalidOperationException) { return false; }
-        if (!IsTalkableAt(npc!, site) || !_actors.TryGet(id, out ActorState currentActor)) return false;
-        actor = currentActor;
-        return true;
+        if (!IsTalkableAt(npc!, site)) return false;
+        if (_actors.TryGet(id, out ActorState currentActor))
+            actor = new(currentActor.Actor.Entity, currentActor.Position);
+        else if (_actors.Entities.TryResolve(ActorsState.Identity(id), out var entity)
+            && _actors.Store.TryGet<DaggerfallNpcBody>(entity, out var body))
+            actor = new(entity, body.Pose.Position);
+        return actor is not null;
     }
 
     private static bool IsTalkableAt(DaggerfallNpc npc, DaggerfallSiteRecord site) =>
         npc.Presence == DaggerfallNpcPresence.Active
         && npc.Services.Contains("talk", StringComparer.Ordinal)
-        && npc.Site.Region == site.Id.Region
-        && string.Equals(npc.Site.Location, site.Name, StringComparison.Ordinal);
+        && (npc.Profile is { } profile ? profile.Site == site.Id
+            : npc.Site.Region == site.Id.Region && string.Equals(npc.Site.Location, site.Name, StringComparison.Ordinal));
 
     private bool MatchesRevision(string? revision) =>
         _current is { } current && string.Equals(current.Revision, revision, StringComparison.Ordinal);
@@ -491,6 +495,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             $"session:{session.Revision}:npc:{session.TargetId}:{purpose}",
             minimum,
             maximum)).Value);
+
+    private sealed record DaggerfallDialogueNpc(EntityId Entity, WorldPoint Position);
 
     private sealed class TalkSession(long targetId, EntityId actor, WorldPoint position, DaggerfallNpcSite site, string revision, string greeting)
     {

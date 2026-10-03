@@ -1,4 +1,5 @@
 using Rusty.Engine;
+using System.Text.Json.Serialization;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
@@ -12,6 +13,7 @@ internal sealed record DaggerfallQuestPlacementOperation(string Id, string Resou
     int? MarkerIndex = null, DaggerfallQuestMarkerPreference Preference = DaggerfallQuestMarkerPreference.Default)
 {
     public DaggerfallQuestAdmittedPlacement? Applied { get; init; }
+    [JsonRequired] public bool AutomaticHome { get; init; }
     internal void Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(Id);
@@ -62,12 +64,12 @@ internal sealed partial class DaggerfallQuestInstances
 {
     /// <summary>Task actions and Person homes use this same durable queue before their target site exists.</summary>
     internal void RequestPlacement(string instanceId, string operationId, string resourceSymbol, string placeSymbol,
-        int? markerIndex = null, DaggerfallQuestMarkerPreference preference = DaggerfallQuestMarkerPreference.Default)
+        int? markerIndex = null, DaggerfallQuestMarkerPreference preference = DaggerfallQuestMarkerPreference.Default, bool automaticHome = false)
     {
         var instance = Active(instanceId);
         string resource = DaggerfallQuestInstanceSave.Canonical(resourceSymbol, "placement resource");
         string place = DaggerfallQuestInstanceSave.Canonical(placeSymbol, "placement place");
-        var operation = new DaggerfallQuestPlacementOperation(operationId, resource, place, markerIndex, preference);
+        var operation = new DaggerfallQuestPlacementOperation(operationId, resource, place, markerIndex, preference) { AutomaticHome = automaticHome };
         operation.Validate();
         var selected = instance.Resources.SingleOrDefault(value => DaggerfallQuestInstanceSave.Canonical(value.Symbol, "placement resource") == resource)
             ?? throw new ArgumentException($"Quest placement refers to unavailable resource '{resource}'.");
@@ -81,6 +83,8 @@ internal sealed partial class DaggerfallQuestInstances
                 throw new ArgumentException($"Quest placement '{operationId}' already names a different operation.");
             return;
         }
+        if (!automaticHome)
+            instance.Placements = [.. instance.Placements.Where(value => value.ResourceSymbol != resource || !value.AutomaticHome || value.Applied is not null)];
         instance.Placements = [.. instance.Placements, operation];
     }
 

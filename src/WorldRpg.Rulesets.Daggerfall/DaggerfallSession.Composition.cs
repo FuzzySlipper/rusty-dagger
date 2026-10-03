@@ -509,6 +509,7 @@ internal sealed partial class DaggerfallSession
             _vitality.SpellTrackRestored += (target, track, requested, restored) =>
                 _facts.Append(new SpellTrackRestoredFact(checked((long)actors.Entities.IdentityOf(target.Entity).Value),
                     track.Value, requested, restored));
+            ReconcileNpcProjection();
             InitializeActivation(engine, tuning.LootInteraction);
             _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator, State.LevelUps, State.Social, State.SkillUses);
             _characterUi.UseGuildMembership(State.GuildMembership, () => checked((int)_time.Calendar.DayNumber));

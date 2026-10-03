@@ -34,7 +34,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     // their normalized texture handles must be admitted with the initial closure.
     private readonly Dictionary<string, RenderResourceInfo> classicTextures = new(StringComparer.Ordinal);
     private readonly Dictionary<long, ActorVisual> actors = [];
-    private readonly Dictionary<long, GroundVisual> groundVisuals = [];
+    private readonly Dictionary<long, BillboardVisual> groundVisuals = [];
+    private readonly Dictionary<long, BillboardVisual> npcVisuals = [];
     private readonly Dictionary<RangedShotIdentity, ulong> arrowVisualEntityIds = [];
     private readonly List<EffectVisual> effects = [];
     private ViewmodelVisual? viewmodel;
@@ -87,7 +88,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly List<AttackImpactNotice> attackImpacts = [];
     private readonly List<SpriteAtlas> atlases = [];
     private SpriteAtlas? groundContainerAtlas;
-    private readonly NormalizedGroundContainerSprite? groundContainerSprite;
+    private readonly NormalizedBillboardSprite? groundContainerSprite;
     private readonly List<Material> materials = [];
     private readonly Dictionary<uint, Material> materialsBySlot = [];
     private readonly Dictionary<DaggerfallRdbDoorId, Appearance> doorVisuals = [];
@@ -267,7 +268,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     /// <summary>Publishes the active ground-container projection through the same Engine snapshot as actors.</summary>
     internal void Publish(ActorsState actors, IReadOnlyDictionary<long, DaggerfallGroundContainer> groundContainers,
         IReadOnlyList<DaggerfallRangedFlightView>? rangedFlights = null, float arrowHeight = 0f,
-        Func<long, DaggerfallPerceptionEffectState>? perception = null)
+        Func<long, DaggerfallPerceptionEffectState>? perception = null, IReadOnlyList<DaggerfallNpcView>? npcs = null)
     {
         if (disposed) return;
         ReconcileGroundVisuals(groundContainers);
@@ -293,10 +294,14 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         }
         foreach (DaggerfallGroundContainer container in groundContainers.Values.OrderBy(container => container.Id))
         {
-            if (groundVisuals.TryGetValue(container.Id, out GroundVisual? visual))
+            if (groundVisuals.TryGetValue(container.Id, out BillboardVisual? visual))
                 facts.Add(new AppearanceFact(checked((ulong)container.Id), false, 0,
                     new Transform(container.Position.ToVector(), Quaternion.Identity, Vector3.One), visual.Appearance, true, RenderLayer.Scene));
         }
+        foreach (var npc in npcs ?? [])
+            if (npcVisuals.TryGetValue(npc.Id, out var visual))
+                facts.Add(new AppearanceFact(checked((ulong)npc.Id), false, 0,
+                    new Transform(npc.Position.ToVector(), Quaternion.Identity, Vector3.One), visual.Appearance, true, RenderLayer.Scene));
         foreach (EffectVisual effect in effects)
             facts.Add(new AppearanceFact(effect.EntityId, false, 0, new Transform(effect.Position.ToVector(), Quaternion.Identity, Vector3.One), effect.Appearance, true, RenderLayer.Scene));
         if (arrowAppearance is { } arrowVisual)
@@ -591,7 +596,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         }
         catch (Exception exception) { failures = [exception]; }
         foreach (ActorVisual visual in actors.Values.Reverse()) visual.Dispose(ref failures);
-        foreach (GroundVisual visual in groundVisuals.Values.Reverse()) visual.Dispose(ref failures);
+        foreach (BillboardVisual visual in groundVisuals.Values.Reverse()) visual.Dispose(ref failures);
+        foreach (BillboardVisual visual in npcVisuals.Values.Reverse()) visual.Dispose(ref failures);
         foreach (EffectVisual effect in effects.AsEnumerable().Reverse()) effect.Dispose(ref failures);
         effects.Clear();
         if (viewmodel is { } weapon) { viewmodel = null; weapon.Dispose(ref failures); }
@@ -600,6 +606,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         nextRetired.Clear(); priorRetired.Clear();
         actors.Clear();
         groundVisuals.Clear();
+        npcVisuals.Clear();
         if (world is { } staticWorld) { world = null; Dispose(staticWorld, ref failures); }
         if (arrowAppearance is { } arrowVisual) { arrowAppearance = null; Dispose(arrowVisual, ref failures); }
         arrowVisualEntityIds.Clear();
@@ -642,11 +649,24 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         catch (Exception exception) { (failures ??= []).Add(exception); }
     }
 
+    internal void AddNpc(long id, NormalizedBillboardSprite sprite)
+    {
+        if (npcVisuals.ContainsKey(id)) return;
+        var (_, visual) = CreateSprite(content, new NormalizedActorSprite(sprite.TexturePath, sprite.TextureSha256,
+            sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size));
+        npcVisuals.Add(id, new(id, visual));
+    }
+
+    internal void RetireNpc(long id)
+    {
+        if (npcVisuals.Remove(id, out var visual)) Retire(visual);
+    }
+
     private void ReconcileGroundVisuals(IReadOnlyDictionary<long, DaggerfallGroundContainer> containers)
     {
         foreach (long id in groundVisuals.Keys.Where(id => !containers.ContainsKey(id)).ToArray())
         {
-            GroundVisual visual = groundVisuals[id];
+            BillboardVisual visual = groundVisuals[id];
             groundVisuals.Remove(id);
             Retire(visual);
         }
@@ -660,7 +680,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 groundContainerSprite.InitialFrameId, groundContainerSprite.Pivot, groundContainerSprite.Size,
                 BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default,
                 new Color(1F, 1F, 1F, 1F)));
-            groundVisuals.Add(container.Id, new GroundVisual(container.Id, visual));
+            groundVisuals.Add(container.Id, new BillboardVisual(container.Id, visual));
         }
     }
 
@@ -1141,7 +1161,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         }
     }
 
-    internal sealed class GroundVisual(long entityId, Appearance appearance) : IDisposable
+    internal sealed class BillboardVisual(long entityId, Appearance appearance) : IDisposable
     {
         internal long EntityId { get; } = entityId;
         internal Appearance Appearance { get; } = appearance;

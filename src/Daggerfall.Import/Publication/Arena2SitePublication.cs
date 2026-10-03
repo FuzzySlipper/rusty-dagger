@@ -65,7 +65,7 @@ public static class Arena2SitePublication
             .Concat(captions.EnumerateArray())
             .Select(flat => (Archive: flat.GetProperty("archive").GetInt32(), Record: flat.GetProperty("record").GetInt32()))
             .Distinct().OrderBy(flat => flat.Archive).ThenBy(flat => flat.Record)
-            .Select(flat => flat.Archive is < 0 or > ushort.MaxValue || flat.Record is < 0 or > 127
+            .Select(flat => flat.Archive is < 0 or > 999 || flat.Record is < 0 or > 127
                 ? throw new InvalidOperationException($"Normalized NPC flat {flat.Archive}/{flat.Record} has an invalid address.")
                 : $"sprite/texture-{flat.Archive}-{flat.Record}")];
     }

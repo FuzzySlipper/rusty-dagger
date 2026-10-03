@@ -182,6 +182,7 @@ internal static class TestSessions
             content.Add(sprite.TexturePath, sprite.TextureSha256);
             if (sprite.Corpse is { } corpse) content.Add(corpse.TexturePath, corpse.TextureSha256);
         }
+        foreach (var sprite in inputs.BillboardSprites.Values) content.Add(sprite.TexturePath, sprite.TextureSha256);
         foreach (NormalizedAudioClip clip in inputs.Audio) content.Add(clip.Path, clip.Sha256);
         foreach (NormalizedClassicEffect effect in inputs.ClassicPresentation.Effects) content.Add(effect.TexturePath, effect.TextureSha256);
         foreach (NormalizedClassicWeapon weapon in inputs.ClassicPresentation.Weapons.Values) content.Add(weapon.TexturePath, weapon.TextureSha256);
@@ -233,7 +234,7 @@ internal static class TestSessions
         return content;
     }
 
-    internal static DaggerfallSiteProfile MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null, bool shortAttackDirection = false, NormalizedGroundContainerSprite? groundContainerSprite = null, DaggerfallActorFeedback? feedback = null, long spriteActorId = 11)
+    internal static DaggerfallSiteProfile MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null, bool shortAttackDirection = false, NormalizedBillboardSprite? groundContainerSprite = null, DaggerfallActorFeedback? feedback = null, long spriteActorId = 11)
     {
         NormalizedSpriteState idle = new("idle", [0], 10F, true)
         {
