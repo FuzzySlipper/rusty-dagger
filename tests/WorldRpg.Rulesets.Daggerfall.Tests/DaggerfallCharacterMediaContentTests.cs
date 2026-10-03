@@ -103,7 +103,9 @@ public sealed class DaggerfallCharacterMediaContentTests
         Assert.Equal(string.Empty, CharacterIdentityPresentation.From(definitions, player with { Career = "class03" })!.Portrait);
 
         // The publication accounts for every supplied character file, and this pack draws every race.
-        Assert.Equal(87, presentation.Files.Count);
+        Assert.Equal(88, presentation.Files.Count);
+        Assert.Equal(4, presentation.ChildFaces.Count);
+        Assert.All(presentation.ChildFaces, face => Assert.Equal("KIDS00I0.CIF", face.SourceFile));
         Assert.Contains("CMPA00I0.BSS", presentation.Files);
         Assert.Empty(presentation.RacesWithoutMedia);
         Assert.Throws<InvalidOperationException>(() => presentation.RequireRace("vampire"));
