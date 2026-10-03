@@ -103,6 +103,7 @@ public sealed class WabbajackSessionTests
         var definitions = TestPayload.Definitions;
         var declaration = definitions.QuestSources.Resources.First(resource => resource.Kind == "foe"
             && definitions.QuestSources.Quests[resource.SourceFile].Disposition == DaggerfallQuestDisposition.Compiled
+            && !definitions.QuestSources.Resources.Any(other => other.SourceFile == resource.SourceFile && other.Kind is "place" or "person")
             && !definitions.QuestSources.UnresolvedReferences.Any(link => link.SourceFile == resource.SourceFile)
             && !DaggerfallQuestClockCompiler.Compile(definitions.QuestSources.Resolve(resource.SourceFile)).Any(DaggerfallQuestClockCompiler.UsesTravelDuration));
         var quest = definitions.QuestSources.Quests[declaration.SourceFile];
