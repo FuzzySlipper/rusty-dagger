@@ -78,7 +78,7 @@ public sealed class PublishedContentDeliveryTests
         // The published group carries every classic descriptor and the sound catalog that describes
         // the archive. The inventory indexes both because both are admitted content.
         Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
-        Assert.Equal(155, listed.Count);
+        Assert.Equal(297, listed.Count);
 
         // The score is published by its own command into its own group, so it carries its own generated
         // index and the classic index above does not account for it.
@@ -134,8 +134,10 @@ public sealed class PublishedContentDeliveryTests
             .Where(path => path.StartsWith("worldrpg/media/character/", StringComparison.Ordinal) && !path.EndsWith("character-media-inventory.json", StringComparison.Ordinal))];
         // Every artifact the index names is an admitted file, and the group carries no other: an
         // artifact written without an index entry, or an entry with no artifact, fails here.
-        Assert.Equal(421, characterListed.Count);
-        Assert.Equal(240, characters.Artifacts.Count(artifact => artifact.GetProperty("binding").GetString() == "admitted"));
+        // The escort HUD adds four child faces and binds the 61 faction faces alongside the
+        // paper-doll layers and career animation frames.
+        Assert.Equal(425, characterListed.Count);
+        Assert.Equal(305, characters.Artifacts.Count(artifact => artifact.GetProperty("binding").GetString() == "admitted"));
         Assert.Equal(
             [.. characterPublished.Except(characterListed).Order(StringComparer.Ordinal)],
             [.. characterListed.Except(characterPublished).Order(StringComparer.Ordinal)]);
@@ -226,7 +228,8 @@ public sealed class PublishedContentDeliveryTests
         // with the file and palette it would need, and names the consumer when one binds it.
         JsonElement[] layers = [.. presentation.GetProperty("layers").EnumerateArray()];
         JsonElement[] factionFaces = [.. presentation.GetProperty("faces").EnumerateArray()];
-        foreach (JsonElement[] references in new[] { layers, factionFaces })
+        JsonElement[] childFaces = [.. presentation.GetProperty("childFaces").EnumerateArray()];
+        foreach (JsonElement[] references in new[] { layers, factionFaces, childFaces })
         {
             Assert.NotEmpty(references);
             Assert.All(references, reference =>
@@ -241,15 +244,17 @@ public sealed class PublishedContentDeliveryTests
             });
         }
 
-        // The canvases are published, so a reference the character sheet resolves is admitted rather than
-        // pending forever - and the sheet resolves every race the catalogs publish, so all 200 layers are
-        // bound. Every faction face stays required-pending: the artifacts are published,
-        // while the future social UI owns their consumer. Both counts are pinned so that binding a file has to move this deliberately.
-        Assert.Equal(200, layers.Count(layer => layer.GetProperty("binding").GetString() == "admitted"));
-        Assert.DoesNotContain(layers, layer => layer.GetProperty("binding").GetString() == "requiredPending");
-        Assert.All(layers, layer => Assert.Equal("the character sheet", layer.GetProperty("consumer").GetString()));
-        // Faction-face pixels are published; their social consumer remains pending.
-        Assert.Equal(61, factionFaces.Count(face => face.GetProperty("binding").GetString() == "requiredPending"));
+        // The sheet binds every race's layers; the quest escort HUD also resolves adult, individual
+        // faction and child faces. These families now have live consumers rather than pending labels.
+        Assert.Equal(200, layers.Length);
+        Assert.Equal(61, factionFaces.Length);
+        Assert.Equal(4, childFaces.Length);
+        foreach (JsonElement[] references in new[] { layers, factionFaces, childFaces })
+            Assert.All(references, reference =>
+            {
+                Assert.Equal("admitted", reference.GetProperty("binding").GetString());
+                Assert.Equal("the character sheet and quest escort HUD", reference.GetProperty("consumer").GetString());
+            });
 
         // The three supplied career portraits are what any career's sheet draws, so they are bound by the
         // same consumer, and the careers the corpus depicts no portrait for say so rather than borrowing
@@ -259,7 +264,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.All(careers, portrait =>
         {
             Assert.Equal("admitted", portrait.GetProperty("binding").GetString());
-            Assert.Equal("the character sheet", portrait.GetProperty("consumer").GetString());
+            Assert.Equal("the character sheet and quest escort HUD", portrait.GetProperty("consumer").GetString());
             // The section states the palette the pixels are really in. A classic animation carries its own,
             // so naming the family's paired palette here would describe colours the portrait does not have -
             // and the generated index, which a consumer resolves the bytes through, states the same fact.
@@ -275,7 +280,7 @@ public sealed class PublishedContentDeliveryTests
 
         // Every reference whose canvas was published states the same palette as the index entry for that
         // canvas: a consumer resolving either record paints the same colours.
-        foreach (JsonElement[] references in new[] { layers, factionFaces, careers })
+        foreach (JsonElement[] references in new[] { layers, factionFaces, childFaces, careers })
         {
             Assert.All(references.Where(reference => painted.ContainsKey(reference.GetProperty("mediaId").GetString()!)), reference =>
             {
@@ -285,6 +290,7 @@ public sealed class PublishedContentDeliveryTests
         }
 
         Assert.All(factionFaces, face => Assert.True(painted.ContainsKey(face.GetProperty("mediaId").GetString()!)));
+        Assert.All(childFaces, face => Assert.True(painted.ContainsKey(face.GetProperty("mediaId").GetString()!)));
 
         // A supplied file whose canvases could not be published is recorded as unreadable with the
         // refusal that names it - not as a file that read and went unused, which would say the opposite
@@ -303,13 +309,13 @@ public sealed class PublishedContentDeliveryTests
     }
 
     /// <summary>
-    /// The admitted references are exactly the ones the character sheet resolves, checked against the
-    /// sheet's own projection for every race and career the pack publishes: a binding is a claim that a live
+    /// The admitted references are the ones the sheet and escort presentations resolve, checked against
+    /// the sheet's projection and the escort face definitions: a binding is a claim that a live
     /// consumer draws the canvas, so this is what makes it a fact about the product rather than a label the
     /// producer wrote for itself.
     /// </summary>
     [Fact]
-    public void The_admitted_character_references_are_the_ones_the_character_sheet_resolves()
+    public void The_admitted_character_references_are_the_ones_the_character_presentations_resolve()
     {
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
             TestPayload.CombinedBytes);
@@ -358,10 +364,17 @@ public sealed class PublishedContentDeliveryTests
             Assert.Contains(portrait.MediaId, admittedPortraits);
         }
 
-        // The faction faces are the one family no consumer resolves, and they are pinned as such: their
-        // grid's cells have no artifact and the pack says pending rather than claiming a reader.
-        Assert.DoesNotContain(set.FactionFaces, face => admittedLayers.Contains(face.MediaId));
-        Assert.All(set.FactionFaces, face => Assert.Equal("an unstated consumer", face.Consumer));
+        // Escort faces are distinct from the paper doll. Both face families are admitted and resolve
+        // to exactly the published definitions the quest HUD selects from.
+        foreach (var (section, faces) in new[] { ("faces", set.FactionFaces), ("childFaces", set.ChildFaces) })
+        {
+            HashSet<string> admittedFaces = [.. presentation.GetProperty(section).EnumerateArray()
+                .Where(face => face.GetProperty("binding").GetString() == "admitted")
+                .Select(face => face.GetProperty("mediaId").GetString()!)];
+            Assert.Equal(faces.Select(face => face.MediaId).Order(StringComparer.Ordinal), admittedFaces.Order(StringComparer.Ordinal));
+            Assert.Empty(admittedFaces.Intersect(admittedLayers));
+            Assert.All(faces, face => Assert.Equal("the character sheet and quest escort HUD", face.Consumer));
+        }
     }
 
     [Fact]
@@ -401,7 +414,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", identified["map.fmap0i17"].Path);
         Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", identified["font.classic.0000"].Path);
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", identified["weapon.werecreature"].Path);
-        Assert.Equal(154, identified.Count);
+        Assert.Equal(296, identified.Count);
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
@@ -452,7 +465,12 @@ public sealed class PublishedContentDeliveryTests
         DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(content, inputs.ClassicPresentation);
         DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(content, castle.ClassicPresentation);
 
-        Assert.Equal(154, media.Paths.Count);
+        Assert.Equal(296, media.Paths.Count);
+        JsonElement inventory = JsonDocument.Parse(content.ReadBytes(DaggerfallUiArt.InventoryPath).ToArray()).RootElement;
+        Dictionary<string, string> published = inventory.GetProperty("artifacts").EnumerateArray()
+            .Where(artifact => artifact.TryGetProperty("mediaId", out _))
+            .ToDictionary(artifact => artifact.GetProperty("mediaId").GetString()!, artifact => artifact.GetProperty("path").GetString()!);
+        Assert.Equal(published.OrderBy(pair => pair.Key), media.Paths.OrderBy(pair => pair.Key));
         Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", media.Paths["map.fmap0i17"]);
         Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", media.Paths["font.classic.0000"]);
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", media.Paths["weapon.werecreature"]);
@@ -467,20 +485,30 @@ public sealed class PublishedContentDeliveryTests
 
         // The catalog is the availability record for the whole archive, delivered by name like any
         // other artifact, so a consumer can see every clip and its disposition rather than assuming
-        // the seven the product plays today.
+        // a fixed subset of melee cues.
         JsonElement[] clips = [.. catalog.GetProperty("clips").EnumerateArray()];
         Assert.Equal(459, clips.Length);
         JsonElement[] admitted = [.. clips.Where(clip => clip.GetProperty("disposition").GetString() == "admitted")];
-        Assert.Equal(7, admitted.Length);
+        Assert.Equal(149, admitted.Length);
         Assert.All(clips.Where(clip => clip.GetProperty("disposition").GetString() != "admitted"), clip => Assert.Equal(JsonValueKind.Null, clip.GetProperty("mediaId").ValueKind));
 
         // Which archive clip each cue is belongs to the product rather than to the producer that just
         // stated it, so the binding is pinned here as literals: a republish that swapped two identities
         // would move the file and the importer's table together and otherwise stay green.
-        Assert.Equal([106, 108, 109, 110, 111, 112, 405], admitted.Select(clip => clip.GetProperty("ordinal").GetInt32()));
+        (int Ordinal, string MediaId)[] semanticCues =
+        [
+            (106, "audio.melee.dagger.swing"),
+            (108, "audio.melee.hit.1"), (109, "audio.melee.hit.2"), (110, "audio.melee.hit.3"),
+            (111, "audio.melee.hit.4"), (112, "audio.melee.hit.5"),
+            (349, "audio.magic.cast"), (350, "audio.magic.poison"), (351, "audio.magic.shock"),
+            (352, "audio.magic.fire"), (353, "audio.magic.cold"), (405, "audio.player.death"),
+        ];
+        // Mobile movement, bark and attack cues, weapon pitches, the arrow and nine parries retain
+        // their archive identities. Pin the complete set so replacing one clip with another fails.
+        int[] sourceOrdinals = [3, 105, .. Enumerable.Range(115, 116), .. Enumerable.Range(237, 9), 347, .. Enumerable.Range(428, 9)];
         Assert.Equal(
-            ["audio.melee.dagger.swing", "audio.melee.hit.1", "audio.melee.hit.2", "audio.melee.hit.3", "audio.melee.hit.4", "audio.melee.hit.5", "audio.player.death"],
-            admitted.Select(clip => clip.GetProperty("mediaId").GetString()));
+            semanticCues.Concat(sourceOrdinals.Select(ordinal => (ordinal, $"audio.source.{ordinal}"))).OrderBy(cue => cue.Item1),
+            admitted.Select(clip => (clip.GetProperty("ordinal").GetInt32(), clip.GetProperty("mediaId").GetString()!)));
 
         // Every admitted reference resolves inside admitted content: the classic media manifest the
         // pack reads carries exactly those media identities, so the catalog's references are the ones
@@ -656,27 +684,27 @@ public sealed class PublishedContentDeliveryTests
         string[] accounted = [.. table.Select(entry => entry.Screen).Concat(modeLess).Order(StringComparer.Ordinal)];
         Assert.Equal(delivered, accounted);
 
-        // The client's whole claim about which modes own a screen and which screen each owns: the two
+        // The client's whole claim about which modes own a screen and which screen each owns: the four
         // whose screen replaces the HUD rather than joining it, in the order the table lists them. The
         // pairing is pinned as literals the way the mode list already was, because which published screen
         // a mode shows is the client's claim about the product and this is the only place outside the
         // client it is written down. The mode and the inventory's slot name differ where the domains do -
         // the dead mode shows the screen slotted "death" - so this states the pair rather than deriving it.
         Assert.Equal(
-            [("title", "screen.title"), ("dead", "screen.death")],
+            [("title", "screen.title"), ("dead", "screen.death"),
+                ("character-generation", "screen.character-generation"), ("character-pick", "screen.pick.02")],
             table);
 
         // The mode the entry screen is keyed by is stated once on each side rather than written out twice
         // where a rename could miss one.
         Assert.Contains($"TITLE_MODE = '{DaggerfallHudProjection.TitleModeName}'", source, StringComparison.Ordinal);
 
-        // And the client's own reader uses that constant for both halves of the entry screen: the condition
-        // the mode is tested by and the screen the mode is resolved to. Those two have to be the same mode -
-        // a reader that showed one mode's screen under another mode's condition would leave the screen it
-        // names delivered and never shown - and this is the only place outside the client that can say so.
+        // The entry surface shows the character step while a draft is being edited, falling back to
+        // title otherwise. Its displayed mode and selected artifact follow that same choice.
         string consumer = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "src/ui/main.ts"));
         Assert.Contains("=== TITLE_MODE", consumer, StringComparison.Ordinal);
-        Assert.Contains("screenForMode(TITLE_MODE)", consumer, StringComparison.Ordinal);
+        Assert.Contains("entryRoot.dataset.mode = creationMode ?? TITLE_MODE", consumer, StringComparison.Ordinal);
+        Assert.Contains("screenForMode(creationMode ?? TITLE_MODE)", consumer, StringComparison.Ordinal);
 
         // The action the entry screen sends is the one the product answers, and the wire is one word: a
         // rename on either side leaves the button that does nothing.

@@ -76,6 +76,8 @@
     <RustyEngineContentBundle Include="daggerfall.castle-necromoghan-audio" Root="worldrpg/imports/castle-necromoghan/media/audio/clips" />
     <RustyEngineContentBundle Include="daggerfall.charing-exterior-audio" Root="worldrpg/imports/charing/exterior/media/audio/clips" />
     <RustyEngineContentBundle Include="daggerfall.charing-interior-1-1-0-audio" Root="worldrpg/imports/charing/interior-1-1-0/media/audio/clips" />
+    <RustyEngineContentBundle Include="daggerfall.small-ship-audio" Root="worldrpg/imports/small-ship/exterior/media/audio/clips" />
+    <RustyEngineContentBundle Include="daggerfall.large-ship-audio" Root="worldrpg/imports/large-ship/exterior/media/audio/clips" />
   </ItemGroup>
 
   <!-- Content derived from the operator's Arena2 files is not tracked; scripts/regenerate-content.sh

@@ -134,7 +134,8 @@ public sealed class SessionCollisionResidencyTests
         Assert.Equal(center, session.Sites.CaptureExteriorResidency()!.Value.Center);
 
         // One cell east is a new column of seven cells to admit and the far west column to remove; the
-        // cells both windows share are neither rebuilt nor moved, because the origin stays put.
+        // cells both windows share are not rebuilt. The movement also crosses the local origin's
+        // threshold, so Engine rebases retained collision after admitting the new column.
         WorldPoint start = session.State.PlayerControl.Position ?? throw new InvalidOperationException("The exterior player has no position.");
         WorldPoint crossed = new(start.X + DaggerfallExteriorCellResidency.CellSize, start.Y, start.Z);
         float yaw = session.State.PlayerControl.YawRadians;
@@ -162,14 +163,23 @@ public sealed class SessionCollisionResidencyTests
         DaggerfallExteriorCellResidencySave moved = session.Sites.CaptureExteriorResidency()!.Value;
         Assert.Equal(east, moved.Center);
         Assert.Equal(window.Origin, moved.Origin);
+        WorldOriginCommitReceipt rebase = Assert.Single(engine.OriginCommits);
+        Assert.NotEqual(Vector3.Zero, rebase.LocalDelta);
+        Assert.Equal(origin.Compensation + rebase.LocalDelta,
+            new Vector3(moved.CompensationX, moved.CompensationY, moved.CompensationZ));
+        Assert.Equal(east, session.Sites.CurrentExteriorCell());
 
-        // The crossing is an ordinary step: the player keeps the pose it walked to and its vitals, and
-        // the actor sharing the window stays where it was.
-        Assert.Equal(crossed, session.State.PlayerControl.Position);
+        // The crossing preserves world-space poses and vitals. Both player and actor adopt the
+        // receipt's local delta, keeping their relative position and the collision window aligned.
+        Assert.Equal(crossed.ToVector() + rebase.LocalDelta, session.State.PlayerControl.Position!.Value.ToVector());
+        Assert.Equal(crossed.ToVector() - origin.Compensation,
+            session.Sites.LocalToProfile(session.State.PlayerControl.Position.Value.ToVector()));
         Assert.Equal(yaw, session.State.PlayerControl.YawRadians);
         Assert.Equal(health, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
         Assert.True(session.State.Actors.TryGet(rat, out ActorState? ratState));
-        Assert.Equal(new WorldPoint(9f, 0f, 9f), ratState.Position);
+        Assert.Equal(new Vector3(9f, 0f, 9f) + rebase.LocalDelta, ratState.Position.ToVector());
+        Assert.Equal(new Vector3(9f, 0f, 9f) - crossed.ToVector(),
+            ratState.Position.ToVector() - session.State.PlayerControl.Position.Value.ToVector());
         Assert.Equal(exterior.Site, session.Site.Active);
 
         // Entering the interior removes the whole window before the interior's content replaces the

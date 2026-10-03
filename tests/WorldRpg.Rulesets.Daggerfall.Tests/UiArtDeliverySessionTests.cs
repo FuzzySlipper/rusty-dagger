@@ -38,11 +38,18 @@ public sealed class UiArtDeliverySessionTests
             .Cast<Dictionary<string, object?>>()
             .ToDictionary(image => Assert.IsType<string>(image["id"]), image => (object?)Assert.IsType<string>(image["image"]), StringComparer.Ordinal);
         // One artifact per identity the DOM draws: the mode screen, the chrome, the three authored
-        // inventory skins the panels paint their frames with, plus every inventory icon the content
-        // pack names for its items.
-        // The always-shown set plus every admitted item icon: the supplied screens a mode is shown with
-        // joined the set, so the count moves with it rather than being pinned to the older five.
-        Assert.Equal(10 + inputs.ClassicPresentation.InventoryIcons.Count, images.Count);
+        // inventory skins, every admitted item icon, and the adult, faction and child portraits the
+        // quest escort HUD selects. Paper-doll backgrounds and bodies stay with the sheet projection.
+        string[] heads = [.. definitions.CharacterPresentation.Races.Values
+            .SelectMany(race => race.Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head))
+            .Select(layer => layer.MediaId).Distinct(StringComparer.Ordinal)];
+        string[] factionFaces = [.. definitions.CharacterPresentation.FactionFaces.Select(face => face.MediaId)];
+        string[] childFaces = [.. definitions.CharacterPresentation.ChildFaces.Select(face => face.MediaId)];
+        Assert.Equal(160, heads.Length);
+        Assert.Equal(61, factionFaces.Length);
+        Assert.Equal(4, childFaces.Length);
+        string[] portraits = [.. heads, .. factionFaces, .. childFaces];
+        Assert.Equal(10 + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length, images.Count);
         Assert.All(images.Values, image => Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(image), StringComparison.Ordinal));
 
         // The bytes are the published artifacts, read from admitted content by their content name.
@@ -83,6 +90,7 @@ public sealed class UiArtDeliverySessionTests
             "inventory.skin.panel-slate.v1",
             "inventory.skin.titlebar-slate.v1",
             .. inputs.ClassicPresentation.InventoryIcons.Values,
+            .. portraits,
         ];
         Assert.Equal([.. expected.Order(StringComparer.Ordinal)], [.. images.Keys.Order(StringComparer.Ordinal)]);
 
@@ -96,6 +104,14 @@ public sealed class UiArtDeliverySessionTests
         Assert.Equal(
             $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content", iconPath)))}",
             images["inventory.icon.iron-dagger"]);
+
+        // Every escort portrait arrives from its character inventory artifact, with the same bytes
+        // as the published canvas rather than a name or a data-URL prefix alone.
+        using JsonDocument characters = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content", DaggerfallUiArt.CharacterInventoryPath)));
+        Dictionary<string, string> characterPaths = characters.RootElement.GetProperty("artifacts").EnumerateArray()
+            .ToDictionary(artifact => artifact.GetProperty("mediaId").GetString()!, artifact => artifact.GetProperty("path").GetString()!);
+        Assert.All(portraits, id => Assert.Equal(
+            $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content", characterPaths[id])))}", images[id]));
     }
 
     [Fact]
