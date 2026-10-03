@@ -5,6 +5,23 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
+/// <summary>
+/// Native origin changed but the product could not finish the matching pose update. Ordinary
+/// teleport, travel and entrance refusal handlers must let this terminate the inconsistent session.
+/// </summary>
+internal sealed class DaggerfallOriginCommitException(Exception innerException)
+    : Exception("The Engine origin was committed but product rebasing failed; the session cannot continue with inconsistent world coordinates.", innerException);
+
+internal sealed record DaggerfallWorldOriginTuning(float VerticalRebaseDistance)
+{
+    internal DaggerfallWorldOriginTuning Validate()
+    {
+        if (!float.IsFinite(VerticalRebaseDistance) || VerticalRebaseDistance <= 0f)
+            throw new ArgumentOutOfRangeException(nameof(VerticalRebaseDistance));
+        return this;
+    }
+}
+
 /// <summary>Pure product-side interpretation of the Engine WorldOrigin commit receipt.</summary>
 internal static class DaggerfallExteriorSessionOrigin
 {
