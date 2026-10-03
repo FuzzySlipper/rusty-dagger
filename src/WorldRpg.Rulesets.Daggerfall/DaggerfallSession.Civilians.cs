@@ -49,7 +49,7 @@ internal sealed partial class DaggerfallSession
                 || npc.Site.Region != site.Id.Region
                 || !StringComparer.Ordinal.Equals(npc.Site.Location, site.Name)
                 || State.Actors.TryGet(npc.DurableId, out _)) continue;
-            WorldPoint position = npc.X is int x && npc.Y is int y && npc.Z is int z
+            WorldPoint position = npc.X is float x && npc.Y is float y && npc.Z is float z
                 ? _sites.ProfileToLocal(new WorldPoint(x, y, z))
                 : fallbackPosition;
             materialized.Add(MaterializeNpcActor(npc.DurableId, new ActorPose(position, 0F)));

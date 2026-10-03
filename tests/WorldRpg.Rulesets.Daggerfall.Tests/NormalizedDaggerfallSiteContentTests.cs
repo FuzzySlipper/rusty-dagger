@@ -254,7 +254,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
 
         Assert.NotNull(inputs.GroundContainerSprite);
-        NormalizedGroundContainerSprite visual = inputs.GroundContainerSprite!;
+        NormalizedBillboardSprite visual = inputs.GroundContainerSprite!;
         Assert.Equal("worldrpg/imports/privateers-hold/media/dungeon/billboards/texture-216-0.png", visual.TexturePath);
         Assert.Equal(new Vector2(.5F, .5F), visual.Pivot);
         Assert.Equal(new Vector2(.975F, .65F), visual.Size);

@@ -74,7 +74,7 @@ public sealed class SiteAppearanceLifecycleTests
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
-        NormalizedGroundContainerSprite sprite = new("sprite/treasure.png", Hash, 39, 26,
+        NormalizedBillboardSprite sprite = new("sprite/treasure.png", Hash, 39, 26,
             [new NormalizedAtlasFrame(0, 0, 0, 39, 26)], 0, new Vector2(.5F, .5F), new Vector2(.975F, .65F));
         DaggerfallWorldProfileKey profile = new DaggerfallWorldProfileKey(new DaggerfallSiteId(1, 2), DaggerfallWorldProfileKind.Dungeon, "hold").Validate();
         DaggerfallGroundContainer pile = new(profile, 100, new EntityId(2), new WorldPoint(4F, 1F, 8F));

@@ -59,8 +59,9 @@ internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions defin
         int? clan = faction.Type == 6 ? RegionClan(region).Id : null;
         DaggerfallFactionFlatDefinition? flat = faction.FlatVisuals.Count > (gender == "Female" ? 1 : 0)
             ? faction.FlatVisuals[gender == "Female" ? 1 : 0] : null;
+        var visualFlat = individual ? faction.FlatVisuals.FirstOrDefault() : flat;
         DaggerfallNpcAppearance? appearance = existing?.Appearance
-            ?? (flat is null ? null : new(race, gender, flat.Archive, flat.Record, seed, factionId));
+            ?? (visualFlat is null ? null : new(race, gender, visualFlat.Archive, visualFlat.Record, seed, factionId));
         var home = places?.AllocatePersonHome(instance.InstanceId, declaration, individual, questor,
             current.CurrentProfile ?? throw new NotSupportedException("Person home allocation requires the actual current profile."), current.Interior,
             parentResources ?? [], activeResources ?? []);

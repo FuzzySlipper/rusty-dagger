@@ -1,4 +1,7 @@
 using Rusty.Engine;
+using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.World;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Kit.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -58,11 +61,13 @@ public sealed record DaggerfallNpc(
     string Role,
     IReadOnlyList<string> Services,
     DaggerfallNpcPresence Presence,
-    int? X,
-    int? Y,
-    int? Z)
+    float? X,
+    float? Y,
+    float? Z)
 {
     public string? DisplayName { get; init; }
+    /// <summary>Current physical profile; Site retains the stable social origin.</summary>
+    internal DaggerfallWorldProfileKey? Profile { get; init; }
 }
 
 /// <summary>
@@ -149,10 +154,19 @@ public sealed class DaggerfallNpcRegistry
     }
 
     /// <summary>Relocates one NPC; the site binding stays where it belongs.</summary>
-    public void Relocate(long durableId, int x, int y, int z) =>
+    public void Relocate(long durableId, float x, float y, float z) =>
         _npcs[durableId] = Require(durableId) with { X = x, Y = y, Z = z };
 
     /// <summary>Every written NPC in durable order, for the save owner.</summary>
+    internal void Place(long durableId, DaggerfallWorldProfileKey profile, WorldPoint position)
+    {
+        profile.Validate();
+        if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
+            throw new ArgumentException("NPC profile position must be finite.");
+        _npcs[durableId] = Require(durableId) with { Profile = profile, X = position.X, Y = position.Y, Z = position.Z,
+            Presence = DaggerfallNpcPresence.Active };
+    }
+
     internal IReadOnlyList<DaggerfallNpc> Capture() => All;
 
     /// <summary>Restores NPCs; refuses a record the registry would not accept live.</summary>
@@ -166,6 +180,10 @@ public sealed class DaggerfallNpcRegistry
             ArgumentNullException.ThrowIfNull(npc);
             ValidateSite(npc.Site);
             ValidateAppearance(npc.Appearance);
+            npc.Profile?.Validate();
+            if (npc.Profile is not null && (npc.X is null || npc.Y is null || npc.Z is null)
+                || npc.X is float x && !float.IsFinite(x) || npc.Y is float y && !float.IsFinite(y) || npc.Z is float z && !float.IsFinite(z))
+                throw new ArgumentException($"NPC {npc.DurableId} has invalid current profile coordinates.");
             if (npc.DisplayName is not null) ArgumentException.ThrowIfNullOrWhiteSpace(npc.DisplayName);
             if (!Enum.IsDefined(npc.Kind) || !Enum.IsDefined(npc.Presence))
             {

@@ -92,7 +92,7 @@ internal static class DaggerfallSiteContent
         IReadOnlyList<DaggerfallSitePortal> portals = ReadSitePortals(world, diagnostics);
         IReadOnlyList<DaggerfallSiteAnchor> anchors = ReadSiteAnchors(world, start, diagnostics);
         Dictionary<long, AuthoredActor> actors = ReadNormalizedPlacements(root, definitions, diagnostics);
-        (IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<int, NormalizedActorSprite> sprites, NormalizedGroundContainerSprite? groundContainerSprite) = ReadDungeonMedia(
+        (IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<int, NormalizedActorSprite> sprites, NormalizedBillboardSprite? groundContainerSprite, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> billboardSprites) = ReadDungeonMedia(
             files.GetExactlyOne(mediaPath),
             publicationRoot,
             artifacts,
@@ -165,7 +165,7 @@ internal static class DaggerfallSiteContent
             ReadInteriorBuilding(normalizedWorld, profileKind, diagnostics),
             music,
             audioBundle,
-            DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics));
+            DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics), billboardSprites);
     }
 
     private static DaggerfallInteriorBuilding? ReadInteriorBuilding(ReadOnlyMemory<byte>? bytes,
@@ -1218,14 +1218,14 @@ internal static class DaggerfallSiteContent
         catch (FormatException) { diagnostics.Add("Generated content digest must be a 64-character hexadecimal SHA-256."); return default; }
     }
 
-    private static (IReadOnlyList<NormalizedMaterial> Materials, IReadOnlyDictionary<int, NormalizedActorSprite> Sprites, NormalizedGroundContainerSprite? GroundContainerSprite) ReadDungeonMedia(
+    private static (IReadOnlyList<NormalizedMaterial> Materials, IReadOnlyDictionary<int, NormalizedActorSprite> Sprites, NormalizedBillboardSprite? GroundContainerSprite, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> BillboardSprites) ReadDungeonMedia(
         ReadOnlyMemory<byte>? bytes,
         string publicationRoot,
         IReadOnlyDictionary<string, ContentSha256> artifacts,
         DaggerfallDefinitions definitions,
         DaggerfallContentDiagnostics diagnostics)
     {
-        if (bytes is null) { diagnostics.Add("Generated dungeon media manifest is unavailable."); return ([], new Dictionary<int, NormalizedActorSprite>(), null); }
+        if (bytes is null) { diagnostics.Add("Generated dungeon media manifest is unavailable."); return ([], new Dictionary<int, NormalizedActorSprite>(), null, new Dictionary<(int, int), NormalizedBillboardSprite>()); }
         try
         {
             using JsonDocument document = JsonDocument.Parse(bytes.Value);
@@ -1307,41 +1307,37 @@ internal static class DaggerfallSiteContent
                     Feedback = ReadActorFeedback(actor, mobileId, diagnostics),
                 })) diagnostics.Add($"Generated actor media repeats mobile '{mobileId}'.");
             }
-            NormalizedGroundContainerSprite? groundContainerSprite = ReadGroundContainerSprite(root, resources, diagnostics);
-            return (Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray()), new ReadOnlyDictionary<int, NormalizedActorSprite>(sprites.ToDictionary()), groundContainerSprite);
+            var billboards = ReadBillboardSprites(root, resources, diagnostics);
+            billboards.TryGetValue((216, 0), out var groundContainerSprite);
+            if (groundContainerSprite is null) diagnostics.Add("Generated dungeon media has no ground-container billboard 'sprite/texture-216-0'.");
+            return (Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray()), new ReadOnlyDictionary<int, NormalizedActorSprite>(sprites.ToDictionary()), groundContainerSprite, billboards);
         }
         catch (JsonException exception)
         {
             diagnostics.Add($"Generated dungeon media manifest is not valid JSON: {exception.Message}");
-            return ([], new Dictionary<int, NormalizedActorSprite>(), null);
+            return ([], new Dictionary<int, NormalizedActorSprite>(), null, new Dictionary<(int, int), NormalizedBillboardSprite>());
         }
     }
 
-    private static NormalizedGroundContainerSprite? ReadGroundContainerSprite(JsonElement root, IReadOnlyDictionary<string, MediaResource> resources, DaggerfallContentDiagnostics diagnostics)
+    private static IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> ReadBillboardSprites(
+        JsonElement root, IReadOnlyDictionary<string, MediaResource> resources, DaggerfallContentDiagnostics diagnostics)
     {
-        const string resourceId = "sprite/texture-216-0";
-        if (!resources.TryGetValue(resourceId, out MediaResource? resource) || resource.Frames.Count == 0)
+        Dictionary<(int, int), NormalizedBillboardSprite> result = [];
+        foreach (var billboard in DaggerfallBaseContent.Array(root, "billboards", diagnostics))
         {
-            diagnostics.Add($"Generated dungeon media has no ground-container billboard '{resourceId}'.");
-            return null;
+            string id = DaggerfallBaseContent.Text(billboard, "spriteResourceId", diagnostics);
+            if (!resources.TryGetValue(id, out var resource) || resource.Frames.Count == 0)
+            { diagnostics.Add($"Generated billboard '{id}' has no published sprite atlas."); continue; }
+            int archive = DaggerfallBaseContent.Integer(billboard, "textureArchive", diagnostics);
+            int record = DaggerfallBaseContent.Integer(billboard, "textureRecord", diagnostics);
+            Vector2 pivot = GeneratedVector2(DaggerfallBaseContent.Property(billboard, "pivot", diagnostics), id + ".pivot", diagnostics);
+            Vector2 size = GeneratedVector2(DaggerfallBaseContent.Property(billboard, "worldSize", diagnostics), id + ".worldSize", diagnostics);
+            if (archive < 0 || record is < 0 or > 127 || id != $"sprite/texture-{archive}-{record}" || !PositiveFinite(size))
+            { diagnostics.Add($"Generated billboard '{id}' has an invalid address or world size."); continue; }
+            if (!result.TryAdd((archive, record), new(resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight,
+                resource.Frames, resource.Frames[0].Id, pivot, size))) diagnostics.Add($"Generated billboard address {archive}/{record} repeats.");
         }
-
-        JsonElement billboard = DaggerfallBaseContent.Array(root, "billboards", diagnostics)
-            .FirstOrDefault(value => value.ValueKind == JsonValueKind.Object
-                && value.TryGetProperty("spriteResourceId", out JsonElement id)
-                && id.ValueKind == JsonValueKind.String
-                && id.GetString() == resourceId);
-        if (billboard.ValueKind != JsonValueKind.Object)
-        {
-            diagnostics.Add($"Generated dungeon media has no billboard descriptor '{resourceId}'.");
-            return null;
-        }
-
-        Vector2 pivot = GeneratedVector2(DaggerfallBaseContent.Property(billboard, "pivot", diagnostics), "ground-container.pivot", diagnostics);
-        Vector2 size = GeneratedVector2(DaggerfallBaseContent.Property(billboard, "worldSize", diagnostics), "ground-container.worldSize", diagnostics);
-        if (!PositiveFinite(size)) diagnostics.Add("Generated ground-container billboard has a non-positive world size.");
-        return new NormalizedGroundContainerSprite(resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight,
-            resource.Frames, resource.Frames[0].Id, pivot, size);
+        return new ReadOnlyDictionary<(int, int), NormalizedBillboardSprite>(result);
     }
 
     private static NormalizedActorSprite ResolveActorPresentation(AuthoredActor actor, DaggerfallActorDefinition definition, NormalizedActorSprite sprite, DaggerfallContentDiagnostics diagnostics)
@@ -2275,7 +2271,7 @@ internal sealed record NormalizedClassicPresentation(IReadOnlyDictionary<string,
 }
 internal sealed record ClassicViewmodelStyle(int RenderOrder);
 internal sealed record NormalizedClassicMediaResource(string Id, string Kind, string RelativePath, ContentSha256 Sha256, long ByteLength);
-internal sealed record NormalizedGroundContainerSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size);
+internal sealed record NormalizedBillboardSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size);
 internal sealed record DaggerfallActorFeedback(int MobileId, string MoveCue, string BarkCue, string AttackCue, bool ParrySounds, int BloodIndex);
 internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size)
 {
@@ -2292,7 +2288,7 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     internal NormalizedAttackSequence? RangedAttackSequence { get; init; }
     internal NormalizedActorSprite? Corpse { get; init; }
 }
-internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedGroundContainerSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null, string? audioBundle = null, IReadOnlyList<DaggerfallSiteMarker>? questMarkers = null)
+internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedBillboardSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null, string? audioBundle = null, IReadOnlyList<DaggerfallSiteMarker>? questMarkers = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite>? billboardSprites = null)
 {
     internal ProjectFacts Project { get; } = project;
     internal SpatialContentArtifact SpatialArtifact { get; } = spatialArtifact;
@@ -2329,7 +2325,9 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContent
         .Select(light => light.Validate())
         .OrderBy(light => light.Id, StringComparer.Ordinal)
         .ToArray());
-    internal NormalizedGroundContainerSprite? GroundContainerSprite { get; } = groundContainerSprite;
+    internal NormalizedBillboardSprite? GroundContainerSprite { get; } = groundContainerSprite;
+    internal IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> BillboardSprites { get; } =
+        new ReadOnlyDictionary<(int, int), NormalizedBillboardSprite>((billboardSprites ?? new Dictionary<(int, int), NormalizedBillboardSprite>()).ToDictionary());
     /// <summary>Normalized per-placement bounds, visibility samples, and source markers used by dungeon discovery; absent on non-dungeons.</summary>
     internal DaggerfallDungeonMapContent? DungeonMap { get; } = dungeonMap;
     internal IReadOnlyList<DaggerfallSiteMarker> QuestMarkers { get; } = Array.AsReadOnly((questMarkers ?? []).ToArray());

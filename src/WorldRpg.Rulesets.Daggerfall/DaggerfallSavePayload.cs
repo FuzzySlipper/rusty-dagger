@@ -423,6 +423,15 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException($"Saved civilian actor {actor.EntityId} does not name a live civilian NPC identity.");
         }
 
+        foreach (var npc in savedNpcs.Values.Where(value => value.Profile is not null))
+        {
+            if (savedLedger.Classify(new(DurableIdentityKind.Actor, checked((ulong)npc.DurableId))) != DurableIdentityClassification.Live)
+                throw new ArgumentException($"Saved placed NPC {npc.DurableId} is not live in the identity ledger.");
+            var profile = npc.Profile!.Require();
+            DaggerfallSiteProfile owner = profiles is null ? inputs : profiles.Require(profile);
+            if (owner.ProfileKey != profile || !owner.BillboardSprites.ContainsKey((npc.BillboardArchive, npc.BillboardRecord)))
+                throw new ArgumentException($"Saved placed NPC {npc.DurableId} has no admitted profile or billboard.");
+        }
         Dictionary<ulong, DaggerfallItemMetadataSave> uniqueItems = [];
         ValidateInventory(Inventory, definitions, uniqueItems, DaggerfallItemOwner.Player, requireEquipment: true);
         HashSet<ulong> containerIdentities = [];
@@ -551,7 +560,7 @@ internal sealed record DaggerfallSavePayload(
             AddQuestStacks(questStacks, DaggerfallItemOwner.Wagon(questWagon.Id), questWagon.Inventory.Stacks);
         foreach (DaggerfallActorInventorySave inventory in ActorInventories)
             AddQuestStacks(questStacks, DaggerfallItemOwner.Actor(inventory.EntityId), inventory.Inventory.Stacks);
-        Quests.ValidateBindings(combatants, savedLedger, locations, questStacks);
+        Quests.ValidateBindings(combatants.Concat(savedNpcs.Values.Where(value => value.Profile is not null && value.Presence != (int)DaggerfallNpcPresence.Removed).Select(value => value.DurableId)).ToHashSet(), savedLedger, locations, questStacks);
         DaggerfallActiveEffectSave[] allEffects = [.. ActiveEffects, .. SiteDeltas.SelectMany(delta => delta.Effects)];
         if (uniqueItems.Values.Any(item => item.HealthLeechLastUsedMinute > new World.DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).ToAbsoluteSeconds() / 60))
             throw new ArgumentException("Saved health-leech last use is later than the current calendar.");
@@ -1303,9 +1312,13 @@ internal sealed record DaggerfallNpcEntry(
     string Role,
     string[] Services,
     int Presence,
-    int? X,
-    int? Y,
-    int? Z);
+    float? X,
+    float? Y,
+    float? Z)
+{
+    [JsonRequired] public DaggerfallWorldProfileKeySave? Profile { get; init; }
+    [JsonRequired] public string? DisplayName { get; init; }
+}
 
 /// <summary>The session's NPCs in durable order.</summary>
 internal sealed record DaggerfallNpcSave(DaggerfallNpcEntry[] Entries)
@@ -1325,6 +1338,13 @@ internal sealed record DaggerfallNpcSave(DaggerfallNpcEntry[] Entries)
             }
 
             ArgumentNullException.ThrowIfNull(entry.Services);
+            if (entry.Profile is { } profile)
+            {
+                _ = profile.Require();
+                if (entry.X is not float x || entry.Y is not float y || entry.Z is not float z || !float.IsFinite(x) || !float.IsFinite(y) || !float.IsFinite(z))
+                    throw new ArgumentException($"Saved NPC {entry.DurableId} has no finite profile position.");
+            }
+            if (entry.DisplayName is not null) ArgumentException.ThrowIfNullOrWhiteSpace(entry.DisplayName);
         }
     }
 }

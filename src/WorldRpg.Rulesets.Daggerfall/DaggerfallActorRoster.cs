@@ -499,13 +499,17 @@ internal sealed class DaggerfallActorGrounding(ISpatialService spatialService, S
     {
         // RDB marker heights are probe origins, not floor contacts. Unlike DFU's centered
         // capsule, our navigation pose is the sprite's base.
+        actor.ApplyPose(new ActorPose(GroundPosition(actor.Position), actor.HeadingYawRadians));
+    }
+
+    internal WorldPoint GroundPosition(WorldPoint position, double? maximumDistance = null)
+    {
         SpatialHit floor = spatialService.CastRay(new SpatialRaycastRequest(
             spatial.Session,
-            actor.Position.ToVector() + Vector3.UnitY * probeLift,
+            position.ToVector() + Vector3.UnitY * probeLift,
             -Vector3.UnitY,
-            probeDistance,
+            maximumDistance ?? probeDistance,
             new SpatialQueryFilter(uint.MaxValue, uint.MaxValue), default, default, default));
-        if (floor.Present && !floor.StartSolid && floor.Normal.Y > 0f)
-            actor.ApplyPose(new ActorPose(WorldPoint.From(floor.Point), actor.HeadingYawRadians));
+        return floor.Present && !floor.StartSolid && floor.Normal.Y > 0f ? WorldPoint.From(floor.Point) : position;
     }
 }

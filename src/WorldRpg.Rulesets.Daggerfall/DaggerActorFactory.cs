@@ -180,7 +180,7 @@ internal static class DaggerActorFactory
                     entry.Role,
                     entry.Services,
                     (DaggerfallNpcPresence)entry.Presence,
-                    entry.X, entry.Y, entry.Z)));
+                    entry.X, entry.Y, entry.Z) { Profile = entry.Profile?.Require(), DisplayName = entry.DisplayName }));
             }
 
             DaggerfallSocialState social = new(definitions.Factions);
