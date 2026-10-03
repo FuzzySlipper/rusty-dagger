@@ -377,6 +377,7 @@ internal sealed class DaggerfallActorRoster
             identities.AddRange(inventory.Read().UniqueItems.Select(item => _state.Actors.Entities.IdentityOf(item.Entity).Value));
         if (_corpseLoot.Corpses.TryGetValue(actor.DurableId, out CorpseContainer? corpse) && corpse.IsRegistered)
             identities.AddRange(_state.Containers.Read(corpse.Owner).UniqueItems.Select(item => _state.Actors.Entities.IdentityOf(item.Entity).Value));
+        RetireInventoryOwners(actor);
         foreach (ulong itemId in identities.Distinct())
         {
             _state.ItemInstances.RemoveUnique(itemId);
