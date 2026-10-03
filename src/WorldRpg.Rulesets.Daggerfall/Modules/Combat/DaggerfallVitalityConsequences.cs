@@ -26,6 +26,14 @@ internal sealed class DaggerfallVitalityConsequences
             calculated, 0, health, terminal ? HealthApplicationMode.Terminal : HealthApplicationMode.Damage).Result;
     }
 
+    /// <summary>Quest-commanded death uses the same accepted health and defeat contributions as combat.</summary>
+    internal DamageResult ResolveQuestDeath(Actor target)
+    {
+        Track health = target.Get<StatsComponent>().GetTrack(HealthTrack);
+        return _combat.ApplyToHealth(new(target, target, "quest foe death"), checked((int)Math.Ceiling(health.Current - health.Minimum)),
+            0, health, HealthApplicationMode.Terminal).Result;
+    }
+
     internal DaggerfallSpellTrackResult ResolveSpellTrack(Actor caster, Actor target, TrackId trackId, int amount, bool permitted = true)
     {
         Track track = target.Get<StatsComponent>().GetTrack(trackId);

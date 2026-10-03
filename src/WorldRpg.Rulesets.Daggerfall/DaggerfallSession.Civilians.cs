@@ -69,7 +69,7 @@ internal sealed partial class DaggerfallSession
         {
             RetireActor(npcId);
         }
-        else if (!RetireDetachedCivilian(npcId))
+        else if (!RetireDetachedActor(npcId, DaggerfallActorKinds.Civilian))
         {
             // Preserve RetireActor's diagnostic for an identity that is not a live
             // dynamic actor and is not retained by an inactive site.
@@ -81,11 +81,11 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
-    /// Removes a civilian whose actor is retained by an inactive site delta. The
+    /// Removes a dynamic actor retained by an inactive site delta. The
     /// detached representation has no Engine entities left to destroy, so retirement
     /// removes every durable relationship directly and keeps the allocator tombstones.
     /// </summary>
-    private bool RetireDetachedCivilian(long npcId)
+    private bool RetireDetachedActor(long npcId, string? requiredDefinition = null)
     {
         DaggerfallWorldProfileKey? owner = null;
         DaggerfallSiteRuntimeDelta? retained = null;
@@ -93,15 +93,15 @@ internal sealed partial class DaggerfallSession
         {
             if (!delta.DynamicActors.Any(actor => actor.EntityId == npcId)) continue;
             if (owner is not null)
-                throw new InvalidOperationException($"Civilian actor {npcId} is retained by more than one site delta.");
+                throw new InvalidOperationException($"Actor {npcId} is retained by more than one site delta.");
             owner = profile;
             retained = delta;
         }
 
         if (retained is null || owner is not DaggerfallWorldProfileKey profileKey) return false;
         DaggerfallDynamicActorSave actor = retained.DynamicActors.Single(value => value.EntityId == npcId);
-        if (!StringComparer.Ordinal.Equals(actor.Definition, DaggerfallActorKinds.Civilian))
-            throw new InvalidOperationException($"Detached NPC actor {npcId} does not carry the civilian runtime definition.");
+        if (requiredDefinition is not null && !StringComparer.Ordinal.Equals(actor.Definition, requiredDefinition))
+            throw new InvalidOperationException($"Detached NPC actor {npcId} does not carry the required runtime definition.");
 
         foreach (ulong itemId in retained.ActorInventories
             .Where(inventory => inventory.EntityId == npcId)
@@ -111,10 +111,20 @@ internal sealed partial class DaggerfallSession
             .Distinct())
         {
             State.ItemInstances.RemoveUnique(itemId);
+            State.Effects.CancelItemReferences(itemId);
+            Casting.CancelItemReferences(itemId);
             DurableIdentityReference identity = new(DurableIdentityKind.Item, itemId);
             if (_actorIdentities.Classify(identity) == DurableIdentityClassification.Live)
                 _uniqueItems.Remove(identity);
         }
+
+        foreach (var inventory in retained.ActorInventories.Where(value => value.EntityId == npcId))
+            foreach (var stack in inventory.Inventory.Stacks)
+                State.ItemInstances.RetireRetainedStack(DaggerfallItemOwner.Actor(npcId), Rusty.Engine.Mechanics.InventoryStackId.Parse(stack.StackId));
+        foreach (var corpse in retained.Corpses.Where(value => value.ActorId == npcId))
+            foreach (var stack in corpse.Stacks)
+                State.ItemInstances.RetireRetainedStack(DaggerfallItemOwner.Corpse(npcId), Rusty.Engine.Mechanics.InventoryStackId.Parse(stack.StackId));
+        State.Effects.CancelActorReferences(npcId);
 
         DaggerfallCorpseSave? corpseSave = retained.Corpses.SingleOrDefault(value => value.ActorId == npcId);
         if (corpseSave is not null)
@@ -122,7 +132,7 @@ internal sealed partial class DaggerfallSession
             DurableIdentityReference persisted = new(DurableIdentityKind.Container, corpseSave.ContainerId);
             if (_corpseLoot.TryGetContainerIdentity(npcId, out DurableIdentityReference mapped)
                 && mapped != persisted)
-                throw new InvalidOperationException($"Detached civilian {npcId} has changed its corpse container identity.");
+                throw new InvalidOperationException($"Detached actor {npcId} has changed its corpse container identity.");
             if (!_corpseLoot.Retire(npcId)
                 && _actorIdentities.Classify(persisted) == DurableIdentityClassification.Live)
                 _actorIdentities.Remove(persisted);
@@ -132,15 +142,32 @@ internal sealed partial class DaggerfallSession
         if (_actorIdentities.Classify(actorIdentity) == DurableIdentityClassification.Live)
             _actorIdentities.Remove(actorIdentity);
 
+        var retiredEffectIds = retained.Effects.Where(value => value.TargetId == npcId || value.CasterId == npcId)
+            .Select(value => value.Instance).ToHashSet(StringComparer.Ordinal);
         _sites.ReplaceDelta(profileKey, retained with
         {
-            DynamicActors = retained.DynamicActors.Where(value => value.EntityId != npcId).ToArray(),
+            Actors = retained.Actors.Select(value => value with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(value.Stats, retiredEffectIds) }).ToArray(),
+            DynamicActors = retained.DynamicActors.Where(value => value.EntityId != npcId)
+                .Select(value => value with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(value.Stats, retiredEffectIds) }).ToArray(),
             ActorInventories = retained.ActorInventories.Where(value => value.EntityId != npcId).ToArray(),
             Corpses = retained.Corpses.Where(value => value.ActorId != npcId).ToArray(),
             Effects = retained.Effects.Where(value => value.TargetId != npcId && value.CasterId != npcId).ToArray(),
         });
         State.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(npcId));
         State.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(npcId));
+        foreach (var entry in _sites.Deltas.Where(value => value.Key != profileKey).ToArray())
+        {
+            var ended = entry.Value.Effects.Where(value => value.TargetId == npcId || value.CasterId == npcId)
+                .Select(value => value.Instance).ToHashSet(StringComparer.Ordinal);
+            if (ended.Count == 0) continue;
+            _sites.ReplaceDelta(entry.Key, entry.Value with
+            {
+                Effects = entry.Value.Effects.Where(value => !ended.Contains(value.Instance)).ToArray(),
+                Actors = entry.Value.Actors.Select(value => value with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(value.Stats, ended) }).ToArray(),
+                DynamicActors = entry.Value.DynamicActors.Select(value => value with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(value.Stats, ended) }).ToArray(),
+            });
+        }
+        State.Quests.ObserveFoeRemoval(npcId);
         return true;
     }
 }

@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
@@ -76,6 +76,9 @@ internal static partial class DaggerfallQuestTaskCompiler
     private static readonly Regex PersistHeader = Header("^until\\s+(?<symbol>[a-zA-Z0-9_.]+)\\s+performed:$");
     private static readonly Regex GlobalHeader = Header("^(?<global>[a-zA-Z0-9_.]+)\\s+(?<symbol>[a-zA-Z0-9_.]+)$");
     private static readonly Regex Start = Header("^(?:start\\s+task|setvar)\\s+(?<symbol>[a-zA-Z0-9_.]+)$");
+    private static readonly Regex InjuredFoe = Header(@"^injured\s+(?<symbol>[a-zA-Z0-9_.-]+)(?:\s+saying\s+(?<message>\d+))?$");
+    private static readonly Regex KilledFoe = Header(@"^killed\s+(?:(?<count>\d+)\s+)?(?<symbol>[a-zA-Z0-9_.-]+)(?:\s+saying\s+(?<message>\d+))?$");
+    private static readonly Regex CommandFoe = Header(@"^(?<verb>kill|remove)\s+foe\s+(?<symbol>[a-zA-Z0-9_.-]+)$");
     private static readonly Regex Questor = Header("^(?<verb>add|drop)\\s+(?<symbol>[a-zA-Z0-9_.-]+)\\s+as\\s+questor$");
     private static readonly Regex Face = Header("^(?<verb>add|drop)\\s+(?<foe>foe\\s+)?(?<symbol>[a-zA-Z0-9_.-]+)\\s+face(?:\\s+saying\\s+(?<message>[0-9]+))?$");
     private static readonly Regex Mute = Header("^mute\\s+npc\\s+(?<symbol>[a-zA-Z0-9_.-]+)$");
@@ -242,6 +245,14 @@ internal static partial class DaggerfallQuestTaskCompiler
         foreach (var (pattern, kind) in new[] { (GetItem, DaggerfallQuestTaskOperationKind.GetItem), (TakeItem, DaggerfallQuestTaskOperationKind.TakeItem), (Permanent, DaggerfallQuestTaskOperationKind.MakePermanent) })
             if (pattern.Match(line) is { Success: true } item)
                 return new(kind, sourceLine, line, [Canonical(item.Groups["symbol"].Value)], [], item.Groups["message"].Success ? Message(item.Groups["message"].Value) : null);
+        if (CommandFoe.Match(line) is { Success: true } commandFoe)
+            return new(commandFoe.Groups["verb"].Value.Equals("kill", StringComparison.OrdinalIgnoreCase) ? DaggerfallQuestTaskOperationKind.KillFoe : DaggerfallQuestTaskOperationKind.RemoveFoe,
+                sourceLine, line, [Canonical(commandFoe.Groups["symbol"].Value)], [], null);
+        if (InjuredFoe.Match(line) is { Success: true } injuredFoe)
+            return new(DaggerfallQuestTaskOperationKind.InjuredFoe, sourceLine, line, [Canonical(injuredFoe.Groups["symbol"].Value)], [], injuredFoe.Groups["message"].Success ? Message(injuredFoe.Groups["message"].Value) : null);
+        if (KilledFoe.Match(line) is { Success: true } killedFoe && (!killedFoe.Groups["message"].Success || killedFoe.Groups["count"].Success))
+            return new(DaggerfallQuestTaskOperationKind.KilledFoe, sourceLine, line, [Canonical(killedFoe.Groups["symbol"].Value)], [], killedFoe.Groups["message"].Success ? Message(killedFoe.Groups["message"].Value) : null,
+                Step: killedFoe.Groups["count"].Success ? Math.Max(1, Step(killedFoe.Groups["count"].Value, sourceLine)) : 1);
         if (Questor.Match(line) is { Success: true } questor)
             return new(questor.Groups["verb"].Value.Equals("add", StringComparison.OrdinalIgnoreCase) ? DaggerfallQuestTaskOperationKind.AddQuestor : DaggerfallQuestTaskOperationKind.DropQuestor,
                 sourceLine, line, [Canonical(questor.Groups["symbol"].Value)], [], null);
@@ -387,6 +398,8 @@ internal static partial class DaggerfallQuestTaskCompiler
 /// <summary>Runs only the retained source-order task transitions over one mutable active quest instance.</summary>
 internal interface IDaggerfallQuestTaskLifecycle
 {
+    bool FoeTrigger(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest foe lifecycle owner is composed.");
+    void FoeCommand(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest foe lifecycle owner is composed.");
     void NpcOverlay(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("This lifecycle does not own NPC overlays.");
     void RearmMute(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("This lifecycle does not own mute rearm.");
     void PlaceResource(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, string task, int operationIndex);
@@ -462,9 +475,26 @@ internal static class DaggerfallQuestTaskRunner
                     continue;
                 }
 
+                if (operation.Kind is DaggerfallQuestTaskOperationKind.InjuredFoe or DaggerfallQuestTaskOperationKind.KilledFoe)
+                {
+                    bool triggered = lifecycle.FoeTrigger(instance, operation);
+                    Set(task, state, triggered, variables);
+                    if (triggered && !state.OperationCompleted[operationIndex])
+                    {
+                        if (operation.MessageId is > 0 and var saying) messages.Popup(instance, saying);
+                        MarkCompleted(state, operationIndex);
+                    }
+                    continue;
+                }
+
                 if (!state.IsSet || state.OperationCompleted[operationIndex]) continue;
                 switch (operation.Kind)
                 {
+                    case DaggerfallQuestTaskOperationKind.KillFoe:
+                    case DaggerfallQuestTaskOperationKind.RemoveFoe:
+                        lifecycle.FoeCommand(instance, operation);
+                        MarkCompleted(state, operationIndex);
+                        break;
                     case DaggerfallQuestTaskOperationKind.AddQuestor:
                     case DaggerfallQuestTaskOperationKind.DropQuestor:
                     case DaggerfallQuestTaskOperationKind.AddFace:

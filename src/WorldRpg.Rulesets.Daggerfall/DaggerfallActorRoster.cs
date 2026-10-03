@@ -180,12 +180,20 @@ internal sealed class DaggerfallActorRoster
     /// container's, leave the shared inventory store with it.
     /// </summary>
     internal HashSet<long> BanishedActors { get; } = [];
+    internal event Action<long>? ActorRetired;
 
     internal void Banish(long durableId)
     {
         if (!_state.Actors.TryGet(durableId, out var actor) || actor.IsDefeated) return;
+        RemoveQuestActor(durableId);
+    }
+
+    /// <summary>Explicit quest removal also removes a defeated actor and its corpse, without inventing a death.</summary>
+    internal void RemoveQuestActor(long durableId)
+    {
         if (_dynamicActors.ContainsKey(durableId)) { Retire(durableId); return; }
-        if (durableId == DaggerfallActorIdentity.PlayerEntityId) throw new InvalidOperationException("The player cannot be banished.");
+        if (durableId == DaggerfallActorIdentity.PlayerEntityId) throw new InvalidOperationException("The player cannot be removed by a quest foe action.");
+        if (!_state.Actors.TryGet(durableId, out _)) throw new InvalidOperationException($"Quest actor {durableId} is not materialized.");
         _definitionsByActor.Remove(durableId);
         Appearance.RetireActor(durableId);
         _lootUi.CloseActor(durableId);
@@ -194,6 +202,7 @@ internal sealed class DaggerfallActorRoster
         _corpseLoot.Retire(durableId);
         _state.Actors.Entities.Destroy(ActorsState.Identity(durableId));
         BanishedActors.Add(durableId);
+        ActorRetired?.Invoke(durableId);
     }
 
     internal void Retire(long durableId)
@@ -219,6 +228,7 @@ internal sealed class DaggerfallActorRoster
         _identities.Remove(new DurableIdentityReference(DurableIdentityKind.Actor, checked((ulong)durableId)));
         if (_state.Npcs.All.Any(npc => npc.DurableId == durableId && npc.Kind == DaggerfallNpcKind.Civilian))
             _state.Npcs.SetPresence(durableId, DaggerfallNpcPresence.Removed);
+        ActorRetired?.Invoke(durableId);
     }
 
     /// <summary>
@@ -315,14 +325,14 @@ internal sealed class DaggerfallActorRoster
     }
 
     /// <summary>Rebuilds a retained actor through the same factory and presentation owner as site re-entry.</summary>
-    internal ActorState MaterializeRetainedActor(DaggerfallDynamicActorSave saved)
+    internal ActorState MaterializeRetainedActor(DaggerfallDynamicActorSave saved, bool projectAppearance = true)
     {
         try
         {
             var actor = DaggerActorFactory.CreateDynamicActor(_random, _mechanics, _definitions, _state.Actors, _state.InventoryStore,
                 _definitionsByActor, saved);
             _dynamicActors.Add(saved.EntityId, new DaggerfallActorId(saved.Definition));
-            if (_definitionsByActor[saved.EntityId].MobileId is int mobileId)
+            if (projectAppearance && _definitionsByActor[saved.EntityId].MobileId is int mobileId)
             {
                 if (!_projection().Inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored dynamic actor '{saved.Definition}' has no admitted mobile {mobileId} presentation.");

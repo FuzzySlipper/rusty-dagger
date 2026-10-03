@@ -522,7 +522,7 @@ public sealed class QuestWorldAdmissionTests
     }
 
     internal static DaggerfallDefinitions Definitions(bool stackable = false, bool gold = false, bool secondPlace = false, bool endSource = false, bool secondItem = false,
-        string[]? actions = null, bool person = false, bool atHome = false, bool rearmPlacement = false)
+        string[]? actions = null, bool person = false, bool atHome = false, bool rearmPlacement = false, string[][]? taskBlocks = null, string[]? messages = null)
     {
         var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
@@ -560,6 +560,9 @@ public sealed class QuestWorldAdmissionTests
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
             {"name":"world-test","displayName":"","sourceFile":"world-test.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[]}
             """));
+        if (messages is not null)
+            root["questSources"]!["quests"]!.AsArray().Last()!["messages"] = new JsonArray(messages.Select((text, index) => (JsonNode)new JsonObject
+                { ["id"] = 100 + index, ["firstLine"] = 1 + index, ["lines"] = new JsonArray(text) }).ToArray());
         if (endSource)
             root["questSources"]!["quests"]!.AsArray().Last()!["blocks"] = JsonNode.Parse("""
                 [{"kind":"headless","firstLine":1,"lines":["end quest"],"global":null}]
@@ -567,6 +570,12 @@ public sealed class QuestWorldAdmissionTests
         if (actions is not null)
             root["questSources"]!["quests"]!.AsArray().Last()!["blocks"] = new JsonArray(new JsonObject
                 { ["kind"] = "headless", ["firstLine"] = 1, ["lines"] = JsonSerializer.SerializeToNode(actions), ["global"] = null });
+        if (taskBlocks is not null)
+        {
+            var blocks = root["questSources"]!["quests"]!.AsArray().Last()!["blocks"]!.AsArray();
+            for (int i = 0; i < taskBlocks.Length; i++) blocks.Add(new JsonObject
+                { ["kind"] = "task", ["firstLine"] = 100 + i * 10, ["lines"] = JsonSerializer.SerializeToNode(taskBlocks[i]), ["global"] = null });
+        }
         if (rearmPlacement)
         {
             var blocks = root["questSources"]!["quests"]!.AsArray().Last()!["blocks"]!.AsArray();

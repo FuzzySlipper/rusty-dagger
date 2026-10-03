@@ -12,9 +12,10 @@ internal sealed partial class DaggerfallSession
         var position = _sites.ProfileToLocal(marker.Position);
         if (resource.SelectedFoe is { } foe)
         {
+            if (resource.IsHidden || resource.Binding.ActorIds.Length > 0 && resource.Binding.ActorIds.All(resource.RemovedFoeIds.Contains)) return null;
             if (resource.Binding.ActorIds.Length != 0)
             {
-                foreach (long id in resource.Binding.ActorIds)
+                foreach (long id in resource.Binding.ActorIds.Except(resource.RemovedFoeIds))
                 {
                     RelocateQuestActor(id, position);
                 }

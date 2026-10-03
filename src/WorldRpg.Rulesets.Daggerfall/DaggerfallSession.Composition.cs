@@ -439,6 +439,7 @@ internal sealed partial class DaggerfallSession
             State.QuestItems = new(State, _actorIdentities, _uniqueItems, ItemOwnerEntity, DestroyUniqueItem, ConsumeItemStack, _equipmentMoves);
             State.Quests.BindItems(State.QuestItems);
             State.Quests.BindPlacementNpcs(State.Npcs);
+            State.Quests.BindFoeCommands(ApplyQuestFoeCommand);
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook,
                 useDrug: variant => UseDrug(variant) == DaggerfallPoisonAdmission.Admitted,
                 useOghma: () =>
@@ -488,6 +489,7 @@ internal sealed partial class DaggerfallSession
             _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
+            _roster.ActorRetired += State.Quests.ObserveFoeRemoval;
             if (saved is null) _roster.GrantInitialAuthoredEquipment();
             _pendingCreateItem = saved?.PendingCreateItem;
             _pendingDispel = saved?.PendingDispel;
