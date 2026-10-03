@@ -5,6 +5,7 @@ using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -56,7 +57,7 @@ public sealed class DaggerfallGroundContainersTests
         Assert.Equal(retainOtherContents, entities.TryResolve(new(DurableIdentityKind.Container, checked((ulong)old.Id)), out _));
         Assert.Equal(retainOtherContents ? DurableIdentityClassification.Live : DurableIdentityClassification.Removed,
             identities.Classify(new(DurableIdentityKind.Container, checked((ulong)old.Id))));
-        Assert.Equal(5UL, containers.Read(ground.Persisted.Single(value => value.Id != old.Id).Owner).Stacks.Aggregate(0UL, (sum, value) => sum + value.Quantity));
+        Assert.Equal(5UL, ground.Capture().Single(value => value.Id != old.Id).Inventory.Stacks.Aggregate(0UL, (sum, value) => sum + value.Quantity));
         if (retainOtherContents) Assert.Equal(1UL, ground.Read(old.Id)!.Stacks.Single().Quantity);
     }
 
@@ -99,12 +100,20 @@ public sealed class DaggerfallGroundContainersTests
 
         ground.SwitchProfile(interior);
         Assert.Empty(ground.All);
+        Assert.False(store.TryGetInventory(pile.Owner, out _));
+        Assert.False(entities.Store.IsAlive(pile.Owner));
+        Assert.Equal(DurableEntityResolution.Unloaded,
+            entities.Classify(new(DurableIdentityKind.Container, checked((ulong)pile.Id)), identities));
+        Assert.Equal(3UL, ground.Capture().Single().Inventory.Stacks.Single().Quantity);
         Assert.Null(ground.Read(pile.Id));
         Assert.Throws<InvalidOperationException>(() => ground.Take(pile.Id,
             new(new InventoryItemId("apple"), 1, playerStack, InventoryStackId.Parse("return.apples")), store.Revision));
         Assert.Equal(2UL, containers.Read(player).Stacks.Single().Quantity);
 
         ground.SwitchProfile(exterior);
+        Assert.NotEqual(pile.Owner, ground.All[pile.Id].Owner);
+        Assert.Equal(DurableEntityResolution.Materialized,
+            entities.Classify(new(DurableIdentityKind.Container, checked((ulong)pile.Id)), identities));
         InventoryStackId destination = ground.ResolveTakeDestination(pile.Id, droppedStack, InventoryStackId.Parse("return.apples"));
         _ = ground.Take(pile.Id, new(new InventoryItemId("apple"), 2, droppedStack, destination), store.Revision);
 
@@ -116,11 +125,76 @@ public sealed class DaggerfallGroundContainersTests
         _ = ground.Take(pile.Id, new(new InventoryItemId("apple"), 1, droppedStack, destination), store.Revision);
         Assert.Equal(new(DaggerfallItemOwner.Ground(pile.Id), droppedStack, DaggerfallItemOwner.Player, destination), changes.Last());
         Assert.Empty(ground.All);
-        Assert.Empty(ground.Persisted);
+        Assert.Empty(ground.Capture());
         Assert.Null(ground.Read(pile.Id));
         Assert.False(store.TryGetInventory(pile.Owner, out _));
         Assert.Equal(DurableIdentityClassification.Removed,
             identities.Classify(new DurableIdentityReference(DurableIdentityKind.Container, (ulong)pile.Id)));
+    }
+
+    [Fact]
+    public void Unloaded_mixed_pile_survives_save_rebase_and_readmission_without_reissuing_identities()
+    {
+        using EntityDirectory entities = new();
+        InventoryStore store = new();
+        EntityId player = entities.Create(new(DurableIdentityKind.Actor, 1), new("player"));
+        store.RegisterInventory(new InventoryState(player));
+        entities.Store.Add(player, new InventoryComponent(store, player));
+        var definitions = new Dictionary<InventoryItemId, ItemDefinition>
+        {
+            [new("apple")] = new(ItemDefinitionId.Parse("apple"), ItemKind.Fungible, 20),
+            [new("ring")] = new(ItemDefinitionId.Parse("ring"), ItemKind.Unique, 1),
+        };
+        MechanicsInventoryContainerCoordinator containers = new(store, entities, definitions);
+        DaggerfallItemInstances instances = new();
+        var ledger = DurableIdentityAllocator.Restore(new([
+            new(DurableIdentityKind.Container, 100, [99], []),
+            new(DurableIdentityKind.Item, 201, [200], []),
+        ]));
+        var profile = Profile(DaggerfallWorldProfileKind.Exterior, "charing-exterior");
+        DaggerfallGroundContainers ground = new(containers, instances, player, ledger, profile);
+        var saved = new DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySave.Capture(profile), 99, 819.3f, 2, 4,
+            new([new("apples", "apple", 3, Metadata(DaggerfallItemOwner.Ground(99)).Capture())],
+                [new("ring", 200, Metadata(DaggerfallItemOwner.Ground(99)).Capture())], []));
+        ground.Restore([saved]);
+        var oldOwner = ground.All[99].Owner;
+        var oldItem = entities.Resolve(new(DurableIdentityKind.Item, 200));
+        var origin = DaggerfallExteriorWorldOrigin.At(new(10, 10));
+        ground.ReconcileExteriorResidency([new(10, 10)], origin);
+        Assert.Empty(ground.All);
+        Assert.False(store.TryGetInventory(oldOwner, out _));
+        Assert.False(entities.Store.IsAlive(oldOwner));
+        Assert.False(entities.Store.IsAlive(oldItem));
+        Assert.Equal(DurableEntityResolution.Unloaded, entities.Classify(new(DurableIdentityKind.Container, 99), ledger));
+        Assert.Equal(DurableEntityResolution.Unloaded, entities.Classify(new(DurableIdentityKind.Item, 200), ledger));
+        Assert.Equal(DurableEntityResolution.NeverIssued, entities.Classify(new(DurableIdentityKind.Item, 900), ledger));
+        var delta = new System.Numerics.Vector3(-819, -2, 0);
+        ground.RebaseActive(delta);
+        var captured = Assert.Single(ground.Capture());
+        Assert.Equal(saved.X + delta.X, captured.X);
+        Assert.Equal(saved.Inventory.Stacks, captured.Inventory.Stacks);
+        Assert.Equal(saved.Inventory.UniqueItems, captured.Inventory.UniqueItems);
+        Assert.Equal(saved.Inventory.Equipment, captured.Inventory.Equipment);
+
+        using EntityDirectory restoredEntities = new();
+        InventoryStore restoredStore = new();
+        EntityId restoredPlayer = restoredEntities.Create(new(DurableIdentityKind.Actor, 1), new("player"));
+        restoredStore.RegisterInventory(new InventoryState(restoredPlayer));
+        restoredEntities.Store.Add(restoredPlayer, new InventoryComponent(restoredStore, restoredPlayer));
+        var restoredLedger = DurableIdentityAllocator.Restore(ledger.CaptureState());
+        DaggerfallGroundContainers restored = new(new(restoredStore, restoredEntities, definitions), new(), restoredPlayer, restoredLedger, profile);
+        restored.ReconcileExteriorResidency([new(10, 10)], origin with { Compensation = delta });
+        restored.Restore([captured]);
+        Assert.Equal(DurableEntityResolution.Unloaded, restoredEntities.Classify(new(DurableIdentityKind.Container, 99), restoredLedger));
+        restored.ReconcileExteriorResidency([new(11, 10)], origin with { Compensation = delta });
+        Assert.Equal(3UL, restored.Read(99)!.Stacks.Single().Quantity);
+        Assert.Single(restored.Read(99)!.UniqueItems);
+        Assert.Equal(DurableEntityResolution.Materialized, restoredEntities.Classify(new(DurableIdentityKind.Item, 200), restoredLedger));
+        Assert.Equal(100UL, restoredLedger.NextIdentity(DurableIdentityKind.Container));
+        Assert.Equal(201UL, restoredLedger.NextIdentity(DurableIdentityKind.Item));
+        restored.ReconcileExteriorResidency([new(11, 10)], origin with { Compensation = delta });
+        Assert.Single(restored.All);
+        Assert.Equal(2, restoredStore.InventoryOwners.Count());
     }
 
     private static DaggerfallWorldProfileKey Profile(DaggerfallWorldProfileKind kind, string id) =>

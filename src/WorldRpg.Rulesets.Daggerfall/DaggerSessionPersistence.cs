@@ -193,12 +193,7 @@ internal sealed class DaggerSessionPersistence
                 var (stacks, uniques) = CaptureContents(State.Containers.Read(value.Owner), DaggerfallItemOwner.Quest(value.Id));
                 return new DaggerfallQuestCustodySave(value.InstanceId, value.Id, new(stacks, uniques, []));
             }).ToArray(),
-            GroundContainers = _groundContainers.Persisted.OrderBy(container => container.Id).Select(container =>
-            {
-                (DaggerfallStackSave[] stacks, DaggerfallUniqueSave[] uniques) = CaptureContents(State.Containers.Read(container.Owner), DaggerfallItemOwner.Ground(container.Id));
-                return new DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySave.Capture(container.Profile), container.Id, container.Position.X, container.Position.Y, container.Position.Z,
-                    new DaggerfallInventorySave(stacks, uniques, []));
-            }).ToArray(),
+            GroundContainers = _groundContainers.Capture(),
         });
     }
 
@@ -393,16 +388,8 @@ internal sealed class DaggerSessionPersistence
     }
 
     /// <summary>Shared stack/unique contents mapping for actor inventories and corpse containers.</summary>
-    private (DaggerfallStackSave[] Stacks, DaggerfallUniqueSave[] UniqueItems) CaptureContents(InventoryView contents, DaggerfallItemOwner owner) => (
-        contents.Stacks.OrderBy(stack => stack.Id.Value, StringComparer.Ordinal)
-            .Select(stack => new DaggerfallStackSave(stack.Id.Value, stack.Definition.Value, stack.Quantity,
-                State.ItemInstances.RequireStack(owner, stack.Id).Capture())).ToArray(),
-        contents.UniqueItems.OrderBy(item => item.Entity.Value)
-            .Select(item =>
-            {
-                ulong identity = State.Actors.Entities.IdentityOf(item.Entity).Value;
-                return new DaggerfallUniqueSave(item.Definition.Value, identity, State.ItemInstances.RequireUnique(identity).Capture());
-        }).ToArray());
+    private (DaggerfallStackSave[] Stacks, DaggerfallUniqueSave[] UniqueItems) CaptureContents(InventoryView contents, DaggerfallItemOwner owner) =>
+        DaggerfallInventorySaveBoundary.CaptureContents(contents, owner, State.ItemInstances, State.Actors.Entities);
 
     private static IReadOnlyDictionary<long, DurableIdentityReference> CorpseIdentities(IEnumerable<DaggerfallCorpseSave> corpses) =>
         corpses.ToDictionary(

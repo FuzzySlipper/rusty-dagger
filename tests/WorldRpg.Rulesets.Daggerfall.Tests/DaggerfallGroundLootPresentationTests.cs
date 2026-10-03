@@ -60,6 +60,19 @@ public sealed class DaggerfallGroundLootPresentationTests
             new DaggerfallInventorySave(stacks, [], []));
         saved.Validate();
         Assert.Equal(profile, saved.Profile.Require());
+        LootPresentation beforeUnload = Assert.IsType<LootPresentation>(loot.Read());
+        ground.SwitchProfile(new(profile.Site, DaggerfallWorldProfileKind.Interior, "charing-interior"));
+        Assert.Null(loot.Read());
+        Assert.Null(loot.PrepareGroundTake(new("loot-take", beforeUnload.Revision,
+            beforeUnload.Items.Single().Key, Container: beforeUnload.Container, Amount: 1)));
+        ground.SwitchProfile(profile);
+        Assert.Null(loot.Read());
+        Assert.True(loot.OpenGround(pile.Id));
+        LootPresentation readmitted = Assert.IsType<LootPresentation>(loot.Read());
+        Assert.NotEqual(beforeUnload.Container, readmitted.Container);
+        Assert.Null(loot.PrepareGroundTake(new("loot-take", beforeUnload.Revision,
+            beforeUnload.Items.Single().Key, Container: beforeUnload.Container, Amount: 1)));
+        Assert.Equal(2UL, ground.Read(pile.Id)!.Stacks.Single().Quantity);
     }
 
     private static DaggerfallDefinitions ReadDefinitions()
