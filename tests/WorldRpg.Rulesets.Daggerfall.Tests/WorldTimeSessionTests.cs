@@ -63,9 +63,9 @@ public sealed class WorldTimeSessionTests
         DaggerfallSavePayload baseline = CapturedSave(root);
         DaggerfallSavePayload saved = baseline with
         {
-            Calendar = new DaggerfallCalendarSave(405, 3, 12, 12, 0, 0, 0d),
+            Calendar = new DaggerfallCalendarSave(406, 3, 12, 12, 0, 0, 0d),
             Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 4), null, []),
-            RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = new DaggerfallCalendar(405, 3, 12, 12, 0, 0).DayNumber },
+            RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = new DaggerfallCalendar(406, 3, 12, 12, 0, 0).DayNumber },
         };
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -103,9 +103,9 @@ public sealed class WorldTimeSessionTests
         DaggerfallSavePayload baseline = CapturedSave(root);
         DaggerfallSavePayload saved = baseline with
         {
-            Calendar = new DaggerfallCalendarSave(405, 3, 11, 23, 0, 0, 0d),
+            Calendar = new DaggerfallCalendarSave(406, 3, 11, 23, 0, 0, 0d),
             Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 4), null, []),
-            RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = new DaggerfallCalendar(405, 3, 11, 23, 0, 0).DayNumber },
+            RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = new DaggerfallCalendar(406, 3, 11, 23, 0, 0).DayNumber },
         };
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -132,9 +132,9 @@ public sealed class WorldTimeSessionTests
         DaggerfallSavePayload baseline = CapturedSave(root);
         DaggerfallSavePayload saved = baseline with
         {
-            Calendar = new DaggerfallCalendarSave(405, 3, 12, 12, 0, 0, 0d),
+            Calendar = new DaggerfallCalendarSave(406, 3, 12, 12, 0, 0, 0d),
             Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 179), null, []),
-            RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = new DaggerfallCalendar(405, 3, 12, 12, 0, 0).DayNumber },
+            RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = new DaggerfallCalendar(406, 3, 12, 12, 0, 0).DayNumber },
         };
         List<string> releases = [];
         ContentFake content = new(releases);
