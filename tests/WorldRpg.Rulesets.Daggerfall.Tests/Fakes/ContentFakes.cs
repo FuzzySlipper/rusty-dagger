@@ -6,6 +6,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 internal sealed class ContentFake : IContentService
 {
 
+    public void PackContainer(ContentContainerPackRequest request) =>
+        throw new NotSupportedException("This fake does not pack installed content containers.");
+
     public ContentBundle OpenContainer(ContentContainerOpenRequest request) =>
         throw new NotSupportedException("This fake does not admit installed content containers.");
     public ContentSha256 ReadBundleIdentity(ContentBundle bundle) =>
@@ -98,6 +101,9 @@ internal sealed class ContentFake : IContentService
 /// <summary>Build-declared bundles for full-product tests; bodies stay outside the eager snapshot.</summary>
 internal sealed class BundleContentFake : IContentService
 {
+
+    public void PackContainer(ContentContainerPackRequest request) =>
+        throw new NotSupportedException("This fake does not pack installed content containers.");
 
     public ContentBundle OpenContainer(ContentContainerOpenRequest request) =>
         throw new NotSupportedException("This fake does not admit installed content containers.");
