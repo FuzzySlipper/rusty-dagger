@@ -48,6 +48,12 @@ internal sealed partial class DaggerfallSession
             for (int index = 0; index < grants.Length; index++)
             {
                 var grant = grants[index];
+                if (DaggerfallEncumbrancePolicy.IsGold(_definitions.RequireItem(new DaggerfallItemId(grant.Item.Item.Value))))
+                {
+                    if (!replacement.State.Currency.ReceiveGold(grant.Item.Quantity))
+                        throw new InvalidOperationException("Starting gold could not be added to the new character's currency.");
+                    continue;
+                }
                 DurableIdentityReference? identity = grant.Item.Stackable ? null : replacement._uniqueItems.AllocateReference();
                 factory.Materialize(grant.Item, replacement.State.Inventory, replacement.State.ItemInstances,
                     grant.Item.Stackable ? InventoryStackId.Parse($"daggerfall.character.initial.{index}") : null, identity);
