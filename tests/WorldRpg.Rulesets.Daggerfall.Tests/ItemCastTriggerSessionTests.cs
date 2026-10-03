@@ -35,7 +35,8 @@ public sealed class ItemCastTriggerSessionTests
         Assert.Equal(condition, restored.State.ItemInstances.RequireUnique(f.Source).CurrentCondition);
         Assert.Equal(Stat(s, "strength").Value, Stat(restored, "strength").Value);
         Assert.Single(restored.State.Effects.Capture(), value => value.ItemId == f.Source);
-        Assert.Equal(EquipmentMoveOutcome.Applied, restored.EquipmentMoves.MoveToGrid(f.Item, 49).Outcome);
+        var restoredEntity = restored.State.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Item, f.Source));
+        Assert.Equal(EquipmentMoveOutcome.Applied, restored.EquipmentMoves.MoveToGrid(new(restoredEntity.Value, f.Item.Definition), 49).Outcome);
         Assert.Null(restored.State.ItemInstances.RequireUnique(f.Source).HeldCast);
         Assert.DoesNotContain(restored.State.Effects.Capture(), value => value.ItemId == f.Source);
         Assert.Equal(strength, Stat(restored, "strength").Value);
