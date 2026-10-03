@@ -264,21 +264,22 @@ internal sealed class DaggerfallActorRoster
         // Detach every target lifecycle before destroying Engine entities; effects on a live player
         // with one of these actors as caster remain active by durable caster identity.
         _ = _state.Effects.SuspendTargets(ids);
-        foreach (long id in ids)
-        {
-            if (!_state.Actors.TryGet(id, out ActorState? actor)) continue;
-            _lootUi.CloseActor(actor.DurableId);
-            DestroySiteOwnedUniqueItems(actor);
-            _definitionsByActor.Remove(actor.DurableId);
-            if (_dynamicActors.Remove(actor.DurableId)) Appearance.RetireActor(actor.DurableId);
-            _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(actor.DurableId), retireBindings: false);
-            // A corpse owns a second Engine inventory/container entity. Capture has already
-            // detached its durable facts, so retire that owner with the site actor rather than
-            // leaving an unreachable native container alive across the transition.
-            _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(actor.DurableId), retireBindings: false);
-            _corpseLoot.Unload(actor.DurableId);
-            _state.Actors.Entities.Destroy(ActorsState.Identity(actor.DurableId));
-        }
+        foreach (long id in ids) UnloadActor(id);
+    }
+
+    /// <summary>Detaches one canonical actor while its values and identities remain in a site delta.</summary>
+    internal void UnloadActor(long id)
+    {
+        _ = _state.Effects.SuspendTargets([id]);
+        if (!_state.Actors.TryGet(id, out ActorState? actor)) return;
+        _lootUi.CloseActor(actor.DurableId);
+        DestroySiteOwnedUniqueItems(actor);
+        _definitionsByActor.Remove(actor.DurableId);
+        if (_dynamicActors.Remove(actor.DurableId)) Appearance.RetireActor(actor.DurableId);
+        _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(actor.DurableId), retireBindings: false);
+        _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(actor.DurableId), retireBindings: false);
+        _corpseLoot.Unload(actor.DurableId);
+        _state.Actors.Entities.Destroy(ActorsState.Identity(actor.DurableId));
     }
 
     /// <summary>
@@ -310,17 +311,26 @@ internal sealed class DaggerfallActorRoster
         }
         if (delta is null) return;
         foreach (DaggerfallDynamicActorSave savedDynamic in delta.DynamicActors.OrderBy(actor => actor.EntityId))
+            MaterializeRetainedActor(savedDynamic);
+    }
+
+    /// <summary>Rebuilds a retained actor through the same factory and presentation owner as site re-entry.</summary>
+    internal ActorState MaterializeRetainedActor(DaggerfallDynamicActorSave saved)
+    {
+        try
         {
-            _ = DaggerActorFactory.CreateDynamicActor(_random, _mechanics, _definitions, _state.Actors, _state.InventoryStore,
-                _definitionsByActor, savedDynamic);
-            _dynamicActors.Add(savedDynamic.EntityId, new DaggerfallActorId(savedDynamic.Definition));
-            if (_definitionsByActor[savedDynamic.EntityId].MobileId is int mobileId)
+            var actor = DaggerActorFactory.CreateDynamicActor(_random, _mechanics, _definitions, _state.Actors, _state.InventoryStore,
+                _definitionsByActor, saved);
+            _dynamicActors.Add(saved.EntityId, new DaggerfallActorId(saved.Definition));
+            if (_definitionsByActor[saved.EntityId].MobileId is int mobileId)
             {
                 if (!_projection().Inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
-                    throw new InvalidOperationException($"Restored dynamic actor '{savedDynamic.Definition}' has no admitted mobile {mobileId} presentation.");
-                Appearance.AddActor(savedDynamic.EntityId, sprite);
+                    throw new InvalidOperationException($"Restored dynamic actor '{saved.Definition}' has no admitted mobile {mobileId} presentation.");
+                Appearance.AddActor(saved.EntityId, sprite);
             }
+            return actor;
         }
+        catch { UnloadActor(saved.EntityId); throw; }
     }
 
     /// <summary>

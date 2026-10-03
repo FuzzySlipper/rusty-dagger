@@ -112,7 +112,7 @@ internal sealed partial class DaggerfallQuestInstances
     private DaggerfallSiteMarker SelectPlacementMarker(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestPlacementOperation operation,
         DaggerfallQuestResourceState resource, DaggerfallSiteProfile profile)
     {
-        if (operation.MarkerIndex is null && instance.Placements.FirstOrDefault(value => value.PlaceSymbol == operation.PlaceSymbol && value.Applied is not null)?.Applied is { } previous)
+        if (operation.MarkerIndex is null && instance.Placements.FirstOrDefault(value => value.PlaceSymbol == operation.PlaceSymbol && value.Applied?.Profile == profile.ProfileKey)?.Applied is { } previous)
             return profile.QuestMarkers.SingleOrDefault(value => value.Id == previous.MarkerId)
                 ?? throw new InvalidOperationException($"Admitted quest marker '{previous.MarkerId}' is absent from '{profile.ProfileKey.LogicalId}'.");
         var preferred = resource.SelectedItem is not null && operation.Preference != DaggerfallQuestMarkerPreference.QuestSpawn
@@ -121,7 +121,7 @@ internal sealed partial class DaggerfallQuestInstances
         // for initial selection; subsequent explicit indices still address the preferred pool.
         var spawn = profile.QuestMarkers.Where(value => value.Kind == DaggerfallSiteMarkerKind.QuestSpawn).ToArray();
         var items = profile.QuestMarkers.Where(value => value.Kind == DaggerfallSiteMarkerKind.QuestItem).ToArray();
-        bool alreadySelected = instance.Placements.Any(value => value.PlaceSymbol == operation.PlaceSymbol && value.Applied is not null);
+        bool alreadySelected = instance.Placements.Any(value => value.PlaceSymbol == operation.PlaceSymbol && value.Applied?.Profile == profile.ProfileKey);
         var markers = preferred == DaggerfallSiteMarkerKind.QuestSpawn ? spawn : items;
         int? markerIndex = operation.MarkerIndex;
         if (!alreadySelected && operation.Preference == DaggerfallQuestMarkerPreference.Any)

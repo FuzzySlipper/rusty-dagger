@@ -46,8 +46,8 @@ internal sealed partial class DaggerfallSession
             if (npc.Kind != DaggerfallNpcKind.Civilian
                 || npc.Presence != DaggerfallNpcPresence.Active
                 || site is null
-                || npc.Site.Region != site.Id.Region
-                || !StringComparer.Ordinal.Equals(npc.Site.Location, site.Name)
+                || (npc.Profile is { } physical ? physical != _sites.ActiveProfile
+                    : npc.Site.Region != site.Id.Region || !StringComparer.Ordinal.Equals(npc.Site.Location, site.Name))
                 || State.Actors.TryGet(npc.DurableId, out _)) continue;
             WorldPoint position = npc.X is float x && npc.Y is float y && npc.Z is float z
                 ? _sites.ProfileToLocal(new WorldPoint(x, y, z))

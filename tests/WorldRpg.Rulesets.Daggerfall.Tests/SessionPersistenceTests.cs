@@ -96,9 +96,12 @@ public sealed class SessionPersistenceTests
             ulong rewardItem = baseline.Inventory.UniqueItems.First().EntityId;
             DaggerfallStackSave questGold = baseline.Inventory.Stacks.First();
             DaggerfallSiteRecord place = definitions.Locations.Records.First();
+            long giver = original.State.Npcs.RegisterStable(DaggerfallNpcKind.Questor, "persistent-giver",
+                new(inputs.Site!.Value.Region, definitions.Locations.Records.First(record => record.Id == inputs.Site.Value).Name, ""),
+                new("Breton", "Male", 0, 0, 0, 0), "quest giver", ["talk"]);
             DaggerfallQuestResourceState[] resources =
             [
-                new("_questgiver_", DaggerfallQuestResourceBinding.Actors(2000)),
+                new("_questgiver_", DaggerfallQuestResourceBinding.Actors(giver)),
                 new("_mondung_", DaggerfallQuestResourceBinding.Place(new DaggerfallSiteIdSave(place.Region, place.Index))),
                 new("_monster_", DaggerfallQuestResourceBinding.Actors(2000)),
                 new("_reward_", DaggerfallQuestResourceBinding.Stack(new DaggerfallItemOwnerSave("player", DaggerfallActorIdentity.PlayerEntityId), questGold.StackId)),

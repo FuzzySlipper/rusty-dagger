@@ -355,7 +355,7 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
     }
 
     internal void ValidateBindings(IReadOnlySet<long> actorIds, DurableIdentityAllocator identities, IReadOnlySet<(int Region, int Index)> locations,
-        IReadOnlySet<(string Scope, long OwnerId, string StackId)> stacks, IReadOnlySet<long> npcIds, DaggerfallDefinitions definitions)
+        IReadOnlySet<(string Scope, long OwnerId, string StackId)> stacks, IReadOnlyDictionary<long, DaggerfallNpcEntry> npcs, DaggerfallDefinitions definitions)
     {
         ArgumentNullException.ThrowIfNull(actorIds);
         ArgumentNullException.ThrowIfNull(identities);
@@ -373,8 +373,16 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
                         throw new ArgumentException($"Quest Person '{resource.Symbol}' requires exactly one NPC identity.");
                     foreach (long actorId in resource.Binding.ActorIds)
                     {
-                        if (person && !npcIds.Contains(actorId))
-                            throw new ArgumentException($"Quest Person '{resource.Symbol}' requires a registered NPC identity, not actor {actorId}.");
+                        if (person)
+                        {
+                            if (!npcs.TryGetValue(actorId, out var npc))
+                                throw new ArgumentException($"Quest Person '{resource.Symbol}' requires a registered NPC identity, not actor {actorId}.");
+                            // Validate(definitions) already requires the exact selected giver.
+                            if (resource.SelectedPerson?.QuestorId is null && (DaggerfallNpcKind)npc.Kind != DaggerfallNpcKind.Questor)
+                                throw new ArgumentException($"Generated quest Person '{resource.Symbol}' requires a Questor NPC identity.");
+                            // Hidden/removed resources retain their identity and text. Their canonical
+                            // registry presence and allocator tombstone govern projection, not the binding.
+                        }
                         if (!person && !actorIds.Contains(actorId)) throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to missing actor {actorId}.");
                     }
                     break;

@@ -81,13 +81,9 @@ internal sealed partial class DaggerfallSession
             probe = WorldPoint.From(position.ToVector() + System.Numerics.Vector3.UnitY * (sprite.Size.Y / 2));
         var floor = _grounding.GroundPosition(probe, 4);
         position = WorldPoint.From(floor.ToVector() + System.Numerics.Vector3.UnitY * (sprite.Size.Y * sprite.Pivot.Y));
-        if (State.Actors.TryGet(id, out var actor)) actor.ApplyPose(new(position, actor.HeadingYawRadians));
-        else
-        {
-            if (npc.Kind == DaggerfallNpcKind.Civilian)
-                throw new NotSupportedException($"Quest giver civilian {id} must be admitted by its actor owner before relocation.");
-            ProjectNpc(npc, profile, position);
-        }
+        if (npc.Kind == DaggerfallNpcKind.Civilian) RelocateQuestActor(id, position);
+        else if (State.Actors.TryGet(id, out var actor)) actor.ApplyPose(new(position, actor.HeadingYawRadians));
+        else ProjectNpc(npc, profile, position);
         State.Npcs.SetDisplayName(id, person.DisplayName);
         State.Npcs.Place(id, profile.ProfileKey, WorldPoint.From(_sites.LocalToProfile(position.ToVector())));
         return DaggerfallQuestResourceBinding.Actors(id);
