@@ -1,6 +1,7 @@
 using Rusty.Engine;
 using Rusty.Engine.Debugging;
 using Rusty.Engine.Persistence;
+using Rusty.Engine.Interaction;
 using WorldRpg.Kit;
 
 namespace WorldRpg.Host;
@@ -85,6 +86,16 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             id => Current().InspectPlaytestAction(id), playtest.PlaytestActions,
             (yaw, pitch) => Current().InspectPlaytestLook(yaw, pitch)));
         registrar.Register(new PlaytestTargetsDebugModule(() => Current().ReadPlaytestTargets()));
+        if (_session is IPlaytestWorldInspectionSession)
+        {
+            IPlaytestWorldInspectionSession World() => (IPlaytestWorldInspectionSession)_session;
+            registrar.Register(new InteractionDebugModule(new WorldInteraction(
+                new CurrentInteractionInspectionScene(() => World().CreateInteractionInspection()), targetedUseEnabled: false)));
+            registrar.Register(new SpatialInspectionDebugModule(
+                (radius, verticalRadius, cellSize) => World().ReadSpatialGrid(radius, verticalRadius, cellSize),
+                distance => World().ReadSpatialProbe(distance),
+                (x, y, z) => World().ReadJumpPlan(x, y, z)));
+        }
     }
 
     /// <summary>The mode the product runs its session under.</summary>

@@ -136,9 +136,12 @@ internal sealed class DaggerfallActivationModule(InteractionTargetingService tar
     internal IEnumerable<DaggerfallActivationTarget> InspectTargets() => _contributions.Targets(Mode);
 
     internal WorldInteractionReadout? Inspect(EntityId player, PlayerControlState control, LookReceipt look) =>
-        control.Position is WorldPoint origin ? _targeting.Inspect(player, origin, look.Forward,
+        control.Position is WorldPoint ? CreateInspection(player, control, look).Inspect() : null;
+
+    internal WorldInteraction CreateInspection(EntityId player, PlayerControlState control, LookReceipt look) =>
+        _targeting.CreateInspection(player, control.Position ?? throw new InvalidOperationException("Interaction inspection requires a player position."), look.Forward,
             _reach.MaximumDistance, _reach.MinimumFacingCosine,
-            _contributions.Targets(Mode).Select(target => target.ToKitCandidate())) : null;
+            _contributions.Targets(Mode).Select(target => target.ToKitCandidate()));
 
     internal bool ChangeMode(DaggerfallActivationMode mode)
     {

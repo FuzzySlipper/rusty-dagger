@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Rusty.Engine;
 using Rusty.Engine.Debugging;
 using Rusty.Engine.Mechanics;
@@ -92,6 +93,52 @@ internal sealed partial class DaggerfallSession
 
     public DebugCommandResult ReadPlaytestTargets() => PlaytestJson(w => WriteTargets(w, compact: false));
 
+    public WorldInteraction CreateInteractionInspection() =>
+        (_activation ?? throw new InvalidOperationException("The activation owner is unavailable."))
+            .CreateInspection(State.Actors.Player.Actor.Entity, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl));
+
+    public DebugCommandResult ReadSpatialGrid(int radius, int verticalRadius, double cellSize)
+    {
+        if (radius is < 0 or > 15 || verticalRadius is < 0 or > 15 || !double.IsFinite(cellSize) || cellSize <= 0)
+            return DebugCommandResult.Failure(DebugCommandStatus.InvalidArguments, "Grid radii must be 0–15 and cell size positive and finite.");
+        Vector3 center = (State.PlayerControl.Position ?? throw new InvalidOperationException("Spatial inspection requires a player position.")).ToVector();
+        Vector3 origin = center - new Vector3((float)((radius + .5) * cellSize),
+            (float)((verticalRadius + .5) * cellSize), (float)((radius + .5) * cellSize));
+        uint width = (uint)(radius * 2 + 1), layers = (uint)(verticalRadius * 2 + 1);
+        if ((ulong)width * width * layers > SpatialGridSnapshot.MaximumCells)
+            return DebugCommandResult.Failure(DebugCommandStatus.InvalidArguments, "Grid exceeds the Engine inspection cell limit.");
+        return DebugCommandResult.Success(SpatialGridSnapshot.Capture(_engine.Spatial,
+            new SpatialMapRequest(_spatial.Session, origin, cellSize, width, width,
+                origin.Y, origin.Y + cellSize, origin.Y, origin.Y + cellSize, ReadOnlyMemory<SpatialEntityCollider>.Empty),
+            layers, new SpatialMapObservation($"{_latestUpdateGeneration}:{_latestSimulationStep}", center,
+                _input.ResolveCurrentLook(State.PlayerControl).Forward)));
+    }
+
+    public DebugCommandResult ReadSpatialProbe(double distance)
+    {
+        if (!double.IsFinite(distance) || distance is <= 0 or > 8)
+            return DebugCommandResult.Failure(DebugCommandStatus.InvalidArguments, "Probe distance must be finite and within (0, 8].");
+        var config = _spatial.CurrentController;
+        float height = State.PlayerControl.Motion.Stance == CharacterStance.Crouched ? config.Shape.CrouchedHeight : config.Shape.StandingHeight;
+        Vector3 feet = (State.PlayerControl.Position ?? throw new InvalidOperationException("Spatial inspection requires a player position.")).ToVector() - Vector3.UnitY * (height * .5f);
+        return DebugCommandResult.Success(PlaytestTraversal.Probe(_engine.Spatial, _spatial.Session,
+            feet, height, config.Surface.MaximumStepHeight, (float)distance, ReadOnlyMemory<SpatialEntityCollider>.Empty));
+    }
+
+    public DebugCommandResult ReadJumpPlan(double x, double y, double z)
+    {
+        if (!double.IsFinite(x) || !double.IsFinite(y) || !double.IsFinite(z))
+            return DebugCommandResult.Failure(DebugCommandStatus.InvalidArguments, "Jump target must be finite.");
+        var config = _spatial.CurrentController;
+        Vector3 center = (State.PlayerControl.Position ?? throw new InvalidOperationException("Jump inspection requires a player position.")).ToVector();
+        float height = State.PlayerControl.Motion.Stance == CharacterStance.Crouched ? config.Shape.CrouchedHeight : config.Shape.StandingHeight;
+        var plan = PlaytestTraversal.JumpToward(center - Vector3.UnitY * (height * .5f),
+            _input.ResolveCurrentLook(State.PlayerControl).Forward, new Vector3((float)x, (float)y, (float)z),
+            config, State.PlayerControl.Motion.Grounded,
+            _controlSettings.KeysFor("jump").First(), _controlSettings.KeysFor("move.forward").First());
+        return DebugCommandResult.Success(JsonSerializer.Serialize(plan, DaggerfallPlaytestJsonContext.Default.PlaytestJumpPlan));
+    }
+
     public DebugCommandResult ReadPlaytestObservation() => PlaytestJson(w =>
     {
         var player = State.PlayerControl;
@@ -157,6 +204,7 @@ internal sealed partial class DaggerfallSession
         w.WriteString("route", "unavailable; targets are loaded positions, not traversable routes");
         w.WriteString("visibilityCoverage", "Current gameplay perception checks retained geometry; call-local moving doors/supports are not included. Visible is not a walking route or full collision clearance.");
         w.WriteString("angleOrigin", "character center used by gameplay targeting; visual angles also supplied from camera viewpoint");
+        w.WriteString("attackVisibilityMeaning", "Player's current weapon-reach query; unavailable beyond its envelope is not an enemy perception result. enemyBehavior contains the last admitted enemy decision.");
         var pairs = combat?.Receipt.Pairs.ToArray() ?? [];
         w.WriteStartArray("actors");
         foreach (var actor in State.Actors.All.OrderBy(a => origin?.HorizontalDistanceTo(a.Position) ?? 0).Take(compact ? 24 : int.MaxValue))
@@ -173,6 +221,33 @@ internal sealed partial class DaggerfallSession
                 var pair = pairs.FirstOrDefault(value => value.Target == (ulong)actor.DurableId);
                 w.WriteString("currentAttackVisibility", pairs.Any(value => value.Target == (ulong)actor.DurableId) ? pair.Kind.ToString() : "unavailable");
                 w.WriteBoolean("selectedForAttack", combat.SelectedTargetId == actor.DurableId);
+            }
+            if (_enemyBehavior.LastEvidence.TryGetValue(actor.DurableId, out var behavior))
+            {
+                w.WriteStartObject("enemyBehavior"); w.WriteString("state", behavior.State.ToString());
+                if (behavior.Visibility is { } visibility)
+                {
+                    var enemyPairs = visibility.Pairs.ToArray();
+                    if (enemyPairs.Where(pair => pair.Observer == (ulong)actor.DurableId)
+                        .Select(pair => (PerceptionPair?)pair).FirstOrDefault() is { } enemyPair)
+                    {
+                        w.WriteString("visibility", enemyPair.Kind.ToString()); w.WriteNumber("distance", enemyPair.Distance);
+                        w.WriteNumber("facingCosine", enemyPair.FacingCosine);
+                    }
+                    else w.WriteString("visibility", "no-pair");
+                }
+                if (_enemyBehavior.LastPerception.TryGetValue(actor.DurableId, out var perception))
+                {
+                    w.WriteBoolean("inSight", perception.InSight); w.WriteBoolean("inEarshot", perception.InEarshot);
+                    w.WriteBoolean("detected", perception.Detected); w.WriteBoolean("pacified", perception.Pacified);
+                    w.WriteBoolean("blockedByIllusion", perception.BlockedByIllusion);
+                }
+                if (behavior.Navigation is { } navigation)
+                {
+                    w.WriteString("navigation", navigation.Outcome.ToString());
+                    Vector(w, "nextWaypoint", navigation.NextWaypoint);
+                }
+                w.WriteEndObject();
             }
             w.WriteEndObject();
         }
@@ -224,3 +299,7 @@ internal sealed partial class DaggerfallSession
         return DebugCommandResult.Success(Encoding.UTF8.GetString(stream.ToArray()));
     }
 }
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(PlaytestJumpPlan))]
+internal partial class DaggerfallPlaytestJsonContext : JsonSerializerContext;

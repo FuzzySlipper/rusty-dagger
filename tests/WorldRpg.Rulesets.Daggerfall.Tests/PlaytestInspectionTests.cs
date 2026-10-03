@@ -2,6 +2,7 @@ using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Debugging;
 using Rusty.Engine.Mechanics;
+using Rusty.Engine.Interaction;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Kit;
 using Xunit;
@@ -11,6 +12,47 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class PlaytestInspectionTests
 {
+    [Fact]
+    public void Enemy_inspection_distinguishes_pursuit_from_player_weapon_query_without_advancing()
+    {
+        var (created, _, perception) = VisibleEnemySession([], distance: 5);
+        using var session = created;
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        var behavior = session.LastEnemyBehavior[2000];
+        perception.Receipt = Receipt(); // The separate player query has no pair outside weapon reach.
+        using var readout = JsonDocument.Parse(session.ReadPlaytestTargets().Message);
+        var actor = readout.RootElement.GetProperty("actors").EnumerateArray().Single(a => a.GetProperty("id").GetString() == "actor:2000");
+        Assert.Equal("unavailable", actor.GetProperty("currentAttackVisibility").GetString());
+        var enemy = actor.GetProperty("enemyBehavior");
+        Assert.Equal("Chase", enemy.GetProperty("state").GetString());
+        Assert.True(enemy.GetProperty("detected").GetBoolean());
+        Assert.Equal("NoPath", enemy.GetProperty("navigation").GetString());
+        Assert.Same(behavior, session.LastEnemyBehavior[2000]);
+    }
+
+    [Fact]
+    public void Standard_world_inspection_uses_live_owners_without_activation_or_resource_changes()
+    {
+        using ConditionSessionFixture fixture = new();
+        var session = fixture.Session;
+        var position = session.State.PlayerControl.Position;
+        var lastActivation = session.LastActivationTargeting;
+        var stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
+        double before = stamina.Current;
+        var module = new InteractionDebugModule(new WorldInteraction(new CurrentInteractionInspectionScene(session.CreateInteractionInspection), targetedUseEnabled: false));
+        using var readout = JsonDocument.Parse(module.Inspect().Message);
+        Assert.Equal("observation-only", readout.RootElement.GetProperty("assistance").GetString());
+        Assert.False(readout.RootElement.GetProperty("targetedUseEnabled").GetBoolean());
+        using var probe = JsonDocument.Parse(session.ReadSpatialProbe(1).Message);
+        Assert.Equal(32, probe.RootElement.GetProperty("samples").GetArrayLength());
+        Assert.Equal(DebugCommandStatus.InvalidArguments, session.ReadSpatialProbe(0).Status);
+        Assert.Equal(DebugCommandStatus.InvalidArguments, session.ReadSpatialGrid(16, 0, 1).Status);
+        Assert.Equal(DebugCommandStatus.InvalidArguments, session.ReadJumpPlan(double.NaN, 0, 0).Status);
+        Assert.Equal(position, session.State.PlayerControl.Position);
+        Assert.Equal(before, stamina.Current);
+        Assert.Same(lastActivation, session.LastActivationTargeting);
+    }
+
     [Fact]
     public void Playtest_attack_reports_resource_refusal_without_spending_or_advancing()
     {

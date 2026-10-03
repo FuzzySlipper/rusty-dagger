@@ -110,13 +110,18 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
 
     /// <summary>Fresh Engine rejection facts without focus acquisition, activation or last-action changes.</summary>
     public WorldInteractionReadout Inspect(EntityId observer, WorldPoint origin, Vector3 forward,
+        double maximumDistance, double minimumFacingCosine, IEnumerable<InteractionTargetCandidate> candidates) =>
+        CreateInspection(observer, origin, forward, maximumDistance, minimumFacingCosine, candidates).Inspect();
+
+    /// <summary>The same read-only scene for Engine's standard inspection commands; targeted use remains disabled.</summary>
+    public WorldInteraction CreateInspection(EntityId observer, WorldPoint origin, Vector3 forward,
         double maximumDistance, double minimumFacingCosine, IEnumerable<InteractionTargetCandidate> candidates)
     {
         InteractionTargetCandidate[] declared = candidates.ToArray();
         foreach (var candidate in declared) candidate.Validate();
         InteractionScene scene = new(_perception, _spatial, _entities, observer, origin, forward,
             (float)maximumDistance, (float)minimumFacingCosine, declared, null);
-        return new WorldInteraction(scene, targetedUseEnabled: false).Inspect();
+        return new WorldInteraction(scene, targetedUseEnabled: false);
     }
 
     private bool IsCurrent(InteractionTargetCandidate candidate) =>

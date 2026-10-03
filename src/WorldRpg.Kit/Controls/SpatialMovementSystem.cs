@@ -76,6 +76,9 @@ public sealed class SpatialMovementSystem : IDisposable
         }
     }
 
+    /// <summary>The current admitted character configuration, including stance geometry and step limits.</summary>
+    public CharacterControllerConfig CurrentController => _controller;
+
     public SpatialMovementSystem(ISpatialService spatial, IContentService content, SpatialContentArtifact inputs, SpatialTuning tuning)
     {
         ArgumentNullException.ThrowIfNull(spatial);
