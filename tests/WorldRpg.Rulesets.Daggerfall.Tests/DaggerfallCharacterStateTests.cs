@@ -11,6 +11,19 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallCharacterStateTests
 {
     [Fact]
+    public void Selectable_careers_do_not_present_missing_portrait_diagnostics_as_restrictions()
+    {
+        DaggerfallCharacterState character = Create(out DaggerfallDefinitions definitions, out _);
+        DaggerfallCharacterCreationPresentation choices = character.ReadCreation();
+        foreach (var missing in definitions.CharacterPresentation.CareersWithoutPortrait)
+        {
+            DaggerfallCharacterChoice choice = choices.Careers.Single(value => value.Id == missing.CareerId);
+            if (choice.Available) Assert.Null(choice.Restriction);
+        }
+        Assert.All(choices.Careers.Where(value => !value.Available), choice => Assert.NotNull(choice.Restriction));
+    }
+
+    [Fact]
     public void Character_action_requires_one_complete_typed_choice()
     {
         DaggerfallPlayerUiAction? action = DaggerfallUiAction.Parse("""{"action":"character-commit","name":"Aubk-i","race":"khajiit","gender":"female","faceIndex":3,"reflexes":1,"career":"class08"}"""u8);
@@ -225,6 +238,8 @@ public sealed class DaggerfallCharacterStateTests
         Assert.Equal(12, committed.Answers.Length);
         Assert.NotEmpty(committed.Biography);
         Assert.NotEmpty(committed.StartingGrants);
+        DaggerfallCharacterBackgroundPresentation presented = DaggerfallCharacterBackgroundPolicy.Present(definitions, career, character.Identity, committed);
+        Assert.All(presented.StartingGrants, grant => Assert.Equal(definitions.RequireItem(new DaggerfallItemId(grant.ItemId)).Template!.Name, grant.Label));
         // Which biography effects are still unsupported is the covered feature's business, not this
         // test's: it requires only that a disclosed gap is named, so supporting one cannot fail here.
         Assert.All(DaggerfallCharacterBackgroundPolicy.Present(definitions, career, character.Identity, committed).UnsupportedEffects,

@@ -227,6 +227,21 @@ test('accessible wagon projection sends revision guarded put and take selections
   } finally { f.dispose(); }
 });
 
+test('item details show published labels and values without internal template identities', () => {
+  const f = fixture();
+  try {
+    f.publish({ inventory: {
+      revision: '1', message: '', equipmentChange: null, slots: [],
+      items: [{ key: 'unique:7', definition: 'template-116-steel', label: 'Steel Broadsword', quantity: '1', weight: 3, value: 25, details: 'A steel blade.', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] }],
+    } });
+    f.root.querySelector('[data-inventory-item="unique:7"]').click();
+    const details = f.root.querySelector('.dagger-inventory-details');
+    assert.match(details.textContent, /Steel Broadsword/);
+    assert.match(details.textContent, /Weight 3 · Value 25/);
+    assert.doesNotMatch(details.textContent, /template-|unique:7/);
+  } finally { f.dispose(); }
+});
+
 test('inventory renders the ruleset-owned completed equip cue without claiming a readiness gate', () => {
   const f = fixture();
   try {
@@ -406,11 +421,11 @@ test('title creation renders normalized questions and sends the selected backgro
           questions: [{ number: 1, text: 'Where did you study?', selectedLetter: 'a', answers: [{ letter: 'a', text: 'At home.' }, { letter: 'b', text: 'At court.' }] }],
           attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 0, value: 50, canAllocate: true }],
           skills: [{ id: 'medical', tier: 'primary', rolled: 28, allocated: 0, biographyBonus: 0, value: 28, canAllocate: true }],
-          startingGrants: [{ itemId: 'template-113-iron', templateIndex: 113, quantity: 1, sourceEffect: 'IT 3 0 0' }], unsupportedEffects: ['The source retains this fatigue background effect without a gameplay consequence.'] },
+          startingGrants: [{ itemId: 'template-113-iron', label: 'Longsword', templateIndex: 113, quantity: 1, sourceEffect: 'IT 3 0 0' }], unsupportedEffects: ['The source retains this fatigue background effect without a gameplay consequence.'] },
       },
     } });
     assert.match(f.root.querySelector('[data-testid="character-biography"]').textContent, /readable biography/);
-    assert.match(f.root.querySelector('[data-testid="character-starting-grants"]').textContent, /template-113-iron/);
+    assert.equal(f.root.querySelector('[data-testid="character-starting-grants"]').textContent, 'Starting grants: 1 × Longsword.');
     assert.match(f.root.querySelector('[data-testid="character-background-unsupported-effects"]').textContent, /fatigue background effect/);
     f.root.querySelector('[aria-label="Attributes strength"]').value = '6';
     f.root.querySelector('[aria-label="Skills medical"]').value = '6';

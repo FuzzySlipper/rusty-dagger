@@ -51,6 +51,8 @@ internal static class DaggerfallFormulaPolicy
     internal static int MaxFatigue(int strength, int endurance) =>
         checked((strength + endurance) * FatigueUnitsPerAttributePoint);
 
+    internal static long DisplayFatigue(long storedFatigue) => storedFatigue / FatigueUnitsPerAttributePoint;
+
     /// <summary>Donor PlayerHealth fall policy: five health points for every metre after the five-metre grace distance.</summary>
     internal static int FallDamage(float distance)
     {

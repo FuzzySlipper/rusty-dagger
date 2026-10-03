@@ -135,7 +135,7 @@ internal sealed class DaggerfallOutcomePresentation(
                 // Soul resolution was completed before the canonical health write.
             case ActorDiedFact died when Actor(died.ActorId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;
-                presentation.SetOutcome($"Defeated {definition.Id} for {DaggerfallFormulaPolicy.DisplayDamage(died.ActualHealthLost)} damage; gained {definition.Rewards.ExperienceReward} XP");
+                presentation.SetOutcome($"Defeated {Name(died.ActorId)} for {DaggerfallFormulaPolicy.DisplayDamage(died.ActualHealthLost)} damage; gained {definition.Rewards.ExperienceReward} XP");
                 if (_soulTrap is { } deathTrap && deathTrap.TargetId == died.ActorId)
                 { presentation.AppendOutcome(deathTrap.Message); _soulTrap = null; }
                 break;
