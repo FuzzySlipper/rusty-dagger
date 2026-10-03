@@ -769,7 +769,8 @@ public static class DungeonNormalizer
                     IsFlat: false,
                     SoundIndex: model.SoundIndex,
                     Position: null,
-                    RawIndex: model.SoundIndex));
+                    RawIndex: model.SoundIndex,
+                    Poison: action.Flags == 0x1A ? new(reference.SourceName, "source-unresolved") : null));
                 AddProvenance(id, "rdb-action-model", blocks.Source, model.ObjectOffset);
             }
 
@@ -777,6 +778,8 @@ public static class DungeonNormalizer
             {
                 if (flat.ObjectOffset <= 0 || !actionIdsByOffset.TryGetValue(flat.ObjectOffset, out string? id))
                     continue;
+                if (flat.Action == 0x1A && (flat.TextureArchive != 199 || flat.TextureRecord != 19))
+                    throw new InvalidOperationException($"RDB Poison action '{id}' is not the owner-approved unresolved treasure marker.");
 
                 actions.Add(new(
                     id,
@@ -792,7 +795,8 @@ public static class DungeonNormalizer
                     IsFlat: true,
                     SoundIndex: flat.SoundIndex,
                     Position: MeshGeometry.ToRightHanded(Place(flat.X, flat.Y, flat.Z, reference)),
-                    RawIndex: flat.SoundIndex));
+                    RawIndex: flat.SoundIndex,
+                    Poison: flat.Action == 0x1A ? new(reference.SourceName, "source-unresolved") : null));
                 AddProvenance(id, "rdb-action-flat", blocks.Source, flat.ObjectOffset);
             }
         }
