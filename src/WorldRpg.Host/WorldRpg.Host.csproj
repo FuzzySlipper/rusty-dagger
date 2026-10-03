@@ -22,7 +22,7 @@
          reruns this only when a file under ../ui or a listed dependency
          changes, so C#-only edits skip it and UI edits skip the C# build. -->
     <RustyEngineProductUiSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'))</RustyEngineProductUiSourceRoot>
-    <RustyEngineProductUiBuildCommand>mkdir -p &quot;$(MSBuildThisFileDirectory)../ui/engine-types&quot; &amp;&amp; (cmp -s &quot;$(RustyEngineProductUiTypes)&quot; &quot;$(MSBuildThisFileDirectory)../ui/engine-types/rusty-engine-product-ui.d.ts&quot; || cp &quot;$(RustyEngineProductUiTypes)&quot; &quot;$(MSBuildThisFileDirectory)../ui/engine-types/rusty-engine-product-ui.d.ts&quot;) &amp;&amp; npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc -p &quot;$(MSBuildThisFileDirectory)../ui/tsconfig.json&quot; --outDir &quot;$(RustyEngineProductUiRoot)&quot; &amp;&amp; cp &quot;$(MSBuildThisFileDirectory)../ui/&quot;*.css &quot;$(RustyEngineProductUiRoot)/&quot;</RustyEngineProductUiBuildCommand>
+    <RustyEngineProductUiBuildCommand>npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc -p &quot;$(MSBuildThisFileDirectory)../ui/tsconfig.json&quot; --outDir &quot;$(RustyEngineProductUiRoot)&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductUiProjectionStream>dagger.hud</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>dagger.ui.snapshot.v1</RustyEngineProductUiProjectionContract>
     <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
@@ -94,4 +94,14 @@
   <ItemGroup>
     <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json;$(MSBuildThisFileDirectory)../../tsconfig.base.json;$(RustyEngineProductUiTypes)" />
   </ItemGroup>
+  <!-- The UI compiles against the pair's declarations, copied beside its
+       sources; copying is MSBuild's, so the command above runs the same under
+       cmd.exe and sh. -->
+  <Target Name="CopyEngineUiTypes" BeforeTargets="BuildRustyEngineProductUi">
+    <Copy SourceFiles="$(RustyEngineProductUiTypes)" DestinationFolder="$(MSBuildThisFileDirectory)../ui/engine-types" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <ProductUiStylesheet Include="$(MSBuildThisFileDirectory)../ui/*.css" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ProductUiStylesheet)" DestinationFolder="$(RustyEngineProductUiRoot)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>
