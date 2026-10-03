@@ -467,7 +467,7 @@ public sealed class QuestWorldAdmissionTests
         state.Containers.Transfer(ground, state.Actors.Player.Actor.Entity, new(first.SelectedItem!.Item, 1,
             UniqueEntityId: state.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Item, carried)).Value));
         state.ItemInstances.MoveUnique(carried, DaggerfallItemOwner.Player);
-        state.ItemInstances.ReplaceUnique(carried, state.ItemInstances.RequireUnique(carried) with { QuestId = null, QuestItemSymbol = null });
+        state.Quests.MakeItemPermanent(started.InstanceId, first.Symbol);
         state.Quests.Complete(started.InstanceId, "reward retained");
         Assert.Null(state.ItemInstances.RequireUnique(carried).QuestId);
         Assert.Equal(DaggerfallItemOwner.Player, state.ItemInstances.RequireUnique(carried).Owner);

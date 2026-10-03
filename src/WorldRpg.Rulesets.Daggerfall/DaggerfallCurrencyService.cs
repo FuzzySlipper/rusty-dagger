@@ -178,6 +178,14 @@ internal sealed class DaggerfallCurrencyService
         return true;
     }
 
+    internal bool ReceiveGold(ulong amount)
+    {
+        GoldGrantPlan? plan = PrepareGoldGrant(amount);
+        if (amount == 0 || plan is null) return false;
+        GrantGold(amount, plan);
+        return true;
+    }
+
     internal bool DepositGold(ulong amount)
     {
         if (amount == 0 || Read().Gold < amount || ulong.MaxValue - _accountGold < amount) return false;

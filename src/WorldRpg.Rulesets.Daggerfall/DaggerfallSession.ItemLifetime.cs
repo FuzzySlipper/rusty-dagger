@@ -11,7 +11,7 @@ internal sealed partial class DaggerfallSession
         "player" => State.Actors.Player.Actor.Entity,
         "actor" => State.Actors.Get(owner.Id).Actor.Entity,
         "corpse" => _corpseLoot.Corpses[owner.Id].Owner,
-        "ground" or "wagon" or "property" => State.Actors.Entities.Resolve(new(DurableIdentityKind.Container, checked((ulong)owner.Id))),
+        "ground" or "wagon" or "property" or "quest" => State.Actors.Entities.Resolve(new(DurableIdentityKind.Container, checked((ulong)owner.Id))),
         _ => throw new InvalidOperationException($"No live inventory owner for {owner.Scope}."),
     };
 
@@ -52,6 +52,7 @@ internal sealed partial class DaggerfallSession
         foreach (var stack in State.ItemInstances.StackItems.Where(value => value.Metadata.QuestId == instanceId
             && value.Owner == DaggerfallItemOwner.Player).ToArray())
             ConsumeItemStack(stack.Owner, stack.Stack);
+        State.QuestItems.RemoveCustody(instanceId);
         State.HeldEnchantments.Refresh();
     }
 }
