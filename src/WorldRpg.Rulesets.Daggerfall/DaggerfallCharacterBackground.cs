@@ -11,6 +11,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed record DaggerfallBiographyAnswerSave(int Question, string Letter);
 internal sealed record DaggerfallCreationAllocationSave(string Id, int Points);
 internal sealed record DaggerfallStartingGrant(string ItemId, int TemplateIndex, ulong Quantity, string SourceEffect);
+internal sealed record DaggerfallStartingGrantPresentation(string ItemId, int TemplateIndex, ulong Quantity, string SourceEffect, string Label);
 /// <summary>The six donor BIOG modifier slots, preserved independently even where a gameplay admission has not landed.</summary>
 internal sealed record DaggerfallBiographyModifiersSave(int PoisonResistance, int Fatigue, int Reaction, int DiseaseResistance, int MagicResistance, int AvoidHit);
 
@@ -35,7 +36,7 @@ internal sealed record DaggerfallCharacterBackgroundPresentation(
     int BiographyClassIndex, string[] Biography, DaggerfallBiographyQuestionPresentation[] Questions,
     DaggerfallCreationAttributePresentation[] Attributes, int AttributeBonusPool, int RemainingAttributePoints,
     DaggerfallCreationSkillPresentation[] Skills, int PrimarySkillPoints, int MajorSkillPoints, int MinorSkillPoints,
-    DaggerfallStartingGrant[] StartingGrants, DaggerfallBiographyModifiersSave Modifiers, string[] UnsupportedEffects);
+    DaggerfallStartingGrantPresentation[] StartingGrants, DaggerfallBiographyModifiersSave Modifiers, string[] UnsupportedEffects);
 internal sealed record DaggerfallBiographyQuestionPresentation(int Number, string Text, DaggerfallBiographyAnswerPresentation[] Answers, string? SelectedLetter);
 internal sealed record DaggerfallBiographyAnswerPresentation(string Letter, string Text);
 internal sealed record DaggerfallCreationAttributePresentation(string Id, string Label, int Rolled, int Allocated, int Value, bool CanAllocate);
@@ -105,7 +106,9 @@ internal static class DaggerfallCharacterBackgroundPolicy
                 question.Answers.Select(answer => new DaggerfallBiographyAnswerPresentation(answer.Letter, Text(definitions, [answer.TextKey]))).ToArray(),
                 background.Answers.Single(answer => answer.Question == question.Number).Letter)).ToArray(),
             attributes, background.AttributeBonusPool, Remaining(background.AttributeBonusPool, background.AttributeAllocations), skills,
-            RemainingTier("primary", background.SkillAllocations, career), RemainingTier("major", background.SkillAllocations, career), RemainingTier("minor", background.SkillAllocations, career), background.StartingGrants,
+            RemainingTier("primary", background.SkillAllocations, career), RemainingTier("major", background.SkillAllocations, career), RemainingTier("minor", background.SkillAllocations, career),
+            background.StartingGrants.Select(grant => new DaggerfallStartingGrantPresentation(grant.ItemId, grant.TemplateIndex, grant.Quantity, grant.SourceEffect,
+                definitions.RequireItem(new DaggerfallItemId(grant.ItemId)).Template!.Name)).ToArray(),
             background.Modifiers, UnsupportedEffects(biography, background.Answers, background.Modifiers));
     }
 

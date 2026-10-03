@@ -178,7 +178,7 @@ internal sealed partial class DaggerfallCharacterState
         }).ToArray();
         DaggerfallCharacterChoice[] careers = _definitions.Catalogs.Careers.Select(career => new DaggerfallCharacterChoice(
             career.Id, career.Name, _definitions.NewGame.Careers.Any(value => value.Career == career.Id),
-            _definitions.NewGame.Careers.All(value => value.Career != career.Id) ? "This career is not selectable for a new player character." : _definitions.CharacterPresentation.CareersWithoutPortrait.FirstOrDefault(value => value.CareerId == career.Id)?.Reason))
+            _definitions.NewGame.Careers.All(value => value.Career != career.Id) ? "This career is not selectable for a new player character." : null))
             .Append(new DaggerfallCharacterChoice(DaggerfallCustomCareerPolicy.CareerId, "Custom class", true, null)).ToArray();
         DaggerfallCharacterFaceChoice[] faces = _definitions.CharacterPresentation.Races.TryGetValue(current.RaceId, out DaggerfallRaceLayers? selected)
             ? [.. selected.Heads(current.Gender).Select(face => new DaggerfallCharacterFaceChoice(face.HeadIndex, face.MediaId))] : [];

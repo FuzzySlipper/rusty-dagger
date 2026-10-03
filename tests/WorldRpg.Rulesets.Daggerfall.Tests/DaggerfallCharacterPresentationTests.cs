@@ -34,7 +34,7 @@ public sealed class DaggerfallCharacterPresentationTests
         Assert.Equal(30, sheet.Skills.Single(value => value.Id == "backstabbing").Value);
         Assert.Equal(60, sheet.Skills.Single(value => value.Id == "long-blade").Value);
         Assert.Equal((21L, 31L), Resource(sheet, "health"));
-        Assert.Equal((5_760L, 5_760L), Resource(sheet, "stamina"));
+        Assert.Equal((90L, 90L), Resource(sheet, "stamina"));
         Assert.Equal((100L, 100L), Resource(sheet, "magicka"));
         Assert.Equal(2, sheet.Progression.Level);
         Assert.Equal(250, sheet.Progression.Experience);
@@ -51,6 +51,18 @@ public sealed class DaggerfallCharacterPresentationTests
                 Assert.Equal(["Right Hand"], item.Slots);
                 Assert.Equal("Attack 2–16; Iron; Long Blade", item.Details);
             });
+    }
+
+    [Fact]
+    public void Sheet_displays_fatigue_in_player_units_without_changing_the_live_track()
+    {
+        using Fixture f = new();
+        Track fatigue = f.Player.Stats.GetTrack(TrackId.Parse("stamina"));
+        fatigue.SetCurrent(4_192);
+
+        Assert.Equal((65L, 90L), Resource(f.Presentation.Read(f.Player, f.Progression), "stamina"));
+        Assert.Equal(4_192, fatigue.ValueInt64);
+        Assert.Equal(5_760, fatigue.Maximum.ValueInt64);
     }
 
     [Fact]

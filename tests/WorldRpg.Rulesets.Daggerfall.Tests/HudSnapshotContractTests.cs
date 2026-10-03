@@ -47,6 +47,10 @@ public sealed class HudSnapshotContractTests
         // The art images are content bytes rather than projection shape and would make the shared file
         // hundreds of kilobytes; the revision that names them stays.
         Dictionary<string, object?> snapshot = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        Dictionary<string, object?> fatigue = Assert.IsType<object[]>(snapshot["resources"]).Cast<Dictionary<string, object?>>()
+            .Single(row => (string)row["id"]! == "stamina");
+        Assert.Equal(session.State.Actors.Player.Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("stamina")).ValueInt64 / 64,
+            Convert.ToInt64(fatigue["current"]));
         Assert.True(snapshot.Remove("uiArt"));
         // The art revision is minted per session, so the shared file names a fixed one.
         Assert.False(string.IsNullOrEmpty(Assert.IsType<string>(snapshot["uiArtRevision"])));

@@ -19,8 +19,8 @@
     {
       "id": "stamina",
       "label": "Stamina",
-      "current": 5568,
-      "maximum": 5568
+      "current": 87,
+      "maximum": 87
     },
     {
       "id": "magicka",
@@ -1100,8 +1100,8 @@
       {
         "id": "stamina",
         "label": "Stamina",
-        "current": 5568,
-        "maximum": 5568
+        "current": 87,
+        "maximum": 87
       },
       {
         "id": "magicka",
@@ -1318,43 +1318,43 @@
           "id": "class01",
           "label": "Spellsword",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Spellsword\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class02",
           "label": "Battlemage",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Battlemage\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class03",
           "label": "Sorcerer",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Sorcerer\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class04",
           "label": "Healer",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Healer\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class05",
           "label": "Nightblade",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Nightblade\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class06",
           "label": "Bard",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Bard\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class07",
           "label": "Burglar",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Burglar\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class08",
@@ -1366,43 +1366,43 @@
           "id": "class09",
           "label": "Acrobat",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Acrobat\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class10",
           "label": "Thief",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Thief\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class11",
           "label": "Assassin",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Assassin\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class12",
           "label": "Monk",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Monk\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class13",
           "label": "Archer",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Archer\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class14",
           "label": "Ranger",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Ranger\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class15",
           "label": "Barbarian",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Barbarian\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class16",
@@ -1414,7 +1414,7 @@
           "id": "class17",
           "label": "Knight",
           "available": true,
-          "restriction": "The corpus supplies no class portrait named for \u0027Knight\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+          "restriction": null
         },
         {
           "id": "class18",

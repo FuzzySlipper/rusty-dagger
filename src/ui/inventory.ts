@@ -459,7 +459,7 @@ function createDetails(): {
     render(item, slots): void {
       name.textContent = item?.label ?? 'Select an item';
       description.textContent = item?.details ?? 'Choose an item, then choose a pack or equipment destination.';
-      metadata.textContent = item === undefined ? '' : `${item.quantity} · Weight ${formatNumber(item.weight)} · Value ${formatNumber(item.value)} · ${item.definition}`;
+      metadata.textContent = item === undefined ? '' : `${item.quantity} · Weight ${formatNumber(item.weight)} · Value ${formatNumber(item.value)}`;
       const prior = equipmentTarget.value;
       equipmentTarget.replaceChildren();
       const compatible = item === undefined ? new Set<string>() : new Set(item.compatibleSlots);

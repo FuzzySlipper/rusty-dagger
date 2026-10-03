@@ -5,6 +5,7 @@ using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -247,10 +248,12 @@ internal sealed class DaggerfallCharacterPresentation
         })
         .ToArray() ?? [];
 
-    private static CharacterResourcePresentation Resource(PlayerActorState player, DaggerfallHudResourceDefinition resource)
+    internal static CharacterResourcePresentation Resource(PlayerActorState player, DaggerfallHudResourceDefinition resource)
     {
         Track value = player.Stats.GetTrack(TrackId.Parse(resource.Track.Value));
-        return new CharacterResourcePresentation(resource.Id, resource.Label, value.ValueInt64, value.Maximum.ValueInt64);
+        return new CharacterResourcePresentation(resource.Id, resource.Label,
+            resource.Track == DaggerfallMechanicsIds.Stamina ? DaggerfallFormulaPolicy.DisplayFatigue(value.ValueInt64) : value.ValueInt64,
+            resource.Track == DaggerfallMechanicsIds.Stamina ? DaggerfallFormulaPolicy.DisplayFatigue(value.Maximum.ValueInt64) : value.Maximum.ValueInt64);
     }
 
 
