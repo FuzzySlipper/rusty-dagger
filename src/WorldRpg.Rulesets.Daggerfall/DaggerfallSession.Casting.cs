@@ -27,7 +27,7 @@ internal sealed partial class DaggerfallSession
             int? cost = Casting.AvailableSpellCost(State.Actors.Player.DurableId, key);
             return new DaggerfallKnownSpellView(key, _definitions.Magic.Spells[key].Name, cost ?? 0, cost is not null);
         }).ToArray(),
-        Casting.ReadyFor(State.Actors.Player.DurableId) is { Source: DaggerfallCastSource.Spell } ready ? ready.SpellKey : null,
+        Casting.ReadyFor(State.Actors.Player.DurableId) is { Source: DaggerfallCastSource.Spell or DaggerfallCastSource.DungeonAction } ready ? ready.SpellKey : null,
         _spellResult, ReadSpellSale(), ReadSpellInformation(), ReadSpellMaker());
     private void ChangeSpell(WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallPlayerUiAction action)
     {
@@ -95,9 +95,9 @@ internal sealed partial class DaggerfallSession
     {
         if (Casting.CheckFlight(bundle) is { } unavailable) return unavailable;
         if (bundle.Target is not (DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange))
-            return new(DaggerfallCastOutcome.InvalidTarget, bundle);
+            return bundle.ActionSource is not null ? Casting.Deliver(bundle, []) : new(DaggerfallCastOutcome.InvalidTarget, bundle);
         Vector3 delta = to - from;
-        if (!ValidDirection(delta)) return new(DaggerfallCastOutcome.InvalidTarget, bundle);
+        if (!ValidDirection(delta)) return bundle.ActionSource is not null ? Casting.Deliver(bundle, []) : new(DaggerfallCastOutcome.InvalidTarget, bundle);
         SpatialHit hit = CastSpellRay(bundle.CasterId, from, delta, delta.Length());
         if (!hit.Present) return new(DaggerfallCastOutcome.Released, bundle); // Still in flight.
         if (bundle.Target == DaggerfallSpellTarget.AreaAtRange)
@@ -106,11 +106,11 @@ internal sealed partial class DaggerfallSession
         return Casting.Deliver(bundle, target is long id ? [id] : []);
     }
 
-    private SpatialHit CastSpellRay(long caster, Vector3 origin, Vector3 direction, float distance) => _spatial.CastRay(
+    private SpatialHit CastSpellRay(long? caster, Vector3 origin, Vector3 direction, float distance) => _spatial.CastRay(
         origin, Vector3.Normalize(direction), distance,
         SpellColliders(caster), _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion));
 
-    private SpatialEntityCollider[] SpellColliders(long caster)
+    private SpatialEntityCollider[] SpellColliders(long? caster)
     {
         // Query-local envelopes projected from canonical actor positions, never another collision world.
         var colliders = State.Actors.All.Where(actor => actor.DurableId != caster && !actor.IsDefeated
@@ -129,10 +129,11 @@ internal sealed partial class DaggerfallSession
                 && actor.Actor.Entity.Value == hit.Entity)
             .Select(actor => (long?)actor.DurableId).SingleOrDefault();
     }
-    private long[] AreaSpellTargets(long caster, Vector3 center, bool excludeCaster, double radius = 4d, bool exclusive = false)
+    private long[] AreaSpellTargets(long? caster, Vector3 center, bool excludeCaster, double radius = 4d, bool exclusive = false)
     {
-        return NearbyContacts(caster, center, CurrentPositions()
-                .Where(pair => IsSpellEligibleActor(pair.Key) && (!excludeCaster || pair.Key != caster)), radius, exclusive)
+        long observer = caster ?? State.Actors.Player.DurableId;
+        return NearbyContacts(observer, center, CurrentPositions()
+                .Where(pair => IsSpellEligibleActor(pair.Key) && (!excludeCaster || caster is not long source || pair.Key != source)), radius, exclusive)
             .Keys.Order().ToArray();
     }
     /// <summary>Engine supplies current distances; callers decide strict range and target eligibility without a second spatial index.</summary>

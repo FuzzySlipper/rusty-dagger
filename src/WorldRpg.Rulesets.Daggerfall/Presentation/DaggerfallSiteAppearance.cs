@@ -37,6 +37,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly Dictionary<long, BillboardVisual> groundVisuals = [];
     private readonly Dictionary<long, BillboardVisual> npcVisuals = [];
     private readonly Dictionary<RangedShotIdentity, ulong> arrowVisualEntityIds = [];
+    private readonly Dictionary<long, ulong> dungeonSpellVisualEntityIds = [];
     private readonly List<EffectVisual> effects = [];
     private ViewmodelVisual? viewmodel;
     private bool weaponDrawn = true;
@@ -273,7 +274,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     /// <summary>Publishes the active ground-container projection through the same Engine snapshot as actors.</summary>
     internal void Publish(ActorsState actors, IReadOnlyDictionary<long, DaggerfallGroundContainer> groundContainers,
         IReadOnlyList<DaggerfallRangedFlightView>? rangedFlights = null, float arrowHeight = 0f,
-        Func<long, DaggerfallPerceptionEffectState>? perception = null, IReadOnlyList<DaggerfallNpcView>? npcs = null)
+        Func<long, DaggerfallPerceptionEffectState>? perception = null, IReadOnlyList<DaggerfallNpcView>? npcs = null,
+        IReadOnlyList<DaggerfallDungeonSpellFlightView>? dungeonSpellFlights = null)
     {
         if (disposed) return;
         ReconcileGroundVisuals(groundContainers);
@@ -326,6 +328,24 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 Quaternion rotation = Quaternion.CreateFromRotationMatrix(
                     Matrix4x4.CreateWorld(Vector3.Zero, direction, up));
                 facts.Add(new AppearanceFact(visualId, false, 0,
+                    new Transform(flight.Position.ToVector() + Vector3.UnitY * arrowHeight,
+                        rotation, Vector3.One), arrowVisual, true, RenderLayer.Scene));
+            }
+            IReadOnlyList<DaggerfallDungeonSpellFlightView> spellFlights = dungeonSpellFlights ?? [];
+            HashSet<long> activeSpells = [.. spellFlights.Select(flight => flight.Sequence)];
+            foreach (long retired in dungeonSpellVisualEntityIds.Keys.Where(id => !activeSpells.Contains(id)).ToArray())
+                dungeonSpellVisualEntityIds.Remove(retired);
+            foreach (DaggerfallDungeonSpellFlightView flight in spellFlights)
+            {
+                if (!dungeonSpellVisualEntityIds.TryGetValue(flight.Sequence, out ulong spellVisualId))
+                    dungeonSpellVisualEntityIds.Add(flight.Sequence, spellVisualId = NextVisualEntityId());
+                Vector3 direction = flight.Direction.LengthSquared() > .000001f
+                    ? flight.Direction : Vector3.UnitZ;
+                Vector3 up = MathF.Abs(Vector3.Dot(direction, Vector3.UnitY)) > .99f
+                    ? Vector3.UnitX : Vector3.UnitY;
+                Quaternion rotation = Quaternion.CreateFromRotationMatrix(
+                    Matrix4x4.CreateWorld(Vector3.Zero, direction, up));
+                facts.Add(new AppearanceFact(spellVisualId, false, 0,
                     new Transform(flight.Position.ToVector() + Vector3.UnitY * arrowHeight,
                         rotation, Vector3.One), arrowVisual, true, RenderLayer.Scene));
             }
@@ -615,6 +635,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         if (world is { } staticWorld) { world = null; Dispose(staticWorld, ref failures); }
         if (arrowAppearance is { } arrowVisual) { arrowAppearance = null; Dispose(arrowVisual, ref failures); }
         arrowVisualEntityIds.Clear();
+        dungeonSpellVisualEntityIds.Clear();
         foreach (Appearance visual in doorVisuals.Values.Reverse()) Dispose(visual, ref failures);
         doorVisuals.Clear();
         doorVisualEntityIds.Clear();

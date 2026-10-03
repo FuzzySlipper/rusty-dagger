@@ -156,6 +156,21 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
         return false;
     }
 
+    /// <summary>Reads the admitted Engine pose for a flat action, including an exterior rebase.</summary>
+    internal bool TryGetTransform(string actionId, out Transform transform)
+    {
+        ThrowIfDisposed();
+        ProfileRuntime profile = RequireActiveProfile();
+        TriggerRuntime? trigger = profile.Triggers.FirstOrDefault(value => value.Action.Id == actionId);
+        if (trigger is not null)
+        {
+            transform = _store.Get(trigger.Entity, EngineComponentTypes.Transform);
+            return true;
+        }
+        transform = default;
+        return false;
+    }
+
     /// <summary>
     /// Reconciles active trigger volumes and dispatches only Engine-reported enter facts for the
     /// player. Exit/continued facts remain Engine state and do not get mirrored into the graph.
@@ -402,7 +417,7 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
         return written == 0 ? "action" : new string(buffer[..written]);
     }
 
-    private static ulong StableIdentity(string profile, string action)
+    internal static ulong StableIdentity(string profile, string action)
     {
         const ulong offset = 14695981039346656037UL;
         const ulong prime = 1099511628211UL;

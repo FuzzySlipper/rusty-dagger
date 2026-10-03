@@ -16,6 +16,53 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallCastingTests
 {
     [Fact]
+    public void Dungeon_caster_only_action_readies_the_real_player_for_free_and_unknown_spells()
+    {
+        using Harness h = new(range: 0);
+        h.Known = false;
+        var source = new DaggerfallActionCastSource("action/test", 41, 1, new(4, 2, 3), 7);
+
+        Assert.Equal(DaggerfallCastOutcome.Ready, h.Casting.TriggerDungeonAction(source, 0).Outcome);
+        Assert.Equal(new DaggerfallReadySpell("spell.001", null, 0, DaggerfallCastSource.DungeonAction),
+            h.Casting.ReadyFor(1));
+        Assert.Equal(1000, h.Magicka(1).Current);
+
+        var release = Assert.IsType<DaggerfallLiveSpell>(h.Casting.Release(1, true).Bundle);
+        Assert.Equal(DaggerfallCastSource.DungeonAction, release.Source);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, h.Casting.Deliver(release, [1]).Outcome);
+        Assert.Contains(release.Results, result => result.Outcome == DaggerfallCastOutcome.Applied);
+    }
+
+    [Fact]
+    public void Dungeon_missile_keeps_actorless_source_and_common_invalid_and_immune_results()
+    {
+        using Harness h = new(range: 1);
+        var source = new DaggerfallActionCastSource("action/test", 42, 1, new(4, 2, 3), 9);
+        var bundle = Assert.IsType<DaggerfallLiveSpell>(h.Casting.TriggerDungeonAction(source, 0).Bundle);
+        Assert.Null(bundle.CasterId);
+        Assert.Equal(source, bundle.ActionSource);
+        Assert.Equal(DaggerfallCastOutcome.InvalidTarget, h.Casting.Deliver(bundle, [1, 2]).Outcome);
+
+        using Harness immune = new(range: 1, paralysis: true);
+        immune.Target.Get<StatsComponent>().GetStat(StatId.Parse(DaggerfallMechanicsIds.ImmunityParalysis.Value)).BaseValue = 1;
+        var immuneBundle = Assert.IsType<DaggerfallLiveSpell>(immune.Casting.TriggerDungeonAction(source, 0).Bundle);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, immune.Casting.Deliver(immuneBundle, [2]).Outcome);
+        Assert.Contains(immuneBundle.Results, result => result.Outcome == DaggerfallCastOutcome.Immune);
+    }
+
+    [Fact]
+    public void Dungeon_missile_rebases_its_admitted_action_pose_without_creating_a_caster()
+    {
+        using Harness h = new(range: 1);
+        var source = new DaggerfallActionCastSource("action/test", 43, 1, new(10, 2, 10), 5);
+        var bundle = Assert.IsType<DaggerfallLiveSpell>(h.Casting.TriggerDungeonAction(source, 0).Bundle);
+        h.Casting.Rebase(new System.Numerics.Vector3(-9, 0, -7));
+        Assert.Equal(new System.Numerics.Vector3(1, 2, 3), bundle.ActionSource!.Origin);
+        Assert.Null(bundle.CasterId);
+        Assert.False(bundle.Delivered);
+    }
+
+    [Fact]
     public void Pending_cast_rebases_its_origin_without_changing_direction_or_redelivering()
     {
         using Harness h = new(range: 3);
@@ -351,7 +398,7 @@ public sealed class DaggerfallCastingTests
             DaggerfallSpellDefinition spell = new("spell", 1, false, "Compiled spell", 4, range, 0, 0, Enumerable.Repeat(setting, count).ToArray());
             var row = new DaggerfallMagicEffectCostDefinition(99,-1,1,"destruction",10,1,0,0,
                 new(new(0,10,1),null,null));
-            Catalog = new(new Dictionary<string,DaggerfallSpellDefinition> { ["spell"] = spell }, new Dictionary<string,DaggerfallMagicItemDefinition>(), [], [],
+            Catalog = new(new Dictionary<string,DaggerfallSpellDefinition> { ["spell"] = spell, ["spell.001"] = spell }, new Dictionary<string,DaggerfallMagicItemDefinition>(), [], [],
                 new Dictionary<(int,int),DaggerfallMagicEffectCostDefinition> { [(99,-1)] = row }, new Dictionary<string,DaggerfallEnchantmentSetting>());
             IEnumerable<IActiveEffectContribution> Apply(DaggerfallActiveEffect effect)
             {

@@ -37,7 +37,7 @@ internal static class DaggerfallAttributeDrainEffects
         Action<long, long> attacked, Func<long, Actor?> actor, Func<DaggerfallEffectLifecycle> effects) =>
         DefinitionsFor(11, career, attacked, incoming =>
         {
-            long casterId = incoming.Cast.Origin!.CasterId;
+            if (incoming.Cast.Origin?.CasterId is not long casterId) return;
             Actor? caster = actor(casterId);
             if (caster is null || caster.Get<StatsComponent>().GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0) return;
             Heal(effects(), casterId, Attributes[incoming.Cast.Settings.SubType], incoming.Cast.Amount, career);
@@ -55,7 +55,8 @@ internal static class DaggerfallAttributeDrainEffects
                 {
                     var incoming = Read(effect.State, selected, type);
                     Update(effect, incoming with { Magnitude = Bounded(effect, selected, incoming.Magnitude) }, selected, career);
-                    attacked(incoming.Cast.Origin!.CasterId, checked((long)effect.Context.Target.Value));
+                    if (incoming.Cast.Origin?.CasterId is long casterId)
+                        attacked(casterId, checked((long)effect.Context.Target.Value));
                     healCaster?.Invoke(incoming);
                     return Cleanup(effect, selected, career);
                 },
@@ -70,7 +71,8 @@ internal static class DaggerfallAttributeDrainEffects
                     var incoming = Read(payload, selected, type);
                     var incumbent = Read(effect.State, selected, effect.Definition.Spell!.Type);
                     Update(effect, incumbent with { Magnitude = Bounded(effect, selected, (long)incumbent.Magnitude + incoming.Magnitude) }, selected, career);
-                    attacked(incoming.Cast.Origin!.CasterId, checked((long)effect.Context.Target.Value));
+                    if (incoming.Cast.Origin?.CasterId is long casterId)
+                        attacked(casterId, checked((long)effect.Context.Target.Value));
                     healCaster?.Invoke(incoming);
                 },
                 Spell: new(type, selected, SpellMaker: true, SupportsMagnitude: true, UntilHealed: true,
@@ -114,8 +116,13 @@ internal static class DaggerfallAttributeDrainEffects
         var state = payload.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallAttributeDrainState);
         if (state?.Cast is not { } cast || cast.Settings is not { } setting || setting.Type != type || type is not (7 or 11) || setting.SubType != subtype
             || cast.CasterLevel < 1 || cast.Amount < 0 || cast.SavePercent is < 1 or > 100 || state.Magnitude < 0
-            || cast.Origin is not { CasterId: > 0 } origin || origin.ItemId == 0 || !Enum.IsDefined(origin.Source)
-            || (origin.Source == DaggerfallCastSource.Spell) != (origin.ItemId is null))
+            || cast.Origin is not { } origin || !Enum.IsDefined(origin.Source)
+            || origin.CasterId is <= 0 || origin.ItemId == 0
+            || origin.Source != DaggerfallCastSource.DungeonAction && origin.CasterId is null
+            || origin.Source == DaggerfallCastSource.DungeonAction
+                && (origin.CasterId is not null || origin.ItemId is not null || origin.ActionSource is not { IsValid: true })
+            || origin.Source == DaggerfallCastSource.Spell && origin.ItemId is not null
+            || origin.Source != DaggerfallCastSource.Spell && origin.Source != DaggerfallCastSource.DungeonAction && origin.ItemId is null)
             throw new ArgumentException("Attribute drain state does not match its admitted variant and origin.");
         return state;
     }
