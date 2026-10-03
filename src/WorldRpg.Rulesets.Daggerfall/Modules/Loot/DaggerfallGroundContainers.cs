@@ -170,6 +170,8 @@ internal sealed class DaggerfallGroundContainers
             _containers.RegisterOwner(owner);
             transfer(DaggerfallItemOwner.Ground(id));
             _ground.Add(id, new(_activeProfile, id, owner, position));
+            foreach (long source in owners.Where(value => value.Scope == "ground").Select(value => value.Id).Distinct())
+                RetireEmptyPile(source);
             return binding.UniqueItemIds.Length > 0 ? binding : binding with
                 { Stacks = binding.Stacks.Select(stack => stack with { Owner = new("ground", id) }).Distinct().ToArray() };
         }
@@ -239,14 +241,23 @@ internal sealed class DaggerfallGroundContainers
             _instances.EnsureTransferCompatible(DaggerfallItemOwner.Ground(id), DaggerfallItemOwner.Player, source, destination);
         InventoryContainerTransferReceipt transfer = _containers.Transfer(container.Owner, _player, selection);
         SyncToPlayer(transfer, id);
+        RetireEmptyPile(id);
+        return transfer;
+    }
+
+    private void RetireEmptyPile(long id)
+    {
+        if (!_ground.TryGetValue(id, out var container)) return;
         InventoryView remaining = _containers.Read(container.Owner);
         if (remaining.Stacks.Count == 0 && remaining.UniqueItems.Count == 0)
         {
+            using var edit = _containers.Entities.Store.Get<InventoryComponent>(container.Owner).Store.Prepare();
+            edit.RetireOwner(container.Owner);
+            edit.Publish();
             _ground.Remove(id);
             _containers.Entities.Destroy(new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)id)));
             _identities.Remove(new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)id)));
         }
-        return transfer;
     }
 
     internal void Restore(IEnumerable<DaggerfallGroundContainerSave> saved)
