@@ -57,7 +57,7 @@ public sealed class DaggerCombatDamagePolicyTests
             Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
         });
         // Each slot independently passes reflex, critical and hit rolls before drawing damage.
-        fixture.ScriptMonster(0, (50, 1, 4), (50, 1, 5), (50, 1, 6));
+        fixture.ScriptMonster(0, (50, 1, 4, 100), (50, 1, 5, 100), (50, 1, 6, 100));
 
         PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
@@ -67,9 +67,9 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Equal(
         [
             (0, 19),
-            (1, 100), (1, 100), (1, 100), (1, 8),
-            (1, 100), (1, 100), (1, 100), (1, 8),
-            (1, 100), (1, 100), (1, 100), (1, 10),
+            (1, 100), (1, 100), (1, 100), (1, 8), (1, 100),
+            (1, 100), (1, 100), (1, 100), (1, 8), (1, 100),
+            (1, 100), (1, 100), (1, 100), (1, 10), (1, 100),
         ], result.Ranges);
     }
 
@@ -83,7 +83,7 @@ public sealed class DaggerCombatDamagePolicyTests
         });
         // Slot 1's reflex roll (51) beats the 50 gate; the recorded sequence jumps from that roll
         // straight to slot 2's reflex roll with no (1, 8) damage draw in between.
-        fixture.ScriptMonster(0, (50, 1, 4), (51, null, null), (50, 1, 6));
+        fixture.ScriptMonster(0, (50, 1, 4, 100), (51, null, null, null), (50, 1, 6, 100));
 
         PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
@@ -93,9 +93,9 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Equal(
         [
             (0, 19),
-            (1, 100), (1, 100), (1, 100), (1, 8),
+            (1, 100), (1, 100), (1, 100), (1, 8), (1, 100),
             (1, 100),
-            (1, 100), (1, 100), (1, 100), (1, 10),
+            (1, 100), (1, 100), (1, 100), (1, 10), (1, 100),
         ], result.Ranges);
     }
 
@@ -110,9 +110,9 @@ public sealed class DaggerCombatDamagePolicyTests
             ActionId = "monster-strike",
             Attacks = [new DaggerfallAttackRange(1, 3), new(0, 0), new(1, 3)],
         });
-        // Slot 1 has no authored minimum and is skipped before any draw; slot 2's rerolled hit
+        // Slot 1 has no authored minimum and stops after its reflex draw; slot 2's rerolled hit
         // gate (98, above the clamped chance ceiling) refuses it after its reflex roll passed.
-        fixture.ScriptMonster(0, (50, 1, 3), (null, null, null), (50, 98, null));
+        fixture.ScriptMonster(0, (50, 1, 3, 1_000_000), (50, null, null, null), (50, 98, null, null));
 
         PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
@@ -120,7 +120,8 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Equal(
         [
             (0, 19),
-            (1, 100), (1, 100), (1, 100), (1, 3),
+            (1, 100), (1, 100), (1, 100), (1, 3), (0, 1_000_000),
+            (1, 100), // The zero-minimum slot still draws reflexes.
             (1, 100), (1, 100), (1, 100),
         ], result.Ranges);
     }
@@ -211,7 +212,7 @@ public sealed class DaggerCombatDamagePolicyTests
         {
             Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
         });
-        fixture.ScriptMonster(0, (1, 100, null), (1, 1, 5), (1, 1, 6));
+        fixture.ScriptMonster(0, (1, 100, null, null), (1, 1, 5, 100), (1, 1, 6, 100));
         PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
         Assert.True(result.Outcome.Hit);
@@ -229,7 +230,7 @@ public sealed class DaggerCombatDamagePolicyTests
         {
             Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
         });
-        var slot = (Reflex: (int?)(evaded ? 100 : 1), Hit: evaded ? null : (int?)100, Damage: (int?)null);
+        var slot = (Reflex: (int?)(evaded ? 100 : 1), Hit: evaded ? null : (int?)100, Damage: (int?)null, Consequence: (int?)null);
         fixture.ScriptMonster(0, slot, slot, slot);
         CountingContribution contribution = new();
         fixture.Contribute(contribution);
@@ -252,7 +253,7 @@ public sealed class DaggerCombatDamagePolicyTests
         });
         CountingContribution contribution = new(rejectFirst: true);
         fixture.Contribute(contribution);
-        fixture.ScriptMonster(0, (1, 1, null), (1, 1, 5), (1, 1, 6));
+        fixture.ScriptMonster(0, (1, 1, null, null), (1, 1, 5, 100), (1, 1, 6, 100));
         PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
         Assert.True(result.Outcome.Hit);
@@ -559,7 +560,7 @@ public sealed class DaggerCombatDamagePolicyTests
             _scripted.Feed(draws);
         }
 
-        internal void ScriptMonster(int body, params (int? Reflex, int? Hit, int? Damage)[] slots)
+        internal void ScriptMonster(int body, params (int? Reflex, int? Hit, int? Damage, int? Consequence)[] slots)
         {
             List<int> draws = [body];
             foreach (var slot in slots)
@@ -567,6 +568,7 @@ public sealed class DaggerCombatDamagePolicyTests
                 if (slot.Reflex is int reflex) draws.Add(reflex);
                 if (slot.Hit is int hit) draws.AddRange([1, hit]); // critical, then hit
                 if (slot.Damage is int damage) draws.Add(damage);
+                if (slot.Consequence is int consequence) draws.Add(consequence);
             }
             _scripted.Feed(draws);
         }
