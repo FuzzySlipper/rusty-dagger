@@ -123,6 +123,10 @@ internal sealed record DaggerfallItemInstanceMetadata(
             saved.PoisonVariant, saved.HeldCast, saved.HealthLeechLastUsedMinute, saved.CapturedSoulMobileId, saved.Conjuration).Validate();
 }
 
+/// <summary>Completed canonical stack movement; quantities and containment remain in Engine.</summary>
+internal sealed record DaggerfallStackChange(DaggerfallItemOwner SourceOwner, InventoryStackId Source,
+    DaggerfallItemOwner? DestinationOwner = null, InventoryStackId? Destination = null, bool SourceRetired = true);
+
 /// <summary>
 /// Ruleset-owned item-instance metadata indexed by durable owner and explicit
 /// Engine stack identity. It deliberately has no quantities or containment
@@ -130,6 +134,7 @@ internal sealed record DaggerfallItemInstanceMetadata(
 /// </summary>
 internal sealed class DaggerfallItemInstances
 {
+    internal event Action<DaggerfallStackChange>? StackChanged;
     internal event Action<ulong>? SourceUnavailable;
     internal IEnumerable<KeyValuePair<ulong, DaggerfallItemInstanceMetadata>> UniqueItems => _unique;
     internal IEnumerable<(DaggerfallItemOwner Owner, InventoryStackId Stack, DaggerfallItemInstanceMetadata Metadata)> StackItems =>
@@ -173,6 +178,7 @@ internal sealed class DaggerfallItemInstances
         _ = RequireStack(owner, stack);
         _stacks.Remove((owner, stack.Value));
         _revision++;
+        StackChanged?.Invoke(new(owner, stack));
     }
 
     /// <summary>Splits through Engine first, then assigns the copied compatible metadata.</summary>
@@ -182,6 +188,7 @@ internal sealed class DaggerfallItemInstances
         DaggerfallItemInstanceMetadata metadata = RequireStack(owner, source);
         inventory.Split(source, split, quantity);
         RegisterStack(owner, split, metadata);
+        StackChanged?.Invoke(new(owner, source, owner, split, SourceRetired: false));
     }
 
     /// <summary>Checks Daggerfall meaning before asking Engine to merge the selected stacks.</summary>
@@ -195,6 +202,7 @@ internal sealed class DaggerfallItemInstances
         inventory.Merge(source, destination);
         _stacks.Remove((owner, source.Value));
         _revision++;
+        StackChanged?.Invoke(new(owner, source, owner, destination));
     }
 
     /// <summary>Checks whether an Engine transfer may merge into its selected destination.</summary>
@@ -221,6 +229,7 @@ internal sealed class DaggerfallItemInstances
             _stacks.Remove((sourceOwner.Validate(), source.Value));
             _revision++;
         }
+        StackChanged?.Invoke(new(sourceOwner, source, destinationOwner, destination, sourceWasExhausted));
     }
 
     internal void RegisterUnique(ulong itemId, DaggerfallItemInstanceMetadata metadata)
@@ -269,7 +278,7 @@ internal sealed class DaggerfallItemInstances
     }
 
     /// <summary>Retires all stack meaning whose Engine owner has been removed.</summary>
-    internal void RemoveOwner(DaggerfallItemOwner owner)
+    internal void RemoveOwner(DaggerfallItemOwner owner, bool retireBindings = true)
     {
         owner.Validate();
         int removed = 0;
@@ -277,6 +286,7 @@ internal sealed class DaggerfallItemInstances
         {
             _stacks.Remove((current, stack));
             removed++;
+            if (retireBindings) StackChanged?.Invoke(new(current, InventoryStackId.Parse(stack)));
         }
         if (removed != 0) _revision++;
     }

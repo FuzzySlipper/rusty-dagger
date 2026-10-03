@@ -423,6 +423,20 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException($"Saved civilian actor {actor.EntityId} does not name a live civilian NPC identity.");
         }
 
+        var dynamicDefinitions = DynamicActors.Concat(SiteDeltas.SelectMany(delta => delta.DynamicActors))
+            .ToDictionary(actor => actor.EntityId, actor => actor.Definition);
+        foreach (var npc in savedNpcs.Values)
+        {
+            if (npc.DurableId == DaggerfallActorIdentity.PlayerEntityId || savedActorIds.Contains(npc.DurableId)
+                || inactiveAuthoredActorIds.Contains(npc.DurableId) || BanishedActors.Contains(npc.DurableId)
+                || dynamicDefinitions.TryGetValue(npc.DurableId, out var definition)
+                    && (npc.Kind != (int)DaggerfallNpcKind.Civilian || definition != DaggerfallActorKinds.Civilian))
+                throw new ArgumentException($"Saved NPC {npc.DurableId} aliases an unrelated actor identity.");
+            var classification = savedLedger.Classify(new(DurableIdentityKind.Actor, checked((ulong)npc.DurableId)));
+            if (classification != DurableIdentityClassification.Live
+                && !(npc.Presence == (int)DaggerfallNpcPresence.Removed && classification == DurableIdentityClassification.Removed))
+                throw new ArgumentException($"Saved NPC {npc.DurableId} has no issued identity for its presence.");
+        }
         foreach (var npc in savedNpcs.Values.Where(value => value.Profile is not null))
         {
             if (savedLedger.Classify(new(DurableIdentityKind.Actor, checked((ulong)npc.DurableId))) != DurableIdentityClassification.Live)
@@ -560,7 +574,16 @@ internal sealed record DaggerfallSavePayload(
             AddQuestStacks(questStacks, DaggerfallItemOwner.Wagon(questWagon.Id), questWagon.Inventory.Stacks);
         foreach (DaggerfallActorInventorySave inventory in ActorInventories)
             AddQuestStacks(questStacks, DaggerfallItemOwner.Actor(inventory.EntityId), inventory.Inventory.Stacks);
-        Quests.ValidateBindings(combatants.Concat(savedNpcs.Values.Where(value => value.Profile is not null && value.Presence != (int)DaggerfallNpcPresence.Removed).Select(value => value.DurableId)).ToHashSet(), savedLedger, locations, questStacks);
+        foreach (var delta in SiteDeltas)
+        {
+            foreach (var inventory in delta.ActorInventories)
+                AddQuestStacks(questStacks, DaggerfallItemOwner.Actor(inventory.EntityId), inventory.Inventory.Stacks);
+            foreach (var corpse in delta.Corpses)
+                AddQuestStacks(questStacks, DaggerfallItemOwner.Corpse(corpse.ActorId), corpse.Stacks);
+        }
+        foreach (var storage in Property.Storage)
+            AddQuestStacks(questStacks, DaggerfallItemOwner.Property(storage.ContainerId), storage.Inventory.Stacks);
+        Quests.ValidateBindings(combatants, savedLedger, locations, questStacks, savedNpcs.Keys.ToHashSet(), definitions);
         DaggerfallActiveEffectSave[] allEffects = [.. ActiveEffects, .. SiteDeltas.SelectMany(delta => delta.Effects)];
         if (uniqueItems.Values.Any(item => item.HealthLeechLastUsedMinute > new World.DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).ToAbsoluteSeconds() / 60))
             throw new ArgumentException("Saved health-leech last use is later than the current calendar.");

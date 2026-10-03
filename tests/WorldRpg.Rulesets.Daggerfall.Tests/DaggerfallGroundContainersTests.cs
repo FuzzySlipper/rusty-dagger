@@ -27,6 +27,8 @@ public sealed class DaggerfallGroundContainersTests
         InventoryStackId playerStack = InventoryStackId.Parse("player.apples");
         new InventoryComponent(store, player).Grant(apples, playerStack, 5);
         DaggerfallItemInstances instances = new();
+        List<DaggerfallStackChange> changes = [];
+        instances.StackChanged += changes.Add;
         instances.RegisterStack(DaggerfallItemOwner.Player, playerStack, Metadata(DaggerfallItemOwner.Player));
         DaggerfallWorldProfileKey exterior = Profile(DaggerfallWorldProfileKind.Exterior, "charing-exterior");
         DaggerfallWorldProfileKey interior = Profile(DaggerfallWorldProfileKind.Interior, "charing-interior");
@@ -60,8 +62,10 @@ public sealed class DaggerfallGroundContainersTests
         Assert.Equal(4UL, containers.Read(player).Stacks.Single().Quantity);
         Assert.Equal(1UL, Assert.Single(ground.Read(pile.Id)!.Stacks).Quantity);
         Assert.Equal(DaggerfallItemOwner.Player, instances.RequireStack(DaggerfallItemOwner.Player, destination).Owner);
+        Assert.Equal(new(DaggerfallItemOwner.Ground(pile.Id), droppedStack, DaggerfallItemOwner.Player, destination, SourceRetired: false), changes.Last());
 
         _ = ground.Take(pile.Id, new(new InventoryItemId("apple"), 1, droppedStack, destination), store.Revision);
+        Assert.Equal(new(DaggerfallItemOwner.Ground(pile.Id), droppedStack, DaggerfallItemOwner.Player, destination), changes.Last());
         Assert.Empty(ground.All);
         Assert.Empty(ground.Persisted);
         Assert.Null(ground.Read(pile.Id));

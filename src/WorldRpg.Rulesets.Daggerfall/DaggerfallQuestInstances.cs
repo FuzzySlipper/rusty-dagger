@@ -76,7 +76,7 @@ internal sealed record DaggerfallQuestResourceBinding(DaggerfallQuestResourceBin
                 break;
             case DaggerfallQuestResourceBindingKind.Actor when ActorIds.Length > 0 && UniqueItemIds.Length == 0 && Stacks.Length == 0 && Places.Length == 0 && ActorIds.All(id => id > 0):
             case DaggerfallQuestResourceBindingKind.Item when ActorIds.Length == 0 && Places.Length == 0 &&
-                ((UniqueItemIds.Length == 1 && UniqueItemIds[0] > 0 && Stacks.Length == 0) || (UniqueItemIds.Length == 0 && Stacks.Length == 1)):
+                ((UniqueItemIds.Length == 1 && UniqueItemIds[0] > 0 && Stacks.Length == 0) || (UniqueItemIds.Length == 0 && Stacks.Distinct().Count() == Stacks.Length)):
             case DaggerfallQuestResourceBindingKind.Place when ActorIds.Length == 0 && UniqueItemIds.Length == 0 && Stacks.Length == 0 && Places.Length == 1:
                 break;
             default:
@@ -355,7 +355,7 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
     }
 
     internal void ValidateBindings(IReadOnlySet<long> actorIds, DurableIdentityAllocator identities, IReadOnlySet<(int Region, int Index)> locations,
-        IReadOnlySet<(string Scope, long OwnerId, string StackId)> stacks)
+        IReadOnlySet<(string Scope, long OwnerId, string StackId)> stacks, IReadOnlySet<long> npcIds, DaggerfallDefinitions definitions)
     {
         ArgumentNullException.ThrowIfNull(actorIds);
         ArgumentNullException.ThrowIfNull(identities);
@@ -367,24 +367,32 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
             switch (resource.Binding.Kind)
             {
                 case DaggerfallQuestResourceBindingKind.Actor:
+                    bool person = definitions.QuestSources.Resources.Any(declaration => declaration.SourceFile == instance.SourceFile
+                        && declaration.CanonicalId == DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "Person binding") && declaration.Kind == "person");
+                    if (person && resource.Binding.ActorIds.Length != 1)
+                        throw new ArgumentException($"Quest Person '{resource.Symbol}' requires exactly one NPC identity.");
                     foreach (long actorId in resource.Binding.ActorIds)
-                        if (!actorIds.Contains(actorId)) throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to missing actor {actorId}.");
+                    {
+                        if (person && !npcIds.Contains(actorId))
+                            throw new ArgumentException($"Quest Person '{resource.Symbol}' requires a registered NPC identity, not actor {actorId}.");
+                        if (!person && !actorIds.Contains(actorId)) throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to missing actor {actorId}.");
+                    }
                     break;
                 case DaggerfallQuestResourceBindingKind.Item:
                     if (resource.Binding.UniqueItemIds.Length == 1)
                     {
                         ulong itemId = resource.Binding.UniqueItemIds[0];
                         DurableIdentityClassification identity = identities.Classify(new DurableIdentityReference(DurableIdentityKind.Item, itemId));
-                        // Ending text may still name a legitimately consumed item. Unknown references remain invalid.
-                        bool ending = instance.Lifecycle != DaggerfallQuestLifecycle.Active || instance.PendingEndPasses > 0;
-                        if (identity != DurableIdentityClassification.Live && !(ending && identity == DurableIdentityClassification.Removed))
+                        // A consumed bound item retains its issued identity and selected text.
+                        // Only an allocator tombstone proves removal; unknown identities still reject.
+                        if (identity is not (DurableIdentityClassification.Live or DurableIdentityClassification.Removed))
                             throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to non-live unique item {itemId}.");
                     }
                     else
                     {
-                        DaggerfallQuestStackBinding stack = resource.Binding.Stacks[0];
-                        if (!stacks.Contains((stack.Owner.Scope, stack.Owner.Id, stack.StackId)))
-                            throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to missing item stack '{stack.StackId}' for {stack.Owner.Scope} {stack.Owner.Id}.");
+                        foreach (DaggerfallQuestStackBinding stack in resource.Binding.Stacks)
+                            if (!stacks.Contains((stack.Owner.Scope, stack.Owner.Id, stack.StackId)))
+                                throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to missing item stack '{stack.StackId}' for {stack.Owner.Scope} {stack.Owner.Id}.");
                     }
                     break;
                 case DaggerfallQuestResourceBindingKind.Place:

@@ -165,6 +165,133 @@ public sealed class QuestWorldAdmissionTests
         Assert.Equal(before.Stacks.Count, state.InventoryStore.View(state.Actors.Player.Actor.Entity).Stacks.Count);
     }
 
+    [Fact]
+    public void Bound_stack_tracks_partial_transfer_split_merge_and_consumption_through_encoded_restore()
+    {
+        var definitions = Definitions(stackable: true, gold: true);
+        using var fixture = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: WithMarker);
+        var session = fixture.Session;
+        var state = session.State;
+        var started = Start(fixture, definitions);
+        var selected = started.Resources.Single(value => value.SelectedItem is not null);
+        session.State.Quests.RequestPlacement(started.InstanceId, "item", selected.Symbol, "location");
+        session.State.Quests.AdmitPlacements(fixture.Inputs, session);
+        DaggerfallQuestResourceBinding Binding() => state.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == selected.Symbol).Binding;
+        var sourceBinding = Binding().Stacks.Single();
+        var groundOwner = new DaggerfallItemOwner(sourceBinding.Owner.Scope, sourceBinding.Owner.Id);
+        var source = Rusty.Engine.Mechanics.InventoryStackId.Parse(sourceBinding.StackId);
+        var groundEntity = state.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)groundOwner.Id)));
+        var groundInventory = state.Containers.Read(groundEntity);
+        Assert.True(groundInventory.Stacks.Single(value => value.Id == source).Quantity > 2);
+        var taken = Rusty.Engine.Mechanics.InventoryStackId.Parse("quest.taken");
+        state.Containers.Transfer(groundEntity, state.Actors.Player.Actor.Entity, new(selected.SelectedItem!.Item, 2, source, taken));
+        state.ItemInstances.TransferStack(groundOwner, DaggerfallItemOwner.Player, source, taken, sourceWasExhausted: false);
+        Assert.Equal(2, Binding().Stacks.Length);
+        using (var moved = fixture.Restore())
+            Assert.Equal(Binding().Stacks, moved.State.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == selected.Symbol).Binding.Stacks);
+        var split = Rusty.Engine.Mechanics.InventoryStackId.Parse("quest.split");
+        state.ItemInstances.SplitStack(DaggerfallItemOwner.Player, state.Inventory, taken, split, 1);
+        Assert.Equal(3, Binding().Stacks.Length);
+        using (var divided = fixture.Restore())
+            Assert.Equal(3, divided.State.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == selected.Symbol).Binding.Stacks.Length);
+        state.ItemInstances.MergeStacks(DaggerfallItemOwner.Player, state.Inventory, split, taken);
+        Assert.Equal(2, Binding().Stacks.Length);
+        state.Inventory.Consume(new(taken, 2));
+        state.ItemInstances.RemoveStack(DaggerfallItemOwner.Player, taken);
+        Assert.Equal(sourceBinding, Binding().Stacks.Single());
+        var remaining = state.Containers.Read(groundEntity).Stacks.Single(value => value.Id == source).Quantity;
+        state.Actors.Store.Get<Rusty.Engine.Mechanics.InventoryComponent>(groundEntity).Consume(source, remaining);
+        state.ItemInstances.RemoveStack(groundOwner, source);
+        Assert.Equal(DaggerfallQuestResourceBindingKind.Item, Binding().Kind);
+        Assert.Empty(Binding().Stacks);
+        using var consumed = fixture.Restore();
+        consumed.State.Quests.AdmitPlacements(fixture.Inputs, consumed);
+        var resource = consumed.State.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == selected.Symbol);
+        Assert.Empty(resource.Binding.Stacks);
+        Assert.NotNull(resource.Text); // Actual selected meaning remains available to ending text.
+        Assert.DoesNotContain(consumed.State.ItemInstances.StackItems, value => value.Metadata.QuestId == started.InstanceId);
+    }
+
+    [Fact]
+    public void Bound_unique_item_retains_issued_identity_after_transfer_and_consumption_without_respawning()
+    {
+        var definitions = Definitions();
+        using var fixture = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: WithMarker);
+        var session = fixture.Session;
+        var state = session.State;
+        var started = Start(fixture, definitions);
+        var resource = started.Resources.Single(value => value.SelectedItem is not null);
+        state.Quests.RequestPlacement(started.InstanceId, "item", resource.Symbol, "location");
+        state.Quests.AdmitPlacements(fixture.Inputs, session);
+        ulong id = state.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == resource.Symbol).Binding.UniqueItemIds.Single();
+        var metadata = state.ItemInstances.RequireUnique(id);
+        var ground = state.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)metadata.Owner.Id)));
+        state.Containers.Transfer(ground, state.Actors.Player.Actor.Entity, new(resource.SelectedItem!.Item, 1, UniqueEntityId: state.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Item, id)).Value));
+        state.ItemInstances.MoveUnique(id, DaggerfallItemOwner.Player);
+        using (var moved = fixture.Restore())
+        {
+            Assert.Equal(DaggerfallItemOwner.Player, moved.State.ItemInstances.RequireUnique(id).Owner);
+            Assert.Contains(moved.State.Inventory.Read().UniqueItems, value => moved.State.Actors.Entities.IdentityOf(value.Entity).Value == id);
+        }
+        var carried = state.Inventory.Read().UniqueItems.Single(value => state.Actors.Entities.IdentityOf(value.Entity).Value == id);
+        state.Inventory.Destroy(new(carried.Entity.Value, new(carried.Definition.Value)));
+        state.ItemInstances.RemoveUnique(id);
+        state.Actors.Entities.Destroy(new(WorldRpg.Kit.World.DurableIdentityKind.Item, id));
+        session.RemoveUniqueItemIdentity(id);
+        using var consumed = fixture.Restore();
+        consumed.State.Quests.AdmitPlacements(fixture.Inputs, consumed);
+        var bound = consumed.State.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == resource.Symbol);
+        Assert.Equal(id, bound.Binding.UniqueItemIds.Single());
+        Assert.False(consumed.State.ItemInstances.ContainsUnique(id));
+        Assert.NotNull(bound.Text);
+        Assert.Equal(WorldRpg.Kit.World.DurableIdentityClassification.Removed,
+            consumed.State.Npcs.Identities!.Classify(new(WorldRpg.Kit.World.DurableIdentityKind.Item, id)));
+        var saved = DaggerfallSavePayload.Read(consumed.CaptureSave());
+        var quest = saved.Quests.Instances.Single();
+        var forged = saved with { Quests = saved.Quests with { Instances = [quest with { Resources = quest.Resources.Select(value => value.Symbol == resource.Symbol
+            ? value with { Binding = DaggerfallQuestResourceBinding.UniqueItem(ulong.MaxValue) } : value).ToArray() }] } };
+        Assert.Throws<ArgumentException>(() => forged.ResolveRestore(definitions, fixture.Inputs, null));
+    }
+
+    [Fact]
+    public void Bound_stack_in_actor_inventory_survives_site_unload_inactive_save_and_return()
+    {
+        var definitions = Definitions(stackable: true);
+        using var fixture = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: WithMarker);
+        var session = fixture.Session;
+        var state = session.State;
+        var started = Start(fixture, definitions);
+        var resource = started.Resources.Single(value => value.SelectedItem is not null);
+        state.Quests.RequestPlacement(started.InstanceId, "item", resource.Symbol, "location");
+        state.Quests.AdmitPlacements(fixture.Inputs, session);
+        var bound = state.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == resource.Symbol).Binding.Stacks.Single();
+        var sourceOwner = new DaggerfallItemOwner(bound.Owner.Scope, bound.Owner.Id);
+        var groundEntity = state.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)sourceOwner.Id)));
+        var source = Rusty.Engine.Mechanics.InventoryStackId.Parse(bound.StackId);
+        var destination = Rusty.Engine.Mechanics.InventoryStackId.Parse("quest.actor-held");
+        const long actorId = 2000;
+        ulong quantity = state.Containers.Read(groundEntity).Stacks.Single(value => value.Id == source).Quantity;
+        state.Containers.Transfer(groundEntity, state.Actors.Get(actorId).Actor.Entity, new(resource.SelectedItem!.Item, quantity, source, destination));
+        state.ItemInstances.TransferStack(sourceOwner, DaggerfallItemOwner.Actor(actorId), source, destination, sourceWasExhausted: true);
+        var profiles = new DaggerfallSiteProfiles([fixture.Inputs, fixture.Castle]);
+        session.AdmitSiteProfiles(profiles);
+        Assert.True(session.TryTransitionTo(fixture.Castle.ProfileKey));
+        Assert.False(state.ItemInstances.ContainsStack(DaggerfallItemOwner.Actor(actorId), destination));
+        var retained = state.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == resource.Symbol).Binding.Stacks.Single();
+        Assert.Equal(new("actor", actorId), retained.Owner);
+        using var inactive = fixture.Restore(profiles);
+        Assert.Equal(retained, inactive.State.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == resource.Symbol).Binding.Stacks.Single());
+        Assert.True(inactive.TryTransitionTo(fixture.Inputs.ProfileKey));
+        var inventory = inactive.State.ActorInventories.InventoryFor(actorId)!;
+        Assert.Equal(quantity, inventory.Read().Stacks.Single(value => value.Id == destination).Quantity);
+        Assert.Equal(DaggerfallItemOwner.Actor(actorId), inactive.State.ItemInstances.RequireStack(DaggerfallItemOwner.Actor(actorId), destination).Owner);
+        inventory.Consume(new(destination, quantity));
+        inactive.State.ItemInstances.RemoveStack(DaggerfallItemOwner.Actor(actorId), destination);
+        Assert.Empty(inactive.State.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == resource.Symbol).Binding.Stacks);
+        var saved = DaggerfallSavePayload.Read(inactive.CaptureSave());
+        _ = saved.ResolveRestore(definitions, fixture.Inputs, profiles);
+    }
+
     private static DaggerfallQuestInstanceSave Start(SanguineRoseSessionTests.Fixture fixture, DaggerfallDefinitions definitions)
     {
         var inputs = fixture.Inputs;
@@ -174,13 +301,14 @@ public sealed class QuestWorldAdmissionTests
                 { PlaceSelection = new(inputs.ProfileKind, site.MapId, null, 0) })], []));
     }
 
-    private static DaggerfallDefinitions Definitions(bool stackable = false)
+    private static DaggerfallDefinitions Definitions(bool stackable = false, bool gold = false)
     {
         var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
         var foe = declarations.First(value => value!["kind"]!.GetValue<string>() == "foe"
             && value["targetSourceSpelling"]!.GetValue<string>() == "Giant_rat")!.DeepClone();
-        var item = declarations.Single(value => value!["sourceFile"]!.GetValue<string>() == (stackable ? "R0C11Y28.txt" : "S0000502.txt")
+        var item = gold ? declarations.First(value => value!["targetCanonicalId"]?.GetValue<string>() == "gold")!.DeepClone()
+            : declarations.Single(value => value!["sourceFile"]!.GetValue<string>() == (stackable ? "R0C11Y28.txt" : "S0000502.txt")
             && value["symbol"]!["canonicalId"]!.GetValue<string>() == (stackable ? "i.09" : "reward"))!.DeepClone();
         var place = declarations.First(value => value!["kind"]!.GetValue<string>() == "place")!.DeepClone();
         foreach (var row in new[] { foe, item, place })
