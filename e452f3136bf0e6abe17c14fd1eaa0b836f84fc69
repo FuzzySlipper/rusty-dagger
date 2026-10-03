@@ -1,0 +1,15 @@
+scripts/verify.sh --play
+corpora: Arena2 corpus local/arena2: present; donor checkout /home/research/daggerfall-unity: present
+generated content: present
+# pass 50
+# fail 0
+# skipped 0
+Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10 WorldRpg.Architecture.Tests.dll (net10.0)
+Passed!  - Failed:     0, Passed:   748, Skipped:     0, Total:   748 Daggerfall.Import.Tests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  2348, Skipped:     0, Total:  2348 WorldRpg.Rulesets.Daggerfall.Tests.dll (net10.0)
+Passed!  - Failed:     0, Passed:     2, Skipped:     0, Total:     2 WorldRpg.Rulesets.Canary.Tests.dll (net10.0)
+Passed!  - Failed:     0, Passed:   144, Skipped:     0, Total:   144 WorldRpg.Kit.Tests.dll (net10.0)
+Passed!  - Failed:     0, Passed:    32, Skipped:     0, Total:    32 WorldRpg.Host.Tests.dll (net10.0)
+Passed!  - Failed:     0, Passed:    27, Skipped:     0, Total:    27 WorldRpg.SpriteWorkbench.Tests.dll (net10.0)
+play-smoke 191.5s passed: mode Playing, drawn cameras 1, characterStepCalls 1, voxelResidencyCalls 0, music cue started
+Verified Engine pair 0.1.0-dev.16a34d53220d: CoreCLR. Use --aot for the NativeAOT fidelity publish.
