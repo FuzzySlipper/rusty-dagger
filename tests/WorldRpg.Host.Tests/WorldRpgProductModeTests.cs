@@ -1,7 +1,10 @@
 using System.Reflection;
+using System.Numerics;
+using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Debugging;
 using Rusty.Engine.Persistence;
+using Rusty.Engine.Interaction;
 using WorldRpg.Host;
 using WorldRpg.Kit;
 using Xunit;
@@ -23,10 +26,18 @@ public sealed class WorldRpgProductModeTests
         DebugRegistrar registrar = new();
         Assert.IsAssignableFrom<IDebugCommandModuleSource>(product).RegisterDebugCommands(registrar);
         var module = Assert.Single(registrar.Modules.OfType<PlaytestDebugModule>());
+        var interaction = Assert.Single(registrar.Modules.OfType<InteractionDebugModule>());
+        var spatial = Assert.Single(registrar.Modules.OfType<SpatialInspectionDebugModule>());
         Assert.Equal("1", module.Observe().Message);
+        Assert.Equal("1", spatial.Probe(1).Message);
+        using (var readout = JsonDocument.Parse(interaction.Inspect().Message))
+            Assert.Equal("1", readout.RootElement.GetProperty("stamp").GetString());
         StartInPlay(product);
         product.Restart();
         Assert.Equal("2", module.Observe().Message);
+        Assert.Equal("2", spatial.Probe(1).Message);
+        using (var readout = JsonDocument.Parse(interaction.Inspect().Message))
+            Assert.Equal("2", readout.RootElement.GetProperty("stamp").GetString());
         Assert.True(ruleset.Replaced!.Disposed);
     }
 
@@ -493,7 +504,7 @@ public sealed class WorldRpgProductModeTests
         }
     }
 
-    private sealed class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, IPlaytestGameSession
+    private sealed class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, IPlaytestGameSession, IPlaytestWorldInspectionSession, IWorldInteractionScene
     {
         private readonly int _identity = owner.Created;
         public IReadOnlyList<string> PlaytestActions => ["attack"];
@@ -501,6 +512,14 @@ public sealed class WorldRpgProductModeTests
         public PlaytestAction InspectPlaytestAction(string id) => new(id, "KeyQ", 100, false);
         public DebugCommandResult InspectPlaytestLook(double yaw, double pitch) => ReadPlaytestObservation();
         public DebugCommandResult ReadPlaytestTargets() => ReadPlaytestObservation();
+        public WorldInteraction CreateInteractionInspection() => new(this, targetedUseEnabled: false);
+        public DebugCommandResult ReadSpatialGrid(int radius, int verticalRadius, double cellSize) => ReadPlaytestObservation();
+        public DebugCommandResult ReadSpatialProbe(double distance) => ReadPlaytestObservation();
+        public DebugCommandResult ReadJumpPlan(double x, double y, double z) => ReadPlaytestObservation();
+        public InteractionSceneSnapshot ReadInteraction() => new(
+            new InteractionQuery(Vector3.Zero, Vector3.UnitZ, 1, 1, 2, 2, 1, 1),
+            ReadOnlyMemory<InteractionCandidate>.Empty, _identity.ToString(), "inspect");
+        public InteractionActionResult UseInteraction(InteractionTarget target) => throw new InvalidOperationException("Inspection cannot activate.");
         internal ProductMode? LastApplied { get; private set; }
 
         /// <summary>The mode the product had put this session in when its update ran.</summary>
