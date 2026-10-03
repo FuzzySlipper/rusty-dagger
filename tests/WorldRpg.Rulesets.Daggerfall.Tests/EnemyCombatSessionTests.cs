@@ -72,7 +72,14 @@ public sealed class EnemyCombatSessionTests
             // rather than a disposition.
             Assert.NotNull(definition.ActionId);
             DaggerfallActionDefinition action = definitions.Actions[definition.ActionId!];
-            Assert.Contains(action.Interpretation, new[] { "fixed-melee", "fixed-ranged" });
+            Assert.Contains(action.Interpretation, new[] { "fixed-melee", "fixed-ranged", "enemy-equipped-melee" });
+            if (action.Interpretation == "enemy-equipped-melee")
+            {
+                // A class enemy swings what it has equipped: the weapon supplies the skill and damage.
+                Assert.Equal("equipped", action.Skill);
+                swinging.Add(placement.ActorId);
+                continue;
+            }
             // A swing either uses one of the actor's own authored damage ranges or carries authored
             // damage of its own; anything else would admit an attack with no damage frame.
             Assert.True(

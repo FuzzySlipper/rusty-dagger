@@ -311,6 +311,7 @@ public sealed class SpriteAuthoringTests
                     Artifact("media/classic/effect.png", fixture.EffectDigest, 3),
                     Artifact("media/classic/font.bin", fixture.FontDigest, 3),
                     Artifact("media/maps/map-fmap0i17.png", ContentDigest.Compute("map"u8), 3),
+                    .. AudioArtifacts(fixture),
                     Artifact(Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, ContentDigest.Compute(dungeon), dungeon.Length),
                     Artifact(Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, ContentDigest.Compute(classic), classic.Length),
                 ],
@@ -322,6 +323,7 @@ public sealed class SpriteAuthoringTests
             Write(root, "media/classic/effect.png", "fx!"u8.ToArray());
             Write(root, "media/classic/font.bin", "fnt"u8.ToArray());
             Write(root, "media/maps/map-fmap0i17.png", "map"u8.ToArray());
+            foreach (ImportPublicationManifestArtifact audio in AudioArtifacts(fixture)) Write(root, audio.RelativePath, "wav"u8.ToArray());
             Write(root, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeon);
             Write(root, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classic);
             Write(root, ImportPublicationManifestSerializer.ManifestRelativePath, ImportPublicationManifestSerializer.Serialize(manifest));
@@ -386,6 +388,7 @@ public sealed class SpriteAuthoringTests
                 Artifact("media/classic/effect.png", fixture.EffectDigest, 3),
                 Artifact("media/classic/font.bin", fixture.FontDigest, 3),
                 Artifact("media/maps/map-fmap0i17.png", ContentDigest.Compute("map"u8), 3),
+                .. AudioArtifacts(fixture),
                 Artifact(Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, ContentDigest.Compute(dungeon), dungeon.Length),
                 Artifact(Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, ContentDigest.Compute(classic), classic.Length),
             ],
@@ -401,6 +404,7 @@ public sealed class SpriteAuthoringTests
             new("media/classic/effect.png", "fx!"u8.ToArray()),
             new("media/classic/font.bin", "fnt"u8.ToArray()),
             new("media/maps/map-fmap0i17.png", "map"u8.ToArray()),
+            .. AudioArtifacts(fixture).Select(audio => new SpritePublicationFile(audio.RelativePath, "wav"u8.ToArray())),
         ];
         SpritePublicationSnapshot snapshot = SpritePublicationReader.Read(files);
 
@@ -455,17 +459,27 @@ public sealed class SpriteAuthoringTests
         DungeonActorMediaManifest actorManifest = new(
             "actor/rat", 0, "Rat", DungeonActorSpriteState.Move,
             new([0, -1], []), "sprite/rat", new(0.5F, 0F), new(1F, 1F), new(1F, 1F),
-            [new(DungeonActorSpriteState.Move, new(6F, true), new(6F, true), 0, 1, layouts)], null, actor.Id);
+            [new(DungeonActorSpriteState.Move, new(6F, true), new(6F, true), 0, 1, layouts)], null, actor.Id)
+        {
+            Feedback = RatFeedback(),
+        };
+        // The persisted-sidecar contract requires the actor's source feedback and admits each cue clip.
+        ContentDigest audioDigest = ContentDigest.Compute("wav"u8);
+        NormalizedMediaDescriptor[] cues = new[] { actorManifest.Feedback.MoveCue, actorManifest.Feedback.BarkCue, actorManifest.Feedback.AttackCue }
+            .Select(cue => new NormalizedMediaDescriptor($"audio.{cue}", NormalizedMediaKind.Audio, $"media/audio/clips/{cue.Replace('.', '-')}.wav",
+                audioDigest, 3, "audio/wav", 0, 0, 0, 0, [], null, null, null, null, null, null))
+            .ToArray();
         DungeonMediaManifestSidecar dungeon = new(
             new([actor, billboard]),
             [],
             [new("sprite/fixture", 1, 1, new(0.5F, 0.5F), new(1F, 1F), new(12F, true), new(5F, false), [new(0, 0, 0, 0, false, billboard.Frames[0], new(1F, 1F))], billboard.Id)],
             [actorManifest]);
         ClassicMediaManifestSidecar classic = new(
-            new([weapon, effect, font, map]),
+            new([weapon, effect, font, map, .. cues]),
             [new ClassicWeaponMediaManifest(weapon.Id, Enum.GetValues<ClassicDaggerWeaponAction>().Select((action, index) => new ClassicWeaponActionManifest(action, index, index, 1, ClassicWeaponScreenAlignment.Right, 0F, new(10F, true), 0, 0)).ToArray())],
             Enum.GetValues<ClassicEffect>().Select((value, index) => new ClassicEffectManifest(value, effect.Id, index, new(10F, false))).ToArray(),
-            [], [], [], new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray()),
+            cues.Select((cue, index) => new ClassicAudioManifest(cue.Id["audio.".Length..], cue.Id, index, (uint)index, SoundArchive.SampleRate)).ToArray(),
+            [], [], new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray()),
             [new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray())],
             [new("map.fmap0i17", MapArtKind.RegionMap, [17], "DaggerfallTravelMapWindow region map", "arena2/FMAP0I17.IMG", 320, 160, false)],
             [.. EmptyMapRegions().Where(region => region.Region != 17), new(17, ["map.fmap0i17"])], [], [], []);
@@ -475,9 +489,20 @@ public sealed class SpriteAuthoringTests
             [],
             [new("arena2/test", ContentDigest.Compute("source"u8), 6)],
             [],
-            [Artifact(actor.RelativePath, actorDigest, 3), Artifact(billboard.RelativePath, billboardDigest, 3), Artifact(weapon.RelativePath, weaponDigest, 3), Artifact(effect.RelativePath, effectDigest, 3), Artifact(font.RelativePath, fontDigest, 3), Artifact(map.RelativePath, mapDigest, 3)]);
+            [Artifact(actor.RelativePath, actorDigest, 3), Artifact(billboard.RelativePath, billboardDigest, 3), Artifact(weapon.RelativePath, weaponDigest, 3), Artifact(effect.RelativePath, effectDigest, 3), Artifact(font.RelativePath, fontDigest, 3), Artifact(map.RelativePath, mapDigest, 3), .. cues.Select(cue => Artifact(cue.RelativePath, audioDigest, 3))]);
         manifest.Validate();
         return new(manifest, dungeon, classic, actorDigest, billboardDigest, weaponDigest, effectDigest, fontDigest);
+    }
+
+    private static IEnumerable<ImportPublicationManifestArtifact> AudioArtifacts(Fixture fixture) => fixture.Classic.Media.Resources
+        .Where(resource => resource.Kind == NormalizedMediaKind.Audio)
+        .Select(resource => Artifact(resource.RelativePath, resource.ContentDigest, resource.ByteLength));
+
+    private static DungeonActorFeedback RatFeedback()
+    {
+        Assert.True(MobileSourceMetadata.TryGet(new(0), out Arena2MobileSource? rat));
+        string Cue(string name) => $"sound.{DaggerfallSoundNames.ForName(name)}";
+        return new(0, Cue(rat.Links.MoveSoundCue), Cue(rat.Links.BarkSoundCue), Cue(rat.Links.AttackSoundCue), rat.Links.ParrySounds, rat.Links.BloodIndex);
     }
 
     private static NormalizedMediaDescriptor Descriptor(string id, NormalizedMediaKind kind, string path, ContentDigest digest, int frameCount) => new(
