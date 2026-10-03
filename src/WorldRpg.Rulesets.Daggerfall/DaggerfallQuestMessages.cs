@@ -63,10 +63,15 @@ internal sealed record DaggerfallQuestRenderedMessage(
 {
     public string? EntryId { get; init; }
 }
+internal sealed record DaggerfallQuestEscortFace(string InstanceId, string Symbol, string Name, string MediaId);
+internal sealed record DaggerfallQuestContact(string InstanceId, string Symbol);
 internal sealed record DaggerfallQuestPresentation(
     IReadOnlyList<DaggerfallQuestRenderedMessage> Deliveries,
     IReadOnlyList<DaggerfallQuestRenderedMessage> Journal,
-    DaggerfallQuestRenderedMessage? Pending);
+    DaggerfallQuestRenderedMessage? Pending)
+{
+    public IReadOnlyList<DaggerfallQuestEscortFace> EscortFaces { get; init; } = [];
+}
 
 /// <summary>
 /// Session-owned quest message state. It preserves source identities and choices, then resolves text

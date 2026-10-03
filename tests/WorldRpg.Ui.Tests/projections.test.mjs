@@ -1118,3 +1118,22 @@ test('spellmaker edits supported settings, preserves typing on repeated projecti
     f.publish({spells:{available:[],ready:null,result:'',maker:null}});assert.equal(root.childElementCount,0);
   } finally {f.dispose();}
 });
+
+test('quest escort portraits use published art and remove only ended quest overlays', () => {
+  const f = fixture();
+  try {
+    const face = { instance: 'first', symbol: 'contact', name: 'Existing Giver', mediaId: 'character.head.male.00.0' };
+    const art = { revision: 'escort-art', images: [{ id: face.mediaId, image: 'data:image/png;base64,cG9ydHJhaXQ=' }] };
+    f.publish({ uiArt: art, quests: { deliveries: [], journal: [], pending: null, escortFaces: [face, { ...face, instance: 'second' }] } });
+    let portraits = f.root.querySelectorAll('.dagger-escort-faces img');
+    assert.equal(portraits.length, 2);
+    assert.equal(portraits[0].alt, face.name);
+    assert.equal(portraits[0].src, art.images[0].image);
+    f.publish({ uiArt: art, quests: { deliveries: [], journal: [], pending: null, escortFaces: [{ ...face, instance: 'second' }] } });
+    portraits = f.root.querySelectorAll('.dagger-escort-faces img');
+    assert.equal(portraits.length, 1);
+    assert.equal(portraits[0].dataset.questInstance, 'second');
+    f.publish({ uiArt: art, quests: { deliveries: [], journal: [], pending: null, escortFaces: [] } });
+    assert.equal(f.root.querySelector('.dagger-escort-faces'), null);
+  } finally { f.dispose(); }
+});

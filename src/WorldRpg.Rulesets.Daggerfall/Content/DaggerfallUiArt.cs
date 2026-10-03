@@ -16,6 +16,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 internal sealed class DaggerfallUiArt
 {
     /// <summary>The published group inventory that names every artifact of the UI content group.</summary>
+    internal const string CharacterInventoryPath = "worldrpg/media/character/character-media-inventory.json";
     internal const string InventoryPath = "worldrpg/media/classic-media-inventory.json";
 
     /// <summary>
@@ -74,16 +75,20 @@ internal sealed class DaggerfallUiArt
     /// inventory describes; the message names the artifact so the producer/consumer disagreement is
     /// visible rather than a blank image at runtime.
     /// </exception>
-    internal static DaggerfallUiArt Read(IContentService content, IEnumerable<string> itemIcons)
+    internal static DaggerfallUiArt Read(IContentService content, IEnumerable<string> itemIcons, IEnumerable<string>? characterIcons = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(itemIcons);
-        Dictionary<string, InventoryEntry> inventory = ReadInventory(content);
+        Dictionary<string, InventoryEntry> inventory = ReadInventory(content, InventoryPath);
+        string[] portraits = characterIcons?.Distinct(StringComparer.Ordinal).ToArray() ?? [];
+        if (portraits.Length > 0)
+            foreach (var entry in ReadInventory(content, CharacterInventoryPath))
+                if (!inventory.TryAdd(entry.Key, entry.Value)) throw new InvalidOperationException($"Published UI art repeats media '{entry.Key}' across inventories.");
         string[] pickScreens = inventory.Where(entry => entry.Value.Slot == "pick").Select(entry => entry.Key).Order(StringComparer.Ordinal).ToArray();
         if (pickScreens.Length == 0 || !pickScreens.Contains("screen.pick.02", StringComparer.Ordinal))
             throw new InvalidOperationException("The published pick slot must supply screen.pick.02.");
         List<(string Id, string Image)> images = [];
-        foreach (string id in AlwaysShown.Concat(pickScreens).Concat(itemIcons).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        foreach (string id in AlwaysShown.Concat(pickScreens).Concat(itemIcons).Concat(portraits).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
             if (!inventory.TryGetValue(id, out InventoryEntry entry))
             {
@@ -98,9 +103,9 @@ internal sealed class DaggerfallUiArt
     }
 
     /// <summary>Reads the generated inventory by name and indexes it by the media identity it states.</summary>
-    private static Dictionary<string, InventoryEntry> ReadInventory(IContentService content)
+    private static Dictionary<string, InventoryEntry> ReadInventory(IContentService content, string inventoryPath)
     {
-        byte[] bytes = ReadAdmittedFile(content, InventoryPath);
+        byte[] bytes = ReadAdmittedFile(content, inventoryPath);
         Dictionary<string, InventoryEntry> entries = new(StringComparer.Ordinal);
         try
         {

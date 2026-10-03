@@ -119,6 +119,7 @@ internal sealed class DaggerfallCharacterPresentationSet(
     /// escort view resolves rather than a race layer.
     /// </summary>
     internal IReadOnlyList<DaggerfallFactionFaceDefinition> FactionFaces { get; } = factionFaces;
+    internal IReadOnlyList<DaggerfallFactionFaceDefinition> ChildFaces { get; init; } = [];
 
     /// <summary>Every career the pack publishes a portrait for, by catalog career identity.</summary>
     internal IReadOnlyDictionary<string, DaggerfallCareerPortraitDefinition> Careers { get; } = careers;

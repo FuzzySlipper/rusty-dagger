@@ -30,6 +30,7 @@ internal sealed record DaggerfallDialogueView(
 {
     internal int ComprehendLanguagesBonus { get; init; }
     internal bool BankAvailable { get; init; }
+    internal IReadOnlyList<DaggerfallQuestContact> QuestContacts { get; init; } = [];
 }
 
 /// <summary>
@@ -65,6 +66,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Action<DaggerfallDialogueView?> _publish;
     private readonly Action<string> _setOutcome;
     private readonly Func<(string Name, string Hint)?>? _directions;
+    private readonly Func<long, bool> _muted;
+    private readonly Func<long, IReadOnlyList<DaggerfallQuestContact>> _questContacts;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -80,7 +83,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallCharacterIdentity> playerIdentity,
         Action<DaggerfallDialogueView?> publish,
         Action<string> setOutcome,
-        Func<(string Name, string Hint)?>? directions = null)
+        Func<(string Name, string Hint)?>? directions = null, Func<long, bool>? muted = null,
+        Func<long, IReadOnlyList<DaggerfallQuestContact>>? questContacts = null)
     {
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
@@ -94,6 +98,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _playerIdentity = playerIdentity ?? throw new ArgumentNullException(nameof(playerIdentity));
         _publish = publish ?? throw new ArgumentNullException(nameof(publish));
         _directions = directions;
+        _muted = muted ?? (_ => false);
+        _questContacts = questContacts ?? (_ => []);
         _setOutcome = setOutcome ?? throw new ArgumentNullException(nameof(setOutcome));
     }
 
@@ -172,6 +178,13 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     {
         if (_current is { } current)
             current.Position = DaggerfallExteriorSessionOrigin.Shift(current.Position, delta);
+    }
+
+    internal void RefreshEligibility()
+    {
+        if (_current is null) return;
+        if (!ValidateCurrent(out var npc, out _, out var site)) Close();
+        else Publish(npc!, site);
     }
 
     internal void Close()
@@ -423,7 +436,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (site is null) return false;
         try { npc = _npcs.Require(id); }
         catch (InvalidOperationException) { return false; }
-        if (!IsTalkableAt(npc!, site)) return false;
+        if (_muted(id) || !IsTalkableAt(npc!, site)) return false;
         if (_actors.TryGet(id, out ActorState currentActor))
             actor = new(currentActor.Actor.Entity, currentActor.Position);
         else if (_actors.Entities.TryResolve(ActorsState.Identity(id), out var entity)
@@ -452,7 +465,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             session.Question,
             session.Reply,
             [new("directions", "Where is this place?"), new("news", "Any news?")],
-            [.. session.Diagnostics]));
+            [.. session.Diagnostics]) { QuestContacts = _questContacts(npc.DurableId) });
     }
 
     private DaggerfallActivationOutcome Reject(string message) => Report(new(false, message));

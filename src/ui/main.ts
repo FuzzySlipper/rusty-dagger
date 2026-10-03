@@ -107,6 +107,7 @@ interface DeathProjection {
 }
 
 interface DialogueProjection {
+  readonly questContacts?: readonly { readonly instance: string; readonly symbol: string }[];
   readonly bankAvailable?: boolean;
   readonly comprehendLanguagesBonus?: number;
   readonly revision: string;
@@ -131,6 +132,7 @@ interface QuestMessageProjection {
   readonly diagnostics: readonly string[];
 }
 interface QuestPresentation {
+  readonly escortFaces: readonly { readonly instance: string; readonly symbol: string; readonly name: string; readonly mediaId: string }[];
   readonly deliveries: readonly QuestMessageProjection[];
   readonly journal: readonly QuestMessageProjection[];
   readonly pending: QuestMessageProjection | null;
@@ -1087,7 +1089,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (dialogue === null) {
       if (dialogueWindow.open) dialogueWindow.close();
     } else {
-      dialogueTarget.textContent = dialogue.targetLabel;
+      dialogueTarget.textContent = dialogue.targetLabel + (dialogue.questContacts?.length ? " — quest contact" : "");
       dialogueGreeting.textContent = dialogue.greeting + (dialogue.comprehendLanguagesBonus ? ` Language comprehension: +${dialogue.comprehendLanguagesBonus}.` : '');
       dialogueTone.value = dialogue.tone;
       dialogueQuestion.textContent = dialogue.question ?? '';
@@ -1553,6 +1555,19 @@ export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null
 function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undefined, claim: (action: UiAction) => void): void {
   root.replaceChildren();
   if (!value) return;
+  if (value.escortFaces?.length) {
+    const escorts = document.createElement('aside'); escorts.className = 'dagger-escort-faces';
+    escorts.setAttribute('aria-label', 'Escorted companions');
+    for (const face of value.escortFaces) {
+      const portrait = document.createElement('img'); portrait.alt = face.name;
+      portrait.dataset.questInstance = face.instance; portrait.dataset.questResource = face.symbol;
+      const source = image(face.mediaId);
+      if (source) portrait.src = source;
+      else portrait.dataset.artMissing = face.mediaId;
+      escorts.append(portrait);
+    }
+    root.append(escorts);
+  }
   const add = (message: QuestMessageProjection, heading: string): void => {
     const article = document.createElement('article');
     article.className = `dagger-quest-message dagger-quest-${message.delivery}`;

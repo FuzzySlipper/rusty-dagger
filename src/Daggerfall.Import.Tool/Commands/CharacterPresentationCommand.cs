@@ -68,10 +68,11 @@ internal static class CharacterPresentationCommand
         // part of the set understates what the pack claims a consumer draws.
         int pending = presentation.Layers.Count(layer => layer.Binding == MediaBinding.RequiredPending)
             + presentation.Faces.Count(face => face.Binding == MediaBinding.RequiredPending)
+            + presentation.ChildFaces.Count(face => face.Binding == MediaBinding.RequiredPending)
             + presentation.Careers.Count(portrait => portrait.Binding == MediaBinding.RequiredPending);
-        int admitted = presentation.Layers.Count + presentation.Faces.Count + presentation.Careers.Count - pending;
+        int admitted = presentation.Layers.Count + presentation.Faces.Count + presentation.ChildFaces.Count + presentation.Careers.Count - pending;
         string[] races = [.. presentation.Layers.Select(layer => layer.Race).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
-        Console.WriteLine($"character presentation: {group.Characters.Files.Count} supplied files, {pass.Artifacts.Count} published canvases, {pass.Refusals.Count} refused, {presentation.Layers.Count} layers over {races.Length} races, {presentation.Faces.Count} faction faces, {presentation.Careers.Count} career portraits, {presentation.CareersWithoutPortrait.Count} careers without one");
+        Console.WriteLine($"character presentation: {group.Characters.Files.Count} supplied files, {pass.Artifacts.Count} published canvases, {pass.Refusals.Count} refused, {presentation.Layers.Count} layers over {races.Length} races, {presentation.Faces.Count} faction faces, {presentation.ChildFaces.Count} child faces, {presentation.Careers.Count} career portraits, {presentation.CareersWithoutPortrait.Count} careers without one");
         Console.WriteLine($"  binding: {admitted} reference(s) bound by {CharacterMediaReferences.CharacterSheetConsumer}, {pending} required-pending; {pass.UnreadableFamilies.Count} unreadable family entry(ies)");
         foreach (string refusal in pass.Refusals.Take(2)) Console.WriteLine($"  refusal: {refusal}");
         Console.WriteLine($"  inventory: {group.Characters.Files.Count - group.Undocumented.Count} documented supplied file(s) reconciled with the corpus");

@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
@@ -76,6 +76,9 @@ internal static partial class DaggerfallQuestTaskCompiler
     private static readonly Regex PersistHeader = Header("^until\\s+(?<symbol>[a-zA-Z0-9_.]+)\\s+performed:$");
     private static readonly Regex GlobalHeader = Header("^(?<global>[a-zA-Z0-9_.]+)\\s+(?<symbol>[a-zA-Z0-9_.]+)$");
     private static readonly Regex Start = Header("^(?:start\\s+task|setvar)\\s+(?<symbol>[a-zA-Z0-9_.]+)$");
+    private static readonly Regex Questor = Header("^(?<verb>add|drop)\\s+(?<symbol>[a-zA-Z0-9_.]+)\\s+as\\s+questor$");
+    private static readonly Regex Face = Header("^(?<verb>add|drop)\\s+(?<foe>foe\\s+)?(?<symbol>[a-zA-Z0-9_.]+)\\s+face(?:\\s+saying\\s+(?<message>[0-9]+))?$");
+    private static readonly Regex Mute = Header("^mute\\s+npc\\s+(?<symbol>[a-zA-Z0-9_.]+)$");
     private static readonly Regex Clear = Header("^clear\\s+(?<symbols>[a-zA-Z0-9_.]+(?:\\s+[a-zA-Z0-9_.]+)*)$");
     private static readonly Regex Unset = Header("^unset\\s+(?<symbols>[a-zA-Z0-9_.]+(?:\\s+[a-zA-Z0-9_.]+)*)$");
     private static readonly Regex End = Header("^end\\s+quest(?:\\s+saying\\s+(?<message>\\d+))?$");
@@ -239,6 +242,14 @@ internal static partial class DaggerfallQuestTaskCompiler
         foreach (var (pattern, kind) in new[] { (GetItem, DaggerfallQuestTaskOperationKind.GetItem), (TakeItem, DaggerfallQuestTaskOperationKind.TakeItem), (Permanent, DaggerfallQuestTaskOperationKind.MakePermanent) })
             if (pattern.Match(line) is { Success: true } item)
                 return new(kind, sourceLine, line, [Canonical(item.Groups["symbol"].Value)], [], item.Groups["message"].Success ? Message(item.Groups["message"].Value) : null);
+        if (Questor.Match(line) is { Success: true } questor)
+            return new(questor.Groups["verb"].Value.Equals("add", StringComparison.OrdinalIgnoreCase) ? DaggerfallQuestTaskOperationKind.AddQuestor : DaggerfallQuestTaskOperationKind.DropQuestor,
+                sourceLine, line, [Canonical(questor.Groups["symbol"].Value)], [], null);
+        if (Face.Match(line) is { Success: true } face && (face.Groups["verb"].Value.Equals("add", StringComparison.OrdinalIgnoreCase) || !face.Groups["message"].Success))
+            return new(face.Groups["verb"].Value.Equals("add", StringComparison.OrdinalIgnoreCase) ? DaggerfallQuestTaskOperationKind.AddFace : DaggerfallQuestTaskOperationKind.DropFace,
+                sourceLine, line, [Canonical(face.Groups["symbol"].Value), face.Groups["foe"].Success ? "foe" : "person"], [], face.Groups["message"].Success ? Message(face.Groups["message"].Value) : null);
+        if (Mute.Match(line) is { Success: true } mute)
+            return new(DaggerfallQuestTaskOperationKind.MuteNpc, sourceLine, line, [Canonical(mute.Groups["symbol"].Value)], [], null);
         if (HaveItem.Match(line) is { Success: true } have)
             return new(DaggerfallQuestTaskOperationKind.HaveItem, sourceLine, line, [Canonical(have.Groups["symbol"].Value), Canonical(have.Groups["task"].Value)], [], null);
         // #8133 owns execution. Retain its exact item/message operands now for named resolution.
@@ -376,6 +387,8 @@ internal static partial class DaggerfallQuestTaskCompiler
 /// <summary>Runs only the retained source-order task transitions over one mutable active quest instance.</summary>
 internal interface IDaggerfallQuestTaskLifecycle
 {
+    void NpcOverlay(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("This lifecycle does not own NPC overlays.");
+    void RearmMute(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("This lifecycle does not own mute rearm.");
     void PlaceResource(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, string task, int operationIndex);
     bool HaveItem(DaggerfallQuestRuntimeInstance instance, string symbol);
     DaggerfallQuestItemResult ItemAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation);
@@ -452,6 +465,14 @@ internal static class DaggerfallQuestTaskRunner
                 if (!state.IsSet || state.OperationCompleted[operationIndex]) continue;
                 switch (operation.Kind)
                 {
+                    case DaggerfallQuestTaskOperationKind.AddQuestor:
+                    case DaggerfallQuestTaskOperationKind.DropQuestor:
+                    case DaggerfallQuestTaskOperationKind.AddFace:
+                    case DaggerfallQuestTaskOperationKind.DropFace:
+                    case DaggerfallQuestTaskOperationKind.MuteNpc:
+                        lifecycle.NpcOverlay(instance, operation);
+                        MarkCompleted(state, operationIndex);
+                        break;
                     case DaggerfallQuestTaskOperationKind.ReservePlace:
                     case DaggerfallQuestTaskOperationKind.PlaceFoe:
                     case DaggerfallQuestTaskOperationKind.PlaceItem:
@@ -480,7 +501,7 @@ internal static class DaggerfallQuestTaskRunner
                     case DaggerfallQuestTaskOperationKind.Clear:
                         // The donor marks clear complete first so a self-clear rearms it instead of overwriting the rearm.
                         MarkCompleted(state, operationIndex);
-                        foreach (string target in operation.Targets) Clear(target, states, indexes, program.Tasks, variables, instance.InstanceId, operation);
+                        foreach (string target in operation.Targets) Clear(target, states, indexes, program.Tasks, variables, instance.InstanceId, operation, mute => lifecycle.RearmMute(instance, mute));
                         break;
                     case DaggerfallQuestTaskOperationKind.Unset:
                         MarkCompleted(state, operationIndex);
@@ -604,8 +625,8 @@ internal static class DaggerfallQuestTaskRunner
                     instance.TerminalMessageId = null;
                     return;
                 }
-                if (target) Clear(task, state, variables);
-                else Rearm(task, state);
+                if (target) Clear(task, state, variables, mute => lifecycle.RearmMute(instance, mute));
+                else Rearm(task, state, mute => lifecycle.RearmMute(instance, mute));
             }
             state.WasSet = state.IsSet;
         }
@@ -712,10 +733,10 @@ internal static class DaggerfallQuestTaskRunner
     }
 
     private static void Clear(string symbol, DaggerfallQuestTaskRuntimeState[] states, IReadOnlyDictionary<string, int> indexes, IReadOnlyList<DaggerfallQuestTaskDefinition> tasks,
-        DaggerfallVariableStore variables, string instanceId, DaggerfallQuestTaskOperation operation)
+        DaggerfallVariableStore variables, string instanceId, DaggerfallQuestTaskOperation operation, Action<DaggerfallQuestTaskOperation> rearmMute)
     {
         int index = Require(symbol, indexes, instanceId, operation);
-        Clear(tasks[index], states[index], variables);
+        Clear(tasks[index], states[index], variables, rearmMute);
     }
 
     private static void Unset(string symbol, DaggerfallQuestTaskRuntimeState[] states, IReadOnlyDictionary<string, int> indexes, IReadOnlyList<DaggerfallQuestTaskDefinition> tasks,
@@ -814,18 +835,19 @@ internal static class DaggerfallQuestTaskRunner
         WriteGlobal(task, value, variables);
     }
 
-    private static void Clear(DaggerfallQuestTaskDefinition task, DaggerfallQuestTaskRuntimeState state, DaggerfallVariableStore variables)
+    private static void Clear(DaggerfallQuestTaskDefinition task, DaggerfallQuestTaskRuntimeState state, DaggerfallVariableStore variables, Action<DaggerfallQuestTaskOperation> rearmMute)
     {
         state.IsSet = false;
-        Rearm(task, state);
+        Rearm(task, state, rearmMute);
         WriteGlobal(task, false, variables);
     }
 
-    private static void Rearm(DaggerfallQuestTaskDefinition task, DaggerfallQuestTaskRuntimeState state)
+    private static void Rearm(DaggerfallQuestTaskDefinition task, DaggerfallQuestTaskRuntimeState state, Action<DaggerfallQuestTaskOperation> rearmMute)
     {
         for (int index = 0; index < task.Operations.Count; index++)
         {
             if (PersistsAcrossRearm(task.Operations[index])) continue;
+            if (task.Operations[index].Kind == DaggerfallQuestTaskOperationKind.MuteNpc && state.OperationCompleted[index]) rearmMute(task.Operations[index]);
             state.OperationCompleted[index] = false;
             state.OperationState[index] = new(null, null);
         }
@@ -834,6 +856,6 @@ internal static class DaggerfallQuestTaskRunner
     // These donor actions opt out of rearm.  RunQuest also retains its live child id while waiting.
     private static bool PersistsAcrossRearm(DaggerfallQuestTaskOperation operation) => operation.Kind is
         DaggerfallQuestTaskOperationKind.StartQuest or DaggerfallQuestTaskOperationKind.RunQuest or DaggerfallQuestTaskOperationKind.TrainPc
-        or DaggerfallQuestTaskOperationKind.Say or DaggerfallQuestTaskOperationKind.JournalNote;
+        or DaggerfallQuestTaskOperationKind.Say or DaggerfallQuestTaskOperationKind.JournalNote or DaggerfallQuestTaskOperationKind.AddFace;
     private static void MarkCompleted(DaggerfallQuestTaskRuntimeState state, int index) => state.OperationCompleted[index] = true;
 }
