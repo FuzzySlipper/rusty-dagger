@@ -132,7 +132,7 @@ internal sealed partial class DaggerCombatRules
         facts.Append(new DamageAppliedFact(target, attacker, DaggerfallDamageCause.Effect,
             result.CalculatedDamage, result.ActualHealthLost, 0, generation, step));
         if (result.ActualHealthLost > 0)
-            facts.Append(new ActorDamagedFact(attacker, target, DaggerfallDamageCause.Effect, result.CalculatedDamage, result.ActualHealthLost));
+            facts.Append(new ActorDamagedFact(attacker, target, DaggerfallDamageCause.Effect, result.CalculatedDamage, result.ActualHealthLost) { TargetDefeated = result.Defeated });
         if (result.Defeated)
             facts.Append(new ActorDiedFact(attacker, target, DaggerfallDamageCause.Effect, result.CalculatedDamage, result.ActualHealthLost, generation, step));
         // The callback's cost is its reflected amount, even when the enemy has fewer health points.

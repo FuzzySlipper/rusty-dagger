@@ -13,12 +13,16 @@ internal sealed record SpellTrackRestoredFact(long TargetId, string Track, int R
 internal sealed record VitalTransferredFact(long CasterId, long TargetId, string Track, int AdmittedAmount,
     double ActualLoss, double ActualRecovery, bool TargetDefeated, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 internal sealed record MagicItemIdentifiedFact(ulong ItemId,bool Success) : IProductFact;
-internal enum DaggerfallDamageCause { PhysicalAttack, Fall, Hazard, Effect }
+internal enum DaggerfallDamageCause { PhysicalAttack, Fall, Hazard, Effect, Quest }
 /// <summary>One accepted live health application. Calculated damage and actual health lost intentionally differ at bounds or contributions.</summary>
 internal sealed record DamageAppliedFact(long SourceActorId, long TargetActorId, DaggerfallDamageCause Cause,
     int CalculatedDamage, double ActualHealthLost, int StruckBody, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 internal sealed record ActorDamagedFact(long ActorId, long SourceActorId, DaggerfallDamageCause Cause,
-    int CalculatedDamage, double ActualHealthLost) : IProductFact;
+    int CalculatedDamage, double ActualHealthLost) : IProductFact
+{
+    /// <summary>The accepted application outcome, independent of later damage in the same delivered batch.</summary>
+    public bool TargetDefeated { get; init; }
+}
 internal sealed record ActorDiedFact(long ActorId, long KillerId, DaggerfallDamageCause Cause,
     int CalculatedDamage, double ActualHealthLost, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
 internal sealed record AzurasStarCaptureFact(long TargetId, ulong? ItemId, DaggerfallStarCaptureOutcome Outcome) : IProductFact;

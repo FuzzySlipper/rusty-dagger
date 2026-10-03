@@ -595,7 +595,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
             result.CalculatedDamage, result.ActualHealthLost, struckBody, generation, step));
         if (result.ActualHealthLost > 0)
             _facts.Append(new ActorDamagedFact(target, source, cause,
-                result.CalculatedDamage, result.ActualHealthLost));
+                result.CalculatedDamage, result.ActualHealthLost) { TargetDefeated = result.Defeated });
         if (result.Defeated)
             _facts.Append(new ActorDiedFact(target, source, cause,
                 result.CalculatedDamage, result.ActualHealthLost, generation, step));
@@ -603,6 +603,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, ISaveabl
 
     private void React(IProductFact fact)
     {
+        State.Quests.ObserveFoeFact(fact);
         ObservePlaytestCombatFact(fact);
         _staminaRecovery.React(fact);
         if (fact is AttackHitFact hit)

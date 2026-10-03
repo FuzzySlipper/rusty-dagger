@@ -72,7 +72,10 @@ internal sealed partial class DaggerfallSession
         // Daily conditions and ordinary source-order operations observe the same admitted calendar
         // after rest, travel, prison, or another interval, including an interval with no clock expiry.
         if (kind is DaggerfallCalendarAdvanceKind.Elapsed or DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills)
+        {
             State.Quests.Advance(State.Variables, _time.Calendar);
+            State.Quests.ReconcileFoeCommands();
+        }
         _dialogue?.RefreshEligibility();
         if (kind is DaggerfallCalendarAdvanceKind.Elapsed or DaggerfallCalendarAdvanceKind.QuestTraining)
         {

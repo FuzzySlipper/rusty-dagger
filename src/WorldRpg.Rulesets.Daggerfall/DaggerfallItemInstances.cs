@@ -310,6 +310,13 @@ internal sealed class DaggerfallItemInstances
         if (removed != 0) _revision++;
     }
 
+    /// <summary>Retained site contents have already unloaded their metadata; actual retirement still notifies canonical quest bindings.</summary>
+    internal void RetireRetainedStack(DaggerfallItemOwner owner, InventoryStackId id)
+    {
+        if (_stacks.Remove((owner, id.Value))) _revision++;
+        StackChanged?.Invoke(new(owner, id));
+    }
+
     internal void RemoveUnique(ulong itemId)
     {
         if (_unique.Remove(itemId)) { _revision++; SourceUnavailable?.Invoke(itemId); }

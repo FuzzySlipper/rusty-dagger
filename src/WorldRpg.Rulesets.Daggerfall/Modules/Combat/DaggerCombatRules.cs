@@ -678,7 +678,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             applied.CalculatedDamage, applied.ActualHealthLost, body, generation, step));
         if (applied.ActualHealthLost > 0)
             facts.Append(new ActorDamagedFact(target, attacker, DaggerfallDamageCause.PhysicalAttack,
-                applied.CalculatedDamage, applied.ActualHealthLost));
+                applied.CalculatedDamage, applied.ActualHealthLost) { TargetDefeated = applied.Defeated });
         if (applied.Defeated)
             facts.Append(new ActorDiedFact(target, attacker, DaggerfallDamageCause.PhysicalAttack,
                 applied.CalculatedDamage, applied.ActualHealthLost, generation, step));

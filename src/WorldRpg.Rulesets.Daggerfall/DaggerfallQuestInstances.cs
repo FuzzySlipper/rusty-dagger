@@ -105,6 +105,12 @@ internal sealed record DaggerfallQuestResourceState(string Symbol, DaggerfallQue
     public bool IsMuted { get; init; }
     public string? EscortFaceMedia { get; init; }
     public long EscortFaceOrder { get; init; }
+    public bool FoeInjured { get; init; }
+    public bool FoeDeathRequested { get; init; }
+    [JsonRequired]
+    public long[] DefeatedFoeIds { get; init; } = [];
+    [JsonRequired]
+    public long[] RemovedFoeIds { get; init; } = [];
     public DaggerfallCreatedItem? SelectedItem { get; init; }
     public DaggerfallQuestFoeSelection? SelectedFoe { get; init; }
     public DaggerfallQuestPersonSelection? SelectedPerson { get; init; }
@@ -166,6 +172,13 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             if (!resources.Add(symbol)) throw new ArgumentException($"Quest instance '{InstanceId}' binds resource '{symbol}' more than once.");
             ArgumentNullException.ThrowIfNull(resource.Binding);
             resource.Binding.Validate(symbol);
+            ArgumentNullException.ThrowIfNull(resource.DefeatedFoeIds);
+            ArgumentNullException.ThrowIfNull(resource.RemovedFoeIds);
+            if (resource.FoeInjured && resource.Binding.ActorIds.Length == 0
+                || resource.DefeatedFoeIds.Distinct().Count() != resource.DefeatedFoeIds.Length || resource.RemovedFoeIds.Distinct().Count() != resource.RemovedFoeIds.Length
+                || resource.DefeatedFoeIds.Concat(resource.RemovedFoeIds).Any(id => id <= 0 || !resource.Binding.ActorIds.Contains(id))
+                || resource.SelectedFoe is null && (resource.FoeInjured || resource.FoeDeathRequested || resource.DefeatedFoeIds.Length > 0 || resource.RemovedFoeIds.Length > 0))
+                throw new ArgumentException($"Quest resource '{symbol}' has incompatible foe lifecycle state.");
             if ((resource.IsQuestor || resource.IsMuted) && resource.SelectedPerson is null
                 || (resource.EscortFaceMedia is null ? resource.EscortFaceOrder != 0 : resource.EscortFaceOrder <= 0)
                 || resource.EscortFaceMedia is not null && (string.IsNullOrWhiteSpace(resource.EscortFaceMedia) || resource.SelectedPerson is null && resource.SelectedFoe is null)
@@ -367,7 +380,7 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
 
     internal void ValidateBindings(IReadOnlySet<long> actorIds, DurableIdentityAllocator identities, IReadOnlySet<(int Region, int Index)> locations,
         IReadOnlyDictionary<(string Scope, long OwnerId, string StackId), DaggerfallStackSave> stacks, IReadOnlyDictionary<ulong, DaggerfallUniqueSave> items,
-        IReadOnlyDictionary<long, string> custody, IReadOnlyDictionary<long, DaggerfallNpcEntry> npcs, DaggerfallDefinitions definitions)
+        IReadOnlyDictionary<long, string> custody, IReadOnlyDictionary<long, DaggerfallNpcEntry> npcs, DaggerfallDefinitions definitions, IReadOnlySet<long>? banishedActors = null)
     {
         ArgumentNullException.ThrowIfNull(actorIds);
         ArgumentNullException.ThrowIfNull(identities);
@@ -397,7 +410,12 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
                             // Hidden/removed resources retain their identity and text. Their canonical
                             // registry presence and allocator tombstone govern projection, not the binding.
                         }
-                        if (!person && !actorIds.Contains(actorId)) throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to missing actor {actorId}.");
+                        if (!person && resource.RemovedFoeIds.Contains(actorId))
+                        {
+                            if (actorIds.Contains(actorId) || identities.Classify(new(DurableIdentityKind.Actor, checked((ulong)actorId))) != DurableIdentityClassification.Removed && banishedActors?.Contains(actorId) != true)
+                                throw new ArgumentException($"Removed quest foe {actorId} requires its canonical retired identity.");
+                        }
+                        else if (!person && !actorIds.Contains(actorId)) throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to missing actor {actorId}.");
                     }
                     break;
                 case DaggerfallQuestResourceBindingKind.Item:
@@ -550,7 +568,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
     private static DaggerfallQuestResourceState[] CopyResources(IEnumerable<DaggerfallQuestResourceState> resources) =>
         resources.Select(resource => resource with
         {
-            Binding = CopyBinding(resource.Binding),
+            Binding = CopyBinding(resource.Binding), DefeatedFoeIds = [.. resource.DefeatedFoeIds], RemovedFoeIds = [.. resource.RemovedFoeIds],
             SelectedPerson = resource.SelectedPerson is { Home: { } home } person
                 ? person with { Home = home with { Binding = CopyBinding(home.Binding) } } : resource.SelectedPerson,
         }).ToArray();

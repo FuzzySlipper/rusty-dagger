@@ -95,18 +95,8 @@ internal sealed class DaggerSessionPersistence
                 actor.Position.X, actor.Position.Y, actor.Position.Z, actor.HeadingYawRadians,
                 DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { WabbajackDefinition = DaggerfallWabbajack.DefinitionOf(actor.Actor), ForcedHostile = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile, MagicallyPacified=actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified })
             .ToArray();
-        DaggerfallDynamicActorSave[] spawned = dynamicActors
-            .OrderBy(entry => entry.Key)
-            .Select(entry =>
-            {
-                ActorState actor = LiveDynamicActor(entry.Key);
-                return new DaggerfallDynamicActorSave(
-                    entry.Key,
-                    entry.Value.Value,
-                    actor.Position.X, actor.Position.Y, actor.Position.Z, actor.HeadingYawRadians,
-                    DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { Level = _actorDefinitions[actor.DurableId].Level ?? 1, CorruptionOrigin = actor.Actor.TryGet<DaggerfallCorruptionOrigin>(out var origin) ? origin : null, WabbajackActive = DaggerfallWabbajack.DefinitionOf(actor.Actor) is not null, PlayerAllied = _actorDefinitions[actor.DurableId].Team == "player-ally", ForcedHostile = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile, MagicallyPacified=actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified };
-            })
-            .ToArray();
+        DaggerfallDynamicActorSave[] spawned = dynamicActors.OrderBy(entry => entry.Key)
+            .Select(entry => CaptureDynamicActor(entry.Key, entry.Value.Value)).ToArray();
         DaggerfallInventorySave inventorySave = CaptureInventory(State.Inventory, State.Equipment, DaggerfallItemOwner.Player);
         DaggerfallCorpseSave[] corpses = _corpseLoot.Corpses.Values.OrderBy(corpse => corpse.ActorId).Select(corpse =>
         {
@@ -229,12 +219,8 @@ internal sealed class DaggerSessionPersistence
             return new DaggerfallActorSave(actor.DurableId, actor.Position.X, actor.Position.Y, actor.Position.Z,
                 actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { WabbajackDefinition = DaggerfallWabbajack.DefinitionOf(actor.Actor), ForcedHostile = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile, MagicallyPacified=actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified };
         }).ToArray();
-        DaggerfallDynamicActorSave[] spawned = dynamicActors.OrderBy(entry => entry.Key).Select(entry =>
-        {
-            ActorState actor = LiveDynamicActor(entry.Key);
-            return new DaggerfallDynamicActorSave(entry.Key, entry.Value.Value, actor.Position.X, actor.Position.Y, actor.Position.Z,
-                actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { Level = _actorDefinitions[actor.DurableId].Level ?? 1, CorruptionOrigin = actor.Actor.TryGet<DaggerfallCorruptionOrigin>(out var origin) ? origin : null, WabbajackActive = DaggerfallWabbajack.DefinitionOf(actor.Actor) is not null, PlayerAllied = _actorDefinitions[actor.DurableId].Team == "player-ally", ForcedHostile = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile, MagicallyPacified=actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified };
-        }).ToArray();
+        DaggerfallDynamicActorSave[] spawned = dynamicActors.OrderBy(entry => entry.Key)
+            .Select(entry => CaptureDynamicActor(entry.Key, entry.Value.Value)).ToArray();
         long[] ids = [.. authoredIds, .. spawned.Select(actor => actor.EntityId)];
         DaggerfallActorInventorySave[] inventories = ids.Select(id => new DaggerfallActorInventorySave(
             id,
@@ -243,6 +229,27 @@ internal sealed class DaggerSessionPersistence
         DaggerfallActiveEffectSave[] effects = State.Effects.Capture().Where(effect => ids.Contains(effect.TargetId)).ToArray();
         return new DaggerfallSiteRuntimeDelta(actors, spawned, inventories, CaptureCorpses(ids), doors.Capture(), effects, motion.Capture()) { BanishedActors = [.. BanishedActors().Order()] };
     }
+
+    private DaggerfallDynamicActorSave CaptureDynamicActor(long id, string definition)
+    {
+        ActorState actor = LiveDynamicActor(id);
+        return new(id, definition, actor.Position.X, actor.Position.Y, actor.Position.Z, actor.HeadingYawRadians,
+            DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity))
+        {
+            Level = _actorDefinitions[id].Level ?? 1,
+            CorruptionOrigin = actor.Actor.TryGet<DaggerfallCorruptionOrigin>(out var origin) ? origin : null,
+            WabbajackActive = DaggerfallWabbajack.DefinitionOf(actor.Actor) is not null,
+            PlayerAllied = _actorDefinitions[id].Team == "player-ally",
+            ForcedHostile = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile,
+            MagicallyPacified = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified,
+        };
+    }
+
+    /// <summary>Captures one canonical materialized actor back to its detached site owner.</summary>
+    internal DaggerfallSiteRuntimeDelta CaptureDynamicActorDelta(long id, string definition) => new([], [CaptureDynamicActor(id, definition)],
+        [new(id, CaptureInventory(State.ActorInventories.InventoryFor(id) ?? throw new InvalidOperationException($"Actor {id} has no inventory."),
+            State.ActorInventories.EquipmentFor(id), DaggerfallItemOwner.Actor(id)))], CaptureCorpses([id]), [],
+        State.Effects.Capture().Where(effect => effect.TargetId == id).ToArray());
 
     /// <summary>Reapplies detached values after the destination has created fresh authored actors.</summary>
     internal void RestoreSiteDelta(DaggerfallSiteRuntimeDelta delta)
