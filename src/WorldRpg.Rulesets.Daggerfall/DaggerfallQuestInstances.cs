@@ -122,6 +122,7 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
     [JsonRequired]
     public int PendingEndPasses { get; init; }
     public DaggerfallQuestClockState[] Clocks { get; init; } = [];
+    [JsonRequired]
     public DaggerfallQuestPlacementOperation[] Placements { get; init; } = [];
     /// <summary>The optional Daggerfall faction supplied by a quest giver; zero is the donor's unscoped value.</summary>
     public int FactionId { get; init; }
@@ -193,7 +194,14 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             placement.Validate();
             if (!operations.Add(placement.Id) || !resources.Contains(placement.ResourceSymbol))
                 throw new ArgumentException($"Quest instance '{InstanceId}' has a duplicate placement or missing resource.");
-            _ = DaggerfallQuestPlacements.Destination(Resources, placement.PlaceSymbol);
+            if (DaggerfallQuestPlacements.Destination(Resources, placement.PlaceSymbol).PlaceSelection is null)
+                throw new ArgumentException($"Quest placement '{placement.Id}' has no selected destination profile.");
+            var resource = Resources.Single(value => Canonical(value.Symbol, "placement resource") == placement.ResourceSymbol);
+            if (resource.SelectedItem is null && resource.SelectedFoe is null && resource.SelectedPerson is null)
+                throw new ArgumentException($"Quest placement '{placement.Id}' has no selected resource meaning.");
+            if (placement.Applied is not null && resource.Binding.Kind != (resource.SelectedItem is null
+                    ? DaggerfallQuestResourceBindingKind.Actor : DaggerfallQuestResourceBindingKind.Item))
+                throw new ArgumentException($"Quest placement '{placement.Id}' was applied without its actual world binding.");
         }
 
         HashSet<string> symbols = [];

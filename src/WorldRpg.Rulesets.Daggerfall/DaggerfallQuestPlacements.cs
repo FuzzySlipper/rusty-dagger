@@ -113,11 +113,25 @@ internal sealed partial class DaggerfallQuestInstances
                 ?? throw new InvalidOperationException($"Admitted quest marker '{previous.MarkerId}' is absent from '{profile.ProfileKey.LogicalId}'.");
         var preferred = resource.SelectedItem is not null && operation.Preference != DaggerfallQuestMarkerPreference.QuestSpawn
             ? DaggerfallSiteMarkerKind.QuestItem : DaggerfallSiteMarkerKind.QuestSpawn;
-        var all = profile.QuestMarkers.Where(value => value.Kind is DaggerfallSiteMarkerKind.QuestSpawn or DaggerfallSiteMarkerKind.QuestItem).ToArray();
-        var markers = operation.Preference == DaggerfallQuestMarkerPreference.Any ? all : all.Where(value => value.Kind == preferred).ToArray();
-        if (markers.Length == 0 && operation.MarkerIndex is null) markers = all;
+        // Source GetSiteMarker orders the combined pool spawn-first. Any ignores an index
+        // for initial selection; subsequent explicit indices still address the preferred pool.
+        var spawn = profile.QuestMarkers.Where(value => value.Kind == DaggerfallSiteMarkerKind.QuestSpawn).ToArray();
+        var items = profile.QuestMarkers.Where(value => value.Kind == DaggerfallSiteMarkerKind.QuestItem).ToArray();
+        bool alreadySelected = instance.Placements.Any(value => value.PlaceSymbol == operation.PlaceSymbol && value.Applied is not null);
+        var markers = preferred == DaggerfallSiteMarkerKind.QuestSpawn ? spawn : items;
+        int? markerIndex = operation.MarkerIndex;
+        if (!alreadySelected && operation.Preference == DaggerfallQuestMarkerPreference.Any)
+        {
+            markers = [.. spawn, .. items];
+            markerIndex = null;
+        }
+        else if (!alreadySelected && markers.Length == 0)
+        {
+            markers = spawn.Length > 0 ? spawn : items;
+            markerIndex = null;
+        }
         if (markers.Length == 0) throw new NotSupportedException($"Place '{operation.PlaceSymbol}' has no published quest marker for resource '{resource.Symbol}'.");
-        int selected = operation.MarkerIndex ?? checked((int)_random.DrawKeyed(new KeyedRngRequest(0, "daggerfall.quest.marker",
+        int selected = markerIndex ?? checked((int)_random.DrawKeyed(new KeyedRngRequest(0, "daggerfall.quest.marker",
             instance.InstanceId + "/" + operation.PlaceSymbol, 0, markers.Length - 1)).Value);
         if (selected >= markers.Length) throw new ArgumentException($"Quest marker index {selected} exceeds the {markers.Length} admitted markers at '{operation.PlaceSymbol}'.");
         return markers[selected];

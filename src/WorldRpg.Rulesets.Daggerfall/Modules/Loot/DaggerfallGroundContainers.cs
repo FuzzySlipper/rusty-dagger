@@ -100,26 +100,58 @@ internal sealed class DaggerfallGroundContainers
     {
         var containerIdentity = _identities.Allocate(DurableIdentityKind.Container);
         long id = checked((long)containerIdentity.Value);
-        var owner = _containers.Entities.Create(containerIdentity, GroundContainerType);
-        _containers.RegisterOwner(owner);
         var metadata = created.Metadata with { Owner = DaggerfallItemOwner.Ground(id) };
-        DaggerfallQuestResourceBinding binding;
-        if (created.Stackable)
+        InventoryStackId? stack = created.Stackable ? InventoryStackId.Parse($"daggerfall.quest.ground.{id}") : null;
+        DurableIdentityReference? unique = null;
+        bool seeded = false;
+        try
         {
-            var stack = InventoryStackId.Parse($"daggerfall.quest.ground.{id}");
-            _containers.Seed(owner, [new(created.Item, created.Quantity, Stack: stack)]);
-            _instances.RegisterStack(metadata.Owner, stack, metadata);
-            binding = DaggerfallQuestResourceBinding.Stack(new(metadata.Owner.Scope, metadata.Owner.Id), stack.Value);
+            var owner = _containers.Entities.Create(containerIdentity, GroundContainerType);
+            _containers.RegisterOwner(owner);
+            unique = created.Stackable ? null : uniqueItems.AllocateReference();
+            _containers.Seed(owner, [new(created.Item, created.Quantity, Stack: stack, UniqueItem: unique)]);
+            seeded = true;
+            DaggerfallQuestResourceBinding binding;
+            if (stack is not null)
+            {
+                _instances.RegisterStack(metadata.Owner, stack, metadata);
+                binding = DaggerfallQuestResourceBinding.Stack(new(metadata.Owner.Scope, metadata.Owner.Id), stack.Value);
+            }
+            else
+            {
+                _instances.RegisterUnique(unique!.Value.Value, metadata);
+                binding = DaggerfallQuestResourceBinding.UniqueItem(unique.Value.Value);
+            }
+            _ground.Add(id, new(_activeProfile, id, owner, position));
+            return binding;
         }
-        else
+        catch
         {
-            var unique = uniqueItems.AllocateReference();
-            _containers.Seed(owner, [new(created.Item, UniqueItem: unique)]);
-            _instances.RegisterUnique(unique.Value, metadata);
-            binding = DaggerfallQuestResourceBinding.UniqueItem(unique.Value);
+            // Seed cleans its own unpublished candidate; after publication retire contents
+            // through the same Engine store before releasing their product identities.
+            if (seeded && _containers.Entities.TryResolve(containerIdentity, out var owner))
+            {
+                var inventory = _containers.Entities.Store.Get<InventoryComponent>(owner);
+                if (unique is { } item && _containers.Entities.TryResolve(item, out var entity))
+                {
+                    using var edit = inventory.Store.Prepare();
+                    edit.DestroyUnique(entity);
+                    edit.Publish();
+                    _containers.Entities.Destroy(item);
+                }
+                else if (stack is not null)
+                    inventory.Consume(stack, created.Quantity);
+            }
+            if (stack is not null && _instances.ContainsStack(metadata.Owner, stack)) _instances.RemoveStack(metadata.Owner, stack);
+            if (unique is { } identity)
+            {
+                if (_instances.ContainsUnique(identity.Value)) _instances.RemoveUnique(identity.Value);
+                uniqueItems.Remove(identity);
+            }
+            _containers.Entities.Destroy(containerIdentity);
+            _identities.Remove(containerIdentity);
+            throw;
         }
-        _ground.Add(id, new(_activeProfile, id, owner, position));
-        return binding;
     }
 
     internal void RelocateQuestItem(DaggerfallQuestResourceBinding binding, WorldPoint position)
