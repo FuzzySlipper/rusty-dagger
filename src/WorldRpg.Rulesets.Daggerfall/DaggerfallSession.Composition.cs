@@ -436,6 +436,8 @@ internal sealed partial class DaggerfallSession
             _notebook = new DaggerfallBookNotebook(definitions, new DaggerfallTextResolver(definitions.Text));
             assembled.Quests.BindNotebook(_notebook.AddQuestNote);
             assembled.Quests.BindItemCleanup(RemoveCarriedQuestItems);
+            State.QuestItems = new(State, _actorIdentities, _uniqueItems, ItemOwnerEntity, DestroyUniqueItem, ConsumeItemStack);
+            State.Quests.BindItems(State.QuestItems);
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook,
                 useDrug: variant => UseDrug(variant) == DaggerfallPoisonAdmission.Admitted,
                 useOghma: () =>

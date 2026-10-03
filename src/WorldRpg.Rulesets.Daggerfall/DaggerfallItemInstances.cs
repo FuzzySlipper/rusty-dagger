@@ -18,10 +18,11 @@ internal sealed record DaggerfallItemOwner(string Scope, long Id)
     internal static DaggerfallItemOwner Property(long id) => new("property", id);
     internal static DaggerfallItemOwner WorldTreasure(long id) => new("world-treasure", id);
     internal static DaggerfallItemOwner Encounter(long id) => new("encounter", id);
+    internal static DaggerfallItemOwner Quest(long id) => new("quest", id);
 
     internal DaggerfallItemOwner Validate()
     {
-        if (Scope is not ("player" or "actor" or "corpse" or "ground" or "wagon" or "property" or "world-treasure" or "encounter") || Id <= 0)
+        if (Scope is not ("player" or "actor" or "corpse" or "ground" or "wagon" or "property" or "world-treasure" or "encounter" or "quest") || Id <= 0)
             throw new ArgumentException("Item ownership must name a known positive durable owner.");
         return this;
     }
