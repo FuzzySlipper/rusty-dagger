@@ -6,6 +6,9 @@ It is not a Den backlog or a claim of completed coverage. The
 scope contract, behavioral splits and decision register (DEC-01–DEC-11), and links
 the stable feature, supplemental, magic, quest and content inventories. The coverage
 tasks live in Den, which owns their status, inventory-ID mapping and dependencies.
+Feature parents and the current execution order are indexed in
+`[doc: rusty-dagger/feature-backlog-ordering]`. Work ready leaf tasks through their
+explicit dependencies; feature parents organize the backlog without adding stage gates.
 The current user request and owning task override older guidance.
 
 ## Purpose and references
