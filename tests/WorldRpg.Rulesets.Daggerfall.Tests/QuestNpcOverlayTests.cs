@@ -19,6 +19,13 @@ public sealed class QuestNpcOverlayTests
     [InlineData("drop _person_ face", DaggerfallQuestTaskOperationKind.DropFace)]
     [InlineData("drop foe _enemy_ face", DaggerfallQuestTaskOperationKind.DropFace)]
     [InlineData("mute npc _person_", DaggerfallQuestTaskOperationKind.MuteNpc)]
+    [InlineData("add _quest-person_ as questor", DaggerfallQuestTaskOperationKind.AddQuestor)]
+    [InlineData("drop _quest-person_ as questor", DaggerfallQuestTaskOperationKind.DropQuestor)]
+    [InlineData("add _quest-person_ face saying 100", DaggerfallQuestTaskOperationKind.AddFace)]
+    [InlineData("add foe _quest-foe_ face", DaggerfallQuestTaskOperationKind.AddFace)]
+    [InlineData("drop _quest-person_ face", DaggerfallQuestTaskOperationKind.DropFace)]
+    [InlineData("drop foe _quest-foe_ face", DaggerfallQuestTaskOperationKind.DropFace)]
+    [InlineData("mute npc _quest-person_", DaggerfallQuestTaskOperationKind.MuteNpc)]
     internal void Source_variants_compile_to_owned_actions(string action, DaggerfallQuestTaskOperationKind kind)
     {
         var source = new DaggerfallQuestSourceDefinition("npc", "", "npc.txt", DaggerfallQuestDisposition.Compiled, [], [new("headless", 1, [action], null)], []);
