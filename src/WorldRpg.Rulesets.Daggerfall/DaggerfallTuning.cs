@@ -27,6 +27,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallStrikeEnchantmentTuning StrikeEnchantments { get; init; } = new(5, 2.25d);
     internal DaggerfallDetectionTuning Detection { get; init; } = new(14d);
     internal DaggerfallMusicTuning Music { get; init; } = new(AlternatePlaylists: false);
+    internal DaggerfallWorldOriginTuning WorldOrigin { get; init; } = new(500f);
 
     internal static DaggerfallTuning Defaults { get; } = new(
         // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
@@ -98,6 +99,7 @@ internal sealed record DaggerfallTuning(
         Transport = Transport.Validate(),
         Detection = Detection.Validate(),
         StrikeEnchantments = StrikeEnchantments.Validate(),
+        WorldOrigin = WorldOrigin.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -235,6 +237,7 @@ internal sealed record DaggerfallTuning(
                 root.GetProperty("strikeEnchantments").GetProperty("vampiricRange").GetDouble()),
             Detection = new(root.GetProperty("detection").GetProperty("maximumDistance").GetDouble()),
             Music = new DaggerfallMusicTuning(root.GetProperty("music").GetProperty("alternatePlaylists").GetBoolean()),
+            WorldOrigin = new(root.GetProperty("worldOrigin").GetProperty("verticalRebaseDistance").GetSingle()),
         }.Validate();
     }
 
