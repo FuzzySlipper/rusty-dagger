@@ -94,6 +94,43 @@ internal sealed class DaggerfallGroundContainers
     internal InventoryView? Read(long id) => TryGet(id, out DaggerfallGroundContainer? container)
         ? _containers.Read(container.Owner) : null;
 
+    /// <summary>Creates a selected quest item directly in the actual ground inventory owner.</summary>
+    internal DaggerfallQuestResourceBinding CreateQuestItem(DaggerfallCreatedItem created, WorldPoint position,
+        DaggerfallUniqueItemAllocator uniqueItems)
+    {
+        var containerIdentity = _identities.Allocate(DurableIdentityKind.Container);
+        long id = checked((long)containerIdentity.Value);
+        var owner = _containers.Entities.Create(containerIdentity, GroundContainerType);
+        _containers.RegisterOwner(owner);
+        var metadata = created.Metadata with { Owner = DaggerfallItemOwner.Ground(id) };
+        DaggerfallQuestResourceBinding binding;
+        if (created.Stackable)
+        {
+            var stack = InventoryStackId.Parse($"daggerfall.quest.ground.{id}");
+            _containers.Seed(owner, [new(created.Item, created.Quantity, Stack: stack)]);
+            _instances.RegisterStack(metadata.Owner, stack, metadata);
+            binding = DaggerfallQuestResourceBinding.Stack(new(metadata.Owner.Scope, metadata.Owner.Id), stack.Value);
+        }
+        else
+        {
+            var unique = uniqueItems.AllocateReference();
+            _containers.Seed(owner, [new(created.Item, UniqueItem: unique)]);
+            _instances.RegisterUnique(unique.Value, metadata);
+            binding = DaggerfallQuestResourceBinding.UniqueItem(unique.Value);
+        }
+        _ground.Add(id, new(_activeProfile, id, owner, position));
+        return binding;
+    }
+
+    internal void RelocateQuestItem(DaggerfallQuestResourceBinding binding, WorldPoint position)
+    {
+        DaggerfallItemOwner itemOwner = binding.UniqueItemIds.Length == 1
+            ? _instances.RequireUnique(binding.UniqueItemIds[0]).Owner : new(binding.Stacks[0].Owner.Scope, binding.Stacks[0].Owner.Id);
+        if (itemOwner.Scope != "ground" || !_ground.TryGetValue(itemOwner.Id, out var container))
+            throw new NotSupportedException("A quest item can be placed again only while its canonical owner is a ground pile.");
+        _ground[container.Id] = container with { Profile = _activeProfile, Position = position };
+    }
+
     internal InventoryStackId ResolveTakeDestination(long id, InventoryStackId source, InventoryStackId freshDestination)
     {
         DaggerfallItemInstanceMetadata metadata = _instances.RequireStack(DaggerfallItemOwner.Ground(id), source);

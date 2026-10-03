@@ -520,6 +520,17 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException($"Saved spawned encounter actor {actorId} is not a dynamic actor.");
         }
         Quests.Validate(definitions);
+        foreach (var instance in Quests.Instances)
+            foreach (var operation in instance.Placements.Where(value => value.Applied is not null))
+            {
+                var applied = operation.Applied!;
+                var projected = applied.Profile == inputs.ProfileKey ? inputs
+                    : (profiles ?? throw new ArgumentException("Saved quest placements require their admitted site catalog.")).Require(applied.Profile);
+                var destination = DaggerfallQuestPlacements.Destination(instance.Resources, operation.PlaceSymbol);
+                if (!DaggerfallQuestPlacements.Matches(destination, projected)
+                    || !projected.QuestMarkers.Any(marker => marker.Id == applied.MarkerId))
+                    throw new ArgumentException($"Saved quest placement '{operation.Id}' names an unavailable profile or marker.");
+            }
 
         HashSet<(int Region, int Index)> locations = [.. definitions.Locations.Records.Select(value => (value.Region, value.Index))];
         RequireSite(Site.Active, locations, "active site");

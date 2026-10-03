@@ -218,6 +218,8 @@ public sealed class QuestPersonSelectionTests
         Assert.True(restored.TryGet(first.InstanceId, out var saved));
         Assert.Equal(home.Binding.Building, saved!.Resources.Single().SelectedPerson!.Home!.Binding.Building);
         Assert.Equal(firstPerson.Text, saved.Resources.Single().Text);
+        var malformed = saved with { Resources = [saved.Resources.Single() with { Text = null }] };
+        Assert.Contains("invalid Person home meaning", Assert.Throws<ArgumentException>(malformed.ValidateShape).Message);
         restored.Complete(first.InstanceId, "completed");
         Assert.False(restored.ClaimsBuilding(site.Id, claimed));
     }

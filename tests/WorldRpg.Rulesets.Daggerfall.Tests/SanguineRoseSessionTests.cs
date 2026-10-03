@@ -257,9 +257,11 @@ public sealed class SanguineRoseSessionTests
         private ulong _step;
         internal int Condition => Session.State.ItemInstances.RequireUnique(Source).CurrentCondition;
         internal string Message => Engine.PublishedNested("inventory", "message")!;
-        internal Fixture(bool appearance = true, string magicItemKey = "magic-item.0004")
+        internal Fixture(bool appearance = true, string magicItemKey = "magic-item.0004", DaggerfallDefinitions? definitions = null,
+            Func<DaggerfallSiteProfile, DaggerfallSiteProfile>? prepareInputs = null)
         {
             var inputs = ReadInputs(TestData.RepositoryRoot);
+            if (prepareInputs is not null) inputs = prepareInputs(inputs);
             Inputs = appearance ? inputs : new DaggerfallSiteProfile(inputs.Project, inputs.SpatialArtifact, inputs.StaticMesh,
                 inputs.WorldAppearance, inputs.InitialLook, inputs.Materials, inputs.ActorSprites,
                 inputs.MobileSprites.Where(entry => entry.Key != 27).ToDictionary(), inputs.Audio, inputs.ClassicPresentation,
@@ -269,7 +271,7 @@ public sealed class SanguineRoseSessionTests
             Castle = DaggerfallSiteContent.Read(FullContent(TestData.RepositoryRoot),
                 File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
             var identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-            Composition = new(TestPayload.Definitions, Inputs, DaggerfallTuning.Defaults, identity);
+            Composition = new(definitions ?? TestPayload.Definitions, Inputs, DaggerfallTuning.Defaults, identity);
             (Engine, Spatial, Perception, Appearance) = CreateEngine();
             Session = DaggerfallSession.StartNew(Engine.Context, Composition);
             Session.State.PlayerControl.MoveTo(new Vector3(0, 2, 0));
