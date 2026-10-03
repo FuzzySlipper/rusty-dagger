@@ -41,6 +41,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     internal IReadOnlyCollection<Appearance> RetainedAppearances => retainedAppearances;
     private readonly HashSet<Appearance> retainedAppearances = new(ReferenceEqualityComparer.Instance);
     private ulong nextHandle = 1;
+    private readonly Dictionary<ulong, ulong> liveLightIds = [];
 
     public RenderResourceInfo OpenResource(RenderResourceRequest request)
     {
@@ -150,7 +151,11 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     }
     public Light CreateLight(LightRequest request) => NewLight(request);
     public void UpdateLight(LightUpdateRequest request) => LightUpdates.Add(request);
-    public Light ReplaceLight(LightUpdateRequest request) => NewLight(request.Replacement);
+    public Light ReplaceLight(LightUpdateRequest request)
+    {
+        liveLightIds.Remove(request.Light.Handle.Value);
+        return NewLight(request.Replacement);
+    }
     public LightReadout ReadLight(Light light) => default;
     public PresentationReadout ReadPresentation() => default;
 
@@ -171,9 +176,14 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
         });
         return value;
     }
+    // Engine refuses a logical light ID that another live light owns, as CSHARP_LIGHT_LOGICAL_ID.
     private Light NewLight(LightRequest request)
     {
+        if (liveLightIds.ContainsValue(request.LogicalId))
+            throw new InvalidOperationException($"CSHARP_LIGHT_LOGICAL_ID: logical light id {request.LogicalId} is already owned by a live light");
         LightRequests.Add(request);
-        return new(new LightHandle(nextHandle++), () => { DisposedLights++; releases.Add("light"); });
+        ulong handle = nextHandle++;
+        liveLightIds.Add(handle, request.LogicalId);
+        return new(new LightHandle(handle), () => { liveLightIds.Remove(handle); DisposedLights++; releases.Add("light"); });
     }
 }
