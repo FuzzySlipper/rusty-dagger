@@ -19,7 +19,7 @@
     <RustyEngineProductUiEntry>workbench.js</RustyEngineProductUiEntry>
     <!-- The SDK reruns tsc only when ../sprite-ui or a listed input changes. -->
     <RustyEngineProductUiSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../sprite-ui'))</RustyEngineProductUiSourceRoot>
-    <RustyEngineProductUiBuildCommand>mkdir -p &quot;$(MSBuildThisFileDirectory)../sprite-ui/engine-types&quot; &amp;&amp; (cmp -s &quot;$(RustyEngineProductUiTypes)&quot; &quot;$(MSBuildThisFileDirectory)../sprite-ui/engine-types/rusty-engine-product-ui.d.ts&quot; || cp &quot;$(RustyEngineProductUiTypes)&quot; &quot;$(MSBuildThisFileDirectory)../sprite-ui/engine-types/rusty-engine-product-ui.d.ts&quot;) &amp;&amp; npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc -p &quot;$(MSBuildThisFileDirectory)../sprite-ui/tsconfig.json&quot; --outDir &quot;$(RustyEngineProductUiRoot)&quot;</RustyEngineProductUiBuildCommand>
+    <RustyEngineProductUiBuildCommand>npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc -p &quot;$(MSBuildThisFileDirectory)../sprite-ui/tsconfig.json&quot; --outDir &quot;$(RustyEngineProductUiRoot)&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductUiProjectionStream>worldrpg.sprite-workbench</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>worldrpg.sprite-workbench.snapshot.v1</RustyEngineProductUiProjectionContract>
     <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
@@ -50,5 +50,11 @@
     </ItemGroup>
     <Copy SourceFiles="@(WorkbenchAtlas)" DestinationFiles="@(WorkbenchAtlas->'$(RustyEngineProductUiRoot)/atlas/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="../sprite-ui/workbench.css" DestinationFolder="$(RustyEngineProductUiRoot)" Condition="Exists('../sprite-ui/workbench.css')" SkipUnchangedFiles="true" />
+  </Target>
+  <!-- The UI compiles against the pair's declarations, copied beside its
+       sources; copying is MSBuild's, so the command above runs the same under
+       cmd.exe and sh. -->
+  <Target Name="CopyEngineUiTypes" BeforeTargets="BuildRustyEngineProductUi">
+    <Copy SourceFiles="$(RustyEngineProductUiTypes)" DestinationFolder="$(MSBuildThisFileDirectory)../sprite-ui/engine-types" SkipUnchangedFiles="true" />
   </Target>
 </Project>
