@@ -22,7 +22,7 @@ public sealed class CrimeCallerSessionTests
         f.Steal(s, 2);
         var attempt = Assert.Single(s.State.Crime.Attempts);
         Assert.Equal(DaggerfallCrimeAttemptOutcome.PropertyTransferred, attempt.Outcome);
-        Assert.Equal(2000, attempt.AffectedActorOrOwnerId);
+        Assert.Equal(f.TargetId, attempt.AffectedActorOrOwnerId);
         Assert.Equal(s.Site.Region, attempt.Region);
         Assert.Equal(gold + 6, s.State.Currency.Read().Gold);
         var stack = Assert.Single(s.State.Inventory.Read().Stacks, value => value.Id.Value.StartsWith("daggerfall.pickpocket."));
@@ -98,14 +98,31 @@ public sealed class CrimeCallerSessionTests
     {
         using Fixture f = new(); var s = f.Session; f.Civilian(s);
         s.State.Actors.Player.Actor.Get<CombatContributions>().Rules.Add(new ForceDamage(lethal ? 10000 : 0));
-        s.ResolveExplicitMelee(new(1, 2000, 8, 10, .125));
+        s.ResolveExplicitMelee(new(1, f.TargetId, 8, 10, .125));
         var crime = Assert.Single(s.State.Crime.Incidents);
         Assert.Equal(lethal ? DaggerfallCrimeKind.Murder : DaggerfallCrimeKind.Assault, crime.Crime);
         Assert.Equal(lethal ? DaggerfallCrimeGuildCredit.CivilianMurder : DaggerfallCrimeGuildCredit.None, crime.GuildCredit);
         // A refused repeat of the same admitted attack does not publish another legal consequence.
-        s.ResolveExplicitMelee(new(1, 2000, 8, 10, .125));
+        s.ResolveExplicitMelee(new(1, f.TargetId, 8, 10, .125));
         Assert.Single(s.State.Crime.Incidents);
         using var restored = f.Restore(s.CaptureSave()); Assert.Single(restored.State.Crime.Incidents);
+    }
+
+    [Fact]
+    public void Ordinary_physical_hit_defeats_the_civilian_without_enemy_combat_skills()
+    {
+        using Fixture f = new(); var s = f.Session; f.Civilian(s);
+        s.ResolveExplicitMelee(new(1, f.TargetId, 8, 10, .125));
+        Assert.True(s.State.Actors.Get(f.TargetId).IsDefeated);
+        var incident = Assert.Single(s.State.Crime.Incidents);
+        Assert.Equal(DaggerfallCrimeKind.Murder, incident.Crime);
+        Assert.Equal(f.TargetId, incident.AffectedActorOrOwnerId);
+        using var restored = f.Restore(s.CaptureSave());
+        Assert.True(restored.State.Actors.Get(f.TargetId).IsDefeated);
+        var restoredIncident = Assert.Single(restored.State.Crime.Incidents);
+        Assert.Equal(incident.Crime, restoredIncident.Crime);
+        Assert.Equal(f.TargetId, restoredIncident.AffectedActorOrOwnerId);
+        Assert.Equal(incident.GuildCredit, restoredIncident.GuildCredit);
     }
 
     [Theory]
@@ -113,9 +130,9 @@ public sealed class CrimeCallerSessionTests
     public void Civilian_guard_death_is_assault_but_actual_city_watch_death_is_murder(bool cityWatch)
     {
         using Fixture f = new(); var s = f.Session;
-        long target = 2000;
-        if (cityWatch) target = s.SpawnActor(TestPayload.Definitions.Actors.Values.First(actor => actor.MobileId == 146).Id.Value, new(new(10, 0, 10), 0));
-        else f.Civilian(s, "guard");
+        long target = cityWatch
+            ? s.SpawnActor(TestPayload.Definitions.Actors.Values.First(actor => actor.MobileId == 146).Id.Value, new(new(10, 0, 10), 0))
+            : f.Civilian(s, "guard");
         s.State.Actors.Player.Actor.Get<CombatContributions>().Rules.Add(new ForceDamage(10000));
         s.ResolveExplicitMelee(new(1, target, 8, 10, .125));
         var incident = Assert.Single(s.State.Crime.Incidents);
@@ -129,7 +146,7 @@ public sealed class CrimeCallerSessionTests
     {
         using Fixture f = new(); var s = f.Session; f.Civilian(s);
         s.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"activation-mode\",\"mode\":\"steal\"}")]));
-        s.State.PlayerControl.MoveTo(s.State.Actors.Get(2000).Position.ToVector() + 3.1f * Vector3.UnitZ);
+        s.State.PlayerControl.MoveTo(s.State.Actors.Get(f.TargetId).Position.ToVector() + 3.1f * Vector3.UnitZ);
         s.State.PlayerControl.YawRadians = 0; s.State.PlayerControl.PitchRadians = 0;
         s.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
         Assert.Single(s.State.Crime.Attempts);
@@ -141,7 +158,7 @@ public sealed class CrimeCallerSessionTests
     {
         using Fixture f = new(); var s = f.Session; f.Civilian(s);
         s.State.Actors.Player.Actor.Get<CombatContributions>().Rules.Add(new ForceMiss());
-        s.ResolveExplicitMelee(new(1, 2000, 8, 10, .125));
+        s.ResolveExplicitMelee(new(1, f.TargetId, 8, 10, .125));
         Assert.Empty(s.State.Crime.Incidents);
     }
 
@@ -157,6 +174,7 @@ public sealed class CrimeCallerSessionTests
         private readonly DaggerfallSessionComposition composition;
         private readonly IRandomService random;
         internal DaggerfallSession Session { get; }
+        internal long TargetId { get; private set; } = 2000;
         internal Fixture(bool fail = false, bool nothing = false)
         {
             random = CrimeRandom.Create(fail, nothing);
@@ -164,12 +182,12 @@ public sealed class CrimeCallerSessionTests
             Session = DaggerfallSession.StartNew(Engine().Context, composition);
             Session.ApplyProductMode(ProductMode.Playing);
         }
-        internal void Civilian(DaggerfallSession s, string role = "civilian")
+        internal long Civilian(DaggerfallSession s, string role = "civilian")
         {
             var site = s.Site.ActiveSite!;
-            s.State.Npcs.Restore([new(2000, DaggerfallNpcKind.Civilian, string.Empty,
-                new(site.Id.Region, site.Name, string.Empty), new("Breton", "Female", 0, 0, 0, 0), role,
-                ["talk"], DaggerfallNpcPresence.Active, null, null, null)]);
+            TargetId = s.State.Npcs.RegisterCivilian(new(site.Id.Region, site.Name, string.Empty),
+                new("breton", "Female", 0, 0, 0, 0), role, ["talk"]);
+            return s.MaterializeNpcActor(TargetId, new(s.State.Actors.Get(2000).Position, 0));
         }
         private EngineContextFake Engine()
         {
@@ -177,14 +195,14 @@ public sealed class CrimeCallerSessionTests
             var spatial = SpatialFake.Create(composition.StartSite.SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;
             var perception = PerceptionFake.Create();
             perception.Responder = request => request.Observers.ToArray().Any(observer => observer.Entity == 1)
-                ? Receipt(new PerceptionPair(1, 2000, 1, 1, PerceptionPairKind.Visible, 1)) : Receipt();
+                ? Receipt(new PerceptionPair(1, checked((ulong)TargetId), 1, 1, PerceptionPairKind.Visible, 1)) : Receipt();
             return EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service, random: random);
         }
         internal void Steal(DaggerfallSession s, ulong step)
         {
             if (s.ActivationMode != DaggerfallActivationMode.Steal)
                 s.Update(new ProductUpdate(OuterUpdate(step - 1), [Ui("{\"action\":\"activation-mode\",\"mode\":\"steal\"}")]));
-            AimActivationAt(s, 2000);
+            AimActivationAt(s, TargetId);
             s.Update(new ProductUpdate(OuterUpdate(step), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
         }
         internal DaggerfallSession Restore(WorldRpg.Kit.RulesetSavePayload saved) => DaggerfallSession.Restore(Engine().Context, composition, saved);
