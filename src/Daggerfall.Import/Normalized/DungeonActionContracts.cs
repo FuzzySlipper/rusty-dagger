@@ -67,7 +67,8 @@ public sealed record NormalizedDungeonAction(
     bool IsFlat = false,
     byte SoundIndex = 0,
     NormalizedVector3? Position = null,
-    byte RawIndex = 0)
+    byte RawIndex = 0,
+    NormalizedDungeonPoisonAction? Poison = null)
 {
     public NormalizedDungeonAction Canonicalize() => this;
 
@@ -76,6 +77,9 @@ public sealed record NormalizedDungeonAction(
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         if (SourceOffset <= 0) throw new ArgumentOutOfRangeException(nameof(SourceOffset));
         Position?.Validate(nameof(Position));
+        if (ActionFlag == 0x1A && Poison is null)
+            throw new InvalidOperationException($"Normalized dungeon Poison action '{Id}' requires explicit source authority or exclusion.");
+        Poison?.Validate(this);
         // Retain the RDB's raw link sentinel exactly; only positive absolute offsets can resolve to a node.
         if (NextActionId is not null)
         {
@@ -92,5 +96,24 @@ public sealed record NormalizedDungeonAction(
             if (!doorIds.Contains(DoorId))
                 throw new InvalidOperationException($"Normalized dungeon action '{Id}' refers to unknown door '{DoorId}'.");
         }
+    }
+}
+
+/// <summary>
+/// Explicit disposition of the original treasure-marker action whose poison variant is unknown.
+/// Its raw index is a sound/source byte, never an inferred poison identity.
+/// </summary>
+public sealed record NormalizedDungeonPoisonAction(string SourceRecord, string Disposition, int? PoisonId = null)
+{
+    public void Validate(NormalizedDungeonAction action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        if (Disposition != "source-unresolved" || PoisonId is not null
+            || SourceRecord != "N0000007.RDB" || action.SourceOffset != 20287
+            || action.ActionFlag != 0x1A || !action.IsFlat || action.TriggerFlag != 2
+            || action.Axis != 0 || action.Duration != 0 || action.Magnitude != 0
+            || action.SoundIndex != 7 || action.RawIndex != 7
+            || action.NextObjectOffset != -2 || action.NextActionId is not null || action.DoorId is not null)
+            throw new InvalidOperationException($"Normalized dungeon Poison action '{action.Id}' has no approved poison identity or source-record exclusion.");
     }
 }

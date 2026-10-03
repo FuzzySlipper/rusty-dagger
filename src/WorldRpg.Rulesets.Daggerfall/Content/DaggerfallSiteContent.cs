@@ -185,7 +185,7 @@ internal static class DaggerfallSiteContent
     /// operation. The graph runtime owns trigger admission and action-family policy; content admission
     /// only validates stable identities, raw parameters, and the links/doors this closure carries.
     /// </summary>
-    private static IReadOnlyList<DaggerfallDungeonActionDefinition> ReadNormalizedActions(
+    internal static IReadOnlyList<DaggerfallDungeonActionDefinition> ReadNormalizedActions(
         ReadOnlyMemory<byte>? bytes,
         IReadOnlyList<DaggerfallRdbDoorDefinition> doors,
         DaggerfallContentDiagnostics diagnostics)
@@ -236,6 +236,20 @@ internal static class DaggerfallSiteContent
                     ? Byte(action, "rawIndex", diagnostics)
                     : soundIndex;
                 Vector3? sourcePosition = OptionalObjectVector3(action, "position", $"normalized dungeon action '{id}' position", diagnostics);
+                DaggerfallDungeonPoisonAction? poison = null;
+                if (action.TryGetProperty("poison", out JsonElement poisonValue) && poisonValue.ValueKind != JsonValueKind.Null)
+                {
+                    JsonElement source = DaggerfallBaseContent.Object(poisonValue, $"normalized dungeon action '{id}' poison", diagnostics);
+                    DaggerfallBaseContent.RejectDuplicateProperties(source, $"normalized dungeon action '{id}' poison", diagnostics);
+                    int? poisonId = null;
+                    if (source.TryGetProperty("poisonId", out JsonElement declared) && declared.ValueKind != JsonValueKind.Null)
+                    {
+                        if (declared.ValueKind == JsonValueKind.Number && declared.TryGetInt32(out int variant)) poisonId = variant;
+                        else diagnostics.Add($"Normalized dungeon Poison action '{id}' poisonId must be an integer or null.");
+                    }
+                    poison = new(DaggerfallBaseContent.Text(source, "sourceRecord", diagnostics),
+                        DaggerfallBaseContent.Text(source, "disposition", diagnostics), poisonId);
+                }
 
                 DaggerfallDungeonActionDefinition parsed = new(
                     id,
@@ -251,7 +265,15 @@ internal static class DaggerfallSiteContent
                     isFlat,
                     SoundIndex: soundIndex,
                     SourcePosition: sourcePosition,
-                    RawIndex: rawIndex);
+                    RawIndex: rawIndex,
+                    Poison: poison);
+                try
+                {
+                    if (actionFlag == (byte)DaggerfallDungeonActionFlag.Poison && poison is null)
+                        diagnostics.Add($"Normalized dungeon Poison action '{id}' requires explicit source authority or exclusion.");
+                    poison?.Validate(parsed);
+                }
+                catch (ArgumentException exception) { diagnostics.Add(exception.Message); }
                 actions.Add(parsed);
                 if (!actionIds.Add(id))
                     diagnostics.Add($"Normalized world repeats dungeon action '{id}'.");

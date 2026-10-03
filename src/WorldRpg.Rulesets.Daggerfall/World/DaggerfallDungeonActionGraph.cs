@@ -99,12 +99,16 @@ internal sealed record DaggerfallDungeonActionDefinition(
     double CooldownSeconds = 0d,
     byte SoundIndex = 0,
     Vector3? SourcePosition = null,
-    byte RawIndex = 0)
+    byte RawIndex = 0,
+    DaggerfallDungeonPoisonAction? Poison = null)
 {
     internal DaggerfallDungeonActionDefinition Validate(IReadOnlySet<string> actionIds)
     {
         if (string.IsNullOrWhiteSpace(Id)) throw new ArgumentException("A dungeon action requires a stable id.", nameof(Id));
         if (SourceOffset <= 0) throw new ArgumentOutOfRangeException(nameof(SourceOffset));
+        if (ActionFlag == (byte)DaggerfallDungeonActionFlag.Poison && Poison is null)
+            throw new ArgumentException($"Dungeon Poison action '{Id}' requires explicit source authority or exclusion.", nameof(Poison));
+        Poison?.Validate(this);
         if (SourcePosition is Vector3 position && (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z)))
             throw new ArgumentOutOfRangeException(nameof(SourcePosition));
         if (NextActionId is not null)
@@ -117,6 +121,21 @@ internal sealed record DaggerfallDungeonActionDefinition(
         if (!double.IsFinite(CooldownSeconds) || CooldownSeconds < 0d)
             throw new ArgumentOutOfRangeException(nameof(CooldownSeconds));
         return this;
+    }
+}
+
+/// <summary>The admitted original-record exclusion; no poison variant was established for it.</summary>
+internal sealed record DaggerfallDungeonPoisonAction(string SourceRecord, string Disposition, int? PoisonId = null)
+{
+    internal void Validate(DaggerfallDungeonActionDefinition action)
+    {
+        if (Disposition != "source-unresolved" || PoisonId is not null
+            || SourceRecord != "N0000007.RDB" || action.SourceOffset != 20287
+            || action.ActionFlag != (byte)DaggerfallDungeonActionFlag.Poison || !action.IsFlat || action.TriggerFlag != 2
+            || action.Axis != 0 || action.Duration != 0 || action.Magnitude != 0
+            || action.SoundIndex != 7 || action.RawIndex != 7
+            || action.NextObjectOffset != -2 || action.NextActionId is not null || action.DoorId is not null)
+            throw new ArgumentException($"Dungeon Poison action '{action.Id}' has no approved poison identity or source-record exclusion.");
     }
 }
 
@@ -392,6 +411,9 @@ internal sealed class DaggerfallDungeonActionGraph
 
     private DaggerfallDungeonActionExecution Apply(DaggerfallDungeonActionDefinition definition, bool missingTarget)
     {
+        if (definition.Poison is { } poison)
+            return new(definition.Id, DaggerfallDungeonActionOutcome.UnsupportedAction,
+                Diagnostic: $"Dungeon Poison action '{definition.Id}' at {poison.SourceRecord}:{definition.SourceOffset} is source-unresolved: no poison variant or effect is established; the owner-approved source-record exclusion preserves raw/link/sound facts without delivering poison.");
         if (definition.ActionFlag == 0)
         {
             return new(definition.Id, DaggerfallDungeonActionOutcome.NoAction,
