@@ -11,6 +11,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// </summary>
 internal sealed class DaggerfallSiteLighting : IDisposable
 {
+    // Engine refuses a logical light ID another live light owns. A replacement session builds its site
+    // before the session it replaces is disposed, so each lighting instance names its lights apart.
+    private static long s_lastInstance;
     private readonly IReadOnlyList<Light> _lights;
     private readonly List<(Light Light, LightRequest Request)> _points = [];
     private readonly IGraphicsService _graphics;
@@ -33,7 +36,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _camera = camera;
         _profileKind = inputs.ProfileKind;
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
-        _ambientId = StableLogicalId(inputs.ProfileKey.LogicalId, "ambient");
+        long instance = Interlocked.Increment(ref s_lastInstance);
+        _ambientId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "ambient");
         _ambientLevel = AmbientLevel(calendar);
 
         List<Light> created = [];
@@ -42,7 +46,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         {
             foreach (DaggerfallSiteLight light in inputs.Lights)
             {
-                ulong lightId = StableLogicalId(inputs.ProfileKey.LogicalId, light.Id);
+                ulong lightId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, light.Id);
                 if (!lightIds.Add(lightId))
                     throw new InvalidOperationException($"Site light '{light.Id}' collides with another admitted light identity.");
                 LightRequest request = new(
@@ -137,14 +141,14 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
-    private static ulong StableLogicalId(string profile, string id)
+    private static ulong LogicalLightId(string profile, long instance, string id)
     {
         const ulong offset = 14695981039346656037UL;
         const ulong prime = 1099511628211UL;
         const ulong jsonSafeMaximum = (1UL << 53) - 1UL;
         ulong hash = offset;
-        foreach (char value in $"site-light:{profile}:{id}") { hash ^= value; hash *= prime; }
-        // Engine publishes light IDs through JSON; keep stable identities inside that exact range.
+        foreach (char value in $"site-light:{profile}:{instance}:{id}") { hash ^= value; hash *= prime; }
+        // Engine publishes light IDs through JSON; keep identities inside that exact range.
         return (hash % jsonSafeMaximum) + 1UL;
     }
 }
