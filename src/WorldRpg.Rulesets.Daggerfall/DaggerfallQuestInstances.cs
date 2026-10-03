@@ -526,6 +526,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     private Func<DaggerfallSiteId, long>? _travelMinutes;
     private Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> _textContext = _ => DaggerfallQuestMessageContext.Empty;
     private Action<string, string>? _appendNote;
+    private Action<string>? _removeCarriedQuestItems;
     private DaggerfallQuestPlaceAllocator? _placeAllocator;
     private DaggerfallQuestPersonAllocator? _personAllocator;
     private DaggerfallQuestResourceAllocator? _resourceAllocator;
@@ -570,6 +571,10 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         _resourceAllocator = allocator ?? throw new ArgumentNullException(nameof(allocator));
 
     internal void BindNotebook(Action<string, string> appendNote) => _appendNote = appendNote ?? throw new ArgumentNullException(nameof(appendNote));
+
+    /// <summary>The session supplies canonical item removal; quest state owns only terminal links.</summary>
+    internal void BindItemCleanup(Action<string> removeCarriedQuestItems) =>
+        _removeCarriedQuestItems = removeCarriedQuestItems ?? throw new ArgumentNullException(nameof(removeCarriedQuestItems));
 
     /// <summary>Uses the session's one route calculator for travel-derived quest deadlines.</summary>
     internal void BindTravelMinutes(Func<DaggerfallSiteId, long> travelMinutes)
@@ -823,9 +828,17 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         instance.Succeeded = lifecycle == DaggerfallQuestLifecycle.Completed;
         instance.PendingEndPasses = 0;
         instance.TerminalMessageId = null;
-        instance.Placements = [.. instance.Placements.Where(value => value.Applied is not null)];
+        ClearWorldLinks(instance);
         ValidateRuntime(instance);
         return instance.Capture();
+    }
+
+    private void ClearWorldLinks(DaggerfallQuestRuntimeInstance instance)
+    {
+        // Selected resource identities and text remain for journal/post-quest conversation.
+        // Visible actors continue under their canonical roster/registry lifetime.
+        instance.Placements = [];
+        _removeCarriedQuestItems?.Invoke(instance.InstanceId);
     }
 
     private DaggerfallQuestRuntimeInstance Active(string instanceId)
@@ -948,7 +961,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 Messages.RetainJournal(instance, _textContext);
                 instance.PendingEndPasses = 0;
                 instance.TerminalMessageId = null;
-                instance.Placements = [.. instance.Placements.Where(value => value.Applied is not null)];
+                ClearWorldLinks(instance);
                 TerminateChildren(instance);
                 instance.Lifecycle = DaggerfallQuestLifecycle.Tombstoned;
                 instance.TombstoneAtSeconds = now;
@@ -1012,7 +1025,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
             child.Succeeded = false;
             child.PendingEndPasses = 0;
             child.TerminalMessageId = null;
-            child.Placements = [.. child.Placements.Where(value => value.Applied is not null)];
+            ClearWorldLinks(child);
         }
         foreach (string id in _pendingStarts.Values.Where(start => start.ParentInstanceId == parent.InstanceId).Select(start => start.InstanceId).ToArray())
             _pendingStarts.Remove(id);

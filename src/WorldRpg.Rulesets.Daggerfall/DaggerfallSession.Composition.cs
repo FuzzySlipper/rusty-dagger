@@ -435,6 +435,7 @@ internal sealed partial class DaggerfallSession
             _inventoryUi.UseGroundDrops(_groundContainers, () => State.PlayerControl.Position);
             _notebook = new DaggerfallBookNotebook(definitions, new DaggerfallTextResolver(definitions.Text));
             assembled.Quests.BindNotebook(_notebook.AddQuestNote);
+            assembled.Quests.BindItemCleanup(RemoveCarriedQuestItems);
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook,
                 useDrug: variant => UseDrug(variant) == DaggerfallPoisonAdmission.Admitted,
                 useOghma: () =>
