@@ -125,6 +125,37 @@ public sealed class QuestItemLifecycleTests
         Assert.Single(state.ItemInstances.UniqueItems, value => value.Value.QuestId == "items");
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Permanent_taken_item_survives_terminal_custody_retirement_and_encoded_restore(bool stackable)
+    {
+        using var f = Fixture(stackable: stackable);
+        var state = f.Session.State;
+        Start(state);
+        state.Quests.GrantItem("items", "gift");
+        var original = Item(state).Binding;
+        state.Quests.TakeItem("items", "gift");
+        state.Quests.MakeItemPermanent("items", "gift");
+        using (var pending = f.Restore())
+        {
+            pending.State.Quests.Complete("items", "permanent reward");
+            Assert.Empty(pending.State.QuestItems.Custody);
+            if (stackable) Assert.Null(pending.State.ItemInstances.RequireStack(DaggerfallItemOwner.Player, InventoryStackId.Parse(original.Stacks.Single().StackId)).QuestId);
+            else Assert.Equal(DaggerfallItemOwner.Player, pending.State.ItemInstances.RequireUnique(original.UniqueItemIds.Single()).Owner);
+        }
+        state.Quests.Complete("items", "permanent reward");
+        using var restored = f.Restore();
+        Assert.Empty(restored.State.QuestItems.Custody);
+        if (stackable) Assert.Null(restored.State.ItemInstances.RequireStack(DaggerfallItemOwner.Player, InventoryStackId.Parse(original.Stacks.Single().StackId)).QuestId);
+        else
+        {
+            var retained = restored.State.ItemInstances.RequireUnique(original.UniqueItemIds.Single());
+            Assert.Equal(DaggerfallItemOwner.Player, retained.Owner);
+            Assert.Null(retained.QuestId);
+        }
+    }
+
     [Fact]
     public void Split_stack_reoffer_keeps_canonical_current_quantity_instead_of_adding_copies()
     {

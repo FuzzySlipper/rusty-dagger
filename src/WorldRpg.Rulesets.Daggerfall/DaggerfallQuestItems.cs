@@ -238,6 +238,11 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
     {
         if (!_custody.TryGetValue(instanceId, out var custody)) return;
         var owner = DaggerfallItemOwner.Quest(custody.Id);
+        // Permanent prototypes remain real items. Return retained rewards to the
+        // player before retiring their temporary quest owner.
+        var permanentUnique = state.ItemInstances.UniqueItems.Where(value => value.Value.Owner == owner && value.Value.QuestId is null).ToArray();
+        var permanentStacks = state.ItemInstances.StackItems.Where(value => value.Owner == owner && value.Metadata.QuestId is null).ToArray();
+        if (permanentUnique.Length != 0 || permanentStacks.Length != 0) Move(permanentUnique, permanentStacks, DaggerfallItemOwner.Player);
         foreach (var item in state.ItemInstances.UniqueItems.Where(value => value.Value.Owner == owner).ToArray()) destroyUnique(item.Key);
         foreach (var stack in state.ItemInstances.StackItems.Where(value => value.Owner == owner).ToArray()) consumeStack(owner, stack.Stack);
         RetireCustody(custody);
