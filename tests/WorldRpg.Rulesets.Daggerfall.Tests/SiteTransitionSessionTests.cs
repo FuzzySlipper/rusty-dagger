@@ -130,6 +130,82 @@ public sealed class SiteTransitionSessionTests
     }
 
     [Fact]
+    public void Inactive_site_releases_inventory_owners_and_restores_equipment_and_corpse_values_once()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile source = ReadInputs(root);
+        ProductContent admitted = FullContent(root);
+        DaggerfallSiteProfile destination = ReadProfile(root, admitted, definitions, "daggerfall.castle-necromoghan.json");
+        DaggerfallSiteProfiles profiles = new([source, destination]);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        DaggerfallSessionComposition composition = new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles };
+        using DaggerfallSession session = DaggerfallSession.StartNew(EngineFor(source).Context, composition);
+        long equippedActor = session.SpawnActor("encounter-warrior", new ActorPose(new WorldPoint(10, 0, 10), 0), level: 4);
+        long defeatedActor = session.SpawnActor("encounter-warrior", new ActorPose(new WorldPoint(20, 0, 20), 0), level: 4);
+        session.State.Actors.Get(defeatedActor).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60;
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, defeatedActor, 1, 1, .125));
+        CorpseContainer corpse = session.Corpses[defeatedActor];
+        EntityId actorOwner = session.State.Actors.Get(equippedActor).Actor.Entity;
+        EntityId playerOwner = session.State.Actors.Player.Actor.Entity;
+        EntityId[] itemEntities = [.. session.State.ActorInventories.InventoryFor(equippedActor)!.Read().UniqueItems.Select(item => item.Entity),
+            .. session.State.Containers.Read(corpse.Owner).UniqueItems.Select(item => item.Entity)];
+        Assert.NotEmpty(itemEntities);
+        DurableIdentityReference[] itemIdentities = [.. itemEntities.Select(session.State.Actors.Entities.IdentityOf)];
+        DaggerfallSavePayload before = DaggerfallSavePayload.Read(session.CaptureSave());
+        DaggerfallActorInventorySave inventoryBefore = Assert.Single(before.ActorInventories, inventory => inventory.EntityId == equippedActor);
+        Assert.NotEmpty(inventoryBefore.Inventory.Equipment);
+        DaggerfallCorpseSave corpseBefore = Assert.Single(before.Corpses, value => value.ActorId == defeatedActor);
+        int inventoryOwnerCount = session.State.InventoryStore.InventoryOwners.Count;
+        int equipmentOwnerCount = session.State.InventoryStore.EquipmentOwners.Count;
+        int itemCount = session.State.InventoryStore.ItemEntities.Count;
+
+        Assert.True(session.TryTransitionTo(destination.ProfileKey));
+        Assert.DoesNotContain(actorOwner, session.State.InventoryStore.InventoryOwners);
+        Assert.DoesNotContain(actorOwner, session.State.InventoryStore.EquipmentOwners);
+        Assert.DoesNotContain(corpse.Owner, session.State.InventoryStore.InventoryOwners);
+        Assert.Contains(playerOwner, session.State.InventoryStore.InventoryOwners);
+        foreach (EntityId item in itemEntities) Assert.DoesNotContain(item, session.State.InventoryStore.ItemEntities);
+        foreach (DurableIdentityReference item in itemIdentities)
+            Assert.Equal(DurableEntityResolution.Unloaded, session.State.Actors.Entities.Classify(item, session.State.Npcs.Identities!));
+        RulesetSavePayload inactiveSave = session.CaptureSave();
+
+        Assert.True(session.TryTransitionTo(source.ProfileKey));
+        Assert.NotEqual(actorOwner, session.State.Actors.Get(equippedActor).Actor.Entity);
+        AssertReturnedValues(session);
+        Assert.True(session.TryTransitionTo(destination.ProfileKey));
+        Assert.True(session.TryTransitionTo(source.ProfileKey));
+        AssertReturnedValues(session);
+
+        using DaggerfallSession restored = DaggerfallSession.Restore(EngineFor(destination).Context, composition, inactiveSave);
+        foreach (DurableIdentityReference item in itemIdentities)
+            Assert.Equal(DurableEntityResolution.Unloaded, restored.State.Actors.Entities.Classify(item, restored.State.Npcs.Identities!));
+        Assert.True(restored.TryTransitionTo(source.ProfileKey));
+        AssertReturnedValues(restored);
+
+        void AssertReturnedValues(DaggerfallSession current)
+        {
+            DaggerfallSavePayload saved = DaggerfallSavePayload.Read(current.CaptureSave());
+            Assert.Equal(JsonSerializer.Serialize(inventoryBefore), JsonSerializer.Serialize(Assert.Single(saved.ActorInventories, inventory => inventory.EntityId == equippedActor)));
+            Assert.Equal(JsonSerializer.Serialize(corpseBefore), JsonSerializer.Serialize(Assert.Single(saved.Corpses, value => value.ActorId == defeatedActor)));
+            Assert.Equal(inventoryOwnerCount, current.State.InventoryStore.InventoryOwners.Count);
+            Assert.Equal(equipmentOwnerCount, current.State.InventoryStore.EquipmentOwners.Count);
+            Assert.Equal(itemCount, current.State.InventoryStore.ItemEntities.Count);
+            foreach (DurableIdentityReference item in itemIdentities)
+                Assert.Equal(DurableEntityResolution.Materialized, current.State.Actors.Entities.Classify(item, current.State.Npcs.Identities!));
+        }
+
+        EngineContextFake EngineFor(DaggerfallSiteProfile active)
+        {
+            List<string> releases = [];
+            ContentFake content = new(releases);
+            PopulateContent(content, source); PopulateContent(content, destination);
+            return EngineContextFake.Create(content, SpatialFake.Create(active.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        }
+    }
+
+    [Fact]
     public void Site_light_resources_retire_on_transition_and_rebuild_on_save_restore()
     {
         string root = TestData.RepositoryRoot;
