@@ -198,6 +198,11 @@ internal sealed class DaggerSessionPersistence
             DungeonText = _dungeonText.Capture(),
             Encounters = encounters.Capture(),
             Notebook = _notebook.Capture(),
+            QuestCustody = State.QuestItems.Custody.OrderBy(value => value.Id).Select(value =>
+            {
+                var (stacks, uniques) = CaptureContents(State.Containers.Read(value.Owner), DaggerfallItemOwner.Quest(value.Id));
+                return new DaggerfallQuestCustodySave(value.InstanceId, value.Id, new(stacks, uniques, []));
+            }).ToArray(),
             GroundContainers = _groundContainers.Persisted.OrderBy(container => container.Id).Select(container =>
             {
                 (DaggerfallStackSave[] stacks, DaggerfallUniqueSave[] uniques) = CaptureContents(State.Containers.Read(container.Owner), DaggerfallItemOwner.Ground(container.Id));
@@ -345,6 +350,7 @@ internal sealed class DaggerSessionPersistence
         ApplyInventory(saved.Inventory, State.Inventory, State.Equipment, DaggerfallItemOwner.Player);
         ApplyActorInventories(saved.ActorInventories);
         _groundContainers.Restore(saved.GroundContainers);
+        State.QuestItems.Restore(saved.QuestCustody);
         if (saved.Wagon is { } wagon) State.Wagon.Restore(wagon);
         State.Transport.Restore(saved.Transport);
         _notebook.Restore(saved.Notebook);

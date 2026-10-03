@@ -119,6 +119,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Persistent player-dropped containers and their current Engine-backed contents.</summary>
     [JsonRequired]
     public DaggerfallGroundContainerSave[] GroundContainers { get; init; } = [];
+    /// <summary>Actual inventory owners retaining canonical taken quest items for reoffer.</summary>
+    [JsonRequired]
+    public DaggerfallQuestCustodySave[] QuestCustody { get; init; } = [];
     /// <summary>Accepted service work that has not reached its concrete service-specific completion.</summary>
     [JsonRequired]
     public DaggerfallServiceStateSave Services { get; init; } = new([]);
@@ -473,6 +476,13 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException($"Saved ground container {ground.Id} is not live in the persisted identity ledger.");
             ValidateInventory(ground.Inventory, definitions, uniqueItems, DaggerfallItemOwner.Ground(ground.Id), requireEquipment: false);
         }
+        foreach (var custody in QuestCustody)
+        {
+            if (!containerIdentities.Add(checked((ulong)custody.Id))) throw new ArgumentException("Quest custody container collides with another owner.");
+            if (savedLedger.Classify(new(DurableIdentityKind.Container, checked((ulong)custody.Id))) != DurableIdentityClassification.Live)
+                throw new ArgumentException("Quest custody container is not live in the identity ledger.");
+            ValidateInventory(custody.Inventory, definitions, uniqueItems, DaggerfallItemOwner.Quest(custody.Id), requireEquipment: false);
+        }
         if (Wagon is { } wagon)
         {
             wagon.Validate();
@@ -565,6 +575,7 @@ internal sealed record DaggerfallSavePayload(
             if (!combatants.Contains(cooldown.AttackerId))
                 throw new ArgumentException($"Saved attack cooldown refers to missing actor {cooldown.AttackerId}.");
         HashSet<(string Scope, long OwnerId, string StackId)> questStacks = [];
+        foreach (var custody in QuestCustody) AddQuestStacks(questStacks, DaggerfallItemOwner.Quest(custody.Id), custody.Inventory.Stacks);
         AddQuestStacks(questStacks, DaggerfallItemOwner.Player, Inventory.Stacks);
         foreach (DaggerfallCorpseSave corpse in Corpses)
             AddQuestStacks(questStacks, DaggerfallItemOwner.Corpse(corpse.ActorId), corpse.Stacks);
@@ -641,6 +652,7 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(Inventory);
         ArgumentNullException.ThrowIfNull(Corpses);
         ArgumentNullException.ThrowIfNull(GroundContainers);
+        ArgumentNullException.ThrowIfNull(QuestCustody);
         ArgumentNullException.ThrowIfNull(Services);
         Services.Validate();
         ArgumentNullException.ThrowIfNull(QuestTraining);
@@ -784,6 +796,16 @@ internal sealed record DaggerfallSavePayload(
         foreach (DaggerfallCorpseSave corpse in delta.Corpses)
             if (!containerIdentities.Add(corpse.ContainerId))
                 throw new ArgumentException("Saved inactive corpse container identities must be distinct from active containers and each other.");
+        HashSet<string> custodyQuests = new(StringComparer.Ordinal);
+        foreach (var custody in QuestCustody)
+        {
+            if (custody.Id <= 0 || string.IsNullOrWhiteSpace(custody.InstanceId) || !custodyQuests.Add(custody.InstanceId)
+                || !Quests.Instances.Any(value => value.InstanceId == custody.InstanceId)) throw new ArgumentException("Quest custody requires a distinct known quest and positive owner identity.");
+            ArgumentNullException.ThrowIfNull(custody.Inventory);
+            custody.Inventory.Validate();
+            if (custody.Inventory.Equipment.Length != 0) throw new ArgumentException("Quest custody cannot equip items.");
+            if (!containerIdentities.Add(checked((ulong)custody.Id))) throw new ArgumentException("Quest custody identity collides with another container.");
+        }
         HashSet<long> inventoryActors = [];
         foreach (DaggerfallActorInventorySave inventory in ActorInventories)
         {

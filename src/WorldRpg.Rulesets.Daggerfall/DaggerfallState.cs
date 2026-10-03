@@ -95,6 +95,7 @@ internal sealed class DaggerfallState(
     internal DaggerfallCharacterState Character { get; } = assembled.Character;
     /// <summary>Current Daggerfall quest instances over admitted definitions and durable product bindings.</summary>
     internal DaggerfallQuestInstances Quests { get; } = assembled.Quests;
+    internal DaggerfallQuestItems QuestItems { get; set; } = null!;
     /// <summary>Live carried-weight policy over the player's canonical Engine inventory.</summary>
     internal DaggerfallEncumbrancePolicy Encumbrance { get; } = encumbrance;
     /// <summary>Inventory-backed coins, letters of credit, and the one persistent bank balance.</summary>
