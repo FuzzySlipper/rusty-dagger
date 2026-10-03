@@ -1906,6 +1906,16 @@ internal static class DaggerfallSiteContent
         }
         foreach (DaggerfallItemDefinition item in definitions.Items.Values.Where(item => item.Weapon is not null))
             if (!mappings.ContainsKey(item.Id.Value)) diagnostics.Add($"Weapon '{item.Id.Value}' has no presentation mapping.");
+        // Factory-created and enchanted weapons retain a native template identity. Join that
+        // template to its authored source weapon's admitted art instead of selecting empty hands.
+        foreach ((string itemId, string resource) in mappings.ToArray())
+        {
+            int? template = DaggerfallTemplateItemDefinitions.TemplateIndexForAuthoredItem(new(itemId));
+            if (template is null) continue;
+            foreach (DaggerfallItemDefinition item in definitions.TemplateItems.Values.Where(item =>
+                item.Weapon is not null && item.Template?.Index == template))
+                mappings.TryAdd(item.Id.Value, resource);
+        }
         string unarmed = DaggerfallBaseContent.Text(presentation, "unarmedVisual", diagnostics);
         if (!classic.Weapons.ContainsKey(unarmed)) diagnostics.Add("Unarmed presentation must select admitted weaponSprite media.");
         ClassicViewmodelStyle? viewmodel = null;
