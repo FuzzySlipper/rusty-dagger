@@ -42,7 +42,10 @@ public sealed class QuestItemLifecycleTests
         var runtime = state.Actors.Entities.Resolve(new(DurableIdentityKind.Item, id));
         foreach (var assignment in state.Equipment.Read().Assignments.Where(value => value.Slot.Value == "right-hand").ToArray()) state.Equipment.Unequip(assignment.Item);
         state.Equipment.Equip(new(runtime.Value, Item(state).SelectedItem!.Item), [new("right-hand")]);
+        DaggerfallEquipmentChange? notification = null;
+        f.Session.EquipmentMoves.Changed += value => notification = value;
         Assert.Equal(DaggerfallQuestItemResult.Changed, state.Quests.TakeItem("items", "gift"));
+        Assert.Equal(runtime.Value, Assert.Single(Assert.IsType<DaggerfallEquipmentChange>(notification).Removed).EntityId);
         Assert.False(state.Quests.HasItem("items", "gift"));
         Assert.DoesNotContain(state.Equipment.Read().Assignments, assignment => assignment.Item.EntityId == runtime.Value);
         Assert.Equal("quest", state.ItemInstances.RequireUnique(id).Owner.Scope);
@@ -55,6 +58,31 @@ public sealed class QuestItemLifecycleTests
         Assert.True(current.Stolen);
         Assert.Equal(metadata.Material, current.Material);
         Assert.Equal(metadata.Enchantment, current.Enchantment);
+    }
+
+    [Fact]
+    public void Taking_equipped_item_spell_source_uses_the_complete_equipment_refresh_owner()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0035", definitions: Definitions(false, false, false));
+        var state = f.Session.State;
+        Start(state);
+        var metadata = state.ItemInstances.RequireUnique(f.Source) with { QuestId = "items", QuestItemSymbol = "gift" };
+        state.ItemInstances.ReplaceUnique(f.Source, metadata);
+        var definition = f.Composition.Definitions.RequireItem(new(metadata.ItemId));
+        var original = Item(state);
+        state.Quests.SetResource("items", original with
+        {
+            Binding = DaggerfallQuestResourceBinding.UniqueItem(f.Source),
+            SelectedItem = new(definition.Template!.Index, new(metadata.ItemId), false, 1, metadata),
+        });
+        var slot = f.Composition.Definitions.EquipmentSlots.Values.First(value => value.AllowedClassifications.Intersect(definition.Equipment!.Classifications).Any());
+        Assert.Equal(EquipmentMoveOutcome.Applied, f.Session.EquipmentMoves.MoveToSlot(f.Item, new(slot.Id.Value)).Outcome);
+        Assert.Contains(state.Effects.Active, value => value.Context.Item?.Value == f.Source);
+        Assert.Equal(DaggerfallQuestItemResult.Changed, state.Quests.TakeItem("items", "gift"));
+        Assert.DoesNotContain(state.Effects.Active, value => value.Context.Item?.Value == f.Source);
+        Assert.Null(state.ItemInstances.RequireUnique(f.Source).HeldCast);
+        using var restored = f.Restore();
+        Assert.DoesNotContain(restored.State.Effects.Active, value => value.Context.Item?.Value == f.Source);
     }
 
     [Theory]
@@ -173,6 +201,150 @@ public sealed class QuestItemLifecycleTests
         Assert.Equal(1010, state.Quests.ItemGrantNotification("items", operation));
         Assert.Throws<ArgumentException>(() => state.Quests.ItemGrantNotification("items", operation with { MessageAlias = "99999" }));
         Assert.Empty(state.Quests.Messages.Capture().Deliveries);
+    }
+
+    [Fact]
+    public void Terminal_custody_cleanup_retires_the_actual_inventory_owner_before_entity_destruction()
+    {
+        using var f = Fixture();
+        var state = f.Session.State;
+        Start(state);
+        state.Quests.GrantItem("items", "gift");
+        state.Quests.TakeItem("items", "gift");
+        var custody = Assert.Single(state.QuestItems.Custody);
+        Assert.True(state.InventoryStore.TryGetInventory(custody.Owner, out _));
+        state.Quests.Complete("items", "done");
+        Assert.False(state.InventoryStore.TryGetInventory(custody.Owner, out _));
+        Assert.False(state.Actors.Entities.TryResolve(new(DurableIdentityKind.Container, checked((ulong)custody.Id)), out _));
+        using var restored = f.Restore();
+        Assert.Empty(restored.State.QuestItems.Custody);
+    }
+
+    [Fact]
+    public void Failed_first_grant_leaves_no_seeded_item_binding_or_custody_owner()
+    {
+        using var f = Fixture(stackable: true);
+        var state = f.Session.State;
+        Start(state);
+        var original = Item(state);
+        ulong maximum = f.Composition.Definitions.RequireItem(new(original.SelectedItem!.Item.Value)).MaximumQuantity;
+        state.Quests.SetResource("items", original with { SelectedItem = original.SelectedItem with { Quantity = maximum + 1 } });
+        var before = state.Inventory.Read();
+        Assert.Throws<MechanicsException>(() => state.Quests.GrantItem("items", "gift"));
+        Assert.Equal(before.Stacks, state.Inventory.Read().Stacks);
+        Assert.Equal(before.UniqueItems, state.Inventory.Read().UniqueItems);
+        Assert.Equal(DaggerfallQuestResourceBindingKind.Pending, Item(state).Binding.Kind);
+        Assert.Empty(state.QuestItems.Custody);
+        Assert.DoesNotContain(state.ItemInstances.StackItems, value => value.Metadata.QuestId == "items");
+        state.Quests.SetResource("items", original);
+        Assert.Equal(DaggerfallQuestItemResult.Changed, state.Quests.GrantItem("items", "gift"));
+    }
+
+    [Fact]
+    public void Engine_rejected_take_returns_branchable_result_without_partial_player_or_metadata_changes()
+    {
+        using var f = Fixture(stackable: true);
+        var state = f.Session.State;
+        Start(state);
+        state.Quests.GrantItem("items", "gift");
+        var primary = InventoryStackId.Parse(Item(state).Binding.Stacks.Single().StackId);
+        state.Quests.TakeItem("items", "gift");
+        var custody = Assert.Single(state.QuestItems.Custody);
+        state.Quests.GrantItem("items", "gift");
+        var prototype = Item(state).SelectedItem!;
+        ulong maximum = f.Composition.Definitions.RequireItem(new(prototype.Item.Value)).MaximumQuantity;
+        state.Containers.Seed(custody.Owner, [new(prototype.Item, maximum, Stack: primary)]);
+        state.ItemInstances.RegisterStack(DaggerfallItemOwner.Quest(custody.Id), primary, prototype.Metadata);
+        var before = state.Inventory.Read();
+        Assert.Equal(DaggerfallQuestItemResult.Unavailable, state.Quests.TakeItem("items", "gift"));
+        Assert.Equal(before.Stacks, state.Inventory.Read().Stacks);
+        Assert.True(state.Quests.HasItem("items", "gift"));
+        Assert.Equal(DaggerfallItemOwner.Player, state.ItemInstances.RequireStack(DaggerfallItemOwner.Player, primary).Owner);
+        Assert.Equal(maximum, state.Containers.Read(custody.Owner).Stacks.Single().Quantity);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Pending_legal_clones_can_be_taken_into_one_canonical_custody_binding_and_reoffered(bool stackable)
+    {
+        using var f = Fixture(stackable: stackable);
+        var state = f.Session.State;
+        Start(state);
+        var prototype = Item(state).SelectedItem!;
+        ulong first = 0;
+        var stack = InventoryStackId.Parse("pending.copy.1");
+        if (stackable)
+        {
+            state.Inventory.Grant(new(prototype.Item, stack, prototype.Quantity));
+            state.ItemInstances.RegisterStack(DaggerfallItemOwner.Player, stack, prototype.Metadata);
+        }
+        else
+        {
+            var id = f.Session.UniqueItemAllocator.AllocateReference();
+            first = id.Value;
+            state.Equipment.Materialize(id, prototype.Item);
+            state.ItemInstances.RegisterUnique(id.Value, prototype.Metadata);
+        }
+        Assert.Equal(DaggerfallQuestResourceBindingKind.Pending, Item(state).Binding.Kind);
+        using (var pending = f.Restore()) Assert.True(pending.State.Quests.HasItem("items", "gift"));
+        Assert.Equal(DaggerfallQuestItemResult.Changed, state.Quests.TakeItem("items", "gift"));
+        Assert.Equal(DaggerfallQuestResourceBindingKind.Item, Item(state).Binding.Kind);
+        using var restored = f.Restore();
+        restored.State.Quests.GrantItem("items", "gift");
+        if (stackable) Assert.Equal(stack.Value, Item(restored.State).Binding.Stacks.Single().StackId);
+        else Assert.Equal(first, Item(restored.State).Binding.UniqueItemIds.Single());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Encoded_save_rejects_bound_items_whose_actual_metadata_lost_quest_provenance(bool stackable)
+    {
+        using var f = Fixture(stackable: stackable);
+        var state = f.Session.State;
+        Start(state);
+        state.Quests.GrantItem("items", "gift");
+        var saved = DaggerfallSavePayload.Read(f.Session.CaptureSave());
+        var inventory = saved.Inventory;
+        if (stackable)
+        {
+            string id = Item(state).Binding.Stacks.Single().StackId;
+            inventory = inventory with { Stacks = inventory.Stacks.Select(value => value.StackId == id
+                ? value with { Metadata = value.Metadata with { QuestId = null, QuestItemSymbol = null } } : value).ToArray() };
+        }
+        else
+        {
+            ulong id = Item(state).Binding.UniqueItemIds.Single();
+            inventory = inventory with { UniqueItems = inventory.UniqueItems.Select(value => value.EntityId == id
+                ? value with { Metadata = value.Metadata with { QuestId = null, QuestItemSymbol = null } } : value).ToArray() };
+        }
+        var payload = DaggerfallSavePayload.Encode(saved with { Inventory = inventory });
+        Assert.Contains("provenance", Assert.Throws<ArgumentException>(() =>
+            DaggerfallSession.Restore(f.Engine.Context, f.Composition, payload)).Message);
+    }
+
+    [Fact]
+    public void Item_retained_outside_player_survives_ordinary_quest_runtime_retirement()
+    {
+        using var f = Fixture();
+        var state = f.Session.State;
+        Start(state);
+        state.Quests.GrantItem("items", "gift");
+        ulong id = Item(state).Binding.UniqueItemIds.Single();
+        var metadata = state.ItemInstances.RequireUnique(id);
+        f.Update();
+        f.Submit(new { action = "inventory-drop", revision = f.Engine.PublishedNested("inventory", "revision"),
+            item = $"unique:{state.Actors.Entities.Resolve(new(DurableIdentityKind.Item, id)).Value}", amount = 1 });
+        var ground = state.ItemInstances.RequireUnique(id).Owner;
+        Assert.Equal("ground", ground.Scope);
+        state.Quests.Complete("items", "done");
+        state.Quests.Advance(state.Variables, DaggerfallCalendar.Start);
+        state.Quests.Advance(state.Variables, DaggerfallCalendar.Start.Advance(8 * 24 * 60 * 60, out _));
+        Assert.Empty(state.Quests.All);
+        using var restored = f.Restore();
+        Assert.Equal(ground, restored.State.ItemInstances.RequireUnique(id).Owner);
+        Assert.Equal("items", restored.State.ItemInstances.RequireUnique(id).QuestId);
     }
 
     private static SanguineRoseSessionTests.Fixture Fixture(bool stackable = false, bool gold = false, bool actions = false) => new(definitions: Definitions(stackable, gold, actions));

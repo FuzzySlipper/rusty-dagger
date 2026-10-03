@@ -574,7 +574,7 @@ internal sealed record DaggerfallSavePayload(
         foreach (DaggerfallCombatCooldownSave cooldown in CombatCooldowns)
             if (!combatants.Contains(cooldown.AttackerId))
                 throw new ArgumentException($"Saved attack cooldown refers to missing actor {cooldown.AttackerId}.");
-        HashSet<(string Scope, long OwnerId, string StackId)> questStacks = [];
+        Dictionary<(string Scope, long OwnerId, string StackId), DaggerfallStackSave> questStacks = [];
         foreach (var custody in QuestCustody) AddQuestStacks(questStacks, DaggerfallItemOwner.Quest(custody.Id), custody.Inventory.Stacks);
         AddQuestStacks(questStacks, DaggerfallItemOwner.Player, Inventory.Stacks);
         foreach (DaggerfallCorpseSave corpse in Corpses)
@@ -594,7 +594,13 @@ internal sealed record DaggerfallSavePayload(
         }
         foreach (var storage in Property.Storage)
             AddQuestStacks(questStacks, DaggerfallItemOwner.Property(storage.ContainerId), storage.Inventory.Stacks);
-        Quests.ValidateBindings(combatants, savedLedger, locations, questStacks, savedNpcs, definitions);
+        DaggerfallUniqueSave[] questUnique = [.. Inventory.UniqueItems, .. ActorInventories.SelectMany(value => value.Inventory.UniqueItems),
+            .. Corpses.SelectMany(value => value.UniqueItems), .. GroundContainers.SelectMany(value => value.Inventory.UniqueItems),
+            .. QuestCustody.SelectMany(value => value.Inventory.UniqueItems), .. (Wagon?.Inventory.UniqueItems ?? []),
+            .. Property.Storage.SelectMany(value => value.Inventory.UniqueItems), .. SiteDeltas.SelectMany(value => value.ActorInventories).SelectMany(value => value.Inventory.UniqueItems),
+            .. SiteDeltas.SelectMany(value => value.Corpses).SelectMany(value => value.UniqueItems)];
+        Quests.ValidateBindings(combatants, savedLedger, locations, questStacks, questUnique.ToDictionary(value => value.EntityId),
+            QuestCustody.ToDictionary(value => value.Id, value => value.InstanceId), savedNpcs, definitions);
         DaggerfallActiveEffectSave[] allEffects = [.. ActiveEffects, .. SiteDeltas.SelectMany(delta => delta.Effects)];
         if (uniqueItems.Values.Any(item => item.HealthLeechLastUsedMinute > new World.DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).ToAbsoluteSeconds() / 60))
             throw new ArgumentException("Saved health-leech last use is later than the current calendar.");
@@ -800,7 +806,7 @@ internal sealed record DaggerfallSavePayload(
         foreach (var custody in QuestCustody)
         {
             if (custody.Id <= 0 || string.IsNullOrWhiteSpace(custody.InstanceId) || !custodyQuests.Add(custody.InstanceId)
-                || !Quests.Instances.Any(value => value.InstanceId == custody.InstanceId)) throw new ArgumentException("Quest custody requires a distinct known quest and positive owner identity.");
+                || !Quests.Instances.Any(value => value.InstanceId == custody.InstanceId && value.Lifecycle == DaggerfallQuestLifecycle.Active)) throw new ArgumentException("Quest custody requires a distinct known quest and positive owner identity.");
             ArgumentNullException.ThrowIfNull(custody.Inventory);
             custody.Inventory.Validate();
             if (custody.Inventory.Equipment.Length != 0) throw new ArgumentException("Quest custody cannot equip items.");
@@ -938,10 +944,10 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException($"Saved {owner.Scope} {owner.Id} stack '{stack.ItemId}' cannot carry an enchantment.");
     }
 
-    private static void AddQuestStacks(HashSet<(string Scope, long OwnerId, string StackId)> target, DaggerfallItemOwner owner, IEnumerable<DaggerfallStackSave> stacks)
+    private static void AddQuestStacks(Dictionary<(string Scope, long OwnerId, string StackId), DaggerfallStackSave> target, DaggerfallItemOwner owner, IEnumerable<DaggerfallStackSave> stacks)
     {
         foreach (DaggerfallStackSave stack in stacks)
-            if (!target.Add((owner.Scope, owner.Id, stack.StackId)))
+            if (!target.TryAdd((owner.Scope, owner.Id, stack.StackId), stack))
                 throw new ArgumentException($"Saved stack '{stack.StackId}' appears more than once for {owner.Scope} {owner.Id}.");
     }
 

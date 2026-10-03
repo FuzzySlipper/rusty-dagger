@@ -72,6 +72,13 @@ internal sealed class DaggerfallEquipmentMoves(
     internal ulong LayoutRevision => _layout.Revision;
     internal int? GridPosition(string key) => _layout.Position(key);
     internal event Action<DaggerfallEquipmentChange>? Changed;
+    /// <summary>Publishes a completed grouped inventory mutation through the ordinary equipment owner.</summary>
+    internal void NotifyRemoved(EquipmentRead before, IReadOnlyList<UniqueItem> removed)
+    {
+        if (removed.Count == 0) return;
+        ReconcileLayout();
+        Changed?.Invoke(new(null, removed, Timing(before, equipment.Read()), DaggerfallEquipmentCue.Unequip));
+    }
 
     /// <summary>Arranges every unequipped item from the authoritative reads. Reads call this.</summary>
     internal void ReconcileLayout()

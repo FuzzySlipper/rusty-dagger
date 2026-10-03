@@ -355,12 +355,15 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
     }
 
     internal void ValidateBindings(IReadOnlySet<long> actorIds, DurableIdentityAllocator identities, IReadOnlySet<(int Region, int Index)> locations,
-        IReadOnlySet<(string Scope, long OwnerId, string StackId)> stacks, IReadOnlyDictionary<long, DaggerfallNpcEntry> npcs, DaggerfallDefinitions definitions)
+        IReadOnlyDictionary<(string Scope, long OwnerId, string StackId), DaggerfallStackSave> stacks, IReadOnlyDictionary<ulong, DaggerfallUniqueSave> items,
+        IReadOnlyDictionary<long, string> custody, IReadOnlyDictionary<long, DaggerfallNpcEntry> npcs, DaggerfallDefinitions definitions)
     {
         ArgumentNullException.ThrowIfNull(actorIds);
         ArgumentNullException.ThrowIfNull(identities);
         ArgumentNullException.ThrowIfNull(locations);
         ArgumentNullException.ThrowIfNull(stacks);
+        foreach (var item in items.Values) ValidateQuestItemReference(item.ItemId, item.Metadata);
+        foreach (var stack in stacks.Values) ValidateQuestItemReference(stack.ItemId, stack.Metadata);
         foreach (DaggerfallQuestInstanceSave instance in Instances)
         foreach (DaggerfallQuestResourceState resource in instance.Resources)
         {
@@ -395,12 +398,20 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
                         // Only an allocator tombstone proves removal; unknown identities still reject.
                         if (identity is not (DurableIdentityClassification.Live or DurableIdentityClassification.Removed))
                             throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to non-live unique item {itemId}.");
+                        if (identity == DurableIdentityClassification.Live && resource.SelectedItem is not null)
+                        {
+                            if (!items.TryGetValue(itemId, out var item)) throw new ArgumentException($"Quest item {itemId} has no actual inventory owner.");
+                            ValidateItemRelation(instance, resource, item.ItemId, item.Metadata, custody);
+                        }
                     }
                     else
                     {
                         foreach (DaggerfallQuestStackBinding stack in resource.Binding.Stacks)
-                            if (!stacks.Contains((stack.Owner.Scope, stack.Owner.Id, stack.StackId)))
+                        {
+                            if (!stacks.TryGetValue((stack.Owner.Scope, stack.Owner.Id, stack.StackId), out var item))
                                 throw new ArgumentException($"Quest instance '{instance.InstanceId}' resource '{resource.Symbol}' refers to missing item stack '{stack.StackId}' for {stack.Owner.Scope} {stack.Owner.Id}.");
+                            if (resource.SelectedItem is not null) ValidateItemRelation(instance, resource, item.ItemId, item.Metadata, custody);
+                        }
                     }
                     break;
                 case DaggerfallQuestResourceBindingKind.Place:
@@ -410,6 +421,31 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
                     break;
             }
         }
+    }
+
+    private void ValidateQuestItemReference(string itemId, DaggerfallItemMetadataSave metadata)
+    {
+        if (metadata.QuestId is null) return;
+        var quest = Instances.SingleOrDefault(value => value.InstanceId == metadata.QuestId);
+        // World/actor/transferred items outlive the existing seven-day quest-runtime retirement.
+        // Their retained tag cannot authorize an action: actions require an active instance.
+        if (quest is null) return;
+        var resource = quest.Resources.SingleOrDefault(value => value.Symbol == DaggerfallQuestInstanceSave.Canonical(metadata.QuestItemSymbol!, "item provenance"))
+            ?? throw new ArgumentException($"Item refers to unknown quest resource '{metadata.QuestItemSymbol}'.");
+        if (resource.Binding.Kind is not (DaggerfallQuestResourceBindingKind.Item or DaggerfallQuestResourceBindingKind.Pending)
+            || resource.SelectedItem is { } prototype && prototype.Item.Value != itemId)
+            throw new ArgumentException("Item quest provenance does not name its actual Item resource.");
+    }
+
+    private static void ValidateItemRelation(DaggerfallQuestInstanceSave instance, DaggerfallQuestResourceState resource,
+        string itemId, DaggerfallItemMetadataSave metadata, IReadOnlyDictionary<long, string> custody)
+    {
+        var prototype = resource.SelectedItem!;
+        bool linked = metadata.QuestId == instance.InstanceId && metadata.QuestItemSymbol == DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "item binding");
+        bool permanent = prototype.Metadata.QuestId is null && metadata.QuestId is null && metadata.QuestItemSymbol is null;
+        if (itemId != prototype.Item.Value || !linked && !permanent
+            || metadata.Owner.Scope == "quest" && (!custody.TryGetValue(metadata.Owner.Id, out var owner) || owner != instance.InstanceId))
+            throw new ArgumentException($"Quest resource '{resource.Symbol}' does not match its actual item provenance or custody owner.");
     }
 }
 
