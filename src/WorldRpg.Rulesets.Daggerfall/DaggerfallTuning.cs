@@ -50,7 +50,7 @@ internal sealed record DaggerfallTuning(
         DaggerfallLocomotionTuning.Classic,
         new FirstPersonCameraTuning(.75f, 65d, .1d, 100d),
         new DaggerfallMeleeTargetingTuning(2.25d, .5d, .35d),
-        new DaggerfallEnemyBehaviorTuning(12d, 3f, 32),
+        new DaggerfallEnemyBehaviorTuning(12d, 3f, 1024),
         new DaggerfallLootInteractionTuning(2.25d, .5d),
         new DaggerfallTimeTuning(12d),
         new DaggerfallStaminaRecoveryTuning(5d, 2d),
