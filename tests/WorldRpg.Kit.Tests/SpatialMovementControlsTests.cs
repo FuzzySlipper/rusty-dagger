@@ -241,6 +241,7 @@ public sealed class SpatialMovementControlsTests
             nameof(ISpatialService.ReplaceContentArtifact) => new SpatialContentArtifactReplaceReceipt(),
             nameof(ISpatialService.ProposeCharacterStep) => Step((CharacterStepRequest)arguments![0]!),
             nameof(ISpatialService.CastRay) => Cast((SpatialRaycastRequest)arguments![0]!),
+            nameof(ISpatialService.CaptureCharacterContinuation) => Capture((CharacterContinuationCaptureRequest)arguments![0]!),
             nameof(ISpatialService.RestoreCharacterContinuation) => Restore((CharacterContinuationRestoreRequest)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
@@ -249,6 +250,13 @@ public sealed class SpatialMovementControlsTests
         {
             RayRequests.Add(request);
             return QueryHit;
+        }
+
+        private CharacterContinuationCheckpoint Capture(CharacterContinuationCaptureRequest capture)
+        {
+            CharacterStepRequest step = Request ?? throw new InvalidOperationException("No character step to capture.");
+            return new(1, capture.ExpectedGeneration, 1, 1, 1, step.Config,
+                step.Motion with { LastCommandSequence = step.Command.Sequence });
         }
 
         private static CharacterContinuationRestoreReceipt Restore(CharacterContinuationRestoreRequest request) =>
