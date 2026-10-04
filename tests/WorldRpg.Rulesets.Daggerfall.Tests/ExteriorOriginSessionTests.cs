@@ -238,8 +238,8 @@ public sealed class ExteriorOriginSessionTests
             Assert.NotEqual(Vector3.Zero, delta);
             Assert.Equal(playerPosition.ToVector() + delta, session.State.PlayerControl.Position!.Value.ToVector());
             Assert.Equal(actorPosition.ToVector() + delta, session.State.Actors.Get(actorId).Position.ToVector());
-            Assert.Equal(exterior.Portals[0].Position.ToVector() + delta,
-                session.Sites.Projection.Portals.All.First().Portal.Position.ToVector());
+            Assert.Equal(exterior.Portals[0].Position.ToVector(),
+                session.Sites.LocalToProfile(session.Sites.Projection.Portals.All.First().Portal.Position.ToVector()));
             Assert.Equal(exterior.WorldAppearance.Transform.Translation + delta,
                 Assert.Single(appearance.Snapshots.Last(), fact => fact.ObjectId == 1).Transform.Translation);
             Assert.Equal(new Vector3(1001, 3, 6) + delta, session.State.PlayerControl.Motion.TetherAnchorPoint);
@@ -265,8 +265,8 @@ public sealed class ExteriorOriginSessionTests
             restored.State.Actors.Store.Get<DaggerfallNpcBody>(npcEntity).Pose.Position.ToVector());
         Assert.Equal(npcPosition.ToVector() + compensation,
             restored.Dialogue.NpcTargets().Single(target => target.Identity.Value == (ulong)npcId).Position.ToVector());
-        Assert.Equal(exterior.Portals[0].Position.ToVector() + compensation,
-            restored.Sites.Projection.Portals.All.First().Portal.Position.ToVector());
+        Assert.Equal(exterior.Portals[0].Position.ToVector(),
+            restored.Sites.LocalToProfile(restored.Sites.Projection.Portals.All.First().Portal.Position.ToVector()));
         Assert.True(restored.TryTransitionTo(interior.ProfileKey));
         DaggerfallSavePayload inside = DaggerfallSavePayload.Read(restored.CaptureSave());
         Assert.Equal(playerPosition.X, inside.Site.ReturnPose!.X);
