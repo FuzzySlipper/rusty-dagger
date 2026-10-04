@@ -197,6 +197,7 @@
       "targetLabel": "guard",
       "questContacts": [],
       "bankAvailable": false,
+      "merchant": null,
       "greeting": "How can I help you, stranger?",
       "comprehendLanguagesBonus": 0,
       "tone": "normal",
@@ -205,13 +206,16 @@
       "topics": [
         {
           "id": "directions",
-          "label": "Where is this place?"
+          "label": "Where is this place?",
+          "key": null
         },
         {
           "id": "news",
-          "label": "Any news?"
+          "label": "Any news?",
+          "key": null
         }
       ],
+      "training": null,
       "diagnostics": []
     }
   },
