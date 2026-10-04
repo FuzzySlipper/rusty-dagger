@@ -184,13 +184,15 @@ public sealed class DaggerfallMusicSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
         DaggerfallSiteProfile outside = ReadProfile(root, content, definitions, "daggerfall.charing-interior-1-1-0.json");
-        DaggerfallSiteProfile destination = SameContentAt(outside, outside.ProfileKey.Site,
-            DaggerfallWorldProfileKind.Exterior, "alternate-music-rotation");
+        DaggerfallSiteProfile destination = ExteriorContentAt(outside, outside.ProfileKey.Site,
+            "alternate-music-rotation");
         DaggerfallMusicBundle bundle = DaggerfallMusicBundle.Admit(content, outside.Music)!;
         List<string> releases = [];
         ContentFake contentService = new(releases);
         PopulateContent(contentService, outside);
         PopulateContent(contentService, destination);
+        PopulateTerrainContent(contentService, outside);
+        PopulateTerrainContent(contentService, destination);
         EngineContextFake engine = EngineContextFake.Create(contentService,
             SpatialFake.Create(outside.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
@@ -238,6 +240,45 @@ public sealed class DaggerfallMusicSessionTests
             Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")))!;
         payload["music"]!["alternatePlaylists"] = alternate;
         return DaggerfallTuning.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()));
+    }
+
+    private static DaggerfallSiteProfile ExteriorContentAt(DaggerfallSiteProfile source, DaggerfallSiteId site,
+        string logicalId) => new(
+        new ProjectFacts(new WorldPoint(1f, 1f, 1f), source.Project.Actors),
+        source.SpatialArtifact,
+        source.StaticMesh,
+        source.WorldAppearance,
+        source.InitialLook,
+        source.Materials,
+        source.ActorSprites,
+        source.MobileSprites,
+        source.Audio,
+        source.ClassicPresentation,
+        site,
+        [],
+        DaggerfallWorldProfileKind.Exterior,
+        logicalId,
+        source.Portals,
+        source.Anchors.Values.ToArray(),
+        source.Lights,
+        source.GroundContainerSprite,
+        null,
+        [],
+        [],
+        null,
+        source.Music,
+        source.AudioBundle,
+        source.QuestMarkers,
+        source.BillboardSprites,
+        [],
+        source.WaterVolumes,
+        source.TerrainTextures,
+        []);
+
+    private static void PopulateTerrainContent(ContentFake content, DaggerfallSiteProfile profile)
+    {
+        foreach (NormalizedTerrainTexture texture in profile.TerrainTextures.Values)
+            content.Add(texture.TexturePath, texture.TextureSha256);
     }
 
     /// <summary>
