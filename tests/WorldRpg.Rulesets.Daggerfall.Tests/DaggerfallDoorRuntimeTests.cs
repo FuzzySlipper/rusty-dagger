@@ -177,6 +177,99 @@ public sealed class DaggerfallDoorRuntimeTests
     }
 
     [Fact]
+    public void Exterior_surface_drives_canonical_lockpick_retry_and_bash_callers()
+    {
+        DaggerfallRdbDoorDefinition definition = Door(startingLock: 4) with
+        {
+            LockSurface = DaggerfallLockInteractionSurface.Exterior,
+        };
+        DaggerfallRdbDoorId id = definition.Id;
+        using EntityDirectory store = new();
+        using DaggerfallDoorRuntime doors = new(store, Random(10), [definition], "exterior");
+
+        DaggerfallLockInteractionSurface surface = doors.InteractionSurface(id);
+        DaggerfallLockInteractionDecision failed = DaggerfallLockInteractionPolicy.EvaluateLockpick(
+            doors.Read(id), surface, playerLevel: 1, lockpickingSkill: 30, previousFailedSkill: null, roll: 10);
+        Assert.Equal(DaggerfallLockInteractionSurface.Exterior, failed.Surface);
+        Assert.Equal(10, failed.Chance);
+        Assert.Equal(DaggerfallLockInteractionStatus.Failed, failed.Status);
+        Assert.True(failed.RecordsSkillUse);
+        Assert.True(failed.EmitsNoise);
+        Assert.True(failed.ReportsBreakingAndEntering);
+        Assert.Equal(DaggerfallDoorOperationResult.LockpickFailed, doors.ApplyLockInteraction(id, failed));
+
+        DaggerfallLockInteractionDecision duplicate = DaggerfallLockInteractionPolicy.EvaluateLockpick(
+            doors.Read(id), surface, playerLevel: 1, lockpickingSkill: 30,
+            previousFailedSkill: doors.FailedLockpickingSkill(id), roll: null);
+        Assert.Equal(DaggerfallLockInteractionStatus.DuplicateAttempt, duplicate.Status);
+        Assert.False(duplicate.RecordsSkillUse);
+        Assert.False(duplicate.EmitsNoise);
+
+        DaggerfallRdbDoorDefinition successDefinition = definition with { Id = definition.Id with { ModelIndex = 5 } };
+        using EntityDirectory successStore = new();
+        using DaggerfallDoorRuntime successDoors = new(successStore, Random(9), [successDefinition], "exterior");
+        DaggerfallLockInteractionDecision success = DaggerfallLockInteractionPolicy.EvaluateLockpick(
+            successDoors.Read(successDefinition.Id), successDoors.InteractionSurface(successDefinition.Id),
+            playerLevel: 1, lockpickingSkill: 30, previousFailedSkill: null, roll: 9);
+        Assert.Equal(DaggerfallLockInteractionStatus.Applied, success.Status);
+        Assert.True(success.RecordsSkillUse);
+        Assert.Equal(DaggerfallDoorOperationResult.Started, successDoors.ApplyLockInteraction(successDefinition.Id, success));
+        Assert.Equal(0, successDoors.Read(successDefinition.Id).LockValue);
+
+        DaggerfallLockInteractionDecision alreadyUnlocked = DaggerfallLockInteractionPolicy.EvaluateLockpick(
+            RuntimeView(definition with { StartingLockValue = 0 }, lockValue: 0), surface,
+            playerLevel: 1, lockpickingSkill: 30, previousFailedSkill: null, roll: null);
+        Assert.Equal(DaggerfallLockInteractionStatus.AlreadyUnlocked, alreadyUnlocked.Status);
+        Assert.False(alreadyUnlocked.RecordsSkillUse);
+
+        DaggerfallRdbDoorDefinition specialDefinition = definition with { Kind = DaggerfallDoorKind.Special, StartingLockValue = 0 };
+        DaggerfallLockInteractionDecision specialLockpick = DaggerfallLockInteractionPolicy.EvaluateLockpick(
+            RuntimeView(specialDefinition, lockValue: 0), specialDefinition.LockSurface,
+            playerLevel: 1, lockpickingSkill: 30, previousFailedSkill: null, roll: null);
+        DaggerfallLockInteractionDecision specialBash = DaggerfallLockInteractionPolicy.EvaluateBash(
+            RuntimeView(specialDefinition, lockValue: 0), specialDefinition.LockSurface,
+            strength: 50, toolForce: 0, roll: null);
+        Assert.Equal(DaggerfallLockInteractionStatus.SpecialDoor, specialLockpick.Status);
+        Assert.Equal(DaggerfallLockInteractionStatus.SpecialDoor, specialBash.Status);
+
+        DaggerfallRdbDoorDefinition bashDefinition = definition with { Id = definition.Id with { ModelIndex = 4 } };
+        using EntityDirectory bashStore = new();
+        using DaggerfallDoorRuntime bashDoors = new(bashStore, Random(21), [bashDefinition], "exterior");
+        DaggerfallDoorOperationResult bash = bashDoors.Bash(bashDefinition.Id, strength: 50, toolForce: 0, out DaggerfallLockInteractionDecision bashDecision);
+        Assert.Equal(DaggerfallDoorOperationResult.Started, bash);
+        Assert.Equal(DaggerfallLockInteractionSurface.Exterior, bashDecision.Surface);
+        Assert.Equal(21, bashDecision.Chance);
+        Assert.Equal(21, bashDecision.Roll);
+        Assert.True(bashDecision.EmitsNoise);
+        Assert.True(bashDecision.ReportsBreakingAndEntering);
+    }
+
+    [Fact]
+    public void Exterior_open_keeps_the_level_gate_for_skeleton_key_and_survives_reload()
+    {
+        DaggerfallRdbDoorDefinition definition = Door(startingLock: 4) with
+        {
+            LockSurface = DaggerfallLockInteractionSurface.Exterior,
+        };
+        DaggerfallRdbDoorId id = definition.Id;
+        DaggerfallDoorSave[] saved;
+        using (EntityDirectory store = new())
+        using (DaggerfallDoorRuntime doors = new(store, Random(1), [definition], "exterior"))
+        {
+            Assert.Equal(DaggerfallDoorOperationResult.Locked, doors.OpenByMagic(id, actorLevel: 3, skeletonKey: true));
+            Assert.Equal(4, doors.Read(id).LockValue);
+            Assert.Equal(DaggerfallDoorOperationResult.Started, doors.OpenByMagic(id, actorLevel: 4, skeletonKey: true));
+            Assert.Equal(0, doors.Read(id).LockValue);
+            saved = doors.Capture();
+        }
+
+        using EntityDirectory restoredStore = new();
+        using DaggerfallDoorRuntime restored = new(restoredStore, Random(1), [definition], "exterior", saved);
+        Assert.Equal(saved, restored.Capture());
+        Assert.Equal(DaggerfallDoorMotion.Opening, restored.Read(id).Motion);
+    }
+
+    [Fact]
     public void Lockpick_mutation_retains_failed_skill_until_a_later_success_and_save_reload()
     {
         DaggerfallRdbDoorId id = Door(startingLock: 4).Id;
