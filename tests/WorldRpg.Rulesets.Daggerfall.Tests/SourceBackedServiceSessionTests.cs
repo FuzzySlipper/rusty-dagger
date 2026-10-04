@@ -87,7 +87,7 @@ public sealed class SourceBackedServiceSessionTests
 
         SubmitUi(session, 3, $"{{\"action\":\"training-commit\",\"revision\":\"{Escape(dialogue.Revision)}\",\"key\":\"{Escape(skill.Id)}\",\"amount\":{training.Price},\"confirm\":true}}");
 
-        Assert.Contains("Training complete", session.ActivationView.Message, StringComparison.Ordinal);
+        Assert.Contains("Training complete", session.Presentation.LastOutcome, StringComparison.Ordinal);
         Assert.Equal(skillBefore + 1, session.State.SkillUses.PermanentSkillValue(skill.Id));
         Assert.Equal(goldBefore - training.Price, session.State.Currency.Read().Gold);
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
@@ -124,7 +124,7 @@ public sealed class SourceBackedServiceSessionTests
         ulong goldBeforeBuy = session.State.Currency.Read().Gold;
         SubmitUi(session, 4, $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(merchant.Revision)}\",\"item\":\"{Escape(stock.Key)}\",\"amount\":1}}");
 
-        Assert.Equal("Purchased", session.ActivationView.Message);
+        Assert.Equal("Purchased", session.Presentation.LastOutcome);
         Assert.Equal(goldBeforeBuy - stock.UnitPrice, session.State.Currency.Read().Gold);
         DaggerfallMerchantView afterBuy = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
         DaggerfallMerchantItemView sold = Assert.Single(afterBuy.PlayerItems,
@@ -132,7 +132,7 @@ public sealed class SourceBackedServiceSessionTests
         ulong goldBeforeSell = session.State.Currency.Read().Gold;
         SubmitUi(session, 5, $"{{\"action\":\"merchant-sell\",\"revision\":\"{Escape(afterBuy.Revision)}\",\"item\":\"{Escape(sold.Key)}\",\"amount\":1}}");
 
-        Assert.Equal("Sold", session.ActivationView.Message);
+        Assert.Equal("Sold", session.Presentation.LastOutcome);
         Assert.Equal(goldBeforeSell + sold.UnitPrice, session.State.Currency.Read().Gold);
         ulong goldAfterSell = session.State.Currency.Read().Gold;
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
