@@ -8,6 +8,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
     public void PublishChanges(AppearanceChangesRequest request) => throw new NotSupportedException();
     internal List<RenderResourceRequest> OpenResourceRequests { get; } = [];
+    internal List<TerrainLayerMaterialRequest> TerrainLayerMaterialRequests { get; } = [];
     internal List<StaticMeshContentAppearanceRequest> StaticMeshContentRequests { get; } = [];
     internal Dictionary<string, Appearance> StaticMeshByPath { get; } = new(StringComparer.Ordinal);
     internal List<MeshMaterialBinding> StaticMeshBindings { get; } = [];
@@ -67,6 +68,11 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
         releases.Add("resource");
     });
     public Material CreateMaterial(MaterialRequest request) => new(new MaterialHandle(1), () => releases.Add("material"));
+    public Material CreateTerrainLayerMaterial(TerrainLayerMaterialRequest request)
+    {
+        TerrainLayerMaterialRequests.Add(request);
+        return new(new MaterialHandle(nextHandle++), () => releases.Add("material"));
+    }
     public Material CreateAuthoredMaterial(AuthoredMaterialAppearanceRequest request) => CreateMaterial(default);
     public void UpdateMaterial(MaterialUpdateRequest request) { }
     public Material ReplaceMaterial(MaterialUpdateRequest request) => CreateMaterial(request.Replacement);
