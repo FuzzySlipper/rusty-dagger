@@ -197,7 +197,7 @@ internal sealed class DaggerfallTempleServiceRuntime
         return new(true, DaggerfallTempleServiceDenial.None, payment.PaidGold, Message: message);
     }
 
-    /// <summary>Quotes curing every active disease, transformation infection, and poison effect.</summary>
+    /// <summary>Quotes curing every ordinary disease and poison; transformation cures remain quest-owned.</summary>
     internal DaggerfallTempleCureQuote? QuoteCure(
         DaggerfallServiceProvider provider,
         DaggerfallInteriorBuilding building,
@@ -214,7 +214,7 @@ internal sealed class DaggerfallTempleServiceRuntime
         if (!TryResolveProvider(provider, CureProviderFactionId, CureService, temple!, DaggerfallConcreteGuildService.CureDisease, out refusal))
             return null;
 
-        int ailments = checked(DaggerfallDiseasePolicy.CountAfflictions(_effects, _actors.Player.DurableId)
+        int ailments = checked(DaggerfallDiseasePolicy.CountOrdinaryDiseases(_effects, _actors.Player.DurableId)
             + _poisons.CountFor(_actors.Player.DurableId));
         if (ailments == 0)
         {
@@ -246,7 +246,7 @@ internal sealed class DaggerfallTempleServiceRuntime
         ArgumentNullException.ThrowIfNull(quote);
         DaggerfallServiceOutcome payment = _transactions.Commit(quote.ServiceQuote);
         if (!payment.Accepted) return FromServiceOutcome(payment);
-        int removed = DaggerfallDiseasePolicy.CureAllDiseases(_effects, _actors.Player.DurableId);
+        int removed = DaggerfallDiseasePolicy.CureOrdinaryDiseases(_effects, _actors.Player.DurableId);
         bool poisonRemoved = _poisons.Cure(_actors.Player.Actor);
         if (poisonRemoved) removed = checked(removed + 1);
         return new(true, DaggerfallTempleServiceDenial.None, payment.PaidGold, removed,
