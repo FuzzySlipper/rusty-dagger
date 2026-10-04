@@ -16,6 +16,67 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallPopulationSessionTests
 {
     [Fact]
+    public void Resident_source_civilian_readds_its_billboard_to_the_retained_projection()
+    {
+        using ResidentPopulationFixture fixture = ResidentPopulationFixture.Create();
+        DaggerfallSession session = fixture.Session;
+        session.AdvanceElapsedTime(8 * 60 * 60);
+
+        DaggerfallNpc sourceNpc = Assert.Single(session.State.Npcs.All,
+            npc => npc.StableKey == "population/source/0/0" && npc.Profile == fixture.Source.ProfileKey);
+        int before = PopulationTextureOpens(fixture.Appearance);
+        Assert.True(before > 0);
+
+        Assert.True(session.TryTransitionTo(fixture.Resident.ProfileKey));
+
+        DaggerfallNpc retained = session.State.Npcs.Require(sourceNpc.DurableId);
+        Assert.Equal(fixture.Source.ProfileKey, retained.Profile);
+        Assert.True(session.State.Actors.TryGet(sourceNpc.DurableId, out _));
+        Assert.True(PopulationTextureOpens(fixture.Appearance) > before);
+    }
+
+    [Fact]
+    public void Resident_defeated_source_civilian_rebuilds_billboard_before_corpse_sync_and_save_restore()
+    {
+        using ResidentPopulationFixture fixture = ResidentPopulationFixture.Create();
+        DaggerfallSession session = fixture.Session;
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        DaggerfallNpc sourceNpc = Assert.Single(session.State.Npcs.All,
+            npc => npc.StableKey == "population/source/0/0" && npc.Profile == fixture.Source.ProfileKey);
+        Assert.True(session.State.Actors.TryGet(sourceNpc.DurableId, out ActorState? sourceActor));
+        sourceActor!.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60;
+        for (ulong step = 1; step < 16 && !sourceActor.IsDefeated; step++)
+            session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, sourceNpc.DurableId, 1, step, .125));
+        Assert.True(sourceActor.IsDefeated);
+        Assert.True(session.Corpses.ContainsKey(sourceNpc.DurableId));
+        int before = PopulationTextureOpens(fixture.Appearance);
+
+        Assert.True(session.TryTransitionTo(fixture.Resident.ProfileKey));
+
+        Assert.True(session.State.Actors.TryGet(sourceNpc.DurableId, out ActorState? residentActor));
+        Assert.True(residentActor!.IsDefeated);
+        Assert.True(session.Corpses.ContainsKey(sourceNpc.DurableId));
+        Assert.True(PopulationTextureOpens(fixture.Appearance) > before);
+        RulesetSavePayload save = session.CaptureSave();
+        DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
+        Assert.Contains(captured.SiteDeltas, delta => delta.Profile.Require() == fixture.Source.ProfileKey
+            && delta.DynamicActors.Any(actor => actor.EntityId == sourceNpc.DurableId));
+        DaggerfallNpcEntry savedNpc = Assert.Single(captured.Npcs.Entries,
+            entry => entry.DurableId == sourceNpc.DurableId);
+        Assert.Equal(fixture.Source.ProfileKey, savedNpc.Profile!.Require());
+
+        (EngineContextFake restoredEngine, AppearanceFake restoredAppearance) = fixture.CreateEngine();
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, fixture.Composition, save);
+        DaggerfallNpc restoredNpc = restored.State.Npcs.Require(sourceNpc.DurableId);
+        Assert.Equal(fixture.Source.ProfileKey, restoredNpc.Profile);
+        Assert.True(restored.State.Actors.TryGet(sourceNpc.DurableId, out ActorState? restoredActor));
+        Assert.True(restoredActor!.IsDefeated);
+        Assert.True(restored.Corpses.ContainsKey(sourceNpc.DurableId));
+        Assert.True(PopulationTextureOpens(restoredAppearance) > 0);
+    }
+
+    [Fact]
     public void Resident_population_sync_keeps_the_owner_profile_pose_through_unload_and_readmission()
     {
         string root = TestData.RepositoryRoot;
@@ -208,5 +269,84 @@ public sealed class DaggerfallPopulationSessionTests
             // tilemap instead of turning this population profile into an empty-media test double.
             terrainTextures: source.TerrainTextures,
             population: population);
+    }
+
+    private static int PopulationTextureOpens(AppearanceFake appearance) =>
+        appearance.OpenResourceRequests.Count(request => request.Path == "sprite/population.png");
+
+    private sealed class ResidentPopulationFixture : IDisposable
+    {
+        private ResidentPopulationFixture(DaggerfallSession session, DaggerfallSessionComposition composition,
+            DaggerfallSiteProfile source, DaggerfallSiteProfile resident, DaggerfallSiteProfile interior,
+            AppearanceFake appearance)
+        {
+            Session = session;
+            Composition = composition;
+            Source = source;
+            Resident = resident;
+            Interior = interior;
+            Appearance = appearance;
+        }
+
+        internal DaggerfallSession Session { get; }
+        internal DaggerfallSessionComposition Composition { get; }
+        internal DaggerfallSiteProfile Source { get; }
+        internal DaggerfallSiteProfile Resident { get; }
+        internal DaggerfallSiteProfile Interior { get; }
+        internal AppearanceFake Appearance { get; }
+
+        internal static ResidentPopulationFixture Create()
+        {
+            string root = TestData.RepositoryRoot;
+            DaggerfallDefinitions definitions = TestPayload.Definitions;
+            DaggerfallSiteRecord[] exteriorRecords = [.. definitions.Locations.Records.Where(record => record.Exterior is not null)];
+            DaggerfallSiteRecord sourceRecord = exteriorRecords.First(record => exteriorRecords.Any(candidate =>
+                candidate.Id != record.Id
+                && (candidate.MapPixelX != record.MapPixelX || candidate.MapPixelY != record.MapPixelY)
+                && Math.Abs(candidate.MapPixelX - record.MapPixelX) <= DaggerfallExteriorCellResidency.StreamingRadius
+                && Math.Abs(candidate.MapPixelY - record.MapPixelY) <= DaggerfallExteriorCellResidency.StreamingRadius));
+            DaggerfallSiteRecord residentRecord = exteriorRecords.First(record =>
+                record.Id != sourceRecord.Id
+                && (record.MapPixelX != sourceRecord.MapPixelX || record.MapPixelY != sourceRecord.MapPixelY)
+                && Math.Abs(record.MapPixelX - sourceRecord.MapPixelX) <= DaggerfallExteriorCellResidency.StreamingRadius
+                && Math.Abs(record.MapPixelY - sourceRecord.MapPixelY) <= DaggerfallExteriorCellResidency.StreamingRadius);
+            DaggerfallSiteProfile template = ReadProfile(root, FullContent(root, "worldrpg/imports/charing"), definitions,
+                "daggerfall.charing-exterior.json");
+            DaggerfallSiteProfile source = PopulationProfile(template, sourceRecord.Id, "resident-population-source",
+                includeAuthoredActors: false);
+            DaggerfallSiteProfile resident = PopulationProfile(template, residentRecord.Id, "resident-population-neighbor",
+                includeAuthoredActors: false, includePopulation: false);
+            DaggerfallSiteProfile interior = SameContentAt(template, sourceRecord.Id,
+                DaggerfallWorldProfileKind.Interior, "resident-population-interior");
+            DaggerfallSiteProfiles profiles = new([source, resident, interior]);
+            DaggerfallSessionComposition composition = new(definitions, source, DaggerfallTuning.Defaults)
+            {
+                Profiles = profiles,
+            };
+            List<string> releases = [];
+            ContentFake content = new(releases);
+            PopulateContent(content, source);
+            PopulateContent(content, resident);
+            PopulateContent(content, interior);
+            SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+            AppearanceFake appearance = new(releases);
+            EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
+            DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+            return new(session, composition, source, resident, interior, appearance);
+        }
+
+        internal (EngineContextFake Engine, AppearanceFake Appearance) CreateEngine()
+        {
+            List<string> releases = [];
+            ContentFake content = new(releases);
+            PopulateContent(content, Source);
+            PopulateContent(content, Resident);
+            PopulateContent(content, Interior);
+            SpatialFake spatial = SpatialFake.Create(Source.SpatialArtifact.Sha256, releases);
+            AppearanceFake appearance = new(releases);
+            return (EngineContextFake.Create(content, spatial.Service, appearance), appearance);
+        }
+
+        public void Dispose() => Session.Dispose();
     }
 }
