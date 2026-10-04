@@ -209,7 +209,8 @@ public sealed class QuestPlacementActionTests
         var inventory = corpse ? inactive.State.Containers.Read(restoredActor.Actor.Get<CorpseLootComponent>().Owner)
             : inactive.State.ActorInventories.InventoryFor(f.Enemy)!.Read();
         if (stackable) Assert.DoesNotContain(inventory.Stacks, value => value.Id.Value == item.Stacks.Single().StackId);
-        else Assert.DoesNotContain(inventory.UniqueItems, value => value.Entity.Value == inactive.State.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Item, item.UniqueItemIds.Single())).Value);
+        else Assert.DoesNotContain(inventory.UniqueItems,
+            value => inactive.State.Actors.Entities.IdentityOf(value.Entity).Value == item.UniqueItemIds.Single());
     }
 
     [Fact]
@@ -314,7 +315,10 @@ public sealed class QuestPlacementActionTests
         Assert.True(inactive.TryTransitionTo(f.Inputs.ProfileKey));
         Assert.DoesNotContain(inactive.State.Effects.Capture(), effect => effect.ItemId == f.Source);
         using var restored = DaggerfallSession.Restore(f.Engine.Context, f.Composition with { Profiles = profiles }, inactive.CaptureSave());
-        Assert.Null(restored.State.ItemInstances.RequireUnique(f.Source).HeldCast);
+        Assert.False(restored.State.ItemInstances.ContainsUnique(f.Source));
+        var savedGroundItem = Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).GroundContainers
+            .SelectMany(value => value.Inventory.UniqueItems), value => value.EntityId == f.Source);
+        Assert.Null(savedGroundItem.Metadata.HeldCast);
     }
 
     private sealed class DefeatingHit : ICombatContribution
