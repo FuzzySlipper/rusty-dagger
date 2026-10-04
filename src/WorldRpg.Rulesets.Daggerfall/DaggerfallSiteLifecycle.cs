@@ -391,8 +391,11 @@ internal sealed class DaggerfallSiteLifecycle
         _host.SyncCivilianPositions();
         bool sourceLocationLoaded = ActiveLocationLoaded;
         DaggerfallExteriorCellId? sourceLocationCell = _locationCell;
+        IReadOnlySet<long> sourceDynamicActorIds = sourceLocationLoaded
+            ? ActiveDynamicActorIds()
+            : new HashSet<long>();
         DaggerfallSiteRuntimeDelta sourceDelta = sourceLocationLoaded
-            ? _persistence.CaptureSiteDelta(source.Inputs, source.Doors, source.Motion, _roster.Dynamic)
+            ? _persistence.CaptureSiteDelta(source.Inputs, source.Doors, source.Motion, _roster.Dynamic, sourceDynamicActorIds)
             : _deltas.TryGetValue(sourceProfile, out DaggerfallSiteRuntimeDelta? detachedSource)
                 ? detachedSource
                 : throw new InvalidOperationException($"Unloaded source profile '{sourceProfile.LogicalId}' has no detached delta.");
@@ -400,8 +403,9 @@ internal sealed class DaggerfallSiteLifecycle
         _deltas.TryGetValue(destination, out DaggerfallSiteRuntimeDelta? destinationDelta);
         if (destinationDelta is null && _residentExteriorLocations.TryGetValue(destination, out ResidentExteriorLocation? residentDestination))
         {
+            Vector3 destinationFrameOffset = ExteriorProfileTranslation(residentDestination.Profile);
             destinationDelta = _persistence.CaptureSiteDelta(residentDestination.Profile, residentDestination.Projection.Doors,
-                residentDestination.Projection.Motion, _roster.Dynamic, residentDestination.ActorIds);
+                residentDestination.Projection.Motion, _roster.Dynamic, residentDestination.ActorIds, destinationFrameOffset);
             _deltas[destination] = destinationDelta;
         }
         // A resident destination was just detached into _deltas above. Include that snapshot in
@@ -804,6 +808,24 @@ internal sealed class DaggerfallSiteLifecycle
         return ExteriorCellsBySite().TryGetValue(siteId, out cell);
     }
 
+    private Vector3 ExteriorProfileTranslation(DaggerfallSiteProfile profile)
+    {
+        DaggerfallExteriorWorldOrigin origin = _exteriorResidency is { IsInitialized: true } residency
+            ? residency.Origin
+            : throw new InvalidOperationException("An exterior profile requires initialized terrain residency.");
+        if (!TryExteriorProfileCell(profile, out DaggerfallExteriorCellId cell))
+            throw new InvalidOperationException($"Exterior profile '{profile.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
+        return origin.LocalTranslation(cell);
+    }
+
+    private IReadOnlySet<long> ActiveDynamicActorIds()
+    {
+        HashSet<long> residentActorIds = [];
+        foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values)
+            residentActorIds.UnionWith(resident.ActorIds);
+        return _roster.DynamicActorIdsExcluding(residentActorIds);
+    }
+
     private void AdmitResidentExteriorLocation(DaggerfallSiteProfile profile)
     {
         DaggerfallWorldProfileKey key = profile.ProfileKey;
@@ -879,8 +901,9 @@ internal sealed class DaggerfallSiteLifecycle
         {
             if (capture)
             {
+                Vector3 profileFrameOffset = ExteriorProfileTranslation(resident.Profile);
                 delta = _persistence.CaptureSiteDelta(resident.Profile, resident.Projection.Doors,
-                    resident.Projection.Motion, _roster.Dynamic, resident.ActorIds);
+                    resident.Projection.Motion, _roster.Dynamic, resident.ActorIds, profileFrameOffset);
                 _deltas[key] = delta;
             }
             resident.Projection.Suspend();
@@ -933,8 +956,9 @@ internal sealed class DaggerfallSiteLifecycle
     {
         if (!_locationLoaded) return;
         DaggerfallSiteProfile profile = Projection.Inputs;
+        IReadOnlySet<long> dynamicActorIds = ActiveDynamicActorIds();
         DaggerfallSiteRuntimeDelta delta = _persistence.CaptureSiteDelta(profile, Projection.Doors,
-            Projection.Motion, _roster.Dynamic);
+            Projection.Motion, _roster.Dynamic, dynamicActorIds);
         _deltas[ActiveProfile] = delta;
         _roster.UnloadSite(profile, delta);
         Projection.Suspend();

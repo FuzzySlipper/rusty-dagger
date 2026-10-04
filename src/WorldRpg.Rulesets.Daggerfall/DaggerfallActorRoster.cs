@@ -70,6 +70,13 @@ internal sealed class DaggerfallActorRoster
     /// <summary>Spawned actors by durable identity to the definition each was registered from.</summary>
     internal IReadOnlyDictionary<long, DaggerfallActorId> Dynamic => _dynamicActors;
 
+    /// <summary>Returns the live spawned identities that are not owned by an already admitted site.</summary>
+    internal IReadOnlySet<long> DynamicActorIdsExcluding(IReadOnlySet<long> excluded)
+    {
+        ArgumentNullException.ThrowIfNull(excluded);
+        return _dynamicActors.Keys.Where(id => !excluded.Contains(id)).ToHashSet();
+    }
+
     private DaggerfallSiteAppearance Appearance => _projection().Appearance;
 
     /// <summary>Replaces the runtime entity at one durable actor identity; no hidden original remains.</summary>
