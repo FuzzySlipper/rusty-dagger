@@ -212,6 +212,87 @@ public sealed class StaticNpcAdmissionTests
         Assert.Equal("bank teller", placement.Role);
     }
 
+    [Fact]
+    public void Temple_source_providers_publish_their_catalog_services()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        NormalizedBillboardSprite billboard = new("sprite/temple.png", new(1, 2, 3, 4), 1, 1,
+            [new NormalizedAtlasFrame(0, 0, 0, 1, 1)], 0, Vector2.Zero, new(1, 1));
+        int[] providerFactions = [254, 496, 497, 498, 810, 813];
+        string json = JsonSerializer.Serialize(new
+        {
+            world = new
+            {
+                interiorBuilding = new { buildingType = 14, factionId = DaggerfallConcreteGuildCatalog.KynarethFactionId },
+                staticNpcs = providerFactions.Select((faction, index) => new
+                {
+                    id = $"person/provider-{faction}",
+                    billboardArchive = 211,
+                    billboardRecord = 13,
+                    race = "breton",
+                    gender = "Female",
+                    factionId = faction,
+                    nameSeed = index,
+                    position = new { x = 1F + index, y = 1F, z = 1F },
+                }),
+            },
+        });
+
+        DaggerfallContentDiagnostics diagnostics = new();
+        IReadOnlyList<DaggerfallStaticNpcPlacement> placements = DaggerfallStaticNpcPlacement.Read(
+            System.Text.Encoding.UTF8.GetBytes(json), new Dictionary<(int Archive, int Record), NormalizedBillboardSprite>
+            {
+                [(211, 13)] = billboard,
+            }, definitions, new DaggerfallSiteId(17, 4), diagnostics);
+
+        diagnostics.ThrowIfAny();
+        Assert.Contains("training", Assert.Single(placements, value => value.Appearance.FactionId == 254).Services);
+        Assert.Contains("buy-spells", Assert.Single(placements, value => value.Appearance.FactionId == 496).Services);
+        Assert.Contains("make-spells", Assert.Single(placements, value => value.Appearance.FactionId == 497).Services);
+        Assert.Contains("daedra-summoning", Assert.Single(placements, value => value.Appearance.FactionId == 498).Services);
+        Assert.Contains("donate", Assert.Single(placements, value => value.Appearance.FactionId == 810).Services);
+        Assert.Contains("cure-disease", Assert.Single(placements, value => value.Appearance.FactionId == 813).Services);
+        Assert.Equal("trainer", Assert.Single(placements, value => value.Appearance.FactionId == 254).Role);
+        Assert.Equal("priest", Assert.Single(placements, value => value.Appearance.FactionId == 810).Role);
+        Assert.Equal("healer", Assert.Single(placements, value => value.Appearance.FactionId == 813).Role);
+    }
+
+    [Fact]
+    public void Mages_source_provider_services_publish_without_faction_only_invention()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        NormalizedBillboardSprite billboard = new("sprite/mages.png", new(1, 2, 3, 4), 1, 1,
+            [new NormalizedAtlasFrame(0, 0, 0, 1, 1)], 0, Vector2.Zero, new(1, 1));
+        string json = JsonSerializer.Serialize(new
+        {
+            world = new
+            {
+                interiorBuilding = new { buildingType = 11, factionId = DaggerfallConcreteGuildCatalog.MagesFactionId },
+                staticNpcs = new[]
+                {
+                    new { id = "person/buy", billboardArchive = 211, billboardRecord = 14, race = "breton", gender = "Male", factionId = 60, nameSeed = 1, position = new { x = 1F, y = 1F, z = 1F } },
+                    new { id = "person/make", billboardArchive = 211, billboardRecord = 14, race = "breton", gender = "Male", factionId = 64, nameSeed = 2, position = new { x = 2F, y = 1F, z = 1F } },
+                    new { id = "person/identify", billboardArchive = 211, billboardRecord = 14, race = "breton", gender = "Male", factionId = 801, nameSeed = 3, position = new { x = 3F, y = 1F, z = 1F } },
+                    new { id = "person/make-magic", billboardArchive = 211, billboardRecord = 14, race = "breton", gender = "Male", factionId = 802, nameSeed = 4, position = new { x = 4F, y = 1F, z = 1F } },
+                },
+            },
+        });
+
+        DaggerfallContentDiagnostics diagnostics = new();
+        IReadOnlyList<DaggerfallStaticNpcPlacement> placements = DaggerfallStaticNpcPlacement.Read(
+            System.Text.Encoding.UTF8.GetBytes(json), new Dictionary<(int Archive, int Record), NormalizedBillboardSprite>
+            {
+                [(211, 14)] = billboard,
+            }, definitions, new DaggerfallSiteId(17, 4), diagnostics);
+
+        diagnostics.ThrowIfAny();
+        Assert.Contains("buy-spells", Assert.Single(placements, value => value.Appearance.FactionId == 60).Services);
+        Assert.Contains("make-spells", Assert.Single(placements, value => value.Appearance.FactionId == 64).Services);
+        Assert.Contains("identify", Assert.Single(placements, value => value.Appearance.FactionId == 801).Services);
+        Assert.Contains("make-magic-items", Assert.Single(placements, value => value.Appearance.FactionId == 802).Services);
+        Assert.DoesNotContain("banking", placements.Single(value => value.Appearance.FactionId == 801).Services);
+    }
+
     private static DaggerfallSiteProfile StaticProviderSite(DaggerfallSiteProfile source, int placementCount = 1)
     {
         if (placementCount is < 1 or > 2) throw new ArgumentOutOfRangeException(nameof(placementCount));

@@ -173,7 +173,12 @@ internal sealed class DaggerfallConcreteGuildServiceRuntime
             providerDenial);
     }
 
-    private static string ProviderServiceName(DaggerfallConcreteGuildService service) => service switch
+    /// <summary>
+    /// The stable service identity shared by source placement admission and the concrete guild
+    /// runtime. A provider NPC is admitted only when its source faction is attached to one of
+    /// these explicit catalog services; callers must not derive service names from faction alone.
+    /// </summary>
+    internal static string ProviderServiceName(DaggerfallConcreteGuildService service) => service switch
     {
         DaggerfallConcreteGuildService.Training => "training",
         DaggerfallConcreteGuildService.Quests => "quests",
