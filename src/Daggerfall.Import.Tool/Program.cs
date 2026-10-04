@@ -15,6 +15,7 @@ internal static class Program
         // Product-wide media.
         MusicMediaCommand.Command,
         ClassicMediaCommand.Command,
+        SkyMediaCommand.Command,
         CharacterPresentationCommand.Command,
         CinematicMediaCommand.Command,
         // The imported payload's sections, the block document and the import records.

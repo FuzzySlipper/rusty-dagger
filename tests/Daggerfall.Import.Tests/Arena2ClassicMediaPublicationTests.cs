@@ -66,9 +66,30 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal(
             [(1, ClassicWeaponScreenAlignment.Right, 0.2F), (2, ClassicWeaponScreenAlignment.Right, 0F), (3, ClassicWeaponScreenAlignment.Right, 0F), (4, ClassicWeaponScreenAlignment.Right, 0F), (5, ClassicWeaponScreenAlignment.Left, 0F), (6, ClassicWeaponScreenAlignment.Left, 0.2F)],
             werecreature.Actions.Where(action => action.Action != ClassicDaggerWeaponAction.Idle).Select(action => (action.SourceRecordOrdinal, action.Alignment, action.ScreenOffset)));
-        Assert.Equal(new[] { 349, 350, 351, 352, 353 }, new[] { ClassicDaggerAudioClip.MagicCast,
+        Assert.Equal(new[] { 81, 82, 83, 84, 85 }, new[] { ClassicDaggerAudioClip.MagicCast,
             ClassicDaggerAudioClip.PoisonCast, ClassicDaggerAudioClip.ShockCast, ClassicDaggerAudioClip.FireCast,
             ClassicDaggerAudioClip.ColdCast }.Select(kind => first.Audio.Single(clip => clip.Clip == char.ToLowerInvariant(kind.ToString()[0]) + kind.ToString()[1..]).SourceRecordOrdinal));
+        Assert.Equal(
+            new Dictionary<string, (int Ordinal, uint NumericId)>(StringComparer.Ordinal)
+            {
+                ["ambient.rain"] = (389, 385),
+                ["ambient.crickets"] = (6, 375),
+                ["ambient.bird1"] = (437, 300),
+                ["ambient.bird2"] = (438, 301),
+                ["ambient.thunder-short"] = (348, 92),
+                ["ambient.thunder"] = (349, 93),
+                ["ambient.lightning-roll"] = (350, 94),
+                ["dungeon.ambient.01"] = (63, 331), ["dungeon.ambient.02"] = (64, 332),
+                ["dungeon.ambient.03"] = (65, 333), ["dungeon.ambient.04"] = (66, 334),
+                ["dungeon.ambient.05"] = (67, 335), ["dungeon.ambient.06"] = (68, 336),
+                ["dungeon.ambient.07"] = (69, 337), ["dungeon.ambient.08"] = (70, 338),
+                ["dungeon.ambient.09"] = (71, 339), ["dungeon.ambient.10"] = (72, 340),
+                ["dungeon.ambient.11"] = (73, 341), ["dungeon.ambient.12"] = (74, 342),
+                ["dungeon.ambient.13"] = (75, 343), ["dungeon.ambient.14"] = (76, 344),
+            }.OrderBy(pair => pair.Key, StringComparer.Ordinal),
+            first.Audio.Where(clip => clip.Clip.StartsWith("ambient.", StringComparison.Ordinal) || clip.Clip.StartsWith("dungeon.ambient.", StringComparison.Ordinal))
+                .ToDictionary(clip => clip.Clip, clip => (clip.SourceRecordOrdinal, clip.SourceNumericId), StringComparer.Ordinal)
+                .OrderBy(pair => pair.Key, StringComparer.Ordinal));
         Assert.Equal(4, first.Effects.Count);
         Assert.All(first.Effects, effect => Assert.False(effect.Timing.Loop));
         Assert.All(MobileSourceMetadata.All, mobile =>
@@ -745,7 +766,20 @@ public sealed class Arena2ClassicMediaPublicationTests
         for (int index = 0; index < recordCount; index++) result.Add((byte)index);
         for (int index = 0; index < recordCount; index++)
         {
-            AppendUInt32(result, checked((uint)(10_000 + index)));
+            uint id = index switch
+            {
+                6 => 375,
+                >= 63 and <= 76 => checked((uint)(index + 268)),
+                >= 81 and <= 85 => checked((uint)(index + 268)),
+                348 => 92,
+                349 => 93,
+                350 => 94,
+                389 => 385,
+                437 => 300,
+                438 => 301,
+                _ => checked((uint)(10_000 + index)),
+            };
+            AppendUInt32(result, id);
             AppendInt32(result, 1);
         }
 

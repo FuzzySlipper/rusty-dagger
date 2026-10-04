@@ -322,6 +322,7 @@ public static class DungeonNormalizer
         private readonly List<DoorDraft> doorDrafts = [];
         private readonly List<DungeonRecordProvenance> provenance = [];
         private readonly List<NormalizedQuestMarker> questMarkers = [];
+        private readonly List<AmbientZoneDraft> ambientZoneDrafts = [];
         private NormalizedMarker? startMarker;
         private NormalizedMarker? enterMarker;
         private int models;
@@ -350,6 +351,7 @@ public static class DungeonNormalizer
             string blockPlacementId = $"{Slug(reference.SourceName)}/{reference.X}/{reference.Z}";
             string blockId = $"block/{blockPlacementId}";
             AddProvenance(blockId, "rdb-block", blocks.Source, record.Ordinal);
+            bool castleBlock = false;
             Arena2ImportPoint origin = Arena2SourceTransform.ToBlockOrigin(reference);
             for (int index = 0; index < block.Lights.Count; index++)
             {
@@ -373,11 +375,15 @@ public static class DungeonNormalizer
                     AddProvenance(marker.Id, "rdb-quest-marker", blocks.Source, index);
                     continue;
                 }
-                if (reference.IsStart && RdbSourceClassification.IsStartMarker(flat))
+                if (RdbSourceClassification.IsStartMarker(flat))
                 {
-                    startMarker ??= new("marker/start", position);
-                    AddProvenance("marker/start", "rdb-start-marker", blocks.Source, index);
-                    continue;
+                    castleBlock |= flat.Magnitude != 0;
+                    if (reference.IsStart)
+                    {
+                        startMarker ??= new("marker/start", position);
+                        AddProvenance("marker/start", "rdb-start-marker", blocks.Source, index);
+                        continue;
+                    }
                 }
 
                 if (reference.IsStart && RdbSourceClassification.IsEnterMarker(flat))
@@ -559,6 +565,16 @@ public static class DungeonNormalizer
             }
 
             AddActions(block, blockPlacementId, reference);
+
+            if (castleBlock || StringComparer.OrdinalIgnoreCase.Equals(reference.SourceName, "S0000161.RDB"))
+            {
+                NormalizedAmbientZoneKind kind = StringComparer.OrdinalIgnoreCase.Equals(reference.SourceName, "S0000161.RDB")
+                    ? NormalizedAmbientZoneKind.SpecialArea
+                    : NormalizedAmbientZoneKind.Castle;
+                string zoneId = $"ambient/{blockPlacementId}/{kind.ToString().ToLowerInvariant()}";
+                ambientZoneDrafts.Add(new(zoneId, kind, reference.SourceName, reference.X, reference.Z, block.Width, block.Height));
+                AddProvenance(zoneId, "rdb-ambient-zone", blocks.Source, record.Ordinal);
+            }
         }
 
         public DungeonNormalizationResult Build()
@@ -602,6 +618,10 @@ public static class DungeonNormalizer
             }
 
             NormalizedBounds bounds = MeshGeometry.Bounds(worldBoundsVertices);
+            NormalizedAmbientZone[] ambientZones = ambientZoneDrafts
+                .Select(draft => draft.ToNormalized(bounds))
+                .OrderBy(zone => zone.Id, StringComparer.Ordinal)
+                .ToArray();
             HashSet<string> movableMeshIds = geometry.Keys
                 .Where(key => key.ActionId is not null || key.DoorId is not null)
                 .Select(key => meshIdsByGeometry[key])
@@ -669,6 +689,7 @@ public static class DungeonNormalizer
                         draft.MeshKeys.Select(key => meshIdsByGeometry[key]).ToArray(),
                         ActionModelArtifactId(staticMeshArtifactId, draft.ActionId)))
                     .ToArray(),
+                AmbientZones = ambientZones,
             };
             DungeonSpatialPublication spatialPublication = DungeonSpatialPublication.Create(
                 staticMeshArtifactId,
@@ -1019,6 +1040,36 @@ public static class DungeonNormalizer
         NormalizedVector3 RotationDegrees,
         IReadOnlySet<GeometryGroupKey> MeshKeys,
         IReadOnlyList<NormalizedVector3> LocalVertices);
+
+    private sealed record AmbientZoneDraft(
+        string Id,
+        NormalizedAmbientZoneKind Kind,
+        string SourceBlock,
+        int BlockX,
+        int BlockZ,
+        uint Width,
+        uint Height)
+    {
+        public NormalizedAmbientZone ToNormalized(NormalizedBounds worldBounds)
+        {
+            const float blockSide = 2048F * Arena2SourceTransform.SourceUnitMetres;
+            float sourceX = BlockX * blockSide;
+            float sourceZ = BlockZ * blockSide;
+            float sourceWidth = Width * blockSide;
+            float sourceHeight = Height * blockSide;
+            NormalizedVector3 sourceOrigin = MeshGeometry.ToRightHanded(new Arena2ImportPoint(sourceX, 0F, sourceZ));
+            NormalizedVector3 sourceFar = MeshGeometry.ToRightHanded(new Arena2ImportPoint(sourceX + sourceWidth, 0F, sourceZ + sourceHeight));
+            return new(
+                Id,
+                Kind,
+                SourceBlock,
+                BlockX,
+                BlockZ,
+                new(
+                    new(MathF.Min(sourceOrigin.X, sourceFar.X), worldBounds.Minimum.Y, MathF.Min(sourceOrigin.Z, sourceFar.Z)),
+                    new(MathF.Max(sourceOrigin.X, sourceFar.X), worldBounds.Maximum.Y, MathF.Max(sourceOrigin.Z, sourceFar.Z))));
+        }
+    }
 
     private readonly record struct Matrix3(float M11, float M12, float M13, float M21, float M22, float M23, float M31, float M32, float M33)
     {

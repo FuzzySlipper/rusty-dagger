@@ -35,6 +35,13 @@ internal sealed partial class ImportToolFixture
                 var classic = ClassicMediaGroup.Create(Arena2SiteSources.ForClassicMedia(Arena2).ClassicMediaInputs, ClassicProfile());
                 Artifacts(At("output/worldrpg"), classic.Artifacts);
                 result.Add(At("output/worldrpg/" + ClassicMediaGroup.InventoryRelativePath), classic.WriteInventory("worldrpg", Directory.EnumerateFiles(Arena2).Select(Path.GetFileName).OfType<string>())); break;
+            case "sky-media":
+                var day = Enumerable.Range(0, SkyFileDecoder.FileCount)
+                    .Select(index => new SkyMediaSource(index, Label($"SKY{index:00}.DAT"), Source($"SKY{index:00}.DAT"))).ToArray();
+                var night = Enumerable.Range(0, 4)
+                    .Select(index => new NightSkyMediaSource(index, Label($"NITE{index:00}I0.IMG"), Source($"NITE{index:00}I0.IMG"))).ToArray();
+                var sky = SkyMediaPublication.Create(day, night, PaletteDecoder.Decode(Source("PAL.PAL"), Label("PAL.PAL")));
+                Artifacts(At("output/worldrpg"), sky.Artifacts); break;
             case "character-presentation":
                 var characters = CharacterPresentationGroup.Create(Directory.EnumerateFiles(Arena2).Select(Path.GetFileName).OfType<string>()
                     .Where(CharacterMediaInventory.IsDocumentedFamily).Order(StringComparer.Ordinal).Select(file => (file, (ReadOnlyMemory<byte>)Source(file))).ToArray(),
