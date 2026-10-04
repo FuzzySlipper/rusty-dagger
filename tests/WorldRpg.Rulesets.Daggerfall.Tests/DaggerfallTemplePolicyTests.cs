@@ -59,6 +59,51 @@ public sealed class DaggerfallTemplePolicyTests
     }
 
     [Fact]
+    public void Held_donation_quote_starts_a_full_duration_when_payment_is_accepted()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        DonationContext donation = PrepareDonation(session, DaggerfallConcreteGuildCatalog.AkatoshFactionId, 1);
+
+        DaggerfallTempleDonationQuote quote = Assert.IsType<DaggerfallTempleDonationQuote>(
+            session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 1, out DaggerfallTempleServiceResult refusal));
+        Assert.True(refusal.Accepted, refusal.Message);
+        session.AdvanceElapsedTime(30);
+
+        Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
+        Assert.Equal(90d, DaggerfallTempleBlessingEffects.Read(Assert.Single(session.State.Effects.Active).State).ExpiresAtGameSecond);
+        session.AdvanceElapsedTime(59);
+        Assert.Single(session.State.Effects.Active);
+        session.AdvanceElapsedTime(1);
+        Assert.Empty(session.State.Effects.Active);
+    }
+
+    [Fact]
+    public void Restore_rejects_a_future_blessing_beyond_its_paid_duration()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        DonationContext donation = PrepareDonation(session, DaggerfallConcreteGuildCatalog.AkatoshFactionId, 1);
+        DaggerfallTempleDonationQuote quote = Assert.IsType<DaggerfallTempleDonationQuote>(
+            session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 1, out DaggerfallTempleServiceResult refusal));
+        Assert.True(refusal.Accepted, refusal.Message);
+        Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
+
+        DaggerfallSavePayload payload = DaggerfallSavePayload.Read(session.CaptureSave());
+        DaggerfallActiveEffectSave saved = Assert.Single(payload.ActiveEffects);
+        DaggerfallTempleBlessingState malformed = DaggerfallTempleBlessingEffects.Read(saved.State) with
+        {
+            ExpiresAtGameSecond = DaggerfallWorldTimeAbsolute(session) + (2 * DaggerfallCalendar.SecondsPerMinute),
+        };
+        RulesetSavePayload malformedSave = DaggerfallSavePayload.Encode(payload with
+        {
+            ActiveEffects = [saved with { State = DaggerfallTempleBlessingEffects.Encode(malformed) }],
+        });
+
+        Assert.Throws<ArgumentException>(() => fixture.Restore(malformedSave));
+    }
+
+    [Fact]
     public void Source_temple_building_faction_retains_its_deity_parent()
     {
         DaggerfallConcreteGuildDefinition arkay = DaggerfallConcreteGuildCatalog.ForFaction(
@@ -186,6 +231,28 @@ public sealed class DaggerfallTemplePolicyTests
         Assert.Single(session.State.Effects.Active);
         session.AdvanceElapsedTime(1);
         Assert.Empty(session.State.Effects.Active);
+    }
+
+    [Fact]
+    public void Fractional_save_preserves_a_full_blessing_duration_after_restore()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        for (ulong step = 1; step <= 3; step++)
+            session.Update(new ProductUpdate(OuterUpdate(step), []));
+
+        DonationContext donation = PrepareDonation(session, DaggerfallConcreteGuildCatalog.AkatoshFactionId, 1);
+        DaggerfallTempleDonationQuote quote = Assert.IsType<DaggerfallTempleDonationQuote>(
+            session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 1, out DaggerfallTempleServiceResult refusal));
+        Assert.True(refusal.Accepted, refusal.Message);
+        Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
+        session.AdvanceElapsedTime(30);
+
+        using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        restored.AdvanceElapsedTime(29);
+        Assert.Single(restored.State.Effects.Active);
+        restored.AdvanceElapsedTime(1);
+        Assert.Empty(restored.State.Effects.Active);
     }
 
     [Fact]
@@ -346,6 +413,13 @@ public sealed class DaggerfallTemplePolicyTests
     {
         DaggerfallCalendarSave saved = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
         return new(saved.Year, saved.Month, saved.Day, saved.Hour, saved.Minute, saved.Second);
+    }
+
+    private static double DaggerfallWorldTimeAbsolute(DaggerfallSession session)
+    {
+        DaggerfallCalendarSave saved = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
+        return new DaggerfallCalendar(saved.Year, saved.Month, saved.Day, saved.Hour, saved.Minute, saved.Second).ToAbsoluteSeconds()
+            + saved.RemainderSeconds;
     }
 
     private static void StartUnrelatedLongEffect(DaggerfallSession session)
