@@ -29,6 +29,9 @@ internal interface IDaggerfallSiteTransitionHost
     /// <summary>Copies accepted source-civilian poses before the departing site's delta is captured.</summary>
     void SyncCivilianPositions();
 
+    /// <summary>Admits retained source-civilian billboards into a resident projection.</summary>
+    void AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection);
+
     /// <summary>The departing projection is about to be released; retire what it was still timing.</summary>
     void RetireDepartingProjection(DaggerfallSiteProjection source);
 }
@@ -962,6 +965,7 @@ internal sealed class DaggerfallSiteLifecycle
             artifactAdmitted = true;
             projection.ActivateMotionCollisionResidency();
             _roster.MaterializeSite(profile, delta, restoreAuthoredAppearance: true, projection: projection);
+            _host.AdmitResidentCivilianAppearances(projection);
             _roster.MaterializeStaticNpcs(profile, projection);
             HashSet<long> actorIds = profile.Project.Actors.Keys.ToHashSet();
             foreach (DaggerfallNpc npc in _state.Npcs.All.Where(npc => npc.Profile == key))

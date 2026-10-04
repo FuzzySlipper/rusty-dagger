@@ -178,6 +178,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     void IDaggerfallSiteTransitionHost.SyncCivilianPositions() => SyncCivilianPositions();
 
+    void IDaggerfallSiteTransitionHost.AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection) =>
+        AdmitResidentCivilianAppearances(projection);
+
     /// <summary>
     /// A swing the departing projection was still timing ends with it: retire and hand its
     /// impact back to the shared state here, inside the generation that admitted it, so the

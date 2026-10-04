@@ -3,6 +3,7 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -29,22 +30,19 @@ internal sealed partial class DaggerfallSession
             throw new InvalidOperationException($"NPC {npcId} has been removed and cannot be materialized.");
         DaggerfallSiteProfile profile = _sites.Projection.Inputs;
         bool sourcePopulation = IsSourcePopulation(npc);
-        NormalizedBillboardSprite? sourceSprite = null;
-        if (sourcePopulation && !profile.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out sourceSprite))
-            throw new NotSupportedException($"Population NPC {npcId} has no published billboard {npc.Appearance.BillboardArchive}/{npc.Appearance.BillboardRecord} at '{profile.ProfileKey.LogicalId}'.");
         if (State.Actors.TryGet(npcId, out _))
         {
             // Site admission can restore a retained actor before the time-of-day population
             // projection runs. Re-admit the source billboard only when the population owner hid
             // that visual for night; the mechanics actor remains the same durable owner.
-            if (sourcePopulation && !_appearance.HasActor(npcId)) _appearance.AddActor(npcId, sourceSprite!);
+            if (sourcePopulation) AdmitSourcePopulationAppearance(npc, profile, _appearance);
             return npcId;
         }
 
         long actorId = _roster.MaterializeCivilian(npc, pose);
         if (sourcePopulation)
         {
-            try { _appearance.AddActor(actorId, sourceSprite!); }
+            try { AdmitSourcePopulationAppearance(npc, profile, _appearance); }
             catch
             {
                 _roster.UnloadActor(actorId);
@@ -52,6 +50,23 @@ internal sealed partial class DaggerfallSession
             }
         }
         return actorId;
+    }
+
+    /// <summary>
+    /// Restores source-population billboards for actors retained by an adjacent exterior. The
+    /// resident projection owns the appearance; the NPC registry and this same source lookup stay
+    /// authoritative, so resident re-entry does not create a second civilian visual graph.
+    /// </summary>
+    internal void AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection)
+    {
+        ArgumentNullException.ThrowIfNull(projection);
+        DaggerfallSiteProfile profile = projection.Inputs;
+        foreach (DaggerfallNpc npc in State.Npcs.All.Where(npc => IsSourcePopulation(npc)
+            && npc.Profile == profile.ProfileKey
+            && State.Actors.TryGet(npc.DurableId, out _)))
+        {
+            AdmitSourcePopulationAppearance(npc, profile, projection.Appearance);
+        }
     }
 
     /// <summary>Materializes every active civilian, using saved coordinates when present.</summary>
@@ -83,6 +98,18 @@ internal sealed partial class DaggerfallSession
     private static bool IsSourcePopulation(DaggerfallNpc npc) =>
         npc.Kind == DaggerfallNpcKind.Civilian
         && npc.StableKey.StartsWith("population/", StringComparison.Ordinal);
+
+    private static void AdmitSourcePopulationAppearance(DaggerfallNpc npc, DaggerfallSiteProfile profile,
+        DaggerfallSiteAppearance appearance)
+    {
+        if (!profile.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord),
+                out NormalizedBillboardSprite? sourceSprite))
+        {
+            throw new NotSupportedException($"Population NPC {npc.DurableId} has no published billboard {npc.Appearance.BillboardArchive}/{npc.Appearance.BillboardRecord} at '{profile.ProfileKey.LogicalId}'.");
+        }
+        if (appearance.HasActor(npc.DurableId)) return;
+        appearance.AddActor(npc.DurableId, sourceSprite);
+    }
 
     /// <summary>Retires a civilian and records the social identity as removed.</summary>
     internal void RetireNpcActor(long npcId)
