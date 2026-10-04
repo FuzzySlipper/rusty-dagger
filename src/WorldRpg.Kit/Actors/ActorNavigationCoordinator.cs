@@ -143,7 +143,11 @@ public sealed class ActorNavigationCoordinator
 
         float stepDistance = MathF.Min(distance, request.MaximumStepUnits);
         Vector3 direction = delta / distance;
-        float planarDistance = MathF.Sqrt((direction.X * direction.X) + (direction.Z * direction.Z));
+        // The normalized three-dimensional direction can round the horizontal magnitude a few
+        // ulps above one. Engine command admission treats the planar intent envelope as strict,
+        // so keep this derived input inside that published contract.
+        float planarDistance = Math.Clamp(
+            MathF.Sqrt((direction.X * direction.X) + (direction.Z * direction.Z)), 0f, 1f);
         float heading = planarDistance > .0001f
             ? MathF.Atan2(direction.X, -direction.Z)
             : before.HeadingYawRadians;

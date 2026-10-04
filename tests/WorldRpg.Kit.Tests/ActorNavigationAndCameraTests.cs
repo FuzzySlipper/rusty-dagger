@@ -169,6 +169,33 @@ public sealed class ActorNavigationAndCameraTests
     }
 
     [Fact]
+    public void Near_horizontal_character_intent_is_bounded_after_float_normalization()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(13), () => { });
+        SpatialDouble spatial = SpatialDouble.Create();
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(0f, 0f, 0f), 0f));
+        ActorState actor = actors.Get(42);
+        Vector3 delta = new(.001f, 1e-8f, .068f);
+        float distance = delta.Length();
+        Vector3 direction = delta / distance;
+        float rawPlanarDistance = MathF.Sqrt((direction.X * direction.X) + (direction.Z * direction.Z));
+        Assert.True(rawPlanarDistance > 1f);
+
+        ActorNavigationCoordinator navigation = new(
+            spatial.Service,
+            session,
+            actors.Store,
+            default,
+            _ => CharacterStepEnvironment.Empty);
+
+        navigation.Evaluate(actor, new ActorNavigationRequest(
+            WorldPoint.From(delta), 1f, 8, ActorNavigationMode.Flying, .1f));
+
+        CharacterStepRequest request = Assert.Single(spatial.CharacterRequests);
+        Assert.Equal(1f, request.Command.PlanarIntent.Y);
+    }
+
+    [Fact]
     public void Wander_uses_engine_receipts_and_enters_blocked_or_unloaded_states_explicitly()
     {
         using SpatialSession session = new(new SpatialSessionHandle(11), () => { });
