@@ -256,8 +256,12 @@ public sealed class SessionCollisionResidencyTests
             session.State.Actors.Get(actorId).Position.ToVector() - residentFrame);
 
         Assert.True(session.TryTransitionTo(source.ProfileKey));
+        // The source transition establishes a new local origin. Re-read the resident profile's
+        // frame after that rebase; its profile-space pose remains unchanged while its local cell
+        // translation changes with the active source origin.
+        Vector3 residentFrameInSource = session.Sites.ExteriorProfileFrameTranslation(resident.ProfileKey);
         Vector3 expectedResidentPose = profilePose.ToVector()
-            + residentFrame;
+            + residentFrameInSource;
         Assert.Equal(expectedResidentPose.X, session.State.Actors.Get(actorId).Position.X, 3);
         Assert.Equal(expectedResidentPose.Y, session.State.Actors.Get(actorId).Position.Y, 3);
         Assert.Equal(expectedResidentPose.Z, session.State.Actors.Get(actorId).Position.Z, 3);
@@ -281,9 +285,11 @@ public sealed class SessionCollisionResidencyTests
 
         Assert.True(session.TryTransitionTo(source.ProfileKey));
         Assert.True(session.State.Actors.TryGet(actorId, out ActorState? restoredResident));
-        Assert.Equal(expectedResidentPose.X, restoredResident!.Position.X, 3);
-        Assert.Equal(expectedResidentPose.Y, restoredResident.Position.Y, 3);
-        Assert.Equal(expectedResidentPose.Z, restoredResident.Position.Z, 3);
+        Vector3 restoredResidentFrame = session.Sites.ExteriorProfileFrameTranslation(resident.ProfileKey);
+        Vector3 restoredExpectedPose = profilePose.ToVector() + restoredResidentFrame;
+        Assert.Equal(restoredExpectedPose.X, restoredResident!.Position.X, 3);
+        Assert.Equal(restoredExpectedPose.Y, restoredResident.Position.Y, 3);
+        Assert.Equal(restoredExpectedPose.Z, restoredResident.Position.Z, 3);
 
         static DaggerfallSiteProfile EmptyExteriorAt(DaggerfallSiteProfile template, DaggerfallSiteId site, string logicalId) =>
             EmptyProfileAt(template, site, DaggerfallWorldProfileKind.Exterior, logicalId);
