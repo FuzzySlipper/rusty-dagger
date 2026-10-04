@@ -71,8 +71,21 @@ internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Positi
                 foreach (DaggerfallConcreteGuildServiceDefinition service in guild.Services
                     .Where(service => service.ProviderFactionId == faction && service.SourceImplemented))
                 {
-                    if (service.Service == DaggerfallConcreteGuildService.BuySpells) { services.Add("buy-spells"); role = "spell seller"; }
-                    if (service.Service == DaggerfallConcreteGuildService.MakeSpells) { services.Add("make-spells"); role = "spellmaker"; }
+                    string serviceName = DaggerfallConcreteGuildServiceRuntime.ProviderServiceName(service.Service);
+                    services.Add(serviceName);
+                    role = service.Service switch
+                    {
+                        DaggerfallConcreteGuildService.BuySpells => "spell seller",
+                        DaggerfallConcreteGuildService.MakeSpells => "spellmaker",
+                        DaggerfallConcreteGuildService.Training => "trainer",
+                        DaggerfallConcreteGuildService.Identify => "identifier",
+                        DaggerfallConcreteGuildService.Repair => "repairer",
+                        DaggerfallConcreteGuildService.Donate => "priest",
+                        DaggerfallConcreteGuildService.CureDisease => "healer",
+                        DaggerfallConcreteGuildService.ReceiveArmor => "armorer",
+                        DaggerfallConcreteGuildService.ReceiveHouse => "property steward",
+                        _ => role,
+                    };
                 }
             }
             result.Add(new(id, position, new(race ?? string.Empty, gender, archive, record,
