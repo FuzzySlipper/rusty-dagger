@@ -29,6 +29,30 @@ public sealed class ActorNavigationAndCameraTests
     }
 
     [Fact]
+    public void Actor_facade_reads_external_engine_transform_with_actor_heading_convention()
+    {
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(1f, 2f, 3f), 0f));
+        ActorState actor = actors.Get(42);
+        WorldPoint externalPosition = new(7f, 8f, 9f);
+        float externalHeading = .75f;
+        Vector3 externalScale = new(2f, 3f, 4f);
+        actors.Store.Set(actor.Actor.Entity, EngineComponentTypes.Transform, new Transform(
+            externalPosition.ToVector(),
+            Quaternion.CreateFromAxisAngle(Vector3.UnitY, -externalHeading),
+            externalScale));
+
+        Assert.Equal(externalPosition, actor.Position);
+        Assert.Equal(externalPosition, actor.Pose.Position);
+        Assert.Equal(externalHeading, actor.HeadingYawRadians, precision: 5);
+
+        actor.ApplyPose(new ActorPose(new WorldPoint(-1f, 0f, 2f), -.5f));
+        Transform applied = actors.Store.Get(actor.Actor.Entity, EngineComponentTypes.Transform);
+        Assert.Equal(externalScale, applied.Scale);
+        Assert.Equal(new Vector3(-1f, 0f, 2f), applied.Translation);
+        Assert.Equal(-.5f, actor.HeadingYawRadians, precision: 5);
+    }
+
+    [Fact]
     public void Navigation_uses_the_supplied_session_and_exact_engine_request_shape()
     {
         using SpatialSession session = new(new SpatialSessionHandle(7), () => { });
@@ -96,7 +120,8 @@ public sealed class ActorNavigationAndCameraTests
 
         new ActorNavigationCoordinator(spatial.Service, session).Evaluate(actor, new ActorNavigationRequest(new WorldPoint(4f, 5f, 6f), 1f, 8));
 
-        Assert.Equal(before, actor.Pose);
+        Assert.Equal(before.Position, actor.Pose.Position);
+        Assert.Equal(before.HeadingYawRadians, actor.Pose.HeadingYawRadians, precision: 5);
     }
 
     [Fact]
@@ -111,7 +136,7 @@ public sealed class ActorNavigationAndCameraTests
         new ActorNavigationCoordinator(spatial.Service, session).Evaluate(actor, new ActorNavigationRequest(new WorldPoint(2f, 9f, -4f), 1f, 8));
 
         Assert.Equal(new WorldPoint(2f, 9f, -4f), actor.Position);
-        Assert.Equal(-.75f, actor.HeadingYawRadians);
+        Assert.Equal(-.75f, actor.HeadingYawRadians, precision: 5);
     }
 
     [Fact]

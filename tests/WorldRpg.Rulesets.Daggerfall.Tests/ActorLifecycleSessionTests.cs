@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using Rusty.Engine;
@@ -19,6 +20,32 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>Spawned and encounter actors: registration, retirement and restore.</summary>
 public sealed class ActorLifecycleSessionTests
 {
+    [Fact]
+    public void Canonical_engine_actor_transform_flows_through_facade_and_save_capture()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        long actorId = session.SpawnActor("rat", new ActorPose(new WorldPoint(10f, 0f, 10f), 0f));
+        ActorState actor = session.State.Actors.Get(actorId);
+        WorldPoint externalPosition = new(13f, 2f, -7f);
+        float externalHeading = .75f;
+        session.State.Actors.Store.Set(actor.Actor.Entity, EngineComponentTypes.Transform, new Transform(
+            externalPosition.ToVector(),
+            Quaternion.CreateFromAxisAngle(Vector3.UnitY, -externalHeading),
+            Vector3.One));
+
+        Assert.Equal(externalPosition, actor.Position);
+        Assert.Equal(externalHeading, actor.HeadingYawRadians, precision: 5);
+
+        DaggerfallDynamicActorSave saved = Assert.Single(
+            DaggerfallSavePayload.Read(session.CaptureSave()).DynamicActors,
+            value => value.EntityId == actorId);
+        Assert.Equal(externalPosition.X, saved.X);
+        Assert.Equal(externalPosition.Y, saved.Y);
+        Assert.Equal(externalPosition.Z, saved.Z);
+        Assert.Equal(externalHeading, saved.HeadingRadians, precision: 5);
+    }
+
     [Fact]
     public void Spawned_actors_register_retire_and_restore_with_distinct_state()
     {

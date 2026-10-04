@@ -42,16 +42,11 @@ public sealed class ActorsState : IDisposable
     public ActorState CreateActor(long id, EntityTypeId type, StatsComponent stats, ActorPose pose, string defeatTrack)
     {
         Actor actor = Construct(id, type, stats, defeatTrack);
-        actor.Add(new ActorBody(pose));
-        Store.Set(actor.Entity, EngineComponentTypes.Transform, EngineTransform(pose));
+        actor.Add(new ActorBody());
+        Store.Set(actor.Entity, EngineComponentTypes.Transform, ActorTransform.FromPose(pose, Vector3.One));
         Store.Set(actor.Entity, EngineComponentTypes.CharacterMotion, InitialCharacterMotion());
         return new ActorState(actor);
     }
-
-    private static Transform EngineTransform(ActorPose pose) => new(
-        pose.Position.ToVector(),
-        Quaternion.CreateFromAxisAngle(Vector3.UnitY, -pose.HeadingYawRadians),
-        Vector3.One);
 
     private static CharacterMotion InitialCharacterMotion() => default(CharacterMotion) with
     {
@@ -145,19 +140,17 @@ public sealed class ActorState(Actor actor)
     public EffectsComponent Effects => Actor.Get<EffectsComponent>();
     public InventoryComponent Inventory => Actor.Get<InventoryComponent>();
     public EquipmentComponent Equipment => Actor.Get<EquipmentComponent>();
-    public ActorPose Pose => Actor.Get<ActorBody>().Pose;
-    public WorldPoint Position => Pose.Position;
-    public float Heading => Pose.HeadingYawRadians;
-    public float HeadingYawRadians => Pose.HeadingYawRadians;
+    public ActorPose Pose => ActorTransform.ToPose(CanonicalTransform);
+    public WorldPoint Position => WorldPoint.From(CanonicalTransform.Translation);
+    public float Heading => ActorTransform.Heading(CanonicalTransform.Rotation);
+    public float HeadingYawRadians => Heading;
     public void ApplyPose(ActorPose pose)
     {
-        Actor.Get<ActorBody>().Pose = pose;
-        if (Actor.Store.Has(Actor.Entity, EngineComponentTypes.Transform))
-            Actor.Store.Set(Actor.Entity, EngineComponentTypes.Transform, new Transform(
-                pose.Position.ToVector(),
-                Quaternion.CreateFromAxisAngle(Vector3.UnitY, -pose.HeadingYawRadians),
-                Vector3.One));
+        Transform current = CanonicalTransform;
+        Actor.Store.Set(Actor.Entity, EngineComponentTypes.Transform, ActorTransform.FromPose(pose, current.Scale));
     }
+
+    private Transform CanonicalTransform => Actor.Store.Get(Actor.Entity, EngineComponentTypes.Transform);
 
     public bool IsDefeated
     {
@@ -169,9 +162,26 @@ public sealed class ActorState(Actor actor)
     }
 }
 
-public sealed class ActorBody(ActorPose pose)
-{
-    public ActorPose Pose { get; set; } = pose;
-}
+/// <summary>Marker for an admitted non-player actor; placement lives in the Engine Transform.</summary>
+public sealed class ActorBody { }
 
 public sealed record ActorVitals(TrackId DefeatTrack);
+
+internal static class ActorTransform
+{
+    internal static Transform FromPose(ActorPose pose, Vector3 scale) => new(
+        pose.Position.ToVector(),
+        Quaternion.CreateFromAxisAngle(Vector3.UnitY, -pose.HeadingYawRadians),
+        scale);
+
+    internal static ActorPose ToPose(Transform transform) => new(
+        WorldPoint.From(transform.Translation),
+        Heading(transform.Rotation));
+
+    /// <summary>Reads yaw using the actor convention: zero faces -Z and positive yaw faces +X.</summary>
+    internal static float Heading(Quaternion rotation)
+    {
+        Vector3 forward = Vector3.Transform(-Vector3.UnitZ, Quaternion.Normalize(rotation));
+        return (float)Math.Atan2(forward.X, -forward.Z);
+    }
+}
