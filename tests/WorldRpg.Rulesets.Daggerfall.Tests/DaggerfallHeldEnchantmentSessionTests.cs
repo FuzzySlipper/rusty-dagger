@@ -35,6 +35,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile inputs = ExteriorContentAt(source, source.ProfileKey.Site,
             "held-enchantment-rest");
+        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(FullContent(root));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -46,7 +47,8 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         RulesetSavePayload saved;
         ulong durableId;
         int afterFirstHour;
-        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
+            new(definitions, inputs, DaggerfallTuning.Defaults) { Sky = sky }))
         {
             DurableIdentityReference identity = session.UniqueItemAllocator.AllocateReference();
             durableId = identity.Value;
@@ -86,7 +88,8 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
             new AppearanceFake(releases), random: RandomMaximum.Create());
         ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root),
             new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, composition), saved);
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
+            new(definitions, inputs, DaggerfallTuning.Defaults, composition) { Sky = sky }, saved);
         DaggerfallItemInstanceMetadata retained = restored.State.ItemInstances.RequireUnique(durableId);
         Assert.Equal(afterFirstHour, retained.CurrentCondition);
         Assert.Equal(TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(value => value.Type == 16 && value.Param == 0).Key,
