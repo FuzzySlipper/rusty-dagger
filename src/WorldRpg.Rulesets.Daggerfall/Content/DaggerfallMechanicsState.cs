@@ -4,7 +4,7 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>Product-owned Daggerfall mechanics definitions and actor construction.</summary>
-internal sealed class DaggerfallMechanicsState
+internal sealed class DaggerfallMechanicsState(DaggerfallEnemySpells? enemySpells = null)
 {
     private const long MinimumStatValue = 0;
     private const long MaximumStatValue = 10_000;
@@ -22,12 +22,17 @@ internal sealed class DaggerfallMechanicsState
         DaggerfallVitalValues vitals)
     {
         ArgumentNullException.ThrowIfNull(definition);
+        bool caster = enemySpells?.IsCaster(definition.MobileId) == true;
+        if (caster) vitals = vitals with { MagickaMaximum = DaggerfallEnemySpells.MagickaMaximum(definition.Level ?? 1) };
         ValidateVitals(vitals);
         List<(StatId Id, Stat Value)> stats = [];
         foreach ((DaggerfallStatId id, int value) in definition.Stats.Values)
         {
-            stats.Add(Stat(id, value));
+            stats.Add(Stat(id, caster && DaggerfallEnemySpells.Schools.Contains(id.Value) ? 80 : value));
         }
+        if (caster)
+            foreach (string school in DaggerfallEnemySpells.Schools.Where(school => !definition.Stats.Values.ContainsKey(new DaggerfallStatId(school))))
+                stats.Add(Stat(new DaggerfallStatId(school), 80));
 
         Stat staminaMaximum = AddStat(stats, DaggerfallMechanicsIds.StaminaMaximum, vitals.StaminaMaximum);
         Stat magickaMaximum = AddStat(stats, DaggerfallMechanicsIds.MagickaMaximum, vitals.MagickaMaximum);
