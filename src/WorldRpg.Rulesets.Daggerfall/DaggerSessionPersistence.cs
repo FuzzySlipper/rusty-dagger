@@ -254,7 +254,7 @@ internal sealed class DaggerSessionPersistence
     }
 
     /// <summary>Captures one canonical materialized actor back to its detached site owner.</summary>
-    internal DaggerfallSiteRuntimeDelta CaptureDynamicActorDelta(long id, string definition) => new([], [CaptureDynamicActor(id, definition)],
+    internal DaggerfallSiteRuntimeDelta CaptureDynamicActorDelta(long id, string definition, Vector3 actorFrameOffset = default) => new([], [CaptureDynamicActor(id, definition, actorFrameOffset)],
         [new(id, CaptureInventory(State.ActorInventories.InventoryFor(id) ?? throw new InvalidOperationException($"Actor {id} has no inventory."),
             State.ActorInventories.EquipmentFor(id), DaggerfallItemOwner.Actor(id)))], CaptureCorpses([id]), [],
         State.Effects.Capture().Where(effect => effect.TargetId == id).ToArray());
