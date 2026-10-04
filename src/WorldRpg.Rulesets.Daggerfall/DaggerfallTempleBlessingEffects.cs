@@ -1,19 +1,21 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Effects;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Durable meaning captured by one paid temple blessing.</summary>
 internal sealed record DaggerfallTempleBlessingState(
-    int DeityFactionId,
-    DaggerfallTempleBlessingTarget Target,
-    int Region,
-    int Magnitude,
-    int DurationMinutes,
-    long ExpiresAtMinute)
+    [property: JsonRequired] int DeityFactionId,
+    [property: JsonRequired] DaggerfallTempleBlessingTarget Target,
+    [property: JsonRequired] int Region,
+    [property: JsonRequired] int Magnitude,
+    [property: JsonRequired] int DurationMinutes,
+    [property: JsonRequired] double ExpiresAtGameSecond)
 {
     internal DaggerfallTempleBlessingState Validate()
     {
@@ -22,7 +24,8 @@ internal sealed record DaggerfallTempleBlessingState(
             || Target == DaggerfallTempleBlessingTarget.None
             || Magnitude is < 2 or > 11
             || DurationMinutes is < 1 or > DaggerfallTemplePolicy.MaximumBlessingMinutes
-            || ExpiresAtMinute < 0
+            || !double.IsFinite(ExpiresAtGameSecond)
+            || ExpiresAtGameSecond < 0d
             || (Target == DaggerfallTempleBlessingTarget.LegalReputation
                 ? Region is < 0 or > 61
                 : Region != -1))
@@ -42,16 +45,24 @@ internal static class DaggerfallTempleBlessingEffects
     private const string SourceDefinition = "daggerfall.temple-blessing";
 
     /// <summary>
-    /// Converts the paid calendar duration to the lifecycle lifetime. Effect admission consumes
-    /// one initial magic round before the next calendar minute, while <see
-    /// cref="DaggerfallTempleBlessingState.ExpiresAtMinute"/> remains the canonical wall-clock
-    /// boundary. The extra round preserves both facts without a second expiry owner.
+    /// Removes blessings whose absolute calendar expiry has arrived. This is called by the one
+    /// session calendar fan-out for every admitted interval, including intervals that do not cross
+    /// a minute boundary, and delegates the removal to the canonical effect lifecycle.
     /// </summary>
-    internal static uint AdmissionRounds(int durationMinutes)
+    internal static int ExpireDue(DaggerfallEffectLifecycle effects, DaggerfallWorldTime time)
     {
-        if (durationMinutes is < 1 or > DaggerfallTemplePolicy.MaximumBlessingMinutes)
-            throw new ArgumentOutOfRangeException(nameof(durationMinutes));
-        return checked((uint)durationMinutes + 1U);
+        ArgumentNullException.ThrowIfNull(effects);
+        ArgumentNullException.ThrowIfNull(time);
+        double now = time.AbsoluteGameSeconds;
+        EffectInstanceId[] due = effects.Active
+            .Where(effect => effect.Definition.Key == Key)
+            .Where(effect => Read(effect.State).ExpiresAtGameSecond <= now)
+            .Select(effect => effect.Lifecycle.Context.Instance)
+            .ToArray();
+        int expired = 0;
+        foreach (EffectInstanceId instance in due)
+            if (effects.Expire(instance)) expired++;
+        return expired;
     }
 
     internal static DaggerfallEffectDefinition Definition(

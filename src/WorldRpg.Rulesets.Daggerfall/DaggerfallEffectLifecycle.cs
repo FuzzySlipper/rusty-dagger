@@ -460,6 +460,10 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     internal bool Cancel(EffectInstanceId instance)
         => End(instance, DaggerfallEffectOutcomeKind.Cancelled);
 
+    /// <summary>Expires one ruleset-selected effect through the same Engine and contribution cleanup path as a magic round.</summary>
+    internal bool Expire(EffectInstanceId instance)
+        => End(instance, DaggerfallEffectOutcomeKind.Expired);
+
     /// <summary>
     /// Ends an active effect because Daggerfall policy cured it.  The policy that selects a cure
     /// remains with the disease, poison, service, or quest caller; this lifecycle only guarantees

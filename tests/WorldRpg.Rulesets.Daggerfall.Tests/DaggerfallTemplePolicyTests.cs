@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
@@ -6,6 +8,7 @@ using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -45,6 +48,17 @@ public sealed class DaggerfallTemplePolicyTests
     }
 
     [Fact]
+    public void Blessing_state_rejects_missing_or_nonfinite_current_expiry()
+    {
+        using JsonDocument missingExpiry = JsonDocument.Parse(
+            "{\"DeityFactionId\":1,\"Target\":1,\"Region\":-1,\"Magnitude\":2,\"DurationMinutes\":1}");
+        Assert.Throws<JsonException>(() => DaggerfallTempleBlessingEffects.Read(missingExpiry.RootElement));
+        Assert.Throws<ArgumentException>(() => new DaggerfallTempleBlessingState(
+            DaggerfallConcreteGuildCatalog.AkatoshFactionId,
+            DaggerfallTempleBlessingTarget.Speed, -1, 2, 1, double.NaN).Validate());
+    }
+
+    [Fact]
     public void Source_temple_building_faction_retains_its_deity_parent()
     {
         DaggerfallConcreteGuildDefinition arkay = DaggerfallConcreteGuildCatalog.ForFaction(
@@ -76,6 +90,7 @@ public sealed class DaggerfallTemplePolicyTests
     {
         using ConditionSessionFixture fixture = new();
         DaggerfallSession session = fixture.Session;
+        session.AdvanceElapsedTime(59);
         DonationContext donation = PrepareDonation(session, DaggerfallConcreteGuildCatalog.AkatoshFactionId, 1);
         int before = Stat(session, DaggerfallMechanicsIds.Speed.Value);
 
@@ -85,7 +100,9 @@ public sealed class DaggerfallTemplePolicyTests
         Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
 
         DaggerfallActiveEffect active = Assert.Single(session.State.Effects.Active);
-        Assert.Equal((uint)1, active.Lifecycle.RemainingRounds);
+        DaggerfallTempleBlessingState state = DaggerfallTempleBlessingEffects.Read(active.State);
+        Assert.Equal(119d, state.ExpiresAtGameSecond);
+        Assert.Null(active.Lifecycle.RemainingRounds);
         Assert.Equal(before + 2, Stat(session, DaggerfallMechanicsIds.Speed.Value));
 
         session.AdvanceElapsedTime(59);
@@ -109,7 +126,9 @@ public sealed class DaggerfallTemplePolicyTests
             session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 2, out DaggerfallTempleServiceResult refusal));
         Assert.True(refusal.Accepted, refusal.Message);
         Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
-        Assert.Equal((uint)2, Assert.Single(session.State.Effects.Active).Lifecycle.RemainingRounds);
+        DaggerfallTempleBlessingState state = DaggerfallTempleBlessingEffects.Read(Assert.Single(session.State.Effects.Active).State);
+        Assert.Equal(120d, state.ExpiresAtGameSecond);
+        Assert.Null(Assert.Single(session.State.Effects.Active).Lifecycle.RemainingRounds);
 
         session.AdvanceElapsedTime(119);
         Assert.Single(session.State.Effects.Active);
@@ -134,7 +153,9 @@ public sealed class DaggerfallTemplePolicyTests
         Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
         session.AdvanceElapsedTime(30);
         RulesetSavePayload save = session.CaptureSave();
-        Assert.Equal((uint)1, Assert.Single(DaggerfallSavePayload.Read(save).ActiveEffects).RemainingRounds);
+        DaggerfallActiveEffectSave savedEffect = Assert.Single(DaggerfallSavePayload.Read(save).ActiveEffects);
+        Assert.Null(savedEffect.RemainingRounds);
+        Assert.Equal(60d, DaggerfallTempleBlessingEffects.Read(savedEffect.State).ExpiresAtGameSecond);
 
         using DaggerfallSession restored = fixture.Restore(save);
         Assert.Single(restored.State.Effects.Active);
@@ -144,6 +165,103 @@ public sealed class DaggerfallTemplePolicyTests
         restored.AdvanceElapsedTime(1);
         Assert.Empty(restored.State.Effects.Active);
         Assert.Equal(before, Stat(restored, DaggerfallMechanicsIds.Speed.Value));
+    }
+
+    [Fact]
+    public void Blessing_duration_includes_the_world_time_remainder_at_admission()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        for (ulong step = 1; step <= 3; step++)
+            session.Update(new ProductUpdate(OuterUpdate(step), []));
+
+        DonationContext donation = PrepareDonation(session, DaggerfallConcreteGuildCatalog.AkatoshFactionId, 1);
+        DaggerfallTempleDonationQuote quote = Assert.IsType<DaggerfallTempleDonationQuote>(
+            session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 1, out DaggerfallTempleServiceResult refusal));
+        Assert.True(refusal.Accepted, refusal.Message);
+        Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
+        Assert.Equal(60.6d, DaggerfallTempleBlessingEffects.Read(Assert.Single(session.State.Effects.Active).State).ExpiresAtGameSecond, 6);
+
+        session.AdvanceElapsedTime(59);
+        Assert.Single(session.State.Effects.Active);
+        session.AdvanceElapsedTime(1);
+        Assert.Empty(session.State.Effects.Active);
+    }
+
+    [Fact]
+    public void Replacement_restarts_absolute_expiry_and_cleans_the_previous_contribution()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        DonationContext donation = PrepareDonation(session, DaggerfallConcreteGuildCatalog.AkatoshFactionId, 1);
+        int before = Stat(session, DaggerfallMechanicsIds.Speed.Value);
+
+        DaggerfallTempleDonationQuote first = Assert.IsType<DaggerfallTempleDonationQuote>(
+            session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 1, out DaggerfallTempleServiceResult firstRefusal));
+        Assert.True(firstRefusal.Accepted, firstRefusal.Message);
+        Assert.True(session.State.TempleServices.CommitDonation(first).Accepted);
+        session.AdvanceElapsedTime(30);
+        Assert.Equal(before + 2, Stat(session, DaggerfallMechanicsIds.Speed.Value));
+
+        Assert.True(session.State.Currency.ReceiveGold(1));
+        DaggerfallTempleDonationQuote replacement = Assert.IsType<DaggerfallTempleDonationQuote>(
+            session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 1, out DaggerfallTempleServiceResult replacementRefusal));
+        Assert.True(replacementRefusal.Accepted, replacementRefusal.Message);
+        Assert.True(session.State.TempleServices.CommitDonation(replacement).Accepted);
+        DaggerfallActiveEffect active = Assert.Single(session.State.Effects.Active);
+        Assert.Equal(before + 2, Stat(session, DaggerfallMechanicsIds.Speed.Value));
+        Assert.Equal(90d, DaggerfallTempleBlessingEffects.Read(active.State).ExpiresAtGameSecond);
+
+        session.AdvanceElapsedTime(59);
+        Assert.Single(session.State.Effects.Active);
+        session.AdvanceElapsedTime(1);
+        Assert.Empty(session.State.Effects.Active);
+        Assert.Equal(before, Stat(session, DaggerfallMechanicsIds.Speed.Value));
+    }
+
+    [Fact]
+    public void Full_day_rest_expires_maximum_blessing_without_capping_unrelated_effect_rounds()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        DonationContext donation = PrepareDonation(session, DaggerfallConcreteGuildCatalog.AkatoshFactionId, 1440);
+        int before = Stat(session, DaggerfallMechanicsIds.Speed.Value);
+
+        DaggerfallTempleDonationQuote quote = Assert.IsType<DaggerfallTempleDonationQuote>(
+            session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 1440, out DaggerfallTempleServiceResult refusal));
+        Assert.True(refusal.Accepted, refusal.Message);
+        Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
+        StartUnrelatedLongEffect(session);
+
+        session.AdvanceElapsedTime(DaggerfallCalendar.SecondsPerDay, resting: true);
+
+        Assert.Equal(before, Stat(session, DaggerfallMechanicsIds.Speed.Value));
+        Assert.DoesNotContain(session.State.Effects.Active, effect => effect.Definition.Key == DaggerfallTempleBlessingEffects.Key);
+        DaggerfallActiveEffect unrelated = Assert.Single(session.State.Effects.Active, effect => effect.Definition.Key == "resist-fire");
+        Assert.Equal((uint)DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds - DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour,
+            unrelated.Lifecycle.RemainingRounds);
+    }
+
+    [Fact]
+    public void Paused_ordinary_update_does_not_advance_blessing_expiry()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        DonationContext donation = PrepareDonation(session, DaggerfallConcreteGuildCatalog.AkatoshFactionId, 1);
+        DaggerfallTempleDonationQuote quote = Assert.IsType<DaggerfallTempleDonationQuote>(
+            session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 1, out DaggerfallTempleServiceResult refusal));
+        Assert.True(refusal.Accepted, refusal.Message);
+        Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
+        DaggerfallCalendar before = Calendar(session);
+
+        session.ApplyProductMode(ProductMode.Paused);
+        session.Update(new ProductUpdate(OuterUpdate(1) with { FixedDeltaSeconds = 60d }, []));
+
+        Assert.Equal(before, Calendar(session));
+        Assert.Single(session.State.Effects.Active);
+        session.ApplyProductMode(ProductMode.Playing);
+        session.AdvanceElapsedTime(60);
+        Assert.Empty(session.State.Effects.Active);
     }
 
     [Fact]
@@ -201,15 +319,6 @@ public sealed class DaggerfallTemplePolicyTests
         // effect lifecycle's normal replacement/cleanup owner above.
     }
 
-    [Fact]
-    public void Admission_rounds_reserve_the_initial_magic_round_for_paid_minutes()
-    {
-        Assert.Equal((uint)2, DaggerfallTempleBlessingEffects.AdmissionRounds(1));
-        Assert.Equal((uint)3, DaggerfallTempleBlessingEffects.AdmissionRounds(2));
-        Assert.Equal((uint)DaggerfallTemplePolicy.MaximumBlessingMinutes + 1,
-            DaggerfallTempleBlessingEffects.AdmissionRounds(DaggerfallTemplePolicy.MaximumBlessingMinutes));
-    }
-
     private static DonationContext PrepareDonation(DaggerfallSession session, int deity, ulong gold)
     {
         DaggerfallSiteRecord site = session.Site.ActiveSite
@@ -232,6 +341,24 @@ public sealed class DaggerfallTemplePolicyTests
 
     private static int Stat(DaggerfallSession session, string id) =>
         session.State.Actors.Player.Stats.GetStat(StatId.Parse(id)).ValueInt;
+
+    private static DaggerfallCalendar Calendar(DaggerfallSession session)
+    {
+        DaggerfallCalendarSave saved = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
+        return new(saved.Year, saved.Month, saved.Day, saved.Hour, saved.Minute, saved.Second);
+    }
+
+    private static void StartUnrelatedLongEffect(DaggerfallSession session)
+    {
+        DaggerfallSpellEffectDefinition settings = new("temple-unrelated", 8, 0, 10, 0, 1, 100, 0, 1, 0, 0, 0, 0, 1);
+        JsonElement state = JsonSerializer.SerializeToElement(
+            new DaggerfallCastEffectState(settings, 1, 0, 100),
+            DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        _ = session.State.Effects.Start(new(
+            "unrelated-duration", "resist-fire", "spell.unrelated", null,
+            DaggerfallActorIdentity.PlayerEntityId, settings.Key, "Magic", null, 1,
+            DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds + 1U, state));
+    }
 
     private sealed record DonationContext(DaggerfallServiceProvider Provider, DaggerfallInteriorBuilding Building);
 }
