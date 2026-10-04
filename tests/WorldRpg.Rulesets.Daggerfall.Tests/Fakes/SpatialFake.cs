@@ -108,7 +108,7 @@ internal class SpatialFake : DispatchProxy
     };
 
     private static NavigationStepResult NoNavigationPath(NavigationStepRequest request) => new(
-        ReadOnlyMemory<PlanarNavCell>.Empty, ReadOnlyMemory<NavigationPathEdge>.Empty, NavigationPathOutcome.NoPath, request.Target, default, default, 0, 0, 0, 0, 0, false, default, default);
+        ReadOnlyMemory<PlanarNavCell>.Empty, ReadOnlyMemory<NavigationPathEdge>.Empty, NavigationPathOutcome.NoPath, request.Target, default, default, 0f, 0, 0, 0, 0, 0, false, default, default);
 
     private object? RegisterTrigger(SpatialTriggerRegisterRequest request)
     {

@@ -79,8 +79,8 @@ public sealed class ExteriorOriginSessionTests
                 for (int column = -DaggerfallExteriorCellResidency.StreamingRadius;
                      column <= DaggerfallExteriorCellResidency.StreamingRadius; column++)
                 {
-                    DaggerfallExteriorCellId candidate = new(admitted.Origin.MapPixelX + column,
-                        admitted.Origin.MapPixelY + row);
+                    DaggerfallExteriorCellId candidate = new(admitted.Origin.X + column,
+                        admitted.Origin.Y + row);
                     if ((uint)candidate.X >= (uint)definitions.Terrain.Width
                         || (uint)candidate.Y >= (uint)definitions.Terrain.Height
                         || locationCells.Contains(candidate)) continue;
@@ -93,7 +93,9 @@ public sealed class ExteriorOriginSessionTests
             DaggerfallTerrainSurface terrain = DaggerfallTerrainSurfaceBuilder.Build(
                 definitions.Terrain, terrainCell.X, terrainCell.Y);
             int terrainSample = DaggerfallTerrainSurfaceBuilder.SampleDimension / 2;
-            Vector3 terrainPoint = admitted.Origin.LocalTranslation(terrainCell)
+            DaggerfallExteriorWorldOrigin terrainOrigin = new(admitted.Origin.X, admitted.Origin.Y,
+                new Vector3(admitted.CompensationX, admitted.CompensationY, admitted.CompensationZ));
+            Vector3 terrainPoint = terrainOrigin.LocalTranslation(terrainCell)
                 + terrain.Vertices[terrainSample + (terrainSample * DaggerfallTerrainSurfaceBuilder.SampleDimension)];
             SpatialHit terrainHit = Hit(terrainPoint + Vector3.UnitY * 20F, 50F);
             Assert.True(terrainHit.Present);
