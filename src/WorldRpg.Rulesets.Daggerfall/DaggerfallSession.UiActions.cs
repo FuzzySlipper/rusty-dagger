@@ -216,7 +216,9 @@ internal sealed partial class DaggerfallSession
             }
             try
             {
-                _groundContainers.Take(groundTake.Id, groundTake.Selection, groundTake.ExpectedWorldRevision);
+                _groundContainers.TryGet(groundTake.Id, out var source);
+                var transfer = _groundContainers.Take(groundTake.Id, groundTake.Selection, groundTake.ExpectedWorldRevision);
+                ObservePropertyLoot(groundTake, source, transfer);
                 _lootUi.CompleteGround(true);
             }
             catch (Exception rejection) when (rejection is InvalidOperationException or ArgumentException)

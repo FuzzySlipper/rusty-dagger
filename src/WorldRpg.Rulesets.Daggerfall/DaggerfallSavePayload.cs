@@ -276,6 +276,13 @@ internal sealed record DaggerfallSavePayload(
             DaggerfallWorldProfileKey profile = ground.Profile.Require();
             if (!admittedGroundProfiles.Contains(profile))
                 throw new ArgumentException($"Saved ground container {ground.Id} names an unadmitted world profile '{profile.LogicalId}'.");
+            if (ground.PropertyPlacement is { } placement)
+            {
+                var source = profile == inputs.ProfileKey ? inputs : profiles!.Require(profile);
+                if (!source.PropertyContainers.Any(value => value.Id == placement)
+                    || GroundContainers.Count(value => value.Profile.Require() == profile && value.PropertyPlacement == placement) != 1)
+                    throw new ArgumentException($"Saved property container {ground.Id} names a missing or repeated source placement '{placement}'.");
+            }
         }
         HashSet<DaggerfallRdbDoorId> selectedDoors = [.. inputs.Doors.Select(door => door.Id)];
         ValidateDungeonMotion(inputs, DungeonMotion);
@@ -1269,7 +1276,7 @@ internal sealed record DaggerfallCorpseSave(long ActorId, ulong ContainerId, ulo
 }
 
 /// <summary>One persistent dropped-item container at a world position.</summary>
-internal sealed record DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySave Profile, long Id, float X, float Y, float Z, DaggerfallInventorySave Inventory)
+internal sealed record DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySave Profile, long Id, float X, float Y, float Z, DaggerfallInventorySave Inventory, string? PropertyPlacement = null, long StockedDay = 0)
 {
     internal void Validate()
     {
@@ -1277,6 +1284,8 @@ internal sealed record DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySa
         Profile.Validate();
         if (Id <= 0 || !float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z))
             throw new ArgumentException("Ground containers require a positive identity and finite position.");
+        if (StockedDay < -1 || PropertyPlacement is not null && string.IsNullOrWhiteSpace(PropertyPlacement))
+            throw new ArgumentException("Property containers require a valid placement and stock date.");
         ArgumentNullException.ThrowIfNull(Inventory);
         Inventory.Validate();
     }

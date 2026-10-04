@@ -93,7 +93,8 @@ internal sealed record DaggerfallCrimeIncidentSave(
     long GameMinute,
     DaggerfallCrimeTargetKind TargetKind,
     DaggerfallCrimeWitnessEvidence Witnesses,
-    DaggerfallCrimeGuildCredit GuildCredit)
+    DaggerfallCrimeGuildCredit GuildCredit,
+    bool Reported = false)
 {
     internal DaggerfallCrimeIncidentSave Validate()
     {
@@ -234,6 +235,12 @@ internal sealed class DaggerfallCrimeState
         _murderInvitationDueMinute = restored.MurderInvitationDueMinute;
     }
 
+    internal event Action<DaggerfallCrimeIncidentSave>? IncidentRecorded;
+
+    internal int OperationCount => _attempts.Count + _incidents.Count + _guildProgress.Count;
+
+    internal bool HasAttempt(string operationId) => _attempts.ContainsKey(operationId);
+
     internal IReadOnlyList<DaggerfallCrimeAttemptSave> Attempts => Array.AsReadOnly(_attempts.Values
         .OrderBy(attempt => attempt.GameMinute).ThenBy(attempt => attempt.OperationId, StringComparer.Ordinal).ToArray());
     internal IReadOnlyList<DaggerfallCrimeIncidentSave> Incidents => Array.AsReadOnly(_incidents.Values
@@ -280,6 +287,7 @@ internal sealed class DaggerfallCrimeState
         if (value.GuildCredit != DaggerfallCrimeGuildCredit.None)
             RecordGuildRequirementProgress(value.OperationId, value.GuildCredit, value.GameMinute);
         _incidents.Add(value.OperationId, value);
+        IncidentRecorded?.Invoke(value);
         return true;
     }
 
@@ -405,7 +413,7 @@ internal sealed class DaggerfallCrimeState
         && left.PerpetratorActorId == right.PerpetratorActorId
         && left.AffectedActorOrOwnerId == right.AffectedActorOrOwnerId
         && left.Region == right.Region && left.GameMinute == right.GameMinute && left.TargetKind == right.TargetKind
-        && left.GuildCredit == right.GuildCredit && SameWitnesses(left.Witnesses, right.Witnesses);
+        && left.GuildCredit == right.GuildCredit && left.Reported == right.Reported && SameWitnesses(left.Witnesses, right.Witnesses);
 
     private static bool SameWitnesses(DaggerfallCrimeWitnessEvidence left, DaggerfallCrimeWitnessEvidence right) =>
         left.Query == right.Query && left.WitnessActorIds.SequenceEqual(right.WitnessActorIds);

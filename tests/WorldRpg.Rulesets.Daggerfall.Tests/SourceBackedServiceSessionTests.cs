@@ -172,9 +172,21 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallMerchantView shopliftView = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
         DaggerfallMerchantItemView stealable = shopliftView.Stock.First(value => value.CanBuy && value.UnitPrice > 0);
         string shopliftAction = $"{{\"action\":\"merchant-shoplift\",\"revision\":\"{Escape(shopliftView.Revision)}\",\"item\":\"{Escape(stealable.Key)}\",\"amount\":1}}";
+        int crimeNotifications = 0;
+        session.CrimeReported += _ => crimeNotifications++;
         SubmitUi(session, 10, shopliftAction);
         Assert.Equal("Caught", session.Presentation.LastOutcome);
         Assert.Equal(pickpocketBeforeShoplift + 1, SkillUseCount(session, "pickpocket"));
+        var crime = Assert.Single(session.State.Crime.Incidents);
+        Assert.Equal(WorldRpg.Rulesets.Daggerfall.Crime.DaggerfallCrimeKind.Theft, crime.Crime);
+        Assert.Equal(WorldRpg.Rulesets.Daggerfall.Crime.DaggerfallCrimeStage.Attempted, crime.Stage);
+        Assert.Equal(1, crimeNotifications);
+        SubmitUi(session, 11, shopliftAction);
+        Assert.Equal("AlreadyAttempted", session.Presentation.LastOutcome);
+        Assert.Equal(pickpocketBeforeShoplift + 1, SkillUseCount(session, "pickpocket"));
+        Assert.Single(session.State.Crime.Incidents);
+        Assert.Equal(1, crimeNotifications);
+
 
         ulong goldAfterSell = session.State.Currency.Read().Gold;
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
@@ -185,6 +197,7 @@ public sealed class SourceBackedServiceSessionTests
         Assert.Equal(pickpocketBeforeShoplift + 1, saved.SkillUses.Counters.Single(value => value.Skill == "pickpocket").Uses);
 
         using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        Assert.Single(restored.State.Crime.Incidents);
         DaggerfallNpc restoredProvider = SourceNpc(restored, fixture.MerchantProvider.Placement.Id);
         OpenSourceNpc(restored, restoredProvider);
         DaggerfallMerchantView restoredMerchant = Assert.IsType<DaggerfallMerchantView>(restored.ActivationView.Dialogue!.Merchant);

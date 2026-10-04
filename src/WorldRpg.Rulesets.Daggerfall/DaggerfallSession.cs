@@ -153,6 +153,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     void IDaggerfallSiteTransitionHost.RebuildActivation()
     {
         ReconcileNpcProjection();
+        ReconcilePropertyContainers();
         InitializeActivation(_engine, _tuning.LootInteraction);
         SyncWeatherContext();
     }
@@ -216,7 +217,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     private DaggerfallInteriorBuilding? CurrentInteriorBuilding()
     {
-        DaggerfallInteriorBuilding? placement = _sites.Profiles?.Require(_activeProfileKey).InteriorBuilding;
+        DaggerfallInteriorBuilding? placement = _sites.Projection.Inputs.InteriorBuilding;
         if (placement is null) return null;
         DaggerfallSiteBuildingSource building = _site.RequireBuildingSource(_activeProfileKey.Site,
             new(placement.BlockX, placement.BlockY, placement.Building.Index));
@@ -700,7 +701,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Map: _mapOpen ? ReadMapPresentation() : null, CreateItem: CreateItemView, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
-        _appearance.Publish(State.Actors, _groundContainers.All,
+        _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],
             _tuning.Camera.EyeHeight, State.Effects.PerceptionFor, ReadNpcViews(), ReadDungeonSpellFlights());

@@ -864,6 +864,19 @@ public sealed record NormalizedAmbientZone(
     }
 }
 
+/// <summary>Placed furniture and its normalized item groups; source model/table interpretation stays offline.</summary>
+public sealed record NormalizedPropertyContainer(string Id, NormalizedVector3 Position, IReadOnlyList<string> ItemGroups, IReadOnlyList<NormalizedVector3> InteractionPoints)
+{
+    public void Validate()
+    {
+        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
+        Position.Validate(nameof(Position));
+        if (ItemGroups.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Property item groups must be named.");
+        if (InteractionPoints.Count == 0) throw new ArgumentException("Property furniture requires a surface interaction point.");
+        foreach (var point in InteractionPoints) point.Validate(nameof(InteractionPoints));
+    }
+}
+
 public sealed record NormalizedWorld(
     string VisualMeshAssetId,
     IReadOnlyList<string> MeshIds,
@@ -878,6 +891,7 @@ public sealed record NormalizedWorld(
 {
     /// <summary>Source-selected building instance; absent for worlds without a building selection.</summary>
     public NormalizedInteriorBuilding? InteriorBuilding { get; init; }
+    public IReadOnlyList<NormalizedPropertyContainer> PropertyContainers { get; init; } = [];
 
     /// <summary>Source-order spawn/item points retained for quest allocation.</summary>
     public IReadOnlyList<NormalizedQuestMarker> QuestMarkers { get; init; } = [];
@@ -908,6 +922,7 @@ public sealed record NormalizedWorld(
         Lights = Lights.OrderBy(light => light.Id, StringComparer.Ordinal).ToArray(),
         Billboards = Billboards.OrderBy(billboard => billboard.Id, StringComparer.Ordinal).ToArray(),
         Actors = Actors.OrderBy(actor => actor.Id, StringComparer.Ordinal).ToArray(),
+        PropertyContainers = PropertyContainers.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray(),
         StaticNpcs = StaticNpcs.OrderBy(npc => npc.Id, StringComparer.Ordinal).ToArray(),
         Population = Population.OrderBy(person => person.Id, StringComparer.Ordinal).ToArray(),
         Treasures = Treasures.OrderBy(treasure => treasure.Id, StringComparer.Ordinal).ToArray(),
@@ -947,6 +962,8 @@ public sealed record NormalizedWorld(
         StartMarker?.Validate();
         EnterMarker?.Validate();
         InteriorBuilding?.Validate();
+        NormalizedImportDocument.ValidateUnique(PropertyContainers, value => value.Id, "property container");
+        foreach (var container in PropertyContainers) container.Validate();
         ArgumentNullException.ThrowIfNull(QuestMarkers);
         NormalizedImportDocument.ValidateUnique(QuestMarkers, marker => marker.Id, "quest marker");
         foreach (NormalizedQuestMarker marker in QuestMarkers) marker.Validate();
