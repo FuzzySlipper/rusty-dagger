@@ -217,8 +217,11 @@ public sealed class PropertySessionTests
         DaggerfallSiteProfile ship = type == "small" ? f.Small : f.Large;
         Assert.True(f.Session.State.Transport.OnShip);
         Assert.Equal(ship.ProfileKey, f.Session.Sites.ActiveProfile);
-        Assert.Equal(ship.RequireAnchor("start").Position,
-            WorldPoint.From(f.Session.Sites.LocalToProfile(f.Session.State.PlayerControl.Position!.Value.ToVector())));
+        WorldPoint boardingProfilePosition = f.Session.Sites.ExteriorSitePosition(f.Session.State.PlayerControl.Position!.Value);
+        WorldPoint boardingAnchor = ship.RequireAnchor("start").Position;
+        Assert.Equal(boardingAnchor.X, boardingProfilePosition.X, 3);
+        Assert.Equal(boardingAnchor.Y, boardingProfilePosition.Y, 3);
+        Assert.Equal(boardingAnchor.Z, boardingProfilePosition.Z, 3);
         Assert.True(f.Session.Sites.ExteriorResidencyInitialized);
         Assert.Equal(f.Session.Sites.ActiveExteriorCell(), f.Session.Sites.CurrentExteriorCell());
         f.AddGold(4);

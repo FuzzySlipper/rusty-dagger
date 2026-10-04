@@ -71,7 +71,13 @@ internal sealed partial class DaggerfallSession
         if (choice == "anchor")
         {
             var player = State.PlayerControl;
-            var position = _sites.LocalToProfile(player.Position!.Value.ToVector());
+            WorldPoint playerPosition = player.Position!.Value;
+            // Exterior profiles author poses in the site's local frame. LocalToProfile is the
+            // map-global projection used by live population and map reads, so feeding it back to
+            // TryRelocatePlayer makes recall resolve an impossible exterior cell.
+            var position = _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
+                ? _sites.ExteriorSitePosition(playerPosition).ToVector()
+                : _sites.LocalToProfile(playerPosition.ToVector());
             var returned = _site.ReturnPose;
             _teleportAnchor = new(DaggerfallWorldProfileKeySave.Capture(_activeProfileKey),
                 new(position.X, position.Y, position.Z, player.YawRadians, player.PitchRadians),
