@@ -342,16 +342,17 @@ public sealed class DaggerfallPopulationSessionTests
             string root = TestData.RepositoryRoot;
             DaggerfallDefinitions definitions = TestPayload.Definitions;
             DaggerfallSiteRecord[] exteriorRecords = [.. definitions.Locations.Records.Where(record => record.Exterior is not null)];
+            // Keep both real exterior sites within the current resident window after the normal
+            // world-origin transition. A one-row map-pixel bound avoids making appearance coverage
+            // depend on the separate terrain-origin alignment owner.
             DaggerfallSiteRecord sourceRecord = exteriorRecords.First(record => exteriorRecords.Any(candidate =>
                 candidate.Id != record.Id
-                && (candidate.MapPixelX != record.MapPixelX || candidate.MapPixelY != record.MapPixelY)
-                && Math.Abs(candidate.MapPixelX - record.MapPixelX) <= DaggerfallExteriorCellResidency.StreamingRadius
-                && Math.Abs(candidate.MapPixelY - record.MapPixelY) <= DaggerfallExteriorCellResidency.StreamingRadius));
+                && Math.Abs(candidate.MapPixelX - record.MapPixelX) <= 1
+                && Math.Abs(candidate.MapPixelY - record.MapPixelY) <= 1));
             DaggerfallSiteRecord residentRecord = exteriorRecords.First(record =>
                 record.Id != sourceRecord.Id
-                && (record.MapPixelX != sourceRecord.MapPixelX || record.MapPixelY != sourceRecord.MapPixelY)
-                && Math.Abs(record.MapPixelX - sourceRecord.MapPixelX) <= DaggerfallExteriorCellResidency.StreamingRadius
-                && Math.Abs(record.MapPixelY - sourceRecord.MapPixelY) <= DaggerfallExteriorCellResidency.StreamingRadius);
+                && Math.Abs(record.MapPixelX - sourceRecord.MapPixelX) <= 1
+                && Math.Abs(record.MapPixelY - sourceRecord.MapPixelY) <= 1);
             DaggerfallSiteProfile template = ReadProfile(root, FullContent(root, "worldrpg/imports/charing"), definitions,
                 "daggerfall.charing-exterior.json");
             DaggerfallSiteProfile source = PopulationProfile(template, sourceRecord.Id, "resident-population-source",
