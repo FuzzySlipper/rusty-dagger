@@ -161,8 +161,11 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         // would not be usable by the named Engine projection adapters.
         _ = RegisteredStores.GetValue(_store, static store =>
         {
-            store.Register(EngineComponentTypes.Transform);
-            store.Register(EngineComponentTypes.SpatialCollider);
+            EntityStoreDiagnostics diagnostics = store.Diagnostics(0);
+            if (!diagnostics.Components.Any(component => component.Key == EngineComponentTypes.Transform.Key))
+                store.Register(EngineComponentTypes.Transform);
+            if (!diagnostics.Components.Any(component => component.Key == EngineComponentTypes.SpatialCollider.Key))
+                store.Register(EngineComponentTypes.SpatialCollider);
             return new object();
         });
         ArgumentNullException.ThrowIfNull(definitions);
