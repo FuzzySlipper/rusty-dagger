@@ -223,7 +223,10 @@ public sealed class PropertySessionTests
         Assert.Equal(boardingAnchor.Y, boardingProfilePosition.Y, 3);
         Assert.Equal(boardingAnchor.Z, boardingProfilePosition.Z, 3);
         Assert.True(f.Session.Sites.ExteriorResidencyInitialized);
-        Assert.Equal(f.Session.Sites.ActiveExteriorCell(), f.Session.Sites.CurrentExteriorCell());
+        // The large ship's authored start is just across the profile cell boundary. The active
+        // profile remains the ship while the terrain window follows the cell containing the player.
+        DaggerfallExteriorCellResidencySave residency = f.Session.Sites.CaptureExteriorResidency()!.Value;
+        Assert.Equal(f.Session.Sites.CurrentExteriorCell(), residency.Center);
         f.AddGold(4);
         DaggerfallPropertyStorageView storage = f.Session.ReadPropertyPresentation().Storage!;
         string coins = f.Session.State.Inventory.Read().Stacks.First(item => item.Definition.Value == "gold-piece").Id.Value;
