@@ -5,6 +5,7 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -62,6 +63,30 @@ internal sealed partial class DaggerfallSession
     private bool IsSpellEligibleActor(long id) =>
         !_roster.Definitions.TryGetValue(id, out DaggerfallActorDefinition? definition)
         || definition.Kind != DaggerfallActorKinds.StaticNpc;
+
+    /// <summary>
+    /// Releases one AI-selected spell through the same readiness, cost, flight and effect owners
+    /// used by player and dungeon action callers. Visibility was already admitted by the behavior
+    /// perception query; ranged releases then await the shared swept Engine flight.
+    /// </summary>
+    private DaggerfallCastResult ExecuteEnemySpell(DaggerfallEnemySpellAttempt attempt)
+    {
+        DaggerfallCastResult ready = Casting.Ready(attempt.ActorId, attempt.SpellKey);
+        if (ready.Outcome != DaggerfallCastOutcome.Ready) return ready;
+        Vector3 origin = attempt.Origin.ToVector();
+        if (attempt.Target is DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange)
+            origin += attempt.Direction * DaggerfallDungeonSpellPolicy.MissileArmLengthMetres;
+        DaggerfallCastResult release = Casting.Release(attempt.ActorId, true, origin, attempt.Direction);
+        if (release.Bundle is not { } bundle) return release;
+        return bundle.Target switch
+        {
+            DaggerfallSpellTarget.CasterOnly => Casting.Deliver(bundle, [attempt.ActorId]),
+            DaggerfallSpellTarget.ByTouch => Casting.Deliver(bundle, [DaggerfallActorIdentity.PlayerEntityId]),
+            DaggerfallSpellTarget.AreaAroundCaster => Casting.Deliver(bundle,
+                AreaSpellTargets(attempt.ActorId, origin, excludeCaster: true)),
+            _ => release,
+        };
+    }
 
     /// <summary>Releases the ready source at its live position. Ranged bundles await Engine collision delivery.</summary>
     internal DaggerfallCastResult ReleaseReadySpell(long casterId, Vector3 direction)

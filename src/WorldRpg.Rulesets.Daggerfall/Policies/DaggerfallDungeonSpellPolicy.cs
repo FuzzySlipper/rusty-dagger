@@ -14,6 +14,11 @@ internal static class DaggerfallDungeonSpellPolicy
     // DaggerfallMissile.LifespanInSeconds in DFU.
     internal const double MissileLifespanSeconds = 8d;
 
+    // DaggerfallMissile.ArmLength in DFU. Enemy releases begin just beyond the
+    // caster's arm so the launch segment cannot immediately collide with its
+    // source actor.
+    internal const float MissileArmLengthMetres = .9f;
+
     // DaggerfallAction.CastSpell raises the action transform by 40 *
     // MeshReader.GlobalScale (0.025 m per classic world unit).
     internal const float MissileOriginHeightMetres = 40f * .025f;

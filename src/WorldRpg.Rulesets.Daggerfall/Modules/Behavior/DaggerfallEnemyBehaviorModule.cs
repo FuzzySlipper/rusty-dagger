@@ -34,6 +34,8 @@ internal sealed class DaggerfallEnemyBehaviorModule
     private readonly Func<long, bool> _isPlayerAllied;
     private readonly Func<long, PursuitTarget?>? _selectAllyTarget;
     private readonly Func<long, ActorControlRestrictions> _controlRestrictions;
+    private Action<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float>? _enemyMagic;
+    private readonly Dictionary<long, double> _lastTargetDistances = [];
 
     internal DaggerfallEnemyBehaviorModule(
         IPerceptionService perception,
@@ -66,6 +68,17 @@ internal sealed class DaggerfallEnemyBehaviorModule
 
     internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEvidence { get; private set; } = new Dictionary<long, EnemyBehaviorEvidence>();
     internal IReadOnlyDictionary<long, DaggerfallEnemyPerceptionDecision> LastPerception { get; private set; } = new Dictionary<long, DaggerfallEnemyPerceptionDecision>();
+
+    /// <summary>Attaches the compiled spell decision to this module's existing actor update.</summary>
+    internal void BindEnemyMagic(Action<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float> decide)
+    {
+        _enemyMagic = decide ?? throw new ArgumentNullException(nameof(decide));
+    }
+
+    internal void ClearEnemyMagic()
+    {
+        _lastTargetDistances.Clear();
+    }
 
     /// <summary>
     /// Reads the retained disposition for the same enemy memory that the live
@@ -110,6 +123,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     {
         foreach (ActorState actor in _actors.All) Senses(actor).Clear();
         _lastDecisions.Clear();
+        _lastTargetDistances.Clear();
         LastPerception = new Dictionary<long, DaggerfallEnemyPerceptionDecision>();
     }
 
@@ -123,11 +137,13 @@ internal sealed class DaggerfallEnemyBehaviorModule
         Dictionary<long, DaggerfallEnemyPerceptionDecision> perceptions = [];
         foreach (ActorState actor in _actors.All.OrderBy(value => value.DurableId))
         {
+            if (actor.IsDefeated) _lastTargetDistances.Remove(actor.DurableId);
             if (!actor.IsDefeated && _controlRestrictions(actor.DurableId).Movement)
             {
                 var restrictedPrevious = actor.Pursuit.TransitionTo(PursuitState.Idle);
                 _combat.InterruptPendingAttack(actor.DurableId, generation);
                 _lastDecisions.Remove(actor.DurableId);
+                _lastTargetDistances.Remove(actor.DurableId);
                 if (restrictedPrevious != PursuitState.Idle)
                     facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, ToDaggerState(restrictedPrevious), EnemyBehaviorState.Idle, generation, simulationStep));
                 evidence.Add(actor.DurableId, new(actor.DurableId, EnemyBehaviorState.Idle, null, null));
@@ -142,6 +158,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 PursuitState previousState = actor.Pursuit.TransitionTo(desired);
                 _combat.InterruptPendingAttack(actor.DurableId, generation);
                 _lastDecisions.Remove(actor.DurableId);
+                _lastTargetDistances.Remove(actor.DurableId);
                 if (previousState != desired)
                     facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, ToDaggerState(previousState), ToDaggerState(desired), generation, simulationStep));
                 evidence.Add(actor.DurableId, new(actor.DurableId, ToDaggerState(desired), null, null));
@@ -164,6 +181,26 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, previous, current, generation, simulationStep));
             }
             evidence.Add(actor.DurableId, new EnemyBehaviorEvidence(actor.DurableId, current, pursuit.Visibility, pursuit.Navigation));
+            double targetRateOfApproach = 0d;
+            PerceptionPair? observed = pursuit.Visibility?.Pairs.ToArray()
+                .Where(pair => pair.Observer == checked((ulong)actor.DurableId)
+                    && pair.Target == checked((ulong)target.Value.DurableId))
+                .OrderBy(pair => pair.Distance)
+                .Select(pair => (PerceptionPair?)pair)
+                .FirstOrDefault();
+            if (observed is { } pair && double.IsFinite(pair.Distance) && pair.Distance >= 0d)
+            {
+                if (_lastTargetDistances.TryGetValue(actor.DurableId, out double previousDistance))
+                    targetRateOfApproach = Math.Max(0d, previousDistance - pair.Distance);
+                _lastTargetDistances[actor.DurableId] = pair.Distance;
+            }
+            else
+            {
+                _lastTargetDistances.Remove(actor.DurableId);
+            }
+            _enemyMagic?.Invoke(actor, target.Value, pursuit.Visibility,
+                _lastDecisions.GetValueOrDefault(actor.DurableId), targetRateOfApproach,
+                generation, simulationStep, deltaSeconds);
             if (actor.IsDefeated)
                 _lastDecisions.Remove(actor.DurableId);
             else if (_lastDecisions.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionDecision? decision))
