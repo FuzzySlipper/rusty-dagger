@@ -425,9 +425,11 @@ internal sealed class DaggerfallSiteLifecycle
         {
             if (!TryExteriorProfileCell(target, out DaggerfallExteriorCellId destinationCell))
                 throw new InvalidOperationException($"Exterior profile '{target.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
-            destinationOrigin = _exteriorResidency is { IsInitialized: true } residency
-                ? residency.Origin
-                : DaggerfallExteriorWorldOrigin.At(destinationCell);
+            // Each exterior transition establishes the destination cell as the local origin. Keeping
+            // the source map origin here would add a far-away map translation to the authored arrival
+            // pose in a float Vector3, irreversibly dropping sub-cell precision before the destination
+            // profile can read it back through ExteriorSitePosition.
+            destinationOrigin = DaggerfallExteriorWorldOrigin.At(destinationCell);
             destinationFrameOffset = ExteriorProfileTranslation(target, destinationOrigin.Value);
         }
         _deltas.TryGetValue(destination, out DaggerfallSiteRuntimeDelta? destinationDelta);
