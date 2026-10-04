@@ -196,6 +196,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         private ulong _nextHandle = 1;
 
         internal List<MeshResourceCreateRequest> MeshRequests { get; } = [];
+        internal List<TerrainLayerMaterialRequest> TerrainLayerMaterialRequests { get; } = [];
         internal List<AppearanceFact[]> Snapshots { get; } = [];
         internal List<string> Releases { get; } = [];
         internal int ReleasedMeshes { get; private set; }
@@ -211,6 +212,12 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         public Material CreateMaterial(MaterialRequest request) => new(
             new MaterialHandle(_nextHandle++),
             () => Releases.Add("material"));
+
+        public Material CreateTerrainLayerMaterial(TerrainLayerMaterialRequest request)
+        {
+            TerrainLayerMaterialRequests.Add(request);
+            return new Material(new MaterialHandle(_nextHandle++), () => Releases.Add("material"));
+        }
 
         public void UpdateMaterial(MaterialUpdateRequest request) => throw new NotSupportedException();
         public Material ReplaceMaterial(MaterialUpdateRequest request) => throw new NotSupportedException();
