@@ -19,6 +19,7 @@ internal class EngineContextFake : DispatchProxy
     internal IReadOnlyList<string> StartedAudioVoices => ((AudioServiceFake)(object)audio).StartedVoices;
     /// <summary>How many of those voices the product released.</summary>
     internal int ReleasedAudioVoices => ((AudioServiceFake)(object)audio).ReleasedVoices;
+    internal IReadOnlyList<AudioSignalHandle> RetiredAudioSignals => ((AudioServiceFake)(object)audio).RetiredSignals;
     /// <summary>How many clips the product opened from content, which is how a cue really resolved.</summary>
     internal int OpenedContentClips => ((AudioServiceFake)(object)audio).OpenedContentClips;
     internal IReadOnlyList<Color> BackgroundColors => ((CameraServiceFake)(object)camera).BackgroundColors;
@@ -218,6 +219,8 @@ internal class EngineContextFake : DispatchProxy
     {
         internal List<string> StartedVoices { get; } = [];
         internal List<AudioEmitRequest> Emits { get; } = [];
+        internal List<AudioSignalHandle> RetiredSignals { get; } = [];
+        internal List<AudioRealizationFact> RealizationFacts { get; } = [];
         internal int ReleasedVoices { get; private set; }
         /// <summary>How many clips the product opened from content, which is how a cue really resolves.</summary>
         internal int OpenedContentClips { get; private set; }
@@ -227,12 +230,20 @@ internal class EngineContextFake : DispatchProxy
             nameof(IAudioService.OpenClip) => OpenClip(),
             nameof(IAudioService.OpenClipFromContent) => OpenClipFromContent(),
             nameof(IAudioService.Emit) => Emit((AudioEmitRequest)arguments![0]!),
+            nameof(IAudioService.RetireOneShot) => Retire((AudioSignalHandle)arguments![0]!),
+            nameof(IAudioService.ReadRealization) => new AudioRealizationResult(RealizationFacts.ToArray(), 0),
             nameof(IAudioService.CreateVoice) => CreateVoice(),
             nameof(IAudioService.ControlVoice) => null,
             _ => throw new NotSupportedException(method?.Name),
         };
 
-        private AudioSignalHandle Emit(AudioEmitRequest request) { Emits.Add(request); return new AudioSignalHandle(1); }
+        private AudioSignalHandle Emit(AudioEmitRequest request)
+        {
+            Emits.Add(request);
+            return new AudioSignalHandle(checked((ulong)Emits.Count));
+        }
+
+        private object? Retire(AudioSignalHandle signal) { RetiredSignals.Add(signal); return null; }
 
         private AudioClip OpenClip() => new(new AudioClipHandle(1), static () => { });
 

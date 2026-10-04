@@ -20,6 +20,7 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
     private readonly Func<DaggerfallWorldProfileKey, string, AudioClip?> _openClip;
     private readonly Func<bool, RenderResourceReference> _precipitationSprite;
     private readonly Dictionary<(DaggerfallWorldProfileKey, string), AudioClip> _clips = [];
+    private readonly HashSet<AudioSignalHandle> _oneShots = [];
     private readonly ulong _emitterId = checked((ulong)Interlocked.Increment(ref s_nextEmitter));
     private PresentationEmitter? _emitter;
     private AudioVoice? _loop;
@@ -52,6 +53,7 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (!double.IsFinite(admittedSeconds) || admittedSeconds < 0) throw new ArgumentOutOfRangeException(nameof(admittedSeconds));
+        RetireRealizedOneShots();
         bool changed = _context != context;
         if (changed)
         {
@@ -171,7 +173,7 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
         Vector3 position = player + new Vector3(MathF.Sin(angle), thunder ? .34f : 0, MathF.Cos(angle)) * distance;
         var descriptor = Descriptor(clip, false) with {SpatialBlend = 1, MaxDistance = thunder ? 24000 : 104,
             EmitterKind = AudioEmitterKind.World3d, Position = position};
-        _audio.Emit(new($"daggerfall.ambient.{_emitterId}.{++_signal}.{id}", descriptor));
+        _oneShots.Add(_audio.Emit(new($"daggerfall.ambient.{_emitterId}.{++_signal}.{id}", descriptor)));
     }
 
     private int Draw(string purpose, int minimum, int maximum) => checked((int)_random.DrawKeyed(new(0,
@@ -179,6 +181,15 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
     private int NextWait() => Draw("wait", _tuning.MinimumWaitSeconds, _tuning.MaximumWaitSeconds - 1);
     private void RetireLoop() {var loop = _loop; _loop = null; _loopClip = null; loop?.Dispose();}
     private void RetireEmitter() {var emitter = _emitter; _emitter = null; emitter?.Dispose();}
+    private void RetireRealizedOneShots()
+    {
+        if (_oneShots.Count == 0) return;
+        AudioRealizationResult realization = _audio.ReadRealization();
+        foreach (AudioRealizationFact fact in realization.Facts.Span)
+            if (fact.SignalHandle != 0
+                && (fact.Kind is AudioRealizationFactKind.NaturalCompletionOneShot or AudioRealizationFactKind.Diagnostic))
+                _oneShots.Remove(new AudioSignalHandle(fact.SignalHandle));
+    }
 
     public void Dispose()
     {
@@ -187,6 +198,9 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
         List<Exception> failures = [];
         try {RetireLoop();} catch (Exception error) {failures.Add(error);}
         try {RetireEmitter();} catch (Exception error) {failures.Add(error);}
+        foreach (AudioSignalHandle signal in _oneShots)
+            try {_audio.RetireOneShot(signal);} catch (Exception error) {failures.Add(error);}
+        _oneShots.Clear();
         foreach (AudioClip clip in _clips.Values)
             try {clip.Dispose();} catch (Exception error) {failures.Add(error);}
         _clips.Clear();

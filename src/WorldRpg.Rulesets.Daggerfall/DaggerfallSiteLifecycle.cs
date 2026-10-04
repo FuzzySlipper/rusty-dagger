@@ -400,18 +400,24 @@ internal sealed class DaggerfallSiteLifecycle
         _host.SyncCivilianPositions();
         bool sourceLocationLoaded = ActiveLocationLoaded;
         DaggerfallExteriorCellId? sourceLocationCell = _locationCell;
-        IReadOnlySet<long> sourceDynamicActorIds = sourceLocationLoaded
-            ? ActiveDynamicActorIds()
-            : new HashSet<long>();
+        IReadOnlySet<long> sourceDynamicActorIds = ActiveDynamicActorIds();
         Vector3 sourceFrameOffset = sourceProfile.Kind == DaggerfallWorldProfileKind.Exterior
             ? ExteriorProfileTranslation(source.Inputs)
             : Vector3.Zero;
-        DaggerfallSiteRuntimeDelta sourceDelta = sourceLocationLoaded
-            ? _persistence.CaptureSiteDelta(source.Inputs, source.Doors, source.Motion, _roster.Dynamic,
-                sourceDynamicActorIds, sourceFrameOffset)
-            : _deltas.TryGetValue(sourceProfile, out DaggerfallSiteRuntimeDelta? detachedSource)
-                ? detachedSource
+        DaggerfallSiteRuntimeDelta sourceDelta;
+        DaggerfallSiteRuntimeDelta? sourceLiveActorDelta = null;
+        if (sourceLocationLoaded)
+        {
+            sourceDelta = _persistence.CaptureSiteDelta(source.Inputs, source.Doors, source.Motion, _roster.Dynamic,
+                sourceDynamicActorIds, sourceFrameOffset);
+        }
+        else
+        {
+            DaggerfallSiteRuntimeDelta detachedSource = _deltas.TryGetValue(sourceProfile, out DaggerfallSiteRuntimeDelta? savedSource)
+                ? savedSource
                 : throw new InvalidOperationException($"Unloaded source profile '{sourceProfile.LogicalId}' has no detached delta.");
+            (sourceDelta, sourceLiveActorDelta) = CaptureDetachedLiveActors(detachedSource, sourceDynamicActorIds, sourceFrameOffset);
+        }
         DaggerfallExteriorCellResidencySave? sourceExterior = CaptureExteriorResidency();
         DaggerfallExteriorWorldOrigin? destinationOrigin = null;
         Vector3 destinationFrameOffset = Vector3.Zero;
@@ -470,6 +476,13 @@ internal sealed class DaggerfallSiteLifecycle
             {
                 source.Suspend();
                 sourceProjectionSuspended = true;
+            }
+            // A profile can already have its authored closure detached while a caller still holds a
+            // live spawned actor in the one canonical roster.  Capture and retire that actor at the
+            // same profile boundary; otherwise the durable entity remains materialized while the
+            // source site is inactive and can be mistaken for a destination actor on re-entry.
+            if (sourceLocationLoaded || sourceLiveActorDelta is not null)
+            {
                 _roster.UnloadSite(source.Inputs, sourceDelta);
                 sourceActorsUnloaded = true;
             }
@@ -557,7 +570,13 @@ internal sealed class DaggerfallSiteLifecycle
             {
                 try { _roster.UnloadSite(target, destinationDelta); }
                 catch (Exception teardownFailure) { failures.Add(teardownFailure); }
-                try { MaterializeSiteActors(source.Inputs, sourceDelta, sourceLocationLoaded); }
+                try
+                {
+                    if (sourceLocationLoaded)
+                        MaterializeSiteActors(source.Inputs, sourceDelta, sourceLocationLoaded);
+                    else if (sourceLiveActorDelta is not null)
+                        RestoreDetachedLiveActors(sourceLiveActorDelta, source);
+                }
                 catch (Exception restoreFailure) { failures.Add(restoreFailure); }
             }
             if (spatialReplaced)
@@ -943,6 +962,65 @@ internal sealed class DaggerfallSiteLifecycle
         foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values)
             residentActorIds.UnionWith(resident.ActorIds);
         return _roster.DynamicActorIdsExcluding(residentActorIds);
+    }
+
+    /// <summary>
+    /// Merges live actors that escaped an already-detached source into that source's durable delta.
+    /// Their source-frame saves are kept separately so a rejected transition can restore precisely
+    /// the live entities it retired without materializing the rest of the detached profile.
+    /// </summary>
+    private (DaggerfallSiteRuntimeDelta Delta, DaggerfallSiteRuntimeDelta? LiveActors) CaptureDetachedLiveActors(
+        DaggerfallSiteRuntimeDelta detachedSource, IReadOnlySet<long> actorIds, Vector3 actorFrameOffset)
+    {
+        ArgumentNullException.ThrowIfNull(detachedSource);
+        ArgumentNullException.ThrowIfNull(actorIds);
+        if (actorIds.Count == 0) return (detachedSource, null);
+
+        List<DaggerfallSiteRuntimeDelta> captured = [];
+        foreach (long id in actorIds.Order())
+        {
+            if (!_roster.Dynamic.TryGetValue(id, out DaggerfallActorId definition)) continue;
+            captured.Add(_persistence.CaptureDynamicActorDelta(id, definition.Value, actorFrameOffset));
+        }
+        if (captured.Count == 0) return (detachedSource, null);
+
+        HashSet<long> capturedIds = [.. captured.SelectMany(delta => delta.DynamicActors).Select(actor => actor.EntityId)];
+        DaggerfallDynamicActorSave[] dynamicActors = [
+            .. detachedSource.DynamicActors.Where(actor => !capturedIds.Contains(actor.EntityId)),
+            .. captured.SelectMany(delta => delta.DynamicActors),
+        ];
+        DaggerfallActorInventorySave[] inventories = [
+            .. detachedSource.ActorInventories.Where(inventory => !capturedIds.Contains(inventory.EntityId)),
+            .. captured.SelectMany(delta => delta.ActorInventories),
+        ];
+        DaggerfallCorpseSave[] corpses = [
+            .. detachedSource.Corpses.Where(corpse => !capturedIds.Contains(corpse.ActorId)),
+            .. captured.SelectMany(delta => delta.Corpses),
+        ];
+        DaggerfallActiveEffectSave[] effects = [
+            .. detachedSource.Effects.Where(effect => !capturedIds.Contains(effect.TargetId)),
+            .. captured.SelectMany(delta => delta.Effects),
+        ];
+        DaggerfallSiteRuntimeDelta merged = detachedSource with
+        {
+            DynamicActors = [.. dynamicActors.OrderBy(actor => actor.EntityId)],
+            ActorInventories = [.. inventories.OrderBy(inventory => inventory.EntityId)],
+            Corpses = [.. corpses.OrderBy(corpse => corpse.ActorId)],
+            Effects = effects,
+        };
+        DaggerfallSiteRuntimeDelta liveActors = new([], [.. captured.SelectMany(delta => delta.DynamicActors)],
+            [.. captured.SelectMany(delta => delta.ActorInventories)], [.. captured.SelectMany(delta => delta.Corpses)], [],
+            [.. captured.SelectMany(delta => delta.Effects)]);
+        return (merged, liveActors);
+    }
+
+    /// <summary>Restores only actors that were live in a detached source before a transition failed.</summary>
+    private void RestoreDetachedLiveActors(DaggerfallSiteRuntimeDelta liveActors, DaggerfallSiteProjection source)
+    {
+        foreach (DaggerfallDynamicActorSave actor in liveActors.DynamicActors.OrderBy(actor => actor.EntityId))
+            _roster.MaterializeRetainedActor(actor, projectAppearance: true, projection: source);
+        _persistence.RestoreSiteDelta(liveActors);
+        source.Appearance.SyncRestoredDefeat(_state.Actors);
     }
 
     private void AdmitResidentExteriorLocation(DaggerfallSiteProfile profile)

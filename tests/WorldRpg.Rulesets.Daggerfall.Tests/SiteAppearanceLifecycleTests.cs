@@ -248,6 +248,24 @@ public sealed class SiteAppearanceLifecycleTests
     }
 
     [Fact]
+    public void Site_audio_retires_pending_one_shot_handles_before_releasing_clips()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        AudioRecorder audio = AudioRecorder.Create();
+        DaggerfallSiteProfile inputs = MediaInputs(audio: [new NormalizedAudioClip("sound.3", "audio/swing.wav", Hash)]);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, inputs, audio.Service);
+
+        presentation.BeginAdmittedUpdate();
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 17, 23) { Feedback = new(true, "sound.3") });
+        Assert.Single(audio.EmittedSignals);
+        presentation.Dispose();
+
+        Assert.Equal(audio.EmittedSignals, audio.RetiredSignals);
+    }
+
+    [Fact]
     public void Classic_textures_are_admitted_during_construction_and_retired_playback_releases_on_the_next_admission()
     {
         List<string> releases = [];
