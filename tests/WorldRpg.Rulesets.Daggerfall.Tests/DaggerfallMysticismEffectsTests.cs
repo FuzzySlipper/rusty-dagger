@@ -192,10 +192,17 @@ public sealed class DaggerfallMysticismEffectsTests
         s.BanishActor(2000); Assert.False(s.State.Actors.TryGet(2000, out _)); var saved = DaggerfallSavePayload.Read(s.CaptureSave());
         Assert.Contains(2000, saved.BanishedActors); Assert.DoesNotContain(saved.Actors, actor => actor.EntityId == 2000);
         using var restored = f.Restore(s.CaptureSave()); Assert.False(restored.State.Actors.TryGet(2000, out _));
-        Assert.True(s.TryTransitionTo(f.Destination!.ProfileKey)); Assert.True(s.TryTransitionTo(f.Composition.StartSite.ProfileKey));
+        Assert.True(s.TryTransitionTo(f.Destination!.ProfileKey));
+        var awaySaved = s.CaptureSave();
+        Assert.Contains(2000, DaggerfallSavePayload.Read(awaySaved).BanishedActors);
+        using var away = f.Restore(awaySaved);
+        Assert.True(away.TryTransitionTo(f.Composition.StartSite.ProfileKey));
+        Assert.False(away.State.Actors.TryGet(2000, out _));
+        Assert.True(s.TryTransitionTo(f.Composition.StartSite.ProfileKey));
         Assert.False(s.State.Actors.TryGet(2000, out _));
         using var returned = f.Restore(s.CaptureSave()); Assert.False(returned.State.Actors.TryGet(2000, out _));
         Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(saved with { BanishedActors = [2000, 2000] })));
+        Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(saved with { BanishedActors = [999999] })));
     }
     [Fact]
     public void Selecting_a_saved_multi_effect_bundle_cancels_all_its_effects_and_preserves_other_bundles()

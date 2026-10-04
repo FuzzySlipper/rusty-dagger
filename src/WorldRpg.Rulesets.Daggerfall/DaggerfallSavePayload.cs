@@ -347,6 +347,7 @@ internal sealed record DaggerfallSavePayload(
         }
         if (!savedDoors.SetEquals(selectedDoors))
             throw new ArgumentException("Current save must carry one state for every selected RDB door.");
+        HashSet<long> knownAuthoredActorIds = [.. inputs.Project.Actors.Keys];
         HashSet<long> inactiveAuthoredActorIds = [];
         HashSet<long> inactiveDynamicActorIds = [];
         bool activeLocationUnloaded = ExteriorLocationResidency?.Loaded == false;
@@ -371,6 +372,7 @@ internal sealed record DaggerfallSavePayload(
                     throw new ArgumentException("Saved inactive site state must name each non-active profile once.");
                 DaggerfallSiteProfile profile = profiles.Require(key);
                 HashSet<long> selectedActors = [.. profile.Project.Actors.Keys];
+                knownAuthoredActorIds.UnionWith(selectedActors);
                 ValidateBanished(delta.BanishedActors, selectedActors, delta.Actors.Select(actor => actor.EntityId));
                 HashSet<long> savedActors = [.. delta.Actors.Select(actor => actor.EntityId), .. delta.BanishedActors];
                 if (!savedActors.SetEquals(selectedActors))
@@ -418,7 +420,7 @@ internal sealed record DaggerfallSavePayload(
             if (!savedActorIds.Add(actor.EntityId))
                 throw new ArgumentException($"Saved actor {actor.EntityId} appears more than once.");
         }
-        ValidateBanished(BanishedActors, inputs.Project.Actors.Keys, savedActorIds);
+        ValidateBanished(BanishedActors, knownAuthoredActorIds, savedActorIds.Concat(inactiveAuthoredActorIds));
         foreach (AuthoredActor placement in inputs.Project.Actors.Values)
         {
             if (!activeLocationUnloaded && !savedActorIds.Contains(placement.EntityId) && !BanishedActors.Contains(placement.EntityId))
