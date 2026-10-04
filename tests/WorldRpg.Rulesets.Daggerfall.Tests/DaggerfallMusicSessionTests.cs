@@ -1,6 +1,7 @@
 using Rusty.Engine;
 using WorldRpg.Host;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
