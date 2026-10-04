@@ -568,6 +568,7 @@ internal static class DaggerfallUiAction
                     || fields.SetEquals(["action", "revision", "item", "amount"]);
                 return shape && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
                     && amount is null or > 0
+                    && (!item.StartsWith("unique:", StringComparison.Ordinal) || amount is null or 1)
                     ? new(action, Revision: revision, Item: item, Amount: amount) : null;
             }
             if (action is "merchant-repair" or "merchant-identify")
