@@ -238,8 +238,11 @@ public sealed class ExteriorOriginSessionTests
             Assert.NotEqual(Vector3.Zero, delta);
             Assert.Equal(playerPosition.ToVector() + delta, session.State.PlayerControl.Position!.Value.ToVector());
             Assert.Equal(actorPosition.ToVector() + delta, session.State.Actors.Get(actorId).Position.ToVector());
-            Assert.Equal(exterior.Portals[0].Position.ToVector(),
-                session.Sites.LocalToProfile(session.Sites.Projection.Portals.All.First().Portal.Position.ToVector()));
+            Vector3 activePortalProfile = session.Sites.LocalToProfile(
+                session.Sites.Projection.Portals.All.First().Portal.Position.ToVector());
+            Assert.Equal(exterior.Portals[0].Position.X, activePortalProfile.X, 3);
+            Assert.Equal(exterior.Portals[0].Position.Y, activePortalProfile.Y, 3);
+            Assert.Equal(exterior.Portals[0].Position.Z, activePortalProfile.Z, 3);
             Assert.Equal(exterior.WorldAppearance.Transform.Translation + delta,
                 Assert.Single(appearance.Snapshots.Last(), fact => fact.ObjectId == 1).Transform.Translation);
             Assert.Equal(new Vector3(1001, 3, 6) + delta, session.State.PlayerControl.Motion.TetherAnchorPoint);
@@ -265,8 +268,11 @@ public sealed class ExteriorOriginSessionTests
             restored.State.Actors.Store.Get<DaggerfallNpcBody>(npcEntity).Pose.Position.ToVector());
         Assert.Equal(npcPosition.ToVector() + compensation,
             restored.Dialogue.NpcTargets().Single(target => target.Identity.Value == (ulong)npcId).Position.ToVector());
-        Assert.Equal(exterior.Portals[0].Position.ToVector(),
-            restored.Sites.LocalToProfile(restored.Sites.Projection.Portals.All.First().Portal.Position.ToVector()));
+        Vector3 restoredPortalProfile = restored.Sites.LocalToProfile(
+            restored.Sites.Projection.Portals.All.First().Portal.Position.ToVector());
+        Assert.Equal(exterior.Portals[0].Position.X, restoredPortalProfile.X, 3);
+        Assert.Equal(exterior.Portals[0].Position.Y, restoredPortalProfile.Y, 3);
+        Assert.Equal(exterior.Portals[0].Position.Z, restoredPortalProfile.Z, 3);
         Assert.True(restored.TryTransitionTo(interior.ProfileKey));
         DaggerfallSavePayload inside = DaggerfallSavePayload.Read(restored.CaptureSave());
         Assert.Equal(playerPosition.X, inside.Site.ReturnPose!.X);

@@ -33,14 +33,29 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal(fixture.Destination.Site!.Value, fixture.Session.Site.Active);
         WorldPoint destination = fixture.Destination.Project.PlayerPosition
             ?? throw new InvalidOperationException("The travel destination has no authored player position.");
-        WorldPoint liveDestination = WorldPoint.From(fixture.Session.Sites.LocalToProfile(
-            fixture.Session.State.PlayerControl.Position!.Value.ToVector()));
-        Assert.Equal(destination, liveDestination);
+        WorldPoint liveDestination = fixture.Session.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The travel session has no live arrival position.");
+        // A travel destination is authored in its site's local frame. The active exterior keeps
+        // the map-pixel translation in the current local origin, so this owner converts the live
+        // pose back to that frame instead of comparing it with a raw global local pose.
+        Assert.Equal(destination, fixture.Session.Sites.ExteriorSitePosition(liveDestination));
+        WorldPoint savedProfileDestination = WorldPoint.From(fixture.Session.Sites.LocalToProfile(
+            liveDestination.ToVector()));
         Assert.True(result.ElapsedSeconds >= quote.TravelSeconds);
-        using var restored = fixture.Restore(fixture.Session.CaptureSave());
+        RulesetSavePayload save = fixture.Session.CaptureSave();
+        DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
+        WorldPoint savedDestination = new(captured.Player.X, captured.Player.Y, captured.Player.Z);
+        Assert.Equal(liveDestination, savedDestination);
+        using var restored = fixture.Restore(save);
         Assert.Equal(result, restored.State.Travel.LastResult);
         Assert.Equal(fixture.Session.State.Currency.Read(), restored.State.Currency.Read());
         Assert.Equal(fixture.Session.Site.Active, restored.Site.Active);
+        WorldPoint restoredDestination = restored.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The restored travel session has no arrival position.");
+        Assert.Equal(savedDestination, restoredDestination);
+        Assert.Equal(destination, restored.Sites.ExteriorSitePosition(restoredDestination));
+        Assert.Equal(savedProfileDestination, WorldPoint.From(restored.Sites.LocalToProfile(
+            restoredDestination.ToVector())));
         Assert.Null(restored.ReadTravelPresentation().Quote);
         Assert.Contains("Arrived", restored.ReadTravelPresentation().Message);
     }
