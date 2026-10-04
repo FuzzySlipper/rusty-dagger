@@ -1,3 +1,4 @@
+using System.Numerics;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Ai;
 using WorldRpg.Kit.Controls;
@@ -186,9 +187,31 @@ internal sealed partial class DaggerfallSession
 
     private void SyncCivilianPosition(ActorState actor)
     {
-        if (!State.Npcs.All.Any(npc => IsPopulationNpc(npc) && npc.DurableId == actor.DurableId)) return;
-        WorldPoint profilePosition = WorldPoint.From(_sites.LocalToProfile(actor.Position.ToVector()));
+        DaggerfallNpc? populationNpc = State.Npcs.All.FirstOrDefault(npc =>
+            IsPopulationNpc(npc) && npc.DurableId == actor.DurableId);
+        if (populationNpc is null) return;
+        WorldPoint profilePosition = WorldPoint.From(PopulationProfilePosition(populationNpc, actor.Position.ToVector()));
         State.Npcs.Relocate(actor.DurableId, profilePosition.X, profilePosition.Y, profilePosition.Z);
+    }
+
+    /// <summary>
+    /// Converts one live population actor back to its durable source profile frame. Active actors
+    /// already use the current profile compensation; a resident actor also carries the exact local
+    /// translation of its owning map pixel, which must be removed before the NPC registry is saved.
+    /// </summary>
+    private Vector3 PopulationProfilePosition(DaggerfallNpc npc, Vector3 localPosition)
+    {
+        if (npc.Profile is not { } profile
+            || profile == _sites.ActiveProfile
+            || profile.Kind != DaggerfallWorldProfileKind.Exterior
+            || !_sites.ResidentExteriorProfiles.Contains(profile))
+            return _sites.LocalToProfile(localPosition);
+
+        Vector3 residentTranslation = _sites.ExteriorProfileFrameTranslation(profile);
+        Vector3 profilePosition = localPosition - residentTranslation;
+        if (!float.IsFinite(profilePosition.X) || !float.IsFinite(profilePosition.Y) || !float.IsFinite(profilePosition.Z))
+            throw new InvalidOperationException($"Resident population NPC {npc.DurableId} produced a non-finite profile position.");
+        return profilePosition;
     }
 
     private void HidePopulationNpc(DaggerfallNpc npc)
