@@ -109,6 +109,7 @@ interface DeathProjection {
 interface DialogueProjection {
   readonly questContacts?: readonly { readonly instance: string; readonly symbol: string }[];
   readonly bankAvailable?: boolean;
+  readonly merchant?: MerchantProjection | null;
   readonly comprehendLanguagesBonus?: number;
   readonly revision: string;
   readonly targetLabel: string;
@@ -128,6 +129,35 @@ interface DialogueProjection {
     readonly skills: readonly { readonly id: string; readonly permanentValue: number; readonly maximumValue: number }[];
   } | null;
   readonly diagnostics: readonly string[];
+}
+
+interface MerchantItemProjection {
+  readonly key: string;
+  readonly definition: string;
+  readonly label: string;
+  readonly quantity: string | number;
+  readonly unitPrice: string | number;
+  readonly currentCondition: number;
+  readonly maximumCondition: number;
+  readonly identified: boolean;
+  readonly stolen: boolean;
+  readonly canBuy: boolean;
+  readonly canSell: boolean;
+}
+
+interface MerchantProjection {
+  readonly revision: string;
+  readonly provider: string;
+  readonly quality: number;
+  readonly gold: string | number;
+  readonly buyAvailable: boolean;
+  readonly sellAvailable: boolean;
+  readonly repairAvailable: boolean;
+  readonly identifyAvailable: boolean;
+  readonly result: string;
+  readonly stock: readonly MerchantItemProjection[];
+  readonly playerItems: readonly MerchantItemProjection[];
+  readonly repairs: readonly { readonly requestId: string; readonly durableItemId: string | number; readonly definition: string; readonly dueMinute: number; readonly ready: boolean }[];
 }
 
 interface QuestMessageProjection {
@@ -347,6 +377,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         <p class="dagger-dialogue-training-summary"></p>
         <div class="dagger-dialogue-training-skills"></div>
       </section>
+      <section class="dagger-dialogue-merchant" aria-label="Merchant services"></section>
       <section class="dagger-dialogue-spells" aria-label="Spells for sale"></section>
       <section class="dagger-dialogue-spellmaker" aria-label="Spell construction"></section>
       <ul class="dagger-dialogue-diagnostics" aria-label="Text diagnostics"></ul>
@@ -531,8 +562,74 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const dialogueTraining = shell.querySelector<HTMLElement>('.dagger-dialogue-training')!;
   const dialogueTrainingSummary = shell.querySelector<HTMLElement>('.dagger-dialogue-training-summary')!;
   const dialogueTrainingSkills = shell.querySelector<HTMLElement>('.dagger-dialogue-training-skills')!;
+  const dialogueMerchant = shell.querySelector<HTMLElement>('.dagger-dialogue-merchant')!;
   const dialogueDiagnostics = shell.querySelector<HTMLElement>('.dagger-dialogue-diagnostics')!;
   let currentDialogue: DialogueProjection | null = null;
+  const merchantAmount = (item: MerchantItemProjection): number | undefined => {
+    if (!item.key.startsWith('stack:')) return undefined;
+    const amount = typeof item.quantity === 'number' ? item.quantity : Number(item.quantity);
+    return Number.isSafeInteger(amount) && amount > 0 ? amount : undefined;
+  };
+  const merchantAction = (action: string, merchant: MerchantProjection, item: MerchantItemProjection, label: string): HTMLButtonElement => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    const amount = merchantAmount(item);
+    button.addEventListener('click', () => context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
+      data: amount === undefined
+        ? { action, revision: merchant.revision, item: item.key }
+        : { action, revision: merchant.revision, item: item.key, amount },
+    }));
+    return button;
+  };
+  const renderMerchant = (merchant: MerchantProjection | null): void => {
+    dialogueMerchant.hidden = merchant === null;
+    dialogueMerchant.replaceChildren();
+    if (merchant === null) return;
+    const heading = document.createElement('h3');
+    heading.textContent = `${merchant.provider} · shop quality ${merchant.quality}`;
+    const gold = document.createElement('p');
+    gold.textContent = `Carried gold: ${merchant.gold}`;
+    dialogueMerchant.append(heading, gold);
+    const addItems = (title: string, items: readonly MerchantItemProjection[], action: string, predicate: (item: MerchantItemProjection) => boolean): void => {
+      const section = document.createElement('section');
+      const sectionHeading = document.createElement('h4'); sectionHeading.textContent = title;
+      const list = document.createElement('ul');
+      for (const item of items) {
+        const row = document.createElement('li');
+        row.textContent = `${item.label} × ${item.quantity} · ${item.unitPrice} gold${item.stolen ? ' · stolen' : ''}`;
+        if (predicate(item)) row.append(' ', merchantAction(action, merchant, item, action === 'merchant-buy' ? 'Buy' : 'Sell'));
+        if (action === 'merchant-buy' && predicate(item)) row.append(' ', merchantAction('merchant-shoplift', merchant, item, 'Steal'));
+        if (action === 'merchant-sell' && merchant.repairAvailable && item.key.startsWith('unique:') && item.maximumCondition > item.currentCondition)
+          row.append(' ', merchantAction('merchant-repair', merchant, item, 'Repair'));
+        if (action === 'merchant-sell' && merchant.identifyAvailable && item.key.startsWith('unique:') && !item.identified)
+          row.append(' ', merchantAction('merchant-identify', merchant, item, 'Identify'));
+        list.append(row);
+      }
+      if (items.length === 0) { const empty = document.createElement('li'); empty.textContent = 'None.'; list.append(empty); }
+      section.append(sectionHeading, list); dialogueMerchant.append(section);
+    };
+    if (merchant.buyAvailable) addItems('Stock', merchant.stock, 'merchant-buy', item => item.canBuy);
+    if (merchant.sellAvailable || merchant.repairAvailable || merchant.identifyAvailable)
+      addItems('Your items', merchant.playerItems, 'merchant-sell', item => merchant.sellAvailable && item.canSell);
+    if (merchant.repairAvailable && merchant.repairs.length > 0) {
+      const section = document.createElement('section');
+      const sectionHeading = document.createElement('h4'); sectionHeading.textContent = 'Repairs';
+      const list = document.createElement('ul');
+      for (const repair of merchant.repairs) {
+        const row = document.createElement('li'); row.textContent = `${repair.definition} · ${repair.ready ? 'ready' : 'in progress'}`;
+        if (repair.ready) {
+          const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Collect';
+          button.addEventListener('click', () => context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,
+            data: { action: 'merchant-collect-repair', revision: merchant.revision, key: repair.requestId } }));
+          row.append(' ', button);
+        }
+        list.append(row);
+      }
+      section.append(sectionHeading, list); dialogueMerchant.append(section);
+    }
+  };
   dialogueTone.addEventListener('change', () => {
     if (!deadMode && currentDialogue) context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: UI_ACTION_CONTRACT,
@@ -1113,6 +1210,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     // choices or leave a close action aimed at a session that has already stopped ordinary input.
     const dialogue = deadMode ? null : value.activation?.dialogue ?? null;
     currentDialogue = dialogue;
+    renderMerchant(dialogue?.merchant ?? null);
     if (dialogue === null) {
       if (dialogueWindow.open) dialogueWindow.close();
     } else {

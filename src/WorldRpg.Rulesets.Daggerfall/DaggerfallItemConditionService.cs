@@ -132,6 +132,27 @@ internal sealed class DaggerfallItemConditionService(
     }
 
     /// <summary>
+    /// Repairs an item held by an admitted provider custody owner. Containment remains the Kit
+    /// container authority; this overload keeps the Daggerfall condition mutation in this owner
+    /// while allowing a queued repair to finish before the item returns to the player.
+    /// </summary>
+    internal DaggerfallItemConditionResult Repair(ulong durableItemId, DaggerfallItemOwner owner)
+    {
+        owner.Validate();
+        DaggerfallItemInstanceMetadata metadata = instances.RequireUnique(durableItemId);
+        if (metadata.Owner != owner)
+            throw new InvalidOperationException($"Item '{durableItemId}' belongs to {metadata.Owner.Scope} {metadata.Owner.Id}, not {owner.Scope} {owner.Id}.");
+        RequireItemMetadata(metadata);
+        if (metadata.MaximumCondition == 0)
+            throw new InvalidOperationException($"Item '{metadata.ItemId}' has no condition units to repair.");
+        if (metadata.CurrentCondition == metadata.MaximumCondition)
+            return new(DaggerfallItemConditionOutcome.AlreadyRepaired, durableItemId, metadata, metadata.CurrentCondition);
+        DaggerfallItemInstanceMetadata repaired = metadata with { CurrentCondition = metadata.MaximumCondition };
+        instances.ReplaceUnique(durableItemId, repaired);
+        return new(DaggerfallItemConditionOutcome.Repaired, durableItemId, repaired, metadata.CurrentCondition);
+    }
+
+    /// <summary>
     /// Raises condition by bounded units up to the authored maximum, without changing durable identity.
     /// Unlike <see cref="Repair"/>, which restores an item whole, this is the steady restoration a worn
     /// enchantment performs on the round cadence.
@@ -175,6 +196,22 @@ internal sealed class DaggerfallItemConditionService(
             return new(DaggerfallItemConditionOutcome.AlreadyIdentified, durableItemId, metadata, metadata.CurrentCondition);
         // A setting has no published template to disclose, so it is identified by its own param meaning;
         // anything else must still name a published magic item.
+        if (!definitions.Magic.EnchantmentSettings.TryGetValue(metadata.Enchantment, out _)) RequireMagic(metadata);
+        DaggerfallItemInstanceMetadata identified = metadata with { Identified = true };
+        instances.ReplaceUnique(durableItemId, identified);
+        return new(DaggerfallItemConditionOutcome.Identified, durableItemId, identified, metadata.CurrentCondition);
+    }
+
+    /// <summary>Discloses an item while it is in provider custody, preserving its durable identity.</summary>
+    internal DaggerfallItemConditionResult Identify(ulong durableItemId, DaggerfallItemOwner owner)
+    {
+        owner.Validate();
+        DaggerfallItemInstanceMetadata metadata = instances.RequireUnique(durableItemId);
+        if (metadata.Owner != owner)
+            throw new InvalidOperationException($"Item '{durableItemId}' belongs to {metadata.Owner.Scope} {metadata.Owner.Id}, not {owner.Scope} {owner.Id}.");
+        RequireItemMetadata(metadata);
+        if (metadata.Enchantment is null || metadata.Identified)
+            return new(DaggerfallItemConditionOutcome.AlreadyIdentified, durableItemId, metadata, metadata.CurrentCondition);
         if (!definitions.Magic.EnchantmentSettings.TryGetValue(metadata.Enchantment, out _)) RequireMagic(metadata);
         DaggerfallItemInstanceMetadata identified = metadata with { Identified = true };
         instances.ReplaceUnique(durableItemId, identified);

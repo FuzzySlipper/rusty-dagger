@@ -73,6 +73,7 @@ internal sealed partial class DaggerfallSession
             BankAvailable = CurrentBankServiceAvailable(),
             ComprehendLanguagesBonus = State.Effects.PerceptionFor(DaggerfallActorIdentity.PlayerEntityId).ComprehendLanguagesBonus,
             Training = CurrentTrainingProvider(dialogue.Revision),
+            Merchant = ReadCurrentMerchant(),
         } : null,
     };
     internal DaggerfallDialogueService Dialogue => _dialogue ?? throw new InvalidOperationException("The session has no dialogue owner.");

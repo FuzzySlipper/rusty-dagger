@@ -33,6 +33,7 @@ internal sealed record DaggerfallDialogueView(
     internal bool BankAvailable { get; init; }
     internal IReadOnlyList<DaggerfallQuestContact> QuestContacts { get; init; } = [];
     internal DaggerfallSkillTrainingProviderView? Training { get; init; }
+    internal DaggerfallMerchantView? Merchant { get; init; }
 }
 
 /// <summary>

@@ -16,13 +16,17 @@ internal sealed record DaggerfallItemOwner(string Scope, long Id)
     internal static DaggerfallItemOwner Wagon(long id) => new("wagon", id);
     /// <summary>A durable property container remains attached to its owned or retained property.</summary>
     internal static DaggerfallItemOwner Property(long id) => new("property", id);
+    /// <summary>Persistent stock owned by one admitted merchant provider.</summary>
+    internal static DaggerfallItemOwner Merchant(long id) => new("merchant", id);
+    /// <summary>Item held by one merchant while a repair request is pending.</summary>
+    internal static DaggerfallItemOwner RepairCustody(long id) => new("repair-custody", id);
     internal static DaggerfallItemOwner WorldTreasure(long id) => new("world-treasure", id);
     internal static DaggerfallItemOwner Encounter(long id) => new("encounter", id);
     internal static DaggerfallItemOwner Quest(long id) => new("quest", id);
 
     internal DaggerfallItemOwner Validate()
     {
-        if (Scope is not ("player" or "actor" or "corpse" or "ground" or "wagon" or "property" or "world-treasure" or "encounter" or "quest") || Id <= 0)
+        if (Scope is not ("player" or "actor" or "corpse" or "ground" or "wagon" or "property" or "merchant" or "repair-custody" or "world-treasure" or "encounter" or "quest") || Id <= 0)
             throw new ArgumentException("Item ownership must name a known positive durable owner.");
         return this;
     }

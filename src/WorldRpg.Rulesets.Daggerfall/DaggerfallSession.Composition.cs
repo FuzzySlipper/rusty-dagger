@@ -337,7 +337,7 @@ internal sealed partial class DaggerfallSession
                 () => _heldEnchantments.CarryMultiplier);
             // A new game wears its loadout now; a restore refreshes once, after its equipment is restored.
             if (restore is null) _heldEnchantments.Refresh();
-            DaggerfallCurrencyService currency = new(definitions, inventory, itemInstances, encumbrance, _uniqueItems, saved?.Currency);
+            DaggerfallCurrencyService currency = new(definitions, inventory, itemInstances, encumbrance, _uniqueItems, containers, saved?.Currency);
             DaggerfallRegionalBankState bank = new(currency, inventory, itemInstances, saved?.Bank);
             DaggerfallLoanState loans = new(saved?.Loans);
             DaggerfallPropertyState property = new(tuning.Property, saved?.Property);
@@ -345,7 +345,7 @@ internal sealed partial class DaggerfallSession
             if (saved?.Property is { } savedProperty) _propertyStorage.Restore(savedProperty);
             DaggerfallCrimeState crime = new(saved?.Crime);
             DaggerfallServiceTransactions services = new(npcs, social, inventory, itemInstances,
-                currency, _uniqueItems, () => _time.Calendar, () => _site.ActiveSite is { } active
+                currency, _uniqueItems, containers, playerEntity, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty, _sites.ActiveProfile.LogicalId)
                     : null, saved?.Services);
             DaggerfallConcreteGuildServiceRuntime concreteGuildServices = new(guildMembership, npcs, services);
@@ -358,6 +358,11 @@ internal sealed partial class DaggerfallSession
                 _time.Calendar.DayNumber, saved?.RegionalPrices);
             regionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
             DaggerfallTradeQuoteService tradeQuotes = new(definitions, new DaggerfallItemValuation(definitions), regionalPrices);
+            DaggerfallMerchantService merchants = new(definitions, _random, npcs, social, playerStats, character, progression,
+                inventory, containers, itemInstances, _uniqueItems, _actorIdentities, currency, services, tradeQuotes,
+                regionalPrices, _itemCondition, skillUses, crime, () => _time.Calendar,
+                () => _dialogue?.CurrentNpc()?.Site,
+                saved?.Merchants);
             DaggerfallTransportPolicy transport = new(tuning.Transport);
             DaggerfallWagonStorage wagon = new(containers, itemInstances, definitions,
                 playerEntity, _actorIdentities, tuning.Transport);
@@ -387,6 +392,7 @@ internal sealed partial class DaggerfallSession
                 skillTraining: skillTraining,
                 regionalPrices: regionalPrices,
                 tradeQuotes: tradeQuotes,
+                merchants: merchants,
                 transport: transport,
                 wagon: wagon,
                 swimming: swimming,

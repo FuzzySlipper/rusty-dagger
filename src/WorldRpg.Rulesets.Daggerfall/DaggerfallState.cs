@@ -46,6 +46,7 @@ internal sealed class DaggerfallState(
     DaggerfallSkillTrainingService skillTraining,
     DaggerfallRegionalPriceState regionalPrices,
     DaggerfallTradeQuoteService tradeQuotes,
+    DaggerfallMerchantService merchants,
     DaggerfallTransportPolicy transport,
     DaggerfallWagonStorage wagon,
     DaggerfallSwimmingPolicy swimming,
@@ -114,6 +115,8 @@ internal sealed class DaggerfallState(
     /// <summary>Calendar-driven regional market factors and item quote policy.</summary>
     internal DaggerfallRegionalPriceState RegionalPrices { get; } = regionalPrices;
     internal DaggerfallTradeQuoteService TradeQuotes { get; } = tradeQuotes;
+    /// <summary>Provider-owned stock, repair custody, and payment-backed merchant actions.</summary>
+    internal DaggerfallMerchantService Merchants { get; } = merchants;
     /// <summary>Current transport choice and its Engine-backed wagon container.</summary>
     internal DaggerfallTransportPolicy Transport { get; } = transport;
     internal DaggerfallWagonStorage Wagon { get; } = wagon;

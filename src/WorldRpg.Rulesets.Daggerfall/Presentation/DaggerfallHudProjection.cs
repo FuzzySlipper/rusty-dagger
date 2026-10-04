@@ -282,6 +282,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("questContacts", builder.Array(dialogue.QuestContacts.Select(contact => builder.Object(
             ("instance", builder.String(contact.InstanceId)), ("symbol", builder.String(contact.Symbol)))).ToArray())),
         ("bankAvailable", builder.Boolean(dialogue.BankAvailable)),
+        ("merchant", dialogue.Merchant is null ? builder.Null() : Merchant(builder, dialogue.Merchant)),
         ("greeting", builder.String(dialogue.Greeting)),
         ("comprehendLanguagesBonus", builder.Number(dialogue.ComprehendLanguagesBonus)),
         ("tone", builder.String(dialogue.Tone)),
@@ -303,6 +304,38 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("permanentValue", builder.Number(skill.PermanentValue)),
                 ("maximumValue", builder.Number(skill.MaximumValue)))).ToArray())))),
         ("diagnostics", builder.Array(dialogue.Diagnostics.Select(builder.String).ToArray())));
+
+    private static uint Merchant(UiValueBuilder builder, DaggerfallMerchantView merchant) => builder.Object(
+        ("revision", builder.String(merchant.Revision)),
+        ("provider", builder.String(merchant.Provider)),
+        ("quality", builder.Number(merchant.Quality)),
+        ("gold", builder.String(merchant.PlayerGold.ToString(CultureInfo.InvariantCulture))),
+        ("buyAvailable", builder.Boolean(merchant.CanBuy)),
+        ("sellAvailable", builder.Boolean(merchant.CanSell)),
+        ("repairAvailable", builder.Boolean(merchant.CanRepair)),
+        ("identifyAvailable", builder.Boolean(merchant.CanIdentify)),
+        ("result", builder.String(merchant.Result)),
+        ("stock", builder.Array(merchant.Stock.Select(item => MerchantItem(builder, item)).ToArray())),
+        ("playerItems", builder.Array(merchant.PlayerItems.Select(item => MerchantItem(builder, item)).ToArray())),
+        ("repairs", builder.Array(merchant.Repairs.Select(repair => builder.Object(
+            ("requestId", builder.String(repair.RequestId)),
+            ("durableItemId", builder.String(repair.DurableItemId.ToString(CultureInfo.InvariantCulture))),
+            ("definition", builder.String(repair.Definition)),
+            ("dueMinute", builder.Number(repair.DueMinute)),
+            ("ready", builder.Boolean(repair.Ready)))).ToArray())));
+
+    private static uint MerchantItem(UiValueBuilder builder, DaggerfallMerchantItemView item) => builder.Object(
+        ("key", builder.String(item.Key)),
+        ("definition", builder.String(item.Definition)),
+        ("label", builder.String(item.Label)),
+        ("quantity", builder.String(item.Quantity.ToString(CultureInfo.InvariantCulture))),
+        ("unitPrice", builder.String(item.UnitPrice.ToString(CultureInfo.InvariantCulture))),
+        ("currentCondition", builder.Number(item.CurrentCondition)),
+        ("maximumCondition", builder.Number(item.MaximumCondition)),
+        ("identified", builder.Boolean(item.Identified)),
+        ("stolen", builder.Boolean(item.Stolen)),
+        ("canBuy", builder.Boolean(item.CanBuy)),
+        ("canSell", builder.Boolean(item.CanSell)));
 
     private static uint Death(UiValueBuilder builder, DaggerfallDeathView death) => builder.Object(
         ("active", builder.Boolean(death.Active)),

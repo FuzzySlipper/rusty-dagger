@@ -129,6 +129,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Accepted service work that has not reached its concrete service-specific completion.</summary>
     [JsonRequired]
     public DaggerfallServiceStateSave Services { get; init; } = new([]);
+    /// <summary>Materialized merchant stock and repair custody keyed by the live provider site.</summary>
+    [JsonRequired]
+    public DaggerfallMerchantSave[] Merchants { get; init; } = [];
     /// <summary>The last donor quest-provided free skill training time, when one has occurred.</summary>
     [JsonRequired]
     public DaggerfallQuestTrainingSave QuestTraining { get; init; } = new(null);
@@ -500,6 +503,43 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException("Quest custody container is not live in the identity ledger.");
             ValidateInventory(custody.Inventory, definitions, uniqueItems, DaggerfallItemOwner.Quest(custody.Id), requireEquipment: false);
         }
+        HashSet<string> merchantKeys = new(StringComparer.Ordinal);
+        HashSet<string> repairRequests = new(StringComparer.Ordinal);
+        Dictionary<string, DaggerfallServiceQueuedWork> pendingServices = Services.Pending.ToDictionary(value => value.Id, StringComparer.Ordinal);
+        foreach (DaggerfallMerchantSave merchant in Merchants)
+        {
+            merchant.Validate();
+            if (!merchantKeys.Add(merchant.Key))
+                throw new ArgumentException($"Saved merchant provider '{merchant.Key}' appears more than once.");
+            foreach (long containerId in new[] { merchant.MerchantContainerId, merchant.CustodyContainerId })
+            {
+                if (!containerIdentities.Add(checked((ulong)containerId)))
+                    throw new ArgumentException($"Saved merchant container identity {containerId} collides with another container.");
+                if (savedLedger.Classify(new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)containerId)))
+                    != DurableIdentityClassification.Live)
+                    throw new ArgumentException($"Saved merchant container {containerId} is not live in the persisted identity ledger.");
+            }
+            ValidateInventory(merchant.Inventory, definitions, uniqueItems,
+                DaggerfallItemOwner.Merchant(merchant.MerchantContainerId), requireEquipment: false);
+            ValidateInventory(merchant.Custody, definitions, uniqueItems,
+                DaggerfallItemOwner.RepairCustody(merchant.CustodyContainerId), requireEquipment: false);
+            if (!savedNpcs.TryGetValue(merchant.ProviderNpcId, out DaggerfallNpcEntry? providerNpc)
+                || providerNpc.Presence != (int)DaggerfallNpcPresence.Active
+                || providerNpc.Region != merchant.ProviderRegion
+                || !StringComparer.Ordinal.Equals(providerNpc.Location, merchant.ProviderLocation)
+                || !StringComparer.Ordinal.Equals(providerNpc.Building, merchant.ProviderBuilding))
+                throw new ArgumentException($"Saved merchant '{merchant.Key}' has no matching active provider NPC site.");
+            DaggerfallServiceProvider provider = new(merchant.ProviderNpcId,
+                new(merchant.ProviderRegion, merchant.ProviderLocation, merchant.ProviderBuilding), merchant.Service);
+            foreach (DaggerfallMerchantRepairSave repair in merchant.Repairs)
+            {
+                if (!repairRequests.Add(repair.RequestId)
+                    || !pendingServices.TryGetValue(repair.RequestId, out DaggerfallServiceQueuedWork? pending)
+                    || pending.Provider.NpcId != provider.NpcId || pending.Provider.Site != provider.Site
+                    || pending.Provider.Service != "repair" || pending.CompletesAtMinute != repair.DueMinute)
+                    throw new ArgumentException($"Saved repair '{repair.RequestId}' has no matching pending provider work.");
+            }
+        }
         if (Wagon is { } wagon)
         {
             wagon.Validate();
@@ -598,6 +638,11 @@ internal sealed record DaggerfallSavePayload(
             AddQuestStacks(questStacks, DaggerfallItemOwner.Corpse(corpse.ActorId), corpse.Stacks);
         foreach (DaggerfallGroundContainerSave ground in GroundContainers)
             AddQuestStacks(questStacks, DaggerfallItemOwner.Ground(ground.Id), ground.Inventory.Stacks);
+        foreach (DaggerfallMerchantSave merchant in Merchants)
+        {
+            AddQuestStacks(questStacks, DaggerfallItemOwner.Merchant(merchant.MerchantContainerId), merchant.Inventory.Stacks);
+            AddQuestStacks(questStacks, DaggerfallItemOwner.RepairCustody(merchant.CustodyContainerId), merchant.Custody.Stacks);
+        }
         if (Wagon is { } questWagon)
             AddQuestStacks(questStacks, DaggerfallItemOwner.Wagon(questWagon.Id), questWagon.Inventory.Stacks);
         foreach (DaggerfallActorInventorySave inventory in ActorInventories)
@@ -614,6 +659,7 @@ internal sealed record DaggerfallSavePayload(
         DaggerfallUniqueSave[] questUnique = [.. Inventory.UniqueItems, .. ActorInventories.SelectMany(value => value.Inventory.UniqueItems),
             .. Corpses.SelectMany(value => value.UniqueItems), .. GroundContainers.SelectMany(value => value.Inventory.UniqueItems),
             .. QuestCustody.SelectMany(value => value.Inventory.UniqueItems), .. (Wagon?.Inventory.UniqueItems ?? []),
+            .. Merchants.SelectMany(value => value.Inventory.UniqueItems), .. Merchants.SelectMany(value => value.Custody.UniqueItems),
             .. Property.Storage.SelectMany(value => value.Inventory.UniqueItems), .. SiteDeltas.SelectMany(value => value.ActorInventories).SelectMany(value => value.Inventory.UniqueItems),
             .. SiteDeltas.SelectMany(value => value.Corpses).SelectMany(value => value.UniqueItems)];
         Quests.ValidateBindings(combatants, savedLedger, locations, questStacks, questUnique.ToDictionary(value => value.EntityId),
@@ -681,6 +727,12 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(QuestCustody);
         ArgumentNullException.ThrowIfNull(Services);
         Services.Validate();
+        ArgumentNullException.ThrowIfNull(Merchants);
+        foreach (DaggerfallMerchantSave merchant in Merchants)
+        {
+            ArgumentNullException.ThrowIfNull(merchant);
+            merchant.Validate();
+        }
         ArgumentNullException.ThrowIfNull(QuestTraining);
         QuestTraining.Validate();
         ArgumentNullException.ThrowIfNull(RegionalPrices);
@@ -837,6 +889,14 @@ internal sealed record DaggerfallSavePayload(
             custody.Inventory.Validate();
             if (custody.Inventory.Equipment.Length != 0) throw new ArgumentException("Quest custody cannot equip items.");
             if (!containerIdentities.Add(checked((ulong)custody.Id))) throw new ArgumentException("Quest custody identity collides with another container.");
+        }
+        HashSet<string> merchantKeys = new(StringComparer.Ordinal);
+        foreach (DaggerfallMerchantSave merchant in Merchants)
+        {
+            if (!merchantKeys.Add(merchant.Key)) throw new ArgumentException("Saved merchant providers must have distinct keys.");
+            if (!containerIdentities.Add(checked((ulong)merchant.MerchantContainerId)
+                ) || !containerIdentities.Add(checked((ulong)merchant.CustodyContainerId)))
+                throw new ArgumentException("Saved merchant container identities must be distinct from every other container.");
         }
         HashSet<long> inventoryActors = [];
         foreach (DaggerfallActorInventorySave inventory in ActorInventories)

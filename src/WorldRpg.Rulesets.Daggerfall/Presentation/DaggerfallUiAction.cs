@@ -26,7 +26,8 @@ internal enum DaggerfallUiActionKind
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
     CharacterLevelAllocate, CharacterLevelCommit,
     ActivationMode, Attack, Loot, Inventory, Character, Menu,
-    DialogueTone, DialogueTopic, DialogueClose, TrainingCommit, CreateItemSelect, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
+    DialogueTone, DialogueTopic, DialogueClose, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift,
+    CreateItemSelect, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
     TransportSelect, TransportToggle, TransportLeaveShip, TransportBoardShip,
     PropertyBuy, PropertySell, PropertyEnter, PropertyPut, PropertyTake,
     TravelSearch, TravelPreview, TravelAccept, MapOpen, MapBuilding,
@@ -182,6 +183,12 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.DialogueTopic, "dialogue-topic", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DialogueClose, "dialogue-close", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TrainingCommit, "training-commit", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.MerchantBuy, "merchant-buy", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.MerchantSell, "merchant-sell", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.MerchantRepair, "merchant-repair", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.MerchantCollectRepair, "merchant-collect-repair", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.MerchantIdentify, "merchant-identify", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.MerchantShoplift, "merchant-shoplift", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportSelect, "transport-select", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportToggle, "transport-toggle", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportBoardShip, "transport-board-ship", DaggerfallUiPhases.Interaction),
@@ -555,6 +562,22 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "revision", "key", "amount", "confirm"])
                     && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) && amount is > 0
                     ? new(action, Revision: revision, Key: key, Amount: amount, Confirm: confirm) : null;
+            if (action is "merchant-buy" or "merchant-sell" or "merchant-shoplift")
+            {
+                bool shape = fields.SetEquals(["action", "revision", "item"])
+                    || fields.SetEquals(["action", "revision", "item", "amount"]);
+                return shape && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                    && amount is null or > 0
+                    ? new(action, Revision: revision, Item: item, Amount: amount) : null;
+            }
+            if (action is "merchant-repair" or "merchant-identify")
+                return fields.SetEquals(["action", "revision", "item"])
+                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                    ? new(action, Revision: revision, Item: item) : null;
+            if (action == "merchant-collect-repair")
+                return fields.SetEquals(["action", "revision", "key"])
+                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key)
+                    ? new(action, Revision: revision, Key: key) : null;
             if (action == "quest-choice")
                 return fields.SetEquals(["action", "questInstance", "questMessage", "questPrompt", "questChoice"])
                     && !string.IsNullOrWhiteSpace(questInstance) && !string.IsNullOrWhiteSpace(questPrompt) && questMessage is > 0 && questChoice is not null
