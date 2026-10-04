@@ -23,17 +23,19 @@ public sealed class DaggerfallRestSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content);
         foreach (bool wilderness in new[] { false, true })
         {
             List<string> releases = [];
-            DaggerfallSiteProfile exterior = SameContentAt(source, source.ProfileKey.Site,
-                DaggerfallWorldProfileKind.Exterior, wilderness ? "rest-wilderness" : "rest-location");
+            DaggerfallSiteProfile exterior = ExteriorContentAt(source, source.ProfileKey.Site,
+                wilderness ? "rest-wilderness" : "rest-location");
             ContentFake content = new(releases);
             PopulateContent(content, exterior);
+            PopulateTerrainContent(content, exterior);
             SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
             EngineContextFake engine = EngineContextFake.Create(content, spatial.Service,
                 new AppearanceFake(releases), random: RandomMaximum.Create());
-            using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults) {Sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content)});
+            using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults) {Sky = sky});
             if (wilderness)
                 session.State.PlayerControl.MoveTo(new WorldPoint(DaggerfallExteriorCellResidency.CellSize + 1f, 1f, 1f).ToVector());
 
@@ -59,16 +61,17 @@ public sealed class DaggerfallRestSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile inputs = SameContentAt(source, source.ProfileKey.Site,
-            DaggerfallWorldProfileKind.Exterior, "rest-selected-encounter");
+        DaggerfallSiteProfile inputs = ExteriorContentAt(source, source.ProfileKey.Site, "rest-selected-encounter");
+        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
+        PopulateTerrainContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
         DaggerfallSavePayload saved;
         long elapsed;
-        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) {Sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content)}))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) {Sky = sky}))
         {
             DaggerfallCalendarSave before = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
@@ -84,12 +87,14 @@ public sealed class DaggerfallRestSessionTests
 
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
+        PopulateTerrainContent(resumedContent, inputs);
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service,
             new AppearanceFake(releases), random: RandomMaximum.Create());
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root),
             new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
+            new(definitions, inputs, DaggerfallTuning.Defaults, identity) {Sky = sky}, DaggerfallSavePayload.Encode(saved));
         DaggerfallSavePayload after = DaggerfallSavePayload.Read(restored.CaptureSave());
         Assert.Equal(saved.Calendar, after.Calendar);
         Assert.Equal(JsonSerializer.Serialize(saved.Encounters), JsonSerializer.Serialize(after.Encounters));
@@ -101,9 +106,11 @@ public sealed class DaggerfallRestSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = ReadInputs(root);
+        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
+        PopulateTerrainContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
 
@@ -113,7 +120,7 @@ public sealed class DaggerfallRestSessionTests
         double staminaBefore;
         double magickaBefore;
         DaggerfallCalendarSave calendarBefore;
-        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) {Sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content)}))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) {Sky = sky}))
         {
             DaggerfallCalendarSave initialCalendar = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
@@ -158,10 +165,12 @@ public sealed class DaggerfallRestSessionTests
 
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
+        PopulateTerrainContent(resumedContent, inputs);
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using (DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(restedSave)))
+        using (DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
+            new(definitions, inputs, DaggerfallTuning.Defaults, identity) {Sky = sky}, DaggerfallSavePayload.Encode(restedSave)))
         {
             DaggerfallSavePayload restoredSave = DaggerfallSavePayload.Read(restored.CaptureSave());
             Assert.Equal(restedSave.Calendar, restoredSave.Calendar);
@@ -170,12 +179,13 @@ public sealed class DaggerfallRestSessionTests
         }
 
         DaggerfallSiteRecord town = definitions.Locations.Records.First(record => record.Kind == DaggerfallSiteKind.TownCity);
-        DaggerfallSiteProfile townInputs = SameContentAt(inputs, town.Id, DaggerfallWorldProfileKind.Exterior, "town-exterior");
+        DaggerfallSiteProfile townInputs = ExteriorContentAt(inputs, town.Id, "town-exterior");
         ContentFake townContent = new(releases);
         PopulateContent(townContent, townInputs);
+        PopulateTerrainContent(townContent, townInputs);
         SpatialFake townSpatial = SpatialFake.Create(townInputs.SpatialArtifact.Sha256, releases);
         EngineContextFake townEngine = EngineContextFake.Create(townContent, townSpatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
-        using DaggerfallSession townSession = DaggerfallSession.StartNew(townEngine.Context, new(definitions, townInputs, DaggerfallTuning.Defaults) {Sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content)});
+        using DaggerfallSession townSession = DaggerfallSession.StartNew(townEngine.Context, new(definitions, townInputs, DaggerfallTuning.Defaults) {Sky = sky});
         Track townHealth = townSession.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
         townHealth.SetCurrent(townHealth.MaximumValue - 10d, clamp: true);
         DaggerfallSavePayload townBefore = DaggerfallSavePayload.Read(townSession.CaptureSave());
@@ -187,6 +197,45 @@ public sealed class DaggerfallRestSessionTests
         Assert.Equal(townBefore.Calendar, townAfter.Calendar);
         Assert.Equal(JsonSerializer.Serialize(townBefore.SkillUses), JsonSerializer.Serialize(townAfter.SkillUses));
         Assert.Equal(JsonSerializer.Serialize(townBefore.Actors), JsonSerializer.Serialize(townAfter.Actors));
+    }
+
+    private static DaggerfallSiteProfile ExteriorContentAt(DaggerfallSiteProfile source, DaggerfallSiteId site,
+        string logicalId) => new(
+        new ProjectFacts(new WorldPoint(1f, 1f, 1f), source.Project.Actors),
+        source.SpatialArtifact,
+        source.StaticMesh,
+        source.WorldAppearance,
+        source.InitialLook,
+        source.Materials,
+        source.ActorSprites,
+        source.MobileSprites,
+        source.Audio,
+        source.ClassicPresentation,
+        site,
+        [],
+        DaggerfallWorldProfileKind.Exterior,
+        logicalId,
+        source.Portals,
+        source.Anchors.Values.ToArray(),
+        source.Lights,
+        source.GroundContainerSprite,
+        null,
+        [],
+        [],
+        null,
+        source.Music,
+        source.AudioBundle,
+        source.QuestMarkers,
+        source.BillboardSprites,
+        [],
+        source.WaterVolumes,
+        source.TerrainTextures,
+        []);
+
+    private static void PopulateTerrainContent(ContentFake content, DaggerfallSiteProfile profile)
+    {
+        foreach (NormalizedTerrainTexture texture in profile.TerrainTextures.Values)
+            content.Add(texture.TexturePath, texture.TextureSha256);
     }
 
     private static long CalendarSeconds(DaggerfallCalendarSave save) =>
