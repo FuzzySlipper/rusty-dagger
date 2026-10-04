@@ -332,7 +332,7 @@ public sealed class DaggerfallTravelSessionTests
                 source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, id,
                 profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: name,
-                terrainTextures: source.TerrainTextures);
+                terrainTextures: source.TerrainTextures, billboardSprites: source.BillboardSprites);
         }
         private DaggerfallSession Create(RulesetSavePayload? save)
         {
