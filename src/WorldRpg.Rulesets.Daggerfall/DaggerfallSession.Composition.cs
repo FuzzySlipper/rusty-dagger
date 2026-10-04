@@ -378,7 +378,7 @@ internal sealed partial class DaggerfallSession
             regionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
             DaggerfallTradeQuoteService tradeQuotes = new(definitions, new DaggerfallItemValuation(definitions), regionalPrices);
             DaggerfallMerchantService merchants = new(definitions, _random, npcs, social, playerStats, character, progression,
-                inventory, containers, itemInstances, _uniqueItems, _actorIdentities, currency, services, tradeQuotes,
+                inventory, containers, itemInstances, _uniqueItems, _actorIdentities, currency, services, concreteGuildServices, tradeQuotes,
                 regionalPrices, _itemCondition, skillUses, crime, () => _time.Calendar,
                 () => _dialogue?.CurrentNpc()?.Site,
                 saved?.Merchants);
