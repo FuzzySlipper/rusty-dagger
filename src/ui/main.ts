@@ -117,7 +117,7 @@ interface DialogueProjection {
   readonly tone: string;
   readonly question: string | null;
   readonly reply: string | null;
-  readonly topics: readonly { readonly id: string; readonly label: string }[];
+  readonly topics: readonly { readonly id: string; readonly label: string; readonly key?: string | null }[];
   readonly training?: {
     readonly providerFaction: number;
     readonly membershipFaction: number;
@@ -653,6 +653,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       }
       data.amount = amount;
     }
+    if (button.dataset.key) data.key = button.dataset.key;
     context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: UI_ACTION_CONTRACT, data,
     });
@@ -1238,6 +1239,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         const button = document.createElement('button');
         button.type = 'button';
         button.dataset.topic = topic.id;
+        if (topic.key) button.dataset.key = topic.key;
         button.textContent = topic.label;
         return button;
       }));

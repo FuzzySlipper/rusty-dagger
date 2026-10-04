@@ -49,7 +49,8 @@ internal sealed partial class DaggerfallSession
             calendar: () => _time.Calendar,
             workAvailable: DialogueWorkAvailable,
             variables: () => State.Variables,
-            templeService: ResolveTempleService);
+            templeService: ResolveTempleService,
+            guildService: ResolveGuildProvider);
         _activation = new DaggerfallActivationModule(
             new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),
             reach,
