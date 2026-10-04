@@ -2,13 +2,14 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>
 /// One classic mobile as the published catalog states it: the donor's own parameters, the identity this
-/// product publishes for it, and the disposition that reconciles the two.
+/// product publishes for it, the donor's door capability, and the disposition that reconciles the two.
 /// </summary>
 internal sealed record DaggerfallMobileDefinition(
     int DonorId,
     string DonorName,
     string Identity,
     bool CastsMagic,
+    bool CanOpenDoors,
     bool SeesThroughInvisibility,
     string? Actor,
     string Disposition,

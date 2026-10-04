@@ -174,6 +174,15 @@ public sealed class DaggerfallNpcRegistry
     internal bool IsStatic(long durableId) => _npcs.TryGetValue(durableId, out DaggerfallNpc? npc)
         && npc.Kind == DaggerfallNpcKind.Static;
 
+    /// <summary>
+    /// Reads the registry's presence for a live actor. Actors with no NPC entry are ordinary
+    /// authored or encounter actors and remain eligible; an admitted civilian becomes ineligible
+    /// as soon as the population owner hides it for night or unload.
+    /// </summary>
+    internal bool IsGameplayActive(long durableId) =>
+        !_npcs.TryGetValue(durableId, out DaggerfallNpc? npc)
+        || npc.Presence == DaggerfallNpcPresence.Active;
+
     /// <summary>Every registered NPC.</summary>
     public IReadOnlyList<DaggerfallNpc> All => [.. _npcs.Values.OrderBy(npc => npc.DurableId)];
 

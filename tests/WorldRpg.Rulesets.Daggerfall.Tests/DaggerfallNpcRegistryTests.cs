@@ -1,6 +1,8 @@
 using Rusty.Engine;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -113,6 +115,20 @@ public sealed class DaggerfallNpcRegistryTests
         Assert.Equal(["talk", "arrest"], refreshed.Services);
         Assert.Equal(DaggerfallNpcPresence.Hidden, refreshed.Presence);
         Assert.Equal((1F, 2F, 3F), (refreshed.X, refreshed.Y, refreshed.Z));
+    }
+
+    [Fact]
+    public void Hidden_population_is_not_a_live_gameplay_actor()
+    {
+        DaggerfallNpcRegistry npcs = Registry();
+        DaggerfallNpcSite site = new(17, "Daggerfall", string.Empty);
+        DaggerfallNpcAppearance look = new("Breton", "Male", 211, 12, 7, 0);
+        long id = npcs.RegisterPopulationCivilian(site, "population/17-2/0/4", look, "civilian", ["talk"]);
+
+        Assert.True(npcs.IsGameplayActive(id));
+        npcs.SetPresence(id, DaggerfallNpcPresence.Hidden);
+        Assert.False(npcs.IsGameplayActive(id));
+        Assert.True(npcs.IsGameplayActive(DaggerfallActorIdentity.PlayerEntityId));
     }
 
     private static DaggerfallNpcRegistry Registry()

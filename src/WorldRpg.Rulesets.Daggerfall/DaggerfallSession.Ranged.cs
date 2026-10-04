@@ -89,7 +89,8 @@ internal sealed partial class DaggerfallSession
     {
         Dictionary<long, WorldPoint> positions = [];
         if (State.PlayerControl.Position is WorldPoint player) positions.Add(DaggerfallActorIdentity.PlayerEntityId, player);
-        foreach (ActorState actor in State.Actors.All) positions[actor.DurableId] = actor.Position;
+        foreach (ActorState actor in State.Actors.All.Where(actor => State.Npcs.IsGameplayActive(actor.DurableId)))
+            positions[actor.DurableId] = actor.Position;
         return positions;
     }
 

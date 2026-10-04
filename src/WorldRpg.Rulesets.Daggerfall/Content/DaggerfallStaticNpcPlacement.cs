@@ -1,6 +1,5 @@
 using System.Text.Json;
 using WorldRpg.Kit.Controls;
-using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
@@ -9,8 +8,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Position,
     DaggerfallNpcAppearance Appearance, string Role, IReadOnlyList<string> Services, NormalizedActorSprite Sprite)
 {
-    private const int MerchantSocialGroup = 1;
-
     internal static IReadOnlyList<DaggerfallStaticNpcPlacement> Read(ReadOnlyMemory<byte>? bytes,
         IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> sprites, DaggerfallDefinitions definitions,
         DaggerfallSiteId? site, DaggerfallContentDiagnostics diagnostics)
@@ -54,43 +51,12 @@ internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Positi
                 diagnostics.Add($"Normalized static person '{id}' has a non-finite pose.");
             int type = building.GetProperty("buildingType").GetInt32();
             int buildingFaction = building.GetProperty("factionId").GetInt32();
-            List<string> services = ["talk"];
-            string role = "person";
-            // Only a published source placement enters this policy. Arbitrary registry entries never
-            // gain services from their faction. Shared guild definitions retain provider/rank authority.
-            if (type == 3 && definitions.Factions.Factions.TryGetValue(faction, out DaggerfallFactionDefinition? sourceFaction)
-                && sourceFaction.SocialGroup == MerchantSocialGroup)
-            {
-                services.Add("banking");
-                role = "bank teller";
-            }
-            if (type is 11 or 14)
-            {
-                foreach (DaggerfallConcreteGuildDefinition guild in DaggerfallConcreteGuildCatalog.All
-                    .Where(guild => guild.FactionId == buildingFaction || guild.ParentFactionId == buildingFaction))
-                foreach (DaggerfallConcreteGuildServiceDefinition service in guild.Services
-                    .Where(service => service.ProviderFactionId == faction && service.SourceImplemented))
-                {
-                    string serviceName = DaggerfallConcreteGuildServiceRuntime.ProviderServiceName(service.Service);
-                    services.Add(serviceName);
-                    role = service.Service switch
-                    {
-                        DaggerfallConcreteGuildService.BuySpells => "spell seller",
-                        DaggerfallConcreteGuildService.MakeSpells => "spellmaker",
-                        DaggerfallConcreteGuildService.Training => "trainer",
-                        DaggerfallConcreteGuildService.Identify => "identifier",
-                        DaggerfallConcreteGuildService.Repair => "repairer",
-                        DaggerfallConcreteGuildService.Donate => "priest",
-                        DaggerfallConcreteGuildService.CureDisease => "healer",
-                        DaggerfallConcreteGuildService.ReceiveArmor => "armorer",
-                        DaggerfallConcreteGuildService.ReceiveHouse => "property steward",
-                        _ => role,
-                    };
-                }
-            }
+            DaggerfallFactionDefinition? sourceFaction = definitions.Factions.Factions.GetValueOrDefault(faction);
+            (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
+                definitions, sourceFaction, type, buildingFaction, "person");
             result.Add(new(id, position, new(race ?? string.Empty, gender, archive, record,
                 person.GetProperty("nameSeed").GetInt32(), faction), role,
-                services.Distinct(StringComparer.Ordinal).ToArray(), new(billboard.TexturePath, billboard.TextureSha256,
+                services, new(billboard.TexturePath, billboard.TextureSha256,
                     billboard.AtlasWidth, billboard.AtlasHeight, billboard.Frames, billboard.InitialFrameId,
                     new System.Numerics.Vector2(.5F, 0F), billboard.Size)));
         }

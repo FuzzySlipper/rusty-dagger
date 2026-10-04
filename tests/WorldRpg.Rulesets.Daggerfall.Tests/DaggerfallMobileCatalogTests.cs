@@ -35,6 +35,8 @@ public sealed class DaggerfallMobileCatalogTests
         Assert.Equal("EnemyRatMove", rat.MoveSound);
         Assert.True(rat.HasIdle);
         Assert.False(rat.HasRangedAttack1);
+        Assert.False(rat.CanOpenDoors);
+        Assert.True(Assert.Contains(1, definitions.Mobiles.Mobiles).CanOpenDoors);
 
         // The catalog resolves an actor to its mobile record, which is how a policy consumer reaches the
         // donor's numbers.

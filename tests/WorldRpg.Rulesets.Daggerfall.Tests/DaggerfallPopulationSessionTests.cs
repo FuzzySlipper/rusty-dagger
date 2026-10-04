@@ -23,7 +23,7 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.Equal(2, towns.Length);
 
         DaggerfallSiteProfile source = PopulationProfile(ReadInputs(root), towns[0].Id, "population-source");
-        DaggerfallSiteProfile destination = SameContentAt(source, towns[1].Id, DaggerfallWorldProfileKind.Exterior, "population-destination");
+        DaggerfallSiteProfile destination = PopulationProfile(ReadInputs(root), towns[1].Id, "population-destination", includeAuthoredActors: false, includePopulation: false);
         DaggerfallSessionComposition composition = new(definitions, source, DaggerfallTuning.Defaults)
         {
             Profiles = new DaggerfallSiteProfiles([source, destination]),
@@ -36,9 +36,14 @@ public sealed class DaggerfallPopulationSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        // PopulationManager admits outdoor people only during the source daytime window; the
+        // canonical new-game clock starts at midnight.
+        session.AdvanceElapsedTime(8 * 60 * 60);
         DaggerfallNpc civilian = Assert.Single(session.State.Npcs.All.Where(npc => npc.StableKey == "population/source/0/0"));
         long id = civilian.DurableId;
-        Assert.Equal("guard", civilian.Role);
+        DaggerfallFactionDefinition sourceFaction = TestPayload.Definitions.Factions.Factions.Values.First(faction => faction.Id > 0
+            && TestPayload.Definitions.Catalogs.Races.Any(race => race.DonorRaceId == faction.Race));
+        Assert.Equal(DaggerfallSession.PopulationRole(sourceFaction), civilian.Role);
         Assert.True(session.State.Actors.TryGet(id, out ActorState? actor));
         Assert.Equal(new WorldPoint(1F, 1F, 1F), actor!.Position);
 
@@ -66,13 +71,22 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.Equal(returned.Position, restored.State.Actors.Get(id).Position);
     }
 
-    private static DaggerfallSiteProfile PopulationProfile(DaggerfallSiteProfile source, DaggerfallSiteId site, string logicalId)
+    private static DaggerfallSiteProfile PopulationProfile(DaggerfallSiteProfile source, DaggerfallSiteId site, string logicalId,
+        bool includeAuthoredActors = true, bool includePopulation = true)
     {
         DaggerfallSiteProfile exterior = SameContentAt(source, site, DaggerfallWorldProfileKind.Exterior, logicalId);
+        ProjectFacts project = includeAuthoredActors
+            ? exterior.Project
+            : new ProjectFacts(exterior.Project.PlayerPosition, new Dictionary<long, AuthoredActor>());
         NormalizedBillboardSprite billboard = new("sprite/population.png", Hash, 8, 8,
             [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, 0F), Vector2.One);
+        IReadOnlyList<DaggerfallPopulationPlacement> population = includePopulation
+            ? [new DaggerfallPopulationPlacement("population/source/0/0", new WorldPoint(1F, 1F, 1F), 210, 4,
+                TestPayload.Definitions.Factions.Factions.Values.First(faction => faction.Id > 0
+                    && TestPayload.Definitions.Catalogs.Races.Any(race => race.DonorRaceId == faction.Race)).Id, 0, 7)]
+            : [];
         return new DaggerfallSiteProfile(
-            exterior.Project,
+            project,
             exterior.SpatialArtifact,
             exterior.StaticMesh,
             exterior.WorldAppearance,
@@ -101,10 +115,6 @@ public sealed class DaggerfallPopulationSessionTests
             {
                 [(210, 4)] = billboard,
             },
-            population:
-            [
-                new DaggerfallPopulationPlacement("population/source/0/0", new WorldPoint(1F, 1F, 1F), 210, 4,
-                    TestPayload.Definitions.Factions.Factions.Values.First(faction => faction.Type == 10).Id, 0, 7),
-            ]);
+            population: population);
     }
 }

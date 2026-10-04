@@ -60,6 +60,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 
     private readonly Func<long, DaggerfallMagicDefense> _magicDefense;
     private readonly Func<long, bool> _physicalAttacksBlocked;
+    private readonly Func<long, bool> _actorGameplayActive;
     private readonly Func<long, long, DaggerfallItemStrikeSource, int, int>? _itemStrike;
     private readonly Action<DaggerfallMonsterHitExposure>? _monsterHit;
     internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
@@ -75,9 +76,10 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? transformActor = null, Func<long, DaggerfallMagicDefense>? magicDefense = null,
         Func<long, bool>? physicalAttacksBlocked = null,
         Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)>? molagBalStrike = null, Func<long, long, DaggerfallItemStrikeSource, int, int>? itemStrike = null,
-        Action<DaggerfallMonsterHitExposure>? monsterHit = null)
+        Action<DaggerfallMonsterHitExposure>? monsterHit = null, Func<long, bool>? actorGameplayActive = null)
     {
         _physicalAttacksBlocked = physicalAttacksBlocked ?? (_ => false);
+        _actorGameplayActive = actorGameplayActive ?? (_ => true);
         _molagBalStrike = molagBalStrike;
         _itemStrike = itemStrike;
         _monsterHit = monsterHit;
@@ -837,7 +839,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     private bool TryResolve(long id, out Combatant combatant)
     {
         if (id == PlayerId && _definitions.TryGetValue(PlayerId, out DaggerfallActorDefinition? player)) { combatant = new(id, _actors.Player.Stats, player); return true; }
-        if (_actors.TryGet(id, out ActorState actor) && _definitions.TryGetValue(id, out DaggerfallActorDefinition? definition) && definition.Kind != DaggerfallActorKinds.StaticNpc) { combatant = new(id, actor.Stats, definition); return true; }
+        if (_actorGameplayActive(id) && _actors.TryGet(id, out ActorState actor) && _definitions.TryGetValue(id, out DaggerfallActorDefinition? definition) && definition.Kind != DaggerfallActorKinds.StaticNpc) { combatant = new(id, actor.Stats, definition); return true; }
         combatant = default;
         return false;
     }

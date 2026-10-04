@@ -126,6 +126,11 @@ internal sealed partial class DaggerfallSession
         AdvanceCalendar(calendarBefore,
             deferSkillAdvancement ? DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills : DaggerfallCalendarAdvanceKind.Elapsed,
             advance.AppliedSeconds > 0 ? encounter : null, resting: resting);
+        // Elapsed rest/travel/service time can cross the donor outdoor population's dawn or dusk
+        // boundary without an Engine admitted frame. Reconcile through the existing NPC/lifetime
+        // owner so source civilians hide, retire, restore and preserve their durable identities.
+        if (advance.AppliedSeconds > 0)
+            ReconcileNpcProjection();
         if (!resting && advance.AppliedSeconds > 0) _itemCastTriggers.CompleteTimeIncrease();
         return advance;
     }

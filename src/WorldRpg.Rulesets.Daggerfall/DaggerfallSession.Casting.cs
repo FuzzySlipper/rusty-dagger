@@ -62,8 +62,9 @@ internal sealed partial class DaggerfallSession
         : IsSpellEligibleActor(id) && State.Actors.TryGet(id, out ActorState actor) ? actor.Actor : null;
 
     private bool IsSpellEligibleActor(long id) =>
-        !_roster.Definitions.TryGetValue(id, out DaggerfallActorDefinition? definition)
-        || definition.Kind != DaggerfallActorKinds.StaticNpc;
+        State.Npcs.IsGameplayActive(id)
+        && (!_roster.Definitions.TryGetValue(id, out DaggerfallActorDefinition? definition)
+            || definition.Kind != DaggerfallActorKinds.StaticNpc);
 
     /// <summary>
     /// Releases one AI-selected spell through the same readiness, cost, flight and effect owners
