@@ -180,6 +180,28 @@ tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/exte
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-1-1-0 \
   --source-manifest "$site_records/charing-interior-1-1-0.sources.json" --region 17 --location Charing --profile interior --block-x 1 --block-y 1 --building 0
 
+# Source-backed ordinary providers are selected from the published RMB building records. These
+# closures deliberately keep their source block/building identity in the normalized document so
+# the ruleset can admit the people and their explicit catalog services at the real interior site.
+# Their exterior profiles are generated beside them; the world admission path owns the canonical
+# source door identity used to enter each selected building.
+tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-3-4-0 \
+  --source-manifest "$site_records/charing-mages-interior.sources.json" --region 17 --location Charing --location-index 4 --profile interior --block-x 3 --block-y 4 --building 0
+tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-3-1-13 \
+  --source-manifest "$site_records/charing-kynareth-interior.sources.json" --region 17 --location Charing --location-index 4 --profile interior --block-x 3 --block-y 1 --building 13
+tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-1-5-17 \
+  --source-manifest "$site_records/charing-bank-interior.sources.json" --region 17 --location Charing --location-index 4 --profile interior --block-x 1 --block-y 5 --building 17
+tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/berbaaqnia/exterior \
+  --source-manifest "$site_records/berbaaqnia-providers-exterior.sources.json" --region 0 --location Berbaaqnia --location-index 15 --profile exterior
+tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/berbaaqnia/interior-5-2-17 \
+  --source-manifest "$site_records/berbaaqnia-mages-interior.sources.json" --region 0 --location Berbaaqnia --location-index 15 --profile interior --block-x 5 --block-y 2 --building 17
+tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/berbaaqnia/interior-4-4-12 \
+  --source-manifest "$site_records/berbaaqnia-bank-interior.sources.json" --region 0 --location Berbaaqnia --location-index 15 --profile interior --block-x 4 --block-y 4 --building 12
+tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/bubyrydata/exterior \
+  --source-manifest "$site_records/bubyrydata-providers-exterior.sources.json" --region 0 --location Bubyrydata --location-index 13 --profile exterior
+tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/bubyrydata/interior-3-1-13 \
+  --source-manifest "$site_records/bubyrydata-kynareth-interior.sources.json" --region 0 --location Bubyrydata --location-index 13 --profile interior --block-x 3 --block-y 1 --building 13
+
 # The two source locations share their display name; select the MAPS indices explicitly.
 for ship in small-ship large-ship; do
   if [[ "$ship" == small-ship ]]; then ship_index=1; else ship_index=2; fi
