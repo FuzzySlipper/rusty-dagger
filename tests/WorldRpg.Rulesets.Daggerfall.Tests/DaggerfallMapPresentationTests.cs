@@ -85,7 +85,14 @@ public sealed class DaggerfallMapPresentationTests
         };
         using var session = DaggerfallSession.StartNew(engine.Context, composition);
         var before = session.ReadMapPresentation()!;
-        Assert.Equal(profile.Project.PlayerPosition, before.Player);
+        WorldPoint canonicalProfilePose = session.Sites.LocalToProfile(
+            session.State.PlayerControl.Position!.Value.ToVector());
+        Assert.Equal(canonicalProfilePose, before.Player);
+        WorldPoint requestedProfilePose = profile.Project.PlayerPosition
+            ?? throw new InvalidOperationException("Charing exterior has no authored player position.");
+        Assert.Equal(requestedProfilePose.X, before.Player.X, 4);
+        Assert.Equal(requestedProfilePose.Y, before.Player.Y, 4);
+        Assert.Equal(requestedProfilePose.Z, before.Player.Z, 4);
         var label = before.Labels.First();
         session.Update(new ProductUpdate(OuterUpdate(1), [Ui(JsonSerializer.Serialize(new {
             action = "map-building", region = before.Region, destination = before.Location, item = label.Id }))]));
