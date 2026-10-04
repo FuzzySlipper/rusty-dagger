@@ -40,6 +40,19 @@ public sealed class RmbExteriorNormalizerTests
         Assert.Equal("RESIAL05.RMB", interior.Layout.Blocks.Single(block => block.X == 1 && block.Y == 1).SourceName);
         Assert.Equal(new RmbBuildingSelection(1, 1, 0), interior.Building);
         Assert.Null(exterior.Document.World.InteriorBuilding);
+        Assert.NotEmpty(exterior.Document.World.Doors);
+        foreach (NormalizedDoorPlacement door in exterior.Document.World.Doors)
+        {
+            NormalizedBounds collision = Assert.IsType<NormalizedBounds>(door.CollisionBounds);
+            Assert.True(collision.Maximum.X > collision.Minimum.X);
+            Assert.True(collision.Maximum.Y > collision.Minimum.Y);
+            Assert.True(collision.Maximum.Z > collision.Minimum.Z);
+            Assert.Equal(-collision.Minimum.X, collision.Maximum.X);
+            Assert.Equal(-collision.Minimum.Y, collision.Maximum.Y);
+            Assert.Equal(-collision.Minimum.Z, collision.Maximum.Z);
+        }
+        Assert.Contains(exterior.Document.World.Doors, door => door.Id.Contains("/1/1/", StringComparison.Ordinal)
+            && door.ExteriorBuildingIndex == 0);
         NormalizedInteriorBuilding building = Assert.IsType<NormalizedInteriorBuilding>(interior.Document.World.InteriorBuilding);
         Assert.Equal((1, 1, "RESIAL05.RMB", 0), (building.BlockX, building.BlockY, building.SourceKey, building.BuildingIndex));
         BsaArchive blockArchive = BsaArchive.Parse(sources.Require("BLOCKS.BSA").Bytes.Span, sources.Require("BLOCKS.BSA").Label);

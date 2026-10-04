@@ -60,7 +60,7 @@ internal sealed partial class DaggerfallSession
             reach,
             new DaggerfallActivationContributions(
                 new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts),
-                new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic),
+                new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic, EnterExteriorBuilding),
                 new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination, TryTransitionTo),
                 new DaggerfallGroundActivationOwner(_groundContainers, _lootUi),
                 npc: new DaggerfallCrimeActivationOwner(_dialogue, State.Actors, IsPickpocketTarget, PickpocketActor)));
@@ -69,6 +69,23 @@ internal sealed partial class DaggerfallSession
     private DaggerfallWorldProfileKey ResolvePortalDestination(string logicalProfile) =>
         (_sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted."))
             .RequireLogicalProfile(logicalProfile).ProfileKey;
+
+    private DaggerfallActivationOutcome? EnterExteriorBuilding(DaggerfallRdbDoorId door)
+    {
+        if (_doors.ExteriorBuildingOf(door) is not { } building) return null;
+        DaggerfallSiteProfiles profiles = _sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted.");
+        DaggerfallSiteProfile[] destinations = profiles.Keys
+            .Where(key => key.Site == _activeProfileKey.Site && key.Kind == DaggerfallWorldProfileKind.Interior)
+            .Select(profiles.Require)
+            .Where(profile => profile.InteriorBuilding is { } interior
+                && interior.BlockX == building.BlockX && interior.BlockY == building.BlockY && interior.Building.Index == building.Index)
+            .ToArray();
+        if (destinations.Length == 0) return new(false, "This building's interior is not available in the selected content.");
+        if (destinations.Length != 1) throw new InvalidOperationException($"Building '{building}' has multiple admitted interiors.");
+        return TryTransitionTo(ResolvePortalDestination(destinations[0].ProfileKey.LogicalId))
+            ? new(true, "You pass through the building entrance.")
+            : new(false, "The building entrance cannot be used.");
+    }
 
     internal DaggerfallActivationMode ActivationMode => _activation?.Mode ?? DaggerfallActivationMode.Grab;
     internal InteractionTargetingEvidence? LastActivationTargeting => _activation?.LastEvidence;
@@ -628,12 +645,14 @@ internal sealed partial class DaggerfallSession
             DaggerfallDoorRuntime doors,
             Action<DaggerfallRdbDoorId> triggerDungeonActions,
             Func<DaggerfallRdbDoorId, DaggerfallActivationMode, DaggerfallActivationOutcome> activateForce,
-            Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> activateMagic)
+            Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> activateMagic,
+            Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> enterExteriorBuilding)
         {
             _doors = doors ?? throw new ArgumentNullException(nameof(doors));
             _triggerDungeonActions = triggerDungeonActions ?? throw new ArgumentNullException(nameof(triggerDungeonActions));
             _activateForce = activateForce ?? throw new ArgumentNullException(nameof(activateForce));
             _activateMagic = activateMagic ?? throw new ArgumentNullException(nameof(activateMagic));
+            _enterExteriorBuilding = enterExteriorBuilding ?? throw new ArgumentNullException(nameof(enterExteriorBuilding));
             Dictionary<DaggerfallRdbDoorId, DurableIdentityReference> identities = [];
             HashSet<DurableIdentityReference> assigned = [];
             foreach (DaggerfallDoorView door in _doors.All)
@@ -649,6 +668,7 @@ internal sealed partial class DaggerfallSession
         private readonly Action<DaggerfallRdbDoorId> _triggerDungeonActions;
         private readonly Func<DaggerfallRdbDoorId, DaggerfallActivationMode, DaggerfallActivationOutcome> _activateForce;
         private readonly Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> _activateMagic;
+        private readonly Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> _enterExteriorBuilding;
 
         public IEnumerable<DaggerfallActivationTarget> DoorTargets()
         {
@@ -675,13 +695,28 @@ internal sealed partial class DaggerfallSession
             if (_activateMagic(id) is { } magic)
             {
                 if (magic.Applied) _triggerDungeonActions(id);
+                if (CanEnter(id) && _enterExteriorBuilding(id) is { } entered) return entered;
                 return magic;
             }
             if (selection.Mode is DaggerfallActivationMode.Steal or DaggerfallActivationMode.Bash)
             {
                 DaggerfallActivationOutcome forced = _activateForce(id, selection.Mode);
                 if (forced.Applied) _triggerDungeonActions(id);
+                if ((forced.Applied || selection.Mode == DaggerfallActivationMode.Steal && !door.IsLocked)
+                    && _doors.ExteriorBuildingOf(id) is not null)
+                {
+                    if (!CanEnter(id)) _ = _doors.Open(id, DaggerfallDoorOperationSource.Player);
+                    if (CanEnter(id) && _enterExteriorBuilding(id) is { } entered) return entered;
+                }
                 return forced;
+            }
+
+            if (_doors.ExteriorBuildingOf(id) is not null)
+            {
+                DaggerfallDoorOperationResult opened = _doors.Open(id, DaggerfallDoorOperationSource.Player);
+                if (opened == DaggerfallDoorOperationResult.Started) _triggerDungeonActions(id);
+                if (CanEnter(id) && _enterExteriorBuilding(id) is { } entered) return entered;
+                return new(false, Message(opened, door.Motion));
             }
 
             DaggerfallDoorOperationResult result = door.Motion is DaggerfallDoorMotion.Open or DaggerfallDoorMotion.Opening
@@ -690,6 +725,12 @@ internal sealed partial class DaggerfallSession
             if (result == DaggerfallDoorOperationResult.Started)
                 _triggerDungeonActions(id);
             return new(result == DaggerfallDoorOperationResult.Started, Message(result, door.Motion));
+        }
+
+        private bool CanEnter(DaggerfallRdbDoorId id)
+        {
+            DaggerfallDoorView door = _doors.Read(id);
+            return !door.IsLocked && door.Motion is DaggerfallDoorMotion.Open or DaggerfallDoorMotion.Opening;
         }
 
         private static string Describe(DaggerfallDoorView door) => door.Kind == DaggerfallDoorKind.Special

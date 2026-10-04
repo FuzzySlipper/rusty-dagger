@@ -70,12 +70,16 @@ internal sealed record DaggerfallRdbDoorDefinition(
     /// caller from guessing the surface from activation mode or source name.
     /// </summary>
     internal DaggerfallLockInteractionSurface LockSurface { get; init; } = DaggerfallLockInteractionSurface.Interior;
+    internal WorldRpg.Rulesets.Daggerfall.Content.DaggerfallSiteBuildingId? ExteriorBuilding { get; init; }
 
     internal DaggerfallRdbDoorDefinition Validate()
     {
         DaggerfallDoorIdentity.Validate(Id);
         if (!Enum.IsDefined(Kind)) throw new ArgumentOutOfRangeException(nameof(Kind));
         if (!Enum.IsDefined(LockSurface)) throw new ArgumentOutOfRangeException(nameof(LockSurface));
+        if (ExteriorBuilding is { } building && (LockSurface != DaggerfallLockInteractionSurface.Exterior
+            || building.BlockX < 0 || building.BlockY < 0 || building.Index < 0))
+            throw new ArgumentException("An exterior door must name a valid placed building.", nameof(ExteriorBuilding));
         if (!IsFinite(Position) || !IsFinite(RotationDegrees) || !IsFinite(BoundsMin) || !IsFinite(BoundsMax))
             throw new ArgumentOutOfRangeException(nameof(Position), "Door pose and bounds must be finite.");
         if (BoundsMin.X >= BoundsMax.X || BoundsMin.Y >= BoundsMax.Y || BoundsMin.Z >= BoundsMax.Z)
@@ -281,6 +285,8 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
 
     /// <summary>Returns the interaction surface carried by the admitted door definition.</summary>
     internal DaggerfallLockInteractionSurface InteractionSurface(DaggerfallRdbDoorId id) => Require(id).Definition.LockSurface;
+    internal WorldRpg.Rulesets.Daggerfall.Content.DaggerfallSiteBuildingId? ExteriorBuildingOf(DaggerfallRdbDoorId id)
+        => Require(id).Definition.ExteriorBuilding;
 
     /// <summary>Retains or clears the current door's failed lockpick attribution.</summary>
     internal void SetFailedLockpickingSkill(DaggerfallRdbDoorId id, int? skill)
