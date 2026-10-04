@@ -104,6 +104,40 @@ public sealed class RmbExteriorNormalizerTests
     }
 
     [CorpusFact]
+    public void Provider_interiors_retain_their_real_building_and_source_people()
+    {
+        DungeonLogicalSourceSet sources = Sources();
+        (int Region, string Location, int LocationIndex, RmbBuildingSelection Selection, string SourceKey, byte Type, ushort BuildingFaction, int[] ProviderFactions)[] cases =
+        [
+            (17, "Charing", 4, new(3, 4, 0), "MAGEAA14.RMB", 11, 40, [60, 64]),
+            (17, "Charing", 4, new(3, 1, 13), "TEMPAAH0.RMB", 14, 35, [254, 496, 497, 498, 810, 813]),
+            (17, "Charing", 4, new(1, 5, 17), "BANKAL01.RMB", 3, 0, [510]),
+            (0, "Berbaaqnia", 15, new(5, 2, 17), "MAGEBA01.RMB", 11, 40, [60, 64]),
+            (0, "Berbaaqnia", 15, new(4, 4, 12), "BANKBL00.RMB", 3, 510, [510]),
+            (0, "Bubyrydata", 13, new(3, 1, 13), "TEMPAAH0.RMB", 14, 35, [254, 496, 497, 498, 810, 813]),
+        ];
+
+        foreach (var item in cases)
+        {
+            RmbExteriorNormalizationResult result = RmbExteriorNormalizer.Normalize(new(sources, item.Region, item.Location, RmbWorldProfileKind.Interior)
+            {
+                LocationIndex = item.LocationIndex,
+                Building = item.Selection,
+                Navigation = NavigationDerivationConfig.ClassicDefault with { CellSize = 2F },
+            });
+
+            NormalizedInteriorBuilding building = Assert.IsType<NormalizedInteriorBuilding>(result.Document.World.InteriorBuilding);
+            Assert.Equal((item.Selection.BlockX, item.Selection.BlockY, item.SourceKey, item.Selection.BuildingIndex,
+                item.Type, item.BuildingFaction),
+                (building.BlockX, building.BlockY, building.SourceKey, building.BuildingIndex,
+                    building.BuildingType, building.FactionId));
+            Assert.NotEmpty(result.Document.World.StaticNpcs);
+            Assert.All(item.ProviderFactions, faction =>
+                Assert.Contains(result.Document.World.StaticNpcs, person => person.FactionId == faction));
+        }
+    }
+
+    [CorpusFact]
     public void Duplicate_Your_Ship_names_publish_unique_source_worlds_and_real_start_markers()
     {
         DungeonLogicalSourceSet sources = Sources();
