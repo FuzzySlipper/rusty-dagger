@@ -33,6 +33,7 @@ public sealed class WabbajackSessionTests
         var oldEntity = old.Actor.Entity;
         var pose = new ActorPose(new WorldPoint(9, 3, -4), .6f);
         old.ApplyPose(pose);
+        var canonicalPose = old.Pose;
         Health(old).Spend(3);
         int count = f.Session.State.Actors.All.Count();
         f.Strike();
@@ -40,7 +41,7 @@ public sealed class WabbajackSessionTests
         Assert.False(f.Session.State.Actors.Store.IsAlive(oldEntity));
         Assert.NotEqual(oldEntity, replacement.Actor.Entity);
         Assert.Equal(count, f.Session.State.Actors.All.Count());
-        Assert.Equal(pose, replacement.Pose);
+        Assert.Equal(canonicalPose, replacement.Pose);
         Assert.Equal("lich", f.Session.DefinitionsByActor[f.Target].Id.Value);
         Assert.Equal(Health(replacement).Maximum.Value - 3, Health(replacement).Current);
         Assert.Contains("Wabbajack transformed", f.Session.Presentation.LastOutcome, StringComparison.Ordinal);
@@ -49,7 +50,7 @@ public sealed class WabbajackSessionTests
         using var restored = DaggerfallSession.Restore(f.Engine().Context, f.Composition, f.Session.CaptureSave());
         var resumed = restored.State.Actors.Get(f.Target);
         Assert.Equal(replacement.Actor.TypeId, resumed.Actor.TypeId);
-        Assert.Equal(pose, resumed.Pose);
+        Assert.Equal(canonicalPose, resumed.Pose);
         Assert.Equal(DaggerfallWabbajack.DefinitionOf(replacement.Actor), DaggerfallWabbajack.DefinitionOf(resumed.Actor));
         Assert.Equal(Health(replacement).Current, Health(resumed).Current);
         Assert.Equal(condition, restored.State.ItemInstances.RequireUnique(f.Source).CurrentCondition);
