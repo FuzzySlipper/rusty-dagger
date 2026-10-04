@@ -72,11 +72,11 @@ public sealed class ResidualSourceInventoryTests
         // A readable source without an admitted consumer remains unused; a published source must
         // retain that consumer disposition rather than being reset by the residual classifier.
         Assert.Equal(
-            ["ART_PAL.COL", "CHGN00I0.IMG", "DIE_00I0.IMG", "MAP.PAL", "PAL.PAL", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG"],
+            ["ART_PAL.COL", "CHGN00I0.IMG", "DIE_00I0.IMG", "MAP.PAL", "NIGHTSKY.COL", "PAL.PAL", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG"],
             inventory.Imported.Select(file => file.Path).Order(StringComparer.Ordinal));
         Assert.All(inventory.Imported, file => Assert.Contains("a consumer claims it", file.Note, StringComparison.Ordinal));
 
-        Assert.Equal(113, inventory.Unused.Count());
+        Assert.Equal(112, inventory.Unused.Count());
         Assert.All(inventory.Unused, file => Assert.Contains("no consumer named here claims it", file.Note, StringComparison.Ordinal));
         Assert.All(inventory.Unused, file => Assert.NotEqual(string.Empty, file.Reader));
 

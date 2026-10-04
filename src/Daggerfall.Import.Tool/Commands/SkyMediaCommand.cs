@@ -6,7 +6,8 @@ namespace Daggerfall.Import.Tool.Commands;
 /// <summary>
 /// Publishes the source-backed daytime and night sky media closure. SKY##.DAT remains a source input;
 /// this command emits ordinary PNG resources plus a typed manifest that retains the source frame and
-/// palette/hemisphere facts needed by the runtime selector.
+/// palette/hemisphere facts needed by the runtime selector. Night images are paired with the
+/// donor's explicit NIGHTSKY.COL source and deterministic star policy.
 /// </summary>
 internal static class SkyMediaCommand
 {
@@ -23,10 +24,10 @@ internal static class SkyMediaCommand
             })
             .ToArray();
 
-        string paletteName = "PAL.PAL";
-        Arena2Palette palette = PaletteDecoder.Decode(
-            PayloadFiles.ReadBounded(Path.Combine(arena2, paletteName), $"sky palette {paletteName}"),
-            Options.Arena2Label(paletteName));
+        string paletteName = NightSkyPaletteSource.FileName;
+        NightSkyPaletteSource nightPalette = new(
+            Options.Arena2Label(paletteName),
+            PayloadFiles.ReadBounded(Path.Combine(arena2, paletteName), $"night sky palette {paletteName}"));
         NightSkyMediaSource[] night = Enumerable.Range(0, 4)
             .Select(index =>
             {
@@ -36,7 +37,7 @@ internal static class SkyMediaCommand
             })
             .ToArray();
 
-        SkyMediaPublication publication = SkyMediaPublication.Create(day, night, palette);
+        SkyMediaPublication publication = SkyMediaPublication.Create(day, night, nightPalette);
         Console.WriteLine($"sky media: {publication.Manifest.Sources.Count} day sources, {publication.Manifest.Resources.Count} day panoramas, {publication.Manifest.NightResources.Count} night backgrounds, {publication.Artifacts.Count} artifacts");
         Console.WriteLine($"sky curve: {string.Join(", ", SkyMediaPublication.DaylightFrameCurve.Select(knot => $"{knot.Time:0.###}->{knot.Value:0.###}"))}");
         if (!args.Switch("--update")) return Options.ReportOnly("these sky artifacts");
