@@ -229,6 +229,8 @@ public sealed class ExteriorOriginSessionTests
                 action = "inventory-drop", revision = engine.PublishedNested("inventory", "revision"), item = gold.Key, amount = 1,
             }))]));
             Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).GroundContainers);
+            Vector3 worldBeforeHorizontalRebase = Assert.Single(appearance.Snapshots.Last(),
+                fact => fact.ObjectId == 1).Transform.Translation;
             session.Update(new ProductUpdate(OuterUpdate(3), []));
             // The admitted Charing frame itself crosses the vertical origin threshold during the
             // first update; the explicit move above then contributes the horizontal commit.
@@ -243,8 +245,11 @@ public sealed class ExteriorOriginSessionTests
             Assert.Equal(exterior.Portals[0].Position.X, activePortalProfile.X, 3);
             Assert.Equal(exterior.Portals[0].Position.Y, activePortalProfile.Y, 3);
             Assert.Equal(exterior.Portals[0].Position.Z, activePortalProfile.Z, 3);
-            Assert.Equal(exterior.WorldAppearance.Transform.Translation + delta,
-                Assert.Single(appearance.Snapshots.Last(), fact => fact.ObjectId == 1).Transform.Translation);
+            Vector3 worldAfterHorizontalRebase = Assert.Single(appearance.Snapshots.Last(),
+                fact => fact.ObjectId == 1).Transform.Translation;
+            Assert.Equal(worldBeforeHorizontalRebase.X + delta.X, worldAfterHorizontalRebase.X, 3);
+            Assert.Equal(worldBeforeHorizontalRebase.Y + delta.Y, worldAfterHorizontalRebase.Y, 3);
+            Assert.Equal(worldBeforeHorizontalRebase.Z + delta.Z, worldAfterHorizontalRebase.Z, 3);
             Assert.Equal(new Vector3(1001, 3, 6) + delta, session.State.PlayerControl.Motion.TetherAnchorPoint);
             save = session.CaptureSave();
             DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
