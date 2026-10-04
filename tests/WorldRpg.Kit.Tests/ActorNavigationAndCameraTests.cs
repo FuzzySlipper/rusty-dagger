@@ -3,6 +3,7 @@ using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Ai;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using Xunit;
@@ -114,6 +115,66 @@ public sealed class ActorNavigationAndCameraTests
     }
 
     [Fact]
+    public void Non_ground_actor_navigation_uses_engine_character_step_and_updates_canonical_transform()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(12), () => { });
+        SpatialDouble spatial = SpatialDouble.Create();
+        spatial.CharacterDisplacement = new Vector3(0f, 1f, 0f);
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(0f, 0f, 0f), 0f));
+        ActorState actor = actors.Get(42);
+        CharacterWaterVolume water = new(1, new Vector3(-4f, -4f, -4f), new Vector3(4f, 4f, 4f));
+        ActorNavigationCoordinator navigation = new(
+            spatial.Service,
+            session,
+            actors.Store,
+            default,
+            _ => new CharacterStepEnvironment(default, ReadOnlyMemory<CharacterObstacle>.Empty,
+                ReadOnlyMemory<CharacterMeshInstance>.Empty, new[] { water }));
+
+        NavigationStepResult receipt = navigation.Evaluate(actor,
+            new ActorNavigationRequest(new WorldPoint(0f, 1f, 0f), 1f, 8, ActorNavigationMode.Swimming, .1f));
+
+        Assert.Equal(NavigationPathOutcome.Reached, receipt.Outcome);
+        Assert.Single(spatial.CharacterRequests);
+        Assert.Empty(spatial.Requests);
+        Assert.Equal(CharacterMovementMode.Swimming, spatial.CharacterRequests[0].Command.Movement.Mode);
+        Assert.Equal(.1f, spatial.CharacterRequests[0].Command.StepSeconds);
+        Assert.Equal(new WorldPoint(0f, 1f, 0f), actor.Position);
+        Assert.Equal(new Vector3(0f, 1f, 0f), actors.Store.Get(actor.Actor.Entity, EngineComponentTypes.Transform).Translation);
+    }
+
+    [Fact]
+    public void Wander_uses_engine_receipts_and_enters_blocked_or_unloaded_states_explicitly()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(11), () => { });
+        SpatialDouble spatial = SpatialDouble.Create();
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(1f, 2f, 3f), 0f));
+        ActorState actor = actors.Get(42);
+        actor.Stats.AddTrack(TrackId.Parse("health"), new Track(new Stat(100), 100));
+        actor.Actor.Add(new WanderMemoryComponent());
+        ActorWanderCoordinator wander = new(new ActorNavigationCoordinator(spatial.Service, session));
+        WanderPolicy policy = new(.5f, 2.5f, 0f, 8, 2, ActorNavigationMode.Swimming);
+
+        spatial.Receipt = Receipt(NavigationPathOutcome.Reached, new Vector3(-1.5f, 2f, 3f));
+        WanderEvidence reached = wander.Update(actor, actor.Wander, policy, 1, .1f);
+        Assert.Equal(WanderState.Idle, reached.Current);
+        Assert.Single(spatial.Requests);
+        Assert.Equal(new Vector3(-1.5f, 2f, 3f), spatial.Requests[0].Target);
+
+        ActorPose beforeBlocked = actor.Pose;
+        spatial.Receipt = Receipt(NavigationPathOutcome.NoPath, new Vector3(99f, 99f, 99f));
+        _ = wander.Update(actor, actor.Wander, policy, 2, .1f);
+        WanderEvidence blocked = wander.Update(actor, actor.Wander, policy, 3, .1f);
+        Assert.Equal(WanderState.Blocked, blocked.Current);
+        Assert.Equal(beforeBlocked, actor.Pose);
+
+        actor.Wander.MarkUnloaded();
+        WanderEvidence unloaded = wander.Update(actor, actor.Wander, policy, 4, .1f);
+        Assert.Equal(WanderState.Unloaded, unloaded.Current);
+        Assert.Equal(3, spatial.Requests.Count);
+    }
+
+    [Fact]
     public void Camera_viewpoint_equals_the_exact_position_in_its_engine_descriptor()
     {
         CameraDouble camera = CameraDouble.Create();
@@ -157,7 +218,9 @@ public sealed class ActorNavigationAndCameraTests
     {
         internal ISpatialService Service { get; private set; } = null!;
         internal List<NavigationStepRequest> Requests { get; } = [];
+        internal List<CharacterStepRequest> CharacterRequests { get; } = [];
         internal NavigationStepResult Receipt { get; set; }
+        internal Vector3 CharacterDisplacement { get; set; } = Vector3.UnitX;
 
         internal static SpatialDouble Create()
         {
@@ -169,13 +232,33 @@ public sealed class ActorNavigationAndCameraTests
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments)
         {
-            if (method?.Name != nameof(ISpatialService.EvaluateNavigationStep))
+            if (method?.Name == nameof(ISpatialService.EvaluateNavigationStep))
             {
-                throw new NotSupportedException(method?.Name);
+                Requests.Add((NavigationStepRequest)arguments![0]!);
+                return Receipt;
             }
 
-            Requests.Add((NavigationStepRequest)arguments![0]!);
-            return Receipt;
+            if (method?.Name == nameof(ISpatialService.ProposeCharacterStep))
+            {
+                CharacterStepRequest request = (CharacterStepRequest)arguments![0]!;
+                CharacterRequests.Add(request);
+                Transform before = new(request.Position, Quaternion.Identity, Vector3.One);
+                Transform after = before with { Translation = before.Translation + CharacterDisplacement };
+                CharacterMotion motion = request.Motion with { LastCommandSequence = request.Command.Sequence };
+                return default(CharacterStepReceipt) with
+                {
+                    Generation = 1,
+                    CommandSequence = request.Command.Sequence,
+                    TransformBefore = before,
+                    Transform = after,
+                    Motion = motion,
+                    WishVelocity = CharacterDisplacement,
+                    Displacement = CharacterDisplacement,
+                    BlockFlags = CharacterBlockFlags.None,
+                };
+            }
+
+            throw new NotSupportedException(method?.Name);
         }
     }
 

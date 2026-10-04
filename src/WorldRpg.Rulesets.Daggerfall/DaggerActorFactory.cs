@@ -389,6 +389,8 @@ internal static class DaggerActorFactory
         actor.Actor.Add(new CombatContributions());
         actor.Actor.Add(new PursuitMemoryComponent());
         actor.Actor.Add(new DaggerfallEnemyPerceptionMemory());
+        if (definition.Kind == DaggerfallActorKinds.Civilian)
+            actor.Actor.Add(new WanderMemoryComponent());
         return actor;
     }
 

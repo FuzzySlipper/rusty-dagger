@@ -121,6 +121,7 @@ public static class RmbExteriorNormalizer
         private readonly List<DoorDraft> doorDrafts = [];
         private readonly HashSet<(int X, int Z)> outdoorNavigationCells = [];
         private readonly List<NormalizedQuestMarker> questMarkers = [];
+        private readonly List<NormalizedPopulationPlacement> population = [];
         private NormalizedMarker? startMarker;
         private NormalizedMarker? enterMarker;
         private NormalizedInteriorBuilding? interiorBuilding;
@@ -141,6 +142,27 @@ public static class RmbExteriorNormalizer
                 }
                 foreach (RmbModelPlacement model in placements.Buildings[index].Exterior.Models)
                     AddModel(model, Arena2SourceTransform.ToExteriorBlockOrigin(reference), slot, reference, index, $"{Slug(reference.SourceName)}/{index}");
+                foreach ((RmbPeoplePlacement person, int personIndex) in placements.Buildings[index].Exterior.People.Select((person, personIndex) => (person, personIndex)))
+                {
+                    Matrix3 rotation = Matrix3.Yaw(Arena2SourceTransform.ToRmbYawDegrees(slot.YRotation));
+                    Arena2ImportPoint point = Arena2SourceTransform.ToRmbImportPoint(person.X, person.Y, person.Z);
+                    Arena2ImportPoint placed = Add(Arena2SourceTransform.ToExteriorBlockOrigin(reference),
+                        Add(Arena2SourceTransform.ToRmbBuildingOrigin(slot), rotation.Transform(point)));
+                    string id = $"population/{Slug(reference.SourceName)}/{index}/{personIndex}";
+                    population.Add(new NormalizedPopulationPlacement(
+                        id,
+                        MeshGeometry.ToRightHanded(placed),
+                        person.TextureArchive,
+                        person.TextureRecord,
+                        person.FactionId,
+                        person.Flags)
+                    {
+                        // Source offsets are provenance only.  The runtime name seed has a
+                        // ushort width, so derive it from the stable normalized identity rather
+                        // than truncating an archive offset.
+                        NameSeed = StablePopulationSeed(id),
+                    });
+                }
             }
             Arena2ImportPoint origin = Arena2SourceTransform.ToExteriorBlockOrigin(reference);
             foreach (RmbModelPlacement model in placements.MiscModels)
@@ -149,6 +171,16 @@ public static class RmbExteriorNormalizer
                 AddSourceMarker(flat.TextureArchive, flat.TextureRecord, Add(origin,
                     Add(Arena2SourceTransform.ToRmbImportPoint(0, 0, 4096), Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z))));
             AddGround(summary, origin, reference);
+        }
+
+        private static ushort StablePopulationSeed(string sourceKey)
+        {
+            unchecked
+            {
+                uint hash = 2166136261;
+                foreach (char value in sourceKey) hash = (hash ^ value) * 16777619;
+                return (ushort)(hash & ushort.MaxValue);
+            }
         }
 
         /// <summary>
@@ -410,6 +442,7 @@ public static class RmbExteriorNormalizer
                 QuestMarkers = questMarkers,
                 StaticNpcs = staticNpcs,
                 StaticMeshIds = staticMeshes.Select(mesh => mesh.Id).ToArray(),
+                Population = population,
             };
             DungeonSpatialPublication spatial = DungeonSpatialPublication.Create(staticId, $"spatial/{slug}/{profile}/static-mesh{StaticMeshBinary.Extension}", collisionId,
                 $"spatial/{slug}/{profile}/collision-navigation{SpatialArtifactBinary.Extension}", resourcesId, $"resources/{slug}/{profile}/catalog.json", world.VisualMeshAssetId, bounds, meshes, world, navigation, resources);

@@ -783,6 +783,30 @@ public sealed record NormalizedStaticNpcPlacement(string Id, NormalizedVector3 P
     }
 }
 
+/// <summary>
+/// One source-authored exterior person placement. The importer preserves the source billboard,
+/// faction and flags; race, role and service meaning remain ruleset policy over admitted catalogs.
+/// </summary>
+public sealed record NormalizedPopulationPlacement(
+    string Id,
+    NormalizedVector3 Position,
+    int BillboardArchive,
+    int BillboardRecord,
+    int FactionId,
+    byte Flags)
+{
+    /// <summary>A deterministic source-placement seed in the runtime's ushort name-seed width.</summary>
+    public int NameSeed { get; init; }
+
+    public void Validate()
+    {
+        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
+        Position.Validate(nameof(Position));
+        if (NameSeed is < 0 or > ushort.MaxValue || BillboardArchive < 0 || BillboardRecord < 0 || FactionId < 0)
+            throw new ArgumentOutOfRangeException(nameof(BillboardArchive), "A normalized population placement has an invalid source billboard or faction.");
+    }
+}
+
 public sealed record NormalizedWorld(
     string VisualMeshAssetId,
     IReadOnlyList<string> MeshIds,
@@ -803,6 +827,9 @@ public sealed record NormalizedWorld(
     /// <summary>Interior people, published from the selected building's people records.</summary>
     public IReadOnlyList<NormalizedStaticNpcPlacement> StaticNpcs { get; init; } = [];
 
+    /// <summary>Exterior source population, published from selected RMB people records.</summary>
+    public IReadOnlyList<NormalizedPopulationPlacement> Population { get; init; } = [];
+
     /// <summary>Source action nodes and their normalized forward links.</summary>
     public IReadOnlyList<NormalizedDungeonAction> Actions { get; init; } = [];
 
@@ -822,6 +849,7 @@ public sealed record NormalizedWorld(
         Billboards = Billboards.OrderBy(billboard => billboard.Id, StringComparer.Ordinal).ToArray(),
         Actors = Actors.OrderBy(actor => actor.Id, StringComparer.Ordinal).ToArray(),
         StaticNpcs = StaticNpcs.OrderBy(npc => npc.Id, StringComparer.Ordinal).ToArray(),
+        Population = Population.OrderBy(person => person.Id, StringComparer.Ordinal).ToArray(),
         Treasures = Treasures.OrderBy(treasure => treasure.Id, StringComparer.Ordinal).ToArray(),
         Doors = Doors.OrderBy(door => door.Id, StringComparer.Ordinal).Select(door => door.Canonicalize()).ToArray(),
         Actions = Actions.OrderBy(action => action.Id, StringComparer.Ordinal)
@@ -865,6 +893,9 @@ public sealed record NormalizedWorld(
         foreach (NormalizedStaticNpcPlacement npc in StaticNpcs) npc.Validate();
         if (StaticNpcs.Count != 0 && InteriorBuilding is null)
             throw new InvalidOperationException("Interior people require their selected source building.");
+        ArgumentNullException.ThrowIfNull(Population);
+        NormalizedImportDocument.ValidateUnique(Population, person => person.Id, "population placement");
+        foreach (NormalizedPopulationPlacement person in Population) person.Validate();
         ArgumentNullException.ThrowIfNull(Lights);
         ArgumentNullException.ThrowIfNull(Billboards);
         ArgumentNullException.ThrowIfNull(Actors);

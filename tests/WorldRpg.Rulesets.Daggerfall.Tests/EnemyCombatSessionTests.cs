@@ -128,7 +128,7 @@ public sealed class EnemyCombatSessionTests
 
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 0d, PerceptionPairKind.FacingRejected, 0d));
         session.Update(new ProductUpdateState(.125f));
-        Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.TargetLost, session.LastEnemyBehavior[2000].State);
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Occluded, 0d));
         session.Update(new ProductUpdateState(.125f));
         Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
@@ -508,7 +508,7 @@ public sealed class EnemyCombatSessionTests
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
 
-        Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.TargetLost, session.LastEnemyBehavior[2000].State);
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 }

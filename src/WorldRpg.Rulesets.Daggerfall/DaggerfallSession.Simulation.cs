@@ -227,6 +227,7 @@ internal sealed partial class DaggerfallSession
         State.Quests.AdmitPlacements(_sites.Projection.Inputs, this);
         State.Quests.ReconcileFoeCommands();
         ReconcileNpcProjection();
+        UpdateCivilianPopulation(simulationStep, update.DeltaSeconds);
         _dialogue?.RefreshEligibility();
     }
 

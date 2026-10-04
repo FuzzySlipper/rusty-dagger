@@ -176,6 +176,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         ChangeMusicSite();
     }
 
+    void IDaggerfallSiteTransitionHost.SyncCivilianPositions() => SyncCivilianPositions();
+
     /// <summary>
     /// A swing the departing projection was still timing ends with it: retire and hand its
     /// impact back to the shared state here, inside the generation that admitted it, so the
@@ -297,6 +299,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         Casting.ClearPending();
         DaggerfallMolagBalEffects.Reconcile(State.Effects, MolagBalEquipped);
         _heldEnchantments.Refresh();
+        SyncCivilianPositions();
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _roster.Dynamic, _encounters,
             _sites.Deltas, _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
             _sites.Projection.CaptureMotion(), _sites.CaptureExteriorResidency(), _sites.CaptureExteriorLocationResidency());

@@ -26,6 +26,9 @@ internal interface IDaggerfallSiteTransitionHost
     /// <summary>The destination became the active site; site-scoped session presentation moves on.</summary>
     void EnteredSite();
 
+    /// <summary>Copies accepted source-civilian poses before the departing site's delta is captured.</summary>
+    void SyncCivilianPositions();
+
     /// <summary>The departing projection is about to be released; retire what it was still timing.</summary>
     void RetireDepartingProjection(DaggerfallSiteProjection source);
 }
@@ -308,6 +311,7 @@ internal sealed class DaggerfallSiteLifecycle
         float sourceYawRadians = player.YawRadians;
         float sourcePitchRadians = player.PitchRadians;
         Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> sourceDeltas = new(_deltas);
+        _host.SyncCivilianPositions();
         bool sourceLocationLoaded = ActiveLocationLoaded;
         DaggerfallExteriorCellId? sourceLocationCell = _locationCell;
         DaggerfallSiteRuntimeDelta sourceDelta = sourceLocationLoaded

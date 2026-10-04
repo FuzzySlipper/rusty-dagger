@@ -1823,7 +1823,10 @@ internal static partial class DaggerfallBaseContent
                 diagnostics.Add($"Climate value {cell} is unresolved with the name '{name}'.");
             }
 
-            values.Add(new DaggerfallClimateValueDefinition(cell, name, disposition));
+            string people = OptionalText(value, "people");
+            if (people.Length != 0 && people is not ("Breton" or "Nord" or "Redguard"))
+                diagnostics.Add($"Climate value {cell} names unsupported People race '{people}'.");
+            values.Add(new DaggerfallClimateValueDefinition(cell, name, disposition) { People = people });
         }
 
         if (values.Count == 0)

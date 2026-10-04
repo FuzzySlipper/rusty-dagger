@@ -27,7 +27,11 @@ internal enum DaggerfallClimateCoordinateDisposition
 /// <param name="Value">The source byte.</param>
 /// <param name="Name">The donor's climate name, empty when no table names it.</param>
 /// <param name="Disposition">Whether the donor's table names the value.</param>
-internal sealed record DaggerfallClimateValueDefinition(int Value, string Name, DaggerfallClimateDisposition Disposition);
+internal sealed record DaggerfallClimateValueDefinition(int Value, string Name, DaggerfallClimateDisposition Disposition)
+{
+    /// <summary>The importer-published donor People race for wandering civilians.</summary>
+    internal string People { get; init; } = string.Empty;
+}
 
 /// <summary>One distinct politic value with the region it names.</summary>
 /// <param name="Value">The source byte.</param>
@@ -39,7 +43,10 @@ internal sealed record DaggerfallPoliticValueDefinition(int Value, int Region, D
 /// <param name="Disposition">Whether the coordinates name a cell.</param>
 /// <param name="Value">The source byte, or -1 past the grid's edge.</param>
 /// <param name="Name">The donor's climate name, empty past the edge or when no table names the value.</param>
-internal sealed record DaggerfallClimateCell(DaggerfallClimateCoordinateDisposition Disposition, int Value, string Name);
+internal sealed record DaggerfallClimateCell(DaggerfallClimateCoordinateDisposition Disposition, int Value, string Name)
+{
+    internal string People { get; init; } = string.Empty;
+}
 
 /// <summary>One politic lookup answer: the cell's value and what it names.</summary>
 /// <param name="Disposition">Whether the coordinates name a region, the ocean, nothing, or no cell.</param>
@@ -75,7 +82,10 @@ internal sealed record DaggerfallClimateGridDefinition(int Width, int Height, by
         return new DaggerfallClimateCell(
             DaggerfallClimateCoordinateDisposition.Found,
             value,
-            named?.Disposition == DaggerfallClimateDisposition.Named ? named.Name : string.Empty);
+            named?.Disposition == DaggerfallClimateDisposition.Named ? named.Name : string.Empty)
+        {
+            People = named?.People ?? string.Empty,
+        };
     }
 }
 

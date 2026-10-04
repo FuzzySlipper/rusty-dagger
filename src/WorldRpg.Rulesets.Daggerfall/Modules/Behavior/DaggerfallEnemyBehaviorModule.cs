@@ -40,6 +40,8 @@ internal sealed class DaggerfallEnemyBehaviorModule
     // closed for an actor after either spell or physical admission so catch-up cannot turn one
     // decision into two different attacks.
     private readonly HashSet<long> _admittedActions = [];
+    private readonly Func<long, PursuitPolicy> _movementPolicy;
+    private readonly ActorWanderCoordinator _wander;
 
     internal DaggerfallEnemyBehaviorModule(
         IPerceptionService perception,
@@ -51,12 +53,14 @@ internal sealed class DaggerfallEnemyBehaviorModule
         Func<long, DaggerfallEnemyPerceptionContext> contextProvider,
         Action<DaggerfallSkillUse> recordSkillUse,
         Func<long, bool>? isPlayerAllied = null, Func<long, PursuitTarget?>? selectAllyTarget = null,
-        Func<long, ActorControlRestrictions>? controlRestrictions = null)
+        Func<long, ActorControlRestrictions>? controlRestrictions = null,
+        Func<long, PursuitPolicy>? movementPolicy = null)
     {
         _combat = combat;
         _isPlayerAllied = isPlayerAllied ?? (_ => false);
         _selectAllyTarget = selectAllyTarget;
         _controlRestrictions = controlRestrictions ?? (_ => default);
+        _movementPolicy = movementPolicy ?? (_ => new PursuitPolicy());
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _contextProvider = contextProvider ?? throw new ArgumentNullException(nameof(contextProvider));
         _recordSkillUse = recordSkillUse ?? throw new ArgumentNullException(nameof(recordSkillUse));
@@ -68,6 +72,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         _pursuitTuning = new PursuitTuning(detectionDistance, minimumFacingCosine, admitted.ChaseSpeedUnitsPerSecond, admitted.NavigationMaximumVisited).Validate();
         _perceptionOptions = new PursuitPerceptionOptions(DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity, DaggerfallPerceptionQueryDefaults.FirstPairCursor, DaggerfallPerceptionQueryDefaults.CompleteQueryPageSize).Validate();
         _pursuit = new PursuitCoordinator<IProductFact>(new DaggerfallEnemyPerceptionService(perception, Filter), spatial, navigation, combat);
+        _wander = new ActorWanderCoordinator(navigation);
     }
 
     internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEvidence { get; private set; } = new Dictionary<long, EnemyBehaviorEvidence>();
@@ -87,6 +92,40 @@ internal sealed class DaggerfallEnemyBehaviorModule
 
     /// <summary>Starts the one action-admission window owned by the next Engine outer update.</summary>
     internal void BeginAdmittedUpdate() => _admittedActions.Clear();
+
+    /// <summary>
+    /// Resolves the movement medium and close-range choices from the authored mobile record.  The
+    /// source behaviour names are retained in the catalog; this adapter only maps them to the Kit
+    /// movement policy and never invents a second navigation implementation.
+    /// </summary>
+    internal static PursuitPolicy PolicyFor(long actorId,
+        IReadOnlyDictionary<long, DaggerfallActorDefinition> actors,
+        DaggerfallDefinitions definitions,
+        bool waterWalking = false,
+        bool levitating = false)
+    {
+        if (!actors.TryGetValue(actorId, out DaggerfallActorDefinition? actor))
+            return new PursuitPolicy();
+
+        ActorNavigationMode mode = ActorNavigationMode.Ground;
+        if (actor.MobileId is int mobileId && definitions.Mobiles.Mobiles.TryGetValue(mobileId, out DaggerfallMobileDefinition? mobile))
+        {
+            mode = mobile.Behaviour switch
+            {
+                "Aquatic" => ActorNavigationMode.Swimming,
+                "Flying" or "Spectral" => ActorNavigationMode.Flying,
+                _ => ActorNavigationMode.Ground,
+            };
+        }
+        // The effect owner may grant a non-player actor the same movement protections as the
+        // player. Those typed capabilities select the Engine mode; no actor-local vertical or
+        // water timer is introduced here.
+        if (levitating) mode = ActorNavigationMode.Flying;
+        else if (waterWalking) mode = ActorNavigationMode.WaterWalking;
+        // EnemyMotor exposes both retreat and strafe decisions to all authored mobile records. The
+        // distance/phase gates belong to the Kit policy; this source mapping supplies the capability.
+        return new PursuitPolicy(mode, CanRetreat: true, CanStrafe: true, EmitTargetLost: true);
+    }
 
     /// <summary>
     /// Reads the retained disposition for the same enemy memory that the live
@@ -120,7 +159,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     {
         foreach (ActorState actor in _actors.All)
         {
-            if (actor.IsDefeated || _isPlayerAllied(actor.DurableId)) continue;
+            if (actor.IsDefeated || actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian || _isPlayerAllied(actor.DurableId)) continue;
             DaggerfallEnemyPerceptionMemory memory = Senses(actor);
             memory.SetForcedHostile(true);
         }
@@ -146,6 +185,16 @@ internal sealed class DaggerfallEnemyBehaviorModule
         foreach (ActorState actor in _actors.All.OrderBy(value => value.DurableId))
         {
             if (actor.IsDefeated) _lastTargetDistances.Remove(actor.DurableId);
+            // Source civilians have their own bounded wander owner. They carry the common enemy
+            // sense component for actor/save compatibility, but must never acquire hostile pursuit
+            // merely because they are now canonical Mechanics actors.
+            if (actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian)
+            {
+                actor.Pursuit.TransitionTo(actor.IsDefeated ? PursuitState.Dead : PursuitState.Idle);
+                _combat.InterruptPendingAttack(actor.DurableId, generation);
+                _lastDecisions.Remove(actor.DurableId);
+                continue;
+            }
             if (!actor.IsDefeated && _controlRestrictions(actor.DurableId).Movement)
             {
                 var restrictedPrevious = actor.Pursuit.TransitionTo(PursuitState.Idle);
@@ -182,7 +231,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 simulationStep,
                 deltaSeconds,
                 facts,
-                admitAttack: false);
+                _movementPolicy(actor.DurableId), admitAttack: false);
             EnemyBehaviorState previous = ToDaggerState(pursuit.Previous);
             EnemyBehaviorState current = ToDaggerState(pursuit.Current);
             if (previous != current)
@@ -235,6 +284,16 @@ internal sealed class DaggerfallEnemyBehaviorModule
         }
         LastEvidence = evidence;
         LastPerception = perceptions;
+    }
+
+    /// <summary>Runs one source-backed civilian activity step through Engine navigation.</summary>
+    internal WanderEvidence UpdateCivilian(ActorState actor, WanderPolicy policy,
+        ulong simulationStep, float deltaSeconds)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        if (actor.Actor.TypeId.Value != DaggerfallActorKinds.Civilian)
+            throw new InvalidOperationException($"Actor {actor.DurableId} is not a Daggerfall civilian.");
+        return _wander.Update(actor, actor.Wander, policy, simulationStep, deltaSeconds);
     }
 
     private readonly Dictionary<long, DaggerfallEnemyPerceptionDecision> _lastDecisions = [];
@@ -290,13 +349,18 @@ internal sealed class DaggerfallEnemyBehaviorModule
     {
         PursuitState.Idle => EnemyBehaviorState.Idle,
         PursuitState.Chase => EnemyBehaviorState.Chase,
+        PursuitState.Retreat => EnemyBehaviorState.Retreat,
+        PursuitState.Strafe => EnemyBehaviorState.Strafe,
         PursuitState.Attack => EnemyBehaviorState.Attack,
+        PursuitState.Blocked => EnemyBehaviorState.Blocked,
+        PursuitState.TargetLost => EnemyBehaviorState.TargetLost,
+        PursuitState.Unloaded => EnemyBehaviorState.Unloaded,
         PursuitState.Dead => EnemyBehaviorState.Dead,
         _ => throw new InvalidOperationException($"Unknown Daggerfall enemy behavior state '{value}'."),
     };
 }
 
-internal enum EnemyBehaviorState { Idle, Chase, Attack, Dead }
+internal enum EnemyBehaviorState { Idle, Chase, Retreat, Strafe, Attack, Blocked, TargetLost, Unloaded, Dead }
 
 /// <summary>Copied Engine receipts used to explain one enemy's most recent ruleset decision.</summary>
 internal sealed record EnemyBehaviorEvidence(long ActorId, EnemyBehaviorState State, PerceptionReadoutResult? Visibility, NavigationStepResult? Navigation);

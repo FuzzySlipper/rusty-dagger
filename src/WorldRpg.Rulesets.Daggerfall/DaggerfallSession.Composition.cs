@@ -308,14 +308,26 @@ internal sealed partial class DaggerfallSession
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
                 _spatial,
-                new ActorNavigationCoordinator(engine.Spatial, _spatial.Session),
+                new ActorNavigationCoordinator(
+                    engine.Spatial,
+                    _spatial.Session,
+                    actors.Store,
+                    _spatial.CurrentController,
+                    actor => _sites.Projection.CharacterEnvironment(
+                        actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion))),
                 actors,
                 kit.Attacks,
                 tuning.EnemyBehavior,
                 contextProvider: BuildEnemyPerceptionContext,
                 recordSkillUse: use => skillUses.Record(use),
                 isPlayerAllied: id => authored.TryGetValue(id, out var actor) && actor.Team == "player-ally",
-                selectAllyTarget: SelectAllyTarget, controlRestrictions: effects.ControlsFor);
+                selectAllyTarget: SelectAllyTarget, controlRestrictions: effects.ControlsFor,
+                movementPolicy: id => DaggerfallEnemyBehaviorModule.PolicyFor(
+                    id,
+                    authored,
+                    definitions,
+                    effects.GrantsWaterWalking(id),
+                    effects.GrantsLevitation(id)));
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {

@@ -13,7 +13,7 @@ public enum DaggerfallNpcKind
     Static,
     /// <summary>A quest person: stable while its quest names it.</summary>
     Questor,
-    /// <summary>An incidental civilian: a fresh identity every regeneration.</summary>
+    /// <summary>An incidental civilian, either transient or a source placement with a stable key.</summary>
     Civilian,
 }
 
@@ -73,9 +73,10 @@ public sealed record DaggerfallNpc(
 /// <summary>
 /// Static NPC, questor and civilian identity with site binding: one durable identity per person
 /// that talk, damage, quests and saves all share. Statics and questors register under a
-/// site-stable key, so re-entering a site finds the same person; civilians regenerate with a fresh
-/// identity every time, so two visually identical passers-by stay distinct. Presence changes hide,
-/// remove or relocate without duplicating the actor; the allocator that mints civilian identities
+/// site-stable key, so re-entering a site finds the same person. Source-authored population records
+/// also use their source placement key so repeated admission does not clone a live civilian; callers
+/// that need an incidental passer-by can continue using the fresh-identity overload. Presence changes
+/// hide, remove or relocate without duplicating the actor; the allocator that mints civilian identities
 /// is wired once by the session that owns it.
 /// </summary>
 public sealed class DaggerfallNpcRegistry
@@ -126,6 +127,44 @@ public sealed class DaggerfallNpcRegistry
         long durableId = checked((long)allocator.Allocate(DurableIdentityKind.Actor).Value);
         _npcs.Add(durableId, new DaggerfallNpc(durableId, DaggerfallNpcKind.Civilian, string.Empty, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null));
         return durableId;
+    }
+
+    /// <summary>
+    /// Registers one source-backed population placement idempotently. The key is the importer placement
+    /// identity, not a generated demo name, so cell re-entry returns the existing civilian and keeps its
+    /// durable actor/corpse/quest relationships intact.
+    /// </summary>
+    public long RegisterPopulationCivilian(DaggerfallNpcSite site, string sourceKey, DaggerfallNpcAppearance appearance, string role, IReadOnlyList<string> services)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceKey);
+        ValidateSite(site);
+        ValidateAppearance(appearance);
+        ArgumentException.ThrowIfNullOrWhiteSpace(role);
+        ArgumentNullException.ThrowIfNull(services);
+        string key = StableIdentityKey(DaggerfallNpcKind.Civilian, site, sourceKey);
+        if (_stable.TryGetValue(key, out long existing)) return existing;
+
+        DurableIdentityAllocator allocator = Identities ?? throw new InvalidOperationException("The NPC registry mints no identity before the session wires its allocator.");
+        long durableId = checked((long)allocator.Allocate(DurableIdentityKind.Actor).Value);
+        _npcs.Add(durableId, new DaggerfallNpc(durableId, DaggerfallNpcKind.Civilian, sourceKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null));
+        _stable.Add(key, durableId);
+        return durableId;
+    }
+
+    /// <summary>
+    /// Refreshes source-authored appearance and service facts while retaining the one durable
+    /// identity, current pose, presence and any actor/corpse relationship.
+    /// </summary>
+    public void RefreshPopulationFacts(long durableId, DaggerfallNpcAppearance appearance, string role, IReadOnlyList<string> services)
+    {
+        DaggerfallNpc npc = Require(durableId);
+        if (npc.Kind != DaggerfallNpcKind.Civilian || string.IsNullOrWhiteSpace(npc.StableKey)
+            || !npc.StableKey.StartsWith("population/", StringComparison.Ordinal))
+            throw new ArgumentException($"NPC {durableId} is not a source-backed population civilian.", nameof(durableId));
+        ValidateAppearance(appearance);
+        ArgumentException.ThrowIfNullOrWhiteSpace(role);
+        ArgumentNullException.ThrowIfNull(services);
+        _npcs[durableId] = npc with { Appearance = appearance, Role = role, Services = [.. services] };
     }
 
     /// <summary>Reads one NPC by its durable identity.</summary>
@@ -197,7 +236,7 @@ public sealed class DaggerfallNpcRegistry
                 throw new ArgumentOutOfRangeException(nameof(npcs), npc.Kind, "A saved NPC names a kind or presence the contract does not declare.");
             }
 
-            if (npc.Kind != DaggerfallNpcKind.Civilian)
+            if (npc.Kind != DaggerfallNpcKind.Civilian || !string.IsNullOrWhiteSpace(npc.StableKey))
             {
                 ArgumentException.ThrowIfNullOrWhiteSpace(npc.StableKey);
                 _stable.Add(StableIdentityKey(npc.Kind, npc.Site, npc.StableKey), npc.DurableId);
