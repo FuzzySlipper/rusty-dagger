@@ -3,6 +3,7 @@ using Rusty.Engine;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -17,24 +18,42 @@ internal sealed partial class DaggerfallSession
     {
         if (_latestUpdateGeneration is not ulong generation || _latestSimulationStep is not ulong simulationStep) return;
         _combat.AdvanceRangedFlight(generation, simulationStep, facts.FixedDeltaSeconds, CurrentPositions(), _facts);
-        AdvanceDungeonSpellFlights();
+        AdvanceDungeonSpellFlights(facts.FixedDeltaSeconds);
         DeliverFacts();
     }
 
-    private void AdvanceDungeonSpellFlights()
+    /// <summary>
+    /// Advances each admitted dungeon missile along its launch direction and submits only the
+    /// newly traversed segment to the Engine spatial owner. The action target is an aim fact at
+    /// launch; it is never consulted again to re-aim a live missile.
+    /// </summary>
+    private void AdvanceDungeonSpellFlights(double fixedDeltaSeconds)
     {
-        IReadOnlyDictionary<long, WorldPoint> positions = CurrentPositions();
+        if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d)
+            throw new ArgumentOutOfRangeException(nameof(fixedDeltaSeconds));
+
+        float displacement = checked((float)(DaggerfallDungeonSpellPolicy.MissileMovementSpeedMetresPerSecond * fixedDeltaSeconds));
         foreach (DaggerfallLiveSpell bundle in Casting.PendingDungeonFlights)
         {
             if (bundle.ActionSource is not { } source) continue;
-            if (!positions.TryGetValue(source.TargetId, out WorldPoint target))
+            if (bundle.ReleaseOrigin is not Vector3 from
+                || !DaggerfallDungeonSpellPolicy.TryNormalizeDirection(bundle.ReleaseDirection ?? default, out Vector3 direction))
             {
-                _ = Casting.Deliver(bundle, [source.TargetId]);
+                // An admitted action with no usable launch direction is a terminal miss. The
+                // source target is not a fallback caster or a proof of impact.
+                _ = Casting.Deliver(bundle, []);
                 continue;
             }
-            Vector3 from = bundle.ReleaseOrigin ?? source.Origin;
-            Vector3 to = target.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight;
-            _ = DeliverSpellImpact(bundle, from, to);
+
+            bundle.DungeonFlightElapsedSeconds += fixedDeltaSeconds;
+            Vector3 to = from + direction * displacement;
+            DaggerfallCastResult impact = DeliverSpellImpact(bundle, from, to);
+            if (impact.Outcome == DaggerfallCastOutcome.Released && !bundle.Delivered)
+            {
+                bundle.ReleaseOrigin = to;
+                if (bundle.DungeonFlightElapsedSeconds > DaggerfallDungeonSpellPolicy.MissileLifespanSeconds)
+                    _ = Casting.Deliver(bundle, []);
+            }
         }
     }
 
@@ -48,19 +67,14 @@ internal sealed partial class DaggerfallSession
 
     internal IReadOnlyList<DaggerfallDungeonSpellFlightView> ReadDungeonSpellFlights()
     {
-        IReadOnlyDictionary<long, WorldPoint> positions = CurrentPositions();
         return [.. Casting.PendingDungeonFlights.Select(bundle =>
         {
             DaggerfallActionCastSource source = bundle.ActionSource!;
-            Vector3 origin = bundle.ReleaseOrigin ?? source.Origin;
-            Vector3 aim = positions.TryGetValue(source.TargetId, out WorldPoint target)
-                ? target.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight
-                : origin + (bundle.ReleaseDirection is { } direction && direction.LengthSquared() > .000001f
-                    ? Vector3.Normalize(direction) : Vector3.UnitZ);
-            Vector3 line = aim - origin;
-            return new DaggerfallDungeonSpellFlightView(bundle.Sequence, WorldPoint.From(origin),
-                line.LengthSquared() > .000001f ? Vector3.Normalize(line) : Vector3.UnitZ);
-        })];
+            Vector3 origin = bundle.ReleaseOrigin ?? source.Origin + Vector3.UnitY * DaggerfallDungeonSpellPolicy.MissileOriginHeightMetres;
+            return DaggerfallDungeonSpellPolicy.TryNormalizeDirection(bundle.ReleaseDirection ?? default, out Vector3 direction)
+                ? new DaggerfallDungeonSpellFlightView(bundle.Sequence, WorldPoint.From(origin), direction)
+                : (DaggerfallDungeonSpellFlightView?)null;
+        }).Where(view => view is not null).Select(view => view!.Value)];
     }
 }
 

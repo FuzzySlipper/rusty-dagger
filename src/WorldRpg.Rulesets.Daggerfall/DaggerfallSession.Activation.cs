@@ -312,13 +312,15 @@ internal sealed partial class DaggerfallSession
             return new(action.Id, DaggerfallDungeonActionOutcome.MissingTarget,
                 Diagnostic: $"Dungeon spell action '{action.Id}' has no admitted source pose.");
 
-        DaggerfallCastResult result = Casting.TriggerDungeonAction(source, action.SoundIndex);
+        Vector3? targetPosition = State.PlayerControl.Position is WorldPoint playerPosition
+            ? playerPosition.ToVector() : null;
+        DaggerfallCastResult result = Casting.TriggerDungeonAction(source, action.SoundIndex, targetPosition);
         return result.Outcome switch
         {
             DaggerfallCastOutcome.Ready => new(action.Id, DaggerfallDungeonActionOutcome.Applied,
                 Diagnostic: $"Dungeon spell action '{action.Id}' readied the player's caster-only spell without a spell-point cost."),
-            DaggerfallCastOutcome.Released => new(action.Id, DaggerfallDungeonActionOutcome.Applied,
-                Diagnostic: $"Dungeon spell action '{action.Id}' admitted a missile from action resource {source.ResourceIdentity}."),
+            DaggerfallCastOutcome.Released => new(action.Id, DaggerfallDungeonActionOutcome.AppliedWithoutChange,
+                Diagnostic: $"Dungeon spell action '{action.Id}' admitted a missile from action resource {source.ResourceIdentity}; terminal effect delivery is pending."),
             DaggerfallCastOutcome.UnknownSpell or DaggerfallCastOutcome.UnsupportedEffect => new(action.Id,
                 DaggerfallDungeonActionOutcome.UnsupportedAction,
                 Diagnostic: $"Dungeon spell action '{action.Id}' could not admit catalog ordinal {action.SoundIndex}: {result.Outcome}."),
