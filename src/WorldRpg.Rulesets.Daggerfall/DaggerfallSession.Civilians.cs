@@ -63,6 +63,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallSiteProfile profile = projection.Inputs;
         foreach (DaggerfallNpc npc in State.Npcs.All.Where(npc => IsSourcePopulation(npc)
             && npc.Profile == profile.ProfileKey
+            && npc.Presence == DaggerfallNpcPresence.Active
             && State.Actors.TryGet(npc.DurableId, out _)))
         {
             AdmitSourcePopulationAppearance(npc, profile, projection.Appearance);

@@ -77,6 +77,48 @@ public sealed class DaggerfallPopulationSessionTests
     }
 
     [Fact]
+    public void Resident_hidden_source_civilian_keeps_actor_identity_without_billboard_through_readmission_and_save_restore()
+    {
+        using ResidentPopulationFixture fixture = ResidentPopulationFixture.Create();
+        DaggerfallSession session = fixture.Session;
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        DaggerfallNpc sourceNpc = Assert.Single(session.State.Npcs.All,
+            npc => npc.StableKey == "population/source/0/0" && npc.Profile == fixture.Source.ProfileKey);
+        long sourceId = sourceNpc.DurableId;
+        Assert.True(session.State.Actors.TryGet(sourceId, out _));
+        int beforeHide = PopulationTextureOpens(fixture.Appearance);
+        Assert.True(beforeHide > 0);
+
+        // Dusk hides the source-backed identity and retires only its admitted billboard. The
+        // dynamic actor stays retained so its durable pose and identity can cross the site window.
+        session.AdvanceElapsedTime(12 * 60 * 60);
+        sourceNpc = session.State.Npcs.Require(sourceId);
+        Assert.Equal(DaggerfallNpcPresence.Hidden, sourceNpc.Presence);
+        Assert.True(session.State.Actors.TryGet(sourceId, out _));
+        Assert.Equal(beforeHide, PopulationTextureOpens(fixture.Appearance));
+
+        Assert.True(session.TryTransitionTo(fixture.Resident.ProfileKey));
+        DaggerfallNpc retained = session.State.Npcs.Require(sourceId);
+        Assert.Equal(DaggerfallNpcPresence.Hidden, retained.Presence);
+        Assert.True(session.State.Actors.TryGet(sourceId, out _));
+        Assert.Equal(beforeHide, PopulationTextureOpens(fixture.Appearance));
+
+        RulesetSavePayload save = session.CaptureSave();
+        DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
+        DaggerfallNpcEntry savedNpc = Assert.Single(captured.Npcs.Entries, entry => entry.DurableId == sourceId);
+        Assert.Equal((int)DaggerfallNpcPresence.Hidden, savedNpc.Presence);
+        Assert.Contains(captured.SiteDeltas, delta => delta.Profile.Require() == fixture.Source.ProfileKey
+            && delta.DynamicActors.Any(actor => actor.EntityId == sourceId));
+
+        (EngineContextFake restoredEngine, AppearanceFake restoredAppearance) = fixture.CreateEngine();
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, fixture.Composition, save);
+        DaggerfallNpc restoredNpc = restored.State.Npcs.Require(sourceId);
+        Assert.Equal(DaggerfallNpcPresence.Hidden, restoredNpc.Presence);
+        Assert.True(restored.State.Actors.TryGet(sourceId, out _));
+        Assert.Equal(0, PopulationTextureOpens(restoredAppearance));
+    }
+
+    [Fact]
     public void Resident_population_sync_keeps_the_owner_profile_pose_through_unload_and_readmission()
     {
         string root = TestData.RepositoryRoot;
