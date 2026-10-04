@@ -610,7 +610,8 @@ public sealed class SpatialMovementSystem : IDisposable
                     new ContentResolveRequest(placement.Path, placement.Sha256));
                 resolved.Add(reference);
                 instances[index] = new SpatialContentArtifactInstance(placement.Id, reference,
-                    placement.ColumnOffset, placement.LevelOffset, placement.RowOffset, placement.QuarterTurns);
+                    placement.ColumnOffset, placement.LevelOffset, placement.RowOffset, placement.QuarterTurns,
+                    placement.Translation);
             }
 
             return _spatial.ApplyContentArtifactResidency(new SpatialContentArtifactResidencyRequest(
@@ -701,12 +702,15 @@ public sealed record SpatialContentArtifactPlacement(
     long ColumnOffset = 0,
     long LevelOffset = 0,
     long RowOffset = 0,
-    uint QuarterTurns = 0)
+    uint QuarterTurns = 0,
+    Vector3 Translation = default)
 {
     internal void Validate()
     {
         if (Id == 0) throw new ArgumentOutOfRangeException(nameof(Id));
         ArgumentException.ThrowIfNullOrWhiteSpace(Path);
         if (QuarterTurns > 3) throw new ArgumentOutOfRangeException(nameof(QuarterTurns));
+        if (!float.IsFinite(Translation.X) || !float.IsFinite(Translation.Y) || !float.IsFinite(Translation.Z))
+            throw new ArgumentOutOfRangeException(nameof(Translation), "Spatial placement translation must be finite.");
     }
 }

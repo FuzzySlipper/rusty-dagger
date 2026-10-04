@@ -85,6 +85,9 @@ internal static class DaggerfallTerrainSurfaceBuilder
     internal const float HorizontalSize = 819.2F;
     internal const float SampleSpacing = 6.4F;
     internal const float TerrainVerticalSize = MaxTerrainHeight * TerrainScale;
+    // Daggerfall Unity's location parent samples Terrain at HeightmapDimension * .55. The
+    // normalized surface stores the same 129 samples, whose normalized extent is 128 intervals.
+    internal const float LocationSampleCoordinate = (SampleDimension * .55F) / (SampleDimension - 1);
 
     private const int WorldMapTileDimension = 128;
     private const int MaxMapPixelY = 500;
@@ -253,6 +256,36 @@ internal static class DaggerfallTerrainSurfaceBuilder
         {
             SourceWorldHeight = surface.SourceWorldHeight,
         };
+    }
+
+    /// <summary>
+    /// Samples the generated surface in the same normalized terrain frame used by the donor's
+    /// location parent. Unity's <c>Terrain.SampleHeight</c> bilinearly samples the heightmap at
+    /// the requested terrain position; keeping that interpolation here lets every exterior owner
+    /// use the exact height that the admitted collision and appearance surfaces carry.
+    /// </summary>
+    internal static float SampleWorldHeight(DaggerfallTerrainSurface surface, float normalizedX, float normalizedY)
+    {
+        ArgumentNullException.ThrowIfNull(surface);
+        if (!float.IsFinite(normalizedX) || !float.IsFinite(normalizedY)
+            || normalizedX < 0F || normalizedX > 1F || normalizedY < 0F || normalizedY > 1F)
+            throw new ArgumentOutOfRangeException(nameof(normalizedX), "A terrain sample must be finite and inside the normalized surface.");
+        if (surface.NormalizedHeights.Length != checked(SampleDimension * SampleDimension))
+            throw new ArgumentException("Terrain surface does not carry the donor 129 by 129 samples.", nameof(surface));
+
+        float sampleX = normalizedX * (SampleDimension - 1);
+        float sampleY = normalizedY * (SampleDimension - 1);
+        int x0 = Math.Min((int)MathF.Floor(sampleX), SampleDimension - 1);
+        int y0 = Math.Min((int)MathF.Floor(sampleY), SampleDimension - 1);
+        int x1 = Math.Min(x0 + 1, SampleDimension - 1);
+        int y1 = Math.Min(y0 + 1, SampleDimension - 1);
+        float tx = sampleX - x0;
+        float ty = sampleY - y0;
+        float lower = Lerp(surface.NormalizedHeights[Index(x0, y0, SampleDimension)],
+            surface.NormalizedHeights[Index(x1, y0, SampleDimension)], tx);
+        float upper = Lerp(surface.NormalizedHeights[Index(x0, y1, SampleDimension)],
+            surface.NormalizedHeights[Index(x1, y1, SampleDimension)], tx);
+        return Lerp(lower, upper, ty) * TerrainVerticalSize;
     }
 
     private static float Lerp(float from, float to, float amount)

@@ -40,7 +40,8 @@ public sealed class ExteriorOriginSessionTests
                 worldOrigin: engine.WorldOrigin);
             using DaggerfallSession session = DaggerfallSession.StartNew(context.Context,
                 new(definitions, exterior, DaggerfallTuning.Defaults));
-            Vector3 ray = exterior.Portals[0].Position.ToVector() + Vector3.UnitY * 20f;
+            Vector3 exteriorFrame = session.Sites.ExteriorProfileFrameTranslation(exterior.ProfileKey);
+            Vector3 ray = exterior.Portals[0].Position.ToVector() + exteriorFrame + Vector3.UnitY * 20f;
             SpatialHit Hit(Vector3 point) => spatial.CastRay(new(recorded.Session!, point, -Vector3.UnitY, 100f,
                 default, ReadOnlyMemory<SpatialEntityCollider>.Empty, ReadOnlyMemory<ulong>.Empty,
                 ReadOnlyMemory<SpatialEntityCollider>.Empty));
@@ -48,7 +49,7 @@ public sealed class ExteriorOriginSessionTests
             Assert.True(before.Present);
             var artifact = EngineBinaryContent.ReadSpatial(files[exterior.SpatialArtifact.Path].Span);
             var cell = artifact.Cells.First(cell => cell.Walkable);
-            Vector3 routePoint = new((float)((cell.Column + .5) * artifact.Config[0]),
+            Vector3 routePoint = exteriorFrame + new Vector3((float)((cell.Column + .5) * artifact.Config[0]),
                 (float)cell.SupportHeight, (float)((cell.Row + .5) * artifact.Config[0]));
             NavigationStepResult beforeRoute = spatial.EvaluateNavigationStep(new(recorded.Session!,
                 routePoint, routePoint, 1f, 1000));
@@ -291,14 +292,17 @@ public sealed class ExteriorOriginSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
         var before = session.Sites.CaptureExteriorResidency()!.Value;
-        WorldPoint start = session.State.PlayerControl.Position!.Value;
-        session.State.PlayerControl.MoveTo(new Vector3(start.X, height, start.Z));
+        WorldPoint start = session.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The exterior player has no position.");
+        WorldPoint desiredProfilePosition = new(start.X, height, start.Z);
+        WorldPoint desiredLocalPosition = session.Sites.ProfileToLocal(desiredProfilePosition);
+        session.State.PlayerControl.MoveTo(desiredLocalPosition.ToVector());
         session.Sites.RebaseExteriorIfNeeded();
         Assert.Single(engine.OriginCommits);
         Assert.Equal(before.Center, session.Sites.CurrentExteriorCell());
-        Assert.Equal(new Vector3(start.X, height, start.Z), session.Sites.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector()));
+        Assert.Equal(desiredProfilePosition.ToVector(), session.Sites.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector()));
         Assert.Equal(0f, session.State.PlayerControl.Position.Value.Y);
-        Assert.Equal(-height, session.Sites.LocalCompensation.Y);
+        Assert.Equal(-MathF.Floor(desiredLocalPosition.Y), session.Sites.LocalCompensation.Y);
     }
 
     [Fact]

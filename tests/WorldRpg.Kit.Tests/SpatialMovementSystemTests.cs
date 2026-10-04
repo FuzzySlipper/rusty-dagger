@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Reflection;
 using Rusty.Engine;
 using WorldRpg.Kit.Controls;
@@ -23,6 +24,27 @@ public sealed class SpatialMovementSystemTests
 
         Assert.Equal(1, content.Disposals.GetValueOrDefault("spatial/destination"));
         Assert.Equal(0, content.Disposals.GetValueOrDefault("spatial/source"));
+    }
+
+    [Fact]
+    public void Continuous_translation_is_forwarded_after_integer_placement_fields()
+    {
+        SpatialDouble spatial = SpatialDouble.Create();
+        ContentDouble content = ContentDouble.Create();
+        using SpatialMovementSystem movement = new(spatial.Service, content.Service,
+            new SpatialContentArtifact("spatial/source", FirstHash, 1), new SpatialTuning(.5, 8, 8, 1));
+        Vector3 translation = new(.125F, -.375F, .625F);
+
+        movement.ApplyContentArtifactResidency(
+            [new SpatialContentArtifactPlacement(42, "spatial/destination", SecondHash,
+                ColumnOffset: 3, LevelOffset: -2, RowOffset: 4, QuarterTurns: 1, Translation: translation)],
+            [], 1);
+
+        SpatialContentArtifactResidencyRequest request = Assert.Single(spatial.ContentResidencyRequests);
+        SpatialContentArtifactInstance placement = Assert.Single(request.Admitted.ToArray());
+        Assert.Equal((3L, -2L, 4L, 1U),
+            (placement.ColumnOffset, placement.LevelOffset, placement.RowOffset, placement.QuarterTurns));
+        Assert.Equal(translation, placement.Translation);
     }
 
     private class ContentDouble : DispatchProxy
@@ -54,6 +76,7 @@ public sealed class SpatialMovementSystemTests
     {
         internal ISpatialService Service { get; private set; } = null!;
         internal bool RejectReplacement { get; set; }
+        internal List<SpatialContentArtifactResidencyRequest> ContentResidencyRequests { get; } = [];
 
         internal static SpatialDouble Create()
         {
@@ -70,7 +93,14 @@ public sealed class SpatialMovementSystemTests
             nameof(ISpatialService.CreateSession) => new SpatialSession(new SpatialSessionHandle(1), static () => { }),
             nameof(ISpatialService.ReplaceContentArtifact) when RejectReplacement => throw new InvalidOperationException("Destination artifact is rejected."),
             nameof(ISpatialService.ReplaceContentArtifact) => new SpatialContentArtifactReplaceReceipt(),
+            nameof(ISpatialService.ApplyContentArtifactResidency) => ApplyContentResidency((SpatialContentArtifactResidencyRequest)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
+
+        private SpatialContentArtifactResidencyReceipt ApplyContentResidency(SpatialContentArtifactResidencyRequest request)
+        {
+            ContentResidencyRequests.Add(request);
+            return default;
+        }
     }
 }
