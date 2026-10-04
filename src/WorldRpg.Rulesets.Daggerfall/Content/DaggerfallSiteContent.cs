@@ -111,7 +111,7 @@ internal static class DaggerfallSiteContent
         IReadOnlyList<DaggerfallDungeonActionModelDefinition> actionModels = ReadNormalizedActionModels(
             normalizedWorld, publicationRoot, artifacts, files, materials, diagnostics);
         IReadOnlyList<DaggerfallRdbDoorDefinition> doors = ReadNormalizedDoors(
-            normalizedWorld, publicationRoot, meshPath, artifacts, materials, actionModels, diagnostics);
+            normalizedWorld, publicationRoot, meshPath, artifacts, materials, actionModels, profileKind, diagnostics);
         IReadOnlyList<DaggerfallDungeonActionDefinition> dungeonActions = ReadNormalizedActions(normalizedWorld, doors, diagnostics);
         HashSet<string> actionIds = dungeonActions.Select(action => action.Id).ToHashSet(StringComparer.Ordinal);
         foreach (DaggerfallDungeonActionModelDefinition model in actionModels)
@@ -719,6 +719,7 @@ internal static class DaggerfallSiteContent
         IReadOnlyDictionary<string, ContentSha256> artifacts,
         IReadOnlyList<NormalizedMaterial> materials,
         IReadOnlyList<DaggerfallDungeonActionModelDefinition> actionModels,
+        DaggerfallWorldProfileKind profileKind,
         DaggerfallContentDiagnostics diagnostics)
     {
         if (bytes is null)
@@ -815,7 +816,10 @@ internal static class DaggerfallSiteContent
                             kind,
                             startingLock,
                             Visual: modelVisual,
-                            Action: action).Validate());
+                            Action: action)
+                        {
+                            LockSurface = DoorSurface(profileKind),
+                        }.Validate());
                     }
                     catch (ArgumentException exception)
                     {
@@ -875,7 +879,10 @@ internal static class DaggerfallSiteContent
                             : throw new InvalidOperationException($"Normalized RDB door '{identity}' refers to missing material '{material}'."))
                         .ToArray();
                     result.Add(new DaggerfallRdbDoorDefinition(identity, position, rotation, minimum, maximum, kind, startingLock,
-                        Visual: new DaggerfallDoorVisual(visualArtifact.Path, visualArtifact.Sha256, bindings), Action: action).Validate());
+                        Visual: new DaggerfallDoorVisual(visualArtifact.Path, visualArtifact.Sha256, bindings), Action: action)
+                    {
+                        LockSurface = DoorSurface(profileKind),
+                    }.Validate());
                 }
                 catch (ArgumentException exception)
                 {
@@ -894,6 +901,11 @@ internal static class DaggerfallSiteContent
             return [];
         }
     }
+
+    private static DaggerfallLockInteractionSurface DoorSurface(DaggerfallWorldProfileKind profileKind) =>
+        profileKind == DaggerfallWorldProfileKind.Exterior
+            ? DaggerfallLockInteractionSurface.Exterior
+            : DaggerfallLockInteractionSurface.Interior;
 
     private static bool TryDoorIdentity(string sourceId, out DaggerfallRdbDoorId identity)
     {

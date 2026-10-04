@@ -294,6 +294,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
         Assert.Equal("worldrpg/imports/castle-necromoghan/spatial/castle-necromoghan/collision-navigation.rspatial", destination.SpatialArtifact.Path);
         Assert.Empty(destination.Project.Actors);
         Assert.Equal(125, destination.Doors.Count);
+        Assert.All(destination.Doors, door => Assert.Equal(DaggerfallLockInteractionSurface.Interior, door.LockSurface));
         Assert.Same(destination, profiles.Require(destination.ProfileKey));
     }
 

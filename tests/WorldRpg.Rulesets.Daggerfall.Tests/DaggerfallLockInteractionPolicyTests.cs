@@ -75,6 +75,13 @@ public sealed class DaggerfallLockInteractionPolicyTests
             DaggerfallLockInteractionPolicy.EvaluateLockpick(
                 Door(lockValue: 0, kind: DaggerfallDoorKind.Special), DaggerfallLockInteractionSurface.Interior,
                 1, 30, null, null).Status);
+        Assert.Equal(DaggerfallLockInteractionStatus.AlreadyUnlocked,
+            DaggerfallLockInteractionPolicy.EvaluateLockpick(
+                Door(), DaggerfallLockInteractionSurface.Exterior, 1, 30, null, null).Status);
+        Assert.Equal(DaggerfallLockInteractionStatus.SpecialDoor,
+            DaggerfallLockInteractionPolicy.EvaluateLockpick(
+                Door(lockValue: 0, kind: DaggerfallDoorKind.Special), DaggerfallLockInteractionSurface.Exterior,
+                1, 30, null, null).Status);
         Assert.Equal(DaggerfallLockInteractionStatus.MagicallyHeld,
             DaggerfallLockInteractionPolicy.EvaluateLockpick(
                 Door(lockValue: 20), DaggerfallLockInteractionSurface.Interior, 1, 30, null, null).Status);
@@ -128,6 +135,9 @@ public sealed class DaggerfallLockInteractionPolicyTests
         Assert.Equal(DaggerfallLockInteractionStatus.SpecialDoor,
             DaggerfallLockInteractionPolicy.EvaluateBash(
                 Door(kind: DaggerfallDoorKind.Special), DaggerfallLockInteractionSurface.Interior, 50, 0, null).Status);
+        Assert.Equal(DaggerfallLockInteractionStatus.SpecialDoor,
+            DaggerfallLockInteractionPolicy.EvaluateBash(
+                Door(kind: DaggerfallDoorKind.Special), DaggerfallLockInteractionSurface.Exterior, 50, 0, null).Status);
         Assert.Equal(DaggerfallLockInteractionStatus.MagicallyHeld,
             DaggerfallLockInteractionPolicy.EvaluateBash(
                 Door(lockValue: 20), DaggerfallLockInteractionSurface.Interior, 50, 0, null).Status);

@@ -63,10 +63,19 @@ internal sealed record DaggerfallRdbDoorDefinition(
     DaggerfallDoorVisual? Visual = null,
     DaggerfallDoorActionSource? Action = null)
 {
+    /// <summary>
+    /// The source interaction surface admitted with this door.  Interior and dungeon action doors
+    /// retain the interior formulas; RMB building doors are admitted as exterior doors by the
+    /// normalized profile reader.  Keeping this beside the canonical definition prevents each
+    /// caller from guessing the surface from activation mode or source name.
+    /// </summary>
+    internal DaggerfallLockInteractionSurface LockSurface { get; init; } = DaggerfallLockInteractionSurface.Interior;
+
     internal DaggerfallRdbDoorDefinition Validate()
     {
         DaggerfallDoorIdentity.Validate(Id);
         if (!Enum.IsDefined(Kind)) throw new ArgumentOutOfRangeException(nameof(Kind));
+        if (!Enum.IsDefined(LockSurface)) throw new ArgumentOutOfRangeException(nameof(LockSurface));
         if (!IsFinite(Position) || !IsFinite(RotationDegrees) || !IsFinite(BoundsMin) || !IsFinite(BoundsMax))
             throw new ArgumentOutOfRangeException(nameof(Position), "Door pose and bounds must be finite.");
         if (BoundsMin.X >= BoundsMax.X || BoundsMin.Y >= BoundsMax.Y || BoundsMin.Z >= BoundsMax.Z)
@@ -134,6 +143,9 @@ internal readonly record struct DaggerfallDoorView(
 internal sealed class DaggerfallDoorRuntime : IDisposable
 {
     private const int DungeonActionLockValue = 16;
+    // The legacy no-input bash entry point had no actor strength.  This is the neutral value for
+    // DaggerfallFormulaPolicy.DamageModifier, preserving its prior 20 - lock chance for interiors.
+    private const int LegacyNeutralBashStrength = 50;
     private const ulong BashRandomSeed = 0x444F4F52UL;
     private const string BashRandomScope = "daggerfall.door.bash.v1";
     private readonly EntityDirectory _entities;
@@ -267,6 +279,9 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     /// <summary>Reads the last failed skill retained by the canonical door, if any.</summary>
     internal int? FailedLockpickingSkill(DaggerfallRdbDoorId id) => Require(id).FailedLockpickingSkill;
 
+    /// <summary>Returns the interaction surface carried by the admitted door definition.</summary>
+    internal DaggerfallLockInteractionSurface InteractionSurface(DaggerfallRdbDoorId id) => Require(id).Definition.LockSurface;
+
     /// <summary>Retains or clears the current door's failed lockpick attribution.</summary>
     internal void SetFailedLockpickingSkill(DaggerfallRdbDoorId id, int? skill)
     {
@@ -365,7 +380,11 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         if (actorLevel < 1) throw new ArgumentOutOfRangeException(nameof(actorLevel));
         Door door = Require(id);
         if (door.Definition.Kind == DaggerfallDoorKind.Special) return DaggerfallDoorOperationResult.SpecialDoor;
-        if (!skeletonKey && door.LockValue > actorLevel)
+        // The donor's exterior Open path always checks player level against the building quality / 2
+        // lock, including an item cast from Skeleton's Key.  Interior action doors retain the donor
+        // artifact bypass for magically held locks.
+        if ((door.Definition.LockSurface == DaggerfallLockInteractionSurface.Exterior || !skeletonKey)
+            && door.LockValue > actorLevel)
             return door.LockValue >= 20 ? DaggerfallDoorOperationResult.MagicallyHeld : DaggerfallDoorOperationResult.Locked;
         bool unlocked = door.LockValue > 0;
         ClearLock(door);
@@ -382,18 +401,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     }
 
     internal DaggerfallDoorOperationResult Bash(DaggerfallRdbDoorId id)
-    {
-        Door door = Require(id);
-        if (door.Definition.Kind == DaggerfallDoorKind.Special) return DaggerfallDoorOperationResult.SpecialDoor;
-        if (door.Motion == DaggerfallDoorMotion.Open) return Close(id, DaggerfallDoorOperationSource.Player);
-        if (door.LockValue >= 20) return DaggerfallDoorOperationResult.MagicallyHeld;
-        int chance = 20 - door.LockValue;
-        ulong attempt = checked(++door.BashAttempts);
-        int roll = checked((int)_random.DrawKeyed(new KeyedRngRequest(BashRandomSeed, BashRandomScope, $"{door.Definition.Id}:{attempt}", 1, 100)).Value);
-        if (roll > chance) return DaggerfallDoorOperationResult.BashFailed;
-        door.LockValue = 0;
-        return Open(id, DaggerfallDoorOperationSource.Player);
-    }
+        => Bash(id, strength: LegacyNeutralBashStrength, toolForce: 0, out _);
 
     /// <summary>
     /// Applies one ruleset lock/bashing decision to the canonical door. The
@@ -472,7 +480,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     {
         Door door = Require(id);
         DaggerfallDoorView view = View(door);
-        DaggerfallLockInteractionSurface surface = DaggerfallLockInteractionSurface.Interior;
+        DaggerfallLockInteractionSurface surface = door.Definition.LockSurface;
         decision = DaggerfallLockInteractionPolicy.EvaluateBashDeferred(
             view,
             surface,

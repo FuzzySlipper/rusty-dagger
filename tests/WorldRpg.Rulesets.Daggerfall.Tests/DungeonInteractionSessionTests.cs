@@ -442,6 +442,68 @@ public sealed class DungeonInteractionSessionTests
     }
 
     [Fact]
+    public void Exterior_lockpick_activation_uses_the_admitted_surface_for_retry_skill_use_and_legal_noise()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile source = ReadInputs(root);
+        DaggerfallSiteProfile exterior = new(source.Project, source.SpatialArtifact, source.StaticMesh, source.WorldAppearance,
+            source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites, source.Audio, source.ClassicPresentation,
+            source.Site, source.Doors.Select(door => door with { LockSurface = DaggerfallLockInteractionSurface.Exterior }).ToArray(),
+            DaggerfallWorldProfileKind.Exterior, "test/exterior", source.Portals, source.Anchors.Values.ToArray(), source.Lights,
+            source.GroundContainerSprite, dungeonMap: null, dungeonActions: [], dungeonActionModels: [], source.InteriorBuilding,
+            source.Music, source.AudioBundle, source.QuestMarkers, source.BillboardSprites, source.StaticNpcs,
+            source.WaterVolumes, source.TerrainTextures, source.Population);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
+            new PerceptionPair(1, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d))]);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases),
+            perception.Service, random: RandomMaximum.Create());
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
+
+        DaggerfallDoorView door = session.Doors.All.First(value =>
+            value.Motion == DaggerfallDoorMotion.Closed && value.IsLocked && value.Kind == DaggerfallDoorKind.Normal);
+        Assert.Equal(DaggerfallLockInteractionSurface.Exterior, session.Doors.InteractionSurface(door.Id));
+        int skill = session.State.SkillUses.PermanentSkillValue(DaggerfallSkills.Lockpicking);
+        DaggerfallLockIncident? incident = null;
+        session.LockIncident += value => incident = value;
+        session.State.PlayerControl.MoveTo(door.Pose.Translation + Vector3.UnitZ);
+        session.State.PlayerControl.YawRadians = 0f;
+        session.State.PlayerControl.PitchRadians = 0f;
+        spatial.FloorHit = request => request.Direction.Y < -.5f ? default : new SpatialHit
+        {
+            Present = true,
+            Kind = SpatialHitKind.Entity,
+            Entity = door.Entity.Value,
+            Point = door.Pose.Translation,
+            Distance = 1f,
+        };
+
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"activation-mode\",\"mode\":\"lockpick\"}")]));
+        session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital,
+            x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
+
+        Assert.Equal(DaggerfallDoorMotion.Closed, session.Doors.Read(door.Id).Motion);
+        Assert.Equal(skill, session.Doors.FailedLockpickingSkill(door.Id));
+        Assert.Equal(1, session.State.Progression.SkillUses[DaggerfallSkills.Lockpicking]);
+        Assert.Equal(DaggerfallLockInteractionSurface.Exterior, incident?.Surface);
+        Assert.Equal(DaggerfallLockInteractionStatus.Failed, incident?.Status);
+        Assert.True(incident?.EmitsNoise);
+        Assert.True(incident?.ReportsBreakingAndEntering);
+
+        session.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.DirectDigital,
+            x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
+        Assert.Equal(1, session.State.Progression.SkillUses[DaggerfallSkills.Lockpicking]);
+        Assert.Equal(DaggerfallLockInteractionStatus.DuplicateAttempt, incident?.Status);
+        Assert.False(incident?.EmitsNoise);
+    }
+
+    [Fact]
     public void Dungeon_text_modal_preserves_answer_continuation_and_linked_displays()
     {
         string root = TestData.RepositoryRoot;

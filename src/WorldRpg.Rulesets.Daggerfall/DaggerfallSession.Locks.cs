@@ -51,7 +51,7 @@ internal sealed partial class DaggerfallSession
         // Donor lockpicking reads the current modified skill for both chance and its retry gate.
         int skill = State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).ValueInt;
         int? previousFailedSkill = _doors.FailedLockpickingSkill(id);
-        DaggerfallLockInteractionSurface surface = DaggerfallLockInteractionSurface.Interior;
+        DaggerfallLockInteractionSurface surface = _doors.InteractionSurface(id);
         DaggerfallLockInteractionDecision decision = DaggerfallLockInteractionPolicy.EvaluateLockpickDeferred(
             door,
             surface,
