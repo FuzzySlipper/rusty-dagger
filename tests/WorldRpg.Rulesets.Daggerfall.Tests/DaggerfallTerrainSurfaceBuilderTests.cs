@@ -151,6 +151,31 @@ public sealed class DaggerfallTerrainSurfaceBuilderTests
         Assert.Equal(explicitPass.Triangles, overload.Triangles);
     }
 
+    [Fact]
+    public void Samples_the_donor_location_parent_height_from_the_flattened_surface()
+    {
+        int count = DaggerfallTerrainSurfaceBuilder.SampleDimension * DaggerfallTerrainSurfaceBuilder.SampleDimension;
+        float[] heights = new float[count];
+        for (int y = 0; y < DaggerfallTerrainSurfaceBuilder.SampleDimension; y++)
+        for (int x = 0; x < DaggerfallTerrainSurfaceBuilder.SampleDimension; x++)
+            heights[Index(x, y)] = (x + y) / (2F * (DaggerfallTerrainSurfaceBuilder.SampleDimension - 1));
+
+        DaggerfallTerrainSurface surface = new(
+            241,
+            132,
+            Enumerable.Range(0, count).Select(index => new Vector3(index % DaggerfallTerrainSurfaceBuilder.SampleDimension,
+                heights[index] * DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize,
+                index / DaggerfallTerrainSurfaceBuilder.SampleDimension)).ToArray(),
+            [new Triangle(0, 1, DaggerfallTerrainSurfaceBuilder.SampleDimension)],
+            heights);
+
+        float expected = DaggerfallTerrainSurfaceBuilder.LocationSampleCoordinate
+            * DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize;
+        Assert.Equal(expected, DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surface,
+            DaggerfallTerrainSurfaceBuilder.LocationSampleCoordinate,
+            DaggerfallTerrainSurfaceBuilder.LocationSampleCoordinate), precision: 2);
+    }
+
     private static DaggerfallTerrainSet FlatTerrain(int width, int height, byte heightValue, byte sampleValue)
     {
         return new DaggerfallTerrainSet(

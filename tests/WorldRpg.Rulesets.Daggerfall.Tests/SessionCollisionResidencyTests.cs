@@ -156,12 +156,14 @@ public sealed class SessionCollisionResidencyTests
         Assert.Equal(entering.Select(DaggerfallExteriorCellResidency.InstanceId).ToHashSet(), InstanceIds(crossing));
         Assert.Equal(leaving.Select(DaggerfallExteriorCellResidency.AssetId).ToHashSet(), crossing.RemovedAssets.ToArray().ToHashSet());
         Assert.Equal(leaving.Select(DaggerfallExteriorCellResidency.InstanceId).ToHashSet(), crossing.RemovedInstances.ToArray().ToHashSet());
+        DaggerfallExteriorCellResidencySave moved = session.Sites.CaptureExteriorResidency()!.Value;
         DaggerfallExteriorWorldOrigin origin = new(window.Origin.X, window.Origin.Y, new Vector3(window.CompensationX, window.CompensationY, window.CompensationZ));
+        DaggerfallExteriorWorldOrigin movedOrigin = new(moved.Origin.X, moved.Origin.Y,
+            new Vector3(moved.CompensationX, moved.CompensationY, moved.CompensationZ));
         Assert.All(crossing.Instances.ToArray(), instance => Assert.Equal(
-            origin.LocalTranslation(entering.Single(cell => DaggerfallExteriorCellResidency.InstanceId(cell) == instance.Id)),
+            movedOrigin.LocalTranslation(entering.Single(cell => DaggerfallExteriorCellResidency.InstanceId(cell) == instance.Id)),
             instance.Transform.Translation));
         Assert.Equal(Window(east).Select(DaggerfallExteriorCellResidency.AssetId).ToHashSet(), ExteriorAssets(spatial));
-        DaggerfallExteriorCellResidencySave moved = session.Sites.CaptureExteriorResidency()!.Value;
         Assert.Equal(east, moved.Center);
         Assert.Equal(window.Origin, moved.Origin);
         WorldOriginCommitReceipt rebase = Assert.Single(engine.OriginCommits);
@@ -173,7 +175,8 @@ public sealed class SessionCollisionResidencyTests
         // The crossing preserves world-space poses and vitals. Both player and actor adopt the
         // receipt's local delta, keeping their relative position and the collision window aligned.
         Assert.Equal(crossed.ToVector() + rebase.LocalDelta, session.State.PlayerControl.Position!.Value.ToVector());
-        Assert.Equal(crossed.ToVector() - origin.Compensation,
+        Vector3 activeFrame = session.Sites.ExteriorProfileFrameTranslation(exterior.ProfileKey);
+        Assert.Equal(crossed.ToVector() + rebase.LocalDelta - activeFrame,
             session.Sites.LocalToProfile(session.State.PlayerControl.Position.Value.ToVector()));
         Assert.Equal(yaw, session.State.PlayerControl.YawRadians);
         Assert.Equal(health, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
@@ -248,8 +251,8 @@ public sealed class SessionCollisionResidencyTests
         DaggerfallExteriorCellResidencySave originSave = session.Sites.CaptureExteriorResidency()!.Value;
         DaggerfallExteriorWorldOrigin origin = new(originSave.Origin.X, originSave.Origin.Y,
             new Vector3(originSave.CompensationX, originSave.CompensationY, originSave.CompensationZ));
-        DaggerfallExteriorCellId residentCell = new(residentRecord.MapPixelX, residentRecord.MapPixelY);
-        Vector3 expectedResidentPose = profilePose.ToVector() + origin.LocalTranslation(residentCell);
+        Vector3 expectedResidentPose = profilePose.ToVector()
+            + session.Sites.ExteriorProfileFrameTranslation(resident.ProfileKey);
         Assert.Equal(expectedResidentPose.X, session.State.Actors.Get(actorId).Position.X, 3);
         Assert.Equal(expectedResidentPose.Y, session.State.Actors.Get(actorId).Position.Y, 3);
         Assert.Equal(expectedResidentPose.Z, session.State.Actors.Get(actorId).Position.Z, 3);
