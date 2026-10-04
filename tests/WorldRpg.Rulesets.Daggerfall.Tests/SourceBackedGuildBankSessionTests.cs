@@ -353,8 +353,11 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         DaggerfallSiteProfile kynareth = SourceProfile(sites, "TEMPAAH0.RMB", 3, 1, 13, 14, 35);
         DaggerfallSiteProfile exterior = Assert.Single(sites, profile =>
             profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && profile.Site == bank.Site);
+        DaggerfallSiteId smallShipSite = Assert.Single(definitions.Locations.Records,
+            location => location.Kind == DaggerfallSiteKind.HomeYourShips
+                && location.Id == new DaggerfallSiteId(31, 1)).Id;
         DaggerfallSiteProfile smallShip = Assert.Single(sites, profile =>
-            profile.ProfileKey.LogicalId == "small-ship");
+            profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && profile.Site == smallShipSite);
 
         ContentPack blocksPack = resolved.ContentPacks.Single(pack => pack.Role == new ContentPackRoleId("daggerfall.blocks"));
         DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(blocksPack.Payload);
