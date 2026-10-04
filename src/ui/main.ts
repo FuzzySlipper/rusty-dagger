@@ -588,6 +588,12 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     input.setAttribute('aria-label', `Quantity of ${item.label}`);
     return input;
   };
+  const merchantPriceLabel = (item: MerchantItemProjection, amountInput?: HTMLInputElement): HTMLSpanElement => {
+    const label = document.createElement('span');
+    const unitPrice = String(item.unitPrice);
+    label.textContent = amountInput === undefined ? `Unit price ${unitPrice} gold` : `Unit price ${unitPrice} gold each`;
+    return label;
+  };
   const merchantAction = (action: string, merchant: MerchantProjection, item: MerchantItemProjection, label: string,
     amountInput?: HTMLInputElement): HTMLButtonElement => {
     const button = document.createElement('button');
@@ -625,11 +631,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       const list = document.createElement('ul');
       for (const item of items) {
         const row = document.createElement('li');
-        row.textContent = `${item.label} × ${item.quantity} · ${item.unitPrice} gold${item.stolen ? ' · stolen' : ''}`;
-        const amountInput = merchantQuantityInput(item);
-        if (amountInput && predicate(item)) row.append(' ', amountInput);
-        if (predicate(item)) row.append(' ', merchantAction(action, merchant, item, action === 'merchant-buy' ? 'Buy' : 'Sell', amountInput));
-        if (action === 'merchant-buy' && predicate(item)) row.append(' ', merchantAction('merchant-shoplift', merchant, item, 'Steal', amountInput));
+        row.textContent = `${item.label} × ${item.quantity}${item.stolen ? ' · stolen' : ''} · `;
+        const tradeAvailable = predicate(item);
+        const amountInput = tradeAvailable ? merchantQuantityInput(item) : undefined;
+        row.append(merchantPriceLabel(item, amountInput));
+        if (amountInput) row.append(' ', amountInput);
+        if (tradeAvailable) row.append(' ', merchantAction(action, merchant, item, action === 'merchant-buy' ? 'Buy' : 'Sell', amountInput));
+        if (action === 'merchant-buy' && tradeAvailable) row.append(' ', merchantAction('merchant-shoplift', merchant, item, 'Steal', amountInput));
         if (action === 'merchant-sell' && merchant.repairAvailable && item.key.startsWith('unique:') && item.maximumCondition > item.currentCondition)
           row.append(' ', merchantAction('merchant-repair', merchant, item, 'Repair'));
         if (action === 'merchant-sell' && merchant.identifyAvailable && item.key.startsWith('unique:') && !item.identified)
