@@ -221,6 +221,7 @@ public sealed class DaggerfallLodgingTests
         private readonly DaggerfallBlocksSnapshot blocks;
         private readonly DaggerfallSiteProfiles profiles;
         private readonly ResolvedCompositionIdentity identity;
+        private readonly DaggerfallSkyMedia sky;
         private ulong step = 1;
         internal DaggerfallSession Session { get; }
         internal DaggerfallSiteProfile Interior { get; }
@@ -239,20 +240,27 @@ public sealed class DaggerfallLodgingTests
             Exterior = Profile(candidates[0].Id, null, "lodging-exterior", DaggerfallWorldProfileKind.Exterior);
             profiles = new([Interior, Other, Exterior]);
             identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+            sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content);
             Session = Create(null);
             DaggerfallSiteProfile Profile(DaggerfallSiteId site, DaggerfallSiteBuildingSource? building, string name, DaggerfallWorldProfileKind kind) => new(
                 new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()), source.SpatialArtifact, source.StaticMesh,
                 source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, site, profileKind: kind, logicalProfileId: name,
-                interiorBuilding: building is null ? null : new(building.Id.BlockX, building.Id.BlockY, building.Source.Id, 15, building.Source.FactionId));
+                interiorBuilding: building is null ? null : new(building.Id.BlockX, building.Id.BlockY, building.Source.Id, 15, building.Source.FactionId),
+                billboardSprites: source.BillboardSprites, terrainTextures: source.TerrainTextures);
         }
         private DaggerfallSession Create(RulesetSavePayload? save)
         {
             ContentFake content = new(releases);
-            foreach (var profile in new[] { Interior, Other, Exterior }) PopulateContent(content, profile);
+            foreach (var profile in new[] { Interior, Other, Exterior })
+            {
+                PopulateContent(content, profile);
+                PopulateTerrainContent(content, profile);
+            }
             EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(Interior.SpatialArtifact.Sha256, releases).Service,
                 new AppearanceFake(releases), random: LodgingRandom.Create());
-            DaggerfallSessionComposition composition = new(definitions, Interior, DaggerfallTuning.Defaults, identity) { Profiles = profiles, Blocks = blocks };
+            DaggerfallSessionComposition composition = new(definitions, Interior, DaggerfallTuning.Defaults, identity)
+                { Profiles = profiles, Blocks = blocks, Sky = sky };
             return save is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, save);
         }
         internal DaggerfallSession Restore(RulesetSavePayload save) => Create(save);
@@ -266,6 +274,11 @@ public sealed class DaggerfallLodgingTests
             var stack = InventoryStackId.Parse("lodging.gold");
             Session.State.Inventory.Grant(new(new InventoryItemId(item.Id.Value), stack, quantity));
             Session.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Player, stack, DaggerfallItemInstanceMetadata.Default(item, DaggerfallItemOwner.Player));
+        }
+        private static void PopulateTerrainContent(ContentFake content, DaggerfallSiteProfile profile)
+        {
+            foreach (NormalizedTerrainTexture texture in profile.TerrainTextures.Values)
+                content.Add(texture.TexturePath, texture.TextureSha256);
         }
         public void Dispose() => Session.Dispose();
     }

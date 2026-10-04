@@ -185,8 +185,10 @@ public sealed class DaggerfallMusicSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
         DaggerfallSiteProfile outside = ReadProfile(root, content, definitions, "daggerfall.charing-interior-1-1-0.json");
-        DaggerfallSiteProfile destination = ExteriorContentAt(outside, outside.ProfileKey.Site,
-            "alternate-music-rotation");
+        // The destination is the source-published Charing exterior. The interior publication has
+        // no terrain media, while the exterior publication carries the normalized climate terrain
+        // set (including the 102/1 tile selected by the admitted climate cell).
+        DaggerfallSiteProfile destination = ReadProfile(root, content, definitions, "daggerfall.charing-exterior.json");
         DaggerfallMusicBundle bundle = DaggerfallMusicBundle.Admit(content, outside.Music)!;
         List<string> releases = [];
         ContentFake contentService = new(releases);
@@ -242,39 +244,6 @@ public sealed class DaggerfallMusicSessionTests
         payload["music"]!["alternatePlaylists"] = alternate;
         return DaggerfallTuning.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()));
     }
-
-    private static DaggerfallSiteProfile ExteriorContentAt(DaggerfallSiteProfile source, DaggerfallSiteId site,
-        string logicalId) => new(
-        new ProjectFacts(new WorldPoint(1f, 1f, 1f), source.Project.Actors),
-        source.SpatialArtifact,
-        source.StaticMesh,
-        source.WorldAppearance,
-        source.InitialLook,
-        source.Materials,
-        source.ActorSprites,
-        source.MobileSprites,
-        source.Audio,
-        source.ClassicPresentation,
-        site,
-        [],
-        DaggerfallWorldProfileKind.Exterior,
-        logicalId,
-        source.Portals,
-        source.Anchors.Values.ToArray(),
-        source.Lights,
-        source.GroundContainerSprite,
-        null,
-        [],
-        [],
-        null,
-        source.Music,
-        source.AudioBundle,
-        source.QuestMarkers,
-        source.BillboardSprites,
-        [],
-        source.WaterVolumes,
-        source.TerrainTextures,
-        []);
 
     private static void PopulateTerrainContent(ContentFake content, DaggerfallSiteProfile profile)
     {

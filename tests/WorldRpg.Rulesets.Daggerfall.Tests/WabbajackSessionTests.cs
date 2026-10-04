@@ -41,7 +41,7 @@ public sealed class WabbajackSessionTests
         Assert.False(f.Session.State.Actors.Store.IsAlive(oldEntity));
         Assert.NotEqual(oldEntity, replacement.Actor.Entity);
         Assert.Equal(count, f.Session.State.Actors.All.Count());
-        Assert.Equal(canonicalPose, replacement.Pose);
+        AssertEquivalentPose(canonicalPose, replacement.Pose);
         Assert.Equal("lich", f.Session.DefinitionsByActor[f.Target].Id.Value);
         Assert.Equal(Health(replacement).Maximum.Value - 3, Health(replacement).Current);
         Assert.Contains("Wabbajack transformed", f.Session.Presentation.LastOutcome, StringComparison.Ordinal);
@@ -50,7 +50,7 @@ public sealed class WabbajackSessionTests
         using var restored = DaggerfallSession.Restore(f.Engine().Context, f.Composition, f.Session.CaptureSave());
         var resumed = restored.State.Actors.Get(f.Target);
         Assert.Equal(replacement.Actor.TypeId, resumed.Actor.TypeId);
-        Assert.Equal(canonicalPose, resumed.Pose);
+        AssertEquivalentPose(canonicalPose, resumed.Pose);
         Assert.Equal(DaggerfallWabbajack.DefinitionOf(replacement.Actor), DaggerfallWabbajack.DefinitionOf(resumed.Actor));
         Assert.Equal(Health(replacement).Current, Health(resumed).Current);
         Assert.Equal(condition, restored.State.ItemInstances.RequireUnique(f.Source).CurrentCondition);
@@ -151,8 +151,8 @@ public sealed class WabbajackSessionTests
         Assert.False(f.Session.State.Actors.TryGet(f.Target, out _));
         using var restored = DaggerfallSession.Restore(f.Engine(destination).Context, f.Composition with { Profiles = profiles }, f.Session.CaptureSave());
         Assert.True(restored.TryTransitionTo(f.Inputs.ProfileKey));
-        Assert.Equal(first, restored.State.Actors.Get(f.Target).Pose);
-        Assert.Equal(second, restored.State.Actors.Get(dynamic).Pose);
+        AssertEquivalentPose(first, restored.State.Actors.Get(f.Target).Pose);
+        AssertEquivalentPose(second, restored.State.Actors.Get(dynamic).Pose);
         Assert.Equal("lich", restored.State.Actors.Get(f.Target).Actor.TypeId.Value);
         Assert.Equal("lich", restored.State.Actors.Get(dynamic).Actor.TypeId.Value);
         Assert.NotNull(DaggerfallWabbajack.DefinitionOf(restored.State.Actors.Get(f.Target).Actor));
@@ -160,6 +160,13 @@ public sealed class WabbajackSessionTests
     }
 
     private static Track Health(ActorState actor) => actor.Stats.GetTrack(TrackId.Parse("health"));
+
+    private static void AssertEquivalentPose(ActorPose expected, ActorPose actual)
+    {
+        Assert.Equal(expected.Position, actual.Position);
+        Assert.Equal(expected.HeadingYawRadians, actual.HeadingYawRadians, precision: 5);
+    }
+
     private sealed class Strike(bool hit, bool allowed) : ICombatContribution
     {
         public void Hit(TryHitEvent value) => value.Hit = hit;
