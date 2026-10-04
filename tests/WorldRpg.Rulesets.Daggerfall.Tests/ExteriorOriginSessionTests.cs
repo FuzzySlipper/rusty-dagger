@@ -41,6 +41,68 @@ public sealed class ExteriorOriginSessionTests
             using DaggerfallSession session = DaggerfallSession.StartNew(context.Context,
                 new(definitions, exterior, DaggerfallTuning.Defaults));
             Vector3 exteriorFrame = session.Sites.ExteriorProfileFrameTranslation(exterior.ProfileKey);
+            // Charing's sampled terrain height is deliberately not representable by the old
+            // quarter-level placement field.  The location artifact and every source-owned pose
+            // must therefore agree on this exact continuous frame.
+            float quarterQuantized = MathF.Round(exteriorFrame.Y / .25F) * .25F;
+            Assert.True(MathF.Abs(exteriorFrame.Y - quarterQuantized) > .001F,
+                $"Charing's sampled location frame was quantized to {quarterQuantized} instead of retaining {exteriorFrame.Y}.");
+            WorldPoint sourcePlayer = exterior.Project.PlayerPosition
+                ?? throw new InvalidOperationException("Charing exterior has no authored player position.");
+            WorldPoint livePlayer = session.State.PlayerControl.Position
+                ?? throw new InvalidOperationException("Native Charing session has no live player position.");
+            Assert.Equal(sourcePlayer.X + exteriorFrame.X, livePlayer.X, 3);
+            Assert.Equal(sourcePlayer.Y + exteriorFrame.Y, livePlayer.Y, 3);
+            Assert.Equal(sourcePlayer.Z + exteriorFrame.Z, livePlayer.Z, 3);
+
+            Assert.NotEmpty(exterior.Doors);
+            DaggerfallRdbDoorDefinition sourceDoor = exterior.Doors[0];
+            DaggerfallDoorView liveDoor = session.Sites.Projection.Doors.Read(sourceDoor.Id);
+            Assert.Equal(sourceDoor.Position.X + exteriorFrame.X, liveDoor.Pose.Translation.X, 3);
+            Assert.Equal(sourceDoor.Position.Y + exteriorFrame.Y, liveDoor.Pose.Translation.Y, 3);
+            Assert.Equal(sourceDoor.Position.Z + exteriorFrame.Z, liveDoor.Pose.Translation.Z, 3);
+
+            // Probe an admitted neighboring map pixel without a location artifact.  This keeps
+            // the ray on the real generated terrain mesh, while the city ray below remains the
+            // native artifact collision check.
+            DaggerfallExteriorCellResidencySave admitted = session.Sites.CaptureExteriorResidency()
+                ?? throw new InvalidOperationException("Native Charing session did not admit an exterior terrain window.");
+            HashSet<DaggerfallExteriorCellId> locationCells = definitions.Locations.Records
+                .Where(record => record.Exterior is not null)
+                .Select(record => new DaggerfallExteriorCellId(record.Exterior!.MapPixelX, record.Exterior.MapPixelY))
+                .ToHashSet();
+            DaggerfallExteriorCellId terrainCell = default;
+            bool foundTerrainCell = false;
+            for (int row = -DaggerfallExteriorCellResidency.StreamingRadius;
+                 row <= DaggerfallExteriorCellResidency.StreamingRadius && !foundTerrainCell; row++)
+            {
+                for (int column = -DaggerfallExteriorCellResidency.StreamingRadius;
+                     column <= DaggerfallExteriorCellResidency.StreamingRadius; column++)
+                {
+                    DaggerfallExteriorCellId candidate = new(admitted.Origin.MapPixelX + column,
+                        admitted.Origin.MapPixelY + row);
+                    if ((uint)candidate.X >= (uint)definitions.Terrain.Width
+                        || (uint)candidate.Y >= (uint)definitions.Terrain.Height
+                        || locationCells.Contains(candidate)) continue;
+                    terrainCell = candidate;
+                    foundTerrainCell = true;
+                    break;
+                }
+            }
+            Assert.True(foundTerrainCell, "Charing's admitted terrain window had no non-city collision cell to probe.");
+            DaggerfallTerrainSurface terrain = DaggerfallTerrainSurfaceBuilder.Build(
+                definitions.Terrain, terrainCell.X, terrainCell.Y);
+            float terrainProbeCoordinate = .5F + (1F / (2F * (DaggerfallTerrainSurfaceBuilder.SampleDimension - 1)));
+            Vector3 terrainPoint = admitted.Origin.LocalTranslation(terrainCell) + new Vector3(
+                terrainProbeCoordinate * DaggerfallTerrainSurfaceBuilder.HorizontalSize,
+                DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(terrain, terrainProbeCoordinate, terrainProbeCoordinate),
+                terrainProbeCoordinate * DaggerfallTerrainSurfaceBuilder.HorizontalSize);
+            SpatialHit terrainHit = Hit(terrainPoint + Vector3.UnitY * 20F);
+            Assert.True(terrainHit.Present);
+            Assert.Equal(terrainPoint.X, terrainHit.Point.X, 2);
+            Assert.Equal(terrainPoint.Y, terrainHit.Point.Y, 2);
+            Assert.Equal(terrainPoint.Z, terrainHit.Point.Z, 2);
+
             Vector3 ray = exterior.Portals[0].Position.ToVector() + exteriorFrame + Vector3.UnitY * 20f;
             SpatialHit Hit(Vector3 point) => spatial.CastRay(new(recorded.Session!, point, -Vector3.UnitY, 100f,
                 default, ReadOnlyMemory<SpatialEntityCollider>.Empty, ReadOnlyMemory<ulong>.Empty,
@@ -54,6 +116,21 @@ public sealed class ExteriorOriginSessionTests
             NavigationStepResult beforeRoute = spatial.EvaluateNavigationStep(new(recorded.Session!,
                 routePoint, routePoint, 1f, 1000));
             Assert.Equal(NavigationPathOutcome.Reached, beforeRoute.Outcome);
+
+            // Advance only the calendar: this admits the real Charing source population without
+            // running a movement step, so its first actor pose remains an exact source-frame fact.
+            session.AdvanceElapsedTime(8 * 60 * 60);
+            DaggerfallNpc[] civilians = [.. session.State.Npcs.All.Where(npc =>
+                npc.StableKey.StartsWith("population/", StringComparison.Ordinal))];
+            Assert.NotEmpty(civilians);
+            DaggerfallNpc civilian = civilians[0];
+            DaggerfallPopulationPlacement sourcePopulation = Assert.Single(exterior.Population,
+                placement => placement.Id == civilian.StableKey);
+            Assert.True(session.State.Actors.TryGet(civilian.DurableId, out ActorState? civilianActor));
+            Assert.Equal(sourcePopulation.Position.X + exteriorFrame.X, civilianActor!.Position.X, 3);
+            Assert.Equal(sourcePopulation.Position.Y + exteriorFrame.Y, civilianActor.Position.Y, 3);
+            Assert.Equal(sourcePopulation.Position.Z + exteriorFrame.Z, civilianActor.Position.Z, 3);
+
             session.State.PlayerControl.MoveTo(new Vector3(1000f, 1f, 5f));
             long actor = session.SpawnActor("rat", new ActorPose(new WorldPoint(1002f, 1f, 5f), 0f));
             session.Sites.RebaseExteriorIfNeeded();
