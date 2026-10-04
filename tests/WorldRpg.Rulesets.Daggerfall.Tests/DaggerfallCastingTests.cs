@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text.Json;
 using System.Reflection;
 using Rusty.Engine;
@@ -60,6 +61,24 @@ public sealed class DaggerfallCastingTests
         Assert.Equal(new System.Numerics.Vector3(1, 2, 3), bundle.ActionSource!.Origin);
         Assert.Null(bundle.CasterId);
         Assert.False(bundle.Delivered);
+    }
+
+    [Fact]
+    public void Dungeon_missile_captures_donor_launch_offset_direction_and_area_target_mode_once()
+    {
+        using Harness ranged = new(range: 1);
+        var source = new DaggerfallActionCastSource("action/ranged", 44, 1, Vector3.Zero, 5);
+        var bundle = Assert.IsType<DaggerfallLiveSpell>(ranged.Casting.TriggerDungeonAction(source, 0, new(0, 0, 10)).Bundle);
+
+        Assert.Equal(new Vector3(0, 1, 0), bundle.ReleaseOrigin);
+        Assert.Equal(Vector3.UnitZ, bundle.ReleaseDirection);
+        Assert.Equal(DaggerfallSpellTarget.SingleTargetAtRange, bundle.Target);
+
+        using Harness area = new(range: 3);
+        var areaBundle = Assert.IsType<DaggerfallLiveSpell>(area.Casting.TriggerDungeonAction(source, 0, new(0, 0, 10)).Bundle);
+        Assert.Equal(DaggerfallSpellTarget.AreaAroundCaster, areaBundle.Target);
+        Assert.Equal(new Vector3(0, 1, 0), areaBundle.ReleaseOrigin);
+        Assert.Equal(Vector3.UnitZ, areaBundle.ReleaseDirection);
     }
 
     [Fact]

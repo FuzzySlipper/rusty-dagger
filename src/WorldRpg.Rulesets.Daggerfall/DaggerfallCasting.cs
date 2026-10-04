@@ -79,7 +79,9 @@ internal sealed class DaggerfallLiveSpell(long sequence, long? casterId, ulong? 
     internal DaggerfallCastSource Source { get; } = source;
     internal DaggerfallActionCastSource? ActionSource { get; set; } = actionSource;
     internal Vector3? ReleaseOrigin { get; set; } = origin;
-    internal Vector3? ReleaseDirection { get; } = direction;
+    internal Vector3? ReleaseDirection { get; set; } = direction;
+    /// <summary>Elapsed movement time for a transient dungeon missile; reset on admission only.</summary>
+    internal double DungeonFlightElapsedSeconds { get; set; }
     internal bool BypassSave => Source == DaggerfallCastSource.ItemHeld || Source == DaggerfallCastSource.ItemUse && Target == DaggerfallSpellTarget.CasterOnly;
     internal bool BypassChance => Source == DaggerfallCastSource.ItemUse && Target == DaggerfallSpellTarget.CasterOnly;
     internal long Sequence { get; } = sequence;
@@ -169,7 +171,8 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
     /// component at no cost; other actions create an actorless missile whose source is the admitted
     /// action resource and whose target is the player.
     /// </summary>
-    internal DaggerfallCastResult TriggerDungeonAction(DaggerfallActionCastSource source, int spellOrdinal)
+    internal DaggerfallCastResult TriggerDungeonAction(DaggerfallActionCastSource source, int spellOrdinal,
+        Vector3? targetPosition = null)
     {
         if (!source.IsValid || source.TargetId != playerId) return Finish(DaggerfallCastOutcome.SourceUnavailable);
         if (spellOrdinal < 0) return Finish(DaggerfallCastOutcome.UnknownSpell);
@@ -184,20 +187,24 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         if (target == DaggerfallSpellTarget.CasterOnly)
             return ReadyDungeonActionSpell(key, spell);
 
-        // DaggerfallAction converts a touch payload to a missile aimed at the player after the
-        // source bundle has been admitted. Preserve the source catalog target for definition
-        // validation while carrying the converted target on the live operation.
+        // DaggerfallAction converts only a touch payload to a missile aimed at the player after
+        // the source bundle has been admitted. Preserve every other source target mode on the
+        // live operation; in particular AreaAroundCaster is not a ranged-area conversion.
         DaggerfallSpellTarget? targetOverride = target switch
         {
             DaggerfallSpellTarget.ByTouch => DaggerfallSpellTarget.SingleTargetAtRange,
-            DaggerfallSpellTarget.AreaAroundCaster => DaggerfallSpellTarget.AreaAtRange,
             _ => null,
         };
+        Vector3 origin = source.Origin + Vector3.UnitY * DaggerfallDungeonSpellPolicy.MissileOriginHeightMetres;
+        Vector3? direction = null;
+        if (targetPosition is Vector3 targetPoint
+            && DaggerfallDungeonSpellPolicy.TryNormalizeDirection(targetPoint - source.Origin, out Vector3 normalized))
+            direction = normalized;
         long sequence = NextSequence;
         NextSequence = checked(sequence + 1);
         DaggerfallLiveSpell bundle = new(sequence, null, null, spell, 0,
             DaggerfallMagicAdmissionPolicy.CalculateCasterLevel(source.CasterLevel), definitions,
-            DaggerfallCastSource.DungeonAction, source.Origin, null, source, targetOverride);
+            DaggerfallCastSource.DungeonAction, origin, direction, source, targetOverride);
         _pending.Add(bundle);
         return Finish(DaggerfallCastOutcome.Released, bundle);
     }
@@ -440,7 +447,10 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                     ? 100 : DaggerfallMagicAdmissionPolicy.SavingThrow(source, liveProfile, () => roll(1, 100));
                 if (permanentPercent == 0) { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.Resisted, 0)); continue; }
                 permanentAmount = (int)(permanentAmount * (permanentPercent / 100f));
-                DaggerfallCastOrigin? origin = binding.UntilHealed
+                // An actorless action still carries its admitted source provenance into the
+                // common effect owner. Immediate destruction uses that typed action source to
+                // retain the donor's player-level power without manufacturing a caster actor.
+                DaggerfallCastOrigin? origin = bundle.Source == DaggerfallCastSource.DungeonAction || binding.UntilHealed
                     ? new(bundle.CasterId, bundle.ItemId, bundle.Source, bundle.ActionSource) : null;
                 long? operationalCaster = binding.UntilHealed ? null : bundle.CasterId;
                 ulong? operationalItem = binding.UntilHealed ? null : bundle.ItemId;
