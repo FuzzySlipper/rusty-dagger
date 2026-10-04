@@ -234,7 +234,7 @@ internal sealed class DaggerSessionPersistence
             CaptureInventory(State.ActorInventories.InventoryFor(id) ?? throw new InvalidOperationException($"Site actor {id} has no inventory."),
                 State.ActorInventories.EquipmentFor(id), DaggerfallItemOwner.Actor(id)))).ToArray();
         DaggerfallActiveEffectSave[] effects = State.Effects.Capture().Where(effect => ids.Contains(effect.TargetId)).ToArray();
-        return new DaggerfallSiteRuntimeDelta(actors, spawned, inventories, CaptureCorpses(ids), doors.Capture(), effects, motion.Capture()) { BanishedActors = [.. BanishedActors().Order()] };
+        return new DaggerfallSiteRuntimeDelta(actors, spawned, inventories, CaptureCorpses(ids), doors.Capture(), effects, motion.Capture()) { BanishedActors = [.. BanishedActors().Where(inputs.Project.Actors.ContainsKey).Order()] };
     }
 
     private DaggerfallDynamicActorSave CaptureDynamicActor(long id, string definition, Vector3 actorFrameOffset = default)
