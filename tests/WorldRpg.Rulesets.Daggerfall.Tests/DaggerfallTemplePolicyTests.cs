@@ -1,7 +1,10 @@
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -67,4 +70,168 @@ public sealed class DaggerfallTemplePolicyTests
         social.RemoveRegionalReputationSource(17, source);
         Assert.Equal(before + 3, social.RegionalReputation(17));
     }
+
+    [Fact]
+    public void One_gold_blessing_survives_seconds_59_and_expires_at_seconds_60()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        DonationContext donation = PrepareDonation(session, DaggerfallConcreteGuildCatalog.AkatoshFactionId, 1);
+        int before = Stat(session, DaggerfallMechanicsIds.Speed.Value);
+
+        DaggerfallTempleDonationQuote quote = Assert.IsType<DaggerfallTempleDonationQuote>(
+            session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 1, out DaggerfallTempleServiceResult refusal));
+        Assert.True(refusal.Accepted, refusal.Message);
+        Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
+
+        DaggerfallActiveEffect active = Assert.Single(session.State.Effects.Active);
+        Assert.Equal((uint)1, active.Lifecycle.RemainingRounds);
+        Assert.Equal(before + 2, Stat(session, DaggerfallMechanicsIds.Speed.Value));
+
+        session.AdvanceElapsedTime(59);
+        Assert.Single(session.State.Effects.Active);
+        Assert.Equal(before + 2, Stat(session, DaggerfallMechanicsIds.Speed.Value));
+
+        session.AdvanceElapsedTime(1);
+        Assert.Empty(session.State.Effects.Active);
+        Assert.Equal(before, Stat(session, DaggerfallMechanicsIds.Speed.Value));
+    }
+
+    [Fact]
+    public void Two_gold_blessing_expires_at_the_second_minute_boundary()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        DonationContext donation = PrepareDonation(session, DaggerfallConcreteGuildCatalog.AkatoshFactionId, 2);
+        int before = Stat(session, DaggerfallMechanicsIds.Speed.Value);
+
+        DaggerfallTempleDonationQuote quote = Assert.IsType<DaggerfallTempleDonationQuote>(
+            session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 2, out DaggerfallTempleServiceResult refusal));
+        Assert.True(refusal.Accepted, refusal.Message);
+        Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
+        Assert.Equal((uint)2, Assert.Single(session.State.Effects.Active).Lifecycle.RemainingRounds);
+
+        session.AdvanceElapsedTime(119);
+        Assert.Single(session.State.Effects.Active);
+        Assert.Equal(before + 2, Stat(session, DaggerfallMechanicsIds.Speed.Value));
+
+        session.AdvanceElapsedTime(1);
+        Assert.Empty(session.State.Effects.Active);
+        Assert.Equal(before, Stat(session, DaggerfallMechanicsIds.Speed.Value));
+    }
+
+    [Fact]
+    public void One_gold_blessing_round_trips_mid_minute_and_expires_at_the_next_boundary()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        DonationContext donation = PrepareDonation(session, DaggerfallConcreteGuildCatalog.AkatoshFactionId, 1);
+        int before = Stat(session, DaggerfallMechanicsIds.Speed.Value);
+
+        DaggerfallTempleDonationQuote quote = Assert.IsType<DaggerfallTempleDonationQuote>(
+            session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 1, out DaggerfallTempleServiceResult refusal));
+        Assert.True(refusal.Accepted, refusal.Message);
+        Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
+        session.AdvanceElapsedTime(30);
+        RulesetSavePayload save = session.CaptureSave();
+        Assert.Equal((uint)1, Assert.Single(DaggerfallSavePayload.Read(save).ActiveEffects).RemainingRounds);
+
+        using DaggerfallSession restored = fixture.Restore(save);
+        Assert.Single(restored.State.Effects.Active);
+        Assert.Equal(before + 2, Stat(restored, DaggerfallMechanicsIds.Speed.Value));
+        restored.AdvanceElapsedTime(29);
+        Assert.Single(restored.State.Effects.Active);
+        restored.AdvanceElapsedTime(1);
+        Assert.Empty(restored.State.Effects.Active);
+        Assert.Equal(before, Stat(restored, DaggerfallMechanicsIds.Speed.Value));
+    }
+
+    [Fact]
+    public void All_seven_paid_blessings_apply_and_Stendarr_reputation_cleans_up_on_replacement()
+    {
+        (int Deity, DaggerfallTempleBlessingTarget Target, string? Stat)[] targets =
+        [
+            (DaggerfallConcreteGuildCatalog.AkatoshFactionId, DaggerfallTempleBlessingTarget.Speed, DaggerfallMechanicsIds.Speed.Value),
+            (DaggerfallConcreteGuildCatalog.DibellaFactionId, DaggerfallTempleBlessingTarget.Luck, DaggerfallMechanicsIds.Luck.Value),
+            (DaggerfallConcreteGuildCatalog.JulianosFactionId, DaggerfallTempleBlessingTarget.Intelligence, DaggerfallMechanicsIds.Intelligence.Value),
+            (DaggerfallConcreteGuildCatalog.KynarethFactionId, DaggerfallTempleBlessingTarget.Endurance, DaggerfallMechanicsIds.Endurance.Value),
+            (DaggerfallConcreteGuildCatalog.MaraFactionId, DaggerfallTempleBlessingTarget.Personality, DaggerfallMechanicsIds.Personality.Value),
+            (DaggerfallConcreteGuildCatalog.StendarrFactionId, DaggerfallTempleBlessingTarget.LegalReputation, null),
+            (DaggerfallConcreteGuildCatalog.ZenitharFactionId, DaggerfallTempleBlessingTarget.Mercantile, "mercantile"),
+        ];
+
+        foreach ((int deity, DaggerfallTempleBlessingTarget target, string? stat) in targets)
+        {
+            // Group 17 permits only one temple membership at a time. Each source target therefore
+            // gets its own real session; the Stendarr iteration additionally proves replacement
+            // removes its regional source before the incoming one is applied.
+            using ConditionSessionFixture fixture = new();
+            DaggerfallSession session = fixture.Session;
+            int region = session.Site.Region ?? throw new InvalidOperationException("The blessing test requires an active source site.");
+            Assert.True(session.State.Currency.ReceiveGold(stat is null ? 2UL : 1UL));
+            DonationContext donation = PrepareDonation(session, deity, 1);
+            int baseRegional = session.State.Social.RegionalReputation(region);
+            int baseStat = stat is null ? 0 : Stat(session, stat);
+            DaggerfallTempleDonationQuote quote = Assert.IsType<DaggerfallTempleDonationQuote>(
+                session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 1, out DaggerfallTempleServiceResult refusal));
+            Assert.True(refusal.Accepted, refusal.Message);
+            Assert.True(session.State.TempleServices.CommitDonation(quote).Accepted);
+            DaggerfallTempleBlessingState state = DaggerfallTempleBlessingEffects.Read(Assert.Single(session.State.Effects.Active).State);
+            Assert.Equal(target, state.Target);
+            Assert.Equal(2, state.Magnitude);
+            if (stat is not null)
+            {
+                Assert.Equal(baseStat + 2, Stat(session, stat));
+                Assert.Equal(baseRegional, session.State.Social.RegionalReputation(region));
+            }
+            else
+            {
+                Assert.Equal(baseRegional + 2, session.State.Social.RegionalReputation(region));
+                DaggerfallTempleDonationQuote replacement = Assert.IsType<DaggerfallTempleDonationQuote>(
+                    session.State.TempleServices.QuoteDonation(donation.Provider, donation.Building, 1, out DaggerfallTempleServiceResult replacementRefusal));
+                Assert.True(replacementRefusal.Accepted, replacementRefusal.Message);
+                Assert.True(session.State.TempleServices.CommitDonation(replacement).Accepted);
+                Assert.Equal(baseRegional + 2, session.State.Social.RegionalReputation(region));
+                Assert.True(session.State.Effects.Cancel(Assert.Single(session.State.Effects.Active).Lifecycle.Context.Instance));
+                Assert.Equal(baseRegional, session.State.Social.RegionalReputation(region));
+            }
+        }
+
+        // All seven target paths were admitted and the Stendarr source was retired through the
+        // effect lifecycle's normal replacement/cleanup owner above.
+    }
+
+    [Fact]
+    public void Admission_rounds_reserve_the_initial_magic_round_for_paid_minutes()
+    {
+        Assert.Equal((uint)2, DaggerfallTempleBlessingEffects.AdmissionRounds(1));
+        Assert.Equal((uint)3, DaggerfallTempleBlessingEffects.AdmissionRounds(2));
+        Assert.Equal((uint)DaggerfallTemplePolicy.MaximumBlessingMinutes + 1,
+            DaggerfallTempleBlessingEffects.AdmissionRounds(DaggerfallTemplePolicy.MaximumBlessingMinutes));
+    }
+
+    private static DonationContext PrepareDonation(DaggerfallSession session, int deity, ulong gold)
+    {
+        DaggerfallSiteRecord site = session.Site.ActiveSite
+            ?? throw new InvalidOperationException("The blessing test requires an active source site.");
+        DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, string.Empty, session.Sites.ActiveProfile.LogicalId);
+        long providerId = session.State.Npcs.RegisterStable(
+            DaggerfallNpcKind.Static,
+            "temple-lifetime-test-provider",
+            npcSite,
+            new DaggerfallNpcAppearance("Breton", "Male", 0, 0, 1, 810),
+            "temple priest",
+            ["donate"]);
+        _ = session.State.Social.JoinGuild(DaggerfallTemplePolicy.MembershipFaction(deity), currentDay: 0);
+        if (session.State.Currency.Read().Gold < gold) Assert.True(session.State.Currency.ReceiveGold(gold));
+        DaggerfallServiceProvider provider = new(providerId, npcSite, "donate");
+        DaggerfallInteriorBuilding building = new(0, 0, new("temple-lifetime-test", 0), 14,
+            DaggerfallConcreteGuildCatalog.ForDeity(deity).FactionId);
+        return new(provider, building);
+    }
+
+    private static int Stat(DaggerfallSession session, string id) =>
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse(id)).ValueInt;
+
+    private sealed record DonationContext(DaggerfallServiceProvider Provider, DaggerfallInteriorBuilding Building);
 }

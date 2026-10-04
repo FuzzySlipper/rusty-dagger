@@ -184,7 +184,10 @@ internal sealed class DaggerfallTempleServiceRuntime
                 Element: null,
                 ItemId: null,
                 Stacks: 1,
-                RemainingRounds: checked((uint)quote.DurationMinutes),
+                // Start applies one magic round immediately. Keep the canonical calendar expiry at
+                // now + duration while reserving that admission round, so a one-gold blessing
+                // remains active through the following minute rather than ending at admission.
+                RemainingRounds: DaggerfallTempleBlessingEffects.AdmissionRounds(quote.DurationMinutes),
                 State: DaggerfallTempleBlessingEffects.Encode(state)));
             if (started is not (DaggerfallEffectAdmissionOutcome.Started or DaggerfallEffectAdmissionOutcome.Replaced))
                 throw new InvalidOperationException($"Temple blessing admission unexpectedly returned {started} after payment.");

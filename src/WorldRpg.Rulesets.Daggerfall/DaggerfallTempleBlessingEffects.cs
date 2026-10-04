@@ -41,6 +41,19 @@ internal static class DaggerfallTempleBlessingEffects
     internal const string Key = "temple-blessing";
     private const string SourceDefinition = "daggerfall.temple-blessing";
 
+    /// <summary>
+    /// Converts the paid calendar duration to the lifecycle lifetime. Effect admission consumes
+    /// one initial magic round before the next calendar minute, while <see
+    /// cref="DaggerfallTempleBlessingState.ExpiresAtMinute"/> remains the canonical wall-clock
+    /// boundary. The extra round preserves both facts without a second expiry owner.
+    /// </summary>
+    internal static uint AdmissionRounds(int durationMinutes)
+    {
+        if (durationMinutes is < 1 or > DaggerfallTemplePolicy.MaximumBlessingMinutes)
+            throw new ArgumentOutOfRangeException(nameof(durationMinutes));
+        return checked((uint)durationMinutes + 1U);
+    }
+
     internal static DaggerfallEffectDefinition Definition(
         DaggerfallSocialState social,
         Func<DaggerfallCareerDefinition> career,
