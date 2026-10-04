@@ -19,6 +19,12 @@ public sealed record Arena2SiteMedia(
 {
     /// <summary>Normalized faction and NPC flats available to quest admission at this site.</summary>
     public IReadOnlyList<string> RuntimeNpcResources { get; init; } = [];
+
+    /// <summary>Nature billboard resources admitted for exterior terrain residency.</summary>
+    public IReadOnlyList<string> RuntimeNatureResources { get; init; } = [];
+
+    /// <summary>Climate ground textures admitted for exterior terrain material remapping.</summary>
+    public IReadOnlyList<string> RuntimeTerrainResources { get; init; } = [];
 }
 
 /// <summary>
@@ -70,6 +76,20 @@ public static class Arena2SitePublication
                 : $"sprite/texture-{flat.Archive}-{flat.Record}")];
     }
 
+    /// <summary>
+    /// The source nature sets and snow variants the exterior streamer may select after a climate
+    /// or season change. The runtime still admits individual placements by source archive/record;
+    /// this list closes the published sprite set without inventing a fallback visual.
+    /// </summary>
+    public static IReadOnlyList<string> RuntimeNatureResources() =>
+        [.. Enumerable.Range(500, 12)
+            .SelectMany(archive => Enumerable.Range(1, 31).Select(record => $"sprite/texture-{archive}-{record}"))];
+
+    /// <summary>The four donor ground sets, summer/winter variants, and all 56 source tile records.</summary>
+    public static IReadOnlyList<string> RuntimeTerrainResources() =>
+        [.. new[] { 2, 3, 102, 103, 302, 303, 402, 403 }
+            .SelectMany(archive => Enumerable.Range(0, 56).Select(record => $"terrain/texture-{archive}-{record}"))];
+
     /// <summary>Publishes one RDB dungeon site, loading the texture leaves its closure names on demand.</summary>
     public static ImportPublicationPlan Dungeon(
         Arena2SiteSources sources,
@@ -109,8 +129,11 @@ public static class Arena2SitePublication
             RmbExteriorNormalizationResult result = RmbExteriorNormalizer.Normalize(new(
                 new DungeonLogicalSourceSet(sources.DungeonSources), region, location,
                 building is null ? RmbWorldProfileKind.Exterior : RmbWorldProfileKind.Interior) { Building = building, LocationIndex = locationIndex });
+            Arena2SiteMedia selectedMedia = building is null
+                ? media
+                : media with { RuntimeNatureResources = [], RuntimeTerrainResources = [] };
             (GeometryPublication geometry, Arena2DungeonMediaPublication dungeonMedia, Arena2ClassicMediaPublication classicMedia) =
-                PublishMedia(sources, result.Document, result.ReferencedMeshIds, media, $"selected RMB media '{result.Layout.LocationName}'");
+                PublishMedia(sources, result.Document, result.ReferencedMeshIds, selectedMedia, $"selected RMB media '{result.Layout.LocationName}'");
             return (Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia, geometry).Plan, result);
         });
     }
@@ -135,9 +158,11 @@ public static class Arena2SitePublication
             {
                 RuntimeActorResources = media.RuntimeActorResources,
                 RuntimeBillboardResources = [.. media.RuntimeNpcResources
+                    .Concat(media.RuntimeNatureResources)
                     .Concat([GroundContainerBillboard])
                     .Concat(document.World.StaticNpcs.Select(npc => $"sprite/texture-{npc.BillboardArchive}-{npc.BillboardRecord}"))
                     .Distinct(StringComparer.Ordinal)],
+                RuntimeTerrainResources = media.RuntimeTerrainResources,
                 AuthoredOverlays = media.DungeonOverlays,
                 TextureLeaves = textureLeaves,
                 TextureLeafConsumer = textureLeafConsumer,

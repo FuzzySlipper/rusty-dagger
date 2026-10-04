@@ -37,6 +37,7 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
     private readonly Dictionary<ulong, Transform> _residentTransforms = [];
     private readonly Dictionary<ulong, (Vector3 Linear, Vector3 Angular)> _meshVelocities = [];
     private bool _collisionAdmissionActive;
+    private bool _suspended;
     private bool _disposed;
 
     internal DaggerfallDungeonMotionProjection(
@@ -125,16 +126,18 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
         _motion.Rebase(delta);
         foreach (EntityId entity in _entitiesByAction.Values)
         {
+            if (entity.Value == 0) continue;
             Transform transform = _store.Get(entity, EngineComponentTypes.Transform);
             _store.Set(entity, EngineComponentTypes.Transform, transform with { Translation = transform.Translation + delta });
         }
         // Native origin commit shifted retained meshes; replacing with these same new local poses
         // also updates this projection's cache, so a later motion step cannot restore the old frame.
-        RebuildCollisionResidency();
+        if (!_suspended) RebuildCollisionResidency();
     }
 
     internal IReadOnlyList<(DaggerfallDungeonActionModelDefinition Model, EntityId Entity)> Visuals =>
         _entitiesByAction.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .Where(pair => pair.Value.Value != 0)
             .Select(pair => (_modelsByAction[pair.Key], pair.Value))
             .ToArray();
 
@@ -158,6 +161,7 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
     internal CharacterStepEnvironment CharacterEnvironment()
     {
         ThrowIfDisposed();
+        if (_suspended) return CharacterStepEnvironment.Empty;
         CharacterMeshInstance[] meshInstances = _collisionModels.Values
             .Where(model => _residentTransforms.ContainsKey(model.InstanceId))
             .OrderBy(model => model.Definition.ActionId, StringComparer.Ordinal)
@@ -179,6 +183,7 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
     internal DaggerfallDungeonMotionActivation Activate(string actionId)
     {
         ThrowIfDisposed();
+        if (_suspended) return DaggerfallDungeonMotionActivation.IgnoredWhileMoving;
         DaggerfallDungeonMotionActivation result = _motion.Activate(actionId);
         SyncCollisionInstances(deltaSeconds: 0d);
         return result;
@@ -187,6 +192,7 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
     internal void Advance(double deltaSeconds)
     {
         ThrowIfDisposed();
+        if (_suspended) return;
         _motion.Advance(deltaSeconds);
         SyncCollisionInstances(deltaSeconds);
     }
@@ -197,7 +203,71 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
     internal void ActivateCollisionResidency()
     {
         ThrowIfDisposed();
+        if (_suspended) return;
         RebuildCollisionResidency();
+    }
+
+    /// <summary>
+    /// Retires movable model geometry and Engine entities while retaining the authored action phase.
+    /// Re-admission creates fresh entities under the same durable resource identities.
+    /// </summary>
+    internal void Suspend()
+    {
+        ThrowIfDisposed();
+        if (_suspended) return;
+        RemoveCollisionResidency();
+        foreach ((string actionId, EntityId entity) in _entitiesByAction.ToArray())
+        {
+            _entities.Destroy(MotionIdentity(ProfileId, actionId));
+            _entitiesByAction[actionId] = default;
+        }
+        // The runtime is rebound by Resume after fresh entities exist; its durable phases remain
+        // untouched while suspended.
+        _suspended = true;
+    }
+
+    /// <summary>Recreates suspended movable model entities and reapplies their retained action phases.</summary>
+    internal void Resume()
+    {
+        ThrowIfDisposed();
+        if (!_suspended) return;
+        Dictionary<string, EntityId> rebound = [];
+        List<string> created = [];
+        try
+        {
+        foreach ((string actionId, DaggerfallDungeonActionModelDefinition model) in _modelsByAction
+                .Where(pair => pair.Value.DoorIdentity is null)
+                .OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            {
+                DurableIdentityReference identity = MotionIdentity(ProfileId, actionId);
+                EntityId entity = _entities.Create(identity, MotionModelType);
+                _store.Set(entity, EngineComponentTypes.Transform, model.InitialTransform);
+                _store.Set(entity, EngineComponentTypes.SpatialCollider, new SpatialCollider(
+                    model.LocalBoundsMin, model.LocalBoundsMax, uint.MaxValue, uint.MaxValue,
+                    model.CollisionTriangles.Length != 0, false, false));
+                _entitiesByAction[actionId] = entity;
+                rebound.Add(actionId, entity);
+                created.Add(actionId);
+            }
+            foreach (CollisionModel model in _collisionModels.Values.Where(model => model.Definition.DoorIdentity is null))
+            {
+                if (!_entitiesByAction.TryGetValue(model.Definition.ActionId, out EntityId entity) || entity.Value == 0)
+                    throw new InvalidOperationException($"Motion collision model '{model.Definition.ActionId}' was not rebound.");
+                model.Entity = entity;
+            }
+            _motion.Rebind(rebound);
+            _suspended = false;
+            RebuildCollisionResidency();
+        }
+        catch
+        {
+            foreach (string actionId in created)
+            {
+                _entities.Destroy(MotionIdentity(ProfileId, actionId));
+                _entitiesByAction[actionId] = default;
+            }
+            throw;
+        }
     }
 
     /// <summary>
@@ -229,28 +299,35 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
         _collisionAdmissionActive = true;
     }
 
+    private void RemoveCollisionResidency()
+    {
+        if (!_collisionAdmissionActive) return;
+        if (_collisionAssets.Length != 0 || _residentTransforms.Count != 0)
+        {
+            _ = _spatial.ApplyCollisionResidency(new CollisionResidencyRequest(
+                _session,
+                Array.Empty<StaticMeshAsset>(),
+                Array.Empty<Vector3>(),
+                Array.Empty<Triangle>(),
+                Array.Empty<StaticMeshInstance>(),
+                _collisionAssets.Select(asset => asset.Id).ToArray(),
+                _collisionModels.Values.Select(model => model.InstanceId).ToArray()));
+        }
+        _residentTransforms.Clear();
+        _meshVelocities.Clear();
+        _collisionAdmissionActive = false;
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
         List<Exception>? failures = null;
-        if (_collisionAssets.Length != 0 || _residentTransforms.Count != 0)
-        {
-            try
-            {
-                _ = _spatial.ApplyCollisionResidency(new CollisionResidencyRequest(
-                    _session,
-                    Array.Empty<StaticMeshAsset>(),
-                    Array.Empty<Vector3>(),
-                    Array.Empty<Triangle>(),
-                    Array.Empty<StaticMeshInstance>(),
-                    _collisionAssets.Select(asset => asset.Id).ToArray(),
-                    _collisionModels.Values.Select(model => model.InstanceId).ToArray()));
-            }
-            catch (Exception exception) { failures = [exception]; }
-        }
+        try { RemoveCollisionResidency(); }
+        catch (Exception exception) { failures = [exception]; }
         foreach ((string actionId, EntityId entity) in _entitiesByAction)
         {
+            if (entity.Value == 0) continue;
             try { _entities.Destroy(MotionIdentity(ProfileId, actionId)); }
             catch (Exception exception) { (failures ??= []).Add(exception); }
         }
@@ -427,9 +504,15 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
         if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallDungeonMotionProjection));
     }
 
-    private sealed record CollisionModel(
-        DaggerfallDungeonActionModelDefinition Definition,
-        EntityId Entity,
-        ulong AssetId,
-        ulong InstanceId);
+    private sealed class CollisionModel(
+        DaggerfallDungeonActionModelDefinition definition,
+        EntityId entity,
+        ulong assetId,
+        ulong instanceId)
+    {
+        internal DaggerfallDungeonActionModelDefinition Definition { get; } = definition;
+        internal EntityId Entity { get; set; } = entity;
+        internal ulong AssetId { get; } = assetId;
+        internal ulong InstanceId { get; } = instanceId;
+    }
 }

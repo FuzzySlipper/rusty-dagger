@@ -26,4 +26,20 @@ public sealed class QuestNpcMediaSelectionTests
             System.Text.Json.JsonSerializer.Serialize(new { factions = new { factions = Array.Empty<object>(),
                 npcCaptions = new[] { new { archive, record } } } })));
     }
+
+    [Fact]
+    public void Exterior_media_closure_names_all_donor_nature_and_climate_variants()
+    {
+        IReadOnlyList<string> nature = Arena2SitePublication.RuntimeNatureResources();
+        IReadOnlyList<string> terrain = Arena2SitePublication.RuntimeTerrainResources();
+
+        Assert.Equal(12 * 31, nature.Count);
+        Assert.Equal(8 * 56, terrain.Count);
+        Assert.Equal(nature.Count, nature.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(terrain.Count, terrain.Distinct(StringComparer.Ordinal).Count());
+        Assert.Contains("sprite/texture-500-1", nature);
+        Assert.Contains("sprite/texture-511-31", nature);
+        Assert.Contains("terrain/texture-303-0", terrain);
+        Assert.Contains("terrain/texture-403-55", terrain);
+    }
 }

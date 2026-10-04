@@ -38,7 +38,11 @@ internal static class SiteInputs
         string imported = PayloadFiles.ReadGeneratedText(args[Options.Pack.Name]);
         return new(Arena2SitePublication.RuntimeActorResources(imported), classicMedia,
             MusicRecords(args.Optional(MusicManifest.Name)), dungeonOverlays ?? [])
-        { RuntimeNpcResources = Arena2SitePublication.RuntimeNpcResources(imported) };
+        {
+            RuntimeNpcResources = Arena2SitePublication.RuntimeNpcResources(imported),
+            RuntimeNatureResources = Arena2SitePublication.RuntimeNatureResources(),
+            RuntimeTerrainResources = Arena2SitePublication.RuntimeTerrainResources(),
+        };
     }
 
     /// <summary>

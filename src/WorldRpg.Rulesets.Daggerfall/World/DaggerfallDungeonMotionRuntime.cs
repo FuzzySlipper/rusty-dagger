@@ -183,6 +183,31 @@ internal sealed class DaggerfallDungeonMotionRuntime
         .Select(state => state.Entity)
         .ToArray();
 
+    /// <summary>
+    /// Rebinds the product motion state to freshly admitted Engine entities after a location cell
+    /// was unloaded. The action phase and authored start transform remain product state; only the
+    /// native entity handle is replaced.
+    /// </summary>
+    internal void Rebind(IReadOnlyDictionary<string, EntityId> entities)
+    {
+        ArgumentNullException.ThrowIfNull(entities);
+        foreach ((string actionId, MotionState state) in _actions)
+        {
+            if (!entities.TryGetValue(actionId, out EntityId entity) || entity.Value == 0)
+                throw new ArgumentException($"Motion rebind omits action '{actionId}'.", nameof(entities));
+            state.Entity = entity;
+            double progress = state.Phase switch
+            {
+                DaggerfallDungeonMotionPhase.Start => 0d,
+                DaggerfallDungeonMotionPhase.End => 1d,
+                DaggerfallDungeonMotionPhase.PlayingForward => state.ElapsedSeconds / state.Specification.DurationSeconds,
+                DaggerfallDungeonMotionPhase.PlayingReverse => 1d - state.ElapsedSeconds / state.Specification.DurationSeconds,
+                _ => throw new InvalidOperationException($"Action '{actionId}' has invalid motion phase {state.Phase}."),
+            };
+            _entities.Set(entity, EngineComponentTypes.Transform, Pose(state, progress));
+        }
+    }
+
     internal bool TryGetTarget(string actionId, out EntityId entity)
     {
         if (_actions.TryGetValue(actionId, out MotionState? state))
@@ -377,7 +402,7 @@ internal sealed class DaggerfallDungeonMotionRuntime
         DaggerfallDungeonMotionSpecification specification)
     {
         internal DaggerfallDungeonActionDefinition Action { get; } = action;
-        internal EntityId Entity { get; } = entity;
+        internal EntityId Entity { get; set; } = entity;
         internal Transform StartTransform { get; set; } = startTransform;
         internal DaggerfallDungeonMotionSpecification Specification { get; } = specification;
         internal DaggerfallDungeonMotionPhase Phase { get; set; } = DaggerfallDungeonMotionPhase.Start;

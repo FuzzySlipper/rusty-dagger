@@ -1,5 +1,7 @@
 using System.Numerics;
 using Rusty.Engine;
+using WorldRpg.Rulesets.Daggerfall;
+using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
@@ -67,6 +69,22 @@ internal readonly record struct DaggerfallExteriorCellResidencySave(
     float CompensationX,
     float CompensationY,
     float CompensationZ);
+
+/// <summary>Durable active-site location state separate from the terrain cell window.</summary>
+internal sealed record DaggerfallExteriorLocationResidencySave(
+    DaggerfallWorldProfileKeySave Profile,
+    DaggerfallExteriorCellId Cell,
+    bool Loaded)
+{
+    internal DaggerfallExteriorLocationResidencySave Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Profile);
+        Profile.Validate();
+        if (Profile.Require().Kind != DaggerfallWorldProfileKind.Exterior)
+            throw new ArgumentException("Exterior location residency requires an exterior profile.", nameof(Profile));
+        return this;
+    }
+}
 
 /// <summary>Result of one incremental exterior residency operation.</summary>
 internal readonly record struct DaggerfallExteriorCellResidencyUpdate(

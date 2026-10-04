@@ -340,7 +340,10 @@ internal sealed class DaggerfallActorRoster
         _lootUi.CloseActor(actor.DurableId);
         DestroySiteOwnedUniqueItems(actor);
         _definitionsByActor.Remove(actor.DurableId);
-        if (_dynamicActors.Remove(actor.DurableId)) Appearance.RetireActor(actor.DurableId);
+        _dynamicActors.Remove(actor.DurableId);
+        // Authored and spawned placements share the same appearance owner. A cell unload must
+        // retire both kinds so no sprite/animation wrapper outlives its admitted location.
+        Appearance.RetireActor(actor.DurableId);
         _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(actor.DurableId), retireBindings: false);
         _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(actor.DurableId), retireBindings: false);
         _corpseLoot.Unload(actor.DurableId);
@@ -351,7 +354,8 @@ internal sealed class DaggerfallActorRoster
     /// Creates a destination site's authored placements and its retained spawned actors. The
     /// caller restores the delta's inventories, corpses and effects onto them afterwards.
     /// </summary>
-    internal void MaterializeSite(DaggerfallSiteProfile destination, DaggerfallSiteRuntimeDelta? delta)
+    internal void MaterializeSite(DaggerfallSiteProfile destination, DaggerfallSiteRuntimeDelta? delta,
+        bool restoreAuthoredAppearance = false)
     {
         BanishedActors.Clear();
         BanishedActors.UnionWith(delta?.BanishedActors ?? []);
@@ -367,6 +371,12 @@ internal sealed class DaggerfallActorRoster
             if (prior is not null) actor.ApplyPose(new ActorPose(new WorldPoint(prior.X, prior.Y, prior.Z), prior.HeadingRadians));
             else if (definition.GroundOnSpawn) _grounding.Ground(actor);
             _definitionsByActor.Add(actor.DurableId, definition);
+            if (restoreAuthoredAppearance && definition.MobileId is int authoredMobile)
+            {
+                if (!destination.MobileSprites.TryGetValue(authoredMobile, out NormalizedActorSprite? sprite))
+                    throw new InvalidOperationException($"Restored authored actor '{placement.EntityId}' has no admitted mobile {authoredMobile} presentation.");
+                Appearance.AddActor(actor.DurableId, sprite);
+            }
             if (prior is null) GrantStartingEquipment(actor, definition);
             if (prior?.WabbajackDefinition is not null && definition.MobileId is int changedMobile)
             {

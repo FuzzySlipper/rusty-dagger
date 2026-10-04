@@ -75,7 +75,7 @@ internal sealed class DaggerSessionPersistence
         _capturePropertyStorage = capturePropertyStorage;
         _travelPosition = travelPosition ?? throw new ArgumentNullException(nameof(travelPosition));
     }
-    internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, DaggerfallEncounterRuntime encounters, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> siteDeltas, DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> dungeonDiscoveries, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions, DaggerfallDungeonMotionSnapshot dungeonMotion, DaggerfallExteriorCellResidencySave? exteriorResidency)
+    internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, DaggerfallEncounterRuntime encounters, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> siteDeltas, DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> dungeonDiscoveries, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions, DaggerfallDungeonMotionSnapshot dungeonMotion, DaggerfallExteriorCellResidencySave? exteriorResidency, DaggerfallExteriorLocationResidencySave? exteriorLocationResidency = null)
     {
         ArgumentNullException.ThrowIfNull(dynamicActors);
         ArgumentNullException.ThrowIfNull(encounters);
@@ -168,6 +168,7 @@ internal sealed class DaggerSessionPersistence
             })],
             DungeonMotion = dungeonMotion,
             ExteriorResidency = exteriorResidency,
+            ExteriorLocationResidency = exteriorLocationResidency,
             Currency = State.Currency.Capture(),
             Bank = State.Bank.Capture(),
             Loans = State.Loans.Capture(),

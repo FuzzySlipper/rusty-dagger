@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
-/// <summary>A source-stable identity for one normalized RDB action-door model.</summary>
+/// <summary>A source-stable identity for one normalized RDB or RMB door model.</summary>
 internal readonly record struct DaggerfallRdbDoorId(string SourceKey, int BlockX, int BlockZ, int ModelIndex)
 {
     public override string ToString() => $"{SourceKey}@{BlockX},{BlockZ}:{ModelIndex}";
@@ -146,6 +146,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     // is tied to the store rather than to an individual site's door entities.
     private static readonly ConditionalWeakTable<EntityStore, object> RegisteredStores = [];
     private bool _disposed;
+    private bool _suspended;
 
     internal DaggerfallDoorRuntime(EntityDirectory entities, IRandomService random, IEnumerable<DaggerfallRdbDoorDefinition> definitions,
         string profileId,
@@ -183,20 +184,70 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         catch { Dispose(); throw; }
     }
 
-    internal IEnumerable<DaggerfallDoorView> All => _doors.Values.OrderBy(door => door.Definition.Id.SourceKey, StringComparer.Ordinal).ThenBy(door => door.Definition.Id.BlockX).ThenBy(door => door.Definition.Id.BlockZ).ThenBy(door => door.Definition.Id.ModelIndex).Select(View);
+    internal IEnumerable<DaggerfallDoorView> All => _suspended
+        ? []
+        : _doors.Values.OrderBy(door => door.Definition.Id.SourceKey, StringComparer.Ordinal)
+            .ThenBy(door => door.Definition.Id.BlockX).ThenBy(door => door.Definition.Id.BlockZ)
+            .ThenBy(door => door.Definition.Id.ModelIndex).Select(View);
+
+    /// <summary>
+    /// Releases the Engine entities for this location while retaining every authored door identity
+    /// and its product state. A later <see cref="Resume"/> creates fresh native entities under the
+    /// same durable resource identities.
+    /// </summary>
+    internal void Suspend()
+    {
+        ThrowIfDisposed();
+        if (_suspended) return;
+        foreach (Door door in _doors.Values)
+        {
+            _entities.Destroy(ReferenceFor(door.Definition.Id));
+            door.Entity = default;
+        }
+        _suspended = true;
+    }
+
+    /// <summary>Re-admits suspended door entities without changing their lock or motion state.</summary>
+    internal void Resume()
+    {
+        ThrowIfDisposed();
+        if (!_suspended) return;
+        List<(Door Door, DurableIdentityReference Identity)> created = [];
+        try
+        {
+            foreach (Door door in _doors.Values)
+            {
+                DurableIdentityReference identity = ReferenceFor(door.Definition.Id);
+                EntityId entity = _entities.Create(identity, new EntityTypeId("daggerfall.rdb-door"));
+                door.Entity = entity;
+                created.Add((door, identity));
+                Apply(door);
+            }
+            _suspended = false;
+        }
+        catch
+        {
+            foreach ((Door door, DurableIdentityReference identity) in created)
+            {
+                _entities.Destroy(identity);
+                door.Entity = default;
+            }
+            throw;
+        }
+    }
 
     internal void Rebase(Vector3 delta)
     {
         foreach (Door door in _doors.Values)
         {
             door.Definition = door.Definition with { Position = door.Definition.Position + delta };
-            Apply(door);
+            if (!_suspended) Apply(door);
         }
     }
 
     internal bool TryRead(DaggerfallRdbDoorId id, out DaggerfallDoorView view)
     {
-        if (_doors.TryGetValue(id, out Door? door)) { view = View(door); return true; }
+        if (!_suspended && _doors.TryGetValue(id, out Door? door)) { view = View(door); return true; }
         view = default;
         return false;
     }
@@ -438,6 +489,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     {
         if (_disposed) return;
         if (!double.IsFinite(deltaSeconds) || deltaSeconds < 0d) throw new ArgumentOutOfRangeException(nameof(deltaSeconds));
+        if (_suspended) return;
         foreach (Door door in _doors.Values)
         {
             float amount = checked((float)(deltaSeconds / door.Definition.OpenDurationSeconds));
@@ -460,6 +512,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     internal CharacterStepEnvironment CharacterEnvironment()
     {
         ThrowIfDisposed();
+        if (_suspended) return CharacterStepEnvironment.Empty;
         CharacterObstacle[] obstacles = _doors.Values.OrderBy(door => door.Entity.Value).Select(door =>
         {
             Transform pose = _store.Get(door.Entity, EngineComponentTypes.Transform);
@@ -478,8 +531,9 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        foreach (Door door in _doors.Values)
-            _entities.Destroy(ReferenceFor(door.Definition.Id));
+        if (!_suspended)
+            foreach (Door door in _doors.Values)
+                _entities.Destroy(ReferenceFor(door.Definition.Id));
         _doors.Clear();
     }
 
@@ -507,8 +561,14 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         }
     }
 
-    private Door Require(DaggerfallRdbDoorId id) => _doors.TryGetValue(id, out Door? door)
-        ? door : throw new KeyNotFoundException($"RDB door '{id}' is not loaded.");
+    private Door Require(DaggerfallRdbDoorId id)
+    {
+        ThrowIfDisposed();
+        if (_suspended)
+            throw new InvalidOperationException($"RDB door '{id}' is not resident in the active site.");
+        return _doors.TryGetValue(id, out Door? door)
+            ? door : throw new KeyNotFoundException($"RDB door '{id}' is not loaded.");
+    }
 
     private DaggerfallDoorView View(Door door)
     {
@@ -563,7 +623,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     private sealed class Door(DaggerfallRdbDoorDefinition definition, EntityId entity, DaggerfallDoorMotion motion, float progress, int lockValue, ulong bashAttempts, int? failedLockpickingSkill)
     {
         internal DaggerfallRdbDoorDefinition Definition { get; set; } = definition;
-        internal EntityId Entity { get; } = entity;
+        internal EntityId Entity { get; set; } = entity;
         internal DaggerfallDoorMotion Motion { get; set; } = motion;
         internal float Progress { get; set; } = progress;
         internal int LockValue { get; set; } = lockValue;
@@ -586,8 +646,10 @@ internal static class DaggerfallDoorIdentity
 {
     internal static void Validate(DaggerfallRdbDoorId id)
     {
-        if (string.IsNullOrWhiteSpace(id.SourceKey) || !id.SourceKey.EndsWith(".RDB", StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("An RDB door identity requires its source RDB key.", nameof(id));
+        if (string.IsNullOrWhiteSpace(id.SourceKey)
+            || (!id.SourceKey.EndsWith(".RDB", StringComparison.OrdinalIgnoreCase)
+                && !id.SourceKey.EndsWith(".RMB", StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException("A normalized door identity requires its source RDB or RMB key.", nameof(id));
         if (id.ModelIndex < 0) throw new ArgumentOutOfRangeException(nameof(id));
     }
 }

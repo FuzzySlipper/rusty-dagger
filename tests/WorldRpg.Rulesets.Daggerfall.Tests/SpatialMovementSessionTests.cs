@@ -142,6 +142,27 @@ public sealed class SpatialMovementSessionTests
     }
 
     [Fact]
+    public void Player_continuation_is_retained_when_a_later_direct_character_step_updates_spatial()
+    {
+        List<string> releases = [];
+        ContentFake content = new("spatial/hold.json", Hash, releases);
+        SpatialFake spatial = SpatialFake.Create(Hash, releases);
+        SpatialTuning tuning = new(.5, 32, 32, 2);
+        PlayerControlState player = new(new WorldPoint(0, 0, 0), 0, 0);
+
+        using SpatialMovementSystem system = new(spatial.Service, content,
+            new SpatialContentArtifact("spatial/hold.json", Hash, 7), tuning);
+        system.Step(player, new ProductUpdateState(.125f));
+        CharacterContinuationCheckpoint checkpoint = system.CaptureContinuation();
+
+        // Population's direct Engine character proposal changes Spatial's latest receipt. The
+        // player's save checkpoint must remain the one captured at the player's own boundary.
+        spatial.Service.ProposeCharacterStep(spatial.StepRequests.Single());
+
+        Assert.Equal(checkpoint, system.CaptureContinuation());
+    }
+
+    [Fact]
     public void Zero_controller_overrides_are_layered_then_left_for_engine_validation()
     {
         List<string> releases = [];

@@ -14,21 +14,24 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     // Engine refuses a logical light ID another live light owns. A replacement session builds its site
     // before the session it replaces is disposed, so each lighting instance names its lights apart.
     private static long s_lastInstance;
-    private readonly IReadOnlyList<Light> _lights;
+    private readonly List<Light> _lights = [];
     private readonly List<(Light Light, LightRequest Request)> _points = [];
+    private readonly List<LightRequest> _suspendedPoints = [];
     private readonly IGraphicsService _graphics;
     private readonly ICameraViewService _camera;
     private readonly DaggerfallWorldProfileKind _profileKind;
     private readonly DaggerfallSiteLightingTuning _tuning;
-    private readonly Light _ambient;
+    private Light? _ambient;
     private readonly ulong _ambientId;
-    private readonly Light? _sun;
+    private Light? _sun;
+    private LightRequest? _sunRequest;
     private readonly ulong _sunId;
     private float _ambientLevel;
     private float _daylight = 1f;
     private float? _dungeonLevel;
     private float _flash;
     private bool _disposed;
+    private bool _suspended;
 
     internal DaggerfallSiteLighting(IGraphicsService graphics, ICameraViewService camera, DaggerfallSiteProfile inputs,
         DaggerfallSiteLightingTuning tuning, DaggerfallCalendar calendar)
@@ -78,12 +81,13 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             }
             if (_profileKind == DaggerfallWorldProfileKind.Exterior)
             {
-                _sun = graphics.CreateLight(SunRequest(calendar, calendar.IsDay ? 1f : 0f));
+                _sunRequest = SunRequest(calendar, calendar.IsDay ? 1f : 0f);
+                _sun = graphics.CreateLight(_sunRequest);
                 created.Add(_sun);
             }
             _ambient = graphics.CreateLight(AmbientRequest(_ambientLevel));
             created.Add(_ambient);
-            _lights = created;
+            _lights.AddRange(created);
             ApplyBackground();
         }
         catch
@@ -97,6 +101,18 @@ internal sealed class DaggerfallSiteLighting : IDisposable
 
     internal void Rebase(Vector3 delta)
     {
+        if (_suspended)
+        {
+            for (int index = 0; index < _suspendedPoints.Count; index++)
+            {
+                LightRequest request = _suspendedPoints[index];
+                _suspendedPoints[index] = request with
+                {
+                    Descriptor = request.Descriptor with { Position = request.Descriptor.Position + delta },
+                };
+            }
+            return;
+        }
         for (int index = 0; index < _points.Count; index++)
         {
             (Light light, LightRequest request) = _points[index];
@@ -116,11 +132,68 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _daylight = exteriorDaylight;
         _dungeonLevel = dungeonLevel;
         _flash = lightningFlash;
-        if (_sun is { } sun) _graphics.UpdateLight(new(sun, SunRequest(calendar, exteriorDaylight)));
+        if (_profileKind == DaggerfallWorldProfileKind.Exterior)
+            _sunRequest = SunRequest(calendar, exteriorDaylight);
+        if (!_suspended && _sun is { } sun && _sunRequest is { } sunRequest)
+            _graphics.UpdateLight(new(sun, sunRequest));
         float level = AmbientLevel(calendar);
         if (level == _ambientLevel) return;
-        _graphics.UpdateLight(new LightUpdateRequest(_ambient, AmbientRequest(level)));
+        if (!_suspended && _ambient is { } ambient)
+            _graphics.UpdateLight(new LightUpdateRequest(ambient, AmbientRequest(level)));
         _ambientLevel = level;
+    }
+
+    /// <summary>Releases point and ambient light resources while retaining their authored requests.</summary>
+    internal void Suspend()
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteLighting));
+        if (_suspended) return;
+        _suspendedPoints.Clear();
+        _suspendedPoints.AddRange(_points.Select(value => value.Request));
+        foreach (Light light in _lights.AsEnumerable().Reverse()) light.Dispose();
+        _points.Clear();
+        _lights.Clear();
+        _ambient = null;
+        _sun = null;
+        _suspended = true;
+    }
+
+    /// <summary>Recreates the retained lights after a location is admitted again.</summary>
+    internal void Resume()
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteLighting));
+        if (!_suspended) return;
+        List<Light> created = [];
+        try
+        {
+            foreach (LightRequest request in _suspendedPoints)
+            {
+                Light light = _graphics.CreateLight(request);
+                created.Add(light);
+                _points.Add((light, request));
+            }
+            if (_sunRequest is { } sunRequest)
+            {
+                _sun = _graphics.CreateLight(sunRequest);
+                created.Add(_sun);
+            }
+            Light ambient = _graphics.CreateLight(AmbientRequest(_ambientLevel));
+            _ambient = ambient;
+            created.Add(ambient);
+            _lights.AddRange(created);
+            _suspendedPoints.Clear();
+            _suspended = false;
+            ApplyBackground();
+        }
+        catch
+        {
+            foreach (Light light in created.AsEnumerable().Reverse()) light.Dispose();
+            _points.Clear();
+            _lights.Clear();
+            _ambient = null;
+        _sun = null;
+            throw;
+        }
     }
 
     internal void ApplyBackground()
@@ -163,11 +236,16 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         if (_disposed) return;
         _disposed = true;
         List<Exception>? failures = null;
-        foreach (Light light in _lights.Reverse())
+        foreach (Light light in _lights.AsEnumerable().Reverse())
         {
             try { light.Dispose(); }
             catch (Exception exception) { (failures ??= []).Add(exception); }
         }
+        _points.Clear();
+        _lights.Clear();
+        _suspendedPoints.Clear();
+        _ambient = null;
+        _sun = null;
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 

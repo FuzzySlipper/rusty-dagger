@@ -25,6 +25,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly DaggerfallAudioBundle? audioBundle;
     private readonly IRandomService? random;
     private readonly DaggerfallPresentationAudioTuning audioTuning;
+    private readonly DaggerfallSiteProfile inputs;
     private readonly Dictionary<string, AudioClip> audioClips = new(StringComparer.Ordinal);
     private readonly IReadOnlyList<string> hitCues;
     private readonly IReadOnlyDictionary<string, NormalizedClassicEffect> classicEffects;
@@ -95,15 +96,17 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly Dictionary<DaggerfallRdbDoorId, Appearance> doorVisuals = [];
     private readonly Dictionary<DaggerfallRdbDoorId, ulong> doorVisualEntityIds = [];
     private readonly Dictionary<string, Appearance> actionModelVisuals = new(StringComparer.Ordinal);
-    private readonly DaggerfallDungeonMotionProjection? dungeonMotion;
+    private DaggerfallDungeonMotionProjection? dungeonMotion;
     // Door source identities are not Engine entity IDs or durable actor IDs.  Keep their render
     // identities in this product-only visual range, below effect/viewmodel identities and above
     // every authored or dynamically allocated gameplay identity.
     private ulong nextDoorVisualEntityId = (1UL << 52) - 1;
-    private readonly DaggerfallDoorRuntime? doors;
+    private DaggerfallDoorRuntime? doors;
     // Engine resources are owning objects: a render resource opened here is released here, because the
     // materials, atlases and sprites that name it hold non-owning references.
     private readonly List<RenderResource> ownedResources = [];
+    private readonly List<RenderResource> locationResources = [];
+    private readonly List<Material> locationMaterials = [];
     private readonly List<IDisposable> priorRetired = [];
     private readonly List<IDisposable> nextRetired = [];
     private Appearance? world;
@@ -111,6 +114,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private AuthoredWorldAppearance worldAppearance;
     private Action<List<AppearanceFact>>? appendSnapshotFacts;
     private Action? completeSnapshot;
+    private bool locationSuspended;
     private bool disposed;
 
     internal void Rebase(Vector3 delta)
@@ -128,6 +132,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
         ArgumentNullException.ThrowIfNull(inputs);
+        this.inputs = inputs;
         this.doors = doors;
         this.dungeonMotion = dungeonMotion;
         this.appearance = appearance;
@@ -142,16 +147,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         worldAppearance = inputs.WorldAppearance;
         try
         {
-            world = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(inputs.StaticMesh.Path, worldAppearance.Tint));
-            foreach (NormalizedMaterial material in inputs.Materials)
-            {
-                RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(material.TexturePath, TextureFilter.Nearest, TextureWrap.Repeat));
-                ownedResources.Add(texture.Handle);
-                Material created = appearance.CreateMaterial(new MaterialRequest(new Color(1F, 1F, 1F, 1F), texture.Handle, 1F, new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false));
-                materials.Add(created);
-                materialsBySlot.Add(material.Slot, created);
-            }
-            appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(world, inputs.Materials.Select((material, index) => new MeshMaterialBinding(material.Slot, materials[index])).ToArray()));
+            AdmitLocationResources();
             DaggerfallMissileVisual? arrow = classicPresentation.WorldVisuals.SingleOrDefault(visual =>
                 visual.MediaId == "visual.missile.arrow");
             if (arrow is not null)
@@ -173,41 +169,6 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(arrowAppearance, bindings.ToArray()));
             }
             if (inputs.Doors.Count != 0 && doors is null) throw new ArgumentException("Door visuals require the selected door runtime.", nameof(doors));
-            foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
-            {
-                DaggerfallDoorVisual visual = door.Visual ?? throw new InvalidOperationException($"Selected RDB door '{door.Id}' has no normalized visual.");
-                Appearance created = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(visual.Path, worldAppearance.Tint));
-                appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, visual.Materials
-                    .Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
-                        ? new MeshMaterialBinding(binding.MeshSlot, material)
-                        : throw new InvalidOperationException($"Door '{door.Id}' refers to missing world material slot {binding.WorldMaterialSlot}."))
-                    .ToArray()));
-                doorVisuals.Add(door.Id, created);
-                doorVisualEntityIds.Add(door.Id, nextDoorVisualEntityId--);
-            }
-            if (dungeonMotion is not null)
-            {
-                foreach ((DaggerfallDungeonActionModelDefinition model, _) in dungeonMotion.Visuals)
-                {
-                    Appearance created = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(model.Visual.Path, worldAppearance.Tint));
-                    try
-                    {
-                        appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, model.Visual.Materials
-                            .Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
-                                ? new MeshMaterialBinding(binding.MeshSlot, material)
-                                : throw new InvalidOperationException($"Action model '{model.ActionId}' refers to missing world material slot {binding.WorldMaterialSlot}."))
-                            .ToArray()));
-                        actionModelVisuals.Add(model.ActionId, created);
-                    }
-                    catch
-                    {
-                        List<Exception>? failures = null;
-                        Dispose(created, ref failures);
-                        if (failures is { Count: > 0 }) throw new AggregateException(failures);
-                        throw;
-                    }
-                }
-            }
             foreach ((long entityId, NormalizedActorSprite sprite) in inputs.ActorSprites.OrderBy(pair => pair.Key))
             {
                 ActorVisual visual = CreateActorVisual(content, entityId, sprite);
@@ -262,8 +223,52 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         if (actors.Remove(durableId, out ActorVisual? visual) && visual is not null)
         {
             List<Exception>? failures = null;
-            visual.Dispose(ref failures);
+            DisposeActorVisual(visual, ref failures);
             if (failures is { Count: > 0 }) throw new AggregateException(failures);
+        }
+    }
+
+    internal void RetireAllActors()
+    {
+        foreach (long durableId in actors.Keys.ToArray())
+            RetireActor(durableId);
+    }
+
+    /// <summary>
+    /// Releases static location geometry and its material closure while retaining the profile's
+    /// durable definitions. Actor, ground and effect visuals have their own lifecycle owners and
+    /// are retired by the roster/cell coordinator before this method is called.
+    /// </summary>
+    internal void SuspendLocationResources()
+    {
+        if (disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteAppearance));
+        if (locationSuspended) return;
+        List<Exception>? failures = null;
+        ReleaseLocationResources(ref failures);
+        locationSuspended = true;
+        if (failures is { Count: > 0 }) throw new AggregateException(failures);
+    }
+
+    /// <summary>Recreates the retained location geometry after its content placement is admitted.</summary>
+    internal void ResumeLocationResources(DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion)
+    {
+        if (disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteAppearance));
+        ArgumentNullException.ThrowIfNull(doors);
+        ArgumentNullException.ThrowIfNull(motion);
+        if (!locationSuspended) return;
+        this.doors = doors;
+        dungeonMotion = motion;
+        try
+        {
+            AdmitLocationResources();
+            locationSuspended = false;
+        }
+        catch
+        {
+            List<Exception>? failures = null;
+            ReleaseLocationResources(ref failures);
+            if (failures is { Count: > 0 }) throw new AggregateException(failures);
+            throw;
         }
     }
 
@@ -620,7 +625,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             completeSnapshot?.Invoke();
         }
         catch (Exception exception) { failures = [exception]; }
-        foreach (ActorVisual visual in actors.Values.Reverse()) visual.Dispose(ref failures);
+        foreach (ActorVisual visual in actors.Values.Reverse()) DisposeActorVisual(visual, ref failures);
         foreach (BillboardVisual visual in groundVisuals.Values.Reverse()) visual.Dispose(ref failures);
         foreach (BillboardVisual visual in npcVisuals.Values.Reverse()) visual.Dispose(ref failures);
         foreach (EffectVisual effect in effects.AsEnumerable().Reverse()) effect.Dispose(ref failures);
@@ -632,7 +637,6 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         actors.Clear();
         groundVisuals.Clear();
         npcVisuals.Clear();
-        if (world is { } staticWorld) { world = null; Dispose(staticWorld, ref failures); }
         if (arrowAppearance is { } arrowVisual) { arrowAppearance = null; Dispose(arrowVisual, ref failures); }
         arrowVisualEntityIds.Clear();
         dungeonSpellVisualEntityIds.Clear();
@@ -641,9 +645,13 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         doorVisualEntityIds.Clear();
         foreach (Appearance visual in actionModelVisuals.Values.Reverse()) Dispose(visual, ref failures);
         actionModelVisuals.Clear();
+        // Sprite atlases borrow textures that location materials may also use. Retire every
+        // atlas before releasing the location material/resource closure so dependents observe a
+        // deterministic atlas -> material -> resource lifetime.
         foreach (SpriteAtlas atlas in atlases.AsEnumerable().Reverse()) Dispose(atlas, ref failures);
         atlases.Clear();
         groundContainerAtlas = null;
+        ReleaseLocationResources(ref failures);
         foreach (Material material in materials.AsEnumerable().Reverse()) Dispose(material, ref failures);
         materials.Clear();
         foreach (RenderResource resource in ownedResources.AsEnumerable().Reverse()) Dispose(resource, ref failures);
@@ -651,6 +659,92 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         foreach (AudioClip clip in audioClips.Values.Reverse()) Dispose(clip, ref failures);
         audioClips.Clear();
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
+    }
+
+    private void AdmitLocationResources()
+    {
+        if (inputs.Doors.Count != 0 && doors is null)
+            throw new ArgumentException("Door visuals require the selected door runtime.", nameof(doors));
+        world = appearance.CreateStaticMeshFromContent(
+            new StaticMeshContentAppearanceRequest(inputs.StaticMesh.Path, worldAppearance.Tint));
+        foreach (NormalizedMaterial material in inputs.Materials)
+        {
+            RenderResourceInfo texture = appearance.OpenResource(
+                new RenderResourceRequest(material.TexturePath, TextureFilter.Nearest, TextureWrap.Repeat));
+            locationResources.Add(texture.Handle);
+            Material created = appearance.CreateMaterial(new MaterialRequest(
+                new Color(1F, 1F, 1F, 1F), texture.Handle, 1F,
+                new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false));
+            locationMaterials.Add(created);
+            materials.Add(created);
+            materialsBySlot.Add(material.Slot, created);
+        }
+        appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(world,
+            inputs.Materials.Select((material, index) => new MeshMaterialBinding(material.Slot, materials[index])).ToArray()));
+        foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
+        {
+            DaggerfallDoorVisual visual = door.Visual
+                ?? throw new InvalidOperationException($"Selected RDB door '{door.Id}' has no normalized visual.");
+            Appearance created = appearance.CreateStaticMeshFromContent(
+                new StaticMeshContentAppearanceRequest(visual.Path, worldAppearance.Tint));
+            appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, visual.Materials
+                .Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
+                    ? new MeshMaterialBinding(binding.MeshSlot, material)
+                    : throw new InvalidOperationException($"Door '{door.Id}' refers to missing world material slot {binding.WorldMaterialSlot}."))
+                .ToArray()));
+            doorVisuals.Add(door.Id, created);
+            doorVisualEntityIds.Add(door.Id, nextDoorVisualEntityId--);
+        }
+        if (dungeonMotion is null) return;
+        foreach ((DaggerfallDungeonActionModelDefinition model, _) in dungeonMotion.Visuals)
+        {
+            Appearance created = appearance.CreateStaticMeshFromContent(
+                new StaticMeshContentAppearanceRequest(model.Visual.Path, worldAppearance.Tint));
+            try
+            {
+                appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, model.Visual.Materials
+                    .Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
+                        ? new MeshMaterialBinding(binding.MeshSlot, material)
+                        : throw new InvalidOperationException($"Action model '{model.ActionId}' refers to missing world material slot {binding.WorldMaterialSlot}."))
+                    .ToArray()));
+                actionModelVisuals.Add(model.ActionId, created);
+            }
+            catch
+            {
+                List<Exception>? failures = null;
+                Dispose(created, ref failures);
+                if (failures is { Count: > 0 }) throw new AggregateException(failures);
+                throw;
+            }
+        }
+    }
+
+    private void ReleaseLocationResources(ref List<Exception>? failures)
+    {
+        if (world is { } staticWorld) { world = null; Dispose(staticWorld, ref failures); }
+        foreach (Appearance visual in doorVisuals.Values.Reverse()) Dispose(visual, ref failures);
+        doorVisuals.Clear();
+        doorVisualEntityIds.Clear();
+        foreach (Appearance visual in actionModelVisuals.Values.Reverse()) Dispose(visual, ref failures);
+        actionModelVisuals.Clear();
+        foreach (Material material in locationMaterials.AsEnumerable().Reverse()) Dispose(material, ref failures);
+        foreach (Material material in locationMaterials) materials.Remove(material);
+        locationMaterials.Clear();
+        materialsBySlot.Clear();
+        foreach (RenderResource resource in locationResources.AsEnumerable().Reverse()) Dispose(resource, ref failures);
+        locationResources.Clear();
+    }
+
+    private void DisposeActorVisual(ActorVisual visual, ref List<Exception>? failures)
+    {
+        visual.Dispose(ref failures);
+        if (visual.CorpseAtlas is { } corpseAtlas)
+        {
+            atlases.Remove(corpseAtlas);
+            Dispose(corpseAtlas, ref failures);
+        }
+        atlases.Remove(visual.Atlas);
+        Dispose(visual.Atlas, ref failures);
     }
 
     private void AdmitClassicTextures()

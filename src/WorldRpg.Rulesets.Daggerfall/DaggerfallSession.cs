@@ -299,7 +299,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _heldEnchantments.Refresh();
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _roster.Dynamic, _encounters,
             _sites.Deltas, _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
-            _sites.Projection.CaptureMotion(), _sites.CaptureExteriorResidency());
+            _sites.Projection.CaptureMotion(), _sites.CaptureExteriorResidency(), _sites.CaptureExteriorLocationResidency());
     }
 
     public ProductUpdateResult Update(ProductUpdate update)

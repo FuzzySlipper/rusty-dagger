@@ -25,16 +25,16 @@ internal sealed partial class DaggerfallSession
         // providers are materialized by DaggerfallActorRoster as real actor entities so dialogue,
         // targeting and site lifetime all observe the same owner; projecting them here would
         // collide with that actor identity.
-        var live = State.Npcs.All.Where(npc => npc.Kind == DaggerfallNpcKind.Questor
+        var active = State.Npcs.All.Where(npc => _sites.ActiveLocationLoaded && npc.Kind == DaggerfallNpcKind.Questor
             && npc.Profile == profile.ProfileKey && npc.Presence == DaggerfallNpcPresence.Active).ToDictionary(npc => npc.DurableId);
         foreach (var entry in State.Actors.Store.Query<DaggerfallNpcBody>())
         {
             long id = checked((long)State.Actors.Entities.IdentityOf(entry.Entity).Value);
-            if (live.ContainsKey(id)) continue;
+            if (active.ContainsKey(id)) continue;
             _appearance.RetireNpc(id);
             State.Actors.Entities.Destroy(ActorsState.Identity(id));
         }
-        foreach (var npc in live.Values)
+        foreach (var npc in active.Values)
         {
             if (npc.X is not float x || npc.Y is not float y || npc.Z is not float z)
                 throw new InvalidOperationException($"Placed NPC {npc.DurableId} has no profile position.");

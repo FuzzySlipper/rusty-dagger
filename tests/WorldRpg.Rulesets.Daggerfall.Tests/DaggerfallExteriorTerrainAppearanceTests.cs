@@ -24,6 +24,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         MeshResourceCreateRequest request = graphics.MeshRequests[0];
         Assert.Equal(3, request.Positions.Length);
         Assert.Equal(3, request.Normals.Length);
+        Assert.Equal(3, request.Uvs.Length);
         Assert.Equal(3, request.Indices.Length);
         Assert.Equal(3U, request.Groups.Span[0].Count);
         Assert.Equal(new Vector3(0F, 1F, 0F), request.Normals.Span[0]);
