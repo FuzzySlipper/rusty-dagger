@@ -25,10 +25,16 @@ public sealed class TargetingServiceTests
         using SpatialMovementSystem spatial = Spatial();
         TargetingService targeting = new(perception.Service, spatial, actors, new Policy());
 
+        Vector3 externalPosition = new(8f, 0f, -2f);
+        actors.Store.Set(actors.Get(2).Actor.Entity, EngineComponentTypes.Transform,
+            new Transform(externalPosition, Quaternion.CreateFromAxisAngle(Vector3.UnitY, -.5f), Vector3.One));
+
         Assert.Equal(2L, targeting.Select(new WorldPoint(0, 0, 0), -Vector3.UnitZ, actionReach: 4d));
         TargetingEvidence evidence = Assert.IsType<TargetingEvidence>(targeting.LastEvidence);
         Assert.Equal(4d, evidence.Request.Observers.Span[0].MaximumDistance);
         Assert.Equal([2UL, 3UL], evidence.Request.Targets.Span.ToArray().Select(target => target.Entity));
+        Assert.Equal(externalPosition, evidence.Request.Targets.Span.ToArray().Single(target => target.Entity == 2).Center);
+        Assert.Equal(actors.Get(2).Actor.Entity, targeting.Current);
         actors.Get(2).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
         Assert.Null(targeting.Current);
 
