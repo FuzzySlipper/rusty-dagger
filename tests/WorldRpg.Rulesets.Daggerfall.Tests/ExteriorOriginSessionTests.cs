@@ -79,8 +79,8 @@ public sealed class ExteriorOriginSessionTests
                 for (int column = -DaggerfallExteriorCellResidency.StreamingRadius;
                      column <= DaggerfallExteriorCellResidency.StreamingRadius; column++)
                 {
-                    DaggerfallExteriorCellId candidate = new(admitted.Origin.X + column,
-                        admitted.Origin.Y + row);
+                    DaggerfallExteriorCellId candidate = new(admitted.Center.X + column,
+                        admitted.Center.Y + row);
                     if ((uint)candidate.X >= (uint)definitions.Terrain.Width
                         || (uint)candidate.Y >= (uint)definitions.Terrain.Height
                         || locationCells.Contains(candidate)) continue;
