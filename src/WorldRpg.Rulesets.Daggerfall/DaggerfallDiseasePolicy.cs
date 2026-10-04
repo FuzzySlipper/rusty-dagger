@@ -290,6 +290,33 @@ internal static class DaggerfallDiseasePolicy
         return instances.Length;
     }
 
+    /// <summary>
+    /// Counts only ordinary diseases for a service cure quote. Transformation infections stay
+    /// under the quest and permanent-transformation owner; a temple cannot silently complete that
+    /// separate chain by treating its staged infection as a normal illness.
+    /// </summary>
+    internal static int CountOrdinaryDiseases(DaggerfallEffectLifecycle effects, long targetId)
+    {
+        ArgumentNullException.ThrowIfNull(effects);
+        HashSet<string> keys = Data.Values.Select(value => value.Key).ToHashSet(StringComparer.Ordinal);
+        return effects.Active.Count(effect => effect.Context.Target.Value == checked((ulong)targetId)
+            && keys.Contains(effect.Definition.Key));
+    }
+
+    /// <summary>Removes ordinary disease effects while leaving transformation infections quest-owned.</summary>
+    internal static int CureOrdinaryDiseases(DaggerfallEffectLifecycle effects, long targetId)
+    {
+        ArgumentNullException.ThrowIfNull(effects);
+        HashSet<string> keys = Data.Values.Select(value => value.Key).ToHashSet(StringComparer.Ordinal);
+        EffectInstanceId[] instances = effects.Active
+            .Where(effect => effect.Context.Target.Value == checked((ulong)targetId)
+                && keys.Contains(effect.Definition.Key))
+            .Select(effect => effect.Context.Instance)
+            .ToArray();
+        foreach (EffectInstanceId instance in instances) _ = effects.Cure(instance);
+        return instances.Length;
+    }
+
     /// <summary>Counts current ordinary and transformation disease effects for a provider quote.</summary>
     internal static int CountAfflictions(DaggerfallEffectLifecycle effects, long targetId)
     {
