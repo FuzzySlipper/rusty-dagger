@@ -769,6 +769,20 @@ public sealed record NormalizedInteriorBuilding(int BlockX, int BlockY, string S
     }
 }
 
+/// <summary>One source static person, independent of a runtime actor identity.</summary>
+public sealed record NormalizedStaticNpcPlacement(string Id, NormalizedVector3 Position, int BillboardArchive,
+    int BillboardRecord, int FactionId, string? Race, string Gender, int NameSeed)
+{
+    public void Validate()
+    {
+        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
+        Position.Validate(nameof(Position));
+        if (BillboardArchive is < 0 or > 511 || BillboardRecord is < 0 or > 127 || FactionId < 0
+            || Race is not null && string.IsNullOrWhiteSpace(Race) || Gender is not ("Male" or "Female"))
+            throw new InvalidOperationException("A static person must retain a valid source appearance and faction.");
+    }
+}
+
 public sealed record NormalizedWorld(
     string VisualMeshAssetId,
     IReadOnlyList<string> MeshIds,
@@ -786,6 +800,8 @@ public sealed record NormalizedWorld(
 
     /// <summary>Source-order spawn/item points retained for quest allocation.</summary>
     public IReadOnlyList<NormalizedQuestMarker> QuestMarkers { get; init; } = [];
+    /// <summary>Interior people, published from the selected building's people records.</summary>
+    public IReadOnlyList<NormalizedStaticNpcPlacement> StaticNpcs { get; init; } = [];
 
     /// <summary>Source action nodes and their normalized forward links.</summary>
     public IReadOnlyList<NormalizedDungeonAction> Actions { get; init; } = [];
@@ -805,6 +821,7 @@ public sealed record NormalizedWorld(
         Lights = Lights.OrderBy(light => light.Id, StringComparer.Ordinal).ToArray(),
         Billboards = Billboards.OrderBy(billboard => billboard.Id, StringComparer.Ordinal).ToArray(),
         Actors = Actors.OrderBy(actor => actor.Id, StringComparer.Ordinal).ToArray(),
+        StaticNpcs = StaticNpcs.OrderBy(npc => npc.Id, StringComparer.Ordinal).ToArray(),
         Treasures = Treasures.OrderBy(treasure => treasure.Id, StringComparer.Ordinal).ToArray(),
         Doors = Doors.OrderBy(door => door.Id, StringComparer.Ordinal).Select(door => door.Canonicalize()).ToArray(),
         Actions = Actions.OrderBy(action => action.Id, StringComparer.Ordinal)
@@ -844,6 +861,10 @@ public sealed record NormalizedWorld(
         ArgumentNullException.ThrowIfNull(QuestMarkers);
         NormalizedImportDocument.ValidateUnique(QuestMarkers, marker => marker.Id, "quest marker");
         foreach (NormalizedQuestMarker marker in QuestMarkers) marker.Validate();
+        NormalizedImportDocument.ValidateUnique(StaticNpcs, npc => npc.Id, "static person");
+        foreach (NormalizedStaticNpcPlacement npc in StaticNpcs) npc.Validate();
+        if (StaticNpcs.Count != 0 && InteriorBuilding is null)
+            throw new InvalidOperationException("Interior people require their selected source building.");
         ArgumentNullException.ThrowIfNull(Lights);
         ArgumentNullException.ThrowIfNull(Billboards);
         ArgumentNullException.ThrowIfNull(Actors);

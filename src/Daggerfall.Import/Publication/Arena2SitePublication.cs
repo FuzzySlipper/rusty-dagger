@@ -134,7 +134,10 @@ public static class Arena2SitePublication
             Arena2DungeonMediaRequest.Create(document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources)) with
             {
                 RuntimeActorResources = media.RuntimeActorResources,
-                RuntimeBillboardResources = [.. media.RuntimeNpcResources, GroundContainerBillboard],
+                RuntimeBillboardResources = [.. media.RuntimeNpcResources
+                    .Concat([GroundContainerBillboard])
+                    .Concat(document.World.StaticNpcs.Select(npc => $"sprite/texture-{npc.BillboardArchive}-{npc.BillboardRecord}"))
+                    .Distinct(StringComparer.Ordinal)],
                 AuthoredOverlays = media.DungeonOverlays,
                 TextureLeaves = textureLeaves,
                 TextureLeafConsumer = textureLeafConsumer,

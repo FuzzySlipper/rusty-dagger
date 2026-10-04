@@ -29,7 +29,7 @@ public enum DaggerfallNpcPresence
 /// <param name="Region">The classic region.</param>
 /// <param name="Location">The location name.</param>
 /// <param name="Building">The building key, empty when the NPC belongs to no building.</param>
-public readonly record struct DaggerfallNpcSite(int Region, string Location, string Building);
+public readonly record struct DaggerfallNpcSite(int Region, string Location, string Building, string? ProfileId = null);
 
 /// <summary>One NPC's appearance: what the world sees.</summary>
 /// <param name="Race">The race name.</param>
@@ -38,7 +38,7 @@ public readonly record struct DaggerfallNpcSite(int Region, string Location, str
 /// <param name="BillboardRecord">The billboard texture record.</param>
 /// <param name="NameSeed">The seed the name derives from.</param>
 /// <param name="FactionId">The faction the NPC answers to, or zero.</param>
-public readonly record struct DaggerfallNpcAppearance(string Race, string Gender, int BillboardArchive, int BillboardRecord, ushort NameSeed, int FactionId);
+public readonly record struct DaggerfallNpcAppearance(string Race, string Gender, int BillboardArchive, int BillboardRecord, int NameSeed, int FactionId);
 
 /// <summary>One NPC: its durable identity, kind, site, appearance, role and presence.</summary>
 /// <param name="DurableId">The durable actor identity.</param>
@@ -132,6 +132,9 @@ public sealed class DaggerfallNpcRegistry
     public DaggerfallNpc Require(long durableId) =>
         _npcs.TryGetValue(durableId, out DaggerfallNpc? npc) ? npc : throw new InvalidOperationException($"No NPC answers durable identity {durableId}.");
 
+    internal bool IsStatic(long durableId) => _npcs.TryGetValue(durableId, out DaggerfallNpc? npc)
+        && npc.Kind == DaggerfallNpcKind.Static;
+
     /// <summary>Every registered NPC.</summary>
     public IReadOnlyList<DaggerfallNpc> All => [.. _npcs.Values.OrderBy(npc => npc.DurableId)];
 
@@ -167,6 +170,10 @@ public sealed class DaggerfallNpcRegistry
             Presence = DaggerfallNpcPresence.Active };
     }
 
+    /// <summary>Removes a failed admission's current placement while retaining its stable identity.</summary>
+    internal void Unplace(long durableId) =>
+        _npcs[durableId] = Require(durableId) with { Profile = null, X = null, Y = null, Z = null };
+
     internal IReadOnlyList<DaggerfallNpc> Capture() => All;
 
     /// <summary>Restores NPCs; refuses a record the registry would not accept live.</summary>
@@ -201,7 +208,7 @@ public sealed class DaggerfallNpcRegistry
     }
 
     private static string StableIdentityKey(DaggerfallNpcKind kind, DaggerfallNpcSite site, string stableKey) =>
-        $"{kind}\0{site.Region}\0{site.Location}\0{site.Building}\0{stableKey}";
+        $"{kind}\0{site.Region}\0{site.Location}\0{site.Building}\0{site.ProfileId}\0{stableKey}";
 
     private static void ValidateSite(DaggerfallNpcSite site)
     {

@@ -31,6 +31,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     internal List<SpritePlaybackHandle> DisposedPlaybackHandles { get; } = [];
     internal int FailSpritePlaybackCreateAt { get; set; }
     internal int FailSpritePlaybackControlAt { get; set; }
+    internal int FailSpriteAtlasCreateAt { get; set; }
     internal int FailPublishAt { get; set; }
     internal bool RejectLateResourceOpen { get; set; }
     internal bool RejectDisposeOfRetainedAppearance { get; set; }
@@ -95,6 +96,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     public SpriteAtlas CreateSpriteAtlas(SpriteAtlasCreateRequest request)
     {
         AtlasRequests.Add(request);
+        if (FailSpriteAtlasCreateAt == AtlasRequests.Count) throw new InvalidOperationException("Injected sprite atlas create failure.");
         CreatedAtlases++;
         return new(new SpriteAtlasHandle(nextHandle++), () => { DisposedAtlases++; releases.Add("atlas"); });
     }

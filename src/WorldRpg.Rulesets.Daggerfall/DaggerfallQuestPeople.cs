@@ -9,7 +9,7 @@ internal sealed record DaggerfallQuestPersonHome(DaggerfallQuestResourceBinding 
 
 /// <summary>Selected Person meaning before its world projection is admitted.</summary>
 internal sealed record DaggerfallQuestPersonSelection(int FactionId, string Race, string Gender,
-    int HudFace, int? SourceFace, ushort NameSeed, string DisplayName, bool Individual,
+    int HudFace, int? SourceFace, int NameSeed, string DisplayName, bool Individual,
     int? VampireClanFactionId, long? QuestorId = null)
 {
     public DaggerfallNpcAppearance? Appearance { get; init; }
@@ -51,7 +51,7 @@ internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions defin
             _ => throw new ArgumentException($"Quest Person '{declaration.CanonicalId}' has an invalid gender."),
         });
         if (faction.Type == 8 || faction.Id == 512) gender = "Female";
-        ushort seed = existing?.Appearance.NameSeed ?? checked((ushort)Draw(key + "/name-seed", 0, ushort.MaxValue));
+        int seed = existing?.Appearance.NameSeed ?? Draw(key + "/name-seed", 0, ushort.MaxValue);
         string name = existing?.DisplayName ?? (faction.Type is 0 or 4 ? faction.Name : names.FullName(bank, gender == "Female",
             existing is null ? key + "/name/" + seed : "npc/" + existing.DurableId + "/name/" + seed));
         if (existing is not null && existing.DisplayName is null) retainNpcName?.Invoke(existing.DurableId, name);

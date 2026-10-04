@@ -226,7 +226,7 @@ internal sealed class DaggerfallActorRoster
         _corpseLoot.Retire(durableId);
         _state.Actors.Entities.Destroy(ActorsState.Identity(durableId));
         _identities.Remove(new DurableIdentityReference(DurableIdentityKind.Actor, checked((ulong)durableId)));
-        if (_state.Npcs.All.Any(npc => npc.DurableId == durableId && npc.Kind == DaggerfallNpcKind.Civilian))
+        if (_state.Npcs.All.Any(npc => npc.DurableId == durableId && npc.Kind is DaggerfallNpcKind.Civilian or DaggerfallNpcKind.Static))
             _state.Npcs.SetPresence(durableId, DaggerfallNpcPresence.Removed);
         ActorRetired?.Invoke(durableId);
     }
@@ -243,13 +243,13 @@ internal sealed class DaggerfallActorRoster
         if (_identities.Classify(identity) != DurableIdentityClassification.Live)
             throw new InvalidOperationException($"NPC {npcId} does not own a live actor identity.");
 
-        DaggerfallActorDefinition definition = DaggerActorFactory.CivilianDefinition(npcId);
+        DaggerfallActorDefinition definition = DaggerActorFactory.CivilianDefinition(npcId, npc.Kind == DaggerfallNpcKind.Static);
         ActorState actor = DaggerActorFactory.CreateCivilianActor(_mechanics, _state.Actors, _state.InventoryStore, npc, pose);
         try
         {
             if (!_definitionsByActor.TryAdd(npcId, definition))
                 throw new InvalidOperationException($"NPC {npcId} already has a runtime actor definition.");
-            if (!_dynamicActors.TryAdd(npcId, new DaggerfallActorId(DaggerfallActorKinds.Civilian)))
+            if (!_dynamicActors.TryAdd(npcId, definition.Id))
                 throw new InvalidOperationException($"NPC {npcId} already has a runtime actor binding.");
             return actor.DurableId;
         }
@@ -258,6 +258,61 @@ internal sealed class DaggerfallActorRoster
             _definitionsByActor.Remove(npcId);
             _dynamicActors.Remove(npcId);
             _state.Actors.Entities.Destroy(identity);
+            throw;
+        }
+    }
+
+    /// <summary>Admits published source people into the same registry, actors, site delta and renderer.</summary>
+    internal void MaterializeStaticNpcs(DaggerfallSiteProfile profile)
+    {
+        if (profile.StaticNpcs.Count == 0) return;
+        DaggerfallSiteId site = profile.Site!.Value;
+        DaggerfallSiteRecord location = _definitions.Locations.Records.Single(location => location.Id == site);
+        DaggerfallInteriorBuilding building = profile.InteriorBuilding!;
+        DaggerfallNpcSite binding = new(site.Region, location.Name,
+            $"{building.BlockX}/{building.BlockY}/{building.Building.Index}", profile.ProfileKey.LogicalId);
+        List<long> batch = [];
+        try
+        {
+            foreach (DaggerfallStaticNpcPlacement placement in profile.StaticNpcs)
+            {
+                long id = _state.Npcs.RegisterStable(DaggerfallNpcKind.Static, placement.Id, binding,
+                    placement.Appearance, placement.Role, placement.Services);
+                DaggerfallNpc npc = _state.Npcs.Require(id);
+                if (npc.Presence != DaggerfallNpcPresence.Active || BanishedActors.Contains(id)) continue;
+                bool created = false;
+                try
+                {
+                    if (!_state.Actors.TryGet(id, out _))
+                    {
+                        MaterializeCivilian(npc, new ActorPose(placement.Position, 0F));
+                        created = true;
+                    }
+                    // Keep the registry's current-profile placement out of a failed candidate. The
+                    // placement becomes durable only after the actor's appearance has been admitted;
+                    // this also lets a transition retry reuse the same live stable identity.
+                    Appearance.AdmitActor(id, placement.Sprite);
+                    _state.Npcs.Place(id, profile.ProfileKey, placement.Position);
+                    batch.Add(id);
+                }
+                catch
+                {
+                    // The outer rollback tears down this candidate together with every earlier
+                    // member of the admission batch. Keep the stable registry identity so a
+                    // transition retry can register the same source person again.
+                    if (created || _state.Actors.TryGet(id, out _) || _dynamicActors.ContainsKey(id))
+                        batch.Add(id);
+                    throw;
+                }
+            }
+        }
+        catch
+        {
+            foreach (long id in batch.Distinct().Reverse())
+            {
+                _state.Npcs.Unplace(id);
+                UnloadActor(id);
+            }
             throw;
         }
     }
@@ -361,7 +416,7 @@ internal sealed class DaggerfallActorRoster
         {
             if (actor.IsDefeated) continue;
             if (!definitionsByActor.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)) continue;
-            DaggerfallEnemyGroup group = definition.Kind == DaggerfallActorKinds.Civilian
+            DaggerfallEnemyGroup group = definition.Kind is DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc
                 ? DaggerfallEnemyGroup.Humanoid
                 : DaggerfallFormulaPolicy.EnemyGroupFor(definition);
             nearby.Add(new DaggerfallNearbyCreature(group, actor.Position));

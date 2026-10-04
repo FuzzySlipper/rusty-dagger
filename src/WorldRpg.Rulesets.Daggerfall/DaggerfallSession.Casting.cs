@@ -3,6 +3,7 @@ using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
@@ -56,7 +57,11 @@ internal sealed partial class DaggerfallSession
         _definitions, State.Effects.MagicDefenseFor(id));
 
     private Actor? CastActor(long id) => id == State.Actors.Player.DurableId ? State.Actors.Player.Actor
-        : State.Actors.TryGet(id, out ActorState actor) ? actor.Actor : null;
+        : IsSpellEligibleActor(id) && State.Actors.TryGet(id, out ActorState actor) ? actor.Actor : null;
+
+    private bool IsSpellEligibleActor(long id) =>
+        !_roster.Definitions.TryGetValue(id, out DaggerfallActorDefinition? definition)
+        || definition.Kind != DaggerfallActorKinds.StaticNpc;
 
     /// <summary>Releases the ready source at its live position. Ranged bundles await Engine collision delivery.</summary>
     internal DaggerfallCastResult ReleaseReadySpell(long casterId, Vector3 direction)
@@ -108,7 +113,8 @@ internal sealed partial class DaggerfallSession
     private SpatialEntityCollider[] SpellColliders(long caster)
     {
         // Query-local envelopes projected from canonical actor positions, never another collision world.
-        var colliders = State.Actors.All.Where(actor => actor.DurableId != caster && !actor.IsDefeated).Select(actor =>
+        var colliders = State.Actors.All.Where(actor => actor.DurableId != caster && !actor.IsDefeated
+            && IsSpellEligibleActor(actor.DurableId)).Select(actor =>
             new SpatialEntityCollider(actor.Actor.Entity.Value, actor.Position.ToVector() - new Vector3(.3f, 0f, .3f),
                 actor.Position.ToVector() + new Vector3(.3f, 1.8f, .3f), 0, 0, true, false, false));
         if (State.Actors.Player.DurableId != caster && !State.Actors.Player.IsDefeated)
@@ -119,11 +125,14 @@ internal sealed partial class DaggerfallSession
     {
         if (!hit.Present || hit.Kind != SpatialHitKind.Entity) return null;
         if (State.Actors.Player.Actor.Entity.Value == hit.Entity) return State.Actors.Player.DurableId;
-        return State.Actors.All.Where(actor => actor.Actor.Entity.Value == hit.Entity).Select(actor => (long?)actor.DurableId).SingleOrDefault();
+        return State.Actors.All.Where(actor => IsSpellEligibleActor(actor.DurableId)
+                && actor.Actor.Entity.Value == hit.Entity)
+            .Select(actor => (long?)actor.DurableId).SingleOrDefault();
     }
     private long[] AreaSpellTargets(long caster, Vector3 center, bool excludeCaster, double radius = 4d, bool exclusive = false)
     {
-        return NearbyContacts(caster, center, CurrentPositions().Where(pair => !excludeCaster || pair.Key != caster), radius, exclusive)
+        return NearbyContacts(caster, center, CurrentPositions()
+                .Where(pair => IsSpellEligibleActor(pair.Key) && (!excludeCaster || pair.Key != caster)), radius, exclusive)
             .Keys.Order().ToArray();
     }
     /// <summary>Engine supplies current distances; callers decide strict range and target eligibility without a second spatial index.</summary>

@@ -11,7 +11,8 @@ internal sealed class DaggerTargetingPolicy(IReadOnlyDictionary<long, Daggerfall
     DaggerfallMeleeTargetingTuning tuning, Func<DaggerfallSiteProfile> currentInputs) : ITargetingPolicy
 {
     public bool IsValidTarget(ActorState actor) => actor.DurableId != DaggerfallActorIdentity.PlayerEntityId
-        && actor.DurableId > 0 && definitions.ContainsKey(actor.DurableId);
+        && actor.DurableId > 0 && definitions.TryGetValue(actor.DurableId, out var definition)
+        && definition.Kind != DaggerfallActorKinds.StaticNpc;
     public double MinimumFacingCosine => tuning.MinimumFacingCosine;
     public Vector3 AimPoint(ActorState actor)
     {

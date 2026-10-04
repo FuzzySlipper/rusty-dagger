@@ -136,7 +136,7 @@ internal sealed class DaggerSessionPersistence
                 npc.Appearance.Race, npc.Appearance.Gender, npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord,
                 npc.Appearance.NameSeed, npc.Appearance.FactionId, npc.Role, [.. npc.Services],
                 (int)npc.Presence, npc.X, npc.Y, npc.Z)
-                { Profile = npc.Profile is { } profile ? DaggerfallWorldProfileKeySave.Capture(profile) : null, DisplayName = npc.DisplayName })]),
+                { Profile = npc.Profile is { } profile ? DaggerfallWorldProfileKeySave.Capture(profile) : null, DisplayName = npc.DisplayName, ProfileId = npc.Site.ProfileId })]),
             _effects.Capture(),
             State.SkillUses.Capture(),
             State.Social.Capture(),
