@@ -270,8 +270,6 @@ public sealed class SiteTransitionSessionTests
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         RulesetSavePayload save;
-        DaggerfallSitePortal exteriorPortal = Assert.Single(exterior.Portals);
-        DaggerfallSitePortal interiorPortal = Assert.Single(interior.Portals);
         long spawnedActor;
         using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults)))
         {
@@ -281,10 +279,15 @@ public sealed class SiteTransitionSessionTests
             Assert.Contains(spawnedActor, session.DynamicActors.Keys);
             Assert.Equal(DurableEntityResolution.Materialized,
                 session.State.Actors.Entities.Classify(spawnedIdentity, session.State.Npcs.Identities!));
+            // Initial exterior admission rebases the live projection into the terrain origin. Use
+            // the admitted portal center, rather than the authored profile coordinate, so this
+            // receipt exercises the real portal transition and its actor retirement boundary.
+            DaggerfallSitePortal exteriorPortal = Assert.Single(session.Sites.Projection.Portals.All).Portal;
             AimActivationAt(session, exteriorPortal.Position);
             perception.Responder = request => PortalReceipt(request, exteriorPortal);
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"loot\"}")]));
 
+            Assert.Equal(interior.ProfileKey, session.Sites.ActiveProfile);
             Assert.Equal(interior.Site, session.Site.Active);
             Assert.False(session.DynamicActors.ContainsKey(spawnedActor));
             Assert.Equal(DurableEntityResolution.Unloaded,
@@ -312,10 +315,12 @@ public sealed class SiteTransitionSessionTests
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, exterior, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save);
 
         Assert.Equal(interior.Site, restored.Site.Active);
+        DaggerfallSitePortal interiorPortal = Assert.Single(restored.Sites.Projection.Portals.All).Portal;
         AimActivationAt(restored, interiorPortal.Position);
         resumedPerception.Responder = request => PortalReceipt(request, interiorPortal);
         restored.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"loot\"}")]));
 
+        Assert.Equal(exterior.ProfileKey, restored.Sites.ActiveProfile);
         Assert.Equal(exterior.Site, restored.Site.Active);
         Assert.True(restored.State.Actors.TryGet(spawnedActor, out ActorState? returnedActor));
         Assert.Equal(new WorldPoint(9f, 0f, 9f), returnedActor.Position);
