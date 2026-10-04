@@ -398,8 +398,10 @@ public sealed class RangedCombatSessionTests
         Assert.False(combat.Attacks.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, generation, releaseStep + 200, .125, facts));
     }
 
-    [Fact]
-    public void Ranged_flight_discards_stale_generations_and_retires_missing_attackers()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Ranged_flight_discards_stale_generations_and_retires_missing_or_inactive_attackers(bool inactive)
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -417,8 +419,10 @@ public sealed class RangedCombatSessionTests
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors,
             new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+        bool gameplayActive = true;
         DaggerCombatRules combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment,
-            session.State.ActorInventories.InventoryFor, session.State.ItemInstances, definitions, authored, targeting);
+            session.State.ActorInventories.InventoryFor, session.State.ItemInstances, definitions, authored, targeting,
+            actorGameplayActive: _ => gameplayActive);
         const long archer = 2004;
         const ulong generation = 77;
         const ulong releaseStep = 400;
@@ -455,7 +459,12 @@ public sealed class RangedCombatSessionTests
         combat.Execution.ApplyImpacts([new AttackImpactNotice(archer, DaggerfallActorIdentity.PlayerEntityId, nextGeneration, nextReleaseStep, Expired: false)], nextGeneration, facts);
         combat.AdvanceRangedFlight(nextGeneration, nextReleaseStep, .125, positions, facts);
         Assert.Single(combat.ReadRangedFlights(nextGeneration, nextReleaseStep));
-        session.State.Actors.Entities.Destroy(ActorsState.Identity(archer));
+        if (inactive)
+        {
+            gameplayActive = false;
+            Assert.True(session.State.Actors.TryGet(archer, out _));
+        }
+        else session.State.Actors.Entities.Destroy(ActorsState.Identity(archer));
         combat.AdvanceRangedFlight(nextGeneration, nextReleaseStep + 100, .125, positions, facts);
         Assert.Empty(combat.ReadRangedFlights(nextGeneration, nextReleaseStep + 100));
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
