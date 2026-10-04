@@ -1,0 +1,11 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.charing-interior-1-5-17",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.site",
+  "dependencies": [
+    { "id": "daggerfall.base" }
+  ],
+  "description": "Normalized Charing BANKAL01.RMB building 17 interior bank teller profile.",
+  "payload": "worldrpg/payloads/daggerfall.charing-interior-1-5-17.json"
+}
