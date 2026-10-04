@@ -189,11 +189,14 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
         var track=Track(s,1,name);track.Maximum.BaseValue=1000;track.SetCurrent(1000);
         Start(s,"unloaded-caster",subtype,100);
         Assert.Equal(1000-perRound,track.Current);
+        int idleFatiguePerMinute = name == "stamina" ? DaggerfallTuning.Defaults.Locomotion.IdleFatiguePerGameMinute : 0;
+        double expectedAfterFirstElapsedMinute = 1000 - (2 * perRound) - idleFatiguePerMinute;
+        double expectedAfterSecondElapsedMinute = 1000 - (3 * perRound) - (2 * idleFatiguePerMinute);
         Assert.True(s.TryTransitionTo(destination.ProfileKey));Assert.DoesNotContain(2000L,s.DefinitionsByActor.Keys);
-        s.AdvanceElapsedTime(60);Assert.Equal(1000-2*perRound,track.Current);
+        s.AdvanceElapsedTime(60);Assert.Equal(expectedAfterFirstElapsedMinute,track.Current);
         using var restored=DaggerfallSession.Restore(engine.Context,composition,s.CaptureSave());
-        Assert.Equal(1000-2*perRound,Track(restored,1,name).Current);
-        restored.AdvanceElapsedTime(60);Assert.Equal(1000-3*perRound,Track(restored,1,name).Current);
+        Assert.Equal(expectedAfterFirstElapsedMinute,Track(restored,1,name).Current);
+        restored.AdvanceElapsedTime(60);Assert.Equal(expectedAfterSecondElapsedMinute,Track(restored,1,name).Current);
         Assert.Equal(3,DaggerfallPeriodicCast.Read(Assert.Single(restored.State.Effects.Active).State,1,subtype).NextRound);
     }
 
