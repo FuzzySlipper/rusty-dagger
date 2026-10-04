@@ -1,4 +1,5 @@
 using Rusty.Engine.Mechanics;
+using Rusty.Engine.Entities;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -31,11 +32,13 @@ internal sealed class DaggerfallCurrencyService
     private readonly DaggerfallItemInstances _instances;
     private readonly DaggerfallEncumbrancePolicy _encumbrance;
     private readonly DaggerfallUniqueItemAllocator _unique;
+    private readonly MechanicsInventoryContainerCoordinator? _containers;
     private ulong _accountGold;
     private ulong _nextGoldStack = 1;
 
     internal DaggerfallCurrencyService(DaggerfallDefinitions definitions, MechanicsInventoryCoordinator inventory,
         DaggerfallItemInstances instances, DaggerfallEncumbrancePolicy encumbrance, DaggerfallUniqueItemAllocator unique,
+        MechanicsInventoryContainerCoordinator? containers,
         DaggerfallCurrencySave? restored = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
@@ -43,12 +46,22 @@ internal sealed class DaggerfallCurrencyService
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _encumbrance = encumbrance ?? throw new ArgumentNullException(nameof(encumbrance));
         _unique = unique ?? throw new ArgumentNullException(nameof(unique));
+        _containers = containers;
         if (restored is { } save)
         {
             save.Validate();
             _accountGold = save.AccountGold;
             _nextGoldStack = save.NextGoldStack;
         }
+    }
+
+    // Kept for the small service fixtures that exercise carried currency without a second
+    // container owner. Provider transfers always use the composed overload above.
+    internal DaggerfallCurrencyService(DaggerfallDefinitions definitions, MechanicsInventoryCoordinator inventory,
+        DaggerfallItemInstances instances, DaggerfallEncumbrancePolicy encumbrance, DaggerfallUniqueItemAllocator unique,
+        DaggerfallCurrencySave? restored = null)
+        : this(definitions, inventory, instances, encumbrance, unique, containers: null!, restored)
+    {
     }
 
     internal DaggerfallCurrencyTotals Read()
@@ -108,6 +121,72 @@ internal sealed class DaggerfallCurrencyService
             if (current is not { Quantity: > 0 } && _instances.ContainsStack(DaggerfallItemOwner.Player, spent.Stack))
                 _instances.RemoveStack(DaggerfallItemOwner.Player, spent.Stack);
         }
+        return true;
+    }
+
+    /// <summary>
+    /// Joins a carried-gold payment to a selected container transfer in one Engine inventory
+    /// candidate. The caller supplies the already-admitted source and destination owners; this
+    /// owner only chooses the canonical gold stacks and removes exhausted stack metadata after the
+    /// publication succeeds.
+    /// </summary>
+    internal bool TrySpendGoldAndTransfer(ulong amount, EntityId source, EntityId destination,
+        InventoryContainerSelection selection, out InventoryContainerTransferReceipt? receipt)
+    {
+        ArgumentNullException.ThrowIfNull(selection);
+        receipt = null;
+        if (_containers is null) return false;
+        List<InventoryConsume>? spends = PrepareGoldSpends(amount);
+        if (spends is null) return false;
+        try
+        {
+            receipt = _containers.Transfer(source, destination, selection, candidate =>
+            {
+                foreach (InventoryConsume spend in spends) candidate.Consume(_inventory.Component.Owner, spend.Stack, spend.Quantity);
+            });
+        }
+        catch (Exception error) when (error is MechanicsException or InvalidOperationException or ArgumentException)
+        {
+            return false;
+        }
+        RetireExhaustedGold(spends);
+        return true;
+    }
+
+    /// <summary>Joins a provider-to-player transfer to the matching gold grant candidate.</summary>
+    internal bool TryReceiveGoldAndTransfer(ulong amount, EntityId source, EntityId destination,
+        InventoryContainerSelection selection, out InventoryContainerTransferReceipt? receipt)
+    {
+        ArgumentNullException.ThrowIfNull(selection);
+        receipt = null;
+        if (_containers is null) return false;
+        if (amount == 0)
+        {
+            try { receipt = _containers.Transfer(source, destination, selection); }
+            catch (Exception error) when (error is MechanicsException or InvalidOperationException or ArgumentException) { return false; }
+            return true;
+        }
+        GoldGrantPlan? plan = PrepareGoldGrant(amount);
+        if (plan is null) return false;
+        if (plan.Grants.Any(grant => grant.NewStack && _instances.ContainsStack(DaggerfallItemOwner.Player, grant.Stack)))
+            return false;
+        try
+        {
+            receipt = _containers.Transfer(source, destination, selection, candidate =>
+            {
+                foreach (GoldGrant grant in plan.Grants)
+                    _containers.Grant(candidate, _inventory.Component.Owner,
+                        new InventoryItemId(grant.Definition.Id.Value), grant.Stack, grant.Quantity);
+            });
+        }
+        catch (Exception error) when (error is MechanicsException or InvalidOperationException or ArgumentException)
+        {
+            return false;
+        }
+        foreach (GoldGrant grant in plan.Grants.Where(grant => grant.NewStack))
+            _instances.RegisterStack(DaggerfallItemOwner.Player, grant.Stack,
+                DaggerfallItemInstanceMetadata.Default(grant.Definition, DaggerfallItemOwner.Player));
+        _nextGoldStack = plan.NextSequence;
         return true;
     }
 
@@ -260,25 +339,12 @@ internal sealed class DaggerfallCurrencyService
 
     private void GrantGold(ulong amount, GoldGrantPlan plan)
     {
-        ulong remaining = amount;
-        foreach (InventoryStack existing in _inventory.Read().Stacks.Where(IsGold).OrderBy(value => value.Id.Value, StringComparer.Ordinal))
+        foreach (GoldGrant grant in plan.Grants)
         {
-            DaggerfallItemDefinition definition = Definition(existing);
-            ulong room = definition.MaximumQuantity - existing.Quantity;
-            ulong grant = Math.Min(remaining, room);
-            if (grant != 0) _inventory.Grant(new InventoryGrant(new InventoryItemId(definition.Id.Value), existing.Id, grant));
-            remaining -= grant;
-            if (remaining == 0) return;
+            _inventory.Grant(new InventoryGrant(new InventoryItemId(grant.Definition.Id.Value), grant.Stack, grant.Quantity));
+            if (grant.NewStack)
+                _instances.RegisterStack(DaggerfallItemOwner.Player, grant.Stack, DaggerfallItemInstanceMetadata.Default(grant.Definition, DaggerfallItemOwner.Player));
         }
-        DaggerfallItemDefinition gold = plan.NewStackDefinition;
-        foreach (InventoryStackId id in plan.NewStacks)
-        {
-            ulong grant = Math.Min(remaining, gold.MaximumQuantity);
-            _inventory.Grant(new InventoryGrant(new InventoryItemId(gold.Id.Value), id, grant));
-            _instances.RegisterStack(DaggerfallItemOwner.Player, id, DaggerfallItemInstanceMetadata.Default(gold, DaggerfallItemOwner.Player));
-            remaining -= grant;
-        }
-        if (remaining != 0) throw new InvalidOperationException("The preflighted gold-stack plan did not cover its requested quantity.");
         _nextGoldStack = plan.NextSequence;
     }
 
@@ -292,22 +358,49 @@ internal sealed class DaggerfallCurrencyService
     }
 
     /// <summary>Finds every new stack identifier before changing either the account or inventory.</summary>
+    private List<InventoryConsume>? PrepareGoldSpends(ulong amount)
+    {
+        List<InventoryConsume> spends = [];
+        if (amount == 0) return spends;
+        ulong remaining = amount;
+        foreach (InventoryStack stack in _inventory.Read().Stacks.Where(IsGold).OrderBy(stack => stack.Id.Value, StringComparer.Ordinal))
+        {
+            ulong spent = Math.Min(remaining, stack.Quantity);
+            if (spent != 0) spends.Add(new InventoryConsume(stack.Id, spent));
+            remaining -= spent;
+            if (remaining == 0) return spends;
+        }
+        return null;
+    }
+
+    private void RetireExhaustedGold(IEnumerable<InventoryConsume> spends)
+    {
+        foreach (InventoryConsume spent in spends)
+        {
+            InventoryStack? current = _inventory.Read().Stacks.SingleOrDefault(stack => stack.Id == spent.Stack);
+            if (current is not { Quantity: > 0 } && _instances.ContainsStack(DaggerfallItemOwner.Player, spent.Stack))
+                _instances.RemoveStack(DaggerfallItemOwner.Player, spent.Stack);
+        }
+    }
+
     private GoldGrantPlan? PrepareGoldGrant(ulong amount)
     {
         ulong remaining = amount;
         DaggerfallItemDefinition? first = null;
+        List<GoldGrant> grants = [];
         foreach (InventoryStack stack in _inventory.Read().Stacks.Where(IsGold).OrderBy(value => value.Id.Value, StringComparer.Ordinal))
         {
             DaggerfallItemDefinition definition = Definition(stack);
             first ??= definition;
-            remaining -= Math.Min(remaining, definition.MaximumQuantity - stack.Quantity);
-            if (remaining == 0) return new GoldGrantPlan([], _nextGoldStack, first);
+            ulong grant = Math.Min(remaining, definition.MaximumQuantity - stack.Quantity);
+            if (grant != 0) grants.Add(new(stack.Id, definition, grant, NewStack: false));
+            remaining -= grant;
+            if (remaining == 0) return new GoldGrantPlan(grants, _nextGoldStack, first);
         }
 
         DaggerfallItemDefinition gold = first ?? _definitions.RequireItem(new DaggerfallItemId(GoldTemplateItem));
         ulong maximum = gold.MaximumQuantity;
         HashSet<string> existing = _inventory.Read().Stacks.Select(stack => stack.Id.Value).ToHashSet(StringComparer.Ordinal);
-        List<InventoryStackId> planned = [];
         ulong next = _nextGoldStack;
         while (remaining != 0)
         {
@@ -317,11 +410,13 @@ internal sealed class DaggerfallCurrencyService
             InventoryStackId candidate = InventoryStackId.Parse($"daggerfall.currency.gold.{next}");
             next++;
             if (!existing.Add(candidate.Value)) continue;
-            planned.Add(candidate);
-            remaining -= Math.Min(remaining, maximum);
+            ulong grant = Math.Min(remaining, maximum);
+            grants.Add(new(candidate, gold, grant, NewStack: true));
+            remaining -= grant;
         }
-        return new GoldGrantPlan(planned, next, gold);
+        return new GoldGrantPlan(grants, next, gold);
     }
 
-    private sealed record GoldGrantPlan(IReadOnlyList<InventoryStackId> NewStacks, ulong NextSequence, DaggerfallItemDefinition NewStackDefinition);
+    private sealed record GoldGrant(InventoryStackId Stack, DaggerfallItemDefinition Definition, ulong Quantity, bool NewStack);
+    private sealed record GoldGrantPlan(IReadOnlyList<GoldGrant> Grants, ulong NextSequence, DaggerfallItemDefinition? NewStackDefinition);
 }

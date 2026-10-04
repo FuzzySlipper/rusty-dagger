@@ -209,6 +209,18 @@ public sealed class MechanicsInventoryContainerCoordinator
             Summarize(afterView));
     }
 
+    /// <summary>Contributes one mapped fungible grant to a caller-owned inventory candidate.</summary>
+    public void Grant(InventoryEdit candidate, EntityId owner, InventoryItemId item, InventoryStackId stack, ulong quantity)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentOutOfRangeException.ThrowIfZero(quantity);
+        RequireRegistered(owner, nameof(owner));
+        ItemDefinition definition = RequireDefinition(item);
+        if (definition.Kind != ItemKind.Fungible)
+            throw new ArgumentException($"Inventory candidate grants require a fungible item: '{item.Value}'.", nameof(item));
+        candidate.Grant(owner, definition, stack ?? throw new ArgumentNullException(nameof(stack)), quantity);
+    }
+
     /// <summary>
     /// Moves all directly contained items from one registered owner to another
     /// through one detached candidate and one Engine publication.
@@ -220,7 +232,8 @@ public sealed class MechanicsInventoryContainerCoordinator
     /// Transfers a selected amount. A caller acting on a selection the player made
     /// from an earlier view checks that view's store revision itself.
     /// </summary>
-    public InventoryContainerTransferReceipt Transfer(EntityId source, EntityId destination, InventoryContainerSelection selection)
+    public InventoryContainerTransferReceipt Transfer(EntityId source, EntityId destination, InventoryContainerSelection selection,
+        Action<InventoryEdit>? additionalChanges = null)
     {
         ArgumentNullException.ThrowIfNull(selection);
         ArgumentOutOfRangeException.ThrowIfZero(selection.Quantity);
@@ -230,10 +243,11 @@ public sealed class MechanicsInventoryContainerCoordinator
             throw new ArgumentException("A unique transfer does not carry a fungible stack identity.", nameof(selection));
         if (selection.UniqueEntityId is null && selection.Stack is null)
             throw new ArgumentException("A fungible transfer requires its selected source stack identity.", nameof(selection));
-        return TransferCore(source, destination, selection);
+        return TransferCore(source, destination, selection, additionalChanges);
     }
 
-    private InventoryContainerTransferReceipt TransferCore(EntityId source, EntityId destination, InventoryContainerSelection? selection)
+    private InventoryContainerTransferReceipt TransferCore(EntityId source, EntityId destination, InventoryContainerSelection? selection,
+        Action<InventoryEdit>? additionalChanges = null)
     {
         RequireRegistered(source, nameof(source));
         RequireRegistered(destination, nameof(destination));
@@ -287,6 +301,10 @@ public sealed class MechanicsInventoryContainerCoordinator
             candidate.TransferUnique(item.Entity, source, destination);
         }
 
+        // Product owners may join one already-prepared transfer with a concrete operation over the
+        // same Engine inventory world (for example carried-gold payment). The callback contributes
+        // only to this candidate; the Engine still publishes the complete operation atomically.
+        additionalChanges?.Invoke(candidate);
         candidate.Publish();
         InventoryView sourceAfterView = _store.Read(source);
         InventoryView destinationAfterView = _store.Read(destination);

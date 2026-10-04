@@ -1,5 +1,6 @@
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Policies;
 
@@ -22,6 +23,15 @@ internal static class DaggerfallRegionalEconomyPolicy
     internal const int MaximumSocialValue = 100;
     internal const int MinimumReaction = -100;
     internal const int MaximumReaction = 100;
+
+    /// <summary>FormulaHelper's percentage used to quote an item sent to a repair shop.</summary>
+    internal const int RepairCostPercent = 10;
+
+    /// <summary>FormulaHelper's fixed-point numerator for a provider identification charge.</summary>
+    internal const int IdentifyCostNumerator = 25;
+
+    /// <summary>FormulaHelper's fixed-point denominator for a provider identification charge.</summary>
+    internal const int IdentifyCostShift = 8;
 
     private const long RandomSeed = 0;
     private const string RandomScope = "daggerfall.regional-economy.v1";
@@ -93,6 +103,45 @@ internal static class DaggerfallRegionalEconomyPolicy
         }
 
         return checked((int)amount);
+    }
+
+    /// <summary>
+    /// Donor FormulaHelper.CalculateItemRepairCost. The guild reduction is supplied by the
+    /// concrete guild owner; a shop repair uses the same regional CalculateCost owner as trade.
+    /// </summary>
+    internal static int CalculateItemRepairCost(int baseValue, int shopQuality, int condition, int maximum,
+        int? region = null, int regionalAdjustment = NeutralRegionalAdjustment, int guildReductionPercent = 0)
+    {
+        if (baseValue < 0) throw new ArgumentOutOfRangeException(nameof(baseValue));
+        if (condition < 0 || maximum < 0 || condition > maximum)
+            throw new ArgumentOutOfRangeException(nameof(condition), "Repair condition must be within the authored maximum.");
+        if (guildReductionPercent is < 0 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(guildReductionPercent));
+        if (condition == maximum) return 0;
+
+        int baseRepair = Math.Max(1, checked(RepairCostPercent * baseValue / 100));
+        int cost = CalculateCost(baseRepair, shopQuality, region, regionalAdjustment);
+        return checked(cost * (100 - guildReductionPercent) / 100);
+    }
+
+    /// <summary>Donor FormulaHelper.CalculateItemRepairTime, expressed in classic seconds.</summary>
+    internal static int CalculateItemRepairTime(int condition, int maximum)
+    {
+        if (condition < 0 || maximum < 0 || condition > maximum)
+            throw new ArgumentOutOfRangeException(nameof(condition), "Repair condition must be within the authored maximum.");
+        long damage = maximum - condition;
+        long seconds = damage * DaggerfallCalendar.SecondsPerDay / 1000L;
+        return checked((int)Math.Max(seconds, DaggerfallCalendar.SecondsPerDay));
+    }
+
+    /// <summary>Donor FormulaHelper.CalculateItemIdentifyCost using the ordinary source value.</summary>
+    internal static int CalculateItemIdentifyCost(int baseValue, int guildReductionPercent = 0)
+    {
+        if (baseValue < 0) throw new ArgumentOutOfRangeException(nameof(baseValue));
+        if (guildReductionPercent is < 0 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(guildReductionPercent));
+        int cost = checked((IdentifyCostNumerator * baseValue) >> IdentifyCostShift);
+        return checked(cost * (100 - guildReductionPercent) / 100);
     }
 
     internal static int[] RandomizeInitialRegionalPrices(IRandomService random, string key)

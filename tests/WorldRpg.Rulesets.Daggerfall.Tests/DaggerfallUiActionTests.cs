@@ -177,6 +177,20 @@ public sealed class DaggerfallUiActionTests
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 
     [Theory]
+    [InlineData("{\"action\":\"merchant-buy\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"stack:gold\",\"amount\":3}", true)]
+    [InlineData("{\"action\":\"merchant-buy\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"unique:1002\"}", true)]
+    [InlineData("{\"action\":\"merchant-sell\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"stack:book\"}", true)]
+    [InlineData("{\"action\":\"merchant-shoplift\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"stack:gem\",\"amount\":1}", true)]
+    [InlineData("{\"action\":\"merchant-repair\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"unique:1002\"}", true)]
+    [InlineData("{\"action\":\"merchant-identify\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"unique:1002\"}", true)]
+    [InlineData("{\"action\":\"merchant-collect-repair\",\"revision\":\"dialogue.1|stock.2\",\"key\":\"merchant:repair:1\"}", true)]
+    [InlineData("{\"action\":\"merchant-buy\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"unique:1002\",\"amount\":2}", false)]
+    [InlineData("{\"action\":\"merchant-repair\",\"revision\":\"dialogue.1|stock.2\"}", false)]
+    [InlineData("{\"action\":\"merchant-collect-repair\",\"revision\":\"dialogue.1|stock.2\"}", false)]
+    public void Merchant_actions_admit_only_typed_provider_payloads(string json, bool accepted) =>
+        Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
     [InlineData("{\"action\":\"transport-select\",\"mode\":\"horse\"}", true)]
     [InlineData("{\"action\":\"transport-select\",\"mode\":\"ship\"}", false)]
     [InlineData("{\"action\":\"transport-select\"}", false)]

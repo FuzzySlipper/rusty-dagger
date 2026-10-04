@@ -19,12 +19,16 @@ internal sealed record DaggerfallServiceProvider(long NpcId, DaggerfallNpcSite S
 }
 
 /// <summary>A selected current item and its minimum usable condition, when a service acts on an item.</summary>
-internal sealed record DaggerfallServiceItemReference(ulong DurableItemId, string Definition, int MinimumCondition = 0)
+internal sealed record DaggerfallServiceItemReference(ulong DurableItemId, string Definition, int MinimumCondition = 0,
+    string? StackId = null, ulong Quantity = 1)
 {
     internal void Validate()
     {
-        if (DurableItemId == 0 || string.IsNullOrWhiteSpace(Definition) || MinimumCondition < 0)
+        bool unique = DurableItemId != 0;
+        bool stack = !string.IsNullOrWhiteSpace(StackId);
+        if (unique == stack || string.IsNullOrWhiteSpace(Definition) || MinimumCondition < 0 || Quantity == 0)
             throw new ArgumentException("A service item reference is incomplete.");
+        if (unique && Quantity != 1) throw new ArgumentException("A unique service item reference has quantity one.");
     }
 }
 
@@ -158,6 +162,8 @@ internal sealed class DaggerfallServiceTransactions
     private readonly DaggerfallItemInstances _instances;
     private readonly DaggerfallCurrencyService _currency;
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
+    private readonly MechanicsInventoryContainerCoordinator? _containers;
+    private readonly EntityId _player;
     private readonly Func<DaggerfallCalendar> _calendar;
     private readonly Func<DaggerfallNpcSite?> _currentSite;
     private readonly Dictionary<string, DaggerfallServiceQueuedWork> _pending = [];
@@ -165,7 +171,8 @@ internal sealed class DaggerfallServiceTransactions
 
     internal DaggerfallServiceTransactions(DaggerfallNpcRegistry npcs, DaggerfallSocialState social,
         MechanicsInventoryCoordinator inventory, DaggerfallItemInstances instances, DaggerfallCurrencyService currency,
-        DaggerfallUniqueItemAllocator uniqueItems, Func<DaggerfallCalendar> calendar, Func<DaggerfallNpcSite?> currentSite,
+        DaggerfallUniqueItemAllocator uniqueItems, MechanicsInventoryContainerCoordinator? containers, EntityId player,
+        Func<DaggerfallCalendar> calendar, Func<DaggerfallNpcSite?> currentSite,
         DaggerfallServiceStateSave? restored = null)
     {
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
@@ -174,6 +181,9 @@ internal sealed class DaggerfallServiceTransactions
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _currency = currency ?? throw new ArgumentNullException(nameof(currency));
         _uniqueItems = uniqueItems ?? throw new ArgumentNullException(nameof(uniqueItems));
+        _containers = containers;
+        if (containers is not null && player.Value == 0) throw new ArgumentOutOfRangeException(nameof(player));
+        _player = player;
         _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
         _currentSite = currentSite ?? throw new ArgumentNullException(nameof(currentSite));
         if (restored is not null)
@@ -182,6 +192,17 @@ internal sealed class DaggerfallServiceTransactions
             foreach (DaggerfallServiceQueuedWork work in restored.Pending)
                 _pending.Add(work.Id, work);
         }
+    }
+
+    // The isolated service-admission fixtures do not materialize a second inventory owner;
+    // retain their original constructor while transfer-capable sessions use the composed one.
+    internal DaggerfallServiceTransactions(DaggerfallNpcRegistry npcs, DaggerfallSocialState social,
+        MechanicsInventoryCoordinator inventory, DaggerfallItemInstances instances, DaggerfallCurrencyService currency,
+        DaggerfallUniqueItemAllocator uniqueItems, Func<DaggerfallCalendar> calendar,
+        Func<DaggerfallNpcSite?> currentSite, DaggerfallServiceStateSave? restored = null)
+        : this(npcs, social, inventory, instances, currency, uniqueItems, containers: null, player: default,
+            calendar, currentSite, restored)
+    {
     }
 
     internal IReadOnlyList<DaggerfallServiceQueuedWork> Pending => [.. _pending.Values.OrderBy(work => work.CompletesAtMinute).ThenBy(work => work.Id, StringComparer.Ordinal)];
@@ -245,6 +266,51 @@ internal sealed class DaggerfallServiceTransactions
             quote.Grants.Select(grant => grant.Grant.Item.Value).ToArray(), quote.QueuedWork);
     }
 
+    /// <summary>
+    /// Commits a concrete existing-item transfer together with its carried-gold settlement in one
+    /// Engine inventory candidate. The concrete provider owns the item meaning and chooses the
+    /// destination owner; this coordinator retains admission, stale-request, payment, queue, and
+    /// metadata-transfer ordering.
+    /// </summary>
+    internal DaggerfallServiceOutcome CommitTransfer(DaggerfallServiceQuote quote, EntityId source, EntityId destination,
+        InventoryContainerSelection selection, DaggerfallItemOwner sourceOwner, DaggerfallItemOwner destinationOwner,
+        bool playerPays)
+    {
+        ArgumentNullException.ThrowIfNull(quote);
+        ArgumentNullException.ThrowIfNull(selection);
+        sourceOwner.Validate();
+        destinationOwner.Validate();
+        if (_containers is null || _player.Value == 0)
+            return DaggerfallServiceOutcome.Refused(DaggerfallServiceDenial.GrantUnavailable);
+        quote.Request.Validate();
+        quote.Eligibility.Validate();
+        if (quote.Grants.Count != 0)
+            return DaggerfallServiceOutcome.Refused(DaggerfallServiceDenial.GrantUnavailable);
+        quote.QueuedWork?.Validate();
+        if (quote.QueuedWork is { } queued && (queued.Id != quote.Request.Id || queued.Provider != quote.Request.Provider
+            || !string.Equals(queued.Service, quote.Request.Provider.Service, StringComparison.Ordinal)))
+            return DaggerfallServiceOutcome.Refused(DaggerfallServiceDenial.GrantUnavailable);
+        if (_pending.ContainsKey(quote.Request.Id) || _submitted.Contains(quote.Request.Id))
+            return DaggerfallServiceOutcome.Refused(DaggerfallServiceDenial.AlreadySubmitted);
+        DaggerfallServiceDenial denial = Admit(quote.Request, quote.Eligibility);
+        if (denial != DaggerfallServiceDenial.None) return DaggerfallServiceOutcome.Refused(denial);
+
+        InventoryContainerTransferReceipt? transfer;
+        bool admitted;
+        if (playerPays)
+            admitted = _currency.TrySpendGoldAndTransfer(quote.Price.Gold, source, destination, selection, out transfer);
+        else
+            admitted = _currency.TryReceiveGoldAndTransfer(quote.Price.Gold, source, destination, selection, out transfer);
+        if (!admitted || transfer is null)
+            return DaggerfallServiceOutcome.Refused(DaggerfallServiceDenial.InsufficientFunds);
+
+        SyncTransfer(transfer, source, destination, sourceOwner, destinationOwner);
+        if (quote.QueuedWork is { } acceptedWork) _pending.Add(acceptedWork.Id, acceptedWork);
+        _submitted.Add(quote.Request.Id);
+        return new(true, DaggerfallServiceDenial.None, quote.Price.Gold,
+            transfer.Stacks.Select(value => value.Item.Value).Concat(transfer.UniqueItems.Select(value => value.Item.Value)).ToArray(), quote.QueuedWork);
+    }
+
     internal DaggerfallServiceStateSave Capture() => new([.. Pending]);
 
     /// <summary>
@@ -306,13 +372,23 @@ internal sealed class DaggerfallServiceTransactions
     private bool ItemAvailable(DaggerfallServiceItemReference? required)
     {
         if (required is null) return true;
-        Rusty.Engine.Mechanics.UniqueInventoryItem[] items = _inventory.Read().UniqueItems.Where(item =>
-            _inventory.GetDurableItemId(item.Entity).Value == required.DurableItemId).ToArray();
-        if (items.Length != 1 || !string.Equals(items[0].Definition.Value, required.Definition, StringComparison.Ordinal)) return false;
-        DaggerfallItemInstanceMetadata metadata;
-        try { metadata = _instances.RequireUnique(required.DurableItemId); }
+        if (required.DurableItemId != 0)
+        {
+            Rusty.Engine.Mechanics.UniqueInventoryItem[] items = _inventory.Read().UniqueItems.Where(item =>
+                _inventory.GetDurableItemId(item.Entity).Value == required.DurableItemId).ToArray();
+            if (items.Length != 1 || !string.Equals(items[0].Definition.Value, required.Definition, StringComparison.Ordinal)) return false;
+            DaggerfallItemInstanceMetadata metadata;
+            try { metadata = _instances.RequireUnique(required.DurableItemId); }
+            catch (InvalidOperationException) { return false; }
+            return metadata.Owner == DaggerfallItemOwner.Player && metadata.CurrentCondition >= required.MinimumCondition;
+        }
+
+        InventoryStackId stack = InventoryStackId.Parse(required.StackId!);
+        InventoryStack[] current = _inventory.Read().Stacks.Where(item => item.Id == stack
+            && string.Equals(item.Definition.Value, required.Definition, StringComparison.Ordinal)).ToArray();
+        if (current.Length != 1 || current[0].Quantity < required.Quantity) return false;
+        try { return _instances.RequireStack(DaggerfallItemOwner.Player, stack).CurrentCondition >= required.MinimumCondition; }
         catch (InvalidOperationException) { return false; }
-        return metadata.Owner == DaggerfallItemOwner.Player && metadata.CurrentCondition >= required.MinimumCondition;
     }
 
     private bool GrantsAvailable(IEnumerable<DaggerfallServiceGrant> grants)
@@ -331,6 +407,21 @@ internal sealed class DaggerfallServiceTransactions
                 || _instances.ContainsStack(DaggerfallItemOwner.Player, grant.Grant.Stack!)) return false;
         }
         return true;
+    }
+
+    private void SyncTransfer(InventoryContainerTransferReceipt transfer, EntityId source, EntityId destination,
+        DaggerfallItemOwner sourceOwner, DaggerfallItemOwner destinationOwner)
+    {
+        MechanicsInventoryContainerCoordinator containers = _containers
+            ?? throw new InvalidOperationException("The composed service transaction owner has no inventory container coordinator.");
+        InventoryView sourceAfter = containers.Read(source);
+        foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
+        {
+            bool exhausted = !sourceAfter.Stacks.Any(value => value.Id == stack.SourceStack);
+            _instances.TransferStack(sourceOwner, destinationOwner, stack.SourceStack, stack.DestinationStack, exhausted);
+        }
+        foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
+            _instances.MoveUnique(containers.Entities.IdentityOf(new EntityId(unique.EntityId)).Value, destinationOwner);
     }
 
     private void RegisterGrant(DaggerfallServiceGrant grant)

@@ -126,6 +126,12 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.DialogueTopic:
             case DaggerfallUiActionKind.DialogueClose: _ = ApplyDialogueAction(action); break;
             case DaggerfallUiActionKind.TrainingCommit: ApplyTrainingAction(action); break;
+            case DaggerfallUiActionKind.MerchantBuy:
+            case DaggerfallUiActionKind.MerchantSell:
+            case DaggerfallUiActionKind.MerchantRepair:
+            case DaggerfallUiActionKind.MerchantCollectRepair:
+            case DaggerfallUiActionKind.MerchantIdentify:
+            case DaggerfallUiActionKind.MerchantShoplift: ChangeMerchant(action); break;
             case DaggerfallUiActionKind.TransportSelect:
             case DaggerfallUiActionKind.TransportToggle:
             case DaggerfallUiActionKind.TransportLeaveShip:
