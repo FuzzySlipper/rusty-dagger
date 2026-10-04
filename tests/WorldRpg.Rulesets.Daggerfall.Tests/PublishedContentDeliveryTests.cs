@@ -73,12 +73,14 @@ public sealed class PublishedContentDeliveryTests
             .Where(path => !path.EndsWith("classic-media-inventory.json", StringComparison.Ordinal)
                 && !path.Contains("/character/", StringComparison.Ordinal)
                 && !path.Contains("/cinematics/", StringComparison.Ordinal)
-                && !path.Contains("/music/", StringComparison.Ordinal))];
+                && !path.Contains("/music/", StringComparison.Ordinal)
+                && !path.StartsWith("worldrpg/media/sky/", StringComparison.Ordinal))];
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
         // The published group carries every classic descriptor and the sound catalog that describes
-        // the archive. The inventory indexes both because both are admitted content.
+        // the archive. The inventory indexes both because both are admitted content; product-wide sky
+        // resources have their own manifest and group below.
         Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
-        Assert.Equal(297, listed.Count);
+        Assert.Equal(318, listed.Count);
 
         // The score is published by its own command into its own group, so it carries its own generated
         // index and the classic index above does not account for it.
@@ -190,6 +192,50 @@ public sealed class PublishedContentDeliveryTests
             Assert.Equal(4, palette.Scale);
             Assert.Equal("ImgFile.ReadPalette", palette.Anchor);
         });
+    }
+
+    [Fact]
+    public void The_generated_sky_manifest_agrees_with_its_own_published_group()
+    {
+        ProductContent content = AdmittedContent();
+        const string manifestPath = "worldrpg/media/sky/manifest.json";
+        JsonElement manifest = JsonDocument.Parse(content.ReadBytes(manifestPath).ToArray()).RootElement;
+
+        // The sky producer owns a separate group from classic media: all day-frame, night and
+        // precipitation entries name a resource in that group, and the group contains no unindexed
+        // artifact. Keeping this join here prevents the classic inventory from becoming a catch-all
+        // while still making a dropped or hand-written sky file visible.
+        JsonElement[] day = [.. manifest.GetProperty("resources").EnumerateArray()];
+        JsonElement[] nights = [.. manifest.GetProperty("nightResources").EnumerateArray()];
+        JsonElement[] particles = [.. manifest.GetProperty("weatherParticles").EnumerateArray()];
+        Assert.Equal(32 * 64, day.Length);
+        Assert.Equal(4, nights.Length);
+        Assert.Equal(2, particles.Length);
+        Assert.Equal(32 * 64, manifest.GetProperty("selections").GetArrayLength());
+        Assert.Equal(7, manifest.GetProperty("daylightFrameCurve").GetArrayLength());
+
+        HashSet<string> indexed = [];
+        foreach (JsonElement resource in day.Concat(nights).Concat(particles))
+        {
+            string relativePath = resource.GetProperty("relativePath").GetString()!;
+            string path = $"worldrpg/{relativePath}";
+            Assert.StartsWith("worldrpg/media/sky/resources/", path, StringComparison.Ordinal);
+            Assert.True(indexed.Add(path), $"The sky manifest names '{path}' more than once.");
+            byte[] bytes = content.ReadBytes(path).ToArray();
+            Assert.Equal(resource.GetProperty("byteLength").GetInt64(), bytes.LongLength);
+            Assert.Equal(resource.GetProperty("contentHash").GetString(), Convert.ToHexStringLower(SHA256.HashData(bytes)));
+        }
+
+        HashSet<string> published = [.. GeneratedContentFiles(content)
+            .Where(path => path.StartsWith("worldrpg/media/sky/", StringComparison.Ordinal)
+                && !StringComparer.Ordinal.Equals(path, manifestPath))];
+        Assert.Equal(indexed.Order(StringComparer.Ordinal), published.Order(StringComparer.Ordinal));
+        Assert.Contains(manifestPath, GeneratedContentFiles(content));
+
+        HashSet<string> selected = [.. manifest.GetProperty("selections").EnumerateArray()
+            .Select(selection => selection.GetProperty("resourceId").GetString()!)];
+        Assert.Equal(day.Select(resource => resource.GetProperty("id").GetString()!).Order(StringComparer.Ordinal),
+            selected.Order(StringComparer.Ordinal));
     }
 
     /// <summary>
@@ -414,7 +460,9 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", identified["map.fmap0i17"].Path);
         Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", identified["font.classic.0000"].Path);
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", identified["weapon.werecreature"].Path);
-        Assert.Equal(296, identified.Count);
+        // The ambient and weather audio publication added 21 source-backed clips to the classic group;
+        // the separate sky group is validated above and does not belong in this count.
+        Assert.Equal(317, identified.Count);
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
@@ -465,7 +513,7 @@ public sealed class PublishedContentDeliveryTests
         DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(content, inputs.ClassicPresentation);
         DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(content, castle.ClassicPresentation);
 
-        Assert.Equal(296, media.Paths.Count);
+        Assert.Equal(317, media.Paths.Count);
         JsonElement inventory = JsonDocument.Parse(content.ReadBytes(DaggerfallUiArt.InventoryPath).ToArray()).RootElement;
         Dictionary<string, string> published = inventory.GetProperty("artifacts").EnumerateArray()
             .Where(artifact => artifact.TryGetProperty("mediaId", out _))
