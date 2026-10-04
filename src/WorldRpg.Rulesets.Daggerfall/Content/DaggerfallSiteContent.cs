@@ -166,7 +166,8 @@ internal static class DaggerfallSiteContent
             music,
             audioBundle,
             DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics), billboardSprites,
-            DaggerfallStaticNpcPlacement.Read(normalizedWorld, billboardSprites, definitions, start.Site, diagnostics));
+            DaggerfallStaticNpcPlacement.Read(normalizedWorld, billboardSprites, definitions, start.Site, diagnostics))
+        { AmbientZones = DaggerfallAmbientZones.Read(normalizedWorld, diagnostics) };
     }
 
     private static DaggerfallInteriorBuilding? ReadInteriorBuilding(ReadOnlyMemory<byte>? bytes,
@@ -2355,6 +2356,7 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContent
         .Select(anchor => anchor.Validate())
         .ToDictionary(anchor => anchor.Id, StringComparer.Ordinal));
     /// <summary>Source-normalized dungeon lights, ordered by their stable RDB placement identity.</summary>
+    internal IReadOnlyList<DaggerfallAmbientZone> AmbientZones { get; init; } = [];
     internal IReadOnlyList<DaggerfallSiteLight> Lights { get; } = Array.AsReadOnly((lights ?? [])
         .Select(light => light.Validate())
         .OrderBy(light => light.Id, StringComparer.Ordinal)

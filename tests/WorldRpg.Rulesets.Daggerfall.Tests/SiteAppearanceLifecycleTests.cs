@@ -183,7 +183,24 @@ public sealed class SiteAppearanceLifecycleTests
             appearance.LightRequests.Last().Descriptor.Intensity);
         exteriorLighting.UpdateAmbient(DaggerfallCalendar.Start with { Hour = 12 });
         Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.ExteriorNoon,
-            appearance.LightUpdates.Single().Replacement.Descriptor.Intensity);
+            appearance.LightUpdates.Single(update => update.Replacement.Descriptor.Kind == LightKind.Ambient).Replacement.Descriptor.Intensity);
+        Assert.Single(appearance.LightRequests, request => request.Descriptor.Kind == LightKind.Directional);
+        var noon = DaggerfallCalendar.Start with { Hour = 12 };
+        float daylight = DaggerfallWeatherTuning.Classic.Daylight(noon, DaggerfallWeatherKind.Thunder);
+        exteriorLighting.UpdateAmbient(noon, daylight);
+        var ambientUpdate = appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Ambient);
+        Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.ExteriorNight
+            + (DaggerfallTuning.Defaults.SiteLighting.ExteriorNoon - DaggerfallTuning.Defaults.SiteLighting.ExteriorNight) * daylight,
+            ambientUpdate.Replacement.Descriptor.Intensity);
+        var sunUpdate = appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Directional);
+        Assert.Equal(daylight, sunUpdate.Replacement.Descriptor.Intensity);
+        Assert.Equal(-1f, sunUpdate.Replacement.Descriptor.Direction.Y, 4);
+        exteriorLighting.UpdateAmbient(noon, daylight, lightningFlash: 2);
+        Assert.Equal(2f, appearance.LightUpdates.Last().Replacement.Descriptor.Intensity);
+        exteriorLighting.UpdateAmbient(noon, daylight);
+        Assert.Equal(ambientUpdate.Replacement.Descriptor.Intensity, appearance.LightUpdates.Last().Replacement.Descriptor.Intensity);
+        exteriorLighting.Dispose();
+        Assert.Equal(appearance.LightRequests.Count, appearance.DisposedLights);
     }
 
     [Fact]

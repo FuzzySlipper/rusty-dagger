@@ -1,6 +1,10 @@
 {
-  "worldOrigin": { "verticalRebaseDistance": 500.0 },
-  "detection": { "maximumDistance": 14.0 },
+  "worldOrigin": {
+    "verticalRebaseDistance": 500.0
+  },
+  "detection": {
+    "maximumDistance": 14.0
+  },
   "playerControl": {
     "lookSensitivity": 0.0035,
     "pitchMinimumRadians": -1.5533,
@@ -138,7 +142,10 @@
     "pointsPerSecond": 5.0,
     "delayAfterAttackSeconds": 2.0
   },
-  "strikeEnchantments": { "damageAdjustment": 5, "vampiricRange": 2.25 },
+  "strikeEnchantments": {
+    "damageAdjustment": 5,
+    "vampiricRange": 2.25
+  },
   "music": {
     "alternatePlaylists": false
   },
@@ -192,5 +199,285 @@
     "dungeon": 0.2941176471,
     "exteriorNoon": 0.5882352941,
     "exteriorNight": 0.1960784314
+  },
+  "weather": {
+    "odds": [
+      [
+        75,
+        15,
+        0,
+        3,
+        5,
+        2,
+        0
+      ],
+      [
+        75,
+        15,
+        0,
+        0,
+        5,
+        5,
+        0
+      ],
+      [
+        85,
+        15,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        80,
+        15,
+        0,
+        0,
+        3,
+        2,
+        0
+      ],
+      [
+        18,
+        20,
+        25,
+        2,
+        0,
+        0,
+        35
+      ],
+      [
+        30,
+        23,
+        15,
+        2,
+        20,
+        10,
+        0
+      ],
+      [
+        45,
+        25,
+        15,
+        0,
+        10,
+        5,
+        0
+      ],
+      [
+        30,
+        18,
+        20,
+        2,
+        20,
+        10,
+        0
+      ],
+      [
+        15,
+        20,
+        25,
+        3,
+        25,
+        12,
+        0
+      ],
+      [
+        20,
+        15,
+        10,
+        3,
+        37,
+        15,
+        0
+      ],
+      [
+        35,
+        20,
+        10,
+        0,
+        25,
+        10,
+        0
+      ],
+      [
+        20,
+        20,
+        20,
+        0,
+        25,
+        15,
+        0
+      ],
+      [
+        15,
+        20,
+        25,
+        25,
+        0,
+        0,
+        15
+      ],
+      [
+        10,
+        10,
+        20,
+        20,
+        25,
+        15,
+        0
+      ],
+      [
+        25,
+        15,
+        15,
+        15,
+        20,
+        10,
+        0
+      ],
+      [
+        15,
+        15,
+        15,
+        20,
+        20,
+        15,
+        0
+      ],
+      [
+        20,
+        20,
+        20,
+        5,
+        25,
+        10,
+        0
+      ],
+      [
+        30,
+        15,
+        10,
+        3,
+        27,
+        15,
+        0
+      ],
+      [
+        40,
+        15,
+        10,
+        0,
+        20,
+        15,
+        0
+      ],
+      [
+        25,
+        20,
+        15,
+        0,
+        25,
+        15,
+        0
+      ],
+      [
+        25,
+        15,
+        20,
+        5,
+        10,
+        0,
+        25
+      ],
+      [
+        35,
+        15,
+        10,
+        5,
+        25,
+        10,
+        0
+      ],
+      [
+        60,
+        20,
+        5,
+        0,
+        10,
+        5,
+        0
+      ],
+      [
+        25,
+        15,
+        20,
+        10,
+        20,
+        10,
+        0
+      ]
+    ],
+    "winterScale": 0.65,
+    "overcastScale": 0.65,
+    "rainScale": 0.45,
+    "stormScale": 0.25,
+    "snowScale": 0.45,
+    "daylightCurve": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0.15,
+        0.65,
+        2.6095238
+      ],
+      [
+        0.5,
+        0.96,
+        0
+      ],
+      [
+        0.85,
+        0.65,
+        -2.609524
+      ],
+      [
+        1,
+        0,
+        0
+      ]
+    ]
+  },
+  "ambient": {
+    "clearFogEnd": 2400,
+    "rainFogDensity": 0.003,
+    "snowFogDensity": 0.005,
+    "heavyFogDensity": 0.05,
+    "interiorFogDensity": 0.001,
+    "dungeonFogDensity": 0.005,
+    "zoneAmbient": 0.6470588235294118,
+    "minimumWaitSeconds": 4,
+    "maximumWaitSeconds": 35,
+    "flashSeconds": 0.03333333333333333,
+    "flashSkipChance": 0.6,
+    "flashIntensity": 2,
+    "rollingThunderDelay": 1.7,
+    "shelterProbeHeight": 12,
+    "precipitationHeight": 6,
+    "rainRate": 800,
+    "snowRate": 400,
+    "rainLifetime": 0.6,
+    "snowLifetime": 4,
+    "rainSpeed": 14,
+    "snowSpeed": 1.5,
+    "rainSize": 0.16,
+    "snowSize": 0.08,
+    "particleBudget": 2048,
+    "rainSpread": 8,
+    "snowSpread": 2
   }
 }

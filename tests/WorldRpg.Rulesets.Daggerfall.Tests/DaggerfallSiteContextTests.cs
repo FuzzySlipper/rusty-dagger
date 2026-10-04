@@ -476,6 +476,7 @@ public sealed class DaggerfallSiteContextTests
     {
         Quests = new([]),
         DungeonMotion = new DaggerfallDungeonMotionSnapshot("test-site-profile", []),
+        Weather = new(Enumerable.Repeat(DaggerfallWeatherKind.Sunny, 6).ToArray(), new DaggerfallCalendar(1, 1, 1, 0, 0, 0).DayNumber + 1),
         RegionalPrices = new(0, Enumerable.Repeat(
             WorldRpg.Rulesets.Daggerfall.Policies.DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment,
             WorldRpg.Rulesets.Daggerfall.Policies.DaggerfallRegionalEconomyPolicy.RegionCount).ToArray()),

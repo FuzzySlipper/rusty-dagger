@@ -134,6 +134,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Resolved market factors at the last applied calendar day.</summary>
     [JsonRequired]
     public DaggerfallRegionalPriceSave RegionalPrices { get; init; } = null!;
+    /// <summary>Resolved climate weather and its next admitted calendar boundary.</summary>
+    [JsonRequired]
+    public DaggerfallWeatherSave Weather { get; init; } = null!;
     /// <summary>Current mount or ship choice and its return pose.</summary>
     [JsonRequired]
     public DaggerfallTransportSave Transport { get; init; } = DaggerfallTransportSave.Foot;
@@ -686,6 +689,10 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(Identities);
         ArgumentNullException.ThrowIfNull(CombatCooldowns);
         ArgumentNullException.ThrowIfNull(Calendar);
+        ArgumentNullException.ThrowIfNull(Weather);
+        Weather.Validate();
+        if (Weather.NextDay != checked(new DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).DayNumber + 1))
+            throw new ArgumentException("Saved weather boundary does not follow the saved calendar day.");
         ArgumentNullException.ThrowIfNull(Site);
         ArgumentNullException.ThrowIfNull(ActorInventories);
         ArgumentNullException.ThrowIfNull(Variables);

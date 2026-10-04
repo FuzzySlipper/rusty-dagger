@@ -33,12 +33,12 @@ public sealed class DaggerfallRestSessionTests
             SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
             EngineContextFake engine = EngineContextFake.Create(content, spatial.Service,
                 new AppearanceFake(releases), random: RandomMaximum.Create());
-            using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
+            using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults) {Sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content)});
             if (wilderness)
                 session.State.PlayerControl.MoveTo(new WorldPoint(DaggerfallExteriorCellResidency.CellSize + 1f, 1f, 1f).ToVector());
 
             DaggerfallExteriorCellId cell = session.Sites.CurrentExteriorCell();
-            int climate = definitions.Grids.Climate.GetCell(cell.X, cell.Y).Value;
+            int climate = definitions.Grids.ClimateAtWorldPixel(cell.X, cell.Y).Value;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
 
             Assert.Equal(3600, session.RestView.ElapsedSeconds);
@@ -68,7 +68,7 @@ public sealed class DaggerfallRestSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
         DaggerfallSavePayload saved;
         long elapsed;
-        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) {Sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content)}))
         {
             DaggerfallCalendarSave before = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
@@ -113,7 +113,7 @@ public sealed class DaggerfallRestSessionTests
         double staminaBefore;
         double magickaBefore;
         DaggerfallCalendarSave calendarBefore;
-        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) {Sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content)}))
         {
             DaggerfallCalendarSave initialCalendar = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
@@ -175,7 +175,7 @@ public sealed class DaggerfallRestSessionTests
         PopulateContent(townContent, townInputs);
         SpatialFake townSpatial = SpatialFake.Create(townInputs.SpatialArtifact.Sha256, releases);
         EngineContextFake townEngine = EngineContextFake.Create(townContent, townSpatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
-        using DaggerfallSession townSession = DaggerfallSession.StartNew(townEngine.Context, new(definitions, townInputs, DaggerfallTuning.Defaults));
+        using DaggerfallSession townSession = DaggerfallSession.StartNew(townEngine.Context, new(definitions, townInputs, DaggerfallTuning.Defaults) {Sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content)});
         Track townHealth = townSession.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
         townHealth.SetCurrent(townHealth.MaximumValue - 10d, clamp: true);
         DaggerfallSavePayload townBefore = DaggerfallSavePayload.Read(townSession.CaptureSave());

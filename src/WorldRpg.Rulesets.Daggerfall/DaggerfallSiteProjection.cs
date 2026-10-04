@@ -124,9 +124,11 @@ internal sealed class DaggerfallSiteProjection : IDisposable
             _spatialMovement.ReleaseTrigger(volume.Trigger, tick);
         _waterTriggersActive = false;
     }
+    internal Vector3 WorldOffset { get; private set; }
 
     internal void Rebase(Vector3 delta)
     {
+        WorldOffset += delta;
         Doors.Rebase(delta);
         Motion.Rebase(delta);
         Portals.Rebase(delta);

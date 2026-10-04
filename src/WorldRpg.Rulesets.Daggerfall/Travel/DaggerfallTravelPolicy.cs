@@ -271,7 +271,7 @@ internal sealed class DaggerfallTravelPolicy
         // MapsFile.GetClimateIndex adds one to world-pixel X to align CLIMATE.PAK with the height
         // map.  The normalized grid retains that sentinel column, so the +1 is part of this route
         // policy rather than a general property of DaggerfallClimateGridDefinition.GetCell.
-        DaggerfallClimateCell climate = _grids.Climate.GetCell(mapPixelX + 1, mapPixelY);
+        DaggerfallClimateCell climate = _grids.ClimateAtWorldPixel(mapPixelX, mapPixelY);
         if (climate.Disposition != DaggerfallClimateCoordinateDisposition.Found)
             throw new InvalidOperationException($"Travel route climate at map pixel {mapPixelX}/{mapPixelY} is outside the admitted climate grid.");
         if (climate.Value < 223 || climate.Value > 232)

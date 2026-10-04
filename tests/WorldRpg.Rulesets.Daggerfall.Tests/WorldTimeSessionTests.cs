@@ -66,6 +66,7 @@ public sealed class WorldTimeSessionTests
             Calendar = new DaggerfallCalendarSave(406, 3, 12, 12, 0, 0, 0d),
             Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 4), null, []),
             RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = new DaggerfallCalendar(406, 3, 12, 12, 0, 0).DayNumber },
+            Weather = baseline.Weather with { NextDay = new DaggerfallCalendar(406, 3, 12, 12, 0, 0).DayNumber + 1 },
         };
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -106,6 +107,7 @@ public sealed class WorldTimeSessionTests
             Calendar = new DaggerfallCalendarSave(406, 3, 11, 23, 0, 0, 0d),
             Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 4), null, []),
             RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = new DaggerfallCalendar(406, 3, 11, 23, 0, 0).DayNumber },
+            Weather = baseline.Weather with { NextDay = new DaggerfallCalendar(406, 3, 11, 23, 0, 0).DayNumber + 1 },
         };
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -135,6 +137,7 @@ public sealed class WorldTimeSessionTests
             Calendar = new DaggerfallCalendarSave(406, 3, 12, 12, 0, 0, 0d),
             Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 179), null, []),
             RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = new DaggerfallCalendar(406, 3, 12, 12, 0, 0).DayNumber },
+            Weather = baseline.Weather with { NextDay = new DaggerfallCalendar(406, 3, 12, 12, 0, 0).DayNumber + 1 },
         };
         List<string> releases = [];
         ContentFake content = new(releases);

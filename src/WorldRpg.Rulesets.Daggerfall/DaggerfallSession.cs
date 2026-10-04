@@ -153,6 +153,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     {
         ReconcileNpcProjection();
         InitializeActivation(_engine, _tuning.LootInteraction);
+        SyncWeatherContext();
     }
 
     void IDaggerfallSiteTransitionHost.RebaseTransientWorld(Vector3 delta)
@@ -276,6 +277,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // went away must not hold the world for a client that cannot see it.
         _interactions.SetMenuOpen(false);
         _hud.RequestArt();
+        SyncWeatherContext();
         PublishPresentation();
     }
 
@@ -320,6 +322,12 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             // is real once the step applied it, and the director is told once per admitted update.
             AdvanceMusic();
         }
+        bool ambientPlaying = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null
+            && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null
+            && update.Facts.LifecycleState == ProductLifecycleState.Running
+            && update.Facts.Mode == ProductUpdateMode.Realtime && update.Facts.AdmittedStepCount > 0
+            && double.IsFinite(update.Facts.FixedDeltaSeconds) && update.Facts.FixedDeltaSeconds > 0;
+        SyncWeatherContext(ambientPlaying ? update.Facts.FixedDeltaSeconds * update.Facts.AdmittedStepCount : 0, ambientPlaying);
         _appearance.CompleteAdmittedUpdate();
         return ProductUpdateResult.None;
     }
@@ -529,7 +537,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _disposed = true;
         // DisposeAll walks backward: projection door entities must release before the actor store.
         Exception? failure = null;
-        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, Infections]); }
+        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, Infections, _weatherPresentation]); }
         catch (Exception exception) { failure = exception; }
         try { _sites.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
