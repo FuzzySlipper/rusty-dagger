@@ -52,7 +52,9 @@ public sealed class ProductModeSessionTests
         }
 
         Assert.Equal(2, engine.UiOpenCalls);
-        Assert.True(releases.IndexOf("session") < releases.LastIndexOf("content"));
+        Assert.NotEmpty(spatial.ContentResidencyRequests);
+        Assert.Contains("content", releases);
+        Assert.True(releases.LastIndexOf("content") < releases.IndexOf("session"));
     }
 
     [Fact]
