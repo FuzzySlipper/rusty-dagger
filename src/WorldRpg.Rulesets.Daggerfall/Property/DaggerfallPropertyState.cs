@@ -365,6 +365,33 @@ internal sealed class DaggerfallPropertyState
             DaggerfallPropertyKind.House, offer.StorageKey);
     }
 
+    /// <summary>
+    /// Awards an already admitted local house through the same property owner used by bank
+    /// purchases.  Knightly order rewards are source-granted deeds, so they do not fabricate a
+    /// second wallet transaction; ownership still goes through this state's region and storage
+    /// invariants and is captured by the normal property save boundary.
+    /// </summary>
+    internal DaggerfallPropertyTransactionResult AwardHouse(DaggerfallHouseOffer offer)
+    {
+        ArgumentNullException.ThrowIfNull(offer);
+        try { offer.Validate(_tuning); }
+        catch (ArgumentException exception)
+        {
+            return DaggerfallPropertyTransactionResult.Refused(DaggerfallPropertyTransactionKind.Purchase,
+                DaggerfallPropertyKind.House, DaggerfallPropertyTransactionDenial.InvalidOffer, offer.StorageKey,
+                exception.Message);
+        }
+        if (OwnsHouseInRegion(offer.Identity.Site.Region))
+            return DaggerfallPropertyTransactionResult.Refused(DaggerfallPropertyTransactionKind.Purchase,
+                DaggerfallPropertyKind.House, DaggerfallPropertyTransactionDenial.AlreadyOwned, offer.StorageKey,
+                "You already own a house in this region.");
+
+        _retainedHouses.Remove(offer.Identity);
+        _houses.Add(offer.Identity, DaggerfallHouseOwnershipSave.Capture(offer.Identity));
+        return new(true, DaggerfallPropertyTransactionKind.Purchase, DaggerfallPropertyKind.House,
+            DaggerfallPropertyTransactionDenial.None, 0, offer.StorageKey, "House awarded.");
+    }
+
     internal DaggerfallPropertyTransactionResult PurchaseShip(DaggerfallShipOffer offer,
         IDaggerfallPropertyBankSettlement settlement)
     {

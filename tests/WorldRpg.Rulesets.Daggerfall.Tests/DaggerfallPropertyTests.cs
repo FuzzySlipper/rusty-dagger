@@ -95,6 +95,24 @@ public sealed class DaggerfallPropertyTests
     }
 
     [Fact]
+    public void Knightly_house_award_uses_property_ownership_without_a_wallet_transaction()
+    {
+        DaggerfallHouseOffer offer = Assert.Single(DaggerfallPropertyPolicy.HousesForSale(
+            [Candidate(new DaggerfallSiteId(17, 4), "TOWN00.RMB", 1, 2f, blockX: 0, blockY: 0)], Tuning));
+        DaggerfallPropertyState state = new(Tuning);
+
+        DaggerfallPropertyTransactionResult awarded = state.AwardHouse(offer);
+
+        Assert.True(awarded.Applied);
+        Assert.Equal(DaggerfallPropertyTransactionKind.Purchase, awarded.Kind);
+        Assert.Equal(0UL, awarded.Amount);
+        Assert.True(state.OwnsHouse(offer.Identity));
+        Assert.Equal(DaggerfallPropertyTransactionDenial.AlreadyOwned, state.AwardHouse(offer).Denial);
+        DaggerfallPropertyState restored = new(Tuning, state.Capture());
+        Assert.True(restored.OwnsHouse(offer.Identity));
+    }
+
+    [Fact]
     public void Property_save_restores_identity_and_sale_retains_the_bound_kit_container()
     {
         DaggerfallHouseOffer offer = Assert.Single(DaggerfallPropertyPolicy.HousesForSale(
