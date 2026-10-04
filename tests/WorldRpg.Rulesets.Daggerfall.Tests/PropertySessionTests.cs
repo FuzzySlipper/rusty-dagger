@@ -418,14 +418,14 @@ public sealed class PropertySessionTests
                 source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, site.Id, profileKind: DaggerfallWorldProfileKind.Exterior,
                 logicalProfileId: "property-land", portals: [new("house-entrance", new(1, 1, 1), 2, House.ProfileKey.LogicalId)],
-                terrainTextures: source.TerrainTextures);
+                billboardSprites: source.BillboardSprites, terrainTextures: source.TerrainTextures);
             var destination = definitions.Locations.Records.Where(value => value.Kind == DaggerfallSiteKind.TownCity && value.Id != site.Id)
                 .OrderBy(value => Math.Abs(value.MapPixelX - site.MapPixelX) + Math.Abs(value.MapPixelY - site.MapPixelY)).First();
             Destination = new(new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()), source.SpatialArtifact,
                 source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, destination.Id,
                 profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "property-destination",
-                terrainTextures: source.TerrainTextures);
+                billboardSprites: source.BillboardSprites, terrainTextures: source.TerrainTextures);
             Small = ReadProfile(root, content, definitions, "daggerfall.small-ship.json");
             Large = ReadProfile(root, content, definitions, "daggerfall.large-ship.json");
             profiles = new(admitShips ? [Land, House, Small, Large, Destination] : [Land, House, Destination]);
