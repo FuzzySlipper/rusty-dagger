@@ -254,6 +254,7 @@ internal sealed partial class DaggerfallSession
                     combatRules,
                     AppendEffectDamage, (effect,track,amount)=>_vitality.AdjustConditionTrack(effect.Source,effect.Target,track,amount)),
                 .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => character.Career),
+                DaggerfallTempleBlessingEffects.Definition(social, () => character.Career, actors.Player.DurableId),
             ]));
             effects.RestoreMagicRounds(saved?.MagicRounds ?? 0);
             Infections = new(effects, () => _time.Calendar.DayNumber, Cinematics, composition.VideosEnabled,
@@ -353,6 +354,8 @@ internal sealed partial class DaggerfallSession
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty, _sites.ActiveProfile.LogicalId)
                     : null, saved?.Services);
             DaggerfallConcreteGuildServiceRuntime concreteGuildServices = new(guildMembership, npcs, services);
+            DaggerfallTempleServiceRuntime templeServices = new(concreteGuildServices, services, npcs, social,
+                effects, _poisons, actors, _random, () => _time.Calendar);
             DaggerfallKnightlyOrderClaimState knightlyClaims = new(saved?.KnightlyClaims);
             DaggerfallKnightlyOrderClaimRuntime knightlyClaimActions = new(concreteGuildServices, knightlyClaims, _random);
             DaggerfallSkillTrainingService skillTraining = new(services, npcs, social,
@@ -393,6 +396,7 @@ internal sealed partial class DaggerfallSession
                 lodging: new DaggerfallLodgingState(saved?.Lodging),
                 travel: new DaggerfallTravelState(saved?.Travel),
                 services: services,
+                templeServices: templeServices,
                 skillTraining: skillTraining,
                 regionalPrices: regionalPrices,
                 tradeQuotes: tradeQuotes,

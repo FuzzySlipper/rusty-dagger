@@ -551,10 +551,16 @@ internal static class DaggerfallUiAction
                     && tone is "polite" or "normal" or "blunt"
                     ? new(action, Revision: revision, Tone: tone) : null;
             if (action == "dialogue-topic")
+            {
+                if (topic == "donate")
+                    return fields.SetEquals(["action", "revision", "topic", "amount"])
+                        && !string.IsNullOrWhiteSpace(revision) && amount is > 0
+                        ? new(action, Revision: revision, Topic: topic, Amount: amount) : null;
                 return fields.SetEquals(["action", "revision", "topic"])
                     && !string.IsNullOrWhiteSpace(revision)
-                    && ValidDialogueTopic(topic)
+                    && (ValidDialogueTopic(topic) || topic == "cure")
                     ? new(action, Revision: revision, Topic: topic) : null;
+            }
             if (action == "dialogue-close")
                 return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision)
                     ? new(action, Revision: revision) : null;

@@ -290,6 +290,22 @@ internal static class DaggerfallDiseasePolicy
         return instances.Length;
     }
 
+    /// <summary>Counts current ordinary and transformation disease effects for a provider quote.</summary>
+    internal static int CountAfflictions(DaggerfallEffectLifecycle effects, long targetId)
+    {
+        ArgumentNullException.ThrowIfNull(effects);
+        HashSet<string> keys = Data.Values.Select(value => value.Key).ToHashSet(StringComparer.Ordinal);
+        return effects.Active.Count(effect => effect.Context.Target.Value == checked((ulong)targetId)
+            && (keys.Contains(effect.Definition.Key) || DaggerfallTransformationInfectionPolicy.IsInfection(effect.Definition.Key)));
+    }
+
+    /// <summary>Answers whether a saved effect key belongs to this disease family.</summary>
+    internal static bool IsDisease(string key)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        return Data.Values.Any(value => value.Key == key);
+    }
+
     private static void AdvanceDisease(DaggerfallActiveEffect effect, DiseaseData data, IRandomService random, Func<long> currentDay,
         Func<DaggerfallCareerDefinition> playerCareer, CombatResolution combat, Action<DaggerfallEffectDamage>? damageApplied, Action<DaggerfallActiveEffect,TrackId,int>? conditionTrack)
     {

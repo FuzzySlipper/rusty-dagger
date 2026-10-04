@@ -62,6 +62,10 @@ internal sealed class DaggerfallPoisonRuntime
     /// <summary>How many poisons are held, an actor's ongoing one and the residue of its completed ones together.</summary>
     internal int Count => Active.Count;
 
+    /// <summary>How many poison effects belong to one durable actor for a cure quote.</summary>
+    internal int CountFor(long actorId) => Active.Count(effect =>
+        effect.Context.Target.Value == checked((ulong)actorId));
+
     /// <summary>Whether an actor carries a poison or the damage one left behind.</summary>
     internal bool IsAfflicted(Actor actor) => Active.Any(effect => SameActor(effect.Target, actor));
 

@@ -43,6 +43,7 @@ internal sealed class DaggerfallState(
     DaggerfallLodgingState lodging,
     DaggerfallTravelState travel,
     DaggerfallServiceTransactions services,
+    DaggerfallTempleServiceRuntime templeServices,
     DaggerfallSkillTrainingService skillTraining,
     DaggerfallRegionalPriceState regionalPrices,
     DaggerfallTradeQuoteService tradeQuotes,
@@ -89,6 +90,8 @@ internal sealed class DaggerfallState(
     internal DaggerfallGuildMembershipPolicy GuildMembership { get; } = guildMembership;
     internal DaggerfallConcreteGuildMembershipRuntime ConcreteGuildMembership { get; } = concreteGuildMembership;
     internal DaggerfallConcreteGuildServiceRuntime ConcreteGuildServices { get; } = concreteGuildServices;
+    /// <summary>Source-backed temple donation, cure, and blessing callers over common services/effects.</summary>
+    internal DaggerfallTempleServiceRuntime TempleServices { get; } = templeServices;
     internal DaggerfallKnightlyOrderClaimState KnightlyClaims { get; } = knightlyClaims;
     internal DaggerfallKnightlyOrderClaimRuntime KnightlyClaimActions { get; } = knightlyClaimActions;
     /// <summary>Daggerfall instance meaning paired with Engine-backed stacks and unique items.</summary>

@@ -101,7 +101,7 @@
 .dagger-dialogue h2 { margin: 0 0 12px; font-size: 1.2rem; }
 .dagger-dialogue p { line-height: 1.5; white-space: pre-wrap; }
 .dagger-dialogue label { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
-.dagger-dialogue select, .dagger-dialogue button { padding: 8px 12px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: inherit; cursor: pointer; }
+.dagger-dialogue select, .dagger-dialogue input, .dagger-dialogue button { padding: 8px 12px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: inherit; cursor: pointer; }
 .dagger-dialogue-topics { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 .dagger-dialogue-diagnostics { padding-left: 1.2rem; color: #cab882; font: .72rem ui-monospace, monospace; }
 .dagger-dialogue-close { margin-top: 10px; }

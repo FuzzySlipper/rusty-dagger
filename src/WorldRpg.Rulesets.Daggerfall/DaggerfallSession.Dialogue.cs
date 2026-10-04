@@ -15,7 +15,7 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 internal enum DaggerfallDialogueTone { Polite, Normal, Blunt }
-internal enum DaggerfallDialogueTopic { Directions, News, Work, QuestInfo }
+internal enum DaggerfallDialogueTopic { Directions, News, Work, QuestInfo, Donate, Cure }
 
 internal sealed record DaggerfallDialogueTopicOption(string Id, string Label);
 internal sealed record DaggerfallDialogueDestination(string Id, string Name, string Hint, bool Known = true);
@@ -83,6 +83,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<long, IReadOnlyList<DaggerfallQuestContact>> _questContacts;
     private readonly Func<long, bool> _workAvailable;
     private readonly Func<DaggerfallVariableStore?>? _variables;
+    private readonly Func<DaggerfallNpc, DaggerfallDialogueTopic, ulong?, DaggerfallTempleServiceResult>? _templeService;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -106,7 +107,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<long, string, (string Text, IReadOnlyList<string> Diagnostics)?>? resolveQuestTopic = null,
         Func<DaggerfallCalendar>? calendar = null,
         Func<long, bool>? workAvailable = null,
-        Func<DaggerfallVariableStore?>? variables = null)
+        Func<DaggerfallVariableStore?>? variables = null,
+        Func<DaggerfallNpc, DaggerfallDialogueTopic, ulong?, DaggerfallTempleServiceResult>? templeService = null)
     {
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
@@ -129,6 +131,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _calendar = calendar ?? (() => DaggerfallCalendar.Start);
         _workAvailable = workAvailable ?? (_ => false);
         _variables = variables;
+        _templeService = templeService;
         _setOutcome = setOutcome ?? throw new ArgumentNullException(nameof(setOutcome));
     }
 
@@ -203,7 +206,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
         if (!TryParseTopic(action.Topic, out DaggerfallDialogueTopic topic, out string? topicTarget))
             return Reject("That topic is not available.");
-        return ResolveTopic(npc!, actor!, site!, topic, topicTarget);
+        return ResolveTopic(npc!, actor!, site!, topic, topicTarget, action.Amount);
     }
 
     internal DaggerfallNpc? CurrentNpc(string? revision = null) =>
@@ -253,9 +256,23 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     }
 
     private DaggerfallActivationOutcome ResolveTopic(DaggerfallNpc npc, DaggerfallDialogueNpc actor, DaggerfallSiteRecord site,
-        DaggerfallDialogueTopic topic, string? topicTarget)
+        DaggerfallDialogueTopic topic, string? topicTarget, ulong? amount)
     {
         TalkSession session = _current!;
+        if (topic is DaggerfallDialogueTopic.Donate or DaggerfallDialogueTopic.Cure)
+        {
+            if (_templeService is null || !OffersTopic(npc, topic))
+                return Reject("That temple service is not available here.");
+            if (topic == DaggerfallDialogueTopic.Donate && amount is not > 0)
+                return Reject("A positive gold donation is required.");
+            DaggerfallTempleServiceResult result = _templeService(npc, topic, amount);
+            session.Question = topic == DaggerfallDialogueTopic.Donate ? "How much gold will you donate?" : "Can you cure my afflictions?";
+            session.Reply = result.Message;
+            session.Diagnostics.Clear();
+            session.QuestionCount++;
+            Publish(npc, site);
+            return Report(new(result.Accepted, result.Message));
+        }
         int socialGroup = ResolveSocialGroup(npc);
         bool directions = topic == DaggerfallDialogueTopic.Directions;
         bool questTopic = topic == DaggerfallDialogueTopic.QuestInfo;
@@ -570,6 +587,10 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             topics.AddRange(_directionDirectory());
         foreach (DaggerfallQuestDialogueTopic topic in _questTopics(npc.DurableId))
             topics.Add(new(topic.Id, topic.Label));
+        if (_templeService is not null && OffersTopic(npc, DaggerfallDialogueTopic.Donate))
+            topics.Add(new("donate", "Donate gold"));
+        if (_templeService is not null && OffersTopic(npc, DaggerfallDialogueTopic.Cure))
+            topics.Add(new("cure", "Cure afflictions"));
         _publish(new DaggerfallDialogueView(
             session.Revision,
             npc.Role,
@@ -580,6 +601,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             topics,
             [.. session.Diagnostics]) { QuestContacts = _questContacts(npc.DurableId) });
     }
+
+    private static bool OffersTopic(DaggerfallNpc npc, DaggerfallDialogueTopic topic) =>
+        npc.Services.Contains(topic == DaggerfallDialogueTopic.Donate ? "donate" : "cure-disease", StringComparer.Ordinal);
 
     private DaggerfallActivationOutcome Reject(string message) => Report(new(false, message));
     private DaggerfallActivationOutcome Report(DaggerfallActivationOutcome outcome)
@@ -608,9 +632,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             "directions" => DaggerfallDialogueTopic.Directions,
             "news" => DaggerfallDialogueTopic.News,
             "work" => DaggerfallDialogueTopic.Work,
+            "donate" => DaggerfallDialogueTopic.Donate,
+            "cure" => DaggerfallDialogueTopic.Cure,
             _ => default,
         };
-        if (value is "directions" or "news" or "work") return true;
+        if (value is "directions" or "news" or "work" or "donate" or "cure") return true;
         if (value is { Length: > 10 } dynamicDirection && dynamicDirection.StartsWith("direction:", StringComparison.Ordinal))
         {
             topic = DaggerfallDialogueTopic.Directions;

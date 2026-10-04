@@ -270,6 +270,12 @@ internal static class DaggerfallConcreteGuildCatalog
             ? definition
             : throw new ArgumentOutOfRangeException(nameof(factionId), factionId, "No concrete Daggerfall guild definition names this faction.");
 
+    /// <summary>Resolves a source temple building's deity root to its group-17 membership owner.</summary>
+    internal static DaggerfallConcreteGuildDefinition ForDeity(int deityFactionId) =>
+        Definitions.SingleOrDefault(definition => definition.MembershipKind == DaggerfallGuildMembershipKind.TempleDeity
+            && definition.ParentFactionId == deityFactionId)
+        ?? throw new ArgumentOutOfRangeException(nameof(deityFactionId), deityFactionId, "No concrete temple carries this deity identity.");
+
     private static IEnumerable<DaggerfallConcreteGuildDefinition> BuildDefinitions()
     {
         yield return Standalone(
@@ -416,7 +422,10 @@ internal static class DaggerfallConcreteGuildCatalog
             Service(DaggerfallConcreteGuildService.Quests, null, 240, requiresMembership: false),
             Service(DaggerfallConcreteGuildService.Donate, null, 810, requiresMembership: false),
             Service(DaggerfallConcreteGuildService.CureDisease, null, 813, requiresMembership: false),
-            Service(DaggerfallConcreteGuildService.Blessing, null, null, requiresMembership: true, sourceImplemented: false),
+            // Blessing is selected through the source donation NPC.  The provider identity is
+            // therefore the same explicit 810 teller as Donate; the runtime still resolves the
+            // deity from the admitted interior building rather than from faction alone.
+            Service(DaggerfallConcreteGuildService.Blessing, null, 810, requiresMembership: true),
         ];
         AddRanked(services, DaggerfallConcreteGuildService.Library, libraryRank, null);
         AddRanked(services, DaggerfallConcreteGuildService.FreeHealing, healingRank, null);

@@ -48,7 +48,8 @@ internal sealed partial class DaggerfallSession
             resolveQuestTopic: ResolveQuestTopic,
             calendar: () => _time.Calendar,
             workAvailable: DialogueWorkAvailable,
-            variables: () => State.Variables);
+            variables: () => State.Variables,
+            templeService: ResolveTempleService);
         _activation = new DaggerfallActivationModule(
             new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),
             reach,
@@ -77,6 +78,30 @@ internal sealed partial class DaggerfallSession
         } : null,
     };
     internal DaggerfallDialogueService Dialogue => _dialogue ?? throw new InvalidOperationException("The session has no dialogue owner.");
+
+    private DaggerfallTempleServiceResult ResolveTempleService(DaggerfallNpc npc, DaggerfallDialogueTopic topic, ulong? amount)
+    {
+        DaggerfallInteriorBuilding? building = CurrentInteriorBuilding();
+        if (building is null)
+            return DaggerfallTempleServiceResult.Refused(DaggerfallTempleServiceDenial.InvalidTemple,
+                "This temple interior is no longer available.");
+
+        string service = topic switch
+        {
+            DaggerfallDialogueTopic.Donate => "donate",
+            DaggerfallDialogueTopic.Cure => "cure-disease",
+            _ => throw new ArgumentOutOfRangeException(nameof(topic), topic, "This dialogue topic is not a temple service."),
+        };
+        DaggerfallServiceProvider provider = new(npc.DurableId, npc.Site, service);
+        if (topic == DaggerfallDialogueTopic.Donate)
+        {
+            DaggerfallTempleDonationQuote? quote = State.TempleServices.QuoteDonation(provider, building, amount ?? 0, out DaggerfallTempleServiceResult refusal);
+            return quote is null ? refusal : State.TempleServices.CommitDonation(quote);
+        }
+
+        DaggerfallTempleCureQuote? cure = State.TempleServices.QuoteCure(provider, building, out DaggerfallTempleServiceResult cureRefusal);
+        return cure is null ? cureRefusal : State.TempleServices.CommitCure(cure);
+    }
 
     /// <summary>Lets the ordinary HUD projection callback carry activation state with its snapshot.</summary>
     internal void PublishActivationView(Action<DaggerfallActivationView> publish) => publish(ActivationView);

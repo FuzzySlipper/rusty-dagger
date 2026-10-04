@@ -95,7 +95,7 @@ public sealed class DaggerfallConcreteGuildCatalogTests
     }
 
     [Fact]
-    public void Temple_absent_rank_data_is_omitted_and_blessing_is_explicitly_unavailable()
+    public void Temple_absent_rank_data_is_omitted_and_blessing_uses_the_source_donation_provider()
     {
         DaggerfallConcreteGuildDefinition julianos = DaggerfallConcreteGuildCatalog.ForFaction(94);
         DaggerfallConcreteGuildDefinition arkay = DaggerfallConcreteGuildCatalog.ForFaction(82);
@@ -104,8 +104,9 @@ public sealed class DaggerfallConcreteGuildCatalogTests
         Assert.True(julianos.TryGetService(DaggerfallConcreteGuildService.BuyMagicItems, out _));
         DaggerfallGuildServiceDecision blessing = DaggerfallConcreteGuildPolicy.EvaluateService(
             arkay, DaggerfallConcreteGuildService.Blessing, new(true, 9));
-        Assert.Equal(DaggerfallGuildServiceDecisionKind.Unavailable, blessing.Kind);
-        Assert.Equal(DaggerfallGuildServiceDenial.Unavailable, blessing.Denial);
+        Assert.True(blessing.Eligible);
+        Assert.Equal(810, blessing.ProviderFactionId);
+        Assert.True(arkay.Services.Single(service => service.Service == DaggerfallConcreteGuildService.Blessing).SourceImplemented);
     }
 
     [Fact]
