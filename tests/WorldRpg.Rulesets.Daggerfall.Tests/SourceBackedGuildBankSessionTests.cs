@@ -24,7 +24,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class SourceBackedGuildBankSessionTests
 {
     [Fact]
-    public void Source_bank_teller_opens_regional_account_and_preserves_ship_purchase_through_boarding_save()
+    public void Source_bank_teller_opens_regional_account_and_persists_source_house_purchase()
     {
         using SourceBackedGuildBankSessionFixture fixture = SourceBackedGuildBankSessionFixture.Create();
         using DaggerfallSession session = fixture.Start(fixture.BankProfile);
@@ -41,27 +41,30 @@ public sealed class SourceBackedGuildBankSessionTests
         Assert.True(session.ReadPropertyPresentation().BankAvailable);
 
         AddGold(session, 1_000_000);
-        Submit(session, 2, new { action = "currency-deposit-gold", amount = 200 });
-        Assert.Equal(200UL, session.State.Bank.BalanceForRegion(fixture.BankProfile.Site.Value.Region));
+        Submit(session, 2, new { action = "currency-deposit-gold", amount = 1_000_000 });
+        int region = fixture.BankProfile.Site!.Value.Region;
+        Assert.Equal(1_000_000UL, session.State.Bank.BalanceForRegion(region));
 
-        DaggerfallPropertyOfferView ship = Assert.Single(session.ReadPropertyPresentation().Offers,
-            offer => offer.Key == "ship/small");
-        Assert.True(ship.CanBuy);
-        Submit(session, 3, new { action = "property-buy", key = ship.Key });
-        Assert.True(session.State.Property.OwnsShip);
-
-        // Boarding is available from the source exterior through the ordinary site transition. The
-        // interior provider remains the authority for the purchase; the ship owner handles boarding.
-        Assert.True(session.TryTransitionTo(fixture.ExteriorProfile.ProfileKey));
-        Submit(session, 4, new { action = "transport-board-ship" });
-        Assert.True(session.State.Transport.OnShip);
+        // Charing is a source town with a bank but no port-town byte, so its admitted bank offers
+        // the actual local house deed rather than a fabricated ship deed. The bank remains the
+        // ordinary authority for this source property purchase.
+        DaggerfallPropertyOfferView house = Assert.Single(session.ReadPropertyPresentation().Offers,
+            offer => offer.Key.StartsWith("house/", StringComparison.Ordinal) && offer.CanBuy);
+        ulong housePrice = ulong.Parse(house.Price, System.Globalization.CultureInfo.InvariantCulture);
+        ulong carriedBeforePurchase = session.State.Currency.Read().Gold;
+        ulong carriedDebit = Math.Min(carriedBeforePurchase, housePrice);
+        ulong expectedAccountDebit = housePrice - carriedDebit;
+        Submit(session, 3, new { action = "property-buy", key = house.Key });
+        DaggerfallHouseIdentity ownedHouse = Assert.Single(session.State.Property.OwnedHouses);
+        Assert.Equal(house.Key, DaggerfallPropertyStorageKey.ForHouse(ownedHouse).Value);
+        Assert.Equal(1_000_000UL - expectedAccountDebit, session.State.Bank.BalanceForRegion(region));
+        Assert.Equal(carriedBeforePurchase - carriedDebit, session.State.Currency.Read().Gold);
 
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
         using DaggerfallSession restored = fixture.Restore(DaggerfallSavePayload.Encode(saved));
-        Assert.True(restored.State.Property.OwnsShip);
-        Assert.True(restored.State.Transport.OnShip);
-        Assert.Equal(200UL, restored.State.Bank.BalanceForRegion(fixture.BankProfile.Site.Value.Region));
-        Assert.Equal(fixture.SmallShipProfile.ProfileKey, restored.Sites.ActiveProfile);
+        Assert.Contains(restored.State.Property.OwnedHouses, houseIdentity => houseIdentity == ownedHouse);
+        Assert.Equal(1_000_000UL - expectedAccountDebit, restored.State.Bank.BalanceForRegion(region));
+        Assert.Equal(carriedBeforePurchase - carriedDebit, restored.State.Currency.Read().Gold);
     }
 
     [Fact]
@@ -92,15 +95,16 @@ public sealed class SourceBackedGuildBankSessionTests
         Assert.False(string.IsNullOrWhiteSpace(armorChoice.Key));
         Submit(session, 6, new { action = "dialogue-topic", revision = dialogue.Revision,
             topic = armorChoice.Id, key = armorChoice.Key });
+        string armorDefinition = $"template-{armorChoice.Key}-iron";
         Assert.Contains(session.State.Inventory.Read().UniqueItems,
-            item => item.Definition.Value.StartsWith("guild.knightly.armor.368.0.", StringComparison.Ordinal));
+            item => item.Definition.Value == armorDefinition);
         Assert.True(session.State.KnightlyClaims.Read(368).HasArmorClaim(0));
 
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
         using DaggerfallSession restored = fixture.Restore(DaggerfallSavePayload.Encode(saved));
         Assert.True(restored.State.KnightlyClaims.Read(368).HasArmorClaim(0));
         int uniqueArmorCount = restored.State.Inventory.Read().UniqueItems.Count(
-            item => item.Definition.Value.StartsWith("guild.knightly.armor.368.0.", StringComparison.Ordinal));
+            item => item.Definition.Value == armorDefinition);
 
         // The same admitted armorer can be revisited after reload, but the canonical claim owner
         // rejects the already-used rank and does not materialize a second reward.
@@ -114,7 +118,7 @@ public sealed class SourceBackedGuildBankSessionTests
         Submit(restored, 8, new { action = "dialogue-topic", revision = restoredDialogue.Revision,
             topic = "armor", key = repeatedChoice });
         Assert.Equal(uniqueArmorCount, restored.State.Inventory.Read().UniqueItems.Count(
-            item => item.Definition.Value.StartsWith("guild.knightly.armor.368.0.", StringComparison.Ordinal)));
+            item => item.Definition.Value == armorDefinition));
 
         // Rank nine is the source gate for the house entitlement. The existing property owner is
         // then responsible for choosing and persisting the admitted local house.
@@ -276,9 +280,19 @@ public sealed class SourceBackedGuildBankSessionTests
     private static void AddGold(DaggerfallSession session, ulong amount)
     {
         DaggerfallItemFactory factory = new(TestPayload.Definitions, RandomMinimum.Create());
+        int suffix = 0;
+        InventoryStackId stack;
+        do
+        {
+            stack = InventoryStackId.Parse(suffix == 0
+                ? "source.guild-bank.test.gold"
+                : $"source.guild-bank.test.gold.{suffix}");
+            suffix++;
+        }
+        while (session.State.Inventory.Read().Stacks.Any(value => value.Id == stack));
         factory.Materialize(factory.Create(new("Currency", "source.guild-bank.test.gold", DaggerfallItemOwner.Player,
             Quantity: amount, TemplateIndex: 276)), session.State.Inventory, session.State.ItemInstances,
-            InventoryStackId.Parse("source.guild-bank.test.gold"));
+            stack);
     }
 
     private static void AddSpellbook(DaggerfallSession session)

@@ -304,16 +304,14 @@ internal sealed class DaggerfallTempleServiceRuntime
         if (building.BuildingType != 14) return false;
         try
         {
-            // The normalized interior carries the authored group-17 temple faction (241, 243,
-            // ...), while that definition's parent carries the deity root used by the social
-            // table (Arkay, Zenithar, ...). Resolve both facts from the catalog instead of
-            // treating a building membership faction as a deity identity.
-            temple = DaggerfallConcreteGuildCatalog.ForFaction(building.FactionId);
-            if (temple.MembershipKind != DaggerfallGuildMembershipKind.TempleDeity)
-            {
-                temple = null;
-                return false;
-            }
+            // Source interiors may carry either the group-17 temple membership faction (36, 82,
+            // ...) or the authored deity root (35, 21, ...). Keep both identities from the
+            // concrete catalog: the parent is the blessing/reputation deity, while the concrete
+            // temple faction remains the membership/provider owner used below.
+            temple = DaggerfallConcreteGuildCatalog.TryGet(building.FactionId, out DaggerfallConcreteGuildDefinition? membership)
+                && membership.MembershipKind == DaggerfallGuildMembershipKind.TempleDeity
+                ? membership
+                : DaggerfallConcreteGuildCatalog.ForDeity(building.FactionId);
             deity = temple.ParentFactionId;
         }
         catch (ArgumentOutOfRangeException) { return false; }
