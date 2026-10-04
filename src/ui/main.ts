@@ -117,6 +117,16 @@ interface DialogueProjection {
   readonly question: string | null;
   readonly reply: string | null;
   readonly topics: readonly { readonly id: string; readonly label: string }[];
+  readonly training?: {
+    readonly providerFaction: number;
+    readonly membershipFaction: number;
+    readonly member: boolean;
+    readonly rank: number;
+    readonly price: number;
+    readonly durationSeconds: number;
+    readonly cooldownReadySecond: number;
+    readonly skills: readonly { readonly id: string; readonly permanentValue: number; readonly maximumValue: number }[];
+  } | null;
   readonly diagnostics: readonly string[];
 }
 
@@ -332,6 +342,11 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       <p class="dagger-dialogue-question" aria-live="polite"></p>
       <p class="dagger-dialogue-reply" aria-live="polite"></p>
       <div class="dagger-dialogue-topics"></div>
+      <section class="dagger-dialogue-training" aria-label="Skill training" hidden>
+        <h3>Skill training</h3>
+        <p class="dagger-dialogue-training-summary"></p>
+        <div class="dagger-dialogue-training-skills"></div>
+      </section>
       <section class="dagger-dialogue-spells" aria-label="Spells for sale"></section>
       <section class="dagger-dialogue-spellmaker" aria-label="Spell construction"></section>
       <ul class="dagger-dialogue-diagnostics" aria-label="Text diagnostics"></ul>
@@ -513,6 +528,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const dialogueQuestion = shell.querySelector<HTMLElement>('.dagger-dialogue-question')!;
   const dialogueReply = shell.querySelector<HTMLElement>('.dagger-dialogue-reply')!;
   const dialogueTopics = shell.querySelector<HTMLElement>('.dagger-dialogue-topics')!;
+  const dialogueTraining = shell.querySelector<HTMLElement>('.dagger-dialogue-training')!;
+  const dialogueTrainingSummary = shell.querySelector<HTMLElement>('.dagger-dialogue-training-summary')!;
+  const dialogueTrainingSkills = shell.querySelector<HTMLElement>('.dagger-dialogue-training-skills')!;
   const dialogueDiagnostics = shell.querySelector<HTMLElement>('.dagger-dialogue-diagnostics')!;
   let currentDialogue: DialogueProjection | null = null;
   dialogueTone.addEventListener('change', () => {
@@ -526,6 +544,15 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (!deadMode && button?.dataset.topic && currentDialogue) context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: UI_ACTION_CONTRACT,
       data: { action: 'dialogue-topic', revision: currentDialogue.revision, topic: button.dataset.topic },
+    });
+  });
+  dialogueTrainingSkills.addEventListener('click', event => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-training-skill]');
+    const training = currentDialogue?.training;
+    if (!deadMode && button?.dataset.trainingSkill && training && currentDialogue) context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
+      data: { action: 'training-commit', revision: currentDialogue.revision, key: button.dataset.trainingSkill,
+        amount: training.price, confirm: true },
     });
   });
   shell.querySelector<HTMLButtonElement>('.dagger-dialogue-close')!.addEventListener('click', () => {
@@ -1101,6 +1128,20 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         button.textContent = topic.label;
         return button;
       }));
+      const training = dialogue.training ?? null;
+      dialogueTraining.hidden = training === null;
+      if (training) {
+        const hours = Math.max(1, Math.round(training.durationSeconds / 3600));
+        dialogueTrainingSummary.textContent = `${training.price} gold for ${hours} hour${hours === 1 ? '' : 's'}${training.member ? ' (member rate)' : ''}.`;
+        dialogueTrainingSkills.replaceChildren(...training.skills.map(skill => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.dataset.trainingSkill = skill.id;
+          button.textContent = `Train ${skill.id} (${skill.permanentValue}/${skill.maximumValue})`;
+          button.disabled = skill.permanentValue >= skill.maximumValue;
+          return button;
+        }));
+      } else dialogueTrainingSkills.replaceChildren();
       if (dialogue.bankAvailable) {
         const bank = document.createElement('button'); bank.type = 'button'; bank.textContent = 'Bank services';
         bank.dataset.bankOpen = 'true';

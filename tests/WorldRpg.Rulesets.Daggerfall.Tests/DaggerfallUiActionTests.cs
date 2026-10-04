@@ -164,7 +164,13 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"dialogue-tone\",\"tone\":\"polite\"}", false)]
     [InlineData("{\"action\":\"dialogue-tone\",\"revision\":\"3\",\"tone\":\"normal\",\"topic\":\"news\"}", false)]
     [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"directions\"}", true)]
+    [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"direction:site:1:2\"}", true)]
+    [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"direction:x\"}", true)]
+    [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"direction:\"}", false)]
     [InlineData("{\"action\":\"dialogue-topic\",\"revision\":\"3\",\"topic\":\"quest\"}", false)]
+    [InlineData("{\"action\":\"training-commit\",\"revision\":\"3\",\"key\":\"long-blade\",\"amount\":250,\"confirm\":true}", true)]
+    [InlineData("{\"action\":\"training-commit\",\"revision\":\"3\",\"key\":\"long-blade\",\"amount\":0,\"confirm\":true}", false)]
+    [InlineData("{\"action\":\"training-commit\",\"revision\":\"3\",\"key\":\"long-blade\",\"amount\":250}", false)]
     [InlineData("{\"action\":\"dialogue-close\",\"revision\":\"3\"}", true)]
     [InlineData("{\"action\":\"dialogue-close\"}", false)]
     public void Dialogue_actions_require_a_live_revision_and_exact_choices(string json, bool accepted) =>

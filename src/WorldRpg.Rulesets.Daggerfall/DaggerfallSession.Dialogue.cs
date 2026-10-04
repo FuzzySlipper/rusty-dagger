@@ -15,9 +15,10 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 internal enum DaggerfallDialogueTone { Polite, Normal, Blunt }
-internal enum DaggerfallDialogueTopic { Directions, News }
+internal enum DaggerfallDialogueTopic { Directions, News, Work, QuestInfo }
 
 internal sealed record DaggerfallDialogueTopicOption(string Id, string Label);
+internal sealed record DaggerfallDialogueDestination(string Id, string Name, string Hint, bool Known = true);
 internal sealed record DaggerfallDialogueView(
     string Revision,
     string TargetLabel,
@@ -31,6 +32,7 @@ internal sealed record DaggerfallDialogueView(
     internal int ComprehendLanguagesBonus { get; init; }
     internal bool BankAvailable { get; init; }
     internal IReadOnlyList<DaggerfallQuestContact> QuestContacts { get; init; } = [];
+    internal DaggerfallSkillTrainingProviderView? Training { get; init; }
 }
 
 /// <summary>
@@ -52,6 +54,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         7251, 7266, 7281, 7250, 7265, 7280, 7252, 7267, 7282, 7253, 7268, 7283, 7304, 7269, 7284,
         7256, 7271, 7286, 7255, 7270, 7285, 7257, 7272, 7287, 7258, 7273, 7288, 7259, 7274, 7289,
     ];
+    private static readonly int[] NonDirectionAnswers =
+    [
+        7251, 7266, 7281, 7250, 7265, 7280, 7252, 7267, 7282, 7253, 7268, 7283, 7304, 7269, 7284,
+        7261, 7276, 7291, 7260, 7275, 7290, 7262, 7277, 7292, 7263, 7278, 7293, 7264, 7279, 7294,
+    ];
 
     private readonly DaggerfallNpcRegistry _npcs;
     private readonly ActorsState _actors;
@@ -66,8 +73,14 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Action<DaggerfallDialogueView?> _publish;
     private readonly Action<string> _setOutcome;
     private readonly Func<(string Name, string Hint)?>? _directions;
+    private readonly Func<string?, DaggerfallDialogueDestination?>? _resolveDirection;
+    private readonly Func<IReadOnlyList<DaggerfallDialogueTopicOption>>? _directionDirectory;
+    private readonly Func<long, IReadOnlyList<DaggerfallQuestDialogueTopic>> _questTopics;
+    private readonly Func<long, string, (string Text, IReadOnlyList<string> Diagnostics)?>? _resolveQuestTopic;
+    private readonly Func<DaggerfallCalendar> _calendar;
     private readonly Func<long, bool> _muted;
     private readonly Func<long, IReadOnlyList<DaggerfallQuestContact>> _questContacts;
+    private readonly Func<long, bool> _workAvailable;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -84,7 +97,13 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Action<DaggerfallDialogueView?> publish,
         Action<string> setOutcome,
         Func<(string Name, string Hint)?>? directions = null, Func<long, bool>? muted = null,
-        Func<long, IReadOnlyList<DaggerfallQuestContact>>? questContacts = null)
+        Func<long, IReadOnlyList<DaggerfallQuestContact>>? questContacts = null,
+        Func<string?, DaggerfallDialogueDestination?>? resolveDirection = null,
+        Func<IReadOnlyList<DaggerfallDialogueTopicOption>>? directionDirectory = null,
+        Func<long, IReadOnlyList<DaggerfallQuestDialogueTopic>>? questTopics = null,
+        Func<long, string, (string Text, IReadOnlyList<string> Diagnostics)?>? resolveQuestTopic = null,
+        Func<DaggerfallCalendar>? calendar = null,
+        Func<long, bool>? workAvailable = null)
     {
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
@@ -98,8 +117,14 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _playerIdentity = playerIdentity ?? throw new ArgumentNullException(nameof(playerIdentity));
         _publish = publish ?? throw new ArgumentNullException(nameof(publish));
         _directions = directions;
+        _resolveDirection = resolveDirection;
+        _directionDirectory = directionDirectory;
         _muted = muted ?? (_ => false);
         _questContacts = questContacts ?? (_ => []);
+        _questTopics = questTopics ?? (_ => []);
+        _resolveQuestTopic = resolveQuestTopic;
+        _calendar = calendar ?? (() => DaggerfallCalendar.Start);
+        _workAvailable = workAvailable ?? (_ => false);
         _setOutcome = setOutcome ?? throw new ArgumentNullException(nameof(setOutcome));
     }
 
@@ -131,6 +156,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             || actor is null
             || actor.Entity != selection.Target.Entity)
             return new(false, "That person is no longer available here.");
+
+        // TalkManager refuses a target whose persistent faction reaction is below -20 before it
+        // opens the modal. Faction-zero civilians remain neutral through ReactionForNpc and can
+        // still answer; no window-local reaction shadow is created here.
+        if (_social.ReactionForNpc(npc!).Value < -20)
+            return new(false, "That person refuses to respond.");
 
         Open(npc!, actor!);
         return new(true, $"You speak with {npc!.Role}.");
@@ -166,9 +197,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             return Report(new(true, $"You choose a {tone.ToString().ToLowerInvariant()} tone."));
         }
 
-        if (!TryParseTopic(action.Topic, out DaggerfallDialogueTopic topic))
+        if (!TryParseTopic(action.Topic, out DaggerfallDialogueTopic topic, out string? topicTarget))
             return Reject("That topic is not available.");
-        return ResolveTopic(npc!, actor!, site!, topic);
+        return ResolveTopic(npc!, actor!, site!, topic, topicTarget);
     }
 
     internal DaggerfallNpc? CurrentNpc(string? revision = null) =>
@@ -217,18 +248,32 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Publish(npc, _activeSite());
     }
 
-    private DaggerfallActivationOutcome ResolveTopic(DaggerfallNpc npc, DaggerfallDialogueNpc actor, DaggerfallSiteRecord site, DaggerfallDialogueTopic topic)
+    private DaggerfallActivationOutcome ResolveTopic(DaggerfallNpc npc, DaggerfallDialogueNpc actor, DaggerfallSiteRecord site,
+        DaggerfallDialogueTopic topic, string? topicTarget)
     {
         TalkSession session = _current!;
         int socialGroup = ResolveSocialGroup(npc);
-        int questionModifier = topic == DaggerfallDialogueTopic.Directions ? LocationQuestionReaction : NormalQuestionReaction;
+        bool directions = topic == DaggerfallDialogueTopic.Directions;
+        bool questTopic = topic == DaggerfallDialogueTopic.QuestInfo;
+        bool work = topic == DaggerfallDialogueTopic.Work;
+        DaggerfallDialogueDestination? selectedDirection = directions
+            ? _resolveDirection?.Invoke(topicTarget)
+            : null;
+        if (directions && topicTarget is not null && selectedDirection is null)
+            return Reject("That place is no longer in the directory.");
+        if (questTopic && (topicTarget is null || !_questTopics(npc.DurableId).Any(value => value.Id == topicTarget)))
+            return Reject("That quest topic is no longer available.");
+
+        int questionModifier = directions ? LocationQuestionReaction : NormalQuestionReaction;
         int band = ReactionBand(session, npc, socialGroup, questionModifier, topic);
-        var destination = topic == DaggerfallDialogueTopic.Directions ? _directions?.Invoke() : null;
+        (string Name, string Hint)? destination = selectedDirection is { } resolved
+            ? (resolved.Name, resolved.Hint)
+            : directions ? _directions?.Invoke() : null;
         DaggerfallTextContext context = Context(npc, site, session.OpeningLine ?? string.Empty, destination?.Name, destination?.Hint);
 
-        DaggerfallTextKey questionKey = topic == DaggerfallDialogueTopic.Directions
+        DaggerfallTextKey questionKey = directions
             ? Resource(7225 + (int)session.Tone)
-            : Resource(7231 + (int)session.Tone);
+            : Resource((work || questTopic ? 7212 : 7231) + (int)session.Tone);
         (session.Question, IReadOnlyList<string> questionDiagnostics) = RenderSelectedRun(
             questionKey,
             context,
@@ -236,14 +281,30 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         session.Diagnostics.Clear();
         session.Diagnostics.AddRange(questionDiagnostics);
 
-        if (topic == DaggerfallDialogueTopic.Directions)
+        if (directions)
         {
-            int responseId = DirectionAnswers[15 + 3 * socialGroup + band];
+            int responseId = selectedDirection is { Known: false }
+                ? NonDirectionAnswers[15 + 3 * socialGroup + band]
+                : DirectionAnswers[15 + 3 * socialGroup + band];
             DaggerfallTextContext responseContext = Context(npc, site, session.OpeningLine ?? string.Empty,
                 subject: destination?.Name ?? site.Name, hint: destination?.Hint ?? "here");
             (session.Reply, IReadOnlyList<string> responseDiagnostics) = RenderSelectedRun(
                 Resource(responseId), responseContext, $"{session.Revision}:{session.QuestionCount}:directions:answer");
             session.Diagnostics.AddRange(responseDiagnostics);
+        }
+        else if (questTopic)
+        {
+            if (topicTarget is null || _resolveQuestTopic?.Invoke(npc.DurableId, topicTarget) is not { } questAnswer)
+                return Reject("That quest topic is no longer available.");
+            session.Reply = questAnswer.Text;
+            session.Diagnostics.AddRange(questAnswer.Diagnostics);
+        }
+        else if (work)
+        {
+            int workId = _workAvailable(npc.DurableId) ? 8075 + band : 8078;
+            (session.Reply, IReadOnlyList<string> workDiagnostics) = RenderSelectedRun(
+                Resource(workId), context, $"{session.Revision}:{session.QuestionCount}:work:answer");
+            session.Diagnostics.AddRange(workDiagnostics);
         }
         else
         {
@@ -268,8 +329,10 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         }
         session.NewsAnswered = true;
 
+        long currentMinute = _currentCalendarMinute();
         DaggerfallRumorDefinition[] candidates = _definitions.Rumors.Entries
             .Where(rumor => IsAmbientNewsCandidate(rumor, site, session))
+            .Where(rumor => rumor.TimeLimit <= 0 || rumor.TimeLimit > currentMinute)
             .OrderBy(rumor => rumor.Index)
             .ToArray();
         if (candidates.Length == 0)
@@ -329,6 +392,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         return !factionNews || Draw(session, $"{session.QuestionCount}:news:{rumor.Index}:faction-frequency", 1, 100) > 75;
     }
 
+    private long _currentCalendarMinute() => _calendar().ToAbsoluteSeconds() / DaggerfallCalendar.SecondsPerMinute;
+
     private bool IsNewsFaction(int factionId) =>
         _definitions.Factions.Factions.TryGetValue(factionId, out DaggerfallFactionDefinition? faction)
         && (faction.Flags & 1) != 0;
@@ -363,7 +428,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         string? oath = ResolveOath(faction?.Race ?? province?.Race);
         return new(
             new DaggerfallTextPlayerContext(Name: player.Name, FirstName: FirstName(player.Name), Race: player.RaceId),
-            new DaggerfallTextCalendarContext(),
+            CalendarContext(),
             new DaggerfallTextLocationContext(
                 City: site?.Name,
                 Region: province?.Name,
@@ -377,6 +442,20 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
                 Oath: oath),
             new DaggerfallTextItemContext(),
             new DaggerfallTextStoryContext(GreetingOrFollowUp: opening));
+    }
+
+    private DaggerfallTextCalendarContext CalendarContext()
+    {
+        DaggerfallCalendar calendar = _calendar();
+        return new(
+            Date: $"{calendar.Month + 1}/{calendar.Day + 1}/{calendar.Year}",
+            Time: $"{calendar.Hour:D2}:{calendar.Minute:D2}",
+            DayNumber: (calendar.Day + 1).ToString(CultureInfo.InvariantCulture),
+            MonthNumber: (calendar.Month + 1).ToString(CultureInfo.InvariantCulture),
+            Year: calendar.Year.ToString(CultureInfo.InvariantCulture),
+            Minute: calendar.Minute.ToString(CultureInfo.InvariantCulture),
+            Hour: calendar.Hour.ToString(CultureInfo.InvariantCulture),
+            Season: calendar.Season.ToString());
     }
 
     private string? ResolveOath(int? race)
@@ -457,6 +536,13 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private void Publish(DaggerfallNpc npc, DaggerfallSiteRecord? site)
     {
         if (_current is not { } session) { _publish(null); return; }
+        List<DaggerfallDialogueTopicOption> topics = [new("directions", "Where is this place?"), new("news", "Any news?")];
+        if (npc.Services.Contains("quest", StringComparer.Ordinal))
+            topics.Add(new("work", "Do you know of any work?"));
+        if (_directionDirectory is not null)
+            topics.AddRange(_directionDirectory());
+        foreach (DaggerfallQuestDialogueTopic topic in _questTopics(npc.DurableId))
+            topics.Add(new(topic.Id, topic.Label));
         _publish(new DaggerfallDialogueView(
             session.Revision,
             npc.Role,
@@ -464,7 +550,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             session.Tone.ToString().ToLowerInvariant(),
             session.Question,
             session.Reply,
-            [new("directions", "Where is this place?"), new("news", "Any news?")],
+            topics,
             [.. session.Diagnostics]) { QuestContacts = _questContacts(npc.DurableId) });
     }
 
@@ -487,15 +573,31 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         return value is "polite" or "normal" or "blunt";
     }
 
-    private static bool TryParseTopic(string? value, out DaggerfallDialogueTopic topic)
+    private static bool TryParseTopic(string? value, out DaggerfallDialogueTopic topic, out string? target)
     {
+        target = null;
         topic = value switch
         {
             "directions" => DaggerfallDialogueTopic.Directions,
             "news" => DaggerfallDialogueTopic.News,
+            "work" => DaggerfallDialogueTopic.Work,
             _ => default,
         };
-        return value is "directions" or "news";
+        if (value is "directions" or "news" or "work") return true;
+        if (value is { Length: > 10 } dynamicDirection && dynamicDirection.StartsWith("direction:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.Directions;
+            target = dynamicDirection[10..];
+            return target.Length > 0;
+        }
+        if (value is { Length: > 11 } dynamicQuest && (dynamicQuest.StartsWith("quest-info:", StringComparison.Ordinal)
+                || dynamicQuest.StartsWith("quest-rumor:", StringComparison.Ordinal)))
+        {
+            topic = DaggerfallDialogueTopic.QuestInfo;
+            target = dynamicQuest;
+            return true;
+        }
+        return false;
     }
 
     private static DaggerfallTextKey Resource(int id) => new(DaggerfallTextKind.Resource, id.ToString(CultureInfo.InvariantCulture));

@@ -65,6 +65,17 @@ internal sealed record DaggerfallQuestRenderedMessage(
 }
 internal sealed record DaggerfallQuestEscortFace(string InstanceId, string Symbol, string Name, string MediaId);
 internal sealed record DaggerfallQuestContact(string InstanceId, string Symbol);
+/// <summary>
+/// One source-declared topic a quest NPC can answer. The message ids stay with the quest message
+/// owner; dialogue only carries the stable topic identity to the session action.
+/// </summary>
+internal sealed record DaggerfallQuestDialogueTopic(
+    string Id,
+    string Label,
+    string InstanceId,
+    string ResourceSymbol,
+    int MessageId,
+    bool PublishesRumor);
 internal sealed record DaggerfallQuestPresentation(
     IReadOnlyList<DaggerfallQuestRenderedMessage> Deliveries,
     IReadOnlyList<DaggerfallQuestRenderedMessage> Journal,
@@ -129,6 +140,22 @@ internal sealed class DaggerfallQuestMessages
 
     internal void Letter(DaggerfallQuestRuntimeInstance instance, int messageId) => Deliver(instance, messageId, DaggerfallQuestMessageDelivery.Letter);
     internal void Rumor(DaggerfallQuestRuntimeInstance instance, int messageId) => Deliver(instance, messageId, DaggerfallQuestMessageDelivery.Rumor);
+
+    /// <summary>
+    /// Publishes a source-backed rumor and renders the exact variant retained by that delivery. The
+    /// durable delivery remains owned by this message store; callers never copy it into dialogue state.
+    /// </summary>
+    internal (string Text, IReadOnlyList<string> Diagnostics) PublishRumorAndRender(
+        DaggerfallQuestRuntimeInstance instance, int messageId, DaggerfallQuestMessageContext context)
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+        ArgumentNullException.ThrowIfNull(context);
+        Rumor(instance, messageId);
+        DaggerfallQuestMessageDeliverySave delivery = _deliveries[^1];
+        (string text, _, IReadOnlyList<string> diagnostics) = Render(instance, messageId,
+            DaggerfallQuestMessageDelivery.Rumor, delivery.Variant, context);
+        return (text, diagnostics);
+    }
 
     internal void Log(DaggerfallQuestRuntimeInstance instance, int messageId, int step)
     {

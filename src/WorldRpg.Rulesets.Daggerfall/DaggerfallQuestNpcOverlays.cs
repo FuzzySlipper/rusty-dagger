@@ -8,6 +8,97 @@ internal sealed partial class DaggerfallQuestInstances
     internal bool IsNpcMuted(long id) => ActiveNpcResources(id).Any(value => value.Resource.IsMuted);
     internal IReadOnlyList<DaggerfallQuestContact> QuestContacts(long id) => ActiveNpcResources(id)
         .Where(value => value.Resource.IsQuestor).Select(value => new DaggerfallQuestContact(value.Instance.InstanceId, value.Resource.Symbol)).ToArray();
+
+    /// <summary>
+    /// Reads the actual anyInfo/rumors message references carried by active NPC resources. This is
+    /// deliberately derived from the normalized declaration and current binding, so a stale or
+    /// unbound quest symbol cannot manufacture a dialogue option.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallQuestDialogueTopic> DialogueTopics(long id) =>
+        ActiveNpcResources(id)
+            .SelectMany(value => DialogueTopics(value.Instance, value.Resource))
+            .GroupBy(topic => topic.Id, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .OrderBy(topic => topic.Label, StringComparer.Ordinal)
+            .ThenBy(topic => topic.Id, StringComparer.Ordinal)
+            .ToArray();
+
+    /// <summary>Answers one source-backed topic through the canonical quest message store.</summary>
+    internal bool TryResolveDialogueTopic(long npcId, string topicId,
+        out string? text, out IReadOnlyList<string> diagnostics)
+    {
+        text = null;
+        diagnostics = [];
+        DaggerfallQuestDialogueTopic? topic = DialogueTopics(npcId).SingleOrDefault(value => value.Id == topicId);
+        if (topic is null || !_instances.TryGetValue(topic.InstanceId, out DaggerfallQuestRuntimeInstance? instance)
+            || instance.Lifecycle != DaggerfallQuestLifecycle.Active)
+            return false;
+        DaggerfallQuestResourceState resource = instance.Resources.SingleOrDefault(value =>
+            value.Symbol == topic.ResourceSymbol && value.Binding.ActorIds.Contains(npcId))!;
+        if (resource is null) return false;
+
+        if (topic.PublishesRumor)
+        {
+            (text, diagnostics) = Messages.PublishRumorAndRender(instance, topic.MessageId, _textContext(instance));
+        }
+        else
+        {
+            text = Messages.NoteText(instance, topic.MessageId, _textContext(instance));
+        }
+        return true;
+    }
+
+    private IEnumerable<DaggerfallQuestDialogueTopic> DialogueTopics(
+        DaggerfallQuestRuntimeInstance instance, DaggerfallQuestResourceState resource)
+    {
+        DaggerfallQuestResourceDefinition? declaration = _definitions.QuestSources.Resources.SingleOrDefault(value =>
+            value.SourceFile == instance.SourceFile && value.CanonicalId == resource.Symbol);
+        if (declaration is null) yield break;
+        DaggerfallQuestSourceDefinition source = _definitions.QuestSources.Resolve(instance.SourceFile);
+        string subject = resource.Text?.Name ?? resource.SelectedPerson?.DisplayName
+            ?? declaration.Person?.Named?.Replace('_', ' ')
+            ?? declaration.TargetSourceSpelling?.Replace('_', ' ')
+            ?? declaration.CanonicalId;
+
+        string? anyInfoReference = declaration.Item?.AnyInfoMessage ?? MessageParameter(declaration, "anyInfo");
+        if (TryResolveMessage(instance, source, anyInfoReference, out int info))
+            yield return new($"quest-info:{Uri.EscapeDataString(instance.InstanceId)}:{Uri.EscapeDataString(resource.Symbol)}",
+                $"Ask about {subject}", instance.InstanceId, resource.Symbol, info, PublishesRumor: false);
+
+        if (TryResolveMessage(instance, source, MessageParameter(declaration, "rumors"), out int rumorId))
+            yield return new($"quest-rumor:{Uri.EscapeDataString(instance.InstanceId)}:{Uri.EscapeDataString(resource.Symbol)}",
+                $"Ask for rumors about {subject}", instance.InstanceId, resource.Symbol, rumorId, PublishesRumor: true);
+    }
+
+    private bool TryResolveMessage(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestSourceDefinition source,
+        string? reference, out int messageId)
+    {
+        messageId = 0;
+        if (string.IsNullOrWhiteSpace(reference)) return false;
+        int? direct = int.TryParse(reference, System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture, out int parsed) ? parsed : null;
+        if (direct is int value && !source.Messages.Any(message => message.Id == value)) return false;
+        try
+        {
+            return Messages.TryResolveMessage(instance, direct, direct is null ? reference : null,
+                out messageId, out _);
+        }
+        catch (ArgumentException)
+        {
+            // A stale or unsupported static alias is not a topic the live NPC can answer.
+            return false;
+        }
+    }
+
+    private static string? MessageParameter(DaggerfallQuestResourceDefinition declaration, string key)
+    {
+        for (int index = 0; index + 1 < declaration.Parameters.Count; index++)
+            if (string.Equals(declaration.Parameters[index], key, StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(declaration.Parameters[index + 1]))
+                return declaration.Parameters[index + 1];
+        return null;
+    }
+
     private IEnumerable<(DaggerfallQuestRuntimeInstance Instance, DaggerfallQuestResourceState Resource)> ActiveNpcResources(long id) =>
         _instances.Values.Where(instance => instance.Lifecycle == DaggerfallQuestLifecycle.Active)
             .SelectMany(instance => instance.Resources.Where(resource => resource.SelectedPerson is not null && resource.Binding.ActorIds.Contains(id))
