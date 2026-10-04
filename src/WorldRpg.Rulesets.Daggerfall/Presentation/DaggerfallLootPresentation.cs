@@ -31,11 +31,12 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
             if (contents is null)
             {
                 _ground = null;
-                Message = "That dropped item pile is no longer available.";
+                Message = "That container is no longer available.";
                 return null;
             }
             owner = DaggerfallItemOwner.Ground(groundId);
-            title = "Dropped items — loot";
+            title = ground!.TryGet(groundId, out var container) && container.PropertyPlacement is not null
+                ? "Furniture" : "Dropped items — loot";
         }
         else if (_actor is long actor)
         {
@@ -100,13 +101,13 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         if (_actor == actorId) _actor = null;
     }
 
-    internal bool OpenGround(long id)
+    internal bool OpenGround(long id, bool privateProperty = false)
     {
-        if (ground?.Read(id) is null) { Message = "That dropped item pile is no longer available."; return false; }
+        if (ground?.Read(id) is null) { Message = "That container is no longer available."; return false; }
         _actor = null;
         _ground = id;
         _opening++;
-        Message = "Choose an item to take.";
+        Message = privateProperty ? "Private property. Taking an item is theft." : "Choose an item to take.";
         return true;
     }
 

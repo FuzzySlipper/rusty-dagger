@@ -182,6 +182,7 @@ internal sealed class DaggerfallMerchantService
     private readonly DaggerfallItemConditionService _conditions;
     private readonly DaggerfallSkillUseReactions _skillUses;
     private readonly DaggerfallCrimeState _crime;
+    private readonly Func<DaggerfallCrimeWitnessEvidence> _crimeWitnesses;
     private readonly Func<DaggerfallCalendar> _calendar;
     private readonly Func<DaggerfallNpcSite?> _currentSite;
     private readonly Dictionary<string, Binding> _bindings = new(StringComparer.Ordinal);
@@ -223,7 +224,8 @@ internal sealed class DaggerfallMerchantService
         DaggerfallCrimeState crime,
         Func<DaggerfallCalendar> calendar,
         Func<DaggerfallNpcSite?> currentSite,
-        IEnumerable<DaggerfallMerchantSave>? restored = null)
+        IEnumerable<DaggerfallMerchantSave>? restored = null,
+        Func<DaggerfallCrimeWitnessEvidence>? crimeWitnesses = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _random = random ?? throw new ArgumentNullException(nameof(random));
@@ -245,6 +247,7 @@ internal sealed class DaggerfallMerchantService
         _conditions = conditions ?? throw new ArgumentNullException(nameof(conditions));
         _skillUses = skillUses ?? throw new ArgumentNullException(nameof(skillUses));
         _crime = crime ?? throw new ArgumentNullException(nameof(crime));
+        _crimeWitnesses = crimeWitnesses ?? (() => DaggerfallCrimeWitnessEvidence.NotQueried);
         _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
         _currentSite = currentSite ?? throw new ArgumentNullException(nameof(currentSite));
         foreach (DaggerfallMerchantSave save in restored ?? []) MaterializeSaved(save);
@@ -408,29 +411,47 @@ internal sealed class DaggerfallMerchantService
         // pickpocket attempt or moving any property; a zero quote is not a stealable item.
         DaggerfallTradeQuote? trade = Quote(binding, DaggerfallTradeSide.BuyFromMerchant, line);
         if (trade is null || trade.Total <= 0) return Refused("QuoteUnavailable");
+        string operation = RequestId(binding, "shoplift", itemKey, revision);
+        if (_crime.HasAttempt(operation)) return Refused("AlreadyAttempted");
         int pickpocket = Math.Clamp(_playerStats.GetStat(StatId.Parse("pickpocket")).ValueInt, 0, 100);
-        int weight = checked(line.Definition.Weight * checked((int)Math.Min(quantity, int.MaxValue)) + 1);
-        int chance = DaggerfallCrimePolicy.CalculateShopliftingChance(pickpocket, binding.Context.Quality, weight);
+        int chance = DaggerfallCrimePolicy.CalculateShopliftingChance(pickpocket, binding.Context.Quality,
+            DaggerfallCrimePolicy.TheftWeight(line.Definition) * quantity, 1);
         int roll = checked((int)_random.DrawKeyed(new KeyedRngRequest(RandomSeed, RandomScope,
             $"{binding.Context.Key}:{revision}:{itemKey}", 0, 99)).Value);
-        string operation = RequestId(binding, "shoplift", itemKey, revision);
         long minute = CurrentMinute();
         _ = _skillUses.Record(new("pickpocket", DaggerfallSkillUseReason.ShopliftingAttempt, DaggerfallSkillUseOutcome.Attempted));
         bool caught = roll < chance;
-        _ = _crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Shoplifting, DaggerfallActorIdentity.PlayerEntityId,
-            binding.MerchantContainerId, binding.Context.Provider.Site.Region, minute,
-            caught ? DaggerfallCrimeAttemptOutcome.Failed : DaggerfallCrimeAttemptOutcome.PropertyTransferred,
-            DaggerfallCrimeWitnessEvidence.NotQueried));
-        if (caught) return Refused("Caught");
+        DaggerfallCrimeWitnessEvidence witnesses = _crimeWitnesses();
+        if (caught)
+        {
+            _crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Shoplifting, DaggerfallActorIdentity.PlayerEntityId,
+                binding.MerchantContainerId, binding.Context.Provider.Site.Region, minute,
+                DaggerfallCrimeAttemptOutcome.Failed, witnesses));
+            _crime.RecordIncident(new(operation, DaggerfallCrimeKind.Theft, DaggerfallCrimeStage.Attempted,
+                DaggerfallActorIdentity.PlayerEntityId, binding.MerchantContainerId, binding.Context.Provider.Site.Region,
+                minute, DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None, Reported: true));
+            return Refused("Caught");
+        }
         InventoryContainerSelection transfer = PrepareDestination(selection, merchantOwner, DaggerfallItemOwner.Player,
             _inventory.Read().Stacks, binding, allowCompatible: false, destinationPrefix: "daggerfall.player.stolen");
-        InventoryContainerTransferReceipt receipt = _containers.Transfer(binding.MerchantOwner, _inventory.Component.Owner, transfer);
+        InventoryContainerTransferReceipt receipt;
+        try { receipt = _containers.Transfer(binding.MerchantOwner, _inventory.Component.Owner, transfer); }
+        catch (MechanicsException failure) when (failure.Reason == MechanicsRefusal.Capacity)
+        {
+            _crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Shoplifting, DaggerfallActorIdentity.PlayerEntityId,
+                binding.MerchantContainerId, binding.Context.Provider.Site.Region, minute,
+                DaggerfallCrimeAttemptOutcome.Failed, witnesses));
+            return Refused("Capacity");
+        }
         SyncTransfer(receipt, DaggerfallItemOwner.Merchant(binding.MerchantContainerId), DaggerfallItemOwner.Player);
         RetireGeneratedSelection(binding, selection);
         MarkStolen(transfer, quantity);
+        _crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Shoplifting, DaggerfallActorIdentity.PlayerEntityId,
+            binding.MerchantContainerId, binding.Context.Provider.Site.Region, minute,
+            DaggerfallCrimeAttemptOutcome.PropertyTransferred, witnesses));
         _ = _crime.RecordIncident(new(operation, DaggerfallCrimeKind.Theft, DaggerfallCrimeStage.Completed,
             DaggerfallActorIdentity.PlayerEntityId, binding.MerchantContainerId, binding.Context.Provider.Site.Region, minute,
-            DaggerfallCrimeTargetKind.Other, DaggerfallCrimeWitnessEvidence.NotQueried, DaggerfallCrimeGuildCredit.Thieving));
+            DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.Thieving));
         return new(true, "Stolen");
     }
 

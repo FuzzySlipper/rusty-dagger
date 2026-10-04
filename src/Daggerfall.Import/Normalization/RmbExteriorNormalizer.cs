@@ -135,6 +135,7 @@ public static class RmbExteriorNormalizer
         private NormalizedMarker? enterMarker;
         private NormalizedInteriorBuilding? interiorBuilding;
         private readonly List<NormalizedStaticNpcPlacement> staticNpcs = [];
+        private readonly List<NormalizedPropertyContainer> propertyContainers = [];
 
         public void AddExterior(MapsExteriorBlock reference)
         {
@@ -296,8 +297,13 @@ public static class RmbExteriorNormalizer
             interiorBuilding = new(reference.X, reference.Y, reference.SourceName, buildingIndex, selected.BuildingType, selected.FactionId);
             // The donor's DaggerfallInterior creates this half in its own local frame; it does not carry the
             // exterior block or building-subrecord transform into the interior scene.
-            foreach (RmbModelPlacement model in placements.Buildings[buildingIndex].Interior.Models)
-                AddInteriorModel(model, reference, $"{Slug(reference.SourceName)}/{buildingIndex}/interior");
+            foreach (var (model, ordinal) in placements.Buildings[buildingIndex].Interior.Models.Select((model, ordinal) => (model, ordinal)))
+            {
+                var container = RmbPropertyContainerFacts.Read(model, ordinal, selected.BuildingType);
+                List<NormalizedVector3>? interactionPoints = container is null ? null : [];
+                AddInteriorModel(model, reference, $"{Slug(reference.SourceName)}/{buildingIndex}/interior", interactionPoints);
+                if (container is not null) propertyContainers.Add(container with { InteractionPoints = interactionPoints! });
+            }
             foreach (var (flat, index) in placements.Buildings[buildingIndex].Interior.Flats.Select((flat, index) => (flat, index)))
                 AddInteriorMarker(flat, index);
             int buildingKey = (reference.X << 16) + (reference.Y << 8) + buildingIndex;
@@ -351,8 +357,8 @@ public static class RmbExteriorNormalizer
             AddMesh(model, point => Add(exteriorOrigin, Add(Arena2SourceTransform.ToRmbImportPoint(0, 0, 4096), point)), identity,
                 block, -1, 0, 0F);
 
-        private void AddInteriorModel(RmbModelPlacement model, MapsExteriorBlock block, string identity) =>
-            AddMesh(model, point => point, identity, block, -1, 0, 0F);
+        private void AddInteriorModel(RmbModelPlacement model, MapsExteriorBlock block, string identity, List<NormalizedVector3>? interactionPoints) =>
+            AddMesh(model, point => point, identity, block, -1, 0, 0F, interactionPoints);
 
         private void AddSourceMarker(int archive, int record, Arena2ImportPoint point)
         {
@@ -376,7 +382,7 @@ public static class RmbExteriorNormalizer
         }
 
         private void AddMesh(RmbModelPlacement model, Func<Arena2ImportPoint, Arena2ImportPoint> parent, string identity,
-            MapsExteriorBlock block, int buildingIndex, int startingLockValue, float parentYaw)
+            MapsExteriorBlock block, int buildingIndex, int startingLockValue, float parentYaw, List<NormalizedVector3>? interactionPoints = null)
         {
             referencedMeshes.Add(model.ModelId);
             if (!uint.TryParse(model.ModelId, NumberStyles.None, CultureInfo.InvariantCulture, out uint id)
@@ -404,7 +410,17 @@ public static class RmbExteriorNormalizer
                     Arena2TextureUv uv = Arena2SourceTransform.ToTextureUv(point, texture.Width, texture.Height);
                     uvs.Add(new(uv.U, uv.V));
                 }
-                group.Add(polygon, uvs, MeshGeometry.Normal(polygon));
+                NormalizedVector3 surfaceNormal = MeshGeometry.Normal(polygon);
+                group.Add(polygon, uvs, surfaceNormal);
+                // Searchable furniture uses exposed authored faces, not the source pivot which
+                // can lie below the floor or inside the solid. Engine still decides visibility.
+                if (interactionPoints is not null && surfaceNormal.Y >= -.5f)
+                {
+                    const float surfaceSeparation = .01f;
+                    interactionPoints.Add(new(polygon.Average(point => point.X) + surfaceNormal.X * surfaceSeparation,
+                        polygon.Average(point => point.Y) + surfaceNormal.Y * surfaceSeparation,
+                        polygon.Average(point => point.Z) + surfaceNormal.Z * surfaceSeparation));
+                }
                 if (doorId is not null)
                 {
                     // DFU GameObjectHelper.GetStaticDoors uses the opposite source corners for
@@ -521,6 +537,7 @@ public static class RmbExteriorNormalizer
             NormalizedWorld world = new($"mesh/{root}", meshes.Select(mesh => mesh.Id).ToArray(), navigation.Id, startMarker, enterMarker, [], [], [], [], doors)
             {
                 InteriorBuilding = interiorBuilding,
+                PropertyContainers = propertyContainers,
                 QuestMarkers = questMarkers,
                 StaticNpcs = staticNpcs,
                 StaticMeshIds = staticMeshes.Select(mesh => mesh.Id).ToArray(),

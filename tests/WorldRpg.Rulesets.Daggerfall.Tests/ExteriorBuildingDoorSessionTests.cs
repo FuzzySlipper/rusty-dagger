@@ -34,7 +34,12 @@ public sealed class ExteriorBuildingDoorSessionTests
         fixture.Interact();
         Assert.True(session.ActivationView.Applied, session.ActivationView.Message);
         Assert.Equal(fixture.Interior.ProfileKey, session.Sites.ActiveProfile);
+        var incident = Assert.Single(session.State.Crime.Incidents);
+        Assert.Equal(mode == "grab" ? WorldRpg.Rulesets.Daggerfall.Crime.DaggerfallCrimeKind.Trespassing
+            : WorldRpg.Rulesets.Daggerfall.Crime.DaggerfallCrimeKind.BreakingAndEntering, incident.Crime);
+        Assert.Equal(mode == "bash", incident.Reported); // Minimum random notices bashing, never lockpicking.
         using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        Assert.Single(restored.State.Crime.Incidents);
         Assert.True(restored.TryTransitionTo(fixture.Exterior.ProfileKey));
         Assert.Equal(0, restored.Doors.Read(fixture.DoorId).LockValue);
         Assert.Equal(484, restored.Doors.All.Count());

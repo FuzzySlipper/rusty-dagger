@@ -6,6 +6,14 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallCrimePolicyTests
 {
     [Fact]
+    public void Authored_item_weight_is_converted_from_quarter_kilograms_for_theft()
+    {
+        var dagger = TestPayload.Definitions.RequireItem(new("iron-dagger"));
+        Assert.Null(dagger.Template);
+        Assert.Equal(.5d, DaggerfallCrimePolicy.TheftWeight(dagger));
+    }
+
+    [Fact]
     public void Pickpocket_chance_applies_enemy_level_adjustment_and_classic_bounds()
     {
         Assert.Equal(42, DaggerfallCrimePolicy.CalculatePickpocketingChance(42, playerLevel: 10));

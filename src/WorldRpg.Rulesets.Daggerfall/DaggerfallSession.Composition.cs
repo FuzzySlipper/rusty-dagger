@@ -384,7 +384,7 @@ internal sealed partial class DaggerfallSession
                 inventory, containers, itemInstances, _uniqueItems, _actorIdentities, currency, services, concreteGuildServices, tradeQuotes,
                 regionalPrices, _itemCondition, skillUses, crime, () => _time.Calendar,
                 () => _dialogue?.CurrentNpc()?.Site,
-                saved?.Merchants);
+                saved?.Merchants, QueryCrimeWitnesses);
             DaggerfallTransportPolicy transport = new(tuning.Transport);
             DaggerfallWagonStorage wagon = new(containers, itemInstances, definitions,
                 playerEntity, _actorIdentities, tuning.Transport);
@@ -577,6 +577,7 @@ internal sealed partial class DaggerfallSession
             partiallyConstructed.Add(_hud);
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments, RestoreDungeonText);
+            ReconcilePropertyContainers();
             foreach (var spell in definitions.Magic.Spells.Values.Where(spell => spell.IsCustom))
                 if (Casting.AvailableSpellCost(actors.Player.DurableId, spell.Key) is null)
                     throw new ArgumentException($"Custom spell '{spell.Key}' contains an unavailable compiled construction effect or combination.");

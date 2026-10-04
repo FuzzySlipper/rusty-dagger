@@ -9,7 +9,7 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 
 /// <summary>One materialized dropped-item container in the shared Engine inventory store.</summary>
-internal sealed record DaggerfallGroundContainer(DaggerfallWorldProfileKey Profile, long Id, EntityId Owner, WorldPoint Position);
+internal sealed record DaggerfallGroundContainer(DaggerfallWorldProfileKey Profile, long Id, EntityId Owner, WorldPoint Position, string? PropertyPlacement = null, long StockedDay = 0);
 
 /// <summary>
 /// Daggerfall policy for ground piles. Kit's container coordinator owns every transfer; this owner
@@ -67,7 +67,7 @@ internal sealed class DaggerfallGroundContainers
                 UniqueItems = value.Inventory.UniqueItems.Where(item => !uniqueItems.Contains(item.EntityId)).ToArray(),
                 Stacks = value.Inventory.Stacks.Where(item => !stacks.Contains((DaggerfallItemOwner.Ground(value.Id), item.StackId))).ToArray(),
             };
-            if (inventory.Stacks.Length == 0 && inventory.UniqueItems.Length == 0)
+            if (value.PropertyPlacement is null && inventory.Stacks.Length == 0 && inventory.UniqueItems.Length == 0)
             {
                 _unloaded.Remove(value.Id);
                 _identities.Remove(new(DurableIdentityKind.Container, checked((ulong)value.Id)));
@@ -122,7 +122,7 @@ internal sealed class DaggerfallGroundContainers
         var (stacks, uniques) = DaggerfallInventorySaveBoundary.CaptureContents(_containers.Read(container.Owner),
             DaggerfallItemOwner.Ground(container.Id), _instances, _containers.Entities);
         return new(DaggerfallWorldProfileKeySave.Capture(container.Profile), container.Id,
-            container.Position.X, container.Position.Y, container.Position.Z, new(stacks, uniques, []));
+            container.Position.X, container.Position.Y, container.Position.Z, new(stacks, uniques, []), container.PropertyPlacement, container.StockedDay);
     }
 
     private void Unload(DaggerfallGroundContainer container)
@@ -190,6 +190,69 @@ internal sealed class DaggerfallGroundContainers
 
     internal InventoryView? Read(long id) => TryGet(id, out DaggerfallGroundContainer? container)
         ? _containers.Read(container.Owner) : null;
+
+    /// <summary>Materializes source furniture through the same durable container and item owners as ground loot.</summary>
+    internal DaggerfallGroundContainer EnsureProperty(DaggerfallPropertyContainerPlacement placement,
+        long day, bool playerOwned, DaggerfallItemFactory factory, DaggerfallUniqueItemAllocator uniqueItems,
+        Func<string, int, int, int> draw, int level, string race, string gender)
+    {
+        var container = All.Values.SingleOrDefault(value => value.PropertyPlacement == placement.Id);
+        if (container is not null && (playerOwned || container.StockedDay >= day)) return container;
+        if (container is null)
+        {
+            var identity = _identities.Allocate(DurableIdentityKind.Container);
+            var entity = _containers.Entities.Create(identity, GroundContainerType);
+            _containers.RegisterOwner(entity);
+            container = new(_activeProfile, checked((long)identity.Value), entity, placement.Position, placement.Id, day);
+            _ground.Add(container.Id, container);
+        }
+        else
+        {
+            // Source restocking replaces old generated furniture contents once per game day.
+            var contents = _containers.Read(container.Owner);
+            using var edit = _containers.Entities.Store.Get<InventoryComponent>(container.Owner).Store.Prepare();
+            foreach (var stack in contents.Stacks) edit.Consume(container.Owner, stack.Id, stack.Quantity);
+            foreach (var item in contents.UniqueItems) edit.DestroyUnique(item.Entity);
+            edit.Publish();
+            foreach (var stack in contents.Stacks) _instances.RemoveStack(DaggerfallItemOwner.Ground(container.Id), stack.Id);
+            foreach (var item in contents.UniqueItems)
+            {
+                var identity = _containers.Entities.IdentityOf(item.Entity);
+                _instances.RemoveUnique(identity.Value);
+                _containers.Entities.Destroy(identity);
+                uniqueItems.Remove(identity);
+            }
+        }
+        container = container with { StockedDay = day };
+        _ground[container.Id] = container;
+        if (playerOwned || placement.ItemGroups.Length == 0) return container;
+        string key = $"property:{_activeProfile.LogicalId}:{placement.Id}:{day}";
+        string group = placement.ItemGroups[draw(key + ":group", 0, placement.ItemGroups.Length - 1)];
+        if (group is "MensClothing" or "WomensClothing") group = gender == "male" ? "MensClothing" : "WomensClothing";
+        List<InventoryContainerSeed> seeds = [];
+        List<(DaggerfallCreatedItem Item, InventoryStackId? Stack, DurableIdentityReference? Unique)> items = [];
+        int continuation = 100;
+        int ordinal = 0;
+        do
+        {
+            string itemKey = $"{key}:{ordinal}";
+            var item = factory.Create(new(group, itemKey, DaggerfallItemOwner.Ground(container.Id), Level: level,
+                Race: race, Gender: gender));
+            InventoryStackId? stack = item.Stackable ? InventoryStackId.Parse($"daggerfall.property.{container.Id}.{day}.{ordinal}") : null;
+            DurableIdentityReference? unique = item.Stackable ? null : uniqueItems.AllocateReference();
+            seeds.Add(new(item.Item, item.Quantity, Stack: stack, UniqueItem: unique));
+            items.Add((item, stack, unique));
+            ordinal++;
+            continuation >>= 1;
+        } while (draw(key + $":continue:{ordinal}", 0, 99) <= continuation);
+        _containers.Seed(container.Owner, seeds);
+        foreach (var (item, stack, unique) in items)
+        {
+            if (stack is not null) _instances.RegisterStack(item.Metadata.Owner, stack, item.Metadata);
+            else _instances.RegisterUnique(unique!.Value.Value, item.Metadata);
+        }
+        return container;
+    }
 
     /// <summary>Creates a selected quest item directly in the actual ground inventory owner.</summary>
     internal DaggerfallQuestResourceBinding CreateQuestItem(DaggerfallCreatedItem created, WorldPoint position,
@@ -322,6 +385,8 @@ internal sealed class DaggerfallGroundContainers
     internal InventoryStackId ResolveTakeDestination(long id, InventoryStackId source, InventoryStackId freshDestination)
     {
         DaggerfallItemInstanceMetadata metadata = _instances.RequireStack(DaggerfallItemOwner.Ground(id), source);
+        if (_ground[id].PropertyPlacement is not null)
+            return InventoryStackId.Parse($"{freshDestination.Value}.{_containers.Read(_player).StoreRevision}");
         return _containers.Read(_player).Stacks.OrderBy(stack => stack.Id.Value, StringComparer.Ordinal)
             .Select(stack => (stack.Id, Metadata: _instances.RequireStack(DaggerfallItemOwner.Player, stack.Id)))
             .Where(candidate => metadata.IsStackCompatibleWith(candidate.Metadata))
@@ -331,7 +396,7 @@ internal sealed class DaggerfallGroundContainers
     internal InventoryContainerTransferReceipt Take(long id, InventoryContainerSelection selection, ulong expectedWorldRevision)
     {
         if (!TryGet(id, out DaggerfallGroundContainer? container))
-            throw new InvalidOperationException("That dropped item pile is no longer available.");
+            throw new InvalidOperationException("That container is no longer available.");
         if (_containers.Read(_player).StoreRevision != expectedWorldRevision)
             throw new InvalidOperationException("Inventory changed. Choose the item again.");
         if (selection.Stack is InventoryStackId source && selection.DestinationStack is InventoryStackId destination)
@@ -346,7 +411,7 @@ internal sealed class DaggerfallGroundContainers
     {
         if (!_ground.TryGetValue(id, out var container)) return;
         InventoryView remaining = _containers.Read(container.Owner);
-        if (remaining.Stacks.Count == 0 && remaining.UniqueItems.Count == 0)
+        if (container.PropertyPlacement is null && remaining.Stacks.Count == 0 && remaining.UniqueItems.Count == 0)
         {
             using var edit = _containers.Entities.Store.Get<InventoryComponent>(container.Owner).Store.Prepare();
             edit.RetireOwner(container.Owner);
@@ -390,7 +455,7 @@ internal sealed class DaggerfallGroundContainers
                 seeded = true;
                 RegisterMetadata(value);
             }
-            _ground.Add(value.Id, new DaggerfallGroundContainer(value.Profile.Require(), value.Id, owner, new WorldPoint(value.X, value.Y, value.Z)));
+            _ground.Add(value.Id, new DaggerfallGroundContainer(value.Profile.Require(), value.Id, owner, new WorldPoint(value.X, value.Y, value.Z), value.PropertyPlacement, value.StockedDay));
         }
         catch
         {

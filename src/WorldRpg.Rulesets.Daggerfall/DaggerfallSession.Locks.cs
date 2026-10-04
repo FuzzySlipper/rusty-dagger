@@ -2,6 +2,7 @@ using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.World;
 using KitEquipmentSlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
@@ -119,6 +120,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallLockInteractionDecision decision,
         DaggerfallDoorOperationResult operation)
     {
+        ObserveCrimeLock(id, decision, operation);
         LockIncident?.Invoke(new(
             id,
             decision.Kind,
@@ -131,6 +133,27 @@ internal sealed partial class DaggerfallSession
             decision.DoorDamage,
             decision.EmitsNoise,
             decision.ReportsBreakingAndEntering));
+    }
+
+    private void ObserveCrimeLock(DaggerfallRdbDoorId id, DaggerfallLockInteractionDecision decision,
+        DaggerfallDoorOperationResult result)
+    {
+        if (decision.Surface != DaggerfallLockInteractionSurface.Exterior || !decision.ConsumedAttempt) return;
+        string operation = $"lock:{State.Crime.OperationCount + 1}";
+        long minute = MinuteIndex(_time.Calendar);
+        long owner = checked((long)_doors.IdentityOf(id).Value);
+        bool accepted = decision.Applied && result == DaggerfallDoorOperationResult.Started;
+        if (accepted && decision.Kind == DaggerfallLockInteractionKind.Lockpick)
+            State.Crime.RecordGuildRequirementProgress(operation, DaggerfallCrimeGuildCredit.Thieving, minute);
+        // An unsuccessful pick is discrete in the donor; only a failed bash has a 10% alarm roll.
+        if (accepted) return; // The accepted building-entry caller records a completed break-in.
+        var witnesses = QueryCrimeWitnesses();
+        State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
+            owner, _activeProfileKey.Site.Region, minute, DaggerfallCrimeAttemptOutcome.Failed, witnesses));
+        if (decision.Kind == DaggerfallLockInteractionKind.Bash && CrimeRoll(operation, "noticed", 0, 99) < 10)
+            ReportCrime(new(operation, DaggerfallCrimeKind.AttemptedBreakingAndEntering, DaggerfallCrimeStage.Attempted,
+                DaggerfallActorIdentity.PlayerEntityId, owner, _activeProfileKey.Site.Region, minute,
+                DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None, Reported: true));
     }
 
     private static string LockpickMessage(DaggerfallLockInteractionStatus status, bool applied) => status switch

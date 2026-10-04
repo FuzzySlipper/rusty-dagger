@@ -75,6 +75,17 @@ public sealed class RmbExteriorNormalizerTests
             .Where(value => value.flat.TextureArchive == 199 && value.flat.TextureRecord is 11 or 18).ToArray();
         Assert.Equal(expectedMarkers.Select(value => value.ordinal), interior.Document.World.QuestMarkers.Select(value => value.SourceOrdinal));
         Assert.Empty(exterior.Document.World.QuestMarkers);
+        Assert.Empty(exterior.Document.World.PropertyContainers);
+        Assert.NotEmpty(interior.Document.World.PropertyContainers);
+        foreach (var container in interior.Document.World.PropertyContainers)
+        {
+            int ordinal = int.Parse(container.Id.Split('/')[1]);
+            var model = rawPlacements.Buildings[0].Interior.Models[ordinal];
+            Assert.Equal(new NormalizedVector3(model.X * .025f, -model.Y * .025f, -model.Z * .025f), container.Position);
+            Assert.NotEmpty(container.ItemGroups);
+            Assert.NotEmpty(container.InteractionPoints);
+            Assert.DoesNotContain(container.Position, container.InteractionPoints);
+        }
         foreach (var (raw, published) in expectedMarkers.Zip(interior.Document.World.QuestMarkers))
         {
             Assert.Equal(new NormalizedVector3(raw.flat.X * .025f, -raw.flat.Y * .025f, -raw.flat.Z * .025f), published.Position);

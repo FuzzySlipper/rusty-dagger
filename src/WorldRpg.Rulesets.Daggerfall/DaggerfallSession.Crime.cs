@@ -15,7 +15,11 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed partial class DaggerfallSession
 {
     /// <summary>Transient notification beside the newly persisted canonical incident.</summary>
-    internal event Action<DaggerfallCrimeIncidentSave>? CrimeReported;
+    internal event Action<DaggerfallCrimeIncidentSave>? CrimeReported
+    {
+        add => State.Crime.IncidentRecorded += value;
+        remove => State.Crime.IncidentRecorded -= value;
+    }
 
     private DaggerfallActivationOutcome PickpocketActor(long targetId)
     {
@@ -66,7 +70,7 @@ internal sealed partial class DaggerfallSession
         if (gold > 0) State.Crime.RecordGuildRequirementProgress(operation, DaggerfallCrimeGuildCredit.Thieving, minute);
         if (!success && npc is not null)
             ReportCrime(new(operation, DaggerfallCrimeKind.Pickpocketing, DaggerfallCrimeStage.Attempted,
-                DaggerfallActorIdentity.PlayerEntityId, targetId, region.Value, minute, DaggerfallCrimeTargetKind.Civilian, witnesses, DaggerfallCrimeGuildCredit.None));
+                DaggerfallActorIdentity.PlayerEntityId, targetId, region.Value, minute, DaggerfallCrimeTargetKind.Civilian, witnesses, DaggerfallCrimeGuildCredit.None, Reported: true));
         else if (!success)
         {
             if (_enemyBehavior.IsPacified(targetId)) _enemyBehavior.MakeActiveEnemiesHostile();
@@ -74,6 +78,11 @@ internal sealed partial class DaggerfallSession
         }
         return new(true, transferRefusal ?? (!success ? "Your pickpocket attempt failed." : gold > 0 ? $"You pinched {gold} gold pieces." : "You found nothing valuable."));
     }
+
+    private bool OwnsInteriorBuilding(DaggerfallInteriorBuilding building) =>
+        building.BuildingType == 24 && State.Property.OwnsShip
+        || State.Property.OwnedHouses.Any(house => house.Site == _activeProfileKey.Site
+            && house.Building == building.Building && house.BlockX == building.BlockX && house.BlockY == building.BlockY);
 
     private bool IsPickpocketTarget(long actorId)
     {
@@ -117,8 +126,7 @@ internal sealed partial class DaggerfallSession
 
     private void ReportCrime(DaggerfallCrimeIncidentSave incident)
     {
-        if (!State.Crime.RecordIncident(incident)) return;
-        CrimeReported?.Invoke(incident);
+        State.Crime.RecordIncident(incident);
     }
 
     private void ObserveCrimeHit(AttackHitFact damage)
@@ -133,7 +141,8 @@ internal sealed partial class DaggerfallSession
         int? region = _site.Region ?? npc?.Site.Region;
         if (region is null) return;
         bool dead = State.Actors.Get(damage.TargetId).IsDefeated;
-        string operation = $"damage:{State.Crime.Incidents.Count + 1}";
+        string operation = $"damage:{damage.OriginatingGeneration}:{damage.OriginatingSimulationStep}:{damage.AttackerId}:{damage.TargetId}";
+        if (State.Crime.HasAttempt(operation)) return;
         var witnesses = QueryCrimeWitnesses();
         var crime = dead && !mobileGuard ? DaggerfallCrimeKind.Murder : DaggerfallCrimeKind.Assault;
         var kind = guard ? DaggerfallCrimeTargetKind.Guard : DaggerfallCrimeTargetKind.Civilian;

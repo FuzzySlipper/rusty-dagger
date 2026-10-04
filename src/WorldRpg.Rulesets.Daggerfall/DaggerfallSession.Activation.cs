@@ -8,6 +8,7 @@ using WorldRpg.Kit.Targeting;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
@@ -62,7 +63,7 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts),
                 new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic, EnterExteriorBuilding),
                 new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination, TryTransitionTo),
-                new DaggerfallGroundActivationOwner(_groundContainers, _lootUi),
+                new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyInteractionPoint, OpenPropertyLoot),
                 npc: new DaggerfallCrimeActivationOwner(_dialogue, State.Actors, IsPickpocketTarget, PickpocketActor)));
     }
 
@@ -70,7 +71,7 @@ internal sealed partial class DaggerfallSession
         (_sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted."))
             .RequireLogicalProfile(logicalProfile).ProfileKey;
 
-    private DaggerfallActivationOutcome? EnterExteriorBuilding(DaggerfallRdbDoorId door)
+    private DaggerfallActivationOutcome? EnterExteriorBuilding(DaggerfallRdbDoorId door, DaggerfallActivationMode? forceMode)
     {
         if (_doors.ExteriorBuildingOf(door) is not { } building) return null;
         DaggerfallSiteProfiles profiles = _sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted.");
@@ -82,9 +83,28 @@ internal sealed partial class DaggerfallSession
             .ToArray();
         if (destinations.Length == 0) return new(false, "This building's interior is not available in the selected content.");
         if (destinations.Length != 1) throw new InvalidOperationException($"Building '{building}' has multiple admitted interiors.");
-        return TryTransitionTo(ResolvePortalDestination(destinations[0].ProfileKey.LogicalId))
-            ? new(true, "You pass through the building entrance.")
-            : new(false, "The building entrance cannot be used.");
+        var interior = destinations[0].InteriorBuilding!;
+        int region = _activeProfileKey.Site.Region;
+        long owner = checked((long)_doors.IdentityOf(door).Value);
+        bool forced = forceMode is not null;
+        bool owned = OwnsInteriorBuilding(interior);
+        bool closed = !DaggerfallCrimePolicy.IsPublicEntryHour(interior.BuildingType, _time.Calendar.Hour);
+        bool trespass = !owned && closed && interior.BuildingType is >= 0 and <= 23;
+        var witnesses = !owned && (forced || trespass) ? QueryCrimeWitnesses() : DaggerfallCrimeWitnessEvidence.NotQueried;
+        if (!TryTransitionTo(ResolvePortalDestination(destinations[0].ProfileKey.LogicalId)))
+            return new(false, "The building entrance cannot be used.");
+        if (!owned && (forced || trespass))
+        {
+            string operation = $"entry:{State.Crime.Attempts.Count + 1}";
+            long minute = MinuteIndex(_time.Calendar);
+            State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
+                owner, region, minute, DaggerfallCrimeAttemptOutcome.EntryAccepted, witnesses));
+            ReportCrime(new(operation, forced ? DaggerfallCrimeKind.BreakingAndEntering : DaggerfallCrimeKind.Trespassing,
+                DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId, owner, region, minute,
+                DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None,
+                Reported: forceMode == DaggerfallActivationMode.Bash && CrimeRoll(operation, "noticed", 0, 99) < 10));
+        }
+        return new(true, "You pass through the building entrance.");
     }
 
     internal DaggerfallActivationMode ActivationMode => _activation?.Mode ?? DaggerfallActivationMode.Grab;
@@ -612,26 +632,26 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>Activation contribution for persistent dropped-item piles.</summary>
-    private sealed class DaggerfallGroundActivationOwner(DaggerfallGroundContainers ground, DaggerfallLootPresentation loot) : IDaggerfallContainerActivationOwner
+    private sealed class DaggerfallGroundActivationOwner(Func<IEnumerable<DaggerfallGroundContainer>> targets, Func<DaggerfallGroundContainer, WorldPoint> interactionPoint, Func<long, DaggerfallActivationOutcome> open) : IDaggerfallContainerActivationOwner
     {
         public IEnumerable<DaggerfallActivationTarget> ContainerTargets()
         {
-            foreach (DaggerfallGroundContainer container in ground.All.Values.OrderBy(value => value.Id))
+            foreach (DaggerfallGroundContainer container in targets().OrderBy(value => value.Id))
                 yield return new(DaggerfallActivationTargetKind.Container,
                     new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)container.Id)), container.Owner,
-                    checked((ulong)container.Id), container.Position, Precedence: 5);
+                    checked((ulong)container.Id), interactionPoint(container), Precedence: 5);
         }
 
         public DaggerfallActivationOutcome ActivateContainer(DaggerfallActivationSelection selection)
         {
             long id = checked((long)selection.Target.Identity.Value);
             if (selection.Mode == DaggerfallActivationMode.Info)
-                return new(true, "You see dropped items.");
+                return new(true, targets().Single(value => value.Id == id).PropertyPlacement is null ? "You see dropped items." : "You see furniture you can search.");
             if (selection.Mode == DaggerfallActivationMode.Bash)
                 return new(false, "Bash requires a door.");
             if (selection.Mode == DaggerfallActivationMode.Talk)
-                return new(false, "Dropped items do not answer.");
-            return loot.OpenGround(id) ? new(true, loot.Message) : new(false, loot.Message);
+                return new(false, "There is no one to talk to here.");
+            return open(id);
         }
     }
 
@@ -646,7 +666,7 @@ internal sealed partial class DaggerfallSession
             Action<DaggerfallRdbDoorId> triggerDungeonActions,
             Func<DaggerfallRdbDoorId, DaggerfallActivationMode, DaggerfallActivationOutcome> activateForce,
             Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> activateMagic,
-            Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> enterExteriorBuilding)
+            Func<DaggerfallRdbDoorId, DaggerfallActivationMode?, DaggerfallActivationOutcome?> enterExteriorBuilding)
         {
             _doors = doors ?? throw new ArgumentNullException(nameof(doors));
             _triggerDungeonActions = triggerDungeonActions ?? throw new ArgumentNullException(nameof(triggerDungeonActions));
@@ -668,7 +688,7 @@ internal sealed partial class DaggerfallSession
         private readonly Action<DaggerfallRdbDoorId> _triggerDungeonActions;
         private readonly Func<DaggerfallRdbDoorId, DaggerfallActivationMode, DaggerfallActivationOutcome> _activateForce;
         private readonly Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> _activateMagic;
-        private readonly Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> _enterExteriorBuilding;
+        private readonly Func<DaggerfallRdbDoorId, DaggerfallActivationMode?, DaggerfallActivationOutcome?> _enterExteriorBuilding;
 
         public IEnumerable<DaggerfallActivationTarget> DoorTargets()
         {
@@ -695,7 +715,7 @@ internal sealed partial class DaggerfallSession
             if (_activateMagic(id) is { } magic)
             {
                 if (magic.Applied) _triggerDungeonActions(id);
-                if (CanEnter(id) && _enterExteriorBuilding(id) is { } entered) return entered;
+                if (CanEnter(id) && _enterExteriorBuilding(id, door.IsLocked ? DaggerfallActivationMode.Steal : null) is { } entered) return entered;
                 return magic;
             }
             if (selection.Mode is DaggerfallActivationMode.Steal or DaggerfallActivationMode.Bash)
@@ -706,7 +726,7 @@ internal sealed partial class DaggerfallSession
                     && _doors.ExteriorBuildingOf(id) is not null)
                 {
                     if (!CanEnter(id)) _ = _doors.Open(id, DaggerfallDoorOperationSource.Player);
-                    if (CanEnter(id) && _enterExteriorBuilding(id) is { } entered) return entered;
+                    if (CanEnter(id) && _enterExteriorBuilding(id, forced.Applied ? selection.Mode : null) is { } entered) return entered;
                 }
                 return forced;
             }
@@ -715,7 +735,7 @@ internal sealed partial class DaggerfallSession
             {
                 DaggerfallDoorOperationResult opened = _doors.Open(id, DaggerfallDoorOperationSource.Player);
                 if (opened == DaggerfallDoorOperationResult.Started) _triggerDungeonActions(id);
-                if (CanEnter(id) && _enterExteriorBuilding(id) is { } entered) return entered;
+                if (CanEnter(id) && _enterExteriorBuilding(id, null) is { } entered) return entered;
                 return new(false, Message(opened, door.Motion));
             }
 
