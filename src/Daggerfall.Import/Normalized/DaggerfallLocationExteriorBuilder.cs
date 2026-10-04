@@ -58,7 +58,7 @@ internal sealed class DaggerfallLocationExteriorBuilder
 
         List<MapsExteriorBuilding> pool = [.. layout.Buildings.Where(building => IsNamedBuilding(building.BuildingType))];
         List<DaggerfallLocationBuilding> buildings = [];
-        List<DaggerfallLocationGroundTile> groundTiles = [];
+        byte[] groundTiles = new byte[128 * 128];
         List<string> missingCityBuildings = [];
         int minX = int.MaxValue;
         int minY = int.MaxValue;
@@ -103,20 +103,17 @@ internal sealed class DaggerfallLocationExteriorBuilder
 
             foreach (RmbGroundTile tile in summary.GroundTiles)
             {
-                byte normalizedTextureRecord = tile.TextureRecord < GroundTextureCount ? tile.TextureRecord : (byte)2;
                 // The source array is addressed as [tileX, 15-tileY] by TerrainHelper. Iterating its
                 // stored coordinates and reversing the y coordinate produces the same terrain frame.
-                if (tile.TextureRecord >= GroundTextureCount)
-                {
-                    int fallbackX = checked(tileOriginX + (block.X * RmbTilesPerBlock) + tile.X);
-                    int fallbackY = checked(tileOriginY + (block.Y * RmbTilesPerBlock) + (15 - tile.Y));
-                    groundTiles.Add(new(fallbackX, fallbackY, normalizedTextureRecord, tile.Rotated, tile.Flipped));
-                    continue;
-                }
+                // Donor TerrainHelper leaves blend-space records (>55) at zero. Zero is the
+                // compact representation for generated terrain and must not be normalized to a
+                // visible ground archive, which would erase the donor's marching-squares result.
+                if (tile.TextureRecord >= GroundTextureCount) continue;
 
                 int x = checked(tileOriginX + (block.X * RmbTilesPerBlock) + tile.X);
                 int y = checked(tileOriginY + (block.Y * RmbTilesPerBlock) + (15 - tile.Y));
-                groundTiles.Add(new(x, y, normalizedTextureRecord, tile.Rotated, tile.Flipped));
+                groundTiles[(y * 128) + x] =
+                    (byte)(tile.TextureRecord | (tile.Rotated ? 0x40 : 0) | (tile.Flipped ? 0x80 : 0));
                 minX = Math.Min(minX, x);
                 maxX = Math.Max(maxX, x);
                 minY = Math.Min(minY, y);

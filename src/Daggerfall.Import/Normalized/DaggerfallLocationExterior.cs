@@ -54,6 +54,9 @@ public sealed record DaggerfallLocationExteriorBlock(string SourceName, byte X, 
 /// <param name="Flipped">Whether the donor reverses the tile's UVs.</param>
 public sealed record DaggerfallLocationGroundTile(int X, int Y, byte TextureRecord, bool Rotated, bool Flipped)
 {
+    /// <summary>Compact source tile value: six record bits followed by the donor UV flags.</summary>
+    public byte Bitfield => checked((byte)(TextureRecord | (Rotated ? 0x40 : 0) | (Flipped ? 0x80 : 0)));
+
     public void Validate(string owner)
     {
         if (X is < 0 or >= 128 || Y is < 0 or >= 128)
@@ -95,8 +98,14 @@ public sealed record DaggerfallLocationExterior(
 {
     /// <summary>Placed building facts specialized for this location, in donor traversal order.</summary>
     public IReadOnlyList<DaggerfallLocationBuilding> Buildings { get; init; } = [];
-    /// <summary>Source ground tiles retained for runtime material and nature exclusion decisions.</summary>
-    public IReadOnlyList<DaggerfallLocationGroundTile> GroundTiles { get; init; } = [];
+    /// <summary>
+    /// Source ground tiles in row-major 128-by-128 terrain order. Each byte is the donor FLD
+    /// tile bitfield: records use bits 0..5, rotation is bit 6, and flip is bit 7. A zero byte
+    /// means the donor left that tile for generated terrain texturing. byte[] is intentional:
+    /// System.Text.Json writes it as one base64 logical grid instead of retaining thousands of
+    /// per-tile objects for every corpus location.
+    /// </summary>
+    public byte[] GroundTiles { get; init; } = [];
     /// <summary>Raw MAPPITEM building references, distinct from named-building policy assignment.</summary>
     public IReadOnlyList<DaggerfallLocationBuildingReference> BuildingReferences { get; init; } = [];
     public byte PortTownAndUnknown { get; init; }
@@ -144,8 +153,18 @@ public sealed record DaggerfallLocationExterior(
         }
 
         FlattenRect.Validate(owner);
-        foreach (DaggerfallLocationGroundTile tile in GroundTiles)
-            tile.Validate(owner);
+        if (GroundTiles.Length != 0 && GroundTiles.Length != 128 * 128)
+        {
+            throw new InvalidOperationException($"Exterior location '{owner}' carries {GroundTiles.Length} ground-grid bytes instead of the donor 128-by-128 terrain frame.");
+        }
+
+        foreach (byte bitfield in GroundTiles)
+        {
+            if ((bitfield & 0x3F) >= 56)
+            {
+                throw new InvalidOperationException($"Exterior location '{owner}' carries unsupported ground texture record {bitfield & 0x3F}.");
+            }
+        }
     }
 }
 
