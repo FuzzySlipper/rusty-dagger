@@ -479,9 +479,18 @@ public sealed record SkyMediaPublication(
     }
 }
 
-/// <summary>Converts the two native 512x220 sky hemispheres into one deterministic 2:1 panorama.</summary>
+/// <summary>
+/// Converts the two native 512x220 sky hemispheres into one deterministic 2:1 panorama.
+/// The donor's fake-sky quads put the source image's bottom row at the horizon. The Engine
+/// samples an equirectangular sky with the horizon at v=.5, so the source occupies the upper
+/// half and its horizon row is extended below it. The quarter turn aligns donor yaw zero
+/// (forward -Z, Engine u=.25) with the west source's first column.
+/// </summary>
 internal static class SkyPanoramaEncoder
 {
+    private const int UpperHemisphereHeight = SkyMediaPublication.PanoramaHeight / 2;
+    private const int QuarterPanoramaWidth = SkyMediaPublication.PanoramaWidth / 4;
+
     public static IReadOnlyList<float> ClearColor(SkyFileDocument document, int frame, bool eastWestSwapped)
     {
         int sourceRecord = eastWestSwapped ? 0 : 1;
@@ -497,12 +506,18 @@ internal static class SkyPanoramaEncoder
         byte[] panorama = new byte[checked(SkyMediaPublication.PanoramaWidth * SkyMediaPublication.PanoramaHeight * 4)];
         for (int y = 0; y < SkyMediaPublication.PanoramaHeight; y++)
         {
-            int sourceY = Math.Min(SkyFileDecoder.FrameHeight - 1,
-                (int)((long)y * SkyFileDecoder.FrameHeight / SkyMediaPublication.PanoramaHeight));
+            int sourceY = y < UpperHemisphereHeight
+                ? Math.Min(SkyFileDecoder.FrameHeight - 1,
+                    (int)((long)y * SkyFileDecoder.FrameHeight / UpperHemisphereHeight))
+                : SkyFileDecoder.FrameHeight - 1;
             for (int x = 0; x < SkyMediaPublication.PanoramaWidth; x++)
             {
-                int sourceX = x % SkyFileDecoder.FrameWidth;
-                bool eastHalf = x < SkyFileDecoder.FrameWidth;
+                // The unrotated source layout is [east, west] (or [west, east] for the
+                // realized afternoon swap). Shift it left by one quarter panorama so west
+                // column zero lands at Engine u=.25 for the normal selection.
+                int unrotatedX = (x + QuarterPanoramaWidth) % SkyMediaPublication.PanoramaWidth;
+                int sourceX = unrotatedX % SkyFileDecoder.FrameWidth;
+                bool eastHalf = unrotatedX < SkyFileDecoder.FrameWidth;
                 byte[] source = eastHalf == eastWestSwapped ? west : east;
                 int sourceOffset = ((sourceY * SkyFileDecoder.FrameWidth) + sourceX) * 4;
                 int targetOffset = ((y * SkyMediaPublication.PanoramaWidth) + x) * 4;
@@ -517,6 +532,9 @@ internal static class SkyPanoramaEncoder
 /// <summary>Converts the donor's single night image, used for both hemispheres, into a 2:1 panorama.</summary>
 internal static class SkyNightPanoramaEncoder
 {
+    private const int UpperHemisphereHeight = SkyMediaPublication.PanoramaHeight / 2;
+    private const int QuarterPanoramaWidth = SkyMediaPublication.PanoramaWidth / 4;
+
     public static IReadOnlyList<float> ClearColor(ReadOnlySpan<byte> sourceRgba) =>
         [sourceRgba[0] / 255F, sourceRgba[1] / 255F, sourceRgba[2] / 255F];
 
@@ -527,11 +545,13 @@ internal static class SkyNightPanoramaEncoder
         byte[] panorama = new byte[checked(width * height * 4)];
         for (int y = 0; y < height; y++)
         {
-            int sourceY = Math.Min(SkyMediaPublication.NightHeight - 1,
-                (int)((long)y * SkyMediaPublication.NightHeight / height));
+            int sourceY = y < UpperHemisphereHeight
+                ? Math.Min(SkyMediaPublication.NightHeight - 1,
+                    (int)((long)y * SkyMediaPublication.NightHeight / UpperHemisphereHeight))
+                : SkyMediaPublication.NightHeight - 1;
             for (int x = 0; x < width; x++)
             {
-                int sourceX = x % SkyMediaPublication.NightWidth;
+                int sourceX = ((x + QuarterPanoramaWidth) % width) % SkyMediaPublication.NightWidth;
                 int sourceOffset = ((sourceY * SkyMediaPublication.NightWidth) + sourceX) * 4;
                 int targetOffset = ((y * width) + x) * 4;
                 sourceRgba.Slice(sourceOffset, 4).CopyTo(panorama.AsSpan(targetOffset, 4));
