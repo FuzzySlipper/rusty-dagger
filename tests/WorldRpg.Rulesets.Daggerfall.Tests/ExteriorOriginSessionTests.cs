@@ -392,7 +392,10 @@ public sealed class ExteriorOriginSessionTests
         Assert.Single(engine.OriginCommits);
         Assert.Equal(before.Center, session.Sites.CurrentExteriorCell());
         Assert.Equal(desiredProfilePosition.ToVector(), session.Sites.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector()));
-        Assert.Equal(0f, session.State.PlayerControl.Position.Value.Y);
+        // Engine origin cells are integral; the sampled location frame is fractional, so the
+        // rebase retains the local height residual while preserving the requested profile height.
+        Assert.Equal(desiredLocalPosition.Y - MathF.Floor(desiredLocalPosition.Y),
+            session.State.PlayerControl.Position.Value.Y, 3);
         Assert.Equal(-MathF.Floor(desiredLocalPosition.Y), session.Sites.LocalCompensation.Y);
     }
 
