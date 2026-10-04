@@ -65,6 +65,9 @@ internal sealed partial class DaggerfallSession
             throw new ArgumentException("Only ordinary play runs simulation steps inside its calendar interval.", nameof(simulate));
         if (encounter is not null && kind is not (DaggerfallCalendarAdvanceKind.Elapsed or DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills))
             throw new ArgumentException("Only an elapsed interval selects an encounter.", nameof(encounter));
+        _locomotion.SetAthletics(
+            State.Character.CustomCareer?.Advantages.Any(trait => trait.Id == "athleticism") == true,
+            State.HeldEnchantments.Talents.Athleticism);
         long minuteBefore = MinuteIndex(before);
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
         _sites.Projection.Lighting.UpdateAmbient(_time.Calendar);
@@ -88,7 +91,15 @@ internal sealed partial class DaggerfallSession
         AdvanceEffectsForCalendar(before, ordinaryPlay, resting);
         if (encounter is not null) QueueEncounter(encounter);
         AnnounceHoliday();
-        if (!ordinaryPlay) return;
+        if (!ordinaryPlay)
+        {
+            // Rest suppresses newly incurred idle loss, while travel, prison, and other elapsed
+            // callers still settle every calendar minute through this existing owner. Any accepted
+            // movement seconds carried from the prior admitted update are settled before reset.
+            _locomotion.AdvanceCalendarMinutes(minuteBefore, MinuteIndex(_time.Calendar), State.Actors.Player.Stats,
+                includeIdleFatigue: !resting);
+            return;
+        }
         simulate!();
         // Locomotion charges the update's minutes once its steps have recorded how they were spent.
         _locomotion.AdvanceCalendarMinutes(minuteBefore, MinuteIndex(_time.Calendar), State.Actors.Player.Stats);

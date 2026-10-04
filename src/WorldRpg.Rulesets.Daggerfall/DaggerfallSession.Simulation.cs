@@ -153,7 +153,7 @@ internal sealed partial class DaggerfallSession
             : DaggerfallSwimmingStep.None;
         DaggerfallLanding? landing = _locomotion.CompleteStep(locomotion, landingBefore, movement,
             update.DeltaSeconds * _tuning.Time.GameSecondsPerRealSecond, State.Actors.Player.Stats,
-            use => State.SkillUses.Record(use));
+            use => State.SkillUses.Record(use), swimming.Swimming);
         _climbing.CompleteStep(climb, movement, use => State.SkillUses.Record(use));
         if (swimming.Drowning)
             AppendDamage(_vitality.ResolveDrowning(State.Actors.Player.Actor), DaggerfallDamageCause.Drowning, 0);
