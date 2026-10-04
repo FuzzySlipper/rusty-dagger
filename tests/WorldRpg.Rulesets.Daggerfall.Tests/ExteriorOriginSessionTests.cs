@@ -224,13 +224,17 @@ public sealed class ExteriorOriginSessionTests
             InventoryPresentation rows = inventory.Read();
             InventoryItemPresentation gold = rows.Items.First(row => row.Definition == "gold-piece");
             session.PublishInitial();
+            AppearanceFact worldBeforeHorizontalRebaseFact = Assert.Single(appearance.Snapshots.Last(),
+                fact => fact.ObjectId == 1);
+            Vector3 worldBeforeHorizontalRebase = new(
+                worldBeforeHorizontalRebaseFact.Transform.Translation.X,
+                worldBeforeHorizontalRebaseFact.Transform.Translation.Y,
+                worldBeforeHorizontalRebaseFact.Transform.Translation.Z);
             session.Update(new ProductUpdate(OuterUpdate(2), [Ui(JsonSerializer.Serialize(new
             {
                 action = "inventory-drop", revision = engine.PublishedNested("inventory", "revision"), item = gold.Key, amount = 1,
             }))]));
             Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).GroundContainers);
-            Vector3 worldBeforeHorizontalRebase = Assert.Single(appearance.Snapshots.Last(),
-                fact => fact.ObjectId == 1).Transform.Translation;
             session.Update(new ProductUpdate(OuterUpdate(3), []));
             // The admitted Charing frame itself crosses the vertical origin threshold during the
             // first update; the explicit move above then contributes the horizontal commit.
