@@ -40,7 +40,6 @@ internal sealed record DaggerfallTempleDonationQuote(
     DaggerfallTempleBlessingTarget Target,
     int Magnitude,
     int DurationMinutes,
-    double ExpiresAtGameSecond,
     string BlessingInstance);
 
 internal sealed record DaggerfallTempleCureQuote(
@@ -125,7 +124,6 @@ internal sealed class DaggerfallTempleServiceRuntime
         int rank = membership.IsMember ? membership.Rank : -1;
         int magnitude = 0;
         int duration = 0;
-        double expires = -1d;
         string instance = string.Empty;
         if (target != DaggerfallTempleBlessingTarget.None)
         {
@@ -139,7 +137,6 @@ internal sealed class DaggerfallTempleServiceRuntime
             {
                 magnitude = DaggerfallTemplePolicy.CalculateTempleBlessing(gold, rank);
                 duration = DaggerfallTemplePolicy.BlessingDurationMinutes(gold);
-                expires = CurrentGameSecond() + (duration * (double)DaggerfallCalendar.SecondsPerMinute);
                 instance = $"temple-blessing.{checked(++_requestSequence)}";
             }
         }
@@ -155,7 +152,7 @@ internal sealed class DaggerfallTempleServiceRuntime
             return null;
         }
         refusal = new(true, DaggerfallTempleServiceDenial.None, Message: "Donation quoted.");
-        return new(quote, deity, membershipFaction, rank, target, magnitude, duration, expires, instance);
+        return new(quote, deity, membershipFaction, rank, target, magnitude, duration, instance);
     }
 
     /// <summary>
@@ -170,10 +167,12 @@ internal sealed class DaggerfallTempleServiceRuntime
 
         if (quote.Target != DaggerfallTempleBlessingTarget.None)
         {
+            double acceptedAt = CurrentGameSecond();
+            double expires = acceptedAt + (quote.DurationMinutes * (double)DaggerfallCalendar.SecondsPerMinute);
             DaggerfallTempleBlessingState state = new DaggerfallTempleBlessingState(quote.DeityFactionId, quote.Target,
                 quote.Target == DaggerfallTempleBlessingTarget.LegalReputation
                     ? quote.ServiceQuote.Request.Provider.Site.Region : -1,
-                quote.Magnitude, quote.DurationMinutes, quote.ExpiresAtGameSecond).Validate();
+                quote.Magnitude, quote.DurationMinutes, expires).ValidateAt(acceptedAt);
             DaggerfallEffectAdmissionOutcome started = _effects.Start(new(
                 quote.BlessingInstance,
                 DaggerfallTempleBlessingEffects.Key,

@@ -32,6 +32,24 @@ internal sealed record DaggerfallTempleBlessingState(
             throw new ArgumentException("Temple blessing state is malformed.");
         return this;
     }
+
+    /// <summary>
+    /// Validates the remaining lifetime against the one current world clock. A past deadline is
+    /// accepted so the canonical lifecycle can retire it; a future deadline must fit inside the
+    /// paid duration that this current save carries.
+    /// </summary>
+    internal DaggerfallTempleBlessingState ValidateAt(double currentGameSecond)
+    {
+        Validate();
+        if (!double.IsFinite(currentGameSecond) || currentGameSecond < 0d)
+            throw new ArgumentOutOfRangeException(nameof(currentGameSecond));
+
+        double latestAllowed = currentGameSecond + (DurationMinutes * (double)DaggerfallCalendar.SecondsPerMinute);
+        if (!double.IsFinite(latestAllowed)
+            || ExpiresAtGameSecond > currentGameSecond && ExpiresAtGameSecond > latestAllowed)
+            throw new ArgumentException("Temple blessing expiry exceeds its paid duration from the current world time.");
+        return this;
+    }
 }
 
 /// <summary>
@@ -54,11 +72,13 @@ internal static class DaggerfallTempleBlessingEffects
         ArgumentNullException.ThrowIfNull(effects);
         ArgumentNullException.ThrowIfNull(time);
         double now = time.AbsoluteGameSeconds;
-        EffectInstanceId[] due = effects.Active
-            .Where(effect => effect.Definition.Key == Key)
-            .Where(effect => Read(effect.State).ExpiresAtGameSecond <= now)
-            .Select(effect => effect.Lifecycle.Context.Instance)
-            .ToArray();
+        List<EffectInstanceId> due = [];
+        foreach (DaggerfallActiveEffect effect in effects.Active.Where(effect => effect.Definition.Key == Key))
+        {
+            DaggerfallTempleBlessingState state = Read(effect.State).ValidateAt(now);
+            if (state.ExpiresAtGameSecond <= now)
+                due.Add(effect.Lifecycle.Context.Instance);
+        }
         int expired = 0;
         foreach (EffectInstanceId instance in due)
             if (effects.Expire(instance)) expired++;
