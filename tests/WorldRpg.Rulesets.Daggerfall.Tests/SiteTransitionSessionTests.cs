@@ -282,7 +282,10 @@ public sealed class SiteTransitionSessionTests
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"loot\"}")]));
 
             Assert.Equal(interior.Site, session.Site.Active);
-            Assert.False(session.State.Actors.TryGet(spawnedActor, out _));
+            DurableIdentityReference spawnedIdentity = new(DurableIdentityKind.Actor, checked((ulong)spawnedActor));
+            Assert.Equal(DurableEntityResolution.Unloaded,
+                session.State.Actors.Entities.Classify(spawnedIdentity, session.State.Npcs.Identities!));
+            Assert.False(session.DynamicActors.ContainsKey(spawnedActor));
             Assert.Equal(2, spatial.ReplaceCalls);
             Assert.Equal("You pass through the entrance.", session.ActivationView.Message);
             Assert.Equal(interior.ProfileKey, DaggerfallSavePayload.Read(session.CaptureSave()).Site.ActiveProfile!.Require());
