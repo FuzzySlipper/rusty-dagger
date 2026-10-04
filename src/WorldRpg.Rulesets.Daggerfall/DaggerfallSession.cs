@@ -62,6 +62,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private readonly DaggerfallDungeonVisibility _dungeonVisibility;
     private bool _verticalMovementDriven;
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
+    private readonly DaggerfallEnemyMagicModule _enemyMagic;
     private readonly DaggerfallCorpseLootModule _corpseLoot;
     private readonly DaggerfallGroundContainers _groundContainers;
     private readonly DaggerfallBookNotebook _notebook;
@@ -167,7 +168,13 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // Ship return pose is detached in the land profile; active-world origin moves do not own it.
     }
 
-    void IDaggerfallSiteTransitionHost.EnteredSite() { Casting.ClearTransient(); ChangeMusicSite(); }
+    void IDaggerfallSiteTransitionHost.EnteredSite()
+    {
+        Casting.ClearTransient();
+        _enemyMagic.Clear();
+        _enemyBehavior.ClearEnemyMagic();
+        ChangeMusicSite();
+    }
 
     /// <summary>
     /// A swing the departing projection was still timing ends with it: retire and hand its
@@ -704,6 +711,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _facts.Deliver(React);
     }
     internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEnemyBehavior => _enemyBehavior.LastEvidence;
+    internal IReadOnlyDictionary<long, DaggerfallEnemySpellEvidence> LastEnemySpell => _enemyMagic.LastEvidence;
     internal LootPresentation? OpenLoot => _lootUi.Read();
 
     /// <summary>Typed equipment moves over live state: the same operations the UI adapter uses.</summary>

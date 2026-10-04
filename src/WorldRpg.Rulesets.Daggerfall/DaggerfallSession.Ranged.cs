@@ -18,7 +18,7 @@ internal sealed partial class DaggerfallSession
     {
         if (_latestUpdateGeneration is not ulong generation || _latestSimulationStep is not ulong simulationStep) return;
         _combat.AdvanceRangedFlight(generation, simulationStep, facts.FixedDeltaSeconds, CurrentPositions(), _facts);
-        AdvanceDungeonSpellFlights(facts.FixedDeltaSeconds);
+        AdvanceSpellFlights(facts.FixedDeltaSeconds);
         DeliverFacts();
     }
 
@@ -27,19 +27,18 @@ internal sealed partial class DaggerfallSession
     /// newly traversed segment to the Engine spatial owner. The action target is an aim fact at
     /// launch; it is never consulted again to re-aim a live missile.
     /// </summary>
-    private void AdvanceDungeonSpellFlights(double fixedDeltaSeconds)
+    private void AdvanceSpellFlights(double fixedDeltaSeconds)
     {
         if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d)
             throw new ArgumentOutOfRangeException(nameof(fixedDeltaSeconds));
 
         float displacement = checked((float)(DaggerfallDungeonSpellPolicy.MissileMovementSpeedMetresPerSecond * fixedDeltaSeconds));
-        foreach (DaggerfallLiveSpell bundle in Casting.PendingDungeonFlights)
+        foreach (DaggerfallLiveSpell bundle in Casting.PendingFlightOperations)
         {
-            if (bundle.ActionSource is not { } source) continue;
             if (bundle.ReleaseOrigin is not Vector3 from
                 || !DaggerfallDungeonSpellPolicy.TryNormalizeDirection(bundle.ReleaseDirection ?? default, out Vector3 direction))
             {
-                // An admitted action with no usable launch direction is a terminal miss. The
+                // An admitted release with no usable launch direction is a terminal miss. The
                 // source target is not a fallback caster or a proof of impact.
                 _ = Casting.Deliver(bundle, []);
                 continue;
@@ -67,10 +66,12 @@ internal sealed partial class DaggerfallSession
 
     internal IReadOnlyList<DaggerfallDungeonSpellFlightView> ReadDungeonSpellFlights()
     {
-        return [.. Casting.PendingDungeonFlights.Select(bundle =>
+        return [.. Casting.PendingRangedFlights.Select(bundle =>
         {
-            DaggerfallActionCastSource source = bundle.ActionSource!;
-            Vector3 origin = bundle.ReleaseOrigin ?? source.Origin + Vector3.UnitY * DaggerfallDungeonSpellPolicy.MissileOriginHeightMetres;
+            Vector3 origin = bundle.ReleaseOrigin
+                ?? (bundle.ActionSource is { } source
+                    ? source.Origin + Vector3.UnitY * DaggerfallDungeonSpellPolicy.MissileOriginHeightMetres
+                    : Vector3.Zero);
             return DaggerfallDungeonSpellPolicy.TryNormalizeDirection(bundle.ReleaseDirection ?? default, out Vector3 direction)
                 ? new DaggerfallDungeonSpellFlightView(bundle.Sequence, WorldPoint.From(origin), direction)
                 : (DaggerfallDungeonSpellFlightView?)null;

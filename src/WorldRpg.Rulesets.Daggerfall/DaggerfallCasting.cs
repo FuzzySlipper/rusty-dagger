@@ -133,6 +133,46 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
     /// <summary>Transient action-resource missiles are advanced by the session's Engine collision caller.</summary>
     internal IReadOnlyList<DaggerfallLiveSpell> PendingDungeonFlights =>
         _pending.Where(bundle => bundle.ActionSource is not null).OrderBy(bundle => bundle.Sequence).ToArray();
+
+    /// <summary>
+    /// All ordinary ranged releases waiting for the one session flight owner to submit their
+    /// swept Engine segment.  Dungeon actions are included because they use the same live bundle
+    /// and collision path; callers that need the action-only presentation use
+    /// <see cref="PendingDungeonFlights"/>.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallLiveSpell> PendingRangedFlights =>
+        _pending.Where(bundle => bundle.Target is DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange)
+            .OrderBy(bundle => bundle.Sequence).ToArray();
+
+    /// <summary>
+    /// Releases owned by the one session flight step. Actorless dungeon actions retain their
+    /// donor target mode so non-ranged action payloads can terminate honestly through the same
+    /// impact owner, while ordinary enemy releases include only ranged target modes.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallLiveSpell> PendingFlightOperations =>
+        _pending.Where(bundle => bundle.ActionSource is not null
+            || bundle.Target is DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange)
+            .OrderBy(bundle => bundle.Sequence).ToArray();
+
+    /// <summary>Whether an actor already has an unreconciled release in the shared pending set.</summary>
+    internal bool HasPending(long casterId) => _pending.Any(bundle => bundle.CasterId == casterId && !bundle.Delivered);
+
+    /// <summary>
+    /// Reuses the effect lifecycle's compiled like-kind ownership for donor duplicate suppression.
+    /// No enemy-specific effect cache is retained here: every payload must already be active on the
+    /// target before the spell is considered a duplicate.
+    /// </summary>
+    internal bool EffectsAlreadyOnTarget(string spellKey, long targetId)
+    {
+        if (!catalog.Spells.TryGetValue(spellKey, out DaggerfallSpellDefinition? spell)
+            || !TryDefinitions(spell, out DaggerfallEffectDefinition[] definitions)) return false;
+        foreach (DaggerfallEffectDefinition definition in definitions)
+        {
+            if (!effects.Active.Any(active => checked((long)active.Context.Target.Value) == targetId
+                && active.Definition.LikeKind == definition.LikeKind)) return false;
+        }
+        return definitions.Length > 0;
+    }
     internal DaggerfallCastResult Refuse(long casterId, DaggerfallCastOutcome reason)
     {
         if (Readiness(casterId) is { } state) { state.Ready = null; _armed.Remove(state); }
