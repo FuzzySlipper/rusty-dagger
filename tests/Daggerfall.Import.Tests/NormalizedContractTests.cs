@@ -92,6 +92,23 @@ public sealed class NormalizedContractTests
     }
 
     [Fact]
+    public void Validation_rejects_population_name_seed_outside_runtime_width()
+    {
+        NormalizedImportDocument invalid = CreateDocument() with
+        {
+            World = CreateDocument().World with
+            {
+                Population = [new("population/source/0/0", new(1F, 2F, 3F), 1, 2, 0, 0)
+                {
+                    NameSeed = ushort.MaxValue + 1,
+                }],
+            },
+        };
+
+        Assert.Throws<ArgumentOutOfRangeException>(invalid.Validate);
+    }
+
+    [Fact]
     public void NormalizedContractsHaveNoEncounterOrRuntimeEntitySurface()
     {
         string json = Encoding.UTF8.GetString(NormalizedImportSerializer.Serialize(CreateDocument()));

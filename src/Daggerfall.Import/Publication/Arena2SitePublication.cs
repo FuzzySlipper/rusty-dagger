@@ -161,6 +161,7 @@ public static class Arena2SitePublication
                     .Concat(media.RuntimeNatureResources)
                     .Concat([GroundContainerBillboard])
                     .Concat(document.World.StaticNpcs.Select(npc => $"sprite/texture-{npc.BillboardArchive}-{npc.BillboardRecord}"))
+                    .Concat(document.World.Population.Select(person => $"sprite/texture-{person.BillboardArchive}-{person.BillboardRecord}"))
                     .Distinct(StringComparer.Ordinal)],
                 RuntimeTerrainResources = media.RuntimeTerrainResources,
                 AuthoredOverlays = media.DungeonOverlays,

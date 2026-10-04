@@ -113,6 +113,9 @@ public sealed record DaggerfallClimateGrid(PublishedSource Source, IReadOnlyList
 /// <param name="Disposition">Whether the donor's table names the value.</param>
 public sealed record DaggerfallClimateValue(int Value, string Name, DaggerfallClimateDisposition Disposition)
 {
+    /// <summary>The donor's source People race for this subclimate, when the source table names one.</summary>
+    public string People { get; init; } = string.Empty;
+
     public void Validate()
     {
         if (Value is < 0 or > 0xff)
@@ -130,9 +133,9 @@ public sealed record DaggerfallClimateValue(int Value, string Name, DaggerfallCl
             throw new ArgumentException($"Climate value {Value} is named with no name.", nameof(Name));
         }
 
-        if (Disposition == DaggerfallClimateDisposition.Unresolved && Name.Length != 0)
+        if (Disposition == DaggerfallClimateDisposition.Unresolved && (Name.Length != 0 || People.Length != 0))
         {
-            throw new ArgumentException($"Climate value {Value} is unresolved with the name '{Name}'.", nameof(Name));
+            throw new ArgumentException($"Climate value {Value} is unresolved with the name '{Name}' and People race '{People}'.", nameof(Name));
         }
     }
 }
@@ -301,7 +304,16 @@ public static class DaggerfallWorldGridsBuilder
             values.Add(new DaggerfallClimateValue(
                 value,
                 named ? name! : string.Empty,
-                named ? DaggerfallClimateDisposition.Named : DaggerfallClimateDisposition.Unresolved));
+                named ? DaggerfallClimateDisposition.Named : DaggerfallClimateDisposition.Unresolved)
+            {
+                People = value switch
+                {
+                    223 or 228 or 229 or 230 or 231 or 232 => "Breton",
+                    224 or 225 or 227 => "Redguard",
+                    226 => "Nord",
+                    _ => string.Empty,
+                },
+            });
         }
 
         return values;

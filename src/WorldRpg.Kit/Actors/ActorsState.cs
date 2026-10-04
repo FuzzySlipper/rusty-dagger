@@ -1,7 +1,9 @@
-using WorldRpg.Kit.Ai;
+using System.Numerics;
 using WorldRpg.Kit.Combat;
+using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Ai;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
 using WorldRpg.Kit.Progression;
@@ -15,6 +17,15 @@ public sealed class ActorsState : IDisposable
     public EntityDirectory Entities { get; } = new();
     public EntityStore Store => Entities.Store;
     public PlayerActorState Player { get; private set; } = null!;
+
+    public ActorsState()
+    {
+        // NPC character motion is projected through the same Engine built-ins as the player.
+        // Registration is explicit so EntityCharacterController never falls back to an
+        // automatic product component family with a different key.
+        Store.Register(EngineComponentTypes.Transform);
+        Store.Register(EngineComponentTypes.CharacterMotion);
+    }
     public IEnumerable<ActorState> All => Store.Query<ActorBody>()
         .Where(entry => entry.Entity != Player?.Actor.Entity)
         .Select(entry => new ActorState(new Actor(Store, entry.Entity)));
@@ -32,8 +43,24 @@ public sealed class ActorsState : IDisposable
     {
         Actor actor = Construct(id, type, stats, defeatTrack);
         actor.Add(new ActorBody(pose));
+        Store.Set(actor.Entity, EngineComponentTypes.Transform, EngineTransform(pose));
+        Store.Set(actor.Entity, EngineComponentTypes.CharacterMotion, InitialCharacterMotion());
         return new ActorState(actor);
     }
+
+    private static Transform EngineTransform(ActorPose pose) => new(
+        pose.Position.ToVector(),
+        Quaternion.CreateFromAxisAngle(Vector3.UnitY, -pose.HeadingYawRadians),
+        Vector3.One);
+
+    private static CharacterMotion InitialCharacterMotion() => default(CharacterMotion) with
+    {
+        Grounded = true,
+        Stance = CharacterStance.Standing,
+        SupportPreviousRotation = Quaternion.Identity,
+        FallOriginY = 0f,
+        PeakY = 0f,
+    };
 
     private Actor Construct(long id, EntityTypeId type, StatsComponent stats, string defeatTrack)
     {
@@ -108,6 +135,8 @@ public readonly record struct ActorPose
 public sealed class ActorState(Actor actor)
 {
     public PursuitMemoryComponent Pursuit => Actor.Get<PursuitMemoryComponent>();
+    /// <summary>Ordinary civilian activity memory, present only on actors admitted for wandering.</summary>
+    public WanderMemoryComponent Wander => Actor.Get<WanderMemoryComponent>();
     public Actor Actor { get; } = actor;
     public long DurableId => checked((long)Actor.Get<DurableEntityIdentity>().Identity.Value);
     public AttackState Attack => Actor.Get<AttackState>();
@@ -120,7 +149,16 @@ public sealed class ActorState(Actor actor)
     public WorldPoint Position => Pose.Position;
     public float Heading => Pose.HeadingYawRadians;
     public float HeadingYawRadians => Pose.HeadingYawRadians;
-    public void ApplyPose(ActorPose pose) => Actor.Get<ActorBody>().Pose = pose;
+    public void ApplyPose(ActorPose pose)
+    {
+        Actor.Get<ActorBody>().Pose = pose;
+        if (Actor.Store.Has(Actor.Entity, EngineComponentTypes.Transform))
+            Actor.Store.Set(Actor.Entity, EngineComponentTypes.Transform, new Transform(
+                pose.Position.ToVector(),
+                Quaternion.CreateFromAxisAngle(Vector3.UnitY, -pose.HeadingYawRadians),
+                Vector3.One));
+    }
+
     public bool IsDefeated
     {
         get

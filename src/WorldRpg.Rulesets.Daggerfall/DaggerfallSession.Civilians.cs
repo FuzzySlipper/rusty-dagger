@@ -27,16 +27,39 @@ internal sealed partial class DaggerfallSession
             throw new InvalidOperationException($"NPC {npcId} is {npc.Kind}, not a materializable civilian.");
         if (npc.Presence == DaggerfallNpcPresence.Removed)
             throw new InvalidOperationException($"NPC {npcId} has been removed and cannot be materialized.");
-        if (State.Actors.TryGet(npcId, out _)) return npcId;
+        DaggerfallSiteProfile profile = _sites.Projection.Inputs;
+        bool sourcePopulation = IsSourcePopulation(npc);
+        NormalizedBillboardSprite? sourceSprite = null;
+        if (sourcePopulation && !profile.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out sourceSprite))
+            throw new NotSupportedException($"Population NPC {npcId} has no published billboard {npc.Appearance.BillboardArchive}/{npc.Appearance.BillboardRecord} at '{profile.ProfileKey.LogicalId}'.");
+        if (State.Actors.TryGet(npcId, out _))
+        {
+            // Site admission can restore a retained actor before the time-of-day population
+            // projection runs. Re-admit the source billboard only when the population owner hid
+            // that visual for night; the mechanics actor remains the same durable owner.
+            if (sourcePopulation && !_appearance.HasActor(npcId)) _appearance.AddActor(npcId, sourceSprite!);
+            return npcId;
+        }
 
-        return _roster.MaterializeCivilian(npc, pose);
+        long actorId = _roster.MaterializeCivilian(npc, pose);
+        if (sourcePopulation)
+        {
+            try { _appearance.AddActor(actorId, sourceSprite!); }
+            catch
+            {
+                _roster.UnloadActor(actorId);
+                throw;
+            }
+        }
+        return actorId;
     }
 
     /// <summary>Materializes every active civilian, using saved coordinates when present.</summary>
     internal IReadOnlyList<long> MaterializeNpcActors(WorldPoint fallbackPosition)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        DaggerfallSiteRecord? site = _site.ActiveSite;
+        DaggerfallSiteProfile profile = _sites.Projection.Inputs;
+        DaggerfallSiteRecord? site = profile.Site is { } siteId ? _site.Require(siteId) : null;
         List<long> materialized = [];
         foreach (DaggerfallNpc npc in State.Npcs.All)
         {
@@ -46,7 +69,7 @@ internal sealed partial class DaggerfallSession
             if (npc.Kind != DaggerfallNpcKind.Civilian
                 || npc.Presence != DaggerfallNpcPresence.Active
                 || site is null
-                || (npc.Profile is { } physical ? physical != _sites.ActiveProfile
+                || (npc.Profile is { } physical ? physical != profile.ProfileKey
                     : npc.Site.Region != site.Id.Region || !StringComparer.Ordinal.Equals(npc.Site.Location, site.Name))
                 || State.Actors.TryGet(npc.DurableId, out _)) continue;
             WorldPoint position = npc.X is float x && npc.Y is float y && npc.Z is float z
@@ -56,6 +79,10 @@ internal sealed partial class DaggerfallSession
         }
         return materialized;
     }
+
+    private static bool IsSourcePopulation(DaggerfallNpc npc) =>
+        npc.Kind == DaggerfallNpcKind.Civilian
+        && npc.StableKey.StartsWith("population/", StringComparison.Ordinal);
 
     /// <summary>Retires a civilian and records the social identity as removed.</summary>
     internal void RetireNpcActor(long npcId)

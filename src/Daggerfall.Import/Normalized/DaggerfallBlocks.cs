@@ -255,7 +255,7 @@ public sealed record DaggerfallBlockRmbSection(int X, int Y, int Z);
 /// <param name="TextureRecord">The texture record.</param>
 /// <param name="FactionId">The NPC faction.</param>
 /// <param name="Flags">The NPC flags.</param>
-public sealed record DaggerfallBlockRmbPerson(int X, int Y, int Z, int TextureArchive, int TextureRecord, short FactionId, byte Flags);
+public sealed record DaggerfallBlockRmbPerson(int X, int Y, int Z, int TextureArchive, int TextureRecord, short FactionId, byte Flags, int SourceOffset = 0);
 
 /// <summary>One placed door: its position, rotation and model.</summary>
 /// <param name="X">The X position.</param>
@@ -904,7 +904,7 @@ public static class DaggerfallBlocksBuilder
             [.. (half?.Models ?? []).Select(model => new DaggerfallBlockRmbModel(model.ModelId, model.ObjectType, model.X, model.Y, model.Z, model.YRotation))],
             [.. (half?.Flats ?? []).Select(flat => new DaggerfallBlockRmbFlat(flat.X, flat.Y, flat.Z, flat.TextureArchive, flat.TextureRecord, flat.FactionId, flat.Flags))],
             [.. (half?.Sections ?? []).Select(section => new DaggerfallBlockRmbSection(section.X, section.Y, section.Z))],
-            [.. (half?.People ?? []).Select(person => new DaggerfallBlockRmbPerson(person.X, person.Y, person.Z, person.TextureArchive, person.TextureRecord, person.FactionId, person.Flags))],
+            [.. (half?.People ?? []).Select(person => new DaggerfallBlockRmbPerson(person.X, person.Y, person.Z, person.TextureArchive, person.TextureRecord, person.FactionId, person.Flags, person.SourceOffset))],
             [.. (half?.Doors ?? []).Select(door => new DaggerfallBlockRmbDoor(door.X, door.Y, door.Z, door.YRotation, door.OpenRotation, door.DoorModelIndex))]);
 
     private static DaggerfallBlockRmbPlacements? Publish(RmbBlockPlacements? placements) =>

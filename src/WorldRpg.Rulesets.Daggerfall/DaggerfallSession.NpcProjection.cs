@@ -40,6 +40,8 @@ internal sealed partial class DaggerfallSession
                 throw new InvalidOperationException($"Placed NPC {npc.DurableId} has no profile position.");
             ProjectNpc(npc, profile, _sites.ProfileToLocal(new(x, y, z)));
         }
+
+        ReconcileCivilianPopulation();
     }
 
     private void ProjectNpc(DaggerfallNpc npc, DaggerfallSiteProfile profile, WorldPoint localPosition)
