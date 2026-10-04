@@ -86,7 +86,11 @@ public sealed class NormalizedContractRoundTripTests
         }
 
         byte[] authored = File.ReadAllBytes(PayloadPath("daggerfall.base.json"));
-        byte[] rewrittenPayload = Encoding.UTF8.GetBytes(imported.ToJsonString(PublishedJson.Section));
+        // The generated locations section is hundreds of megabytes. Its semantic round-trip above
+        // uses the canonical indented dialect, but re-indenting the entire joined document expands
+        // that section beyond Utf8JsonWriter's raw-value envelope. Compact published JSON carries
+        // the same names, numbers and enum values while keeping this reader fixture admissible.
+        byte[] rewrittenPayload = Encoding.UTF8.GetBytes(imported.ToJsonString(PublishedJson.SectionCompact));
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(authored, rewrittenPayload);
         Assert.NotEmpty(definitions.Catalogs.Careers);
     }
@@ -106,7 +110,9 @@ public sealed class NormalizedContractRoundTripTests
         JsonObject imported = ReadImported();
         imported["mobiles"] = JsonNode.Parse(publication.Json);
 
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(authored, Encoding.UTF8.GetBytes(imported.ToJsonString(PublishedJson.Section)));
+        // Keep the full generated locations section in this fixture; only the document whitespace
+        // changes so the combined payload remains within the Engine-safe JSON token envelope.
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(authored, Encoding.UTF8.GetBytes(imported.ToJsonString(PublishedJson.SectionCompact)));
 
         IReadOnlyList<global::Daggerfall.Import.Arena2.Arena2MobileTableEntry> table = global::Daggerfall.Import.Arena2.Arena2MobileTable.Read(enemyBasics);
         Assert.Equal(
