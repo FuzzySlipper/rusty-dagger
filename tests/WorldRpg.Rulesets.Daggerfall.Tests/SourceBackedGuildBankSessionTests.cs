@@ -8,6 +8,7 @@ using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Property;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -130,6 +131,118 @@ public sealed class SourceBackedGuildBankSessionTests
         Assert.Contains(reloaded.State.Property.OwnedHouses, house => house == awardedHouse);
     }
 
+    [Fact]
+    public void Source_mages_buy_spells_and_spellmaker_use_admitted_providers_and_encoded_restore()
+    {
+        using SourceBackedGuildBankSessionFixture fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.MagesProfile);
+
+        DaggerfallNpc seller = SourceNpc(session, faction: 60, service: "buy-spells");
+        DaggerfallNpc maker = SourceNpc(session, faction: 64, service: "make-spells");
+        Assert.Equal("spell seller", seller.Role);
+        Assert.Equal("spellmaker", maker.Role);
+        AddSpellbook(session);
+        AddGold(session, 100_000);
+
+        OpenSourceNpc(session, seller);
+        DaggerfallSpellbookView initial = session.ReadSpells();
+        DaggerfallSpellSaleView sale = Assert.IsType<DaggerfallSpellSaleView>(initial.Sale);
+        DaggerfallSpellOffer offer = Assert.Single(sale.Offers, value => value.Key == "spell.023");
+        Submit(session, 1, new { action = "spell-buy", revision = sale.Revision, key = offer.Key,
+            amount = offer.Price, confirm = true });
+        Assert.Contains(offer.Key, session.State.Character.KnownSpells);
+        Assert.Equal("Purchased", session.ReadSpells().Result);
+
+        FillMagicka(session);
+        Submit(session, 2, new { action = "spell-ready", key = offer.Key });
+        Assert.Equal(offer.Key, session.ReadSpells().Ready);
+        DaggerfallSavePayload sellerSave = DaggerfallSavePayload.Read(session.CaptureSave());
+        using DaggerfallSession restoredSeller = fixture.Restore(DaggerfallSavePayload.Encode(sellerSave));
+        Assert.Contains(offer.Key, restoredSeller.State.Character.KnownSpells);
+        Assert.Equal(offer.Key, restoredSeller.ReadSpells().Ready);
+
+        // Spellmaking requires the same canonical Mages Guild membership that the concrete source
+        // catalog names for faction 64. The provider itself remains the admitted MAGEAA14.RMB NPC.
+        _ = restoredSeller.State.Social.JoinGuild(40, 0);
+        AddGold(restoredSeller, 100_000);
+        DaggerfallNpc restoredMaker = SourceNpc(restoredSeller, faction: 64, service: "make-spells");
+        OpenSourceNpc(restoredSeller, restoredMaker);
+        DaggerfallSpellMakerView makerView = Assert.IsType<DaggerfallSpellMakerView>(restoredSeller.ReadSpells().Maker);
+        DaggerfallSpellMakerEffect effect = Assert.Single(makerView.Effects, value => value.Key == "free-action");
+        DaggerfallSpellEffectDefinition setting = new(effect.Key, effect.Type, effect.SubType,
+            3, 7, 2, 1, 1, 1, 1, 1, 1, 1, 1);
+        DaggerfallSpellDraft draft = new("Source freedom", 4, 0, 1, [setting]);
+        string draftText = JsonSerializer.Serialize(draft, DaggerfallSpellDraftJsonContext.Default.DaggerfallSpellDraft);
+        Submit(restoredSeller, 3, new { action = "spellmaker-draft", revision = makerView.Revision, text = draftText });
+        makerView = Assert.IsType<DaggerfallSpellMakerView>(restoredSeller.ReadSpells().Maker);
+        DaggerfallSpellConstructionQuote quote = Assert.IsType<DaggerfallSpellConstructionQuote>(makerView.Quote);
+        Assert.True(quote.Eligible);
+        Submit(restoredSeller, 4, new { action = "spellmaker-buy", revision = makerView.Revision,
+            key = quote.Key, amount = (ulong)quote.Gold, confirm = true });
+        Assert.Equal("Purchased", restoredSeller.ReadSpells().Result);
+        string customKey = Assert.Single(restoredSeller.State.Character.KnownSpells,
+            value => value.StartsWith("custom-spell.", StringComparison.Ordinal));
+        Submit(restoredSeller, 5, new { action = "spellmaker-buy", revision = makerView.Revision,
+            key = quote.Key, amount = (ulong)quote.Gold, confirm = true });
+        Assert.Equal("DraftChanged", restoredSeller.ReadSpells().Result);
+
+        FillMagicka(restoredSeller);
+        Submit(restoredSeller, 6, new { action = "spell-ready", key = customKey });
+        Assert.Equal(customKey, restoredSeller.ReadSpells().Ready);
+        DaggerfallSavePayload makerSave = DaggerfallSavePayload.Read(restoredSeller.CaptureSave());
+        Assert.Contains(makerSave.CustomSpells, value => value.Key == customKey && !value.SpellsForSale);
+        using DaggerfallSession restoredMakerSession = fixture.Restore(DaggerfallSavePayload.Encode(makerSave));
+        Assert.Contains(customKey, restoredMakerSession.State.Character.KnownSpells);
+        Assert.Equal(customKey, restoredMakerSession.ReadSpells().Ready);
+    }
+
+    [Fact]
+    public void Source_kynareth_seller_rank_gate_and_paid_blessing_survive_save_then_expire()
+    {
+        using SourceBackedGuildBankSessionFixture fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.KynarethProfile);
+
+        DaggerfallNpc seller = SourceNpc(session, faction: 496, service: "buy-spells");
+        DaggerfallNpc priest = SourceNpc(session, faction: 810, service: "donate");
+        Assert.Equal("spell seller", seller.Role);
+        Assert.Equal("priest", priest.Role);
+        AddSpellbook(session);
+        AddGold(session, 100_000);
+
+        OpenSourceNpc(session, seller);
+        Assert.Null(session.ReadSpells().Sale);
+        _ = session.State.Social.JoinGuild(36, 0);
+        for (int rank = 0; rank < 3; rank++) _ = session.State.Social.PromoteGuild(36, 0);
+        OpenSourceNpc(session, seller);
+        DaggerfallSpellSaleView sale = Assert.IsType<DaggerfallSpellSaleView>(session.ReadSpells().Sale);
+        DaggerfallSpellOffer offer = Assert.Single(sale.Offers, value => value.Key == "spell.023");
+        Submit(session, 1, new { action = "spell-buy", revision = sale.Revision, key = offer.Key,
+            amount = offer.Price, confirm = true });
+        Assert.Contains(offer.Key, session.State.Character.KnownSpells);
+
+        using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        Assert.Contains(offer.Key, restored.State.Character.KnownSpells);
+        AddGold(restored, 1);
+        DaggerfallNpc restoredPriest = SourceNpc(restored, faction: 810, service: "donate");
+        OpenSourceNpc(restored, restoredPriest);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue);
+        Assert.Contains(dialogue.Topics, value => value.Id == "donate");
+        Submit(restored, 2, new { action = "dialogue-topic", revision = dialogue.Revision,
+            topic = "donate", amount = 1UL });
+        DaggerfallTempleBlessingState blessing = DaggerfallTempleBlessingEffects.Read(
+            Assert.Single(restored.State.Effects.Active).State);
+        Assert.Equal(DaggerfallConcreteGuildCatalog.KynarethFactionId, blessing.DeityFactionId);
+        Assert.Equal(DaggerfallTempleBlessingTarget.Endurance, blessing.Target);
+        Assert.Equal(1, blessing.DurationMinutes);
+
+        using DaggerfallSession blessingReload = fixture.Restore(restored.CaptureSave());
+        Assert.Single(blessingReload.State.Effects.Active);
+        _ = blessingReload.AdvanceElapsedTime(59);
+        Assert.Single(blessingReload.State.Effects.Active);
+        _ = blessingReload.AdvanceElapsedTime(1);
+        Assert.Empty(blessingReload.State.Effects.Active);
+    }
+
     private static DaggerfallNpc SourceNpc(DaggerfallSession session, int faction, string service) =>
         Assert.Single(session.State.Npcs.All, npc => npc.Kind == DaggerfallNpcKind.Static
             && npc.Presence == DaggerfallNpcPresence.Active && npc.Appearance.FactionId == faction
@@ -154,6 +267,21 @@ public sealed class SourceBackedGuildBankSessionTests
             Quantity: amount, TemplateIndex: 276)), session.State.Inventory, session.State.ItemInstances,
             InventoryStackId.Parse("source.guild-bank.test.gold"));
     }
+
+    private static void AddSpellbook(DaggerfallSession session)
+    {
+        DaggerfallItemFactory factory = new(TestPayload.Definitions, RandomMinimum.Create());
+        factory.Materialize(factory.Create(new("MiscItems", "source.guild-bank.test.spellbook", DaggerfallItemOwner.Player,
+            Quantity: 1, TemplateIndex: 132)), session.State.Inventory, session.State.ItemInstances,
+            InventoryStackId.Parse("source.guild-bank.test.spellbook"), session.UniqueItemAllocator.AllocateReference());
+    }
+
+    private static void FillMagicka(DaggerfallSession session)
+    {
+        Track magicka = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
+        magicka.Maximum.BaseValue = 10_000;
+        magicka.SetCurrent(10_000);
+    }
 }
 
 internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
@@ -166,6 +294,8 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
 
     internal DaggerfallSiteProfile BankProfile { get; }
     internal DaggerfallSiteProfile KnightlyProfile { get; }
+    internal DaggerfallSiteProfile MagesProfile { get; }
+    internal DaggerfallSiteProfile KynarethProfile { get; }
     internal DaggerfallSiteProfile ExteriorProfile { get; }
     internal DaggerfallSiteProfile SmallShipProfile { get; }
 
@@ -176,6 +306,8 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         DaggerfallSessionComposition composition,
         DaggerfallSiteProfile bank,
         DaggerfallSiteProfile knightly,
+        DaggerfallSiteProfile mages,
+        DaggerfallSiteProfile kynareth,
         DaggerfallSiteProfile exterior,
         DaggerfallSiteProfile smallShip)
     {
@@ -185,6 +317,8 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         _composition = composition;
         BankProfile = bank;
         KnightlyProfile = knightly;
+        MagesProfile = mages;
+        KynarethProfile = kynareth;
         ExteriorProfile = exterior;
         SmallShipProfile = smallShip;
     }
@@ -202,6 +336,8 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         DaggerfallSiteProfiles profiles = new(sites);
         DaggerfallSiteProfile bank = SourceProfile(sites, "BANKAL01.RMB", 1, 5, 17, 3, 0);
         DaggerfallSiteProfile knightly = SourceProfile(sites, "KDRAAL01.RMB", 3, 2, 14, 11, 368);
+        DaggerfallSiteProfile mages = SourceProfile(sites, "MAGEAA14.RMB", 3, 4, 0, 11, 40);
+        DaggerfallSiteProfile kynareth = SourceProfile(sites, "TEMPAAH0.RMB", 3, 1, 13, 14, 35);
         DaggerfallSiteProfile exterior = Assert.Single(sites, profile =>
             profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && profile.Site == bank.Site);
         DaggerfallSiteProfile smallShip = Assert.Single(sites, profile =>
@@ -215,7 +351,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
             Profiles = profiles,
             Blocks = blocks,
         };
-        return new(definitions, sites, profiles, composition, bank, knightly, exterior, smallShip);
+        return new(definitions, sites, profiles, composition, bank, knightly, mages, kynareth, exterior, smallShip);
     }
 
     private static DaggerfallSiteProfile SourceProfile(IEnumerable<DaggerfallSiteProfile> sites, string sourceKey,
