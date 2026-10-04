@@ -34,6 +34,16 @@ internal sealed class DaggerfallVitalityConsequences
             0, health, HealthApplicationMode.Terminal).Result;
     }
 
+    /// <summary>Drowning is a terminal accepted health consequence, sharing combat defeat and fact publication.</summary>
+    internal DamageResult ResolveDrowning(Actor victim)
+    {
+        ArgumentNullException.ThrowIfNull(victim);
+        Track health = victim.Get<StatsComponent>().GetTrack(HealthTrack);
+        int calculated = checked((int)Math.Ceiling(Math.Max(0d, health.Current - health.Minimum)));
+        return _combat.ApplyToHealth(new CombatParticipants(victim, victim, "drowning"), calculated,
+            0, health, HealthApplicationMode.Terminal).Result;
+    }
+
     internal DaggerfallSpellTrackResult ResolveSpellTrack(Actor caster, Actor target, TrackId trackId, int amount, bool permitted = true)
     {
         Track track = target.Get<StatsComponent>().GetTrack(trackId);

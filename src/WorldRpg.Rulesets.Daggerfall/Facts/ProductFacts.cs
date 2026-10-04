@@ -13,7 +13,7 @@ internal sealed record SpellTrackRestoredFact(long TargetId, string Track, int R
 internal sealed record VitalTransferredFact(long CasterId, long TargetId, string Track, int AdmittedAmount,
     double ActualLoss, double ActualRecovery, bool TargetDefeated, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 internal sealed record MagicItemIdentifiedFact(ulong ItemId,bool Success) : IProductFact;
-internal enum DaggerfallDamageCause { PhysicalAttack, Fall, Hazard, Effect, Quest }
+internal enum DaggerfallDamageCause { PhysicalAttack, Fall, Hazard, Effect, Quest, Drowning }
 /// <summary>One accepted live health application. Calculated damage and actual health lost intentionally differ at bounds or contributions.</summary>
 internal sealed record DamageAppliedFact(long SourceActorId, long TargetActorId, DaggerfallDamageCause Cause,
     int CalculatedDamage, double ActualHealthLost, int StruckBody, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;

@@ -2321,7 +2321,7 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     internal NormalizedAttackSequence? RangedAttackSequence { get; init; }
     internal NormalizedActorSprite? Corpse { get; init; }
 }
-internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedBillboardSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null, string? audioBundle = null, IReadOnlyList<DaggerfallSiteMarker>? questMarkers = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite>? billboardSprites = null, IReadOnlyList<DaggerfallStaticNpcPlacement>? staticNpcs = null)
+internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedBillboardSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null, string? audioBundle = null, IReadOnlyList<DaggerfallSiteMarker>? questMarkers = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite>? billboardSprites = null, IReadOnlyList<DaggerfallStaticNpcPlacement>? staticNpcs = null, IReadOnlyList<CharacterWaterVolume>? waterVolumes = null)
 {
     internal IReadOnlyList<DaggerfallStaticNpcPlacement> StaticNpcs { get; } = staticNpcs ?? [];
     internal ProjectFacts Project { get; } = project;
@@ -2362,6 +2362,8 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContent
     internal NormalizedBillboardSprite? GroundContainerSprite { get; } = groundContainerSprite;
     internal IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> BillboardSprites { get; } =
         new ReadOnlyDictionary<(int, int), NormalizedBillboardSprite>((billboardSprites ?? new Dictionary<(int, int), NormalizedBillboardSprite>()).ToDictionary());
+    /// <summary>World-normalized water volumes supplied to the one admitted character step.</summary>
+    internal IReadOnlyList<CharacterWaterVolume> WaterVolumes { get; } = ReadWaterVolumes(waterVolumes);
     /// <summary>Normalized per-placement bounds, visibility samples, and source markers used by dungeon discovery; absent on non-dungeons.</summary>
     internal DaggerfallDungeonMapContent? DungeonMap { get; } = dungeonMap;
     internal IReadOnlyList<DaggerfallSiteMarker> QuestMarkers { get; } = Array.AsReadOnly((questMarkers ?? []).ToArray());
@@ -2381,6 +2383,17 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContent
         return Anchors.TryGetValue(id, out DaggerfallSiteAnchor? anchor)
             ? anchor
             : throw new InvalidOperationException($"World profile '{ProfileKey.LogicalId}' has no anchor '{id}'.");
+    }
+
+    private static IReadOnlyList<CharacterWaterVolume> ReadWaterVolumes(IReadOnlyList<CharacterWaterVolume>? volumes)
+    {
+        CharacterWaterVolume[] normalized = (volumes ?? [])
+            .Select(volume => volume.Validate())
+            .OrderBy(volume => volume.Trigger)
+            .ToArray();
+        if (normalized.Select(volume => volume.Trigger).Distinct().Count() != normalized.Length)
+            throw new ArgumentException("A site cannot admit duplicate water trigger identities.", nameof(volumes));
+        return Array.AsReadOnly(normalized);
     }
 
     internal IReadOnlyList<DaggerfallRdbDoorDefinition> Doors { get; } = Array.AsReadOnly((doors ?? [])

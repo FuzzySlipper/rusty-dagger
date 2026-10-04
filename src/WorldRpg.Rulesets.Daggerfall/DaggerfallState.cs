@@ -48,6 +48,7 @@ internal sealed class DaggerfallState(
     DaggerfallTradeQuoteService tradeQuotes,
     DaggerfallTransportPolicy transport,
     DaggerfallWagonStorage wagon,
+    DaggerfallSwimmingPolicy swimming,
     Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> dungeonDiscoveries,
     Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions)
 {
@@ -116,6 +117,8 @@ internal sealed class DaggerfallState(
     /// <summary>Current transport choice and its Engine-backed wagon container.</summary>
     internal DaggerfallTransportPolicy Transport { get; } = transport;
     internal DaggerfallWagonStorage Wagon { get; } = wagon;
+    /// <summary>Accepted Engine swimming mode, breath continuation, and water-volume identity.</summary>
+    internal DaggerfallSwimmingPolicy Swimming { get; } = swimming;
     /// <summary>Durable discovery for admitted dungeon profiles, independent of the active scene projection.</summary>
     internal Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> DungeonDiscoveries { get; } = dungeonDiscoveries;
     /// <summary>Profile-scoped normalized dungeon action graphs sharing the session variable store.</summary>

@@ -359,6 +359,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallTransportPolicy transport = new(tuning.Transport);
             DaggerfallWagonStorage wagon = new(containers, itemInstances, definitions,
                 playerEntity, _actorIdentities, tuning.Transport);
+            DaggerfallSwimmingPolicy swimming = new(tuning.Swimming);
             State = new DaggerfallState(
                 assembled,
                 kit: kit,
@@ -386,6 +387,7 @@ internal sealed partial class DaggerfallSession
                 tradeQuotes: tradeQuotes,
                 transport: transport,
                 wagon: wagon,
+                swimming: swimming,
                 dungeonDiscoveries: dungeonDiscoveries,
                 dungeonActions: dungeonActions);
             _travelMessage = State.Travel.LastResult?.Message;
@@ -486,7 +488,7 @@ internal sealed partial class DaggerfallSession
                 strikeTuning: tuning.StrikeEnchantments);
             _itemCondition.Enchanted += _itemCastTriggers.Enchanted;
             effects.Completed += _itemCastTriggers.EffectCompleted;
-            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
+            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
             _roster.ActorRetired += State.Quests.ObserveFoeRemoval;

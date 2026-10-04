@@ -28,6 +28,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallDetectionTuning Detection { get; init; } = new(14d);
     internal DaggerfallMusicTuning Music { get; init; } = new(AlternatePlaylists: false);
     internal DaggerfallWorldOriginTuning WorldOrigin { get; init; } = new(500f);
+    internal DaggerfallSwimmingTuning Swimming { get; init; } = DaggerfallSwimmingTuning.Classic;
 
     internal static DaggerfallTuning Defaults { get; } = new(
         // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
@@ -100,6 +101,7 @@ internal sealed record DaggerfallTuning(
         Detection = Detection.Validate(),
         StrikeEnchantments = StrikeEnchantments.Validate(),
         WorldOrigin = WorldOrigin.Validate(),
+        Swimming = Swimming.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -238,6 +240,9 @@ internal sealed record DaggerfallTuning(
             Detection = new(root.GetProperty("detection").GetProperty("maximumDistance").GetDouble()),
             Music = new DaggerfallMusicTuning(root.GetProperty("music").GetProperty("alternatePlaylists").GetBoolean()),
             WorldOrigin = new(root.GetProperty("worldOrigin").GetProperty("verticalRebaseDistance").GetSingle()),
+            Swimming = root.TryGetProperty("swimming", out JsonElement swimming)
+                ? ReadSwimming(swimming)
+                : DaggerfallSwimmingTuning.Classic,
         }.Validate();
     }
 
@@ -259,6 +264,14 @@ internal sealed record DaggerfallTuning(
         JumpHeldInputRetriggers: controller.GetProperty("jumpHeldInputRetriggers").GetBoolean(),
         RecoveryMaximumDistance: controller.GetProperty("recoveryMaximumDistance").GetSingle(),
         MaximumStepHeight: controller.GetProperty("maximumStepHeight").GetSingle());
+
+    private static DaggerfallSwimmingTuning ReadSwimming(JsonElement swimming) => new(
+        swimming.GetProperty("speed").GetSingle(),
+        swimming.GetProperty("acceleration").GetSingle(),
+        swimming.GetProperty("drag").GetSingle(),
+        swimming.GetProperty("gravityScale").GetSingle(),
+        swimming.GetProperty("buoyancy").GetSingle(),
+        swimming.GetProperty("breathSecondsPerPoint").GetSingle());
 
     /// <summary>
     /// Reads the pad's positional mapping. The Engine numbers controller axes and buttons rather than
