@@ -1,6 +1,7 @@
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall;
