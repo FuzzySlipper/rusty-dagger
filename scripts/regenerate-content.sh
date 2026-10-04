@@ -48,7 +48,7 @@ missing() {
 for file in MAPS.BSA BLOCKS.BSA ARCH3D.BSA MONSTER.BSA DAGGER.SND TEXT.RSC CLASSES.DAT CLIMATE.PAK POLITIC.PAK WOODS.WLD FACTION.TXT SPELLS.STD MAGIC.DEF ANIM0000.VID AZURA.FLC; do
   [[ -f "$arena2/$file" ]] || missing "Arena2 file '$arena2/$file'"
 done
-for file in PAL.PAL SKY{00..31}.DAT NITE{00..03}I0.IMG; do
+for file in PAL.PAL NIGHTSKY.COL SKY{00..31}.DAT NITE{00..03}I0.IMG; do
   [[ -f "$arena2/$file" ]] || missing "Arena2 sky file '$arena2/$file'"
 done
 [[ -d "$arena2/books" ]] || missing "Arena2 books directory '$arena2/books'"

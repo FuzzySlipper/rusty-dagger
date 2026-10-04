@@ -45,18 +45,19 @@ public sealed class SkyMediaPublicationTests
         Assert.Equal(31, document.Frame(1, 31).Frame);
     }
 
-    [CorpusFact("NITE00I0.IMG", "PAL.PAL")]
-    public void ReadsTheNightSourceShapeAndSharedFullPalette()
+    [CorpusFact("NITE00I0.IMG", "NIGHTSKY.COL")]
+    public void ReadsTheNightSourceShapeAndDonorNightPalette()
     {
         byte[] imageBytes = File.ReadAllBytes(TestData.Corpus("NITE00I0.IMG"));
         IndexedImg image = ImgDecoder.DecodeHeaderless(imageBytes, "arena2/NITE00I0.IMG");
-        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(TestData.Corpus("PAL.PAL")), "arena2/PAL.PAL");
+        NightSkyPaletteSource palette = new("arena2/NIGHTSKY.COL", File.ReadAllBytes(TestData.Corpus("NIGHTSKY.COL")));
 
         Assert.Equal((512, 219), (image.Width, image.Height));
         Assert.Equal(SkyMediaPublication.NightSourceBytes, imageBytes.Length);
-        Assert.Equal(776, File.ReadAllBytes(TestData.Corpus("PAL.PAL")).Length);
-        Assert.Equal(256, palette.Colors.Length);
-        Assert.Contains(palette.Colors.Span.ToArray(), color => color.Red > 63 || color.Green > 63 || color.Blue > 63);
+        Assert.Equal(776, palette.Bytes.Length);
+        Assert.Equal(256, palette.Palette.Colors.Length);
+        Assert.Equal("arena2/NIGHTSKY.COL", palette.SourcePath);
+        Assert.Contains(palette.Palette.Colors.Span.ToArray(), color => color.Red > 63 || color.Green > 63 || color.Blue > 63);
     }
 
     [Fact]
@@ -99,11 +100,35 @@ public sealed class SkyMediaPublicationTests
         SkyMediaPublication publication = RealPublication.Value;
         byte[] panorama = DecodePng(publication.Artifacts.Single(artifact => artifact.RelativePath == "media/sky/resources/night-00.png").Bytes.ToArray());
         IndexedImg source = ImgDecoder.DecodeHeaderless(File.ReadAllBytes(TestData.Corpus("NITE00I0.IMG")), "arena2/NITE00I0.IMG");
-        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(TestData.Corpus("PAL.PAL")), "arena2/PAL.PAL");
+        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(TestData.Corpus("NIGHTSKY.COL")), "arena2/NIGHTSKY.COL");
         Assert.Equal(SourceRed(source, palette, row: 0), Channel(panorama, 256, 0));
         Assert.Equal(SourceGreen(source, palette, row: SkyMediaPublication.NightHeight - 1), ChannelGreen(panorama, 256, 255));
         Assert.Equal(SourceGreen(source, palette, row: SkyMediaPublication.NightHeight - 1), ChannelGreen(panorama, 256, 256));
         Assert.Equal(SourceGreen(source, palette, row: SkyMediaPublication.NightHeight - 1), ChannelGreen(panorama, 256, SkyMediaPublication.PanoramaHeight - 1));
+    }
+
+    [CorpusFact("NITE00I0.IMG", "NITE01I0.IMG", "NITE02I0.IMG", "NITE03I0.IMG", "NIGHTSKY.COL")]
+    public void NightResourcesUseTheDonorPaletteAndStarMutationForEverySource()
+    {
+        SkyMediaPublication publication = RealPublication.Value;
+        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(TestData.Corpus("NIGHTSKY.COL")), "arena2/NIGHTSKY.COL");
+        int changedPixels = 0;
+        foreach (int nightIndex in Enumerable.Range(0, 4))
+        {
+            string sourceName = $"NITE{nightIndex:00}I0.IMG";
+            IndexedImg source = ImgDecoder.DecodeHeaderless(File.ReadAllBytes(TestData.Corpus(sourceName)), $"arena2/{sourceName}");
+            byte[] expected = ExpectedNightPanorama(source, palette, out int sourceStars);
+            byte[] actual = DecodePng(publication.Artifacts.Single(artifact => artifact.RelativePath == $"media/sky/resources/night-{nightIndex:00}.png").Bytes.ToArray());
+            Assert.Equal(expected, actual);
+            Assert.Equal("arena2/NIGHTSKY.COL", publication.Manifest.NightResources.Single(resource => resource.NightIndex == nightIndex).PaletteSourcePath);
+            Assert.Equal(776, publication.Manifest.NightResources.Single(resource => resource.NightIndex == nightIndex).PaletteSourceByteLength);
+            Assert.Equal(0, publication.Manifest.NightResources.Single(resource => resource.NightIndex == nightIndex).StarPolicy.RandomSeed);
+            Assert.Equal(0.004F, publication.Manifest.NightResources.Single(resource => resource.NightIndex == nightIndex).StarPolicy.Chance);
+            Assert.True(sourceStars > 0, $"{sourceName} did not exercise the donor star mutation.");
+            changedPixels += sourceStars;
+        }
+
+        Assert.True(changedPixels > 0);
     }
 
     [CorpusFact]
@@ -127,7 +152,7 @@ public sealed class SkyMediaPublicationTests
         NightSkyMediaSource[] night = Enumerable.Range(0, 4)
             .Select(index => new NightSkyMediaSource(index, $"arena2/NITE{index:00}I0.IMG", File.ReadAllBytes(TestData.Corpus($"NITE{index:00}I0.IMG"))))
             .ToArray();
-        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(TestData.Corpus("PAL.PAL")), "arena2/PAL.PAL");
+        NightSkyPaletteSource palette = new("arena2/NIGHTSKY.COL", File.ReadAllBytes(TestData.Corpus("NIGHTSKY.COL")));
         return SkyMediaPublication.Create(day, night, palette);
     }
 
@@ -151,6 +176,51 @@ public sealed class SkyMediaPublicationTests
     {
         byte index = source.Pixels.Span[row * SkyMediaPublication.NightWidth];
         return palette.Colors.Span[index].Green;
+    }
+
+    private static byte[] ExpectedNightPanorama(IndexedImg source, Arena2Palette palette, out int starCount)
+    {
+        byte[] indexed = source.Pixels.ToArray();
+        Random random = new(0);
+        byte[] starColors = [16, 32, 74, 105, 112, 120];
+        starCount = 0;
+        for (int index = 0; index < indexed.Length; index++)
+        {
+            int sourceIndex = indexed[index];
+            if (sourceIndex > 16 && sourceIndex < 32 && random.NextDouble() < 0.004)
+            {
+                indexed[index] = starColors[random.Next(starColors.Length)];
+                starCount++;
+            }
+        }
+
+        for (int row = 0; row < SkyMediaPublication.NightHeight; row++)
+        {
+            int seam = row * SkyMediaPublication.NightWidth + SkyMediaPublication.NightWidth - 2;
+            indexed[seam + 1] = indexed[seam];
+        }
+
+        byte[] expected = new byte[SkyMediaPublication.PanoramaWidth * SkyMediaPublication.PanoramaHeight * 4];
+        for (int y = 0; y < SkyMediaPublication.PanoramaHeight; y++)
+        {
+            int sourceY = y < SkyMediaPublication.PanoramaHeight / 2
+                ? Math.Min(SkyMediaPublication.NightHeight - 1,
+                    (int)((long)y * SkyMediaPublication.NightHeight / (SkyMediaPublication.PanoramaHeight / 2)))
+                : SkyMediaPublication.NightHeight - 1;
+            for (int x = 0; x < SkyMediaPublication.PanoramaWidth; x++)
+            {
+                int sourceX = ((x + SkyMediaPublication.PanoramaWidth / 4) % SkyMediaPublication.PanoramaWidth)
+                    % SkyMediaPublication.NightWidth;
+                Rgb24 color = palette.Colors.Span[indexed[sourceY * SkyMediaPublication.NightWidth + sourceX]];
+                int offset = ((y * SkyMediaPublication.PanoramaWidth) + x) * 4;
+                expected[offset] = color.Red;
+                expected[offset + 1] = color.Green;
+                expected[offset + 2] = color.Blue;
+                expected[offset + 3] = byte.MaxValue;
+            }
+        }
+
+        return expected;
     }
 
     private static byte[] DecodePng(byte[] png)

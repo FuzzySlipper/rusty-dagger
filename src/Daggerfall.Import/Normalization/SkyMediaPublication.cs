@@ -65,6 +65,47 @@ public sealed class NightSkyMediaSource
     public ReadOnlyMemory<byte> Bytes => bytes;
 }
 
+/// <summary>The exact NIGHTSKY.COL palette paired with every vanilla NITE##I0.IMG source.</summary>
+public sealed class NightSkyPaletteSource
+{
+    public const string FileName = "NIGHTSKY.COL";
+    private readonly byte[] bytes;
+
+    public NightSkyPaletteSource(string sourcePath, ReadOnlySpan<byte> bytes)
+    {
+        ValidateSourcePath(sourcePath);
+        if (bytes.Length != Arena2FormatConstants.PaletteHeaderedBytes)
+        {
+            throw new ArgumentException($"{FileName} must be exactly {Arena2FormatConstants.PaletteHeaderedBytes} bytes.", nameof(bytes));
+        }
+
+        SourcePath = sourcePath;
+        this.bytes = bytes.ToArray();
+        Palette = PaletteDecoder.Decode(this.bytes, sourcePath);
+    }
+
+    public string SourcePath { get; }
+
+    public ReadOnlyMemory<byte> Bytes => bytes;
+
+    public Arena2Palette Palette { get; }
+
+    public ContentDigest SourceHash => ContentDigest.Compute(bytes);
+
+    public long ByteLength => bytes.Length;
+
+    internal static void ValidateSourcePath(string sourcePath)
+    {
+        SkyFileDecoder.ValidateSource(sourcePath, nameof(sourcePath));
+        int separator = sourcePath.LastIndexOf('/');
+        string leaf = sourcePath[(separator + 1)..];
+        if (!StringComparer.OrdinalIgnoreCase.Equals(leaf, FileName))
+        {
+            throw new ArgumentException($"Night sky media requires the donor {FileName} palette, not '{leaf}'.", nameof(sourcePath));
+        }
+    }
+}
+
 /// <summary>The weather family encoded by the donor's sky index offset within an eight-file climate set.</summary>
 public enum SkyWeatherVariant
 {
@@ -73,6 +114,26 @@ public enum SkyWeatherVariant
     Rain2,
     Snow1,
     Snow2,
+}
+
+/// <summary>The donor's deterministic night-star mutation applied before palette conversion.</summary>
+public sealed record SkyNightStarPolicy(
+    int RandomSeed,
+    float Chance,
+    int EligibleIndexMinimumExclusive,
+    int EligibleIndexMaximumExclusive,
+    IReadOnlyList<byte> PaletteIndices)
+{
+    public static SkyNightStarPolicy Donor { get; } = new(0, 0.004F, 16, 32, [16, 32, 74, 105, 112, 120]);
+
+    public void Validate()
+    {
+        if (RandomSeed != 0 || Chance != 0.004F || EligibleIndexMinimumExclusive != 16
+            || EligibleIndexMaximumExclusive != 32 || !PaletteIndices.SequenceEqual(Donor.PaletteIndices))
+        {
+            throw new InvalidOperationException("Night-star policy must retain the donor seed, chance, eligible index range, and palette indices.");
+        }
+    }
 }
 
 /// <summary>One generated 2:1 panorama and its exact source-frame provenance.</summary>
@@ -170,6 +231,9 @@ public sealed record SkyNightResource(
     ContentDigest SourceHash,
     long SourceByteLength,
     string PaletteSourcePath,
+    ContentDigest PaletteSourceHash,
+    long PaletteSourceByteLength,
+    SkyNightStarPolicy StarPolicy,
     bool SeamFixed,
     IReadOnlyList<float> ClearColor)
 {
@@ -179,6 +243,9 @@ public sealed record SkyNightResource(
         NormalizedImportDocument.RequireLogicalPath(RelativePath, nameof(RelativePath));
         ContentHash.Validate();
         SourceHash.Validate();
+        PaletteSourceHash.Validate();
+        NightSkyPaletteSource.ValidateSourcePath(PaletteSourcePath);
+        StarPolicy.Validate();
         if (ClearColor.Count != 3 || ClearColor.Any(channel => !float.IsFinite(channel) || channel is < 0F or > 1F))
             throw new InvalidOperationException($"Night sky resource '{Id}' must carry a normalized RGB clear color.");
         SkyFileDecoder.ValidateSource(SourcePath, nameof(SourcePath));
@@ -186,7 +253,8 @@ public sealed record SkyNightResource(
         if (ByteLength <= 0 || Width != SkyMediaPublication.PanoramaWidth || Height != SkyMediaPublication.PanoramaHeight
             || SourceWidth != SkyMediaPublication.NightWidth || SourceHeight != SkyMediaPublication.NightHeight
             || NightIndex is < 0 or >= 4
-            || SourceByteLength != SkyMediaPublication.NightSourceBytes || !SeamFixed)
+            || SourceByteLength != SkyMediaPublication.NightSourceBytes
+            || PaletteSourceByteLength != Arena2FormatConstants.PaletteHeaderedBytes || !SeamFixed)
         {
             throw new InvalidOperationException($"Night sky resource '{Id}' carries invalid source or generated image facts.");
         }
@@ -345,12 +413,12 @@ public sealed record SkyMediaPublication(
     ];
 
     public static SkyMediaPublication Create(IEnumerable<SkyMediaSource> inputs)
-        => Create(inputs, [], palette: null);
+        => Create(inputs, [], nightPalette: null);
 
     public static SkyMediaPublication Create(
         IEnumerable<SkyMediaSource> inputs,
         IEnumerable<NightSkyMediaSource> nightInputs,
-        Arena2Palette? palette)
+        NightSkyPaletteSource? nightPalette)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(nightInputs);
@@ -398,8 +466,8 @@ public sealed record SkyMediaPublication(
         }
 
         NightSkyMediaSource[] nightSources = nightInputs.OrderBy(source => source.NightIndex).ToArray();
-        if (nightSources.Length != 0 && palette is null)
-            throw new ArgumentNullException(nameof(palette), "Night sky publication requires the shared PAL.PAL palette.");
+        if (nightSources.Length != 0 && nightPalette is null)
+            throw new ArgumentNullException(nameof(nightPalette), $"Night sky publication requires {NightSkyPaletteSource.FileName}.");
         if (nightSources.Length != 0 && (nightSources.Length != 4 || nightSources.Select(source => source.NightIndex).Distinct().Count() != 4))
             throw new InvalidOperationException("Night sky publication requires NITE00I0.IMG through NITE03I0.IMG exactly once.");
 
@@ -410,7 +478,8 @@ public sealed record SkyMediaPublication(
             IndexedImg image = ImgDecoder.DecodeHeaderless(source.Bytes.Span, source.SourcePath);
             if (image.Width != NightWidth || image.Height != NightHeight)
                 throw new InvalidOperationException($"Night sky source '{source.SourcePath}' is {image.Width}x{image.Height}, not {NightWidth}x{NightHeight}.");
-            byte[] rgba = palette!.ToRgbaBytes(image.Pixels.Span, PaletteAlphaMode.Opaque);
+            byte[] indexed = ApplyDonorNightStars(image.Pixels.Span, SkyNightStarPolicy.Donor);
+            byte[] rgba = nightPalette!.Palette.ToRgbaBytes(indexed, PaletteAlphaMode.Opaque);
             for (int row = 0; row < NightHeight; row++)
             {
                 int seam = ((row * NightWidth) + NightWidth - 2) * 4;
@@ -423,7 +492,8 @@ public sealed record SkyMediaPublication(
             artifacts.Add(new(path, png, mediaId: id));
             nightResources.Add(new(id, path, ContentDigest.Compute(png), png.LongLength, PanoramaWidth, PanoramaHeight,
                 NightWidth, NightHeight, source.NightIndex, source.SourcePath, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length,
-                "arena2/PAL.PAL", SeamFixed: true, ClearColor: SkyNightPanoramaEncoder.ClearColor(rgba)));
+                nightPalette.SourcePath, nightPalette.SourceHash, nightPalette.ByteLength, SkyNightStarPolicy.Donor,
+                SeamFixed: true, ClearColor: SkyNightPanoramaEncoder.ClearColor(rgba)));
             nightProvenance.Add(PublishedSource.Of(source.SourcePath, source.Bytes.Span));
         }
 
@@ -458,6 +528,27 @@ public sealed record SkyMediaPublication(
         byte[] manifestBytes = JsonSerializer.SerializeToUtf8Bytes(manifest, PublishedJson.Section);
         artifacts.Add(new(ManifestRelativePath, [.. manifestBytes, (byte)'\n']));
         return new(artifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).ToArray(), manifest, provenance);
+    }
+
+    private static byte[] ApplyDonorNightStars(ReadOnlySpan<byte> indexedPixels, SkyNightStarPolicy policy)
+    {
+        // DaggerfallSky owns one System.Random(0). Offline publication uses the same seed for
+        // each independent NITE resource so the generated closure stays deterministic while
+        // retaining the donor's strict clear-sky index gate and replacement palette choices.
+        byte[] pixels = indexedPixels.ToArray();
+        Random random = new(policy.RandomSeed);
+        for (int index = 0; index < pixels.Length; index++)
+        {
+            int sourceIndex = pixels[index];
+            if (sourceIndex > policy.EligibleIndexMinimumExclusive
+                && sourceIndex < policy.EligibleIndexMaximumExclusive
+                && random.NextDouble() < policy.Chance)
+            {
+                pixels[index] = policy.PaletteIndices[random.Next(policy.PaletteIndices.Count)];
+            }
+        }
+
+        return pixels;
     }
 
     private static SkyWeatherParticleResource[] CreateWeatherParticles(List<ImportPublicationArtifact> artifacts)

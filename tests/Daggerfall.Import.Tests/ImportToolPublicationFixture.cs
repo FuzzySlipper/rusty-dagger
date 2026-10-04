@@ -40,7 +40,7 @@ internal sealed partial class ImportToolFixture
                     .Select(index => new SkyMediaSource(index, Label($"SKY{index:00}.DAT"), Source($"SKY{index:00}.DAT"))).ToArray();
                 var night = Enumerable.Range(0, 4)
                     .Select(index => new NightSkyMediaSource(index, Label($"NITE{index:00}I0.IMG"), Source($"NITE{index:00}I0.IMG"))).ToArray();
-                var sky = SkyMediaPublication.Create(day, night, PaletteDecoder.Decode(Source("PAL.PAL"), Label("PAL.PAL")));
+                var sky = SkyMediaPublication.Create(day, night, new NightSkyPaletteSource(Label("NIGHTSKY.COL"), Source("NIGHTSKY.COL")));
                 Artifacts(At("output/worldrpg"), sky.Artifacts); break;
             case "character-presentation":
                 var characters = CharacterPresentationGroup.Create(Directory.EnumerateFiles(Arena2).Select(Path.GetFileName).OfType<string>()
