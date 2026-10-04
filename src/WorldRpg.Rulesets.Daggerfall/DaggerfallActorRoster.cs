@@ -419,12 +419,15 @@ internal sealed class DaggerfallActorRoster
     /// session is still composing, before the roster's own presentation dependencies exist.
     /// </remarks>
     internal static IReadOnlyList<DaggerfallNearbyCreature> NearbyCreatures(ActorsState actors,
-        IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByActor)
+        IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByActor,
+        Func<long, bool>? actorGameplayActive = null)
     {
+        actorGameplayActive ??= _ => true;
         List<DaggerfallNearbyCreature> nearby = [];
         foreach (ActorState actor in actors.All)
         {
             if (actor.IsDefeated) continue;
+            if (!actorGameplayActive(actor.DurableId)) continue;
             if (!definitionsByActor.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)) continue;
             DaggerfallEnemyGroup group = definition.Kind is DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc
                 ? DaggerfallEnemyGroup.Humanoid

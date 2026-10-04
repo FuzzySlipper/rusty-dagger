@@ -202,16 +202,25 @@ internal static class DaggerfallSiteContent
                 int record = DaggerfallBaseContent.Integer(person, "billboardRecord", diagnostics);
                 int faction = DaggerfallBaseContent.Integer(person, "factionId", diagnostics);
                 int flags = DaggerfallBaseContent.Integer(person, "flags", diagnostics);
+                int sourceBuildingType = person.TryGetProperty("sourceBuildingType", out _)
+                    ? DaggerfallBaseContent.Integer(person, "sourceBuildingType", diagnostics) : 0;
+                int sourceBuildingFaction = person.TryGetProperty("sourceBuildingFactionId", out _)
+                    ? DaggerfallBaseContent.Integer(person, "sourceBuildingFactionId", diagnostics) : 0;
                 int nameSeed = person.TryGetProperty("nameSeed", out _)
                     ? DaggerfallBaseContent.Integer(person, "nameSeed", diagnostics)
                     : StablePopulationSeed(id);
                 try
                 {
                     if (nameSeed < 0 || nameSeed > ushort.MaxValue || archive < 0 || record < 0 || faction < 0
-                        || flags is < byte.MinValue or > byte.MaxValue)
+                        || flags is < byte.MinValue or > byte.MaxValue || sourceBuildingType is < 0 or > byte.MaxValue
+                        || sourceBuildingFaction is < 0 or > ushort.MaxValue)
                         throw new ArgumentOutOfRangeException(nameof(person), "A normalized population placement has an invalid source value.");
                     DaggerfallPopulationPlacement parsed = new(id,
-                        new WorldPoint(position.X, position.Y, position.Z), archive, record, faction, (byte)flags, (ushort)nameSeed);
+                        new WorldPoint(position.X, position.Y, position.Z), archive, record, faction, (byte)flags, (ushort)nameSeed)
+                    {
+                        SourceBuildingType = sourceBuildingType,
+                        SourceBuildingFactionId = sourceBuildingFaction,
+                    };
                     if (!placements.TryAdd(parsed.Id, parsed))
                         diagnostics.Add($"Normalized world repeats population placement '{parsed.Id}'.");
                 }
@@ -2437,7 +2446,11 @@ internal sealed record NormalizedBillboardSprite(string TexturePath, ContentSha2
 internal sealed record NormalizedTerrainTexture(string TexturePath, ContentSha256 TextureSha256);
 /// <summary>Ruleset input projected from an importer-owned source population placement.</summary>
 internal sealed record DaggerfallPopulationPlacement(string Id, WorldPoint Position, int BillboardArchive,
-    int BillboardRecord, int FactionId, byte Flags, ushort NameSeed);
+    int BillboardRecord, int FactionId, byte Flags, ushort NameSeed)
+{
+    internal int SourceBuildingType { get; init; }
+    internal int SourceBuildingFactionId { get; init; }
+}
 internal sealed record DaggerfallActorFeedback(int MobileId, string MoveCue, string BarkCue, string AttackCue, bool ParrySounds, int BloodIndex);
 internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size)
 {

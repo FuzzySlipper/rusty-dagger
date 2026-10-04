@@ -41,6 +41,8 @@ internal sealed class DaggerfallEnemyBehaviorModule
     // decision into two different attacks.
     private readonly HashSet<long> _admittedActions = [];
     private readonly Func<long, PursuitPolicy> _movementPolicy;
+    private readonly Func<long, bool> _canOpenDoors;
+    private readonly Func<ActorState, bool>? _openBlockedDoor;
     private readonly ActorWanderCoordinator _wander;
 
     internal DaggerfallEnemyBehaviorModule(
@@ -54,13 +56,17 @@ internal sealed class DaggerfallEnemyBehaviorModule
         Action<DaggerfallSkillUse> recordSkillUse,
         Func<long, bool>? isPlayerAllied = null, Func<long, PursuitTarget?>? selectAllyTarget = null,
         Func<long, ActorControlRestrictions>? controlRestrictions = null,
-        Func<long, PursuitPolicy>? movementPolicy = null)
+        Func<long, PursuitPolicy>? movementPolicy = null,
+        Func<long, bool>? canOpenDoors = null,
+        Func<ActorState, bool>? openBlockedDoor = null)
     {
         _combat = combat;
         _isPlayerAllied = isPlayerAllied ?? (_ => false);
         _selectAllyTarget = selectAllyTarget;
         _controlRestrictions = controlRestrictions ?? (_ => default);
         _movementPolicy = movementPolicy ?? (_ => new PursuitPolicy());
+        _canOpenDoors = canOpenDoors ?? (_ => false);
+        _openBlockedDoor = openBlockedDoor;
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _contextProvider = contextProvider ?? throw new ArgumentNullException(nameof(contextProvider));
         _recordSkillUse = recordSkillUse ?? throw new ArgumentNullException(nameof(recordSkillUse));
@@ -125,6 +131,19 @@ internal sealed class DaggerfallEnemyBehaviorModule
         // EnemyMotor exposes both retreat and strafe decisions to all authored mobile records. The
         // distance/phase gates belong to the Kit policy; this source mapping supplies the capability.
         return new PursuitPolicy(mode, CanRetreat: true, CanStrafe: true, EmitTargetLost: true);
+    }
+
+    /// <summary>Reads the donor EnemyBasics CanOpenDoors fact from the composed mobile catalog.</summary>
+    internal static bool CanOpenDoors(long actorId,
+        IReadOnlyDictionary<long, DaggerfallActorDefinition> actors,
+        DaggerfallDefinitions definitions)
+    {
+        ArgumentNullException.ThrowIfNull(actors);
+        ArgumentNullException.ThrowIfNull(definitions);
+        return actors.TryGetValue(actorId, out DaggerfallActorDefinition? actor)
+            && actor.MobileId is int mobileId
+            && definitions.Mobiles.Mobiles.TryGetValue(mobileId, out DaggerfallMobileDefinition? mobile)
+            && mobile.CanOpenDoors;
     }
 
     /// <summary>
@@ -232,6 +251,15 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 deltaSeconds,
                 facts,
                 _movementPolicy(actor.DurableId), admitAttack: false);
+            if (pursuit.Current == PursuitState.Blocked
+                && pursuit.Navigation is { Outcome: not NavigationPathOutcome.Reached }
+                && _canOpenDoors(actor.DurableId)
+                && _openBlockedDoor?.Invoke(actor) == true)
+            {
+                // The canonical door owner has changed state. Leave the Engine navigation receipt
+                // and pursuit state intact; the next admitted step retries the same target through
+                // the now-opened collision rather than introducing a local detour.
+            }
             EnemyBehaviorState previous = ToDaggerState(pursuit.Previous);
             EnemyBehaviorState current = ToDaggerState(pursuit.Current);
             if (previous != current)

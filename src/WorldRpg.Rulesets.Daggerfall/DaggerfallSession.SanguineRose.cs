@@ -64,6 +64,7 @@ internal sealed partial class DaggerfallSession
         double radius, double facing, Func<DaggerfallActorDefinition, bool> eligible)
     {
         PerceptionTarget[] targets = State.Actors.All.Where(actor => actor.DurableId != observerId && !actor.IsDefeated
+                && State.Npcs.IsGameplayActive(actor.DurableId)
                 && _roster.Definitions.TryGetValue(actor.DurableId, out var definition)
                 && definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass && eligible(definition))
             .OrderBy(actor => actor.DurableId)
@@ -85,7 +86,7 @@ internal sealed partial class DaggerfallSession
     {
         CharacterStepEnvironment environment = _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion);
         // These are call-local spawn-clearance envelopes, not another retained collision world.
-        SpatialEntityCollider[] actors = State.Actors.All.Where(actor => !actor.IsDefeated).Select(actor =>
+        SpatialEntityCollider[] actors = State.Actors.All.Where(actor => !actor.IsDefeated && State.Npcs.IsGameplayActive(actor.DurableId)).Select(actor =>
         {
             Vector3 center = actor.Position.ToVector() + Vector3.UnitY * SummonSeparation;
             return new SpatialEntityCollider(actor.Actor.Entity.Value, center - new Vector3(SummonClearanceRadius),

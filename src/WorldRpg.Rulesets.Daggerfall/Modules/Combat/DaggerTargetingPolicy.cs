@@ -8,11 +8,15 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 internal sealed class DaggerTargetingPolicy(IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions,
-    DaggerfallMeleeTargetingTuning tuning, Func<DaggerfallSiteProfile> currentInputs) : ITargetingPolicy
+    DaggerfallMeleeTargetingTuning tuning, Func<DaggerfallSiteProfile> currentInputs,
+    Func<long, bool>? actorGameplayActive = null) : ITargetingPolicy
 {
+    private readonly Func<long, bool> _actorGameplayActive = actorGameplayActive ?? (_ => true);
+
     public bool IsValidTarget(ActorState actor) => actor.DurableId != DaggerfallActorIdentity.PlayerEntityId
         && actor.DurableId > 0 && definitions.TryGetValue(actor.DurableId, out var definition)
-        && definition.Kind != DaggerfallActorKinds.StaticNpc;
+        && definition.Kind != DaggerfallActorKinds.StaticNpc
+        && _actorGameplayActive(actor.DurableId);
     public double MinimumFacingCosine => tuning.MinimumFacingCosine;
     public Vector3 AimPoint(ActorState actor)
     {

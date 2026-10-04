@@ -2,6 +2,8 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Ai;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -20,8 +22,12 @@ internal sealed partial class DaggerfallSession
     private const int PopulationBandSize = 24;
     private const int MinimumPopulationBands = 1;
     private const int MaximumPopulationBands = 4;
-    private const int KnightlyGuardFactionType = 10;
-    private static readonly IReadOnlyList<string> PopulationServices = ["talk"];
+    // PopulationManager's source admission facts. The grid radius is converted through the
+    // donor MeshReader scale once; it is a placement filter, not a second navigation system.
+    internal const float PopulationNavGridSpawnRadiusMeters = 96F * 64F * (float)DaggerfallPerceptionQueryDefaults.ClassicGlobalScale;
+    internal const float PopulationMaximumOutsideRangeMeters = 2500F * (float)DaggerfallPerceptionQueryDefaults.ClassicGlobalScale;
+    internal const float PopulationRecycleDistanceMeters = 150F;
+    internal const float PopulationVisiblePopulationRangeMeters = 120F;
     private static readonly WanderPolicy PopulationWanderPolicy = new(
         MovementSpeedUnitsPerSecond: 1.3f,
         WaypointDistance: 2.5f,
@@ -57,10 +63,24 @@ internal sealed partial class DaggerfallSession
             return;
         }
 
+        WorldPoint playerProfile = PopulationPlayerProfilePosition(profile);
+        if (!IsWithinPopulationSourceRange(profile.Population, playerProfile))
+        {
+            foreach (DaggerfallNpc npc in sourceNpcs)
+                HidePopulationNpc(npc);
+            return;
+        }
+
+        Dictionary<string, DaggerfallNpc> existingByKey = sourceNpcs.ToDictionary(npc => npc.StableKey, StringComparer.Ordinal);
         DaggerfallPopulationPlacement[] candidates = [.. profile.Population
-            .OrderBy(value => value.Id, StringComparer.Ordinal)
             .Where(placement => profile.BillboardSprites.ContainsKey((placement.BillboardArchive, placement.BillboardRecord))
                 && (placement.FactionId == 0 || _definitions.Factions.Factions.ContainsKey(placement.FactionId)))
+            .Where(placement => IsPopulationPlacementAdmitted(placement, existingByKey.GetValueOrDefault(placement.Id), playerProfile))
+            // Preserve already active source identities through normal wandering. Stable source
+            // order remains the tie-breaker for newly admitted people.
+            .OrderByDescending(placement => existingByKey.TryGetValue(placement.Id, out DaggerfallNpc? npc)
+                && npc.Presence == DaggerfallNpcPresence.Active)
+            .ThenBy(placement => placement.Id, StringComparer.Ordinal)
             .Take(PopulationCapacity(site, profile.Population.Count))];
         HashSet<string> admittedKeys = candidates.Select(placement => placement.Id).ToHashSet(StringComparer.Ordinal);
         foreach (DaggerfallNpc npc in sourceNpcs.Where(npc => !admittedKeys.Contains(npc.StableKey)))
@@ -73,7 +93,8 @@ internal sealed partial class DaggerfallSession
                 : _definitions.Factions.Factions[placement.FactionId];
             DaggerfallNpcAppearance appearance = new(race, (placement.Flags & FemalePopulationFlag) != 0 ? "Female" : "Male",
                 placement.BillboardArchive, placement.BillboardRecord, placement.NameSeed, placement.FactionId);
-            string role = PopulationRole(faction);
+            (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
+                _definitions, faction, placement.SourceBuildingType, placement.SourceBuildingFactionId, "civilian");
 
             DaggerfallNpc? existing = sourceNpcs.FirstOrDefault(npc =>
                 StringComparer.Ordinal.Equals(npc.StableKey, placement.Id));
@@ -82,9 +103,9 @@ internal sealed partial class DaggerfallSession
                 placement.Id,
                 appearance,
                 role,
-                PopulationServices);
+                services);
             if (existing is not null)
-                State.Npcs.RefreshPopulationFacts(npcId, appearance, role, PopulationServices);
+                State.Npcs.RefreshPopulationFacts(npcId, appearance, role, services);
             DaggerfallNpc npc = State.Npcs.Require(npcId);
             if (npc.Presence == DaggerfallNpcPresence.Removed)
                 continue;
@@ -127,7 +148,24 @@ internal sealed partial class DaggerfallSession
             && _time.Calendar.IsDay;
         foreach (ActorState actor in State.Actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian))
         {
-            if (!admitted || !activeSource.Contains(actor.DurableId))
+            bool recycled = false;
+            DaggerfallNpc? populationNpc = State.Npcs.All.FirstOrDefault(npc =>
+                IsPopulationNpc(npc) && npc.DurableId == actor.DurableId);
+            if (populationNpc is not null
+                && _sites.Projection.Inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior
+                && _time.Calendar.IsDay
+                && _sites.ActiveLocationLoaded
+                && _sites.Projection.Inputs.Project.PlayerPosition is not null
+                && State.PlayerControl.Position is WorldPoint player
+                && actor.Position.HorizontalDistanceTo(player) > PopulationRecycleDistanceMeters)
+            {
+                // Retire only the admitted appearance. The canonical actor, inventory, corpse,
+                // and durable pose remain owned by the existing lifetime/save path for re-entry.
+                HidePopulationNpc(populationNpc);
+                recycled = true;
+            }
+
+            if (!admitted || recycled || !activeSource.Contains(actor.DurableId))
             {
                 actor.Wander.MarkUnloaded();
                 continue;
@@ -165,6 +203,75 @@ internal sealed partial class DaggerfallSession
         npc.Kind == DaggerfallNpcKind.Civilian
         && npc.StableKey.StartsWith("population/", StringComparison.Ordinal);
 
+    private WorldPoint PopulationPlayerProfilePosition(DaggerfallSiteProfile profile)
+    {
+        if (State.PlayerControl.Position is WorldPoint local)
+            return WorldPoint.From(_sites.LocalToProfile(local.ToVector()));
+        return profile.Project.PlayerPosition ?? new WorldPoint(0F, 0F, 0F);
+    }
+
+    private static bool IsWithinPopulationSourceRange(IReadOnlyList<DaggerfallPopulationPlacement> placements, WorldPoint player)
+    {
+        if (placements.Count == 0) return false;
+        float minX = placements.Min(placement => placement.Position.X) - PopulationMaximumOutsideRangeMeters;
+        float maxX = placements.Max(placement => placement.Position.X) + PopulationMaximumOutsideRangeMeters;
+        float minZ = placements.Min(placement => placement.Position.Z) - PopulationMaximumOutsideRangeMeters;
+        float maxZ = placements.Max(placement => placement.Position.Z) + PopulationMaximumOutsideRangeMeters;
+        return player.X >= minX && player.X <= maxX && player.Z >= minZ && player.Z <= maxZ;
+    }
+
+    private bool IsPopulationPlacementAdmitted(DaggerfallPopulationPlacement placement, DaggerfallNpc? existing,
+        WorldPoint playerProfile)
+    {
+        WorldPoint placementLocal = _sites.ProfileToLocal(placement.Position);
+        WorldPoint playerLocal = _sites.ProfileToLocal(playerProfile);
+        float distance = playerLocal.HorizontalDistanceTo(placementLocal);
+        if (distance > PopulationNavGridSpawnRadiusMeters) return false;
+        if (existing is { Presence: DaggerfallNpcPresence.Active })
+        {
+            if (State.Actors.TryGet(existing.DurableId, out ActorState? actor))
+                distance = actor.Position.HorizontalDistanceTo(playerLocal);
+            return distance <= PopulationRecycleDistanceMeters;
+        }
+
+        // Visible population is allowed to change inside the donor's 120m hysteresis range;
+        // the larger grid radius only bounds which source pool entries can be considered.
+        return distance <= PopulationVisiblePopulationRangeMeters;
+    }
+
+    /// <summary>
+    /// Routes a blocked enemy's donor door action through the active canonical door owner. The
+    /// behavior layer supplies the source CanOpenDoors fact; this method only selects a nearby
+    /// normalized door and asks that owner to mutate its motion/lock state.
+    /// </summary>
+    private bool TryOpenDoorForEnemy(ActorState actor)
+    {
+        const float reach = 1.75F;
+        WorldPoint position = actor.Position;
+        DaggerfallDoorView[] nearby = [.. _doors.All
+            .Where(door => door.Kind == DaggerfallDoorKind.Normal && door.Motion == DaggerfallDoorMotion.Closed)
+            .Where(door => MathF.Abs(door.Pose.Translation.Y - position.Y) <= 2.5F)
+            .Where(door =>
+            {
+                float dx = door.Pose.Translation.X - position.X;
+                float dz = door.Pose.Translation.Z - position.Z;
+                return (dx * dx) + (dz * dz) <= reach * reach;
+            })
+            .OrderBy(door => door.Id.SourceKey, StringComparer.Ordinal)
+            .ThenBy(door => door.Id.BlockX)
+            .ThenBy(door => door.Id.BlockZ)
+            .ThenBy(door => door.Id.ModelIndex)];
+        foreach (DaggerfallDoorView door in nearby)
+        {
+            DaggerfallDoorOperationResult result = door.LockValue == 0
+                ? _doors.Open(door.Id, DaggerfallDoorOperationSource.Player)
+                : door.LockValue < 20 ? _doors.Bash(door.Id) : DaggerfallDoorOperationResult.MagicallyHeld;
+            if (result is DaggerfallDoorOperationResult.Started or DaggerfallDoorOperationResult.AlreadyOpen)
+                return true;
+        }
+        return false;
+    }
+
     private string? ResolvePopulationRace(DaggerfallSiteRecord site, IReadOnlyList<DaggerfallPopulationPlacement> placements)
     {
         DaggerfallClimateCell climate = _definitions.Grids.Climate.GetCell(site.MapPixelX + 1, site.MapPixelY);
@@ -172,7 +279,7 @@ internal sealed partial class DaggerfallSession
         {
             DaggerfallRaceDefinition? climateRace = _definitions.Catalogs.Races.FirstOrDefault(race =>
                 StringComparer.OrdinalIgnoreCase.Equals(race.Id, climate.People));
-            return climateRace?.Id;
+            if (climateRace is not null) return climateRace.Id;
         }
 
         // Older hand-authored fixtures may carry no importer People column. Their source faction
@@ -201,7 +308,7 @@ internal sealed partial class DaggerfallSession
 
     /// <summary>Maps the source faction's filed type to the role consumers use for crime and dialogue.</summary>
     internal static string PopulationRole(DaggerfallFactionDefinition? faction) =>
-        faction?.Type == KnightlyGuardFactionType || StringComparer.Ordinal.Equals(faction?.TypeName, "KnightlyGuard")
+        faction?.Type == 10 || StringComparer.Ordinal.Equals(faction?.TypeName, "KnightlyGuard")
             ? "guard"
             : "civilian";
 }

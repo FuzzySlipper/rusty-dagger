@@ -36,7 +36,7 @@ internal sealed partial class DaggerfallSession
         else
         {
             var magical = State.Effects.Active.Select(effect => effect.Context.Target.Value).ToHashSet();
-            foreach (var actor in State.Actors.All.Where(actor => !actor.IsDefeated))
+            foreach (var actor in State.Actors.All.Where(actor => !actor.IsDefeated && State.Npcs.IsGameplayActive(actor.DurableId)))
             {
                 if (!_roster.Definitions.TryGetValue(actor.DurableId, out var definition)) continue;
                 bool enemy = definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass;

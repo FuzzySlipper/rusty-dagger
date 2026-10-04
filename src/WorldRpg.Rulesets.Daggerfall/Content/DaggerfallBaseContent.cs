@@ -1247,6 +1247,7 @@ internal static partial class DaggerfallBaseContent
                 OptionalText(mobile, "donorName"),
                 identity,
                 mobile.TryGetProperty("castsMagic", out JsonElement castsMagic) && castsMagic.ValueKind == JsonValueKind.True,
+                mobile.TryGetProperty("canOpenDoors", out JsonElement canOpenDoors) && canOpenDoors.ValueKind == JsonValueKind.True,
                 Boolean(mobile, "seesThroughInvisibility", diagnostics),
                 actor,
                 disposition,
