@@ -547,7 +547,7 @@ internal sealed record DaggerfallSavePayload(
                 || !StringComparer.Ordinal.Equals(providerNpc.Building, merchant.ProviderBuilding))
                 throw new ArgumentException($"Saved merchant '{merchant.Key}' has no matching active provider NPC site.");
             DaggerfallServiceProvider provider = new(merchant.ProviderNpcId,
-                new(merchant.ProviderRegion, merchant.ProviderLocation, merchant.ProviderBuilding), merchant.Service);
+                new(merchant.ProviderRegion, merchant.ProviderLocation, merchant.ProviderBuilding, providerNpc.ProfileId), merchant.Service);
             foreach (DaggerfallMerchantRepairSave repair in merchant.Repairs)
             {
                 if (!repairRequests.Add(repair.RequestId)
