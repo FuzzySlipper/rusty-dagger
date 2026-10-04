@@ -5,6 +5,7 @@ using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -199,6 +200,93 @@ public sealed class SourceBackedServiceSessionTests
     }
 
     [Fact]
+    public void Source_general_store_repairs_a_damaged_item_through_ui_custody_due_reload_and_collection()
+    {
+        using SourceBackedServiceSessionFixture fixture = SourceBackedServiceSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.GenericRepairProvider.Profile);
+        session.AdvanceElapsedTime(6 * 60 * 60);
+
+        DaggerfallNpc provider = SourceNpc(session, fixture.GenericRepairProvider.Placement.Id);
+        DaggerfallSiteBuildingSource sourceBuilding = fixture.SourceBuilding(fixture.GenericRepairProvider.Profile);
+        Assert.Equal("GENRAL01.RMB", fixture.GenericRepairProvider.Profile.InteriorBuilding!.Building.SourceKey);
+        Assert.Equal(0, fixture.GenericRepairProvider.Profile.InteriorBuilding.FactionId);
+        Assert.Equal(9, sourceBuilding.Source.BuildingType);
+        Assert.Equal(510, sourceBuilding.Source.FactionId);
+        Assert.Equal(14, sourceBuilding.Quality);
+        Assert.Equal(510, provider.Appearance.FactionId);
+        Assert.Contains("repair", provider.Services);
+        Assert.DoesNotContain("identify", provider.Services);
+
+        AddGold(session, 100_000);
+        DurableIdentityReference itemId = AddDamagedWeapon(session);
+        string itemKey = $"unique:{itemId.Value}";
+        OpenSourceNpc(session, provider);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        DaggerfallMerchantView merchant = Assert.IsType<DaggerfallMerchantView>(dialogue.Merchant);
+        Assert.Equal(sourceBuilding.Quality, merchant.Quality);
+        Assert.True(merchant.CanRepair);
+        Assert.Contains(merchant.PlayerItems, value => value.Key == itemKey && value.CurrentCondition < value.MaximumCondition);
+
+        ulong beforeGold = session.State.Currency.Read().Gold;
+        SubmitUi(session, 1, $"{{\"action\":\"merchant-repair\",\"revision\":\"{Escape(merchant.Revision)}\",\"item\":\"{Escape(itemKey)}\"}}");
+
+        Assert.Equal("RepairAccepted", session.Presentation.LastOutcome);
+        Assert.True(session.State.Currency.Read().Gold < beforeGold);
+        Assert.DoesNotContain(session.State.Inventory.Read().UniqueItems,
+            value => value.Entity.Value == ResolveEntity(session, itemId));
+        DaggerfallMerchantView pending = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
+        DaggerfallRepairView repair = Assert.Single(pending.Repairs);
+        DaggerfallSavePayload beforeDueSave = DaggerfallSavePayload.Read(session.CaptureSave());
+        DaggerfallMerchantSave beforeDueMerchant = Assert.Single(beforeDueSave.Merchants);
+        Assert.Equal(sourceBuilding.Quality, beforeDueMerchant.Quality);
+        Assert.Equal("repair", beforeDueMerchant.Service);
+        Assert.Contains(beforeDueMerchant.Custody.UniqueItems, value => value.EntityId == itemId.Value);
+        DaggerfallServiceQueuedWork queued = Assert.Single(beforeDueSave.Services.Pending);
+        Assert.Equal(repair.RequestId, queued.Id);
+        Assert.Equal(repair.DueMinute, queued.CompletesAtMinute);
+        Assert.Equal(beforeDueMerchant.ProviderNpcId, queued.Provider.NpcId);
+        Assert.Equal(beforeDueMerchant.Service, queued.Provider.Service);
+
+        SubmitUi(session, 2, $"{{\"action\":\"merchant-collect-repair\",\"revision\":\"{Escape(pending.Revision)}\",\"key\":\"{Escape(repair.RequestId)}\"}}");
+        Assert.Equal("RepairNotReady", session.Presentation.LastOutcome);
+        Assert.Contains(DaggerfallSavePayload.Read(session.CaptureSave()).Merchants.Single().Custody.UniqueItems,
+            value => value.EntityId == itemId.Value);
+
+        using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        DaggerfallNpc restoredProvider = SourceNpc(restored, fixture.GenericRepairProvider.Placement.Id);
+        OpenSourceNpc(restored, restoredProvider);
+        DaggerfallMerchantView restoredPending = Assert.IsType<DaggerfallMerchantView>(
+            Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue).Merchant);
+        DaggerfallRepairView restoredRepair = Assert.Single(restoredPending.Repairs);
+        Assert.False(restoredRepair.Ready);
+        restored.AdvanceElapsedTime(2 * DaggerfallCalendar.SecondsPerDay);
+
+        OpenSourceNpc(restored, restoredProvider);
+        DaggerfallMerchantView ready = Assert.IsType<DaggerfallMerchantView>(
+            Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue).Merchant);
+        DaggerfallRepairView readyRepair = Assert.Single(ready.Repairs);
+        Assert.Equal(restoredRepair.RequestId, readyRepair.RequestId);
+        Assert.True(readyRepair.Ready);
+        SubmitUi(restored, 3, $"{{\"action\":\"merchant-collect-repair\",\"revision\":\"{Escape(ready.Revision)}\",\"key\":\"{Escape(readyRepair.RequestId)}\"}}");
+
+        Assert.Equal("RepairCollected", restored.Presentation.LastOutcome);
+        Assert.Contains(restored.State.Inventory.Read().UniqueItems,
+            value => value.Entity.Value == ResolveEntity(restored, itemId));
+        DaggerfallItemInstanceMetadata repaired = restored.State.ItemInstances.RequireUnique(itemId.Value);
+        Assert.Equal(repaired.MaximumCondition, repaired.CurrentCondition);
+        DaggerfallMerchantView collected = Assert.IsType<DaggerfallMerchantView>(
+            Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue).Merchant);
+        Assert.Empty(collected.Repairs);
+
+        SubmitUi(restored, 4, $"{{\"action\":\"merchant-collect-repair\",\"revision\":\"{Escape(collected.Revision)}\",\"key\":\"{Escape(readyRepair.RequestId)}\"}}");
+        Assert.Equal("RepairUnavailable", restored.Presentation.LastOutcome);
+        using DaggerfallSession reloaded = fixture.Restore(restored.CaptureSave());
+        Assert.Contains(reloaded.State.Inventory.Read().UniqueItems,
+            value => value.Entity.Value == ResolveEntity(reloaded, itemId));
+        Assert.Empty(DaggerfallSavePayload.Read(reloaded.CaptureSave()).Merchants.Single().Repairs);
+    }
+
+    [Fact]
     public void Source_bookseller_does_not_advertise_guild_identify()
     {
         using SourceBackedServiceSessionFixture fixture = SourceBackedServiceSessionFixture.Create();
@@ -224,6 +312,7 @@ public sealed class SourceBackedServiceSessionTests
     {
         using SourceBackedServiceSessionFixture fixture = SourceBackedServiceSessionFixture.Create();
         using DaggerfallSession session = fixture.Start(fixture.MagesIdentifierProvider.Profile);
+        session.AdvanceElapsedTime(6 * 60 * 60);
 
         DaggerfallNpc provider = SourceNpc(session, fixture.MagesIdentifierProvider.Placement.Id);
         DaggerfallSiteBuildingSource sourceBuilding = fixture.SourceBuilding(fixture.MagesIdentifierProvider.Profile);
@@ -304,6 +393,22 @@ public sealed class SourceBackedServiceSessionTests
         return id;
     }
 
+    private static DurableIdentityReference AddDamagedWeapon(DaggerfallSession session)
+    {
+        DaggerfallItemFactory factory = new(TestPayload.Definitions, RandomMinimum.Create());
+        DaggerfallCreatedItem created = factory.Create(new("Weapons", "source.consumer.test.repair",
+            DaggerfallItemOwner.Player, TemplateIndex: 113, Material: "iron"));
+        DurableIdentityReference id = session.UniqueItemAllocator.AllocateReference();
+        factory.Materialize(created, session.State.Inventory, session.State.ItemInstances, unique: id);
+        DaggerfallItemInstanceMetadata metadata = session.State.ItemInstances.RequireUnique(id.Value);
+        session.State.ItemInstances.ReplaceUnique(id.Value,
+            metadata with { CurrentCondition = Math.Max(1, metadata.MaximumCondition / 2) });
+        return id;
+    }
+
+    private static ulong ResolveEntity(DaggerfallSession session, DurableIdentityReference identity) =>
+        checked((ulong)session.State.Containers.Entities.Resolve(identity).Value);
+
     private static long AbsoluteSecond(DaggerfallCalendarSave calendar) =>
         new DaggerfallCalendar(calendar.Year, calendar.Month, calendar.Day, calendar.Hour, calendar.Minute, calendar.Second).ToAbsoluteSeconds();
 
@@ -321,6 +426,7 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
     internal DaggerfallSiteProfile PopulationProfile { get; }
     internal SourceProvider TrainingProvider { get; }
     internal SourceProvider MerchantProvider { get; }
+    internal SourceProvider GenericRepairProvider { get; }
     internal SourceProvider BooksellerProvider { get; }
     internal SourceProvider MagesIdentifierProvider { get; }
 
@@ -332,6 +438,7 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
         DaggerfallSiteProfile populationProfile,
         SourceProvider trainingProvider,
         SourceProvider merchantProvider,
+        SourceProvider genericRepairProvider,
         SourceProvider booksellerProvider,
         SourceProvider magesIdentifierProvider)
     {
@@ -342,6 +449,7 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
         PopulationProfile = populationProfile;
         TrainingProvider = trainingProvider;
         MerchantProvider = merchantProvider;
+        GenericRepairProvider = genericRepairProvider;
         BooksellerProvider = booksellerProvider;
         MagesIdentifierProvider = magesIdentifierProvider;
     }
@@ -381,6 +489,13 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
             .OrderBy(value => value.Profile.ProfileKey.LogicalId, StringComparer.Ordinal)
             .ThenBy(value => value.Placement.Id, StringComparer.Ordinal)
             .First();
+        SourceProvider genericRepair = sites
+            .SelectMany(profile => profile.StaticNpcs.Select(placement => new SourceProvider(profile, placement)))
+            .Where(value => value.Profile.InteriorBuilding?.BuildingType is 2 or 9 or 13
+                && value.Placement.Services.Contains("repair", StringComparer.Ordinal))
+            .OrderBy(value => value.Profile.ProfileKey.LogicalId, StringComparer.Ordinal)
+            .ThenBy(value => value.Placement.Id, StringComparer.Ordinal)
+            .First();
         SourceProvider magesIdentifier = sites
             .SelectMany(profile => profile.StaticNpcs.Select(placement => new SourceProvider(profile, placement)))
             .Where(value => value.Placement.Appearance.FactionId == 801
@@ -396,7 +511,7 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
             Profiles = profiles,
             Blocks = blocks,
         };
-        return new(definitions, sites, profiles, composition, population, training, merchant, bookseller, magesIdentifier);
+        return new(definitions, sites, profiles, composition, population, training, merchant, genericRepair, bookseller, magesIdentifier);
     }
 
     internal DaggerfallSession Start(DaggerfallSiteProfile profile)
