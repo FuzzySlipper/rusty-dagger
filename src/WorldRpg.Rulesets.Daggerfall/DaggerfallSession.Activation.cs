@@ -50,7 +50,11 @@ internal sealed partial class DaggerfallSession
             workAvailable: DialogueWorkAvailable,
             variables: () => State.Variables,
             templeService: ResolveTempleService,
-            guildService: ResolveGuildProvider);
+            guildService: ResolveGuildProvider,
+            activeProfile: () => _sites.ActiveProfile,
+            discloseDirection: DiscloseDialogueDirection,
+            dialogueWorld: State.DialogueWorld);
+        _dialogue.SynchronizeWorldState();
         _activation = new DaggerfallActivationModule(
             new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),
             reach,

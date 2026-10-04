@@ -52,7 +52,8 @@ internal sealed class DaggerfallState(
     DaggerfallWagonStorage wagon,
     DaggerfallSwimmingPolicy swimming,
     Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> dungeonDiscoveries,
-    Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions)
+    Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions,
+    DaggerfallDialogueWorldState? dialogueWorld = null)
 {
     internal GameplayServices<IProductFact> Kit { get; } = kit;
     /// <summary>Compiled Daggerfall effect policy over the attached per-actor Engine effect components.</summary>
@@ -125,6 +126,8 @@ internal sealed class DaggerfallState(
     internal DaggerfallWagonStorage Wagon { get; } = wagon;
     /// <summary>Accepted Engine swimming mode, breath continuation, and water-volume identity.</summary>
     internal DaggerfallSwimmingPolicy Swimming { get; } = swimming;
+    /// <summary>Generated spoken-world events and their transition/expiry state.</summary>
+    internal DaggerfallDialogueWorldState DialogueWorld { get; } = dialogueWorld ?? new();
     /// <summary>Durable discovery for admitted dungeon profiles, independent of the active scene projection.</summary>
     internal Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> DungeonDiscoveries { get; } = dungeonDiscoveries;
     /// <summary>Profile-scoped normalized dungeon action graphs sharing the session variable store.</summary>

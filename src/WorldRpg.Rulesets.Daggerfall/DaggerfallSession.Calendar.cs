@@ -80,6 +80,7 @@ internal sealed partial class DaggerfallSession
             State.Quests.Advance(State.Variables, _time.Calendar);
             State.Quests.ReconcileFoeCommands();
         }
+        _dialogue?.SynchronizeWorldState();
         _dialogue?.RefreshEligibility();
         if (kind is DaggerfallCalendarAdvanceKind.Elapsed or DaggerfallCalendarAdvanceKind.QuestTraining)
         {

@@ -149,6 +149,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>The persistent wagon owner and its Engine-backed inventory, if one exists.</summary>
     [JsonRequired]
     public DaggerfallWagonSave? Wagon { get; init; }
+    /// <summary>Generated spoken-world events, including their current expiry markers.</summary>
+    [JsonRequired]
+    public DaggerfallDialogueWorldSave DialogueWorld { get; init; } = DaggerfallDialogueWorldSave.Empty;
     [JsonRequired]
     public DaggerfallNotebookSave Notebook { get; init; } = new([], [], null, 0, 0);
     /// <summary>The dynamic identity kinds owned by the current Daggerfall ruleset.</summary>
@@ -752,6 +755,8 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(Transport);
         Transport.Validate();
         Wagon?.Validate();
+        ArgumentNullException.ThrowIfNull(DialogueWorld);
+        DialogueWorld.Validate();
         ArgumentNullException.ThrowIfNull(Notebook);
         Notebook.Validate();
         ArgumentNullException.ThrowIfNull(Identities);
