@@ -119,8 +119,8 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallSiteBuildingSource sourceBuilding = fixture.SourceBuilding(fixture.MerchantProvider.Profile);
         Assert.Equal(sourceBuilding.Quality, merchant.Quality);
         DaggerfallMerchantItemView stock = merchant.Stock.First(value => value.CanBuy && value.UnitPrice > 0);
-        int mercantileBeforeBuy = session.State.SkillUses.PermanentSkillValue("mercantile");
-        int pickpocketBeforeShoplift = session.State.SkillUses.PermanentSkillValue("pickpocket");
+        int mercantileBeforeBuy = SkillUseCount(session, "mercantile");
+        int pickpocketBeforeShoplift = SkillUseCount(session, "pickpocket");
 
         AddGold(session, checked(stock.UnitPrice * 2 + 1_000));
         ulong goldBeforeBuy = session.State.Currency.Read().Gold;
@@ -129,10 +129,10 @@ public sealed class SourceBackedServiceSessionTests
 
         Assert.Equal("Purchased", session.Presentation.LastOutcome);
         Assert.Equal(goldBeforeBuy - stock.UnitPrice, session.State.Currency.Read().Gold);
-        Assert.Equal(mercantileBeforeBuy + 1, session.State.SkillUses.PermanentSkillValue("mercantile"));
+        Assert.Equal(mercantileBeforeBuy + 1, SkillUseCount(session, "mercantile"));
         SubmitUi(session, 5, buyAction);
         Assert.Equal("Stale", session.Presentation.LastOutcome);
-        Assert.Equal(mercantileBeforeBuy + 1, session.State.SkillUses.PermanentSkillValue("mercantile"));
+        Assert.Equal(mercantileBeforeBuy + 1, SkillUseCount(session, "mercantile"));
 
         DaggerfallMerchantView afterBuy = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
         DaggerfallMerchantItemView sold = Assert.Single(afterBuy.PlayerItems,
@@ -143,10 +143,10 @@ public sealed class SourceBackedServiceSessionTests
 
         Assert.Equal("Sold", session.Presentation.LastOutcome);
         Assert.Equal(goldBeforeSell + sold.UnitPrice, session.State.Currency.Read().Gold);
-        Assert.Equal(mercantileBeforeBuy + 2, session.State.SkillUses.PermanentSkillValue("mercantile"));
+        Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(session, "mercantile"));
         SubmitUi(session, 7, sellAction);
         Assert.Equal("Stale", session.Presentation.LastOutcome);
-        Assert.Equal(mercantileBeforeBuy + 2, session.State.SkillUses.PermanentSkillValue("mercantile"));
+        Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(session, "mercantile"));
 
         // The real source caller must keep refusal paths from manufacturing a trade use. The sold
         // item is no longer in the player container, so this uses the current revision and reaches
@@ -154,7 +154,7 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallMerchantView afterSell = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
         SubmitUi(session, 8, $"{{\"action\":\"merchant-sell\",\"revision\":\"{Escape(afterSell.Revision)}\",\"item\":\"{Escape(sold.Key)}\",\"amount\":1}}");
         Assert.Equal("ItemUnavailable", session.Presentation.LastOutcome);
-        Assert.Equal(mercantileBeforeBuy + 2, session.State.SkillUses.PermanentSkillValue("mercantile"));
+        Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(session, "mercantile"));
 
         ulong carriedGold = session.State.Currency.Read().Gold;
         Assert.True(carriedGold > 0);
@@ -163,7 +163,7 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallMerchantView noFunds = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
         SubmitUi(session, 9, $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(noFunds.Revision)}\",\"item\":\"{Escape(unaffordable.Key)}\",\"amount\":1}}");
         Assert.Equal("InsufficientFunds", session.Presentation.LastOutcome);
-        Assert.Equal(mercantileBeforeBuy + 2, session.State.SkillUses.PermanentSkillValue("mercantile"));
+        Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(session, "mercantile"));
 
         // Shoplifting is an admitted source-backed merchant action even when the deterministic
         // fixture roll catches the player. The attempt is recorded before the caught/success result.
@@ -173,7 +173,7 @@ public sealed class SourceBackedServiceSessionTests
         string shopliftAction = $"{{\"action\":\"merchant-shoplift\",\"revision\":\"{Escape(shopliftView.Revision)}\",\"item\":\"{Escape(stealable.Key)}\",\"amount\":1}}";
         SubmitUi(session, 10, shopliftAction);
         Assert.Equal("Caught", session.Presentation.LastOutcome);
-        Assert.Equal(pickpocketBeforeShoplift + 1, session.State.SkillUses.PermanentSkillValue("pickpocket"));
+        Assert.Equal(pickpocketBeforeShoplift + 1, SkillUseCount(session, "pickpocket"));
 
         ulong goldAfterSell = session.State.Currency.Read().Gold;
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
@@ -189,8 +189,8 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallMerchantView restoredMerchant = Assert.IsType<DaggerfallMerchantView>(restored.ActivationView.Dialogue!.Merchant);
         Assert.Equal(sourceBuilding.Quality, restoredMerchant.Quality);
         Assert.Equal(goldAfterSell, restored.State.Currency.Read().Gold);
-        Assert.Equal(mercantileBeforeBuy + 2, restored.State.SkillUses.PermanentSkillValue("mercantile"));
-        Assert.Equal(pickpocketBeforeShoplift + 1, restored.State.SkillUses.PermanentSkillValue("pickpocket"));
+        Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(restored, "mercantile"));
+        Assert.Equal(pickpocketBeforeShoplift + 1, SkillUseCount(restored, "pickpocket"));
         Assert.Contains(restoredMerchant.Stock, value => value.Definition == sold.Definition);
         DaggerfallSavePayload restoredSave = DaggerfallSavePayload.Read(restored.CaptureSave());
         Assert.Equal(saved.RegionalPrices!.LastAdvancedDay, restoredSave.RegionalPrices!.LastAdvancedDay);
@@ -213,6 +213,9 @@ public sealed class SourceBackedServiceSessionTests
 
     private static void SubmitUi(DaggerfallSession session, ulong step, string action) =>
         session.Update(new ProductUpdate(OuterUpdate(step), [Ui(action)]));
+
+    private static int SkillUseCount(DaggerfallSession session, string skill) =>
+        session.State.SkillUses.Capture().Counters.Single(value => value.Skill == skill).Uses;
 
     private static void AddGold(DaggerfallSession session, ulong amount)
     {
