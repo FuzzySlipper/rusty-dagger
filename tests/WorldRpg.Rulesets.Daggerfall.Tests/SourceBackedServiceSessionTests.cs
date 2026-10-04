@@ -198,6 +198,73 @@ public sealed class SourceBackedServiceSessionTests
         Assert.Contains(restoredSave.Merchants, value => value.Key == merchantSave.Key && value.Quality == merchantSave.Quality);
     }
 
+    [Fact]
+    public void Source_bookseller_does_not_advertise_guild_identify()
+    {
+        using SourceBackedServiceSessionFixture fixture = SourceBackedServiceSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.BooksellerProvider.Profile);
+
+        DaggerfallNpc provider = SourceNpc(session, fixture.BooksellerProvider.Placement.Id);
+        DaggerfallSiteBuildingSource sourceBuilding = fixture.SourceBuilding(fixture.BooksellerProvider.Profile);
+        Assert.Equal(5, sourceBuilding.Source.BuildingType);
+        Assert.Equal(510, provider.Appearance.FactionId);
+        Assert.Contains("shop", provider.Services);
+        Assert.DoesNotContain("identify", provider.Services);
+
+        OpenSourceNpc(session, provider);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        DaggerfallMerchantView merchant = Assert.IsType<DaggerfallMerchantView>(dialogue.Merchant);
+        Assert.False(merchant.CanIdentify);
+        Assert.True(merchant.CanBuy);
+        Assert.True(merchant.CanSell);
+    }
+
+    [Fact]
+    public void Source_mages_identifier_accepts_payment_and_persists_identification_through_reload()
+    {
+        using SourceBackedServiceSessionFixture fixture = SourceBackedServiceSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.MagesIdentifierProvider.Profile);
+
+        DaggerfallNpc provider = SourceNpc(session, fixture.MagesIdentifierProvider.Placement.Id);
+        DaggerfallSiteBuildingSource sourceBuilding = fixture.SourceBuilding(fixture.MagesIdentifierProvider.Profile);
+        Assert.Equal(11, sourceBuilding.Source.BuildingType);
+        Assert.Equal("MAGEAA14.RMB", fixture.MagesIdentifierProvider.Profile.InteriorBuilding!.Building.SourceKey);
+        Assert.Equal(801, provider.Appearance.FactionId);
+        Assert.Equal("identifier", provider.Role);
+        Assert.Contains("identify", provider.Services);
+
+        AddGold(session, 100_000);
+        DurableIdentityReference itemId = AddUnidentifiedMagic(session);
+        string itemKey = $"unique:{itemId.Value}";
+        OpenSourceNpc(session, provider);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        DaggerfallMerchantView merchant = Assert.IsType<DaggerfallMerchantView>(dialogue.Merchant);
+        Assert.True(merchant.CanIdentify);
+        Assert.False(merchant.CanSell);
+        Assert.Contains(merchant.PlayerItems, value => value.Key == itemKey && !value.Identified);
+
+        ulong beforeGold = session.State.Currency.Read().Gold;
+        SubmitUi(session, 1, $"{{\"action\":\"merchant-identify\",\"revision\":\"{Escape(merchant.Revision)}\",\"item\":\"{Escape(itemKey)}\"}}");
+
+        Assert.Equal("Identified", session.Presentation.LastOutcome);
+        Assert.True(session.State.ItemInstances.RequireUnique(itemId.Value).Identified);
+        Assert.True(session.State.Currency.Read().Gold < beforeGold);
+        ulong afterPayment = session.State.Currency.Read().Gold;
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
+
+        using DaggerfallSession restored = fixture.Restore(DaggerfallSavePayload.Encode(saved));
+        DaggerfallNpc restoredProvider = SourceNpc(restored, fixture.MagesIdentifierProvider.Placement.Id);
+        OpenSourceNpc(restored, restoredProvider);
+        DaggerfallDialogueView restoredDialogue = Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue);
+        DaggerfallMerchantView restoredMerchant = Assert.IsType<DaggerfallMerchantView>(restoredDialogue.Merchant);
+        Assert.True(restored.State.ItemInstances.RequireUnique(itemId.Value).Identified);
+        Assert.Equal(afterPayment, restored.State.Currency.Read().Gold);
+
+        SubmitUi(restored, 2, $"{{\"action\":\"merchant-identify\",\"revision\":\"{Escape(restoredMerchant.Revision)}\",\"item\":\"{Escape(itemKey)}\"}}");
+        Assert.Equal("AlreadyIdentified", restored.Presentation.LastOutcome);
+        Assert.Equal(afterPayment, restored.State.Currency.Read().Gold);
+    }
+
     private static void OpenSourceNpc(DaggerfallSession session, DaggerfallNpc npc)
     {
         DaggerfallActivationTarget target = Assert.Single(session.Dialogue.NpcTargets(),
@@ -225,6 +292,18 @@ public sealed class SourceBackedServiceSessionTests
             InventoryStackId.Parse("source.consumer.test.gold"));
     }
 
+    private static DurableIdentityReference AddUnidentifiedMagic(DaggerfallSession session)
+    {
+        DaggerfallItemFactory factory = new(TestPayload.Definitions, RandomMinimum.Create());
+        DaggerfallCreatedItem created = factory.Create(new("Magic", "source.consumer.test.identify",
+            DaggerfallItemOwner.Player, Race: "breton", Gender: "male", MagicItemKey: "magic-item.0022"));
+        DurableIdentityReference id = session.UniqueItemAllocator.AllocateReference();
+        factory.Materialize(created, session.State.Inventory, session.State.ItemInstances, unique: id);
+        session.State.ItemInstances.ReplaceUnique(id.Value,
+            session.State.ItemInstances.RequireUnique(id.Value) with { Identified = false });
+        return id;
+    }
+
     private static long AbsoluteSecond(DaggerfallCalendarSave calendar) =>
         new DaggerfallCalendar(calendar.Year, calendar.Month, calendar.Day, calendar.Hour, calendar.Minute, calendar.Second).ToAbsoluteSeconds();
 
@@ -242,6 +321,8 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
     internal DaggerfallSiteProfile PopulationProfile { get; }
     internal SourceProvider TrainingProvider { get; }
     internal SourceProvider MerchantProvider { get; }
+    internal SourceProvider BooksellerProvider { get; }
+    internal SourceProvider MagesIdentifierProvider { get; }
 
     private SourceBackedServiceSessionFixture(
         DaggerfallDefinitions definitions,
@@ -250,7 +331,9 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
         DaggerfallSessionComposition composition,
         DaggerfallSiteProfile populationProfile,
         SourceProvider trainingProvider,
-        SourceProvider merchantProvider)
+        SourceProvider merchantProvider,
+        SourceProvider booksellerProvider,
+        SourceProvider magesIdentifierProvider)
     {
         _definitions = definitions;
         _sites = sites;
@@ -259,6 +342,8 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
         PopulationProfile = populationProfile;
         TrainingProvider = trainingProvider;
         MerchantProvider = merchantProvider;
+        BooksellerProvider = booksellerProvider;
+        MagesIdentifierProvider = magesIdentifierProvider;
     }
 
     internal static SourceBackedServiceSessionFixture Create()
@@ -289,6 +374,20 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
             .OrderBy(value => value.Profile.ProfileKey.LogicalId, StringComparer.Ordinal)
             .ThenBy(value => value.Placement.Id, StringComparer.Ordinal)
             .First();
+        SourceProvider bookseller = sites
+            .SelectMany(profile => profile.StaticNpcs.Select(placement => new SourceProvider(profile, placement)))
+            .Where(value => value.Profile.InteriorBuilding?.BuildingType == 5
+                && value.Placement.Services.Contains("shop", StringComparer.Ordinal))
+            .OrderBy(value => value.Profile.ProfileKey.LogicalId, StringComparer.Ordinal)
+            .ThenBy(value => value.Placement.Id, StringComparer.Ordinal)
+            .First();
+        SourceProvider magesIdentifier = sites
+            .SelectMany(profile => profile.StaticNpcs.Select(placement => new SourceProvider(profile, placement)))
+            .Where(value => value.Placement.Appearance.FactionId == 801
+                && value.Placement.Services.Contains("identify", StringComparer.Ordinal))
+            .OrderBy(value => value.Profile.ProfileKey.LogicalId, StringComparer.Ordinal)
+            .ThenBy(value => value.Placement.Id, StringComparer.Ordinal)
+            .First();
         ContentPack blocksPack = resolved.ContentPacks.Single(pack => pack.Role == new ContentPackRoleId("daggerfall.blocks"));
         DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(blocksPack.Payload);
         blocks.AdmitLocations(definitions.Locations);
@@ -297,7 +396,7 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
             Profiles = profiles,
             Blocks = blocks,
         };
-        return new(definitions, sites, profiles, composition, population, training, merchant);
+        return new(definitions, sites, profiles, composition, population, training, merchant, bookseller, magesIdentifier);
     }
 
     internal DaggerfallSession Start(DaggerfallSiteProfile profile)
