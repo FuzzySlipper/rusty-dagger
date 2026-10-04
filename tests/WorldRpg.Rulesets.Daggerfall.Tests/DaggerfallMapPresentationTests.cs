@@ -85,8 +85,8 @@ public sealed class DaggerfallMapPresentationTests
         };
         using var session = DaggerfallSession.StartNew(engine.Context, composition);
         var before = session.ReadMapPresentation()!;
-        WorldPoint canonicalProfilePose = session.Sites.LocalToProfile(
-            session.State.PlayerControl.Position!.Value.ToVector());
+        WorldPoint canonicalProfilePose = WorldPoint.From(session.Sites.LocalToProfile(
+            session.State.PlayerControl.Position!.Value.ToVector()));
         Assert.Equal(canonicalProfilePose, before.Player);
         WorldPoint requestedProfilePose = profile.Project.PlayerPosition
             ?? throw new InvalidOperationException("Charing exterior has no authored player position.");
