@@ -92,19 +92,17 @@ public sealed class ExteriorOriginSessionTests
             Assert.True(foundTerrainCell, "Charing's admitted terrain window had no non-city collision cell to probe.");
             DaggerfallTerrainSurface terrain = DaggerfallTerrainSurfaceBuilder.Build(
                 definitions.Terrain, terrainCell.X, terrainCell.Y);
-            float terrainProbeCoordinate = .5F + (1F / (2F * (DaggerfallTerrainSurfaceBuilder.SampleDimension - 1)));
-            Vector3 terrainPoint = admitted.Origin.LocalTranslation(terrainCell) + new Vector3(
-                terrainProbeCoordinate * DaggerfallTerrainSurfaceBuilder.HorizontalSize,
-                DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(terrain, terrainProbeCoordinate, terrainProbeCoordinate),
-                terrainProbeCoordinate * DaggerfallTerrainSurfaceBuilder.HorizontalSize);
-            SpatialHit terrainHit = Hit(terrainPoint + Vector3.UnitY * 20F);
+            int terrainSample = DaggerfallTerrainSurfaceBuilder.SampleDimension / 2;
+            Vector3 terrainPoint = admitted.Origin.LocalTranslation(terrainCell)
+                + terrain.Vertices[terrainSample + (terrainSample * DaggerfallTerrainSurfaceBuilder.SampleDimension)];
+            SpatialHit terrainHit = Hit(terrainPoint + Vector3.UnitY * 20F, 50F);
             Assert.True(terrainHit.Present);
             Assert.Equal(terrainPoint.X, terrainHit.Point.X, 2);
             Assert.Equal(terrainPoint.Y, terrainHit.Point.Y, 2);
             Assert.Equal(terrainPoint.Z, terrainHit.Point.Z, 2);
 
             Vector3 ray = exterior.Portals[0].Position.ToVector() + exteriorFrame + Vector3.UnitY * 20f;
-            SpatialHit Hit(Vector3 point) => spatial.CastRay(new(recorded.Session!, point, -Vector3.UnitY, 100f,
+            SpatialHit Hit(Vector3 point, float distance = 100F) => spatial.CastRay(new(recorded.Session!, point, -Vector3.UnitY, distance,
                 default, ReadOnlyMemory<SpatialEntityCollider>.Empty, ReadOnlyMemory<ulong>.Empty,
                 ReadOnlyMemory<SpatialEntityCollider>.Empty));
             SpatialHit before = Hit(ray);
@@ -116,6 +114,11 @@ public sealed class ExteriorOriginSessionTests
             NavigationStepResult beforeRoute = spatial.EvaluateNavigationStep(new(recorded.Session!,
                 routePoint, routePoint, 1f, 1000));
             Assert.Equal(NavigationPathOutcome.Reached, beforeRoute.Outcome);
+            SpatialHit cityFloor = Hit(routePoint + Vector3.UnitY * .5F, 1F);
+            Assert.True(cityFloor.Present);
+            Assert.Equal(routePoint.X, cityFloor.Point.X, 2);
+            Assert.Equal(routePoint.Y, cityFloor.Point.Y, 2);
+            Assert.Equal(routePoint.Z, cityFloor.Point.Z, 2);
 
             // Advance only the calendar: this admits the real Charing source population without
             // running a movement step, so its first actor pose remains an exact source-frame fact.
