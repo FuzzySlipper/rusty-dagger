@@ -374,6 +374,10 @@ public sealed class DaggerfallPopulationSessionTests
             AppearanceFake appearance = new(releases);
             EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
             DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+            // StartNew admits the selected profile before the catalog is attached. Let the
+            // ordinary first update reconcile the real neighboring exterior closure so these
+            // tests exercise retained source actors through the same runtime path as the host.
+            session.Update(new ProductUpdate(OuterUpdate(1), []));
             return new(session, composition, source, resident, interior, appearance);
         }
 
