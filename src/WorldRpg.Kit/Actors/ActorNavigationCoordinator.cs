@@ -217,7 +217,7 @@ public sealed class ActorNavigationCoordinator
 
     private static NavigationStepResult CharacterReceipt(NavigationPathOutcome outcome, Vector3 waypoint, uint reached) =>
         new(ReadOnlyMemory<PlanarNavCell>.Empty, ReadOnlyMemory<NavigationPathEdge>.Empty, outcome, waypoint,
-            default, NavigationEdgeKind.Walk, reached, 1, 0, 0, 0, false, default, default);
+            default, NavigationEdgeKind.Walk, 0f, reached, 1, 0, 0, 0, false, default, default);
 
     private static ActorPose WithHeadingForAcceptedWaypoint(ActorPose before, Vector3 waypoint)
     {
