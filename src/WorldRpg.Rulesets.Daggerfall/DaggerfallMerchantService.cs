@@ -935,13 +935,33 @@ internal sealed class DaggerfallMerchantService
     {
         DaggerfallItemOwner merchantOwner = DaggerfallItemOwner.Merchant(binding.MerchantContainerId);
         DaggerfallItemOwner custodyOwner = DaggerfallItemOwner.RepairCustody(binding.CustodyContainerId);
+        string service = PersistedProviderService(binding);
         return new(binding.Context.Key, binding.Context.Provider.NpcId, binding.Context.Provider.Site.Region,
-            binding.Context.Provider.Site.Location, binding.Context.Provider.Site.Building, binding.Context.Provider.Service,
+            binding.Context.Provider.Site.Location, binding.Context.Provider.Site.Building, service,
             binding.Context.BuildingType, binding.Context.BlockX, binding.Context.BlockY, binding.Context.BuildingIndex,
             binding.Context.Quality, binding.MerchantContainerId, binding.CustodyContainerId, binding.StockedDay,
             CaptureContents(binding.MerchantOwner, merchantOwner), CaptureContents(binding.CustodyOwner, custodyOwner),
             [.. binding.GeneratedStacks.Order(StringComparer.Ordinal)], [.. binding.GeneratedUniqueItems.Order()],
             [.. binding.Repairs.Values.OrderBy(value => value.RequestId, StringComparer.Ordinal)]);
+    }
+
+    private string PersistedProviderService(Binding binding)
+    {
+        if (binding.Repairs.Count == 0) return binding.Context.Provider.Service;
+
+        DaggerfallServiceQueuedWork[] pending = _services.Pending
+            .Where(value => binding.Repairs.ContainsKey(value.Id))
+            .ToArray();
+        if (pending.Length != binding.Repairs.Count
+            || pending.Any(value => value.Provider.NpcId != binding.Context.Provider.NpcId
+                || value.Provider.Site != binding.Context.Provider.Site))
+            throw new InvalidOperationException($"Merchant '{binding.Context.Key}' has repair custody without matching provider work.");
+
+        string? service = pending.Select(value => value.Provider.Service)
+            .Distinct(StringComparer.Ordinal).SingleOrDefault();
+        if (!StringComparer.Ordinal.Equals(service, "repair"))
+            throw new InvalidOperationException($"Merchant '{binding.Context.Key}' has repair work with an invalid provider service.");
+        return service;
     }
 
     private DaggerfallInventorySave CaptureContents(EntityId owner, DaggerfallItemOwner itemOwner)
