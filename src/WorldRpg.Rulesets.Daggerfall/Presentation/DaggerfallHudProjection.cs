@@ -290,6 +290,18 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("topics", builder.Array(dialogue.Topics.Select(topic => builder.Object(
             ("id", builder.String(topic.Id)),
             ("label", builder.String(topic.Label)))).ToArray())),
+        ("training", dialogue.Training is not { } training ? builder.Null() : builder.Object(
+            ("providerFaction", builder.Number(training.ProviderFactionId)),
+            ("membershipFaction", builder.Number(training.MembershipFactionId)),
+            ("member", builder.Boolean(training.IsMember)),
+            ("rank", builder.Number(training.Rank)),
+            ("price", builder.Number(training.Price)),
+            ("durationSeconds", builder.Number(training.DurationSeconds)),
+            ("cooldownReadySecond", builder.Number(training.CooldownReadySecond)),
+            ("skills", builder.Array(training.Skills.Select(skill => builder.Object(
+                ("id", builder.String(skill.Id)),
+                ("permanentValue", builder.Number(skill.PermanentValue)),
+                ("maximumValue", builder.Number(skill.MaximumValue)))).ToArray())))),
         ("diagnostics", builder.Array(dialogue.Diagnostics.Select(builder.String).ToArray())));
 
     private static uint Death(UiValueBuilder builder, DaggerfallDeathView death) => builder.Object(

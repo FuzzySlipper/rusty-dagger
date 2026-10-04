@@ -8,6 +8,7 @@ using WorldRpg.Kit.Targeting;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -40,7 +41,13 @@ internal sealed partial class DaggerfallSession
             () => _site.ActiveSite,
             () => State.Character.Identity,
             view => _activationPresentation.SetDialogue(view),
-            message => Presentation.SetOutcome(message), MapDirections, State.Quests.IsNpcMuted, State.Quests.QuestContacts);
+            message => Presentation.SetOutcome(message), MapDirections, State.Quests.IsNpcMuted, State.Quests.QuestContacts,
+            resolveDirection: ResolveDialogueDirection,
+            directionDirectory: DialogueDirectory,
+            questTopics: State.Quests.DialogueTopics,
+            resolveQuestTopic: ResolveQuestTopic,
+            calendar: () => _time.Calendar,
+            workAvailable: DialogueWorkAvailable);
         _activation = new DaggerfallActivationModule(
             new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),
             reach,
@@ -61,12 +68,44 @@ internal sealed partial class DaggerfallSession
     internal DaggerfallActivationView ActivationView => _activationPresentation.View with
     {
         Dialogue = _activationPresentation.View.Dialogue is { } dialogue ? dialogue with
-        { BankAvailable = CurrentBankServiceAvailable(), ComprehendLanguagesBonus = State.Effects.PerceptionFor(DaggerfallActorIdentity.PlayerEntityId).ComprehendLanguagesBonus } : null,
+        {
+            BankAvailable = CurrentBankServiceAvailable(),
+            ComprehendLanguagesBonus = State.Effects.PerceptionFor(DaggerfallActorIdentity.PlayerEntityId).ComprehendLanguagesBonus,
+            Training = CurrentTrainingProvider(dialogue.Revision),
+        } : null,
     };
     internal DaggerfallDialogueService Dialogue => _dialogue ?? throw new InvalidOperationException("The session has no dialogue owner.");
 
     /// <summary>Lets the ordinary HUD projection callback carry activation state with its snapshot.</summary>
     internal void PublishActivationView(Action<DaggerfallActivationView> publish) => publish(ActivationView);
+
+    private DaggerfallSkillTrainingProviderView? CurrentTrainingProvider(string? revision = null)
+    {
+        DaggerfallNpc? npc = _dialogue?.CurrentNpc(revision);
+        if (npc is null || !npc.Services.Contains(DaggerfallSkillTrainingPolicy.ServiceName, StringComparer.Ordinal)) return null;
+        return State.SkillTraining.ReadProvider(new(npc.DurableId, npc.Site, DaggerfallSkillTrainingPolicy.ServiceName));
+    }
+
+    private (string Text, IReadOnlyList<string> Diagnostics)? ResolveQuestTopic(long npcId, string topicId)
+    {
+        return State.Quests.TryResolveDialogueTopic(npcId, topicId,
+            out string? text, out IReadOnlyList<string> diagnostics)
+            ? (text!, diagnostics) : null;
+    }
+
+    private bool DialogueWorkAvailable(long npcId)
+    {
+        DaggerfallNpc npc;
+        try { npc = State.Npcs.Require(npcId); }
+        catch (InvalidOperationException) { return false; }
+        if (npc.Appearance.FactionId == 0 || !_definitions.Factions.Factions.TryGetValue(npc.Appearance.FactionId, out DaggerfallFactionDefinition? faction))
+            return false;
+        bool member = faction.GuildGroup > 0 && State.Social.GuildEligibility(faction.Id).IsMember;
+        int reputation = State.Social.FactionReputation(faction.Id);
+        int rank = faction.GuildGroup > 0 ? State.Social.GuildEligibility(faction.Id).Rank : 0;
+        return State.Quests.HasOrdinaryWorkOffer(faction.Id, member, State.Progression.Level, reputation, rank,
+            State.Character.Identity.Gender, checked((int)_time.Calendar.DayNumber));
+    }
 
     /// <summary>Consumes one parsed mode action; it does not turn into a world activation.</summary>
     private bool ApplyActivationMode(DaggerfallPlayerUiAction action)

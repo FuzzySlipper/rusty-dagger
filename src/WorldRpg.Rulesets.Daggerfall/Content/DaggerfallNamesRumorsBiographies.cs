@@ -46,7 +46,7 @@ internal enum DaggerfallRumorTypeDisposition
 /// <param name="QuestId">The quest the rumor belongs to, zero for none.</param>
 /// <param name="QuestName">The quest's name field, empty for none.</param>
 /// <param name="NpcId">The NPC a post-quest greeting addresses, zero for none.</param>
-/// <param name="TimeLimit">The days the rumor stays current.</param>
+/// <param name="TimeLimit">The absolute classic game minute after which the rumor expires.</param>
 /// <param name="TextKey">The text key the rumor's text resolves through.</param>
 internal sealed record DaggerfallRumorDefinition(
     int Index,

@@ -26,7 +26,7 @@ internal enum DaggerfallUiActionKind
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
     CharacterLevelAllocate, CharacterLevelCommit,
     ActivationMode, Attack, Loot, Inventory, Character, Menu,
-    DialogueTone, DialogueTopic, DialogueClose, CreateItemSelect, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
+    DialogueTone, DialogueTopic, DialogueClose, TrainingCommit, CreateItemSelect, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
     TransportSelect, TransportToggle, TransportLeaveShip, TransportBoardShip,
     PropertyBuy, PropertySell, PropertyEnter, PropertyPut, PropertyTake,
     TravelSearch, TravelPreview, TravelAccept, MapOpen, MapBuilding,
@@ -181,6 +181,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.DialogueTone, "dialogue-tone", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DialogueTopic, "dialogue-topic", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DialogueClose, "dialogue-close", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.TrainingCommit, "training-commit", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportSelect, "transport-select", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportToggle, "transport-toggle", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportBoardShip, "transport-board-ship", DaggerfallUiPhases.Interaction),
@@ -545,11 +546,15 @@ internal static class DaggerfallUiAction
             if (action == "dialogue-topic")
                 return fields.SetEquals(["action", "revision", "topic"])
                     && !string.IsNullOrWhiteSpace(revision)
-                    && topic is "directions" or "news"
+                    && ValidDialogueTopic(topic)
                     ? new(action, Revision: revision, Topic: topic) : null;
             if (action == "dialogue-close")
                 return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision)
                     ? new(action, Revision: revision) : null;
+            if (action == "training-commit")
+                return fields.SetEquals(["action", "revision", "key", "amount", "confirm"])
+                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) && amount is > 0
+                    ? new(action, Revision: revision, Key: key, Amount: amount, Confirm: confirm) : null;
             if (action == "quest-choice")
                 return fields.SetEquals(["action", "questInstance", "questMessage", "questPrompt", "questChoice"])
                     && !string.IsNullOrWhiteSpace(questInstance) && !string.IsNullOrWhiteSpace(questPrompt) && questMessage is > 0 && questChoice is not null
@@ -566,6 +571,15 @@ internal static class DaggerfallUiAction
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException) { return null; }
     }
+
+    private static bool ValidDialogueTopic(string? value) => value is { Length: > 0 and <= 512 }
+        && (value is "directions" or "news" or "work"
+            || HasTopicTarget(value, "direction:")
+            || HasTopicTarget(value, "quest-info:")
+            || HasTopicTarget(value, "quest-rumor:"));
+
+    private static bool HasTopicTarget(string value, string prefix) =>
+        value.StartsWith(prefix, StringComparison.Ordinal) && value.Length > prefix.Length;
 
     private static bool ValidNotebookText(string? value) => !string.IsNullOrWhiteSpace(value) && value.Length <= 2048;
 }

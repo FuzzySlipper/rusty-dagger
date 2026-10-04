@@ -82,4 +82,8 @@ internal sealed class DaggerfallQuestRuntimeAdmission
         string diagnostics = string.Join("; ", receipt.Diagnostics.Select(diagnostic => $"line {diagnostic.Line}: {diagnostic.Text} ({diagnostic.Reason})"));
         throw new ArgumentException($"Quest source '{sourceFile}' has no admitted runnable program: {diagnostics}");
     }
+
+    /// <summary>Answers whether an admitted receipt can enter an ordinary offer.</summary>
+    internal bool IsRunnable(string sourceFile) =>
+        !_receipts.TryGetValue(sourceFile, out DaggerfallFightersGuildQuestRuntimeReceipt? receipt) || receipt.Runnable;
 }

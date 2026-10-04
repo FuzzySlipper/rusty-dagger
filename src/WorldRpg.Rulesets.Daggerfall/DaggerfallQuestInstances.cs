@@ -636,6 +636,54 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
 
     internal IReadOnlyCollection<DaggerfallQuestInstanceSave> All => _instances.Values.Select(instance => instance.Capture()).ToArray();
 
+    /// <summary>
+    /// Selects the source-backed ordinary work pool for one live quest-service faction. The
+    /// catalog's group, membership, rank/level and reputation columns remain the authority; a
+    /// dialogue contact cannot turn a disabled, diagnosed, or already-used source into an offer.
+    /// The day is part of the stable selection key so a changed calendar can select a different
+    /// admitted source without adding another mutable offer store.
+    /// </summary>
+    internal bool HasOrdinaryWorkOffer(int factionId, bool playerIsMember, int playerLevel, int playerReputation, int playerRank,
+        DaggerfallCharacterGender playerGender, int currentDay)
+        => SelectOrdinaryWorkOffer(factionId, playerIsMember, playerLevel, playerReputation, playerRank, playerGender, currentDay) is not null;
+
+    private DaggerfallQuestCatalogRow? SelectOrdinaryWorkOffer(int factionId, bool playerIsMember, int playerLevel, int playerReputation, int playerRank,
+        DaggerfallCharacterGender playerGender, int currentDay)
+    {
+        DaggerfallFactionDefinition? faction = _definitions.Factions.Factions.GetValueOrDefault(factionId);
+        if (faction is null) return null;
+        string group = faction.GuildGroupName.Length > 0 ? faction.GuildGroupName : faction.SocialGroupName;
+        char[] membership = faction.GuildGroup > 0
+            ? [playerIsMember ? 'M' : 'N']
+            : ['N', playerGender == DaggerfallCharacterGender.Female ? 'F' : 'M'];
+
+        DaggerfallQuestCatalogRow[] eligible = [.. _definitions.QuestSources.Catalog.Rows
+            .Where(row => row.Active && row.Group.Equals(group, StringComparison.Ordinal)
+                && row.Membership is { Length: 1 } value && membership.Contains(value[0])
+                && row.MinimumRequirement <= (row.RequirementKind == "reputation" ? playerReputation
+                    : row.RequirementKind == "rank" ? playerRank : playerLevel))
+            .Where(row => _disabledSelection?.IsOrdinaryOffer(row.Name) != false)
+            .Where(row => _definitions.QuestSources.Quests.TryGetValue(row.Name + ".txt", out DaggerfallQuestSourceDefinition? source)
+                && source.Disposition == DaggerfallQuestDisposition.Compiled
+                && (_admission?.IsRunnable(source.SourceFile) ?? true))
+            .Where(row => !row.OneTime || !_instances.Values.Any(instance =>
+                instance.SourceFile.Equals(row.Name + ".txt", StringComparison.Ordinal)
+                || Messages.Journal.Any(entry => entry.SourceFile?.Equals(row.Name + ".txt", StringComparison.Ordinal) == true)))
+            .OrderBy(row => row.Name, StringComparer.Ordinal)];
+
+        // Keep the source selection deterministic across one session while still making the
+        // calendar a real input to which admitted work is selected.
+        if (eligible.Length == 0) return null;
+        uint hash = 2_166_136_261;
+        foreach (int value in new[] { currentDay, factionId, playerLevel, playerRank })
+        {
+            hash ^= unchecked((uint)value);
+            hash *= 16_777_619;
+        }
+        int selected = (int)(hash % (uint)eligible.Length);
+        return eligible[selected];
+    }
+
     /// <summary>A live resource owned by an active quest may not be replaced by an artifact.</summary>
     internal bool ProtectsActor(long actorId) => _instances.Values.Any(instance =>
         instance.Lifecycle == DaggerfallQuestLifecycle.Active
