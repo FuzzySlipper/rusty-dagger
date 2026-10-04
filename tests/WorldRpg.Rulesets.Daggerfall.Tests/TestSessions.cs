@@ -104,19 +104,33 @@ internal static class TestSessions
 
     internal static ProductContent ImportContent(string root) => ContentAt(root, "worldrpg/imports/privateers-hold");
 
-    internal static ProductContent FullContent(string root)
+    internal static ProductContent FullContent(string root, params string[] selectedPublicationRoots)
     {
-        (string Root, string Bundle)[] audioBundles =
-        [
-            // The score's clips are staged as their own bundle: the manifest that names them sits above
-            // this root so it is read eagerly while the cue bodies stay lazy.
-            ("worldrpg/media/music/clips", "daggerfall.music"),
-            ("worldrpg/media/audio/clips", "daggerfall.classic-audio"),
-            ("worldrpg/media/sky/resources", "daggerfall.sky"),
-            // Each site's clips are staged as the bundle its own payload declares.
-            .. SiteAudioBundles(root),
-        ];
-        return ContentWithBundles(root, audioBundles, out _);
+        ArgumentNullException.ThrowIfNull(selectedPublicationRoots);
+        string[] selectedRoots = selectedPublicationRoots
+            .Where(root => !string.IsNullOrWhiteSpace(root))
+            .Select(root => root.TrimEnd('/'))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        List<(string Root, string Bundle)> audioBundles = [];
+        if (selectedRoots.Length == 0)
+        {
+            // The score's clips are staged as their own bundle, and each site's clips are staged as
+            // the bundle its payload declares.
+            audioBundles.Add(("worldrpg/media/music/clips", "daggerfall.music"));
+            audioBundles.Add(("worldrpg/media/audio/clips", "daggerfall.classic-audio"));
+            audioBundles.Add(("worldrpg/media/sky/resources", "daggerfall.sky"));
+            audioBundles.AddRange(SiteAudioBundles(root));
+        }
+        else
+        {
+            // The selected-closure form omits unrelated audio bodies while retaining the selected
+            // profile's own source closure and bundle declaration.
+            audioBundles.AddRange(SiteAudioBundles(root).Where(bundle => selectedRoots.Any(selected =>
+                bundle.Root.StartsWith(selected + "/", StringComparison.Ordinal)
+                || string.Equals(bundle.Root, selected, StringComparison.Ordinal))));
+        }
+        return ContentWithBundles(root, audioBundles.ToArray(), out _, selectedRoots);
     }
 
     /// <summary>
@@ -131,7 +145,8 @@ internal static class TestSessions
         return ContentWithBundles(root, declared, out bundles);
     }
 
-    private static ProductContent ContentWithBundles(string root, (string Root, string Bundle)[] declared, out BundleContentFake bundles)
+    private static ProductContent ContentWithBundles(string root, (string Root, string Bundle)[] declared,
+        out BundleContentFake bundles, IReadOnlyCollection<string>? selectedPublicationRoots = null)
     {
         string contentRoot = Path.Combine(root, "content");
         bundles = new();
@@ -140,6 +155,12 @@ internal static class TestSessions
         foreach (string file in Directory.GetFiles(Path.Combine(contentRoot, "worldrpg"), "*", SearchOption.AllDirectories))
         {
             string relative = Path.GetRelativePath(contentRoot, file).Replace(Path.DirectorySeparatorChar, '/');
+            if (selectedPublicationRoots is { Count: > 0 }
+                && !selectedPublicationRoots.Any(selected =>
+                    relative.StartsWith(selected + "/", StringComparison.Ordinal)
+                    || string.Equals(relative, selected, StringComparison.Ordinal))
+                && !IsGlobalContentMetadata(relative))
+                continue;
             (string Root, string Bundle) bundle = declared.FirstOrDefault(value => relative.StartsWith(value.Root + "/", StringComparison.Ordinal));
             if (string.IsNullOrEmpty(bundle.Root))
             {
@@ -152,6 +173,15 @@ internal static class TestSessions
 
         return new ProductContent(eager.ToArray(), bundles);
     }
+
+    private static bool IsGlobalContentMetadata(string relative) =>
+        relative.StartsWith("worldrpg/payloads/", StringComparison.Ordinal)
+        || relative.StartsWith("worldrpg/content-packs/", StringComparison.Ordinal)
+        || relative.StartsWith("worldrpg/bundles/", StringComparison.Ordinal)
+        || relative.StartsWith("worldrpg/tuning/", StringComparison.Ordinal)
+        || relative.StartsWith("worldrpg/tuning-payloads/", StringComparison.Ordinal)
+        || relative.StartsWith("worldrpg/media/", StringComparison.Ordinal)
+            && string.Equals(Path.GetExtension(relative), ".json", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The audio bundle every committed site payload declares, rooted at its publication's clips.</summary>
     internal static IEnumerable<(string Root, string Bundle)> SiteAudioBundles(string root)

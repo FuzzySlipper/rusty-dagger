@@ -68,7 +68,7 @@ internal sealed partial class DaggerfallSession
         bool activeLocationLoaded = _sites.ActiveLocationLoaded;
         _doors.Advance(update.DeltaSeconds);
         _sites.Projection.AdvanceMotion(update.DeltaSeconds);
-        CharacterStepEnvironment doorEnvironment = _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion);
+        CharacterStepEnvironment doorEnvironment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
         SpatialEntityCollider[] waterTriggers =
         [
             .. doorEnvironment.WaterVolumes.Span.ToArray().Select(SpatialMovementSystem.ProjectWaterCollider),

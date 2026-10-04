@@ -39,6 +39,9 @@ internal sealed class DaggerfallTerrainSurface
 
     /// <summary>Donor-normalized heights matching <see cref="Vertices"/> by index.</summary>
     internal float[] NormalizedHeights { get; }
+
+    /// <summary>The source map-pixel elevation used by nature density, before terrain interpolation/flattening.</summary>
+    internal int SourceWorldHeight { get; init; }
 }
 
 /// <summary>
@@ -140,7 +143,10 @@ internal static class DaggerfallTerrainSurfaceBuilder
         }
 
         Triangle[] triangles = BuildTriangles();
-        return new DaggerfallTerrainSurface(mapPixelX, mapPixelY, vertices, triangles, normalizedHeights);
+        return new DaggerfallTerrainSurface(mapPixelX, mapPixelY, vertices, triangles, normalizedHeights)
+        {
+            SourceWorldHeight = terrain.GetHeight(mapPixelX, mapPixelY),
+        };
     }
 
     /// <summary>
@@ -243,7 +249,10 @@ internal static class DaggerfallTerrainSurfaceBuilder
             surface.MapPixelY,
             vertices,
             surface.Triangles,
-            normalizedHeights);
+            normalizedHeights)
+        {
+            SourceWorldHeight = surface.SourceWorldHeight,
+        };
     }
 
     private static float Lerp(float from, float to, float amount)

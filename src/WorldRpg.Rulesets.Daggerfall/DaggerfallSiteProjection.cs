@@ -31,7 +31,9 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         Lighting = lighting;
         Portals = portals;
         _spatialMovement = spatialMovement ?? throw new ArgumentNullException(nameof(spatialMovement));
-        _waterTriggersActive = inputs.WaterVolumes.Count > 0;
+        // Creation admits authored water below. Keep this false until registration and activation
+        // have both succeeded so the initial projection cannot skip its trigger admission.
+        _waterTriggersActive = false;
     }
 
     internal DaggerfallSiteProfile Inputs { get; }
@@ -73,7 +75,6 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         DaggerfallSiteAppearance? appearance = null;
         DaggerfallSiteLighting? lighting = null;
         DaggerfallSitePortalRuntime? portals = null;
-        List<ulong> newlyRegisteredWaterTriggers = [];
         try
         {
             motion = new(actors, engine.Spatial, spatialMovement.Session, doors, inputs.ProfileKey.LogicalId,
@@ -83,21 +84,11 @@ internal sealed class DaggerfallSiteProjection : IDisposable
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);
             DaggerfallSiteProjection projection = new(inputs, doors, motion, appearance, lighting, portals, spatialMovement);
-            foreach (CharacterWaterVolume volume in inputs.WaterVolumes)
-            {
-                _ = spatialMovement.RegisterTrigger(volume.Trigger, inputs.ProfileKey.LogicalId, "water");
-                spatialMovement.ActivateTrigger(volume.Trigger, tick: 0);
-                newlyRegisteredWaterTriggers.Add(volume.Trigger);
-            }
+            projection.ActivateWaterTriggers(tick: 0);
             return projection;
         }
         catch
         {
-            foreach (ulong trigger in newlyRegisteredWaterTriggers)
-            {
-                try { spatialMovement.ReleaseTrigger(trigger, tick: 0); }
-                catch { /* the construction failure remains the source exception */ }
-            }
             try { portals?.Dispose(); }
             finally
             {
@@ -134,6 +125,32 @@ internal sealed class DaggerfallSiteProjection : IDisposable
             _spatialMovement.ReleaseTrigger(volume.Trigger, tick);
         _waterTriggersActive = false;
     }
+
+    /// <summary>Re-admits this profile's authored water triggers after a suspended location resumes.</summary>
+    private void ActivateWaterTriggers(ulong tick)
+    {
+        if (_waterTriggersActive || Inputs.WaterVolumes.Count == 0) return;
+        List<ulong> registered = [];
+        try
+        {
+            foreach (CharacterWaterVolume volume in Inputs.WaterVolumes)
+            {
+                _ = _spatialMovement.RegisterTrigger(volume.Trigger, Inputs.ProfileKey.LogicalId, "water");
+                registered.Add(volume.Trigger);
+                _spatialMovement.ActivateTrigger(volume.Trigger, tick);
+            }
+            _waterTriggersActive = true;
+        }
+        catch
+        {
+            foreach (ulong trigger in registered)
+            {
+                try { _spatialMovement.ReleaseTrigger(trigger, tick); }
+                catch { /* preserve the admission failure */ }
+            }
+            throw;
+        }
+    }
     /// <summary>
     /// Retires every Engine-backed resource belonging to this location cell while retaining the
     /// profile projection and its product state. Durable resource identities are recreated by
@@ -143,6 +160,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     {
         if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteProjection));
         if (_suspended) return;
+        DeactivateWaterTriggers(tick: 0);
         Appearance.RetireAllActors();
         Appearance.SuspendLocationResources();
         Motion.Suspend();
@@ -162,6 +180,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         Appearance.ResumeLocationResources(Doors, Motion);
         Portals.Resume();
         Lighting.Resume();
+        ActivateWaterTriggers(tick: 0);
         _suspended = false;
     }
 
@@ -187,7 +206,12 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         // collision and over-block.
         _ = motion;
         CharacterStepEnvironment doors = Doors.CharacterEnvironment();
-        return CombineCharacterEnvironments(doors, motionModels, Inputs.WaterVolumes);
+        CharacterWaterVolume[] water = Inputs.WaterVolumes
+            .Select(volume => _worldOffset == Vector3.Zero
+                ? volume
+                : new CharacterWaterVolume(volume.Trigger, volume.Minimum + _worldOffset, volume.Maximum + _worldOffset))
+            .ToArray();
+        return CombineCharacterEnvironments(doors, motionModels, water);
     }
 
     internal static CharacterStepEnvironment CombineCharacterEnvironments(

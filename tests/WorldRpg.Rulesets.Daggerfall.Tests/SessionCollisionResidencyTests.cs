@@ -92,7 +92,7 @@ public sealed class SessionCollisionResidencyTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        ProductContent admitted = FullContent(root);
+        ProductContent admitted = FullContent(root, "worldrpg/imports/charing");
         DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
         DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
         Assert.Equal(DaggerfallWorldProfileKind.Exterior, exterior.ProfileKey.Kind);

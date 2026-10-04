@@ -207,7 +207,7 @@ internal sealed class DaggerSessionPersistence
 
     /// <summary>Captures one unloading site's actor-owned state without retaining runtime entities.</summary>
     internal DaggerfallSiteRuntimeDelta CaptureSiteDelta(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion,
-        IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors)
+        IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, IReadOnlySet<long>? actorFilter = null)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(doors);
@@ -222,7 +222,9 @@ internal sealed class DaggerSessionPersistence
             return new DaggerfallActorSave(actor.DurableId, actor.Position.X, actor.Position.Y, actor.Position.Z,
                 actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { WabbajackDefinition = DaggerfallWabbajack.DefinitionOf(actor.Actor), ForcedHostile = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile, MagicallyPacified=actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified };
         }).ToArray();
-        DaggerfallDynamicActorSave[] spawned = dynamicActors.OrderBy(entry => entry.Key)
+        DaggerfallDynamicActorSave[] spawned = dynamicActors
+            .Where(entry => actorFilter is null || actorFilter.Contains(entry.Key))
+            .OrderBy(entry => entry.Key)
             .Select(entry => CaptureDynamicActor(entry.Key, entry.Value.Value)).ToArray();
         long[] ids = [.. authoredIds, .. spawned.Select(actor => actor.EntityId)];
         DaggerfallActorInventorySave[] inventories = ids.Select(id => new DaggerfallActorInventorySave(
