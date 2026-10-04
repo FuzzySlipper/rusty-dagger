@@ -27,6 +27,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly DaggerfallPresentationAudioTuning audioTuning;
     private readonly DaggerfallSiteProfile inputs;
     private readonly Dictionary<string, AudioClip> audioClips = new(StringComparer.Ordinal);
+    private readonly HashSet<AudioSignalHandle> oneShotSignals = [];
     private readonly IReadOnlyList<string> hitCues;
     private readonly IReadOnlyDictionary<string, NormalizedClassicEffect> classicEffects;
     private readonly NormalizedClassicPresentation classicPresentation;
@@ -415,6 +416,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
 
     internal void BeginAdmittedUpdate()
     {
+        RetireRealizedOneShots();
         // These wrappers belonged to the preceding successful callback.  Their
         // generated releases are staged in this new callback, not the one that
         // replaced their local role.
@@ -664,6 +666,9 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         materials.Clear();
         foreach (RenderResource resource in ownedResources.AsEnumerable().Reverse()) Dispose(resource, ref failures);
         ownedResources.Clear();
+        foreach (AudioSignalHandle signal in oneShotSignals)
+            try { audio!.RetireOneShot(signal); } catch (Exception exception) { (failures ??= []).Add(exception); }
+        oneShotSignals.Clear();
         foreach (AudioClip clip in audioClips.Values.Reverse()) Dispose(clip, ref failures);
         audioClips.Clear();
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
@@ -1255,7 +1260,17 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             audioClips.Add(clipId, clip);
         }
         string signalId = $"daggerfall.media.{identity.Generation}.{identity.SimulationStep}.{identity.Attacker}.{identity.Target}.{identity.Outcome}.{marker}.{clipId}";
-        audio.Emit(new AudioEmitRequest(signalId, new AudioSourceDescriptor(clip, AudioBus.Sfx, audioTuning.Volume * volumeScale, pitch ?? audioTuning.Pitch, false, position is null ? audioTuning.SpatialBlend : 1F, audioTuning.MaxDistance, AudioRolloff.Linear, 0F, position is null ? AudioEmitterKind.Global2d : AudioEmitterKind.World3d, position?.ToVector() ?? Vector3.Zero, 0, Vector3.Zero)));
+        oneShotSignals.Add(audio.Emit(new AudioEmitRequest(signalId, new AudioSourceDescriptor(clip, AudioBus.Sfx, audioTuning.Volume * volumeScale, pitch ?? audioTuning.Pitch, false, position is null ? audioTuning.SpatialBlend : 1F, audioTuning.MaxDistance, AudioRolloff.Linear, 0F, position is null ? AudioEmitterKind.Global2d : AudioEmitterKind.World3d, position?.ToVector() ?? Vector3.Zero, 0, Vector3.Zero)));
+    }
+
+    private void RetireRealizedOneShots()
+    {
+        if (oneShotSignals.Count == 0) return;
+        AudioRealizationResult realization = audio!.ReadRealization();
+        foreach (AudioRealizationFact fact in realization.Facts.Span)
+            if (fact.SignalHandle != 0
+                && (fact.Kind is AudioRealizationFactKind.NaturalCompletionOneShot or AudioRealizationFactKind.Diagnostic))
+                oneShotSignals.Remove(new AudioSignalHandle(fact.SignalHandle));
     }
 
     internal sealed class ActorVisual(long entityId, NormalizedActorSprite sprite, SpriteAtlas atlas, Appearance live, SpriteAtlas? corpseAtlas, Appearance? corpse)
