@@ -43,7 +43,7 @@ public sealed class DaggerfallSkyMediaTests
         node["nightResources"]!.AsArray().RemoveAt(0);
         Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(fixture.WithManifest(node)));
         node = JsonNode.Parse(fixture.Manifest)!;
-        node["resources"]![0]!["contentHash"]!["value"] = new string('0',64);
+        node["resources"]![0]!["contentHash"] = new string('0',64);
         Assert.Contains("digest", Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(fixture.WithManifest(node))).Message);
     }
 
@@ -56,7 +56,7 @@ public sealed class DaggerfallSkyMediaTests
         object Resource(string id, int width, int height, int? night = null, string? kind = null)
         {
             service.Add(DaggerfallSkyMedia.BundleId, id + ".png", body);
-            return new {id, relativePath="media/sky/resources/"+id+".png", contentHash=new {value=digest}, byteLength=1,
+            return new {id, relativePath="media/sky/resources/"+id+".png", contentHash=digest, byteLength=1,
                 width,height,nightIndex=night,kind,clearColor=new[]{.1f,.2f,.3f}};
         }
         for (int sky=0;sky<32;sky++) for(int frame=0;frame<64;frame++)

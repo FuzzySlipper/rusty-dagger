@@ -36,7 +36,7 @@ internal sealed record DaggerfallWeatherTuning(int[][] Odds, float WinterScale, 
             [60, 20, 5, 0, 10, 5, 0],
             [25, 15, 20, 10, 20, 10, 0],
         ], .65f, .65f, .45f, .25f, .45f,
-        [[0, 0, 0], [.15f, .65f, 2.6095238f], [.5f, .96f, 0], [.85f, .65f, -2.609524f], [1, 0, 0]]);
+        [[0, 0, 0], [.08f, .36f, 2.8928573f], [.5f, .9f, 0], [.92f, .36f, -2.8928576f], [1, 0, 0]]);
 
     internal DaggerfallWeatherTuning Validate()
     {
