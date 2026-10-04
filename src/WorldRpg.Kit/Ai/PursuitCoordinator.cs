@@ -92,7 +92,8 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
         ulong generation,
         ulong simulationStep,
         float deltaSeconds,
-        FactBuffer<TFact> facts)
+        FactBuffer<TFact> facts,
+        bool admitAttack = true)
     {
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(memory);
@@ -132,7 +133,10 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
 
         PursuitState previous = memory.TransitionTo(desired);
         if (desired == PursuitState.Attack)
-            _attacks.TryBeginEnemyAttack(actor.DurableId, target.DurableId, generation, simulationStep, deltaSeconds, facts);
+        {
+            if (admitAttack)
+                _attacks.TryBeginEnemyAttack(actor.DurableId, target.DurableId, generation, simulationStep, deltaSeconds, facts);
+        }
         else
             _attacks.InterruptPendingAttack(actor.DurableId, generation);
         return new PursuitEvidence(previous, desired, visibility, navigation);

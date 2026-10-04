@@ -34,8 +34,12 @@ internal sealed class DaggerfallEnemyBehaviorModule
     private readonly Func<long, bool> _isPlayerAllied;
     private readonly Func<long, PursuitTarget?>? _selectAllyTarget;
     private readonly Func<long, ActorControlRestrictions> _controlRestrictions;
-    private Action<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float>? _enemyMagic;
+    private Func<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float, bool>? _enemyMagic;
     private readonly Dictionary<long, double> _lastTargetDistances = [];
+    // One Engine outer update can contain several admitted fixed steps.  Keep the action door
+    // closed for an actor after either spell or physical admission so catch-up cannot turn one
+    // decision into two different attacks.
+    private readonly HashSet<long> _admittedActions = [];
 
     internal DaggerfallEnemyBehaviorModule(
         IPerceptionService perception,
@@ -70,7 +74,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     internal IReadOnlyDictionary<long, DaggerfallEnemyPerceptionDecision> LastPerception { get; private set; } = new Dictionary<long, DaggerfallEnemyPerceptionDecision>();
 
     /// <summary>Attaches the compiled spell decision to this module's existing actor update.</summary>
-    internal void BindEnemyMagic(Action<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float> decide)
+    internal void BindEnemyMagic(Func<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float, bool> decide)
     {
         _enemyMagic = decide ?? throw new ArgumentNullException(nameof(decide));
     }
@@ -78,7 +82,11 @@ internal sealed class DaggerfallEnemyBehaviorModule
     internal void ClearEnemyMagic()
     {
         _lastTargetDistances.Clear();
+        _admittedActions.Clear();
     }
+
+    /// <summary>Starts the one action-admission window owned by the next Engine outer update.</summary>
+    internal void BeginAdmittedUpdate() => _admittedActions.Clear();
 
     /// <summary>
     /// Reads the retained disposition for the same enemy memory that the live
@@ -173,7 +181,8 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 generation,
                 simulationStep,
                 deltaSeconds,
-                facts);
+                facts,
+                admitAttack: false);
             EnemyBehaviorState previous = ToDaggerState(pursuit.Previous);
             EnemyBehaviorState current = ToDaggerState(pursuit.Current);
             if (previous != current)
@@ -198,9 +207,27 @@ internal sealed class DaggerfallEnemyBehaviorModule
             {
                 _lastTargetDistances.Remove(actor.DurableId);
             }
-            _enemyMagic?.Invoke(actor, target.Value, pursuit.Visibility,
+            bool actionAlreadyAdmitted = _admittedActions.Contains(actor.DurableId);
+            bool magicAdmitted = !actionAlreadyAdmitted && _enemyMagic?.Invoke(actor, target.Value, pursuit.Visibility,
                 _lastDecisions.GetValueOrDefault(actor.DurableId), targetRateOfApproach,
-                generation, simulationStep, deltaSeconds);
+                generation, simulationStep, deltaSeconds) == true;
+            // The donor chooses a single action: a successful spell selection owns this action
+            // window and vetoes the delayed physical swing that pursuit would otherwise admit.
+            // If magic declined or could not be admitted, the same attack owner receives the one
+            // physical admission after the spell decision has had its chance.
+            if (!actionAlreadyAdmitted && pursuit.Current == PursuitState.Attack)
+            {
+                if (magicAdmitted)
+                {
+                    _admittedActions.Add(actor.DurableId);
+                    _combat.InterruptPendingAttack(actor.DurableId, generation);
+                }
+                else if (_combat.TryBeginEnemyAttack(actor.DurableId, target.Value.DurableId, generation,
+                    simulationStep, deltaSeconds, facts))
+                {
+                    _admittedActions.Add(actor.DurableId);
+                }
+            }
             if (actor.IsDefeated)
                 _lastDecisions.Remove(actor.DurableId);
             else if (_lastDecisions.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionDecision? decision))

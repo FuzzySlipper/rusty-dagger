@@ -308,6 +308,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // text and stack, and a resume continues this same session, so nothing is torn down on the way
         // out. Session resources are released by Dispose.
         _appearance.BeginAdmittedUpdate();
+        _enemyBehavior.BeginAdmittedUpdate();
         Update(update.Facts, update.Input);
         // Sprite playback consumes the Engine-bound outer update identity.  It
         // must not run for each private catch-up simulation step above, and it
@@ -510,6 +511,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     internal void Update(ProductUpdateState update)
     {
+        _enemyBehavior.BeginAdmittedUpdate();
         SimulateStep(update, 0, 0);
         DeliverFacts();
         PublishPresentation();

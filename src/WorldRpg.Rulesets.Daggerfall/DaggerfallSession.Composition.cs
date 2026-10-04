@@ -476,7 +476,7 @@ internal sealed partial class DaggerfallSession
                 (caster, item) => itemInstances.RequireUnique(item).Owner == (caster == actors.Player.DurableId ? DaggerfallItemOwner.Player : DaggerfallItemOwner.Actor(caster)));
             _enemyMagic = new(definitions.EnemySpells, definitions.Magic, Casting, _random,
                 id => authored.GetValueOrDefault(id),
-                id => definitions.Mobiles.Mobiles.GetValueOrDefault(id), ExecuteEnemySpell);
+                id => definitions.Mobiles.Mobiles.GetValueOrDefault(id), EnemyRangedSpellPathClear, ExecuteEnemySpell);
             _enemyBehavior.BindEnemyMagic(_enemyMagic.Decide);
             _itemCastTriggers = new(definitions.Magic, itemInstances, Casting, effects, actors.Entities,
                 id => id == actors.Player.DurableId ? equipmentCoordinator : actors.TryGet(id, out var actor) && !actor.IsDefeated ? actorInventories.EquipmentFor(id) : null,
