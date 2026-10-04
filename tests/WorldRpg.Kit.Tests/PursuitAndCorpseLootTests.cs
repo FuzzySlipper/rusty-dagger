@@ -46,7 +46,7 @@ public sealed class PursuitAndCorpseLootTests
         PursuitEvidence evidence = pursuit.Update(
             actors.Get(42), memory, new PursuitTarget(1, new WorldPoint(200, 50, 200), IsLoaded: false),
             new(64, 0, 2, 8), new(0, 0, 8), 1, 2, .1f, new FactBuffer<TestFact>(),
-            new(ActorNavigationMode.Swimming, CanRetreat: true, CanStrafe: true, EmitTargetLost: true));
+            new PursuitPolicy(ActorNavigationMode.Swimming, CanRetreat: true, CanStrafe: true, EmitTargetLost: true));
 
         Assert.Equal(PursuitState.Unloaded, evidence.Current);
         Assert.Empty(perception.Requests);
