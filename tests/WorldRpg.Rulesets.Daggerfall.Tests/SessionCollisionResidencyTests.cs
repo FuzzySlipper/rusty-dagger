@@ -112,10 +112,10 @@ public sealed class SessionCollisionResidencyTests
         // Construction admits the seven-by-seven window centred on the player's cell as one delta: an
         // asset and an instance per cell, placed in the site's local frame - the frame the player's own
         // position is in, so the window and the player agree on which cell the player stands in.
-        DaggerfallExteriorCellResidencySave admitted = session.Sites.CaptureExteriorResidency()
+        DaggerfallExteriorCellResidencySave admittedWindow = session.Sites.CaptureExteriorResidency()
             ?? throw new InvalidOperationException("The exterior session admitted no cell window.");
-        DaggerfallExteriorCellId center = admitted.Center;
-        Assert.Equal(session.Sites.ActiveExteriorCell(), admitted.Origin);
+        DaggerfallExteriorCellId center = admittedWindow.Center;
+        Assert.Equal(session.Sites.ActiveExteriorCell(), admittedWindow.Origin);
         Assert.Equal(session.Sites.CurrentExteriorCell(), center);
         CollisionResidencyRequest admission = Assert.Single(spatial.CollisionResidencyRequests, IsExterior);
         DaggerfallExteriorCellId[] cells = Window(center);
