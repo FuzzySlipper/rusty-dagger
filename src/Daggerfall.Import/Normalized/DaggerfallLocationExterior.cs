@@ -96,12 +96,16 @@ public sealed record DaggerfallLocationExterior(
     DaggerfallLocationTerrainRect FlattenRect,
     IReadOnlyList<DaggerfallLocationExteriorBlock> Blocks)
 {
+    /// <summary>Normalized sentinel for a frame tile left to generated terrain texturing.</summary>
+    public const byte GeneratedTerrainBitfield = 0xFE;
+
     /// <summary>Placed building facts specialized for this location, in donor traversal order.</summary>
     public IReadOnlyList<DaggerfallLocationBuilding> Buildings { get; init; } = [];
     /// <summary>
     /// Source ground tiles in row-major 128-by-128 terrain order. Each byte is the donor FLD
-    /// tile bitfield: records use bits 0..5, rotation is bit 6, and flip is bit 7. A zero byte
-    /// means the donor left that tile for generated terrain texturing. byte[] is intentional:
+    /// tile bitfield: records use bits 0..5, rotation is bit 6, and flip is bit 7. The reserved
+    /// 0xFE byte means the donor left that tile for generated terrain texturing; record zero is a
+    /// valid authored source tile. byte[] is intentional:
     /// System.Text.Json writes it as one base64 logical grid instead of retaining thousands of
     /// per-tile objects for every corpus location.
     /// </summary>
@@ -160,7 +164,7 @@ public sealed record DaggerfallLocationExterior(
 
         foreach (byte bitfield in GroundTiles)
         {
-            if ((bitfield & 0x3F) >= 56)
+            if (bitfield != GeneratedTerrainBitfield && (bitfield & 0x3F) >= 56)
             {
                 throw new InvalidOperationException($"Exterior location '{owner}' carries unsupported ground texture record {bitfield & 0x3F}.");
             }
