@@ -653,6 +653,10 @@ public sealed record NormalizedDoorPlacement(
     int StartingLockValue = 0,
     NormalizedDoorAction? Action = null)
 {
+    /// <summary>Source-sized local interaction/collision volume for a planar exterior door.</summary>
+    public NormalizedBounds? CollisionBounds { get; init; }
+    public int? ExteriorBuildingIndex { get; init; }
+
     public NormalizedDoorPlacement Canonicalize() => this with
     {
         VisualMeshIds = VisualMeshIds.OrderBy(meshId => meshId, StringComparer.Ordinal).ToArray(),
@@ -677,6 +681,13 @@ public sealed record NormalizedDoorPlacement(
         RotationDegrees.Validate(nameof(RotationDegrees));
         if (Kind is not ("normal" or "special")) throw new ArgumentException($"A normalized door kind must be normal or special, got '{Kind ?? "<null>"}'.", nameof(Kind));
         if (StartingLockValue < 0 || Kind == "special" && StartingLockValue != 0) throw new ArgumentOutOfRangeException(nameof(StartingLockValue));
+        if (ExteriorBuildingIndex is < 0) throw new ArgumentOutOfRangeException(nameof(ExteriorBuildingIndex));
+        if (CollisionBounds is { } bounds)
+        {
+            bounds.Validate();
+            if (bounds.Minimum.X >= bounds.Maximum.X || bounds.Minimum.Y >= bounds.Maximum.Y || bounds.Minimum.Z >= bounds.Maximum.Z)
+                throw new ArgumentException("A door collision volume must have positive extent.", nameof(CollisionBounds));
+        }
     }
 }
 

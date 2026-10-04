@@ -865,6 +865,22 @@ internal static class DaggerfallSiteContent
                     minimum = Vector3.Min(minimum, local);
                     maximum = Vector3.Max(maximum, local);
                 }
+                if (door.TryGetProperty("collisionBounds", out JsonElement collisionBounds)
+                    && collisionBounds.ValueKind != JsonValueKind.Null)
+                {
+                    minimum = ObjectVector3(DaggerfallBaseContent.Property(collisionBounds, "minimum", diagnostics),
+                        $"normalized door '{sourceId}' collision minimum", diagnostics);
+                    maximum = ObjectVector3(DaggerfallBaseContent.Property(collisionBounds, "maximum", diagnostics),
+                        $"normalized door '{sourceId}' collision maximum", diagnostics);
+                }
+                DaggerfallSiteBuildingId? exteriorBuilding = null;
+                if (door.TryGetProperty("exteriorBuildingIndex", out JsonElement buildingIndex)
+                    && buildingIndex.ValueKind != JsonValueKind.Null)
+                {
+                    if (profileKind != DaggerfallWorldProfileKind.Exterior || !buildingIndex.TryGetInt32(out int index) || index < 0)
+                        diagnostics.Add($"Normalized door '{sourceId}' has invalid exterior building identity.");
+                    else exteriorBuilding = new(identity.BlockX, identity.BlockZ, index);
+                }
                 try
                 {
                     string artifactId = $"{staticMeshArtifactId}/door/{sourceId["door/".Length..].Replace('/', '-')}";
@@ -882,6 +898,7 @@ internal static class DaggerfallSiteContent
                         Visual: new DaggerfallDoorVisual(visualArtifact.Path, visualArtifact.Sha256, bindings), Action: action)
                     {
                         LockSurface = DoorSurface(profileKind),
+                        ExteriorBuilding = exteriorBuilding,
                     }.Validate());
                 }
                 catch (ArgumentException exception)

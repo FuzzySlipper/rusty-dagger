@@ -326,14 +326,6 @@ public static class RmbExteriorNormalizer
                 {
                     int ordinal = NextDoorOrdinal(block);
                     doorId = $"door/{Slug(block.SourceName)}-rmb/{block.X}/{block.Y}/{ordinal}";
-                    Arena2ImportPoint worldOrigin = parent(modelOrigin);
-                    doorDrafts.Add(new(
-                        doorId,
-                        "door/rmb-exterior",
-                        MeshGeometry.ToRightHanded(worldOrigin),
-                        new(0F, parentYaw + Arena2SourceTransform.ToRmbYawDegrees(model.YRotation), 0F),
-                        buildingIndex >= 0 ? "normal" : "normal",
-                        buildingIndex >= 0 ? startingLockValue : 0));
                 }
                 NormalizedMeshBuilder group = Geometry(plane.TextureArchive, plane.TextureRecord, texture.MaterialId, doorId);
                 List<NormalizedVector3> polygon = [];
@@ -346,6 +338,23 @@ public static class RmbExteriorNormalizer
                     uvs.Add(new(uv.U, uv.V));
                 }
                 group.Add(polygon, uvs, MeshGeometry.Normal(polygon));
+                if (doorId is not null)
+                {
+                    // DFU GameObjectHelper.GetStaticDoors uses the opposite source corners for
+                    // the centre and a uniform horizontal volume, because ARCH3D doors are planes.
+                    Arena2ImportPoint first = Arena2SourceTransform.ToImportPoint(plane.Points[0]);
+                    Arena2ImportPoint opposite = Arena2SourceTransform.ToImportPoint(plane.Points[2]);
+                    float thickness = MathF.Max(MathF.Abs(opposite.XMetres - first.XMetres), MathF.Abs(opposite.ZMetres - first.ZMetres));
+                    float height = MathF.Abs(opposite.YMetres - first.YMetres);
+                    NormalizedVector3 half = new(thickness / 2F, MathF.Max(height, thickness) / 2F, MathF.Min(height, thickness) / 2F);
+                    NormalizedVector3 centre = new((polygon[0].X + polygon[2].X) / 2F,
+                        (polygon[0].Y + polygon[2].Y) / 2F, (polygon[0].Z + polygon[2].Z) / 2F);
+                    NormalizedVector3 normal = MeshGeometry.Normal(polygon);
+                    float yaw = MathF.Atan2(normal.X, normal.Z) * (180F / MathF.PI);
+                    doorDrafts.Add(new(doorId, "door/rmb-exterior", centre, new(0F, yaw, 0F), "normal",
+                        buildingIndex >= 0 ? startingLockValue : 0,
+                        new(new(-half.X, -half.Y, -half.Z), half), buildingIndex >= 0 ? buildingIndex : null));
+                }
             }
         }
 
@@ -426,7 +435,11 @@ public static class RmbExteriorNormalizer
                     door.Position,
                     door.RotationDegrees,
                     Kind: door.Kind,
-                    StartingLockValue: door.StartingLockValue))
+                    StartingLockValue: door.StartingLockValue)
+                {
+                    CollisionBounds = door.CollisionBounds,
+                    ExteriorBuildingIndex = door.ExteriorBuildingIndex,
+                })
                 .ToList();
             List<NormalizedResourceCatalogEntry> resources = textures.OrderBy(pair => pair.Key.Archive).ThenBy(pair => pair.Key.Record)
                 .SelectMany(pair => new[]
@@ -477,7 +490,8 @@ public static class RmbExteriorNormalizer
 
     private sealed record TextureInfo(int Width, int Height, string TextureId, string MaterialId);
     private sealed record DoorDraft(string Id, string DoorResourceId, NormalizedVector3 Position,
-        NormalizedVector3 RotationDegrees, string Kind, int StartingLockValue);
+        NormalizedVector3 RotationDegrees, string Kind, int StartingLockValue,
+        NormalizedBounds CollisionBounds, int? ExteriorBuildingIndex);
     private readonly record struct Matrix3(float C, float S)
     {
         public static Matrix3 Yaw(float degrees) { float radians = degrees * MathF.PI / 180F; return new(MathF.Cos(radians), MathF.Sin(radians)); }
