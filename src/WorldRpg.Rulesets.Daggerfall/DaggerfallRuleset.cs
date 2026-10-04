@@ -61,6 +61,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
         {
             Profiles = admitted.Profiles,
             Audio = admitted.Audio,
+            Sky = DaggerfallSkyMedia.Read(admitted.Content),
             CinematicContent = admitted.Content,
             VideosEnabled = _videosEnabled,
             QuestAdmission = new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts),

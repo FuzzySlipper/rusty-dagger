@@ -29,6 +29,8 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallMusicTuning Music { get; init; } = new(AlternatePlaylists: false);
     internal DaggerfallWorldOriginTuning WorldOrigin { get; init; } = new(500f);
     internal DaggerfallSwimmingTuning Swimming { get; init; } = DaggerfallSwimmingTuning.Classic;
+    internal DaggerfallWeatherTuning Weather { get; init; } = DaggerfallWeatherTuning.Classic;
+    internal DaggerfallAmbientTuning Ambient { get; init; } = DaggerfallAmbientTuning.Classic;
 
     internal static DaggerfallTuning Defaults { get; } = new(
         // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
@@ -102,6 +104,8 @@ internal sealed record DaggerfallTuning(
         StrikeEnchantments = StrikeEnchantments.Validate(),
         WorldOrigin = WorldOrigin.Validate(),
         Swimming = Swimming.Validate(),
+        Weather = Weather.Validate(),
+        Ambient = Ambient.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -245,6 +249,8 @@ internal sealed record DaggerfallTuning(
             Swimming = root.TryGetProperty("swimming", out JsonElement swimming)
                 ? ReadSwimming(swimming)
                 : DaggerfallSwimmingTuning.Classic,
+            Weather = DaggerfallWeatherTuning.Read(root.GetProperty("weather")),
+            Ambient = DaggerfallAmbientTuning.Read(root.GetProperty("ambient")),
         }.Validate();
     }
 

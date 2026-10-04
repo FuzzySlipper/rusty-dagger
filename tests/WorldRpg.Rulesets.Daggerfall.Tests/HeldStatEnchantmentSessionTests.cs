@@ -77,7 +77,7 @@ public sealed class HeldStatEnchantmentSessionTests
                 // The conditional value is rebuilt from the resumed world, never retained
                 // merely because the item still owns the saved source identity.
                 using DaggerfallSession changedSeason = DaggerfallSession.Restore(Engine().Context, composition,
-                    DaggerfallSavePayload.Encode(raw with { Calendar = raw.Calendar with { Month = 11 } }));
+                    DaggerfallSavePayload.Encode(raw with { Calendar = raw.Calendar with { Month = 11 }, Weather = raw.Weather with {NextDay = new World.DaggerfallCalendar(raw.Calendar.Year,11,raw.Calendar.Day,raw.Calendar.Hour,raw.Calendar.Minute,raw.Calendar.Second).DayNumber + 1} }));
                 Assert.Equal(baseline, Read(changedSeason));
             }
         }

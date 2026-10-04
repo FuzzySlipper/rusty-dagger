@@ -22,7 +22,12 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private readonly DaggerfallSiteLightingTuning _tuning;
     private readonly Light _ambient;
     private readonly ulong _ambientId;
+    private readonly Light? _sun;
+    private readonly ulong _sunId;
     private float _ambientLevel;
+    private float _daylight = 1f;
+    private float? _dungeonLevel;
+    private float _flash;
     private bool _disposed;
 
     internal DaggerfallSiteLighting(IGraphicsService graphics, ICameraViewService camera, DaggerfallSiteProfile inputs,
@@ -38,6 +43,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         long instance = Interlocked.Increment(ref s_lastInstance);
         _ambientId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "ambient");
+        _sunId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "sun");
         _ambientLevel = AmbientLevel(calendar);
 
         List<Light> created = [];
@@ -70,6 +76,11 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                 created.Add(point);
                 _points.Add((point, request));
             }
+            if (_profileKind == DaggerfallWorldProfileKind.Exterior)
+            {
+                _sun = graphics.CreateLight(SunRequest(calendar, calendar.IsDay ? 1f : 0f));
+                created.Add(_sun);
+            }
             _ambient = graphics.CreateLight(AmbientRequest(_ambientLevel));
             created.Add(_ambient);
             _lights = created;
@@ -95,8 +106,17 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         }
     }
 
-    internal void UpdateAmbient(DaggerfallCalendar calendar)
+    internal void UpdateAmbient(DaggerfallCalendar calendar, float exteriorDaylight = 1f,
+        float? dungeonLevel = null, float lightningFlash = 0f)
     {
+        if (!float.IsFinite(exteriorDaylight) || exteriorDaylight is < 0f or > 1f
+            || dungeonLevel is float variant && (!float.IsFinite(variant) || variant is < 0f or > 1f)
+            || !float.IsFinite(lightningFlash) || lightningFlash < 0f)
+            throw new ArgumentOutOfRangeException(nameof(exteriorDaylight), "Ambient context requires normalized daylight/zone values and finite nonnegative flash intensity.");
+        _daylight = exteriorDaylight;
+        _dungeonLevel = dungeonLevel;
+        _flash = lightningFlash;
+        if (_sun is { } sun) _graphics.UpdateLight(new(sun, SunRequest(calendar, exteriorDaylight)));
         float level = AmbientLevel(calendar);
         if (level == _ambientLevel) return;
         _graphics.UpdateLight(new LightUpdateRequest(_ambient, AmbientRequest(level)));
@@ -116,14 +136,24 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         new LightDescriptor(LightKind.Ambient, Vector3.One, level, true,
             Vector3.Zero, Vector3.Zero, false, 0F, 0F, 0F, 0F, LightShadowIntent.Disabled));
 
+    private LightRequest SunRequest(DaggerfallCalendar calendar, float daylight)
+    {
+        float phase = (calendar.SecondOfDay / 60f - DaggerfallCalendar.DawnHour * 60f)
+            / ((DaggerfallCalendar.DuskHour - DaggerfallCalendar.DawnHour) * 60f);
+        Vector3 direction = Vector3.Normalize(new(MathF.Cos(phase * MathF.PI), -MathF.Sin(phase * MathF.PI), 0f));
+        return new(_sunId, false, 0, new LightDescriptor(LightKind.Directional, Vector3.One,
+            daylight, true, Vector3.Zero, direction, false, 0f, 0f, 0f, 0f, LightShadowIntent.Disabled));
+    }
+
     private float AmbientLevel(DaggerfallCalendar calendar)
     {
         bool night = calendar.Hour is < 6 or >= 18;
         return _profileKind switch
         {
             DaggerfallWorldProfileKind.Interior => night ? _tuning.InteriorNight : _tuning.InteriorDay,
-            DaggerfallWorldProfileKind.Dungeon => _tuning.Dungeon,
-            DaggerfallWorldProfileKind.Exterior => night ? _tuning.ExteriorNight : _tuning.ExteriorNoon,
+            DaggerfallWorldProfileKind.Dungeon => _dungeonLevel ?? _tuning.Dungeon,
+            DaggerfallWorldProfileKind.Exterior => Math.Max(_flash,
+                _tuning.ExteriorNight + (_tuning.ExteriorNoon - _tuning.ExteriorNight) * (night ? 0f : _daylight)),
             _ => throw new ArgumentOutOfRangeException(nameof(_profileKind)),
         };
     }

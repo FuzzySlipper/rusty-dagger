@@ -49,6 +49,7 @@ internal sealed class DaggerSessionPersistence
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _actorDefinitions;
     private readonly Func<long> _nextCastSequence;
     internal Func<DaggerfallInfectionsSave> Infections { get; set; } = () => DaggerfallInfectionsSave.Empty;
+    internal Func<DaggerfallWeatherSave> Weather { get; set; } = null!;
     internal Func<DaggerfallReadySpell?> ReadySpell {get;set;}=()=>null;
     internal Func<DaggerfallCreateItemRequest?> PendingCreateItem { get; set; } = () => null;
     internal Func<DaggerfallIdentifyRequest?> PendingIdentify { get; set; } = () => null;
@@ -178,6 +179,7 @@ internal sealed class DaggerSessionPersistence
             Services = State.Services.Capture(),
             QuestTraining = State.QuestTraining.Capture(),
             RegionalPrices = State.RegionalPrices.Capture(),
+            Weather = Weather(),
             Transport = State.Transport.Capture(),
             Swimming = State.Swimming.Capture(),
             Wagon = State.Wagon.Capture(),

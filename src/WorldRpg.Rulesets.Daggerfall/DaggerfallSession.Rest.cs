@@ -131,7 +131,7 @@ internal sealed partial class DaggerfallSession
         }
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
             && _sites.CurrentExteriorCell() is { } current
-            && _definitions.Grids.Climate.GetCell(current.X, current.Y).Value is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232))
+            && _definitions.Grids.ClimateAtWorldPixel(current.X, current.Y).Value is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232))
             return new(false, Message: "You cannot rest on this terrain.");
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
             && site.Kind is DaggerfallSiteKind.TownCity or DaggerfallSiteKind.TownHamlet or DaggerfallSiteKind.TownVillage)
@@ -231,7 +231,7 @@ internal sealed partial class DaggerfallSession
         if (_activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return null;
 
         DaggerfallExteriorCellId cell = _sites.CurrentExteriorCell();
-        DaggerfallClimateCell climate = _definitions.Grids.Climate.GetCell(cell.X, cell.Y);
+        DaggerfallClimateCell climate = _definitions.Grids.ClimateAtWorldPixel(cell.X, cell.Y);
         if (climate.Value is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232))
             throw new InvalidOperationException($"Exterior rest at {cell.X}/{cell.Y} has no encounter climate.");
         long timeOfDay = minute % (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour);

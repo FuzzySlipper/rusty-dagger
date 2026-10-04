@@ -117,4 +117,8 @@ internal sealed record DaggerfallPoliticGridDefinition(int Width, int Height, by
 /// <summary>The normalized world grids, loaded from the pack alone.</summary>
 /// <param name="Climate">The climate grid.</param>
 /// <param name="Politic">The politic grid.</param>
-internal sealed record DaggerfallWorldGridsSet(DaggerfallClimateGridDefinition Climate, DaggerfallPoliticGridDefinition Politic);
+internal sealed record DaggerfallWorldGridsSet(DaggerfallClimateGridDefinition Climate, DaggerfallPoliticGridDefinition Politic)
+{
+    // MapsFile.GetClimateIndex aligns the raw CLIMATE.PAK column with the height map.
+    internal DaggerfallClimateCell ClimateAtWorldPixel(int x, int y) => Climate.GetCell(checked(x + 1), y);
+}

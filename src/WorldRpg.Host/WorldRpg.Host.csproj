@@ -68,6 +68,7 @@
     <!-- The score is one product-wide bundle: its manifest sits above the root and stays eager while the
          cue bodies are opened on the first cue, exactly as the effect clips above are. -->
     <RustyEngineContentBundle Include="daggerfall.music" Root="worldrpg/media/music/clips" />
+    <RustyEngineContentBundle Include="daggerfall.sky" Root="worldrpg/media/sky/resources" />
     <RustyEngineContentBundle Include="daggerfall.cinematics" Root="worldrpg/media/cinematics" />
     <!-- One bundle per site: its id is the site payload's world.audioBundle and its root is the audio
          clips under that payload's publicationRoot. The SDK stages exactly the items declared here, one

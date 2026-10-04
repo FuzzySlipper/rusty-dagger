@@ -70,7 +70,8 @@ internal sealed partial class DaggerfallSession
             State.HeldEnchantments.Talents.Athleticism);
         long minuteBefore = MinuteIndex(before);
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
-        _sites.Projection.Lighting.UpdateAmbient(_time.Calendar);
+        _weather.Advance(_time.Calendar);
+        _sites.Projection.Lighting.UpdateAmbient(_time.Calendar, _tuning.Weather.Daylight(_time.Calendar, CurrentWeather));
         State.Quests.AdvanceClocks(State.Variables, before, _time.Calendar);
         // Daily conditions and ordinary source-order operations observe the same admitted calendar
         // after rest, travel, prison, or another interval, including an interval with no clock expiry.

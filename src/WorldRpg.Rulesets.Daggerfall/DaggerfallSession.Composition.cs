@@ -131,6 +131,7 @@ internal sealed partial class DaggerfallSession
                     : DaggerfallCalendar.Start,
                 saved?.Calendar?.RemainderSeconds ?? 0d,
                 tuning.Time.GameSecondsPerRealSecond);
+            _weather = new DaggerfallWeatherState(_random, tuning.Weather, _time.Calendar, saved?.Weather);
             // New games use the bundle site; current saves carry their explicit site state.
             _site = saved?.Site is { } restoredSite
                 ? new World.DaggerfallSiteContext(
@@ -502,6 +503,7 @@ internal sealed partial class DaggerfallSession
             State.Character.SpellForgotten+=key=>
             { if(Casting.ReadyFor(actors.Player.DurableId)?.SpellKey==key) Casting.Cancel(actors.Player.DurableId); };
             _persistence.Infections = Infections.Capture;
+            _persistence.Weather = _weather.Capture;
             _persistence.ReadySpell=()=>Casting.ReadyFor(actors.Player.DurableId);
             _persistence.PendingCreateItem = () => _pendingCreateItem;
             _persistence.PendingDispel = () => _pendingDispel;
@@ -513,6 +515,9 @@ internal sealed partial class DaggerfallSession
             _sites = new DaggerfallSiteLifecycle(engine, State, definitions, tuning, _time, _site, _spatial, _camera, audioBundles,
                 _roster, _persistence, _groundContainers, _enemyBehavior, ExecuteDungeonFamilyAction, this,
                 projection, actionTriggers, profiles, activeProfile, saved?.Site.ReturnProfile?.Require());
+            _weatherPresentation = new DaggerfallWeatherPresentation(engine, composition.Sky, tuning.Weather, tuning.Ambient, tuning.PresentationAudio,
+                (profile, clip) => audioBundles?.Require(profile).OpenClip(engine.Audio, clip));
+            partiallyConstructed.Add(_weatherPresentation);
             effects.Completed += outcome => _facts.Append(new MagicEffectFact(outcome));
             _vitality.PoisonDamageApplied += result=>AppendEffectDamage(new(result));
             _vitality.ConditionTrackLost += AppendSpellTrackLoss;

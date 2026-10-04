@@ -49,6 +49,10 @@ internal class EngineContextFake : DispatchProxy
     private IRandomService random = null!;
     private IUiService ui = null!;
     private IPersistenceService persistence = null!;
+    internal PresentationRecorder Particles { get; } = PresentationRecorder.Create();
+    internal IReadOnlyList<RenderResource> SkyBackgrounds => ((CameraServiceFake)(object)camera).SkyBackgrounds;
+    internal IReadOnlyList<SkyBackgroundBlendRequest> SkyBlends => ((CameraServiceFake)(object)camera).SkyBlends;
+    internal IReadOnlyList<FogRequest> Fogs => ((CameraServiceFake)(object)camera).Fogs;
     private IWorldOriginService worldOrigin = null!;
     internal IReadOnlyList<WorldOriginCommitReceipt> OriginCommits => ((WorldOriginFake)(object)worldOrigin).Commits;
 
@@ -85,6 +89,7 @@ internal class EngineContextFake : DispatchProxy
         "get_Perception" => perception,
         "get_CameraView" => camera,
         "get_Audio" => audio,
+        "get_Presentation" => Particles.Service,
         "get_Diagnostics" => diagnostics,
         "get_Video" => video,
         "get_Random" => random,
@@ -135,6 +140,9 @@ internal class EngineContextFake : DispatchProxy
         internal bool FailNextUpdate { get; set; }
         internal int ClearedSkyBackgrounds { get; private set; }
         internal List<Color> BackgroundColors { get; } = [];
+        internal List<FogRequest> Fogs { get; } = [];
+        internal List<RenderResource> SkyBackgrounds { get; } = [];
+        internal List<SkyBackgroundBlendRequest> SkyBlends { get; } = [];
         internal ulong? ActiveCamera { get; private set; }
         private ulong nextCamera = 1;
 
@@ -152,11 +160,18 @@ internal class EngineContextFake : DispatchProxy
                 nameof(ICameraViewService.ClearActiveCamera) => SetActive(null),
                 nameof(ICameraViewService.ClearSkyBackground) => ClearSkyBackground(),
                 nameof(ICameraViewService.SetBackgroundColor) => SetBackgroundColor(arguments),
-                nameof(ICameraViewService.UpdateCamera) or nameof(ICameraViewService.SetSkyBackground) => null,
+                nameof(ICameraViewService.UpdateCamera) => null,
+                nameof(ICameraViewService.SetSkyBackground) => SetSky((RenderResource)arguments![0]!),
+                nameof(ICameraViewService.SetSkyBackgroundBlend) => SetBlend((SkyBackgroundBlendRequest)arguments![0]!),
+                nameof(ICameraViewService.SetFog) => SetFog((FogRequest)arguments![0]!),
                 nameof(ICameraViewService.ReplaceCamera) => ReplaceCamera(((CameraUpdateRequest)arguments![0]!).Camera.Handle.Value),
                 _ => throw new NotSupportedException(method?.Name),
             };
         }
+
+        private object? SetSky(RenderResource resource) {SkyBackgrounds.Add(resource); return null;}
+        private object? SetBlend(SkyBackgroundBlendRequest request) {SkyBlends.Add(request); return null;}
+        private object? SetFog(FogRequest request) { Fogs.Add(request); return null; }
 
         // Like the Engine, destroying the active camera clears it, and replacing it keeps the replacement active.
         private Camera NewCamera()
@@ -213,6 +228,7 @@ internal class EngineContextFake : DispatchProxy
             nameof(IAudioService.OpenClipFromContent) => OpenClipFromContent(),
             nameof(IAudioService.Emit) => Emit((AudioEmitRequest)arguments![0]!),
             nameof(IAudioService.CreateVoice) => CreateVoice(),
+            nameof(IAudioService.ControlVoice) => null,
             _ => throw new NotSupportedException(method?.Name),
         };
 

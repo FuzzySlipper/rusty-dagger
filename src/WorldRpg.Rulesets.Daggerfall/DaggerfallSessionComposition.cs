@@ -26,6 +26,8 @@ internal sealed record DaggerfallSessionComposition(
     /// <summary>Each admitted site's audio bundle.</summary>
     internal DaggerfallSiteAudioBundles? Audio { get; init; }
 
+    internal DaggerfallSkyMedia? Sky { get; init; }
+
     /// <summary>The published content the opening cinematics play from; null composes no cinematics.</summary>
     internal ProductContent? CinematicContent { get; init; }
 
