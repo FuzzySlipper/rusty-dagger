@@ -129,6 +129,19 @@ public sealed class SourceBackedGuildBankSessionTests
 
         using DaggerfallSession reloaded = fixture.Restore(restored.CaptureSave());
         Assert.Contains(reloaded.State.Property.OwnedHouses, house => house == awardedHouse);
+
+        // A reload must retain the canonical one-time property claim. Revisit the same admitted
+        // source steward and exercise the ordinary topic again; the property owner must reject
+        // repetition without adding a second local house.
+        DaggerfallNpc reloadedSteward = SourceNpc(reloaded, faction: 848, service: "house");
+        OpenSourceNpc(reloaded, reloadedSteward);
+        DaggerfallDialogueView repeatedHouseDialogue =
+            Assert.IsType<DaggerfallDialogueView>(reloaded.ActivationView.Dialogue);
+        Assert.Contains(repeatedHouseDialogue.Topics, topic => topic.Id == "house");
+        Submit(reloaded, 10, new { action = "dialogue-topic", revision = repeatedHouseDialogue.Revision,
+            topic = "house" });
+        Assert.Single(reloaded.State.Property.OwnedHouses);
+        Assert.Equal(awardedHouse, Assert.Single(reloaded.State.Property.OwnedHouses));
     }
 
     [Fact]
