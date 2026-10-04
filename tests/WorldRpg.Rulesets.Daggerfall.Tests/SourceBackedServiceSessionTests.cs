@@ -119,26 +119,69 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallSiteBuildingSource sourceBuilding = fixture.SourceBuilding(fixture.MerchantProvider.Profile);
         Assert.Equal(sourceBuilding.Quality, merchant.Quality);
         DaggerfallMerchantItemView stock = merchant.Stock.First(value => value.CanBuy && value.UnitPrice > 0);
+        int mercantileBeforeBuy = session.State.SkillUses.PermanentSkillValue("mercantile");
+        int pickpocketBeforeShoplift = session.State.SkillUses.PermanentSkillValue("pickpocket");
 
         AddGold(session, checked(stock.UnitPrice * 2 + 1_000));
         ulong goldBeforeBuy = session.State.Currency.Read().Gold;
-        SubmitUi(session, 4, $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(merchant.Revision)}\",\"item\":\"{Escape(stock.Key)}\",\"amount\":1}}");
+        string buyAction = $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(merchant.Revision)}\",\"item\":\"{Escape(stock.Key)}\",\"amount\":1}}";
+        SubmitUi(session, 4, buyAction);
 
         Assert.Equal("Purchased", session.Presentation.LastOutcome);
         Assert.Equal(goldBeforeBuy - stock.UnitPrice, session.State.Currency.Read().Gold);
+        Assert.Equal(mercantileBeforeBuy + 1, session.State.SkillUses.PermanentSkillValue("mercantile"));
+        SubmitUi(session, 5, buyAction);
+        Assert.Equal("Stale", session.Presentation.LastOutcome);
+        Assert.Equal(mercantileBeforeBuy + 1, session.State.SkillUses.PermanentSkillValue("mercantile"));
+
         DaggerfallMerchantView afterBuy = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
         DaggerfallMerchantItemView sold = Assert.Single(afterBuy.PlayerItems,
             value => value.Definition == stock.Definition && value.CanSell && value.UnitPrice > 0);
         ulong goldBeforeSell = session.State.Currency.Read().Gold;
-        SubmitUi(session, 5, $"{{\"action\":\"merchant-sell\",\"revision\":\"{Escape(afterBuy.Revision)}\",\"item\":\"{Escape(sold.Key)}\",\"amount\":1}}");
+        string sellAction = $"{{\"action\":\"merchant-sell\",\"revision\":\"{Escape(afterBuy.Revision)}\",\"item\":\"{Escape(sold.Key)}\",\"amount\":1}}";
+        SubmitUi(session, 6, sellAction);
 
         Assert.Equal("Sold", session.Presentation.LastOutcome);
         Assert.Equal(goldBeforeSell + sold.UnitPrice, session.State.Currency.Read().Gold);
+        Assert.Equal(mercantileBeforeBuy + 2, session.State.SkillUses.PermanentSkillValue("mercantile"));
+        SubmitUi(session, 7, sellAction);
+        Assert.Equal("Stale", session.Presentation.LastOutcome);
+        Assert.Equal(mercantileBeforeBuy + 2, session.State.SkillUses.PermanentSkillValue("mercantile"));
+
+        // The real source caller must keep refusal paths from manufacturing a trade use. The sold
+        // item is no longer in the player container, so this uses the current revision and reaches
+        // the ordinary ItemUnavailable branch rather than replaying the stale accepted action.
+        DaggerfallMerchantView afterSell = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
+        SubmitUi(session, 8, $"{{\"action\":\"merchant-sell\",\"revision\":\"{Escape(afterSell.Revision)}\",\"item\":\"{Escape(sold.Key)}\",\"amount\":1}}");
+        Assert.Equal("ItemUnavailable", session.Presentation.LastOutcome);
+        Assert.Equal(mercantileBeforeBuy + 2, session.State.SkillUses.PermanentSkillValue("mercantile"));
+
+        ulong carriedGold = session.State.Currency.Read().Gold;
+        Assert.True(carriedGold > 0);
+        Assert.True(session.State.Currency.TrySpendGold(carriedGold, []));
+        DaggerfallMerchantItemView unaffordable = afterSell.Stock.First(value => value.CanBuy && value.UnitPrice > 0);
+        DaggerfallMerchantView noFunds = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
+        SubmitUi(session, 9, $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(noFunds.Revision)}\",\"item\":\"{Escape(unaffordable.Key)}\",\"amount\":1}}");
+        Assert.Equal("InsufficientFunds", session.Presentation.LastOutcome);
+        Assert.Equal(mercantileBeforeBuy + 2, session.State.SkillUses.PermanentSkillValue("mercantile"));
+
+        // Shoplifting is an admitted source-backed merchant action even when the deterministic
+        // fixture roll catches the player. The attempt is recorded before the caught/success result.
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("pickpocket")).BaseValue = 100;
+        DaggerfallMerchantView shopliftView = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
+        DaggerfallMerchantItemView stealable = shopliftView.Stock.First(value => value.CanBuy && value.UnitPrice > 0);
+        string shopliftAction = $"{{\"action\":\"merchant-shoplift\",\"revision\":\"{Escape(shopliftView.Revision)}\",\"item\":\"{Escape(stealable.Key)}\",\"amount\":1}}";
+        SubmitUi(session, 10, shopliftAction);
+        Assert.Equal("Caught", session.Presentation.LastOutcome);
+        Assert.Equal(pickpocketBeforeShoplift + 1, session.State.SkillUses.PermanentSkillValue("pickpocket"));
+
         ulong goldAfterSell = session.State.Currency.Read().Gold;
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
         DaggerfallMerchantSave merchantSave = Assert.Single(saved.Merchants);
         Assert.Equal(sourceBuilding.Quality, merchantSave.Quality);
         Assert.Equal(fixture.MerchantProvider.Profile.Site!.Value.Region, merchantSave.ProviderRegion);
+        Assert.Equal(mercantileBeforeBuy + 2, saved.SkillUses.Counters.Single(value => value.Skill == "mercantile").Uses);
+        Assert.Equal(pickpocketBeforeShoplift + 1, saved.SkillUses.Counters.Single(value => value.Skill == "pickpocket").Uses);
 
         using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
         DaggerfallNpc restoredProvider = SourceNpc(restored, fixture.MerchantProvider.Placement.Id);
@@ -146,6 +189,8 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallMerchantView restoredMerchant = Assert.IsType<DaggerfallMerchantView>(restored.ActivationView.Dialogue!.Merchant);
         Assert.Equal(sourceBuilding.Quality, restoredMerchant.Quality);
         Assert.Equal(goldAfterSell, restored.State.Currency.Read().Gold);
+        Assert.Equal(mercantileBeforeBuy + 2, restored.State.SkillUses.PermanentSkillValue("mercantile"));
+        Assert.Equal(pickpocketBeforeShoplift + 1, restored.State.SkillUses.PermanentSkillValue("pickpocket"));
         Assert.Contains(restoredMerchant.Stock, value => value.Definition == sold.Definition);
         DaggerfallSavePayload restoredSave = DaggerfallSavePayload.Read(restored.CaptureSave());
         Assert.Equal(saved.RegionalPrices!.LastAdvancedDay, restoredSave.RegionalPrices!.LastAdvancedDay);
