@@ -115,6 +115,40 @@ public sealed class DaggerfallEnemyMagicSessionTests
     }
 
     [Fact]
+    public void Late_batch_enemy_release_is_aged_only_from_its_admitted_step()
+    {
+        using Fixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        WorldPoint playerPosition = session.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The fixture player has no position.");
+        long imp = session.SpawnActor("imp", new ActorPose(playerPosition with { Z = playerPosition.Z - 10f }, 0f), level: 1);
+        session.State.Actors.Get(imp).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value)).SetCurrent(1, clamp: true);
+        PerceptionReadoutResult visible = Receipt(new PerceptionPair(
+            checked((ulong)imp), checked((ulong)DaggerfallActorIdentity.PlayerEntityId), 10d, 1d,
+            PerceptionPairKind.Visible, 1d));
+        PerceptionReadoutResult occluded = Receipt(new PerceptionPair(
+            checked((ulong)imp), checked((ulong)DaggerfallActorIdentity.PlayerEntityId), 10d, 0d,
+            PerceptionPairKind.Occluded, 0d));
+        // The behavior owner queries every live actor once per admitted step. Keep the entire
+        // first step occluded and expose the imp during the second step of this three-step batch.
+        fixture.Perception.Responder = _ => fixture.Perception.Requests.Count >= 50 ? visible : occluded;
+        fixture.Spatial.FloorHit = _ => default;
+
+        ProductUpdateFacts facts = OuterUpdate(1) with { SimulationStep = 3, AdmittedStepCount = 3 };
+        session.Update(new ProductUpdate(facts, []));
+
+        DaggerfallLiveSpell flight = Assert.Single(session.Casting.PendingRangedFlights);
+        // The first inner step is deliberately occluded. The spell enters at step 4 and gets the
+        // step-4 and step-5 slices, while the step-3 slice must never be charged retroactively.
+        Assert.Equal(4UL, flight.ReleaseSimulationStep);
+        Assert.Equal(2d / 60d, flight.DungeonFlightElapsedSeconds, 8);
+        Vector3 launch = Assert.Single(fixture.Spatial.CapsuleCastRequests).Center;
+        DaggerfallDungeonSpellFlightView view = Assert.Single(session.ReadDungeonSpellFlights());
+        Assert.Equal(25f * (2f / 60f), Vector3.Distance(launch, view.Position.ToVector()), 4);
+        Assert.True(fixture.Perception.Requests.Count >= 3);
+    }
+
+    [Fact]
     public void Caster_only_enemy_spell_is_delivered_immediately_and_duplicate_is_suppressed()
     {
         using Fixture fixture = new();

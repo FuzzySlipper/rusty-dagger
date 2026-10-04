@@ -499,7 +499,8 @@ internal sealed partial class DaggerfallSession
                     result.Bundle?.Spell.Name, result.Bundle?.Spell.Element ?? 0, result.Bundle?.ItemId)),
                 _random, actors.Player.DurableId, saved?.NextCastSequence ?? 1, State.Character.KnownSpells.Contains,
                 id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1,
-                (caster, item) => itemInstances.RequireUnique(item).Owner == (caster == actors.Player.DurableId ? DaggerfallItemOwner.Player : DaggerfallItemOwner.Actor(caster)));
+                (caster, item) => itemInstances.RequireUnique(item).Owner == (caster == actors.Player.DurableId ? DaggerfallItemOwner.Player : DaggerfallItemOwner.Actor(caster)),
+                () => _latestUpdateGeneration, () => _latestSimulationStep);
             _enemyMagic = new(definitions.EnemySpells, definitions.Magic, Casting, _random,
                 id => authored.GetValueOrDefault(id),
                 id => definitions.Mobiles.Mobiles.GetValueOrDefault(id), EnemyRangedSpellPathClear, ExecuteEnemySpell);

@@ -230,6 +230,92 @@ public sealed class RangedCombatSessionTests
     }
 
     [Fact]
+    public void Batched_ranged_flight_uses_one_step_speed_and_retires_at_the_same_arrival()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        using DaggerfallSession session = CreateArcherSession(root, definitions, inputs, releases,
+            out AppearanceFake appearance, out PerceptionFake perception);
+        const long archer = 2004;
+        double separation = definitions.Actions.Values.Where(action => action.Interpretation == "fixed-melee")
+            .Max(action => action.Reach!.Value) + 1d;
+        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d,
+            PerceptionPairKind.Visible, 1d));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
+        double healthBefore = PlayerHealth(session);
+
+        // Release on the outer boundary after three admitted simulation steps. Every later update
+        // catches up three steps, but the combat owner still derives the 25 m/s arrival from one
+        // fixed step rather than treating the whole batch as one oversized step.
+        session.Update(new ProductUpdate(OuterUpdate(1) with { SimulationStep = 1, AdmittedStepCount = 3 }, []));
+        appearance.AdvanceReceiptForAll = null;
+        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 0d,
+            PerceptionPairKind.FacingRejected, 0d));
+        DaggerfallMissileVisual arrow = Assert.Single(inputs.ClassicPresentation.WorldVisuals,
+            visual => visual.MediaId == "visual.missile.arrow");
+        Assert.Contains(appearance.Snapshots.Last(), fact =>
+            ReferenceEquals(fact.Appearance, appearance.StaticMeshByPath[arrow.Path]));
+
+        // The historical aggregate-duration bug arrives this shot during this window. A correct
+        // one-step flight is still travelling after thirty admitted simulation steps.
+        for (ulong start = 4; start <= 31; start += 3)
+            session.Update(new ProductUpdate(OuterUpdate(start) with
+            {
+                SimulationStep = start,
+                AdmittedStepCount = 3,
+            }, []));
+        Assert.Equal(healthBefore, PlayerHealth(session));
+        Assert.Contains(appearance.Snapshots.Last(), fact =>
+            ReferenceEquals(fact.Appearance, appearance.StaticMeshByPath[arrow.Path]));
+
+        ulong arrivalStep = 0;
+        for (ulong start = 34; start <= 100; start += 3)
+        {
+            session.Update(new ProductUpdate(OuterUpdate(start) with
+            {
+                SimulationStep = start,
+                AdmittedStepCount = 3,
+            }, []));
+            if (PlayerHealth(session) < healthBefore)
+            {
+                arrivalStep = checked(start + 2);
+                break;
+            }
+        }
+
+        Assert.InRange(arrivalStep, 34UL, 100UL);
+        // One further admitted boundary gives the appearance owner a completed flight receipt and
+        // retires the world mesh with that flight's identity.
+        ulong afterArrival = checked(arrivalStep + 3);
+        session.Update(new ProductUpdate(OuterUpdate(afterArrival) with
+        {
+            SimulationStep = afterArrival,
+            AdmittedStepCount = 3,
+        }, []));
+        Assert.DoesNotContain(appearance.Snapshots.Last(), fact =>
+            ReferenceEquals(fact.Appearance, appearance.StaticMeshByPath[arrow.Path]));
+    }
+
+    [Fact]
+    public void Batched_ranged_flight_matches_one_step_arrival_and_retirement()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+
+        ulong oneStepTravel = RunArcherFlight(root, definitions, inputs, admittedStepCount: 1);
+        ulong batchedTravel = RunArcherFlight(root, definitions, inputs, admittedStepCount: 3);
+
+        // Both runs cover the same authored world distance at 25 m/s. A three-step batch can only
+        // round the arrival boundary by at most its two extra steps; it must not turn the batch
+        // duration into the per-step speed or leave the mesh alive after the common impact.
+        Assert.True(Math.Abs(checked((long)oneStepTravel - (long)batchedTravel)) <= 2,
+            $"one-step travel={oneStepTravel}, batched travel={batchedTravel}");
+    }
+
+    [Fact]
     public void An_archer_shot_misses_when_the_player_leaves_its_release_aim_during_flight()
     {
         string root = TestData.RepositoryRoot;
@@ -544,6 +630,55 @@ public sealed class RangedCombatSessionTests
         appearance = new AppearanceFake(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         return DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
+    }
+
+    private static ulong RunArcherFlight(string root, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs,
+        uint admittedStepCount)
+    {
+        List<string> releases = [];
+        using DaggerfallSession session = CreateArcherSession(root, definitions, inputs, releases,
+            out AppearanceFake appearance, out PerceptionFake perception);
+        const long archer = 2004;
+        double separation = definitions.Actions.Values.Where(action => action.Interpretation == "fixed-melee")
+            .Max(action => action.Reach!.Value) + 1d;
+        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d,
+            PerceptionPairKind.Visible, 1d));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
+        double healthBefore = PlayerHealth(session);
+        session.Update(new ProductUpdate(OuterUpdate(1) with
+        {
+            SimulationStep = 1,
+            AdmittedStepCount = admittedStepCount,
+        }, []));
+        appearance.AdvanceReceiptForAll = null;
+        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 0d,
+            PerceptionPairKind.FacingRejected, 0d));
+        DaggerfallMissileVisual arrow = Assert.Single(inputs.ClassicPresentation.WorldVisuals,
+            visual => visual.MediaId == "visual.missile.arrow");
+
+        for (ulong start = checked((ulong)admittedStepCount + 1); start <= 100; start = checked(start + admittedStepCount))
+        {
+            session.Update(new ProductUpdate(OuterUpdate(start) with
+            {
+                SimulationStep = start,
+                AdmittedStepCount = admittedStepCount,
+            }, []));
+            if (PlayerHealth(session) < healthBefore)
+            {
+                ulong arrivalStep = checked(start + admittedStepCount - 1);
+                ulong afterArrival = checked(arrivalStep + 1);
+                session.Update(new ProductUpdate(OuterUpdate(afterArrival) with
+                {
+                    SimulationStep = afterArrival,
+                    AdmittedStepCount = admittedStepCount,
+                }, []));
+                Assert.DoesNotContain(appearance.Snapshots.Last(), fact =>
+                    ReferenceEquals(fact.Appearance, appearance.StaticMeshByPath[arrow.Path]));
+                return checked(arrivalStep - admittedStepCount);
+            }
+        }
+
+        throw new Xunit.Sdk.XunitException($"Archer flight did not arrive in 100 simulation steps (batch {admittedStepCount}).");
     }
 
     /// <summary>The damage marker the placed archer's authored ranged sequence publishes.</summary>

@@ -11,32 +11,34 @@ internal sealed partial class DaggerfallSession
 {
     /// <summary>
     /// Advances Daggerfall-owned travelling ranged releases after sprite impact notices have been
-    /// consumed. The release step is the latest admitted simulation step, not the attack's earlier
-    /// decision step, so sprite playback delay cannot make a new shot look already arrived.
+    /// consumed. The combat owner receives the one admitted-step delta used to derive arrival
+    /// steps; the simulation step itself carries already-live arrows across a catch-up batch.
     /// </summary>
     partial void UpdateRangedFlight(ProductUpdateFacts facts)
     {
         if (_latestUpdateGeneration is not ulong generation || _latestSimulationStep is not ulong simulationStep) return;
         if (facts.AdmittedStepCount == 0) return;
-        double admittedElapsedSeconds = facts.FixedDeltaSeconds * facts.AdmittedStepCount;
-        if (!double.IsFinite(admittedElapsedSeconds) || admittedElapsedSeconds <= 0d)
-            throw new ArgumentOutOfRangeException(nameof(facts), "Admitted ranged-flight elapsed time must be finite and positive.");
-        _combat.AdvanceRangedFlight(generation, simulationStep, admittedElapsedSeconds, CurrentPositions(), _facts);
-        AdvanceSpellFlights(admittedElapsedSeconds);
+        double fixedDeltaSeconds = facts.FixedDeltaSeconds;
+        if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d)
+            throw new ArgumentOutOfRangeException(nameof(facts), "Admitted ranged-flight step time must be finite and positive.");
+        _combat.AdvanceRangedFlight(generation, simulationStep, fixedDeltaSeconds, CurrentPositions(), _facts);
+        AdvanceSpellFlights(facts, generation, fixedDeltaSeconds);
         DeliverFacts();
     }
 
     /// <summary>
-    /// Advances each admitted dungeon missile along its launch direction and submits only the
-    /// newly traversed segment to the Engine spatial owner. The action target is an aim fact at
-    /// launch; it is never consulted again to re-aim a live missile.
+    /// Advances each admitted dungeon missile in one segment per elapsed admitted simulation step
+    /// and submits every newly traversed segment to the Engine spatial owner. A bundle released
+    /// during this batch carries its actual release step, so only later slices can age it. The
+    /// action target is an aim fact at launch; it is never consulted again to re-aim a live missile.
     /// </summary>
-    private void AdvanceSpellFlights(double fixedDeltaSeconds)
+    private void AdvanceSpellFlights(ProductUpdateFacts facts, ulong generation, double fixedDeltaSeconds)
     {
         if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d)
             throw new ArgumentOutOfRangeException(nameof(fixedDeltaSeconds));
 
         float displacement = checked((float)(DaggerfallDungeonSpellPolicy.MissileMovementSpeedMetresPerSecond * fixedDeltaSeconds));
+        ulong lastStep = checked(facts.SimulationStep + facts.AdmittedStepCount - 1);
         foreach (DaggerfallLiveSpell bundle in Casting.PendingFlightOperations)
         {
             if (bundle.ReleaseOrigin is not Vector3 from
@@ -48,12 +50,35 @@ internal sealed partial class DaggerfallSession
                 continue;
             }
 
-            bundle.DungeonFlightElapsedSeconds += fixedDeltaSeconds;
-            Vector3 to = from + direction * displacement;
-            DaggerfallCastResult impact = DeliverSpellImpact(bundle, from, to);
-            if (impact.Outcome == DaggerfallCastOutcome.Released && !bundle.Delivered)
+            // Non-ranged action target modes have no travelling segment. They still terminate
+            // through the common impact owner on this admitted update, as they did before the
+            // per-step movement path was introduced.
+            if (bundle.Target is not (DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange))
             {
-                bundle.ReleaseOrigin = to;
+                _ = DeliverSpellImpact(bundle, from, from);
+                continue;
+            }
+
+            ulong stepsToAdvance = facts.AdmittedStepCount;
+            if (bundle.ReleaseGeneration == generation && bundle.ReleaseSimulationStep is ulong releaseStep)
+            {
+                // A release is admitted during its simulation step and consumes that step's
+                // movement slice, but none of the slices before it. A release in the last inner
+                // step therefore advances once; a release before this batch advances every slice.
+                stepsToAdvance = releaseStep > lastStep ? 0UL
+                    : releaseStep == lastStep ? 1UL
+                    : releaseStep >= facts.SimulationStep ? checked(lastStep - releaseStep + 1UL)
+                    : facts.AdmittedStepCount;
+            }
+
+            for (ulong step = 0; step < stepsToAdvance && !bundle.Delivered; step++)
+            {
+                Vector3 next = from + direction * displacement;
+                bundle.DungeonFlightElapsedSeconds += fixedDeltaSeconds;
+                DaggerfallCastResult impact = DeliverSpellImpact(bundle, from, next);
+                if (impact.Outcome != DaggerfallCastOutcome.Released || bundle.Delivered) break;
+                from = next;
+                bundle.ReleaseOrigin = from;
                 if (bundle.DungeonFlightElapsedSeconds > DaggerfallDungeonSpellPolicy.MissileLifespanSeconds)
                     _ = Casting.Deliver(bundle, []);
             }
