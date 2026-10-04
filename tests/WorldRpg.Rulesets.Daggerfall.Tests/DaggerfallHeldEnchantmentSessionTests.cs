@@ -33,11 +33,12 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile inputs = SameContentAt(source, source.ProfileKey.Site,
-            DaggerfallWorldProfileKind.Exterior, "held-enchantment-rest");
+        DaggerfallSiteProfile inputs = ExteriorContentAt(source, source.ProfileKey.Site,
+            "held-enchantment-rest");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
+        PopulateTerrainContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service,
             new AppearanceFake(releases), random: RandomMaximum.Create());
@@ -79,6 +80,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
 
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
+        PopulateTerrainContent(resumedContent, inputs);
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service,
             new AppearanceFake(releases), random: RandomMaximum.Create());
@@ -95,5 +97,44 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         restored.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
         Assert.Equal(3600, restored.RestView.ElapsedSeconds);
         Assert.Equal(afterFirstHour - 15, restored.State.ItemInstances.RequireUnique(durableId).CurrentCondition);
+    }
+
+    private static DaggerfallSiteProfile ExteriorContentAt(DaggerfallSiteProfile source, DaggerfallSiteId site,
+        string logicalId) => new(
+        new ProjectFacts(new WorldPoint(1f, 1f, 1f), source.Project.Actors),
+        source.SpatialArtifact,
+        source.StaticMesh,
+        source.WorldAppearance,
+        source.InitialLook,
+        source.Materials,
+        source.ActorSprites,
+        source.MobileSprites,
+        source.Audio,
+        source.ClassicPresentation,
+        site,
+        [],
+        DaggerfallWorldProfileKind.Exterior,
+        logicalId,
+        source.Portals,
+        source.Anchors.Values.ToArray(),
+        source.Lights,
+        source.GroundContainerSprite,
+        null,
+        [],
+        [],
+        null,
+        source.Music,
+        source.AudioBundle,
+        source.QuestMarkers,
+        source.BillboardSprites,
+        [],
+        source.WaterVolumes,
+        source.TerrainTextures,
+        []);
+
+    private static void PopulateTerrainContent(ContentFake content, DaggerfallSiteProfile profile)
+    {
+        foreach (NormalizedTerrainTexture texture in profile.TerrainTextures.Values)
+            content.Add(texture.TexturePath, texture.TextureSha256);
     }
 }

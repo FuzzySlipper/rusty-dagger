@@ -330,12 +330,15 @@ public sealed class DaggerfallTravelSessionTests
             DaggerfallSiteProfile Profile(DaggerfallSiteId id, string name) => new(
                 new ProjectFacts(new WorldPoint(name == "travel-origin" ? 1 : 3, 1, 1), new Dictionary<long, AuthoredActor>()), source.SpatialArtifact,
                 source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
-                source.MobileSprites, source.Audio, source.ClassicPresentation, id, profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: name);
+                source.MobileSprites, source.Audio, source.ClassicPresentation, id,
+                profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: name,
+                terrainTextures: source.TerrainTextures);
         }
         private DaggerfallSession Create(RulesetSavePayload? save)
         {
             ContentFake content = new(releases);
             PopulateContent(content, Origin); PopulateContent(content, Destination);
+            PopulateTerrainContent(content, Origin); PopulateTerrainContent(content, Destination);
             var engine = EngineContextFake.Create(content, SpatialFake.Create(Origin.SpatialArtifact.Sha256, releases).Service,
                 new AppearanceFake(releases), random: encounter ? TravelEncounterRandom.CreateEncounter() : LodgingRandom.Create());
             DaggerfallSessionComposition composition = new(definitions, Origin, DaggerfallTuning.Defaults, Inputs.Value.Identity)
@@ -371,6 +374,12 @@ public sealed class DaggerfallTravelSessionTests
         internal void StartEffect(uint rounds = 4) => Session.State.Effects.Start(new("travel-test-instance", "travel-test", "spell", null,
             DaggerfallActorIdentity.PlayerEntityId, "classic", "magic", null, 1, rounds, JsonDocument.Parse("{}").RootElement.Clone()));
         public void Dispose() => Session.Dispose();
+
+        private static void PopulateTerrainContent(ContentFake content, DaggerfallSiteProfile profile)
+        {
+            foreach (NormalizedTerrainTexture texture in profile.TerrainTextures.Values)
+                content.Add(texture.TexturePath, texture.TextureSha256);
+        }
     }
 }
 
