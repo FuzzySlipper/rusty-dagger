@@ -21,7 +21,11 @@ internal sealed partial class DaggerfallSession
     internal void ReconcileNpcProjection()
     {
         var profile = _sites.Projection.Inputs;
-        var live = State.Npcs.All.Where(npc => npc.Kind != DaggerfallNpcKind.Civilian
+        // Questors without a gameplay actor use this lightweight projection. Static source
+        // providers are materialized by DaggerfallActorRoster as real actor entities so dialogue,
+        // targeting and site lifetime all observe the same owner; projecting them here would
+        // collide with that actor identity.
+        var live = State.Npcs.All.Where(npc => npc.Kind == DaggerfallNpcKind.Questor
             && npc.Profile == profile.ProfileKey && npc.Presence == DaggerfallNpcPresence.Active).ToDictionary(npc => npc.DurableId);
         foreach (var entry in State.Actors.Store.Query<DaggerfallNpcBody>())
         {

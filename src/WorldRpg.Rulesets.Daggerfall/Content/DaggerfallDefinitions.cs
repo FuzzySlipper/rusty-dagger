@@ -25,6 +25,7 @@ internal static class DaggerfallActorKinds
     internal const string Monster = "monster";
     internal const string EnemyClass = "enemy-class";
     internal const string Civilian = "civilian";
+    internal const string StaticNpc = "static-npc";
 }
 
 /// <summary>Pack skill keys shared across formulas, in pack vocabulary spelling.</summary>

@@ -837,7 +837,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     private bool TryResolve(long id, out Combatant combatant)
     {
         if (id == PlayerId && _definitions.TryGetValue(PlayerId, out DaggerfallActorDefinition? player)) { combatant = new(id, _actors.Player.Stats, player); return true; }
-        if (_actors.TryGet(id, out ActorState actor) && _definitions.TryGetValue(id, out DaggerfallActorDefinition? definition)) { combatant = new(id, actor.Stats, definition); return true; }
+        if (_actors.TryGet(id, out ActorState actor) && _definitions.TryGetValue(id, out DaggerfallActorDefinition? definition) && definition.Kind != DaggerfallActorKinds.StaticNpc) { combatant = new(id, actor.Stats, definition); return true; }
         combatant = default;
         return false;
     }

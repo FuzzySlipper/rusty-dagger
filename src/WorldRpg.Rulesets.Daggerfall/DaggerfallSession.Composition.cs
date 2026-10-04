@@ -344,7 +344,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallCrimeState crime = new(saved?.Crime);
             DaggerfallServiceTransactions services = new(npcs, social, inventory, itemInstances,
                 currency, _uniqueItems, () => _time.Calendar, () => _site.ActiveSite is { } active
-                    ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty)
+                    ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty, _sites.ActiveProfile.LogicalId)
                     : null, saved?.Services);
             DaggerfallConcreteGuildServiceRuntime concreteGuildServices = new(guildMembership, npcs, services);
             DaggerfallKnightlyOrderClaimState knightlyClaims = new(saved?.KnightlyClaims);
@@ -539,6 +539,7 @@ internal sealed partial class DaggerfallSession
                     throw new ArgumentException($"Custom spell '{spell.Key}' contains an unavailable compiled construction effect or combination.");
             if (saved?.ReadySpell is { } readyKey) Casting.RestoreReadySpell(readyKey);
             ExpireConjuredItems();
+            _roster.MaterializeStaticNpcs(inputs);
             _sites.AdmitInitialExterior(saved?.ExteriorResidency);
             // Registry positions are profile coordinates; restore the projection after the
             // saved origin has been admitted so dialogue and the first snapshot share its frame.

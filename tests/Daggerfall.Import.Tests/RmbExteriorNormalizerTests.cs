@@ -59,6 +59,15 @@ public sealed class RmbExteriorNormalizerTests
             Assert.Equal(raw.flat.TextureRecord == 11 ? NormalizedQuestMarkerKind.Spawn : NormalizedQuestMarkerKind.Item, published.Kind);
         }
         Assert.Equal(building, NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(interior.Document)).World.InteriorBuilding);
+        IReadOnlyList<RmbPeoplePlacement> people = RmbPlacementReader.Read(sourceBytes, 0, summary, blockArchive.Source).Buildings[0].Interior.People;
+        Assert.Equal(people.Count, interior.Document.World.StaticNpcs.Count);
+        foreach ((RmbPeoplePlacement person, int ordinal) in people.Select((person, ordinal) => (person, ordinal)))
+        {
+            NormalizedStaticNpcPlacement npc = Assert.Single(interior.Document.World.StaticNpcs, npc => npc.Id == $"person/{ordinal}");
+            Assert.Equal((person.TextureArchive, person.TextureRecord, person.FactionId), (npc.BillboardArchive, npc.BillboardRecord, npc.FactionId));
+            Assert.Equal((person.Flags & 32) != 0 ? "Female" : "Male", npc.Gender);
+            Assert.Equal(person.SourceOffset ^ (((1 << 16) + (1 << 8)) + interior.Layout.LocationIndex), npc.NameSeed);
+        }
         Assert.NotEmpty(interior.Document.Meshes);
         Assert.NotEmpty(interior.SpatialPublication.Navigation.Cells);
         Assert.Equal(new NormalizedMarker("marker/enter", new NormalizedVector3(8F, 0F, 4.8F)), interior.Document.World.EnterMarker);
@@ -114,7 +123,7 @@ public sealed class RmbExteriorNormalizerTests
     {
         string arena2 = TestData.CorpusRoot;
         return new DungeonLogicalSourceSet(Directory.EnumerateFiles(arena2)
-            .Where(path => Path.GetFileName(path) is "MAPS.BSA" or "BLOCKS.BSA" or "ARCH3D.BSA" or "CLIMATE.PAK"
+            .Where(path => Path.GetFileName(path) is "MAPS.BSA" or "BLOCKS.BSA" or "ARCH3D.BSA" or "CLIMATE.PAK" or "FACTION.TXT"
                 || Path.GetFileName(path).StartsWith("TEXTURE.", StringComparison.Ordinal))
             .Select(path => new DungeonLogicalSource($"arena2/{Path.GetFileName(path)}", File.ReadAllBytes(path))));
     }

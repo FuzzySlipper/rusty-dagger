@@ -428,10 +428,10 @@ internal sealed record DaggerfallSavePayload(
         Dictionary<long, DaggerfallNpcEntry> savedNpcs = Npcs.Entries.ToDictionary(entry => entry.DurableId);
         foreach (DaggerfallDynamicActorSave actor in DynamicActors.Concat(SiteDeltas.SelectMany(delta => delta.DynamicActors)))
         {
-            if (!StringComparer.Ordinal.Equals(actor.Definition, DaggerfallActorKinds.Civilian)) continue;
+            if (actor.Definition is not (DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc)) continue;
             if (!savedNpcs.TryGetValue(actor.EntityId, out DaggerfallNpcEntry? npc))
                 throw new ArgumentException($"Saved civilian actor {actor.EntityId} has no matching NPC identity record.");
-            if ((DaggerfallNpcKind)npc.Kind != DaggerfallNpcKind.Civilian || (DaggerfallNpcPresence)npc.Presence == DaggerfallNpcPresence.Removed)
+            if ((DaggerfallNpcKind)npc.Kind != (actor.Definition == DaggerfallActorKinds.StaticNpc ? DaggerfallNpcKind.Static : DaggerfallNpcKind.Civilian) || (DaggerfallNpcPresence)npc.Presence == DaggerfallNpcPresence.Removed)
                 throw new ArgumentException($"Saved civilian actor {actor.EntityId} does not name a live civilian NPC identity.");
         }
 
@@ -442,7 +442,8 @@ internal sealed record DaggerfallSavePayload(
             if (npc.DurableId == DaggerfallActorIdentity.PlayerEntityId || savedActorIds.Contains(npc.DurableId)
                 || inactiveAuthoredActorIds.Contains(npc.DurableId) || BanishedActors.Contains(npc.DurableId)
                 || dynamicDefinitions.TryGetValue(npc.DurableId, out var definition)
-                    && (npc.Kind != (int)DaggerfallNpcKind.Civilian || definition != DaggerfallActorKinds.Civilian))
+                    && (npc.Kind != (int)DaggerfallNpcKind.Civilian || definition != DaggerfallActorKinds.Civilian)
+                    && (npc.Kind != (int)DaggerfallNpcKind.Static || definition != DaggerfallActorKinds.StaticNpc))
                 throw new ArgumentException($"Saved NPC {npc.DurableId} aliases an unrelated actor identity.");
             var classification = savedLedger.Classify(new(DurableIdentityKind.Actor, checked((ulong)npc.DurableId)));
             if (classification != DurableIdentityClassification.Live
@@ -900,7 +901,7 @@ internal sealed record DaggerfallSavePayload(
 
     private static bool IsAdmittedDynamicDefinition(DaggerfallDefinitions definitions, string definition) =>
         !string.IsNullOrWhiteSpace(definition)
-        && (StringComparer.Ordinal.Equals(definition, DaggerfallActorKinds.Civilian)
+        && (definition is DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc
             || definitions.Actors.ContainsKey(new DaggerfallActorId(definition)));
 
     private static void ValidateInventory(DaggerfallInventorySave inventory, DaggerfallDefinitions definitions, Dictionary<ulong, DaggerfallItemMetadataSave> allUnique, DaggerfallItemOwner owner, bool requireEquipment)
@@ -1367,7 +1368,7 @@ internal sealed record DaggerfallNpcEntry(
     string Gender,
     int BillboardArchive,
     int BillboardRecord,
-    ushort NameSeed,
+    int NameSeed,
     int FactionId,
     string Role,
     string[] Services,
@@ -1378,6 +1379,7 @@ internal sealed record DaggerfallNpcEntry(
 {
     [JsonRequired] public DaggerfallWorldProfileKeySave? Profile { get; init; }
     [JsonRequired] public string? DisplayName { get; init; }
+    [JsonRequired] public string? ProfileId { get; init; }
 }
 
 /// <summary>The session's NPCs in durable order.</summary>
