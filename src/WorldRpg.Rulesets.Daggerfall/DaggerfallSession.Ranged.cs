@@ -17,8 +17,12 @@ internal sealed partial class DaggerfallSession
     partial void UpdateRangedFlight(ProductUpdateFacts facts)
     {
         if (_latestUpdateGeneration is not ulong generation || _latestSimulationStep is not ulong simulationStep) return;
-        _combat.AdvanceRangedFlight(generation, simulationStep, facts.FixedDeltaSeconds, CurrentPositions(), _facts);
-        AdvanceSpellFlights(facts.FixedDeltaSeconds);
+        if (facts.AdmittedStepCount == 0) return;
+        double admittedElapsedSeconds = facts.FixedDeltaSeconds * facts.AdmittedStepCount;
+        if (!double.IsFinite(admittedElapsedSeconds) || admittedElapsedSeconds <= 0d)
+            throw new ArgumentOutOfRangeException(nameof(facts), "Admitted ranged-flight elapsed time must be finite and positive.");
+        _combat.AdvanceRangedFlight(generation, simulationStep, admittedElapsedSeconds, CurrentPositions(), _facts);
+        AdvanceSpellFlights(admittedElapsedSeconds);
         DeliverFacts();
     }
 

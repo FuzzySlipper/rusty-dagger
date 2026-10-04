@@ -46,6 +46,7 @@ internal sealed class DaggerfallEnemyMagicModule
     private readonly DaggerfallCasting _casting;
     private readonly IRandomService _random;
     private readonly Func<long, DaggerfallActorDefinition?> _definition;
+    private readonly Func<DaggerfallEnemySpellAttempt, bool> _rangedPathClear;
     private readonly Func<DaggerfallEnemySpellAttempt, DaggerfallCastResult> _execute;
     private readonly Dictionary<long, DaggerfallEnemySpellEvidence> _last = [];
 
@@ -56,6 +57,7 @@ internal sealed class DaggerfallEnemyMagicModule
         IRandomService random,
         Func<long, DaggerfallActorDefinition?> definition,
         Func<int, DaggerfallMobileDefinition?> mobileCatalog,
+        Func<DaggerfallEnemySpellAttempt, bool> rangedPathClear,
         Func<DaggerfallEnemySpellAttempt, DaggerfallCastResult> execute)
     {
         _spells = spells ?? throw new ArgumentNullException(nameof(spells));
@@ -64,6 +66,7 @@ internal sealed class DaggerfallEnemyMagicModule
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _definition = definition ?? throw new ArgumentNullException(nameof(definition));
         _mobileCatalog = mobileCatalog ?? throw new ArgumentNullException(nameof(mobileCatalog));
+        _rangedPathClear = rangedPathClear ?? throw new ArgumentNullException(nameof(rangedPathClear));
         _execute = execute ?? throw new ArgumentNullException(nameof(execute));
     }
 
@@ -79,15 +82,15 @@ internal sealed class DaggerfallEnemyMagicModule
     /// deliberately does not issue another visibility query or retain a timer: the common pending
     /// cast set and active effects are the only duplicate/cancellation authorities.
     /// </summary>
-    internal void Decide(ActorState actor, PursuitTarget target, PerceptionReadoutResult? visibility,
+    internal bool Decide(ActorState actor, PursuitTarget target, PerceptionReadoutResult? visibility,
         DaggerfallEnemyPerceptionDecision? perception, double targetRateOfApproach,
         ulong generation, ulong simulationStep, float deltaSeconds)
     {
         if (actor.IsDefeated || target.DurableId != DaggerfallActorIdentity.PlayerEntityId
-            || visibility is not { } receipt || perception is not { InSight: true, PursuitVisible: true }) return;
-        if (_casting.HasPending(actor.DurableId)) return;
+            || visibility is not { } receipt || perception is not { InSight: true, PursuitVisible: true }) return false;
+        if (_casting.HasPending(actor.DurableId)) return false;
         DaggerfallActorDefinition? definition = _definition(actor.DurableId);
-        if (definition is null || !_spells.IsCaster(definition.MobileId)) return;
+        if (definition is null || !_spells.IsCaster(definition.MobileId)) return false;
 
         PerceptionPair? observed = receipt.Pairs.ToArray()
             .Where(pair => pair.Observer == checked((ulong)actor.DurableId)
@@ -96,7 +99,7 @@ internal sealed class DaggerfallEnemyMagicModule
             .Select(pair => (PerceptionPair?)pair)
             .FirstOrDefault();
         if (observed is not { } pair || pair.Kind != PerceptionPairKind.Visible
-            || !double.IsFinite(pair.Distance) || pair.Distance < 0d) return;
+            || !double.IsFinite(pair.Distance) || pair.Distance < 0d) return false;
 
         DaggerfallMobileDefinition? mobile = definition.MobileId is int mobileId
             ? _definitionMobile(mobileId) : null;
@@ -113,20 +116,25 @@ internal sealed class DaggerfallEnemyMagicModule
             if (!_casting.EffectsAlreadyOnTarget(selected, target.DurableId)
                 && Draw(actor.DurableId, generation, simulationStep, "ranged-gate", 1, 40) == 1)
             {
-                TryExecute(actor, selected, target, generation, simulationStep);
-                return;
+                if (TryBuildAttempt(actor, selected, target, out DaggerfallEnemySpellAttempt attempt)
+                    && _rangedPathClear(attempt))
+                    return TryExecute(attempt, generation, simulationStep);
             }
         }
 
-        if (pair.Distance > MeleeDistance + Math.Max(0d, targetRateOfApproach)) return;
+        // TargetRateOfApproach is a donor EnhancedCombatAI input. The compiled ruleset has no
+        // corresponding enhanced mode, so classic touch eligibility remains the authored melee
+        // distance even when the target is closing during this update.
+        if (pair.Distance > MeleeDistance) return false;
         List<string> touch = SpellKeys(definition)
             .Where(key => TargetOf(key) is DaggerfallSpellTarget.ByTouch or DaggerfallSpellTarget.CasterOnly)
             .ToList();
-        if (touch.Count == 0) return;
+        if (touch.Count == 0) return false;
         string touchSpell = Select(touch, actor.DurableId, generation, simulationStep, "touch");
         if (_casting.EffectsAlreadyOnTarget(touchSpell,
-                TargetOf(touchSpell) == DaggerfallSpellTarget.CasterOnly ? actor.DurableId : target.DurableId)) return;
-        TryExecute(actor, touchSpell, target, generation, simulationStep);
+                TargetOf(touchSpell) == DaggerfallSpellTarget.CasterOnly ? actor.DurableId : target.DurableId)) return false;
+        return TryBuildAttempt(actor, touchSpell, target, out DaggerfallEnemySpellAttempt touchAttempt)
+            && TryExecute(touchAttempt, generation, simulationStep);
     }
 
     private IReadOnlyList<string> SpellKeys(DaggerfallActorDefinition definition) =>
@@ -144,18 +152,36 @@ internal sealed class DaggerfallEnemyMagicModule
     private DaggerfallSpellTarget TargetOf(string key) =>
         DaggerfallMagicCostPolicy.TargetForRangeType(_catalog.Spells[key].RangeType);
 
-    private void TryExecute(ActorState actor, string key, PursuitTarget target, ulong generation, ulong simulationStep)
+    private bool TryBuildAttempt(ActorState actor, string key, PursuitTarget target,
+        out DaggerfallEnemySpellAttempt attempt)
     {
-        if (!_catalog.Spells.ContainsKey(key)) return;
-        DaggerfallSpellTarget targetMode = TargetOf(key);
+        attempt = default;
+        if (!TryReadTarget(key, out DaggerfallSpellTarget targetMode)) return false;
         Vector3 origin = actor.Position.ToVector();
         Vector3 aim = target.Position.ToVector();
         Vector3 delta = aim - origin;
-        if (!TryNormalize(delta, out Vector3 direction)) return;
-        DaggerfallCastResult result = _execute(new(actor.DurableId, key, targetMode,
-            actor.Position, target.Position, direction));
-        _last[actor.DurableId] = new(actor.DurableId, key, targetMode, result.Outcome,
+        if (!TryNormalize(delta, out Vector3 direction)) return false;
+        attempt = new(actor.DurableId, key, targetMode, actor.Position, target.Position, direction);
+        return true;
+    }
+
+    private bool TryReadTarget(string key, out DaggerfallSpellTarget target)
+    {
+        if (!_catalog.Spells.TryGetValue(key, out DaggerfallSpellDefinition? spell))
+        {
+            target = default;
+            return false;
+        }
+        target = DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType);
+        return true;
+    }
+
+    private bool TryExecute(DaggerfallEnemySpellAttempt attempt, ulong generation, ulong simulationStep)
+    {
+        DaggerfallCastResult result = _execute(attempt);
+        _last[attempt.ActorId] = new(attempt.ActorId, attempt.SpellKey, attempt.Target, result.Outcome,
             generation, simulationStep);
+        return result.Outcome is DaggerfallCastOutcome.Released or DaggerfallCastOutcome.DeliveryCompleted;
     }
 
     private string Select(IReadOnlyList<string> keys, long actorId, ulong generation, ulong simulationStep, string lane)

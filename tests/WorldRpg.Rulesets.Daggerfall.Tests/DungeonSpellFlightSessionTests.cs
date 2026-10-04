@@ -69,6 +69,50 @@ public sealed class DungeonSpellFlightSessionTests
     }
 
     [Fact]
+    public void Dungeon_action_missile_consumes_every_admitted_catch_up_step()
+    {
+        using Fixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallDungeonActionGraph graph = session.State.DungeonActions.Single().Value;
+        graph.Trigger(fixture.Action.Id, DaggerfallDungeonActionEvent.Direct);
+        DaggerfallLiveSpell bundle = Assert.Single(session.Casting.PendingDungeonFlights);
+        Vector3 launch = bundle.ReleaseOrigin!.Value;
+        fixture.Spatial.FloorHit = _ => default;
+
+        ProductUpdateFacts facts = OuterUpdate(1) with { SimulationStep = 3, AdmittedStepCount = 3 };
+        session.Update(new ProductUpdate(facts, []));
+
+        DaggerfallDungeonSpellFlightView flight = Assert.Single(session.ReadDungeonSpellFlights());
+        Assert.Equal(1.25f, Vector3.Distance(launch, flight.Position.ToVector()), 4);
+        Assert.Equal(3d / 60d, bundle.DungeonFlightElapsedSeconds, 8);
+    }
+
+    [Fact]
+    public void Dungeon_action_missile_expires_after_admitted_catch_up_lifetime()
+    {
+        using Fixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallDungeonActionGraph graph = session.State.DungeonActions.Single().Value;
+        graph.Trigger(fixture.Action.Id, DaggerfallDungeonActionEvent.Direct);
+        DaggerfallLiveSpell bundle = Assert.Single(session.Casting.PendingDungeonFlights);
+        fixture.Spatial.FloorHit = _ => default;
+
+        for (ulong outer = 1; outer <= 161; outer++)
+        {
+            ProductUpdateFacts facts = OuterUpdate(outer) with
+            {
+                SimulationStep = checked(outer * 3),
+                AdmittedStepCount = 3,
+            };
+            session.Update(new ProductUpdate(facts, []));
+        }
+
+        Assert.True(bundle.Delivered);
+        Assert.Empty(session.Casting.PendingDungeonFlights);
+        Assert.Equal(DaggerfallCastOutcome.Missed, Assert.Single(bundle.Results).Outcome);
+    }
+
+    [Fact]
     public void Dungeon_action_missile_expires_as_one_common_missed_result_after_its_admitted_lifetime()
     {
         using Fixture fixture = new();

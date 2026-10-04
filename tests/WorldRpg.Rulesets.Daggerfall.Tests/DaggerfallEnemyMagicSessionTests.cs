@@ -61,6 +61,60 @@ public sealed class DaggerfallEnemyMagicSessionTests
     }
 
     [Fact]
+    public void Ranged_enemy_spell_requires_clear_engine_path_before_readiness_and_cost()
+    {
+        using Fixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        WorldPoint playerPosition = session.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The fixture player has no position.");
+        long imp = session.SpawnActor("imp", new ActorPose(playerPosition with { Z = playerPosition.Z - 10f }, 0f), level: 1);
+        Track magicka = session.State.Actors.Get(imp).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value));
+        magicka.SetCurrent(1, clamp: true);
+        fixture.Perception.Receipt = Receipt(new PerceptionPair(
+            checked((ulong)imp), checked((ulong)DaggerfallActorIdentity.PlayerEntityId), 10d, 1d,
+            PerceptionPairKind.Visible, 1d));
+        fixture.Spatial.OverlapHit = _ => default;
+        fixture.Spatial.CapsuleCastHit = _ => new SpatialHit
+        {
+            Present = true,
+            Kind = SpatialHitKind.StaticMesh,
+            Point = playerPosition.ToVector() - Vector3.UnitZ * 5f,
+        };
+        double before = magicka.Current;
+
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        Assert.Equal(before, magicka.Current);
+        Assert.DoesNotContain(imp, session.LastEnemySpell);
+        Assert.Empty(session.Casting.PendingRangedFlights);
+        Assert.NotEmpty(fixture.Spatial.CapsuleCastRequests);
+    }
+
+    [Fact]
+    public void Ordinary_enemy_missile_consumes_all_admitted_catch_up_steps()
+    {
+        using Fixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        WorldPoint playerPosition = session.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The fixture player has no position.");
+        long imp = session.SpawnActor("imp", new ActorPose(playerPosition with { Z = playerPosition.Z - 10f }, 0f), level: 1);
+        session.State.Actors.Get(imp).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value)).SetCurrent(1, clamp: true);
+        fixture.Perception.Receipt = Receipt(new PerceptionPair(
+            checked((ulong)imp), checked((ulong)DaggerfallActorIdentity.PlayerEntityId), 10d, 1d,
+            PerceptionPairKind.Visible, 1d));
+        fixture.Spatial.FloorHit = _ => default;
+
+        ProductUpdateFacts facts = OuterUpdate(1) with { SimulationStep = 3, AdmittedStepCount = 3 };
+        session.Update(new ProductUpdate(facts, []));
+
+        DaggerfallLiveSpell flight = Assert.Single(session.Casting.PendingRangedFlights);
+        Assert.Equal(3d / 60d, flight.DungeonFlightElapsedSeconds, 8);
+        DaggerfallDungeonSpellFlightView view = Assert.Single(session.ReadDungeonSpellFlights());
+        Vector3 launch = Assert.Single(fixture.Spatial.CapsuleCastRequests).Center;
+        Assert.Equal(1.25f, Vector3.Distance(launch, view.Position.ToVector()), 4);
+    }
+
+    [Fact]
     public void Caster_only_enemy_spell_is_delivered_immediately_and_duplicate_is_suppressed()
     {
         using Fixture fixture = new();
@@ -81,6 +135,7 @@ public sealed class DaggerfallEnemyMagicSessionTests
         Assert.Equal(DaggerfallSpellTarget.CasterOnly, evidence.Target);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, evidence.Outcome);
         Assert.Contains(session.State.Effects.Active, effect => effect.Context.Target.Value == checked((ulong)shaman));
+        Assert.Null(session.State.Actors.Get(shaman).Attack.Pending);
         int activeEffects = session.State.Effects.Active.Count;
 
         session.Update(new ProductUpdate(OuterUpdate(2), []));
@@ -88,6 +143,51 @@ public sealed class DaggerfallEnemyMagicSessionTests
         Assert.Equal(activeEffects, session.State.Effects.Active.Count);
         Assert.True(session.LastEnemySpell.TryGetValue(shaman, out DaggerfallEnemySpellEvidence? repeated));
         Assert.Equal(evidence, repeated);
+    }
+
+    [Fact]
+    public void Caster_only_enemy_spell_owns_the_whole_admitted_catch_up_window()
+    {
+        using Fixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        WorldPoint playerPosition = session.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The fixture player has no position.");
+        long shaman = session.SpawnActor("orc-shaman", new ActorPose(playerPosition with { Z = playerPosition.Z - 1f }, 0f), level: 1);
+        session.State.Actors.Get(shaman).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value)).SetCurrent(1, clamp: true);
+        fixture.Perception.Receipt = Receipt(new PerceptionPair(
+            checked((ulong)shaman), checked((ulong)DaggerfallActorIdentity.PlayerEntityId), 1d, 1d,
+            PerceptionPairKind.Visible, 1d));
+
+        ProductUpdateFacts facts = OuterUpdate(1) with { SimulationStep = 3, AdmittedStepCount = 3 };
+        session.Update(new ProductUpdate(facts, []));
+
+        Assert.True(session.LastEnemySpell.TryGetValue(shaman, out DaggerfallEnemySpellEvidence? evidence));
+        Assert.NotNull(evidence);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, evidence.Outcome);
+        Assert.Null(session.State.Actors.Get(shaman).Attack.Pending);
+    }
+
+    [Fact]
+    public void Classic_touch_spell_does_not_use_enhanced_closing_target_allowance()
+    {
+        using Fixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        WorldPoint playerPosition = session.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The fixture player has no position.");
+        long shaman = session.SpawnActor("orc-shaman", new ActorPose(playerPosition with { Z = playerPosition.Z - 3.5f }, 0f), level: 1);
+        session.State.Actors.Get(shaman).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value)).SetCurrent(1, clamp: true);
+        fixture.Perception.Receipt = Receipt(new PerceptionPair(
+            checked((ulong)shaman), checked((ulong)DaggerfallActorIdentity.PlayerEntityId), 3.5d, 1d,
+            PerceptionPairKind.Visible, 1d));
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        session.State.Actors.Get(shaman).ApplyPose(new ActorPose(playerPosition with { Z = playerPosition.Z - 2.5f }, 0f));
+        fixture.Perception.Receipt = Receipt(new PerceptionPair(
+            checked((ulong)shaman), checked((ulong)DaggerfallActorIdentity.PlayerEntityId), 2.5d, 1d,
+            PerceptionPairKind.Visible, 1d));
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+
+        Assert.DoesNotContain(shaman, session.LastEnemySpell);
     }
 
     [Fact]

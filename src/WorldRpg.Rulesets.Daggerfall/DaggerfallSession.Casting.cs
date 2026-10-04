@@ -3,6 +3,7 @@ using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
@@ -87,6 +88,37 @@ internal sealed partial class DaggerfallSession
             _ => release,
         };
     }
+
+    /// <summary>
+    /// Applies the donor's ranged admission boundary through the one Engine spatial owner. The
+    /// projectile starts at the authored arm distance, checks its radius at that origin, then
+    /// sweeps to the admitted aim. Only the intended player entity is an allowed hit; static cover
+    /// and another actor reject the action before readiness or magicka deduction.
+    /// </summary>
+    private bool EnemyRangedSpellPathClear(DaggerfallEnemySpellAttempt attempt)
+    {
+        if (attempt.Target is not (DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange))
+            return true;
+        Vector3 origin = attempt.Origin.ToVector();
+        Vector3 aim = attempt.Aim.ToVector();
+        Vector3 delta = aim - origin;
+        if (!ValidDirection(delta)) return false;
+        float distance = delta.Length();
+        float armDistance = DaggerfallDungeonSpellPolicy.MissileArmLengthMetres;
+        if (!float.IsFinite(distance) || distance <= armDistance) return false;
+        Vector3 direction = Vector3.Normalize(delta);
+        Vector3 launch = origin + direction * armDistance;
+        ReadOnlyMemory<SpatialEntityCollider> colliders = SpellColliders(attempt.ActorId);
+        CharacterStepEnvironment environment = _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion);
+        SpatialHit atLaunch = _spatial.OverlapCapsule(launch, 0d, .45d, colliders, environment);
+        if (BlocksEnemySpellPath(atLaunch)) return false;
+        SpatialHit alongPath = _spatial.CastCapsule(launch, 0d, .45d,
+            direction * (distance - armDistance), colliders, environment);
+        return !BlocksEnemySpellPath(alongPath);
+    }
+
+    private bool BlocksEnemySpellPath(SpatialHit hit) => hit.Present
+        && !(hit.Kind == SpatialHitKind.Entity && ActorForSpellHit(hit) == DaggerfallActorIdentity.PlayerEntityId);
 
     /// <summary>Releases the ready source at its live position. Ranged bundles await Engine collision delivery.</summary>
     internal DaggerfallCastResult ReleaseReadySpell(long casterId, Vector3 direction)
