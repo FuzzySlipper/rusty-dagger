@@ -273,10 +273,18 @@ public sealed class ExteriorOriginSessionTests
         Assert.Equal(playerPosition.ToVector() + compensation, restored.State.PlayerControl.Position!.Value.ToVector());
         Assert.Equal(actorPosition.ToVector() + compensation, restored.State.Actors.Get(actorId).Position.ToVector());
         var npcEntity = restored.State.Actors.Entities.Resolve(ActorsState.Identity(npcId));
-        Assert.Equal(npcPosition.ToVector() + compensation,
-            restored.State.Actors.Store.Get<DaggerfallNpcBody>(npcEntity).Pose.Position.ToVector());
-        Assert.Equal(npcPosition.ToVector() + compensation,
+        // Quest NPC registry positions are profile coordinates.  Re-entry projects them through
+        // both the saved origin compensation and Charing's admitted continuous terrain frame;
+        // resident player/actor poses already carry that frame in their saved local coordinates.
+        WorldPoint expectedNpcLocal = restored.Sites.ProfileToLocal(npcPosition);
+        Vector3 restoredNpcLocal = restored.State.Actors.Store.Get<DaggerfallNpcBody>(npcEntity).Pose.Position.ToVector();
+        Assert.Equal(expectedNpcLocal.ToVector(), restoredNpcLocal);
+        Assert.Equal(restoredNpcLocal,
             restored.Dialogue.NpcTargets().Single(target => target.Identity.Value == (ulong)npcId).Position.ToVector());
+        Vector3 restoredNpcProfile = restored.Sites.LocalToProfile(restoredNpcLocal);
+        Assert.Equal(npcPosition.X, restoredNpcProfile.X, 3);
+        Assert.Equal(npcPosition.Y, restoredNpcProfile.Y, 3);
+        Assert.Equal(npcPosition.Z, restoredNpcProfile.Z, 3);
         Vector3 restoredPortalProfile = restored.Sites.LocalToProfile(
             restored.Sites.Projection.Portals.All.First().Portal.Position.ToVector());
         Assert.Equal(exterior.Portals[0].Position.X, restoredPortalProfile.X, 3);
