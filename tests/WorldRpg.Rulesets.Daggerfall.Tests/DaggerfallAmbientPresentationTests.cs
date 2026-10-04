@@ -62,6 +62,24 @@ public sealed class DaggerfallAmbientPresentationTests
         Assert.Equal(2, audio.Emits.Count); Assert.Equal(0, owner.FlashIntensity);
         owner.Update(dungeon, Vector3.Zero, 0, true);
         Assert.Equal(audio.Voices.Count, audio.ReleasedVoices);
+        owner.Dispose();
+        Assert.Equal(audio.EmittedSignals.OrderBy(signal => signal.Value), audio.RetiredSignals.OrderBy(signal => signal.Value));
+    }
+
+    [Fact]
+    public void Realized_one_shot_is_removed_from_the_disposal_retirement_set()
+    {
+        var particles = PresentationRecorder.Create(); var audio = AudioRecorder.Create();
+        using var owner = new DaggerfallAmbientPresentation(particles.Service, audio.Service, RandomMinimum.Create(),
+            DaggerfallAmbientTuning.Classic, (_, _) => audio.Service.OpenClip(new("fixture.wav")), _ => new(9ul));
+        var dungeon = Context(DaggerfallWorldProfileKind.Dungeon, DaggerfallWeatherKind.Sunny);
+        owner.Update(dungeon with {Castle = true}, Vector3.Zero, 40, true);
+        owner.Update(dungeon, Vector3.Zero, 5, true);
+        AudioSignalHandle signal = Assert.Single(audio.EmittedSignals);
+        audio.RealizationFacts.Add(new(AudioRealizationFactKind.NaturalCompletionOneShot, 1, 0, signal.Value, 0, AudioDiagnosticCode.None));
+        owner.Update(dungeon, Vector3.Zero, 0, true);
+        owner.Dispose();
+        Assert.Empty(audio.RetiredSignals);
     }
 
     private static DaggerfallAmbientContext Context(DaggerfallWorldProfileKind kind, DaggerfallWeatherKind weather) =>
