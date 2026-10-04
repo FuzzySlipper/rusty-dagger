@@ -197,6 +197,8 @@ tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/inte
   --source-manifest "$site_records/charing-bank-interior.sources.json" --region 17 --location Charing --location-index 4 --profile interior --block-x 1 --block-y 5 --building 17
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-4-2-0 \
   --source-manifest "$site_records/charing-shop-interior.sources.json" --region 17 --location Charing --location-index 4 --profile interior --block-x 4 --block-y 2 --building 0
+tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-3-2-14 \
+  --source-manifest "$site_records/charing-knights-interior.sources.json" --region 17 --location Charing --location-index 4 --profile interior --block-x 3 --block-y 2 --building 14
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/berbaaqnia/exterior \
   --source-manifest "$site_records/berbaaqnia-providers-exterior.sources.json" --region 0 --location Berbaaqnia --location-index 15 --profile exterior
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/berbaaqnia/interior-5-2-17 \
