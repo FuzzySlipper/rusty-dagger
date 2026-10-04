@@ -258,6 +258,12 @@ public sealed class ExteriorOriginSessionTests
             save = session.CaptureSave();
             DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
             Assert.Equal(delta.X, captured.ExteriorResidency!.Value.CompensationX);
+            Assert.Equal(playerPosition.ToVector() + delta,
+                new Vector3(captured.Player.X, captured.Player.Y, captured.Player.Z));
+            DaggerfallDynamicActorSave capturedActor = Assert.Single(captured.DynamicActors,
+                actor => actor.EntityId == actorId);
+            Assert.Equal(actorPosition.ToVector() + delta,
+                new Vector3(capturedActor.X, capturedActor.Y, capturedActor.Z));
             Assert.Equal(playerPosition.X + delta.X, captured.GroundContainers[0].X);
         }
         List<string> restoredReleases = [];
@@ -269,9 +275,13 @@ public sealed class ExteriorOriginSessionTests
             new AppearanceFake(restoredReleases));
         using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context,
             new(definitions, exterior, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save);
-        Vector3 compensation = restored.Sites.LocalCompensation;
-        Assert.Equal(playerPosition.ToVector() + compensation, restored.State.PlayerControl.Position!.Value.ToVector());
-        Assert.Equal(actorPosition.ToVector() + compensation, restored.State.Actors.Get(actorId).Position.ToVector());
+        DaggerfallSavePayload savedPayload = DaggerfallSavePayload.Read(save);
+        Assert.Equal(new Vector3(savedPayload.Player.X, savedPayload.Player.Y, savedPayload.Player.Z),
+            restored.State.PlayerControl.Position!.Value.ToVector());
+        DaggerfallDynamicActorSave savedActor = Assert.Single(savedPayload.DynamicActors,
+            actor => actor.EntityId == actorId);
+        Assert.Equal(new Vector3(savedActor.X, savedActor.Y, savedActor.Z),
+            restored.State.Actors.Get(actorId).Position.ToVector());
         var npcEntity = restored.State.Actors.Entities.Resolve(ActorsState.Identity(npcId));
         // Quest NPC registry positions are profile coordinates.  Re-entry projects them through
         // both the saved origin compensation and Charing's admitted continuous terrain frame;
