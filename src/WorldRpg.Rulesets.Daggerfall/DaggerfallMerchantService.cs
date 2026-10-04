@@ -314,7 +314,10 @@ internal sealed class DaggerfallMerchantService
         ulong itemId = _containers.GetDurableItemId(new EntityId(itemEntity)).Value;
         if (line.Metadata.CurrentCondition == line.Metadata.MaximumCondition) return Refused("AlreadyRepaired");
         DaggerfallConcreteGuildServiceRuntimeDecision? guild = ConcreteGuildProvider(context, DaggerfallConcreteGuildService.Repair);
-        if (guild is null) return Refused("ProviderUnavailable");
+        // Generic Armorer, GeneralStore, and WeaponSmith providers use this same transaction
+        // contract without Fighters membership. Guild repair remains the richer path below, with
+        // its canonical membership gate and rank-based price reduction.
+        if (guild is null && !IsGenericRepairProvider(context)) return Refused("ProviderUnavailable");
         if (guild is { CanUse: false }) return Refused(GuildRefusal(guild));
         int cost = DaggerfallRegionalEconomyPolicy.CalculateItemRepairCost(line.Definition.Value, binding.Context.Quality,
             line.Metadata.CurrentCondition, line.Metadata.MaximumCondition, binding.Context.Provider.Site.Region,
@@ -448,6 +451,14 @@ internal sealed class DaggerfallMerchantService
             : _concreteGuildServices.Evaluate(guild.FactionId, service,
                 checked((int)_calendar().DayNumber),
                 new DaggerfallConcreteGuildServiceInput(context.Provider, context.Provider.Site.Region));
+    }
+
+    private bool IsGenericRepairProvider(DaggerfallMerchantProviderContext context)
+    {
+        if (!StringComparer.Ordinal.Equals(context.Provider.Service, "repair")
+            || !DaggerfallNpcServiceFacts.IsGenericRepairShop(context.BuildingType))
+            return false;
+        return _npcs.Require(context.Provider.NpcId).Services.Contains("repair", StringComparer.Ordinal);
     }
 
     private static string GuildRefusal(DaggerfallConcreteGuildServiceRuntimeDecision decision) =>
