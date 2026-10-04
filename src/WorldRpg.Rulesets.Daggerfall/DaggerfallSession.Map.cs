@@ -108,7 +108,8 @@ internal sealed partial class DaggerfallSession
         {
             DaggerfallNpc? npc = State.Npcs.All.SingleOrDefault(value => value.DurableId == npcId);
             if (npc is null || _dialogue?.IsLiveTalkTarget(npc) != true) return null;
-            string hint = npc.X is float x && npc.Z is float z && State.PlayerControl.Position is WorldPoint player
+            string hint = _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
+                && npc.X is float x && npc.Z is float z && State.PlayerControl.Position is WorldPoint player
                 ? CardinalHint(new(x, player.Y, z), _sites.ExteriorSitePosition(player)) : "here";
             DaggerfallNpc? speaker = _dialogue?.CurrentNpc();
             bool sameBuilding = speaker is not null && !string.IsNullOrEmpty(speaker.Site.Building)

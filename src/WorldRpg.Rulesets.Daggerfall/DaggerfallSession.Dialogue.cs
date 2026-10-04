@@ -536,16 +536,18 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
     /// <summary>
     /// Retains the donor's distinction between map visibility and an NPC's subject knowledge.
-    /// Building, organization and quest-local subjects are known without a roll; all other
-    /// subjects use a stable NPC/topic draw so a repeated conversation does not change knowledge
+    /// Building and quest-local subjects are known without a roll. Organization membership is an
+    /// automatic answer only for a place/topic shape; a named person still uses the donor's
+    /// deterministic person-knowledge draw so a repeated conversation does not change knowledge
     /// merely because the player asked again.
     /// </summary>
     private bool KnowsDirection(DaggerfallNpc npc, DaggerfallDialogueDestination destination, string? topicTarget)
     {
-        if (destination.SameBuilding || destination.SameOrganization || destination.QuestLocality)
+        int questionIndex = destination.Id.StartsWith("direction:npc:", StringComparison.Ordinal) ? 1 : 0;
+        bool placeSubject = questionIndex == 0;
+        if (destination.SameBuilding || destination.QuestLocality || (placeSubject && destination.SameOrganization))
             return true;
 
-        int questionIndex = destination.Id.StartsWith("direction:npc:", StringComparison.Ordinal) ? 1 : 0;
         int socialGroup = Math.Clamp(ResolveSocialGroup(npc), 0, 4);
         int modifier = KnowledgeModifiers[questionIndex * 5 + socialGroup];
         int roll = checked((int)_random.DrawKeyed(new KeyedRngRequest(
