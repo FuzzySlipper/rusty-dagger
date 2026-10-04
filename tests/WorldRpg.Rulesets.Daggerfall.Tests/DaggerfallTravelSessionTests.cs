@@ -31,7 +31,11 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal(quote.TotalCost, result.PaidGold);
         Assert.Equal(before - (ulong)quote.TotalCost, fixture.Session.State.Currency.Read().Gold);
         Assert.Equal(fixture.Destination.Site!.Value, fixture.Session.Site.Active);
-        Assert.Equal(fixture.Destination.Project.PlayerPosition, fixture.Session.State.PlayerControl.Position);
+        WorldPoint destination = fixture.Destination.Project.PlayerPosition
+            ?? throw new InvalidOperationException("The travel destination has no authored player position.");
+        WorldPoint liveDestination = WorldPoint.From(fixture.Session.Sites.LocalToProfile(
+            fixture.Session.State.PlayerControl.Position!.Value.ToVector()));
+        Assert.Equal(destination, liveDestination);
         Assert.True(result.ElapsedSeconds >= quote.TravelSeconds);
         using var restored = fixture.Restore(fixture.Session.CaptureSave());
         Assert.Equal(result, restored.State.Travel.LastResult);
@@ -52,12 +56,23 @@ public sealed class DaggerfallTravelSessionTests
         var stats = fixture.Session.State.Actors.Player.Stats;
         foreach (string name in new[] { "health", "stamina", "magicka" }) stats.GetTrack(TrackId.Parse(name)).SetCurrent(1);
         fixture.Accept(quote);
-        Assert.Equal(DaggerfallTravelOutcome.Arrived, fixture.Session.State.Travel.LastResult!.Outcome);
-        foreach (string name in new[] { "health", "stamina", "magicka" })
-        {
-            var track = stats.GetTrack(TrackId.Parse(name));
-            Assert.Equal(cautious ? track.Maximum.Value : 1, track.Current);
-        }
+        var result = Assert.IsType<DaggerfallTravelResult>(fixture.Session.State.Travel.LastResult);
+        Assert.Equal(DaggerfallTravelOutcome.Arrived, result.Outcome);
+        Assert.Equal(cautious ? stats.GetTrack(TrackId.Parse("health")).Maximum.Value : 1,
+            stats.GetTrack(TrackId.Parse("health")).Current);
+        Assert.Equal(cautious ? stats.GetTrack(TrackId.Parse("magicka")).Maximum.Value : 1,
+            stats.GetTrack(TrackId.Parse("magicka")).Current);
+
+        // Cautious recovery happens before travel. Elapsed travel and its arrival delay then
+        // settle every covered calendar minute through the locomotion owner's idle fatigue rule.
+        Track stamina = stats.GetTrack(TrackId.Parse("stamina"));
+        long coveredMinutes = result.EndedSeconds / DaggerfallCalendar.SecondsPerMinute
+            - result.StartedSeconds / DaggerfallCalendar.SecondsPerMinute;
+        Assert.True(coveredMinutes > 0);
+        double startingStamina = cautious ? stamina.Maximum.Value : 1;
+        double expectedStamina = Math.Max(0, startingStamina
+            - (coveredMinutes * (long)DaggerfallTuning.Defaults.Locomotion.IdleFatiguePerGameMinute));
+        Assert.Equal(expectedStamina, stamina.Current);
     }
 
     [Theory]
