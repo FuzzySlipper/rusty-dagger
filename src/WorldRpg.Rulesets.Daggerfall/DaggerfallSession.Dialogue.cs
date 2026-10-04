@@ -81,6 +81,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<long, bool> _muted;
     private readonly Func<long, IReadOnlyList<DaggerfallQuestContact>> _questContacts;
     private readonly Func<long, bool> _workAvailable;
+    private readonly Func<DaggerfallVariableStore?>? _variables;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -103,7 +104,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<long, IReadOnlyList<DaggerfallQuestDialogueTopic>>? questTopics = null,
         Func<long, string, (string Text, IReadOnlyList<string> Diagnostics)?>? resolveQuestTopic = null,
         Func<DaggerfallCalendar>? calendar = null,
-        Func<long, bool>? workAvailable = null)
+        Func<long, bool>? workAvailable = null,
+        Func<DaggerfallVariableStore?>? variables = null)
     {
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
@@ -125,6 +127,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _resolveQuestTopic = resolveQuestTopic;
         _calendar = calendar ?? (() => DaggerfallCalendar.Start);
         _workAvailable = workAvailable ?? (_ => false);
+        _variables = variables;
         _setOutcome = setOutcome ?? throw new ArgumentNullException(nameof(setOutcome));
     }
 
@@ -330,20 +333,43 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         session.NewsAnswered = true;
 
         long currentMinute = _currentCalendarMinute();
-        DaggerfallRumorDefinition[] candidates = _definitions.Rumors.Entries
+        List<DaggerfallDialogueNewsCandidate> candidates = [.. _definitions.Rumors.Entries
             .Where(rumor => IsAmbientNewsCandidate(rumor, site, session))
             .Where(rumor => rumor.TimeLimit <= 0 || rumor.TimeLimit > currentMinute)
             .OrderBy(rumor => rumor.Index)
-            .ToArray();
-        if (candidates.Length == 0)
+            .Select(rumor => new DaggerfallDialogueNewsCandidate(
+                rumor.TextKey,
+                rumor.Faction1,
+                rumor.Faction2))];
+        DaggerfallVariableStore? variables = _variables?.Invoke();
+        if (variables is not null)
+        {
+            foreach (DaggerfallDialogueWorldNewsRule rule in _definitions.DialogueWorldRules.News)
+            {
+                int owner = rule.Scope switch
+                {
+                    DaggerfallVariableScope.Global => 0,
+                    DaggerfallVariableScope.Region => site.Id.Region,
+                    DaggerfallVariableScope.Faction => npc.Appearance.FactionId,
+                    _ => throw new InvalidOperationException($"Dialogue world rule {rule.Type}/{rule.TextId} names an unsupported variable scope."),
+                };
+                if (!rule.VariableKeys.Any(key => variables.Read(new DaggerfallVariableAddress(rule.Scope, owner, key)) == rule.RequiredValue))
+                    continue;
+                candidates.Add(new(
+                    Resource(rule.TextId),
+                    Faction1: 0,
+                    Faction2: 0));
+            }
+        }
+        if (candidates.Count == 0)
         {
             (string empty, diagnostics) = RenderSelectedRun(Resource(1457), context,
                 $"{session.Revision}:{session.QuestionCount}:news:empty");
             return empty;
         }
 
-        DaggerfallRumorDefinition rumor = candidates[Draw(session, $"{session.QuestionCount}:news:select", 0, candidates.Length - 1)];
-        DaggerfallTextRenderResult result = _text.Resolve(rumor.TextKey, RumorContext(npc, site, rumor));
+        DaggerfallDialogueNewsCandidate candidate = candidates[Draw(session, $"{session.QuestionCount}:news:select", 0, candidates.Count - 1)];
+        DaggerfallTextRenderResult result = _text.Resolve(candidate.TextKey, RumorContext(npc, site, candidate.Faction1, candidate.Faction2));
         diagnostics = [.. result.Diagnostics.Select(diagnostic => $"{diagnostic.Kind}: {diagnostic.Detail}")];
         return result.Text;
     }
@@ -398,11 +424,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _definitions.Factions.Factions.TryGetValue(factionId, out DaggerfallFactionDefinition? faction)
         && (faction.Flags & 1) != 0;
 
-    private DaggerfallTextContext RumorContext(DaggerfallNpc npc, DaggerfallSiteRecord site, DaggerfallRumorDefinition rumor)
+    private DaggerfallTextContext RumorContext(DaggerfallNpc npc, DaggerfallSiteRecord site, int factionOne, int factionTwo)
     {
         DaggerfallTextContext context = Context(npc, site, string.Empty);
-        string? first = _definitions.Factions.Factions.GetValueOrDefault(rumor.Faction1)?.Name;
-        string? second = _definitions.Factions.Factions.GetValueOrDefault(rumor.Faction2)?.Name;
+        string? first = _definitions.Factions.Factions.GetValueOrDefault(factionOne)?.Name;
+        string? second = _definitions.Factions.Factions.GetValueOrDefault(factionTwo)?.Name;
         DaggerfallFactionDefinition? province = _definitions.Factions.Factions.Values
             .Where(faction => faction.Type == 7 && faction.Region == site.Id.Region)
             .OrderBy(faction => faction.Id)
@@ -610,6 +636,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             $"session:{session.Revision}:npc:{session.TargetId}:{purpose}",
             minimum,
             maximum)).Value);
+
+    private sealed record DaggerfallDialogueNewsCandidate(
+        DaggerfallTextKey TextKey,
+        int Faction1,
+        int Faction2);
 
     private sealed record DaggerfallDialogueNpc(EntityId Entity, WorldPoint Position);
 

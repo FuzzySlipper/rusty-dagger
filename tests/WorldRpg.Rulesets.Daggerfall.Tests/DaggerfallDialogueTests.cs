@@ -92,11 +92,30 @@ public sealed class DaggerfallDialogueTests
         Assert.Null(talk.View);
     }
 
+    [Fact]
+    public void Region_condition_uses_the_live_variable_store_to_admit_donor_news()
+    {
+        using ConditionSessionFixture fixture = new();
+        TalkTarget talk = new(fixture.Session, fixture.Definitions, attachVariables: true);
+        int region = fixture.Session.Site.ActiveSite!.Id.Region;
+        Assert.NotEmpty(fixture.Definitions.DialogueWorldRules.News);
+
+        fixture.Session.State.Variables.Write(
+            new DaggerfallVariableAddress(DaggerfallVariableScope.Region, region, 11), true);
+        Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
+        string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;
+
+        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "news")).Applied);
+        DaggerfallDialogueView news = Assert.IsType<DaggerfallDialogueView>(talk.View);
+        Assert.True(news.Reply?.Contains("criminal", StringComparison.OrdinalIgnoreCase) == true
+            || news.Reply?.Contains("killed", StringComparison.OrdinalIgnoreCase) == true);
+    }
+
     private sealed class TalkTarget
     {
         private DaggerfallDialogueView? _view;
 
-        internal TalkTarget(DaggerfallSession session, DaggerfallDefinitions definitions)
+        internal TalkTarget(DaggerfallSession session, DaggerfallDefinitions definitions, bool attachVariables = false)
         {
             DaggerfallSiteRecord site = session.Site.ActiveSite
                 ?? throw new InvalidOperationException("The focused talk test needs the admitted fixture site.");
@@ -117,7 +136,8 @@ public sealed class DaggerfallDialogueTests
                 () => session.Site.ActiveSite,
                 () => session.State.Character.Identity,
                 view => _view = view,
-                _ => { });
+                _ => { },
+                variables: attachVariables ? () => session.State.Variables : null);
             Target = Assert.Single(Service.NpcTargets());
         }
 

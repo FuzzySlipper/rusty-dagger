@@ -231,6 +231,12 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal DaggerfallRumorCatalogSet Rumors { get; } = rumors;
 
     /// <summary>
+    /// The authored links between live region variables and donor non-quest news resources. The
+    /// values are policy data; the session variable store remains the sole source of live state.
+    /// </summary>
+    internal DaggerfallDialogueWorldRules DialogueWorldRules { get; init; } = DaggerfallDialogueWorldRules.Empty;
+
+    /// <summary>
     /// The published biographies, loaded from the pack alone: each questionnaire resolves to its
     /// questions, answers and effect references with the text keys and link states they carry.
     /// </summary>
