@@ -1,0 +1,11 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.charing-interior-3-1-13",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.site",
+  "dependencies": [
+    { "id": "daggerfall.base" }
+  ],
+  "description": "Normalized Charing TEMPAAH0.RMB building 13 interior provider profile.",
+  "payload": "worldrpg/payloads/daggerfall.charing-interior-3-1-13.json"
+}
