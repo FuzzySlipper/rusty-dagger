@@ -1,0 +1,11 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.charing-interior-4-2-0",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.site",
+  "dependencies": [
+    { "id": "daggerfall.base" }
+  ],
+  "description": "Normalized Charing BOOKAL02.RMB building 0 interior merchant profile.",
+  "payload": "worldrpg/payloads/daggerfall.charing-interior-4-2-0.json"
+}

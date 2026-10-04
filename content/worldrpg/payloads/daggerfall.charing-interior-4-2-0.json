@@ -1,0 +1,34 @@
+{
+  "ruleset": "daggerfall",
+  "startingState": {
+    "position": [4.8, 0, 8],
+    "look": { "yawRadians": 0, "pitchRadians": 0 },
+    "site": { "region": 17, "index": 4 }
+  },
+  "placements": [],
+  "world": {
+    "publicationRoot": "worldrpg/imports/charing/interior-4-2-0",
+    "audioBundle": "daggerfall.charing-interior-4-2-0-audio",
+    "appearance": {
+      "tint": [0.72, 0.7, 0.65, 1],
+      "position": [0, 0, 0],
+      "rotation": [0, 0, 0, 1],
+      "scale": [1, 1, 1],
+      "visible": true,
+      "layer": "scene"
+    },
+    "navigationGridId": 1,
+    "collisionNavigationPath": "spatial/charing-17-4/interior-4-2-0/collision-navigation.rspatial",
+    "staticMeshPath": "spatial/charing-17-4/interior-4-2-0/static-mesh.rstatmsh",
+    "profileKind": "interior",
+    "rmbSource": {
+      "format": "rmb",
+      "region": 17,
+      "location": "Charing",
+      "mapId": 4326545,
+      "grid": { "width": 6, "height": 7 },
+      "block": { "name": "BOOKAL02.RMB", "x": 4, "y": 2, "building": 0 },
+      "entryMarker": { "textureArchive": 199, "textureRecord": 8, "positionRaw": [320, 0, -192] }
+    }
+  }
+}
