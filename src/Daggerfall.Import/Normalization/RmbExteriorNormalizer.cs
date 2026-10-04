@@ -114,6 +114,10 @@ public static class RmbExteriorNormalizer
 
     private sealed class Builder(RmbExteriorNormalizationRequest request, MapsExteriorLayout layout, BsaArchive blocks, BsaArchive arch, ushort groundTextureArchive)
     {
+        private const int PopulationBlocksPerBand = 16;
+        private const int PopulationBandSize = 24;
+        private const int PopulationMinimumBands = 1;
+        private const int PopulationMaximumBands = 4;
         private readonly Dictionary<(ushort Archive, ushort Record, string? DoorId), NormalizedMeshBuilder> geometry = [];
         private readonly Dictionary<(ushort Archive, ushort Record), TextureInfo> textures = [];
         private readonly SortedSet<string> referencedMeshes = new(StringComparer.Ordinal);
@@ -122,6 +126,11 @@ public static class RmbExteriorNormalizer
         private readonly HashSet<(int X, int Z)> outdoorNavigationCells = [];
         private readonly List<NormalizedQuestMarker> questMarkers = [];
         private readonly List<NormalizedPopulationPlacement> population = [];
+        private readonly IReadOnlyDictionary<int, ClassicFaction> sourceFactions =
+            FactionReader.Read(Encoding.UTF8.GetString(request.Sources.Require("FACTION.TXT").Bytes.Span),
+                request.Sources.Require("FACTION.TXT").Label).ToDictionary(faction => faction.Id);
+        private readonly IReadOnlyDictionary<(int X, int Y), MapsExteriorBlock> sourceBlocks =
+            layout.Blocks.ToDictionary(block => ((int)block.X, (int)block.Y));
         private NormalizedMarker? startMarker;
         private NormalizedMarker? enterMarker;
         private NormalizedInteriorBuilding? interiorBuilding;
@@ -161,6 +170,8 @@ public static class RmbExteriorNormalizer
                         // ushort width, so derive it from the stable normalized identity rather
                         // than truncating an archive offset.
                         NameSeed = StablePopulationSeed(id),
+                        SourceBuildingType = slot.BuildingType,
+                        SourceBuildingFactionId = slot.FactionId,
                     });
                 }
             }
@@ -180,6 +191,62 @@ public static class RmbExteriorNormalizer
                 uint hash = 2166136261;
                 foreach (char value in sourceKey) hash = (hash ^ value) * 16777619;
                 return (ushort)(hash & ushort.MaxValue);
+            }
+        }
+
+        /// <summary>
+        /// The donor's PopulationManager fills an exterior's bounded mobile pool alongside any
+        /// fixed RMB people records. Positions come from the source CityNavigation clear cells
+        /// and appearance comes from the regional People faction in FACTION.TXT. Runtime admission
+        /// can therefore keep one durable key, day/night lifetime and Engine-owned wandering
+        /// without inventing authored NPC records.
+        /// </summary>
+        private void AddDynamicPopulation()
+        {
+            ClassicFaction? people = sourceFactions.Values
+                .Where(faction => faction.Type == 15 && faction.Region == request.Region && faction.Flats.Count != 0)
+                .OrderBy(faction => faction.Id)
+                .FirstOrDefault()
+                ?? sourceFactions.Values.Where(faction => faction.Type == 15 && faction.Flats.Count != 0)
+                    .OrderBy(faction => faction.Id).FirstOrDefault();
+            if (people is null) return;
+
+            int bands = Math.Clamp(layout.Blocks.Count / PopulationBlocksPerBand,
+                PopulationMinimumBands, PopulationMaximumBands);
+            int maximum = checked(bands * PopulationBandSize);
+            (int X, int Z)[] cells = [.. outdoorNavigationCells
+                .Where(cell => sourceBlocks.ContainsKey((cell.X / 64, cell.Z / 64)))
+                .OrderBy(cell => cell.X).ThenBy(cell => cell.Z)];
+            int count = Math.Min(maximum, cells.Length);
+            if (count == 0) return;
+
+            string location = $"{Slug(layout.LocationName)}-{layout.Region}-{layout.LocationIndex}";
+            for (int index = 0; index < count; index++)
+            {
+                // PopulationManager draws from the whole admitted exterior navigation pool. The
+                // source cells are sorted for deterministic output, but taking the first N would
+                // put every civilian in one corner of a large city. Evenly sample the canonical
+                // pool so the persisted placements cover the real city while remaining stable
+                // across importer runs.
+                int cellIndex = (int)((long)index * cells.Length / count);
+                (int X, int Z) cell = cells[cellIndex];
+                MapsExteriorBlock block = sourceBlocks[(cell.X / 64, cell.Z / 64)];
+                int sourceX = cell.X - (block.X * 64);
+                int sourceY = 63 - (cell.Z - (block.Y * 64));
+                Arena2ImportPoint placed = Add(Arena2SourceTransform.ToExteriorBlockOrigin(block),
+                    Arena2SourceTransform.ToRmbImportPoint((sourceX * 64) + 32, 0, (sourceY * 64) + 32));
+                string id = $"population/{location}/dynamic/{index:D3}";
+                int flat = people.Flats[index % people.Flats.Count];
+                population.Add(new NormalizedPopulationPlacement(
+                    id,
+                    MeshGeometry.ToRightHanded(placed),
+                    flat >> 7,
+                    flat & 0x7f,
+                    people.Id,
+                    (byte)(index % people.Flats.Count == 1 ? 0x20 : 0))
+                {
+                    NameSeed = StablePopulationSeed(id),
+                });
             }
         }
 
@@ -402,6 +469,8 @@ public static class RmbExteriorNormalizer
         public RmbExteriorNormalizationResult Build()
         {
             if (geometry.Count == 0) throw new InvalidOperationException("RMB normalization produced no ARCH3D static geometry.");
+            if (request.ProfileKind == RmbWorldProfileKind.Exterior)
+                AddDynamicPopulation();
             string slug = Slug(layout.LocationName) + (request.LocationIndex is int index ? $"-{layout.Region}-{index}" : "");
             string profile = request.ProfileKind == RmbWorldProfileKind.Exterior ? "exterior" : $"interior-{request.Building!.BlockX}-{request.Building.BlockY}-{request.Building.BuildingIndex}";
             string root = $"rmb/{slug}/{profile}";
