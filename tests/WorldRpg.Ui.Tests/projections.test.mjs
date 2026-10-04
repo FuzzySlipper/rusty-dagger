@@ -1135,6 +1135,47 @@ test('live banking dialogue emits bank-open with its actual revision', () => {
   } finally { f.dispose(); }
 });
 
+test('merchant rows keep unit and selected stack totals explicit and expose service-only actions', () => {
+  const f = fixture();
+  try {
+    const stack = { key: 'stack:shop.arrows', definition: 'template-131', label: 'Arrows', quantity: '10', unitPrice: '7',
+      currentCondition: 10, maximumCondition: 10, identified: true, stolen: false, canBuy: true, canSell: false };
+    const player = { key: 'unique:17', definition: 'template-113', label: 'Worn sword', quantity: 1, unitPrice: 20,
+      currentCondition: 3, maximumCondition: 10, identified: false, stolen: false, canBuy: false, canSell: false };
+    const dialogue = (merchant) => ({ revision: 'merchant-1', targetLabel: 'Guild officer', greeting: 'Welcome.', tone: 'normal',
+      question: null, reply: null, topics: [], diagnostics: [], merchant });
+    const baseMerchant = { revision: 'merchant-1', provider: 'Guild officer', quality: 10, gold: '100', buyAvailable: true,
+      sellAvailable: false, repairAvailable: false, identifyAvailable: false, result: '', stock: [stack], playerItems: [], repairs: [] };
+    f.publish({ activation: { mode: 'talk', dialogue: dialogue(baseMerchant) } });
+
+    const stockRow = [...f.root.querySelectorAll('.dagger-dialogue-merchant li')].find(row => row.textContent.includes('Arrows'));
+    assert.ok(stockRow);
+    assert.match(stockRow.textContent, /Unit price 7 gold each/);
+    const quantity = stockRow.querySelector('.dagger-merchant-quantity');
+    quantity.value = '3';
+    quantity.dispatchEvent(new window.Event('input', { bubbles: true }));
+    assert.match(stockRow.textContent, /Unit price 7 gold each/);
+    stockRow.querySelector('button').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'merchant-buy', revision: 'merchant-1', item: 'stack:shop.arrows', amount: 3 });
+
+    const serviceOnly = { ...baseMerchant, buyAvailable: false, repairAvailable: true, stock: [], playerItems: [player] };
+    f.publish({ activation: { mode: 'talk', dialogue: dialogue(serviceOnly) } });
+    const repairRow = [...f.root.querySelectorAll('.dagger-dialogue-merchant li')].find(row => row.textContent.includes('Worn sword'));
+    assert.ok(repairRow);
+    assert.ok([...repairRow.querySelectorAll('button')].some(button => button.textContent === 'Repair'));
+    repairRow.querySelector('button').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'merchant-repair', revision: 'merchant-1', item: 'unique:17' });
+
+    const identifyOnly = { ...serviceOnly, repairAvailable: false, identifyAvailable: true };
+    f.publish({ activation: { mode: 'talk', dialogue: dialogue(identifyOnly) } });
+    const identifyRow = [...f.root.querySelectorAll('.dagger-dialogue-merchant li')].find(row => row.textContent.includes('Worn sword'));
+    assert.ok(identifyRow);
+    assert.ok([...identifyRow.querySelectorAll('button')].some(button => button.textContent === 'Identify'));
+    identifyRow.querySelector('button').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'merchant-identify', revision: 'merchant-1', item: 'unique:17' });
+  } finally { f.dispose(); }
+});
+
 test('create item presents authoritative paid choices and submits selection without cancellation or optimistic inventory', () => {
   const f = fixture();
   try {

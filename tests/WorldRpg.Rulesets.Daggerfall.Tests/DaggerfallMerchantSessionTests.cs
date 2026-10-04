@@ -17,6 +17,30 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallMerchantSessionTests
 {
     [Fact]
+    public void Stack_projection_publishes_one_unit_price_used_by_a_single_item_purchase()
+    {
+        using var fixture = new ConditionSessionFixture(random: RandomMaximum.Create());
+        DaggerfallSession session = fixture.Session;
+        session.AdvanceElapsedTime(6 * 60 * 60);
+        DaggerfallServiceProvider provider = OpenProvider(session, faction: 0, service: "shop", "shop");
+        DaggerfallMerchantProviderContext context = Context(provider, buildingType: 13);
+        AddGold(session, 100_000);
+        AddArrows(session, 10);
+
+        DaggerfallMerchantView beforeSale = session.State.Merchants.Read(context);
+        DaggerfallMerchantResult sold = session.State.Merchants.Sell(context, beforeSale.Revision, "stack:merchant.test.arrows", 4);
+        Assert.True(sold.Accepted, sold.Outcome);
+        DaggerfallMerchantView afterSale = session.State.Merchants.Read(context);
+        DaggerfallMerchantItemView row = Assert.Single(afterSale.Stock,
+            item => item.Key.Contains(".acquired.", StringComparison.Ordinal) && item.Definition == "template-131");
+
+        DaggerfallMerchantResult bought = session.State.Merchants.Buy(context, afterSale.Revision, row.Key, 1);
+        Assert.True(bought.Accepted, bought.Outcome);
+        Assert.Equal(row.UnitPrice, bought.PaidGold);
+        Assert.Equal(3UL, session.State.Merchants.Read(context).Stock.Single(item => item.Key == row.Key).Quantity);
+    }
+
+    [Fact]
     public void Actual_trade_caller_supports_partial_stolen_and_payment_failure_without_losing_stock_on_restock_or_save()
     {
         using var fixture = new ConditionSessionFixture(random: RandomMaximum.Create());
@@ -104,6 +128,9 @@ public sealed class DaggerfallMerchantSessionTests
         AddGold(session, 100_000);
 
         DaggerfallMerchantView initial = session.State.Merchants.Read(context);
+        Assert.True(initial.CanRepair);
+        Assert.False(initial.CanSell);
+        Assert.Contains(initial.PlayerItems, item => item.Key == itemKey);
         DaggerfallMerchantResult refused = session.State.Merchants.RequestRepair(context, initial.Revision, itemKey);
         Assert.False(refused.Accepted);
         Assert.Equal("NotMember", refused.Outcome);
@@ -165,6 +192,9 @@ public sealed class DaggerfallMerchantSessionTests
         DaggerfallServiceProvider wrongProvider = OpenProvider(session, 0, "identify", "identify");
         DaggerfallMerchantProviderContext wrongContext = Context(wrongProvider, buildingType: 12);
         DaggerfallMerchantView wrongView = session.State.Merchants.Read(wrongContext);
+        Assert.True(wrongView.CanIdentify);
+        Assert.False(wrongView.CanSell);
+        Assert.Contains(wrongView.PlayerItems, item => item.Key == itemKey);
         ulong beforeWrongProvider = session.State.Currency.Read().Gold;
         DaggerfallMerchantResult wrong = session.State.Merchants.Identify(wrongContext, wrongView.Revision, itemKey);
         Assert.False(wrong.Accepted);
@@ -193,6 +223,47 @@ public sealed class DaggerfallMerchantSessionTests
         Assert.True(restored.State.ItemInstances.RequireUnique(itemId.Value).Identified);
         Assert.Equal("AlreadyIdentified", restored.State.Merchants.Identify(context,
             restored.State.Merchants.Read(context).Revision, itemKey).Outcome);
+    }
+
+    [Fact]
+    public void Identify_returns_item_unavailable_after_the_real_repair_custody_transfer()
+    {
+        using var fixture = new ConditionSessionFixture(random: RandomMaximum.Create());
+        DaggerfallSession session = fixture.Session;
+        session.AdvanceElapsedTime(6 * 60 * 60);
+        AddGold(session, 100_000);
+        DurableIdentityReference itemId = AddUnidentifiedMagic(session);
+        DaggerfallItemInstanceMetadata metadata = session.State.ItemInstances.RequireUnique(itemId.Value);
+        session.State.ItemInstances.ReplaceUnique(itemId.Value,
+            metadata with { CurrentCondition = Math.Max(1, metadata.MaximumCondition / 2) });
+        string itemKey = "unique:" + itemId.Value;
+
+        DaggerfallServiceProvider magesProvider = OpenProvider(session, 801, "identify", "identify");
+        DaggerfallMerchantProviderContext identifyContext = Context(magesProvider, buildingType: 12);
+        DaggerfallMerchantView identifyView = session.State.Merchants.Read(identifyContext);
+        Assert.True(identifyView.CanIdentify);
+        Assert.False(identifyView.CanSell);
+        Assert.Contains(identifyView.PlayerItems, item => item.Key == itemKey && !item.Identified);
+        ulong beforeMoveGold = session.State.Currency.Read().Gold;
+
+        int repairProviderFaction = DaggerfallConcreteGuildCatalog.ForFaction(DaggerfallConcreteGuildCatalog.FightersFactionId)
+            .Services.Single(service => service.Service == DaggerfallConcreteGuildService.Repair).ProviderFactionId!.Value;
+        DaggerfallServiceProvider fightersProvider = OpenProvider(session, repairProviderFaction, "repair", "repair");
+        _ = session.State.Social.JoinGuild(DaggerfallConcreteGuildCatalog.FightersFactionId, 0);
+        DaggerfallMerchantProviderContext repairContext = Context(fightersProvider, buildingType: 2);
+        DaggerfallMerchantView repairView = session.State.Merchants.Read(repairContext);
+        DaggerfallMerchantResult repair = session.State.Merchants.RequestRepair(repairContext, repairView.Revision, itemKey);
+        Assert.True(repair.Accepted, repair.Outcome);
+        Assert.DoesNotContain(session.State.Inventory.Read().UniqueItems, item => item.Entity.Value == ResolveEntity(session, itemId));
+
+        DaggerfallMerchantResult moved = session.State.Merchants.Identify(identifyContext, identifyView.Revision, itemKey);
+        Assert.False(moved.Accepted);
+        Assert.Equal("ItemUnavailable", moved.Outcome);
+        Assert.Equal(beforeMoveGold - repair.PaidGold, session.State.Currency.Read().Gold);
+        Assert.False(session.State.ItemInstances.RequireUnique(itemId.Value).Identified);
+        DaggerfallMerchantSave save = Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Merchants,
+            merchant => merchant.Key == repairContext.Key);
+        Assert.Contains(save.Custody.UniqueItems, item => item.EntityId == itemId.Value);
     }
 
     private static DaggerfallMerchantProviderContext Context(DaggerfallServiceProvider provider, int buildingType) =>

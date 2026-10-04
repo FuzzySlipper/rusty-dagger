@@ -367,8 +367,9 @@ internal sealed class DaggerfallMerchantService
     {
         Binding binding = Ensure(context);
         if (!RevisionMatches(binding, revision)) return Refused("Stale");
-        if (!TrySelection(DaggerfallItemOwner.Player, itemKey, 1, out InventoryContainerSelection selection, out DaggerfallTradeLine line)
-            || selection.UniqueEntityId is not ulong itemEntity || line.Metadata.Enchantment is null || line.Metadata.Identified)
+        if (!TrySelection(DaggerfallItemOwner.Player, itemKey, 1, out InventoryContainerSelection selection, out DaggerfallTradeLine line))
+            return Refused("ItemUnavailable");
+        if (selection.UniqueEntityId is not ulong itemEntity || line.Metadata.Enchantment is null || line.Metadata.Identified)
             return Refused("AlreadyIdentified");
         ulong itemId = _containers.GetDurableItemId(new EntityId(itemEntity)).Value;
         DaggerfallConcreteGuildServiceRuntimeDecision? guild = ConcreteGuildProvider(context, DaggerfallConcreteGuildService.Identify);
@@ -482,7 +483,10 @@ internal sealed class DaggerfallMerchantService
             DaggerfallItemInstanceMetadata metadata = _instances.RequireStack(owner, stack.Id);
             DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(stack.Definition.Value));
             ulong price = Price(binding, buying ? DaggerfallTradeSide.BuyFromMerchant : DaggerfallTradeSide.SellToMerchant,
-                new(definition, metadata, stack.Quantity));
+                // The projection field is UnitPrice. The caller supplies its selected quantity to
+                // Quote during the action, so a stack row must price one item here rather than
+                // displaying the total for the complete stock beside a one-item control.
+                new(definition, metadata, 1));
             rows.Add(new("stack:" + stack.Id.Value, definition.Id.Value, definition.Id.Value, stack.Quantity, price,
                 metadata.CurrentCondition, metadata.MaximumCondition, metadata.Identified, metadata.Stolen,
                 buying, !buying && CanSellToBuilding(binding.Context.BuildingType, metadata)));
