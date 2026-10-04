@@ -168,7 +168,7 @@ public sealed class DaggerfallCastingTests
         Assert.Single(bundle.Results, result => result.Outcome == DaggerfallCastOutcome.Reflected);
         Assert.Equal(2, bundle.Results.Count(result => result.TargetId == 1 && result.Outcome == DaggerfallCastOutcome.Applied));
         using Harness resisted = new();
-        resisted.Defense = new(0, 0, [new(DaggerfallMagicResistanceElement.Magic, 100)]);
+        resisted.Defense = new(0, 0, [], AllResistanceChance: 100);
         resisted.ApplyDefense(2);
         bundle = resisted.Release(); resisted.Casting.Deliver(bundle, [2]);
         Assert.Equal(DaggerfallCastOutcome.Resisted, Assert.Single(bundle.Results).Outcome);

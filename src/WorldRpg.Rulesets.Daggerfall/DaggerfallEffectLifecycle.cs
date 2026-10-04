@@ -67,7 +67,8 @@ internal readonly record struct DaggerfallMovementProtection(
     bool PreventsFallDamage,
     bool GrantsLevitation = false,
     bool EnhancesClimbing = false,
-    bool GrantsWaterBreathing = false);
+    bool GrantsWaterBreathing = false,
+    bool GrantsWaterWalking = false);
 
 [Flags]
 internal enum DaggerfallConcealment
@@ -299,6 +300,11 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     internal bool GrantsWaterBreathing(long targetId) => _effects.Values.Any(effect =>
         checked((long)effect.Lifecycle.Context.Target.Value) == targetId
         && effect.Definition.MovementProtection.GrantsWaterBreathing);
+
+    /// <summary>Reads the typed water-walking capability supplied by active compiled effects.</summary>
+    internal bool GrantsWaterWalking(long targetId) => _effects.Values.Any(effect =>
+        checked((long)effect.Lifecycle.Context.Target.Value) == targetId
+        && effect.Definition.MovementProtection.GrantsWaterWalking);
 
     /// <summary>
     /// Projects the active typed perception meanings for one target. The lifecycle owns the
