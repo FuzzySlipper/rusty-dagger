@@ -1,0 +1,11 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.charing-interior-3-2-14",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.site",
+  "dependencies": [
+    { "id": "daggerfall.base" }
+  ],
+  "description": "Normalized Charing KDRAAL01.RMB building 14 interior Knights of the Dragon provider profile.",
+  "payload": "worldrpg/payloads/daggerfall.charing-interior-3-2-14.json"
+}
