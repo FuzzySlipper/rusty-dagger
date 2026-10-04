@@ -7,6 +7,7 @@ using WorldRpg.Kit.Progression;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Crime;
+using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.World;
 
@@ -175,6 +176,7 @@ internal sealed class DaggerfallMerchantService
     private readonly DurableIdentityAllocator _identities;
     private readonly DaggerfallCurrencyService _currency;
     private readonly DaggerfallServiceTransactions _services;
+    private readonly DaggerfallConcreteGuildServiceRuntime _concreteGuildServices;
     private readonly DaggerfallTradeQuoteService _tradeQuotes;
     private readonly DaggerfallRegionalPriceState _regionalPrices;
     private readonly DaggerfallItemConditionService _conditions;
@@ -213,6 +215,7 @@ internal sealed class DaggerfallMerchantService
         DurableIdentityAllocator identities,
         DaggerfallCurrencyService currency,
         DaggerfallServiceTransactions services,
+        DaggerfallConcreteGuildServiceRuntime concreteGuildServices,
         DaggerfallTradeQuoteService tradeQuotes,
         DaggerfallRegionalPriceState regionalPrices,
         DaggerfallItemConditionService conditions,
@@ -236,6 +239,7 @@ internal sealed class DaggerfallMerchantService
         _identities = identities ?? throw new ArgumentNullException(nameof(identities));
         _currency = currency ?? throw new ArgumentNullException(nameof(currency));
         _services = services ?? throw new ArgumentNullException(nameof(services));
+        _concreteGuildServices = concreteGuildServices ?? throw new ArgumentNullException(nameof(concreteGuildServices));
         _tradeQuotes = tradeQuotes ?? throw new ArgumentNullException(nameof(tradeQuotes));
         _regionalPrices = regionalPrices ?? throw new ArgumentNullException(nameof(regionalPrices));
         _conditions = conditions ?? throw new ArgumentNullException(nameof(conditions));
@@ -309,9 +313,14 @@ internal sealed class DaggerfallMerchantService
             return Refused("ItemUnavailable");
         ulong itemId = _containers.GetDurableItemId(new EntityId(itemEntity)).Value;
         if (line.Metadata.CurrentCondition == line.Metadata.MaximumCondition) return Refused("AlreadyRepaired");
+        DaggerfallConcreteGuildServiceRuntimeDecision? guild = ConcreteGuildProvider(context, DaggerfallConcreteGuildService.Repair);
+        if (guild is null) return Refused("ProviderUnavailable");
+        if (guild is { CanUse: false }) return Refused(GuildRefusal(guild));
         int cost = DaggerfallRegionalEconomyPolicy.CalculateItemRepairCost(line.Definition.Value, binding.Context.Quality,
             line.Metadata.CurrentCondition, line.Metadata.MaximumCondition, binding.Context.Provider.Site.Region,
             _regionalPrices.AdjustmentForRegion(binding.Context.Provider.Site.Region));
+        if (guild is { Definition.FactionId: DaggerfallConcreteGuildCatalog.FightersFactionId, CanUse: true })
+            cost = DaggerfallConcreteGuildPolicy.FightersRepairCost(cost, guild.Membership.Rank);
         long due = checked(CurrentMinute() + Math.Max(1, (DaggerfallRegionalEconomyPolicy.CalculateItemRepairTime(
             line.Metadata.CurrentCondition, line.Metadata.MaximumCondition) + DaggerfallCalendar.SecondsPerMinute - 1) / DaggerfallCalendar.SecondsPerMinute));
         string requestId = RequestId(binding, "repair", itemKey, revision);
@@ -362,8 +371,15 @@ internal sealed class DaggerfallMerchantService
             || selection.UniqueEntityId is not ulong itemEntity || line.Metadata.Enchantment is null || line.Metadata.Identified)
             return Refused("AlreadyIdentified");
         ulong itemId = _containers.GetDurableItemId(new EntityId(itemEntity)).Value;
+        DaggerfallConcreteGuildServiceRuntimeDecision? guild = ConcreteGuildProvider(context, DaggerfallConcreteGuildService.Identify);
+        if (guild is null) return Refused("ProviderUnavailable");
+        if (guild is { CanUse: false }) return Refused(GuildRefusal(guild));
         int sourceValue = IdentifySourceValue(line.Definition, line.Metadata);
-        int cost = DaggerfallRegionalEconomyPolicy.CalculateItemIdentifyCost(sourceValue);
+        // The donor makes identification free during Witches Festival. Mages Guild does not
+        // override ReducedIdentifyCost, so its canonical service admission changes eligibility
+        // and provider identity while leaving the ordinary cost unchanged outside that holiday.
+        int cost = _calendar().GetHolidayId(binding.Context.Provider.Site.Region) == WitchesFestival
+            ? 0 : DaggerfallRegionalEconomyPolicy.CalculateItemIdentifyCost(sourceValue);
         string requestId = RequestId(binding, "identify", itemKey, revision);
         DaggerfallServiceRequest request = new(requestId, binding.Context.Provider,
             new(itemId, line.Definition.Id.Value, line.Metadata.CurrentCondition));
@@ -383,6 +399,11 @@ internal sealed class DaggerfallMerchantService
         DaggerfallItemOwner merchantOwner = DaggerfallItemOwner.Merchant(binding.MerchantContainerId);
         if (!TrySelection(merchantOwner, itemKey, quantity, out InventoryContainerSelection selection, out DaggerfallTradeLine line))
             return Refused("ItemUnavailable");
+        // DaggerfallTradeWindow only attempts a theft when the current buy-mode cost is
+        // positive.  Recompute that quote for the selected quantity before consuming the
+        // pickpocket attempt or moving any property; a zero quote is not a stealable item.
+        DaggerfallTradeQuote? trade = Quote(binding, DaggerfallTradeSide.BuyFromMerchant, line);
+        if (trade is null || trade.Total <= 0) return Refused("QuoteUnavailable");
         int pickpocket = Math.Clamp(_playerStats.GetStat(StatId.Parse("pickpocket")).ValueInt, 0, 100);
         int weight = checked(line.Definition.Weight * checked((int)Math.Min(quantity, int.MaxValue)) + 1);
         int chance = DaggerfallCrimePolicy.CalculateShopliftingChance(pickpocket, binding.Context.Quality, weight);
@@ -410,6 +431,28 @@ internal sealed class DaggerfallMerchantService
     }
 
     private static DaggerfallMerchantResult Refused(string outcome) => new(false, outcome);
+
+    private const int WitchesFestival = 43;
+
+    private DaggerfallConcreteGuildServiceRuntimeDecision? ConcreteGuildProvider(
+        DaggerfallMerchantProviderContext context, DaggerfallConcreteGuildService service)
+    {
+        DaggerfallNpc npc = _npcs.Require(context.Provider.NpcId);
+        DaggerfallConcreteGuildDefinition? guild = DaggerfallConcreteGuildCatalog.All
+            .Where(candidate => candidate.TryGetService(service, out DaggerfallConcreteGuildServiceDefinition? definition)
+                && definition.ProviderFactionId == npc.Appearance.FactionId)
+            .SingleOrDefault();
+        return guild is null
+            ? null
+            : _concreteGuildServices.Evaluate(guild.FactionId, service,
+                checked((int)_calendar().DayNumber),
+                new DaggerfallConcreteGuildServiceInput(context.Provider, context.Provider.Site.Region));
+    }
+
+    private static string GuildRefusal(DaggerfallConcreteGuildServiceRuntimeDecision decision) =>
+        !decision.Policy.Eligible ? decision.Policy.Denial.ToString()
+        : decision.ProviderDenial != DaggerfallServiceDenial.None ? decision.ProviderDenial.ToString()
+        : "ServiceUnavailable";
 
     private DaggerfallMerchantView Project(Binding binding, string result, string? dialogueRevision)
     {
@@ -748,8 +791,13 @@ internal sealed class DaggerfallMerchantService
         string? magicKey = null) =>
         new DaggerfallItemFactory(_definitions, _random).Create(new(category, key,
             DaggerfallItemOwner.Merchant(binding.MerchantContainerId), Quantity: null, TemplateIndex: template,
-            Level: Math.Max(1, _progression.Level), Race: _character.Identity.RaceId,
-            Gender: _character.Identity.Gender.ToString().ToLowerInvariant(), PotionRecipeKey: recipe, MagicItemKey: magicKey));
+            Level: Math.Max(1, _progression.Level),
+            Race: RequiresAppearance(category) ? _character.Identity.RaceId : null,
+            Gender: RequiresAppearance(category) ? _character.Identity.Gender.ToString().ToLowerInvariant() : null,
+            PotionRecipeKey: recipe, MagicItemKey: magicKey));
+
+    private static bool RequiresAppearance(string category) =>
+        category is "Armor" or "MensClothing" or "WomensClothing" or "Magic";
 
     private void AddGenerated(Binding binding, DaggerfallCreatedItem item,
         List<InventoryContainerSeed> seeds,

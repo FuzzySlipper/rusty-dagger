@@ -573,17 +573,41 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     const amount = typeof item.quantity === 'number' ? item.quantity : Number(item.quantity);
     return Number.isSafeInteger(amount) && amount > 0 ? amount : undefined;
   };
-  const merchantAction = (action: string, merchant: MerchantProjection, item: MerchantItemProjection, label: string): HTMLButtonElement => {
+  const merchantQuantityInput = (item: MerchantItemProjection): HTMLInputElement | undefined => {
+    if (!item.key.startsWith('stack:')) return undefined;
+    const available = merchantAmount(item);
+    if (available === undefined) return undefined;
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '1';
+    input.max = String(available);
+    input.value = '1';
+    input.step = '1';
+    input.inputMode = 'numeric';
+    input.className = 'dagger-merchant-quantity';
+    input.setAttribute('aria-label', `Quantity of ${item.label}`);
+    return input;
+  };
+  const merchantAction = (action: string, merchant: MerchantProjection, item: MerchantItemProjection, label: string,
+    amountInput?: HTMLInputElement): HTMLButtonElement => {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = label;
-    const amount = merchantAmount(item);
-    button.addEventListener('click', () => context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-      data: amount === undefined
+    button.addEventListener('click', () => {
+      const data = amountInput === undefined
         ? { action, revision: merchant.revision, item: item.key }
-        : { action, revision: merchant.revision, item: item.key, amount },
-    }));
+        : (() => {
+          const available = merchantAmount(item);
+          const amount = Number(amountInput.value);
+          if (available === undefined || !Number.isSafeInteger(amount) || amount < 1 || amount > available) {
+            amountInput.focus();
+            return undefined;
+          }
+          return { action, revision: merchant.revision, item: item.key, amount };
+        })();
+      if (data === undefined) return;
+      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data });
+    });
     return button;
   };
   const renderMerchant = (merchant: MerchantProjection | null): void => {
@@ -602,8 +626,10 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       for (const item of items) {
         const row = document.createElement('li');
         row.textContent = `${item.label} × ${item.quantity} · ${item.unitPrice} gold${item.stolen ? ' · stolen' : ''}`;
-        if (predicate(item)) row.append(' ', merchantAction(action, merchant, item, action === 'merchant-buy' ? 'Buy' : 'Sell'));
-        if (action === 'merchant-buy' && predicate(item)) row.append(' ', merchantAction('merchant-shoplift', merchant, item, 'Steal'));
+        const amountInput = merchantQuantityInput(item);
+        if (amountInput && predicate(item)) row.append(' ', amountInput);
+        if (predicate(item)) row.append(' ', merchantAction(action, merchant, item, action === 'merchant-buy' ? 'Buy' : 'Sell', amountInput));
+        if (action === 'merchant-buy' && predicate(item)) row.append(' ', merchantAction('merchant-shoplift', merchant, item, 'Steal', amountInput));
         if (action === 'merchant-sell' && merchant.repairAvailable && item.key.startsWith('unique:') && item.maximumCondition > item.currentCondition)
           row.append(' ', merchantAction('merchant-repair', merchant, item, 'Repair'));
         if (action === 'merchant-sell' && merchant.identifyAvailable && item.key.startsWith('unique:') && !item.identified)
