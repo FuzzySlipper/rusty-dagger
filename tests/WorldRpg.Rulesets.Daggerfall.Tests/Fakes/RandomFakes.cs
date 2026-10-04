@@ -22,9 +22,18 @@ internal class RandomMinimum : DispatchProxy
         return service;
     }
 
-    protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
-        ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
-        : throw new NotSupportedException(method?.Name);
+    protected override object? Invoke(MethodInfo? method, object?[]? arguments)
+    {
+        if (method?.Name == nameof(IRandomService.DrawKeyed))
+            return new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum);
+        if (method?.Name == nameof(IRandomService.DrawLcg15))
+        {
+            Lcg15Request request = (Lcg15Request)arguments![0]!;
+            uint state = unchecked(request.State * 1103515245u + 12345u);
+            return new Lcg15Receipt(state, ((state >> 16) & 0x7fffu) % request.UpperExclusive);
+        }
+        throw new NotSupportedException(method?.Name);
+    }
 }
 
 internal class KeyedRandomFake : DispatchProxy
