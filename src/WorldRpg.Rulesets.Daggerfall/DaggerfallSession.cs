@@ -300,6 +300,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         DaggerfallMolagBalEffects.Reconcile(State.Effects, MolagBalEquipped);
         _heldEnchantments.Refresh();
         SyncCivilianPositions();
+        using IDisposable detachedResidents = _sites.SuspendResidentExteriorLocationsForSave();
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _roster.Dynamic, _encounters,
             _sites.Deltas, _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
             _sites.Projection.CaptureMotion(), _sites.CaptureExteriorResidency(), _sites.CaptureExteriorLocationResidency());
@@ -553,8 +554,12 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _disposed = true;
         // DisposeAll walks backward: projection door entities must release before the actor store.
         Exception? failure = null;
-        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, Infections, _weatherPresentation]); }
+        try { _sites.ReleaseExteriorWaterTriggers(); }
         catch (Exception exception) { failure = exception; }
+        try { _sites.RetireResidentExteriorLocations(capture: false); }
+        catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
+        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, Infections, _weatherPresentation]); }
+        catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { _sites.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         // The score's loop and the clips it opened belong to this session, so they are retired before

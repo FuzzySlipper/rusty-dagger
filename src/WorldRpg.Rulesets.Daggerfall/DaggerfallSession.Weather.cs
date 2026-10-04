@@ -19,7 +19,7 @@ internal sealed partial class DaggerfallSession
                 ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer);
         bool sheltered = outside && _spatial.CastRay(player + Vector3.UnitY * _tuning.Camera.EyeHeight,
             Vector3.UnitY, _tuning.Ambient.ShelterProbeHeight,
-            _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion)).Present;
+            _sites.CharacterEnvironment(State.PlayerControl.Motion)).Present;
         _weatherPresentation.Update(_sites.Projection, _time.Calendar, CurrentClimate, CurrentWeather,
             _weather.SkyVariant(CurrentClimate), player, sheltered, seconds, playing);
     }

@@ -107,10 +107,13 @@ public sealed class DaggerfallTerrainSurfaceBuilderTests
     public void Flattens_the_location_rectangle_to_the_preblend_average_with_donor_edge_strength()
     {
         DaggerfallTerrainSurface source = DaggerfallTerrainSurfaceBuilder.Build(GradientTerrain(8, 8), 3, 3);
+        Assert.Equal(128, source.SourceWorldHeight);
         float target = source.NormalizedHeights.Average();
         DaggerfallTerrainLocationFlattening flattening = new(32, 96, 32, 96);
 
         DaggerfallTerrainSurface flattened = DaggerfallTerrainSurfaceBuilder.ApplyLocationFlattening(source, flattening);
+
+        Assert.Equal(source.SourceWorldHeight, flattened.SourceWorldHeight);
 
         // Interior samples are exactly the generated pre-blend average.
         Assert.InRange(MathF.Abs(flattened.NormalizedHeights[Index(64, 64)] - target), 0F, .000001F);

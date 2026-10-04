@@ -145,29 +145,31 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         Dictionary<DaggerfallExteriorCellId, DaggerfallExteriorTerrainVariant> variants = environment?.TerrainVariants
             .ToDictionary(variant => variant.Cell)
             ?? [];
+        DaggerfallExteriorNaturePlacement[] naturePlacements = environment?.NaturePlacements.ToArray() ?? [];
         List<(DaggerfallExteriorCellId Cell, TerrainVisual Visual)> additions = [];
         List<NatureVisual> natureAdditions = [];
         try
         {
             foreach (DaggerfallExteriorCellId cell in desired)
             {
-                TerrainTextureKey? textureKey = variants.TryGetValue(cell, out DaggerfallExteriorTerrainVariant variant)
-                    ? ResolveTerrainTexture(variant)
-                    : null;
+                IReadOnlyList<DaggerfallExteriorTerrainTile> terrainTiles = environment?.TerrainTilesFor(cell) ?? [];
+                IReadOnlyList<TerrainTextureKey> textureKeys = variants.TryGetValue(cell, out DaggerfallExteriorTerrainVariant variant)
+                    ? ResolveTerrainTextures(variant, terrainTiles)
+                    : [];
                 if (_visuals.TryGetValue(cell, out TerrainVisual? current)
-                    && current.TextureKey == textureKey) continue;
-                additions.Add((cell, CreateVisual(cell, surfaceFactory(cell), textureKey)));
+                    && TextureKeysEqual(current.TextureKeys, textureKeys)
+                    && current.TerrainTiles.SequenceEqual(terrainTiles)) continue;
+                additions.Add((cell, CreateVisual(cell, surfaceFactory(cell), terrainTiles, textureKeys)));
             }
 
             if (environment is not null)
             {
-                foreach (DaggerfallExteriorNaturePlacement placement in environment.NaturePlacements)
+                foreach (DaggerfallExteriorNaturePlacement placement in naturePlacements)
                 {
-                    if (!TryResolveNatureSprite(placement, out NatureSpriteKey spriteKey, out NormalizedBillboardSprite? sprite))
-                        continue;
+                    (NatureSpriteKey spriteKey, NormalizedBillboardSprite sprite) = ResolveNatureSprite(placement);
                     if (_natureVisuals.TryGetValue(placement.StableId, out NatureVisual? current)
                         && current.Key == spriteKey) continue;
-                    natureAdditions.Add(CreateNatureVisual(placement, spriteKey, sprite!));
+                    natureAdditions.Add(CreateNatureVisual(placement, spriteKey, sprite));
                 }
             }
         }
@@ -180,9 +182,9 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
             throw;
         }
 
+        HashSet<DaggerfallExteriorCellId> replacedCells = additions.Select(addition => addition.Cell).ToHashSet();
         foreach (DaggerfallExteriorCellId cell in _visuals.Keys
-            .Where(cell => !desiredSet.Contains(cell)
-                || additions.Any(addition => addition.Cell == cell))
+            .Where(cell => !desiredSet.Contains(cell) || replacedCells.Contains(cell))
             .ToArray())
         {
             _retired.Add(_visuals[cell]);
@@ -194,19 +196,10 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
 
         HashSet<ulong> desiredNature = environment is null
             ? _natureVisuals.Keys.ToHashSet()
-            : natureAdditions.Select(visual => visual.ObjectId).ToHashSet();
-        if (environment is not null)
-        {
-            // A placement omitted because its generated source sprite is unavailable must be
-            // removed from the complete snapshot as well; keeping an old season's sprite would
-            // make the terrain facts and the admitted media closure disagree.
-            desiredNature.UnionWith(environment.NaturePlacements
-                .Where(placement => TryResolveNatureSprite(placement, out _, out _))
-                .Select(placement => placement.StableId));
-        }
+            : naturePlacements.Select(placement => placement.StableId).ToHashSet();
+        HashSet<ulong> replacedNature = natureAdditions.Select(visual => visual.ObjectId).ToHashSet();
         foreach (ulong objectId in _natureVisuals.Keys
-            .Where(objectId => !desiredNature.Contains(objectId)
-                || natureAdditions.Any(addition => addition.ObjectId == objectId))
+            .Where(objectId => !desiredNature.Contains(objectId) || replacedNature.Contains(objectId))
             .ToArray())
         {
             _retiredNature.Add(_natureVisuals[objectId]);
@@ -305,7 +298,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     private TerrainVisual CreateVisual(
         DaggerfallExteriorCellId cell,
         DaggerfallTerrainSurface surface,
-        TerrainTextureKey? textureKey)
+        IReadOnlyList<DaggerfallExteriorTerrainTile> terrainTiles,
+        IReadOnlyList<TerrainTextureKey> textureKeys)
     {
         ArgumentNullException.ThrowIfNull(surface);
         if (surface.MapPixelX != cell.X || surface.MapPixelY != cell.Y)
@@ -317,31 +311,42 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
             throw new InvalidOperationException($"Exterior terrain cell ({cell.X},{cell.Y}) has no renderable geometry.");
 
         Vector3[] normals = BuildNormals(surface);
-        Vector2[] uvs = BuildTerrainUvs(surface);
-        uint[] indices = new uint[checked(surface.Triangles.Length * 3)];
-        for (int index = 0; index < surface.Triangles.Length; index++)
+        Vector3[] positions;
+        Vector2[] uvs;
+        uint[] indices;
+        MeshGroup[] groups;
+        MeshMaterialBinding[] bindings;
+        if (textureKeys.Count == 0)
         {
-            Triangle triangle = surface.Triangles[index];
-            indices[index * 3] = triangle.A;
-            indices[index * 3 + 1] = triangle.B;
-            indices[index * 3 + 2] = triangle.C;
+            positions = surface.Vertices;
+            uvs = BuildTerrainUvs(surface);
+            indices = new uint[checked(surface.Triangles.Length * 3)];
+            for (int index = 0; index < surface.Triangles.Length; index++)
+            {
+                Triangle triangle = surface.Triangles[index];
+                indices[index * 3] = triangle.A;
+                indices[index * 3 + 1] = triangle.B;
+                indices[index * 3 + 2] = triangle.C;
+            }
+            groups = [new MeshGroup(0, 0, checked((uint)indices.Length))];
+            bindings = [new MeshMaterialBinding(0, _material)];
         }
-
-        Material material = textureKey is { } key
-            ? GetTerrainMaterial(key).Material
-            : _material;
+        else
+        {
+            (positions, normals, uvs, indices, groups, bindings) = BuildTiledMesh(surface, normals, terrainTiles, textureKeys);
+        }
         MeshResource? mesh = null;
         try
         {
             mesh = _graphics.CreateMeshResource(new MeshResourceCreateRequest(
-                surface.Vertices,
+                positions,
                 normals,
                 uvs,
                 indices,
-                new[] { new MeshGroup(0, 0, checked((uint)indices.Length)) },
-                new[] { new MeshMaterialBinding(0, material) }));
+                groups,
+                bindings));
             Appearance appearance = _graphics.CreateMeshAppearance(mesh);
-            return new(mesh, appearance, textureKey);
+            return new(mesh, appearance, textureKeys.ToArray(), terrainTiles.ToArray());
         }
         catch
         {
@@ -350,21 +355,100 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         }
     }
 
-    private TerrainTextureKey? ResolveTerrainTexture(DaggerfallExteriorTerrainVariant variant)
+    private IReadOnlyList<TerrainTextureKey> ResolveTerrainTextures(
+        DaggerfallExteriorTerrainVariant variant,
+        IReadOnlyList<DaggerfallExteriorTerrainTile> terrainTiles)
     {
-        if (_profile is null) return null;
-        foreach (KeyValuePair<(int Archive, int Record), NormalizedTerrainTexture> pair in _profile.TerrainTextures
-            .Where(pair => pair.Key.Archive == variant.GroundTextureArchive)
-            .OrderBy(pair => pair.Key.Record))
+        if (_profile is null)
+            throw new InvalidOperationException("Exterior terrain variants require a configured site media profile.");
+        if (terrainTiles.Count != checked(DaggerfallTerrainSurfaceBuilder.SampleDimension - 1)
+            * (DaggerfallTerrainSurfaceBuilder.SampleDimension - 1))
         {
-            // The terrain mesh is one admitted Engine resource per cell. The source climate
-            // archive is the policy-bearing choice; record zero is the canonical tile when the
-            // generated closure has it, while a fixture or older closure may expose another
-            // source record only. Keeping the path in the key also prevents stale resources
-            // surviving a profile replacement under the same archive/record address.
-            return new(pair.Key.Archive, pair.Key.Record, pair.Value.TexturePath);
+            throw new InvalidOperationException($"Exterior terrain cell ({variant.Cell.X},{variant.Cell.Y}) published {terrainTiles.Count} tiles instead of the donor 128x128 tilemap.");
         }
-        return null;
+
+        TerrainTextureKey[] keys = new TerrainTextureKey[terrainTiles.Count];
+        for (int index = 0; index < terrainTiles.Count; index++)
+        {
+            DaggerfallExteriorTerrainTile tile = terrainTiles[index];
+            if (!_profile.TerrainTextures.TryGetValue((variant.GroundTextureArchive, tile.TextureRecord), out NormalizedTerrainTexture? texture))
+            {
+                throw new InvalidOperationException(
+                    $"Exterior terrain texture {variant.GroundTextureArchive}/{tile.TextureRecord} was selected without a normalized media resource.");
+            }
+            keys[index] = new(variant.GroundTextureArchive, tile.TextureRecord, texture.TexturePath);
+        }
+        return keys;
+    }
+
+    private static bool TextureKeysEqual(IReadOnlyList<TerrainTextureKey> first, IReadOnlyList<TerrainTextureKey> second) =>
+        first.Count == second.Count && first.SequenceEqual(second);
+
+    private (Vector3[] Positions, Vector3[] Normals, Vector2[] Uvs, uint[] Indices,
+        MeshGroup[] Groups, MeshMaterialBinding[] Bindings) BuildTiledMesh(
+        DaggerfallTerrainSurface surface,
+        Vector3[] sourceNormals,
+        IReadOnlyList<DaggerfallExteriorTerrainTile> terrainTiles,
+        IReadOnlyList<TerrainTextureKey> textureKeys)
+    {
+        const int tileDimension = DaggerfallTerrainSurfaceBuilder.SampleDimension - 1;
+        if (terrainTiles.Count != tileDimension * tileDimension || textureKeys.Count != terrainTiles.Count)
+            throw new InvalidOperationException("Exterior terrain tile facts do not match the terrain surface tilemap.");
+
+        List<Vector3> positions = new(terrainTiles.Count * 4);
+        List<Vector3> normals = new(terrainTiles.Count * 4);
+        List<Vector2> uvs = new(terrainTiles.Count * 4);
+        Dictionary<TerrainTextureKey, List<uint>> groupedIndices = [];
+        for (int tileY = 0; tileY < tileDimension; tileY++)
+        {
+            for (int tileX = 0; tileX < tileDimension; tileX++)
+            {
+                int tileIndex = (tileY * tileDimension) + tileX;
+                DaggerfallExteriorTerrainTile tile = terrainTiles[tileIndex];
+                TerrainTextureKey key = textureKeys[tileIndex];
+                if (!groupedIndices.TryGetValue(key, out List<uint>? tileIndices))
+                    groupedIndices.Add(key, tileIndices = []);
+
+                int vertex = positions.Count;
+                int lowerLeft = tileY * DaggerfallTerrainSurfaceBuilder.SampleDimension + tileX;
+                int lowerRight = lowerLeft + 1;
+                int upperLeft = lowerLeft + DaggerfallTerrainSurfaceBuilder.SampleDimension;
+                int upperRight = upperLeft + 1;
+                int[] source = [lowerLeft, lowerRight, upperLeft, upperRight];
+                Vector2[] tileUvs = [new(0F, 0F), new(1F, 0F), new(0F, 1F), new(1F, 1F)];
+                for (int corner = 0; corner < source.Length; corner++)
+                {
+                    positions.Add(surface.Vertices[source[corner]]);
+                    normals.Add(sourceNormals[source[corner]]);
+                    uvs.Add(TransformTileUv(tileUvs[corner], tile.Rotated, tile.Flipped));
+                }
+                tileIndices.AddRange([(uint)vertex, (uint)(vertex + 3), (uint)(vertex + 1),
+                    (uint)vertex, (uint)(vertex + 2), (uint)(vertex + 3)]);
+            }
+        }
+
+        List<uint> indices = [];
+        List<MeshGroup> groups = [];
+        List<MeshMaterialBinding> bindings = [];
+        uint start = 0;
+        uint slot = 0;
+        foreach ((TerrainTextureKey key, List<uint> tileIndices) in groupedIndices.OrderBy(entry => entry.Key.Archive)
+            .ThenBy(entry => entry.Key.Record).ThenBy(entry => entry.Key.Path, StringComparer.Ordinal))
+        {
+            indices.AddRange(tileIndices);
+            groups.Add(new MeshGroup(slot, start, checked((uint)tileIndices.Count)));
+            bindings.Add(new MeshMaterialBinding(slot, GetTerrainMaterial(key).Material));
+            start = checked(start + (uint)tileIndices.Count);
+            slot++;
+        }
+        return (positions.ToArray(), normals.ToArray(), uvs.ToArray(), indices.ToArray(), groups.ToArray(), bindings.ToArray());
+    }
+
+    internal static Vector2 TransformTileUv(Vector2 uv, bool rotated, bool flipped)
+    {
+        if (rotated) uv = new(uv.Y, 1F - uv.X);
+        if (flipped) uv.Y = 1F - uv.Y;
+        return uv;
     }
 
     private TerrainMaterial GetTerrainMaterial(TerrainTextureKey key)
@@ -411,6 +495,18 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
             return false;
         key = new(placement.SpriteArchive, placement.SpriteRecord, sprite.TexturePath);
         return true;
+    }
+
+    private (NatureSpriteKey Key, NormalizedBillboardSprite Sprite) ResolveNatureSprite(
+        DaggerfallExteriorNaturePlacement placement)
+    {
+        if (!TryResolveNatureSprite(placement, out NatureSpriteKey key, out NormalizedBillboardSprite? sprite)
+            || sprite is null)
+        {
+            throw new InvalidOperationException(
+                $"Exterior nature sprite {placement.SpriteArchive}/{placement.SpriteRecord} was selected without a normalized media resource.");
+        }
+        return (key, sprite);
     }
 
     private NatureVisual CreateNatureVisual(
@@ -579,5 +675,5 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     private sealed record TerrainMaterial(TerrainTextureKey Key, RenderResource Resource, Material Material);
     private sealed record NatureSprite(NatureSpriteKey Key, RenderResource Resource, SpriteAtlas Atlas);
     private sealed record NatureVisual(ulong ObjectId, DaggerfallExteriorNaturePlacement Placement, NatureSpriteKey Key, Appearance Appearance);
-    private sealed record TerrainVisual(MeshResource Mesh, Appearance Appearance, TerrainTextureKey? TextureKey);
+    private sealed record TerrainVisual(MeshResource Mesh, Appearance Appearance, IReadOnlyList<TerrainTextureKey> TextureKeys, IReadOnlyList<DaggerfallExteriorTerrainTile> TerrainTiles);
 }

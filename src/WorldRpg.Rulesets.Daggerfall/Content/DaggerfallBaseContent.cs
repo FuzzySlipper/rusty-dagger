@@ -640,35 +640,51 @@ internal static partial class DaggerfallBaseContent
         return blocks.AsReadOnly();
     }
 
-    private static IReadOnlyList<DaggerfallSiteGroundTile> ReadSiteGroundTiles(JsonElement exterior, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallGroundTileGrid ReadSiteGroundTiles(JsonElement exterior, DaggerfallContentDiagnostics diagnostics)
     {
-        // Older authored sites have no source FLD section. They remain valid and simply expose no
-        // location-specific ground override; generated locations publish all normalized tiles.
-        if (!exterior.TryGetProperty("groundTiles", out JsonElement section)) return [];
-        if (section.ValueKind != JsonValueKind.Array)
+        // The normalized importer publishes the complete FLD frame as one compact logical grid.
+        // An absent section remains valid for authored sites that intentionally have no source FLD.
+        if (!exterior.TryGetProperty("groundTiles", out JsonElement section)) return DaggerfallGroundTileGrid.Empty;
+        if (section.ValueKind != JsonValueKind.String)
         {
-            diagnostics.Add("Location exterior groundTiles must be an array.");
-            return [];
+            diagnostics.Add("Location exterior groundTiles must be a base64 logical grid.");
+            return DaggerfallGroundTileGrid.Empty;
         }
 
-        List<DaggerfallSiteGroundTile> tiles = [];
-        HashSet<(int X, int Y)> identities = [];
-        foreach (JsonElement value in section.EnumerateArray())
+        byte[] grid;
+        try
         {
-            int x = Integer(value, "x", diagnostics);
-            int y = Integer(value, "y", diagnostics);
-            int texture = Integer(value, "textureRecord", diagnostics);
-            bool rotated = Boolean(value, "rotated", diagnostics);
-            bool flipped = Boolean(value, "flipped", diagnostics);
-            if (x is < 0 or >= 128 || y is < 0 or >= 128 || texture is < 0 or >= 56
-                || !identities.Add((x, y)))
-            {
-                diagnostics.Add($"Exterior ground tile ({x},{y}) has an invalid frame, texture record, or duplicate identity.");
-                continue;
-            }
-            tiles.Add(new(x, y, (byte)texture, rotated, flipped));
+            grid = Convert.FromBase64String(section.GetString() ?? string.Empty);
         }
-        return tiles.AsReadOnly();
+        catch (FormatException)
+        {
+            diagnostics.Add("Location exterior groundTiles is not valid base64.");
+            return DaggerfallGroundTileGrid.Empty;
+        }
+
+        const int expected = DaggerfallGroundTileGrid.CellCount;
+        if (grid.Length != expected)
+        {
+            diagnostics.Add($"Location exterior groundTiles carries {grid.Length} bytes instead of the donor 128-by-128 logical grid.");
+            return DaggerfallGroundTileGrid.Empty;
+        }
+        foreach (byte bitfield in grid)
+        {
+            if (bitfield != DaggerfallGroundTileGrid.GeneratedTerrainBitfield && (bitfield & 0x3F) >= 56)
+            {
+                diagnostics.Add($"Location exterior groundTiles carries unsupported texture record {bitfield & 0x3F}.");
+                return DaggerfallGroundTileGrid.Empty;
+            }
+        }
+        try
+        {
+            return DaggerfallGroundTileGrid.FromBytes(grid, "published exterior");
+        }
+        catch (InvalidOperationException exception)
+        {
+            diagnostics.Add(exception.Message);
+            return DaggerfallGroundTileGrid.Empty;
+        }
     }
 
     private static IReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> ReadSiteBuildings(JsonElement exterior, int region, int index,

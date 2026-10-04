@@ -263,9 +263,10 @@ internal sealed class DaggerfallActorRoster
     }
 
     /// <summary>Admits published source people into the same registry, actors, site delta and renderer.</summary>
-    internal void MaterializeStaticNpcs(DaggerfallSiteProfile profile)
+    internal void MaterializeStaticNpcs(DaggerfallSiteProfile profile, DaggerfallSiteProjection? projection = null)
     {
         if (profile.StaticNpcs.Count == 0) return;
+        DaggerfallSiteAppearance appearance = (projection ?? _projection()).Appearance;
         DaggerfallSiteId site = profile.Site!.Value;
         DaggerfallSiteRecord location = _definitions.Locations.Records.Single(location => location.Id == site);
         DaggerfallInteriorBuilding building = profile.InteriorBuilding!;
@@ -291,7 +292,7 @@ internal sealed class DaggerfallActorRoster
                     // Keep the registry's current-profile placement out of a failed candidate. The
                     // placement becomes durable only after the actor's appearance has been admitted;
                     // this also lets a transition retry reuse the same live stable identity.
-                    Appearance.AdmitActor(id, placement.Sprite);
+                    appearance.AdmitActor(id, placement.Sprite);
                     _state.Npcs.Place(id, profile.ProfileKey, placement.Position);
                     batch.Add(id);
                 }
@@ -311,7 +312,7 @@ internal sealed class DaggerfallActorRoster
             foreach (long id in batch.Distinct().Reverse())
             {
                 _state.Npcs.Unplace(id);
-                UnloadActor(id);
+                UnloadActor(id, projection);
             }
             throw;
         }
@@ -322,18 +323,23 @@ internal sealed class DaggerfallActorRoster
     /// suspended, owned item entities released with their durable identities kept for the delta,
     /// and the actor, its corpse container and its appearance retired.
     /// </summary>
-    internal void UnloadSite(DaggerfallSiteProfile source, DaggerfallSiteRuntimeDelta? delta)
+    internal void UnloadSite(DaggerfallSiteProfile source, DaggerfallSiteRuntimeDelta? delta,
+        DaggerfallSiteProjection? projection = null, IReadOnlySet<long>? actorIds = null)
     {
-        long[] ids = [.. source.Project.Actors.Keys.Concat(delta?.DynamicActors.Select(actor => actor.EntityId) ?? []).Order()];
+        IEnumerable<long> authored = source.Project.Actors.Keys;
+        IEnumerable<long> dynamic = delta?.DynamicActors.Select(actor => actor.EntityId) ?? [];
+        long[] ids = actorIds is null
+            ? [.. authored.Concat(dynamic).Order()]
+            : [.. actorIds.Order()];
         // The delta was captured while these actors and their target-bound contributions were live.
         // Detach every target lifecycle before destroying Engine entities; effects on a live player
         // with one of these actors as caster remain active by durable caster identity.
         _ = _state.Effects.SuspendTargets(ids);
-        foreach (long id in ids) UnloadActor(id);
+        foreach (long id in ids) UnloadActor(id, projection);
     }
 
     /// <summary>Detaches one canonical actor while its values and identities remain in a site delta.</summary>
-    internal void UnloadActor(long id)
+    internal void UnloadActor(long id, DaggerfallSiteProjection? projection = null)
     {
         _ = _state.Effects.SuspendTargets([id]);
         if (!_state.Actors.TryGet(id, out ActorState? actor)) return;
@@ -343,7 +349,7 @@ internal sealed class DaggerfallActorRoster
         _dynamicActors.Remove(actor.DurableId);
         // Authored and spawned placements share the same appearance owner. A cell unload must
         // retire both kinds so no sprite/animation wrapper outlives its admitted location.
-        Appearance.RetireActor(actor.DurableId);
+        (projection?.Appearance ?? Appearance).RetireActor(actor.DurableId);
         _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(actor.DurableId), retireBindings: false);
         _state.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(actor.DurableId), retireBindings: false);
         _corpseLoot.Unload(actor.DurableId);
@@ -355,10 +361,12 @@ internal sealed class DaggerfallActorRoster
     /// caller restores the delta's inventories, corpses and effects onto them afterwards.
     /// </summary>
     internal void MaterializeSite(DaggerfallSiteProfile destination, DaggerfallSiteRuntimeDelta? delta,
-        bool restoreAuthoredAppearance = false)
+        bool restoreAuthoredAppearance = false, DaggerfallSiteProjection? projection = null)
     {
-        BanishedActors.Clear();
-        BanishedActors.UnionWith(delta?.BanishedActors ?? []);
+        // Banishment is a session-wide durable identity fact. A second resident profile must not
+        // clear an earlier profile's tombstones while it is being admitted.
+        if (delta is not null) BanishedActors.UnionWith(delta.BanishedActors);
+        DaggerfallSiteAppearance appearance = (projection ?? _projection()).Appearance;
         Dictionary<long, DaggerfallActorSave> saved = delta?.Actors.ToDictionary(value => value.EntityId) ?? [];
         foreach (AuthoredActor placement in destination.Project.Actors.Values.OrderBy(value => value.EntityId))
         {
@@ -375,22 +383,23 @@ internal sealed class DaggerfallActorRoster
             {
                 if (!destination.MobileSprites.TryGetValue(authoredMobile, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored authored actor '{placement.EntityId}' has no admitted mobile {authoredMobile} presentation.");
-                Appearance.AddActor(actor.DurableId, sprite);
+                appearance.AddActor(actor.DurableId, sprite);
             }
             if (prior is null) GrantStartingEquipment(actor, definition);
             if (prior?.WabbajackDefinition is not null && definition.MobileId is int changedMobile)
             {
-                Appearance.RetireActor(actor.DurableId);
-                Appearance.AddActor(actor.DurableId, destination.MobileSprites[changedMobile]);
+                appearance.RetireActor(actor.DurableId);
+                appearance.AddActor(actor.DurableId, destination.MobileSprites[changedMobile]);
             }
         }
         if (delta is null) return;
         foreach (DaggerfallDynamicActorSave savedDynamic in delta.DynamicActors.OrderBy(actor => actor.EntityId))
-            MaterializeRetainedActor(savedDynamic);
+            MaterializeRetainedActor(savedDynamic, projectAppearance: true, projection: projection);
     }
 
     /// <summary>Rebuilds a retained actor through the same factory and presentation owner as site re-entry.</summary>
-    internal ActorState MaterializeRetainedActor(DaggerfallDynamicActorSave saved, bool projectAppearance = true)
+    internal ActorState MaterializeRetainedActor(DaggerfallDynamicActorSave saved, bool projectAppearance = true,
+        DaggerfallSiteProjection? projection = null)
     {
         try
         {
@@ -399,13 +408,14 @@ internal sealed class DaggerfallActorRoster
             _dynamicActors.Add(saved.EntityId, new DaggerfallActorId(saved.Definition));
             if (projectAppearance && _definitionsByActor[saved.EntityId].MobileId is int mobileId)
             {
-                if (!_projection().Inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
+                DaggerfallSiteProfile presentation = projection?.Inputs ?? _projection().Inputs;
+                if (!presentation.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored dynamic actor '{saved.Definition}' has no admitted mobile {mobileId} presentation.");
-                Appearance.AddActor(saved.EntityId, sprite);
+                (projection?.Appearance ?? Appearance).AddActor(saved.EntityId, sprite);
             }
             return actor;
         }
-        catch { UnloadActor(saved.EntityId); throw; }
+        catch { UnloadActor(saved.EntityId, projection); throw; }
     }
 
     /// <summary>

@@ -128,10 +128,109 @@ internal sealed record DaggerfallSiteExterior(
 {
     internal int? SourceLocationId { get; init; }
     internal IReadOnlyList<DaggerfallSiteBlock> Blocks { get; init; } = [];
-    internal IReadOnlyList<DaggerfallSiteGroundTile> GroundTiles { get; init; } = [];
+    /// <summary>
+    /// Compact row-major FLD facts. The reader keeps only non-sentinel source tiles in this typed
+    /// grid, including authored record zero, so the full location catalog does not retain one
+    /// 16-KiB array (or thousands of tile objects) per location. Contains distinguishes an absent
+    /// generated terrain tile from an authored record-zero tile.
+    /// </summary>
+    internal DaggerfallGroundTileGrid GroundTiles { get; init; } = DaggerfallGroundTileGrid.Empty;
     internal IReadOnlyList<DaggerfallSiteBuildingReference> BuildingReferences { get; init; } = [];
     internal int PortTownAndUnknown { get; init; }
     internal IReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> Buildings { get; init; } = new Dictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource>();
+}
+
+/// <summary>
+/// A source location's 128-by-128 FLD frame in a compact typed representation. The published
+/// importer contract remains a complete base64 byte grid; this runtime value indexes the same
+/// row-major bytes without retaining a heap object for every terrain tile.
+/// </summary>
+internal sealed class DaggerfallGroundTileGrid
+{
+    internal const int Dimension = 128;
+    internal const int CellCount = Dimension * Dimension;
+    // Matches Daggerfall.Import's normalized logical grid sentinel. Record zero remains a
+    // source-authored tile and therefore must remain present in the sparse index.
+    internal const byte GeneratedTerrainBitfield = 0xFE;
+    private readonly ushort[] _indices;
+    private readonly byte[] _values;
+
+    private DaggerfallGroundTileGrid(ushort[] indices, byte[] values)
+    {
+        _indices = indices;
+        _values = values;
+    }
+
+    internal static DaggerfallGroundTileGrid Empty { get; } = new([], []);
+
+    internal bool IsEmpty => _indices.Length == 0;
+
+    internal static DaggerfallGroundTileGrid FromBytes(ReadOnlySpan<byte> source, string owner)
+    {
+        if (source.Length != 0 && source.Length != CellCount)
+            throw new InvalidOperationException($"Location {owner} carries {source.Length} source ground bytes instead of the donor {Dimension}-by-{Dimension} frame.");
+
+        int nonZero = 0;
+        foreach (byte bitfield in source)
+        {
+            if (bitfield != GeneratedTerrainBitfield && (bitfield & 0x3F) >= 56)
+                throw new InvalidOperationException($"Location {owner} carries unsupported ground texture record {bitfield & 0x3F}.");
+            if (bitfield != GeneratedTerrainBitfield) nonZero++;
+        }
+
+        if (nonZero == 0) return Empty;
+        ushort[] indices = new ushort[nonZero];
+        byte[] values = new byte[nonZero];
+        int cursor = 0;
+        for (int index = 0; index < source.Length; index++)
+        {
+            byte bitfield = source[index];
+            if (bitfield == GeneratedTerrainBitfield) continue;
+            indices[cursor] = checked((ushort)index);
+            values[cursor++] = bitfield;
+        }
+        return new(indices, values);
+    }
+
+    internal byte At(int x, int y)
+    {
+        if ((uint)x >= Dimension || (uint)y >= Dimension)
+            throw new ArgumentOutOfRangeException($"({x},{y})");
+        return At(checked((y * Dimension) + x));
+    }
+
+    internal byte At(int index)
+    {
+        if ((uint)index >= CellCount) throw new ArgumentOutOfRangeException(nameof(index));
+        return TryAt(index, out byte value) ? value : (byte)0;
+    }
+
+    /// <summary>Returns whether the normalized source frame authored this tile, including record zero.</summary>
+    internal bool Contains(int index)
+    {
+        if ((uint)index >= CellCount) throw new ArgumentOutOfRangeException(nameof(index));
+        return TryAt(index, out _);
+    }
+
+    private bool TryAt(int index, out byte value)
+    {
+        int low = 0;
+        int high = _indices.Length - 1;
+        while (low <= high)
+        {
+            int middle = low + ((high - low) >> 1);
+            int candidate = _indices[middle];
+            if (candidate == index)
+            {
+                value = _values[middle];
+                return true;
+            }
+            if (candidate < index) low = middle + 1;
+            else high = middle - 1;
+        }
+        value = 0;
+        return false;
+    }
 }
 
 internal sealed record DaggerfallSiteBlock(string SourceName, int X, int Y);

@@ -297,7 +297,7 @@ internal sealed partial class DaggerfallSession
             return null;
         SpatialHit hit = _spatial.CastRay(position.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight,
             direction, (float)maximumDistance, _sites.ActionTriggers.ActiveRayEntities(),
-            _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion));
+            _sites.CharacterEnvironment(State.PlayerControl.Motion));
         if (!hit.Present || hit.Kind != SpatialHitKind.Entity) return null;
         foreach (DaggerfallDoorView door in _doors.All)
             if (door.Entity.Value == hit.Entity) return door.Id;
@@ -321,7 +321,7 @@ internal sealed partial class DaggerfallSession
             direction,
             (float)maximumDistance,
             actionEntities,
-            _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion));
+            _sites.CharacterEnvironment(State.PlayerControl.Motion));
         if (!hit.Present) return false;
 
         if (hit.Kind == SpatialHitKind.Entity)

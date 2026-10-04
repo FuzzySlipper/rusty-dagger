@@ -314,7 +314,7 @@ internal sealed partial class DaggerfallSession
                     _spatial.Session,
                     actors.Store,
                     _spatial.CurrentController,
-                    actor => _sites.Projection.CharacterEnvironment(
+                    actor => _sites.CharacterEnvironment(
                         actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion))),
                 actors,
                 kit.Attacks,

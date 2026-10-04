@@ -110,7 +110,7 @@ internal sealed partial class DaggerfallSession
         Vector3 direction = Vector3.Normalize(delta);
         Vector3 launch = origin + direction * armDistance;
         ReadOnlyMemory<SpatialEntityCollider> colliders = SpellColliders(attempt.ActorId);
-        CharacterStepEnvironment environment = _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion);
+        CharacterStepEnvironment environment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
         SpatialHit atLaunch = _spatial.OverlapCapsule(launch, 0d, .45d, colliders, environment);
         if (BlocksEnemySpellPath(atLaunch)) return false;
         SpatialHit alongPath = _spatial.CastCapsule(launch, 0d, .45d,
@@ -133,7 +133,7 @@ internal sealed partial class DaggerfallSession
             if (!ValidDirection(direction)) return Casting.Release(casterId, false);
             SpatialHit hit = _spatial.CastCapsule(origin.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight,
                 0d, .25d, Vector3.Normalize(direction) * 3f, SpellColliders(casterId),
-                _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion));
+                _sites.CharacterEnvironment(State.PlayerControl.Motion));
             touch = ActorForSpellHit(hit);
         }
         DaggerfallCastResult release = Casting.Release(casterId, target != DaggerfallSpellTarget.ByTouch || touch.HasValue,
@@ -166,7 +166,7 @@ internal sealed partial class DaggerfallSession
 
     private SpatialHit CastSpellRay(long? caster, Vector3 origin, Vector3 direction, float distance) => _spatial.CastRay(
         origin, Vector3.Normalize(direction), distance,
-        SpellColliders(caster), _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion));
+        SpellColliders(caster), _sites.CharacterEnvironment(State.PlayerControl.Motion));
 
     private SpatialEntityCollider[] SpellColliders(long? caster)
     {

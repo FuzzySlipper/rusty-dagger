@@ -84,7 +84,7 @@ internal sealed partial class DaggerfallSession
 
     private bool TrySummonPose(KitUniqueInventoryItem source, WorldPoint player, out ActorPose pose, string randomScope = "daggerfall.sanguine-rose.v1")
     {
-        CharacterStepEnvironment environment = _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion);
+        CharacterStepEnvironment environment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
         // These are call-local spawn-clearance envelopes, not another retained collision world.
         SpatialEntityCollider[] actors = State.Actors.All.Where(actor => !actor.IsDefeated && State.Npcs.IsGameplayActive(actor.DurableId)).Select(actor =>
         {

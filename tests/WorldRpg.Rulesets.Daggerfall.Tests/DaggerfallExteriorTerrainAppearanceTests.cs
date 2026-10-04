@@ -1,12 +1,22 @@
 using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.World;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallExteriorTerrainAppearanceTests
 {
+    [Fact]
+    public void Donor_tile_uv_flags_flip_the_vertical_axis_after_rotation()
+    {
+        AssertUv(new(0.2F, 0.3F), false, false, new(0.2F, 0.3F));
+        AssertUv(new(0.2F, 0.3F), false, true, new(0.2F, 0.7F));
+        AssertUv(new(0.2F, 0.3F), true, false, new(0.3F, 0.8F));
+        AssertUv(new(0.2F, 0.3F), true, true, new(0.3F, 0.2F));
+    }
+
     [Fact]
     public void Reconcile_builds_normals_mesh_groups_and_stable_cell_facts()
     {
@@ -114,6 +124,42 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         Assert.Equal(1, graphics.ReleasedAppearances);
     }
 
+    [Fact]
+    public void Changed_tile_flags_replace_the_mesh_and_unchanged_flags_retain_it()
+    {
+        DaggerfallExteriorCellId cell = new(1, 0);
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
+        GraphicsDouble graphics = new();
+        using DaggerfallExteriorTerrainAppearance appearance = new(graphics);
+        DaggerfallTerrainSurface surface = Surface(cell);
+        DaggerfallTerrainSurface environmentSurface = new(cell.X, cell.Y, [], [], new float[129 * 129]);
+        DaggerfallClimateGridDefinition climate = new(3, 1, [0, 0, 231],
+            [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]);
+        DaggerfallWorldGridsSet grids = new(climate, new(3, 1, [64, 64, 64], []));
+        DaggerfallExteriorEnvironment Environment(byte tile)
+        {
+            DaggerfallSiteExterior location = new(1, 0, 1, 1, 0, 0, false, 2, 0, 1, 0, 1)
+            {
+                GroundTiles = DaggerfallGroundTileGrid.FromBytes(Enumerable.Repeat(tile, 128 * 128).ToArray(), "test"),
+            };
+            DaggerfallExteriorEnvironment environment = new();
+            environment.Reconcile([cell], origin, _ => environmentSurface,
+                new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location }, grids);
+            return environment;
+        }
+        DaggerfallExteriorEnvironment original = Environment(0);
+        DaggerfallExteriorEnvironment rotated = Environment(0x40);
+        appearance.Reconcile([cell], origin, _ => surface, original);
+        Appearance first = Assert.Single(appearance.BuildFacts()).Appearance;
+        appearance.Reconcile([cell], origin, _ => surface, rotated);
+        Appearance second = Assert.Single(appearance.BuildFacts()).Appearance;
+        Assert.NotSame(first, second);
+        Assert.Equal(2, graphics.MeshRequests.Count);
+        appearance.Reconcile([cell], origin, _ => surface, rotated);
+        Assert.Same(second, Assert.Single(appearance.BuildFacts()).Appearance);
+        Assert.Equal(2, graphics.MeshRequests.Count);
+    }
+
     private static DaggerfallTerrainSurface Surface(DaggerfallExteriorCellId cell) => new(
         cell.X,
         cell.Y,
@@ -127,6 +173,13 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         [new Vector3(0F, 0F, 0F), new Vector3(1F, 0F, 0F), new Vector3(0F, 0F, 1F)],
         [new Triangle(0, 2, 4)],
         [0F, 0F, 0F]);
+
+    private static void AssertUv(Vector2 input, bool rotated, bool flipped, Vector2 expected)
+    {
+        Vector2 actual = DaggerfallExteriorTerrainAppearance.TransformTileUv(input, rotated, flipped);
+        Assert.Equal(expected.X, actual.X, 5);
+        Assert.Equal(expected.Y, actual.Y, 5);
+    }
 
     private sealed class GraphicsDouble : IGraphicsService
     {
