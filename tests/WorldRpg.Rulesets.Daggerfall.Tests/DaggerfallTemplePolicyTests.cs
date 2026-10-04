@@ -104,15 +104,28 @@ public sealed class DaggerfallTemplePolicyTests
     }
 
     [Fact]
-    public void Source_temple_building_faction_retains_its_deity_parent()
+    public void Source_temple_building_roots_resolve_to_group_seventeen_memberships()
     {
-        DaggerfallConcreteGuildDefinition arkay = DaggerfallConcreteGuildCatalog.ForFaction(
-            DaggerfallConcreteGuildCatalog.ArkayTempleFactionId);
+        (int Deity, int Membership)[] temples =
+        [
+            (DaggerfallConcreteGuildCatalog.ArkayFactionId, DaggerfallConcreteGuildCatalog.ArkayTempleFactionId),
+            (DaggerfallConcreteGuildCatalog.ZenitharFactionId, DaggerfallConcreteGuildCatalog.ZenitharTempleFactionId),
+            (DaggerfallConcreteGuildCatalog.MaraFactionId, DaggerfallConcreteGuildCatalog.MaraTempleFactionId),
+            (DaggerfallConcreteGuildCatalog.AkatoshFactionId, DaggerfallConcreteGuildCatalog.AkatoshTempleFactionId),
+            (DaggerfallConcreteGuildCatalog.JulianosFactionId, DaggerfallConcreteGuildCatalog.JulianosTempleFactionId),
+            (DaggerfallConcreteGuildCatalog.DibellaFactionId, DaggerfallConcreteGuildCatalog.DibellaTempleFactionId),
+            (DaggerfallConcreteGuildCatalog.StendarrFactionId, DaggerfallConcreteGuildCatalog.StendarrTempleFactionId),
+            (DaggerfallConcreteGuildCatalog.KynarethFactionId, DaggerfallConcreteGuildCatalog.KynarethTempleFactionId),
+        ];
 
-        Assert.Equal(DaggerfallGuildMembershipKind.TempleDeity, arkay.MembershipKind);
-        Assert.Equal(DaggerfallConcreteGuildCatalog.ArkayFactionId, arkay.ParentFactionId);
-        Assert.Equal(arkay.FactionId,
-            DaggerfallConcreteGuildCatalog.ForDeity(DaggerfallConcreteGuildCatalog.ArkayFactionId).FactionId);
+        Assert.Equal(8, temples.Length);
+        foreach ((int deity, int membershipFaction) in temples)
+        {
+            DaggerfallConcreteGuildDefinition membership = DaggerfallConcreteGuildCatalog.ForFaction(membershipFaction);
+            Assert.Equal(DaggerfallGuildMembershipKind.TempleDeity, membership.MembershipKind);
+            Assert.Equal(deity, membership.ParentFactionId);
+            Assert.Equal(membershipFaction, DaggerfallConcreteGuildCatalog.ForDeity(deity).FactionId);
+        }
     }
 
     [Fact]
