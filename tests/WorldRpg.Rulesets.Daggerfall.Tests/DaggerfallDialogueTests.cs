@@ -143,7 +143,7 @@ public sealed class DaggerfallDialogueTests
         Assert.False(disclosed);
         Assert.False(string.IsNullOrWhiteSpace(first.Reply));
         string[] knowledgeKeys = [.. random.Requests
-            .Where(request => request.Key.Contains(":knowledge:npc:", StringComparison.Ordinal))
+            .Where(request => request.Key.StartsWith("knowledge:npc:", StringComparison.Ordinal))
             .Select(request => request.Key)];
         Assert.Single(knowledgeKeys);
         Assert.Contains($":topic:{destination.Id}", knowledgeKeys[0], StringComparison.Ordinal);
@@ -152,7 +152,7 @@ public sealed class DaggerfallDialogueTests
         Assert.False(disclosed);
         Assert.False(string.IsNullOrWhiteSpace(Assert.IsType<DaggerfallDialogueView>(talk.View).Reply));
         string[] repeatedKnowledgeKeys = [.. random.Requests
-            .Where(request => request.Key.Contains(":knowledge:npc:", StringComparison.Ordinal))
+            .Where(request => request.Key.StartsWith("knowledge:npc:", StringComparison.Ordinal))
             .Select(request => request.Key)];
         Assert.Equal([knowledgeKeys[0], knowledgeKeys[0]], repeatedKnowledgeKeys);
     }
@@ -234,9 +234,11 @@ public sealed class DaggerfallDialogueTests
         {
             DaggerfallSiteRecord site = session.Site.ActiveSite
                 ?? throw new InvalidOperationException("The focused talk test needs the admitted fixture site.");
+            (int archive, int record) = session.Sites.Projection.Inputs.BillboardSprites.Keys
+                .OrderBy(key => key.Item1).ThenBy(key => key.Item2).First();
             long id = session.State.Npcs.RegisterCivilian(
                 new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
-                new DaggerfallNpcAppearance("Breton", "Female", 0, 0, 0, 0), "guard", ["talk"]);
+                new DaggerfallNpcAppearance("Breton", "Female", archive, record, 0, 0), "guard", ["talk"]);
             session.MaterializeNpcActor(id, session.State.Actors.Get(2000).Pose);
             session.State.Npcs.Place(id, session.Sites.ActiveProfile, session.State.Actors.Get(id).Position);
             Npc = session.State.Npcs.Require(id);
