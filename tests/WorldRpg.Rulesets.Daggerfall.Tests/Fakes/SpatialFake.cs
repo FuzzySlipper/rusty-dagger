@@ -154,6 +154,9 @@ internal class SpatialFake : DispatchProxy
     /// </summary>
     private CollisionReplaceReceipt ApplyCollisionResidency(CollisionResidencyRequest request)
     {
+        // Engine consumes the request at admission. Keep the receipt's memory independent of
+        // caller-owned arrays so a later origin commit cannot rewrite the admitted frame.
+        request = SnapshotCollisionResidency(request);
         CollisionResidencyRequests.Add(request);
         SessionColliders colliders = Live(request.Session);
         HashSet<ulong> nextAssets = [.. colliders.Assets];
@@ -191,6 +194,15 @@ internal class SpatialFake : DispatchProxy
         ulong before = colliders.Revision++;
         return new CollisionReplaceReceipt(before, colliders.Revision, (ulong)colliders.Assets.Count, (ulong)colliders.Instances.Count, 0);
     }
+
+    private static CollisionResidencyRequest SnapshotCollisionResidency(CollisionResidencyRequest request) => new(
+        request.Session,
+        request.Assets.ToArray(),
+        request.Vertices.ToArray(),
+        request.Triangles.ToArray(),
+        request.Instances.ToArray(),
+        request.RemovedAssets.ToArray(),
+        request.RemovedInstances.ToArray());
 
     private SessionColliders Live(SpatialSession session)
     {
