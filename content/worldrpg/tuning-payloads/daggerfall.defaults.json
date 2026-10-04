@@ -87,6 +87,7 @@
     "jumpSkillMultiplier": 0.5,
     "crouchedJumpMultiplier": 0.8,
     "climbingFatiguePerGameMinute": 22,
+    "swimmingFatiguePerGameMinute": 44,
     "levitationVerticalSpeed": 4.0
   },
   "climbing": {

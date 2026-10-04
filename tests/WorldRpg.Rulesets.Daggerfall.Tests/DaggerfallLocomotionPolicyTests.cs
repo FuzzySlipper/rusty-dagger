@@ -79,6 +79,71 @@ public sealed class DaggerfallLocomotionPolicyTests
     }
 
     [Fact]
+    public void Movement_fatigue_uses_the_donor_activity_rates_and_keeps_idle_base_loss_unscaled()
+    {
+        static CharacterStepReceipt Moved() => default(CharacterStepReceipt) with
+        {
+            Displacement = new Vector3(.1f, 0f, 0f),
+            Motion = default(CharacterMotion) with { Grounded = true },
+        };
+
+        StatsComponent climbingStats = Stats(speed: 50, running: 40, stamina: 200);
+        DaggerfallLocomotionPolicy climbing = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+        climbing.CompleteStep(new DaggerfallLocomotionStep(default, false, false, Climbing: true), default, Moved(), 60d, climbingStats, _ => { });
+        climbing.AdvanceCalendarMinutes(0, 1, climbingStats);
+        Assert.Equal(178d, climbingStats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+
+        StatsComponent swimmingStats = Stats(speed: 50, running: 40, stamina: 200);
+        DaggerfallLocomotionPolicy swimming = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+        swimming.CompleteStep(default, default, Moved(), 60d, swimmingStats, _ => { }, swimming: true);
+        swimming.AdvanceCalendarMinutes(0, 1, swimmingStats);
+        Assert.Equal(156d, swimmingStats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+
+        StatsComponent idleStats = Stats(speed: 50, running: 40, stamina: 200);
+        DaggerfallLocomotionPolicy idle = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+        idle.SetAthletics(careerAdvantage: true, improvedHeldTalent: false);
+        idle.AdvanceCalendarMinutes(0, 1, idleStats);
+        Assert.Equal(189d, idleStats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+    }
+
+    [Fact]
+    public void Movement_fatigue_applies_career_and_held_athleticism_only_to_activity_loss()
+    {
+        static double RunLoss(double multiplier)
+        {
+            StatsComponent stats = Stats(speed: 50, running: 40, stamina: 200);
+            DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+            policy.SetAthletics(multiplier == .9d, multiplier == .8d);
+            policy.CompleteStep(new DaggerfallLocomotionStep(default, Running: true, JumpRequested: false), default,
+                default(CharacterStepReceipt) with
+                {
+                    Displacement = new Vector3(.1f, 0f, 0f),
+                    Motion = default(CharacterMotion) with { Grounded = true },
+                }, 60d, stats, _ => { });
+            policy.AdvanceCalendarMinutes(0, 1, stats);
+            return 200d - stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
+        }
+
+        Assert.Equal(88d, RunLoss(1d));
+        Assert.Equal(79d, RunLoss(.9d));
+        Assert.Equal(70d, RunLoss(.8d));
+    }
+
+    [Fact]
+    public void Elapsed_calendar_catch_up_charges_each_covered_minute_and_rest_can_suppress_idle_loss()
+    {
+        StatsComponent travelStats = Stats(speed: 50, running: 40, stamina: 200);
+        DaggerfallLocomotionPolicy travel = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+        travel.AdvanceCalendarMinutes(0, 3, travelStats);
+        Assert.Equal(167d, travelStats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+
+        StatsComponent restStats = Stats(speed: 50, running: 40, stamina: 200);
+        DaggerfallLocomotionPolicy rest = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+        rest.AdvanceCalendarMinutes(0, 3, restStats, includeIdleFatigue: false);
+        Assert.Equal(200d, restStats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+    }
+
+    [Fact]
     public void Accepted_airborne_to_grounded_transition_reports_the_engine_peak_once()
     {
         StatsComponent stats = Stats(speed: 50, running: 40, stamina: 200);

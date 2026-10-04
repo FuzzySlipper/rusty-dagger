@@ -19,6 +19,8 @@ internal sealed class DaggerfallLocomotionPolicy
     private bool _jumpInFlight;
     private double _runningGameSeconds;
     private double _climbingGameSeconds;
+    private double _swimmingGameSeconds;
+    private double _movementFatigueMultiplier = 1d;
 
     internal DaggerfallLocomotionPolicy(DaggerfallLocomotionTuning tuning, DaggerfallControlSettings controls)
     {
@@ -39,7 +41,7 @@ internal sealed class DaggerfallLocomotionPolicy
         ArgumentNullException.ThrowIfNull(stats);
         FpsInputFrame frame = _input.Consume(inputs, seconds);
         Track stamina = stats.GetTrack(Stamina);
-        bool hasJumpFatigue = stamina.Current >= _tuning.JumpFatigueCost;
+        bool hasJumpFatigue = stamina.Current >= MovementFatigue(_tuning.JumpFatigueCost);
         bool onFoot = transport?.IsOnFoot ?? true;
         bool running = canMove && onFoot && stamina.Current > 0d && frame.SprintHeld;
         bool crouching = !running && frame.CrouchHeld;
@@ -63,7 +65,7 @@ internal sealed class DaggerfallLocomotionPolicy
     }
 
     /// <summary>Charges and records only accepted Engine motion, never an input request that Engine kept grounded or blocked.</summary>
-    internal DaggerfallLanding? CompleteStep(DaggerfallLocomotionStep step, CharacterMotion before, CharacterStepReceipt? receipt, double gameSeconds, StatsComponent stats, Action<DaggerfallSkillUse> recordSkillUse)
+    internal DaggerfallLanding? CompleteStep(DaggerfallLocomotionStep step, CharacterMotion before, CharacterStepReceipt? receipt, double gameSeconds, StatsComponent stats, Action<DaggerfallSkillUse> recordSkillUse, bool swimming = false)
     {
         ArgumentNullException.ThrowIfNull(stats);
         ArgumentNullException.ThrowIfNull(recordSkillUse);
@@ -78,12 +80,15 @@ internal sealed class DaggerfallLocomotionPolicy
             _runningGameSeconds += gameSeconds;
             recordSkillUse(new DaggerfallSkillUse(DaggerfallMechanicsIds.Running.Value, DaggerfallSkillUseReason.Running, DaggerfallSkillUseOutcome.Accepted));
         }
+        if (swimming && !step.Climbing)
+            _swimmingGameSeconds += gameSeconds;
 
         bool rising = accepted.Motion.ControlledVelocity.Y > 0f && before.ControlledVelocity.Y <= 0f;
         if (!_jumpInFlight && step.JumpRequested && rising)
         {
             Track stamina = stats.GetTrack(Stamina);
-            if (stamina.TrySpend(_tuning.JumpFatigueCost))
+            int jumpFatigue = MovementFatigue(_tuning.JumpFatigueCost);
+            if (stamina.TrySpend(jumpFatigue))
             {
                 _jumpInFlight = true;
                 recordSkillUse(new DaggerfallSkillUse(DaggerfallMechanicsIds.Jumping.Value, DaggerfallSkillUseReason.Jumping, DaggerfallSkillUseOutcome.Accepted));
@@ -96,7 +101,7 @@ internal sealed class DaggerfallLocomotionPolicy
     }
 
     /// <summary>Consumes each calendar minute exactly once; the session calendar remains the only time authority.</summary>
-    internal void AdvanceCalendarMinutes(long before, long after, StatsComponent stats)
+    internal void AdvanceCalendarMinutes(long before, long after, StatsComponent stats, bool includeIdleFatigue = true)
     {
         if (after < before) throw new ArgumentOutOfRangeException(nameof(after));
         if (after == before) return;
@@ -105,14 +110,27 @@ internal sealed class DaggerfallLocomotionPolicy
         long minutes = checked(after - before);
         long climbingMinutes = Math.Min(minutes, checked((long)Math.Ceiling(_climbingGameSeconds / DaggerfallCalendar.SecondsPerMinute)));
         long runningMinutes = Math.Min(minutes - climbingMinutes, checked((long)Math.Ceiling(_runningGameSeconds / DaggerfallCalendar.SecondsPerMinute)));
-        long idleMinutes = checked(minutes - climbingMinutes - runningMinutes);
-        double fatigue = checked((climbingMinutes * (long)_tuning.ClimbingFatiguePerGameMinute)
+        long swimmingMinutes = Math.Min(minutes - climbingMinutes - runningMinutes,
+            checked((long)Math.Ceiling(_swimmingGameSeconds / DaggerfallCalendar.SecondsPerMinute)));
+        long idleMinutes = includeIdleFatigue ? checked(minutes - climbingMinutes - runningMinutes - swimmingMinutes) : 0;
+        double movementFatigue = checked((climbingMinutes * (long)_tuning.ClimbingFatiguePerGameMinute)
             + (runningMinutes * (long)_tuning.RunningFatiguePerGameMinute)
-            + (idleMinutes * (long)_tuning.IdleFatiguePerGameMinute));
+            + (swimmingMinutes * (long)_tuning.SwimmingFatiguePerGameMinute));
+        double fatigue = Math.Truncate(movementFatigue * _movementFatigueMultiplier)
+            + (idleMinutes * (long)_tuning.IdleFatiguePerGameMinute);
         _ = stamina.Spend(Math.Min(stamina.Current, fatigue));
         _runningGameSeconds = 0d;
         _climbingGameSeconds = 0d;
+        _swimmingGameSeconds = 0d;
     }
+
+    /// <summary>Refreshes the typed athletics multiplier from the current career and held talent owners.</summary>
+    internal void SetAthletics(bool careerAdvantage, bool improvedHeldTalent) =>
+        _movementFatigueMultiplier = improvedHeldTalent ? .8d : careerAdvantage ? .9d : 1d;
+
+    internal double SwimmingGameSeconds => _swimmingGameSeconds;
+
+    private int MovementFatigue(int baseCost) => (int)(baseCost * _movementFatigueMultiplier);
 
     internal float WalkSpeed(int liveSpeed)
     {
@@ -132,7 +150,7 @@ internal sealed class DaggerfallLocomotionPolicy
         return crouching ? speed * _tuning.CrouchedJumpMultiplier : speed;
     }
 
-    internal DaggerfallLocomotionSave Capture() => new(_runningGameSeconds, _climbingGameSeconds);
+    internal DaggerfallLocomotionSave Capture() => new(_runningGameSeconds, _climbingGameSeconds, _swimmingGameSeconds);
 
     internal void Restore(DaggerfallLocomotionSave saved)
     {
@@ -140,6 +158,7 @@ internal sealed class DaggerfallLocomotionPolicy
         saved.Validate();
         _runningGameSeconds = saved.RunningGameSeconds;
         _climbingGameSeconds = saved.ClimbingGameSeconds;
+        _swimmingGameSeconds = saved.SwimmingGameSeconds;
         _jumpInFlight = false;
     }
 
@@ -187,6 +206,7 @@ internal sealed record DaggerfallLocomotionTuning(
     float JumpSkillMultiplier,
     float CrouchedJumpMultiplier,
     int ClimbingFatiguePerGameMinute = 22,
+    int SwimmingFatiguePerGameMinute = 44,
     float LevitationVerticalSpeed = 4f)
 {
     internal static DaggerfallLocomotionTuning Classic { get; } = new(39.5f, 150f, 50f, 1.35f, 200f, 30, 11, 88, 11, 4.5f, .5f, .8f);
@@ -200,19 +220,21 @@ internal sealed record DaggerfallLocomotionTuning(
             || RunningSkillDivisor <= 0f || RunBaseMultiplier <= 0f || JumpBaseSpeed <= 0f || JumpSkillMultiplier < 0f || CrouchedJumpMultiplier <= 0f
             || LevitationVerticalSpeed <= 0f) throw new ArgumentOutOfRangeException(nameof(WalkBase));
         if (MinimumWalkSpeedAttribute < 0 || IdleFatiguePerGameMinute < 0 || RunningFatiguePerGameMinute < 0
-            || ClimbingFatiguePerGameMinute < 0 || JumpFatigueCost <= 0)
+            || ClimbingFatiguePerGameMinute < 0 || SwimmingFatiguePerGameMinute < 0 || JumpFatigueCost <= 0)
             throw new ArgumentOutOfRangeException(nameof(MinimumWalkSpeedAttribute));
         return this;
     }
 }
 
 /// <summary>Durable movement work awaiting the next calendar-minute fatigue charge; physical held input is deliberately not saved.</summary>
-internal sealed record DaggerfallLocomotionSave(double RunningGameSeconds, double ClimbingGameSeconds = 0d)
+internal sealed record DaggerfallLocomotionSave(double RunningGameSeconds, double ClimbingGameSeconds = 0d, double SwimmingGameSeconds = 0d)
 {
     internal void Validate()
     {
         if (!double.IsFinite(RunningGameSeconds) || RunningGameSeconds < 0d
             || !double.IsFinite(ClimbingGameSeconds) || ClimbingGameSeconds < 0d)
             throw new ArgumentOutOfRangeException(nameof(RunningGameSeconds));
+        if (!double.IsFinite(SwimmingGameSeconds) || SwimmingGameSeconds < 0d)
+            throw new ArgumentOutOfRangeException(nameof(SwimmingGameSeconds));
     }
 }
