@@ -112,6 +112,7 @@ internal static class TestSessions
             // this root so it is read eagerly while the cue bodies stay lazy.
             ("worldrpg/media/music/clips", "daggerfall.music"),
             ("worldrpg/media/audio/clips", "daggerfall.classic-audio"),
+            ("worldrpg/media/sky/resources", "daggerfall.sky"),
             // Each site's clips are staged as the bundle its own payload declares.
             .. SiteAudioBundles(root),
         ];
