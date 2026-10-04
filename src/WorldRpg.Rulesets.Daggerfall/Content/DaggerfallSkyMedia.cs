@@ -38,7 +38,7 @@ internal sealed class DaggerfallSkyMedia
                 || path.Contains("..", StringComparison.Ordinal) || path.Contains('\\')
                 || resource.GetProperty("byteLength").GetInt64() <= 0)
                 throw new InvalidOperationException($"Sky resource '{id}' has invalid publication identity or artifact facts.");
-            ContentSha256 hash = DaggerfallContentHash.Parse(resource.GetProperty("contentHash").GetProperty("value").GetString()!, $"Sky resource '{id}'");
+            ContentSha256 hash = DaggerfallContentHash.Parse(resource.GetProperty("contentHash").GetString()!, $"Sky resource '{id}'");
             Color color = new(1,1,1,1);
             if (section != "weatherParticles")
             {

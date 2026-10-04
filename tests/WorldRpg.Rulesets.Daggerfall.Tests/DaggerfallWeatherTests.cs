@@ -69,10 +69,12 @@ public sealed class DaggerfallWeatherTests
         var tuning = DaggerfallWeatherTuning.Classic;
         var noon = new DaggerfallCalendar(405, 5, 0, 12, 0, 0);
         Assert.Equal(0f, tuning.Daylight(noon with { Hour = 6 }, DaggerfallWeatherKind.Sunny));
-        Assert.Equal(.96f, tuning.Daylight(noon, DaggerfallWeatherKind.Sunny), 5);
+        Assert.Equal(.36f, tuning.Daylight(noon with { Hour = 6, Minute = 57, Second = 36 }, DaggerfallWeatherKind.Sunny), 5);
+        Assert.Equal(.9f, tuning.Daylight(noon, DaggerfallWeatherKind.Sunny), 5);
+        Assert.Equal(.36f, tuning.Daylight(noon with { Hour = 17, Minute = 2, Second = 24 }, DaggerfallWeatherKind.Sunny), 5);
         Assert.Equal(0f, tuning.Daylight(noon with { Hour = 18 }, DaggerfallWeatherKind.Sunny));
-        Assert.Equal(.96f * .25f, tuning.Daylight(noon, DaggerfallWeatherKind.Thunder), 5);
-        Assert.Equal(.96f * .65f, tuning.Daylight(noon with { Month = 0 }, DaggerfallWeatherKind.Sunny), 5);
-        Assert.Equal(.96f * .45f, tuning.Daylight(noon with { Month = 0 }, DaggerfallWeatherKind.Rain), 5);
+        Assert.Equal(.9f * .25f, tuning.Daylight(noon, DaggerfallWeatherKind.Thunder), 5);
+        Assert.Equal(.9f * .65f, tuning.Daylight(noon with { Month = 0 }, DaggerfallWeatherKind.Sunny), 5);
+        Assert.Equal(.9f * .45f, tuning.Daylight(noon with { Month = 0 }, DaggerfallWeatherKind.Rain), 5);
     }
 }
