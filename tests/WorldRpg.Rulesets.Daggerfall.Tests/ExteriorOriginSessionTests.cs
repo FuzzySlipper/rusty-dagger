@@ -92,11 +92,20 @@ public sealed class ExteriorOriginSessionTests
             Assert.True(foundTerrainCell, "Charing's admitted terrain window had no non-city collision cell to probe.");
             DaggerfallTerrainSurface terrain = DaggerfallTerrainSurfaceBuilder.Build(
                 definitions.Terrain, terrainCell.X, terrainCell.Y);
-            int terrainSample = DaggerfallTerrainSurfaceBuilder.SampleDimension / 2;
             DaggerfallExteriorWorldOrigin terrainOrigin = new(admitted.Origin.X, admitted.Origin.Y,
                 new Vector3(admitted.CompensationX, admitted.CompensationY, admitted.CompensationZ));
+            int quadsPerSide = DaggerfallTerrainSurfaceBuilder.SampleDimension - 1;
+            int centerQuad = quadsPerSide / 2;
+            int centerTriangle = ((centerQuad * quadsPerSide) + centerQuad) * 2;
+            Triangle terrainTriangle = terrain.Triangles[centerTriangle];
+            Vector3 triangleA = terrain.Vertices[checked((int)terrainTriangle.A)];
+            Vector3 triangleB = terrain.Vertices[checked((int)terrainTriangle.B)];
+            Vector3 triangleC = terrain.Vertices[checked((int)terrainTriangle.C)];
+            // A shared grid vertex can be rejected by native triangle edge rules. Probe a
+            // strictly interior point of the admitted triangle while retaining the exact mesh
+            // plane, rather than approximating it with a bilinear sample.
             Vector3 terrainPoint = terrainOrigin.LocalTranslation(terrainCell)
-                + terrain.Vertices[terrainSample + (terrainSample * DaggerfallTerrainSurfaceBuilder.SampleDimension)];
+                + (triangleA * .2F) + (triangleB * .3F) + (triangleC * .5F);
             SpatialHit terrainHit = Hit(terrainPoint + Vector3.UnitY * 20F, 50F);
             Assert.True(terrainHit.Present);
             Assert.Equal(terrainPoint.X, terrainHit.Point.X, 2);
