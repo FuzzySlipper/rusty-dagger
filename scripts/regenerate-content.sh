@@ -48,6 +48,9 @@ missing() {
 for file in MAPS.BSA BLOCKS.BSA ARCH3D.BSA MONSTER.BSA DAGGER.SND TEXT.RSC CLASSES.DAT CLIMATE.PAK POLITIC.PAK WOODS.WLD FACTION.TXT SPELLS.STD MAGIC.DEF ANIM0000.VID AZURA.FLC; do
   [[ -f "$arena2/$file" ]] || missing "Arena2 file '$arena2/$file'"
 done
+for file in PAL.PAL SKY{00..31}.DAT NITE{00..03}I0.IMG; do
+  [[ -f "$arena2/$file" ]] || missing "Arena2 sky file '$arena2/$file'"
+done
 [[ -d "$arena2/books" ]] || missing "Arena2 books directory '$arena2/books'"
 [[ -d "$donor" ]] || missing "Daggerfall Unity checkout '$donor' (set DAGGER_DONOR_ROOT or pass --donor)"
 donor_files=(
@@ -119,6 +122,7 @@ done < scripts/generated-content-paths.txt
 tool music-media --out content --sound "$sound" --require-all --update
 tool classic-media --arena2 "$arena2" --out content --group worldrpg \
   --ui-authored-assets "$ui_assets" --ui-original "$ui_original" --update
+tool sky-media --arena2 "$arena2" --out content --group worldrpg --update
 
 # 2. The imported payload's sections, in dependency order, with the block document and the import
 #    records. Commands that join authored sections (vocabulary, actors, items) read the authored payload.

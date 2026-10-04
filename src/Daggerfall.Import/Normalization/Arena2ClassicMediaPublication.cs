@@ -1081,12 +1081,40 @@ public sealed record Arena2ClassicMediaPublication(
         new(ClassicDaggerAudioClip.Hit4, "audio.melee.hit.4", 111),
         new(ClassicDaggerAudioClip.Hit5, "audio.melee.hit.5", 112),
         new(ClassicDaggerAudioClip.PlayerDeath, "audio.player.death", 405),
-        // EntityEffectManager.GetCastSoundID selects these DAGGER.SND ordinals by element.
-        new(ClassicDaggerAudioClip.MagicCast, "audio.magic.cast", 349),
-        new(ClassicDaggerAudioClip.PoisonCast, "audio.magic.poison", 350),
-        new(ClassicDaggerAudioClip.ShockCast, "audio.magic.shock", 351),
-        new(ClassicDaggerAudioClip.FireCast, "audio.magic.fire", 352),
-        new(ClassicDaggerAudioClip.ColdCast, "audio.magic.cold", 353),
+        // EntityEffectManager.GetCastSoundID supplies these as numeric DAGGER.SND IDs. The
+        // importer must resolve those IDs through the archive directory: in the classic corpus
+        // IDs 349..353 are ordinals 81..85, while ordinals 349..353 are unrelated storm/arena
+        // records. The manifest retains both identities after that lookup.
+        new(ClassicDaggerAudioClip.MagicCast, "audio.magic.cast", 81, 349),
+        new(ClassicDaggerAudioClip.PoisonCast, "audio.magic.poison", 82, 350),
+        new(ClassicDaggerAudioClip.ShockCast, "audio.magic.shock", 83, 351),
+        new(ClassicDaggerAudioClip.FireCast, "audio.magic.fire", 84, 352),
+        new(ClassicDaggerAudioClip.ColdCast, "audio.magic.cold", 85, 353),
+
+        // AmbientEffectsPlayer reads these SoundClips by archive ordinal. Keep the product-facing
+        // cue name separate from the audio resource identity, while retaining the source numeric ID
+        // in the generated manifest for readers that use SoundReader's ID overload.
+        new("ambient.rain", "audio.ambient.rain", 389, 385),
+        new("ambient.crickets", "audio.ambient.crickets", 6, 375),
+        new("ambient.bird1", "audio.ambient.bird1", 437, 300),
+        new("ambient.bird2", "audio.ambient.bird2", 438, 301),
+        new("ambient.thunder-short", "audio.ambient.thunder-short", 348, 92),
+        new("ambient.thunder", "audio.ambient.thunder", 349, 93),
+        new("ambient.lightning-roll", "audio.ambient.lightning-roll", 350, 94),
+        new("dungeon.ambient.01", "audio.dungeon.ambient.01", 63, 331),
+        new("dungeon.ambient.02", "audio.dungeon.ambient.02", 64, 332),
+        new("dungeon.ambient.03", "audio.dungeon.ambient.03", 65, 333),
+        new("dungeon.ambient.04", "audio.dungeon.ambient.04", 66, 334),
+        new("dungeon.ambient.05", "audio.dungeon.ambient.05", 67, 335),
+        new("dungeon.ambient.06", "audio.dungeon.ambient.06", 68, 336),
+        new("dungeon.ambient.07", "audio.dungeon.ambient.07", 69, 337),
+        new("dungeon.ambient.08", "audio.dungeon.ambient.08", 70, 338),
+        new("dungeon.ambient.09", "audio.dungeon.ambient.09", 71, 339),
+        new("dungeon.ambient.10", "audio.dungeon.ambient.10", 72, 340),
+        new("dungeon.ambient.11", "audio.dungeon.ambient.11", 73, 341),
+        new("dungeon.ambient.12", "audio.dungeon.ambient.12", 74, 342),
+        new("dungeon.ambient.13", "audio.dungeon.ambient.13", 75, 343),
+        new("dungeon.ambient.14", "audio.dungeon.ambient.14", 76, 344),
     ];
 
     private static readonly UiImageSource[] UiImageSources =
@@ -1511,7 +1539,13 @@ public sealed record Arena2ClassicMediaPublication(
         SoundArchive sounds = SoundArchive.Parse(soundBytes, DaggerSoundSourcePath);
         List<GeneratedMediaArtifact> result = [];
         List<ClassicAudioManifest> semantic = [];
-        var selected = AudioSources.Select(source => (Id: char.ToLowerInvariant(source.Clip.ToString()[0]) + source.Clip.ToString()[1..], source.MediaId, source.SourceRecordOrdinal)).ToList();
+        var selected = AudioSources.Select(source =>
+        {
+            string id = source.Clip.IndexOf('.') >= 0
+                ? source.Clip
+                : char.ToLowerInvariant(source.Clip[0]) + source.Clip[1..];
+            return (Id: id, source.MediaId, source.SourceRecordOrdinal, source.ExpectedNumericId);
+        }).ToList();
         // Every retained mobile's named sounds, the weapon pitches and the parry family come
         // from the existing offline sound-name authority. Keep their numeric archive identities.
         var names = MobileSourceMetadata.All.SelectMany(mobile => new[] { mobile.Links.MoveSoundCue, mobile.Links.BarkSoundCue, mobile.Links.AttackSoundCue })
@@ -1522,11 +1556,16 @@ public sealed record Arena2ClassicMediaPublication(
         {
             if (ordinal >= sounds.Count) throw new InvalidOperationException($"Required mobile/weapon sound {ordinal} is absent from the source archive.");
             if (selected.All(source => source.SourceRecordOrdinal != ordinal))
-                selected.Add(($"sound.{ordinal}", $"audio.source.{ordinal}", ordinal));
+                selected.Add(($"sound.{ordinal}", $"audio.source.{ordinal}", ordinal, null));
         }
         foreach (var source in selected)
         {
             Arena2PcmClip clip = sounds.GetClip(source.SourceRecordOrdinal);
+            if (source.ExpectedNumericId is uint expectedNumericId && clip.NumericId != expectedNumericId)
+            {
+                throw new InvalidOperationException($"Audio source '{source.MediaId}' expected DAGGER.SND numeric ID {expectedNumericId} at ordinal {source.SourceRecordOrdinal}, but the archive carries {clip.NumericId}.");
+            }
+
             byte[] wave = sounds.CreateWave(source.SourceRecordOrdinal);
             RequireArtifactQuota(wave, options, source.MediaId);
             // Keep the availability catalog at media/audio while the WAV bodies live below a
@@ -2237,7 +2276,13 @@ public sealed record Arena2ClassicMediaPublication(
         ["AMAP00I0.IMG", "AMAP01I0.IMG", "TMAP00I0.IMG", "TOWN00I0.IMG", "TRAV0I04.IMG"],
         StringComparer.Ordinal);
     private sealed record EffectSource(ClassicEffect Effect, string MediaId, int SourceRecordOrdinal);
-    private sealed record AudioSource(ClassicDaggerAudioClip Clip, string MediaId, int SourceRecordOrdinal);
+    private sealed record AudioSource(string Clip, string MediaId, int SourceRecordOrdinal, uint? ExpectedNumericId = null)
+    {
+        public AudioSource(ClassicDaggerAudioClip clip, string mediaId, int sourceRecordOrdinal, uint? expectedNumericId = null)
+            : this(clip.ToString(), mediaId, sourceRecordOrdinal, expectedNumericId)
+        {
+        }
+    }
     private sealed record UiImageSource(ClassicUiImage Image, string MediaId, string FileName, bool IsHeaderless);
     private sealed record InventoryIconSource(string ItemId, int TextureArchive, int SourceRecordOrdinal);
 

@@ -117,6 +117,37 @@ public sealed class SoundCatalogTests
         foreach (DaggerfallSoundAdmission admission in Admissions())
             Assert.Equal(admission.MediaId, Assert.Single(admitted, clip => clip.Ordinal == admission.Ordinal).MediaId);
 
+        // AmbientEffectsPlayer uses the enum values as archive ordinals, while the magic caster
+        // passes numeric sound IDs through SoundReader. The emitted manifests retain both so a
+        // downstream lookup cannot accidentally play ordinal 349 (storm thunder) for numeric ID 349
+        // (the magic cast record at ordinal 81).
+        Dictionary<string, (int Ordinal, uint NumericId)> ambient = new(StringComparer.Ordinal)
+        {
+            ["audio.ambient.rain"] = (389, 385),
+            ["audio.ambient.crickets"] = (6, 375),
+            ["audio.ambient.bird1"] = (437, 300),
+            ["audio.ambient.bird2"] = (438, 301),
+            ["audio.ambient.thunder-short"] = (348, 92),
+            ["audio.ambient.thunder"] = (349, 93),
+            ["audio.ambient.lightning-roll"] = (350, 94),
+            ["audio.dungeon.ambient.01"] = (63, 331), ["audio.dungeon.ambient.02"] = (64, 332),
+            ["audio.dungeon.ambient.03"] = (65, 333), ["audio.dungeon.ambient.04"] = (66, 334),
+            ["audio.dungeon.ambient.05"] = (67, 335), ["audio.dungeon.ambient.06"] = (68, 336),
+            ["audio.dungeon.ambient.07"] = (69, 337), ["audio.dungeon.ambient.08"] = (70, 338),
+            ["audio.dungeon.ambient.09"] = (71, 339), ["audio.dungeon.ambient.10"] = (72, 340),
+            ["audio.dungeon.ambient.11"] = (73, 341), ["audio.dungeon.ambient.12"] = (74, 342),
+            ["audio.dungeon.ambient.13"] = (75, 343), ["audio.dungeon.ambient.14"] = (76, 344),
+        };
+        foreach (KeyValuePair<string, (int Ordinal, uint NumericId)> entry in ambient)
+        {
+            ClassicAudioManifest source = Assert.Single(publication.Audio, clip => clip.MediaId == entry.Key);
+            Assert.Equal(entry.Value.Ordinal, source.SourceRecordOrdinal);
+            Assert.Equal(entry.Value.NumericId, source.SourceNumericId);
+            Assert.Equal(entry.Value.Ordinal, Assert.Single(admitted, clip => clip.MediaId == entry.Key).Ordinal);
+        }
+        Assert.Equal(81, publication.Audio.Single(clip => clip.MediaId == "audio.magic.cast").SourceRecordOrdinal);
+        Assert.Equal(349U, publication.Audio.Single(clip => clip.MediaId == "audio.magic.cast").SourceNumericId);
+
         foreach (DaggerfallSoundClip clip in admitted)
         {
             // The reference a consumer follows, followed to the end: clip ordinal -> media id -> one

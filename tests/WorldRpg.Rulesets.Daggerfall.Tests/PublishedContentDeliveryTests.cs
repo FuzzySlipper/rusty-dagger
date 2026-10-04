@@ -489,7 +489,7 @@ public sealed class PublishedContentDeliveryTests
         JsonElement[] clips = [.. catalog.GetProperty("clips").EnumerateArray()];
         Assert.Equal(459, clips.Length);
         JsonElement[] admitted = [.. clips.Where(clip => clip.GetProperty("disposition").GetString() == "admitted")];
-        Assert.Equal(149, admitted.Length);
+        Assert.Equal(170, admitted.Length);
         Assert.All(clips.Where(clip => clip.GetProperty("disposition").GetString() != "admitted"), clip => Assert.Equal(JsonValueKind.Null, clip.GetProperty("mediaId").ValueKind));
 
         // Which archive clip each cue is belongs to the product rather than to the producer that just
@@ -500,8 +500,15 @@ public sealed class PublishedContentDeliveryTests
             (106, "audio.melee.dagger.swing"),
             (108, "audio.melee.hit.1"), (109, "audio.melee.hit.2"), (110, "audio.melee.hit.3"),
             (111, "audio.melee.hit.4"), (112, "audio.melee.hit.5"),
-            (349, "audio.magic.cast"), (350, "audio.magic.poison"), (351, "audio.magic.shock"),
-            (352, "audio.magic.fire"), (353, "audio.magic.cold"), (405, "audio.player.death"),
+            (81, "audio.magic.cast"), (82, "audio.magic.poison"), (83, "audio.magic.shock"),
+            (84, "audio.magic.fire"), (85, "audio.magic.cold"), (405, "audio.player.death"),
+            (6, "audio.ambient.crickets"), (63, "audio.dungeon.ambient.01"), (64, "audio.dungeon.ambient.02"),
+            (65, "audio.dungeon.ambient.03"), (66, "audio.dungeon.ambient.04"), (67, "audio.dungeon.ambient.05"),
+            (68, "audio.dungeon.ambient.06"), (69, "audio.dungeon.ambient.07"), (70, "audio.dungeon.ambient.08"),
+            (71, "audio.dungeon.ambient.09"), (72, "audio.dungeon.ambient.10"), (73, "audio.dungeon.ambient.11"),
+            (74, "audio.dungeon.ambient.12"), (75, "audio.dungeon.ambient.13"), (76, "audio.dungeon.ambient.14"),
+            (348, "audio.ambient.thunder-short"), (349, "audio.ambient.thunder"), (350, "audio.ambient.lightning-roll"),
+            (389, "audio.ambient.rain"), (437, "audio.ambient.bird1"), (438, "audio.ambient.bird2"),
         ];
         // Mobile movement, bark and attack cues, weapon pitches, the arrow and nine parries retain
         // their archive identities. Pin the complete set so replacing one clip with another fails.

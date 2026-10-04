@@ -35,6 +35,25 @@ public sealed class DungeonNormalizerTests
         Assert.DoesNotContain("encounter", Encoding.UTF8.GetString(NormalizedImportSerializer.Serialize(result.Document)), StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void PublishesCastleAndSpecialAreaAmbientZonesFromTheDonorMarkerFacts()
+    {
+        DungeonNormalizationResult castle = DungeonNormalizer.Normalize(Request(AmbientSources("S0000007.RDB", 7, markerMagnitude: 1)));
+        NormalizedAmbientZone castleZone = Assert.Single(castle.Document.World.AmbientZones);
+        Assert.Equal(NormalizedAmbientZoneKind.Castle, castleZone.Kind);
+        Assert.Equal((1, 1), (castleZone.BlockX, castleZone.BlockZ));
+        Assert.Equal("S0000007.RDB", castleZone.SourceBlock);
+        Assert.Equal(new NormalizedVector3(51.2F, castle.Document.Bounds.Minimum.Y, -102.4F), castleZone.Bounds.Minimum);
+        Assert.Equal(new NormalizedVector3(102.4F, castle.Document.Bounds.Maximum.Y, -51.2F), castleZone.Bounds.Maximum);
+        Assert.Contains(castle.RecordProvenance, provenance => provenance.Id == castleZone.Id && provenance.Kind == "rdb-ambient-zone");
+
+        DungeonNormalizationResult special = DungeonNormalizer.Normalize(Request(AmbientSources("S0000161.RDB", 161, markerMagnitude: 0)));
+        NormalizedAmbientZone specialZone = Assert.Single(special.Document.World.AmbientZones);
+        Assert.Equal(NormalizedAmbientZoneKind.SpecialArea, specialZone.Kind);
+        Assert.Equal("S0000161.RDB", specialZone.SourceBlock);
+        Assert.Equal(specialZone, Assert.Single(NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(special.Document)).World.AmbientZones));
+    }
+
     [Theory]
     [InlineData(11, NormalizedQuestMarkerKind.Spawn)]
     [InlineData(18, NormalizedQuestMarkerKind.Item)]
@@ -513,6 +532,18 @@ public sealed class DungeonNormalizerTests
         new("TEXTURE.002", CreateTexture()),
     ];
 
+    private static DungeonLogicalSource[] AmbientSources(string blockName, ushort blockNumber, ushort markerMagnitude)
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "MAPS.BSA", CreateNamedBsa(
+            ("MAPNAMES.017", CreateMapNames()),
+            ("MAPTABLE.017", CreateMapTable()),
+            ("MAPPITEM.017", CreateMapPItem()),
+            ("MAPDITEM.017", CreateMapDItem(blockNumber, (1, 1)))));
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa((blockName, CreateRdbFixture(factionOrMobileId: markerMagnitude))));
+        return sources;
+    }
+
     private static void Replace(DungeonLogicalSource[] sources, string label, byte[] bytes)
     {
         int index = Array.FindIndex(sources, source => source.Label == label);
@@ -546,7 +577,9 @@ public sealed class DungeonNormalizerTests
         return pitem;
     }
 
-    private static byte[] CreateMapDItem(params (sbyte X, sbyte Z)[] blocks)
+    private static byte[] CreateMapDItem(params (sbyte X, sbyte Z)[] blocks) => CreateMapDItem(7, blocks);
+
+    private static byte[] CreateMapDItem(ushort blockNumber, params (sbyte X, sbyte Z)[] blocks)
     {
         if (blocks.Length == 0) blocks = [(1, 1)];
         byte[] ditem = new byte[145 + (blocks.Length * 4)];
@@ -562,7 +595,7 @@ public sealed class DungeonNormalizerTests
             int offset = 145 + (index * 4);
             ditem[offset] = unchecked((byte)blocks[index].X);
             ditem[offset + 1] = unchecked((byte)blocks[index].Z);
-            BitConverter.GetBytes((ushort)((3 << 11) | 0x400 | 7)).CopyTo(ditem, offset + 2);
+            BitConverter.GetBytes((ushort)((3 << 11) | 0x400 | blockNumber)).CopyTo(ditem, offset + 2);
         }
         return ditem;
     }

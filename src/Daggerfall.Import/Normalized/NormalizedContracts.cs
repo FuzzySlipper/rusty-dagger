@@ -807,6 +807,45 @@ public sealed record NormalizedPopulationPlacement(
     }
 }
 
+/// <summary>
+/// Source-backed dungeon area whose ambient presentation may differ from the ordinary interior.
+/// The importer carries only classification and bounds; shelter, light selection, and transition
+/// policy remain ruleset owners.
+/// </summary>
+public enum NormalizedAmbientZoneKind
+{
+    Castle,
+    SpecialArea,
+}
+
+/// <summary>One normalized RDB ambient area.</summary>
+public sealed record NormalizedAmbientZone(
+    string Id,
+    NormalizedAmbientZoneKind Kind,
+    string SourceBlock,
+    int BlockX,
+    int BlockZ,
+    NormalizedBounds Bounds)
+{
+    public void Validate()
+    {
+        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
+        if (!Enum.IsDefined(Kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "The normalized ambient zone kind is not known.");
+        }
+
+        NormalizedImportDocument.RequireLogicalId(SourceBlock, nameof(SourceBlock));
+        if (BlockX is < sbyte.MinValue or > sbyte.MaxValue || BlockZ is < sbyte.MinValue or > sbyte.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(nameof(BlockX), "A normalized dungeon ambient zone must retain its signed source block coordinates.");
+        }
+
+        ArgumentNullException.ThrowIfNull(Bounds);
+        Bounds.Validate();
+    }
+}
+
 public sealed record NormalizedWorld(
     string VisualMeshAssetId,
     IReadOnlyList<string> MeshIds,
@@ -842,6 +881,9 @@ public sealed record NormalizedWorld(
     /// <summary>Action-bearing RDB model meshes kept local to their explicit instance transform.</summary>
     public IReadOnlyList<NormalizedActionModelPlacement> ActionModels { get; init; } = [];
 
+    /// <summary>Source-backed dungeon areas that select a specialized ambient presentation.</summary>
+    public IReadOnlyList<NormalizedAmbientZone> AmbientZones { get; init; } = [];
+
     public NormalizedWorld Canonicalize() => this with
     {
         MeshIds = MeshIds.OrderBy(id => id, StringComparer.Ordinal).ToArray(),
@@ -856,6 +898,7 @@ public sealed record NormalizedWorld(
             .Select(action => action.Canonicalize()).ToArray(),
         GeometryPlacements = GeometryPlacements.OrderBy(placement => placement.Id, StringComparer.Ordinal)
             .Select(placement => placement.Canonicalize()).ToArray(),
+        AmbientZones = AmbientZones.OrderBy(zone => zone.Id, StringComparer.Ordinal).ToArray(),
         StaticMeshIds = (StaticMeshIds ?? MeshIds.Except(
                 Doors.SelectMany(door => door.VisualMeshIds)
                     .Concat(ActionModels.SelectMany(model => model.MeshIds)), StringComparer.Ordinal).ToArray())
@@ -904,6 +947,7 @@ public sealed record NormalizedWorld(
         ArgumentNullException.ThrowIfNull(Actions);
         ArgumentNullException.ThrowIfNull(GeometryPlacements);
         ArgumentNullException.ThrowIfNull(ActionModels);
+        ArgumentNullException.ThrowIfNull(AmbientZones);
         NormalizedImportDocument.ValidateUnique(Lights, light => light.Id, "light placement");
         NormalizedImportDocument.ValidateUnique(Billboards, billboard => billboard.Id, "billboard placement");
         NormalizedImportDocument.ValidateUnique(Actors, actor => actor.Id, "actor placement");
@@ -936,6 +980,12 @@ public sealed record NormalizedWorld(
                 if (!door.VisualMeshIds.ToHashSet(StringComparer.Ordinal).SetEquals(model.MeshIds))
                     throw new InvalidOperationException($"Action model '{model.ActionId}' and door '{model.DoorId}' must share exactly one local visual mesh set.");
             }
+        }
+
+        NormalizedImportDocument.ValidateUnique(AmbientZones, zone => zone.Id, "ambient zone");
+        foreach (NormalizedAmbientZone zone in AmbientZones)
+        {
+            zone.Validate();
         }
 
         IReadOnlyList<string> staticMeshIds = StaticMeshIds ?? MeshIds.Except(
