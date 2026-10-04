@@ -175,6 +175,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// </summary>
     void IDaggerfallSiteTransitionHost.RetireDepartingProjection(DaggerfallSiteProjection source)
     {
+        source.DeactivateWaterTriggers(_latestSimulationStep ?? 0UL);
         RetireDepartingSwing(source);
         _combat.ClearRangedFlight();
         CancelDungeonTextOnUnload();

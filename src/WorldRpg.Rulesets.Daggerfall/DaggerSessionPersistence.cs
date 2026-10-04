@@ -42,6 +42,7 @@ internal sealed class DaggerSessionPersistence
     private readonly Func<DaggerfallDoorRuntime> _doors;
     private readonly DaggerfallLocomotionPolicy _locomotion;
     private readonly DaggerfallClimbingPolicy _climbing;
+    private readonly DaggerfallSwimmingPolicy _swimming;
     private readonly DaggerfallDungeonTextActions _dungeonText;
     private readonly Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> _capturePropertyStorage;
     private readonly Func<DaggerfallTravelMapPixel> _travelPosition;
@@ -58,17 +59,18 @@ internal sealed class DaggerSessionPersistence
     internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallBookNotebook notebook,
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
         DaggerfallEffectLifecycle effects, Func<DaggerfallDoorRuntime> doors, DaggerfallLocomotionPolicy locomotion,
-        DaggerfallClimbingPolicy climbing, DaggerfallDungeonTextActions dungeonText,
+        DaggerfallClimbingPolicy climbing, DaggerfallSwimmingPolicy swimming, DaggerfallDungeonTextActions dungeonText,
         Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> capturePropertyStorage, Func<DaggerfallTravelMapPixel> travelPosition, IReadOnlyDictionary<long, DaggerfallActorDefinition> actorDefinitions, Func<long> nextCastSequence)
     {
         _nextCastSequence = nextCastSequence;
         ArgumentNullException.ThrowIfNull(doors);
         ArgumentNullException.ThrowIfNull(locomotion);
         ArgumentNullException.ThrowIfNull(climbing);
+        ArgumentNullException.ThrowIfNull(swimming);
         ArgumentNullException.ThrowIfNull(dungeonText);
         ArgumentNullException.ThrowIfNull(capturePropertyStorage);
         _actorDefinitions = actorDefinitions;
-        State = state; _corpseLoot = corpses; _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers)); _notebook = notebook ?? throw new ArgumentNullException(nameof(notebook)); _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors; _locomotion = locomotion; _climbing = climbing; _dungeonText = dungeonText;
+        State = state; _corpseLoot = corpses; _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers)); _notebook = notebook ?? throw new ArgumentNullException(nameof(notebook)); _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors; _locomotion = locomotion; _climbing = climbing; _swimming = swimming; _dungeonText = dungeonText;
         _capturePropertyStorage = capturePropertyStorage;
         _travelPosition = travelPosition ?? throw new ArgumentNullException(nameof(travelPosition));
     }
@@ -177,6 +179,7 @@ internal sealed class DaggerSessionPersistence
             QuestTraining = State.QuestTraining.Capture(),
             RegionalPrices = State.RegionalPrices.Capture(),
             Transport = State.Transport.Capture(),
+            Swimming = State.Swimming.Capture(),
             Wagon = State.Wagon.Capture(),
             Locomotion = _locomotion.Capture(),
             Climbing = _climbing.Capture(),
@@ -346,6 +349,7 @@ internal sealed class DaggerSessionPersistence
         State.SkillUses.Restore(saved.SkillUses);
         _locomotion.Restore(saved.Locomotion);
         _climbing.Restore(saved.Climbing);
+        _swimming.Restore(saved.Swimming);
         State.LevelUps.Restore(saved.LevelUp);
         State.Quests.Restore(saved.Quests);
 

@@ -31,6 +31,8 @@ internal class SpatialFake : DispatchProxy
     internal bool RejectContentReplacement { get; set; }
     internal SpatialContentArtifactReplaceRequest? LastRequest { get; private set; }
     internal List<CharacterStepRequest> StepRequests { get; } = [];
+    internal List<SpatialTriggerRegisterRequest> TriggerRegistrations { get; } = [];
+    internal List<SpatialTriggerSetActiveRequest> TriggerLifecycleRequests { get; } = [];
     /// <summary>Every residency delta the product applied, in order, including one the fake refused.</summary>
     internal List<CollisionResidencyRequest> CollisionResidencyRequests { get; } = [];
     /// <summary>The collision assets resident in the most recently created spatial session.</summary>
@@ -90,8 +92,8 @@ internal class SpatialFake : DispatchProxy
         nameof(ISpatialService.ProposeCharacterStep) => Step((CharacterStepRequest)arguments![0]!),
         // These general session tests have no authored trigger contact. Action trigger
         // edge behavior is exercised by its dedicated Spatial fake.
-        nameof(ISpatialService.RegisterTrigger) => null,
-        nameof(ISpatialService.SetTriggerActive) => default(SpatialTriggerLifecycleResult),
+        nameof(ISpatialService.RegisterTrigger) => RegisterTrigger((SpatialTriggerRegisterRequest)arguments![0]!),
+        nameof(ISpatialService.SetTriggerActive) => SetTriggerActive((SpatialTriggerSetActiveRequest)arguments![0]!),
         nameof(ISpatialService.RestoreTriggers) => default(SpatialTriggerRestoreReceipt),
         nameof(ISpatialService.ReconcileTriggers) => default(SpatialTriggerReconcileResult),
         // Navigation is not under test here: an honest no-path receipt leaves the
@@ -104,6 +106,18 @@ internal class SpatialFake : DispatchProxy
 
     private static NavigationStepResult NoNavigationPath(NavigationStepRequest request) => new(
         ReadOnlyMemory<PlanarNavCell>.Empty, ReadOnlyMemory<NavigationPathEdge>.Empty, NavigationPathOutcome.NoPath, request.Target, default, default, 0, 0, 0, 0, 0, false, default, default);
+
+    private object? RegisterTrigger(SpatialTriggerRegisterRequest request)
+    {
+        TriggerRegistrations.Add(request);
+        return null;
+    }
+
+    private SpatialTriggerLifecycleResult SetTriggerActive(SpatialTriggerSetActiveRequest request)
+    {
+        TriggerLifecycleRequests.Add(request);
+        return new SpatialTriggerLifecycleResult(ReadOnlyMemory<SpatialTriggerFact>.Empty, request.Trigger, request.Active, 0);
+    }
 
     private SpatialContentArtifactReplaceReceipt Replace(SpatialContentArtifactReplaceRequest request)
     {

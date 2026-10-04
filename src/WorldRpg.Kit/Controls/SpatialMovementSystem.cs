@@ -3,21 +3,51 @@ using Rusty.Engine;
 
 namespace WorldRpg.Kit.Controls;
 
+/// <summary>One normalized water volume admitted by the current world projection.</summary>
+/// <remarks>
+/// The volume is a trigger identity and an axis-aligned world-space envelope.  It is
+/// deliberately a value supplied for the current proposal; the Kit does not retain a
+/// second water map or infer immersion from product geometry.
+/// </remarks>
+public readonly record struct CharacterWaterVolume(ulong Trigger, Vector3 Minimum, Vector3 Maximum)
+{
+    public CharacterWaterVolume Validate()
+    {
+        if (Trigger == 0
+            || !float.IsFinite(Minimum.X) || !float.IsFinite(Minimum.Y) || !float.IsFinite(Minimum.Z)
+            || !float.IsFinite(Maximum.X) || !float.IsFinite(Maximum.Y) || !float.IsFinite(Maximum.Z)
+            || Minimum.X > Maximum.X || Minimum.Y > Maximum.Y || Minimum.Z > Maximum.Z)
+            throw new ArgumentOutOfRangeException(nameof(CharacterWaterVolume), "Water volumes require a non-zero trigger and finite ordered bounds.");
+        return this;
+    }
+
+    /// <summary>The normalized surface height used by product movement policy.</summary>
+    public float SurfaceY => Maximum.Y;
+}
+
 /// <summary>Call-local facts supplied for one proposal; the Engine does not retain product support or obstacle ownership.</summary>
 public readonly record struct CharacterStepEnvironment(
     CharacterSupport Support,
     ReadOnlyMemory<CharacterObstacle> Obstacles,
-    ReadOnlyMemory<CharacterMeshInstance> MeshInstances)
+    ReadOnlyMemory<CharacterMeshInstance> MeshInstances,
+    ReadOnlyMemory<CharacterWaterVolume> WaterVolumes)
 {
     public CharacterStepEnvironment(CharacterSupport support, ReadOnlyMemory<CharacterObstacle> obstacles)
-        : this(support, obstacles, ReadOnlyMemory<CharacterMeshInstance>.Empty)
+        : this(support, obstacles, ReadOnlyMemory<CharacterMeshInstance>.Empty, ReadOnlyMemory<CharacterWaterVolume>.Empty)
+    {
+    }
+
+    public CharacterStepEnvironment(CharacterSupport support, ReadOnlyMemory<CharacterObstacle> obstacles,
+        ReadOnlyMemory<CharacterMeshInstance> meshInstances)
+        : this(support, obstacles, meshInstances, ReadOnlyMemory<CharacterWaterVolume>.Empty)
     {
     }
 
     public static CharacterStepEnvironment Empty { get; } = new(
         default,
         ReadOnlyMemory<CharacterObstacle>.Empty,
-        ReadOnlyMemory<CharacterMeshInstance>.Empty);
+        ReadOnlyMemory<CharacterMeshInstance>.Empty,
+        ReadOnlyMemory<CharacterWaterVolume>.Empty);
 }
 
 /// <summary>Horizontal direction used by a call-local wall contact query.</summary>
@@ -37,7 +67,8 @@ public readonly record struct CharacterStepControls(
     float? StrafeSpeed = null,
     float? JumpSpeed = null,
     Vector2? PlanarIntent = null,
-    float? VerticalVelocity = null)
+    float? VerticalVelocity = null,
+    CharacterMovementRequest? Movement = null)
 {
     internal CharacterControllerConfig ApplyTo(CharacterControllerConfig defaults) => defaults with
     {
@@ -63,6 +94,7 @@ public sealed class SpatialMovementSystem : IDisposable
     private readonly SpatialSession _session;
     private ulong? _latestGeneration;
     private CharacterContinuationCheckpoint? _restoredCheckpoint;
+    private readonly Dictionary<ulong, (string Scope, string Tag, int References, bool Active)> _registeredTriggers = [];
     private bool _verticalDriven;
     private bool _disposed;
 
@@ -129,6 +161,8 @@ public sealed class SpatialMovementSystem : IDisposable
         CharacterStepControls selected = controls ?? default;
         if (selected.VerticalVelocity is float verticalVelocity && !float.IsFinite(verticalVelocity))
             throw new ArgumentOutOfRangeException(nameof(controls), "Controlled vertical velocity must be finite.");
+        if (selected.Movement is CharacterMovementRequest movement)
+            ValidateMovement(movement, nameof(controls));
 
         bool verticalDriveSelected = selected.VerticalVelocity.HasValue;
         bool verticalDriveReleased = !verticalDriveSelected && _verticalDriven;
@@ -163,6 +197,7 @@ public sealed class SpatialMovementSystem : IDisposable
         }
 
         CharacterControllerCommand command = new(
+            selected.Movement ?? default,
             selected.PlanarIntent ?? update.PlanarIntent,
             player.YawRadians,
             verticalDriveSelected ? false : selected.JumpPressed,
@@ -353,6 +388,92 @@ public sealed class SpatialMovementSystem : IDisposable
             Trigger: false);
     }
 
+    /// <summary>Projects one normalized water volume for the Engine trigger service.</summary>
+    public static SpatialEntityCollider ProjectWaterCollider(CharacterWaterVolume volume)
+    {
+        volume.Validate();
+        return new SpatialEntityCollider(
+            volume.Trigger,
+            volume.Minimum,
+            volume.Maximum,
+            0,
+            0,
+            Enabled: true,
+            StaticCollider: false,
+            Trigger: true);
+    }
+
+    /// <summary>Registers a product-owned trigger identity with the current Engine spatial session.</summary>
+    public bool RegisterTrigger(ulong trigger, string scope, string tag)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        if (trigger == 0) throw new ArgumentOutOfRangeException(nameof(trigger));
+        ArgumentException.ThrowIfNullOrWhiteSpace(scope);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tag);
+        if (_registeredTriggers.TryGetValue(trigger, out (string Scope, string Tag, int References, bool Active) prior))
+        {
+            if (!StringComparer.Ordinal.Equals(prior.Scope, scope) || !StringComparer.Ordinal.Equals(prior.Tag, tag))
+                throw new ArgumentException($"Spatial trigger {trigger} is already registered with different scope or tag.", nameof(trigger));
+            _registeredTriggers[trigger] = (prior.Scope, prior.Tag, checked(prior.References + 1), prior.Active);
+            return false;
+        }
+        _spatial.RegisterTrigger(new SpatialTriggerRegisterRequest(
+            _session, trigger, scope, tag, SpatialTriggerGeometry.EntityBounds));
+        _registeredTriggers.Add(trigger, (scope, tag, 1, true));
+        return true;
+    }
+
+    /// <summary>Reactivates a retained trigger after its prior projection released the last reference.</summary>
+    public void ActivateTrigger(ulong trigger, ulong tick)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        if (!_registeredTriggers.TryGetValue(trigger, out (string Scope, string Tag, int References, bool Active) registration))
+            throw new InvalidOperationException($"Spatial trigger {trigger} has not been registered.");
+        if (registration.References <= 0)
+            throw new InvalidOperationException($"Spatial trigger {trigger} has no retained projection.");
+        if (registration.Active) return;
+        _ = _spatial.SetTriggerActive(new SpatialTriggerSetActiveRequest(_session, trigger, Active: true, tick));
+        _registeredTriggers[trigger] = (registration.Scope, registration.Tag, registration.References, true);
+    }
+
+    /// <summary>Releases one projection's trigger reference, retiring the Engine trigger at zero.</summary>
+    public void ReleaseTrigger(ulong trigger, ulong tick)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        if (!_registeredTriggers.TryGetValue(trigger, out (string Scope, string Tag, int References, bool Active) registration))
+            throw new InvalidOperationException($"Spatial trigger {trigger} has not been registered.");
+        if (registration.References <= 0)
+            throw new InvalidOperationException($"Spatial trigger {trigger} has already released all projection references.");
+        int references = registration.References - 1;
+        bool active = registration.Active;
+        if (references == 0 && active)
+        {
+            _ = _spatial.SetTriggerActive(new SpatialTriggerSetActiveRequest(_session, trigger, Active: false, tick));
+            active = false;
+        }
+        _registeredTriggers[trigger] = (registration.Scope, registration.Tag, references, active);
+    }
+
+    /// <summary>Reconciles current player/entity bounds through Engine trigger admission.</summary>
+    public SpatialTriggerReconcileResult ReconcileTriggers(ulong tick, ReadOnlyMemory<SpatialEntityCollider> entities)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        ValidateColliders(entities.Span, nameof(entities));
+        return _spatial.ReconcileTriggers(new SpatialTriggerReconcileRequest(
+            _session, tick, SpatialTriggerCause.Movement, entities));
+    }
+
+    /// <summary>Changes a registered trigger's active state through Engine lifecycle admission.</summary>
+    public SpatialTriggerLifecycleResult SetTriggerActive(ulong trigger, bool active, ulong tick)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        if (trigger == 0) throw new ArgumentOutOfRangeException(nameof(trigger));
+        SpatialTriggerLifecycleResult result = _spatial.SetTriggerActive(new SpatialTriggerSetActiveRequest(_session, trigger, active, tick));
+        if (_registeredTriggers.TryGetValue(trigger, out (string Scope, string Tag, int References, bool Active) registration))
+            _registeredTriggers[trigger] = (registration.Scope, registration.Tag, registration.References, active);
+        return result;
+    }
+
     private static ReadOnlyMemory<SpatialEntityCollider> SpatialColliders(CharacterStepEnvironment? environment)
     {
         if (environment is not { } selected || selected.Obstacles.IsEmpty)
@@ -390,6 +511,21 @@ public sealed class SpatialMovementSystem : IDisposable
                 || collider.Min.X > collider.Max.X || collider.Min.Y > collider.Max.Y || collider.Min.Z > collider.Max.Z)
                 throw new ArgumentOutOfRangeException(parameterName, "Projected spatial colliders require non-zero entities and finite ordered bounds.");
         }
+    }
+
+    private static void ValidateMovement(CharacterMovementRequest movement, string parameterName)
+    {
+        if (!Enum.IsDefined(movement.Mode)
+            || !float.IsFinite(movement.VerticalIntent)
+            || !float.IsFinite(movement.Speed) || movement.Speed < 0f
+            || !float.IsFinite(movement.Acceleration) || movement.Acceleration < 0f
+            || !float.IsFinite(movement.Drag) || movement.Drag < 0f
+            || !float.IsFinite(movement.Minimum.X) || !float.IsFinite(movement.Minimum.Y) || !float.IsFinite(movement.Minimum.Z)
+            || !float.IsFinite(movement.Maximum.X) || !float.IsFinite(movement.Maximum.Y) || !float.IsFinite(movement.Maximum.Z)
+            || movement.Minimum.X > movement.Maximum.X || movement.Minimum.Y > movement.Maximum.Y || movement.Minimum.Z > movement.Maximum.Z
+            || !float.IsFinite(movement.GravityScale) || !float.IsFinite(movement.Buoyancy)
+            || !float.IsFinite(movement.ClimbReach) || movement.ClimbReach < 0f)
+            throw new ArgumentOutOfRangeException(parameterName, "Engine movement requests require a defined mode and finite ordered values.");
     }
 
     /// <summary>

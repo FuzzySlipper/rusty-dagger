@@ -187,6 +187,66 @@ public sealed class SpatialMovementSessionTests
     }
 
     [Fact]
+    public void Spatial_step_forwards_one_product_selected_swim_request_with_the_call_local_water_volume()
+    {
+        List<string> releases = [];
+        ContentFake content = new("spatial/hold.json", Hash, releases);
+        SpatialFake spatial = SpatialFake.Create(Hash, releases);
+        PlayerControlState player = new(new WorldPoint(1f, 2f, 3f), 0f, 0f);
+        CharacterWaterVolume volume = new(77, new Vector3(-2f, -1f, -2f), new Vector3(2f, 4f, 2f));
+        CharacterMovementRequest movement = new(
+            CharacterMovementMode.Swimming,
+            VerticalIntent: 1f,
+            Speed: 2f,
+            Acceleration: 12f,
+            Drag: 4f,
+            Minimum: volume.Minimum,
+            Maximum: volume.Maximum,
+            GravityScale: 0f,
+            Buoyancy: 1f,
+            ClimbReach: 0f);
+
+        using SpatialMovementSystem system = new(spatial.Service, content,
+            new SpatialContentArtifact("spatial/hold.json", Hash, 7), new SpatialTuning(.5, 32, 32, 2));
+        system.Step(player, new ProductUpdateState(1f / 60f),
+            new CharacterStepEnvironment(default, Array.Empty<CharacterObstacle>(), Array.Empty<CharacterMeshInstance>(), new[] { volume }),
+            new CharacterStepControls(PlanarIntent: Vector2.UnitY, Movement: movement));
+
+        CharacterStepRequest request = Assert.Single(spatial.StepRequests);
+        Assert.Equal(movement, request.Command.Movement);
+    }
+
+    [Fact]
+    public void Spatial_trigger_registration_is_idempotent_and_deactivation_is_engine_admitted()
+    {
+        List<string> releases = [];
+        ContentFake content = new("spatial/hold.json", Hash, releases);
+        SpatialFake spatial = SpatialFake.Create(Hash, releases);
+
+        using SpatialMovementSystem system = new(spatial.Service, content,
+            new SpatialContentArtifact("spatial/hold.json", Hash, 7), new SpatialTuning(.5, 32, 32, 2));
+
+        Assert.True(system.RegisterTrigger(91, "profile", "water"));
+        Assert.False(system.RegisterTrigger(91, "profile", "water"));
+        system.ReleaseTrigger(91, tick: 4);
+        Assert.Empty(spatial.TriggerLifecycleRequests);
+        system.ReleaseTrigger(91, tick: 5);
+        Assert.Single(spatial.TriggerLifecycleRequests);
+        Assert.False(spatial.TriggerLifecycleRequests[0].Active);
+        Assert.False(system.RegisterTrigger(91, "profile", "water"));
+        system.ActivateTrigger(91, tick: 6);
+
+        Assert.Single(spatial.TriggerRegistrations);
+        Assert.Equal(91UL, spatial.TriggerRegistrations[0].Trigger);
+        Assert.Equal(2, spatial.TriggerLifecycleRequests.Count);
+        Assert.Equal(91UL, spatial.TriggerLifecycleRequests[0].Trigger);
+        Assert.False(spatial.TriggerLifecycleRequests[0].Active);
+        Assert.Equal(5UL, spatial.TriggerLifecycleRequests[0].Tick);
+        Assert.True(spatial.TriggerLifecycleRequests[1].Active);
+        Assert.Equal(6UL, spatial.TriggerLifecycleRequests[1].Tick);
+    }
+
+    [Fact]
     public void Over_capacity_player_still_receives_an_engine_step_but_cannot_propose_planar_movement()
     {
         string root = TestData.RepositoryRoot;

@@ -43,6 +43,15 @@ internal static class DaggerfallAlterationEffects
                 var added = ReadShield(incoming);
                 incumbent.State = ShieldState(prior with { Remaining = (int)Math.Min(prior.Starting, (long)prior.Remaining + added.Starting) });
             }, ExtendIncumbentDuration: true);
+
+        // The donor keeps Water Breathing as an ordinary duration effect whose only gameplay
+        // contribution is a live capability read by the swimming owner.  It therefore belongs in
+        // the compiled alteration catalog rather than in a second swimmer cache.
+        yield return new("water-breathing", "water-breathing", DaggerfallEffectStacking.RefreshDuration, 1, 1,
+            Apply: effect => ValidateWaterBreathing(effect), Resume: effect => ValidateWaterBreathing(effect),
+            MovementProtection: new(PreventsFallDamage: false, GrantsWaterBreathing: true),
+            Spell: new(30, 255, SpellMaker: true, SupportsDuration: true),
+            ExtendIncumbentDuration: true, IncumbentSettingsMatch: (_, _) => true);
     }
 
     internal static DaggerfallShieldState ReadShield(JsonElement state)
@@ -62,6 +71,15 @@ internal static class DaggerfallAlterationEffects
         var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
         if (state?.Settings is not { Type: 8 } settings || settings.SubType != (int)element || state.CasterLevel < 1)
             throw new ArgumentException("Resistance effect state does not match its compiled variant.");
+        return [];
+    }
+
+    private static IEnumerable<IActiveEffectContribution> ValidateWaterBreathing(DaggerfallActiveEffect effect)
+    {
+        DaggerfallCastEffectState? state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        if (state?.Settings is not { Type: 30, SubType: 255 } || state.CasterLevel < 1
+            || state.Amount != 0 || state.SavePercent is < 1 or > 100)
+            throw new ArgumentException("Water-breathing state does not match its duration-only variant.");
         return [];
     }
 

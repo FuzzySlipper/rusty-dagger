@@ -67,6 +67,15 @@ internal sealed partial class DaggerfallSession
         _doors.Advance(update.DeltaSeconds);
         _sites.Projection.AdvanceMotion(update.DeltaSeconds);
         CharacterStepEnvironment doorEnvironment = _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion);
+        SpatialEntityCollider[] waterTriggers =
+        [
+            .. doorEnvironment.WaterVolumes.Span.ToArray().Select(SpatialMovementSystem.ProjectWaterCollider),
+            _spatial.ProjectCharacterCollider(State.PlayerControl, State.Actors.Player.Actor.Entity.Value),
+        ];
+        SpatialTriggerReconcileResult triggerReconciliation = _spatial.ReconcileTriggers(simulationStep, waterTriggers);
+        State.Swimming.ObserveTriggers(triggerReconciliation.Facts.Span,
+            State.Actors.Player.Actor.Entity.Value, doorEnvironment.WaterVolumes.Span);
+        CharacterWaterVolume? activeWater = State.Swimming.ActiveVolume(doorEnvironment.WaterVolumes.Span);
         bool wallAhead = _spatial.TryProbeClimbWall(State.PlayerControl, CharacterWallProbeDirection.Forward, out SpatialHit forwardHit, doorEnvironment)
             && MathF.Abs(forwardHit.Normal.Y) <= .06f;
         bool wallAtFeet = _climbing.IsAttached
@@ -76,15 +85,14 @@ internal sealed partial class DaggerfallSession
             && _spatial.TryProbeClimbWall(State.PlayerControl, CharacterWallProbeDirection.Backward, out SpatialHit rearHit, doorEnvironment)
             && MathF.Abs(rearHit.Normal.Y) <= .06f;
         DaggerfallClimbStep climb = _climbing.BeginStep(locomotion, motionBefore, wallAhead, wallAtFeet, wallBehind,
-            canMove && State.Transport.IsOnFoot,
+            canMove && State.Transport.IsOnFoot && activeWater is null,
             State.Actors.Player.Stats, State.Character.Race.Id == "khajiit",
             State.Effects.EnhancesClimbing(DaggerfallActorIdentity.PlayerEntityId),
             update.DeltaSeconds, () => checked((int)_random.DrawKeyed(new KeyedRngRequest(
                 CombatRandomKey.Seed, "daggerfall.climbing.v1", $"generation:{generation}:step:{simulationStep}", 1, 100)).Value));
         DaggerfallLevitationStep levitation = _levitation.Resolve(new DaggerfallLevitationContext(
             State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId),
-            // No movement owner reports water yet, so the player is never swimming here.
-            Swimming: false,
+            Swimming: State.Swimming.IsSwimming,
             Climbing: climb.Climbing,
             CanMove: canMove,
             UpHeld: locomotion.UpHeld,
@@ -101,6 +109,23 @@ internal sealed partial class DaggerfallSession
             Running = !levitation.IsLevitating && locomotion.Running,
             JumpRequested = !levitation.IsLevitating && locomotion.JumpRequested,
         };
+        if (activeWater is { } water && !climb.Climbing && canMove && State.Transport.IsOnFoot)
+        {
+            float verticalIntent = locomotion.UpHeld ? 1f : locomotion.DownHeld ? -1f : 0f;
+            locomotion = locomotion with
+            {
+                Controls = locomotion.Controls with
+                {
+                    Movement = State.Swimming.Movement(water, verticalIntent),
+                    VerticalVelocity = null,
+                    JumpPressed = false,
+                    JumpHeld = false,
+                    CrouchRequested = false,
+                },
+                Running = false,
+                JumpRequested = false,
+            };
+        }
         locomotion = locomotion with { Controls = restrictions.Restrict(locomotion.Controls) };
         bool releasedVerticalDrive = _verticalMovementDriven && !locomotion.Controls.VerticalVelocity.HasValue;
         CharacterStepReceipt? movement = _spatial.Step(State.PlayerControl, update, doorEnvironment, locomotion.Controls);
@@ -116,8 +141,22 @@ internal sealed partial class DaggerfallSession
         CharacterMotion landingBefore = releasedVerticalDrive && positionBefore is WorldPoint releasePosition
             ? motionBefore with { PeakY = releasePosition.Y, FallOriginY = releasePosition.Y }
             : motionBefore;
-        DaggerfallLanding? landing = _locomotion.CompleteStep(locomotion, landingBefore, movement, update.DeltaSeconds * _tuning.Time.GameSecondsPerRealSecond, State.Actors.Player.Stats, use => State.SkillUses.Record(use));
+        DaggerfallSwimmingStep swimming = movement is not null
+            ? State.Swimming.Complete(
+                movement,
+                State.Effects.GrantsWaterBreathing(DaggerfallActorIdentity.PlayerEntityId),
+                State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
+                update.DeltaSeconds,
+                update.DeltaSeconds * _tuning.Time.GameSecondsPerRealSecond,
+                MinuteIndex(_time.Calendar),
+                use => State.SkillUses.Record(use))
+            : DaggerfallSwimmingStep.None;
+        DaggerfallLanding? landing = _locomotion.CompleteStep(locomotion, landingBefore, movement,
+            update.DeltaSeconds * _tuning.Time.GameSecondsPerRealSecond, State.Actors.Player.Stats,
+            use => State.SkillUses.Record(use));
         _climbing.CompleteStep(climb, movement, use => State.SkillUses.Record(use));
+        if (swimming.Drowning)
+            AppendDamage(_vitality.ResolveDrowning(State.Actors.Player.Actor), DaggerfallDamageCause.Drowning, 0);
         if (_vitality.ResolveLanding(State.Actors.Player.Actor, landing, State.Effects.PreventsFallDamage(DaggerfallActorIdentity.PlayerEntityId)) is { } fall)
             AppendDamage(fall, DaggerfallDamageCause.Fall, 0);
         _sites.RebaseExteriorIfNeeded();

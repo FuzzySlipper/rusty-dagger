@@ -63,7 +63,11 @@ internal enum DaggerfallEffectStacking
 }
 
 /// <summary>Typed movement meaning supplied by compiled effect families; the movement owner never infers it from effect names.</summary>
-internal readonly record struct DaggerfallMovementProtection(bool PreventsFallDamage, bool GrantsLevitation = false, bool EnhancesClimbing = false);
+internal readonly record struct DaggerfallMovementProtection(
+    bool PreventsFallDamage,
+    bool GrantsLevitation = false,
+    bool EnhancesClimbing = false,
+    bool GrantsWaterBreathing = false);
 
 [Flags]
 internal enum DaggerfallConcealment
@@ -290,6 +294,11 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     internal bool EnhancesClimbing(long targetId) => _effects.Values.Any(effect =>
         checked((long)effect.Lifecycle.Context.Target.Value) == targetId
         && effect.Definition.MovementProtection.EnhancesClimbing);
+
+    /// <summary>Reads the typed water-breathing capability supplied by active compiled effects.</summary>
+    internal bool GrantsWaterBreathing(long targetId) => _effects.Values.Any(effect =>
+        checked((long)effect.Lifecycle.Context.Target.Value) == targetId
+        && effect.Definition.MovementProtection.GrantsWaterBreathing);
 
     /// <summary>
     /// Projects the active typed perception meanings for one target. The lifecycle owns the

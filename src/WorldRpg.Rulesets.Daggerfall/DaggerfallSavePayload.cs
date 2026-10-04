@@ -104,6 +104,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Current wall attachment and the donor check timers, independent of transient physical keys.</summary>
     [JsonRequired]
     public DaggerfallClimbingSave Climbing { get; init; } = new(false, false, 0f, 0f);
+    /// <summary>Accepted water mode and breath continuation, including an admitted submersion timer.</summary>
+    [JsonRequired]
+    public DaggerfallSwimmingSave Swimming { get; init; } = DaggerfallSwimmingSave.Empty;
     /// <summary>Profile-scoped dungeon exploration, independent of active geometry or door motion.</summary>
     [JsonRequired]
     public DaggerfallDungeonDiscoverySnapshot[] DungeonDiscovery { get; init; } = [];
@@ -743,6 +746,8 @@ internal sealed record DaggerfallSavePayload(
         Locomotion.Validate();
         ArgumentNullException.ThrowIfNull(Climbing);
         Climbing.Validate();
+        ArgumentNullException.ThrowIfNull(Swimming);
+        Swimming.Validate();
         ArgumentNullException.ThrowIfNull(DungeonDiscovery);
         foreach (DaggerfallDungeonDiscoverySnapshot snapshot in DungeonDiscovery) ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(DungeonActions);

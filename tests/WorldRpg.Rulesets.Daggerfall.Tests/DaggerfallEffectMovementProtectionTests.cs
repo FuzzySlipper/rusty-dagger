@@ -31,6 +31,28 @@ public sealed class DaggerfallEffectMovementProtectionTests
         Assert.False(effects.PreventsFallDamage(DaggerfallActorIdentity.PlayerEntityId));
     }
 
+    [Fact]
+    public void Active_water_breathing_exposes_typed_capability_until_it_ends()
+    {
+        using ActorsState actors = new();
+        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(), "health");
+        DaggerfallEffectCatalog catalog = new(
+        [
+            new DaggerfallEffectDefinition("water-breathing", "water-breathing", DaggerfallEffectStacking.RefreshDuration, 1, 1,
+                MovementProtection: new DaggerfallMovementProtection(PreventsFallDamage: false, GrantsWaterBreathing: true)),
+        ]);
+        using DaggerfallEffectLifecycle effects = new(actors, catalog);
+        DaggerfallEffectRequest request = new("water-breathing", "water-breathing", "spell", null,
+            DaggerfallActorIdentity.PlayerEntityId, "test", null, null, 1, 2, EmptyState());
+
+        _ = effects.Start(request);
+        Assert.True(effects.GrantsWaterBreathing(DaggerfallActorIdentity.PlayerEntityId));
+        Assert.False(effects.GrantsWaterBreathing(2));
+
+        Assert.True(effects.Cancel(EffectInstanceId.Parse("water-breathing")));
+        Assert.False(effects.GrantsWaterBreathing(DaggerfallActorIdentity.PlayerEntityId));
+    }
+
     private static StatsComponent Stats()
     {
         Stat maximum = new(100);

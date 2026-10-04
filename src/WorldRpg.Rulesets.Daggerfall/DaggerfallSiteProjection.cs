@@ -16,9 +16,11 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </summary>
 internal sealed class DaggerfallSiteProjection : IDisposable
 {
+    private readonly SpatialMovementSystem _spatialMovement;
     private bool _disposed;
+    private bool _waterTriggersActive;
 
-    private DaggerfallSiteProjection(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion, DaggerfallSiteAppearance appearance, DaggerfallSiteLighting lighting, DaggerfallSitePortalRuntime portals)
+    private DaggerfallSiteProjection(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion, DaggerfallSiteAppearance appearance, DaggerfallSiteLighting lighting, DaggerfallSitePortalRuntime portals, SpatialMovementSystem spatialMovement)
     {
         Inputs = inputs;
         Doors = doors;
@@ -26,6 +28,8 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         Appearance = appearance;
         Lighting = lighting;
         Portals = portals;
+        _spatialMovement = spatialMovement ?? throw new ArgumentNullException(nameof(spatialMovement));
+        _waterTriggersActive = inputs.WaterVolumes.Count > 0;
     }
 
     internal DaggerfallSiteProfile Inputs { get; }
@@ -59,6 +63,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         DaggerfallSiteAppearance? appearance = null;
         DaggerfallSiteLighting? lighting = null;
         DaggerfallSitePortalRuntime? portals = null;
+        List<ulong> newlyRegisteredWaterTriggers = [];
         try
         {
             motion = new(actors, engine.Spatial, spatialMovement.Session, doors, inputs.ProfileKey.LogicalId,
@@ -67,10 +72,22 @@ internal sealed class DaggerfallSiteProjection : IDisposable
                 tuning.PresentationAudio, random, audioBundle, doors, motion);
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);
-            return new(inputs, doors, motion, appearance, lighting, portals);
+            DaggerfallSiteProjection projection = new(inputs, doors, motion, appearance, lighting, portals, spatialMovement);
+            foreach (CharacterWaterVolume volume in inputs.WaterVolumes)
+            {
+                _ = spatialMovement.RegisterTrigger(volume.Trigger, inputs.ProfileKey.LogicalId, "water");
+                spatialMovement.ActivateTrigger(volume.Trigger, tick: 0);
+                newlyRegisteredWaterTriggers.Add(volume.Trigger);
+            }
+            return projection;
         }
         catch
         {
+            foreach (ulong trigger in newlyRegisteredWaterTriggers)
+            {
+                try { spatialMovement.ReleaseTrigger(trigger, tick: 0); }
+                catch { /* the construction failure remains the source exception */ }
+            }
             try { portals?.Dispose(); }
             finally
             {
@@ -99,6 +116,15 @@ internal sealed class DaggerfallSiteProjection : IDisposable
 
     internal void RebuildMotionCollisionResidency() => Motion.RebuildCollisionResidency();
 
+    /// <summary>Retires this projection's Engine trigger definitions without retaining a second overlap map.</summary>
+    internal void DeactivateWaterTriggers(ulong tick)
+    {
+        if (!_waterTriggersActive) return;
+        foreach (CharacterWaterVolume volume in Inputs.WaterVolumes)
+            _spatialMovement.ReleaseTrigger(volume.Trigger, tick);
+        _waterTriggersActive = false;
+    }
+
     internal void Rebase(Vector3 delta)
     {
         Doors.Rebase(delta);
@@ -117,19 +143,24 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         // collision and over-block.
         _ = motion;
         CharacterStepEnvironment doors = Doors.CharacterEnvironment();
-        return CombineCharacterEnvironments(doors, motionModels);
+        return CombineCharacterEnvironments(doors, motionModels, Inputs.WaterVolumes);
     }
 
     internal static CharacterStepEnvironment CombineCharacterEnvironments(
         CharacterStepEnvironment doors,
-        CharacterStepEnvironment motionModels)
+        CharacterStepEnvironment motionModels,
+        IReadOnlyList<CharacterWaterVolume>? waterVolumes = null)
     {
         CharacterMeshInstance[] meshInstances = [.. doors.MeshInstances.ToArray(), .. motionModels.MeshInstances.ToArray()];
         HashSet<ulong> meshEntities = meshInstances.Select(mesh => mesh.Entity).ToHashSet();
         CharacterObstacle[] obstacles = [.. doors.Obstacles.ToArray(), .. motionModels.Obstacles.ToArray()];
         if (meshEntities.Count != 0)
             obstacles = obstacles.Where(obstacle => !meshEntities.Contains(obstacle.Entity)).ToArray();
-        return new CharacterStepEnvironment(doors.Support, obstacles, meshInstances);
+        CharacterWaterVolume[] water = (waterVolumes ?? [.. doors.WaterVolumes.ToArray(), .. motionModels.WaterVolumes.ToArray()])
+            .Select(volume => volume.Validate())
+            .OrderBy(volume => volume.Trigger)
+            .ToArray();
+        return new CharacterStepEnvironment(doors.Support, obstacles, meshInstances, water);
     }
 
     public void Dispose()
@@ -137,8 +168,10 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         if (_disposed) return;
         _disposed = true;
         List<Exception>? failures = null;
-        try { Lighting.Dispose(); }
+        try { DeactivateWaterTriggers(0); }
         catch (Exception exception) { failures = [exception]; }
+        try { Lighting.Dispose(); }
+        catch (Exception exception) { (failures ??= []).Add(exception); }
         try { Appearance.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
         try { Portals.Dispose(); }
