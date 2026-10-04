@@ -187,7 +187,7 @@ public sealed class SessionCollisionResidencyTests
         // The rat was spawned before the idle update's vertical origin commit. Its absolute local pose
         // therefore carries the pre-crossing window compensation as well as the crossing receipt.
         Assert.Equal(new Vector3(9f, 0f, 9f) + origin.Compensation + rebase.LocalDelta, ratState.Position.ToVector());
-        Assert.Equal(new Vector3(9f, 0f, 9f) - crossed.ToVector(),
+        Assert.Equal(new Vector3(9f, 0f, 9f) + origin.Compensation - crossed.ToVector(),
             ratState.Position.ToVector() - session.State.PlayerControl.Position.Value.ToVector());
         Assert.Equal(exterior.Site, session.Site.Active);
 
