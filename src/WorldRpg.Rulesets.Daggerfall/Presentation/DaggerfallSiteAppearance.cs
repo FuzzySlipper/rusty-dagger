@@ -1260,7 +1260,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             audioClips.Add(clipId, clip);
         }
         string signalId = $"daggerfall.media.{identity.Generation}.{identity.SimulationStep}.{identity.Attacker}.{identity.Target}.{identity.Outcome}.{marker}.{clipId}";
-        oneShotSignals.Add(audio.Emit(new AudioEmitRequest(signalId, new AudioSourceDescriptor(clip, AudioBus.Sfx, audioTuning.Volume * volumeScale, pitch ?? audioTuning.Pitch, false, position is null ? audioTuning.SpatialBlend : 1F, audioTuning.MaxDistance, AudioRolloff.Linear, 0F, position is null ? AudioEmitterKind.Global2d : AudioEmitterKind.World3d, position?.ToVector() ?? Vector3.Zero, 0, Vector3.Zero)));
+        oneShotSignals.Add(audio.Emit(new AudioEmitRequest(signalId, new AudioSourceDescriptor(clip, AudioBus.Sfx, audioTuning.Volume * volumeScale, pitch ?? audioTuning.Pitch, false, position is null ? audioTuning.SpatialBlend : 1F, audioTuning.MaxDistance, AudioRolloff.Linear, 0F, position is null ? AudioEmitterKind.Global2d : AudioEmitterKind.World3d, position?.ToVector() ?? Vector3.Zero, 0, Vector3.Zero))));
     }
 
     private void RetireRealizedOneShots()
