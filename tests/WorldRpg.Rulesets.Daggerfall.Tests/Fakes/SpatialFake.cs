@@ -22,6 +22,7 @@ internal class SpatialFake : DispatchProxy
     private List<string> releases = null!;
     internal ISpatialService Service { get; private set; } = null!;
     internal int ReplaceCalls { get; private set; }
+    internal List<SpatialContentArtifactResidencyRequest> ContentResidencyRequests { get; } = [];
     internal int ReadCalls { get; private set; }
     internal int CreateSessionCalls { get; private set; }
     internal int StepCalls { get; private set; }
@@ -88,6 +89,7 @@ internal class SpatialFake : DispatchProxy
         nameof(ISpatialService.ValidateCharacterControllerConfig) => ValidateConfig((CharacterControllerConfig)arguments![0]!),
         nameof(ISpatialService.ValidateCharacterControllerCommand) => ValidateCommand((CharacterControllerValidationRequest)arguments![0]!),
         nameof(ISpatialService.ReplaceContentArtifact) => Replace((SpatialContentArtifactReplaceRequest)arguments![0]!),
+        nameof(ISpatialService.ApplyContentArtifactResidency) => ApplyContentResidency((SpatialContentArtifactResidencyRequest)arguments![0]!),
         nameof(ISpatialService.ApplyCollisionResidency) => ApplyCollisionResidency((CollisionResidencyRequest)arguments![0]!),
         nameof(ISpatialService.ReadContentArtifact) => Read(),
         nameof(ISpatialService.ProposeCharacterStep) => Step((CharacterStepRequest)arguments![0]!),
@@ -131,6 +133,17 @@ internal class SpatialFake : DispatchProxy
         colliders.Assets.Clear();
         colliders.Instances.Clear();
         return new(request.Content.Handle.Value, hash, 1, 2, 3, 4, 5, 6, 7, 8);
+    }
+
+    private SpatialContentArtifactResidencyReceipt ApplyContentResidency(SpatialContentArtifactResidencyRequest request)
+    {
+        ContentResidencyRequests.Add(request);
+        // Keep the historical counter as a count of accepted/attempted static world admissions so
+        // the existing transition tests continue to assert one Engine admission per profile change.
+        ReplaceCalls++;
+        if (RejectContentReplacement) throw new InvalidOperationException("Rejected spatial content replacement.");
+        return new SpatialContentArtifactResidencyReceipt(0UL, (ulong)request.Admitted.Length,
+            (ulong)request.Admitted.Length, 0UL, 0UL, 0UL, 0UL);
     }
 
     /// <summary>

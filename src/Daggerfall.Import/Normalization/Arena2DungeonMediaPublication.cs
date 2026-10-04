@@ -172,6 +172,13 @@ public sealed record Arena2DungeonMediaRequest(
     public IReadOnlyList<string> RuntimeBillboardResources { get; init; } = [];
 
     /// <summary>
+    /// Runtime exterior terrain textures selected by climate and season rather than a static mesh
+    /// material slot. They are emitted into the admitted media closure so a retained terrain
+    /// material can be replaced when the product's season changes.
+    /// </summary>
+    public IReadOnlyList<string> RuntimeTerrainResources { get; init; } = [];
+
+    /// <summary>
     /// Typed, discoverable display defaults. Rulesets or authored overlays may
     /// replace these values without changing Arena2 layout interpretation.
     /// </summary>
@@ -204,6 +211,10 @@ public sealed record Arena2DungeonMediaRequest(
         if (RuntimeBillboardResources.Any(string.IsNullOrWhiteSpace)
             || RuntimeBillboardResources.Distinct(StringComparer.Ordinal).Count() != RuntimeBillboardResources.Count)
             throw new ArgumentException("Runtime billboard resources must be distinct non-empty source resource IDs.", nameof(RuntimeBillboardResources));
+        ArgumentNullException.ThrowIfNull(RuntimeTerrainResources);
+        if (RuntimeTerrainResources.Any(string.IsNullOrWhiteSpace)
+            || RuntimeTerrainResources.Distinct(StringComparer.Ordinal).Count() != RuntimeTerrainResources.Count)
+            throw new ArgumentException("Runtime terrain resources must be distinct non-empty source resource IDs.", nameof(RuntimeTerrainResources));
         ArgumentNullException.ThrowIfNull(DisplayProfile);
         DisplayProfile.Validate();
         if ((TextureLeaves is null) != string.IsNullOrWhiteSpace(TextureLeafConsumer))
@@ -537,7 +548,7 @@ public sealed record Arena2DungeonMediaPublication(
         EnforceSourceQuotas(request.Sources, request.Quotas);
 
         Arena2Palette palette = request.Sources.DecodePalette();
-        Selection selection = Select(request.Dungeon, request.RuntimeActorResources, request.RuntimeBillboardResources);
+        Selection selection = Select(request.Dungeon, request.RuntimeActorResources, request.RuntimeBillboardResources, request.RuntimeTerrainResources);
         EnforceExactTextureClosure(request.Sources, selection.RequiredArchives);
         if (request.TextureLeaves is not null)
         {
@@ -551,6 +562,7 @@ public sealed record Arena2DungeonMediaPublication(
         List<GeneratedMediaArtifact> generated = [];
         List<MaterialDraft> materialDrafts = BuildMaterials(selection.Materials, archives, palette, request.Quotas, generated);
         List<BillboardDraft> billboardDrafts = BuildBillboards(selection.Billboards, archives, palette, request.Quotas, generated);
+        BuildTerrainTextures(selection.TerrainTextures, archives, palette, request.Quotas, generated);
         List<ActorDraft> actorDrafts = BuildActors(selection.Actors, archives, palette, request.Quotas, generated);
         Dictionary<string, AuthoredMediaOverlay> overlaysById = request.AuthoredOverlays.ToDictionary(overlay => overlay.Id, StringComparer.Ordinal);
         ValidateActorTimingOverlays(overlaysById, actorDrafts);
@@ -688,6 +700,31 @@ public sealed record Arena2DungeonMediaPublication(
         }
 
         return drafts;
+    }
+
+    private static void BuildTerrainTextures(
+        IReadOnlyList<TerrainTextureSelection> selections,
+        IReadOnlyDictionary<ushort, TextureArchive> archives,
+        Arena2Palette palette,
+        Arena2DungeonMediaQuotas quotas,
+        List<GeneratedMediaArtifact> generated)
+    {
+        foreach (TerrainTextureSelection selection in selections)
+        {
+            IndexedTextureFrame decoded = archives[selection.Archive].DecodeFrame(selection.Record, 0);
+            byte[] rgba = decoded.ToRgba(palette, PaletteAlphaMode.Opaque);
+            byte[] png = DeterministicPngEncoder.EncodeRgba8(decoded.Width, decoded.Height, rgba);
+            RequireArtifactSize(png, quotas, $"terrain texture '{selection.TextureResourceId}'");
+            generated.Add(new GeneratedMediaArtifact(
+                selection.TextureResourceId,
+                NormalizedMediaKind.Texture,
+                $"media/dungeon/terrain/texture-{selection.Archive}-{selection.Record}.png",
+                png,
+                decoded.Width,
+                decoded.Height,
+                null,
+                "image/png"));
+        }
     }
 
     private static List<ActorDraft> BuildActors(
@@ -1011,7 +1048,8 @@ public sealed record Arena2DungeonMediaPublication(
     private static Selection Select(
         NormalizedImportDocument document,
         IReadOnlyList<string> runtimeActorResources,
-        IReadOnlyList<string> runtimeBillboardResources)
+        IReadOnlyList<string> runtimeBillboardResources,
+        IReadOnlyList<string> runtimeTerrainResources)
     {
         Dictionary<string, NormalizedResourceCatalogEntry> resources = document.Resources.ToDictionary(resource => resource.Id, StringComparer.Ordinal);
         List<MaterialSelection> materials = [];
@@ -1040,6 +1078,15 @@ public sealed record Arena2DungeonMediaPublication(
                 return new BillboardSelection(id, archive, record);
             })
             .ToList();
+        List<TerrainTextureSelection> terrainTextures = runtimeTerrainResources
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .Select(id =>
+            {
+                (ushort archive, ushort record) = ParseTextureResourceId(id, "terrain/texture-");
+                return new TerrainTextureSelection(id, archive, record);
+            })
+            .ToList();
         List<ActorSelection> actors = document.World.Actors
             .Select(actor => actor.ActorResourceId)
             .Concat(runtimeActorResources)
@@ -1058,6 +1105,7 @@ public sealed record Arena2DungeonMediaPublication(
             .ToList();
         HashSet<ushort> requiredArchives = materials.Select(material => material.Archive)
             .Concat(billboards.Select(billboard => billboard.Archive))
+            .Concat(terrainTextures.Select(texture => texture.Archive))
             .Concat(actors.Select(actor => actor.Source.TextureArchive.Value))
             .Concat(actors.Where(actor => actor.Source.Corpse is not null).Select(actor => actor.Source.Corpse!.Value.TextureArchive.Value))
             .ToHashSet();
@@ -1066,7 +1114,7 @@ public sealed record Arena2DungeonMediaPublication(
             throw new InvalidOperationException("Normalized dungeon media has no material, visible billboard, or selected actor source references.");
         }
 
-        return new(materials, billboards, actors, requiredArchives);
+        return new(materials, billboards, terrainTextures, actors, requiredArchives);
     }
 
     private static (ushort Archive, ushort Record) ParseTextureResourceId(string id, string prefix)
@@ -1103,11 +1151,14 @@ public sealed record Arena2DungeonMediaPublication(
 
     private sealed record BillboardSelection(string SpriteResourceId, ushort Archive, ushort Record);
 
+    private sealed record TerrainTextureSelection(string TextureResourceId, ushort Archive, ushort Record);
+
     private sealed record ActorSelection(string ActorResourceId, Arena2MobileSource Source);
 
     private sealed record Selection(
         IReadOnlyList<MaterialSelection> Materials,
         IReadOnlyList<BillboardSelection> Billboards,
+        IReadOnlyList<TerrainTextureSelection> TerrainTextures,
         IReadOnlyList<ActorSelection> Actors,
         IReadOnlySet<ushort> RequiredArchives);
 

@@ -1,6 +1,7 @@
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
+using Daggerfall.Import.Publication;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -71,6 +72,23 @@ public sealed class Arena2DungeonMediaPublicationTests
         Assert.NotNull(actor.Corpse.Descriptor);
         Assert.All(first.Artifacts, artifact => Assert.DoesNotContain("PAL.PAL", artifact.RelativePath, StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain("encounter", string.Join('|', first.Artifacts.Select(artifact => artifact.RelativePath)), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Publishes_runtime_terrain_texture_into_the_admitted_media_closure()
+    {
+        Arena2DungeonMediaPublication publication = Arena2DungeonMediaPublication.Create(CreateRequest() with
+        {
+            RuntimeTerrainResources = ["terrain/texture-2-0"],
+        });
+
+        ImportPublicationArtifact terrain = Assert.Single(publication.Artifacts,
+            artifact => artifact.RelativePath == "media/dungeon/terrain/texture-2-0.png");
+        Assert.True(terrain.Bytes.Length > 0);
+        Assert.Contains(publication.MediaManifest.Resources, resource =>
+            resource.Id == "terrain/texture-2-0"
+            && resource.Kind == NormalizedMediaKind.Texture
+            && resource.RelativePath == terrain.RelativePath);
     }
 
     [Fact]

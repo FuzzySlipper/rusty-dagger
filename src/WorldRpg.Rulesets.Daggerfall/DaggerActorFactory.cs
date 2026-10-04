@@ -54,7 +54,8 @@ internal static class DaggerActorFactory
     private const ulong PlayerMechanicsEntityId = (ulong)DaggerfallActorIdentity.PlayerEntityId;
     internal static CapacityMetricId ClassicWeightMetric { get; } = CapacityMetricId.Parse("daggerfall.classic-weight");
     internal static DaggerActorAssembly Create(IRandomService random, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallSavePayload? saved,
-        DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null)
+        DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null,
+        bool materializeActiveSite = true)
     {
         ActorsState actors = new();
         try
@@ -126,8 +127,11 @@ internal static class DaggerActorFactory
                 if (saved?.BanishedActors.Contains(source.EntityId) == true) continue;
                 if (!definitions.Actors.TryGetValue(source.ActorId, out DaggerfallActorDefinition? definition))
                     throw new InvalidOperationException($"Site placement '{source.EntityId}' refers to missing actor '{source.ActorId.Value}'.");
+                authored.Add(source.EntityId, definition);
+                if (!materializeActiveSite) continue;
                 DaggerfallActorSave? prior = saved?.Actors.Single(value => value.EntityId == source.EntityId);
                 if (prior?.WabbajackDefinition is { } transformed) definition = DaggerfallWabbajack.RequireDefinition(definitions, transformed);
+                authored[source.EntityId] = definition;
                 ActorState actor = CreateNonPlayerActor(actors, source.EntityId, definition,
                     mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
                     new ActorPose(source.Position, 0f));
@@ -135,7 +139,6 @@ internal static class DaggerActorFactory
                 DaggerfallWabbajack.Restore(actor.Actor, prior?.WabbajackDefinition);
                 actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(prior?.ForcedHostile ?? false);
                 actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = prior?.MagicallyPacified ?? false;
-                authored.Add(source.EntityId, definition);
                 RegisterActorInventory(actor, inventoryStore);
                 // A placed actor whose definition declares a loadout carries it in a managed
                 // inventory over the session's inventory store: today that is the ranged actors'
@@ -192,7 +195,7 @@ internal static class DaggerActorFactory
             DaggerfallCharacterState character = new(definitions, player.Stats, playerDefinition, saved?.Character);
             DaggerfallQuestInstances quests = new(definitions, random, questAdmission, disabledQuestSelection);
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
-            if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
+            if (saved is not null && materializeActiveSite) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
             return new(
                 new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians),
                 actors, inventoryStore, inventory, equipmentCoordinator, containers,

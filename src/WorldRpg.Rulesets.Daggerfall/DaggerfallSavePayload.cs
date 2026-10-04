@@ -78,6 +78,8 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Durable map-pixel center and local origin for the active exterior window.</summary>
     [JsonRequired]
     public DaggerfallExteriorCellResidencySave? ExteriorResidency { get; init; }
+    /// <summary>Whether the active exterior location cell still owns admitted geometry and actors.</summary>
+    public DaggerfallExteriorLocationResidencySave? ExteriorLocationResidency { get; init; }
     /// <summary>Detached state for admitted sites that are currently unloaded.</summary>
     [JsonRequired]
     public DaggerfallSiteDeltaSave[] SiteDeltas { get; init; } = [];
@@ -198,6 +200,15 @@ internal sealed record DaggerfallSavePayload(
                 new(Player.X, Player.Y, Player.Z), origin, new(definitions.Terrain.Width, definitions.Terrain.Height));
             if (savedExterior.Center != playerCell)
                 throw new ArgumentException("Saved exterior window is not centered on the saved player; restoring it would admit the wrong terrain cells.");
+        }
+        if (ExteriorLocationResidency is { } savedLocation)
+        {
+            savedLocation.Validate();
+            DaggerfallWorldProfileKey active = Site.ActiveProfile?.Require()
+                ?? throw new ArgumentException("Saved exterior location residency requires an active profile.");
+            if (savedLocation.Profile.Require() != active)
+                throw new ArgumentException("Saved exterior location residency names a different active profile.");
+            DaggerfallExteriorWorldBounds.Daggerfall.Require(savedLocation.Cell, nameof(ExteriorLocationResidency));
         }
         ArgumentNullException.ThrowIfNull(CustomSpells);
         if (CustomSpells.Any(spell => spell is null || !spell.IsPlayerCreated))
@@ -335,6 +346,7 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException("Current save must carry one state for every selected RDB door.");
         HashSet<long> inactiveAuthoredActorIds = [];
         HashSet<long> inactiveDynamicActorIds = [];
+        bool activeLocationUnloaded = ExteriorLocationResidency?.Loaded == false;
         if (profiles is null)
         {
             HashSet<DaggerfallWorldProfileKey> detachedProfiles = [];
@@ -352,7 +364,7 @@ internal sealed record DaggerfallSavePayload(
             {
                 DaggerfallWorldProfileKey key = delta.Profile.Require();
                 DaggerfallSiteId site = key.Site;
-                if (key == inputs.ProfileKey || !detachedProfiles.Add(key))
+                if ((key == inputs.ProfileKey && !activeLocationUnloaded) || !detachedProfiles.Add(key))
                     throw new ArgumentException("Saved inactive site state must name each non-active profile once.");
                 DaggerfallSiteProfile profile = profiles.Require(key);
                 HashSet<long> selectedActors = [.. profile.Project.Actors.Keys];
@@ -406,7 +418,7 @@ internal sealed record DaggerfallSavePayload(
         ValidateBanished(BanishedActors, inputs.Project.Actors.Keys, savedActorIds);
         foreach (AuthoredActor placement in inputs.Project.Actors.Values)
         {
-            if (!savedActorIds.Contains(placement.EntityId) && !BanishedActors.Contains(placement.EntityId))
+            if (!activeLocationUnloaded && !savedActorIds.Contains(placement.EntityId) && !BanishedActors.Contains(placement.EntityId))
                 throw new ArgumentException($"Current save is missing authored actor {placement.EntityId}.");
         }
         // Dynamic actors are spawn-time registrations, not content placements: each one names
@@ -781,6 +793,15 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException("Saved exterior origin compensation must be finite.", nameof(ExteriorResidency));
             if (Site.ActiveProfile?.Require().Kind != DaggerfallWorldProfileKind.Exterior)
                 throw new ArgumentException("Saved exterior residency requires an active exterior profile.", nameof(ExteriorResidency));
+        }
+        if (ExteriorLocationResidency is { } location)
+        {
+            location.Validate();
+            if (Site.ActiveProfile?.Require() != location.Profile.Require())
+                throw new ArgumentException("Saved exterior location residency must name the active profile.", nameof(ExteriorLocationResidency));
+            DaggerfallExteriorWorldBounds.Daggerfall.Require(location.Cell, nameof(ExteriorLocationResidency));
+            if (Site.ActiveProfile?.Require().Kind != DaggerfallWorldProfileKind.Exterior)
+                throw new ArgumentException("Saved exterior location residency requires an active exterior profile.", nameof(ExteriorLocationResidency));
         }
         ArgumentNullException.ThrowIfNull(SiteDeltas);
         foreach (DaggerfallSiteDeltaSave delta in SiteDeltas) delta.Validate();

@@ -87,12 +87,13 @@ public sealed class SpatialMovementSystem : IDisposable
 {
     private readonly ISpatialService _spatial;
     private readonly IContentService _contentService;
-    private ContentReference _content;
+    private ContentReference? _content;
     private readonly SpatialTuning _tuning;
     private readonly CharacterControllerConfig _baseController;
     private CharacterControllerConfig _controller;
     private readonly SpatialSession _session;
     private ulong? _latestGeneration;
+    private CharacterContinuationCheckpoint? _latestCheckpoint;
     private CharacterContinuationCheckpoint? _restoredCheckpoint;
     private readonly Dictionary<ulong, (string Scope, string Tag, int References, bool Active)> _registeredTriggers = [];
     private bool _verticalDriven;
@@ -111,11 +112,16 @@ public sealed class SpatialMovementSystem : IDisposable
     /// <summary>The current admitted character configuration, including stance geometry and step limits.</summary>
     public CharacterControllerConfig CurrentController => _controller;
 
-    public SpatialMovementSystem(ISpatialService spatial, IContentService content, SpatialContentArtifact inputs, SpatialTuning tuning)
+    /// <summary>
+    /// Creates one spatial session. A null base artifact is useful when a product owns all of its
+    /// static closures through <see cref="ApplyContentArtifactResidency"/>; the first admitted
+    /// placement establishes the Engine navigation grid and later placements can be removed without
+    /// replacing the whole scene.
+    /// </summary>
+    public SpatialMovementSystem(ISpatialService spatial, IContentService content, SpatialContentArtifact? inputs, SpatialTuning tuning)
     {
         ArgumentNullException.ThrowIfNull(spatial);
         ArgumentNullException.ThrowIfNull(content);
-        ArgumentNullException.ThrowIfNull(inputs);
         tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         _spatial = spatial;
         _contentService = content;
@@ -130,19 +136,22 @@ public sealed class SpatialMovementSystem : IDisposable
             VoxelSurfaceMode.GreedyCubes));
         try
         {
-            ContentReference resolved = content.ResolveReference(new ContentResolveRequest(inputs.Path, inputs.Sha256));
-            try
+            if (inputs is { } artifact)
             {
-                spatial.ReplaceContentArtifact(new SpatialContentArtifactReplaceRequest(
-                    session,
-                    resolved,
-                    inputs.NavigationGridId,
-                    tuning.NavigationChunkSize,
-                    tuning.NavigationMaximumStepCells));
-                _content = resolved;
-                resolved = null!;
+                ContentReference resolved = content.ResolveReference(new ContentResolveRequest(artifact.Path, artifact.Sha256));
+                try
+                {
+                    spatial.ReplaceContentArtifact(new SpatialContentArtifactReplaceRequest(
+                        session,
+                        resolved,
+                        artifact.NavigationGridId,
+                        tuning.NavigationChunkSize,
+                        tuning.NavigationMaximumStepCells));
+                    _content = resolved;
+                    resolved = null!;
+                }
+                finally { resolved?.Dispose(); }
             }
-            finally { resolved?.Dispose(); }
             _session = session;
         }
         catch { session.Dispose(); throw; }
@@ -218,6 +227,11 @@ public sealed class SpatialMovementSystem : IDisposable
             command);
         CharacterStepReceipt receipt = _spatial.ProposeCharacterStep(request);
         _latestGeneration = receipt.Generation;
+        // Population may admit direct Engine character steps after the player. Capture the
+        // player's full native continuation at this boundary so a later save never asks the
+        // Engine to reconstruct it from another actor's latest receipt.
+        _latestCheckpoint = _spatial.CaptureCharacterContinuation(
+            new CharacterContinuationCaptureRequest(_session, receipt.Generation));
         _restoredCheckpoint = null;
         if (verticalDriveReleased) _controller = _baseController;
         _verticalDriven = verticalDriveSelected;
@@ -547,15 +561,70 @@ public sealed class SpatialMovementSystem : IDisposable
                 inputs.NavigationGridId,
                 _tuning.NavigationChunkSize,
                 _tuning.NavigationMaximumStepCells));
-            ContentReference previous = _content;
+            ContentReference? previous = _content;
             _content = candidate;
             candidate = null;
-            previous.Dispose();
+            previous?.Dispose();
             return receipt;
         }
         finally
         {
             candidate?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Applies an atomic set of precompiled spatial closures. The Engine owns their collision and
+    /// navigation composition; this facade only resolves product references for the duration of the
+    /// call and retains no content handles. Stable placement IDs belong to the product cell/profile
+    /// owner and therefore survive unload/re-admission and origin rebases.
+    /// </summary>
+    public SpatialContentArtifactResidencyReceipt ApplyContentArtifactResidency(
+        IEnumerable<SpatialContentArtifactPlacement> placements,
+        IEnumerable<ulong> removals,
+        ulong navigationGridId)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        ArgumentNullException.ThrowIfNull(placements);
+        ArgumentNullException.ThrowIfNull(removals);
+        SpatialContentArtifactPlacement[] selected = placements.ToArray();
+        ulong[] removed = removals.ToArray();
+        HashSet<ulong> ids = [];
+        foreach (SpatialContentArtifactPlacement placement in selected)
+        {
+            placement.Validate();
+            if (!ids.Add(placement.Id))
+                throw new ArgumentException($"Spatial placement identity {placement.Id} is repeated.", nameof(placements));
+        }
+        if (removed.Any(id => id == 0) || removed.Distinct().Count() != removed.Length)
+            throw new ArgumentException("Spatial placement removals must be distinct and non-zero.", nameof(removals));
+
+        List<ContentReference> resolved = [];
+        try
+        {
+            SpatialContentArtifactInstance[] instances = new SpatialContentArtifactInstance[selected.Length];
+            for (int index = 0; index < selected.Length; index++)
+            {
+                SpatialContentArtifactPlacement placement = selected[index];
+                ContentReference reference = _contentService.ResolveReference(
+                    new ContentResolveRequest(placement.Path, placement.Sha256));
+                resolved.Add(reference);
+                instances[index] = new SpatialContentArtifactInstance(placement.Id, reference,
+                    placement.ColumnOffset, placement.LevelOffset, placement.RowOffset, placement.QuarterTurns);
+            }
+
+            return _spatial.ApplyContentArtifactResidency(new SpatialContentArtifactResidencyRequest(
+                _session,
+                instances,
+                removed,
+                navigationGridId,
+                _tuning.NavigationChunkSize,
+                _tuning.NavigationMaximumStepCells));
+        }
+        finally
+        {
+            foreach (ContentReference reference in resolved)
+                reference.Dispose();
         }
     }
 
@@ -571,6 +640,7 @@ public sealed class SpatialMovementSystem : IDisposable
         position.Validate();
         player.Restore(position, default);
         _latestGeneration = null;
+        _latestCheckpoint = null;
         _restoredCheckpoint = null;
     }
 
@@ -579,6 +649,7 @@ public sealed class SpatialMovementSystem : IDisposable
     {
         if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
         if (_restoredCheckpoint is { } restored) return restored;
+        if (_latestCheckpoint is { } captured) return captured;
         if (_latestGeneration is not ulong generation)
             throw new InvalidOperationException("The spatial character has no completed proposal checkpoint.");
         return _spatial.CaptureCharacterContinuation(new CharacterContinuationCaptureRequest(_session, generation));
@@ -598,6 +669,7 @@ public sealed class SpatialMovementSystem : IDisposable
         // proposal so continuation compatibility remains explicit.
         _controller = checkpoint.Config;
         _verticalDriven = checkpoint.Config.Vertical.Gravity == 0f;
+        _latestCheckpoint = null;
         _restoredCheckpoint = checkpoint;
         return receipt;
     }
@@ -612,7 +684,7 @@ public sealed class SpatialMovementSystem : IDisposable
         List<Exception>? failures = null;
         try { _session.Dispose(); }
         catch (Exception exception) { failures = [exception]; }
-        try { _content.Dispose(); }
+        try { _content?.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
@@ -620,3 +692,21 @@ public sealed class SpatialMovementSystem : IDisposable
 
 /// <summary>Ruleset-provided identity for one Engine-admitted spatial artifact; the Kit never reads its format.</summary>
 public sealed record SpatialContentArtifact(string Path, ContentSha256 Sha256, ulong NavigationGridId);
+
+/// <summary>One product-owned placement of a precompiled spatial closure in the current grid.</summary>
+public sealed record SpatialContentArtifactPlacement(
+    ulong Id,
+    string Path,
+    ContentSha256 Sha256,
+    long ColumnOffset = 0,
+    long LevelOffset = 0,
+    long RowOffset = 0,
+    uint QuarterTurns = 0)
+{
+    internal void Validate()
+    {
+        if (Id == 0) throw new ArgumentOutOfRangeException(nameof(Id));
+        ArgumentException.ThrowIfNullOrWhiteSpace(Path);
+        if (QuarterTurns > 3) throw new ArgumentOutOfRangeException(nameof(QuarterTurns));
+    }
+}

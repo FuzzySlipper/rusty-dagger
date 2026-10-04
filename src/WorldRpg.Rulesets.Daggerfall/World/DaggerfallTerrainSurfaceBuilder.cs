@@ -441,6 +441,19 @@ internal static class DaggerfallTerrainSurfaceBuilder
             return Math.Clamp(value, 0F, 1F);
         }
 
+        internal static float GetNoise(int x, int y, float frequency, float amplitude, float persistence, int octaves, int seed)
+        {
+            float finalValue = 0F;
+            for (int octave = 0; octave < octaves; octave++)
+            {
+                finalValue += Perlin(seed + (x * frequency), seed + (y * frequency)) * amplitude;
+                frequency *= 2F;
+                amplitude *= persistence;
+            }
+
+            return Math.Clamp(finalValue, 0F, 1F);
+        }
+
         private static float Perlin(float x, float y)
         {
             int floorX = (int)MathF.Floor(x);
@@ -482,4 +495,8 @@ internal static class DaggerfallTerrainSurfaceBuilder
 
         private static float Lerp(float from, float to, float amount) => from + (amount * (to - from));
     }
+
+    /// <summary>Source DefaultTerrainTexturing weight using its fixed seed and three octaves.</summary>
+    internal static float DonorTerrainWeight(int worldX, int worldY) =>
+        DonorNoise.GetNoise(worldX, worldY, .05F, .9F, .4F, 3, 417_028);
 }

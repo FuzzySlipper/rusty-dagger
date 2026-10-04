@@ -65,6 +65,7 @@ internal sealed partial class DaggerfallSession
             State.Actors.Player.Stats, canMove, State.Transport);
         CharacterMotion motionBefore = State.PlayerControl.Motion;
         WorldPoint? positionBefore = State.PlayerControl.Position;
+        bool activeLocationLoaded = _sites.ActiveLocationLoaded;
         _doors.Advance(update.DeltaSeconds);
         _sites.Projection.AdvanceMotion(update.DeltaSeconds);
         CharacterStepEnvironment doorEnvironment = _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion);
@@ -133,7 +134,13 @@ internal sealed partial class DaggerfallSession
         CharacterStepReceipt? movement = _spatial.Step(State.PlayerControl, update, doorEnvironment, locomotion.Controls);
         if (movement is not null) _verticalMovementDriven = locomotion.Controls.VerticalVelocity.HasValue;
         if (movement is not null && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior)
+        {
             _sites.UpdateExteriorResidency();
+            // A terrain cell can remain resident while the authored location closure is unloaded.
+            // Finish the movement/origin boundary, then keep location-scoped AI, encounters and
+            // interactions from observing a projection whose actors and geometry are intentionally absent.
+            activeLocationLoaded = _sites.ActiveLocationLoaded;
+        }
         if (movement is not null && actionGraph is not null)
             _ = ReportDungeonActions(_sites.ActionTriggers.Reconcile(actionGraph, State.PlayerControl,
                 State.Actors.Player.Actor.Entity, simulationStep));
@@ -163,6 +170,7 @@ internal sealed partial class DaggerfallSession
             AppendDamage(fall, DaggerfallDamageCause.Fall, 0);
         _sites.RebaseExteriorIfNeeded();
         _camera.Update(State.PlayerControl);
+        if (!activeLocationLoaded) return;
         if (!alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
         _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, (definition, pose, level) =>
             SpawnActor(definition, pose, level));

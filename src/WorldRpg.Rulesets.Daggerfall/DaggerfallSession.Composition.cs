@@ -108,7 +108,9 @@ internal sealed partial class DaggerfallSession
             _openingCinematics = new DaggerfallOpeningCinematics(Cinematics, composition.VideosEnabled);
             // Owners are built in dependency order, each from the owners it reads; the named state is
             // constructed once every service it names exists, so nothing reads a service before it is built.
-            DaggerActorAssembly assembled = DaggerActorFactory.Create(_random, definitions, inputs, saved, composition.QuestAdmission, composition.DisabledQuestSelection);
+            bool materializeActiveSite = saved?.ExteriorLocationResidency?.Loaded != false;
+            DaggerActorAssembly assembled = DaggerActorFactory.Create(_random, definitions, inputs, saved,
+                composition.QuestAdmission, composition.DisabledQuestSelection, materializeActiveSite);
             ActorsState actors = assembled.Actors;
             partiallyConstructed.Add(actors);
             DaggerfallCharacterState character = assembled.Character;
@@ -147,7 +149,9 @@ internal sealed partial class DaggerfallSession
             _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings, tuning.ControllerInput);
             _locomotion = new DaggerfallLocomotionPolicy(tuning.Locomotion, _controlSettings);
             _climbing = new DaggerfallClimbingPolicy(tuning.Climbing);
-            _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
+            // Location artifacts are admitted by the site lifecycle so an exterior map-pixel
+            // transition can remove and re-admit one profile without replacing the whole session.
+            _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, null, tuning.Spatial);
             _dungeonVisibility = new DaggerfallDungeonVisibility(_spatial, tuning.Spatial.CollisionVoxelSize);
             _grounding = new DaggerfallActorGrounding(engine.Spatial, _spatial,
                 tuning.EnemyBehavior.SpawnGroundProbeLift, tuning.EnemyBehavior.SpawnGroundProbeDistance);
@@ -558,7 +562,7 @@ internal sealed partial class DaggerfallSession
             if (saved?.ReadySpell is { } readyKey) Casting.RestoreReadySpell(readyKey);
             ExpireConjuredItems();
             _roster.MaterializeStaticNpcs(inputs);
-            _sites.AdmitInitialExterior(saved?.ExteriorResidency);
+            _sites.AdmitInitialResidency(saved?.ExteriorResidency, saved?.ExteriorLocationResidency);
             // Registry positions are profile coordinates; restore the projection after the
             // saved origin has been admitted so dialogue and the first snapshot share its frame.
             ReconcileNpcProjection();

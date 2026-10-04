@@ -57,7 +57,11 @@ internal sealed class DaggerfallSiteLifecycle
     private readonly Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> _deltas = [];
     private DaggerfallExteriorCellResidency? _exteriorResidency;
     private DaggerfallExteriorTerrainAppearance? _exteriorTerrainAppearance;
+    private DaggerfallExteriorEnvironment? _exteriorEnvironment;
     private Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface>? _exteriorSurfaceFactory;
+    private bool _locationLoaded;
+    private DaggerfallExteriorCellId? _locationCell;
+    private bool _admittingInitialResidency;
     private bool _retired;
 
     internal DaggerfallSiteLifecycle(IEngineContext engine, DaggerfallState state, DaggerfallDefinitions definitions,
@@ -89,6 +93,7 @@ internal sealed class DaggerfallSiteLifecycle
         Profiles = profiles;
         ActiveProfile = activeProfile;
         ReturnProfile = returnProfile;
+        _locationLoaded = activeProfile.Kind != DaggerfallWorldProfileKind.Exterior;
     }
 
     /// <summary>The active site's live projection: doors, motion, appearance, lighting and portals.</summary>
@@ -104,6 +109,38 @@ internal sealed class DaggerfallSiteLifecycle
 
     /// <summary>The profile a return portal leads back to, when the player entered from one.</summary>
     internal DaggerfallWorldProfileKey? ReturnProfile { get; private set; }
+
+    /// <summary>Whether the active profile's location resources and actor roster are currently admitted.</summary>
+    internal bool ActiveLocationLoaded => ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior || _locationLoaded;
+
+    /// <summary>Source-backed terrain, water and nature facts for the admitted exterior window.</summary>
+    internal DaggerfallExteriorEnvironment? ExteriorEnvironment => _exteriorEnvironment;
+
+    private static ulong LocationPlacementId(DaggerfallWorldProfileKey profile)
+    {
+        const ulong offset = 14695981039346656037UL;
+        const ulong prime = 1099511628211UL;
+        ulong hash = offset;
+        foreach (char value in $"daggerfall.location-artifact.v1|{profile.LogicalId}")
+        {
+            hash ^= value;
+            hash *= prime;
+        }
+        return hash == 0 ? 1UL : hash;
+    }
+
+    private SpatialContentArtifactPlacement LocationPlacement(DaggerfallSiteProfile profile) =>
+        new(LocationPlacementId(profile.ProfileKey), profile.SpatialArtifact.Path, profile.SpatialArtifact.Sha256);
+
+    private void AdmitLocationArtifact(DaggerfallSiteProfile profile)
+    {
+        _ = _spatial.ApplyContentArtifactResidency([LocationPlacement(profile)], [], profile.SpatialArtifact.NavigationGridId);
+    }
+
+    private void RemoveLocationArtifact(DaggerfallSiteProfile profile)
+    {
+        _ = _spatial.ApplyContentArtifactResidency([], [LocationPlacementId(profile.ProfileKey)], profile.SpatialArtifact.NavigationGridId);
+    }
 
     /// <summary>Inactive sites' detached actor, door, effect and motion state, by profile.</summary>
     internal IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> Deltas => _deltas;
@@ -271,12 +308,18 @@ internal sealed class DaggerfallSiteLifecycle
         float sourceYawRadians = player.YawRadians;
         float sourcePitchRadians = player.PitchRadians;
         Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> sourceDeltas = new(_deltas);
-        DaggerfallSiteRuntimeDelta sourceDelta = _persistence.CaptureSiteDelta(source.Inputs, source.Doors,
-            source.Motion, _roster.Dynamic);
+        bool sourceLocationLoaded = ActiveLocationLoaded;
+        DaggerfallExteriorCellId? sourceLocationCell = _locationCell;
+        DaggerfallSiteRuntimeDelta sourceDelta = sourceLocationLoaded
+            ? _persistence.CaptureSiteDelta(source.Inputs, source.Doors, source.Motion, _roster.Dynamic)
+            : _deltas.TryGetValue(sourceProfile, out DaggerfallSiteRuntimeDelta? detachedSource)
+                ? detachedSource
+                : throw new InvalidOperationException($"Unloaded source profile '{sourceProfile.LogicalId}' has no detached delta.");
         DaggerfallExteriorCellResidencySave? sourceExterior = CaptureExteriorResidency();
         _deltas.TryGetValue(destination, out DaggerfallSiteRuntimeDelta? destinationDelta);
         DaggerfallSiteProjection? candidate = null;
         bool spatialReplaced = false;
+        bool sourceProjectionSuspended = false;
         bool sourceActorsUnloaded = false;
         bool groundProfileSwitched = false;
         bool playerRelocated = false;
@@ -291,11 +334,21 @@ internal sealed class DaggerfallSiteLifecycle
                 ClearExteriorResidency();
                 exteriorCleared = true;
             }
-            _spatial.ReplaceContent(target.SpatialArtifact);
+            _spatial.ApplyContentArtifactResidency([LocationPlacement(target)],
+                sourceLocationLoaded ? [LocationPlacementId(sourceProfile)] : [],
+                target.SpatialArtifact.NavigationGridId);
             spatialReplaced = true;
             candidate.ActivateMotionCollisionResidency();
-            _roster.UnloadSite(source.Inputs, sourceDelta);
-            sourceActorsUnloaded = true;
+            // Admit the destination collision models before retiring the source.  The Engine
+            // residency seam is additive, so this keeps a transition continuously covered while
+            // the source actors and their projection are being torn down.
+            if (sourceLocationLoaded)
+            {
+                source.Suspend();
+                sourceProjectionSuspended = true;
+                _roster.UnloadSite(source.Inputs, sourceDelta);
+                sourceActorsUnloaded = true;
+            }
             Projection = candidate;
             candidate = null;
             MaterializeSiteActors(target, destinationDelta);
@@ -328,7 +381,16 @@ internal sealed class DaggerfallSiteLifecycle
             _host.EnteredSite();
             BankProvider = null;
             if (destination.Kind == DaggerfallWorldProfileKind.Exterior)
+            {
+                _locationLoaded = true;
+                _locationCell = ActiveExteriorCell();
                 UpdateExteriorResidency();
+            }
+            else
+            {
+                _locationLoaded = true;
+                _locationCell = null;
+            }
             if (destination.Kind != DaggerfallWorldProfileKind.Exterior)
                 _state.Transport.ForceFootOnInteriorTransition();
             ReturnProfile = returnDestination is null ? sourceProfile : null;
@@ -360,19 +422,29 @@ internal sealed class DaggerfallSiteLifecycle
             {
                 try { _roster.UnloadSite(target, destinationDelta); }
                 catch (Exception teardownFailure) { failures.Add(teardownFailure); }
-                try { MaterializeSiteActors(source.Inputs, sourceDelta); }
+                try { MaterializeSiteActors(source.Inputs, sourceDelta, sourceLocationLoaded); }
                 catch (Exception restoreFailure) { failures.Add(restoreFailure); }
             }
             if (spatialReplaced)
             {
-                try { _spatial.ReplaceContent(source.Inputs.SpatialArtifact); }
+                try
+                {
+                    if (sourceLocationLoaded)
+                        _ = _spatial.ApplyContentArtifactResidency([LocationPlacement(source.Inputs)],
+                            [LocationPlacementId(destination)], source.Inputs.SpatialArtifact.NavigationGridId);
+                    else
+                        _ = _spatial.ApplyContentArtifactResidency([], [LocationPlacementId(destination)], source.Inputs.SpatialArtifact.NavigationGridId);
+                }
                 catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
                 // Whole-content replacement removes every incremental resident collider. Drop the
                 // destination coordinator's remembered set before restoring the source window;
                 // otherwise overlapping cells would be skipped as already admitted.
                 try { ClearExteriorResidency(); }
                 catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
-                try { source.RebuildMotionCollisionResidency(); }
+            }
+            if (sourceProjectionSuspended)
+            {
+                try { source.Resume(); }
                 catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
             }
             try { source.Lighting.ApplyBackground(); }
@@ -382,12 +454,19 @@ internal sealed class DaggerfallSiteLifecycle
             _deltas.Clear();
             foreach ((DaggerfallWorldProfileKey key, DaggerfallSiteRuntimeDelta delta) in sourceDeltas) _deltas.Add(key, delta);
             ActiveProfile = sourceProfile;
+            _locationLoaded = sourceLocationLoaded;
+            _locationCell = sourceLocationCell;
             ReturnProfile = sourceReturnProfile;
             BankProvider = sourceBankProvider;
             if (sourceExterior is { } priorExterior && exteriorCleared)
             {
-                try { RestoreExteriorResidency(priorExterior); }
+                try
+                {
+                    _admittingInitialResidency = !sourceLocationLoaded;
+                    RestoreExteriorResidency(priorExterior);
+                }
                 catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
+                finally { _admittingInitialResidency = false; }
             }
             else if (_exteriorResidency is { IsInitialized: true })
             {
@@ -432,9 +511,10 @@ internal sealed class DaggerfallSiteLifecycle
     }
 
     /// <summary>Creates a destination's actors and reapplies the detached values its delta kept.</summary>
-    private void MaterializeSiteActors(DaggerfallSiteProfile destination, DaggerfallSiteRuntimeDelta? delta)
+    private void MaterializeSiteActors(DaggerfallSiteProfile destination, DaggerfallSiteRuntimeDelta? delta,
+        bool restoreAuthoredAppearance = false)
     {
-        _roster.MaterializeSite(destination, delta);
+        _roster.MaterializeSite(destination, delta, restoreAuthoredAppearance);
         _roster.MaterializeStaticNpcs(destination);
         if (delta is null) return;
         _persistence.RestoreSiteDelta(delta);
@@ -445,17 +525,48 @@ internal sealed class DaggerfallSiteLifecycle
     internal bool ExteriorResidencyInitialized => _exteriorResidency?.IsInitialized == true;
 
     /// <summary>
-    /// Admits a constructed session's exterior window: the saved window when the save carries one,
-    /// otherwise the window around the player. Interiors and dungeons own no window.
+    /// Admits a constructed session's location artifact and, for an exterior, its terrain window.
+    /// A saved unloaded location restores detached state without recreating native geometry until
+    /// the player returns to the authored map pixel.
     /// </summary>
-    internal void AdmitInitialExterior(DaggerfallExteriorCellResidencySave? saved)
+    internal void AdmitInitialResidency(DaggerfallExteriorCellResidencySave? savedExterior,
+        DaggerfallExteriorLocationResidencySave? savedLocation = null)
     {
-        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior) return;
-        if (saved is { } exterior)
-            RestoreExteriorResidency(exterior);
+        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior)
+        {
+            AdmitLocationArtifact(Projection.Inputs);
+            _locationLoaded = true;
+            return;
+        }
+        _locationLoaded = savedLocation?.Loaded != false;
+        _locationCell = savedLocation?.Cell;
+        _admittingInitialResidency = true;
+        try
+        {
+            if (savedExterior is { } exterior)
+                RestoreExteriorResidency(exterior);
+            else
+                UpdateExteriorResidency();
+        }
+        finally { _admittingInitialResidency = false; }
+        _locationCell ??= ActiveExteriorCell();
+        if (savedLocation?.Loaded == false)
+        {
+            _locationLoaded = false;
+            Projection.Suspend();
+            RemoveLocationArtifact(Projection.Inputs);
+            _host.RebuildActivation();
+        }
         else
-            UpdateExteriorResidency();
+        {
+            AdmitLocationArtifact(Projection.Inputs);
+            _locationLoaded = true;
+            UpdateExteriorLocation(CurrentExteriorCell());
+        }
     }
+
+    /// <summary>Compatibility entry point retained for callers that only persisted terrain state.</summary>
+    internal void AdmitInitialExterior(DaggerfallExteriorCellResidencySave? saved) => AdmitInitialResidency(saved);
 
     /// <summary>
     /// Resolves the active site's normalized map-pixel identity. An interior or dungeon profile does
@@ -516,6 +627,7 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin);
         _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, residency.Origin);
         ReconcileExteriorTerrainAppearance(residency);
+        UpdateExteriorLocation(center);
         return update;
     }
 
@@ -534,7 +646,60 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin);
         _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, residency.Origin);
         ReconcileExteriorTerrainAppearance(residency);
+        UpdateExteriorLocation(center);
         return update;
+    }
+
+    private void UpdateExteriorLocation(DaggerfallExteriorCellId center)
+    {
+        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior) return;
+        if (_admittingInitialResidency) return;
+        DaggerfallExteriorCellId siteCell = ActiveExteriorCell();
+        DaggerfallExteriorCellResidency residency = EnsureExteriorResidency();
+        bool locationWindowContainsSite = residency.ResidentCells.Contains(siteCell);
+        if (locationWindowContainsSite)
+        {
+            if (!_locationLoaded) LoadExteriorLocation(center);
+        }
+        else if (_locationLoaded)
+        {
+            UnloadExteriorLocation(center);
+        }
+        _locationCell = center;
+    }
+
+    private void UnloadExteriorLocation(DaggerfallExteriorCellId center)
+    {
+        if (!_locationLoaded) return;
+        DaggerfallSiteProfile profile = Projection.Inputs;
+        DaggerfallSiteRuntimeDelta delta = _persistence.CaptureSiteDelta(profile, Projection.Doors,
+            Projection.Motion, _roster.Dynamic);
+        _deltas[ActiveProfile] = delta;
+        _roster.UnloadSite(profile, delta);
+        Projection.Suspend();
+        RemoveLocationArtifact(profile);
+        _locationLoaded = false;
+        _locationCell = center;
+        _host.RebuildActivation();
+    }
+
+    private void LoadExteriorLocation(DaggerfallExteriorCellId center)
+    {
+        if (_locationLoaded) return;
+        DaggerfallSiteProfile profile = Projection.Inputs;
+        AdmitLocationArtifact(profile);
+        Projection.Resume();
+        _deltas.TryGetValue(ActiveProfile, out DaggerfallSiteRuntimeDelta? delta);
+        _roster.MaterializeSite(profile, delta, restoreAuthoredAppearance: true);
+        if (delta is not null)
+        {
+            _persistence.RestoreSiteDelta(delta);
+            Projection.Appearance.SyncRestoredDefeat(_state.Actors);
+            _deltas.Remove(ActiveProfile);
+        }
+        _locationLoaded = true;
+        _locationCell = center;
+        _host.RebuildActivation();
     }
 
     /// <summary>Captures only durable exterior identity/origin facts; Engine handles stay native.</summary>
@@ -542,6 +707,15 @@ internal sealed class DaggerfallSiteLifecycle
         _exteriorResidency is { IsInitialized: true }
             ? _exteriorResidency.Capture()
             : null;
+
+    internal DaggerfallExteriorLocationResidencySave? CaptureExteriorLocationResidency()
+    {
+        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior) return null;
+        return new(
+            DaggerfallWorldProfileKeySave.Capture(ActiveProfile),
+            _locationCell ?? CurrentExteriorCell(),
+            _locationLoaded);
+    }
 
     /// <summary>Restores the saved exterior window after the owning SpatialSession is admitted.</summary>
     internal DaggerfallExteriorCellResidencyUpdate RestoreExteriorResidency(
@@ -701,6 +875,7 @@ internal sealed class DaggerfallSiteLifecycle
         Projection.Appearance.SetSnapshotSupplement(null, null);
         _exteriorTerrainAppearance?.Dispose();
         _exteriorTerrainAppearance = null;
+        _exteriorEnvironment = null;
     }
 
     private DaggerfallExteriorCellResidency EnsureExteriorResidency()
@@ -731,10 +906,32 @@ internal sealed class DaggerfallSiteLifecycle
         if (!residency.IsInitialized) return;
         Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaceFactory = _exteriorSurfaceFactory
             ?? throw new InvalidOperationException("Exterior terrain surface factory was not initialized.");
+        Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> exteriors = _definitions.Locations.Records
+            .Where(site => site.Exterior is not null)
+            .ToDictionary(site => new DaggerfallExteriorCellId(site.Exterior!.MapPixelX, site.Exterior.MapPixelY),
+                site => site.Exterior!);
+        DaggerfallExteriorEnvironment environment = _exteriorEnvironment ??= new();
+        environment.Reconcile(residency.ResidentCells, residency.Origin, surfaceFactory, exteriors, _definitions.Grids);
         DaggerfallExteriorTerrainAppearance appearance =
-            _exteriorTerrainAppearance ??= new DaggerfallExteriorTerrainAppearance(_engine.Graphics);
+            _exteriorTerrainAppearance ??= new DaggerfallExteriorTerrainAppearance(_engine.Graphics, Projection.Inputs);
+        appearance.ConfigureProfile(Projection.Inputs);
         Projection.Appearance.SetSnapshotSupplement(appearance.AppendFacts, appearance.CompleteAcceptedSnapshot);
-        appearance.Reconcile(residency.ResidentCells, residency.Origin, surfaceFactory);
+        appearance.Reconcile(residency.ResidentCells, residency.Origin, surfaceFactory, environment);
+    }
+
+    /// <summary>Applies the calendar/weather season to the resident terrain environment.</summary>
+    internal void SetExteriorSeason(DaggerfallExteriorSeason season)
+    {
+        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior) return;
+        if (_exteriorEnvironment is null)
+        {
+            _exteriorEnvironment = new(season);
+            return;
+        }
+        if (_exteriorEnvironment.Season == season) return;
+        _exteriorEnvironment.SetSeason(season);
+        if (_exteriorResidency is { IsInitialized: true } residency)
+            ReconcileExteriorTerrainAppearance(residency);
     }
 
     private void RequireExteriorProfile()

@@ -19,6 +19,8 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     private readonly SpatialMovementSystem _spatialMovement;
     private bool _disposed;
     private bool _waterTriggersActive;
+    private bool _suspended;
+    private Vector3 _worldOffset;
 
     private DaggerfallSiteProjection(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion, DaggerfallSiteAppearance appearance, DaggerfallSiteLighting lighting, DaggerfallSitePortalRuntime portals, SpatialMovementSystem spatialMovement)
     {
@@ -38,6 +40,14 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     internal DaggerfallSiteAppearance Appearance { get; }
     internal DaggerfallSiteLighting Lighting { get; }
     internal DaggerfallSitePortalRuntime Portals { get; }
+    internal bool IsSuspended => _suspended;
+
+    /// <summary>
+    /// Accumulated product-space displacement from the profile's authored source frame. Ambient
+    /// zones and other source-coordinate consumers use this value when the Engine origin rebases;
+    /// it is kept beside the projection so those consumers never infer it from native transforms.
+    /// </summary>
+    internal Vector3 WorldOffset => _worldOffset;
 
     internal static DaggerfallSiteProjection Create(
         IEngineContext engine,
@@ -124,11 +134,42 @@ internal sealed class DaggerfallSiteProjection : IDisposable
             _spatialMovement.ReleaseTrigger(volume.Trigger, tick);
         _waterTriggersActive = false;
     }
-    internal Vector3 WorldOffset { get; private set; }
+    /// <summary>
+    /// Retires every Engine-backed resource belonging to this location cell while retaining the
+    /// profile projection and its product state. Durable resource identities are recreated by
+    /// <see cref="Resume"/> under the same profile key.
+    /// </summary>
+    internal void Suspend()
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteProjection));
+        if (_suspended) return;
+        Appearance.RetireAllActors();
+        Appearance.SuspendLocationResources();
+        Motion.Suspend();
+        Doors.Suspend();
+        Portals.Suspend();
+        Lighting.Suspend();
+        _suspended = true;
+    }
+
+    /// <summary>Re-admits the location's geometry, actors' supporting action models and portal resources.</summary>
+    internal void Resume()
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteProjection));
+        if (!_suspended) return;
+        Doors.Resume();
+        Motion.Resume();
+        Appearance.ResumeLocationResources(Doors, Motion);
+        Portals.Resume();
+        Lighting.Resume();
+        _suspended = false;
+    }
 
     internal void Rebase(Vector3 delta)
     {
-        WorldOffset += delta;
+        if (!float.IsFinite(delta.X) || !float.IsFinite(delta.Y) || !float.IsFinite(delta.Z))
+            throw new ArgumentOutOfRangeException(nameof(delta), "A site rebase delta must be finite.");
+        _worldOffset += delta;
         Doors.Rebase(delta);
         Motion.Rebase(delta);
         Portals.Rebase(delta);
@@ -138,6 +179,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
 
     internal CharacterStepEnvironment CharacterEnvironment(CharacterMotion motion)
     {
+        if (_suspended) return CharacterStepEnvironment.Empty;
         CharacterStepEnvironment motionModels = Motion.CharacterEnvironment();
         // Motion models enter Engine Spatial as exact triangle instances bound to their current
         // entity identities. Passing those instances lets Engine resolve support and carry from
@@ -193,6 +235,7 @@ internal sealed class DaggerfallSitePortalRuntime : IDisposable
     private readonly EntityDirectory _entities;
     private readonly Dictionary<string, (DaggerfallSitePortal Portal, DurableIdentityReference Identity, EntityId Entity)> _portals;
     private bool _disposed;
+    private bool _suspended;
 
     internal DaggerfallSitePortalRuntime(EntityDirectory entities, DaggerfallWorldProfileKey profile, IEnumerable<DaggerfallSitePortal> portals)
     {
@@ -219,10 +262,52 @@ internal sealed class DaggerfallSitePortalRuntime : IDisposable
     }
 
     internal IEnumerable<(DaggerfallSitePortal Portal, DurableIdentityReference Identity, EntityId Entity)> All => _portals.Values
+        .Where(value => !_suspended)
         .OrderBy(value => value.Portal.Id, StringComparer.Ordinal).Select(value => (value.Portal, value.Identity, value.Entity));
+
+    /// <summary>Releases portal entities while retaining their durable destination records.</summary>
+    internal void Suspend()
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSitePortalRuntime));
+        if (_suspended) return;
+        foreach (var value in _portals.Values.ToArray())
+        {
+            _entities.Destroy(value.Identity);
+            _portals[value.Portal.Id] = (value.Portal, value.Identity, default);
+        }
+        _suspended = true;
+    }
+
+    /// <summary>Re-admits suspended portal entities under their original resource identities.</summary>
+    internal void Resume()
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSitePortalRuntime));
+        if (!_suspended) return;
+        List<(DaggerfallSitePortal Portal, DurableIdentityReference Identity, EntityId Entity)> created = [];
+        try
+        {
+            foreach (var value in _portals.Values.ToArray())
+            {
+                EntityId entity = _entities.Create(value.Identity, PortalType);
+                _portals[value.Portal.Id] = (value.Portal, value.Identity, entity);
+                created.Add((value.Portal, value.Identity, entity));
+            }
+            _suspended = false;
+        }
+        catch
+        {
+            foreach ((DaggerfallSitePortal portal, DurableIdentityReference identity, EntityId entity) in created)
+            {
+                _entities.Destroy(identity);
+                _portals[portal.Id] = (portal, identity, default);
+            }
+            throw;
+        }
+    }
 
     internal void Rebase(Vector3 delta)
     {
+        if (_suspended) return;
         foreach (string id in _portals.Keys.ToArray())
         {
             var value = _portals[id];
@@ -234,8 +319,9 @@ internal sealed class DaggerfallSitePortalRuntime : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        foreach ((DaggerfallSitePortal _, DurableIdentityReference identity, EntityId _) in _portals.Values)
-            _entities.Destroy(identity);
+        if (!_suspended)
+            foreach ((DaggerfallSitePortal _, DurableIdentityReference identity, EntityId _) in _portals.Values)
+                _entities.Destroy(identity);
     }
 
     private static ulong StableIdentity(string profile, string id)

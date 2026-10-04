@@ -43,6 +43,27 @@ public sealed record DaggerfallLocationExteriorBlock(string SourceName, byte X, 
 }
 
 /// <summary>
+/// One source FLD ground tile in the location's normalized 128-by-128 terrain frame. The frame
+/// already applies the donor block ordering and Y reversal, so runtime terrain consumers never need
+/// to reopen an RMB header to select a ground material or reproduce its UV orientation.
+/// </summary>
+/// <param name="X">The location-frame terrain tile x coordinate.</param>
+/// <param name="Y">The location-frame terrain tile y coordinate.</param>
+/// <param name="TextureRecord">The source four-frame ground texture record.</param>
+/// <param name="Rotated">Whether the donor rotates the tile's UVs.</param>
+/// <param name="Flipped">Whether the donor reverses the tile's UVs.</param>
+public sealed record DaggerfallLocationGroundTile(int X, int Y, byte TextureRecord, bool Rotated, bool Flipped)
+{
+    public void Validate(string owner)
+    {
+        if (X is < 0 or >= 128 || Y is < 0 or >= 128)
+            throw new InvalidOperationException($"Exterior location '{owner}' carries ground tile ({X},{Y}) outside its 128-by-128 terrain frame.");
+        if (TextureRecord >= 56)
+            throw new InvalidOperationException($"Exterior location '{owner}' carries unsupported ground texture record {TextureRecord}.");
+    }
+}
+
+/// <summary>
 /// Normalized MAPPITEM plus FLD facts required to place and flatten an exterior location. Runtime
 /// consumers can use this section without reopening MAPS, BLOCKS, RMB or FLD source records.
 /// </summary>
@@ -74,6 +95,8 @@ public sealed record DaggerfallLocationExterior(
 {
     /// <summary>Placed building facts specialized for this location, in donor traversal order.</summary>
     public IReadOnlyList<DaggerfallLocationBuilding> Buildings { get; init; } = [];
+    /// <summary>Source ground tiles retained for runtime material and nature exclusion decisions.</summary>
+    public IReadOnlyList<DaggerfallLocationGroundTile> GroundTiles { get; init; } = [];
     /// <summary>Raw MAPPITEM building references, distinct from named-building policy assignment.</summary>
     public IReadOnlyList<DaggerfallLocationBuildingReference> BuildingReferences { get; init; } = [];
     public byte PortTownAndUnknown { get; init; }
@@ -88,6 +111,7 @@ public sealed record DaggerfallLocationExterior(
     {
         ArgumentNullException.ThrowIfNull(FlattenRect);
         ArgumentNullException.ThrowIfNull(Blocks);
+        ArgumentNullException.ThrowIfNull(GroundTiles);
         if ((uint)MapPixelX >= MapWidth || (uint)MapPixelY >= MapHeight)
         {
             throw new InvalidOperationException($"Exterior location '{owner}' places its map pixel at ({MapPixelX},{MapPixelY}) outside the {MapWidth}x{MapHeight} wilderness.");
@@ -120,6 +144,8 @@ public sealed record DaggerfallLocationExterior(
         }
 
         FlattenRect.Validate(owner);
+        foreach (DaggerfallLocationGroundTile tile in GroundTiles)
+            tile.Validate(owner);
     }
 }
 

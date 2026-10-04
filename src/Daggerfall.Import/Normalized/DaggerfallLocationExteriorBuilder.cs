@@ -58,6 +58,7 @@ internal sealed class DaggerfallLocationExteriorBuilder
 
         List<MapsExteriorBuilding> pool = [.. layout.Buildings.Where(building => IsNamedBuilding(building.BuildingType))];
         List<DaggerfallLocationBuilding> buildings = [];
+        List<DaggerfallLocationGroundTile> groundTiles = [];
         List<string> missingCityBuildings = [];
         int minX = int.MaxValue;
         int minY = int.MaxValue;
@@ -102,15 +103,20 @@ internal sealed class DaggerfallLocationExteriorBuilder
 
             foreach (RmbGroundTile tile in summary.GroundTiles)
             {
+                byte normalizedTextureRecord = tile.TextureRecord < GroundTextureCount ? tile.TextureRecord : (byte)2;
                 // The source array is addressed as [tileX, 15-tileY] by TerrainHelper. Iterating its
                 // stored coordinates and reversing the y coordinate produces the same terrain frame.
                 if (tile.TextureRecord >= GroundTextureCount)
                 {
+                    int fallbackX = checked(tileOriginX + (block.X * RmbTilesPerBlock) + tile.X);
+                    int fallbackY = checked(tileOriginY + (block.Y * RmbTilesPerBlock) + (15 - tile.Y));
+                    groundTiles.Add(new(fallbackX, fallbackY, normalizedTextureRecord, tile.Rotated, tile.Flipped));
                     continue;
                 }
 
                 int x = checked(tileOriginX + (block.X * RmbTilesPerBlock) + tile.X);
                 int y = checked(tileOriginY + (block.Y * RmbTilesPerBlock) + (15 - tile.Y));
+                groundTiles.Add(new(x, y, normalizedTextureRecord, tile.Rotated, tile.Flipped));
                 minX = Math.Min(minX, x);
                 maxX = Math.Max(maxX, x);
                 minY = Math.Min(minY, y);
@@ -143,6 +149,7 @@ internal sealed class DaggerfallLocationExteriorBuilder
             [.. layout.Blocks.Select(block => new DaggerfallLocationExteriorBlock(block.SourceName, block.X, block.Y))])
         {
             Buildings = buildings,
+            GroundTiles = groundTiles,
             BuildingReferences = [.. layout.Buildings.Select(building => new DaggerfallLocationBuildingReference(building.LocationId, building.Sector) { BuildingType = building.BuildingType })],
             PortTownAndUnknown = layout.PortTownAndUnknown,
             MissingCityBuildings = missingCityBuildings,

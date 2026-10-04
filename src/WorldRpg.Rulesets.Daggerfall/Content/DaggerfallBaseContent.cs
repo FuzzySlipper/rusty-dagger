@@ -602,6 +602,7 @@ internal static partial class DaggerfallBaseContent
             SourceLocationId = sourceLocationId,
             PortTownAndUnknown = port,
             Blocks = ReadSiteBlocks(exterior, width, height, diagnostics),
+            GroundTiles = ReadSiteGroundTiles(exterior, diagnostics),
             Buildings = ReadSiteBuildings(exterior, region, index, width, height, diagnostics),
             BuildingReferences = ReadBuildingReferences(exterior, diagnostics),
         };
@@ -637,6 +638,37 @@ internal static partial class DaggerfallBaseContent
         }
         if (blocks.Count != width * height) diagnostics.Add("Location exterior must publish its complete block grid.");
         return blocks.AsReadOnly();
+    }
+
+    private static IReadOnlyList<DaggerfallSiteGroundTile> ReadSiteGroundTiles(JsonElement exterior, DaggerfallContentDiagnostics diagnostics)
+    {
+        // Older authored sites have no source FLD section. They remain valid and simply expose no
+        // location-specific ground override; generated locations publish all normalized tiles.
+        if (!exterior.TryGetProperty("groundTiles", out JsonElement section)) return [];
+        if (section.ValueKind != JsonValueKind.Array)
+        {
+            diagnostics.Add("Location exterior groundTiles must be an array.");
+            return [];
+        }
+
+        List<DaggerfallSiteGroundTile> tiles = [];
+        HashSet<(int X, int Y)> identities = [];
+        foreach (JsonElement value in section.EnumerateArray())
+        {
+            int x = Integer(value, "x", diagnostics);
+            int y = Integer(value, "y", diagnostics);
+            int texture = Integer(value, "textureRecord", diagnostics);
+            bool rotated = Boolean(value, "rotated", diagnostics);
+            bool flipped = Boolean(value, "flipped", diagnostics);
+            if (x is < 0 or >= 128 || y is < 0 or >= 128 || texture is < 0 or >= 56
+                || !identities.Add((x, y)))
+            {
+                diagnostics.Add($"Exterior ground tile ({x},{y}) has an invalid frame, texture record, or duplicate identity.");
+                continue;
+            }
+            tiles.Add(new(x, y, (byte)texture, rotated, flipped));
+        }
+        return tiles.AsReadOnly();
     }
 
     private static IReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> ReadSiteBuildings(JsonElement exterior, int region, int index,
