@@ -36,10 +36,13 @@ public sealed class HudSnapshotContractTests
         session.ApplyProductMode(ProductMode.Playing);
 
         DaggerfallSiteRecord site = session.Site.ActiveSite ?? throw new InvalidOperationException("The fixture session has no admitted site.");
-        session.State.Npcs.Restore([new DaggerfallNpc(2000, DaggerfallNpcKind.Static, "snapshot-guard",
+        (int archive, int record) = session.Sites.Projection.Inputs.BillboardSprites.Keys
+            .OrderBy(key => key.Item1).ThenBy(key => key.Item2).First();
+        long guardId = session.State.Npcs.RegisterCivilian(
             new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
-            new DaggerfallNpcAppearance("Breton", "Female", 0, 0, 0, 0), "guard", ["talk"],
-            DaggerfallNpcPresence.Active, null, null, null)]);
+            new DaggerfallNpcAppearance("Breton", "Female", archive, record, 0, 0), "guard", ["talk"]);
+        session.MaterializeNpcActor(guardId, session.State.Actors.Get(2000).Pose);
+        session.State.Npcs.Place(guardId, session.Sites.ActiveProfile, session.State.Actors.Get(guardId).Position);
         DaggerfallActivationTarget target = Assert.Single(session.Dialogue.NpcTargets());
         Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
