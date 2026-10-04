@@ -61,6 +61,11 @@ internal sealed class DaggerfallSocialState
     private int _biographyReactionModifier;
     // Live effects are reconstructed from their owners, never serialized as permanent standing.
     private readonly Stat[] _reactionModifiers = Enumerable.Range(0, SocialGroupCount).Select(_ => new Stat(0)).ToArray();
+    // Live legal contributions are reconstructed from active effects, never serialized as
+    // permanent regional standing.  A region owns its own Stat so replacement/expiry removes
+    // exactly the blessing source that admitted it while crime and loans continue to mutate the
+    // persistent regional value below.
+    private readonly Dictionary<int, Stat> _regionalReputationModifiers = [];
 
     internal DaggerfallSocialState(DaggerfallFactionsSet catalog)
     {
@@ -73,7 +78,9 @@ internal sealed class DaggerfallSocialState
     internal int RegionalReputation(int region)
     {
         RequireRegion(region);
-        return _regionalReputations.GetValueOrDefault(region);
+        int permanent = _regionalReputations.GetValueOrDefault(region);
+        int contribution = _regionalReputationModifiers.GetValueOrDefault(region)?.ValueInt ?? 0;
+        return Clamp(checked(permanent + contribution));
     }
 
     /// <summary>The player record's standing with one donor social group, independent of any NPC instance.</summary>
@@ -144,9 +151,40 @@ internal sealed class DaggerfallSocialState
     internal int ChangeRegionalReputation(int region, int amount)
     {
         RequireRegion(region);
-        int value = Clamp(checked(RegionalReputation(region) + amount));
+        // A temporary legal contribution must not become permanent merely because a crime or
+        // loan settlement occurs while it is active.  Mutations therefore read the saved base.
+        int value = Clamp(checked(_regionalReputations.GetValueOrDefault(region) + amount));
         _regionalReputations[region] = value;
         return value;
+    }
+
+    /// <summary>Installs one live legal contribution owned by an active effect.</summary>
+    internal void SetRegionalReputationSource(int region, MechanicsSourceIdentity identity, int amount)
+    {
+        RequireRegion(region);
+        ArgumentNullException.ThrowIfNull(identity);
+        if (!_regionalReputationModifiers.TryGetValue(region, out Stat? stat))
+        {
+            stat = new Stat(0);
+            _regionalReputationModifiers.Add(region, stat);
+        }
+        StatId id = StatId.Parse($"legal.region.{region}");
+        stat.SetSources(id, [.. stat.Sources.Where(source => source.Identity != identity),
+            new StatSource(identity, SourceDefinitionId.Parse("daggerfall.social.legal"), 0,
+                [new StatContributionDefinition(id, StackingGroupId.Parse("daggerfall.social.legal"),
+                    MechanicsStackingPolicy.Sum, new StatContribution.Add(amount))])]);
+    }
+
+    /// <summary>Removes one live legal contribution without touching saved regional standing.</summary>
+    internal void RemoveRegionalReputationSource(int region, MechanicsSourceIdentity identity)
+    {
+        RequireRegion(region);
+        ArgumentNullException.ThrowIfNull(identity);
+        if (_regionalReputationModifiers.TryGetValue(region, out Stat? stat))
+        {
+            stat.RemoveSource(identity);
+            if (stat.Sources.Count == 0) _regionalReputationModifiers.Remove(region);
+        }
     }
 
     /// <summary>

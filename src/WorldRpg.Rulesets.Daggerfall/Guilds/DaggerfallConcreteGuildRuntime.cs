@@ -185,6 +185,9 @@ internal sealed class DaggerfallConcreteGuildServiceRuntime
         DaggerfallConcreteGuildService.Repair => "repair",
         DaggerfallConcreteGuildService.Identify => "identify",
         DaggerfallConcreteGuildService.Donate => "donate",
+        // The donor opens both donation and blessing from the same source priest.  Building
+        // deity identity, membership, and the blessing effect remain explicit runtime policy.
+        DaggerfallConcreteGuildService.Blessing => "donate",
         DaggerfallConcreteGuildService.CureDisease => "cure-disease",
         DaggerfallConcreteGuildService.BuyPotions => "buy-potions",
         DaggerfallConcreteGuildService.MakePotions => "make-potions",

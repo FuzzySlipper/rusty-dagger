@@ -369,6 +369,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       <h2 id="dagger-dialogue-title" class="dagger-dialogue-target"></h2>
       <p class="dagger-dialogue-greeting" aria-live="polite"></p>
       <label>Tone <select class="dagger-dialogue-tone"><option value="polite">Polite</option><option value="normal">Normal</option><option value="blunt">Blunt</option></select></label>
+      <label class="dagger-dialogue-donation" hidden>Donation gold <input class="dagger-dialogue-donation-amount" type="number" min="1" step="1" value="1" inputmode="numeric"></label>
       <p class="dagger-dialogue-question" aria-live="polite"></p>
       <p class="dagger-dialogue-reply" aria-live="polite"></p>
       <div class="dagger-dialogue-topics"></div>
@@ -556,6 +557,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const dialogueTarget = shell.querySelector<HTMLElement>('.dagger-dialogue-target')!;
   const dialogueGreeting = shell.querySelector<HTMLElement>('.dagger-dialogue-greeting')!;
   const dialogueTone = shell.querySelector<HTMLSelectElement>('.dagger-dialogue-tone')!;
+  const dialogueDonation = shell.querySelector<HTMLLabelElement>('.dagger-dialogue-donation')!;
+  const dialogueDonationAmount = shell.querySelector<HTMLInputElement>('.dagger-dialogue-donation-amount')!;
   const dialogueQuestion = shell.querySelector<HTMLElement>('.dagger-dialogue-question')!;
   const dialogueReply = shell.querySelector<HTMLElement>('.dagger-dialogue-reply')!;
   const dialogueTopics = shell.querySelector<HTMLElement>('.dagger-dialogue-topics')!;
@@ -638,9 +641,20 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   });
   dialogueTopics.addEventListener('click', event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-topic]');
-    if (!deadMode && button?.dataset.topic && currentDialogue) context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-      data: { action: 'dialogue-topic', revision: currentDialogue.revision, topic: button.dataset.topic },
+    if (deadMode || !button?.dataset.topic || !currentDialogue) return;
+    const data: Record<string, unknown> = {
+      action: 'dialogue-topic', revision: currentDialogue.revision, topic: button.dataset.topic,
+    };
+    if (button.dataset.topic === 'donate') {
+      const amount = Number(dialogueDonationAmount.value);
+      if (!Number.isSafeInteger(amount) || amount <= 0) {
+        dialogueDonationAmount.focus();
+        return;
+      }
+      data.amount = amount;
+    }
+    context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT, data,
     });
   });
   dialogueTrainingSkills.addEventListener('click', event => {
@@ -1217,6 +1231,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       dialogueTarget.textContent = dialogue.targetLabel + (dialogue.questContacts?.length ? " — quest contact" : "");
       dialogueGreeting.textContent = dialogue.greeting + (dialogue.comprehendLanguagesBonus ? ` Language comprehension: +${dialogue.comprehendLanguagesBonus}.` : '');
       dialogueTone.value = dialogue.tone;
+      dialogueDonation.hidden = !dialogue.topics.some(topic => topic.id === 'donate');
       dialogueQuestion.textContent = dialogue.question ?? '';
       dialogueReply.textContent = dialogue.reply ?? '';
       dialogueTopics.replaceChildren(...dialogue.topics.map(topic => {
