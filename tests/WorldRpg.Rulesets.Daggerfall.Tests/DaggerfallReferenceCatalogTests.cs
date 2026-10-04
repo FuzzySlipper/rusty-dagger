@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Daggerfall.Import.Publication;
 using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -91,7 +92,11 @@ public sealed class DaggerfallReferenceCatalogTests
                 {
                     JsonObject pack = JsonNode.Parse(bytes)!.AsObject();
                     change(pack);
-                    bytes = System.Text.Encoding.UTF8.GetBytes(pack.ToJsonString());
+                    // The imported payload carries a generated locations section large enough that
+                    // re-indenting the tampered document exceeds Utf8JsonWriter's raw-value envelope
+                    // when the composed reader joins authored and imported sections. Compact JSON has
+                    // the same catalog values and keeps the fixture on the published read path.
+                    bytes = System.Text.Encoding.UTF8.GetBytes(pack.ToJsonString(PublishedJson.SectionCompact));
                 }
 
                 return new ProductContentFile(System.Text.Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), bytes);

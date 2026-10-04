@@ -158,10 +158,11 @@ public sealed class SessionCollisionResidencyTests
         Assert.Equal(leaving.Select(DaggerfallExteriorCellResidency.InstanceId).ToHashSet(), crossing.RemovedInstances.ToArray().ToHashSet());
         DaggerfallExteriorCellResidencySave moved = session.Sites.CaptureExteriorResidency()!.Value;
         DaggerfallExteriorWorldOrigin origin = new(window.Origin.X, window.Origin.Y, new Vector3(window.CompensationX, window.CompensationY, window.CompensationZ));
-        DaggerfallExteriorWorldOrigin movedOrigin = new(moved.Origin.X, moved.Origin.Y,
-            new Vector3(moved.CompensationX, moved.CompensationY, moved.CompensationZ));
+        // The entering column is admitted before the same update commits the Engine origin rebase,
+        // so the request carries the prior local frame. The Engine commit then shifts retained
+        // collision; the receipt and the product poses below cover that later frame.
         Assert.All(crossing.Instances.ToArray(), instance => Assert.Equal(
-            movedOrigin.LocalTranslation(entering.Single(cell => DaggerfallExteriorCellResidency.InstanceId(cell) == instance.Id)),
+            origin.LocalTranslation(entering.Single(cell => DaggerfallExteriorCellResidency.InstanceId(cell) == instance.Id)),
             instance.Transform.Translation));
         Assert.Equal(Window(east).Select(DaggerfallExteriorCellResidency.AssetId).ToHashSet(), ExteriorAssets(spatial));
         Assert.Equal(east, moved.Center);
@@ -243,16 +244,16 @@ public sealed class SessionCollisionResidencyTests
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Contains(resident.ProfileKey, session.Sites.ResidentExteriorProfiles);
         Assert.True(session.TryTransitionTo(resident.ProfileKey));
-        WorldPoint profilePose = new(4F, 0F, 5F);
-        long actorId = session.SpawnActor("rat", new ActorPose(profilePose, .25F));
-        profilePose = session.State.Actors.Get(actorId).Position;
+        WorldPoint authoredProfilePose = new(4F, 0F, 5F);
+        Vector3 residentFrame = session.Sites.ExteriorProfileFrameTranslation(resident.ProfileKey);
+        long actorId = session.SpawnActor("rat",
+            new ActorPose(WorldPoint.From(authoredProfilePose.ToVector() + residentFrame), .25F));
+        WorldPoint profilePose = WorldPoint.From(
+            session.State.Actors.Get(actorId).Position.ToVector() - residentFrame);
 
         Assert.True(session.TryTransitionTo(source.ProfileKey));
-        DaggerfallExteriorCellResidencySave originSave = session.Sites.CaptureExteriorResidency()!.Value;
-        DaggerfallExteriorWorldOrigin origin = new(originSave.Origin.X, originSave.Origin.Y,
-            new Vector3(originSave.CompensationX, originSave.CompensationY, originSave.CompensationZ));
         Vector3 expectedResidentPose = profilePose.ToVector()
-            + session.Sites.ExteriorProfileFrameTranslation(resident.ProfileKey);
+            + residentFrame;
         Assert.Equal(expectedResidentPose.X, session.State.Actors.Get(actorId).Position.X, 3);
         Assert.Equal(expectedResidentPose.Y, session.State.Actors.Get(actorId).Position.Y, 3);
         Assert.Equal(expectedResidentPose.Z, session.State.Actors.Get(actorId).Position.Z, 3);

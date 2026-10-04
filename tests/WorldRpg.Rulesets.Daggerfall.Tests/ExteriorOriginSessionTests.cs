@@ -230,7 +230,10 @@ public sealed class ExteriorOriginSessionTests
             }))]));
             Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).GroundContainers);
             session.Update(new ProductUpdate(OuterUpdate(3), []));
-            WorldOriginCommitReceipt commit = Assert.Single(engine.OriginCommits);
+            // The admitted Charing frame itself crosses the vertical origin threshold during the
+            // first update; the explicit move above then contributes the horizontal commit.
+            Assert.Equal(2, engine.OriginCommits.Count);
+            WorldOriginCommitReceipt commit = engine.OriginCommits[^1];
             Vector3 delta = commit.LocalDelta;
             Assert.NotEqual(Vector3.Zero, delta);
             Assert.Equal(playerPosition.ToVector() + delta, session.State.PlayerControl.Position!.Value.ToVector());
@@ -385,13 +388,20 @@ public sealed class ExteriorOriginSessionTests
         var before = session.Sites.CaptureExteriorResidency()!.Value;
         WorldPoint start = session.State.PlayerControl.Position
             ?? throw new InvalidOperationException("The exterior player has no position.");
-        WorldPoint desiredProfilePosition = new(start.X, height, start.Z);
+        // Rebase thresholds are evaluated in the current local frame. The authored profile is
+        // elevated by Charing's sampled terrain frame, so offset the probe back into that frame
+        // while keeping the asserted durable profile pose explicit.
+        float frameHeight = session.Sites.ExteriorProfileFrameTranslation(exterior.ProfileKey).Y;
+        WorldPoint desiredProfilePosition = new(start.X, height - frameHeight, start.Z);
         WorldPoint desiredLocalPosition = session.Sites.ProfileToLocal(desiredProfilePosition);
         session.State.PlayerControl.MoveTo(desiredLocalPosition.ToVector());
         session.Sites.RebaseExteriorIfNeeded();
         Assert.Single(engine.OriginCommits);
         Assert.Equal(before.Center, session.Sites.CurrentExteriorCell());
-        Assert.Equal(desiredProfilePosition.ToVector(), session.Sites.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector()));
+        Vector3 actualProfilePosition = session.Sites.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector());
+        Assert.Equal(desiredProfilePosition.X, actualProfilePosition.X, 3);
+        Assert.Equal(desiredProfilePosition.Y, actualProfilePosition.Y, 3);
+        Assert.Equal(desiredProfilePosition.Z, actualProfilePosition.Z, 3);
         // Engine origin cells are integral; the sampled location frame is fractional, so the
         // rebase retains the local height residual while preserving the requested profile height.
         Assert.Equal(desiredLocalPosition.Y - MathF.Floor(desiredLocalPosition.Y),
