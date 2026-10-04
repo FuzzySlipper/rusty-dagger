@@ -609,11 +609,13 @@ internal sealed class DaggerfallMerchantService
     private InventoryStackId NewDestinationStack(DaggerfallItemOwner owner, IReadOnlyList<InventoryStack> destinationStacks, string prefix)
     {
         HashSet<string> existing = destinationStacks.Select(value => value.Id.Value).ToHashSet(StringComparer.Ordinal);
-        while (true)
+        InventoryStackId candidate;
+        do
         {
-            InventoryStackId candidate = InventoryStackId.Parse($"{prefix}.{checked(++_nextRequest)}");
-            if (!existing.Contains(candidate.Value) && !_instances.ContainsStack(owner, candidate)) return candidate;
+            candidate = InventoryStackId.Parse($"{prefix}.{checked(++_nextRequest)}");
         }
+        while (existing.Contains(candidate.Value) || _instances.ContainsStack(owner, candidate));
+        return candidate;
     }
 
     private void SyncTransfer(InventoryContainerTransferReceipt transfer, DaggerfallItemOwner sourceOwner, DaggerfallItemOwner destinationOwner)
