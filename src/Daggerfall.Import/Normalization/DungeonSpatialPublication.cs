@@ -342,12 +342,54 @@ public static class OfflineNavigationDeriver
             }
         }
 
+        // A city's supports and triangles can number in the hundreds of thousands. Restrict
+        // each headroom query to triangles whose horizontal bounds cover its spatial bucket;
+        // the exact intersection and height test below still decides the resulting artifact.
+        float bucketSize = config.CellSize * 8F;
+        Dictionary<(int X, int Z), List<CollisionTriangle>> headroomBuckets = BuildHeadroomBuckets(collision, bucketSize);
         NormalizedNavigationCell[] cells = supports
-            .Where(candidate => HasHeadroom(candidate.Key.Column, candidate.Key.Row, candidate.Value, collision, config))
+            .Where(candidate => HasHeadroom(candidate.Key.Column, candidate.Key.Row, candidate.Value,
+                HeadroomCandidates(candidate.Key.Column, candidate.Key.Row), config))
             .OrderBy(candidate => candidate.Key.Column).ThenBy(candidate => candidate.Key.Row).ThenBy(candidate => candidate.Key.Level)
             .Select(candidate => new NormalizedNavigationCell(candidate.Key.Column, candidate.Key.Row, candidate.Key.Level, candidate.Value, true))
             .ToArray();
         return new(id, artifactId, config, cells);
+
+        IReadOnlyList<CollisionTriangle> HeadroomCandidates(int column, int row)
+        {
+            int x = CellCoordinate(MathF.Floor((column + 0.5F) * config.CellSize / bucketSize));
+            int z = CellCoordinate(MathF.Floor((row + 0.5F) * config.CellSize / bucketSize));
+            return headroomBuckets.TryGetValue((x, z), out List<CollisionTriangle>? triangles) ? triangles : [];
+        }
+    }
+
+    private static Dictionary<(int X, int Z), List<CollisionTriangle>> BuildHeadroomBuckets(
+        IReadOnlyList<CollisionTriangle> triangles, float bucketSize)
+    {
+        Dictionary<(int X, int Z), List<CollisionTriangle>> buckets = [];
+        foreach (CollisionTriangle triangle in triangles)
+        {
+            float minX = MathF.Min(triangle.A.X, MathF.Min(triangle.B.X, triangle.C.X));
+            float maxX = MathF.Max(triangle.A.X, MathF.Max(triangle.B.X, triangle.C.X));
+            float minZ = MathF.Min(triangle.A.Z, MathF.Min(triangle.B.Z, triangle.C.Z));
+            float maxZ = MathF.Max(triangle.A.Z, MathF.Max(triangle.B.Z, triangle.C.Z));
+            // TryHeightAt permits each barycentric coordinate to extend by EdgeTolerance.
+            // Two negative coordinates can extend the query beyond either bounding edge.
+            float marginX = (maxX - minX) * (2F * EdgeTolerance);
+            float marginZ = (maxZ - minZ) * (2F * EdgeTolerance);
+            int firstX = CellCoordinate(MathF.Floor((minX - marginX) / bucketSize));
+            int lastX = CellCoordinate(MathF.Floor((maxX + marginX) / bucketSize));
+            int firstZ = CellCoordinate(MathF.Floor((minZ - marginZ) / bucketSize));
+            int lastZ = CellCoordinate(MathF.Floor((maxZ + marginZ) / bucketSize));
+            for (int x = firstX; x <= lastX; x++)
+            for (int z = firstZ; z <= lastZ; z++)
+            {
+                if (!buckets.TryGetValue((x, z), out List<CollisionTriangle>? bucket))
+                    buckets.Add((x, z), bucket = []);
+                bucket.Add(triangle);
+            }
+        }
+        return buckets;
     }
 
     private static IEnumerable<CollisionTriangle> CollisionTriangles(NormalizedMesh mesh)

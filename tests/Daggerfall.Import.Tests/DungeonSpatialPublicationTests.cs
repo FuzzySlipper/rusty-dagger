@@ -104,6 +104,40 @@ public sealed class DungeonSpatialPublicationTests
         Assert.Empty(navigation.Cells);
     }
 
+    [Theory]
+    [InlineData(-8.2F)]
+    [InlineData(7.2F)]
+    public void HeadroomAcrossHorizontalBucketBoundariesRetainsOnlyTheUncoveredFloor(float minimum)
+    {
+        NormalizedMesh floor = Floor("mesh/floor", "artifact/static/headroom", "material/floor", 0F, true, minimum);
+        NormalizedMesh ceiling = Floor("mesh/ceiling", "artifact/static/headroom", "material/ceiling", 1F, true, minimum, upward: false);
+        ceiling = ceiling with
+        {
+            Vertices = ceiling.Vertices.Select(vertex => vertex with { X = vertex.X + 1F }).ToArray(),
+        };
+        var navigation = OfflineNavigationDeriver.Derive("navigation/headroom", "artifact/spatial/headroom",
+            [floor, ceiling], NavigationDerivationConfig.ClassicDefault with { CellSize = 1F });
+        Assert.Equal(2, navigation.Cells.Count);
+        Assert.All(navigation.Cells, cell => Assert.True((cell.Column + .5F) < minimum + 1F));
+    }
+
+    [Fact]
+    public void WideCeilingRetainsBarycentricEdgeToleranceInItsNeighboringBucket()
+    {
+        NormalizedMesh floor = Floor("mesh/floor", "artifact/static/edge", "material/floor", 0F, true, 6.2F);
+        NormalizedMesh ceiling = Floor("mesh/ceiling", "artifact/static/edge", "material/ceiling", 1F, true, upward: false);
+        ceiling = ceiling with
+        {
+            // The 7.5 m probe lies just outside the ceiling and in its neighboring bucket.
+            // Its long edge permits that probe within the source intersection tolerance.
+            Vertices = [new(8.001F,1F,-100F), new(10008.001F,1F,-100F), new(10008.001F,1F,100F), new(8.001F,1F,100F)],
+        };
+        var navigation = OfflineNavigationDeriver.Derive("navigation/edge", "artifact/spatial/edge",
+            [floor, ceiling], NavigationDerivationConfig.ClassicDefault with { CellSize = 1F });
+        Assert.DoesNotContain(navigation.Cells, cell => cell.Column == 7 && cell.SupportHeight == 0);
+        Assert.Contains(navigation.Cells, cell => cell.Column == 6 && cell.SupportHeight == 0);
+    }
+
     [Fact]
     public void RejectsMalformedSpatialBoundsAndNavigationLevelQuantization()
     {
