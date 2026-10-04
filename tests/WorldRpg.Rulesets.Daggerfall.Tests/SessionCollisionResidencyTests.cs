@@ -112,10 +112,10 @@ public sealed class SessionCollisionResidencyTests
         // Construction admits the seven-by-seven window centred on the player's cell as one delta: an
         // asset and an instance per cell, placed in the site's local frame - the frame the player's own
         // position is in, so the window and the player agree on which cell the player stands in.
-        DaggerfallExteriorCellResidencySave window = session.Sites.CaptureExteriorResidency()
+        DaggerfallExteriorCellResidencySave admitted = session.Sites.CaptureExteriorResidency()
             ?? throw new InvalidOperationException("The exterior session admitted no cell window.");
-        DaggerfallExteriorCellId center = window.Center;
-        Assert.Equal(session.Sites.ActiveExteriorCell(), window.Origin);
+        DaggerfallExteriorCellId center = admitted.Center;
+        Assert.Equal(session.Sites.ActiveExteriorCell(), admitted.Origin);
         Assert.Equal(session.Sites.CurrentExteriorCell(), center);
         CollisionResidencyRequest admission = Assert.Single(spatial.CollisionResidencyRequests, IsExterior);
         DaggerfallExteriorCellId[] cells = Window(center);
@@ -132,7 +132,8 @@ public sealed class SessionCollisionResidencyTests
         int admissions = spatial.CollisionResidencyRequests.Count;
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal(admissions, spatial.CollisionResidencyRequests.Count);
-        Assert.Equal(center, session.Sites.CaptureExteriorResidency()!.Value.Center);
+        DaggerfallExteriorCellResidencySave window = session.Sites.CaptureExteriorResidency()!.Value;
+        Assert.Equal(center, window.Center);
 
         // One cell east is a new column of seven cells to admit and the far west column to remove; the
         // cells both windows share are not rebuilt. The movement also crosses the local origin's
@@ -142,6 +143,7 @@ public sealed class SessionCollisionResidencyTests
         float yaw = session.State.PlayerControl.YawRadians;
         double health = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
         int before = spatial.CollisionResidencyRequests.Count;
+        int originCommitsBeforeCrossing = engine.OriginCommits.Count;
         session.State.PlayerControl.MoveTo(crossed.ToVector());
         session.Update(new ProductUpdate(OuterUpdate(2), []));
 
@@ -167,7 +169,7 @@ public sealed class SessionCollisionResidencyTests
         Assert.Equal(Window(east).Select(DaggerfallExteriorCellResidency.AssetId).ToHashSet(), ExteriorAssets(spatial));
         Assert.Equal(east, moved.Center);
         Assert.Equal(window.Origin, moved.Origin);
-        WorldOriginCommitReceipt rebase = Assert.Single(engine.OriginCommits);
+        WorldOriginCommitReceipt rebase = Assert.Single(engine.OriginCommits.Skip(originCommitsBeforeCrossing));
         Assert.NotEqual(Vector3.Zero, rebase.LocalDelta);
         Assert.Equal(origin.Compensation + rebase.LocalDelta,
             new Vector3(moved.CompensationX, moved.CompensationY, moved.CompensationZ));
