@@ -275,9 +275,14 @@ public sealed class DaggerfallMerchantSessionTests
         DaggerfallSiteRecord site = session.Site.ActiveSite ?? throw new InvalidOperationException("No active fixture site.");
         DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, string.Empty);
         string[] offered = ["talk", .. services.Distinct(StringComparer.Ordinal)];
+        (int archive, int record) = session.Sites.Projection.Inputs.BillboardSprites.Keys
+            .OrderBy(key => key.Item1).ThenBy(key => key.Item2).First();
         long id = session.State.Npcs.RegisterCivilian(npcSite,
-            new DaggerfallNpcAppearance("Breton", "Male", 0, 0, 0, faction), "merchant test provider", offered);
-        session.MaterializeNpcActor(id, new ActorPose(session.State.PlayerControl.Position!.Value, 0));
+            new DaggerfallNpcAppearance("Breton", "Male", archive, record, 0, faction), "merchant test provider", offered);
+        WorldRpg.Kit.Controls.WorldPoint position = session.State.PlayerControl.Position!.Value;
+        session.State.Npcs.Place(id, session.Sites.ActiveProfile,
+            WorldRpg.Kit.Controls.WorldPoint.From(session.Sites.LocalToProfile(position.ToVector())));
+        session.MaterializeNpcActor(id, new ActorPose(position, 0));
         DaggerfallActivationTarget target = session.Dialogue.NpcTargets().Single(value => value.Identity.Value == (ulong)id);
         Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);
         return new(id, npcSite, service);
