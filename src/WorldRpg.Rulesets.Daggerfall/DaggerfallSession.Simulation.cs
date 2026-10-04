@@ -76,6 +76,7 @@ internal sealed partial class DaggerfallSession
         State.Swimming.ObserveTriggers(triggerReconciliation.Facts.Span,
             State.Actors.Player.Actor.Entity.Value, doorEnvironment.WaterVolumes.Span);
         CharacterWaterVolume? activeWater = State.Swimming.ActiveVolume(doorEnvironment.WaterVolumes.Span);
+        bool waterWalking = State.Effects.GrantsWaterWalking(DaggerfallActorIdentity.PlayerEntityId);
         bool wallAhead = _spatial.TryProbeClimbWall(State.PlayerControl, CharacterWallProbeDirection.Forward, out SpatialHit forwardHit, doorEnvironment)
             && MathF.Abs(forwardHit.Normal.Y) <= .06f;
         bool wallAtFeet = _climbing.IsAttached
@@ -92,7 +93,7 @@ internal sealed partial class DaggerfallSession
                 CombatRandomKey.Seed, "daggerfall.climbing.v1", $"generation:{generation}:step:{simulationStep}", 1, 100)).Value));
         DaggerfallLevitationStep levitation = _levitation.Resolve(new DaggerfallLevitationContext(
             State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId),
-            Swimming: State.Swimming.IsSwimming,
+            Swimming: State.Swimming.IsSwimming && !waterWalking,
             Climbing: climb.Climbing,
             CanMove: canMove,
             UpHeld: locomotion.UpHeld,
@@ -109,7 +110,7 @@ internal sealed partial class DaggerfallSession
             Running = !levitation.IsLevitating && locomotion.Running,
             JumpRequested = !levitation.IsLevitating && locomotion.JumpRequested,
         };
-        if (activeWater is { } water && !climb.Climbing && canMove && State.Transport.IsOnFoot)
+        if (activeWater is { } water && !waterWalking && !climb.Climbing && canMove && State.Transport.IsOnFoot)
         {
             float verticalIntent = locomotion.UpHeld ? 1f : locomotion.DownHeld ? -1f : 0f;
             locomotion = locomotion with

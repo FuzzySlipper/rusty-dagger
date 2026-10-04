@@ -211,6 +211,7 @@ internal sealed partial class DaggerfallSession
             effects = new(actors, composition.Effects ?? new DaggerfallEffectCatalog(
             [
                 .. DaggerfallAlterationEffects.Definitions(effect => effects.Cancel(effect.Context.Instance)),
+                .. DaggerfallThaumaturgyEffects.Definitions(),
                 DaggerfallParalysisEffects.Definition(ReactToSpellAttack),
                 .. DaggerfallCureEffects.Definitions(
                     target => DaggerfallDiseasePolicy.CureAllDiseases(effects, target),

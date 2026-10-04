@@ -27,7 +27,8 @@ internal sealed record DaggerfallCastOrigin(long CasterId, ulong? ItemId, Dagger
 
 /// <summary>Computed from actual active effects; no independently retained defense state.</summary>
 internal sealed record DaggerfallMagicDefense(int AbsorptionChance, int ReflectionChance,
-    DaggerfallMagicActiveResistance[] Resistances, bool BlocksCasting = false, bool PreventsParalysis = false, ulong[]? AbsorptionItems = null)
+    DaggerfallMagicActiveResistance[] Resistances, bool BlocksCasting = false, bool PreventsParalysis = false,
+    ulong[]? AbsorptionItems = null, int AllResistanceChance = 0)
 {
     internal static DaggerfallMagicDefense None { get; } = new(0, 0, []);
     internal static DaggerfallMagicDefense Combine(IEnumerable<DaggerfallMagicDefense> defenses)
@@ -38,7 +39,8 @@ internal sealed record DaggerfallMagicDefense(int AbsorptionChance, int Reflecti
             values.SelectMany(value => value.Resistances).GroupBy(value => value.Element)
                 .Select(group => new DaggerfallMagicActiveResistance(group.Key, checked((int)Math.Min(100L, group.Sum(value => (long)value.Chance))))).ToArray(),
             values.Any(value => value.BlocksCasting), values.Any(value => value.PreventsParalysis),
-            values.SelectMany(value => value.AbsorptionItems ?? []).Distinct().Order().ToArray());
+            values.SelectMany(value => value.AbsorptionItems ?? []).Distinct().Order().ToArray(),
+            values.Select(value => value.AllResistanceChance).DefaultIfEmpty().Max());
     }
 }
 
@@ -313,6 +315,9 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
             var binding = definition.Spell!;
             var setting = bundle.Spell.Effects[i];
             var source = new DaggerfallMagicEffectSource(true, binding.IsParalysis, binding.IsDisease, binding.AllowedElements, bundle.Element);
+            DaggerfallMagicResistanceElement resistanceElement = DaggerfallMagicAdmissionPolicy.GetElementType(source);
+            int specificResistance = defense.Resistances.FirstOrDefault(value => value.Element == resistanceElement)?.Chance ?? 0;
+            int resistanceChance = Math.Max(defense.AllResistanceChance, specificResistance);
             var liveProfile = profile(targetId);
             var flags = DaggerfallMagicAdmissionPolicy.GetEffectFlags(source);
             var raceFlags = liveProfile.PlayerRaceTolerances?.Immunity ?? DaggerfallMagicEffectFlags.None;
@@ -334,8 +339,9 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 DeliverTo(bundle, bundle.CasterId, reflected: true, roll);
                 outcome = DaggerfallCastOutcome.Reflected;
             }
-            else if (!bundle.BypassSave && bundle.Target != DaggerfallSpellTarget.CasterOnly && defense.Resistances.FirstOrDefault(value => value.Element == DaggerfallMagicAdmissionPolicy.GetElementType(source))
-                is { } resistance && roll(1, 100) <= resistance.Chance) outcome = DaggerfallCastOutcome.Resisted;
+            else if (!bundle.BypassSave && bundle.Target != DaggerfallSpellTarget.CasterOnly
+                && resistanceChance > 0 && roll(1, 100) <= resistanceChance)
+                outcome = DaggerfallCastOutcome.Resisted;
             else if (!bundle.BypassChance && !(binding.BypassItemChance && bundle.ItemId is not null)
                 && binding.RollChanceOnCast && roll(1, 100) > DaggerfallMagicAdmissionPolicy.CalculateEffectChance(setting, bundle.CasterLevel)) outcome = DaggerfallCastOutcome.ChanceFailed;
             else
