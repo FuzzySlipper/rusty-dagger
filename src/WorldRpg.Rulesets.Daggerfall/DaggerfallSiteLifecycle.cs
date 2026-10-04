@@ -1273,6 +1273,11 @@ internal sealed class DaggerfallSiteLifecycle
             ActionTriggers.RebaseActive(localDelta);
             _groundContainers.RebaseActive(localDelta);
             _host.RebaseTransientWorld(localDelta);
+            // RestoreTriggers replaces the complete native active-trigger set. Release the
+            // environment-owned IDs before restoring the dungeon baseline so the later terrain
+            // reconciliation can register and activate them again instead of leaving the local
+            // SpatialMovementSystem registry ahead of Engine's inactive set.
+            ReleaseExteriorWaterTriggers();
             ActionTriggers.RebaseRestoredPlayer(_state.PlayerControl, _state.Actors.Player.Actor.Entity);
 
             DaggerfallExteriorWorldOrigin prior = residency.Origin;
