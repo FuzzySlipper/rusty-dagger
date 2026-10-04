@@ -572,7 +572,11 @@ public static class DungeonNormalizer
                     ? NormalizedAmbientZoneKind.SpecialArea
                     : NormalizedAmbientZoneKind.Castle;
                 string zoneId = $"ambient/{blockPlacementId}/{kind.ToString().ToLowerInvariant()}";
-                ambientZoneDrafts.Add(new(zoneId, kind, reference.SourceName, reference.X, reference.Z, block.Width, block.Height));
+                // RDB header Width/Height describe the source file's object-root grid. A dungeon
+                // block's world footprint is the fixed 2048-unit RDBSide used by DaggerfallDungeon;
+                // using the object-root dimensions here would expand a castle zone over neighboring
+                // blocks when a source block happens to use an 8x8 root grid.
+                ambientZoneDrafts.Add(new(zoneId, kind, reference.SourceName, reference.X, reference.Z));
                 AddProvenance(zoneId, "rdb-ambient-zone", blocks.Source, record.Ordinal);
             }
         }
@@ -1046,19 +1050,15 @@ public static class DungeonNormalizer
         NormalizedAmbientZoneKind Kind,
         string SourceBlock,
         int BlockX,
-        int BlockZ,
-        uint Width,
-        uint Height)
+        int BlockZ)
     {
         public NormalizedAmbientZone ToNormalized(NormalizedBounds worldBounds)
         {
             const float blockSide = 2048F * Arena2SourceTransform.SourceUnitMetres;
             float sourceX = BlockX * blockSide;
             float sourceZ = BlockZ * blockSide;
-            float sourceWidth = Width * blockSide;
-            float sourceHeight = Height * blockSide;
             NormalizedVector3 sourceOrigin = MeshGeometry.ToRightHanded(new Arena2ImportPoint(sourceX, 0F, sourceZ));
-            NormalizedVector3 sourceFar = MeshGeometry.ToRightHanded(new Arena2ImportPoint(sourceX + sourceWidth, 0F, sourceZ + sourceHeight));
+            NormalizedVector3 sourceFar = MeshGeometry.ToRightHanded(new Arena2ImportPoint(sourceX + blockSide, 0F, sourceZ + blockSide));
             return new(
                 Id,
                 Kind,

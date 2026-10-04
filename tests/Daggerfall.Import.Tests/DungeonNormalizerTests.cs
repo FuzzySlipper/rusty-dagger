@@ -540,7 +540,7 @@ public sealed class DungeonNormalizerTests
             ("MAPTABLE.017", CreateMapTable()),
             ("MAPPITEM.017", CreateMapPItem()),
             ("MAPDITEM.017", CreateMapDItem(blockNumber, (1, 1)))));
-        Replace(sources, "BLOCKS.BSA", CreateNamedBsa((blockName, CreateRdbFixture(factionOrMobileId: markerMagnitude))));
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa((blockName, CreateRdbFixture(factionOrMobileId: markerMagnitude, rdbWidth: 4, rdbHeight: 4))));
         return sources;
     }
 
@@ -616,9 +616,11 @@ public sealed class DungeonNormalizerTests
         int modelXRotation = 0,
         int modelYRotation = 0,
         int modelZRotation = 0,
-        byte modelSoundIndex = 0) =>
+        byte modelSoundIndex = 0,
+        uint rdbWidth = 1,
+        uint rdbHeight = 1) =>
         CreateRdbFixtureWithModels(["42"], flatTextureArchive, flatTextureRecord, factionOrMobileId, modelDescription, triggerFlagStartingLock, actionFlags, actionNextObjectOffset, flatAction, flatNextObjectOffset,
-            modelX, modelY, modelZ, modelXRotation, modelYRotation, modelZRotation, modelSoundIndex);
+            modelX, modelY, modelZ, modelXRotation, modelYRotation, modelZRotation, modelSoundIndex, rdbWidth, rdbHeight);
 
     /// <summary>
     /// Builds an RDB block whose single cell places one model per entry of <paramref name="modelIds"/>, in
@@ -643,10 +645,12 @@ public sealed class DungeonNormalizerTests
         int modelXRotation = 0,
         int modelYRotation = 0,
         int modelZRotation = 0,
-        byte modelSoundIndex = 0)
+        byte modelSoundIndex = 0,
+        uint rdbWidth = 1,
+        uint rdbHeight = 1)
     {
         // The classic RDB layout the decoder reads: a 20-byte header, a fixed 750-entry model-reference
-        // table, one cell root, then 25-byte object nodes and their resources.
+        // table, the object-root grid, then 25-byte object nodes and their resources.
         const int headerBytes = 20;
         const int modelReferences = 750;
         const int referenceBytes = 8;
@@ -655,7 +659,8 @@ public sealed class DungeonNormalizerTests
         const int flatResourceBytes = 11;
         const int lightResourceBytes = 10;
         int roots = headerBytes + (modelReferences * referenceBytes);
-        int firstModelNode = roots + sizeof(int);
+        int rootBytes = checked((int)(rdbWidth * rdbHeight * sizeof(int)));
+        int firstModelNode = roots + rootBytes;
         int flatNode = firstModelNode + (modelIds.Count * nodeBytes);
         int lightNode = flatNode + nodeBytes;
         int firstModelResource = lightNode + nodeBytes;
@@ -663,9 +668,11 @@ public sealed class DungeonNormalizerTests
         int lightResource = flatResource + flatResourceBytes;
         int actionResource = lightResource + lightResourceBytes;
         byte[] data = new byte[actionFlags == 0 ? actionResource : actionResource + 10];
-        BitConverter.GetBytes(1U).CopyTo(data, 4);
-        BitConverter.GetBytes(1U).CopyTo(data, 8);
+        BitConverter.GetBytes(rdbWidth).CopyTo(data, 4);
+        BitConverter.GetBytes(rdbHeight).CopyTo(data, 8);
         BitConverter.GetBytes((uint)roots).CopyTo(data, 12);
+        for (int root = 0; root < checked((int)(rdbWidth * rdbHeight)); root++)
+            BitConverter.GetBytes(-1).CopyTo(data, roots + (root * sizeof(int)));
         BitConverter.GetBytes(firstModelNode).CopyTo(data, roots);
         for (int index = 0; index < modelIds.Count; index++)
         {
