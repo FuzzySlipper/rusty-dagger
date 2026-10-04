@@ -167,9 +167,13 @@ public sealed class PropertySessionTests
             s.ChooseTeleport(s.TeleportView!.Revision, choice);
         }
         Teleport(f.Session, "anchor");
+        DaggerfallTeleportAnchor anchor = Assert.IsType<DaggerfallTeleportAnchor>(
+            DaggerfallSavePayload.Read(f.Session.CaptureSave()).TeleportAnchor);
+        Assert.True(anchor.ShipReturn is { OnShip: true });
         f.Submit(new { action = "transport-leave-ship" });
         using var restored = f.Restore(f.Session.CaptureSave());
         Teleport(restored, "recall");
+        Assert.Equal("Recalled to the teleport anchor.", restored.Presentation.LastOutcome);
         Assert.True(restored.State.Transport.OnShip); Assert.Equal(f.Small.ProfileKey, restored.Sites.ActiveProfile);
         Assert.Null(restored.Sites.ReturnProfile);
         Assert.Equal(f.Land.ProfileKey, restored.State.Transport.ShipReturnProfile);
@@ -213,7 +217,8 @@ public sealed class PropertySessionTests
         DaggerfallSiteProfile ship = type == "small" ? f.Small : f.Large;
         Assert.True(f.Session.State.Transport.OnShip);
         Assert.Equal(ship.ProfileKey, f.Session.Sites.ActiveProfile);
-        Assert.Equal(ship.RequireAnchor("start").Position, f.Session.State.PlayerControl.Position);
+        Assert.Equal(ship.RequireAnchor("start").Position,
+            WorldPoint.From(f.Session.Sites.LocalToProfile(f.Session.State.PlayerControl.Position!.Value.ToVector())));
         Assert.True(f.Session.Sites.ExteriorResidencyInitialized);
         Assert.Equal(f.Session.Sites.ActiveExteriorCell(), f.Session.Sites.CurrentExteriorCell());
         f.AddGold(4);
@@ -366,7 +371,12 @@ public sealed class PropertySessionTests
         malformed = saved with { Site = saved.Site with {
             ActiveProfile = saved.Site.ActiveProfile! with { Kind = (int)DaggerfallWorldProfileKind.Dungeon },
             ReturnAnchor = saved.Site.Active, ReturnProfile = saved.Site.ActiveProfile,
-            ReturnPose = new(1, 1, 1, 0, 0) } };
+            ReturnPose = new(1, 1, 1, 0, 0) },
+            // This malformed record is intended to reach the ship-interior relation check. The
+            // active profile was changed to a dungeon, so retaining the exterior residency records
+            // would correctly fail the newer profile/frame preflight before that relation is read.
+            ExteriorResidency = null,
+            ExteriorLocationResidency = null };
         Assert.Contains("ship interior", Assert.Throws<ArgumentException>(() => f.Resolve(malformed)).Message);
     }
 
