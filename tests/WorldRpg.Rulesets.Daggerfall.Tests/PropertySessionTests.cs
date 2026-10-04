@@ -445,7 +445,9 @@ public sealed class PropertySessionTests
             spatial.KeepPosition = true;
             var engine = EngineContextFake.Create(content, spatial.Service,
                 new AppearanceFake(releases), random: LodgingRandom.Create());
-            DaggerfallSessionComposition composition = new(definitions, Land, DaggerfallTuning.Defaults, identity) { Profiles = profiles, Blocks = blocks };
+            DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(FullContent(TestData.RepositoryRoot));
+            DaggerfallSessionComposition composition = new(definitions, Land, DaggerfallTuning.Defaults, identity)
+                { Profiles = profiles, Blocks = blocks, Sky = sky };
             return saved is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, saved);
         }
         internal void OpenBank(DaggerfallSession? session = null)
