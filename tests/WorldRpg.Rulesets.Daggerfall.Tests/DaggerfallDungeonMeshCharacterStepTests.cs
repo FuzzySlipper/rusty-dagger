@@ -55,6 +55,7 @@ public sealed class DaggerfallDungeonMeshCharacterStepTests
             nameof(ISpatialService.CreateSession) => new SpatialSession(new SpatialSessionHandle(1), static () => { }),
             nameof(ISpatialService.ReplaceContentArtifact) => new SpatialContentArtifactReplaceReceipt(),
             nameof(ISpatialService.ProposeCharacterStep) => Step((CharacterStepRequest)arguments![0]!),
+            nameof(ISpatialService.CaptureCharacterContinuation) => Capture((CharacterContinuationCaptureRequest)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
 
@@ -67,6 +68,20 @@ public sealed class DaggerfallDungeonMeshCharacterStepTests
                 Transform = new Transform(request.Position, Quaternion.Identity, Vector3.One),
                 Motion = request.Motion with { LastCommandSequence = request.Command.Sequence },
             };
+        }
+
+        private CharacterContinuationCheckpoint Capture(CharacterContinuationCaptureRequest request)
+        {
+            CharacterStepRequest step = Request
+                ?? throw new InvalidOperationException("A character continuation requires a completed step.");
+            return new CharacterContinuationCheckpoint(
+                1,
+                request.ExpectedGeneration,
+                1,
+                1,
+                1,
+                step.Config,
+                step.Motion with { LastCommandSequence = step.Command.Sequence });
         }
     }
 }
