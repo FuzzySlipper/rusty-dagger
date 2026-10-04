@@ -883,8 +883,9 @@ internal sealed class DaggerfallMerchantService
         DurableIdentityReference custodyIdentity = new(DurableIdentityKind.Container, checked((ulong)save.CustodyContainerId));
         if (_identities.Classify(merchantIdentity) != DurableIdentityClassification.Live || _identities.Classify(custodyIdentity) != DurableIdentityClassification.Live)
             throw new ArgumentException($"Saved merchant '{save.Key}' names a container identity that is not live.", nameof(save));
+        DaggerfallNpc providerNpc = _npcs.Require(save.ProviderNpcId);
         DaggerfallMerchantProviderContext context = new(new(save.ProviderNpcId,
-            new(save.ProviderRegion, save.ProviderLocation, save.ProviderBuilding), save.Service), save.Quality,
+            new(save.ProviderRegion, save.ProviderLocation, save.ProviderBuilding, providerNpc.Site.ProfileId), save.Service), save.Quality,
             save.BuildingType, save.BlockX, save.BlockY, save.BuildingIndex);
         Binding binding = CreateEmpty(context, save);
         try
