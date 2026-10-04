@@ -26,13 +26,15 @@ public sealed class HudSnapshotContractTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallSiteProfile inputs = ReadInputs(root);
+        DaggerfallDefinitions definitions = CompactHudDefinitions(TestPayload.Definitions, inputs.Site
+            ?? throw new InvalidOperationException("The HUD fixture profile has no geographic site."));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults, identity));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity));
         session.ApplyProductMode(ProductMode.Playing);
 
         DaggerfallSiteRecord site = session.Site.ActiveSite ?? throw new InvalidOperationException("The fixture session has no admitted site.");
@@ -69,5 +71,65 @@ public sealed class HudSnapshotContractTests
 
         Assert.True(File.Exists(path), $"{HudSnapshotFixture} is missing; run this test with DAGGER_WRITE_UI_FIXTURE=1 to write it.");
         Assert.Equal(File.ReadAllText(path), published);
+    }
+
+    /// <summary>
+    /// The snapshot contract needs a real site context, but its directory topic should exercise the
+    /// projection with a small authored catalog rather than copying every converted location name into
+    /// a committed UI fixture. Keep the active source site and add one explicit hand-authored destination
+    /// so the ordinary directory path still publishes a meaningful site-direction action.
+    /// </summary>
+    private static DaggerfallDefinitions CompactHudDefinitions(DaggerfallDefinitions source, DaggerfallSiteId activeId)
+    {
+        DaggerfallSiteRecord active = source.Locations.Records.Single(record => record.Id == activeId);
+        DaggerfallSiteRecord directoryDestination = new(
+            new(activeId.Region, checked(activeId.Index + 1)),
+            "Hand-authored Waypoint",
+            active.MapId,
+            active.Longitude,
+            active.Latitude,
+            DungeonType: 0,
+            Kind: DaggerfallSiteKind.HomeFarms,
+            Discovered: false);
+        DaggerfallLocationSet locations = source.Locations with
+        {
+            Keys = [(active.Id.Region, active.Id.Index), (directoryDestination.Id.Region, directoryDestination.Id.Index)],
+            Records = [active, directoryDestination],
+        };
+        return new DaggerfallDefinitions(
+            source.Catalogs,
+            source.Vocabulary,
+            source.Actors,
+            source.Items,
+            source.EquipmentSlots,
+            source.ArmorValuesByMaterial,
+            source.Actions,
+            source.LootTables,
+            source.HudResources,
+            source.LootCategoryPools,
+            source.DonorErrata,
+            source.ItemTemplates,
+            source.CharacterPresentation,
+            locations,
+            source.Text,
+            source.Magic,
+            source.Mobiles,
+            source.Names,
+            source.Rumors,
+            source.Biographies,
+            source.Grids,
+            source.Books,
+            source.Factions,
+            source.Terrain,
+            source.ItemTemplateCatalog,
+            source.QuestSources,
+            source.Cinematics,
+            source.Encounters)
+        {
+            EnemySpells = source.EnemySpells,
+            NewGame = source.NewGame,
+            BuildingNames = source.BuildingNames,
+            DialogueWorldRules = source.DialogueWorldRules,
+        };
     }
 }
