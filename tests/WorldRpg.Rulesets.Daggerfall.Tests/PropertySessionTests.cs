@@ -214,6 +214,8 @@ public sealed class PropertySessionTests
         Assert.True(f.Session.State.Transport.OnShip);
         Assert.Equal(ship.ProfileKey, f.Session.Sites.ActiveProfile);
         Assert.Equal(ship.RequireAnchor("start").Position, f.Session.State.PlayerControl.Position);
+        Assert.True(f.Session.Sites.ExteriorResidencyInitialized);
+        Assert.Equal(f.Session.Sites.ActiveExteriorCell(), f.Session.Sites.CurrentExteriorCell());
         f.AddGold(4);
         DaggerfallPropertyStorageView storage = f.Session.ReadPropertyPresentation().Storage!;
         string coins = f.Session.State.Inventory.Read().Stacks.First(item => item.Definition.Value == "gold-piece").Id.Value;

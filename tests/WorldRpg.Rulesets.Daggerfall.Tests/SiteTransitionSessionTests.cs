@@ -277,15 +277,18 @@ public sealed class SiteTransitionSessionTests
         {
             session.AdmitSiteProfiles(profiles);
             spawnedActor = session.SpawnActor("rat", new ActorPose(new WorldPoint(9f, 0f, 9f), 0f));
+            DurableIdentityReference spawnedIdentity = new(DurableIdentityKind.Actor, checked((ulong)spawnedActor));
+            Assert.Contains(spawnedActor, session.DynamicActors.Keys);
+            Assert.Equal(DurableEntityResolution.Materialized,
+                session.State.Actors.Entities.Classify(spawnedIdentity, session.State.Npcs.Identities!));
             AimActivationAt(session, exteriorPortal.Position);
             perception.Responder = request => PortalReceipt(request, exteriorPortal);
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"loot\"}")]));
 
             Assert.Equal(interior.Site, session.Site.Active);
-            DurableIdentityReference spawnedIdentity = new(DurableIdentityKind.Actor, checked((ulong)spawnedActor));
+            Assert.False(session.DynamicActors.ContainsKey(spawnedActor));
             Assert.Equal(DurableEntityResolution.Unloaded,
                 session.State.Actors.Entities.Classify(spawnedIdentity, session.State.Npcs.Identities!));
-            Assert.False(session.DynamicActors.ContainsKey(spawnedActor));
             Assert.Equal(2, spatial.ReplaceCalls);
             Assert.Equal("You pass through the entrance.", session.ActivationView.Message);
             Assert.Equal(interior.ProfileKey, DaggerfallSavePayload.Read(session.CaptureSave()).Site.ActiveProfile!.Require());
