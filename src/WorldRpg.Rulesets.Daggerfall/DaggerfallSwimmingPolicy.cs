@@ -129,23 +129,28 @@ internal sealed class DaggerfallSwimmingPolicy
     /// terminal consequence is requested once when the cadence reaches zero.
     /// </summary>
     internal DaggerfallSwimmingStep Complete(CharacterStepReceipt? receipt, bool waterBreathing, int endurance,
-        double realSeconds, double gameSeconds, long gameMinute, Action<DaggerfallSkillUse> recordSkillUse)
+        double realSeconds, double gameSeconds, long gameMinute, Action<DaggerfallSkillUse> recordSkillUse,
+        long? firstGameMinute = null)
     {
         ArgumentNullException.ThrowIfNull(recordSkillUse);
         if (endurance < 0) throw new ArgumentOutOfRangeException(nameof(endurance));
         if (!double.IsFinite(realSeconds) || realSeconds <= 0d) throw new ArgumentOutOfRangeException(nameof(realSeconds));
         if (!double.IsFinite(gameSeconds) || gameSeconds <= 0d) throw new ArgumentOutOfRangeException(nameof(gameSeconds));
+        if (firstGameMinute > gameMinute) throw new ArgumentOutOfRangeException(nameof(firstGameMinute));
         if (receipt is not { } accepted) return DaggerfallSwimmingStep.None;
 
         _swimming = accepted.Movement.Mode == CharacterMovementMode.Swimming;
         _headSubmerged = _swimming && accepted.Movement.HeadSubmerged;
         if (_swimming)
         {
-            recordSkillUse(new DaggerfallSkillUse(
-                "swimming",
-                DaggerfallSkillUseReason.Swimming,
-                DaggerfallSkillUseOutcome.Accepted,
-                gameMinute));
+            // Every minute occupied by accepted swimming reaches the existing persisted cadence
+            // gate. Adjacent slices share their boundary minute; the gate suppresses that duplicate.
+            for (long minute = firstGameMinute ?? gameMinute; ; minute = checked(minute + 1))
+            {
+                recordSkillUse(new DaggerfallSkillUse("swimming", DaggerfallSkillUseReason.Swimming,
+                    DaggerfallSkillUseOutcome.Accepted, minute));
+                if (minute == gameMinute) break;
+            }
         }
 
         if (!_headSubmerged || waterBreathing)

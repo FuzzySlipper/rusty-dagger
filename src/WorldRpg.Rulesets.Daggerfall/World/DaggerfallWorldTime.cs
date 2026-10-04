@@ -26,6 +26,14 @@ internal sealed class DaggerfallWorldTime(
     /// <summary>The part of a game second not yet applied to the calendar.</summary>
     internal double RemainderSeconds => _remainder;
 
+    /// <summary>Reads a simulation slice's minute within the interval admitted by this clock.</summary>
+    internal static long MinuteAtAdmittedOffset(DaggerfallCalendar before, double remainderSeconds, double gameSeconds)
+    {
+        if (!double.IsFinite(gameSeconds) || gameSeconds < 0d) throw new ArgumentOutOfRangeException(nameof(gameSeconds));
+        long whole = WholeSeconds(remainderSeconds + gameSeconds);
+        return (whole > 0 ? before.Advance(whole, out _) : before).ToAbsoluteSeconds() / 60;
+    }
+
     /// <summary>
     /// Advances by an interval its owner supplies in game seconds, stopping at the first consequence.
     /// </summary>
@@ -71,7 +79,7 @@ internal sealed class DaggerfallWorldTime(
         // Three tenths of a second, three times, then a tenth is a whole second by arithmetic but not
         // in binary floating point: the floor is taken with a tolerance, or the clock would lose the
         // second the player watched it earn.
-        long whole = (long)Math.Floor(_remainder + 1e-9);
+        long whole = WholeSeconds(_remainder);
         if (whole <= 0)
         {
             return;
@@ -89,4 +97,6 @@ internal sealed class DaggerfallWorldTime(
             _remainder = 0d;
         }
     }
+
+    private static long WholeSeconds(double seconds) => checked((long)Math.Floor(seconds + 1e-9));
 }

@@ -42,7 +42,8 @@ internal sealed partial class DaggerfallSession
     /// the admitted update publishes once after all its steps, and direct callers publish
     /// with the step.
     /// </summary>
-    private void SimulateStep(ProductUpdateState update, ulong generation, ulong simulationStep)
+    private void SimulateStep(ProductUpdateState update, ulong generation, ulong simulationStep,
+        long? swimmingMinuteBefore = null, long? swimmingMinuteAfter = null)
     {
         _latestUpdateGeneration = generation;
         _latestSimulationStep = simulationStep;
@@ -149,8 +150,8 @@ internal sealed partial class DaggerfallSession
                 State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
                 update.DeltaSeconds,
                 update.DeltaSeconds * _tuning.Time.GameSecondsPerRealSecond,
-                MinuteIndex(_time.Calendar),
-                use => State.SkillUses.Record(use))
+                swimmingMinuteAfter ?? MinuteIndex(_time.Calendar),
+                use => State.SkillUses.Record(use), swimmingMinuteBefore)
             : DaggerfallSwimmingStep.None;
         DaggerfallLanding? landing = _locomotion.CompleteStep(locomotion, landingBefore, movement,
             update.DeltaSeconds * _tuning.Time.GameSecondsPerRealSecond, State.Actors.Player.Stats,

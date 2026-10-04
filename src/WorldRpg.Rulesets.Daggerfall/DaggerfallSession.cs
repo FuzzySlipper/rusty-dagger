@@ -411,6 +411,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // larger admitted interval uses the same lifecycle catch-up path as rest, travel, and prison,
         // so no second effect timer can drift from the saved calendar.
         DaggerfallCalendar calendarBefore = _time.Calendar;
+        double remainderBefore = _time.RemainderSeconds;
+        long MinuteAtStep(uint step) => DaggerfallWorldTime.MinuteAtAdmittedOffset(calendarBefore, remainderBefore,
+            deltaSeconds * step * _time.GameSecondsPerRealSecond);
         _time.Advance(deltaSeconds * facts.AdmittedStepCount);
         AdvanceCalendar(calendarBefore, DaggerfallCalendarAdvanceKind.OrdinaryPlay, simulate: () =>
         {
@@ -419,11 +422,12 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             // direct digital movement, pointer deltas, and semantic actions do not replay.
             // Simulation and reactions run per step; the final publication below (and the outer
             // update's, after animation impacts) happens once, not once per step.
-            SimulateStep(firstStep, facts.Generation, facts.SimulationStep);
+            SimulateStep(firstStep, facts.Generation, facts.SimulationStep, MinuteAtStep(0), MinuteAtStep(1));
             DeliverFacts();
             for (uint step = 1; step < facts.AdmittedStepCount; step++)
             {
-                SimulateStep(new ProductUpdateState(deltaSeconds), facts.Generation, checked(facts.SimulationStep + step));
+                SimulateStep(new ProductUpdateState(deltaSeconds), facts.Generation, checked(facts.SimulationStep + step),
+                    MinuteAtStep(step), MinuteAtStep(checked(step + 1)));
                 DeliverFacts();
             }
         });

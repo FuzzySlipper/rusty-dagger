@@ -8,6 +8,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 internal class SpatialFake : DispatchProxy
 {
     internal bool KeepPosition { get; set; }
+    internal Func<CharacterStepRequest, CharacterMovementFact> MovementFact { get; set; } = _ => default;
     internal Func<SpatialCapsuleQueryRequest, SpatialHit> OverlapHit { get; set; } = _ => default;
     internal List<SpatialCapsuleQueryRequest> OverlapRequests { get; } = [];
     private SpatialHit Overlap(SpatialCapsuleQueryRequest request) { OverlapRequests.Add(request); return OverlapHit(request); }
@@ -246,6 +247,7 @@ internal class SpatialFake : DispatchProxy
             Displacement = !KeepPosition && request.Command.PlanarIntent != Vector2.Zero ? Vector3.UnitX : Vector3.Zero,
             Motion = request.Motion with { Grounded = true, LastCommandSequence = request.Command.Sequence },
             Ground = default(CharacterGround) with { Present = true },
+            Movement = MovementFact(request),
         };
     }
 
