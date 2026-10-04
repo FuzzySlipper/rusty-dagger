@@ -184,6 +184,7 @@ internal sealed class DaggerSessionPersistence
             Weather = Weather(),
             Transport = State.Transport.Capture(),
             Swimming = State.Swimming.Capture(),
+            DialogueWorld = State.DialogueWorld.Capture(),
             Wagon = State.Wagon.Capture(),
             Locomotion = _locomotion.Capture(),
             Climbing = _climbing.Capture(),

@@ -18,7 +18,16 @@ internal enum DaggerfallDialogueTone { Polite, Normal, Blunt }
 internal enum DaggerfallDialogueTopic { Directions, News, Work, QuestInfo, Donate, Cure, RankReview, Armor, House }
 
 internal sealed record DaggerfallDialogueTopicOption(string Id, string Label, string? Key = null);
-internal sealed record DaggerfallDialogueDestination(string Id, string Name, string Hint, bool Known = true);
+/// <param name="Known">Whether the map already discloses this destination; subject knowledge is resolved separately.</param>
+internal sealed record DaggerfallDialogueDestination(string Id, string Name, string Hint, bool Known = true)
+{
+    /// <summary>Whether the speaking NPC shares the destination's building.</summary>
+    internal bool SameBuilding { get; init; }
+    /// <summary>Whether the speaking NPC belongs to the destination's organization.</summary>
+    internal bool SameOrganization { get; init; }
+    /// <summary>Whether the destination is a current quest-local subject.</summary>
+    internal bool QuestLocality { get; init; }
+}
 internal sealed record DaggerfallDialogueView(
     string Revision,
     string TargetLabel,
@@ -50,6 +59,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
     private static readonly int[] EtiquetteReactionMods = [-10, 5, 10, 15, -15];
     private static readonly int[] StreetwiseReactionMods = [10, 5, -10, -15, 15];
+    // FALL.EXE's knowledge modifiers, indexed by classic question type then social group.
+    // The two direction question types retained here are LocalBuilding/Regional (0) and
+    // Person (1); the remaining source entries stay documented in the donor rather than being
+    // copied into a product owner that does not expose those topics yet.
+    private static readonly int[] KnowledgeModifiers = [5, 7, 0, 0, 4, 1, 2, -2, 3, 7];
     private static readonly int[] DirectionAnswers =
     [
         7251, 7266, 7281, 7250, 7265, 7280, 7252, 7267, 7282, 7253, 7268, 7283, 7304, 7269, 7284,
@@ -83,6 +97,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<long, IReadOnlyList<DaggerfallQuestContact>> _questContacts;
     private readonly Func<long, bool> _workAvailable;
     private readonly Func<DaggerfallVariableStore?>? _variables;
+    private readonly Func<DaggerfallWorldProfileKey>? _activeProfile;
+    private readonly Func<string, bool>? _discloseDirection;
+    private readonly DaggerfallDialogueWorldState _dialogueWorld;
     private readonly Func<DaggerfallNpc, DaggerfallDialogueTopic, ulong?, DaggerfallTempleServiceResult>? _templeService;
     private readonly Func<DaggerfallNpc, DaggerfallDialogueTopic, string?, DaggerfallGuildProviderResult>? _guildService;
     private TalkSession? _current;
@@ -110,7 +127,10 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<long, bool>? workAvailable = null,
         Func<DaggerfallVariableStore?>? variables = null,
         Func<DaggerfallNpc, DaggerfallDialogueTopic, ulong?, DaggerfallTempleServiceResult>? templeService = null,
-        Func<DaggerfallNpc, DaggerfallDialogueTopic, string?, DaggerfallGuildProviderResult>? guildService = null)
+        Func<DaggerfallNpc, DaggerfallDialogueTopic, string?, DaggerfallGuildProviderResult>? guildService = null,
+        Func<DaggerfallWorldProfileKey>? activeProfile = null,
+        Func<string, bool>? discloseDirection = null,
+        DaggerfallDialogueWorldState? dialogueWorld = null)
     {
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
@@ -133,6 +153,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _calendar = calendar ?? (() => DaggerfallCalendar.Start);
         _workAvailable = workAvailable ?? (_ => false);
         _variables = variables;
+        _activeProfile = activeProfile;
+        _discloseDirection = discloseDirection;
+        _dialogueWorld = dialogueWorld ?? new();
         _templeService = templeService;
         _guildService = guildService;
         _setOutcome = setOutcome ?? throw new ArgumentNullException(nameof(setOutcome));
@@ -214,6 +237,24 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
     internal DaggerfallNpc? CurrentNpc(string? revision = null) =>
         (revision is null || MatchesRevision(revision)) && ValidateCurrent(out var npc, out _, out _) ? npc : null;
+
+    /// <summary>
+    /// The map directory and resolver use the same admission contract as activation. This keeps a
+    /// durable registry row from becoming talkable after its actor or current profile has gone away.
+    /// </summary>
+    internal bool IsLiveTalkTarget(DaggerfallNpc npc) =>
+        npc is not null && TryReadLiveNpc(npc.DurableId, out _, out _);
+
+    /// <summary>
+    /// Reconciles generated spoken-world events with the live variable store. Calendar and quest
+    /// owners call this after a transition, while a direct dialogue read calls it as a bounded
+    /// catch-up for a variable changed between admitted updates.
+    /// </summary>
+    internal void SynchronizeWorldState()
+    {
+        if (_variables?.Invoke() is { } variables)
+            _dialogueWorld.Synchronize(_definitions.DialogueWorldRules, variables, _currentCalendarMinute());
+    }
 
     internal void Rebase(System.Numerics.Vector3 delta)
     {
@@ -326,7 +367,26 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
         if (directions)
         {
-            int responseId = selectedDirection is { Known: false }
+            bool knowsDestination = selectedDirection is not null && KnowsDirection(npc, selectedDirection, topicTarget);
+            if (knowsDestination && selectedDirection is { Known: false } undisclosed)
+            {
+                bool disclosed = _discloseDirection?.Invoke(undisclosed.Id) == true;
+                if (disclosed)
+                {
+                    // The successful disclosure is part of this operation's semantic result. The
+                    // next request therefore sees the same map marker without changing the answer
+                    // branch after the fact.
+                    selectedDirection = undisclosed with { Known = true };
+                }
+                else
+                {
+                    // A provider that cannot commit the durable disclosure cannot honestly give
+                    // the direct answer. Keep the reply and post-state on the same refusal path.
+                    knowsDestination = false;
+                }
+            }
+
+            int responseId = !knowsDestination
                 ? NonDirectionAnswers[15 + 3 * socialGroup + band]
                 : DirectionAnswers[15 + 3 * socialGroup + band];
             DaggerfallTextContext responseContext = Context(npc, site, session.OpeningLine ?? string.Empty,
@@ -380,7 +440,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             .Select(rumor => new DaggerfallDialogueNewsCandidate(
                 rumor.TextKey,
                 rumor.Faction1,
-                rumor.Faction2))];
+                rumor.Faction2,
+                TimeLimit: rumor.TimeLimit))];
+        SynchronizeWorldState();
         DaggerfallVariableStore? variables = _variables?.Invoke();
         if (variables is not null)
         {
@@ -393,14 +455,22 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
                     DaggerfallVariableScope.Faction => npc.Appearance.FactionId,
                     _ => throw new InvalidOperationException($"Dialogue world rule {rule.Type}/{rule.TextId} names an unsupported variable scope."),
                 };
-                if (!rule.VariableKeys.Any(key => variables.Read(new DaggerfallVariableAddress(rule.Scope, owner, key)) == rule.RequiredValue))
+                bool enabled = rule.VariableKeys.Count != 0
+                    && rule.VariableKeys.All(key => variables.Read(new DaggerfallVariableAddress(rule.Scope, owner, key)) == rule.RequiredValue);
+                DaggerfallDialogueWorldRumorSave? generated = rule.Type == DaggerfallDialogueWorldState.CrimeWaveType
+                    && rule.Scope == DaggerfallVariableScope.Region
+                    ? _dialogueWorld.ReadActive(rule.Type, site.Id.Region, rule.TextId, currentMinute)
+                    : null;
+                if (!enabled || rule.Type == DaggerfallDialogueWorldState.CrimeWaveType && generated is null)
                     continue;
                 candidates.Add(new(
                     Resource(rule.TextId),
                     Faction1: 0,
-                    Faction2: 0));
+                    Faction2: 0,
+                    TimeLimit: generated?.ExpiresAtMinute ?? 0));
             }
         }
+        candidates.RemoveAll(candidate => candidate.TimeLimit > 0 && candidate.TimeLimit <= currentMinute);
         if (candidates.Count == 0)
         {
             (string empty, diagnostics) = RenderSelectedRun(Resource(1457), context,
@@ -463,6 +533,29 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private bool IsNewsFaction(int factionId) =>
         _definitions.Factions.Factions.TryGetValue(factionId, out DaggerfallFactionDefinition? faction)
         && (faction.Flags & 1) != 0;
+
+    /// <summary>
+    /// Retains the donor's distinction between map visibility and an NPC's subject knowledge.
+    /// Building, organization and quest-local subjects are known without a roll; all other
+    /// subjects use a stable NPC/topic draw so a repeated conversation does not change knowledge
+    /// merely because the player asked again.
+    /// </summary>
+    private bool KnowsDirection(DaggerfallNpc npc, DaggerfallDialogueDestination destination, string? topicTarget)
+    {
+        if (destination.SameBuilding || destination.SameOrganization || destination.QuestLocality)
+            return true;
+
+        int questionIndex = destination.Id.StartsWith("direction:npc:", StringComparison.Ordinal) ? 1 : 0;
+        int socialGroup = Math.Clamp(ResolveSocialGroup(npc), 0, 4);
+        int modifier = KnowledgeModifiers[questionIndex * 5 + socialGroup];
+        int roll = checked((int)_random.DrawKeyed(new KeyedRngRequest(
+            CombatRandomKey.Seed,
+            RandomScope,
+            $"knowledge:npc:{npc.DurableId}:topic:{topicTarget ?? destination.Id}",
+            1,
+            20)).Value);
+        return roll <= modifier + 10;
+    }
 
     private DaggerfallTextContext RumorContext(DaggerfallNpc npc, DaggerfallSiteRecord site, int factionOne, int factionTwo)
     {
@@ -582,6 +675,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         try { npc = _npcs.Require(id); }
         catch (InvalidOperationException) { return false; }
         if (_muted(id) || !IsTalkableAt(npc!, site)) return false;
+        if (_activeProfile is not null
+            && (npc!.Profile is not { } profile || profile != _activeProfile())) return false;
         if (_actors.TryGet(id, out ActorState currentActor))
             actor = new(currentActor.Actor.Entity, currentActor.Position);
         else if (_actors.Entities.TryResolve(ActorsState.Identity(id), out var entity)
@@ -687,7 +782,10 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (value is { Length: > 10 } dynamicDirection && dynamicDirection.StartsWith("direction:", StringComparison.Ordinal))
         {
             topic = DaggerfallDialogueTopic.Directions;
-            target = dynamicDirection[10..];
+            // Keep the canonical directory identity intact. The map resolver and the disclosure
+            // owner both use the same prefix, and stripping it here made a valid UI directory
+            // option fail to resolve while the generic directions topic still worked.
+            target = dynamicDirection;
             return target.Length > 0;
         }
         if (value is { Length: > 11 } dynamicQuest && (dynamicQuest.StartsWith("quest-info:", StringComparison.Ordinal)
@@ -714,7 +812,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private sealed record DaggerfallDialogueNewsCandidate(
         DaggerfallTextKey TextKey,
         int Faction1,
-        int Faction2);
+        int Faction2,
+        long TimeLimit = 0);
 
     private sealed record DaggerfallDialogueNpc(EntityId Entity, WorldPoint Position);
 

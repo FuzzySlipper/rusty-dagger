@@ -2,6 +2,7 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
+using Rusty.Engine;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -109,13 +110,127 @@ public sealed class DaggerfallDialogueTests
         DaggerfallDialogueView news = Assert.IsType<DaggerfallDialogueView>(talk.View);
         Assert.True(news.Reply?.Contains("criminal", StringComparison.OrdinalIgnoreCase) == true
             || news.Reply?.Contains("killed", StringComparison.OrdinalIgnoreCase) == true);
+
+        DaggerfallSavePayload save = DaggerfallSavePayload.Read(fixture.Session.CaptureSave());
+        DaggerfallDialogueWorldRumorSave generated = Assert.Single(save.DialogueWorld.Rumors);
+        Assert.Equal(DaggerfallDialogueWorldState.CrimeWaveType, generated.Type);
+        Assert.Equal(DaggerfallDialogueWorldState.CrimeWaveTextId, generated.TextId);
+        World.DaggerfallCalendar savedCalendar = new(save.Calendar.Year, save.Calendar.Month, save.Calendar.Day,
+            save.Calendar.Hour, save.Calendar.Minute, save.Calendar.Second);
+        Assert.Equal(savedCalendar.ToAbsoluteSeconds() / World.DaggerfallCalendar.SecondsPerMinute
+            + DaggerfallDialogueWorldState.GeneratedRumorDurationMinutes, generated.ExpiresAtMinute);
+
+        using DaggerfallSession restored = fixture.Restore(DaggerfallSavePayload.Encode(save));
+        DaggerfallDialogueWorldRumorSave restoredGenerated = Assert.Single(
+            DaggerfallSavePayload.Read(restored.CaptureSave()).DialogueWorld.Rumors);
+        Assert.Equal(generated, restoredGenerated);
+    }
+
+    [Fact]
+    public void Unknown_site_direction_refuses_without_discovery_and_repeated_knowledge_is_stable()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallDialogueDestination destination = new("direction:site:0:1", "Far place", "on the map", Known: false);
+        KeyedRandomFake random = KeyedRandomFake.Create(20);
+        bool disclosed = false;
+        TalkTarget talk = new(fixture.Session, fixture.Definitions, random: random.Service,
+            destination: destination, disclose: _ => { disclosed = true; return true; });
+        Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
+        string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;
+
+        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: destination.Id)).Applied);
+        DaggerfallDialogueView first = Assert.IsType<DaggerfallDialogueView>(talk.View);
+        Assert.False(disclosed);
+        Assert.False(string.IsNullOrWhiteSpace(first.Reply));
+        string[] knowledgeKeys = [.. random.Requests
+            .Where(request => request.Key.Contains(":knowledge:npc:", StringComparison.Ordinal))
+            .Select(request => request.Key)];
+        Assert.Single(knowledgeKeys);
+        Assert.Contains($":topic:{destination.Id}", knowledgeKeys[0], StringComparison.Ordinal);
+
+        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: destination.Id)).Applied);
+        Assert.False(disclosed);
+        Assert.False(string.IsNullOrWhiteSpace(Assert.IsType<DaggerfallDialogueView>(talk.View).Reply));
+        string[] repeatedKnowledgeKeys = [.. random.Requests
+            .Where(request => request.Key.Contains(":knowledge:npc:", StringComparison.Ordinal))
+            .Select(request => request.Key)];
+        Assert.Equal([knowledgeKeys[0], knowledgeKeys[0]], repeatedKnowledgeKeys);
+    }
+
+    [Fact]
+    public void Known_site_direction_discloses_once_then_reuses_the_committed_state()
+    {
+        using ConditionSessionFixture fixture = new();
+        DaggerfallSiteRecord active = fixture.Session.Site.ActiveSite
+            ?? throw new InvalidOperationException("The focused direction test needs an admitted site.");
+        DaggerfallSiteRecord destination = fixture.Session.Site.Records
+            .Where(place => place.Id.Region == active.Id.Region
+                && place.Id != active.Id
+                && !fixture.Session.Site.IsDiscovered(place.Id))
+            .OrderBy(place => place.Id.Index)
+            .First();
+        string target = $"direction:site:{destination.Id.Region}:{destination.Id.Index}";
+        bool known = false;
+        DaggerfallDialogueDestination Destination() => new(target, destination.Name, "on the map", known);
+        int disclosures = 0;
+        TalkTarget talk = new(fixture.Session, fixture.Definitions, random: RandomMinimum.Create(),
+            destinationFactory: Destination, disclose: _ =>
+            {
+                disclosures++;
+                known = true;
+                fixture.Session.Site.Discover(destination.Id);
+                return true;
+            });
+        Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
+        string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;
+
+        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: target)).Applied);
+        Assert.Equal(1, disclosures);
+        Assert.True(known);
+        Assert.True(fixture.Session.Site.IsDiscovered(destination.Id));
+
+        DaggerfallSavePayload save = DaggerfallSavePayload.Read(fixture.Session.CaptureSave());
+        using DaggerfallSession restored = fixture.Restore(DaggerfallSavePayload.Encode(save));
+        Assert.True(restored.Site.IsDiscovered(destination.Id));
+
+        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: target)).Applied);
+        Assert.Equal(1, disclosures);
+    }
+
+    [Fact]
+    public void Dialogue_directory_and_activation_reject_a_live_actor_from_an_old_profile()
+    {
+        using ConditionSessionFixture fixture = new();
+        TalkTarget talk = new(fixture.Session, fixture.Definitions);
+        DaggerfallWorldProfileKey stale = fixture.Session.Sites.ActiveProfile with { LogicalId = "stale-profile" };
+        fixture.Session.State.Npcs.Place(talk.Npc.DurableId, stale, talk.Actor.Position);
+
+        Assert.Empty(talk.Service.NpcTargets());
+        DaggerfallActivationOutcome refused = talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target));
+        Assert.False(refused.Applied);
+        Assert.Contains("no longer available", refused.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Dialogue_directory_rejects_a_registered_npc_when_its_actor_entity_is_deleted()
+    {
+        using ConditionSessionFixture fixture = new();
+        TalkTarget talk = new(fixture.Session, fixture.Definitions);
+        Assert.NotEmpty(talk.Service.NpcTargets());
+
+        Assert.True(fixture.Session.State.Actors.Entities.Destroy(ActorsState.Identity(talk.Npc.DurableId)));
+
+        Assert.Empty(talk.Service.NpcTargets());
+        Assert.False(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
     }
 
     private sealed class TalkTarget
     {
         private DaggerfallDialogueView? _view;
 
-        internal TalkTarget(DaggerfallSession session, DaggerfallDefinitions definitions, bool attachVariables = false)
+        internal TalkTarget(DaggerfallSession session, DaggerfallDefinitions definitions, bool attachVariables = false,
+            IRandomService? random = null, DaggerfallDialogueDestination? destination = null,
+            Func<DaggerfallDialogueDestination>? destinationFactory = null, Func<string, bool>? disclose = null)
         {
             DaggerfallSiteRecord site = session.Site.ActiveSite
                 ?? throw new InvalidOperationException("The focused talk test needs the admitted fixture site.");
@@ -123,6 +238,7 @@ public sealed class DaggerfallDialogueTests
                 new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
                 new DaggerfallNpcAppearance("Breton", "Female", 0, 0, 0, 0), "guard", ["talk"]);
             session.MaterializeNpcActor(id, session.State.Actors.Get(2000).Pose);
+            session.State.Npcs.Place(id, session.Sites.ActiveProfile, session.State.Actors.Get(id).Position);
             Npc = session.State.Npcs.Require(id);
             Actor = session.State.Actors.Get(id);
             Service = new DaggerfallDialogueService(
@@ -132,12 +248,16 @@ public sealed class DaggerfallDialogueTests
                 session.State.SkillUses,
                 session.State.Actors.Player.Stats,
                 definitions,
-                RandomMinimum.Create(),
+                random ?? RandomMinimum.Create(),
                 () => session.Site.ActiveSite,
                 () => session.State.Character.Identity,
                 view => _view = view,
                 _ => { },
-                variables: attachVariables ? () => session.State.Variables : null);
+                resolveDirection: destinationFactory is not null ? _ => destinationFactory() : destination is not null ? _ => destination : null,
+                variables: attachVariables ? () => session.State.Variables : null,
+                activeProfile: () => session.Sites.ActiveProfile,
+                discloseDirection: disclose,
+                dialogueWorld: session.State.DialogueWorld);
             Target = Assert.Single(Service.NpcTargets());
         }
 

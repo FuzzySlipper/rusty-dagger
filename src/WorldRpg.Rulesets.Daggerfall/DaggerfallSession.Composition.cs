@@ -417,7 +417,8 @@ internal sealed partial class DaggerfallSession
                 wagon: wagon,
                 swimming: swimming,
                 dungeonDiscoveries: dungeonDiscoveries,
-                dungeonActions: dungeonActions);
+                dungeonActions: dungeonActions,
+                dialogueWorld: new DaggerfallDialogueWorldState(saved?.DialogueWorld));
             _travelMessage = State.Travel.LastResult?.Message;
             State.Quests.BindTextContext(QuestTextContext);
             DaggerfallNames questNames = new(definitions, engine.Random);

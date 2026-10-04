@@ -59,9 +59,7 @@ internal sealed partial class DaggerfallSession
         }
 
         foreach (DaggerfallNpc npc in State.Npcs.All
-            .Where(npc => npc.Presence == DaggerfallNpcPresence.Active
-                && npc.Site.Region == site.Id.Region
-                && string.Equals(npc.Site.Location, site.Name, StringComparison.Ordinal))
+            .Where(npc => _dialogue?.IsLiveTalkTarget(npc) == true)
             .OrderBy(npc => npc.DurableId))
         {
             string display = npc.DisplayName ?? npc.Role;
@@ -94,7 +92,13 @@ internal sealed partial class DaggerfallSession
             try
             {
                 DaggerfallSiteBuildingRecord building = Site.SelectBuilding(active.Id, id);
-                return new(target, building.Name, BuildingHint(active.Id, id), Known: true);
+                bool sameBuilding = _dialogue?.CurrentNpc() is { } speaker
+                    && string.Equals(speaker.Site.Building, $"{blockX}/{blockY}/{index}", StringComparison.Ordinal);
+                return new(target, building.Name, BuildingHint(active.Id, id), Known: true)
+                {
+                    SameBuilding = sameBuilding,
+                    QuestLocality = State.Quests.ClaimsBuilding(active.Id, building.Source),
+                };
             }
             catch (InvalidOperationException) { return null; }
         }
@@ -103,12 +107,24 @@ internal sealed partial class DaggerfallSession
             && long.TryParse(target[14..], out long npcId))
         {
             DaggerfallNpc? npc = State.Npcs.All.SingleOrDefault(value => value.DurableId == npcId);
-            if (npc is null || npc.Presence != DaggerfallNpcPresence.Active
-                || npc.Site.Region != active.Id.Region
-                || !string.Equals(npc.Site.Location, active.Name, StringComparison.Ordinal)) return null;
+            if (npc is null || _dialogue?.IsLiveTalkTarget(npc) != true) return null;
             string hint = npc.X is float x && npc.Z is float z && State.PlayerControl.Position is WorldPoint player
                 ? CardinalHint(new(x, player.Y, z), _sites.ExteriorSitePosition(player)) : "here";
-            return new(target, npc.DisplayName ?? npc.Role, hint, Known: true);
+            DaggerfallNpc? speaker = _dialogue?.CurrentNpc();
+            bool sameBuilding = speaker is not null && !string.IsNullOrEmpty(speaker.Site.Building)
+                && string.Equals(speaker.Site.Building, npc.Site.Building, StringComparison.Ordinal);
+            bool sameOrganization = speaker is not null && FactionsShareOrganization(
+                speaker.Appearance.FactionId, npc.Appearance.FactionId);
+            bool questLocality = speaker is not null
+                && speaker.Site.Region == npc.Site.Region
+                && string.Equals(speaker.Site.Location, npc.Site.Location, StringComparison.Ordinal)
+                && State.Quests.QuestContacts(npc.DurableId).Count != 0;
+            return new(target, npc.DisplayName ?? npc.Role, hint, Known: true)
+            {
+                SameBuilding = sameBuilding,
+                SameOrganization = sameOrganization,
+                QuestLocality = questLocality,
+            };
         }
 
         if (target.StartsWith("direction:site:", StringComparison.Ordinal))
@@ -121,10 +137,58 @@ internal sealed partial class DaggerfallSession
             catch (InvalidOperationException) { return null; }
             if (place.Id.Region != active.Id.Region) return null;
             bool known = Site.IsDiscovered(id);
-            Site.Discover(id);
             return new(target, place.Name, "on the map", known);
         }
         return null;
+    }
+
+    /// <summary>
+    /// Retains the donor's organization relation: a parent, child, shared hierarchy, or an
+    /// authored ally/enemy relation is a known organization subject. The check walks the catalog's
+    /// current links with cycle protection instead of equating only exact faction identities.
+    /// </summary>
+    private bool FactionsShareOrganization(int firstId, int secondId)
+    {
+        if (firstId == 0 || secondId == 0) return false;
+        if (!_definitions.Factions.Factions.ContainsKey(firstId) || !_definitions.Factions.Factions.ContainsKey(secondId)) return false;
+
+        HashSet<int> firstHierarchy = FactionHierarchy(firstId);
+        HashSet<int> secondHierarchy = FactionHierarchy(secondId);
+        if (firstHierarchy.Overlaps(secondHierarchy)) return true;
+
+        foreach (int ancestorId in firstHierarchy)
+        {
+            if (!_definitions.Factions.Factions.TryGetValue(ancestorId, out DaggerfallFactionDefinition? ancestor)) continue;
+            foreach (int relatedId in secondHierarchy)
+                if (ancestor.Allies.Contains(relatedId) || ancestor.Enemies.Contains(relatedId)) return true;
+        }
+        return false;
+    }
+
+    private HashSet<int> FactionHierarchy(int factionId)
+    {
+        HashSet<int> hierarchy = [];
+        int current = factionId;
+        while (hierarchy.Add(current)
+            && _definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? faction)
+            && faction.Parent != 0)
+            current = faction.Parent;
+        return hierarchy;
+    }
+
+    /// <summary>Applies a site disclosure only after the dialogue owner has admitted the answer.</summary>
+    private bool DiscloseDialogueDirection(string target)
+    {
+        if (!target.StartsWith("direction:site:", StringComparison.Ordinal)) return false;
+        string[] parts = target[15..].Split(':');
+        if (parts.Length != 2 || !int.TryParse(parts[0], out int region) || !int.TryParse(parts[1], out int index)) return false;
+        DaggerfallSiteId id = new(region, index);
+        DaggerfallSiteRecord? active = Site.ActiveSite;
+        if (active is null || active.Id.Region != region) return false;
+        try { _ = Site.Require(id); }
+        catch (InvalidOperationException) { return false; }
+        if (!Site.IsDiscovered(id)) Site.Discover(id);
+        return true;
     }
 
     private string BuildingHint(DaggerfallSiteId site, DaggerfallSiteBuildingId building)
