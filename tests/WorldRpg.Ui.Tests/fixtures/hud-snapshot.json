@@ -213,6 +213,16 @@
           "id": "news",
           "label": "Any news?",
           "key": null
+        },
+        {
+          "id": "direction:npc:1000000000000",
+          "label": "Where is guard?",
+          "key": null
+        },
+        {
+          "id": "direction:site:17:180",
+          "label": "Where is Hand-authored Waypoint?",
+          "key": null
         }
       ],
       "training": null,
@@ -339,255 +349,14 @@
   "lodging": null,
   "map": null,
   "travel": {
-    "destinations": [
-      {
-        "region": 0,
-        "index": 0,
-        "name": "Caarcun Manor",
-        "kind": "HomeWealthy"
-      },
-      {
-        "region": 0,
-        "index": 1,
-        "name": "The Flying Goat Hostel",
-        "kind": "Tavern"
-      },
-      {
-        "region": 0,
-        "index": 3,
-        "name": "Singing Star of Stendarr",
-        "kind": "ReligionTemple"
-      },
-      {
-        "region": 0,
-        "index": 4,
-        "name": "The Dead Griffin Inn",
-        "kind": "Tavern"
-      },
-      {
-        "region": 0,
-        "index": 5,
-        "name": "Sacred Rebirth of Stendarr",
-        "kind": "ReligionTemple"
-      },
-      {
-        "region": 0,
-        "index": 7,
-        "name": "Blessed Prophet of Stendarr",
-        "kind": "ReligionTemple"
-      },
-      {
-        "region": 0,
-        "index": 9,
-        "name": "The Old Nheth Place",
-        "kind": "HomePoor"
-      },
-      {
-        "region": 0,
-        "index": 10,
-        "name": "Atriga",
-        "kind": "TownVillage"
-      },
-      {
-        "region": 0,
-        "index": 12,
-        "name": "The Old Luctta Shack",
-        "kind": "HomePoor"
-      },
-      {
-        "region": 0,
-        "index": 13,
-        "name": "Bubyrydata",
-        "kind": "TownHamlet"
-      },
-      {
-        "region": 0,
-        "index": 14,
-        "name": "The Bat and Bird Hostel",
-        "kind": "Tavern"
-      },
-      {
-        "region": 0,
-        "index": 15,
-        "name": "Berbaaqnia",
-        "kind": "TownCity"
-      },
-      {
-        "region": 0,
-        "index": 19,
-        "name": "The Shust Farmstead",
-        "kind": "HomeFarms"
-      },
-      {
-        "region": 0,
-        "index": 20,
-        "name": "Holy Martyr of Stendarr",
-        "kind": "ReligionTemple"
-      },
-      {
-        "region": 0,
-        "index": 23,
-        "name": "Fearful Tree of Stendarr",
-        "kind": "ReligionTemple"
-      },
-      {
-        "region": 0,
-        "index": 27,
-        "name": "Mhurgin Manor",
-        "kind": "HomeWealthy"
-      },
-      {
-        "region": 0,
-        "index": 28,
-        "name": "Weeping Redeemer of Stendarr",
-        "kind": "ReligionTemple"
-      },
-      {
-        "region": 0,
-        "index": 33,
-        "name": "Kaloguja",
-        "kind": "TownCity"
-      },
-      {
-        "region": 0,
-        "index": 36,
-        "name": "The Rat and Castle Tavern",
-        "kind": "Tavern"
-      },
-      {
-        "region": 0,
-        "index": 37,
-        "name": "Rlictta Grange",
-        "kind": "HomeFarms"
-      },
-      {
-        "region": 0,
-        "index": 38,
-        "name": "Syro-Kom",
-        "kind": "TownVillage"
-      },
-      {
-        "region": 0,
-        "index": 39,
-        "name": "Bleeding Light of Stendarr",
-        "kind": "ReligionTemple"
-      },
-      {
-        "region": 0,
-        "index": 43,
-        "name": "Bleeding Seer of Stendarr",
-        "kind": "ReligionTemple"
-      },
-      {
-        "region": 0,
-        "index": 46,
-        "name": "Hettubu",
-        "kind": "TownVillage"
-      },
-      {
-        "region": 0,
-        "index": 49,
-        "name": "Fholl Palace",
-        "kind": "HomeWealthy"
-      },
-      {
-        "region": 0,
-        "index": 50,
-        "name": "The Devil\u0027s Mug Tavern",
-        "kind": "Tavern"
-      },
-      {
-        "region": 0,
-        "index": 52,
-        "name": "Mogandaton",
-        "kind": "TownCity"
-      },
-      {
-        "region": 0,
-        "index": 58,
-        "name": "Grejon Palace",
-        "kind": "HomeWealthy"
-      },
-      {
-        "region": 0,
-        "index": 61,
-        "name": "Dhalpem Hall",
-        "kind": "HomeWealthy"
-      },
-      {
-        "region": 0,
-        "index": 63,
-        "name": "Zenunnuga",
-        "kind": "TownVillage"
-      },
-      {
-        "region": 0,
-        "index": 64,
-        "name": "Rhogila",
-        "kind": "TownCity"
-      },
-      {
-        "region": 0,
-        "index": 65,
-        "name": "Garin Manor",
-        "kind": "HomeWealthy"
-      },
-      {
-        "region": 0,
-        "index": 68,
-        "name": "Old Mught-si\u0027s Shack",
-        "kind": "HomePoor"
-      },
-      {
-        "region": 0,
-        "index": 69,
-        "name": "Burning Idol of Stendarr",
-        "kind": "ReligionTemple"
-      },
-      {
-        "region": 0,
-        "index": 70,
-        "name": "Khurtin Court",
-        "kind": "HomeWealthy"
-      },
-      {
-        "region": 0,
-        "index": 71,
-        "name": "Osopaisa",
-        "kind": "TownVillage"
-      },
-      {
-        "region": 0,
-        "index": 74,
-        "name": "The Restless Badger Inn",
-        "kind": "Tavern"
-      },
-      {
-        "region": 0,
-        "index": 77,
-        "name": "Mesascuza",
-        "kind": "TownVillage"
-      },
-      {
-        "region": 0,
-        "index": 78,
-        "name": "Ceriburea",
-        "kind": "TownCity"
-      },
-      {
-        "region": 0,
-        "index": 79,
-        "name": "Baghissibu",
-        "kind": "TownVillage"
-      }
-    ],
+    "destinations": [],
     "message": null,
     "executionAvailable": false,
     "lastResult": null,
     "quote": null
   },
   "inventory": {
-    "revision": "173:1:45:0:",
+    "revision": "175:1:45:0:",
     "message": "Drag items between the grid and compatible equipment slots.",
     "encumbrance": {
       "currentClassicUnits": 7025,
@@ -1638,6 +1407,11 @@
       "daggerfall.castle-necromoghan",
       "daggerfall.charing-exterior",
       "daggerfall.charing-interior-1-1-0",
+      "daggerfall.charing-interior-3-4-0",
+      "daggerfall.charing-interior-3-1-13",
+      "daggerfall.charing-interior-4-2-0",
+      "daggerfall.charing-interior-1-5-17",
+      "daggerfall.charing-interior-3-2-14",
       "daggerfall.quests.fighters",
       "daggerfall.quests.mages",
       "daggerfall.quests.temples",
