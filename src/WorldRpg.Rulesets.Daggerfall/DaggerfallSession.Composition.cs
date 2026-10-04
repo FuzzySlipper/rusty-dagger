@@ -367,7 +367,7 @@ internal sealed partial class DaggerfallSession
                     : null, saved?.Services);
             DaggerfallConcreteGuildServiceRuntime concreteGuildServices = new(guildMembership, npcs, services);
             DaggerfallTempleServiceRuntime templeServices = new(concreteGuildServices, services, npcs, social,
-                effects, _poisons, actors, _random, () => _time.Calendar);
+                effects, _poisons, actors, _random, () => _time);
             DaggerfallKnightlyOrderClaimState knightlyClaims = new(saved?.KnightlyClaims);
             DaggerfallKnightlyOrderClaimRuntime knightlyClaimActions = new(concreteGuildServices, knightlyClaims, _random);
             DaggerfallSkillTrainingService skillTraining = new(services, npcs, social,

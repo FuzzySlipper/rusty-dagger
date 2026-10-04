@@ -26,6 +26,9 @@ internal sealed class DaggerfallWorldTime(
     /// <summary>The part of a game second not yet applied to the calendar.</summary>
     internal double RemainderSeconds => _remainder;
 
+    /// <summary>The current admitted game time, including the fraction carried between calendar seconds.</summary>
+    internal double AbsoluteGameSeconds => Calendar.ToAbsoluteSeconds() + _remainder;
+
     /// <summary>Reads a simulation slice's minute within the interval admitted by this clock.</summary>
     internal static long MinuteAtAdmittedOffset(DaggerfallCalendar before, double remainderSeconds, double gameSeconds)
     {

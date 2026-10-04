@@ -40,7 +40,7 @@ internal sealed record DaggerfallTempleDonationQuote(
     DaggerfallTempleBlessingTarget Target,
     int Magnitude,
     int DurationMinutes,
-    long ExpiresAtMinute,
+    double ExpiresAtGameSecond,
     string BlessingInstance);
 
 internal sealed record DaggerfallTempleCureQuote(
@@ -69,7 +69,7 @@ internal sealed class DaggerfallTempleServiceRuntime
     private readonly DaggerfallPoisonRuntime _poisons;
     private readonly ActorsState _actors;
     private readonly IRandomService _random;
-    private readonly Func<DaggerfallCalendar> _calendar;
+    private readonly Func<DaggerfallWorldTime> _time;
     private long _requestSequence;
 
     internal DaggerfallTempleServiceRuntime(
@@ -81,7 +81,7 @@ internal sealed class DaggerfallTempleServiceRuntime
         DaggerfallPoisonRuntime poisons,
         ActorsState actors,
         IRandomService random,
-        Func<DaggerfallCalendar> calendar)
+        Func<DaggerfallWorldTime> time)
     {
         _guildServices = guildServices ?? throw new ArgumentNullException(nameof(guildServices));
         _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
@@ -91,7 +91,7 @@ internal sealed class DaggerfallTempleServiceRuntime
         _poisons = poisons ?? throw new ArgumentNullException(nameof(poisons));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _random = random ?? throw new ArgumentNullException(nameof(random));
-        _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
+        _time = time ?? throw new ArgumentNullException(nameof(time));
     }
 
     /// <summary>Quotes a positive source donation without charging gold or mutating reputation.</summary>
@@ -125,7 +125,7 @@ internal sealed class DaggerfallTempleServiceRuntime
         int rank = membership.IsMember ? membership.Rank : -1;
         int magnitude = 0;
         int duration = 0;
-        long expires = -1;
+        double expires = -1d;
         string instance = string.Empty;
         if (target != DaggerfallTempleBlessingTarget.None)
         {
@@ -139,7 +139,7 @@ internal sealed class DaggerfallTempleServiceRuntime
             {
                 magnitude = DaggerfallTemplePolicy.CalculateTempleBlessing(gold, rank);
                 duration = DaggerfallTemplePolicy.BlessingDurationMinutes(gold);
-                expires = checked(CurrentMinute() + duration);
+                expires = CurrentGameSecond() + (duration * (double)DaggerfallCalendar.SecondsPerMinute);
                 instance = $"temple-blessing.{checked(++_requestSequence)}";
             }
         }
@@ -173,7 +173,7 @@ internal sealed class DaggerfallTempleServiceRuntime
             DaggerfallTempleBlessingState state = new DaggerfallTempleBlessingState(quote.DeityFactionId, quote.Target,
                 quote.Target == DaggerfallTempleBlessingTarget.LegalReputation
                     ? quote.ServiceQuote.Request.Provider.Site.Region : -1,
-                quote.Magnitude, quote.DurationMinutes, quote.ExpiresAtMinute).Validate();
+                quote.Magnitude, quote.DurationMinutes, quote.ExpiresAtGameSecond).Validate();
             DaggerfallEffectAdmissionOutcome started = _effects.Start(new(
                 quote.BlessingInstance,
                 DaggerfallTempleBlessingEffects.Key,
@@ -184,10 +184,9 @@ internal sealed class DaggerfallTempleServiceRuntime
                 Element: null,
                 ItemId: null,
                 Stacks: 1,
-                // Start applies one magic round immediately. Keep the canonical calendar expiry at
-                // now + duration while reserving that admission round, so a one-gold blessing
-                // remains active through the following minute rather than ending at admission.
-                RemainingRounds: DaggerfallTempleBlessingEffects.AdmissionRounds(quote.DurationMinutes),
+                // Blessings expire from their absolute calendar state. They do not borrow the
+                // generic magic-round catch-up cap, which is policy for donor spell effects.
+                RemainingRounds: null,
                 State: DaggerfallTempleBlessingEffects.Encode(state)));
             if (started is not (DaggerfallEffectAdmissionOutcome.Started or DaggerfallEffectAdmissionOutcome.Replaced))
                 throw new InvalidOperationException($"Temple blessing admission unexpectedly returned {started} after payment.");
@@ -273,7 +272,7 @@ internal sealed class DaggerfallTempleServiceRuntime
         DaggerfallConcreteGuildServiceRuntimeDecision decision = _guildServices.Evaluate(
             temple.FactionId,
             concreteService,
-            checked((int)_calendar().DayNumber),
+            checked((int)_time().Calendar.DayNumber),
             new(provider, provider.Site.Region));
         if (decision.Policy.ProviderFactionId != providerFaction || !decision.CanUse)
         {
@@ -336,7 +335,9 @@ internal sealed class DaggerfallTempleServiceRuntime
 
     private string RequestId(string kind) => $"temple.{kind}.{checked(++_requestSequence)}";
 
-    private long CurrentMinute() => _calendar().ToAbsoluteSeconds() / DaggerfallCalendar.SecondsPerMinute;
+    private long CurrentMinute() => _time().Calendar.ToAbsoluteSeconds() / DaggerfallCalendar.SecondsPerMinute;
+
+    private double CurrentGameSecond() => _time().AbsoluteGameSeconds;
 
     private static DaggerfallTempleServiceResult FromServiceOutcome(DaggerfallServiceOutcome outcome) =>
         DaggerfallTempleServiceResult.Refused(outcome.Denial switch

@@ -65,6 +65,10 @@ internal sealed partial class DaggerfallSession
             throw new ArgumentException("Only ordinary play runs simulation steps inside its calendar interval.", nameof(simulate));
         if (encounter is not null && kind is not (DaggerfallCalendarAdvanceKind.Elapsed or DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills))
             throw new ArgumentException("Only an elapsed interval selects an encounter.", nameof(encounter));
+        // Paid temple blessings own an absolute calendar deadline rather than a generic magic-round
+        // lifetime. Observe it before every other consumer so a boundary reached inside a minute is
+        // visible immediately and rest/travel cannot outrun the blessing through catch-up limits.
+        _ = DaggerfallTempleBlessingEffects.ExpireDue(State.Effects, _time);
         _locomotion.SetAthletics(
             State.Character.CustomCareer?.Advantages.Any(trait => trait.Id == "athleticism") == true,
             State.HeldEnchantments.Talents.Athleticism);

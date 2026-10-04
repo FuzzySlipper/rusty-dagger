@@ -261,6 +261,7 @@ internal sealed class DaggerSessionPersistence
         ApplyActorInventories(delta.ActorInventories);
         _corpseLoot.Restore(delta.Corpses, CorpseIdentities(delta.Corpses));
         _effects.Restore(delta.Effects);
+        _ = DaggerfallTempleBlessingEffects.ExpireDue(_effects, _time);
     }
 
     private DaggerfallCorpseSave[] CaptureCorpses(IEnumerable<long> actorIds)
@@ -376,6 +377,7 @@ internal sealed class DaggerSessionPersistence
         // Actors, their shared stats/tracks, and item identities exist before active effects rebuild
         // their reversible contributions. Resume deliberately does not replay an initial magic round.
         _effects.Restore(saved.ActiveEffects);
+        _ = DaggerfallTempleBlessingEffects.ExpireDue(_effects, _time);
         _camera.Update(State.PlayerControl);
         // Enemy behavior, perception leases, held input, pending loot, facts,
         // presentation effects and a swing still waiting for its damage frame are
