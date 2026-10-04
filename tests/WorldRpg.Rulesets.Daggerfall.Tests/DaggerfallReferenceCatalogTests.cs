@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Daggerfall.Import.Publication;
 using Rusty.Engine;
@@ -92,11 +94,14 @@ public sealed class DaggerfallReferenceCatalogTests
                 {
                     JsonObject pack = JsonNode.Parse(bytes)!.AsObject();
                     change(pack);
-                    // The imported payload carries a generated locations section large enough that
-                    // re-indenting the tampered document exceeds Utf8JsonWriter's raw-value envelope
-                    // when the composed reader joins authored and imported sections. Compact JSON has
-                    // the same catalog values and keeps the fixture on the published read path.
-                    bytes = System.Text.Encoding.UTF8.GetBytes(pack.ToJsonString(PublishedJson.SectionCompact));
+                    // Keep the generated locations section in its published form. Re-serializing the
+                    // whole JsonNode expands that value beyond Utf8JsonWriter's raw-value envelope;
+                    // this fixture only changes catalogs, so replace that root value in place.
+                    bytes = System.Text.Encoding.UTF8.GetBytes(TopLevelJsonSectionRewriter.ReplaceOrAppend(
+                        File.ReadAllText(path), new Dictionary<string, string>(StringComparer.Ordinal)
+                        {
+                            ["catalogs"] = pack["catalogs"]!.ToJsonString(PublishedJson.SectionCompact),
+                        }));
                 }
 
                 return new ProductContentFile(System.Text.Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), bytes);
@@ -259,7 +264,32 @@ public sealed class DaggerfallReferenceCatalogTests
     {
         JsonObject pack = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
         change(pack);
-        return Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(pack.ToJsonString())));
+        byte[] payload = pack.ContainsKey("catalogs")
+            ? System.Text.Encoding.UTF8.GetBytes(TopLevelJsonSectionRewriter.ReplaceOrAppend(
+                TestPayload.CombinedText, new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["catalogs"] = pack["catalogs"]!.ToJsonString(PublishedJson.SectionCompact),
+                }))
+            : RemoveTopLevelSection(TestPayload.CombinedText, "catalogs");
+        return Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(payload));
+    }
+
+    private static byte[] RemoveTopLevelSection(string json, string section)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        StringBuilder output = new(json.Length);
+        output.Append('{');
+        bool first = true;
+        foreach (JsonProperty property in document.RootElement.EnumerateObject())
+        {
+            if (property.Name == section) continue;
+            if (!first) output.Append(',');
+            first = false;
+            output.Append(JsonSerializer.Serialize(property.Name)).Append(':').Append(property.Value.GetRawText());
+        }
+
+        output.Append('}');
+        return System.Text.Encoding.UTF8.GetBytes(output.ToString());
     }
 
     private static DaggerfallDefinitions ReadPack() => TestPayload.Definitions;
