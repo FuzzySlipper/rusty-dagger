@@ -148,7 +148,8 @@ public sealed class SourceBackedServiceSessionTests
         Assert.Equal(goldAfterSell, restored.State.Currency.Read().Gold);
         Assert.Contains(restoredMerchant.Stock, value => value.Definition == sold.Definition);
         DaggerfallSavePayload restoredSave = DaggerfallSavePayload.Read(restored.CaptureSave());
-        Assert.Equal(saved.RegionalPrices, restoredSave.RegionalPrices);
+        Assert.Equal(saved.RegionalPrices!.LastAdvancedDay, restoredSave.RegionalPrices!.LastAdvancedDay);
+        Assert.Equal(saved.RegionalPrices.Factors, restoredSave.RegionalPrices.Factors);
         Assert.Contains(restoredSave.Merchants, value => value.Key == merchantSave.Key && value.Quality == merchantSave.Quality);
     }
 
