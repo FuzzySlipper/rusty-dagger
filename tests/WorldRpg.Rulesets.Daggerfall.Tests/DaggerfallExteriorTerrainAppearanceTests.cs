@@ -132,7 +132,9 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         GraphicsDouble graphics = new();
         using DaggerfallExteriorTerrainAppearance appearance = new(graphics);
         DaggerfallTerrainSurface surface = Surface(cell);
-        DaggerfallTerrainSurface environmentSurface = new(cell.X, cell.Y, [], [], new float[129 * 129]);
+        DaggerfallTerrainSurface environmentSurface = new(cell.X, cell.Y,
+            Enumerable.Range(0, 129 * 129).Select(index => new Vector3(index % 129, 0F, index / 129)).ToArray(),
+            [], new float[129 * 129]);
         DaggerfallClimateGridDefinition climate = new(3, 1, [0, 0, 231],
             [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]);
         DaggerfallWorldGridsSet grids = new(climate, new(3, 1, [64, 64, 64], []));
