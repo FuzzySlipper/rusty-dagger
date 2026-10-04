@@ -58,7 +58,7 @@ internal sealed class DaggerfallLocationExteriorBuilder
 
         List<MapsExteriorBuilding> pool = [.. layout.Buildings.Where(building => IsNamedBuilding(building.BuildingType))];
         List<DaggerfallLocationBuilding> buildings = [];
-        byte[] groundTiles = new byte[128 * 128];
+        byte[] groundTiles = Enumerable.Repeat(DaggerfallLocationExterior.GeneratedTerrainBitfield, 128 * 128).ToArray();
         List<string> missingCityBuildings = [];
         int minX = int.MaxValue;
         int minY = int.MaxValue;
@@ -105,8 +105,8 @@ internal sealed class DaggerfallLocationExteriorBuilder
             {
                 // The source array is addressed as [tileX, 15-tileY] by TerrainHelper. Iterating its
                 // stored coordinates and reversing the y coordinate produces the same terrain frame.
-                // Donor TerrainHelper leaves blend-space records (>55) at zero. Zero is the
-                // compact representation for generated terrain and must not be normalized to a
+                // Donor TerrainHelper leaves blend-space records (>55) at zero. The reserved
+                // sentinel represents generated terrain and must not be normalized to a
                 // visible ground archive, which would erase the donor's marching-squares result.
                 if (tile.TextureRecord >= GroundTextureCount) continue;
 
