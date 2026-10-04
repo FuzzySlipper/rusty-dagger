@@ -119,9 +119,13 @@ public sealed class ItemCastTriggerSessionTests
         // Prime the already-running lifecycle before this item is equipped; equip must not reset its beat.
         s.AdvanceElapsedTime(60);
         Equip(s, f.Item); int before = f.Condition;
-        for (int minute = 0; minute < 3; minute++) f.Update(60d / DaggerfallTuning.Defaults.Time.GameSecondsPerRealSecond);
+        // The default tuning advances twelve game seconds per real second. Submit five one-second
+        // admitted updates per game minute so each Engine navigation request stays within its strict
+        // [0.001, 1] second controller contract.
+        for (int minute = 0; minute < 3; minute++)
+            for (int step = 0; step < 5; step++) f.Update(1d);
         Assert.Equal(4, s.State.Effects.MagicRounds); Assert.Equal(before, f.Condition);
-        f.Update(60d / DaggerfallTuning.Defaults.Time.GameSecondsPerRealSecond);
+        for (int step = 0; step < 5; step++) f.Update(1d);
         Assert.Equal(5, s.State.Effects.MagicRounds); Assert.Equal(before - 1, f.Condition);
     }
 
