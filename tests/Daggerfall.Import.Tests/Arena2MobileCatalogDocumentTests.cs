@@ -83,6 +83,10 @@ public sealed class Arena2MobileCatalogDocumentTests
         Assert.Equal(
             "Horse (unused, but can appear in merchant-sold soul traps)",
             mobiles.Single(mobile => mobile!["disposition"]!.GetValue<string>() == "unpublished")!["donorName"]!.GetValue<string>());
+        // EnemyBasics states CanOpenDoors per mobile; the behavior caller consumes this source fact
+        // instead of granting a blanket product ability.
+        Assert.True(mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 1)!["canOpenDoors"]!.GetValue<bool>());
+        Assert.False(mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["canOpenDoors"]!.GetValue<bool>());
         // Every published actor that came from the donor table carries a damage range; an actor with no
         // range here is one the donor gives none, which is a fact a policy task must see.
         List<JsonNode> ranged = [.. mobiles.Where(mobile => mobile!["disposition"]!.GetValue<string>() == "published").Select(mobile => mobile!)];

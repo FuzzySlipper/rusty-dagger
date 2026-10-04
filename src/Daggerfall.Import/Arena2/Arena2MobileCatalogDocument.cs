@@ -36,7 +36,8 @@ public sealed record Arena2MobileTableEntry(
     int Weight,
     string Team,
     bool SeesThroughInvisibility,
-    bool CastsMagic);
+    bool CastsMagic,
+    bool CanOpenDoors);
 
 /// <summary>
 /// Reads the donor's static mobile table. The table is the authority for what a classic mobile is: its
@@ -110,7 +111,8 @@ public static class Arena2MobileTable
                 Number(fields, "Weight"),
                 Last(fields, "Team"),
                 Flag(fields, "SeesThroughInvisibility"),
-                Flag(fields, "CastsMagic")));
+                Flag(fields, "CastsMagic"),
+                Flag(fields, "CanOpenDoors")));
         }
 
         if (entries.Count == 0)
@@ -217,6 +219,7 @@ public static class Arena2MobileCatalogDocument
                 ["identity"] = identity,
                 ["seesThroughInvisibility"] = entry.SeesThroughInvisibility,
                 ["castsMagic"] = entry.CastsMagic,
+                ["canOpenDoors"] = entry.CanOpenDoors,
                 ["actor"] = actor,
                 ["disposition"] = disposition,
                 ["behaviour"] = entry.Behaviour,

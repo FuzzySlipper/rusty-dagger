@@ -35,6 +35,15 @@ public sealed class RmbExteriorNormalizerTests
         Assert.Contains(exterior.Document.Meshes.SelectMany(mesh => mesh.Vertices), point => point.X == 614.4F && point.Y == 0F && point.Z == -614.4F);
         Assert.NotEmpty(exterior.SpatialPublication.Navigation.Cells);
         Assert.Contains(exterior.SpatialPublication.Navigation.Cells, cell => cell.SupportHeight == 0F);
+        Assert.NotEmpty(exterior.Document.World.Population);
+        Assert.InRange(exterior.Document.World.Population.Count, 1, 96);
+        Assert.All(exterior.Document.World.Population, person => Assert.Equal(518, person.FactionId));
+        // The source pool is sampled across the admitted CityNavigation cells. A prefix-only
+        // selection would cluster every civilian in one corner of this 614m city closure.
+        Assert.True(exterior.Document.World.Population.Max(person => person.Position.X)
+            - exterior.Document.World.Population.Min(person => person.Position.X) > 100F);
+        Assert.True(exterior.Document.World.Population.Max(person => person.Position.Z)
+            - exterior.Document.World.Population.Min(person => person.Position.Z) > 100F);
         Assert.Equal(exterior.SpatialPublication.StaticMesh.Bytes.ToArray(), exteriorAgain.SpatialPublication.StaticMesh.Bytes.ToArray());
         Assert.Equal(exterior.SpatialPublication.CollisionNavigation.Bytes.ToArray(), exteriorAgain.SpatialPublication.CollisionNavigation.Bytes.ToArray());
         Assert.Equal("RESIAL05.RMB", interior.Layout.Blocks.Single(block => block.X == 1 && block.Y == 1).SourceName);

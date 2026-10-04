@@ -809,11 +809,18 @@ public sealed record NormalizedPopulationPlacement(
     /// <summary>A deterministic source-placement seed in the runtime's ushort name-seed width.</summary>
     public int NameSeed { get; init; }
 
+    /// <summary>The exterior building slot that supplied this person, or zero for donor dynamic population.</summary>
+    public int SourceBuildingType { get; init; }
+
+    /// <summary>The faction on the supplying exterior building slot, or zero for donor dynamic population.</summary>
+    public int SourceBuildingFactionId { get; init; }
+
     public void Validate()
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         Position.Validate(nameof(Position));
-        if (NameSeed is < 0 or > ushort.MaxValue || BillboardArchive < 0 || BillboardRecord < 0 || FactionId < 0)
+        if (NameSeed is < 0 or > ushort.MaxValue || SourceBuildingType is < 0 or > byte.MaxValue
+            || SourceBuildingFactionId is < 0 or > ushort.MaxValue || BillboardArchive < 0 || BillboardRecord < 0 || FactionId < 0)
             throw new ArgumentOutOfRangeException(nameof(BillboardArchive), "A normalized population placement has an invalid source billboard or faction.");
     }
 }
