@@ -130,11 +130,18 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         DaggerfallExteriorCellId cell = new(1, 0);
         DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
         GraphicsDouble graphics = new();
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics);
-        DaggerfallTerrainSurface surface = Surface(cell);
+        DaggerfallSiteProfile source = TestSessions.MediaInputs();
+        DaggerfallSiteProfile profile = new(source.Project, source.SpatialArtifact, source.StaticMesh,
+            source.WorldAppearance, source.InitialLook, [], new Dictionary<long, NormalizedActorSprite>(),
+            terrainTextures: new Dictionary<(int Archive, int Record), NormalizedTerrainTexture>
+            {
+                [(302, 0)] = new("texture/terrain.png", TestSessions.Hash),
+            });
+        using DaggerfallExteriorTerrainAppearance appearance = new(graphics, profile);
         DaggerfallTerrainSurface environmentSurface = new(cell.X, cell.Y,
             Enumerable.Range(0, 129 * 129).Select(index => new Vector3(index % 129, 0F, index / 129)).ToArray(),
-            [], new float[129 * 129]);
+            [new Triangle(0, 130, 1)], new float[129 * 129]);
+        DaggerfallTerrainSurface surface = environmentSurface;
         DaggerfallClimateGridDefinition climate = new(3, 1, [0, 0, 231],
             [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]);
         DaggerfallWorldGridsSet grids = new(climate, new(3, 1, [64, 64, 64], []));
@@ -156,6 +163,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         appearance.Reconcile([cell], origin, _ => surface, rotated);
         Appearance second = Assert.Single(appearance.BuildFacts()).Appearance;
         Assert.NotSame(first, second);
+        Assert.NotEqual(graphics.MeshRequests[0].Uvs.Span[0], graphics.MeshRequests[1].Uvs.Span[0]);
         Assert.Equal(2, graphics.MeshRequests.Count);
         appearance.Reconcile([cell], origin, _ => surface, rotated);
         Assert.Same(second, Assert.Single(appearance.BuildFacts()).Appearance);
@@ -193,7 +201,8 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         internal int ReleasedMeshes { get; private set; }
         internal int ReleasedAppearances { get; private set; }
 
-        public RenderResourceInfo OpenResource(RenderResourceRequest request) => throw new NotSupportedException();
+        public RenderResourceInfo OpenResource(RenderResourceRequest request) =>
+            new(new RenderResource(new RenderResourceHandle(_nextHandle++), () => Releases.Add("resource")), default, 0);
         public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
         public void PublishChanges(AppearanceChangesRequest request) => throw new NotSupportedException();
         public RenderResourceInfo OpenResourceFromContent(RenderResourceContentRequest request) => throw new NotSupportedException();
