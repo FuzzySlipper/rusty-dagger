@@ -158,6 +158,62 @@ public sealed class DaggerfallDialogueTests
     }
 
     [Fact]
+    public void Same_organization_person_direction_still_uses_person_knowledge_roll()
+    {
+        using ConditionSessionFixture fixture = new();
+        string target = "direction:npc:991";
+        DaggerfallDialogueDestination destination = new(target, "Another person", "here")
+        {
+            SameOrganization = true,
+        };
+        KeyedRandomFake random = KeyedRandomFake.Create(20);
+        TalkTarget talk = new(fixture.Session, fixture.Definitions, random: random.Service, destination: destination);
+        Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
+        string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;
+
+        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: target)).Applied);
+        Assert.Contains(random.Requests, request => request.Key.StartsWith("knowledge:npc:", StringComparison.Ordinal)
+            && request.Key.EndsWith($":topic:{target}", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Same_organization_person_direction_through_live_resolver_still_uses_person_roll()
+    {
+        KeyedRandomFake random = KeyedRandomFake.Create(20);
+        using ConditionSessionFixture fixture = new(random.Service);
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord site = session.Site.ActiveSite
+            ?? throw new InvalidOperationException("The resolver test needs an admitted fixture site.");
+        (int archive, int record) = session.Sites.Projection.Inputs.BillboardSprites.Keys
+            .OrderBy(key => key.Item1).ThenBy(key => key.Item2).First();
+        int faction = fixture.Definitions.Factions.Factions.Keys.Where(id => id > 0).OrderBy(id => id).First();
+
+        long Register(string role)
+        {
+            long id = session.State.Npcs.RegisterCivilian(
+                new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
+                new DaggerfallNpcAppearance("Breton", "Female", archive, record, 0, faction), role, ["talk"]);
+            session.MaterializeNpcActor(id, session.State.Actors.Get(2000).Pose);
+            session.State.Npcs.Place(id, session.Sites.ActiveProfile, session.State.Actors.Get(id).Position);
+            return id;
+        }
+
+        long speakerId = Register("speaker");
+        long targetId = Register("target");
+        DaggerfallActivationTarget speaker = session.Dialogue.NpcTargets()
+            .Single(value => value.Identity.Value == (ulong)speakerId);
+        Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, speaker)).Applied);
+        DaggerfallDialogueView opening = session.ActivationView.Dialogue
+            ?? throw new InvalidOperationException("The resolver test needs an open dialogue.");
+        string topic = $"direction:npc:{targetId}";
+        Assert.Contains(opening.Topics, option => option.Id == topic);
+
+        Assert.True(session.Dialogue.ApplyAction(new("dialogue-topic", Revision: opening.Revision, Topic: topic)).Applied);
+        Assert.Contains(random.Requests, request => request.Key.StartsWith("knowledge:npc:", StringComparison.Ordinal)
+            && request.Key.EndsWith($":topic:{topic}", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Known_site_direction_discloses_once_then_reuses_the_committed_state()
     {
         using ConditionSessionFixture fixture = new();
