@@ -254,7 +254,15 @@ public sealed class SiteAppearanceLifecycleTests
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
         AudioRecorder audio = AudioRecorder.Create();
-        DaggerfallSiteProfile inputs = MediaInputs(audio: [new NormalizedAudioClip("sound.3", "audio/swing.wav", Hash)]);
+        DaggerfallSiteProfile inputs = MediaInputs(audio:
+        [
+            new NormalizedAudioClip("sound.3", "audio/swing.wav", Hash),
+            new NormalizedAudioClip("hit1", "audio/hit.wav", Hash),
+            new NormalizedAudioClip("hit2", "audio/hit2.wav", Hash),
+            new NormalizedAudioClip("hit3", "audio/hit3.wav", Hash),
+            new NormalizedAudioClip("hit4", "audio/hit4.wav", Hash),
+            new NormalizedAudioClip("hit5", "audio/hit5.wav", Hash),
+        ]);
         using DaggerfallSiteAppearance presentation = new(content, appearance, inputs, audio.Service);
 
         presentation.BeginAdmittedUpdate();
