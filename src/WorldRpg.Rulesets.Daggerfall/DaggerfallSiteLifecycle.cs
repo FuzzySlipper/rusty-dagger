@@ -514,7 +514,12 @@ internal sealed class DaggerfallSiteLifecycle
             {
                 _locationLoaded = true;
                 _locationCell = ActiveExteriorCell();
-                UpdateExteriorResidency();
+                // The player pose was translated from the captured destination origin above. The
+                // residency coordinator was cleared while replacing the source artifact, so the
+                // no-argument overload would derive a new At(site) frame and interpret that pose
+                // in the wrong map cell. Re-admit the target window in the same canonical frame.
+                UpdateExteriorResidency(destinationOrigin
+                    ?? throw new InvalidOperationException("An exterior transition did not resolve its destination origin."));
             }
             else
             {
