@@ -44,8 +44,7 @@ internal static class DaggerfallNpcServiceFacts
             services.Add("merchant");
             services.Add("buy-items");
             services.Add("sell-items");
-            services.Add("identify");
-            if (sourceBuildingType is 2 or 9 or 13)
+            if (IsGenericRepairShop(sourceBuildingType))
                 services.Add("repair");
             role = "merchant";
         }
@@ -82,5 +81,7 @@ internal static class DaggerfallNpcServiceFacts
     // Alchemist, Armorer, Bookseller, ClothingStore, FurnitureStore, GemStore, GeneralStore,
     // PawnShop, and WeaponSmith are the merchant shops. This is source-format policy, so it stays
     // in the Daggerfall content resolver rather than the shared Kit or Economy runtime.
+    internal static bool IsGenericRepairShop(int sourceBuildingType) => sourceBuildingType is 2 or 9 or 13;
+
     private static bool IsShop(int sourceBuildingType) => sourceBuildingType is 0 or 2 or 5 or 6 or 7 or 8 or 9 or 12 or 13;
 }
