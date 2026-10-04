@@ -3,6 +3,7 @@ using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Publication;
 using System.Buffers.Binary;
 using System.IO.Compression;
+using System.Text.Json;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -103,6 +104,19 @@ public sealed class SkyMediaPublicationTests
         Assert.Equal(SourceGreen(source, palette, row: SkyMediaPublication.NightHeight - 1), ChannelGreen(panorama, 256, 255));
         Assert.Equal(SourceGreen(source, palette, row: SkyMediaPublication.NightHeight - 1), ChannelGreen(panorama, 256, 256));
         Assert.Equal(SourceGreen(source, palette, row: SkyMediaPublication.NightHeight - 1), ChannelGreen(panorama, 256, SkyMediaPublication.PanoramaHeight - 1));
+    }
+
+    [CorpusFact]
+    public void WritesRuntimeContentHashesAsCanonicalDigestStrings()
+    {
+        byte[] manifest = RealPublication.Value.Artifacts
+            .Single(artifact => artifact.RelativePath == SkyMediaPublication.ManifestRelativePath).Bytes.ToArray();
+        using JsonDocument document = JsonDocument.Parse(manifest);
+        foreach (string section in new[] { "resources", "nightResources", "weatherParticles" })
+        {
+            Assert.All(document.RootElement.GetProperty(section).EnumerateArray(), resource =>
+                Assert.Equal(JsonValueKind.String, resource.GetProperty("contentHash").ValueKind));
+        }
     }
 
     private static SkyMediaPublication CreateRealPublication()
