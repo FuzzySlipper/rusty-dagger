@@ -54,6 +54,23 @@ public sealed class DaggerfallNamesRumorsBiographiesTests
     }
 
     [Fact]
+    public void Loads_the_spoken_world_news_link_from_the_donor_condition_schema()
+    {
+        DaggerfallDefinitions definitions = Definitions();
+
+        Assert.Equal(
+            "daggerfall-unity/Assets/Scripts/Game/Entities/PlayerEntity.cs",
+            definitions.DialogueWorldRules.Source);
+        DaggerfallDialogueWorldNewsRule crimeWave = Assert.Single(definitions.DialogueWorldRules.News);
+        Assert.Equal(11, crimeWave.Type);
+        Assert.Equal(1410, crimeWave.TextId);
+        Assert.Equal(DaggerfallVariableScope.Region, crimeWave.Scope);
+        Assert.Equal([11], crimeWave.VariableKeys);
+        Assert.True(crimeWave.RequiredValue);
+        Assert.Contains("criminals", string.Concat(definitions.Text.Require(new(DaggerfallTextKind.Resource, "1410")).TextRuns), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Loads_eighteen_questionnaires_with_links_and_the_recorded_miss()
     {
         DaggerfallDefinitions definitions = Definitions();

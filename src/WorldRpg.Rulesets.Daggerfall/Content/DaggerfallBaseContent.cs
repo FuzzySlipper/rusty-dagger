@@ -95,6 +95,7 @@ internal static partial class DaggerfallBaseContent
             DaggerfallBuildingNameInputs buildingNames = ReadBuildingNameInputs(root, locations.Regions, diagnostics);
             DaggerfallNameTablesSet names = ReadNameTables(root, text, diagnostics);
             DaggerfallRumorCatalogSet rumors = ReadRumorCatalog(root, text, diagnostics);
+            DaggerfallDialogueWorldRules dialogueWorldRules = ReadDialogueWorldRules(root, text, diagnostics);
             DaggerfallBiographiesSet biographies = ReadBiographies(root, text, diagnostics);
             DaggerfallWorldGridsSet grids = ReadWorldGrids(root, diagnostics);
             DaggerfallBooksSet books = ReadBooks(root, text, diagnostics);
@@ -113,6 +114,7 @@ internal static partial class DaggerfallBaseContent
             {
                 BuildingNames = buildingNames,
                 EnemySpells = enemySpells,
+                DialogueWorldRules = dialogueWorldRules,
                 NewGame = newGame,
             };
         }
@@ -1454,6 +1456,72 @@ internal static partial class DaggerfallBaseContent
         }
 
         return new DaggerfallRumorCatalogSet(entries);
+    }
+
+    /// <summary>
+    /// Reads the authored links for donor-generated regional news. These rows are separate from
+    /// RUMOR.DAT: the donor creates them when region conditions change, then TalkManager reads the
+    /// resulting non-quest rumor. Keeping the links authored makes that source-backed boundary
+    /// explicit instead of pretending those generated rows were imported rumor records.
+    /// </summary>
+    private static DaggerfallDialogueWorldRules ReadDialogueWorldRules(
+        JsonElement root,
+        DaggerfallTextSet text,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("dialogueWorldRules", out JsonElement section))
+            return DaggerfallDialogueWorldRules.Empty;
+
+        section = Object(section, "dialogueWorldRules", diagnostics);
+        string source = Text(section, "source", diagnostics);
+        if (!string.Equals(source, DaggerfallDialogueWorldRules.DonorSource, StringComparison.Ordinal))
+            diagnostics.Add($"Dialogue world rules must retain the PlayerEntity donor citation '{DaggerfallDialogueWorldRules.DonorSource}'.");
+
+        Dictionary<(int Type, int TextId), int[]> expectedRegionKeys = new()
+        {
+            // PlayerEntity marks the condition but emits only this row without the sign flag;
+            // TalkManager therefore admits it in ordinary conversation. Famine, plague,
+            // persecuted-temple and witch-burning rows are sign-only donor resources and stay
+            // out of the spoken-news projection until a sign-reading caller owns them.
+            [(11, 1410)] = [11], // CrimeWave
+        };
+        List<DaggerfallDialogueWorldNewsRule> rules = [];
+        HashSet<(int Type, int TextId)> seen = [];
+        foreach (JsonElement row in Array(section, "news", diagnostics))
+        {
+            int type = Integer(row, "type", diagnostics);
+            int textId = Integer(row, "textId", diagnostics);
+            string scopeName = Text(row, "scope", diagnostics);
+            if (!TryReadName(scopeName, out DaggerfallVariableScope scope))
+                diagnostics.Add($"Dialogue world news {type}/{textId} names unknown variable scope '{scopeName}'.");
+            int[] variableKeys = [.. Array(row, "variableKeys", diagnostics)
+                .Select(value => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out int key) ? key : InvalidWorldVariableKey(diagnostics))];
+            bool requiredValue = Boolean(row, "requiredValue", diagnostics);
+            if (!seen.Add((type, textId)))
+                diagnostics.Add($"Dialogue world news {type}/{textId} is published twice, so one link would be unreachable.");
+            if (scope != DaggerfallVariableScope.Region)
+                diagnostics.Add($"Dialogue world news {type}/{textId} must use a region variable because PlayerEntity emits it from RegionDataFlags.");
+            if (variableKeys.Any(key => key < 0))
+                diagnostics.Add($"Dialogue world news {type}/{textId} names a negative variable key.");
+            if (!expectedRegionKeys.TryGetValue((type, textId), out int[]? expectedKeys)
+                || !expectedKeys.SequenceEqual(variableKeys)
+                || !requiredValue)
+                diagnostics.Add($"Dialogue world news {type}/{textId} does not match the PlayerEntity region-condition mapping.");
+
+            DaggerfallTextKey textKey = new(DaggerfallTextKind.Resource, textId.ToString(CultureInfo.InvariantCulture));
+            if (!text.Values.ContainsKey(textKey))
+                diagnostics.Add($"Dialogue world news {type}/{textId} names text key '{textKey}', which the text section does not carry.");
+
+            rules.Add(new(type, textId, scope, variableKeys, requiredValue));
+        }
+
+        return new DaggerfallDialogueWorldRules(source, System.Array.AsReadOnly(rules.ToArray()));
+    }
+
+    private static int InvalidWorldVariableKey(DaggerfallContentDiagnostics diagnostics)
+    {
+        diagnostics.Add("Dialogue world news variable keys must be integers.");
+        return -1;
     }
 
     /// <summary>

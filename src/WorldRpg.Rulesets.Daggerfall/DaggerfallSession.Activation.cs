@@ -47,7 +47,8 @@ internal sealed partial class DaggerfallSession
             questTopics: State.Quests.DialogueTopics,
             resolveQuestTopic: ResolveQuestTopic,
             calendar: () => _time.Calendar,
-            workAvailable: DialogueWorkAvailable);
+            workAvailable: DialogueWorkAvailable,
+            variables: () => State.Variables);
         _activation = new DaggerfallActivationModule(
             new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),
             reach,
