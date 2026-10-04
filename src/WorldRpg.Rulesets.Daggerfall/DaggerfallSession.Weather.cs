@@ -14,6 +14,9 @@ internal sealed partial class DaggerfallSession
         if (State.PlayerControl.Position is not { } position) return;
         Vector3 player = position.ToVector();
         bool outside = _sites.Projection.Inputs.ProfileKind == Content.DaggerfallWorldProfileKind.Exterior;
+        if (outside)
+            _sites.SetExteriorSeason(_time.Calendar.Season == DaggerfallSeason.Winter
+                ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer);
         bool sheltered = outside && _spatial.CastRay(player + Vector3.UnitY * _tuning.Camera.EyeHeight,
             Vector3.UnitY, _tuning.Ambient.ShelterProbeHeight,
             _sites.Projection.CharacterEnvironment(State.PlayerControl.Motion)).Present;

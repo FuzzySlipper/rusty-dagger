@@ -81,8 +81,9 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             }
             if (_profileKind == DaggerfallWorldProfileKind.Exterior)
             {
-                _sunRequest = SunRequest(calendar, calendar.IsDay ? 1f : 0f);
-                _sun = graphics.CreateLight(_sunRequest);
+                LightRequest sunRequest = SunRequest(calendar, calendar.IsDay ? 1f : 0f);
+                _sunRequest = sunRequest;
+                _sun = graphics.CreateLight(sunRequest);
                 created.Add(_sun);
             }
             _ambient = graphics.CreateLight(AmbientRequest(_ambientLevel));
