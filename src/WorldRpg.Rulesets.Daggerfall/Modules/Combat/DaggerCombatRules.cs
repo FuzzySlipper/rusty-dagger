@@ -399,6 +399,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 
     private bool IsLiveCombatant(long actorId)
     {
+        if (!_actorGameplayActive(actorId)) return false;
         if (actorId == PlayerId) return ! _actors.Player.IsDefeated && _definitions.ContainsKey(actorId);
         return _actors.TryGet(actorId, out ActorState actor) && !actor.IsDefeated && _definitions.ContainsKey(actorId);
     }
