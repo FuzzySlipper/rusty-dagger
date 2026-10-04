@@ -80,6 +80,13 @@ internal sealed class DaggerfallLiveSpell(long sequence, long? casterId, ulong? 
     internal DaggerfallActionCastSource? ActionSource { get; set; } = actionSource;
     internal Vector3? ReleaseOrigin { get; set; } = origin;
     internal Vector3? ReleaseDirection { get; set; } = direction;
+    /// <summary>
+    /// The admitted simulation identity at which this transient release entered the flight owner.
+    /// This is intentionally product timing provenance, not a second clock or a replay log: the
+    /// session uses it to avoid charging a release for slices that happened before it existed.
+    /// </summary>
+    internal ulong? ReleaseGeneration { get; set; }
+    internal ulong? ReleaseSimulationStep { get; set; }
     /// <summary>Elapsed movement time for a transient dungeon missile; reset on admission only.</summary>
     internal double DungeonFlightElapsedSeconds { get; set; }
     internal bool BypassSave => Source == DaggerfallCastSource.ItemHeld || Source == DaggerfallCastSource.ItemUse && Target == DaggerfallSpellTarget.CasterOnly;
@@ -103,11 +110,23 @@ internal sealed class DaggerfallLiveSpell(long sequence, long? casterId, ulong? 
 internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, DaggerfallEffectLifecycle effects,
     Func<long, Actor?> resolveActor, Func<long, DaggerfallMagicTargetProfile> profile,
     Func<ulong, bool> itemAvailable, Action<DaggerfallSkillUse> recordSkill,
-    Action<DaggerfallCastResult> completed, IRandomService random, long playerId, long nextSequence = 1, Func<string, bool>? playerKnowsSpell = null, Func<long, int>? casterLevel = null, Func<long, ulong, bool>? ownsItem = null)
+    Action<DaggerfallCastResult> completed, IRandomService random, long playerId, long nextSequence = 1,
+    Func<string, bool>? playerKnowsSpell = null, Func<long, int>? casterLevel = null,
+    Func<long, ulong, bool>? ownsItem = null, Func<ulong?>? releaseGeneration = null,
+    Func<ulong?>? releaseSimulationStep = null)
 {
     private readonly HashSet<DaggerfallLiveSpell> _pending = [];
     private readonly HashSet<DaggerfallSpellReadiness> _armed = [];
+    private readonly Func<ulong?>? _releaseGeneration = releaseGeneration;
+    private readonly Func<ulong?>? _releaseSimulationStep = releaseSimulationStep;
     private DaggerfallSpellReadiness? Readiness(long id) => resolveActor(id)?.Get<DaggerfallSpellReadiness>();
+
+    private DaggerfallLiveSpell StampRelease(DaggerfallLiveSpell bundle)
+    {
+        bundle.ReleaseGeneration = _releaseGeneration?.Invoke();
+        bundle.ReleaseSimulationStep = _releaseSimulationStep?.Invoke();
+        return bundle;
+    }
     internal void Rebase(Vector3 delta)
     {
         foreach (var bundle in _pending)
@@ -245,7 +264,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         DaggerfallLiveSpell bundle = new(sequence, null, null, spell, 0,
             DaggerfallMagicAdmissionPolicy.CalculateCasterLevel(source.CasterLevel), definitions,
             DaggerfallCastSource.DungeonAction, origin, direction, source, targetOverride);
-        _pending.Add(bundle);
+        _pending.Add(StampRelease(bundle));
         return Finish(DaggerfallCastOutcome.Released, bundle);
     }
 
@@ -381,7 +400,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
             foreach (var effect in spell.Effects)
                 recordSkill(new(catalog.RequireEffectCost(effect).School, DaggerfallSkillUseReason.ReleasedSpellEffect,
                     DaggerfallSkillUseOutcome.Accepted));
-        _pending.Add(bundle);
+        _pending.Add(StampRelease(bundle));
         return publishRelease ? Finish(DaggerfallCastOutcome.Released, bundle) : new(DaggerfallCastOutcome.Released, bundle);
     }
 
