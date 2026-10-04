@@ -189,6 +189,8 @@ tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/inte
 # the ruleset can admit the people and their explicit catalog services at the real interior site.
 # Their exterior profiles are generated beside them; the world admission path owns the canonical
 # source door identity used to enter each selected building.
+tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-2-1-0 \
+  --source-manifest "$site_records/charing-general-store-interior.sources.json" --region 17 --location Charing --location-index 4 --profile interior --block-x 2 --block-y 1 --building 0
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-3-4-0 \
   --source-manifest "$site_records/charing-mages-interior.sources.json" --region 17 --location Charing --location-index 4 --profile interior --block-x 3 --block-y 4 --building 0
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-3-1-13 \

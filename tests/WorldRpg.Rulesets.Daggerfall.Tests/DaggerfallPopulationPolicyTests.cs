@@ -46,7 +46,7 @@ public sealed class DaggerfallPopulationPolicyTests
         Assert.Contains("buy-items", services);
         Assert.Contains("sell-items", services);
         Assert.Contains("repair", services);
-        Assert.Contains("identify", services);
+        Assert.DoesNotContain("identify", services);
     }
 
     private static DaggerfallSiteRecord Site(int blockCount)
