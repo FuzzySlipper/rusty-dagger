@@ -93,6 +93,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                         ("key", builder.String(offer.Key)), ("name", builder.String(offer.Name)),
                         ("castingCost", builder.Number(offer.CastingCost)), ("price", builder.Number(checked((long)offer.Price))),
                         ("known", builder.Boolean(offer.Known)))).ToArray())))),
+                ("potionMaker", frame.Spells.PotionMaker is not { } potionMaker ? builder.Null() : PotionMaker(builder, potionMaker)),
                 ("information", frame.Spells.Information is not { } information ? builder.Null() : builder.Object(
                     ("key", builder.String(information.Key)), ("name", builder.String(information.Name)),
                     ("element", builder.Number(information.Element)), ("target", builder.String(information.Target)),
@@ -311,12 +312,21 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("maximumValue", builder.Number(skill.MaximumValue)))).ToArray())))),
         ("diagnostics", builder.Array(dialogue.Diagnostics.Select(builder.String).ToArray())));
 
+    private static uint PotionMaker(UiValueBuilder builder, DaggerfallPotionMakerView maker) => builder.Object(
+        ("revision", builder.String(maker.Revision)), ("provider", builder.String(maker.Provider)), ("eligible", builder.Boolean(maker.Eligible)),
+        ("ingredients", builder.Array(maker.Ingredients.Select(value => builder.Object(
+            ("template", builder.Number(value.Template)), ("name", builder.String(value.Name)), ("quantity", builder.Number(checked((long)value.Quantity))))).ToArray())),
+        ("recipes", builder.Array(maker.Recipes.Select(value => builder.Object(
+            ("key", builder.Number(value.Key)), ("name", builder.String(value.Name)), ("available", builder.Boolean(value.Available)),
+            ("ingredients", builder.Array(value.Ingredients.Select(item => builder.Number(item)).ToArray())))).ToArray())));
+
     private static uint Merchant(UiValueBuilder builder, DaggerfallMerchantView merchant) => builder.Object(
         ("revision", builder.String(merchant.Revision)),
         ("provider", builder.String(merchant.Provider)),
         ("quality", builder.Number(merchant.Quality)),
         ("gold", builder.String(merchant.PlayerGold.ToString(CultureInfo.InvariantCulture))),
         ("buyAvailable", builder.Boolean(merchant.CanBuy)),
+        ("shopliftAvailable", builder.Boolean(merchant.CanShoplift)),
         ("sellAvailable", builder.Boolean(merchant.CanSell)),
         ("repairAvailable", builder.Boolean(merchant.CanRepair)),
         ("identifyAvailable", builder.Boolean(merchant.CanIdentify)),

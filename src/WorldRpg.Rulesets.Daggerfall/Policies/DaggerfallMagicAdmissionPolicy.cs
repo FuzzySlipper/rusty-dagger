@@ -386,9 +386,11 @@ internal static class DaggerfallMagicAdmissionPolicy
     internal static int CalculateEffectDuration(DaggerfallSpellEffectDefinition settings, int level) => checked(
         settings.DurationBase + settings.DurationMod * Math.Max(1, level / Math.Max(1, settings.DurationPerLevel)));
 
-    internal static int RollEffectMagnitude(DaggerfallSpellEffectDefinition settings, int level, Func<int, int, int> roll) => checked(
-        roll(settings.MagnitudeBaseLow, settings.MagnitudeBaseHigh)
-        + roll(settings.MagnitudeLevelBase, settings.MagnitudeLevelHigh) * (level / Math.Max(1, settings.MagnitudePerLevel)));
+    internal static int RollEffectMagnitude(DaggerfallSpellEffectDefinition settings, int level, Func<int, int, int> roll) =>
+        RollEffectMagnitude(settings.MagnitudeBaseLow, settings.MagnitudeBaseHigh, settings.MagnitudeLevelBase, settings.MagnitudeLevelHigh, settings.MagnitudePerLevel, level, roll);
+
+    internal static int RollEffectMagnitude(int baseLow, int baseHigh, int levelLow, int levelHigh, int perLevel, int level, Func<int, int, int> roll) => checked(
+        roll(baseLow, baseHigh) + roll(levelLow, levelHigh) * (level / Math.Max(1, perLevel)));
 
     private static readonly IReadOnlyDictionary<string, int> EmptySkills = new Dictionary<string, int>(StringComparer.Ordinal);
 

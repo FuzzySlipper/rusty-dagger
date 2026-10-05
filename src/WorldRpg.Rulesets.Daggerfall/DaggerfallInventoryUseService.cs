@@ -17,7 +17,7 @@ internal sealed record DaggerfallInventoryUseResult(bool Applied, string Message
 
 /// <summary>
 /// Daggerfall item-use policy over the existing Engine inventory and site owners. Map use is complete
-/// here; book, potion, and enchantment payloads retain their named receiving owners until they exist.
+/// here; book, potion, and enchantment payloads delegate to their named session owners.
 /// </summary>
 internal sealed class DaggerfallInventoryUseService(
     MechanicsInventoryCoordinator inventory,
@@ -33,7 +33,8 @@ internal sealed class DaggerfallInventoryUseService(
     Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useSanguineRose = null,
     Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useSkullCorruption = null,
     Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useItemSpell = null,
-    Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useAzurasStar = null)
+    Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useAzurasStar = null,
+    Func<int, DaggerfallInventoryUseResult>? usePotion = null)
 {
     private const int FirstDrugTemplate = 78;
     private const int LastDrugTemplate = 81;
@@ -132,8 +133,13 @@ internal sealed class DaggerfallInventoryUseService(
             DaggerfallReadableBook book = notebook.Open(bookId);
             return new(true, $"Reading {book.Title}.", OpenedBook: book);
         }
-        if (metadata.PotionRecipeKey is not null)
-            return new(false, "Potion effects are not available yet.", DaggerfallInventoryUseReceiver.PotionConsumption);
+        if (metadata.PotionRecipeKey is int recipe)
+        {
+            if (Template(itemId) != 83) return new(false, "Read the recipe to see its ingredients; it cannot be drunk.");
+            var result = usePotion?.Invoke(recipe) ?? new(false, "Potion consumption is unavailable.", DaggerfallInventoryUseReceiver.PotionConsumption);
+            if (result.Applied) consume(); // The source delivers the complete self-targeted payload before removing one dose.
+            return result;
+        }
         if (Template(itemId) is int template and (>= FirstDrugTemplate and <= LastDrugTemplate))
         {
             // A drug is taken, not applied: the dose is consumed whatever it does to the taker, and what it

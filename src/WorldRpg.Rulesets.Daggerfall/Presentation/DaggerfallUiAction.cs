@@ -20,7 +20,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
 /// <summary>Every player action the <c>dagger.ui.action.v1</c> contract carries, by meaning.</summary>
 internal enum DaggerfallUiActionKind
 {
-    Begin, CinematicSkip, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellMakerDraft, SpellMakerBuy,
+    Begin, CinematicSkip, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellMakerDraft, SpellMakerBuy, PotionMix,
     ControlsRebind, ControlsReset,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
@@ -160,6 +160,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.SpellReady,"spell-ready",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SpellUnready,"spell-unready",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SpellCast,"spell-cast",DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.PotionMix,"potion-mix",DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.SpellMakerDraft,"spellmaker-draft",DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.SpellMakerBuy,"spellmaker-buy",DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.SpellBuy,"spell-buy",DaggerfallUiPhases.Interaction),
@@ -394,7 +395,7 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "revision", "note", "destination"]) && !string.IsNullOrWhiteSpace(revision)
                     && !string.IsNullOrWhiteSpace(note) && destination is >= 0
                     ? new(action, Revision: revision, Note: note, Destination: destination) : null;
-            if (action == "spellmaker-draft")
+            if (action is "spellmaker-draft" or "potion-mix")
                 return fields.SetEquals(["action", "revision", "text"]) && !string.IsNullOrWhiteSpace(revision)
                     && text is { Length: > 0 and <= 3000 }
                     ? new(action, Revision: revision, Text: text) : null;

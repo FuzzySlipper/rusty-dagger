@@ -67,7 +67,7 @@ internal sealed record DaggerfallCastResult(DaggerfallCastOutcome Outcome, Dagge
 internal sealed record DaggerfallCastEffectResult(int EffectIndex, long? TargetId, DaggerfallCastOutcome Outcome,
     int SavePercent = 100, string? Instance = null);
 internal sealed record DaggerfallSpellAbsorptionResult(long TargetId, int AdmittedSpellPoints, double RestoredSpellPoints, ulong[] SourceItems);
-internal enum DaggerfallCastSource { Spell, ItemUse, ItemHeld, ItemStrike, DungeonAction }
+internal enum DaggerfallCastSource { Spell, ItemUse, ItemHeld, ItemStrike, DungeonAction, Potion }
 internal sealed record DaggerfallReadySpell(string SpellKey, ulong? ItemId, int Cost, DaggerfallCastSource Source);
 internal sealed class DaggerfallSpellReadiness { internal DaggerfallReadySpell? Ready { get; set; } }
 
@@ -89,8 +89,8 @@ internal sealed class DaggerfallLiveSpell(long sequence, long? casterId, ulong? 
     internal ulong? ReleaseSimulationStep { get; set; }
     /// <summary>Elapsed movement time for a transient dungeon missile; reset on admission only.</summary>
     internal double DungeonFlightElapsedSeconds { get; set; }
-    internal bool BypassSave => Source == DaggerfallCastSource.ItemHeld || Source == DaggerfallCastSource.ItemUse && Target == DaggerfallSpellTarget.CasterOnly;
-    internal bool BypassChance => Source == DaggerfallCastSource.ItemUse && Target == DaggerfallSpellTarget.CasterOnly;
+    internal bool BypassSave => Source is DaggerfallCastSource.Potion or DaggerfallCastSource.ItemHeld || Source == DaggerfallCastSource.ItemUse && Target == DaggerfallSpellTarget.CasterOnly;
+    internal bool BypassChance => Source == DaggerfallCastSource.Potion || Source == DaggerfallCastSource.ItemUse && Target == DaggerfallSpellTarget.CasterOnly;
     internal long Sequence { get; } = sequence;
     internal long? CasterId { get; } = casterId;
     internal ulong? ItemId { get; } = itemId;
@@ -107,7 +107,7 @@ internal sealed class DaggerfallLiveSpell(long sequence, long? casterId, ulong? 
 }
 
 /// <summary>Ruleset casting coordination over canonical actors, costs, effects, draws and facts.</summary>
-internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, DaggerfallEffectLifecycle effects,
+internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, DaggerfallEffectLifecycle effects,
     Func<long, Actor?> resolveActor, Func<long, DaggerfallMagicTargetProfile> profile,
     Func<ulong, bool> itemAvailable, Action<DaggerfallSkillUse> recordSkill,
     Action<DaggerfallCastResult> completed, IRandomService random, long playerId, long nextSequence = 1,
@@ -474,7 +474,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 || binding.IsParalysis && liveProfile.CareerTolerances.Paralysis == DaggerfallMagicTolerance.Immune;
             DaggerfallCastOutcome outcome;
             if (hardImmune) outcome = DaggerfallCastOutcome.Immune;
-            else if (bundle.Source != DaggerfallCastSource.ItemHeld && catalog.RequireEffectCost(setting).School == "destruction" && defense.AbsorptionChance > 0
+            else if (bundle.Source is not (DaggerfallCastSource.ItemHeld or DaggerfallCastSource.Potion) && catalog.RequireEffectCost(setting).School == "destruction" && defense.AbsorptionChance > 0
                 && stats.TryGetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), out var magicka)
                 && AbsorptionCost(target, bundle, setting) is int refund && magicka.Current + absorbed + refund <= magicka.Maximum.Value
                 && (defense.AbsorptionItems is { Length: > 0 } || roll(1, 100) <= defense.AbsorptionChance))
@@ -497,7 +497,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 liveProfile = liveProfile with { ActiveResistances = [] };
                 string instance = $"cast.{bundle.Sequence}.{targetId}.{i}.{(reflected ? "reflected" : "direct")}";
                 var bundleKind = bundle.Source == DaggerfallCastSource.ItemHeld && !binding.UntilHealed
-                    ? DaggerfallEffectBundleKind.HeldMagicItem : DaggerfallEffectBundleKind.Spell;
+                    ? DaggerfallEffectBundleKind.HeldMagicItem : bundle.Source == DaggerfallCastSource.Potion ? DaggerfallEffectBundleKind.Potion : DaggerfallEffectBundleKind.Spell;
                 uint? baseDuration = bundle.Source == DaggerfallCastSource.ItemHeld || binding.UntilHealed || binding.UntilTriggered ? null : binding.SupportsDuration ? checked((uint)Math.Max(1,
                     DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting, bundle.CasterLevel))) : 1u;
                 // Permanent attribute damage rolls its incoming payload/save even when an incumbent exists.
@@ -516,7 +516,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 var preliminaryState = new DaggerfallCastEffectState(setting, bundle.CasterLevel, permanentAmount, permanentPercent, origin);
                 JsonElement preliminary = binding.CreateState?.Invoke(preliminaryState)
                     ?? JsonSerializer.SerializeToElement(preliminaryState, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
-                if (effects.TryAdmitIncumbent(new(instance, definition.Key, $"spell.{bundle.Spell.Key}", operationalCaster,
+                if (effects.TryAdmitIncumbent(new(instance, definition.Key, bundle.Source == DaggerfallCastSource.Potion ? bundle.Spell.Key : $"spell.{bundle.Spell.Key}", operationalCaster,
                     targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, baseDuration, preliminary) { BundleKind = bundleKind, BundleId = $"cast.{bundle.Sequence}", BundleSequence = bundle.Sequence, BundleName = bundle.Spell.Name }, out var incumbent,
                     () =>
                     {
@@ -542,7 +542,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
                 var state = new DaggerfallCastEffectState(setting, bundle.CasterLevel, amount, percent, origin);
                 JsonElement payload = binding.CreateState?.Invoke(state)
                     ?? JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
-                var admission = effects.Start(new(instance, definition.Key, $"spell.{bundle.Spell.Key}", operationalCaster,
+                var admission = effects.Start(new(instance, definition.Key, bundle.Source == DaggerfallCastSource.Potion ? bundle.Spell.Key : $"spell.{bundle.Spell.Key}", operationalCaster,
                     targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, duration, payload) { BundleId = $"cast.{bundle.Sequence}", BundleSequence = bundle.Sequence, BundleName = bundle.Spell.Name, BundleKind = bundleKind });
                 outcome = admission switch
                 {

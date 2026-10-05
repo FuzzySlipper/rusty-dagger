@@ -1,4 +1,5 @@
 {
+  "legal": null,
   "dispel": null,
   "detectors": [],
   "identify": null,
@@ -7,6 +8,7 @@
     "ready": null,
     "result": "",
     "sale": null,
+    "potionMaker": null,
     "information": null
   },
   "resources": [
@@ -1278,6 +1280,7 @@
       "gender": "male",
       "faceIndex": 0,
       "career": "class00",
+      "racialOverride": null,
       "media": [
         {
           "layer": "background",
