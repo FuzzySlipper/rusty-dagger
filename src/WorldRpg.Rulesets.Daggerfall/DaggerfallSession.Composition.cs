@@ -495,6 +495,7 @@ internal sealed partial class DaggerfallSession
                     State.Quests.UseItem(State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(new(item.EntityId)).Value));
             };
             State.Quests.BindClickGold(amount => State.Currency.TrySpendGold(amount, []));
+            State.Quests.BindSocial(State.Social, State.Crime, () => _site.Region);
             State.Quests.BindWorldRead(() => _sites.ReadQuestLocation());
             State.Quests.BindWorldActions(ApplyQuestWorldAction);
             _inventoryUi.BindQuestDrops(State.Quests.CanDropItem, State.Quests.ItemDropped);

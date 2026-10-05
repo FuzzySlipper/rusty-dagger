@@ -142,6 +142,7 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
     public DaggerfallQuestPlacementOperation[] Placements { get; init; } = [];
     /// <summary>The optional Daggerfall faction supplied by a quest giver; zero is the donor's unscoped value.</summary>
     public int FactionId { get; init; }
+    public bool FactionSettled { get; init; }
     /// <summary>The explicit canonical quest giver, supplied by the accepting dialogue/service caller.</summary>
     public long? QuestorId { get; init; }
     /// <summary>The quest that invoked this child, if this was started by a run-quest operation.</summary>
@@ -170,6 +171,7 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             throw new ArgumentException($"Quest instance '{InstanceId}' has an incompatible pending end.");
         if (TerminalMessageId is < 0 || (TerminalMessageId is not null && Lifecycle != DaggerfallQuestLifecycle.Ended && PendingEndPasses == 0))
             throw new ArgumentException($"Quest instance '{InstanceId}' has an incompatible terminal message.");
+        if (FactionSettled && Lifecycle == DaggerfallQuestLifecycle.Active) throw new ArgumentException("An active quest cannot have settled its terminal faction reputation.");
         HashSet<string> resources = [];
         foreach (DaggerfallQuestResourceState resource in Resources)
         {
@@ -255,6 +257,8 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ValidateShape();
+        if (FactionId != 0 && !definitions.Factions.Factions.ContainsKey(FactionId))
+            throw new ArgumentException($"Quest instance '{InstanceId}' refers to unknown faction {FactionId}.");
         if (!definitions.QuestSources.Quests.TryGetValue(SourceFile, out DaggerfallQuestSourceDefinition? definition))
             throw new ArgumentException($"Quest instance '{InstanceId}' refers to missing definition '{SourceFile}'.");
         if (definition.Disposition != DaggerfallQuestDisposition.Compiled)
@@ -388,6 +392,8 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
         }
         foreach (DaggerfallQuestStartSave start in PendingStarts)
         {
+            if (start.FactionId != 0 && !definitions.Factions.Factions.ContainsKey(start.FactionId))
+                throw new ArgumentException($"Pending quest start '{start.InstanceId}' refers to unknown faction {start.FactionId}.");
             if (!definitions.QuestSources.Quests.TryGetValue(start.SourceFile, out DaggerfallQuestSourceDefinition? source)
                 || source.Disposition != DaggerfallQuestDisposition.Compiled)
                 throw new ArgumentException($"Pending quest start '{start.InstanceId}' refers to unavailable source '{start.SourceFile}'.");
@@ -513,6 +519,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         TerminalMessageId = saved.TerminalMessageId;
         PendingEndPasses = saved.PendingEndPasses;
         FactionId = saved.FactionId;
+        FactionSettled = saved.FactionSettled;
         QuestorId = saved.QuestorId;
         ParentInstanceId = saved.ParentInstanceId;
         Succeeded = saved.Succeeded;
@@ -533,6 +540,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
     internal int? TerminalMessageId { get; set; }
     internal int PendingEndPasses { get; set; }
     internal int FactionId { get; }
+    internal bool FactionSettled { get; set; }
     internal long? QuestorId { get; }
     internal string? ParentInstanceId { get; }
     internal bool? Succeeded { get; set; }
@@ -574,6 +582,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         Tasks = [.. Tasks.Select(task => task.Capture())],
         Clocks = [.. Clocks],
         FactionId = FactionId,
+        FactionSettled = FactionSettled,
         QuestorId = QuestorId,
         Placements = [.. Placements],
         ParentInstanceId = ParentInstanceId,
@@ -1002,6 +1011,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         instance.Succeeded = lifecycle == DaggerfallQuestLifecycle.Completed;
         instance.PendingEndPasses = 0;
         instance.TerminalMessageId = null;
+        SettleFaction(instance);
         ClearWorldLinks(instance);
         ValidateRuntime(instance);
         return instance.Capture();
@@ -1118,7 +1128,8 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
 
     private void ScheduleStart(string sourceFile, string? parentInstanceId, int factionId, string instanceId, long? questorId)
     {
-        if (factionId < 0) throw new ArgumentOutOfRangeException(nameof(factionId));
+        if (factionId < 0 || factionId != 0 && !_definitions.Factions.Factions.ContainsKey(factionId))
+            throw new ArgumentOutOfRangeException(nameof(factionId), $"Unknown quest faction {factionId}.");
         if (_instances.ContainsKey(instanceId) || _pendingStarts.ContainsKey(instanceId)) return;
         _pendingStarts.Add(instanceId, new(instanceId, sourceFile, parentInstanceId, factionId) { QuestorId = questorId });
     }
@@ -1144,6 +1155,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values)
             if (instance.Lifecycle is DaggerfallQuestLifecycle.Completed or DaggerfallQuestLifecycle.Failed or DaggerfallQuestLifecycle.Ended)
             {
+                SettleFaction(instance);
                 Messages.RetainJournal(instance, _textContext);
                 instance.PendingEndPasses = 0;
                 instance.TerminalMessageId = null;
@@ -1244,7 +1256,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 DaggerfallQuestTaskOperation operation = task.Operations[operationIndex];
                 DaggerfallQuestTaskOperationState receipt = state.OperationState[operationIndex];
                 if (receipt.UnavailableReason is { } reason && (string.IsNullOrWhiteSpace(reason)
-                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.WorldUpdate or DaggerfallQuestTaskOperationKind.AddDialog or DaggerfallQuestTaskOperationKind.DialogLink or DaggerfallQuestTaskOperationKind.TeleportPlace or DaggerfallQuestTaskOperationKind.RevealPlace or DaggerfallQuestTaskOperationKind.GiveItem or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
+                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.ChangeRepute or DaggerfallQuestTaskOperationKind.LegalRepute or DaggerfallQuestTaskOperationKind.SetCrime or DaggerfallQuestTaskOperationKind.ReputeExceeds or DaggerfallQuestTaskOperationKind.WhenRepute or DaggerfallQuestTaskOperationKind.WorldUpdate or DaggerfallQuestTaskOperationKind.AddDialog or DaggerfallQuestTaskOperationKind.DialogLink or DaggerfallQuestTaskOperationKind.TeleportPlace or DaggerfallQuestTaskOperationKind.RevealPlace or DaggerfallQuestTaskOperationKind.GiveItem or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
                     throw new ArgumentException("Quest unsupported world detail must identify its owning action.");
                 if (receipt.ItemDropped && operation.Kind != DaggerfallQuestTaskOperationKind.DroppedAt)
                     throw new ArgumentException("Quest drop state must belong to a drop trigger.");
