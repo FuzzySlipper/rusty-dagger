@@ -266,6 +266,8 @@ internal sealed partial class DaggerfallSession
             partiallyConstructed.Add(Infections);
             Infections.BindConsumer(this);
             partiallyConstructed.Add(effects);
+            if (composition.Effects is null)
+                foreach (var recipe in definitions.Magic.PotionRecipes.Values) recipe.ValidateEffects(effects.Catalog);
             _rewards = new DaggerfallRewardReactions(
                 progression,
                 playerStats,

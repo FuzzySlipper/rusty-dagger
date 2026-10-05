@@ -229,7 +229,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         return readable[Draw(request.Key + ".book", 0, readable.Length - 1)].BookId;
     }
 
-    private static int? SelectPotionRecipe(DaggerfallItemTemplateDefinition template, DaggerfallItemCreateRequest request)
+    private int? SelectPotionRecipe(DaggerfallItemTemplateDefinition template, DaggerfallItemCreateRequest request)
     {
         if (template.Index is not (83 or 278))
         {
@@ -237,7 +237,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
                 throw new ArgumentException($"Template {template.Index} is not a potion or potion recipe.", nameof(request));
             return null;
         }
-        if (request.PotionRecipeKey is not int recipe || !DaggerfallLootPolicy.IsClassicPotionRecipeKey(recipe))
+        if (request.PotionRecipeKey is not int recipe || !_definitions.Magic.PotionRecipes.ContainsKey(recipe))
             throw new ArgumentException($"Template {template.Index} requires one retained classic potion recipe identity.", nameof(request));
         return recipe;
     }

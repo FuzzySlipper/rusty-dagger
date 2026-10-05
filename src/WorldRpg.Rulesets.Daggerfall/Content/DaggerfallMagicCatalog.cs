@@ -180,6 +180,14 @@ internal sealed record DaggerfallMagicCatalogSet(
     IReadOnlyDictionary<(int Type, int SubType), DaggerfallMagicEffectCostDefinition> EffectCosts,
     IReadOnlyDictionary<string, DaggerfallEnchantmentSetting> EnchantmentSettings)
 {
+    internal IReadOnlyDictionary<int, DaggerfallPotionRecipeDefinition> PotionRecipes { get; init; } = new Dictionary<int, DaggerfallPotionRecipeDefinition>();
+    internal int[] ClassicPotionRecipeKeys => [.. PotionRecipes.Values.OrderBy(recipe => recipe.ClassicIndex).Select(recipe => recipe.Key)];
+    internal int ChoosePotionRecipe(Func<int, int, int> draw)
+    {
+        var keys = ClassicPotionRecipeKeys;
+        if (keys.Length == 0) throw new InvalidOperationException("The content publishes no potion recipes.");
+        return keys[draw(0, keys.Length - 1)];
+    }
     private Dictionary<string, DaggerfallSpellDefinition>? _sessionSpells;
 
     internal DaggerfallMagicCatalogSet ForSession(IReadOnlyList<DaggerfallSpellDefinition> constructed)

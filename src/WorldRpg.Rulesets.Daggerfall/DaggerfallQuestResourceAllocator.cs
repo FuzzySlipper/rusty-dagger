@@ -86,7 +86,7 @@ internal sealed class DaggerfallQuestResourceAllocator(
                 }
                 bool clothing = groupId is 6 or 12;
                 int? potion = template is 83 or 278
-                    ? options.Key ?? DaggerfallLootPolicy.ChooseClassicPotionRecipe((low, high) => Draw(key + "/recipe", low, high)) : null;
+                    ? options.Key ?? definitions.Magic.ChoosePotionRecipe((low, high) => Draw(key + "/recipe", low, high)) : null;
                 request = new(group.Name, key, DaggerfallItemOwner.Player, Quantity: 1, TemplateIndex: template, Variant: 0,
                     Material: groupId == 2 ? "leather" : groupId == 3 && template != 131 ? "iron" : null, Level: context.Level,
                     Race: clothing || groupId == 2 ? context.Race : null,
