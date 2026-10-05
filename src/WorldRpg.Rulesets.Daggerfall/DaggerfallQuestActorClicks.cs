@@ -25,17 +25,17 @@ internal sealed partial class DaggerfallQuestInstances
     private readonly HashSet<(string Instance, string Symbol)> _pendingClickRearms = [];
     internal void BindClickGold(Func<ulong, bool> spend) => _spendClickGold = spend;
     internal bool IsClickableActor(long actor) => _instances.Values.Any(instance => instance.Lifecycle == DaggerfallQuestLifecycle.Active
-        && instance.Resources.Any(resource => (resource.SelectedFoe is not null || resource.SelectedPerson is not null) && !resource.IsHidden && resource.Binding.ActorIds.Contains(actor)
+        && instance.Resources.Any(resource => (resource.SelectedFoe is not null || resource.SelectedPerson is not null) && !resource.IsHidden && !resource.IsNpcDestroyed && resource.Binding.ActorIds.Contains(actor)
             && !resource.DefeatedFoeIds.Contains(actor) && !resource.RemovedFoeIds.Contains(actor)));
 
     /// <summary>The admitted target interaction supplies durable actor identity after live-entity validation.</summary>
     internal bool ActorClicked(long actor)
     {
-        bool handled = false;
+        bool handled = ObserveAvailableNpcClick(actor);
         foreach (var instance in _instances.Values.Where(value => value.Lifecycle == DaggerfallQuestLifecycle.Active))
         {
             var program = Program(instance.SourceFile);
-            foreach (var resource in instance.Resources.Where(value => !value.IsHidden && value.Binding.ActorIds.Contains(actor)
+            foreach (var resource in instance.Resources.Where(value => !value.IsHidden && !value.IsNpcDestroyed && value.Binding.ActorIds.Contains(actor)
                 && (value.SelectedPerson is not null || value.SelectedFoe is not null)).ToArray())
             {
                 SetResource(instance.InstanceId, resource with { HasPlayerClicked = true });
@@ -53,7 +53,7 @@ internal sealed partial class DaggerfallQuestInstances
     {
         var resource = instance.Resources.SingleOrDefault(value => DaggerfallQuestInstanceSave.Canonical(value.Symbol, "clicked resource") == operation.Targets[0]);
         bool correctKind = operation.Kind == DaggerfallQuestTaskOperationKind.ClickedNpc ? resource?.SelectedPerson is not null : resource?.SelectedFoe is not null;
-        if (!correctKind || resource is null || resource.IsHidden || !resource.HasPlayerClicked) return new(false);
+        if (!correctKind || resource is null || resource.IsHidden || resource.IsNpcDestroyed || !resource.HasPlayerClicked) return new(false);
         int? message = null;
         if (operation.MessageId is > 0 || operation.MessageAlias is not null)
         {

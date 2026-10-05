@@ -334,7 +334,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     internal void Publish(ActorsState actors, IReadOnlyDictionary<long, DaggerfallGroundContainer> groundContainers,
         IReadOnlyList<DaggerfallRangedFlightView>? rangedFlights = null, float arrowHeight = 0f,
         Func<long, DaggerfallPerceptionEffectState>? perception = null, IReadOnlyList<DaggerfallNpcView>? npcs = null,
-        IReadOnlyList<DaggerfallDungeonSpellFlightView>? dungeonSpellFlights = null)
+        IReadOnlyList<DaggerfallDungeonSpellFlightView>? dungeonSpellFlights = null, Func<long, bool>? actorActive = null)
     {
         if (disposed) return;
         ReconcileGroundVisuals(groundContainers);
@@ -358,7 +358,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             if (!this.actors.TryGetValue(actor.DurableId, out ActorVisual? visual)) continue;
             Appearance? chosen = actor.IsDefeated ? visual.Corpse : visual.Live;
             if (chosen is not null) facts.Add(new AppearanceFact(checked((ulong)actor.DurableId), false, 0, new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), chosen,
-                actor.IsDefeated || perception?.Invoke(actor.DurableId).Invisible != true, RenderLayer.Scene));
+                actorActive?.Invoke(actor.DurableId) != false && (actor.IsDefeated || perception?.Invoke(actor.DurableId).Invisible != true), RenderLayer.Scene));
         }
         foreach (DaggerfallGroundContainer container in groundContainers.Values.OrderBy(container => container.Id))
         {

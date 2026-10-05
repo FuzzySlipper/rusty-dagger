@@ -293,7 +293,7 @@ public sealed class StaticNpcAdmissionTests
         Assert.DoesNotContain("banking", placements.Single(value => value.Appearance.FactionId == 801).Services);
     }
 
-    private static DaggerfallSiteProfile StaticProviderSite(DaggerfallSiteProfile source, int placementCount = 1)
+    internal static DaggerfallSiteProfile StaticProviderSite(DaggerfallSiteProfile source, int placementCount = 1, int factionId = 60)
     {
         if (placementCount is < 1 or > 2) throw new ArgumentOutOfRangeException(nameof(placementCount));
         NormalizedActorSprite mobile = source.MobileSprites.Values.First();
@@ -310,7 +310,7 @@ public sealed class StaticNpcAdmissionTests
         };
         DaggerfallStaticNpcPlacement[] placements = Enumerable.Range(0, placementCount).Select(index => new DaggerfallStaticNpcPlacement(
             $"person/{index}", new WorldPoint(1F + index, 1F, 1F),
-            new("breton", "Male", archive, record, 123 + index, 60),
+            new("breton", "Male", archive, record, 123 + index, index == 0 ? factionId : 60),
             "spell seller", ["talk", "buy-spells"],
             new(mobile.TexturePath, mobile.TextureSha256, mobile.AtlasWidth, mobile.AtlasHeight,
                 mobile.Frames, mobile.InitialFrameId, mobile.Pivot, mobile.Size))).ToArray();

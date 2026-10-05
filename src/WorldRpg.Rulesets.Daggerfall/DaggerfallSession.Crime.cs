@@ -88,7 +88,7 @@ internal sealed partial class DaggerfallSession
     {
         var npc = State.Npcs.All.SingleOrDefault(value => value.DurableId == actorId);
         if (npc is not null) return npc.Kind == DaggerfallNpcKind.Civilian
-            && npc.Presence == DaggerfallNpcPresence.Active
+            && State.Npcs.IsGameplayActive(npc.DurableId)
             && npc.Site.Region == _site.Region && npc.Site.Location == _site.ActiveSite?.Name;
         return _roster.Definitions.TryGetValue(actorId, out var definition)
             && definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass;
@@ -101,7 +101,7 @@ internal sealed partial class DaggerfallSession
     {
         if (State.PlayerControl.Position is not WorldPoint player) return DaggerfallCrimeWitnessEvidence.NotQueried;
         var observers = State.Actors.All.Where(actor => !actor.IsDefeated && actor.DurableId != DaggerfallActorIdentity.PlayerEntityId &&
-            (State.Npcs.All.Any(npc => npc.DurableId == actor.DurableId && npc.Presence == DaggerfallNpcPresence.Active
+            (State.Npcs.All.Any(npc => npc.DurableId == actor.DurableId && State.Npcs.IsGameplayActive(npc.DurableId)
                 && npc.Site.Region == _site.Region && npc.Site.Location == _site.ActiveSite?.Name)
              || _roster.Definitions.GetValueOrDefault(actor.DurableId)?.MobileId == 146))
             .Select(actor => new PerceptionObserver(checked((ulong)actor.DurableId), actor.Position.ToVector(),

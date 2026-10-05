@@ -143,7 +143,7 @@ internal sealed partial class DaggerfallSession
     {
         HashSet<long> activeSource = State.Npcs.All
             .Where(npc => IsPopulationNpc(npc)
-                && npc.Presence == DaggerfallNpcPresence.Active
+                && State.Npcs.IsGameplayActive(npc.DurableId)
                 && npc.Profile == _sites.ActiveProfile)
             .Select(npc => npc.DurableId)
             .ToHashSet();

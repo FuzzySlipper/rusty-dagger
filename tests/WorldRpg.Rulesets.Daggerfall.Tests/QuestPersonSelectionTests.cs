@@ -182,7 +182,7 @@ public sealed class QuestPersonSelectionTests
         declaration["quest"] = "homes"; declaration["sourceFile"] = "homes.txt";
         root["questSources"]!["resources"]!["declarations"]!.AsArray().Add(declaration);
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
-            {"name":"homes","displayName":"","sourceFile":"homes.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[]}
+            {"name":"homes","displayName":"","sourceFile":"homes.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"headless","firstLine":1,"lines":["create npc _vamp_"],"global":null}],"diagnostics":[]}
             """));
         var definitions = DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
         var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
@@ -209,6 +209,13 @@ public sealed class QuestPersonSelectionTests
         Assert.Equal("Daggerfall", firstPerson.Text.NameFour);
         Assert.Equal(definitions.Factions.NpcCaptions[(firstPerson.SelectedPerson.Appearance!.Value.BillboardArchive,
             firstPerson.SelectedPerson.Appearance.Value.BillboardRecord)], firstPerson.Text.Details);
+        quests.Advance(new DaggerfallVariableStore(new Dictionary<string, int>()), DaggerfallCalendar.Start);
+        var created = quests.Capture().Instances.Single();
+        Assert.Equal(firstPerson.Binding, created.Resources.Single().Binding);
+        var create = Assert.Single(created.Placements);
+        Assert.Equal("task:headless.1:0", create.Id);
+        Assert.Equal("vamp.home", create.PlaceSymbol);
+        Assert.False(create.AutomaticHome);
         var second = quests.Start(Instance("homes.txt") with { InstanceId = "second-home" });
         Assert.NotEqual(home.Binding.Building, second.Resources.Single().SelectedPerson!.Home!.Binding.Building);
         var encoded = JsonSerializer.SerializeToUtf8Bytes(quests.Capture(), DaggerfallSaveJsonContext.Default.DaggerfallQuestInstancesSave);

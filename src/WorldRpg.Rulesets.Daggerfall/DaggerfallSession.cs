@@ -723,7 +723,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],
-            _tuning.Camera.EyeHeight, State.Effects.PerceptionFor, ReadNpcViews(), ReadDungeonSpellFlights());
+            _tuning.Camera.EyeHeight, State.Effects.PerceptionFor, ReadNpcViews(), ReadDungeonSpellFlights(), State.Npcs.IsGameplayActive);
     }
 
     /// <summary>The panel the player asked for through a device the DOM has no channel of its own for.</summary>
