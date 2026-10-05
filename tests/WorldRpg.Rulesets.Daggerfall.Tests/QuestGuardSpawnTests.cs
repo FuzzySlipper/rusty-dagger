@@ -68,6 +68,25 @@ public sealed class QuestGuardSpawnTests
         Assert.Empty(f.Session.State.Crime.Incidents);
     }
 
+    [Fact]
+    public void Delayed_report_rescans_watchmen_and_wilderness_reports_unavailable()
+    {
+        using var f = new Fixture(false);
+        f.Civilian(); f.Advance();
+        long watchman = f.Civilian("guard");
+        f.Advance(seconds: 5);
+        Assert.Single(Guards(f.Session));
+        Assert.False(f.Session.State.Actors.TryGet(watchman, out _));
+        Assert.Equal(DaggerfallQuestGuardSpawnOutcome.Complete, Schedule(f.Session).Outcome);
+        using var wilderness = new Fixture(true);
+        wilderness.Session.State.PlayerControl.MoveTo(new Vector3(10000, 2, 10000));
+        wilderness.Advance();
+        var action = wilderness.Session.State.Quests.Capture().Instances.Single().Tasks.Single();
+        Assert.Contains("wilderness", action.OperationState.Single().UnavailableReason);
+        Assert.False(action.OperationCompleted.Single());
+        Assert.Empty(Guards(wilderness.Session));
+    }
+
     private static long[] Guards(DaggerfallSession s) => s.DefinitionsByActor.Where(x => x.Value.MobileId == 146).Select(x => x.Key).ToArray();
     private static DaggerfallQuestGuardSpawnState Schedule(DaggerfallSession s) => s.State.Quests.Capture().Instances.Single().Tasks.Single().OperationState.Single().GuardSpawn!;
 

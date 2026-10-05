@@ -4,7 +4,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed record DaggerfallQuestFoeSpawn(int IntervalSeconds, int? MaximumGroups, int Chance, bool Send);
-internal sealed record DaggerfallQuestFoeSpawnState(long LastAttemptSeconds, int Attempts, int CompletedGroups,
+internal sealed record DaggerfallQuestFoeSpawnState(long? LastAttemptSeconds, int Attempts, int CompletedGroups,
     int PendingRemaining, DaggerfallWorldProfileKey? PendingProfile, bool MessageSent);
 
 internal static partial class DaggerfallQuestTaskCompiler
@@ -41,7 +41,7 @@ internal sealed partial class DaggerfallQuestInstances
         long now = calendar.ToAbsoluteSeconds();
         string key = instance.InstanceId + "/" + task.Symbol + "/" + index;
         var retained = task.OperationState[index].FoeSpawn;
-        var state = retained is { LastAttemptSeconds: >= 0 } ? retained : new(now - _random.DrawKeyed(new(0, "daggerfall.quest.spawn",
+        var state = retained is { LastAttemptSeconds: not null } ? retained : new(now - _random.DrawKeyed(new(0, "daggerfall.quest.spawn",
             key + "/initial-delay", 0, Math.Max(0, specification.IntervalSeconds - 1))).Value, 0, 0, 0, null, retained?.MessageSent ?? false);
         var location = (_worldRead ?? throw new InvalidOperationException("Quest spawning requires the current admitted location."))();
         if (state.PendingProfile is { } prior && prior != location.Profile.ProfileKey)

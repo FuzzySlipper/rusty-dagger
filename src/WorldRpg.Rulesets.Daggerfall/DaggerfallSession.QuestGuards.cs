@@ -18,7 +18,9 @@ internal sealed partial class DaggerfallSession
             return state with { Remaining = 0, CandidateNpcs = [], Outcome = DaggerfallQuestGuardSpawnOutcome.LeftLocation };
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon)
             throw new NotSupportedException("City guards cannot be requested inside a dungeon; the request awaits an admitted settlement.");
-        if (location.ExteriorLocation is not { } town || State.PlayerControl.Position is not WorldPoint player || State.Actors.Player.IsDefeated) return state;
+        if (State.PlayerControl.Position is not WorldPoint player || State.Actors.Player.IsDefeated) return state;
+        if (location.ExteriorLocation is not { } town)
+            throw new NotSupportedException("City guards require an admitted settlement; the request cannot summon watchmen in wilderness.");
         if (state is null)
         {
             DaggerfallQuestGuardSpawnState Result(DaggerfallQuestGuardSpawnOutcome outcome, int count = 0, double delay = 0, long[]? candidates = null) =>
@@ -66,6 +68,9 @@ internal sealed partial class DaggerfallSession
         {
             state = state with { DelaySeconds = Math.Max(0, state.DelaySeconds - elapsedSeconds) };
             if (state.DelaySeconds > 0) return state;
+            // PlayerEntity's countdown re-enters the immediate request: population may have
+            // changed while the report travelled, so conversions precede random fallback.
+            return SpawnQuestGuards(operation, true, 0, null);
         }
         if (state.Remaining == 0) return state with { Outcome = DaggerfallQuestGuardSpawnOutcome.Complete };
         long? candidate = state.CandidateNpcs.Length > 0 ? state.CandidateNpcs[0] : null;

@@ -81,6 +81,37 @@ public sealed class QuestSpawnTests
         Assert.Single(f.Session.State.Quests.Messages.Deliveries);
     }
 
+    [Fact]
+    public void Negative_initial_backdate_is_a_real_timestamp_and_survives_restore()
+    {
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: ["create foe _enemy_ every 1 minutes 1 times with 100% success"]);
+        using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
+        Start(f, definitions);
+        f.Session.State.Quests.Advance(f.Session.State.Variables, At(-100));
+        long? first = Schedule(f.Session).LastAttemptSeconds;
+        Assert.True(first < 0);
+        using var restored = f.Restore();
+        restored.State.Quests.Advance(restored.State.Variables, At(-99));
+        Assert.Equal(first, Schedule(restored).LastAttemptSeconds);
+        Assert.Empty(Resource(restored).Binding.ActorIds);
+    }
+
+    [Fact]
+    public void Restore_rejects_an_unknown_pending_spawn_profile()
+    {
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: ["create foe _enemy_ every 0 minutes 1 times with 100% success"]);
+        using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
+        Start(f, definitions);
+        f.Spatial.OverlapHit = _ => default(SpatialHit) with { Present = true };
+        f.Session.State.Quests.Advance(f.Session.State.Variables, At(0));
+        var save = DaggerfallSavePayload.Read(f.Session.CaptureSave());
+        var operation = save.Quests.Instances.Single().Tasks.Single().OperationState[0];
+        save.Quests.Instances.Single().Tasks.Single().OperationState[0] = operation with
+        { FoeSpawn = operation.FoeSpawn! with { PendingProfile = f.Inputs.ProfileKey with { LogicalId = "missing-profile" } } };
+        Assert.Contains("unavailable admitted profile", Assert.Throws<ArgumentException>(() =>
+            DaggerfallSession.Restore(f.Engine.Context, f.Composition, DaggerfallSavePayload.Encode(save))).Message);
+    }
+
     private static DaggerfallCalendar At(int seconds) => DaggerfallCalendar.FromAbsoluteSeconds(DaggerfallCalendar.Start.ToAbsoluteSeconds() + seconds);
     private static DaggerfallQuestResourceState Resource(DaggerfallSession session) => session.State.Quests.Capture().Instances.Single().Resources.Single(value => value.SelectedFoe is not null);
     private static DaggerfallQuestFoeSpawnState Schedule(DaggerfallSession session) => session.State.Quests.Capture().Instances.Single().Tasks.Single().OperationState.Single().FoeSpawn!;
