@@ -21,11 +21,12 @@ public sealed class QuestOfferTests
         Assert.Contains("daedra-summoning", facts.Services);
         var site = session.Site.ActiveSite!;
         long provider = session.State.Npcs.RegisterStable(DaggerfallNpcKind.Static, "coven-work", new(site.Region, site.Name, string.Empty),
-            new("Breton", "Female", 184, 8, 0, faction.Id), facts.Role, facts.Services);
+            new("breton", "Female", 184, 8, 0, faction.Id), facts.Role, facts.Services);
         var pool = session.State.Quests.OrdinaryWorkPool(faction.Id, false, 20, 100, 0, DaggerfallCharacterGender.Female);
         Assert.Equal(10, pool.Length);
         Assert.All(pool, row => Assert.Equal("Witches", row.Group));
         string text = session.OfferQuestWork(provider);
+        Assert.True(session.State.Quests.PendingOffer is not null, text);
         var offer = Assert.IsType<DaggerfallQuestOfferSave>(session.State.Quests.PendingOffer);
         Assert.StartsWith("Q0", offer.Quest.DefinitionName);
         session.AnswerQuestOffer(offer.Quest.InstanceId, true);
