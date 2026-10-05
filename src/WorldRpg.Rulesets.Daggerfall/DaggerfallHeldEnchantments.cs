@@ -430,7 +430,7 @@ internal sealed partial class DaggerfallHeldEnchantments : IDisposable
             DurableIdentityReference identity = _entities.IdentityOf(new EntityId(target.Item.EntityId));
             if (!_instances.ContainsUnique(identity.Value)) continue;
             DaggerfallItemInstanceMetadata metadata = _instances.RequireUnique(identity.Value);
-            if (metadata.Enchantment is not null || metadata.MaximumCondition == 0
+            if (metadata.HasEnchantment || metadata.MaximumCondition == 0
                 || metadata.CurrentCondition >= metadata.MaximumCondition) continue;
             _itemCondition.Restore(target.Item, HeldConditionUnitsPerTick);
             return;
@@ -493,8 +493,7 @@ internal sealed partial class DaggerfallHeldEnchantments : IDisposable
         if (!_instances.ContainsUnique(identity.Value)) return false;
         DaggerfallItemInstanceMetadata metadata = _instances.RequireUnique(identity.Value);
         if (metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0) return false;
-        if (metadata.Enchantment is not { } key) return false;
-        return _magic.TryEnchantments(key, out enchantments);
+        return _magic.TryEnchantments(metadata, out enchantments);
     }
 
     private EffectSourceIdentity IdentityFor(WorldRpg.Kit.Inventory.EquipmentAssignment assignment, DaggerfallMagicEnchantmentDefinition enchantment)
@@ -512,8 +511,7 @@ internal sealed partial class DaggerfallHeldEnchantments : IDisposable
         foreach (ulong id in inventory.Equipment.Select(value => value.ItemEntityId).Distinct())
         {
             DaggerfallUniqueSave item = inventory.UniqueItems.Single(value => value.EntityId == id);
-            if (item.Metadata.CurrentCondition <= 0 || item.Metadata.Enchantment is not { } key
-                || !magic.TryEnchantments(key, out var enchantments)) continue;
+            if (item.Metadata.CurrentCondition <= 0 || !magic.TryEnchantments(item.Metadata, out var enchantments)) continue;
             foreach (var enchantment in enchantments.Where(value => value.Type is EnhancesSkillType or ExtraSpellPointsType))
             {
                 if (HeldStatFor(enchantment) is not { } stat || source.StatId != stat.Value || source.SourceStatId != stat.Value

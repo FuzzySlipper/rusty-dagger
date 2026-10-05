@@ -37,7 +37,8 @@ public sealed record InventoryAtomicGrant(
     InventoryItemId Item,
     ulong Quantity = 1,
     DurableIdentityReference? UniqueItem = null,
-    InventoryStackId? Stack = null)
+    InventoryStackId? Stack = null,
+    IReadOnlyList<ItemCapacityCost>? CapacityCosts = null)
 {
     public InventoryAtomicGrant Validate()
     {
@@ -53,6 +54,8 @@ public sealed record InventoryAtomicGrant(
         }
         else if (Stack is null)
             throw new ArgumentException("Fungible atomic grants require an explicit stack identity.", nameof(Stack));
+        if (UniqueItem is null && CapacityCosts is not null)
+            throw new ArgumentException("Per-item capacity costs require a unique item.", nameof(CapacityCosts));
         return this;
     }
 }
@@ -120,7 +123,7 @@ public sealed class MechanicsInventoryCoordinator
                         throw new InvalidOperationException($"Atomic unique grant '{grant.Item.Value}' requires a unique item definition.");
                     EntityId item = Entities.CreateItemEntity(identity, new EntityTypeId(definition.Id.Value));
                     created.Add(identity);
-                    candidate.MaterializeUnique(new ItemState(item, definition), Component.Owner);
+                    candidate.MaterializeUnique(new ItemState(item, definition, grant.CapacityCosts), Component.Owner);
                 }
                 else
                 {
@@ -183,7 +186,7 @@ public sealed class MechanicsInventoryCoordinator
                         throw new InvalidOperationException($"Atomic unique grant '{award.Item.Value}' requires a unique item definition.");
                     EntityId item = Entities.CreateItemEntity(identity, new EntityTypeId(definition.Id.Value));
                     created.Add(identity);
-                    candidate.MaterializeUnique(new ItemState(item, definition), Component.Owner);
+                    candidate.MaterializeUnique(new ItemState(item, definition, award.CapacityCosts), Component.Owner);
                 }
                 else
                 {
@@ -202,6 +205,9 @@ public sealed class MechanicsInventoryCoordinator
             throw;
         }
     }
+
+    public ItemCapacityCostReceipt SetCapacityCosts(UniqueInventoryItem item, IReadOnlyList<ItemCapacityCost>? costs) =>
+        Component.Store.SetCapacityCosts(RequireUniqueEntity(item), costs);
 
     /// <summary>Destroys one contained unique item through the Engine inventory candidate.</summary>
     public ItemDestroyReceipt Destroy(UniqueInventoryItem item) => Component.Store.DestroyUnique(RequireUniqueEntity(item));
@@ -283,14 +289,14 @@ public sealed class MechanicsEquipmentCoordinator
     }
 
     /// <summary>Creates one live Engine item from its durable item identity and admits it to this inventory.</summary>
-    public UniqueInventoryItem Materialize(DurableIdentityReference itemId, InventoryItemId definitionId)
+    public UniqueInventoryItem Materialize(DurableIdentityReference itemId, InventoryItemId definitionId, IReadOnlyList<ItemCapacityCost>? capacityCosts = null)
     {
         ItemDefinition definition = RequireDefinition(definitionId);
         if (definition.Kind != ItemKind.Unique)
             throw new InvalidOperationException($"Item '{definitionId.Value}' is not a unique item definition.");
 
         EntityId item = Entities.CreateItemEntity(itemId, new EntityTypeId(definition.Id.Value));
-        try { Inventory.MaterializeUnique(new ItemState(item, definition)); }
+        try { Inventory.MaterializeUnique(new ItemState(item, definition, capacityCosts)); }
         catch { Entities.Destroy(itemId); throw; }
         return new UniqueInventoryItem(item.Value, definitionId);
     }

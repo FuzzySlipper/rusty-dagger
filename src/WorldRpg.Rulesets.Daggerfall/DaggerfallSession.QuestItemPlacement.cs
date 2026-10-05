@@ -13,7 +13,7 @@ internal sealed partial class DaggerfallSession
             ? DaggerfallItemInstanceMetadata.Restore(unique.ItemId, unique.Metadata)
             : DaggerfallItemInstanceMetadata.Restore(Stack!.ItemId, Stack.Metadata);
         internal InventoryContainerSeed Seed => Unique is { } unique
-            ? new(new(unique.ItemId), UniqueItem: new(DurableIdentityKind.Item, unique.EntityId))
+            ? new(new(unique.ItemId), UniqueItem: new(DurableIdentityKind.Item, unique.EntityId), CapacityCosts: DaggerfallEncumbrancePolicy.CapacityOverride(unique.Metadata.WeightClassicUnits))
             : new(new(Stack!.ItemId), Stack.Quantity, Stack: InventoryStackId.Parse(Stack.StackId));
     }
 

@@ -171,7 +171,7 @@ internal sealed class DaggerfallWagonStorage
                     .Select(stack => new InventoryContainerSeed(new InventoryItemId(stack.ItemId), stack.Quantity,
                         Stack: InventoryStackId.Parse(stack.StackId)))
                     .Concat(saved.Inventory.UniqueItems.Select(unique => new InventoryContainerSeed(
-                        new InventoryItemId(unique.ItemId), UniqueItem: new DurableIdentityReference(DurableIdentityKind.Item, unique.EntityId))))
+                        new InventoryItemId(unique.ItemId), UniqueItem: new DurableIdentityReference(DurableIdentityKind.Item, unique.EntityId), CapacityCosts: DaggerfallEncumbrancePolicy.CapacityOverride(unique.Metadata.WeightClassicUnits))))
                     .ToArray();
                 _containers.Seed(owner, seeds);
                 seeded = true;
@@ -219,7 +219,9 @@ internal sealed class DaggerfallWagonStorage
         long currentWeight = _wagon is DaggerfallWagon current
             ? WeightClassicUnits(_containers.Read(current.Owner))
             : 0;
-        long requestedWeight = checked((long)DaggerfallEncumbrancePolicy.ClassicWeightCost(definition) * checked((long)selection.Quantity));
+        DaggerfallItemInstanceMetadata? metadata = selection.UniqueEntityId is ulong entity
+            ? _instances.RequireUnique(_containers.Entities.IdentityOf(new EntityId(entity)).Value) : null;
+        long requestedWeight = checked((long)DaggerfallEncumbrancePolicy.ClassicWeightCost(definition, metadata) * checked((long)selection.Quantity));
         if (requestedWeight < 0 || currentWeight > _tuning.WagonCapacityClassicUnits - requestedWeight)
             throw new InvalidOperationException("The wagon cannot hold that much weight.");
     }
@@ -299,21 +301,8 @@ internal sealed class DaggerfallWagonStorage
         }
     }
 
-    private long WeightClassicUnits(InventoryView inventory)
-    {
-        long weight = 0;
-        foreach (InventoryStack stack in inventory.Stacks)
-        {
-            DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(stack.Definition.Value));
-            weight = checked(weight + checked((long)DaggerfallEncumbrancePolicy.ClassicWeightCost(definition) * checked((long)stack.Quantity)));
-        }
-        foreach (Rusty.Engine.Mechanics.UniqueInventoryItem item in inventory.UniqueItems)
-        {
-            DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(item.Definition.Value));
-            weight = checked(weight + checked((long)DaggerfallEncumbrancePolicy.ClassicWeightCost(definition)));
-        }
-        return weight;
-    }
+    private static long WeightClassicUnits(InventoryView inventory) =>
+        inventory.Capacity.Where(value => value.Metric == DaggerActorFactory.ClassicWeightMetric).Sum(value => checked((long)value.Used));
 
     private static bool HasCart(InventoryView inventory) => inventory.UniqueItems.Any(item => item.Definition.Value == DaggerfallTransportPolicy.CartItemId);
 

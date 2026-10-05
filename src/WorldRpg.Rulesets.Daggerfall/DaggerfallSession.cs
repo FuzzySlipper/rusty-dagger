@@ -417,6 +417,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // reads the body the player is wearing now rather than the one the previous update saw.
         State.HeldEnchantments.Refresh();
         _itemCastTriggers.Refresh();
+        ReleasePendingBoundSouls();
 
         // A standing panel request ages on the same admitted world time as everything else.
         _interactions.AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);

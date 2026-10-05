@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed partial class DaggerfallItemCastTriggers
 {
     private IReadOnlyList<DaggerfallMagicEnchantmentDefinition> Enchantments(DaggerfallItemInstanceMetadata metadata) =>
-        metadata.Enchantment is { } key && magic.TryEnchantments(key, out var values) ? values : [];
+        magic.TryEnchantments(metadata, out var values) ? values : [];
 
     /// <summary>The ItemMaker calls this when enchanting commits; an existing found item retains its original age.</summary>
     internal void Enchanted(ulong itemId)

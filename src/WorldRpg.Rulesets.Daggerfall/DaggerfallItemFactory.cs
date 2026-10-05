@@ -153,7 +153,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         else
         {
             DurableIdentityReference id = unique ?? throw new ArgumentException("A unique created item requires a durable identity.", nameof(unique));
-            inventory.GrantAtomic([new InventoryAtomicGrant(created.Item, UniqueItem: id)]);
+            inventory.GrantAtomic([new InventoryAtomicGrant(created.Item, UniqueItem: id, CapacityCosts: DaggerfallEncumbrancePolicy.CapacityOverride(created.Metadata.WeightClassicUnits))]);
             instances.RegisterUnique(id.Value, created.Metadata);
         }
     }

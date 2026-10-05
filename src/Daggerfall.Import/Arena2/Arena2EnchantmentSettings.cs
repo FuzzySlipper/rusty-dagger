@@ -142,6 +142,26 @@ internal static class Arena2EnchantmentSettings
         AddFamily(20, "LowDamageVs", "Low damage vs", [(0, -800, "undead", "undead", "undead"), (1, -900, "daedra", "daedra", "Daedra"), (2, -1000, "humanoid", "humanoid", "humanoid"), (3, -1200, "animals", "animalsUpper", "animals")]);
         AddFamily(4, "PotentVs", "Potent vs", [(0, 800, "undead", "undead", "undead"), (1, 900, "daedra", "daedra", "Daedra"), (2, 1000, "humanoid", "humanoid", "humanoid"), (3, 1200, "animals", "animalsUpper", "animals")]);
         AddFamily(6, "VampiricEffect", "Vampiric effect", [(0, 2000, "at-range", "atRange", "at range"), (1, 1000, "when-strikes", "whenStrikes", "when strikes")]);
+        AddFamily(11, "FeatherWeight", "Feather weight", [(-1, 100, "feather-weight", null, null)]);
+        AddFamily(23, "ExtraWeight", "Extra weight", [(-1, -100, "extra-weight", null, null)]);
+        // SoulBound.classicParamCosts follows the complete classic mobile identity table.
+        int[] soulCosts = [0, -10, -20, 0, 0, 0, 0, -10, -30, -90, -100, 0, -10, -30, -140, 0, -30, 0, -300, -100, 0, -30, -30, -300, -10, -500, -500, -100, -700, -1500, -1000, -8000, -1000, -2500, 0, -300, -300, -300, -300, 0, -5000, -100, -100];
+        string[] souls = ["rat", "imp", "spriggan", "giant-bat", "grizzly-bear", "sabertooth-tiger", "spider", "orc", "centaur", "werewolf", "nymph", "slaughterfish", "orc-sergeant", "harpy", "wereboar", "skeletal-warrior", "giant", "zombie", "ghost", "mummy", "giant-scorpion", "orc-shaman", "gargoyle", "wraith", "orc-warlord", "frost-daedra", "fire-daedra", "daedroth", "vampire", "daedra-seducer", "vampire-ancient", "daedra-lord", "lich", "ancient-lich", "dragonling", "fire-atronach", "iron-atronach", "flesh-atronach", "ice-atronach", "horse-invalid", "dragonling-alternate", "dreugh", "lamia"];
+        AddFamily(15, "SoulBound", "Soul bound", [.. souls.Select((name, id) => (id, soulCosts[id], $"soul-{id}", (string?)$"enemy.{id}", (string?)name.Replace('-', ' ')))]);
+        Dictionary<int, string[]> forced = new()
+        {
+            [31] = ["4.1", "17.1", "23.-1"],
+            [29] = ["14.5", "16.1", "17.1", "21.2", "22.1"],
+            [27] = ["20.1", "22.2", "16.2"],
+            [35] = ["0.12"],
+            [26] = ["10.9", "0.12", "22.1"],
+            [25] = ["10.9", "0.11", "16.2"],
+            [18] = ["11.-1", "16.2", "20.0"],
+            [32] = ["10.22", "16.1", "20.0"],
+            [23] = ["5.2", "16.2", "20.0"],
+        };
+        foreach (JsonNode? row in settings.Where(row => row!["type"]!.GetValue<int>() == 15))
+            row!["forcedSettings"] = new JsonArray([.. forced.GetValueOrDefault(row["param"]!.GetValue<int>(), []).Select(key => (JsonNode?)JsonValue.Create("enchantment." + key))]);
         return settings;
 
         void AddSpellFamily(int type, string sourceClass, string meaning, int[] identities, int[] costs)

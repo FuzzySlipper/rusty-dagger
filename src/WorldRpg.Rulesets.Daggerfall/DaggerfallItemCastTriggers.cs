@@ -7,7 +7,7 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Meaningful equipped-callback and cadence state, carried by the actual durable item.</summary>
-internal sealed record DaggerfallItemStrikeSource(ulong ItemId, string Enchantment);
+internal sealed record DaggerfallItemStrikeSource(ulong ItemId, string? Enchantment, DaggerfallMadeEnchantment? MadeEnchantment);
 
 internal sealed record DaggerfallHeldCastState(long CasterId, long LastRerollMinute, string[] ActiveEffectInstances, bool RerollPending = false);
 
@@ -30,7 +30,7 @@ internal sealed partial class DaggerfallItemCastTriggers(DaggerfallMagicCatalogS
         ? DaggerfallItemOwner.Player : DaggerfallItemOwner.Actor(casterId);
 
     private IReadOnlyList<DaggerfallMagicEnchantmentDefinition> Payloads(DaggerfallItemInstanceMetadata metadata, int type) =>
-        metadata.Enchantment is { } key && magic.TryEnchantments(key, out var payloads)
+        magic.TryEnchantments(metadata, out var payloads)
             ? payloads.Where(value => value.Type == type).ToArray() : [];
 
     private UniqueInventoryItem? Equipped(long casterId, ulong id) => equipmentFor(casterId)?.Read().Assignments
@@ -116,14 +116,14 @@ internal sealed partial class DaggerfallItemCastTriggers(DaggerfallMagicCatalogS
         ulong id = entities.IdentityOf(new EntityId(item.EntityId)).Value;
         if (!instances.ContainsUnique(id)) return null;
         var metadata = instances.RequireUnique(id);
-        return metadata.CurrentCondition > 0 && metadata.Enchantment is { } key && magic.TryEnchantments(key, out var payloads)
-            && payloads.Any(value => value.Type is StrikeType or DaggerfallEnchantmentSettings.HealthLeechType or DaggerfallEnchantmentSettings.LowDamageVsType or DaggerfallEnchantmentSettings.PotentVsType or DaggerfallEnchantmentSettings.VampiricType) ? new(id, key) : null;
+        return metadata.CurrentCondition > 0 && magic.TryEnchantments(metadata, out var payloads)
+            && payloads.Any(value => value.Type is StrikeType or DaggerfallEnchantmentSettings.HealthLeechType or DaggerfallEnchantmentSettings.LowDamageVsType or DaggerfallEnchantmentSettings.PotentVsType or DaggerfallEnchantmentSettings.VampiricType) ? new(id, metadata.Enchantment, metadata.MadeEnchantment) : null;
     }
 
     internal int Strike(long casterId, long targetId, DaggerfallItemStrikeSource source, int sourceDamage)
     {
         ulong id = source.ItemId;
-        if (sourceDamage < 0 || !OwnsItem(casterId, id) || instances.RequireUnique(id).Enchantment != source.Enchantment || !Available(id) || Equipped(casterId, id) is not { } item) return sourceDamage;
+        if (sourceDamage < 0 || !OwnsItem(casterId, id) || (instances.RequireUnique(id).Enchantment != source.Enchantment || instances.RequireUnique(id).MadeEnchantment != source.MadeEnchantment) || !Available(id) || Equipped(casterId, id) is not { } item) return sourceDamage;
         var payloads = Enchantments(instances.RequireUnique(id));
         int adjusted = sourceDamage;
         foreach (var payload in payloads)

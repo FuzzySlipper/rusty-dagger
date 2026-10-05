@@ -200,6 +200,24 @@ internal sealed record DaggerfallMagicCatalogSet(
     }
 
     /// <summary>The loaded payloads owned by one item key, including maker-authored settings.</summary>
+    internal bool TryEnchantments(DaggerfallItemInstanceMetadata item, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)
+        => TryEnchantments(item.Enchantment, item.MadeEnchantment, out enchantments);
+
+    internal bool TryEnchantments(DaggerfallItemMetadataSave item, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)
+        => TryEnchantments(item.Enchantment, item.MadeEnchantment, out enchantments);
+
+    private bool TryEnchantments(string? key, DaggerfallMadeEnchantment? made, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)
+    {
+        if (made is not null)
+        {
+            enchantments = made.Settings.Select((value, index) => DaggerfallEnchantmentSettings.ToEffect(EnchantmentSettings[value.Key]) with { Key = $"{value.Key}.made.{index}" }).ToArray();
+            return true;
+        }
+        if (key is not null) return TryEnchantments(key, out enchantments);
+        enchantments = [];
+        return false;
+    }
+
     internal bool TryEnchantments(string key, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)
     {
         if (MagicItems.TryGetValue(key, out var magic))

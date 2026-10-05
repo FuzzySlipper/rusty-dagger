@@ -55,13 +55,13 @@ public sealed class Arena2MagicCatalogDocumentTests
     {
         JsonArray settings = JsonNode.Parse(Arena2MagicCatalogDocument.Build(
             SpellTable(), MagicItemTable(), "arena2/SPELLS.STD", "arena2/MAGIC.DEF").Json)!["enchantmentSettings"]!.AsArray();
-        Assert.Equal(164, settings.Count);
+        Assert.Equal(209, settings.Count);
         var absorption=Assert.Single(settings,row=>row!["type"]!.GetValue<int>()==9)!;
         Assert.Equal(-1,absorption["param"]!.GetValue<int>());
         Assert.Equal(1500,absorption["cost"]!.GetValue<int>());
         Assert.Equal("spell-absorption",absorption["meaning"]!.GetValue<string>());
         Assert.Equal("AbsorbsSpells",absorption["textKey"]!.GetValue<string>());
-        Assert.Equal(164, settings.Select(row => row!["key"]!.GetValue<string>()).Distinct().Count());
+        Assert.Equal(209, settings.Select(row => row!["key"]!.GetValue<string>()).Distinct().Count());
         foreach ((int type, int count, string source) in new[] {
             (10, 35, "EnhancesSkill"), (3, 11, "ExtraSpellPts"),
             (7, 2, "IncreasedWeightAllowance"), (13, 3, "ImprovesTalents"),
@@ -123,7 +123,7 @@ public sealed class Arena2MagicCatalogDocumentTests
         JsonArray costs = JsonNode.Parse(publication.Json)!["effectCosts"]!.AsArray();
 
         // Both spells carry one effect without a subtype, so each type resolves through its first slot.
-        Assert.Equal([2, 4, 7, 7, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 12, 13, 16, 23, 24, 26, 31, 33, 33, 33, 33, 34, 39, 39, 39, 40], costs.Select(cost => cost!["type"]!.GetValue<int>()));
+        Assert.Equal([2, 4, 7, 7, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 12, 13, 16, 23, 24, 26, 28, 31, 33, 33, 33, 33, 34, 39, 39, 39, 40], costs.Select(cost => cost!["type"]!.GetValue<int>()));
         JsonObject first = costs.Single(cost => cost!["type"]!.GetValue<int>() == 16)!.AsObject();
         Assert.Equal(-1, first["subType"]!.GetValue<int>());
         Assert.Equal(3, first["settingsType"]!.GetValue<int>());
@@ -152,7 +152,7 @@ public sealed class Arena2MagicCatalogDocumentTests
         HashSet<(int, int)> used = [.. document["spells"]!.AsArray().SelectMany(spell => spell!["effects"]!.AsArray())
             .Select(effect => (effect!["type"]!.GetValue<int>(), effect["subType"]!.GetValue<int>()))];
 
-        Assert.Equal(89, rows.Count);
+        Assert.Equal(90, rows.Count);
         used.Add((2, -1)); used.Add((12, -1));
         used.Add((4, 1));
         used.Add((13, 1)); used.Add((23, 1)); used.Add((24, 1));
@@ -161,7 +161,7 @@ public sealed class Arena2MagicCatalogDocumentTests
         for (int subtype = 0; subtype < 4; subtype++) used.Add((33, subtype));
         used.Add((34, -1)); used.Add((40, -1));
         Assert.Contains((26, -1), rows);
-        used.Add((26, -1));
+        used.Add((26, -1)); used.Add((28, -1));
         used.Add((7, 4)); used.Add((7, 7));
         for (int subtype = 0; subtype < 8; subtype++) Assert.Contains((7, subtype), rows);
         Assert.True(used.SetEquals(rows));

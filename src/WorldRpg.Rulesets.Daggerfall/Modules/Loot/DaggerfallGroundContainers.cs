@@ -449,7 +449,7 @@ internal sealed class DaggerfallGroundContainers
                 InventoryContainerSeed[] seeds = value.Inventory.Stacks
                     .Select(stack => new InventoryContainerSeed(new InventoryItemId(stack.ItemId), stack.Quantity, Stack: InventoryStackId.Parse(stack.StackId)))
                     .Concat(value.Inventory.UniqueItems.Select(unique => new InventoryContainerSeed(
-                        new InventoryItemId(unique.ItemId), UniqueItem: new DurableIdentityReference(DurableIdentityKind.Item, unique.EntityId))))
+                        new InventoryItemId(unique.ItemId), UniqueItem: new DurableIdentityReference(DurableIdentityKind.Item, unique.EntityId), CapacityCosts: DaggerfallEncumbrancePolicy.CapacityOverride(unique.Metadata.WeightClassicUnits))))
                     .ToArray();
                 _containers.Seed(owner, seeds);
                 seeded = true;

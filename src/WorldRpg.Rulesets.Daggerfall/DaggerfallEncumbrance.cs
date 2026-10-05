@@ -48,14 +48,14 @@ internal sealed class DaggerfallEncumbrancePolicy
         ? CurrentClassicUnits(inventory ?? throw new ArgumentNullException(nameof(inventory)))
         : 0;
 
-    internal bool CanCarry(DaggerfallItemDefinition definition, ulong quantity)
+    internal bool CanCarry(DaggerfallItemDefinition definition, ulong quantity, DaggerfallItemInstanceMetadata? metadata = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
         if (quantity == 0) return true;
         DaggerfallEncumbrance current = Read();
         try
         {
-            long next = checked((long)current.CurrentClassicUnits + WeightClassicUnits(definition, quantity));
+            long next = checked((long)current.CurrentClassicUnits + WeightClassicUnits(definition, quantity, metadata));
             return next <= current.MaximumClassicUnits;
         }
         catch (OverflowException)
@@ -66,11 +66,11 @@ internal sealed class DaggerfallEncumbrancePolicy
         }
     }
 
-    internal long WeightClassicUnits(DaggerfallItemDefinition definition, ulong quantity = 1)
+    internal long WeightClassicUnits(DaggerfallItemDefinition definition, ulong quantity = 1, DaggerfallItemInstanceMetadata? metadata = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
         if (quantity == 0) return 0;
-        long unit = checked((long)ClassicWeightCost(definition));
+        long unit = checked((long)ClassicWeightCost(definition, metadata));
         return checked(unit * checked((long)quantity));
     }
 
@@ -93,9 +93,13 @@ internal sealed class DaggerfallEncumbrancePolicy
     }
 
     internal static bool IsGold(DaggerfallItemDefinition definition) => definition.Id.Value == GoldPiece || definition.Template?.Index == 276;
-    internal static ulong ClassicWeightCost(DaggerfallItemDefinition definition)
+    internal static ItemCapacityCost[]? CapacityOverride(ulong? weight) => weight is null ? null
+        : weight == 0 ? [] : [new(DaggerActorFactory.ClassicWeightMetric, weight.Value)];
+
+    internal static ulong ClassicWeightCost(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
+        if (metadata?.WeightClassicUnits is ulong weight) return weight;
         // ItemTemplate.hasNoEncumbrance: transportation, maps, and arrows stay in inventory
         // without contributing to PlayerEntity.CarriedWeight. The compact authored arrow has no
         // template link, so it names the same exception explicitly.

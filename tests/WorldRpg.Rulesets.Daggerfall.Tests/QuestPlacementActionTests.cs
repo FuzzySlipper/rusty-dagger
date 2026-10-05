@@ -1,4 +1,5 @@
 using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.World;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Loot;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -319,6 +320,38 @@ public sealed class QuestPlacementActionTests
         var savedGroundItem = Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).GroundContainers
             .SelectMany(value => value.Inventory.UniqueItems), value => value.EntityId == f.Source);
         Assert.Null(savedGroundItem.Metadata.HeldCast);
+    }
+
+    [Fact]
+    public void Retained_made_item_rehoming_preserves_actual_inventory_weight()
+    {
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: ["place item _gift_ at _location_ anymarker"]);
+        using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
+        var castle = QuestWorldAdmissionTests.WithMarker(f.Castle);
+        var profiles = new DaggerfallSiteProfiles([f.Inputs, castle]);
+        f.Session.AdmitSiteProfiles(profiles);
+        var started = Start(f, definitions, castle);
+        var state = f.Session.State;
+        var (item, id) = ItemEnchantmentMutationTests.Weapon(f);
+        f.Session.ItemCondition.Enchant(item, "enchantment.11.-1");
+        var metadata = state.ItemInstances.RequireUnique(id) with { QuestId = started.InstanceId, QuestItemSymbol = "gift" };
+        state.ItemInstances.ReplaceUnique(id, metadata);
+        var resource = started.Resources.Single(value => value.Symbol == "gift");
+        state.Quests.SetResource(started.InstanceId, resource with
+        {
+            Binding = DaggerfallQuestResourceBinding.UniqueItem(id),
+            SelectedItem = resource.SelectedItem! with { Item = new(item.Definition.Value), Metadata = metadata }
+        });
+        var actor = state.Actors.Get(f.Enemy).Actor.Entity;
+        state.Containers.Transfer(state.Actors.Player.Actor.Entity, actor, new(item.Definition, 1, UniqueEntityId: item.EntityId));
+        state.ItemInstances.MoveUnique(id, DaggerfallItemOwner.Actor(f.Enemy));
+        Assert.True(f.Session.TryTransitionTo(castle.ProfileKey));
+        using var inactive = f.Restore(profiles);
+        inactive.Update(new ProductUpdate(OuterUpdate(1), []));
+        var moved = inactive.State.ItemInstances.RequireUnique(id);
+        Assert.Equal("ground", moved.Owner.Scope);
+        var owner = inactive.State.Containers.Entities.Resolve(new(DurableIdentityKind.Container, checked((ulong)moved.Owner.Id)));
+        Assert.Equal(100UL, inactive.State.Containers.Read(owner).Capacity.Single(value => value.Metric == DaggerActorFactory.ClassicWeightMetric).Used);
     }
 
     private sealed class DefeatingHit : ICombatContribution

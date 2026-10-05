@@ -55,8 +55,10 @@ internal sealed record DaggerfallItemInstanceMetadata(
     int? BookId = null,
     int? PotionRecipeKey = null,
     ulong? CreditValue = null,
-    int? PoisonVariant = null, DaggerfallHeldCastState? HeldCast = null, long HealthLeechLastUsedMinute = 0, int? CapturedSoulMobileId = null, DaggerfallConjuredItem? Conjuration = null)
+    int? PoisonVariant = null, DaggerfallHeldCastState? HeldCast = null, long HealthLeechLastUsedMinute = 0, int? CapturedSoulMobileId = null, DaggerfallConjuredItem? Conjuration = null,
+    DaggerfallMadeEnchantment? MadeEnchantment = null, ulong? WeightClassicUnits = null, bool BoundSoulReleased = false, bool BoundSoulReleasePending = false)
 {
+    internal bool HasEnchantment => Enchantment is not null || MadeEnchantment is not null;
     internal DaggerfallItemInstanceMetadata Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ItemId);
@@ -79,12 +81,15 @@ internal sealed record DaggerfallItemInstanceMetadata(
             throw new ArgumentOutOfRangeException(nameof(CreditValue), "A letter of credit must carry a positive amount.");
         if (ItemId != "template-275" && CreditValue is not null)
             throw new ArgumentException("Only a letter of credit can carry a credit amount.", nameof(CreditValue));
-        if (HeldCast is { } held && (held.CasterId <= 0 || held.CasterId != Owner.Id || Owner.Scope is not ("player" or "actor") || held.LastRerollMinute < 0 || Enchantment is null
+        if (HeldCast is { } held && (held.CasterId <= 0 || held.CasterId != Owner.Id || Owner.Scope is not ("player" or "actor") || held.LastRerollMinute < 0 || !HasEnchantment
             || held.ActiveEffectInstances is null || held.ActiveEffectInstances.Any(string.IsNullOrWhiteSpace)
             || held.ActiveEffectInstances.Distinct().Count() != held.ActiveEffectInstances.Length))
             throw new ArgumentException("Held spell cadence requires a positive caster, nonnegative calendar/cadence, and enchantment.");
         if (CapturedSoulMobileId is < 0 or > 42) throw new ArgumentOutOfRangeException(nameof(CapturedSoulMobileId));
         Conjuration?.Validate();
+        if (MadeEnchantment is not null && Enchantment is not null)
+            throw new ArgumentException("An item carries either a published enchantment or its made settings.");
+        MadeEnchantment?.ValidateShape();
         Owner.Validate();
         return this;
     }
@@ -110,6 +115,8 @@ internal sealed record DaggerfallItemInstanceMetadata(
             && CreditValue == other.CreditValue
             && HealthLeechLastUsedMinute == other.HealthLeechLastUsedMinute
             && CapturedSoulMobileId == other.CapturedSoulMobileId && Conjuration == other.Conjuration
+            && Equals(MadeEnchantment, other.MadeEnchantment) && WeightClassicUnits == other.WeightClassicUnits
+            && BoundSoulReleased == other.BoundSoulReleased && BoundSoulReleasePending == other.BoundSoulReleasePending
             && HeldCast is null && other.HeldCast is null;
     }
 
@@ -119,13 +126,14 @@ internal sealed record DaggerfallItemInstanceMetadata(
 
     internal DaggerfallItemMetadataSave Capture() => new(Material, Variant, CurrentCondition, MaximumCondition,
         Identified, Stolen, QuestId, QuestItemSymbol, Enchantment, new DaggerfallItemOwnerSave(Owner.Scope, Owner.Id), Race, Gender, Dye, BookId, PotionRecipeKey, CreditValue,
-        PoisonVariant, HeldCast, HealthLeechLastUsedMinute, CapturedSoulMobileId, Conjuration);
+        PoisonVariant, HeldCast, HealthLeechLastUsedMinute, CapturedSoulMobileId, Conjuration, MadeEnchantment, WeightClassicUnits, BoundSoulReleased, BoundSoulReleasePending);
 
     internal static DaggerfallItemInstanceMetadata Restore(string itemId, DaggerfallItemMetadataSave saved) =>
         new DaggerfallItemInstanceMetadata(itemId, saved.Material, saved.Variant, saved.CurrentCondition, saved.MaximumCondition,
             saved.Identified, saved.Stolen, saved.QuestId, saved.QuestItemSymbol, saved.Enchantment,
             new DaggerfallItemOwner(saved.Owner.Scope, saved.Owner.Id), saved.Race, saved.Gender, saved.Dye, saved.BookId, saved.PotionRecipeKey, saved.CreditValue,
-            saved.PoisonVariant, saved.HeldCast, saved.HealthLeechLastUsedMinute, saved.CapturedSoulMobileId, saved.Conjuration).Validate();
+            saved.PoisonVariant, saved.HeldCast, saved.HealthLeechLastUsedMinute, saved.CapturedSoulMobileId, saved.Conjuration,
+            saved.MadeEnchantment, saved.WeightClassicUnits, saved.BoundSoulReleased, saved.BoundSoulReleasePending).Validate();
 }
 
 /// <summary>Completed canonical stack movement; quantities and containment remain in Engine.</summary>

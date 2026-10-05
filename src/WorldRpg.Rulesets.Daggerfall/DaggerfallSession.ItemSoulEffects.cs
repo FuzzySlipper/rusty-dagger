@@ -1,4 +1,5 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Kit.Controls;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Facts;
@@ -17,6 +18,32 @@ internal sealed partial class DaggerfallSession
         int? released = SoulGems.ReleaseStar(id);
         return released is { } mobile ? new(true, $"Released {_definitions.Actors.Values.First(actor => actor.Kind == DaggerfallActorKinds.Monster && actor.MobileId == mobile).Id.Value} from Azura's Star.")
             : new(false, "Azura's Star has no soul to release.");
+    }
+
+    private void ReleaseBoundSoul(ulong itemId)
+    {
+        if (!State.ItemInstances.ContainsUnique(itemId)) return;
+        var item = State.ItemInstances.RequireUnique(itemId);
+        if (!item.BoundSoulReleasePending || item.BoundSoulReleased) return;
+        if (!_definitions.Magic.TryEnchantments(item, out var payloads)) return;
+        var soul = payloads.SingleOrDefault(value => value.Type == 15);
+        if (soul is null) return;
+        var definition = _definitions.Actors.Values.FirstOrDefault(actor => actor.Kind == DaggerfallActorKinds.Monster && actor.MobileId == soul.Param);
+        if (definition is null) throw new InvalidOperationException($"Bound soul {soul.Param} has no admitted actor definition.");
+        WorldPoint? origin = item.Owner == DaggerfallItemOwner.Player ? State.PlayerControl.Position
+            : item.Owner.Scope == "actor" && State.Actors.TryGet(item.Owner.Id, out var owner) ? owner.Position : null;
+        if (origin is not { } position || !_sites.Projection.Inputs.MobileSprites.ContainsKey(soul.Param)
+            || !TrySpawnPose($"soul:{itemId}", "daggerfall.soul-bound.v1", position, 4f, 20f, out var pose)) return;
+        var spawned = _roster.Spawn(definition.Id.Value, pose, playerAllied: false);
+        _enemyBehavior.MakeHostile(spawned);
+        State.ItemInstances.ReplaceUnique(itemId, item with { BoundSoulReleasePending = false, BoundSoulReleased = true });
+        Presentation.SetOutcome($"The bound {definition.Id.Value} escaped from the broken item.");
+    }
+
+    private void ReleasePendingBoundSouls()
+    {
+        foreach (ulong itemId in State.ItemInstances.UniqueItems.Where(value => value.Value.BoundSoulReleasePending).Select(value => value.Key).ToArray())
+            ReleaseBoundSoul(itemId);
     }
 
     private void CaptureHeldSoul(ActorDiedFact death)

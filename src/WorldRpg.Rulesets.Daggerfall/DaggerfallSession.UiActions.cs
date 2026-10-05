@@ -219,7 +219,8 @@ internal sealed partial class DaggerfallSession
     {
         if (_lootUi.PrepareGroundTake(action) is { } groundTake)
         {
-            if (!State.Encumbrance.CanCarry(_definitions.RequireItem(new DaggerfallItemId(groundTake.Definition)), groundTake.Quantity))
+            if (!State.Encumbrance.CanCarry(_definitions.RequireItem(new DaggerfallItemId(groundTake.Definition)), groundTake.Quantity,
+                groundTake.Selection.UniqueEntityId is ulong entity ? State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(new(entity)).Value) : null))
             {
                 _lootUi.CompleteGround(false, "You cannot carry any more.");
                 Presentation.SetOutcome(_lootUi.Message);

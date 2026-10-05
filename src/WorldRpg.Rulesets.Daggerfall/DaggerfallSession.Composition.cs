@@ -287,7 +287,8 @@ internal sealed partial class DaggerfallSession
                 definitions, () => character.Career, _random, _rewards);
             _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
                 () => character.Career.ForbiddenEquipment, itemInstances, () => character.RacialOverrides?.Current?.State.BeastForm == true);
-            _itemCondition = new DaggerfallItemConditionService(definitions, itemInstances, _equipmentMoves);
+            _itemCondition = new DaggerfallItemConditionService(definitions, itemInstances, _equipmentMoves, inventory, () => SoulGems);
+            _itemCondition.Broken += ReleaseBoundSoul;
             _playerSwings = new DaggerfallSwingTracker(_tuning.MeleeTargeting.MinimumSwingGestureRadians);
             _heldEnchantments = new DaggerfallHeldEnchantments(equipmentCoordinator, itemInstances, definitions.Magic,
                 playerStats, actors.Entities, playerEntity, () => _time.Calendar,
