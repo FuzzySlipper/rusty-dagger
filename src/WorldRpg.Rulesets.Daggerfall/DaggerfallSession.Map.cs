@@ -70,6 +70,11 @@ internal sealed partial class DaggerfallSession
             .Where(place => place.Id.Region == site.Id.Region && place.Id != site.Id)
             .OrderBy(place => place.Name, StringComparer.Ordinal).ThenBy(place => place.Id.Index))
             entries.Add(new($"direction:site:{place.Id.Region}:{place.Id.Index}", $"Where is {place.Name}?"));
+        foreach (var (quest, resource) in State.Quests.DialogueResources())
+        {
+            string key = $"direction:quest:{Uri.EscapeDataString(quest.InstanceId)}:{Uri.EscapeDataString(resource.Symbol)}";
+            if (ResolveDialogueDirection(key) is { } destination) entries.Add(new(key, $"Where is {destination.Name}?"));
+        }
         return entries;
     }
 
@@ -82,6 +87,12 @@ internal sealed partial class DaggerfallSession
     {
         DaggerfallSiteRecord? active = Site.ActiveSite;
         if (active is null || string.IsNullOrWhiteSpace(target)) return null;
+        if (target.StartsWith("direction:quest:", StringComparison.Ordinal))
+        {
+            if (QuestDirectionTarget(target) is not { } translated) return null;
+            var destination = ResolveDialogueDirection(translated.Target);
+            return destination is null ? null : destination with { Name = translated.Name };
+        }
         if (target.StartsWith("direction:building:", StringComparison.Ordinal))
         {
             string[] parts = target[19..].Split(':');
@@ -141,6 +152,26 @@ internal sealed partial class DaggerfallSession
             return new(target, place.Name, "on the map", known);
         }
         return null;
+    }
+
+    private (string Target, string Name)? QuestDirectionTarget(string key)
+    {
+        string[] parts = key[16..].Split(':');
+        if (parts.Length != 2) return null;
+        string instance = Uri.UnescapeDataString(parts[0]), symbol = Uri.UnescapeDataString(parts[1]);
+        var selected = State.Quests.DialogueResources().SingleOrDefault(value => value.Instance.InstanceId == instance && value.Resource.Symbol == symbol);
+        if (selected.Resource is not { } resource) return null;
+        string name = resource.Text?.Name ?? resource.SelectedPerson?.DisplayName ?? resource.Symbol;
+        if (resource.SelectedPerson is not null)
+        {
+            foreach (long id in resource.Binding.ActorIds)
+                if (ResolveDialogueDirection($"direction:npc:{id}") is not null) return ($"direction:npc:{id}", name);
+        }
+        var binding = resource.SelectedPerson?.Home?.Binding ?? resource.Binding;
+        if (binding.Kind != DaggerfallQuestResourceBindingKind.Place || binding.Places is not [var place] || place.Region is not int region || place.Index is not int index) return null;
+        if (Site.ActiveSite?.Id == new DaggerfallSiteId(region, index) && binding.Building is { } building)
+            return ($"direction:building:{building.BlockX}:{building.BlockY}:{building.Index}", name);
+        return ($"direction:site:{place.Region}:{place.Index}", name);
     }
 
     /// <summary>

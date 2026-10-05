@@ -75,7 +75,10 @@ internal sealed record DaggerfallQuestDialogueTopic(
     string InstanceId,
     string ResourceSymbol,
     int MessageId,
-    bool PublishesRumor);
+    bool PublishesRumor)
+{
+    internal string? Diagnostic { get; init; }
+}
 internal sealed record DaggerfallQuestPresentation(
     IReadOnlyList<DaggerfallQuestRenderedMessage> Deliveries,
     IReadOnlyList<DaggerfallQuestRenderedMessage> Journal,
@@ -93,7 +96,7 @@ internal sealed class DaggerfallQuestMessages
     // The donor tests the long name forms first. Keeping that order stops '__foo_' being consumed as
     // a shorter spelling and makes every retained name, faction, binding, and detail arm explicit.
     private static readonly Regex ResourceMacro = new(
-        "(?<token>____(?<name4>[a-zA-Z0-9.]+)_|___(?<name3>[a-zA-Z0-9.]+)_|__(?<name2>[a-zA-Z0-9.]+)_|_(?<name1>[a-zA-Z0-9.]+)_|==(?<faction>[a-zA-Z0-9.]+)_|=#(?<binding>[a-zA-Z0-9.]+)_|=(?<details>[a-zA-Z0-9.]+)_)|(?<npcClan>%vcn)(?![a-zA-Z0-9])",
+        "(?<token>____(?<name4>[a-zA-Z0-9.-]+)_|___(?<name3>[a-zA-Z0-9.-]+)_|__(?<name2>[a-zA-Z0-9.-]+)_|_(?<name1>[a-zA-Z0-9.-]+)_|==(?<faction>[a-zA-Z0-9.-]+)_|=#(?<binding>[a-zA-Z0-9.-]+)_|=(?<details>[a-zA-Z0-9.-]+)_)|(?<npcClan>%vcn)(?![a-zA-Z0-9])",
         RegexOptions.CultureInvariant);
     private readonly DaggerfallTextResolver _text;
     private readonly IReadOnlyDictionary<string, DaggerfallQuestSourceDefinition> _sources;
@@ -104,6 +107,7 @@ internal sealed class DaggerfallQuestMessages
     private readonly List<DaggerfallQuestChoiceSave> _choices = [];
     private DaggerfallQuestPromptSave? _pending;
     private ulong _lastDeliveryId;
+    internal Action<DaggerfallQuestRuntimeInstance, string>? ResourceNamed { get; set; }
 
     internal DaggerfallQuestMessages(DaggerfallDefinitions definitions, IRandomService random)
         : this(definitions?.TextPresentation ?? throw new ArgumentNullException(nameof(definitions)), definitions.QuestSources.Quests,
@@ -156,6 +160,16 @@ internal sealed class DaggerfallQuestMessages
             DaggerfallQuestMessageDelivery.Rumor, delivery.Variant, context);
         return (text, diagnostics);
     }
+
+    internal (string Text, IReadOnlyList<string> Diagnostics) RenderDelivery(DaggerfallQuestRuntimeInstance instance,
+        DaggerfallQuestMessageDeliverySave delivery, DaggerfallQuestMessageContext context)
+    {
+        var rendered = Render(instance, delivery.MessageId, delivery.Delivery, delivery.Variant, context);
+        return (rendered.Text, rendered.Diagnostics);
+    }
+
+    internal void RemoveDialogue(string instanceId) => _deliveries.RemoveAll(delivery => delivery.InstanceId == instanceId
+        && delivery.Delivery == DaggerfallQuestMessageDelivery.Rumor);
 
     internal void Log(DaggerfallQuestRuntimeInstance instance, int messageId, int step)
     {
@@ -424,7 +438,8 @@ internal sealed class DaggerfallQuestMessages
         DaggerfallQuestMessageDelivery delivery,
         int variant,
         DaggerfallQuestMessageContext context)
-        => Render(instance.SourceFile, messageId, delivery, variant, BindSymbols(instance, context));
+        => Render(instance.SourceFile, messageId, delivery, variant, BindSymbols(instance, context), delivery is DaggerfallQuestMessageDelivery.Popup or DaggerfallQuestMessageDelivery.Rumor or DaggerfallQuestMessageDelivery.Prompt or DaggerfallQuestMessageDelivery.Journal or DaggerfallQuestMessageDelivery.Letter
+            ? symbol => ResourceNamed?.Invoke(instance, symbol) : null);
 
     private static DaggerfallQuestMessageContext BindSymbols(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestMessageContext context)
     {
@@ -438,7 +453,7 @@ internal sealed class DaggerfallQuestMessages
     }
 
     private (string Text, string? Signoff, IReadOnlyList<string> Diagnostics) Render(string sourceFile, int messageId,
-        DaggerfallQuestMessageDelivery delivery, int variant, DaggerfallQuestMessageContext context)
+        DaggerfallQuestMessageDelivery delivery, int variant, DaggerfallQuestMessageContext context, Action<string>? resourceNamed = null)
     {
         DaggerfallQuestMessageDefinition message = RequireMessage(sourceFile, messageId);
         List<string> issues = [];
@@ -460,7 +475,9 @@ internal sealed class DaggerfallQuestMessages
                 .First(group => group.Success && group.Name is "name4" or "name3" or "name2" or "name1" or "faction" or "binding" or "details").Value,
                 "quest message resource");
             referencedClan = context.Resources.TryGetValue(symbol, out var resource) ? resource.NpcVampireClan : null;
-            return ExpandResource(match, context.Resources, delivery, issues);
+            string expanded = ExpandResource(match, context.Resources, delivery, issues);
+            if (match.Groups["name1"].Success && !string.IsNullOrWhiteSpace(resource?.Name)) resourceNamed?.Invoke(symbol);
+            return expanded;
         });
         DaggerfallTextRenderResult global = _text.ResolveRaw(text, key,
             context.Text with { Faction = context.Text.Faction with { NpcVampireClan = null } });

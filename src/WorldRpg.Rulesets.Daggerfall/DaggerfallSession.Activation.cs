@@ -48,6 +48,8 @@ internal sealed partial class DaggerfallSession
             resolveDirection: ResolveDialogueDirection,
             directionDirectory: DialogueDirectory,
             questTopics: State.Quests.DialogueTopics,
+            questRumors: State.Quests.DialogueRumors,
+            resolveQuestRumor: State.Quests.ResolveDialogueRumor,
             resolveQuestTopic: ResolveQuestTopic,
             calendar: () => _time.Calendar,
             workAvailable: DialogueWorkAvailable,

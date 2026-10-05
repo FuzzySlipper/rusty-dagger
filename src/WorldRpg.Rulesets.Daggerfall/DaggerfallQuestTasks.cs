@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { When, DroppedAt, RevealPlace, TeleportPlace, WorldUpdate, ClickedItem, TotingItem, ItemUsed, GiveItem, PayMoney, GivePc, FoeTeam, FoeInfighting, FoeRestraint, Enemies, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { AddDialog, DialogLink, When, DroppedAt, RevealPlace, TeleportPlace, WorldUpdate, ClickedItem, TotingItem, ItemUsed, GiveItem, PayMoney, GivePc, FoeTeam, FoeInfighting, FoeRestraint, Enemies, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
@@ -240,6 +240,7 @@ internal static partial class DaggerfallQuestTaskCompiler
 
     private static DaggerfallQuestTaskOperation CompileOperation(string line, int sourceLine)
     {
+        if (CompileDialogueLink(line, sourceLine) is { } dialogue) return dialogue;
         if (CompileWorldAction(line, sourceLine) is { } worldAction) return worldAction;
         if (CompileItemInteraction(line, sourceLine) is { } interaction) return interaction;
         if (CompileReward(line, sourceLine) is { } reward) return reward;
@@ -428,6 +429,7 @@ internal interface IDaggerfallQuestTaskLifecycle
     bool ItemUsed(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest item use owner is composed.");
     string? PayMoney(DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest payment owner is composed.");
     bool GiveItem(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, DaggerfallQuestTaskRuntimeState state, int index) => throw new NotSupportedException("No quest item transfer owner is composed.");
+    void DialogueLink(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest dialogue owner is composed.");
     bool WorldAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest world action owner is composed.");
     bool GivePc(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, DaggerfallQuestTaskRuntimeState task, int index, World.DaggerfallCalendar calendar, double elapsedSeconds) => throw new NotSupportedException("No quest reward owner is composed.");
     bool FoeRelation(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest foe relation owner is composed.");
@@ -640,6 +642,11 @@ internal static class DaggerfallQuestTaskRunner
                             MarkCompleted(state, operationIndex);
                             Start(operation.Targets[1], states, indexes, program.Tasks, variables, instance.InstanceId, operation);
                         }
+                        break;
+                    case DaggerfallQuestTaskOperationKind.AddDialog:
+                    case DaggerfallQuestTaskOperationKind.DialogLink:
+                        try { lifecycle.DialogueLink(instance, operation); MarkCompleted(state, operationIndex); }
+                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); operationIndex = task.Operations.Count; }
                         break;
                     case DaggerfallQuestTaskOperationKind.RevealPlace:
                     case DaggerfallQuestTaskOperationKind.TeleportPlace:
