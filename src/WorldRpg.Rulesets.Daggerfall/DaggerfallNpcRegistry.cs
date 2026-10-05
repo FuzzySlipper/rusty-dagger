@@ -81,6 +81,9 @@ public sealed record DaggerfallNpc(
 /// </summary>
 public sealed class DaggerfallNpcRegistry
 {
+    private Func<long, bool> _questUnavailable = _ => false;
+    internal void BindQuestPresence(Func<long, bool> unavailable) => _questUnavailable = unavailable;
+
     private readonly Dictionary<long, DaggerfallNpc> _npcs = new();
     private readonly Dictionary<string, long> _stable = new(StringComparer.Ordinal);
 
@@ -180,8 +183,8 @@ public sealed class DaggerfallNpcRegistry
     /// as soon as the population owner hides it for night or unload.
     /// </summary>
     internal bool IsGameplayActive(long durableId) =>
-        !_npcs.TryGetValue(durableId, out DaggerfallNpc? npc)
-        || npc.Presence == DaggerfallNpcPresence.Active;
+        (!_npcs.TryGetValue(durableId, out DaggerfallNpc? npc)
+        || npc.Presence == DaggerfallNpcPresence.Active) && !_questUnavailable(durableId);
 
     /// <summary>Every registered NPC.</summary>
     public IReadOnlyList<DaggerfallNpc> All => [.. _npcs.Values.OrderBy(npc => npc.DurableId)];

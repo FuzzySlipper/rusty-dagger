@@ -702,8 +702,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         return actor is not null;
     }
 
-    private static bool IsTalkableAt(DaggerfallNpc npc, DaggerfallSiteRecord site) =>
-        npc.Presence == DaggerfallNpcPresence.Active
+    private bool IsTalkableAt(DaggerfallNpc npc, DaggerfallSiteRecord site) =>
+        _npcs.IsGameplayActive(npc.DurableId)
         && npc.Services.Contains("talk", StringComparer.Ordinal)
         && (npc.Profile is { } profile ? profile.Site == site.Id
             : npc.Site.Region == site.Id.Region && string.Equals(npc.Site.Location, site.Name, StringComparison.Ordinal));

@@ -105,7 +105,7 @@ internal sealed partial class DaggerfallSession
         // conversion, retire that representation and admit a real watch actor at its pose.
         // Its new durable combat identity then remains in this case and the site delta.
         foreach (var npc in State.Npcs.All.Where(npc => npc.Kind == DaggerfallNpcKind.Civilian
-            && npc.Role == "guard" && npc.Presence == DaggerfallNpcPresence.Active).ToArray())
+            && npc.Role == "guard" && State.Npcs.IsGameplayActive(npc.DurableId)).ToArray())
         {
             if (!State.Actors.TryGet(npc.DurableId, out var actor) || actor.IsDefeated) continue;
             var watch = _definitions.Actors.Values.Single(definition => definition.MobileId == 146);

@@ -66,7 +66,11 @@ internal static class DaggerfallQuestPlacements
 internal sealed partial class DaggerfallQuestInstances
 {
     private DaggerfallNpcRegistry? _placementNpcs;
-    internal void BindPlacementNpcs(DaggerfallNpcRegistry npcs) => _placementNpcs = npcs;
+    internal void BindPlacementNpcs(DaggerfallNpcRegistry npcs)
+    {
+        _placementNpcs = npcs;
+        foreach (var instance in _instances.Values) ValidateOperationReceipts(instance, Program(instance.SourceFile));
+    }
     void IDaggerfallQuestTaskLifecycle.PlaceResource(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, string task, int operationIndex)
     {
         if (operation.Kind == DaggerfallQuestTaskOperationKind.ReservePlace)
@@ -88,6 +92,7 @@ internal sealed partial class DaggerfallQuestInstances
             _ => false,
         };
         if (!correctKind) throw new ArgumentException($"Quest placement at line {operation.SourceLine} does not name the required resource kind.");
+        if (resource.IsNpcDestroyed) return;
         if (resource.SelectedPerson is not null && resource.Binding.ActorIds.Length == 1
             && _placementNpcs?.Require(resource.Binding.ActorIds[0]).Presence == DaggerfallNpcPresence.Removed) return;
         if (resource.SelectedPerson?.Individual == true && _definitions.QuestSources.Resources.Single(value => value.SourceFile == instance.SourceFile
@@ -142,6 +147,7 @@ internal sealed partial class DaggerfallQuestInstances
                 var destination = DaggerfallQuestPlacements.Destination(instance.Resources, operation.PlaceSymbol);
                 if (!DaggerfallQuestPlacements.Matches(destination, profile)) continue;
                 var resource = instance.Resources.Single(value => DaggerfallQuestInstanceSave.Canonical(value.Symbol, "placement resource") == operation.ResourceSymbol);
+                if (resource.SelectedPerson is not null && (resource.IsHidden || resource.IsNpcDestroyed)) continue;
                 var marker = SelectPlacementMarker(instance, operation, resource, profile);
                 var binding = world.Place(instance.InstanceId, resource, profile, marker);
                 if (binding is null)

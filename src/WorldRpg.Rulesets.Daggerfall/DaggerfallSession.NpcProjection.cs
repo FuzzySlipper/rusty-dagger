@@ -26,7 +26,7 @@ internal sealed partial class DaggerfallSession
         // targeting and site lifetime all observe the same owner; projecting them here would
         // collide with that actor identity.
         var active = State.Npcs.All.Where(npc => _sites.ActiveLocationLoaded && npc.Kind == DaggerfallNpcKind.Questor
-            && npc.Profile == profile.ProfileKey && npc.Presence == DaggerfallNpcPresence.Active).ToDictionary(npc => npc.DurableId);
+            && npc.Profile == profile.ProfileKey && State.Npcs.IsGameplayActive(npc.DurableId)).ToDictionary(npc => npc.DurableId);
         foreach (var entry in State.Actors.Store.Query<DaggerfallNpcBody>())
         {
             long id = checked((long)State.Actors.Entities.IdentityOf(entry.Entity).Value);

@@ -180,7 +180,7 @@ public sealed class QuestNpcAdmissionTests
         Assert.Single(DaggerfallSavePayload.Read(inactive.CaptureSave()).DynamicActors, value => value.EntityId == id);
     }
 
-    private static DaggerfallDefinitions Definitions(bool explicitGiver = false)
+    internal static DaggerfallDefinitions Definitions(bool explicitGiver = false, string[][]? taskBlocks = null)
     {
         var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
@@ -193,6 +193,13 @@ public sealed class QuestNpcAdmissionTests
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
             {"name":"npc","displayName":"","sourceFile":"npc.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[]}
             """));
+        if (taskBlocks is not null)
+        {
+            var blocks = root["questSources"]!["quests"]!.AsArray().Last()!["blocks"]!.AsArray();
+            string symbol = person["symbol"]!["canonicalId"]!.GetValue<string>();
+            for (int i = 0; i < taskBlocks.Length; i++) blocks.Add(new JsonObject { ["kind"] = "task", ["firstLine"] = 10 + i * 10,
+                ["lines"] = System.Text.Json.JsonSerializer.SerializeToNode(taskBlocks[i].Select(line => line.Replace("_person_", symbol))), ["global"] = null });
+        }
         return DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
     }
 }

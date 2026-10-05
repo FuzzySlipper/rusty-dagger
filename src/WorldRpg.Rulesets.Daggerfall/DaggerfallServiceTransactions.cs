@@ -351,7 +351,7 @@ internal sealed class DaggerfallServiceTransactions
         DaggerfallNpc npc;
         try { npc = _npcs.Require(provider.NpcId); }
         catch (InvalidOperationException) { return DaggerfallServiceDenial.UnknownProvider; }
-        if (npc.Presence != DaggerfallNpcPresence.Active) return DaggerfallServiceDenial.ProviderUnavailable;
+        if (!_npcs.IsGameplayActive(npc.DurableId)) return DaggerfallServiceDenial.ProviderUnavailable;
         if (npc.Site != provider.Site) return DaggerfallServiceDenial.SiteChanged;
         if (!npc.Services.Contains(provider.Service, StringComparer.Ordinal)) return DaggerfallServiceDenial.ServiceUnavailable;
         DaggerfallNpcSite? current = _currentSite();

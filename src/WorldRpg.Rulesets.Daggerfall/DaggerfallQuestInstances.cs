@@ -101,6 +101,7 @@ internal sealed record DaggerfallQuestBuildingClaim(string SourceKey, int Index,
 /// <summary>Durable state belonging to one declared resource.</summary>
 internal sealed record DaggerfallQuestResourceState(string Symbol, DaggerfallQuestResourceBinding Binding, bool IsHidden = false, bool HasPlayerClicked = false)
 {
+    public bool IsNpcDestroyed { get; init; }
     public bool IsQuestor { get; init; }
     public bool IsMuted { get; init; }
     public string? EscortFaceMedia { get; init; }
@@ -179,6 +180,7 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
                 || resource.DefeatedFoeIds.Concat(resource.RemovedFoeIds).Any(id => id <= 0 || !resource.Binding.ActorIds.Contains(id))
                 || resource.SelectedFoe is null && (resource.FoeInjured || resource.FoeDeathRequested || resource.DefeatedFoeIds.Length > 0 || resource.RemovedFoeIds.Length > 0))
                 throw new ArgumentException($"Quest resource '{symbol}' has incompatible foe lifecycle state.");
+            if (resource.IsNpcDestroyed && resource.SelectedPerson is null) throw new ArgumentException($"Quest resource '{symbol}' carries NPC destruction without a Person.");
             if ((resource.IsQuestor || resource.IsMuted) && resource.SelectedPerson is null
                 || (resource.EscortFaceMedia is null ? resource.EscortFaceOrder != 0 : resource.EscortFaceOrder <= 0)
                 || resource.EscortFaceMedia is not null && (string.IsNullOrWhiteSpace(resource.EscortFaceMedia) || resource.SelectedPerson is null && resource.SelectedFoe is null)
@@ -837,7 +839,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         })] }, program) { TravelClockSeconds = ResolveTravelClockSeconds };
         InitializeWorldTriggers(started, program);
         if (!_instances.TryAdd(started.InstanceId, started)) throw new ArgumentException($"Quest instance '{started.InstanceId}' already exists.");
-        foreach (var resource in started.Resources.Where(value => value.SelectedPerson?.Home is not null))
+        foreach (var resource in started.Resources.Where(value => value.SelectedPerson is { Home: not null, QuestorId: null }))
             RequestPlacement(started.InstanceId, "person-home:" + DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "Person home"), resource.Symbol,
                 DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "Person home") + ".home", automaticHome: true);
         return started.Capture();
@@ -1221,8 +1223,11 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 DaggerfallQuestTaskOperation operation = task.Operations[operationIndex];
                 DaggerfallQuestTaskOperationState receipt = state.OperationState[operationIndex];
                 if (receipt.UnavailableReason is { } reason && (string.IsNullOrWhiteSpace(reason)
-                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
+                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
                     throw new ArgumentException("Quest unsupported world detail must identify its owning action.");
+                if (receipt.NpcAvailability is { } availability && (operation.Kind != DaggerfallQuestTaskOperationKind.WhenNpcAvailable
+                    || availability.ActorId <= 0 || _placementNpcs is not null && !_placementNpcs.IsStatic(availability.ActorId)))
+                    throw new ArgumentException("Quest NPC availability requires its actual static NPC interaction.");
                 if (receipt.Location is { } location)
                 {
                     if (operation.Kind is not (DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits))
