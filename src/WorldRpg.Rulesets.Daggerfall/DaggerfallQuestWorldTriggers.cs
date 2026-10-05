@@ -45,13 +45,7 @@ internal sealed partial class DaggerfallQuestInstances
     bool IDaggerfallQuestTaskLifecycle.PlayerAt(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation)
     {
         var current = WorldRead();
-        if (operation.Kind == DaggerfallQuestTaskOperationKind.PcAt)
-        {
-            var binding = DaggerfallQuestPlacements.Destination(instance.Resources, operation.Targets[0]);
-            return binding.PlaceSelection?.Kind == DaggerfallWorldProfileKind.Exterior
-                ? current.Profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && current.ExteriorLocation?.Id == binding.Places[0].Require()
-                : DaggerfallQuestPlacements.Matches(binding, current.Profile);
-        }
+        if (operation.Kind == DaggerfallQuestTaskOperationKind.PcAt) return IsAtPlace(instance, operation.Targets[0]);
         var place = WorldPlace(operation);
         return place.P1 switch
         {

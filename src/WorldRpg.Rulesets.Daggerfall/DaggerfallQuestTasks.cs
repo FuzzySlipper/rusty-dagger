@@ -5,12 +5,13 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { When, ClickedItem, TotingItem, ItemUsed, GiveItem, PayMoney, GivePc, FoeTeam, FoeInfighting, FoeRestraint, Enemies, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { When, DroppedAt, RevealPlace, TeleportPlace, WorldUpdate, ClickedItem, TotingItem, ItemUsed, GiveItem, PayMoney, GivePc, FoeTeam, FoeInfighting, FoeRestraint, Enemies, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
 internal sealed record DaggerfallQuestTaskOperationState(string? PickedTarget, string? ChildInstanceId)
 {
+    public bool ItemDropped { get; init; }
     public DaggerfallQuestItemTransfer? ItemTransfer { get; init; }
     public string? PaymentBranch { get; init; }
     public DaggerfallQuestRewardState? Reward { get; init; }
@@ -56,7 +57,7 @@ internal sealed class DaggerfallQuestTaskRuntimeState
 internal sealed record DaggerfallQuestTaskCondition(DaggerfallQuestTaskConditionOperator Operator, string Symbol);
 internal sealed record DaggerfallQuestTaskOperation(DaggerfallQuestTaskOperationKind Kind, int SourceLine, string Source,
     string[] Targets, DaggerfallQuestTaskCondition[] Conditions, int? MessageId, int? Step = null, string? MessageAlias = null, DaggerfallQuestPromptOption[]? PromptOptions = null,
-    int? MarkerIndex = null, DaggerfallQuestMarkerPreference MarkerPreference = DaggerfallQuestMarkerPreference.Default, DaggerfallQuestFoeSpawn? FoeSpawn = null);
+    int? MarkerIndex = null, DaggerfallQuestMarkerPreference MarkerPreference = DaggerfallQuestMarkerPreference.Default, DaggerfallQuestFoeSpawn? FoeSpawn = null, DaggerfallQuestWorldUpdate? WorldUpdate = null);
 internal sealed record DaggerfallQuestTaskDefinition(string Symbol, DaggerfallQuestTaskKind Kind, string? PersistUntilTarget,
     string? GlobalName, IReadOnlyList<DaggerfallQuestTaskOperation> Operations);
 internal sealed class DaggerfallQuestTaskProgram
@@ -239,6 +240,7 @@ internal static partial class DaggerfallQuestTaskCompiler
 
     private static DaggerfallQuestTaskOperation CompileOperation(string line, int sourceLine)
     {
+        if (CompileWorldAction(line, sourceLine) is { } worldAction) return worldAction;
         if (CompileItemInteraction(line, sourceLine) is { } interaction) return interaction;
         if (CompileReward(line, sourceLine) is { } reward) return reward;
         if (CompileFoeRelations(line, sourceLine) is { } relation) return relation;
@@ -426,6 +428,7 @@ internal interface IDaggerfallQuestTaskLifecycle
     bool ItemUsed(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest item use owner is composed.");
     string? PayMoney(DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest payment owner is composed.");
     bool GiveItem(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, DaggerfallQuestTaskRuntimeState state, int index) => throw new NotSupportedException("No quest item transfer owner is composed.");
+    bool WorldAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest world action owner is composed.");
     bool GivePc(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, DaggerfallQuestTaskRuntimeState task, int index, World.DaggerfallCalendar calendar, double elapsedSeconds) => throw new NotSupportedException("No quest reward owner is composed.");
     bool FoeRelation(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest foe relation owner is composed.");
     void FoeCommand(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest foe lifecycle owner is composed.");
@@ -471,6 +474,16 @@ internal static class DaggerfallQuestTaskRunner
             for (int operationIndex = 0; operationIndex < task.Operations.Count; operationIndex++)
             {
                 DaggerfallQuestTaskOperation operation = task.Operations[operationIndex];
+                if (operation.Kind == DaggerfallQuestTaskOperationKind.DroppedAt)
+                {
+                    if (!state.IsSet && !state.IsDropped && state.OperationState[operationIndex].ItemDropped)
+                    {
+                        if (!state.OperationCompleted[operationIndex] && operation.MessageId is > 0 and var dropMessage) messages.Popup(instance, dropMessage);
+                        MarkCompleted(state, operationIndex);
+                        Set(task, state, true, variables);
+                    }
+                    continue;
+                }
                 if (operation.Kind is DaggerfallQuestTaskOperationKind.ClickedItem or DaggerfallQuestTaskOperationKind.TotingItem)
                 {
                     if (state.IsSet || state.IsDropped) continue;
@@ -627,6 +640,15 @@ internal static class DaggerfallQuestTaskRunner
                             MarkCompleted(state, operationIndex);
                             Start(operation.Targets[1], states, indexes, program.Tasks, variables, instance.InstanceId, operation);
                         }
+                        break;
+                    case DaggerfallQuestTaskOperationKind.RevealPlace:
+                    case DaggerfallQuestTaskOperationKind.TeleportPlace:
+                    case DaggerfallQuestTaskOperationKind.WorldUpdate:
+                        bool worldApplied = false;
+                        try { worldApplied = lifecycle.WorldAction(instance, operation); }
+                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); }
+                        if (worldApplied) MarkCompleted(state, operationIndex);
+                        else operationIndex = task.Operations.Count;
                         break;
                     case DaggerfallQuestTaskOperationKind.GiveItem:
                         bool transferSettled = false;
@@ -1025,7 +1047,7 @@ internal static class DaggerfallQuestTaskRunner
 
     // These donor actions opt out of rearm.  RunQuest also retains its live child id while waiting.
     private static bool PersistsAcrossRearm(DaggerfallQuestTaskOperation operation) => operation.Kind is
-        DaggerfallQuestTaskOperationKind.GiveItem or DaggerfallQuestTaskOperationKind.ItemUsed or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.WhenNpcAvailable or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits or
+        DaggerfallQuestTaskOperationKind.DroppedAt or DaggerfallQuestTaskOperationKind.GiveItem or DaggerfallQuestTaskOperationKind.ItemUsed or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.WhenNpcAvailable or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits or
         DaggerfallQuestTaskOperationKind.StartQuest or DaggerfallQuestTaskOperationKind.RunQuest or DaggerfallQuestTaskOperationKind.TrainPc
         or DaggerfallQuestTaskOperationKind.Say or DaggerfallQuestTaskOperationKind.JournalNote or DaggerfallQuestTaskOperationKind.AddFace;
     private static void DiagnoseWorldAction(DaggerfallQuestTaskRuntimeState state, int index, DaggerfallQuestTaskOperation operation, string reason)

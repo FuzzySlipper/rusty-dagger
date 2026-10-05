@@ -43,6 +43,10 @@ internal sealed class DaggerfallInventoryPresentation
     private Func<DaggerfallCalendar>? loanCalendar;
     private Func<int>? loanLevel;
     private Func<int?>? currentRegion;
+    private Func<DaggerfallItemInstanceMetadata, string?>? canDropQuestItem;
+    private Action<DaggerfallItemInstanceMetadata>? questItemDropped;
+    internal void BindQuestDrops(Func<DaggerfallItemInstanceMetadata, string?> canDrop, Action<DaggerfallItemInstanceMetadata> dropped)
+    { canDropQuestItem = canDrop; questItemDropped = dropped; }
     internal event Action<DaggerfallReadableBook>? BookOpened;
     internal string Message { get; private set; } = "Drag items between the grid and compatible equipment slots.";
     internal DaggerfallEquipmentChange? LastEquipmentChange { get; private set; }
@@ -277,9 +281,12 @@ internal sealed class DaggerfallInventoryPresentation
         else { Message = "That item is no longer in your inventory."; return; }
         WorldRpg.Kit.Controls.WorldPoint? position = groundPosition();
         if (position is null) { Message = "You cannot drop an item without a world position."; return; }
+        var metadata = Metadata(row.Key, itemOwner);
+        if (metadata is not null && canDropQuestItem?.Invoke(metadata) is { } refusal) { Message = refusal; return; }
         try
         {
             _ = ground.Drop(selection, position.Value, ulong.Parse(current.Revision.Split(':')[0], CultureInfo.InvariantCulture));
+            if (metadata is not null) questItemDropped?.Invoke(metadata);
             Message = $"Dropped {row.Label}.";
         }
         catch (Exception rejection) when (rejection is InvalidOperationException or ArgumentException)

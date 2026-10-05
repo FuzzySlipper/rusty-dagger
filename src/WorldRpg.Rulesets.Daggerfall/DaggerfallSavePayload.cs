@@ -50,6 +50,8 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallLevelUpSave? LevelUp = null)
 {
     [JsonRequired]
+    public DaggerfallWorldVariantSave[] WorldVariants { get; init; } = [];
+    [JsonRequired]
     public DaggerfallSpellDefinition[] CustomSpells { get; init; } = [];
     [JsonRequired]
     public long MagicRounds { get; init; }
@@ -848,6 +850,15 @@ internal sealed record DaggerfallSavePayload(
             DaggerfallExteriorWorldBounds.Daggerfall.Require(location.Cell, nameof(ExteriorLocationResidency));
             if (Site.ActiveProfile?.Require().Kind != DaggerfallWorldProfileKind.Exterior)
                 throw new ArgumentException("Saved exterior location residency requires an active exterior profile.", nameof(ExteriorLocationResidency));
+        }
+        ArgumentNullException.ThrowIfNull(WorldVariants);
+        var variantSites = new HashSet<DaggerfallSiteId>();
+        foreach (var variant in WorldVariants)
+        {
+            ArgumentNullException.ThrowIfNull(variant);
+            var site = new DaggerfallSiteId(variant.Region, variant.Location);
+            if (variant.Region < 0 || variant.Location < 0 || !DaggerfallBaseContent.ValidId(variant.Variant) || variant.Variant == "-" || !variantSites.Add(site))
+                throw new ArgumentException("Saved world variants require one valid named variant per location.");
         }
         ArgumentNullException.ThrowIfNull(SiteDeltas);
         foreach (DaggerfallSiteDeltaSave delta in SiteDeltas) delta.Validate();

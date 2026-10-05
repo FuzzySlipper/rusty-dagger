@@ -168,7 +168,9 @@ internal static class DaggerfallSiteContent
             audioBundle,
             DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics), billboardSprites,
             DaggerfallStaticNpcPlacement.Read(normalizedWorld, billboardSprites, definitions, start.Site, diagnostics), terrainTextures: terrainTextures, population: population)
-        { AmbientZones = DaggerfallAmbientZones.Read(normalizedWorld, diagnostics),
+        { VariantName = DaggerfallBaseContent.OptionalText(world, "variant", diagnostics),
+            VariantBaseLogicalId = DaggerfallBaseContent.OptionalText(world, "variantOf", diagnostics),
+            AmbientZones = DaggerfallAmbientZones.Read(normalizedWorld, diagnostics),
             PropertyContainers = DaggerfallPropertyContainerPlacement.Read(normalizedWorld) };
     }
 
@@ -2470,6 +2472,8 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
 }
 internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedBillboardSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null, string? audioBundle = null, IReadOnlyList<DaggerfallSiteMarker>? questMarkers = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite>? billboardSprites = null, IReadOnlyList<DaggerfallStaticNpcPlacement>? staticNpcs = null, IReadOnlyList<CharacterWaterVolume>? waterVolumes = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture>? terrainTextures = null, IReadOnlyList<DaggerfallPopulationPlacement>? population = null)
 {
+    internal string? VariantName { get; init; }
+    internal string? VariantBaseLogicalId { get; init; }
     internal IReadOnlyList<DaggerfallPropertyContainerPlacement> PropertyContainers { get; init; } = [];
     internal IReadOnlyList<DaggerfallStaticNpcPlacement> StaticNpcs { get; } = staticNpcs ?? [];
     internal ProjectFacts Project { get; } = project;
@@ -2490,7 +2494,7 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContent
     internal DaggerfallWorldProfileKind ProfileKind { get; } = profileKind;
     internal DaggerfallInteriorBuilding? InteriorBuilding { get; } = interiorBuilding?.Validate();
     internal DaggerfallWorldProfileKey ProfileKey => Site is { } selected
-        ? new DaggerfallWorldProfileKey(selected, ProfileKind, logicalProfileId ?? "unscoped-profile").Validate()
+        ? new DaggerfallWorldProfileKey(selected, ProfileKind, VariantBaseLogicalId ?? logicalProfileId ?? "unscoped-profile").Validate()
         : throw new InvalidOperationException("A selectable world profile must name its geographic site.");
     /// <summary>Normalized RDB action doors for this selected published world, in stable source identity order.</summary>
     /// <summary>Source-derived interaction portals for this profile; destinations resolve only through admitted logical profiles.</summary>
