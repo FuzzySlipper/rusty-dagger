@@ -85,6 +85,8 @@ public sealed record DaggerfallRaceWithoutMedia(string Race, int DonorRaceId, st
 /// <param name="Layers">Every published layer, ordered by race then layer.</param>
 /// <param name="RacesWithoutMedia">Races no supplied media draws.</param>
 /// <param name="Sources">Inventory identities this section was built from.</param>
+public sealed record DaggerfallRacialForm(string Id, string HeadMediaId, string BodyMediaId);
+
 public sealed record DaggerfallCharacterPresentation(
     IReadOnlyList<DaggerfallCharacterLayer> Layers,
     IReadOnlyList<DaggerfallFactionFace> Faces,
@@ -94,6 +96,7 @@ public sealed record DaggerfallCharacterPresentation(
     IReadOnlyList<DaggerfallRaceWithoutMedia> RacesWithoutMedia,
     IReadOnlyList<string> Sources)
 {
+    public IReadOnlyList<DaggerfallRacialForm> RacialForms { get; init; } = [];
     public IReadOnlyList<DaggerfallFactionFace> ChildFaces { get; init; } = [];
 
     /// <summary>
@@ -110,6 +113,12 @@ public sealed record DaggerfallCharacterPresentation(
     public void Validate(IReadOnlySet<string> publishedMediaIds)
     {
         ArgumentNullException.ThrowIfNull(publishedMediaIds);
+        foreach (var form in RacialForms)
+        {
+            NormalizedImportDocument.RequireLogicalId(form.Id, nameof(form.Id));
+            RequireBoundReference(publishedMediaIds, MediaBinding.Admitted, form.HeadMediaId, $"Racial form '{form.Id}' head");
+            RequireBoundReference(publishedMediaIds, MediaBinding.Admitted, form.BodyMediaId, $"Racial form '{form.Id}' body");
+        }
         foreach (DaggerfallCharacterLayer layer in Layers)
         {
             NormalizedImportDocument.RequireLogicalId(layer.Race, nameof(layer.Race));
@@ -324,11 +333,19 @@ public static class DaggerfallCharacterPresentationBuilder
                 $"The corpus supplies no class portrait named for '{name}'; the three it supplies depict the classes they are named for, and none of them is this one."));
         }
 
+        List<DaggerfallRacialForm> racialForms = [];
+        foreach (var (id, headFile, bodyFile) in new[] { ("werewolf", "WERE01I0.IMG", "WOLF00I0.IMG"), ("wereboar", "WERE00I0.IMG", "BOAR00I0.IMG") })
+        {
+            var head = set.Canvases.SingleOrDefault(value => System.IO.Path.GetFileName(value.Path) == headFile);
+            var body = set.Canvases.SingleOrDefault(value => System.IO.Path.GetFileName(value.Path) == bodyFile);
+            if (head is not null && body is not null) racialForms.Add(new(id, head.MediaId, body.MediaId));
+        }
         HashSet<string> referenced =
         [
             .. layers.Select(layer => System.IO.Path.GetFileName(layer.SourceFile)),
             .. faces.Select(face => face.SourceFile),
             .. childFaces.Select(face => face.SourceFile),
+            .. set.Canvases.Where(value => value.Family is "WERE" or "WOLF" or "BOAR").Select(value => System.IO.Path.GetFileName(value.Path)),
             .. careerPortraits.Select(portrait => portrait.SourceFile),
         ];
         Dictionary<string, CharacterMediaUnavailable> unavailable = set.Unavailable.ToDictionary(entry => System.IO.Path.GetFileName(entry.Path), StringComparer.Ordinal);
@@ -364,6 +381,6 @@ public static class DaggerfallCharacterPresentationBuilder
             careersWithout,
             files,
             without,
-            [inventory.Source, .. set.Unavailable.Select(entry => entry.Path).Order(StringComparer.Ordinal)]) { ChildFaces = childFaces };
+            [inventory.Source, .. set.Unavailable.Select(entry => entry.Path).Order(StringComparer.Ordinal)]) { ChildFaces = childFaces, RacialForms = racialForms };
     }
 }

@@ -654,6 +654,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             DaggerfallParalysisEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallContinuousDestructionEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallConcealmentEffects.End(State.Effects, died.ActorId);
+            foreach (var light in State.Effects.Active.Where(effect => effect.Definition.Key == DaggerfallIllusionEffects.LightKey
+                && effect.Context.Target.Value == (ulong)died.ActorId).ToArray()) State.Effects.Cancel(light.Context.Instance);
             _corpseLoot.Create(died);
             _rewards.React(died, _facts);
         }
@@ -671,6 +673,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     {
         _heldEnchantments.Refresh();
         RefreshPassiveMagery();
+        RefreshLycanthropy();
         _appearance.RefreshEnemyVoices(State.Actors);
         DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
@@ -700,6 +703,13 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             SiteName: Site.ActiveSite?.Name,
             Map: _mapOpen ? ReadMapPresentation() : null, CreateItem: CreateItemView, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
+        Vector3? candlePosition = !State.Actors.Player.IsDefeated && State.PlayerControl.Position is { } playerPosition
+            && State.Effects.Active.Any(effect => effect.Definition.Key == DaggerfallIllusionEffects.LightKey)
+            ? playerPosition.ToVector() + new Vector3(MathF.Sin(State.PlayerControl.YawRadians) * _tuning.NormalLight.Distance,
+                _spatial.CurrentController.Shape.StandingHeight * _tuning.NormalLight.HeightFraction,
+                -MathF.Cos(State.PlayerControl.YawRadians) * _tuning.NormalLight.Distance) : null;
+        _sites.Projection.Lighting.UpdateMagicCandle(candlePosition, _tuning.NormalLight);
+        _appearance.UpdateMagicCandle(candlePosition);
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep

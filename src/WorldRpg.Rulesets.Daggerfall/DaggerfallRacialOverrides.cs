@@ -87,15 +87,34 @@ internal sealed class DaggerfallRacialOverrides(DaggerfallEffectLifecycle effect
             CriticalWeaknessFlags = birthRace.CriticalWeaknessFlags & ~(int)DaggerfallMagicEffectFlags.Disease,
         };
 
-    internal static DaggerfallEffectDefinition Definition(DaggerfallCharacterState character) => new(EffectKey, EffectKey, DaggerfallEffectStacking.Reject, 1, 1,
-        Apply: effect => Validate(effect, character), Resume: effect => Validate(effect, character), ShowSpellIcon: false);
+    internal static DaggerfallEffectDefinition Definition(DaggerfallCharacterState character, DaggerfallLycanthropyTuning? tuning = null) => new(EffectKey, EffectKey, DaggerfallEffectStacking.Reject, 1, 1,
+        Apply: effect => Attach(effect, character, tuning ?? DaggerfallLycanthropyTuning.Classic), Resume: effect => Attach(effect, character, tuning ?? DaggerfallLycanthropyTuning.Classic), ShowSpellIcon: false);
 
-    private static IEnumerable<IActiveEffectContribution> Validate(DaggerfallActiveEffect effect, DaggerfallCharacterState character)
+    private static IEnumerable<IActiveEffectContribution> Attach(DaggerfallActiveEffect effect, DaggerfallCharacterState character, DaggerfallLycanthropyTuning tuning)
     {
         if (effect.Context.Target.Value != (ulong)DaggerfallActorIdentity.PlayerEntityId)
             throw new ArgumentException("Racial override is only defined for the player.");
         _ = Read(effect.State);
-        return [new DelegateActiveEffectContribution(() => character.RemoveSpellGrants(effect.Context.Instance.Value))];
+        var stats = effect.Target.Get<StatsComponent>();
+        var identity = new EffectSourceIdentity(effect.Target.Entity, effect.Context.Instance, 1, SourceDefinitionId.Parse(EffectKey));
+        string[] attributes = ["strength", "agility", "endurance", "speed"];
+        string[] skills = ["swimming", "running", "stealth", "critical-strike", "climbing", "hand-to-hand", "jumping"];
+        foreach (string key in attributes.Concat(skills))
+        {
+            var id = StatId.Parse(key);
+            var stat = stats.GetStat(id);
+            int amount = attributes.Contains(key) ? tuning.AttributeBonus : tuning.SkillBonus;
+            stat.SetSources(id, [.. stat.Sources.Where(source => source.Identity != identity),
+                new StatSource(identity, SourceDefinitionId.Parse(EffectKey), 0,
+                    [new(id, StackingGroupId.Parse($"daggerfall.lycanthropy.{key}"), MechanicsStackingPolicy.Sum, new StatContribution.Add(amount))])]);
+        }
+        DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(stats, character.Career);
+        return [new DelegateActiveEffectContribution(() =>
+        {
+            foreach (string key in attributes.Concat(skills).Append("health-maximum")) stats.GetStat(StatId.Parse(key)).RemoveSource(identity);
+            DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(stats, character.Career);
+            character.RemoveSpellGrants(effect.Context.Instance.Value);
+        })];
     }
     private static DaggerfallRacialOverrideState Read(JsonElement state) =>
         (state.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallRacialOverrideState)

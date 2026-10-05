@@ -1,4 +1,13 @@
 {
+  "normalLight": { "distance": 1.4, "heightFraction": 0.25, "range": 15, "intensity": 1 },
+  "lycanthropy": {
+    "attributeBonus": 40,
+    "skillBonus": 30,
+    "morphCooldownMinutes": 1440,
+    "hungerPeriodMinutes": 43200,
+    "healthLossPerMinute": 0.0166667,
+    "minimumHealth": 4
+  },
   "worldOrigin": {
     "verticalRebaseDistance": 500.0
   },
@@ -165,6 +174,10 @@
     "attackCueChancePercent": 50,
     "occludedVolumeScale": 0.25,
     "muteHumanSounds": true,
+    "beastMinimumDelaySeconds": 4,
+    "beastMaximumDelaySeconds": 20,
+    "beastAttackChancePercent": 10,
+    "beastBarkChancePercent": 20,
     "contactPitch": 1.1
   },
   "progression": {

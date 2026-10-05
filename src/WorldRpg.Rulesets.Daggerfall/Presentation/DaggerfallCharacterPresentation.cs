@@ -92,6 +92,15 @@ internal sealed record CharacterIdentityPresentation(
     }
 
     /// <summary>Resolves the committed player identity including its exact gender and face media.</summary>
+    internal static CharacterIdentityPresentation From(DaggerfallDefinitions definitions, DaggerfallCharacterIdentity identity, DaggerfallRacialOverrideView? racial)
+    {
+        var original = From(definitions, identity) with { RacialOverride = racial };
+        if (racial?.State.BeastForm != true) return original;
+        string key = racial.State.Kind == DaggerfallRacialKind.Werewolf ? "werewolf" : "wereboar";
+        var form = definitions.CharacterPresentation.RacialForms[key];
+        return original with { SelectedMedia = [new("background", form.BodyMediaId), new("head", form.HeadMediaId)] };
+    }
+
     internal static CharacterIdentityPresentation From(DaggerfallDefinitions definitions, DaggerfallCharacterIdentity identity)
     {
         ArgumentNullException.ThrowIfNull(definitions);
@@ -205,7 +214,7 @@ internal sealed class DaggerfallCharacterPresentation
             Stats(player, ResistanceStats, requireActorDefinition: false),
             Affiliations(),
             _character is { History.Count: > 0 } character ? new CharacterHistoryPresentation([.. character.History]) : null,
-            _character is null ? CharacterIdentityPresentation.From(_definitions, _playerDefinition) : CharacterIdentityPresentation.From(_definitions, _character.Identity) with { RacialOverride = _character.RacialOverrides?.Current },
+            _character is null ? CharacterIdentityPresentation.From(_definitions, _playerDefinition) : CharacterIdentityPresentation.From(_definitions, _character.Identity, _character.RacialOverrides?.Current),
             _character is null ? [] : [.. _character.GrantedSkills],
             _character?.ReadCreation(),
             _levelUps?.Read());

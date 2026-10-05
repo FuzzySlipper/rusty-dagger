@@ -103,6 +103,8 @@ internal sealed record DaggerfallRaceWithoutMedia(string RaceId, int DonorRaceId
 /// carried with their reason rather than being absent, so a caller cannot mistake "no media" for
 /// "not looked up".
 /// </remarks>
+internal sealed record DaggerfallRacialFormMedia(string Id, string HeadMediaId, string BodyMediaId);
+
 internal sealed class DaggerfallCharacterPresentationSet(
     IReadOnlyDictionary<string, DaggerfallRaceLayers> races,
     IReadOnlyList<DaggerfallFactionFaceDefinition> factionFaces,
@@ -119,6 +121,7 @@ internal sealed class DaggerfallCharacterPresentationSet(
     /// escort view resolves rather than a race layer.
     /// </summary>
     internal IReadOnlyList<DaggerfallFactionFaceDefinition> FactionFaces { get; } = factionFaces;
+    internal IReadOnlyDictionary<string, DaggerfallRacialFormMedia> RacialForms { get; init; } = new Dictionary<string, DaggerfallRacialFormMedia>();
     internal IReadOnlyList<DaggerfallFactionFaceDefinition> ChildFaces { get; init; } = [];
 
     /// <summary>Every career the pack publishes a portrait for, by catalog career identity.</summary>

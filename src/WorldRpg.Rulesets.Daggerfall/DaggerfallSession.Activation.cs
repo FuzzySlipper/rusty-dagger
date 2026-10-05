@@ -32,6 +32,7 @@ internal sealed partial class DaggerfallSession
     {
         ArgumentNullException.ThrowIfNull(engine);
         _appearance.UseEnemyAudibleRange(() => EnemyAudibleRange);
+        _appearance.UsePlayerBeastForm(() => State.RacialOverrides.Current is { State.BeastForm: true } form ? form.State.Kind : null);
         _dialogue = new DaggerfallDialogueService(
             State.Npcs,
             State.Actors,

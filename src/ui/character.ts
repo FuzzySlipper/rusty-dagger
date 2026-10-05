@@ -147,13 +147,14 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
   const affiliations = section('Affiliations');
   const history = section('History');
   const equipment = section('Equipped items');
+  const portrait = document.createElement('div'); portrait.className = 'dagger-character-art';
   const career = section('Career training');
   const levelUp = section('Level up');
   const creation = section('Character choices');
   const columns = document.createElement('div');
   columns.className = 'dagger-character-columns';
   columns.append(resources.element, attributes.element, skills.element, resistances.element, affiliations.element, history.element, career.element, equipment.element, levelUp.element, creation.element);
-  shell.append(chrome, heading, overview, columns);
+  shell.append(chrome, heading, portrait, overview, columns);
   root.append(shell);
   let disposed = false;
   let held: CharacterProjection | null = null;
@@ -166,6 +167,13 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
       held = value;
       const published = image('window.character-sheet.chrome');
       if (published !== null && chrome.src !== published) chrome.src = published;
+      portrait.replaceChildren(...(value.identity?.selectedMedia ?? []).filter(media =>
+        media.layer.startsWith('head') || value.identity?.racialOverride?.beastForm && media.layer === 'background').flatMap(media => {
+          const source = image(media.mediaId); if (source === null) return [];
+          const img = document.createElement('img'); img.src = source; img.dataset.mediaId = media.mediaId;
+          img.alt = `${value.identity?.racialOverride?.beastForm ? value.identity.racialOverride.name : value.name} ${media.layer.startsWith('head') ? 'portrait' : 'form'}`;
+          return [img];
+        }));
       overview.replaceChildren(
         overviewRow('Player', value.name),
         overviewRow('Level', format(value.progression.level)),

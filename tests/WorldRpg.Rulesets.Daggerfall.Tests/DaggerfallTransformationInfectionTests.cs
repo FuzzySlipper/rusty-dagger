@@ -52,9 +52,19 @@ public sealed class DaggerfallTransformationInfectionTests
             Assert.Equal(DaggerfallInfectionStage.ReadyForTransformation, State(pending).Stage);
             pending.Update(new ProductUpdate(OuterUpdate(3), []));
         }
+        if (kind != DaggerfallInfectionKind.Vampire)
+        {
+            Assert.Empty(pending.Infections.Ready);
+            var racial = Assert.IsType<DaggerfallRacialOverrideView>(pending.State.RacialOverrides.Current);
+            Assert.Equal(kind == DaggerfallInfectionKind.Werewolf ? DaggerfallRacialKind.Werewolf : DaggerfallRacialKind.Wereboar, racial.State.Kind);
+            using var permanent = f.Restore(pending.CaptureSave());
+            Assert.Equal(racial, permanent.State.RacialOverrides.Current);
+            Assert.Equal(DaggerfallInfectionCleanup.Consumed, Assert.Single(DaggerfallSavePayload.Read(permanent.CaptureSave()).Infections.LastOutcomes).Outcome);
+            return;
+        }
         var ready = Assert.Single(pending.Infections.Ready);
         Assert.Equal(kind, ready.Kind); Assert.Equal(3, ready.InfectionRegion);
-        Assert.Contains("consumer is unavailable", State(pending).Unavailable);
+        Assert.Contains("unavailable", State(pending).Unavailable);
         using var waiting = f.Restore(pending.CaptureSave());
         Assert.Equal(ready, Assert.Single(waiting.Infections.Ready));
         Consumer consumer = new(); waiting.Infections.BindConsumer(consumer);

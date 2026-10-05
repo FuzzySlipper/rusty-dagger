@@ -57,7 +57,8 @@ internal sealed class DaggerfallEquipmentMoves(
     MechanicsEquipmentCoordinator equipment,
     DaggerfallDefinitions definitions,
     Func<IReadOnlyList<string>>? forbiddenEquipment = null,
-    DaggerfallItemInstances? itemInstances = null)
+    DaggerfallItemInstances? itemInstances = null,
+    Func<bool>? beastForm = null)
 {
     internal const int GridCapacity = 50;
     private readonly InventoryGridLayout _layout = new(GridCapacity);
@@ -158,6 +159,16 @@ internal sealed class DaggerfallEquipmentMoves(
         return new(EquipmentMoveOutcome.Applied);
     }
 
+    /// <summary>Transforms both hands together and publishes one complete equipment change.</summary>
+    internal void UnequipHands()
+    {
+        var before = equipment.Read();
+        var removed = before.Assignments.Where(value => value.Slot.Value is "right-hand" or "left-hand")
+            .Select(value => value.Item).DistinctBy(value => value.EntityId).ToArray();
+        foreach (var item in removed) equipment.Unequip(item);
+        NotifyRemoved(before, removed);
+    }
+
     internal EquipmentMoveResult MoveToSlot(UniqueItem item, SlotId slot) =>
         MoveToSlot(item, slot, DaggerfallEquipmentCue.Equip, publish: true);
 
@@ -204,6 +215,8 @@ internal sealed class DaggerfallEquipmentMoves(
         if (!definitions.TryResolveItem(new DaggerfallItemId(item.Definition.Value), out DaggerfallItemDefinition definition))
             return new(EquipmentMoveOutcome.UnknownItem);
         if (!IsContained(item)) return new(EquipmentMoveOutcome.UnknownItem);
+        if (beastForm?.Invoke() == true && slot.Value is "right-hand" or "left-hand")
+            return new(EquipmentMoveOutcome.Rejected, "You cannot equip your hands in beast form.");
         if (forbiddenEquipment?.Invoke() is { } restrictions
             && DaggerfallCustomCareerPolicy.Forbids(definition, restrictions, out string restriction))
             return new(EquipmentMoveOutcome.Rejected, restriction);

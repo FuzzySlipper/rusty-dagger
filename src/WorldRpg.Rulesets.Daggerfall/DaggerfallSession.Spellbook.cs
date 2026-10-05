@@ -34,7 +34,7 @@ internal sealed partial class DaggerfallSession
     private DaggerfallSpellInformation? ReadSpellInformation()
     {
         if (_spellInfo is not { } key || !_definitions.Magic.Spells.TryGetValue(key, out var spell)) return null;
-        return new(key, spell.Name, spell.Element, Policies.DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType).ToString(),
+        return new(key, State.Character.IsGrantedSpell(key) ? spell.Name.TrimStart('!') : spell.Name, spell.Element, Policies.DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType).ToString(),
             spell.Effects.Select(effect => $"{_definitions.Magic.RequireEffectCost(effect).School}: duration {effect.DurationBase} + {effect.DurationMod} per {effect.DurationPerLevel} levels; chance {effect.ChanceBase}% + {effect.ChanceMod}% per {effect.ChancePerLevel} levels; magnitude {effect.MagnitudeBaseLow}–{effect.MagnitudeBaseHigh} + {effect.MagnitudeLevelBase}–{effect.MagnitudeLevelHigh} per {effect.MagnitudePerLevel} levels.").ToArray());
     }
 

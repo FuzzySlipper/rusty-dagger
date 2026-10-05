@@ -159,7 +159,7 @@ public static class Arena2SitePublication
                 RuntimeActorResources = media.RuntimeActorResources,
                 RuntimeBillboardResources = [.. media.RuntimeNpcResources
                     .Concat(media.RuntimeNatureResources)
-                    .Concat([GroundContainerBillboard])
+                    .Concat([GroundContainerBillboard, "sprite/texture-210-3"])
                     .Concat(document.World.StaticNpcs.Select(npc => $"sprite/texture-{npc.BillboardArchive}-{npc.BillboardRecord}"))
                     .Concat(document.World.Population.Select(person => $"sprite/texture-{person.BillboardArchive}-{person.BillboardRecord}"))
                     .Distinct(StringComparer.Ordinal)],

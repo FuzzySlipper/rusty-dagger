@@ -177,6 +177,13 @@ internal sealed partial class DaggerfallHeldEnchantments : IDisposable
     /// <summary>The talents the worn items improve right now.</summary>
     internal DaggerfallHeldTalents Talents { get; private set; }
 
+    internal bool HircinesRingEquipped => _equipment.Read().Assignments.Any(assignment =>
+        assignment.Slot.Value is "ring0" or "ring1" && TryEnchantments(assignment, out var enchantments)
+        && enchantments.Any(value => value.Type == ArtifactEffectType && value.Param == 3)
+        && _entities.IdentityOf(new EntityId(assignment.Item.EntityId)) is { Kind: DurableIdentityKind.Item } identity
+        && _instances.RequireUnique(identity.Value).Enchantment is { } key
+        && _magic.MagicItems.TryGetValue(key, out var artifact) && artifact.Type != 0);
+
     internal bool AzurasStarEquipped => _entities.Store.IsAlive(_actor)
         && _stats.GetTrack(TrackId.Parse("health")).Current > 0
         && _equipment.Read().Assignments.Any(assignment => TryEnchantments(assignment, out var enchantments)
@@ -585,8 +592,7 @@ internal sealed partial class DaggerfallHeldEnchantments : IDisposable
     /// </summary>
     private static MoonPhase MoonPhaseAt(DaggerfallCalendar calendar, bool masser)
     {
-        int offset = masser ? 3 : -1;
-        int ratio = ((calendar.DayOfYear + (calendar.Year * 12 * 30) + offset) % 32 + 32) % 32;
+        int ratio = calendar.LunarCycleDay(masser);
         return ratio switch
         {
             0 => MoonPhase.Full,

@@ -227,6 +227,8 @@ internal sealed partial class DaggerfallSession
                     id => authored.TryGetValue(id, out var actorDefinition) && actorDefinition.Kind == DaggerfallActorKinds.Monster ? actorDefinition.MobileId : null,
                     mobile => SoulGems.Capture(mobile), _random, (target, message, dies) => _facts.Append(new SoulTrapResolvedFact(target, message, dies))),
                 .. DaggerfallSocialMagicEffects.Definitions(ApplyPacify,RequestIdentify),
+                DaggerfallIllusionEffects.MorphSelf(() => MorphPlayer()),
+                DaggerfallIllusionEffects.NormalLight(),
                 .. DaggerfallConcealmentEffects.Definitions(),
                 .. DaggerfallDetectionEffects.Definitions(),
                 .. DaggerfallDoorMagicEffects.Definitions(),
@@ -246,7 +248,7 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallDestructionEffects.Definitions(_vitality, AppendEffectDamage, AppendSpellTrackLoss,
                     id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition),
                     ReactToSpellAttack),
-                DaggerfallRacialOverrides.Definition(character),
+                DaggerfallRacialOverrides.Definition(character, tuning.Lycanthropy),
                 .. DaggerfallTransformationInfectionPolicy.Definitions(effect => Infections!.Advance(effect)),
                 .. DaggerfallDiseasePolicy.Definitions(
                     _random,
@@ -262,6 +264,7 @@ internal sealed partial class DaggerfallSession
             Infections = new(effects, () => _time.Calendar.DayNumber, Cinematics, composition.VideosEnabled,
                 message => Presentation.SetOutcome(message), saved?.Infections);
             partiallyConstructed.Add(Infections);
+            Infections.BindConsumer(this);
             partiallyConstructed.Add(effects);
             _rewards = new DaggerfallRewardReactions(
                 progression,
@@ -275,14 +278,15 @@ internal sealed partial class DaggerfallSession
             DaggerfallGuildMembershipPolicy guildMembership = new(social,
                 skillUses.PermanentSkillValue, DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
             DaggerfallConcreteGuildMembershipRuntime concreteGuildMembership = new(guildMembership);
+            assembled.Quests.BindLycanthropyCure(() => CureLycanthropy(fromQuest: true));
             assembled.Quests.BindRuntime(new DaggerfallQuestRuntime(progression, playerStats, definitions,
-                assembled.QuestTraining, tuning.Locomotion, _random, () => _time.Calendar, AdvanceQuestTraining));
+                assembled.QuestTraining, tuning.Locomotion, _random, () => _time.Calendar, AdvanceQuestTime));
             assembled.Quests.BindTravelMinutes(site => _travelPolicy.CautiousQuestLegMinutes(QuestTravelOrigin(), site));
             character.BindCareerCommitted(skillUses.RebaseForCareerSelection);
             DaggerfallLevelUpState levelUps = new(progression, skillUses, playerStats,
                 definitions, () => character.Career, _random, _rewards);
             _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
-                () => character.Career.ForbiddenEquipment, itemInstances);
+                () => character.Career.ForbiddenEquipment, itemInstances, () => character.RacialOverrides?.Current?.State.BeastForm == true);
             _itemCondition = new DaggerfallItemConditionService(definitions, itemInstances, _equipmentMoves);
             _playerSwings = new DaggerfallSwingTracker(_tuning.MeleeTargeting.MinimumSwingGestureRadians);
             _heldEnchantments = new DaggerfallHeldEnchantments(equipmentCoordinator, itemInstances, definitions.Magic,
@@ -507,7 +511,7 @@ internal sealed partial class DaggerfallSession
                 _random, actors.Player.DurableId, saved?.NextCastSequence ?? 1, State.Character.KnownSpells.Contains,
                 id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1,
                 (caster, item) => itemInstances.RequireUnique(item).Owner == (caster == actors.Player.DurableId ? DaggerfallItemOwner.Player : DaggerfallItemOwner.Actor(caster)),
-                () => _latestUpdateGeneration, () => _latestSimulationStep);
+                () => _latestUpdateGeneration, () => _latestSimulationStep, State.Character.IsGrantedSpell);
             _enemyMagic = new(definitions.EnemySpells, definitions.Magic, Casting, _random,
                 id => authored.GetValueOrDefault(id),
                 id => definitions.Mobiles.Mobiles.GetValueOrDefault(id), EnemyRangedSpellPathClear, ExecuteEnemySpell);
@@ -576,7 +580,8 @@ internal sealed partial class DaggerfallSession
                 DaggerfallUiArt.Read(engine.Content, inputs.ClassicPresentation.InventoryIcons.Values,
                     _definitions.CharacterPresentation.Races.Values.SelectMany(race => race.Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head)).Select(layer => layer.MediaId)
                     .Concat(_definitions.CharacterPresentation.FactionFaces.Select(face => face.MediaId))
-                    .Concat(_definitions.CharacterPresentation.ChildFaces.Select(face => face.MediaId))));
+                    .Concat(_definitions.CharacterPresentation.ChildFaces.Select(face => face.MediaId))
+                    .Concat(_definitions.CharacterPresentation.RacialForms.Values.SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId }))));
             partiallyConstructed.Add(_hud);
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments, RestoreDungeonText);
