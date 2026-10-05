@@ -28,7 +28,7 @@ public sealed class DaggerfallMagicCostPolicyTests
             .Select(effect => (effect.Type, effect.SubType)).Distinct().Order().ToArray();
         Assert.Equal(60, retainedEffects.Length);
         // Crafted/potion variants without stock spells still need their published coefficient rows.
-        Assert.Equal(retainedEffects.Concat([(2, -1), (12, -1), (26, -1), (7, 4), (7, 7), (13, 1), (23, 1), (24, 1), (4, 1), (40, -1)]).Concat(Enumerable.Range(0, 4).Select(subtype => (33, subtype))).Concat(Enumerable.Range(0, 8).Select(subtype => (10, subtype))).Concat(Enumerable.Range(0, 8).Select(subtype => (11, subtype))).Concat(Enumerable.Range(0, 3).Select(subtype => (39, subtype))).Distinct().Order(), definitions.Magic.EffectCosts.Keys.Order());
+        Assert.Equal(retainedEffects.Concat([(2, -1), (12, -1), (26, -1), (28, -1), (7, 4), (7, 7), (13, 1), (23, 1), (24, 1), (4, 1), (40, -1)]).Concat(Enumerable.Range(0, 4).Select(subtype => (33, subtype))).Concat(Enumerable.Range(0, 8).Select(subtype => (10, subtype))).Concat(Enumerable.Range(0, 8).Select(subtype => (11, subtype))).Concat(Enumerable.Range(0, 3).Select(subtype => (39, subtype))).Distinct().Order(), definitions.Magic.EffectCosts.Keys.Order());
 
         DaggerfallSpellDefinition doorJam = definitions.Magic.Spells["spell.001"];
         Assert.Equal(28, DaggerfallMagicCostPolicy.QuoteCasting(definitions.Magic, doorJam, new Dictionary<string, int>(), enchantingItem: true).SpellPoints);
