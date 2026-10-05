@@ -5,12 +5,15 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { When, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { When, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
 internal sealed record DaggerfallQuestTaskOperationState(string? PickedTarget, string? ChildInstanceId)
 {
+    public DaggerfallQuestGuardSpawnState? GuardSpawn { get; init; }
+    internal DaggerfallQuestTaskOperationState Copy() => this with { GuardSpawn = GuardSpawn?.Copy() };
+    public DaggerfallQuestFoeSpawnState? FoeSpawn { get; init; }
     public DaggerfallQuestNpcAvailability? NpcAvailability { get; init; }
     public DaggerfallQuestLocationTransition? Location { get; init; }
     public string? UnavailableReason { get; init; }
@@ -34,7 +37,7 @@ internal sealed class DaggerfallQuestTaskRuntimeState
         WasSet = saved.WasSet;
         IsDropped = saved.IsDropped;
         OperationCompleted = [.. saved.OperationCompleted];
-        OperationState = [.. saved.OperationState];
+        OperationState = [.. saved.OperationState.Select(value => value.Copy())];
     }
 
     internal string Symbol { get; }
@@ -44,13 +47,13 @@ internal sealed class DaggerfallQuestTaskRuntimeState
     internal bool IsDropped { get; set; }
     internal bool[] OperationCompleted { get; set; }
     internal DaggerfallQuestTaskOperationState[] OperationState { get; set; }
-    internal DaggerfallQuestTaskState Capture() => new(Symbol, Kind, IsSet, WasSet, IsDropped, [.. OperationCompleted]) { OperationState = [.. OperationState] };
+    internal DaggerfallQuestTaskState Capture() => new(Symbol, Kind, IsSet, WasSet, IsDropped, [.. OperationCompleted]) { OperationState = [.. OperationState.Select(value => value.Copy())] };
 }
 
 internal sealed record DaggerfallQuestTaskCondition(DaggerfallQuestTaskConditionOperator Operator, string Symbol);
 internal sealed record DaggerfallQuestTaskOperation(DaggerfallQuestTaskOperationKind Kind, int SourceLine, string Source,
     string[] Targets, DaggerfallQuestTaskCondition[] Conditions, int? MessageId, int? Step = null, string? MessageAlias = null, DaggerfallQuestPromptOption[]? PromptOptions = null,
-    int? MarkerIndex = null, DaggerfallQuestMarkerPreference MarkerPreference = DaggerfallQuestMarkerPreference.Default);
+    int? MarkerIndex = null, DaggerfallQuestMarkerPreference MarkerPreference = DaggerfallQuestMarkerPreference.Default, DaggerfallQuestFoeSpawn? FoeSpawn = null);
 internal sealed record DaggerfallQuestTaskDefinition(string Symbol, DaggerfallQuestTaskKind Kind, string? PersistUntilTarget,
     string? GlobalName, IReadOnlyList<DaggerfallQuestTaskOperation> Operations);
 internal sealed class DaggerfallQuestTaskProgram
@@ -234,6 +237,7 @@ internal static partial class DaggerfallQuestTaskCompiler
 
     private static DaggerfallQuestTaskOperation CompileOperation(string line, int sourceLine)
     {
+        if (CompileSpawning(line, sourceLine) is { } spawning) return spawning;
         if (CompileNpcLifecycle(line, sourceLine) is { } npcLifecycle) return npcLifecycle;
         if (CompileActorClick(line, sourceLine) is { } click) return click;
         if (CompileWorldTrigger(line, sourceLine) is { } worldTrigger) return worldTrigger;
@@ -408,6 +412,8 @@ internal static partial class DaggerfallQuestTaskCompiler
 /// <summary>Runs only the retained source-order task transitions over one mutable active quest instance.</summary>
 internal interface IDaggerfallQuestTaskLifecycle
 {
+    bool SpawnGuards(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, DaggerfallQuestTaskRuntimeState state, int index, double elapsedSeconds) => throw new NotSupportedException("No quest guard spawning owner is composed.");
+    void SpawnFoes(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, DaggerfallQuestTaskRuntimeState task, int index, World.DaggerfallCalendar calendar) => throw new NotSupportedException("No quest foe spawning owner is composed.");
     void NpcCommand(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, string task, int index) => throw new NotSupportedException("No quest NPC lifecycle owner is composed.");
     bool NpcAvailable(DaggerfallQuestTaskOperation operation, DaggerfallQuestTaskRuntimeState state, int index) => throw new NotSupportedException("No quest NPC availability owner is composed.");
     DaggerfallQuestClickResult ActorClick(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest actor interaction owner is composed.");
@@ -437,7 +443,7 @@ internal static class DaggerfallQuestTaskRunner
     // Donor QuestMachine.QuestMessages.QuestComplete. TrainPc presents this fixed reward message.
     private const int QuestCompleteMessageId = 1004;
 
-    internal static void Advance(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program, DaggerfallVariableStore variables, World.DaggerfallCalendar calendar, DaggerfallQuestMessages messages, IDaggerfallQuestTaskLifecycle lifecycle)
+    internal static void Advance(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program, DaggerfallVariableStore variables, World.DaggerfallCalendar calendar, DaggerfallQuestMessages messages, IDaggerfallQuestTaskLifecycle lifecycle, double elapsedSeconds = 0)
     {
         ArgumentNullException.ThrowIfNull(instance);
         ArgumentNullException.ThrowIfNull(program);
@@ -549,6 +555,13 @@ internal static class DaggerfallQuestTaskRunner
                 if (!state.IsSet || state.OperationCompleted[operationIndex]) continue;
                 switch (operation.Kind)
                 {
+                    case DaggerfallQuestTaskOperationKind.SpawnCityGuards:
+                        try { if (lifecycle.SpawnGuards(instance, operation, state, operationIndex, elapsedSeconds)) MarkCompleted(state, operationIndex); }
+                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); }
+                        break;
+                    case DaggerfallQuestTaskOperationKind.CreateFoe:
+                        lifecycle.SpawnFoes(instance, operation, state, operationIndex, calendar);
+                        break; // Periodic source actions remain active until their task is cleared.
                     case DaggerfallQuestTaskOperationKind.CreateNpc:
                     case DaggerfallQuestTaskOperationKind.HideNpc:
                     case DaggerfallQuestTaskOperationKind.RestoreNpc:
@@ -952,7 +965,11 @@ internal static class DaggerfallQuestTaskRunner
             if (PersistsAcrossRearm(task.Operations[index])) continue;
             if (task.Operations[index].Kind == DaggerfallQuestTaskOperationKind.MuteNpc && state.OperationCompleted[index]) rearmMute(task.Operations[index]);
             state.OperationCompleted[index] = false;
-            state.OperationState[index] = new(null, null);
+            state.OperationState[index] = new(null, null)
+            {
+                FoeSpawn = task.Operations[index].Kind == DaggerfallQuestTaskOperationKind.CreateFoe
+                    && state.OperationState[index].FoeSpawn is { } spawn ? new(-1, 0, 0, 0, null, spawn.MessageSent) : null,
+            };
         }
     }
 

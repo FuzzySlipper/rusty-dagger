@@ -849,7 +849,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     internal DaggerfallQuestInstanceSave Fail(string instanceId, string outcome) => Transition(instanceId, DaggerfallQuestLifecycle.Failed, outcome);
 
     /// <summary>Advances active quest task blocks once within the already-admitted session simulation step.</summary>
-    internal void Advance(DaggerfallVariableStore variables, DaggerfallCalendar calendar)
+    internal void Advance(DaggerfallVariableStore variables, DaggerfallCalendar calendar, double elapsedSeconds = 0)
     {
         ArgumentNullException.ThrowIfNull(variables);
         long now = calendar.ToAbsoluteSeconds();
@@ -870,7 +870,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                     instance.Succeeded ??= false;
                     continue;
                 }
-                DaggerfallQuestTaskRunner.Advance(instance, Program(instance.SourceFile), variables, calendar, Messages, this);
+                DaggerfallQuestTaskRunner.Advance(instance, Program(instance.SourceFile), variables, calendar, Messages, this, elapsedSeconds);
                 }
                 finally
                 {
@@ -1223,8 +1223,25 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 DaggerfallQuestTaskOperation operation = task.Operations[operationIndex];
                 DaggerfallQuestTaskOperationState receipt = state.OperationState[operationIndex];
                 if (receipt.UnavailableReason is { } reason && (string.IsNullOrWhiteSpace(reason)
-                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
+                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
                     throw new ArgumentException("Quest unsupported world detail must identify its owning action.");
+                if (receipt.GuardSpawn is { } guardSpawn)
+                {
+                    if (operation.Kind != DaggerfallQuestTaskOperationKind.SpawnCityGuards) throw new ArgumentException("Quest guard state requires its guard action.");
+                    guardSpawn.Validate();
+                    if (!_definitions.Locations.Records.Any(value => value.Id == guardSpawn.Location)
+                        || _placementNpcs is not null && guardSpawn.CandidateNpcs.Any(id => !_placementNpcs.All.Any(npc => npc.DurableId == id)))
+                        throw new ArgumentException("Quest guard request names an unavailable location or NPC candidate.");
+                }
+                if (receipt.FoeSpawn is { } spawn)
+                {
+                    if (operation.Kind != DaggerfallQuestTaskOperationKind.CreateFoe || spawn.LastAttemptSeconds < -1 || spawn.Attempts < 0
+                        || spawn.CompletedGroups < 0 || spawn.PendingRemaining < 0 || (spawn.PendingRemaining == 0) != (spawn.PendingProfile is null)
+                        || operation.FoeSpawn!.MaximumGroups is { } maximum && spawn.CompletedGroups > maximum
+                        || spawn.PendingRemaining > FoeResource(instance, operation).SelectedFoe!.Count)
+                        throw new ArgumentException("Quest foe spawn schedule does not match its source or pending group.");
+                    spawn.PendingProfile?.Validate();
+                }
                 if (receipt.NpcAvailability is { } availability && (operation.Kind != DaggerfallQuestTaskOperationKind.WhenNpcAvailable
                     || availability.ActorId <= 0 || _placementNpcs is not null && !_placementNpcs.IsStatic(availability.ActorId)))
                     throw new ArgumentException("Quest NPC availability requires its actual static NPC interaction.");

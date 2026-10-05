@@ -24,6 +24,7 @@ internal sealed record DaggerfallTuning(
     DaggerfallPropertyTuning Property,
     DaggerfallTransportTuning Transport)
 {
+    internal DaggerfallQuestSpawningTuning QuestSpawning { get; init; } = new(5f, 20f, 8f, 25f, 5, 77.5f, 95f, 105.469f, 25);
     internal DaggerfallLawTuning Law { get; init; } = new(5, 10, 2, 5, 12.8f, 51.2f, 3.2d);
     internal DaggerfallNormalLightTuning NormalLight { get; init; } = new(1.4f, .25f, 15f, 1f);
     internal DaggerfallLycanthropyTuning Lycanthropy { get; init; } = DaggerfallLycanthropyTuning.Classic;
@@ -112,6 +113,7 @@ internal sealed record DaggerfallTuning(
         Lycanthropy = Lycanthropy.Validate(),
         NormalLight = NormalLight.Validate(),
         Law = Law.Validate(),
+        QuestSpawning = QuestSpawning.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -257,6 +259,15 @@ internal sealed record DaggerfallTuning(
         {
             StrikeEnchantments = new(root.GetProperty("strikeEnchantments").GetProperty("damageAdjustment").GetInt32(),
                 root.GetProperty("strikeEnchantments").GetProperty("vampiricRange").GetDouble()),
+            QuestSpawning = new(root.GetProperty("questSpawning").GetProperty("minimumFoeDistance").GetSingle(),
+                root.GetProperty("questSpawning").GetProperty("maximumFoeDistance").GetSingle(),
+                root.GetProperty("questSpawning").GetProperty("minimumWildernessDistance").GetSingle(),
+                root.GetProperty("questSpawning").GetProperty("maximumWildernessDistance").GetSingle(),
+                root.GetProperty("questSpawning").GetProperty("maximumActiveGuards").GetInt32(),
+                root.GetProperty("questSpawning").GetProperty("guardWitnessDistance").GetSingle(),
+                root.GetProperty("questSpawning").GetProperty("guardWitnessAngleDegrees").GetSingle(),
+                root.GetProperty("questSpawning").GetProperty("guardConversionAngleDegrees").GetSingle(),
+                root.GetProperty("questSpawning").GetProperty("guardConversionChance").GetInt32()),
             Law = new(root.GetProperty("law").GetProperty("minimumResponseSeconds").GetInt32(),
                 root.GetProperty("law").GetProperty("maximumResponseSeconds").GetInt32(),
                 root.GetProperty("law").GetProperty("minimumGuards").GetInt32(), root.GetProperty("law").GetProperty("maximumGuards").GetInt32(),
@@ -556,4 +567,18 @@ internal sealed record DaggerfallLawTuning(int MinimumResponseSeconds, int Maxim
         && float.IsFinite(MinimumArrivalDistance) && MinimumArrivalDistance > 0 && float.IsFinite(MaximumArrivalDistance)
         && MaximumArrivalDistance >= MinimumArrivalDistance && double.IsFinite(ArrestReach) && ArrestReach > 0
         ? this : throw new ArgumentException("Law tuning requires ordered finite response delays, guard counts and arrival distances.");
+}
+
+internal sealed record DaggerfallQuestSpawningTuning(float MinimumFoeDistance, float MaximumFoeDistance,
+    float MinimumWildernessDistance, float MaximumWildernessDistance, int MaximumActiveGuards,
+    float GuardWitnessDistance, float GuardWitnessAngleDegrees, float GuardConversionAngleDegrees, int GuardConversionChance)
+{
+    internal DaggerfallQuestSpawningTuning Validate() => float.IsFinite(MinimumFoeDistance) && MinimumFoeDistance > 0
+        && float.IsFinite(MaximumFoeDistance) && MaximumFoeDistance >= MinimumFoeDistance
+        && float.IsFinite(MinimumWildernessDistance) && MinimumWildernessDistance > 0
+        && float.IsFinite(MaximumWildernessDistance) && MaximumWildernessDistance >= MinimumWildernessDistance
+        && MaximumActiveGuards >= 0 && float.IsFinite(GuardWitnessDistance) && GuardWitnessDistance > 0
+        && float.IsFinite(GuardWitnessAngleDegrees) && GuardWitnessAngleDegrees is >= 0 and <= 180
+        && float.IsFinite(GuardConversionAngleDegrees) && GuardConversionAngleDegrees is >= 0 and <= 180
+        && GuardConversionChance is >= 0 and <= 100 ? this : throw new ArgumentException("Quest spawn tuning has invalid ranges, angles, count, or chance.");
 }

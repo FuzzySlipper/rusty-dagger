@@ -487,6 +487,8 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindClickGold(amount => State.Currency.TrySpendGold(amount, []));
             State.Quests.BindWorldRead(() => _sites.ReadQuestLocation());
             State.Quests.BindFoeCommands(ApplyQuestFoeCommand);
+            State.Quests.BindFoeSpawning(SpawnQuestFoe);
+            State.Quests.BindGuardSpawning(SpawnQuestGuards);
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook,
                 useDrug: variant => UseDrug(variant) == DaggerfallPoisonAdmission.Admitted,
                 useOghma: () =>

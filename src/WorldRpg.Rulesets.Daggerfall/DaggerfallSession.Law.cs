@@ -108,8 +108,7 @@ internal sealed partial class DaggerfallSession
             && npc.Role == "guard" && State.Npcs.IsGameplayActive(npc.DurableId)).ToArray())
         {
             if (!State.Actors.TryGet(npc.DurableId, out var actor) || actor.IsDefeated) continue;
-            var watch = _definitions.Actors.Values.Single(definition => definition.MobileId == 146);
-            long guard = _roster.Spawn(watch.Id.Value, actor.Pose);
+            long guard = AdmitCityWatch(actor.Pose);
             RetireNpcActor(npc.DurableId);
             live.Add(guard);
         }
@@ -125,12 +124,11 @@ internal sealed partial class DaggerfallSession
         }
         if (live.Count == 0 && State.PlayerControl.Position is WorldPoint player)
         {
-            var watch = _definitions.Actors.Values.Single(actor => actor.MobileId == 146);
             int count = CrimeRoll(response.Id, "guard-count", _tuning.Law.MinimumGuards, _tuning.Law.MaximumGuards);
             for (int index = 0; index < count; index++)
             {
                 if (!TryGuardArrivalPose($"{response.Id}:{_activeProfileKey.LogicalId}:{response.Guards.Length}:{index}", player, out ActorPose pose)) continue;
-                live.Add(_roster.Spawn(watch.Id.Value, pose));
+                live.Add(AdmitCityWatch(pose));
             }
         }
         response = response with { Guards = response.Guards.Concat(live).Distinct().ToArray() };
@@ -142,6 +140,14 @@ internal sealed partial class DaggerfallSession
                 definition => definition.MobileId == 146).Where(pair => pair.Kind == PerceptionPairKind.Visible);
             if (visible.Any(pair => live.Contains(checked((long)pair.Target)))) OpenArrest(response);
         }
+    }
+
+    private long AdmitCityWatch(ActorPose pose)
+    {
+        var watch = _definitions.Actors.Values.Single(definition => definition.MobileId == 146);
+        long id = _roster.Spawn(watch.Id.Value, pose);
+        _enemyBehavior.MakeHostile(id);
+        return id;
     }
 
     private bool TryGuardArrivalPose(string operation, WorldPoint player, out ActorPose pose)
