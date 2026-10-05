@@ -258,6 +258,18 @@ internal sealed partial class DaggerfallCharacterState
         Pending = current with { Background = DaggerfallCharacterBackgroundPolicy.Roll(_definitions, career, identity, random, NextBackgroundRollSequence()) };
     }
 
+    internal bool BackgroundCareerChanged(DaggerfallCharacterCreationChoices choices)
+    {
+        if (Pending is not { } previous) return false;
+        var before = CurrentCareer(previous);
+        var after = CurrentCareer(choices);
+        return before.Id != after.Id || !before.PrimarySkills.SequenceEqual(after.PrimarySkills)
+            || !before.MajorSkills.SequenceEqual(after.MajorSkills) || !before.MinorSkills.SequenceEqual(after.MinorSkills);
+    }
+
+    internal DaggerfallCharacterCreationChoices WithFreshBackground(DaggerfallCharacterCreationChoices choices, Rusty.Engine.IRandomService random) =>
+        choices with { Background = DaggerfallCharacterBackgroundPolicy.Roll(_definitions, CurrentCareer(choices), choices.ToIdentity(), random, NextBackgroundRollSequence()) };
+
     internal void ReplacePending(DaggerfallCharacterCreationChoices choices)
     {
         ArgumentNullException.ThrowIfNull(choices);

@@ -506,6 +506,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   }));
   const creationElement = characterView.creationElement;
   const creationHome = creationElement.parentElement!;
+  const entryOutcome = document.createElement('p'); entryOutcome.className = 'dagger-entry-outcome'; entryOutcome.setAttribute('role', 'status'); entryRoot.append(entryOutcome);
   const entryParts = document.createElement('div'); entryParts.className = 'dagger-entry-parts'; entryRoot.append(entryParts);
   const entryCreate = document.createElement('button'); entryCreate.type = 'button'; entryCreate.textContent = 'Create character';
   entryCreate.className = 'dagger-entry-create'; entryCreate.dataset.testid = 'entry-create-character'; entryRoot.append(entryCreate);
@@ -1253,6 +1254,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
     siteName.textContent = value.site?.name ?? '';
     outcome.textContent = value.lastOutcome;
+    entryOutcome.textContent = value.lastOutcome;
     renderQuestMessages(quests, value.quests, (action) => context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
     }));
