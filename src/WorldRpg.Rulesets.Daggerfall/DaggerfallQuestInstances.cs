@@ -101,6 +101,7 @@ internal sealed record DaggerfallQuestBuildingClaim(string SourceKey, int Index,
 /// <summary>Durable state belonging to one declared resource.</summary>
 internal sealed record DaggerfallQuestResourceState(string Symbol, DaggerfallQuestResourceBinding Binding, bool IsHidden = false, bool HasPlayerClicked = false)
 {
+    public DaggerfallQuestFoeRelations? FoeRelations { get; init; }
     public bool IsNpcDestroyed { get; init; }
     public bool IsQuestor { get; init; }
     public bool IsMuted { get; init; }
@@ -173,6 +174,11 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             if (!resources.Add(symbol)) throw new ArgumentException($"Quest instance '{InstanceId}' binds resource '{symbol}' more than once.");
             ArgumentNullException.ThrowIfNull(resource.Binding);
             resource.Binding.Validate(symbol);
+            if (resource.FoeRelations is { } relation && (resource.SelectedFoe is null || relation.Actors is null || relation.Actors.Any(value => value is null || value.Team < 0 || !resource.Binding.ActorIds.Contains(value.ActorId))
+                || relation.Actors.Select(value => value.ActorId).Distinct().Count() != relation.Actors.Length || relation.ReleasedRestraint is null
+                || relation.ReleasedRestraint.Distinct().Count() != relation.ReleasedRestraint.Length
+                || relation.ReleasedRestraint.Any(id => !resource.Binding.ActorIds.Contains(id)) || !relation.Restrained && relation.ReleasedRestraint.Length != 0))
+                throw new ArgumentException($"Quest resource '{symbol}' has invalid foe relation policy.");
             ArgumentNullException.ThrowIfNull(resource.DefeatedFoeIds);
             ArgumentNullException.ThrowIfNull(resource.RemovedFoeIds);
             if (resource.FoeInjured && resource.Binding.ActorIds.Length == 0
@@ -570,6 +576,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
     private static DaggerfallQuestResourceState[] CopyResources(IEnumerable<DaggerfallQuestResourceState> resources) =>
         resources.Select(resource => resource with
         {
+            FoeRelations = resource.FoeRelations?.Copy(),
             Binding = CopyBinding(resource.Binding), DefeatedFoeIds = [.. resource.DefeatedFoeIds], RemovedFoeIds = [.. resource.RemovedFoeIds],
             SelectedPerson = resource.SelectedPerson is { Home: { } home } person
                 ? person with { Home = home with { Binding = CopyBinding(home.Binding) } } : resource.SelectedPerson,

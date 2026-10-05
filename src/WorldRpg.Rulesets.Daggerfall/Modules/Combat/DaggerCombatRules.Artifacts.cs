@@ -107,7 +107,7 @@ internal sealed partial class DaggerCombatRules
     {
         if (target != PlayerId || attacker == PlayerId || applied.Damage <= 0 || _itemCondition is null
             || !_definitions.TryGetValue(attacker, out var enemy)) return;
-        int reflected = NamiraReflection(enemy.Team, applied.Damage);
+        int reflected = NamiraReflection(_actorTeam(attacker), applied.Damage);
         if (reflected == 0) return;
         var ring = _equipment.Read().Assignments
             .Where(assignment => assignment.Slot.Value is "ring0" or "ring1")

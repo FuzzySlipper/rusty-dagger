@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { When, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { When, FoeTeam, FoeInfighting, FoeRestraint, Enemies, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
@@ -237,6 +237,7 @@ internal static partial class DaggerfallQuestTaskCompiler
 
     private static DaggerfallQuestTaskOperation CompileOperation(string line, int sourceLine)
     {
+        if (CompileFoeRelations(line, sourceLine) is { } relation) return relation;
         if (CompileSpawning(line, sourceLine) is { } spawning) return spawning;
         if (CompileNpcLifecycle(line, sourceLine) is { } npcLifecycle) return npcLifecycle;
         if (CompileActorClick(line, sourceLine) is { } click) return click;
@@ -421,6 +422,7 @@ internal interface IDaggerfallQuestTaskLifecycle
     bool PlayerAt(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest world reader is composed.");
     bool WorldTransition(DaggerfallQuestTaskOperation operation, DaggerfallQuestTaskRuntimeState state, int operationIndex) => throw new NotSupportedException("No quest world reader is composed.");
     bool FoeTrigger(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest foe lifecycle owner is composed.");
+    bool FoeRelation(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest foe relation owner is composed.");
     void FoeCommand(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest foe lifecycle owner is composed.");
     void NpcOverlay(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("This lifecycle does not own NPC overlays.");
     void RearmMute(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("This lifecycle does not own mute rearm.");
@@ -568,6 +570,12 @@ internal static class DaggerfallQuestTaskRunner
                     case DaggerfallQuestTaskOperationKind.DestroyNpc:
                         try { lifecycle.NpcCommand(instance, operation, task.Symbol, operationIndex); MarkCompleted(state, operationIndex); }
                         catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); }
+                        break;
+                    case DaggerfallQuestTaskOperationKind.FoeTeam:
+                    case DaggerfallQuestTaskOperationKind.FoeInfighting:
+                    case DaggerfallQuestTaskOperationKind.FoeRestraint:
+                    case DaggerfallQuestTaskOperationKind.Enemies:
+                        if (lifecycle.FoeRelation(instance, operation)) MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.KillFoe:
                     case DaggerfallQuestTaskOperationKind.RemoveFoe:

@@ -19,6 +19,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 /// </summary>
 internal sealed class DaggerfallEnemyBehaviorModule
 {
+    private readonly Func<long, PursuitTarget?>? _selectTarget;
+    private readonly Func<long, bool> _questRestrained;
     private readonly ActorsState _actors;
     private readonly PursuitCoordinator<IProductFact> _pursuit;
     private readonly Func<long, DaggerfallEnemyPerceptionContext> _contextProvider;
@@ -58,8 +60,10 @@ internal sealed class DaggerfallEnemyBehaviorModule
         Func<long, ActorControlRestrictions>? controlRestrictions = null,
         Func<long, PursuitPolicy>? movementPolicy = null,
         Func<long, bool>? canOpenDoors = null,
-        Func<ActorState, bool>? openBlockedDoor = null)
+        Func<ActorState, bool>? openBlockedDoor = null, Func<long, PursuitTarget?>? selectTarget = null, Func<long, bool>? questRestrained = null)
     {
+        _selectTarget = selectTarget;
+        _questRestrained = questRestrained ?? (_ => false);
         _combat = combat;
         _isPlayerAllied = isPlayerAllied ?? (_ => false);
         _selectAllyTarget = selectAllyTarget;
@@ -152,7 +156,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     /// it does not keep a second hostility cache.
     /// </summary>
     internal bool IsPacified(long actorId) =>
-        _actors.TryGet(actorId, out ActorState actor) && Senses(actor).Pacified;
+        _actors.TryGet(actorId, out ActorState actor) && (Senses(actor).Pacified || _questRestrained(actorId));
 
     internal void Pacify(long actorId)
     {
@@ -225,7 +229,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 evidence.Add(actor.DurableId, new(actor.DurableId, EnemyBehaviorState.Idle, null, null));
                 continue;
             }
-            PursuitTarget? target = _isPlayerAllied(actor.DurableId)
+            PursuitTarget? target = _selectTarget is not null ? _selectTarget(actor.DurableId) : _isPlayerAllied(actor.DurableId)
                 ? _selectAllyTarget?.Invoke(actor.DurableId)
                 : new PursuitTarget(DaggerfallActorIdentity.PlayerEntityId, playerPosition);
             if (target is null)
@@ -339,7 +343,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
             return receipt;
         }
         // The player's stealth/language policy does not reinterpret an ally's enemy visibility.
-        if (_isPlayerAllied(actorId)) return receipt;
+        if (_isPlayerAllied(actorId) || receipt.Pairs.Length > 0 && receipt.Pairs.ToArray().All(pair => pair.Target != DaggerfallActorIdentity.PlayerEntityId)) return receipt;
         PerceptionPair? pair = receipt.Pairs.ToArray()
             .Where(value => value.Observer == checked((ulong)actorId) && value.Target == checked((ulong)DaggerfallActorIdentity.PlayerEntityId))
             .OrderBy(value => value.Distance)

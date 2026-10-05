@@ -604,6 +604,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         DaggerfallConcealmentEffects.BreakNormal(State.Effects, caster);
         if (caster != DaggerfallActorIdentity.PlayerEntityId || target == caster) return;
         if (_enemyBehavior.IsPacified(target)) _enemyBehavior.MakeActiveEnemiesHostile();
+        State.Quests.ReleaseFoeRestraint(target);
         _enemyBehavior.MakeHostile(target);
     }
 

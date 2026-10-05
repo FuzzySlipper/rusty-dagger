@@ -61,6 +61,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly Func<long, DaggerfallMagicDefense> _magicDefense;
     private readonly Func<long, bool> _physicalAttacksBlocked;
     private readonly Func<long, bool> _actorGameplayActive;
+    private readonly Func<long, string?> _actorTeam;
     private readonly Func<long, long, DaggerfallItemStrikeSource, int, int>? _itemStrike;
     private readonly Action<DaggerfallMonsterHitExposure>? _monsterHit;
     internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
@@ -76,10 +77,11 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? transformActor = null, Func<long, DaggerfallMagicDefense>? magicDefense = null,
         Func<long, bool>? physicalAttacksBlocked = null,
         Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)>? molagBalStrike = null, Func<long, long, DaggerfallItemStrikeSource, int, int>? itemStrike = null,
-        Action<DaggerfallMonsterHitExposure>? monsterHit = null, Func<long, bool>? actorGameplayActive = null)
+        Action<DaggerfallMonsterHitExposure>? monsterHit = null, Func<long, bool>? actorGameplayActive = null, Func<long, string?>? actorTeam = null)
     {
         _physicalAttacksBlocked = physicalAttacksBlocked ?? (_ => false);
         _actorGameplayActive = actorGameplayActive ?? (_ => true);
+        _actorTeam = actorTeam ?? (id => definitionsByEntity.GetValueOrDefault(id)?.Team);
         _molagBalStrike = molagBalStrike;
         _itemStrike = itemStrike;
         _monsterHit = monsterHit;
