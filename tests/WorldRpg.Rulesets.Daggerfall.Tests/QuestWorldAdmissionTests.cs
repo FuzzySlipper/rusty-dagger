@@ -569,7 +569,7 @@ public sealed class QuestWorldAdmissionTests
     }
 
     internal static DaggerfallDefinitions Definitions(bool stackable = false, bool gold = false, bool secondPlace = false, bool endSource = false, bool secondItem = false,
-        string[]? actions = null, bool person = false, bool atHome = false, bool rearmPlacement = false, string[][]? taskBlocks = null, string[]? messages = null, int? foeCount = null, int firstMessageId = 100)
+        string[]? actions = null, bool person = false, bool atHome = false, bool rearmPlacement = false, string[][]? taskBlocks = null, string[]? messages = null, int? foeCount = null, int firstMessageId = 100, string? itemUsedMessage = null, bool personQuestor = false, bool potion = false)
     {
         var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
@@ -583,11 +583,20 @@ public sealed class QuestWorldAdmissionTests
         { row["sourceFile"] = "world-test.txt"; row["quest"] = "world-test"; declarations.Add(row); }
         place["symbol"]!["canonicalId"] = "location"; place["symbol"]!["sourceSpelling"] = "_location_";
         item["symbol"]!["canonicalId"] = "gift"; item["symbol"]!["sourceSpelling"] = "_gift_";
+        if (potion)
+        {
+            var group = TestPayload.Definitions.ItemTemplateCatalog.Groups.Values.Single(group => group.TemplateIndices && group.Values.Contains(83));
+            item["item"]!["class"] = group.Id;
+            item["item"]!["subclass"] = null;
+            item["item"]!["template"] = 83;
+            item["item"]!["key"] = 221871;
+        }
+        if (itemUsedMessage is not null) item["item"]!["usedMessage"] = itemUsedMessage;
         foe["symbol"]!["canonicalId"] = "enemy"; foe["symbol"]!["sourceSpelling"] = "_enemy_";
         if (foeCount is not null) foe["foe"]!["count"] = foeCount.Value;
         if (person)
         {
-            var npc = declarations.First(value => value!["kind"]!.GetValue<string>() == "person" && value["person"]!["named"] is not null && value["person"]!["atHome"]!.GetValue<bool>())!.DeepClone();
+            var npc = declarations.First(value => value!["kind"]!.GetValue<string>() == "person" && (personQuestor ? value["person"]!["group"]?.GetValue<string>() == "Questor" : value["person"]!["named"] is not null && value["person"]!["atHome"]!.GetValue<bool>()))!.DeepClone();
             npc["quest"] = "world-test"; npc["sourceFile"] = "world-test.txt";
             npc["symbol"]!["canonicalId"] = "person"; npc["symbol"]!["sourceSpelling"] = "_person_";
             npc["person"]!["atHome"] = atHome; npc["person"]!["gender"] = "female";

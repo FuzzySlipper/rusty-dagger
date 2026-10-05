@@ -18,9 +18,10 @@ public sealed class CorpseLootComponent
 
     public EntityId Owner { get; }
     public ulong OriginatingSequence { get; }
-    public bool HasRegisteredInventory { get; }
+    public bool HasRegisteredInventory { get; private set; }
     public bool IsInteractable { get; private set; }
 
+    internal void SetRegisteredInventory() => HasRegisteredInventory = true;
     internal void SetInteractable(bool value) => IsInteractable = value;
 }
 
@@ -77,6 +78,21 @@ public sealed class CorpseLootCoordinator
             if (seeds.Count > 0) _containers.Seed(owner, seeds);
         }
         return new CorpseLootComponent(owner, originatingSequence, hasRegisteredInventory, isInteractable);
+    }
+
+    /// <summary>Admits new loot into the canonical corpse, including an empty or previously searched one.</summary>
+    public void Receive(CorpseLootComponent corpse, Action<EntityId> admit)
+    {
+        ArgumentNullException.ThrowIfNull(corpse);
+        ArgumentNullException.ThrowIfNull(admit);
+        if (!corpse.HasRegisteredInventory)
+        {
+            _containers.RegisterOwner(corpse.Owner);
+            corpse.SetRegisteredInventory();
+        }
+        admit(corpse.Owner);
+        var contents = _containers.Read(corpse.Owner);
+        corpse.SetInteractable(contents.Stacks.Count > 0 || contents.UniqueItems.Count > 0);
     }
 
     public InventoryView? Read(CorpseLootComponent corpse)

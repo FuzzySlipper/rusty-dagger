@@ -22,7 +22,11 @@ internal sealed partial class DaggerfallSession
             .Select(effect => effect.Instance).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>Rejoins retained site values with canonical live containment in one Engine admission.</summary>
-    private DaggerfallQuestResourceBinding PlaceBoundQuestItem(DaggerfallQuestResourceBinding binding, WorldPoint position)
+    private DaggerfallQuestResourceBinding PlaceBoundQuestItem(DaggerfallQuestResourceBinding binding, WorldPoint position) =>
+        TransferBoundQuestItem(binding, (owners, transfer) => _groundContainers.PlaceQuestItem(binding, position, owners, transfer));
+
+    private DaggerfallQuestResourceBinding TransferBoundQuestItem(DaggerfallQuestResourceBinding binding,
+        Func<DaggerfallItemOwner[], Action<DaggerfallItemOwner>, DaggerfallQuestResourceBinding> admit)
     {
         List<RetainedQuestItem> retained = [];
         List<DaggerfallItemOwner> owners = [];
@@ -88,7 +92,7 @@ internal sealed partial class DaggerfallSession
         var seeds = retained.Where(value => value.Unique is not null).Select(value => value.Seed)
             .Concat(retained.Where(value => value.Stack is not null).GroupBy(value => value.Stack!.StackId)
                 .Select(group => group.First().Seed with { Quantity = group.Aggregate(0UL, (sum, item) => checked(sum + item.Stack!.Quantity)) })).ToArray();
-        return _groundContainers.PlaceQuestItem(binding, position, owners.Distinct().ToArray(), destination =>
+        return admit(owners.Distinct().ToArray(), destination =>
         {
             State.QuestItems.MoveBoundItem(binding, destination, seeds, stackIds);
             foreach (var item in retained)

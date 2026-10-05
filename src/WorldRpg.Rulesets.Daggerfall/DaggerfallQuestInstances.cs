@@ -101,6 +101,7 @@ internal sealed record DaggerfallQuestBuildingClaim(string SourceKey, int Index,
 /// <summary>Durable state belonging to one declared resource.</summary>
 internal sealed record DaggerfallQuestResourceState(string Symbol, DaggerfallQuestResourceBinding Binding, bool IsHidden = false, bool HasPlayerClicked = false)
 {
+    public bool UseClicked { get; init; }
     public DaggerfallQuestFoeRelations? FoeRelations { get; init; }
     public bool IsNpcDestroyed { get; init; }
     public bool IsQuestor { get; init; }
@@ -614,7 +615,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     }
     private int? ResolveItemMessage(DaggerfallQuestRuntimeInstance instance, string? reference)
     {
-        if (reference is null) return null;
+        if (string.IsNullOrWhiteSpace(reference) || reference == "0") return null;
         if (!Messages.TryResolveMessage(instance, int.TryParse(reference, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int direct) ? direct : null, reference, out int message, out var diagnostic))
             throw new ArgumentException($"Quest item message in '{instance.SourceFile}': {diagnostic}");
         return message;
@@ -875,6 +876,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                     continue;
                 }
                 DaggerfallQuestTaskRunner.Advance(instance, Program(instance.SourceFile), variables, calendar, Messages, this, elapsedSeconds);
+                AdmitQueuedFoeItems(instance);
                 }
                 finally
                 {
@@ -1233,8 +1235,28 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 DaggerfallQuestTaskOperation operation = task.Operations[operationIndex];
                 DaggerfallQuestTaskOperationState receipt = state.OperationState[operationIndex];
                 if (receipt.UnavailableReason is { } reason && (string.IsNullOrWhiteSpace(reason)
-                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
+                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.GiveItem or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
                     throw new ArgumentException("Quest unsupported world detail must identify its owning action.");
+                if (receipt.PaymentBranch is { } branch && (operation.Kind != DaggerfallQuestTaskOperationKind.PayMoney || !operation.Targets.Take(2).Contains(branch)))
+                    throw new ArgumentException("Quest payment result must name its paid or unpaid branch.");
+                if (receipt.ItemTransfer is { } transfer)
+                {
+                    var recipient = instance.Resources.SingleOrDefault(resource => resource.Symbol == transfer.Recipient);
+                    if (operation.Kind != DaggerfallQuestTaskOperationKind.GiveItem || transfer.Item != operation.Targets[0] || transfer.Recipient != operation.Targets[1]
+                        || recipient is null || transfer.Recipients is null || transfer.Recipients.Distinct().Count() != transfer.Recipients.Length
+                        || transfer.Recipients.Any(id => !recipient.Binding.ActorIds.Contains(id)) || (recipient.SelectedFoe is not null) != (transfer.Prototype is not null))
+                        throw new ArgumentException("Quest item transfer requires its selected actor recipient and admitted copies.");
+                    if (transfer.Prototype is { } prototype)
+                    {
+                        prototype.Metadata.Validate();
+                        _definitions.RequireItem(new(prototype.Item.Value));
+                        var item = instance.Resources.SingleOrDefault(resource => resource.Symbol == transfer.Item)?.SelectedItem;
+                        bool linked = prototype.Metadata.QuestId == instance.InstanceId && prototype.Metadata.QuestItemSymbol == transfer.Item;
+                        bool permanent = prototype.Metadata.QuestId is null && prototype.Metadata.QuestItemSymbol is null && item?.Metadata.QuestId is null;
+                        if (prototype.Quantity == 0 || item is null || prototype.Item != item.Item || !linked && !permanent)
+                            throw new ArgumentException("Queued quest foe item has invalid content or provenance.");
+                    }
+                }
                 if (receipt.Reward is { } reward && (operation.Kind != DaggerfallQuestTaskOperationKind.GivePc
                     || !double.IsFinite(reward.DelaySeconds) || reward.DelaySeconds < 0 || reward.GroundContainer <= 0 || reward.DeliveryId == 0
                     || reward.DeliveryId is not null && reward.GroundContainer is null && !reward.LootOpened))

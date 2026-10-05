@@ -34,7 +34,8 @@ internal sealed class DaggerfallInventoryUseService(
     Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useSkullCorruption = null,
     Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useItemSpell = null,
     Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useAzurasStar = null,
-    Func<int, DaggerfallInventoryUseResult>? usePotion = null)
+    Func<int, DaggerfallInventoryUseResult>? usePotion = null,
+    Func<DaggerfallItemInstanceMetadata, DaggerfallInventoryUseResult?>? useQuestItem = null)
 {
     private const int FirstDrugTemplate = 78;
     private const int LastDrugTemplate = 81;
@@ -66,12 +67,12 @@ internal sealed class DaggerfallInventoryUseService(
         if (entry is not InventoryStack found) return new(false, "That item is no longer in your inventory.");
         DaggerfallItemInstanceMetadata metadata = instances.RequireStack(DaggerfallItemOwner.Player, stack);
         if (Template(found.Definition.Value) == OilTemplate)
-            return RefuelLantern(current, stack, metadata);
-        return Route(found.Definition.Value, metadata, () =>
+            return ObserveQuestUse(metadata, RefuelLantern(current, stack, metadata));
+        return ObserveQuestUse(metadata, Route(found.Definition.Value, metadata, () =>
         {
             InventoryMutationReceipt receipt = inventory.Consume(new InventoryConsume(stack, 1));
             if (receipt.AfterQuantity == 0) instances.RemoveStack(DaggerfallItemOwner.Player, stack);
-        }, $"stack:{stack.Value}");
+        }, $"stack:{stack.Value}"));
     }
 
     private DaggerfallInventoryUseResult UseUnique(InventoryView current, ulong entity)
@@ -81,13 +82,21 @@ internal sealed class DaggerfallInventoryUseService(
         if (entry is not { } found) return new(false, "That item is no longer in your inventory.");
         DurableIdentityReference identity = inventory.GetDurableItemId(found.Entity);
         DaggerfallItemInstanceMetadata metadata = instances.RequireUnique(identity.Value);
-        return Route(found.Definition.Value, metadata, () =>
+        return ObserveQuestUse(metadata, Route(found.Definition.Value, metadata, () =>
         {
             _ = inventory.Destroy(new KitUniqueInventoryItem(found.Entity.Value, new InventoryItemId(found.Definition.Value)));
             inventory.Entities.Destroy(identity);
             instances.RemoveUnique(identity.Value);
             uniqueItems.Remove(identity);
-        }, $"unique:{identity.Value}", new KitUniqueInventoryItem(found.Entity.Value, new InventoryItemId(found.Definition.Value)));
+        }, $"unique:{identity.Value}", new KitUniqueInventoryItem(found.Entity.Value, new InventoryItemId(found.Definition.Value))));
+    }
+
+    private DaggerfallInventoryUseResult ObserveQuestUse(DaggerfallItemInstanceMetadata metadata, DaggerfallInventoryUseResult result)
+    {
+        // Observe the real selected item after its ordinary effect and consumption. Retain the
+        // captured identity even when use consumed the last dose and removed its metadata.
+        var quest = useQuestItem?.Invoke(metadata);
+        return result.Applied || quest is null ? result : quest;
     }
 
     private DaggerfallInventoryUseResult Route(string itemId, DaggerfallItemInstanceMetadata metadata, Action consume, string useKey, KitUniqueInventoryItem? unique = null)

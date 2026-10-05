@@ -98,6 +98,31 @@ public sealed class PursuitAndCorpseLootTests
         Assert.Throws<InvalidOperationException>(() => loot.TransferAll(corpse, recipient));
     }
 
+    [Fact]
+    public void Receiving_new_contents_registers_an_empty_corpse_and_reopens_a_searched_one()
+    {
+        EntityDirectory entities = new();
+        InventoryStore inventory = new();
+        MechanicsInventoryContainerCoordinator containers = new(inventory, entities,
+            new Dictionary<InventoryItemId, ItemDefinition> { [new("gold")] = new(ItemDefinitionId.Parse("gold"), ItemKind.Fungible, 10) });
+        var recipient = entities.Create(new(DurableIdentityKind.Actor, 1), new("player"));
+        containers.RegisterOwner(recipient);
+        CorpseLootCoordinator loot = new(entities, containers);
+        var corpse = loot.Create(new(DurableIdentityKind.Container, 2000), new("corpse"), 1, []);
+        Assert.False(corpse.HasRegisteredInventory);
+        Assert.True(loot.TransferAll(corpse, recipient).IsEmpty);
+        var owner = corpse.Owner;
+        loot.Receive(corpse, target => containers.Seed(target, [new(new("gold"), 1, Stack: InventoryStackId.Parse("first"))]));
+        Assert.True(corpse.HasRegisteredInventory);
+        Assert.True(corpse.IsInteractable);
+        Assert.Equal(owner, corpse.Owner);
+        loot.TransferAll(corpse, recipient);
+        Assert.False(corpse.IsInteractable);
+        loot.Receive(corpse, target => containers.Seed(target, [new(new("gold"), 2, Stack: InventoryStackId.Parse("second"))]));
+        Assert.True(corpse.IsInteractable);
+        Assert.Equal(2UL, Assert.Single(loot.Read(corpse)!.Stacks).Quantity);
+    }
+
     private sealed record TestFact : IWorldRpgFact;
 
     private sealed class RecordingAttacks(double reach) : IAttackCapabilities<TestFact>

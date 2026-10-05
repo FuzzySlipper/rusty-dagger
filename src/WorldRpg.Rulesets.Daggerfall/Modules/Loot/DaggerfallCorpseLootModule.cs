@@ -19,9 +19,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 /// Daggerfall death-loot and explicit corpse interaction policy.  Engine
 /// Mechanics owns the inventory contents and Engine Perception owns the
 /// visibility classification; this module only supplies Daggerfall's loot,
-/// eligibility, and deterministic selection meaning.  The current actor
-/// model has no authored live enemy inventories; donor-style transfer of one
-/// is therefore deliberately deferred rather than represented by a mirror.
+/// eligibility, and deterministic selection meaning. Live actor contents move
+/// into the same canonical corpse inventory as generated death loot.
 /// </summary>
 internal sealed class DaggerfallCorpseLootModule
 {
@@ -184,7 +183,28 @@ internal sealed class DaggerfallCorpseLootModule
             _identityLedger.Abort(corpseIdentity, fact.ActorId);
             throw;
         }
+        // Real carried items (including quest gifts) outlive their actor in its corpse.
+        if (!state.Actor.TryGet<InventoryComponent>(out _)) return;
+        var carried = _containers.Read(state.Actor.Entity);
+        if (carried.Stacks.Count == 0 && carried.UniqueItems.Count == 0) return;
+        var source = DaggerfallItemOwner.Actor(fact.ActorId);
+        var destination = DaggerfallItemOwner.Corpse(fact.ActorId);
+        foreach (var stack in carried.Stacks) _itemInstances.EnsureTransferCompatible(source, destination, stack.Id, stack.Id);
+        _corpseLoot.Receive(state.Actor.Get<CorpseLootComponent>(), owner =>
+        {
+            var store = _actors.Entities.Store.Get<InventoryComponent>(state.Actor.Entity).Store;
+            var equipped = store.TryGetEquipment(state.Actor.Entity, out var equipment) ? equipment!.Assignments.ToArray() : [];
+            _containers.TransferAll(state.Actor.Entity, owner, edit =>
+            {
+                foreach (var item in equipped.Select(value => value.Item).Distinct()) edit.Unequip(state.Actor.Entity, item);
+            });
+            foreach (var item in carried.UniqueItems) _itemInstances.MoveUnique(_actors.Entities.IdentityOf(item.Entity).Value, destination);
+            foreach (var stack in carried.Stacks) _itemInstances.TransferStack(source, destination, stack.Id, stack.Id, true);
+        });
     }
+
+    internal void ReceiveItems(long actorId, Action admit) =>
+        _corpseLoot.Receive(_actors.Get(actorId).Actor.Get<CorpseLootComponent>(), _ => admit());
 
     /// <summary>Reads Engine visibility and prepares, but does not publish, an explicit loot action.</summary>
     internal PendingCorpseLoot? PrepareLoot(PlayerControlState player, LookReceipt look, long? targetActorId = null)
