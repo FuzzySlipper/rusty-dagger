@@ -35,9 +35,15 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
         IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(
             new ProductContent(Array.Empty<ProductContentFile>()),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")), definitions);
-        DaggerfallFightersGuildQuestRuntimeReceipt blocked = receipts.First(receipt => !receipt.Runnable);
+        Assert.All(receipts, receipt => Assert.True(receipt.Runnable));
+        // Exercise rejection with an explicitly denied receipt; the retained corpus now runs.
+        DaggerfallFightersGuildQuestRuntimeReceipt blocked = receipts[0] with
+        {
+            Runnable = false,
+            Diagnostics = [new(12, "unsupported test action", "Unsupported operation in the selected source.")],
+        };
         DaggerfallQuestSourceDefinition source = definitions.QuestSources.Resolve(blocked.SourceFile);
-        DaggerfallQuestRuntimeAdmission admission = new(receipts);
+        DaggerfallQuestRuntimeAdmission admission = new(receipts.Select(receipt => receipt.SourceFile == blocked.SourceFile ? blocked : receipt).ToArray());
         DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create(), admission);
         DaggerfallQuestInstanceSave fresh = new("fighters:blocked", source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []);
         ArgumentException start = Assert.Throws<ArgumentException>(() => instances.Start(fresh));
