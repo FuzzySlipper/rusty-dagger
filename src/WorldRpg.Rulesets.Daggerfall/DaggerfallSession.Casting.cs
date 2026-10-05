@@ -30,7 +30,7 @@ internal sealed partial class DaggerfallSession
             return new DaggerfallKnownSpellView(key, State.Character.IsGrantedSpell(key) ? _definitions.Magic.Spells[key].Name.TrimStart('!') : _definitions.Magic.Spells[key].Name, cost ?? 0, cost is not null);
         }).ToArray(),
         Casting.ReadyFor(State.Actors.Player.DurableId) is { Source: DaggerfallCastSource.Spell or DaggerfallCastSource.DungeonAction } ready ? ready.SpellKey : null,
-        _spellResult, ReadSpellSale(), ReadSpellInformation(), ReadSpellMaker(), ReadPotionMaker());
+        _spellResult, ReadSpellSale(), ReadSpellInformation(), ReadSpellMaker(), ReadPotionMaker(), ReadItemMaker());
     private void ChangeSpell(WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallPlayerUiAction action)
     {
         var result=action.Kind switch
@@ -221,4 +221,4 @@ internal sealed partial class DaggerfallSession
 
 internal sealed record DaggerfallKnownSpellView(string Key, string Name, int Cost, bool CanCast = true);
 internal sealed record DaggerfallSpellbookView(DaggerfallKnownSpellView[] Available, string? Ready, string Result,
-    DaggerfallSpellSaleView? Sale = null, DaggerfallSpellInformation? Information = null, DaggerfallSpellMakerView? Maker = null, DaggerfallPotionMakerView? PotionMaker = null);
+    DaggerfallSpellSaleView? Sale = null, DaggerfallSpellInformation? Information = null, DaggerfallSpellMakerView? Maker = null, DaggerfallPotionMakerView? PotionMaker = null, DaggerfallItemMakerView? ItemMaker = null);

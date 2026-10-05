@@ -93,6 +93,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                         ("key", builder.String(offer.Key)), ("name", builder.String(offer.Name)),
                         ("castingCost", builder.Number(offer.CastingCost)), ("price", builder.Number(checked((long)offer.Price))),
                         ("known", builder.Boolean(offer.Known)))).ToArray())))),
+                ("itemMaker", frame.Spells.ItemMaker is not { } itemMaker ? builder.Null() : ItemMaker(builder, itemMaker)),
                 ("potionMaker", frame.Spells.PotionMaker is not { } potionMaker ? builder.Null() : PotionMaker(builder, potionMaker)),
                 ("information", frame.Spells.Information is not { } information ? builder.Null() : builder.Object(
                     ("key", builder.String(information.Key)), ("name", builder.String(information.Name)),
@@ -311,6 +312,22 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("permanentValue", builder.Number(skill.PermanentValue)),
                 ("maximumValue", builder.Number(skill.MaximumValue)))).ToArray())))),
         ("diagnostics", builder.Array(dialogue.Diagnostics.Select(builder.String).ToArray())));
+
+    private static uint ItemMakerSetting(UiValueBuilder builder, DaggerfallItemMakerSetting setting) => builder.Object(
+        ("key", builder.String(setting.Key)), ("name", builder.String(setting.Name)), ("cost", builder.Number(setting.Cost)),
+        ("forced", builder.Array(setting.Forced.Select(builder.String).ToArray())));
+
+    private static uint ItemMaker(UiValueBuilder builder, DaggerfallItemMakerView maker) => builder.Object(
+        ("revision", builder.String(maker.Revision)), ("provider", builder.String(maker.Provider)), ("eligible", builder.Boolean(maker.Eligible)),
+        ("items", builder.Array(maker.Items.Select(item => builder.Object(("key", builder.String(item.Key)), ("name", builder.String(item.Name)),
+            ("capacity", builder.Number(item.Capacity)), ("quantity", builder.Number(item.Quantity)))).ToArray())),
+        ("settings", builder.Array(maker.Settings.Select(setting => ItemMakerSetting(builder, setting)).ToArray())),
+        ("draft", builder.Object(("item", builder.String(maker.Draft.Item)), ("name", builder.String(maker.Draft.Name)),
+            ("settings", builder.Array(maker.Draft.Settings.Select(builder.String).ToArray())))),
+        ("quote", maker.Quote is not { } quote ? builder.Null() : builder.Object(("key", builder.String(quote.Key)),
+            ("capacity", builder.Number(quote.Capacity)), ("power", builder.Number(quote.Power)), ("gold", builder.Number(quote.Gold)),
+            ("eligible", builder.Boolean(quote.Eligible)), ("reason", quote.Reason is null ? builder.Null() : builder.String(quote.Reason)),
+            ("payloads", builder.Array(quote.Payloads.Select(setting => ItemMakerSetting(builder, setting)).ToArray())))));
 
     private static uint PotionMaker(UiValueBuilder builder, DaggerfallPotionMakerView maker) => builder.Object(
         ("revision", builder.String(maker.Revision)), ("provider", builder.String(maker.Provider)), ("eligible", builder.Boolean(maker.Eligible)),

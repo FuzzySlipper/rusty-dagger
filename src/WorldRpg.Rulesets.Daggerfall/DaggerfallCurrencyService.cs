@@ -98,7 +98,7 @@ internal sealed class DaggerfallCurrencyService
     /// candidate.  The service owner has already decided pricing and meaning; this owner selects
     /// only the actual coin stacks and retires their metadata after a successful publication.
     /// </summary>
-    internal bool TrySpendGold(ulong amount, IEnumerable<InventoryAtomicGrant> grants)
+    internal bool TrySpendGold(ulong amount, IEnumerable<InventoryAtomicGrant> grants, Action<InventoryEdit>? additionalChanges = null)
     {
         ArgumentNullException.ThrowIfNull(grants);
         InventoryAtomicGrant[] awards = grants.Select(grant => grant.Validate()).ToArray();
@@ -112,9 +112,9 @@ internal sealed class DaggerfallCurrencyService
             if (remaining == 0) break;
         }
         if (remaining != 0) return false;
-        if (spends.Count == 0 && awards.Length == 0) return true;
+        if (spends.Count == 0 && awards.Length == 0 && additionalChanges is null) return true;
 
-        _inventory.CommitAtomic(spends, awards);
+        _inventory.CommitAtomic(spends, awards, additionalChanges: additionalChanges);
         foreach (InventoryConsume spent in spends)
         {
             InventoryStack? current = _inventory.Read().Stacks.SingleOrDefault(stack => stack.Id == spent.Stack);

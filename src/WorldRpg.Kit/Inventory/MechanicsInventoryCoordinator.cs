@@ -154,14 +154,14 @@ public sealed class MechanicsInventoryCoordinator
     /// containment, and all-or-nothing publication.
     /// </summary>
     public void CommitAtomic(IEnumerable<InventoryConsume> consumes, IEnumerable<InventoryAtomicGrant> grants,
-        IEnumerable<UniqueInventoryItem>? destroys = null)
+        IEnumerable<UniqueInventoryItem>? destroys = null, Action<InventoryEdit>? additionalChanges = null)
     {
         ArgumentNullException.ThrowIfNull(consumes);
         ArgumentNullException.ThrowIfNull(grants);
         InventoryConsume[] payments = consumes.Select(consume => consume.Validate()).ToArray();
         InventoryAtomicGrant[] awards = grants.Select(grant => grant.Validate()).ToArray();
         UniqueInventoryItem[] retired = (destroys ?? []).ToArray();
-        if (payments.Length == 0 && awards.Length == 0 && retired.Length == 0)
+        if (payments.Length == 0 && awards.Length == 0 && retired.Length == 0 && additionalChanges is null)
             throw new ArgumentException("An atomic inventory commit requires a payment, grant, or unique-item removal.");
         (EntityId Entity, DurableIdentityReference Identity)[] retiredEntities = [.. retired.Select(item =>
         {
@@ -177,6 +177,7 @@ public sealed class MechanicsInventoryCoordinator
                 candidate.Consume(Component.Owner, payment.Stack, payment.Quantity);
             foreach ((EntityId entity, _) in retiredEntities)
                 candidate.DestroyUnique(entity);
+            additionalChanges?.Invoke(candidate);
             foreach (InventoryAtomicGrant award in awards)
             {
                 ItemDefinition definition = RequireDefinition(award.Item);

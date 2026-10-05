@@ -8,6 +8,7 @@
     "ready": null,
     "result": "",
     "sale": null,
+    "itemMaker": null,
     "potionMaker": null,
     "information": null
   },

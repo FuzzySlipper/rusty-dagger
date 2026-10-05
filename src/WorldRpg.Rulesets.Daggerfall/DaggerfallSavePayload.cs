@@ -1125,7 +1125,16 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException($"Saved item {itemId} names unpublished creature soul {soul}.");
         if (restored.CapturedSoulMobileId is not null && !DaggerfallSoulGems.IsTrap(restored, definitions.Magic))
             throw new ArgumentException($"Saved item {itemId} cannot hold a soul.");
-        restored.MadeEnchantment?.Validate(definitions.Magic);
+        if (restored.MadeEnchantment is { } made)
+        {
+            made.Validate(definitions.Magic);
+            var plain = restored with { MadeEnchantment = null, WeightClassicUnits = null };
+            var canonical = DaggerfallEnchantmentConstruction.Quote(definitions, plain, made.Name,
+                made.Settings.Where(value => value.Parent is null).Select(value => value.Key));
+            if (made.Value != canonical.Enchantment.Value || !made.Settings.SequenceEqual(canonical.Enchantment.Settings)
+                || restored.WeightClassicUnits != DaggerfallEnchantmentConstruction.EnchantedWeight(definitions, plain, canonical.Enchantment))
+                throw new ArgumentException($"Saved made item '{itemId}' differs from its canonical enchantment value, weight, or forced settings.");
+        }
         definitions.Magic.TryEnchantments(restored, out var currentPayloads);
         bool hasBoundSoul = currentPayloads.Any(value => value.Type == 15);
         if ((restored.BoundSoulReleased || restored.BoundSoulReleasePending) && !hasBoundSoul

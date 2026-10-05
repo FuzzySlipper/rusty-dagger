@@ -11,6 +11,25 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallServiceTransactionsTests
 {
     [Fact]
+    public void Rejected_additional_inventory_mutation_preserves_payment_and_unique_grant_for_retry()
+    {
+        using Fixture f = new();
+        var definition = f.Definitions.RequireItem(new DaggerfallItemId("iron-longsword"));
+        var identity = f.Unique.AllocateReference();
+        var grant = new DaggerfallServiceGrant(new(new(definition.Id.Value), UniqueItem: identity),
+            DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player));
+        var quote = f.Services.Quote(f.Request("paid-mutation"), f.MemberOnly, new(25), [grant]).Quote!;
+        var refused = f.Services.Commit(quote, candidate => candidate.Consume(f.Inventory.Component.Owner, InventoryStackId.Parse("coins"), 100));
+        Assert.Equal(DaggerfallServiceDenial.GrantUnavailable, refused.Denial);
+        Assert.Equal(100UL, f.Currency.Read().Gold);
+        Assert.False(f.Instances.ContainsUnique(identity.Value));
+        Assert.DoesNotContain(f.Inventory.Read().UniqueItems, item => f.Inventory.GetDurableItemId(item.Entity) == identity);
+        Assert.True(f.Services.Commit(quote).Accepted);
+        Assert.Equal(75UL, f.Currency.Read().Gold);
+        Assert.True(f.Instances.ContainsUnique(identity.Value));
+    }
+
+    [Fact]
     public void Commit_revalidates_changed_funds_rank_and_item_then_duplicate_submit_preserves_truth()
     {
         using Fixture f = new();

@@ -228,7 +228,7 @@ internal sealed class DaggerfallServiceTransactions
         return new(new(request, eligibility, price, Array.AsReadOnly(awarded), queuedWork, _calendar()), DaggerfallServiceOutcome.Quoted());
     }
 
-    internal DaggerfallServiceOutcome Commit(DaggerfallServiceQuote quote)
+    internal DaggerfallServiceOutcome Commit(DaggerfallServiceQuote quote, Action<InventoryEdit>? additionalChanges = null)
     {
         ArgumentNullException.ThrowIfNull(quote);
         quote.Request.Validate();
@@ -245,7 +245,7 @@ internal sealed class DaggerfallServiceTransactions
         if (!GrantsAvailable(quote.Grants)) return DaggerfallServiceOutcome.Refused(DaggerfallServiceDenial.GrantUnavailable);
         try
         {
-            if (!_currency.TrySpendGold(quote.Price.Gold, quote.Grants.Select(grant => grant.Grant)))
+            if (!_currency.TrySpendGold(quote.Price.Gold, quote.Grants.Select(grant => grant.Grant), additionalChanges))
                 return DaggerfallServiceOutcome.Refused(DaggerfallServiceDenial.InsufficientFunds);
         }
         catch (Exception error) when (error is MechanicsException or InvalidOperationException or ArgumentException)

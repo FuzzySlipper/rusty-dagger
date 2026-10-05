@@ -12,9 +12,7 @@ internal static class DaggerfallEnchantmentConstruction
         string name, IEnumerable<string> selected)
     {
         var definition = definitions.RequireItem(new(item.ItemId));
-        if (item.HasEnchantment || item.PotionRecipeKey is not null || definition.Template?.Index == 131
-            || definition.Template is null || !definition.Template.Groups.Any(group => group is "Weapons" or "Armor" or "Gems" or "MensClothing" or "WomensClothing" or "Jewellery"))
-            throw new ArgumentException("Choose an ordinary non-potion item other than arrows.");
+        if (!IsEligible(definition, item)) throw new ArgumentException("Choose an ordinary enchantable item other than arrows.");
         var made = new DaggerfallMadeEnchantment(name.Trim(), Expand(definitions.Magic, selected), definition.Value);
         made.Validate(definitions.Magic);
         var settings = made.Settings.Select(value => definitions.Magic.EnchantmentSettings[value.Key]).ToArray();
@@ -26,6 +24,21 @@ internal static class DaggerfallEnchantmentConstruction
         int capacity = DaggerfallMagicCostPolicy.ItemEnchantmentPower(definition, item);
         if (power > capacity) throw new ArgumentException($"The item has {capacity} enchantment power; these settings require {power}.");
         return new(made, capacity, power, checked(settings.Where(value => value.Cost > 0).Sum(value => value.Cost) * 10));
+    }
+
+    internal static bool IsEligible(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata item) =>
+        !item.HasEnchantment && item.PotionRecipeKey is null && definition.Template is { Index: not 131 } template
+        && template.Groups.Any(group => group is "Weapons" or "Armor" or "Gems" or "MensClothing" or "WomensClothing" or "Jewellery");
+
+    internal static ulong? EnchantedWeight(DaggerfallDefinitions definitions, DaggerfallItemInstanceMetadata metadata, DaggerfallMadeEnchantment made)
+    {
+        ulong? weight = metadata.WeightClassicUnits;
+        foreach (var setting in made.Settings.Select(value => definitions.Magic.EnchantmentSettings[value.Key]))
+        {
+            if (setting.Type == 23) weight = checked(DaggerfallEncumbrancePolicy.ClassicWeightCost(definitions.RequireItem(new(metadata.ItemId)), metadata) * 4);
+            if (setting.Type == 11) weight = 100; // Source Feather Weight: 0.25 kg.
+        }
+        return weight;
     }
 
     internal static DaggerfallMadeSetting[] Expand(DaggerfallMagicCatalogSet magic, IEnumerable<string> selected)

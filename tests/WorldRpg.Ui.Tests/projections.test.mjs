@@ -1324,3 +1324,21 @@ test('potion maker selects an owned recipe or an ingredient experiment through t
     f.publish({spells:{available:[],ready:null,result:'',potionMaker:{...potionMaker,eligible:false}}});assert.equal(root.querySelector('form'),null);
   } finally {f.dispose();}
 });
+
+test('item maker edits named settings, shows forced payloads, and confirms the quoted purchase', () => {
+  const f=fixture();
+  try {
+    let confirmed=false;window.confirm=()=>confirmed;
+    const setting={key:'enchantment.15.18',name:'Soul Bound: Ghost',cost:-300,forced:['Feather Weight','Item Deteriorates','Low Damage']};
+    const itemMaker={revision:'enchant-1',provider:'Enchanter',eligible:true,items:[{key:'stack:rubies',name:'Ruby',capacity:1800,quantity:3}],settings:[setting],
+      draft:{item:'stack:rubies',name:'Ghost ruby',settings:[setting.key]},quote:{key:'draft-1',capacity:1800,power:-300,gold:1000,eligible:true,reason:null,payloads:[setting,{key:'forced',name:'Feather Weight',cost:100,forced:[]}]}};
+    const publish=()=>f.publish({spells:{available:[],ready:null,result:'',itemMaker},activation:{mode:'talk',message:'',applied:true,
+      dialogue:{revision:'enchant-1',targetLabel:'Enchanter',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
+    publish();const root=f.root.querySelector('.dagger-dialogue-itemmaker');assert.match(root.textContent,/-300\/1800 power · 1000 gold/);assert.match(root.textContent,/Feather Weight/);
+    const buy=[...root.querySelectorAll('button')].find(b=>b.textContent==='Enchant item');buy.click();assert.equal(f.actions.length,0);
+    confirmed=true;buy.click();assert.deepEqual(f.actions.at(-1),{action:'itemmaker-buy',revision:'enchant-1',key:'draft-1',amount:1000,confirm:true});
+    const name=root.querySelector('[name="enchanted-name"]');name.value='Changed';name.dispatchEvent(new window.Event('input',{bubbles:true}));assert.equal(buy.disabled,true);
+    publish();assert.equal(root.querySelector('[name="enchanted-name"]'),name);
+    root.querySelector('form').dispatchEvent(new window.Event('submit',{cancelable:true}));assert.deepEqual(JSON.parse(f.actions.at(-1).text),{item:'stack:rubies',name:'Changed',settings:[setting.key]});
+  } finally {f.dispose();}
+});
