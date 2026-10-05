@@ -90,15 +90,15 @@ public sealed class QuestGuardSpawnTests
     private static long[] Guards(DaggerfallSession s) => s.DefinitionsByActor.Where(x => x.Value.MobileId == 146).Select(x => x.Key).ToArray();
     private static DaggerfallQuestGuardSpawnState Schedule(DaggerfallSession s) => s.State.Quests.Capture().Instances.Single().Tasks.Single().OperationState.Single().GuardSpawn!;
 
-    private sealed class Fixture : IDisposable
+    internal sealed class Fixture : IDisposable
     {
         internal DaggerfallSession Session { get; }
         internal SpatialFake Spatial { get; private set; } = null!;
         private readonly DaggerfallSessionComposition composition;
         private readonly DaggerfallSiteProfile profile;
-        internal Fixture(bool immediate)
+        internal Fixture(bool immediate, DaggerfallDefinitions? definitions = null)
         {
-            var definitions = QuestWorldAdmissionTests.Definitions(actions: ["spawncityguards" + (immediate ? " immediate" : "")]);
+            definitions ??= QuestWorldAdmissionTests.Definitions(actions: ["spawncityguards" + (immediate ? " immediate" : "")]);
             profile = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), definitions, "daggerfall.charing-exterior.json");
             composition = new(definitions, profile, DaggerfallTuning.Defaults with { Law = new(5, 5, 2, 2, 12.8f, 51.2f, 3.2) }) { Profiles = new([profile]) };
             Session = DaggerfallSession.StartNew(Engine().Context, composition);

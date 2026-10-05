@@ -490,6 +490,7 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindFoeSpawning(SpawnQuestFoe);
             State.Quests.BindEnemyRelations(ApplyAllEnemyCommand, id => actors.TryGet(id, out var actor) && !actor.IsDefeated);
             State.Quests.BindGuardSpawning(SpawnQuestGuards);
+            State.Quests.BindRewards(OfferQuestReward, PresentQuestReward, tuning.QuestRewards);
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook,
                 useDrug: variant => UseDrug(variant) == DaggerfallPoisonAdmission.Admitted,
                 useOghma: () =>

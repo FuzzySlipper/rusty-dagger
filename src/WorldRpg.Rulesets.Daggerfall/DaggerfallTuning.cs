@@ -24,6 +24,7 @@ internal sealed record DaggerfallTuning(
     DaggerfallPropertyTuning Property,
     DaggerfallTransportTuning Transport)
 {
+    internal DaggerfallQuestRewardTuning QuestRewards { get; init; } = new(7, 18, 4, 50);
     internal DaggerfallQuestSpawningTuning QuestSpawning { get; init; } = new(5f, 20f, 8f, 25f, 5, 77.5f, 95f, 105.469f, 25);
     internal DaggerfallLawTuning Law { get; init; } = new(5, 10, 2, 5, 12.8f, 51.2f, 3.2d);
     internal DaggerfallNormalLightTuning NormalLight { get; init; } = new(1.4f, .25f, 15f, 1f);
@@ -114,6 +115,7 @@ internal sealed record DaggerfallTuning(
         NormalLight = NormalLight.Validate(),
         Law = Law.Validate(),
         QuestSpawning = QuestSpawning.Validate(),
+        QuestRewards = QuestRewards.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -259,6 +261,10 @@ internal sealed record DaggerfallTuning(
         {
             StrikeEnchantments = new(root.GetProperty("strikeEnchantments").GetProperty("damageAdjustment").GetInt32(),
                 root.GetProperty("strikeEnchantments").GetProperty("vampiricRange").GetDouble()),
+            QuestRewards = new(root.GetProperty("questRewards").GetProperty("minimumDeliveryHour").GetInt32(),
+                root.GetProperty("questRewards").GetProperty("maximumDeliveryHour").GetInt32(),
+                root.GetProperty("questRewards").GetProperty("minimumDelaySeconds").GetInt32(),
+                root.GetProperty("questRewards").GetProperty("maximumDelaySeconds").GetInt32()),
             QuestSpawning = new(root.GetProperty("questSpawning").GetProperty("minimumFoeDistance").GetSingle(),
                 root.GetProperty("questSpawning").GetProperty("maximumFoeDistance").GetSingle(),
                 root.GetProperty("questSpawning").GetProperty("minimumWildernessDistance").GetSingle(),
@@ -581,4 +587,11 @@ internal sealed record DaggerfallQuestSpawningTuning(float MinimumFoeDistance, f
         && float.IsFinite(GuardWitnessAngleDegrees) && GuardWitnessAngleDegrees is >= 0 and <= 180
         && float.IsFinite(GuardConversionAngleDegrees) && GuardConversionAngleDegrees is >= 0 and <= 180
         && GuardConversionChance is >= 0 and <= 100 ? this : throw new ArgumentException("Quest spawn tuning has invalid ranges, angles, count, or chance.");
+}
+
+internal sealed record DaggerfallQuestRewardTuning(int MinimumDeliveryHour, int MaximumDeliveryHour, int MinimumDelaySeconds, int MaximumDelaySeconds)
+{
+    internal DaggerfallQuestRewardTuning Validate() => MinimumDeliveryHour is >= 0 and <= 23 && MaximumDeliveryHour >= MinimumDeliveryHour
+        && MaximumDeliveryHour <= 23 && MinimumDelaySeconds >= 0 && MaximumDelaySeconds >= MinimumDelaySeconds && MaximumDelaySeconds <= int.MaxValue / 10
+        ? this : throw new ArgumentException("Quest reward delivery tuning requires ordered hours and bounded nonnegative delays.");
 }

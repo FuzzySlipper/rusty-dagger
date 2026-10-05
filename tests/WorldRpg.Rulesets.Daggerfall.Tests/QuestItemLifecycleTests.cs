@@ -218,7 +218,7 @@ public sealed class QuestItemLifecycleTests
     }
 
     [Fact]
-    public void Letter_and_give_notification_source_references_resolve_without_publishing_and_missing_text_diagnoses()
+    public void Letter_source_reference_resolves_and_give_notification_compiles_without_publishing()
     {
         using var f = Fixture();
         var state = f.Session.State;
@@ -228,9 +228,8 @@ public sealed class QuestItemLifecycleTests
             [new("headless", 1, ["give pc _gift_ notify 1010"], null)], []));
         var operation = program.Tasks.Single().Operations.Single();
         Assert.Equal("gift", operation.Targets.Single());
-        Assert.Equal(DaggerfallQuestTaskOperationKind.Unsupported, operation.Kind); // #8133 still owns execution.
-        Assert.Equal(1010, state.Quests.ItemGrantNotification("items", operation));
-        Assert.Throws<ArgumentException>(() => state.Quests.ItemGrantNotification("items", operation with { MessageAlias = "99999" }));
+        Assert.Equal(DaggerfallQuestTaskOperationKind.GivePc, operation.Kind);
+        Assert.Equal(1010, operation.MessageId);
         Assert.Empty(state.Quests.Messages.Capture().Deliveries);
     }
 
