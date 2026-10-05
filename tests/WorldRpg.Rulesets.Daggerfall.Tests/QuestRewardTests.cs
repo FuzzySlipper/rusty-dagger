@@ -10,6 +10,18 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class QuestRewardTests
 {
     [Theory]
+    [InlineData("give pc _gift_ notify QuestComplete", 1)]
+    [InlineData("give pc _gift_ notify 1004", 1)]
+    [InlineData("give pc _gift_ notify 0", 0)]
+    [InlineData("give pc _gift_ silently", 2)]
+    [InlineData("give pc _gift_", 0)]
+    public void Notification_aliases_keep_the_notification_mode(string action, int mode)
+    {
+        var source = new DaggerfallQuestSourceDefinition("reward", "", "reward.txt", DaggerfallQuestDisposition.Compiled, [], [new("headless", 1, [action], null)], []);
+        Assert.Equal(mode, Assert.Single(Assert.Single(DaggerfallQuestTaskCompiler.Compile(source).Tasks).Operations).Step);
+    }
+
+    [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]
     [InlineData(true, true)]
@@ -66,17 +78,19 @@ public sealed class QuestRewardTests
         Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).GroundContainers.Where(g => g.Id == receipt.GroundContainer));
     }
 
-    [Fact]
-    public void Unsupported_resource_diagnoses_before_success_or_notification()
+    [Theory]
+    [InlineData("give pc _enemy_", "selected Item")]
+    [InlineData("give pc _gift_ notify unknown_alias", "no admitted source text")]
+    public void Unsupported_resource_diagnoses_before_success_or_notification(string source, string diagnostic)
     {
-        var definitions = QuestWorldAdmissionTests.Definitions(actions: ["give pc _enemy_", "end quest"], messages: ["Your reward."], firstMessageId: 1004);
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: [source, "end quest"], messages: ["Your reward."], firstMessageId: 1004);
         using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
         Start(f, definitions); Advance(f.Session);
         var quest = Assert.Single(f.Session.State.Quests.Capture().Instances);
         Assert.NotEqual(true, quest.Succeeded);
         Assert.All(quest.Tasks.Single().OperationCompleted, completed => Assert.False(completed));
         Assert.Equal(DaggerfallQuestLifecycle.Active, quest.Lifecycle);
-        Assert.Contains("selected Item", quest.Tasks.Single().OperationState.First().UnavailableReason);
+        Assert.Contains(diagnostic, quest.Tasks.Single().OperationState.First().UnavailableReason);
         Assert.Empty(f.Session.State.Quests.Messages.Deliveries);
     }
 
