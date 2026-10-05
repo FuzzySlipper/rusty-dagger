@@ -97,16 +97,18 @@ internal sealed partial class DaggerfallSession
     private int CrimeRoll(string operation, string purpose, int minimum, int maximum) =>
         checked((int)_random.DrawKeyed(new(0, "daggerfall.crime.v1", $"{operation}:{purpose}", minimum, maximum)).Value);
 
-    private DaggerfallCrimeWitnessEvidence QueryCrimeWitnesses()
+    private DaggerfallCrimeWitnessEvidence QueryCrimeWitnesses() => QueryCrimeWitnesses(null);
+
+    private DaggerfallCrimeWitnessEvidence QueryCrimeWitnesses(Func<ActorState, bool>? eligibleObserver, double? maximumDistance = null, double? minimumFacingCosine = null)
     {
         if (State.PlayerControl.Position is not WorldPoint player) return DaggerfallCrimeWitnessEvidence.NotQueried;
-        var observers = State.Actors.All.Where(actor => !actor.IsDefeated && actor.DurableId != DaggerfallActorIdentity.PlayerEntityId &&
+        var observers = State.Actors.All.Where(actor => !actor.IsDefeated && actor.DurableId != DaggerfallActorIdentity.PlayerEntityId && eligibleObserver?.Invoke(actor) != false &&
             (State.Npcs.All.Any(npc => npc.DurableId == actor.DurableId && State.Npcs.IsGameplayActive(npc.DurableId)
                 && npc.Site.Region == _site.Region && npc.Site.Location == _site.ActiveSite?.Name)
              || _roster.Definitions.GetValueOrDefault(actor.DurableId)?.MobileId == 146))
             .Select(actor => new PerceptionObserver(checked((ulong)actor.DurableId), actor.Position.ToVector(),
                 new Vector3(MathF.Sin(actor.HeadingYawRadians), 0, -MathF.Cos(actor.HeadingYawRadians)),
-                DaggerfallPerceptionQueryDefaults.SightRadius, DaggerfallPerceptionQueryDefaults.MinimumFacingCosine, 1d)).ToArray();
+                maximumDistance ?? DaggerfallPerceptionQueryDefaults.SightRadius, minimumFacingCosine ?? DaggerfallPerceptionQueryDefaults.MinimumFacingCosine, 1d)).ToArray();
         if (observers.Length == 0) return DaggerfallCrimeWitnessEvidence.NotQueried;
         PerceptionQueryRequest query = new(_spatial.Session, observers,
             new[] { new PerceptionTarget(DaggerfallActorIdentity.PlayerEntityId, player.ToVector()) },

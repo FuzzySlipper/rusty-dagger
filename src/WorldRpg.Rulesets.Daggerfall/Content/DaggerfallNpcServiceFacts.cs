@@ -83,5 +83,5 @@ internal static class DaggerfallNpcServiceFacts
     // in the Daggerfall content resolver rather than the shared Kit or Economy runtime.
     internal static bool IsGenericRepairShop(int sourceBuildingType) => sourceBuildingType is 2 or 9 or 13;
 
-    private static bool IsShop(int sourceBuildingType) => sourceBuildingType is 0 or 2 or 5 or 6 or 7 or 8 or 9 or 12 or 13;
+    internal static bool IsShop(int sourceBuildingType) => sourceBuildingType is 0 or 2 or 5 or 6 or 7 or 8 or 9 or 12 or 13;
 }

@@ -1,4 +1,15 @@
 {
+  "questSpawning": {
+    "minimumFoeDistance": 5,
+    "maximumFoeDistance": 20,
+    "minimumWildernessDistance": 8,
+    "maximumWildernessDistance": 25,
+    "maximumActiveGuards": 5,
+    "guardWitnessDistance": 77.5,
+    "guardWitnessAngleDegrees": 95,
+    "guardConversionAngleDegrees": 105.469,
+    "guardConversionChance": 25
+  },
   "law": {
     "minimumResponseSeconds": 5,
     "maximumResponseSeconds": 10,

@@ -233,7 +233,7 @@ internal sealed partial class DaggerfallSession
         if (update.IsRequested(DaggerfallInput.Menu)) RequestPanel(DaggerfallPanel.Menu);
         // Tasks consume the state committed by this admitted step. Clock actions mutate only the
         // quest clock state; elapsed duration is still consumed by the calendar owner above.
-        State.Quests.Advance(State.Variables, _time.Calendar);
+        State.Quests.Advance(State.Variables, _time.Calendar, update.DeltaSeconds);
         _dialogue?.SynchronizeWorldState();
         State.Quests.AdmitPlacements(_sites.Projection.Inputs, this);
         State.Quests.ReconcileFoeCommands();
