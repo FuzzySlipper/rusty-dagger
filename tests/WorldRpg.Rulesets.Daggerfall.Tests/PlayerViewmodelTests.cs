@@ -14,6 +14,40 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>The player weapon viewmodel: art selection, swing playback and viewport placement.</summary>
 public sealed class PlayerViewmodelTests
 {
+    [Theory]
+    [InlineData(false, false)] [InlineData(true, false)]
+    [InlineData(false, true)] [InlineData(true, true)]
+    public void Vampire_voice_waits_for_the_melee_frame_and_retirement_cancels_it(bool targeted, bool retire)
+    {
+        List<string> releases = [];
+        var content = MediaContent(releases); content.Add("weapon/dagger.png", Hash);
+        var appearance = new AppearanceFake(releases);
+        var audio = AudioRecorder.Create();
+        using var presentation = new DaggerfallSiteAppearance(content, appearance,
+            MediaInputs(classic: ClassicWeapon(), audio: [
+                new NormalizedAudioClip("hit1", "audio/hit.wav", Hash),
+                new NormalizedAudioClip("sound.205", "audio/vampire.wav", Hash)]), audio.Service,
+            DaggerfallTuning.Defaults.PresentationAudio with { VampireAttackChancePercent = 100, VampireBarkChancePercent = 100 });
+        presentation.UsePlayerVampireGender(() => false);
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: targeted ? 12 : null) { Feedback = new(false, "") });
+        Assert.Empty(audio.EmittedSignals);
+        Frame(1, 1);
+        Assert.Empty(audio.EmittedSignals);
+        if (retire) presentation.RetirePendingSwing();
+        Frame(2, 2);
+        Assert.Equal(retire ? 0 : 1, audio.EmittedSignals.Count);
+        Frame(3, 3);
+        Assert.Equal(retire ? 0 : 1, audio.EmittedSignals.Count);
+
+        void Frame(ulong step, uint frame)
+        {
+            appearance.AdvanceReceipts.Enqueue(default); // The existing actor playback advances first.
+            appearance.AdvanceReceipts.Enqueue(Reading(0, frame));
+            presentation.Advance(OuterUpdate(step));
+        }
+    }
+
     [Fact]
     public void Compatible_right_hand_creates_a_viewmodel_and_uses_one_shot_strike_playback()
     {

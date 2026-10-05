@@ -516,8 +516,12 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 // authored strike has no frame to wait for, so the impact lands in this update
                 // rather than being withheld by a presentation the composition does not have.
                 if (!StartWeaponStrike(swing, started.FrameSeconds, started.TargetId, started.HitFrame))
+                {
                     attackImpacts.Add(new AttackImpactNotice(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0,
                         started.OriginatingGeneration, started.OriginatingSimulationStep, Expired: false));
+                    if (started.Feedback.SwingCue != "sound.3") EmitPlayerVampireVoice(swing);
+                }
+                else if (started.Feedback.SwingCue != "sound.3") viewmodel!.PendingAttackVoice = swing;
                 Emit(started.Feedback.SwingCue, swing, 0);
                 deliveredEvents.Add(swing);
                 break;
@@ -550,11 +554,6 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                         ? beast == DaggerfallRacialKind.Werewolf ? "sound.144" : "sound.159"
                         : DrawCue(hitEvent, "beast-bark", 1, 100) <= audioTuning.BeastBarkChancePercent ? beast == DaggerfallRacialKind.Werewolf ? "sound.143" : "sound.158" : null;
                     if (cue is not null) Emit(cue, hitEvent, 0);
-                }
-                if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && playerVampireFemale() is bool female)
-                {
-                    bool bark = DrawCue(hitEvent, "vampire-bark", 1, 100) <= audioTuning.VampireBarkChancePercent;
-                    Emit(female ? bark ? "sound.199" : "sound.200" : bark ? "sound.205" : "sound.206", hitEvent, 0);
                 }
                 EmitAtActor(SelectHitCue(hitEvent, hit.Feedback.Weapon), hitEvent,
                     hit.TargetId == DaggerfallActorIdentity.PlayerEntityId ? hit.AttackerId : hit.TargetId,
@@ -663,6 +662,11 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             SpritePlaybackAdvanceResult receipt = appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(weaponPlayback));
             // The classic swing's damage lands on its hit frame. One decided swing owns one beat, so
             // the first frame at or past it reports and later frames of the same swing do not.
+            if (weapon.Strike && weapon.PendingAttackVoice is { } voice && receipt.Readout.FrameIndex >= weapon.HitFrame)
+            {
+                weapon.PendingAttackVoice = null;
+                EmitPlayerVampireVoice(voice);
+            }
             if (weapon.Strike && weapon.PendingImpact is { } pending && !weapon.ImpactReported
                 && receipt.Readout.FrameIndex >= weapon.HitFrame)
             {
@@ -970,6 +974,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     /// <summary>Retires a strike's admitted impact that its animation never delivered.</summary>
     private void RetireUnreportedImpact()
     {
+        if (viewmodel is not null) viewmodel.PendingAttackVoice = null;
         if (viewmodel is not { PendingImpact: { } pending, ImpactReported: false }) return;
         attackImpacts.Add(new AttackImpactNotice(pending.Attacker, pending.Target, pending.Generation, pending.SimulationStep, Expired: true));
         viewmodel.PendingImpact = null;
@@ -1191,6 +1196,16 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             if (roll <= cumulative) return sequence;
         }
         return sequences[0];
+    }
+
+    private void EmitPlayerVampireVoice(PresentationEventIdentity identity)
+    {
+        // Optional combat voice belongs to the melee attack frame, including an empty or missed
+        // swing. The outer voice chance is separate from the vampire's bark/attack selection.
+        if (playerVampireFemale() is not bool female
+            || DrawCue(identity, "vampire-voice", 1, 100) > audioTuning.VampireAttackChancePercent) return;
+        bool bark = DrawCue(identity, "vampire-bark", 1, 100) <= audioTuning.VampireBarkChancePercent;
+        Emit(female ? bark ? "sound.199" : "sound.200" : bark ? "sound.205" : "sound.206", identity, 0);
     }
 
     private int DrawCue(PresentationEventIdentity identity, string purpose, int minimum, int maximum) =>
@@ -1466,6 +1481,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         internal bool Strike { get; set; }
         /// <summary>The move this weapon swing delivers when its animation reaches the hit frame, if any.</summary>
         internal PresentationEventIdentity? PendingImpact { get; set; }
+        internal PresentationEventIdentity? PendingAttackVoice { get; set; }
         /// <summary>The frame of this swing's own animation that releases its impact.</summary>
         internal int HitFrame { get; set; } = DaggerfallFormulaPolicy.MeleeWeaponHitFrame;
         internal bool ImpactReported { get; set; }
