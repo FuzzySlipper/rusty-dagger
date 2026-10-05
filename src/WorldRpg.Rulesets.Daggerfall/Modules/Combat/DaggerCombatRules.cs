@@ -578,7 +578,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         DaggerfallAttackDefinition attack, int body, bool enemy, int attackDamageMod, int backstabChance) => Rules.Damage(participants, damage =>
     {
         damage.Body = body;
-        if (attack.Material is not null && !DaggerfallFormulaPolicy.CanHitMaterial(attack.Material, target.Definition.MinimumMaterial, _weaponMaterialRanks))
+        if (attack.Material is not null && !DaggerfallFormulaPolicy.CanHitMaterial(attack.Material, target.Id == PlayerId && _character()?.RacialOverrides?.Current?.State.BeastForm == true
+                ? "silver" : target.Definition.MinimumMaterial, _weaponMaterialRanks))
         {
             damage.Allowed = false;
             damage.Damage = 0;

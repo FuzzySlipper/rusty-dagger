@@ -31,10 +31,10 @@ internal enum DaggerfallCalendarAdvanceKind
     ElapsedDeferringSkills,
 
     /// <summary>
-    /// A quest-owned training interval: skills raise, but quest tasks do not run, because the quest
+    /// A quest-owned elapsed interval: skills raise, but quest tasks do not run, because the quest
     /// runtime that asked for the interval is still running its own tasks.
     /// </summary>
-    QuestTraining,
+    QuestAction,
 }
 
 /// <summary>The one calendar fan-out: every path that moves the session calendar reaches its consumers here.</summary>
@@ -87,7 +87,7 @@ internal sealed partial class DaggerfallSession
         }
         _dialogue?.SynchronizeWorldState();
         _dialogue?.RefreshEligibility();
-        if (kind is DaggerfallCalendarAdvanceKind.Elapsed or DaggerfallCalendarAdvanceKind.QuestTraining)
+        if (kind is DaggerfallCalendarAdvanceKind.Elapsed or DaggerfallCalendarAdvanceKind.QuestAction)
         {
             State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());
             State.LevelUps.BeginIfEligible();
@@ -136,12 +136,12 @@ internal sealed partial class DaggerfallSession
         return advance;
     }
 
-    /// <summary>Applies a quest-owned training interval through the existing calendar without recursively re-running quest tasks.</summary>
-    private void AdvanceQuestTraining(long gameSeconds)
+    /// <summary>Applies a quest-owned elapsed interval through the existing calendar without recursively re-running quest tasks.</summary>
+    private void AdvanceQuestTime(long gameSeconds)
     {
         DaggerfallCalendar calendarBefore = _time.Calendar;
         var advance = _time.AdvanceInterval(gameSeconds, []);
-        AdvanceCalendar(calendarBefore, DaggerfallCalendarAdvanceKind.QuestTraining);
+        AdvanceCalendar(calendarBefore, DaggerfallCalendarAdvanceKind.QuestAction);
         if (advance.AppliedSeconds > 0) _itemCastTriggers.CompleteTimeIncrease();
     }
 
@@ -153,6 +153,8 @@ internal sealed partial class DaggerfallSession
 
         long roundBefore = State.Effects.MagicRounds;
         AdvancePassiveRounds(roundBefore, minutes);
+        AdvanceLycanthropyRound(before);
+        RefreshLycanthropy();
         // The normal path is expressed as its normal one-round operation.  Multiple minutes (whether
         // an unusually long admitted update or an elapsed interval) retain the donor's bounded
         // catch-up policy inside the lifecycle.

@@ -266,9 +266,9 @@ public sealed class CharacterMediaPublicationTests
 
         // The census, as counts rather than a claim: every family the inventory enumerates is published
         // from, and the totals are the readers' own.
-        Assert.Equal(425, pass.Artifacts.Count);
+        Assert.Equal(429, pass.Artifacts.Count);
         Assert.Empty(pass.Refusals);
-        Assert.Equal(88, inventory.Files.Count);
+        Assert.Equal(92, inventory.Files.Count);
         Assert.Equal(
             [4, 9, 9, 10, 32, 96, 40, 221],
             new[]
@@ -353,7 +353,7 @@ public sealed class CharacterMediaPublicationTests
         // the three class portraits. The ninth SCBG file numbers a race the catalogs do not publish and
         // stays unbound rather than being mapped onto one.
         IReadOnlySet<string> bound = CharacterMediaReferences.FilesBoundByCharacterSheet(inventory);
-        Assert.Equal(61, bound.Count);
+        Assert.Equal(65, bound.Count);
         Assert.Equal(8, bound.Count(file => file.StartsWith("SCBG", StringComparison.Ordinal)));
         Assert.Equal(32, bound.Count(file => file.StartsWith("BODY", StringComparison.Ordinal)));
         Assert.Equal(17, bound.Count(file => file.StartsWith("FACE", StringComparison.Ordinal)));
@@ -364,7 +364,7 @@ public sealed class CharacterMediaPublicationTests
         Assert.DoesNotContain("CMPA00I0.BSS", bound);
 
         CharacterMediaReferenceSet referenced = CharacterMediaReferences.WithBoundFiles(set, bound, CharacterMediaReferences.CharacterSheetConsumer);
-        Assert.Equal(305, referenced.Canvases.Count(canvas => canvas.Binding == MediaBinding.Admitted));
+        Assert.Equal(309, referenced.Canvases.Count(canvas => canvas.Binding == MediaBinding.Admitted));
         Assert.All(referenced.Canvases.Where(canvas => canvas.Binding == MediaBinding.Admitted),
             canvas => Assert.Equal(CharacterMediaReferences.CharacterSheetConsumer, canvas.Consumer));
         // The rewrite does not touch a reference no consumer bound: it keeps the inventory's own label for
@@ -463,7 +463,7 @@ public sealed class CharacterMediaPublicationTests
             .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-021"))
             .Select(row => System.IO.Path.GetFileName(row.PathOrPattern))
             .Order(StringComparer.OrdinalIgnoreCase)];
-        Assert.Equal(88, documented.Length);
+        Assert.Equal(92, documented.Length);
 
         string arena2 = TestData.CorpusRoot;
         string[] supplied = [.. Directory.EnumerateFiles(arena2)

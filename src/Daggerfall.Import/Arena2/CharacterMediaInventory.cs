@@ -54,6 +54,9 @@ public sealed class CharacterMediaInventory
         ("CEL", 3, "class portraits"),
         ("BSS", 3, "ambient story sprites"),
         ("KIDS", 1, "child escort portraits"),
+        ("WERE", 2, "lycanthrope heads"),
+        ("WOLF", 1, "werewolf paper doll"),
+        ("BOAR", 1, "wereboar paper doll"),
     ];
 
     private CharacterMediaInventory(string source, IReadOnlyList<CharacterMediaRecord> files)

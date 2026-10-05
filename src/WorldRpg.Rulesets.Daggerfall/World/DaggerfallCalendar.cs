@@ -114,6 +114,9 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
     /// The day of the year, counted from one at the year's first day, which is what the holiday
     /// table is keyed by.
     /// </summary>
+    internal int LunarCycleDay(bool masser) => (int)(((long)DayOfYear + (long)Year * DaysPerYear + (masser ? 3 : -1)) % 32 + 32) % 32;
+    internal bool IsFullMoon => LunarCycleDay(true) == 0 || LunarCycleDay(false) == 0;
+
     public int DayOfYear => (Month * DaysPerMonth) + Day + 1;
 
     /// <summary>

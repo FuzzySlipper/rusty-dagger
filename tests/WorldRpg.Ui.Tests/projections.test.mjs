@@ -1253,13 +1253,18 @@ test('racial form projection closes and suppresses inventory until human form re
       identity: { race: 'breton', donorRaceId: 1, portrait: '', gender: 'female', faceIndex: 0, career: 'mage', media: [], selectedMedia: [],
         racialOverride: { name: 'Werewolf', beastForm: true, suppressInventory: true } } };
     f.root.querySelector('[data-action="inventory"]').click();
-    f.publish({ character });
+    character.identity.selectedMedia = [{layer:'background',mediaId:'beast.body'},{layer:'head',mediaId:'beast.head'}];
+    const uiArt = {revision:'beast-art',images:[{id:'beast.body',image:'data:image/png;base64,Ym9keQ=='},{id:'beast.head',image:'data:image/png;base64,aGVhZA=='}]};
+    f.publish({ character, uiArt });
+    assert.deepEqual([...f.root.querySelectorAll('.dagger-character-art img')].map(img=>img.dataset.mediaId), ['beast.body','beast.head']);
     assert.equal(f.root.querySelector('[data-action="inventory"]').disabled, true);
     assert.match(f.root.querySelector('.dagger-character-overview').textContent, /Werewolf · Beast form/);
     assert.equal(f.root.querySelector('.dagger-menu').classList.contains('has-inventory'), false);
     character.identity.racialOverride.beastForm = false;
     character.identity.racialOverride.suppressInventory = false;
+    character.identity.selectedMedia = [];
     f.publish({ character });
+    assert.equal(f.root.querySelectorAll('.dagger-character-art img').length,0);
     assert.equal(f.root.querySelector('[data-action="inventory"]').disabled, false);
     f.root.querySelector('[data-action="inventory"]').click();
     assert.equal(f.root.querySelector('.dagger-menu').classList.contains('has-inventory'), true);

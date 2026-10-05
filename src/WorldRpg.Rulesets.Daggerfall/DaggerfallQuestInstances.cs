@@ -695,6 +695,10 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     internal DaggerfallQuestMessages Messages { get; }
 
     /// <summary>Binds the one session's live player and elapsed-time owners after composition completes.</summary>
+    private Func<bool>? _cureLycanthropy;
+    internal void BindLycanthropyCure(Func<bool> cure) => _cureLycanthropy = cure;
+    bool IDaggerfallQuestTaskLifecycle.CureLycanthropy() => (_cureLycanthropy ?? throw new InvalidOperationException("No permanent curse owner is composed."))();
+
     internal void BindRuntime(DaggerfallQuestRuntime runtime) => _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
     internal void BindTextContext(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context) =>
         _textContext = context ?? throw new ArgumentNullException(nameof(context));

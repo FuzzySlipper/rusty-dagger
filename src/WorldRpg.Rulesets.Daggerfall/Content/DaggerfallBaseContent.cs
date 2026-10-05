@@ -290,6 +290,13 @@ internal static partial class DaggerfallBaseContent
             faces.Add(new DaggerfallFactionFaceDefinition(index, mediaId, sourceFile, palette, consumer));
         }
 
+        Dictionary<string, DaggerfallRacialFormMedia> racialForms = [];
+        foreach (JsonElement form in Array(section, "racialForms", diagnostics))
+        {
+            string id = Text(form, "id", diagnostics);
+            if (!racialForms.TryAdd(id, new(id, Text(form, "headMediaId", diagnostics), Text(form, "bodyMediaId", diagnostics))))
+                diagnostics.Add($"Duplicate racial form media '{id}'.");
+        }
         List<DaggerfallFactionFaceDefinition> childFaces = [];
         foreach (JsonElement face in Array(section, "childFaces", diagnostics))
         {
@@ -340,7 +347,7 @@ internal static partial class DaggerfallBaseContent
             careersWithout.Add(new DaggerfallCareerWithoutPortrait(Text(entry, "careerId", diagnostics), Text(entry, "reason", diagnostics)));
         }
 
-        return new DaggerfallCharacterPresentationSet(races, [.. faces.OrderBy(face => face.Index)], careers, careersWithout, without, files) { ChildFaces = childFaces };
+        return new DaggerfallCharacterPresentationSet(races, [.. faces.OrderBy(face => face.Index)], careers, careersWithout, without, files) { ChildFaces = childFaces, RacialForms = racialForms };
     }
 
     /// <summary>

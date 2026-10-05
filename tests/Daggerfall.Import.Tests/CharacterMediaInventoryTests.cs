@@ -17,7 +17,7 @@ public sealed class CharacterMediaInventoryTests
 
         // The documented counts are 32;17;9;10;4;9;3;3 for BODY, FACE (including FACES.CIF),
         // CHAR, CUST, NITE, SCBG, CEL and BSS, and the corpus supplies exactly those.
-        Assert.Equal(88, inventory.Files.Count);
+        Assert.Equal(92, inventory.Files.Count);
         Assert.All(CharacterMediaInventory.DocumentedFamilies, family =>
             Assert.Equal(family.Count, inventory.Family(family.Prefix).Count()));
         Assert.Equal(17, inventory.Family("FACE").Count());
@@ -36,9 +36,9 @@ public sealed class CharacterMediaInventoryTests
         // Every documented family now has a reader here: the class portraits through the FLC
         // container and the story sprites through their own, so nothing in this corpus is retained
         // unreadable any more.
-        Assert.Equal(88, inventory.Files.Count(file => file.Decode != Arena2CanvasKind.Unread));
+        Assert.Equal(92, inventory.Files.Count(file => file.Decode != Arena2CanvasKind.Unread));
         Assert.Empty(inventory.Unsupported);
-        Assert.All(inventory.Files, file => Assert.Contains(file.Family, "BODY FACE CHAR CUST NITE SCBG CEL BSS KIDS".Split(' ')));
+        Assert.All(inventory.Files, file => Assert.Contains(file.Family, "BODY FACE CHAR CUST NITE SCBG CEL BSS KIDS WERE WOLF BOAR".Split(' ')));
         Assert.All(inventory.Files, file => Assert.False(string.IsNullOrWhiteSpace(file.UseCandidate)));
     }
 
@@ -304,14 +304,14 @@ public sealed class CharacterMediaInventoryTests
 
         // Every supplied file is accounted for, including the six nothing reads and the readable
         // files no layer uses: a family cannot go missing between the inventory and the pack.
-        Assert.Equal(88, presentation.Files.Count);
+        Assert.Equal(92, presentation.Files.Count);
         Assert.DoesNotContain(presentation.Files, file => file.Outcome == CharacterFileOutcome.Unreadable);
-        Assert.Equal(88, presentation.Files.Count(file => file.Outcome != CharacterFileOutcome.Unreadable));
+        Assert.Equal(92, presentation.Files.Count(file => file.Outcome != CharacterFileOutcome.Unreadable));
         // Fifty-seven files a layer draws from and thirty that read and no layer uses yet; the two
         // counts account for every supplied file, which is the property worth holding.
-        Assert.Equal(61, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Referenced));
+        Assert.Equal(65, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Referenced));
         Assert.Equal(27, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Unreferenced));
-        Assert.Equal(88, presentation.Files.Count);
+        Assert.Equal(92, presentation.Files.Count);
         Assert.All(presentation.Files, file => Assert.False(string.IsNullOrWhiteSpace(file.Reason)));
         Assert.Contains(presentation.Files, file => file.Path == "CMPA00I0.BSS" && file.Outcome == CharacterFileOutcome.Unreferenced);
         // The class portraits read now, and no layer uses them yet: the career references that would

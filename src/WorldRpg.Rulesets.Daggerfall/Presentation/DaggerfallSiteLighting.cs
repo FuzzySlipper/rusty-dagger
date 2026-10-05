@@ -21,6 +21,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private readonly ICameraViewService _camera;
     private readonly DaggerfallWorldProfileKind _profileKind;
     private readonly DaggerfallSiteLightingTuning _tuning;
+    private Light? _magicCandle;
+    private readonly ulong _magicCandleId;
     private Light? _ambient;
     private readonly ulong _ambientId;
     private Light? _sun;
@@ -46,16 +48,17 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         long instance = Interlocked.Increment(ref s_lastInstance);
         _ambientId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "ambient");
+        _magicCandleId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "magic-candle");
         _sunId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "sun");
         _ambientLevel = AmbientLevel(calendar);
 
         List<Light> created = [];
-        HashSet<ulong> lightIds = [_ambientId];
+        HashSet<ulong> lightIds = [_ambientId, _sunId, _magicCandleId];
         try
         {
             foreach (DaggerfallSiteLight light in inputs.Lights)
             {
-                ulong lightId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, light.Id);
+                ulong lightId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, $"authored:{light.Id}");
                 if (!lightIds.Add(lightId))
                     throw new InvalidOperationException($"Site light '{light.Id}' collides with another admitted light identity.");
                 LightRequest request = new(
@@ -99,6 +102,21 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     }
 
     internal int Count => _lights.Count;
+
+    internal void UpdateMagicCandle(Vector3? position, DaggerfallNormalLightTuning tuning)
+    {
+        if (_disposed || _suspended) return;
+        if (position is not Vector3 value)
+        {
+            if (_magicCandle is { } ended) { _lights.Remove(ended); ended.Dispose(); _magicCandle = null; }
+            return;
+        }
+        var request = new LightRequest(_magicCandleId, false, 0, new LightDescriptor(LightKind.Point,
+            Vector3.One, tuning.Intensity, true, value, Vector3.Zero, true, tuning.Range, 2f, 0f, 0f, LightShadowIntent.Disabled));
+        if (_magicCandle is null) { _magicCandle = _graphics.CreateLight(request); _lights.Add(_magicCandle); }
+        else _graphics.UpdateLight(new(_magicCandle, request));
+    }
+
 
     internal void Rebase(Vector3 delta)
     {
@@ -156,6 +174,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _lights.Clear();
         _ambient = null;
         _sun = null;
+        _magicCandle = null;
         _suspended = true;
     }
 
@@ -193,6 +212,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             _lights.Clear();
             _ambient = null;
         _sun = null;
+        _magicCandle = null;
             throw;
         }
     }
@@ -247,6 +267,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _suspendedPoints.Clear();
         _ambient = null;
         _sun = null;
+        _magicCandle = null;
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 

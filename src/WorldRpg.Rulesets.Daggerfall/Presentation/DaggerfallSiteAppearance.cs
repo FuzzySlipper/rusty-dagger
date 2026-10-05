@@ -29,6 +29,34 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly Dictionary<string, AudioClip> audioClips = new(StringComparer.Ordinal);
     private readonly HashSet<AudioSignalHandle> oneShotSignals = [];
     private readonly Dictionary<AudioVoiceHandle, EnemyVoice> enemyVoices = [];
+    private Func<DaggerfallRacialKind?> playerBeastForm = () => null;
+    internal void UsePlayerBeastForm(Func<DaggerfallRacialKind?> form) => playerBeastForm = form;
+    private double? playerBeastVoiceSeconds;
+    private readonly NormalizedBillboardSprite? candleSprite;
+    private SpriteAtlas? candleAtlas;
+    private Appearance? candleAppearance;
+    private Vector3? candlePosition;
+    private ulong candleVisualId;
+
+    internal void UpdateMagicCandle(Vector3? position)
+    {
+        if (disposed || locationSuspended) position = null;
+        candlePosition = position;
+        if (position is null)
+        {
+            if (candleAppearance is { } candle) Retire(candle); candleAppearance = null;
+            return;
+        }
+        if (candleAppearance is not null) return;
+        var sprite = candleSprite ?? throw new InvalidOperationException("Normal light requires the published magic candle billboard 210/3.");
+        candleVisualId = NextVisualEntityId();
+        if (candleAtlas is null)
+            (candleAtlas, candleAppearance) = CreateSprite(content, new NormalizedActorSprite(sprite.TexturePath,
+                sprite.TextureSha256, sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size));
+        else candleAppearance = appearance.CreateSpriteFromAtlas(new(candleAtlas, sprite.InitialFrameId, sprite.Pivot,
+            sprite.Size, BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f)));
+    }
+
     private Func<float> enemyAudibleRange = () => 16F;
     internal void UseEnemyAudibleRange(Func<float> range) => enemyAudibleRange = range;
     private sealed record EnemyVoice(AudioVoice Voice, AudioSourceDescriptor Descriptor, long ActorId);
@@ -155,6 +183,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         this.dungeonMotion = dungeonMotion;
         this.appearance = appearance;
         this.content = content;
+        candleSprite = inputs.BillboardSprites.GetValueOrDefault((210, 3));
         this.audio = audio;
         this.audioBundle = audioBundle;
         this.random = random;
@@ -250,7 +279,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         foreach (var (handle, entry) in enemyVoices.Where(pair => pair.Value.ActorId == durableId).ToArray())
         { Dispose(entry.Voice, ref failures); enemyVoices.Remove(handle); }
         if (actors.Remove(durableId, out ActorVisual? visual) && visual is not null)
-            DisposeActorVisual(visual, ref failures);
+            Retire(new RetiredActorVisual(this, visual));
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
@@ -269,10 +298,9 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     {
         if (disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteAppearance));
         if (locationSuspended) return;
-        List<Exception>? failures = null;
-        ReleaseLocationResources(ref failures);
+        UpdateMagicCandle(null);
+        Retire(new RetiredLocationResources(TakeLocationResources()));
         locationSuspended = true;
-        if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
     /// <summary>Recreates the retained location geometry after its content placement is admitted.</summary>
@@ -311,6 +339,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         if (disposed) return;
         ReconcileGroundVisuals(groundContainers);
         List<AppearanceFact> facts = [];
+        if (candleAppearance is { } candle && candlePosition is Vector3 candleAt)
+            facts.Add(new(candleVisualId, false, 0, new Transform(candleAt, Quaternion.Identity, Vector3.One), candle, true, RenderLayer.Scene));
         if (world is { } staticWorld) facts.Add(new AppearanceFact(1, false, 0, worldAppearance.Transform, staticWorld, worldAppearance.Visible, worldAppearance.Layer));
         if (doors is not null) foreach (DaggerfallDoorView door in doors.All)
             if (doorVisuals.TryGetValue(door.Id, out Appearance? visual)) facts.Add(new AppearanceFact(doorVisualEntityIds[door.Id], false, 0, door.Pose, visual, true, RenderLayer.Scene));
@@ -512,6 +542,13 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                     StartAttack(hit.AttackerId, hit.TargetId, hit.OriginatingGeneration, hit.OriginatingSimulationStep, hitEvent);
                 if (!appliedImpacts.Add(hitEvent)) break;
                 if (hit.ActualHealthLost <= 0) { EmitMiss(hit.Feedback, hitEvent, actorState); break; }
+                if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && playerBeastForm() is { } beast)
+                {
+                    string? cue = DrawCue(hitEvent, "beast-attack", 1, 100) <= audioTuning.BeastAttackChancePercent
+                        ? beast == DaggerfallRacialKind.Werewolf ? "sound.144" : "sound.159"
+                        : DrawCue(hitEvent, "beast-bark", 1, 100) <= audioTuning.BeastBarkChancePercent ? beast == DaggerfallRacialKind.Werewolf ? "sound.143" : "sound.158" : null;
+                    if (cue is not null) Emit(cue, hitEvent, 0);
+                }
                 EmitAtActor(SelectHitCue(hitEvent, hit.Feedback.Weapon), hitEvent,
                     hit.TargetId == DaggerfallActorIdentity.PlayerEntityId ? hit.AttackerId : hit.TargetId,
                     actorState, pitch: audioTuning.ContactPitch);
@@ -547,9 +584,9 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
 
     private NormalizedClassicWeapon? SelectPlayerWeapon(EquipmentRead equipment)
     {
-        string? resource = null;
+        string? resource = playerBeastForm() is not null ? "weapon.werecreature" : null;
         foreach (string slot in new[] { "right-hand", "left-hand" })
-            if (equipment.TryGet(new EquipmentSlotId(slot), out UniqueInventoryItem item)
+            if (resource is null && equipment.TryGet(new EquipmentSlotId(slot), out UniqueInventoryItem item)
                 && classicPresentation.CompatibleItemVisuals.TryGetValue(item.Definition.Value, out resource)) break;
         resource ??= classicPresentation.UnarmedVisual;
         return weaponDrawn && resource is not null
@@ -653,6 +690,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         }
         catch (Exception exception) { failures = [exception]; }
         foreach (ActorVisual visual in actors.Values.Reverse()) DisposeActorVisual(visual, ref failures);
+        if (candleAppearance is { } candle) Dispose(candle, ref failures); candleAppearance = null;
         foreach (BillboardVisual visual in groundVisuals.Values.Reverse()) visual.Dispose(ref failures);
         foreach (BillboardVisual visual in npcVisuals.Values.Reverse()) visual.Dispose(ref failures);
         foreach (EffectVisual effect in effects.AsEnumerable().Reverse()) effect.Dispose(ref failures);
@@ -753,18 +791,25 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
 
     private void ReleaseLocationResources(ref List<Exception>? failures)
     {
-        if (world is { } staticWorld) { world = null; Dispose(staticWorld, ref failures); }
-        foreach (Appearance visual in doorVisuals.Values.Reverse()) Dispose(visual, ref failures);
+        foreach (IDisposable value in TakeLocationResources()) Dispose(value, ref failures);
+    }
+
+    private IDisposable[] TakeLocationResources()
+    {
+        List<IDisposable> retired = [];
+        if (world is { } staticWorld) { world = null; retired.Add(staticWorld); }
+        retired.AddRange(doorVisuals.Values.Reverse());
         doorVisuals.Clear();
         doorVisualEntityIds.Clear();
-        foreach (Appearance visual in actionModelVisuals.Values.Reverse()) Dispose(visual, ref failures);
+        retired.AddRange(actionModelVisuals.Values.Reverse());
         actionModelVisuals.Clear();
-        foreach (Material material in locationMaterials.AsEnumerable().Reverse()) Dispose(material, ref failures);
+        retired.AddRange(locationMaterials.AsEnumerable().Reverse());
         foreach (Material material in locationMaterials) materials.Remove(material);
         locationMaterials.Clear();
         materialsBySlot.Clear();
-        foreach (RenderResource resource in locationResources.AsEnumerable().Reverse()) Dispose(resource, ref failures);
+        retired.AddRange(locationResources.AsEnumerable().Reverse());
         locationResources.Clear();
+        return [.. retired];
     }
 
     private void DisposeActorVisual(ActorVisual visual, ref List<Exception>? failures)
@@ -1171,6 +1216,18 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     {
         if (disposed || update.AdmittedStepCount == 0) return;
         AppearanceOuterUpdate outer = new(update.Generation, update.ControlRevision, update.SimulationStep, update.AdmittedStepCount);
+        if (playerBeastForm() is { } beast)
+        {
+            var identity = Event(DaggerfallActorIdentity.PlayerEntityId, DaggerfallActorIdentity.PlayerEntityId, update.Generation, update.SimulationStep, "beast-move");
+            playerBeastVoiceSeconds ??= DrawCue(identity, "beast-delay", audioTuning.BeastMinimumDelaySeconds, audioTuning.BeastMaximumDelaySeconds);
+            playerBeastVoiceSeconds -= update.FixedDeltaSeconds * update.AdmittedStepCount;
+            if (playerBeastVoiceSeconds <= 0)
+            {
+                Emit(beast == DaggerfallRacialKind.Werewolf ? "sound.142" : "sound.157", identity, 0);
+                playerBeastVoiceSeconds = null;
+            }
+        }
+        else playerBeastVoiceSeconds = null;
         foreach (ActorState actor in state.All)
         {
             if (!actors.TryGetValue(actor.DurableId, out ActorVisual? visual) || actor.IsDefeated
@@ -1302,6 +1359,26 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 oneShotSignals.Remove(new AudioSignalHandle(fact.SignalHandle));
             if (fact.VoiceValue != 0 && (fact.Kind is AudioRealizationFactKind.NaturalCompletionRetainedVoice or AudioRealizationFactKind.Diagnostic)
                 && enemyVoices.Remove(new(fact.VoiceValue), out var voice)) voice.Voice.Dispose();
+        }
+    }
+
+    private sealed class RetiredLocationResources(IDisposable[] values) : IDisposable
+    {
+        public void Dispose()
+        {
+            List<Exception>? failures = null;
+            foreach (IDisposable value in values) DaggerfallSiteAppearance.Dispose(value, ref failures);
+            if (failures is { Count: > 0 }) throw new AggregateException(failures);
+        }
+    }
+
+    private sealed class RetiredActorVisual(DaggerfallSiteAppearance owner, ActorVisual visual) : IDisposable
+    {
+        public void Dispose()
+        {
+            List<Exception>? failures = null;
+            owner.DisposeActorVisual(visual, ref failures);
+            if (failures is { Count: > 0 }) throw new AggregateException(failures);
         }
     }
 

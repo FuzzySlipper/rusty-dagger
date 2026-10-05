@@ -138,11 +138,12 @@ internal sealed partial class DaggerfallSession
         bool guard = cityWatch || mobileGuard;
         bool civilian = npc?.Kind == DaggerfallNpcKind.Civilian;
         if (!civilian && !guard) return;
+        bool dead = State.Actors.Get(damage.TargetId).IsDefeated;
         int? region = _site.Region ?? npc?.Site.Region;
         if (region is null) return;
-        bool dead = State.Actors.Get(damage.TargetId).IsDefeated;
         string operation = $"damage:{damage.OriginatingGeneration}:{damage.OriginatingSimulationStep}:{damage.AttackerId}:{damage.TargetId}";
         if (State.Crime.HasAttempt(operation)) return;
+        if (dead && State.RacialOverrides.Current is not null) State.RacialOverrides.Satiate(MinuteIndex(_time.Calendar));
         var witnesses = QueryCrimeWitnesses();
         var crime = dead && !mobileGuard ? DaggerfallCrimeKind.Murder : DaggerfallCrimeKind.Assault;
         var kind = guard ? DaggerfallCrimeTargetKind.Guard : DaggerfallCrimeTargetKind.Civilian;

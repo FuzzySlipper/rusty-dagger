@@ -113,7 +113,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
     Action<DaggerfallCastResult> completed, IRandomService random, long playerId, long nextSequence = 1,
     Func<string, bool>? playerKnowsSpell = null, Func<long, int>? casterLevel = null,
     Func<long, ulong, bool>? ownsItem = null, Func<ulong?>? releaseGeneration = null,
-    Func<ulong?>? releaseSimulationStep = null)
+    Func<ulong?>? releaseSimulationStep = null, Func<string, bool>? playerGrantedSpell = null)
 {
     private readonly HashSet<DaggerfallLiveSpell> _pending = [];
     private readonly HashSet<DaggerfallSpellReadiness> _armed = [];
@@ -214,10 +214,10 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         if (actor is null) return Finish(DaggerfallCastOutcome.SourceUnavailable);
         if (itemId is null && effects.MagicDefenseFor(casterId).BlocksCasting) return Finish(DaggerfallCastOutcome.Silenced);
         if (casterId == playerId && itemId is null && playerKnowsSpell is not null && !playerKnowsSpell(spellKey)) return Finish(DaggerfallCastOutcome.UnknownSpell);
-        if (!catalog.Spells.TryGetValue(spellKey, out var spell) || (!spell.IsCustom && spell.Name.StartsWith('!')) || spell.Effects.Count == 0)
+        if (!catalog.Spells.TryGetValue(spellKey, out var spell) || ((!spell.IsCustom && spell.Name.StartsWith('!')) && !(casterId == playerId && itemId is null && playerGrantedSpell?.Invoke(spellKey) == true)) || spell.Effects.Count == 0)
             return Finish(DaggerfallCastOutcome.UnknownSpell);
         if (!TryDefinitions(spell, out _)) return Finish(DaggerfallCastOutcome.UnsupportedEffect);
-        int cost = itemId is null ? Quote(actor, spell) : 0;
+        int cost = itemId is null ? Quote(casterId, actor, spell) : 0;
         if (!CanPay(actor, casterId, cost, itemId)) return Finish(DaggerfallCastOutcome.InsufficientMagicka);
         var readiness = actor.Get<DaggerfallSpellReadiness>();
         readiness.Ready = new(spellKey, itemId, cost, source); _armed.Add(readiness);
@@ -289,8 +289,8 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
     {
         var actor=ResolveSource(casterId,null);
         return actor is not null && catalog.Spells.TryGetValue(key,out var spell)
-            && !(!spell.IsCustom && spell.Name.StartsWith('!')) && spell.Effects.Count>0 && TryDefinitions(spell,out _)
-            ? Quote(actor,spell) : null;
+            && !((!spell.IsCustom && spell.Name.StartsWith('!')) && !(casterId == playerId && playerGrantedSpell?.Invoke(key) == true)) && spell.Effects.Count>0 && TryDefinitions(spell,out _)
+            ? Quote(casterId,actor,spell) : null;
     }
 
     internal void RestoreReadySpell(DaggerfallReadySpell ready)
@@ -299,7 +299,7 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
             || (ready.ItemId is null) != (ready.Source is DaggerfallCastSource.Spell or DaggerfallCastSource.DungeonAction)
             || ready.Cost < 0 || ready.ItemId is not null && ready.Cost != 0
             || ResolveSource(playerId, ready.ItemId) is null
-            || !catalog.Spells.TryGetValue(ready.SpellKey, out var spell) || (!spell.IsCustom && spell.Name.StartsWith('!')) || !TryDefinitions(spell, out _)
+            || !catalog.Spells.TryGetValue(ready.SpellKey, out var spell) || ((!spell.IsCustom && spell.Name.StartsWith('!')) && !(ready.Source == DaggerfallCastSource.Spell && playerGrantedSpell?.Invoke(ready.SpellKey) == true)) || !TryDefinitions(spell, out _)
             || ready.Source == DaggerfallCastSource.DungeonAction && DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType) != DaggerfallSpellTarget.CasterOnly
             || ready.Source == DaggerfallCastSource.DungeonAction && ready.Cost != 0
             || ready.Source != DaggerfallCastSource.DungeonAction && ready.ItemId is null && playerKnowsSpell?.Invoke(ready.SpellKey) == false)
@@ -613,7 +613,11 @@ internal sealed class DaggerfallCasting(DaggerfallMagicCatalogSet catalog, Dagge
         if (spell.IsCustom && (allowedElements & element) == 0) { definitions = []; return false; }
         definitions = resolved.ToArray(); return true;
     }
-    private int Quote(Actor actor, DaggerfallSpellDefinition spell) => DaggerfallMagicAdmissionPolicy.CalculateCastingCost(catalog, spell, Schools(actor), enchantingItem: false);
+    private int Quote(long casterId, Actor actor, DaggerfallSpellDefinition spell) =>
+        casterId == playerId && playerGrantedSpell?.Invoke(spell.Key) == true
+            ? DaggerfallMagicCostPolicy.CalculateTotalEffectCosts(catalog, spell.Effects,
+                DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType), Schools(actor), minimumCastingCost: true).SpellPoints
+            : DaggerfallMagicAdmissionPolicy.CalculateCastingCost(catalog, spell, Schools(actor), enchantingItem: false);
     private static IReadOnlyDictionary<string, int> Schools(Actor actor) => new[] { "destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism" }
         .ToDictionary(key => key, key => Read(actor.Get<StatsComponent>(), key));
     private bool CanPay(Actor actor, long casterId, int cost, ulong? itemId) => itemId is not null

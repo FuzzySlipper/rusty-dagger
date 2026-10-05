@@ -24,6 +24,8 @@ internal sealed record DaggerfallTuning(
     DaggerfallPropertyTuning Property,
     DaggerfallTransportTuning Transport)
 {
+    internal DaggerfallNormalLightTuning NormalLight { get; init; } = new(1.4f, .25f, 15f, 1f);
+    internal DaggerfallLycanthropyTuning Lycanthropy { get; init; } = DaggerfallLycanthropyTuning.Classic;
     internal DaggerfallStrikeEnchantmentTuning StrikeEnchantments { get; init; } = new(5, 2.25d);
     internal DaggerfallDetectionTuning Detection { get; init; } = new(14d);
     internal DaggerfallMusicTuning Music { get; init; } = new(AlternatePlaylists: false);
@@ -106,6 +108,8 @@ internal sealed record DaggerfallTuning(
         Swimming = Swimming.Validate(),
         Weather = Weather.Validate(),
         Ambient = Ambient.Validate(),
+        Lycanthropy = Lycanthropy.Validate(),
+        NormalLight = NormalLight.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -205,6 +209,10 @@ internal sealed record DaggerfallTuning(
                 AttackCueChancePercent = presentationAudio.GetProperty("attackCueChancePercent").GetInt32(),
                 OccludedVolumeScale = presentationAudio.GetProperty("occludedVolumeScale").GetSingle(),
                 MuteHumanSounds = presentationAudio.GetProperty("muteHumanSounds").GetBoolean(),
+                BeastMinimumDelaySeconds = presentationAudio.GetProperty("beastMinimumDelaySeconds").GetInt32(),
+                BeastMaximumDelaySeconds = presentationAudio.GetProperty("beastMaximumDelaySeconds").GetInt32(),
+                BeastAttackChancePercent = presentationAudio.GetProperty("beastAttackChancePercent").GetInt32(),
+                BeastBarkChancePercent = presentationAudio.GetProperty("beastBarkChancePercent").GetInt32(),
                 ContactPitch = presentationAudio.GetProperty("contactPitch").GetSingle(),
             },
             new DaggerfallProgressionTuning(
@@ -247,6 +255,15 @@ internal sealed record DaggerfallTuning(
         {
             StrikeEnchantments = new(root.GetProperty("strikeEnchantments").GetProperty("damageAdjustment").GetInt32(),
                 root.GetProperty("strikeEnchantments").GetProperty("vampiricRange").GetDouble()),
+            NormalLight = new(root.GetProperty("normalLight").GetProperty("distance").GetSingle(),
+                root.GetProperty("normalLight").GetProperty("heightFraction").GetSingle(),
+                root.GetProperty("normalLight").GetProperty("range").GetSingle(), root.GetProperty("normalLight").GetProperty("intensity").GetSingle()),
+            Lycanthropy = new(root.GetProperty("lycanthropy").GetProperty("attributeBonus").GetInt32(),
+                root.GetProperty("lycanthropy").GetProperty("skillBonus").GetInt32(),
+                root.GetProperty("lycanthropy").GetProperty("morphCooldownMinutes").GetInt32(),
+                root.GetProperty("lycanthropy").GetProperty("hungerPeriodMinutes").GetInt32(),
+                root.GetProperty("lycanthropy").GetProperty("healthLossPerMinute").GetDouble(),
+                root.GetProperty("lycanthropy").GetProperty("minimumHealth").GetInt32()),
             Detection = new(root.GetProperty("detection").GetProperty("maximumDistance").GetDouble()),
             Music = new DaggerfallMusicTuning(root.GetProperty("music").GetProperty("alternatePlaylists").GetBoolean()),
             WorldOrigin = new(root.GetProperty("worldOrigin").GetProperty("verticalRebaseDistance").GetSingle()),
@@ -451,6 +468,10 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
     internal int AttackCueChancePercent { get; init; } = 50;
     internal float OccludedVolumeScale { get; init; } = .25F;
     internal bool MuteHumanSounds { get; init; } = true;
+    internal int BeastMinimumDelaySeconds { get; init; } = 4;
+    internal int BeastMaximumDelaySeconds { get; init; } = 20;
+    internal int BeastAttackChancePercent { get; init; } = 10;
+    internal int BeastBarkChancePercent { get; init; } = 20;
     internal float ContactPitch { get; init; } = 1.1F;
     internal DaggerfallPresentationAudioTuning Validate()
     {
@@ -462,6 +483,9 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
         if (AttractMinimumDelaySeconds < 0 || AttractMaximumDelaySeconds < AttractMinimumDelaySeconds) throw new ArgumentOutOfRangeException(nameof(AttractMaximumDelaySeconds));
         if (AttractMoveChancePercent is < 0 or > 100 || AttackCueChancePercent is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(AttackCueChancePercent));
         if (!float.IsFinite(OccludedVolumeScale) || OccludedVolumeScale is < 0F or > 1F) throw new ArgumentOutOfRangeException(nameof(OccludedVolumeScale));
+        if (BeastMinimumDelaySeconds < 0 || BeastMaximumDelaySeconds < BeastMinimumDelaySeconds
+            || BeastAttackChancePercent is < 0 or > 100 || BeastBarkChancePercent is < 0 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(BeastMaximumDelaySeconds));
         if (!float.IsFinite(ContactPitch) || ContactPitch <= 0F) throw new ArgumentOutOfRangeException(nameof(ContactPitch));
         return this;
     }
@@ -508,4 +532,11 @@ internal sealed record DaggerfallDetectionTuning(double MaximumDistance)
             throw new ArgumentOutOfRangeException(nameof(MaximumDistance));
         return this;
     }
+}
+
+internal sealed record DaggerfallNormalLightTuning(float Distance, float HeightFraction, float Range, float Intensity)
+{
+    internal DaggerfallNormalLightTuning Validate() => float.IsFinite(Distance) && Distance > 0
+        && float.IsFinite(HeightFraction) && HeightFraction is >= 0 and <= 1 && float.IsFinite(Range) && Range > 0
+        && float.IsFinite(Intensity) && Intensity > 0 ? this : throw new ArgumentException("Normal light tuning requires a finite pose, range and intensity.");
 }

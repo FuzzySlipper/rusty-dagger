@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { When, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
@@ -305,6 +305,8 @@ internal static partial class DaggerfallQuestTaskCompiler
         if (RunQuest.Match(line) is { Success: true } run)
             return new(DaggerfallQuestTaskOperationKind.RunQuest, sourceLine, line,
                 [run.Groups["quest"].Value, Canonical(run.Groups["success"].Value), Canonical(run.Groups["failure"].Value)], [], null);
+        if (line.Equals("cure lycanthropy", StringComparison.OrdinalIgnoreCase))
+            return new(DaggerfallQuestTaskOperationKind.CureLycanthropy, sourceLine, line, [], [], null);
         if (StartQuest.Match(line) is { Success: true } startQuest)
         {
             string target = startQuest.Groups["quest"].Success
@@ -408,6 +410,7 @@ internal interface IDaggerfallQuestTaskLifecycle
     bool IsLevelCompleted(int minimum);
     bool IsAttributeAtLeast(string attribute, int minimum);
     bool IsSkillAtLeast(string skill, int minimum);
+    bool CureLycanthropy() => throw new NotSupportedException("No permanent curse owner is composed.");
     void Train(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation);
     void JournalNote(DaggerfallQuestRuntimeInstance instance, int messageId, string task, int operationIndex);
     string Pick(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, int operationIndex, DaggerfallQuestTaskRuntimeState state);
@@ -612,6 +615,11 @@ internal static class DaggerfallQuestTaskRunner
                         break;
                     case DaggerfallQuestTaskOperationKind.StartQuest:
                         lifecycle.Schedule(instance, operation);
+                        MarkCompleted(state, operationIndex);
+                        break;
+                    case DaggerfallQuestTaskOperationKind.CureLycanthropy:
+                        if (!lifecycle.CureLycanthropy())
+                            return;
                         MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.TrainPc:
