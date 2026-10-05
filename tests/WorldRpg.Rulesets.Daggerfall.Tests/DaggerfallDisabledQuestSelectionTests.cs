@@ -21,7 +21,9 @@ public sealed class DaggerfallDisabledQuestSelectionTests
         DaggerfallQuestInstanceSave summoned = new("daedric:80", resolved.SourceFile, resolved.Name, DaggerfallQuestLifecycle.Active, null, [], []);
         DaggerfallQuestInstances instances = new(definitions, RandomMinimum.Create(), new(selection.Receipts), selection);
         Assert.Contains("requires an explicit Daedric summoning identity", Assert.Throws<ArgumentException>(() => instances.Start(summoned)).Message, StringComparison.Ordinal);
-        Assert.Contains("no admitted runnable program", Assert.Throws<ArgumentException>(() => instances.StartSummoned("80C0XY00", summoned)).Message, StringComparison.Ordinal);
+        Assert.True(new DaggerfallQuestRuntimeAdmission(selection.Receipts).IsRunnable(resolved.SourceFile));
+        // The source is admitted now; this isolated owner still lacks the session's route service.
+        Assert.Contains("admitted route calculator", Assert.Throws<NotSupportedException>(() => instances.StartSummoned("80C0XY00", summoned)).Message, StringComparison.Ordinal);
         Assert.Throws<ArgumentException>(() => instances.StartSummoned("80C0XY00", summoned with { SourceFile = "10C00Y00.txt" }));
     }
 }

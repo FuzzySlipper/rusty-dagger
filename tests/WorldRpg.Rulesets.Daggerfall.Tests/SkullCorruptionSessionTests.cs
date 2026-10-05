@@ -110,8 +110,9 @@ public sealed class SkullCorruptionSessionTests
             && !definitions.QuestSources.UnresolvedReferences.Any(link => link.SourceFile == resource.SourceFile)
             && !DaggerfallQuestClockCompiler.Compile(definitions.QuestSources.Resolve(resource.SourceFile)).Any(DaggerfallQuestClockCompiler.UsesTravelDuration));
         var quest = definitions.QuestSources.Quests[declaration.SourceFile];
-        f.Session.State.Quests.Start(new("skull-protected", declaration.SourceFile, quest.Name, DaggerfallQuestLifecycle.Active, null,
-            [new(declaration.CanonicalId, DaggerfallQuestResourceBinding.Actors(f.Enemy))], []));
+        var started = f.Session.State.Quests.Start(new("skull-protected", declaration.SourceFile, quest.Name, DaggerfallQuestLifecycle.Active, null, [], []));
+        var foe = started.Resources.Single(resource => resource.Symbol == declaration.CanonicalId);
+        f.Session.State.Quests.SetResource(started.InstanceId, foe with { Binding = DaggerfallQuestResourceBinding.Actors(f.Enemy) });
         int condition = f.Condition;
         using var protectedSave = f.Restore();
         Assert.True(protectedSave.State.Quests.ProtectsActor(f.Enemy));
