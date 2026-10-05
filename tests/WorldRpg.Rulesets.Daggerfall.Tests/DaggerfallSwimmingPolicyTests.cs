@@ -93,7 +93,7 @@ public sealed class DaggerfallSwimmingPolicyTests
             .Single(value => value.Key == "water-breathing");
 
         Assert.True(definition.MovementProtection.GrantsWaterBreathing);
-        Assert.Equal((30, 255), (definition.Spell!.Type, definition.Spell.SubType));
+        Assert.Equal((30, -1), (definition.Spell!.Type, definition.Spell.SubType));
         Assert.True(definition.Spell.SupportsDuration);
     }
 
