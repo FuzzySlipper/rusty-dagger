@@ -124,6 +124,23 @@ public sealed class QuestFoeRelationTests
         Assert.Equal(restored.DefinitionsByActor[second].Team, restored.EffectiveFoeTeam(second));
     }
 
+    [Fact]
+    public void Global_hostility_updates_allied_foes_base_disposition_before_team_cleanup()
+    {
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: ["create foe _enemy_ every 0 minutes 1 times with 100% success", "change foe _enemy_ team PlayerAlly"],
+            taskBlocks: [["_hostile_ task:", "clicked foe _enemy_", "enemies makehostile"]]);
+        using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
+        Start(f, definitions); Advance(f.Session);
+        long id = Foe(f.Session);
+        f.Session.State.Actors.Get(id).Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(false);
+        Assert.True(f.Session.State.Quests.ActorClicked(id)); Advance(f.Session);
+        Assert.True(f.Session.State.Actors.Get(id).Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+        using var restored = f.Restore();
+        restored.State.Quests.Complete("relations", "done");
+        Assert.NotEqual("player-ally", restored.EffectiveFoeTeam(id));
+        Assert.True(restored.State.Actors.Get(id).Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+    }
+
     private sealed class OneDamage : ICombatContribution
     {
         public void Hit(TryHitEvent value) => value.Hit = true;

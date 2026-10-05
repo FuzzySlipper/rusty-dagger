@@ -20,7 +20,7 @@ internal sealed partial class DaggerfallSession
             .Select(pair => pair.Key).ToArray())
         {
             if (clear) _roster.RemoveQuestActor(id);
-            else _enemyBehavior.MakeHostile(id);
+            else _enemyBehavior.MakeHostile(id, includePlayerAllies: true);
         }
     }
 

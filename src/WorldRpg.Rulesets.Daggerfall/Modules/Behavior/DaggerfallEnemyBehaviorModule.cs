@@ -167,9 +167,9 @@ internal sealed class DaggerfallEnemyBehaviorModule
         memory.HasEncounteredPlayer=true;
     }
 
-    internal void MakeHostile(long actorId)
+    internal void MakeHostile(long actorId, bool includePlayerAllies = false)
     {
-        if (!_actors.TryGet(actorId, out var actor) || actor.IsDefeated || _isPlayerAllied(actorId)) return;
+        if (!_actors.TryGet(actorId, out var actor) || actor.IsDefeated || !includePlayerAllies && _isPlayerAllied(actorId)) return;
         var memory = Senses(actor);
         memory.SetForcedHostile(true);
     }
