@@ -109,6 +109,49 @@ public sealed class DaggerfallAudioBundleTests
         Assert.Equal(1, audio.ReleasedClips);
     }
 
+    [Theory]
+    [InlineData(false, 100, 100, false, "sound.205")]
+    [InlineData(false, 100, 0, false, "sound.206")]
+    [InlineData(true, 100, 100, false, "sound.199")]
+    [InlineData(true, 100, 0, false, "sound.200")]
+    [InlineData(false, 0, 100, false, "sound.205")]
+    [InlineData(false, 100, 100, true, "sound.205")]
+    public void Vampire_voice_uses_the_admitted_swing_not_damage_and_honors_voice_gate_and_bow_exclusion(
+        bool female, int voiceChance, int barkChance, bool bow, string expected)
+    {
+        const string path = "voice.wav";
+        var content = BundleContentFake.Create(path);
+        var clips = new[] { new NormalizedAudioClip(expected, SiteRoot + path, default),
+            new NormalizedAudioClip("sound.3", SiteRoot + path, default),
+            new NormalizedAudioClip("hit1", SiteRoot + path, default) };
+        var bundle = new DaggerfallAudioBundle(new ProductContent(Array.Empty<ProductContentFile>(), content.Service), SiteBundle, SiteRoot, clips);
+        var audio = AudioFake.Create();
+        var inputs = new DaggerfallSiteProfile(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
+            new SpatialContentArtifact("spatial/hold.json", default, 1), new ContentArtifact("mesh/hold.json", default),
+            new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [],
+            new Dictionary<long, NormalizedActorSprite>(), mobileSprites: null, clips);
+        var appearance = new DaggerfallSiteAppearance(content.Service, GraphicsFake.Create(), inputs, audio.Service,
+            DaggerfallTuning.Defaults.PresentationAudio with { VampireAttackChancePercent = voiceChance, VampireBarkChancePercent = barkChance }, audioBundle: bundle);
+        appearance.UsePlayerVampireGender(() => female);
+        var started = new PlayerAttackStartedFact(7, 11) { Feedback = new(false, bow ? "sound.3" : "") };
+        try
+        {
+            // No target or damaging outcome is needed; a composition without a viewmodel admits
+            // its attack frame immediately. Re-delivery and later miss/contact cannot duplicate it.
+            appearance.React(started);
+            appearance.React(started);
+            int expectedEmissions = bow || voiceChance > 0 ? 1 : 0;
+            Assert.Equal(expectedEmissions, audio.Emitted);
+            appearance.React(new AttackMissedFact(1, 2, 100, 10, false, 7, 11) { Feedback = new(false, "") });
+            appearance.React(new AttackHitFact(1, 2, 1, 0, 0, false, 7, 11) { Feedback = new(false, "") });
+            Assert.Equal(expectedEmissions, audio.Emitted);
+        }
+        finally
+        {
+            Assert.Throws<AggregateException>(appearance.Dispose);
+        }
+    }
+
     [Fact]
     public void Published_catalog_admissions_close_over_the_generated_audio_bundle_paths()
     {

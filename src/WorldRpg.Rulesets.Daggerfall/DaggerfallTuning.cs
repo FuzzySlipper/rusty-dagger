@@ -221,6 +221,7 @@ internal sealed record DaggerfallTuning(
                 BeastMinimumDelaySeconds = presentationAudio.GetProperty("beastMinimumDelaySeconds").GetInt32(),
                 BeastMaximumDelaySeconds = presentationAudio.GetProperty("beastMaximumDelaySeconds").GetInt32(),
                 BeastAttackChancePercent = presentationAudio.GetProperty("beastAttackChancePercent").GetInt32(),
+                VampireAttackChancePercent = presentationAudio.GetProperty("vampireAttackChancePercent").GetInt32(),
                 VampireBarkChancePercent = presentationAudio.GetProperty("vampireBarkChancePercent").GetInt32(),
                 BeastBarkChancePercent = presentationAudio.GetProperty("beastBarkChancePercent").GetInt32(),
                 ContactPitch = presentationAudio.GetProperty("contactPitch").GetSingle(),
@@ -502,6 +503,7 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
     internal int BeastMinimumDelaySeconds { get; init; } = 4;
     internal int BeastMaximumDelaySeconds { get; init; } = 20;
     internal int BeastAttackChancePercent { get; init; } = 10;
+    internal int VampireAttackChancePercent { get; init; } = 20;
     internal int VampireBarkChancePercent { get; init; } = 20;
     internal int BeastBarkChancePercent { get; init; } = 20;
     internal float ContactPitch { get; init; } = 1.1F;
@@ -516,7 +518,7 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
         if (AttractMoveChancePercent is < 0 or > 100 || AttackCueChancePercent is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(AttackCueChancePercent));
         if (!float.IsFinite(OccludedVolumeScale) || OccludedVolumeScale is < 0F or > 1F) throw new ArgumentOutOfRangeException(nameof(OccludedVolumeScale));
         if (BeastMinimumDelaySeconds < 0 || BeastMaximumDelaySeconds < BeastMinimumDelaySeconds
-            || VampireBarkChancePercent is < 0 or > 100 || BeastAttackChancePercent is < 0 or > 100 || BeastBarkChancePercent is < 0 or > 100)
+            || VampireAttackChancePercent is < 0 or > 100 || VampireBarkChancePercent is < 0 or > 100 || BeastAttackChancePercent is < 0 or > 100 || BeastBarkChancePercent is < 0 or > 100)
             throw new ArgumentOutOfRangeException(nameof(BeastMaximumDelaySeconds));
         if (!float.IsFinite(ContactPitch) || ContactPitch <= 0F) throw new ArgumentOutOfRangeException(nameof(ContactPitch));
         return this;

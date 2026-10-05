@@ -205,6 +205,7 @@
     "beastMaximumDelaySeconds": 20,
     "beastAttackChancePercent": 10,
     "beastBarkChancePercent": 20,
+    "vampireAttackChancePercent": 20,
     "vampireBarkChancePercent": 20,
     "contactPitch": 1.1
   },
