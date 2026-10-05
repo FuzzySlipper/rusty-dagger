@@ -32,6 +32,40 @@ public sealed class QuestItemInteractionTests
         Assert.NotEqual(DaggerfallQuestTaskOperationKind.Unsupported, Assert.Single(Assert.Single(DaggerfallQuestTaskCompiler.Compile(source).Tasks).Operations).Kind);
     }
 
+    [Fact]
+    public void Item_actions_rearm_while_accepted_foe_queue_and_used_resource_fact_survive_restore()
+    {
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: ["get item _gift_", "create foe _enemy_ every 0 minutes 1 times with 100% success", "start task _use_", "start task _give_"],
+            foeCount: 1, messages: ["Used again."], taskBlocks: [
+                ["_use_ task:", "_gift_ used saying 100 do _used_"], ["_used_ task:"],
+                ["_give_ task:", "give item _gift_ to _enemy_"],
+                ["_rearm_ task:", "clear _give_", "clear _use_", "start task _give_", "start task _use_", "clear _rearm_"]]);
+        using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
+        Start(f, definitions); Advance(f.Session);
+        var quests = f.Session.State.Quests;
+        var gift = Quest(f.Session).Resources.Single(r => r.Symbol == "gift");
+        quests.SetResource("interactions", gift with { UseClicked = true });
+        Advance(f.Session);
+        var before = Quest(f.Session);
+        Assert.True(before.Tasks.Single(t => t.Symbol == "use").OperationCompleted[0]);
+        var queue = before.Tasks.Single(t => t.Symbol == "give").OperationState[0].ItemTransfer!;
+        int originalItemCount = f.Session.State.ItemInstances.UniqueItems.Count(i => i.Value.QuestId == "interactions");
+        var snapshot = quests.Capture();
+        quests.Restore(snapshot with { Instances = snapshot.Instances.Select(instance => instance with
+            { Tasks = instance.Tasks.Select(task => task.Symbol == "rearm" ? task with { IsSet = true } : task).ToArray() }).ToArray() });
+        Advance(f.Session);
+        Assert.False(Quest(f.Session).Tasks.Single(t => t.Symbol == "give").OperationCompleted[0]);
+        Assert.False(Quest(f.Session).Tasks.Single(t => t.Symbol == "use").OperationCompleted[0]);
+        Assert.Equal(queue.Recipients, Quest(f.Session).Tasks.Single(t => t.Symbol == "give").OperationState[0].ItemTransfer!.Recipients);
+        using var restored = f.Restore(); Advance(restored);
+        Assert.True(Quest(restored).Tasks.Single(t => t.Symbol == "give").OperationCompleted[0]);
+        Assert.True(Quest(restored).Tasks.Single(t => t.Symbol == "use").OperationCompleted[0]);
+        Assert.Equal(2, restored.State.Quests.Messages.Deliveries.Count(d => d.MessageId == 100));
+        Assert.Equal(originalItemCount, restored.State.ItemInstances.UniqueItems.Count(i => i.Value.QuestId == "interactions"));
+        foreach (long id in queue.Recipients)
+            Assert.Single(restored.State.ItemInstances.UniqueItems.Where(i => i.Value.QuestId == "interactions" && i.Value.Owner == DaggerfallItemOwner.Actor(id)));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
