@@ -483,6 +483,7 @@ internal sealed partial class DaggerfallSession
             State.QuestItems = new(State, _actorIdentities, _uniqueItems, ItemOwnerEntity, DestroyUniqueItem, ConsumeItemStack, _equipmentMoves);
             State.Quests.BindItems(State.QuestItems);
             State.Quests.BindPlacementNpcs(State.Npcs);
+            State.Quests.BindWorldRead(() => _sites.ReadQuestLocation());
             State.Quests.BindFoeCommands(ApplyQuestFoeCommand);
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook,
                 useDrug: variant => UseDrug(variant) == DaggerfallPoisonAdmission.Admitted,

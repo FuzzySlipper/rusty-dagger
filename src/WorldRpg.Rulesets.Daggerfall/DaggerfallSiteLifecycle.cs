@@ -784,6 +784,35 @@ internal sealed class DaggerfallSiteLifecycle
         return new(position.X - translation.X, position.Y - translation.Y, position.Z - translation.Z);
     }
 
+    /// <summary>Quest location facts read the accepted player position in the current world frame.</summary>
+    internal DaggerfallQuestLocationRead ReadQuestLocation()
+    {
+        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior)
+            return new(Projection.Inputs, _site.ActiveSite, _site.ActiveSite?.DungeonType);
+        if (_state.PlayerControl.Position is not WorldPoint position) return new(Projection.Inputs, null, null);
+        // Location artifacts use their normalized RMB frame, not the source terrain-tile origin.
+        // Check the actual admitted profiles, including neighbors in the shared exterior window.
+        var profiles = (_locationLoaded ? new[] { Projection.Inputs } : [])
+            .Concat(_residentExteriorLocations.Values.Select(value => value.Profile));
+        foreach (var profile in profiles)
+        {
+            if (profile.Site is not { } id || !_site.TryFind(id, out var location) || location.Exterior is not { } footprint) continue;
+            var translation = ExteriorProfileTranslation(profile);
+            if (InsideLocationFootprint(footprint, position.X - translation.X, position.Z - translation.Z))
+                return new(Projection.Inputs, location, null);
+        }
+        return new(Projection.Inputs, null, null);
+    }
+
+    internal static bool InsideLocationFootprint(DaggerfallSiteExterior location, float x, float z)
+    {
+        // PlayerGPS adds one RMB block of classic town-boundary clearance. Published geometry
+        // starts at the zero-based RMB origin and reflects source +Z into Engine -Z.
+        const float block = 16 * DaggerfallTerrainSurfaceBuilder.SampleSpacing;
+        return x >= -block && x <= (location.Width + 1) * block
+            && z >= -(location.Height + 1) * block && z <= block;
+    }
+
     internal DaggerfallExteriorCellId CurrentExteriorCell()
     {
         DaggerfallExteriorCellId site = ActiveExteriorCell();

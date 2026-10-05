@@ -20,6 +20,10 @@ internal sealed class DaggerfallQuestPlaceAllocator(
     private static readonly int[] AnyHouse = [17, 18, 19, 20];
     private static readonly int[] AnyShop = [0, 2, 5, 6, 7, 8, 9, 12, 13];
 
+    internal static bool BuildingMatches(int actualType, int actualFaction, int type, int faction) =>
+        (type == -1 ? (faction == 1 ? AnyHouse : faction == 2 ? AnyShop : AllValid).Contains(actualType) : actualType == type)
+        && (actualType != 11 || faction == 0 || actualFaction == faction);
+
     internal DaggerfallQuestResourceState Allocate(string instanceId, DaggerfallQuestResourceDefinition resource,
         IEnumerable<DaggerfallQuestResourceState> parentResources, IEnumerable<DaggerfallQuestResourceState> activeResources)
     {
@@ -190,9 +194,7 @@ internal sealed class DaggerfallQuestPlaceAllocator(
     private DaggerfallSiteBuildingSource[] Buildings(DaggerfallSiteRecord site, int type, int faction,
         DaggerfallQuestResourceState[] parent, DaggerfallQuestResourceState[] active) =>
         [.. sites.BuildingsAt(site.Id).OrderBy(value => value.Id.BlockY).ThenBy(value => value.Id.BlockX).ThenBy(value => value.Id.Index)
-            .Where(building => (type == -1 ? (faction == 1 ? AnyHouse : faction == 2 ? AnyShop : AllValid).Contains(building.Source.BuildingType)
-                    : building.Source.BuildingType == type)
-                && (building.Source.BuildingType != 11 || faction == 0 || building.Source.FactionId == faction)
+            .Where(building => BuildingMatches(building.Source.BuildingType, building.Source.FactionId, type, faction)
                 && building.Source.FactionId != DaggerfallConcreteGuildCatalog.ThievesFactionId
                 && building.Source.FactionId != DaggerfallConcreteGuildCatalog.DarkBrotherhoodFactionId
                 && !isOwnedHouse(site.Id, building)

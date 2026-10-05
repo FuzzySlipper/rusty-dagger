@@ -835,6 +835,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 : _random.DrawKeyed(new KeyedRngRequest(0, "daggerfall.quest.clock", $"{instance.InstanceId}:{clock.Symbol}", clock.MinimumSeconds, clock.MaximumSeconds)).Value;
             return new DaggerfallQuestClockState(clock.Symbol, duration, duration, clock.Flag, clock.MinRange, clock.MaxRange, false, false);
         })] }, program) { TravelClockSeconds = ResolveTravelClockSeconds };
+        InitializeWorldTriggers(started, program);
         if (!_instances.TryAdd(started.InstanceId, started)) throw new ArgumentException($"Quest instance '{started.InstanceId}' already exists.");
         foreach (var resource in started.Resources.Where(value => value.SelectedPerson?.Home is not null))
             RequestPlacement(started.InstanceId, "person-home:" + DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "Person home"), resource.Symbol,
@@ -1210,6 +1211,15 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
             {
                 DaggerfallQuestTaskOperation operation = task.Operations[operationIndex];
                 DaggerfallQuestTaskOperationState receipt = state.OperationState[operationIndex];
+                if (receipt.UnavailableReason is { } reason && (string.IsNullOrWhiteSpace(reason)
+                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
+                    throw new ArgumentException("Quest unsupported world detail must identify its owning action.");
+                if (receipt.Location is { } location)
+                {
+                    if (operation.Kind is not (DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits))
+                        throw new ArgumentException("Quest location state belongs only to an exterior transition trigger.");
+                    location.Validate();
+                }
                 if (operation.Kind == DaggerfallQuestTaskOperationKind.PickOneOf)
                 {
                     if (receipt.ChildInstanceId is not null || receipt.PickedTarget is not null && !operation.Targets.Contains(receipt.PickedTarget, StringComparer.Ordinal))
