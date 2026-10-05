@@ -36,6 +36,17 @@ internal class RandomMinimum : DispatchProxy
     }
 }
 
+/// <summary>Keep deterministic minimum gameplay rolls while allowing source Place retries to explore the catalog.</summary>
+internal class QuestPlaceRandomMinimum : RandomMinimum
+{
+    private readonly IRandomService _places = SummonRandom.Create();
+    internal new static IRandomService Create() => DispatchProxy.Create<IRandomService, QuestPlaceRandomMinimum>();
+    protected override object? Invoke(MethodInfo? method, object?[]? arguments) =>
+        method?.Name == nameof(IRandomService.DrawKeyed) && arguments![0] is KeyedRngRequest request
+            && request.ToString().Contains("daggerfall.quest.place", StringComparison.Ordinal)
+            ? _places.DrawKeyed(request) : base.Invoke(method, arguments);
+}
+
 internal class KeyedRandomFake : DispatchProxy
 {
     internal IRandomService Service { get; private set; } = null!;
