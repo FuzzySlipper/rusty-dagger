@@ -968,7 +968,7 @@ internal static class DaggerfallQuestTaskRunner
             state.OperationState[index] = new(null, null)
             {
                 FoeSpawn = task.Operations[index].Kind == DaggerfallQuestTaskOperationKind.CreateFoe
-                    && state.OperationState[index].FoeSpawn is { } spawn ? new(-1, 0, 0, 0, null, spawn.MessageSent) : null,
+                    && state.OperationState[index].FoeSpawn is { } spawn ? new(null, 0, 0, 0, null, spawn.MessageSent) : null,
             };
         }
     }

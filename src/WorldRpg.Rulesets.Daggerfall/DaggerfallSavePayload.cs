@@ -645,6 +645,10 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException($"Saved spawned encounter actor {actorId} is not a dynamic actor.");
         }
         Quests.Validate(definitions);
+        foreach (var operation in Quests.Instances.SelectMany(instance => instance.Tasks).SelectMany(task => task.OperationState))
+            foreach (var profile in new DaggerfallWorldProfileKey?[] { operation.FoeSpawn?.PendingProfile, operation.GuardSpawn?.Profile })
+                if (profile is { } required && required != inputs.ProfileKey && profiles?.TryGet(required, out _) != true)
+                    throw new ArgumentException($"Quest spawn request names unavailable admitted profile '{required.LogicalId}'.");
         foreach (var instance in Quests.Instances)
             foreach (var operation in instance.Placements.Where(value => value.Applied is not null))
             {

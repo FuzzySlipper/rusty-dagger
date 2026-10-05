@@ -1235,7 +1235,8 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 }
                 if (receipt.FoeSpawn is { } spawn)
                 {
-                    if (operation.Kind != DaggerfallQuestTaskOperationKind.CreateFoe || spawn.LastAttemptSeconds < -1 || spawn.Attempts < 0
+                    if (operation.Kind != DaggerfallQuestTaskOperationKind.CreateFoe || spawn.Attempts < 0
+                        || spawn.LastAttemptSeconds is null && (spawn.Attempts != 0 || spawn.CompletedGroups != 0 || spawn.PendingRemaining != 0)
                         || spawn.CompletedGroups < 0 || spawn.PendingRemaining < 0 || (spawn.PendingRemaining == 0) != (spawn.PendingProfile is null)
                         || operation.FoeSpawn!.MaximumGroups is { } maximum && spawn.CompletedGroups > maximum
                         || spawn.PendingRemaining > FoeResource(instance, operation).SelectedFoe!.Count)
