@@ -162,7 +162,7 @@ internal sealed partial class DaggerfallSession
 
     private sealed class DaggerfallCrimeActivationOwner(DaggerfallDialogueService dialogue, ActorsState actors,
         Func<long, bool> eligible, Func<long, DaggerfallActivationOutcome> pickpocket,
-        Func<long, bool> lawGuard, Func<long, DaggerfallActivationOutcome> surrender) : IDaggerfallNpcActivationOwner
+        Func<long, bool> lawGuard, Func<long, DaggerfallActivationOutcome> surrender, Func<long, bool> questActor, Func<long, bool> questClick) : IDaggerfallNpcActivationOwner
     {
         public IEnumerable<DaggerfallActivationTarget> NpcTargets()
         {
@@ -170,21 +170,34 @@ internal sealed partial class DaggerfallSession
         }
         public IEnumerable<DaggerfallActivationTarget> NpcTargets(DaggerfallActivationMode mode)
         {
+            HashSet<long> included = [];
             if (mode != DaggerfallActivationMode.Steal)
+                foreach (var person in dialogue.NpcTargets()) { included.Add(checked((long)person.Identity.Value)); yield return person; }
+            if (mode is DaggerfallActivationMode.Grab or DaggerfallActivationMode.Talk or DaggerfallActivationMode.Steal)
             {
-                foreach (var person in dialogue.NpcTargets()) yield return person;
-                if (mode == DaggerfallActivationMode.Talk)
-                    foreach (var guard in actors.All.Where(actor => !actor.IsDefeated && lawGuard(actor.DurableId)))
-                        yield return new(DaggerfallActivationTargetKind.Npc, ActorsState.Identity(guard.DurableId), guard.Actor.Entity,
-                            checked((ulong)guard.DurableId), guard.Position, 1, ReachDistance: 3.2);
-                yield break;
+                foreach (var person in dialogue.QuestNpcTargets(questActor))
+                    if (included.Add(checked((long)person.Identity.Value))) yield return person;
+                foreach (var actor in actors.All.Where(actor => !actor.IsDefeated && questActor(actor.DurableId) && included.Add(actor.DurableId)))
+                    yield return Target(actor);
             }
-            foreach (var actor in actors.All.Where(actor => !actor.IsDefeated && actor.DurableId != DaggerfallActorIdentity.PlayerEntityId && eligible(actor.DurableId)))
-                yield return new(DaggerfallActivationTargetKind.Npc, ActorsState.Identity(actor.DurableId), actor.Actor.Entity,
-                    checked((ulong)actor.DurableId), actor.Position, 1, ReachDistance: 3.2);
+            foreach (var actor in actors.All.Where(actor => !actor.IsDefeated && actor.DurableId != DaggerfallActorIdentity.PlayerEntityId
+                && (mode == DaggerfallActivationMode.Steal ? eligible(actor.DurableId) : mode == DaggerfallActivationMode.Talk && lawGuard(actor.DurableId))
+                && included.Add(actor.DurableId)))
+                yield return Target(actor);
         }
-        public DaggerfallActivationOutcome ActivateNpc(DaggerfallActivationSelection selection) => selection.Mode == DaggerfallActivationMode.Steal
-            ? pickpocket(checked((long)selection.Target.Identity.Value))
-            : lawGuard(checked((long)selection.Target.Identity.Value)) ? surrender(checked((long)selection.Target.Identity.Value)) : dialogue.ActivateNpc(selection);
+        private static DaggerfallActivationTarget Target(ActorState actor) =>
+            new(DaggerfallActivationTargetKind.Npc, ActorsState.Identity(actor.DurableId), actor.Actor.Entity,
+                checked((ulong)actor.DurableId), actor.Position, 1, ReachDistance: 3.2);
+        public DaggerfallActivationOutcome ActivateNpc(DaggerfallActivationSelection selection)
+        {
+            long id = checked((long)selection.Target.Identity.Value);
+            if (!(actors.TryGet(id, out var actor) && !actor.IsDefeated && actor.Actor.Entity == selection.Target.Entity)
+                && !dialogue.IsCurrentNpcSelection(selection))
+                return new(false, "That person is no longer available here.");
+            if (selection.Mode is DaggerfallActivationMode.Grab or DaggerfallActivationMode.Talk or DaggerfallActivationMode.Steal && questClick(id))
+                return new(true, "You address them.");
+            if (selection.Mode == DaggerfallActivationMode.Steal) return pickpocket(id);
+            return lawGuard(id) ? surrender(id) : dialogue.ActivateNpc(selection);
+        }
     }
 }

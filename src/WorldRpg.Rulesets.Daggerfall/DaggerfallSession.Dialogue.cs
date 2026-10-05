@@ -181,6 +181,18 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         }
     }
 
+    internal IEnumerable<DaggerfallActivationTarget> QuestNpcTargets(Func<long, bool> bound)
+    {
+        foreach (var npc in _npcs.All)
+            if (bound(npc.DurableId) && TryReadLiveNpc(npc.DurableId, out _, out var actor, allowMuted: true))
+                yield return new(DaggerfallActivationTargetKind.Npc, ActorsState.Identity(npc.DurableId), actor!.Entity,
+                    checked((ulong)npc.DurableId), actor.Position, 1, Label: npc.Role);
+    }
+
+    internal bool IsCurrentNpcSelection(DaggerfallActivationSelection selection) =>
+        TryReadLiveNpc(checked((long)selection.Target.Identity.Value), out _, out var actor, allowMuted: true)
+        && actor!.Entity == selection.Target.Entity;
+
     public DaggerfallActivationOutcome ActivateNpc(DaggerfallActivationSelection selection)
     {
         ArgumentNullException.ThrowIfNull(selection);
@@ -671,7 +683,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             && actor.Position == session.Position;
     }
 
-    private bool TryReadLiveNpc(long id, out DaggerfallNpc? npc, out DaggerfallDialogueNpc? actor)
+    private bool TryReadLiveNpc(long id, out DaggerfallNpc? npc, out DaggerfallDialogueNpc? actor, bool allowMuted = false)
     {
         npc = null;
         actor = null;
@@ -679,7 +691,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (site is null) return false;
         try { npc = _npcs.Require(id); }
         catch (InvalidOperationException) { return false; }
-        if (_muted(id) || !IsTalkableAt(npc!, site)) return false;
+        if ((!allowMuted && _muted(id)) || !IsTalkableAt(npc!, site)) return false;
         if (_activeProfile is not null
             && (npc!.Profile is not { } profile || profile != _activeProfile())) return false;
         if (_actors.TryGet(id, out ActorState currentActor))

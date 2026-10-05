@@ -857,6 +857,8 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values.ToArray())
             if (instance.Lifecycle == DaggerfallQuestLifecycle.Active)
             {
+                try
+                {
                 // A final prompt owns its answer before retirement. No separate clock or scheduler.
                 if (Messages.Pending?.InstanceId == instance.InstanceId) continue;
                 if (instance.PendingEndPasses > 0 && --instance.PendingEndPasses == 0)
@@ -867,6 +869,13 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                     continue;
                 }
                 DaggerfallQuestTaskRunner.Advance(instance, Program(instance.SourceFile), variables, calendar, Messages, this);
+                }
+                finally
+                {
+                    // Source resource PostTick expires unconsumed interaction facts after
+                    // this quest pass; failed payment cannot retain a click for a later debit.
+                    instance.Resources = instance.Resources.Select(resource => resource with { HasPlayerClicked = false }).ToArray();
+                }
             }
         TombstoneAndCleanup(now);
     }
