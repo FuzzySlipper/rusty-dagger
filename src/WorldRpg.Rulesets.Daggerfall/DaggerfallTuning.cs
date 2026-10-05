@@ -165,7 +165,11 @@ internal sealed record DaggerfallTuning(
                 locomotion.GetProperty("climbingFatiguePerGameMinute").GetInt32(),
                 locomotion.TryGetProperty("swimmingFatiguePerGameMinute", out JsonElement swimmingFatigue)
                     ? swimmingFatigue.GetInt32() : 44,
-                locomotion.GetProperty("levitationVerticalSpeed").GetSingle()),
+                locomotion.GetProperty("levitationVerticalSpeed").GetSingle(),
+                locomotion.GetProperty("athleticJumpBonus").GetSingle(),
+                locomotion.GetProperty("improvedAthleticJumpBonus").GetSingle(),
+                locomotion.GetProperty("enhancedJumpBonus").GetSingle(),
+                locomotion.GetProperty("slowfallDescentSpeed").GetSingle()),
             new FirstPersonCameraTuning(
                 camera.GetProperty("eyeHeight").GetSingle(),
                 camera.GetProperty("fieldOfViewYDegrees").GetDouble(),

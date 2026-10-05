@@ -92,7 +92,11 @@
     "crouchedJumpMultiplier": 0.8,
     "climbingFatiguePerGameMinute": 22,
     "swimmingFatiguePerGameMinute": 44,
-    "levitationVerticalSpeed": 4.0
+    "levitationVerticalSpeed": 4.0,
+    "athleticJumpBonus": 0.1,
+    "improvedAthleticJumpBonus": 0.1,
+    "enhancedJumpBonus": 0.6,
+    "slowfallDescentSpeed": 1.75
   },
   "climbing": {
     "startCheckSeconds": 0.7689556,
