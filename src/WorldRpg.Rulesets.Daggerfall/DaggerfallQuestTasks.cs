@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { When, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { When, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
@@ -233,6 +233,7 @@ internal static partial class DaggerfallQuestTaskCompiler
 
     private static DaggerfallQuestTaskOperation CompileOperation(string line, int sourceLine)
     {
+        if (CompileActorClick(line, sourceLine) is { } click) return click;
         if (CompileWorldTrigger(line, sourceLine) is { } worldTrigger) return worldTrigger;
         if (ReservePlace.Match(line) is { Success: true } reserve)
             return new(DaggerfallQuestTaskOperationKind.ReservePlace, sourceLine, line, [Canonical(reserve.Groups["place"].Value)], [], null);
@@ -405,6 +406,8 @@ internal static partial class DaggerfallQuestTaskCompiler
 /// <summary>Runs only the retained source-order task transitions over one mutable active quest instance.</summary>
 internal interface IDaggerfallQuestTaskLifecycle
 {
+    DaggerfallQuestClickResult ActorClick(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest actor interaction owner is composed.");
+    void FinishTaskInteractions(DaggerfallQuestRuntimeInstance instance) { }
     bool PlayerAt(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest world reader is composed.");
     bool WorldTransition(DaggerfallQuestTaskOperation operation, DaggerfallQuestTaskRuntimeState state, int operationIndex) => throw new NotSupportedException("No quest world reader is composed.");
     bool FoeTrigger(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest foe lifecycle owner is composed.");
@@ -445,10 +448,21 @@ internal static class DaggerfallQuestTaskRunner
             DaggerfallQuestTaskDefinition task = program.Tasks[index];
             DaggerfallQuestTaskRuntimeState state = states[index];
             ReadGlobal(task, state, variables);
+            try
+            {
             bool ranPrimaryAlwaysOn = false;
             for (int operationIndex = 0; operationIndex < task.Operations.Count; operationIndex++)
             {
                 DaggerfallQuestTaskOperation operation = task.Operations[operationIndex];
+                if (operation.Kind is DaggerfallQuestTaskOperationKind.ClickedNpc or DaggerfallQuestTaskOperationKind.ClickedFoe)
+                {
+                    if (state.IsSet || state.IsDropped) continue;
+                    var click = lifecycle.ActorClick(instance, operation);
+                    if (click.Otherwise is { } otherwise) Start(otherwise, states, indexes, program.Tasks, variables, instance.InstanceId, operation);
+                    Set(task, state, click.Triggered, variables);
+                    if (click.Triggered && click.MessageId is { } clickMessage) messages.Popup(instance, clickMessage);
+                    continue;
+                }
                 if (operation.Kind == DaggerfallQuestTaskOperationKind.DailyFrom)
                 {
                     int current = (calendar.Hour * 60) + calendar.Minute;
@@ -700,6 +714,8 @@ internal static class DaggerfallQuestTaskRunner
                 else Rearm(task, state, mute => lifecycle.RearmMute(instance, mute));
             }
             state.WasSet = state.IsSet;
+            }
+            finally { lifecycle.FinishTaskInteractions(instance); }
         }
     }
 

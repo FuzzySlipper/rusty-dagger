@@ -192,10 +192,10 @@ public sealed class QuestNpcOverlayTests
         Assert.Equal(expected.Services, actual.Services);
     }
 
-    private static void Start(SanguineRoseSessionTests.Fixture f, string instance, long id) =>
+    internal static void Start(SanguineRoseSessionTests.Fixture f, string instance, long id) =>
         f.Session.State.Quests.Start(new(instance, "overlay.txt", "overlay", DaggerfallQuestLifecycle.Active, null, [], []) { QuestorId = id });
 
-    private static long Giver(SanguineRoseSessionTests.Fixture f, DaggerfallDefinitions definitions, int? factionId = null, string gender = "Male")
+    internal static long Giver(SanguineRoseSessionTests.Fixture f, DaggerfallDefinitions definitions, int? factionId = null, string gender = "Male")
     {
         var faction = definitions.Factions.Factions.Values.First(value => (factionId is null ? value.Type != 0 && value.Type != 4 && value.Id != 514 : value.Id == factionId) && value.FlatVisuals.Count > 0
             && f.Inputs.BillboardSprites.ContainsKey((value.FlatVisuals[0].Archive, value.FlatVisuals[0].Record)));
@@ -208,7 +208,7 @@ public sealed class QuestNpcOverlayTests
         return id;
     }
 
-    private static DaggerfallDefinitions Definitions(string[] actions, bool rearm = false)
+    internal static DaggerfallDefinitions Definitions(string[] actions, bool rearm = false, string[][]? taskBlocks = null)
     {
         var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
@@ -223,6 +223,8 @@ public sealed class QuestNpcOverlayTests
             blocks.Add(JsonNode.Parse("""{"kind":"task","firstLine":100,"lines":["until _stop_ performed:","start task headless.1"],"global":null}"""));
         }
         blocks.Add(new JsonObject { ["kind"] = "headless", ["firstLine"] = 1, ["lines"] = JsonSerializer.SerializeToNode(actions), ["global"] = null });
+        if (taskBlocks is not null)
+            for (int i = 0; i < taskBlocks.Length; i++) blocks.Add(new JsonObject { ["kind"] = "task", ["firstLine"] = 200 + i * 20, ["lines"] = JsonSerializer.SerializeToNode(taskBlocks[i]), ["global"] = null });
         root["questSources"]!["quests"]!.AsArray().Add(new JsonObject { ["name"] = "overlay", ["displayName"] = "", ["sourceFile"] = "overlay.txt", ["disposition"] = "compiled", ["messages"] = new JsonArray(new JsonObject { ["id"] = 100, ["firstLine"] = 1, ["lines"] = new JsonArray("A companion joins you.") }), ["blocks"] = blocks, ["diagnostics"] = new JsonArray() });
         return DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
     }
