@@ -1039,6 +1039,8 @@ internal static class DaggerfallQuestTaskRunner
             state.OperationCompleted[index] = false;
             state.OperationState[index] = new(null, null)
             {
+                // Rearm execution without losing the accepted queue or its actual recipients.
+                ItemTransfer = state.OperationState[index].ItemTransfer,
                 FoeSpawn = task.Operations[index].Kind == DaggerfallQuestTaskOperationKind.CreateFoe
                     && state.OperationState[index].FoeSpawn is { } spawn ? new(null, 0, 0, 0, null, spawn.MessageSent) : null,
             };
@@ -1047,7 +1049,7 @@ internal static class DaggerfallQuestTaskRunner
 
     // These donor actions opt out of rearm.  RunQuest also retains its live child id while waiting.
     private static bool PersistsAcrossRearm(DaggerfallQuestTaskOperation operation) => operation.Kind is
-        DaggerfallQuestTaskOperationKind.DroppedAt or DaggerfallQuestTaskOperationKind.GiveItem or DaggerfallQuestTaskOperationKind.ItemUsed or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.WhenNpcAvailable or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits or
+        DaggerfallQuestTaskOperationKind.DroppedAt or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.WhenNpcAvailable or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits or
         DaggerfallQuestTaskOperationKind.StartQuest or DaggerfallQuestTaskOperationKind.RunQuest or DaggerfallQuestTaskOperationKind.TrainPc
         or DaggerfallQuestTaskOperationKind.Say or DaggerfallQuestTaskOperationKind.JournalNote or DaggerfallQuestTaskOperationKind.AddFace;
     private static void DiagnoseWorldAction(DaggerfallQuestTaskRuntimeState state, int index, DaggerfallQuestTaskOperation operation, string reason)
