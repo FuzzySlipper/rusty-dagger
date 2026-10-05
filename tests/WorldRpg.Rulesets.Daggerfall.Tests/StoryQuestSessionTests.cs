@@ -7,6 +7,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class StoryQuestSessionTests
 {
     [Theory]
+    [InlineData("Gothryd", "gothryd", "completesurrender", 0)]
     [InlineData("Akorithi", "akorithi", "s.30", 100000)]
     [InlineData("Brisienna", "brisienna", "s.32", 0)]
     [InlineData("KingOfWorms", "kingoworms", "s.33", 0)]
@@ -24,7 +25,11 @@ public sealed class StoryQuestSessionTests
         var saved = game.State.Quests.Capture();
         game.State.Quests.Restore(saved with { Instances = [saved.Instances.Single() with
         {
-            Tasks = saved.Instances.Single().Tasks.Select(task => task with { IsDropped = task.Symbol != branch }).ToArray(),
+            Tasks = saved.Instances.Single().Tasks.Select(task => task with
+            {
+                IsDropped = task.Symbol != branch && !(recipient == "Gothryd" && task.Symbol is "holdtotem" or "surrenderchoice" or "giventodaggerfall" or "s.31"),
+                IsSet = recipient == "Gothryd" && task.Symbol is "holdtotem" or "surrenderchoice",
+            }).ToArray(),
             Resources = saved.Instances.Single().Resources.Select(resource => resource.Symbol == npc ? resource with { HasPlayerClicked = true } : resource).ToArray(),
         }] });
         using var before = fixture.Restore(game.CaptureSave());

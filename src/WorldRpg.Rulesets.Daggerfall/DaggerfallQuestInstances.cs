@@ -726,7 +726,8 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         if (faction is null) return [];
         var templeOwner = Guilds.DaggerfallConcreteGuildCatalog.All.FirstOrDefault(guild => guild.Kind == Guilds.DaggerfallConcreteGuildKind.Temple && guild.ParentFactionId == factionId);
         if (templeOwner is not null) faction = _definitions.Factions.Factions[templeOwner.FactionId];
-        bool isGuild = Guilds.DaggerfallConcreteGuildCatalog.All.Any(guild => guild.FactionId == faction.Id);
+        bool isGuild = faction.Type == 8 || Guilds.DaggerfallConcreteGuildCatalog.All.Any(guild => guild.FactionId == faction.Id);
+        if (faction.Type == 8) { playerIsMember = false; playerRank = playerLevel; }
         string group = isGuild ? faction.GuildGroupName : faction.SocialGroupName;
         char temple = faction.Id switch { 82 or 21 => 'A', 84 or 22 => 'Z', 88 or 24 => 'R', 92 or 26 => 'T',
             94 or 27 => 'J', 98 or 29 => 'D', 106 or 33 => 'S', 36 or 35 => 'K', _ => '\0' };
