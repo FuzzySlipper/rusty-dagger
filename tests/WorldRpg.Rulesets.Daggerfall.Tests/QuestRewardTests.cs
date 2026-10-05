@@ -37,8 +37,24 @@ public sealed class QuestRewardTests
         Assert.All(ground.Inventory.UniqueItems, i => Assert.Null(i.Metadata.QuestId));
         if (original is { } id) Assert.Equal(id, Assert.Single(ground.Inventory.UniqueItems).EntityId);
         Assert.All(ground.Inventory.Stacks, i => Assert.Null(i.Metadata.QuestId));
-        using var restored = f.Restore();
+        DaggerfallSiteProfiles? profiles = null;
+        if (!stackable)
+        {
+            profiles = new([f.Inputs, f.Castle]);
+            f.Session.AdmitSiteProfiles(profiles);
+            Assert.True(f.Session.TryTransitionTo(f.Castle.ProfileKey));
+            var pending = Assert.Single(f.Session.State.Quests.Messages.Deliveries);
+            Assert.False(f.Session.State.Quests.DismissRewardMessage("reward", pending.EntryId));
+            Assert.Single(f.Session.State.Quests.Messages.Deliveries);
+            Assert.False(f.Session.State.Quests.Capture().Instances.Single().Tasks.SelectMany(t => t.OperationState).Single(o => o.Reward is not null).Reward!.LootOpened);
+        }
+        using var restored = f.Restore(profiles);
         var message = Assert.Single(restored.State.Quests.Messages.Deliveries);
+        if (!stackable)
+        {
+            Assert.False(restored.State.Quests.DismissRewardMessage("reward", message.EntryId));
+            Assert.True(restored.TryTransitionTo(f.Inputs.ProfileKey));
+        }
         Assert.Equal(1004, message.MessageId);
         restored.Update(new ProductUpdate(OuterUpdate(1), [Ui(JsonSerializer.Serialize(new { action = "quest-dismiss", questInstance = "reward", questDelivery = message.EntryId }))]));
         Assert.NotNull(restored.OpenLoot);

@@ -25,9 +25,9 @@ internal static partial class DaggerfallQuestTaskCompiler
 internal sealed partial class DaggerfallQuestInstances
 {
     private Func<DaggerfallQuestRuntimeInstance, string, long?>? _offerQuestReward;
-    private Action<long?>? _presentQuestReward;
+    private Func<long?, bool>? _presentQuestReward;
     private DaggerfallQuestRewardTuning? _rewardTuning;
-    internal void BindRewards(Func<DaggerfallQuestRuntimeInstance, string, long?> offer, Action<long?> present, DaggerfallQuestRewardTuning tuning)
+    internal void BindRewards(Func<DaggerfallQuestRuntimeInstance, string, long?> offer, Func<long?, bool> present, DaggerfallQuestRewardTuning tuning)
     { _offerQuestReward = offer; _presentQuestReward = present; _rewardTuning = tuning.Validate(); }
 
     bool IDaggerfallQuestTaskLifecycle.GivePc(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation,
@@ -90,15 +90,17 @@ internal sealed partial class DaggerfallQuestInstances
     internal bool DismissRewardMessage(string instanceId, string entryId)
     {
         var delivery = Messages.Deliveries.FirstOrDefault(value => value.InstanceId == instanceId && value.EntryId == entryId);
-        if (delivery is null || !Messages.Dismiss(instanceId, entryId)) return false;
+        if (delivery is null) return false;
         if (_instances.TryGetValue(instanceId, out var instance))
             foreach (var task in instance.Tasks)
                 for (int index = 0; index < task.OperationState.Length; index++)
                     if (task.OperationState[index].Reward is { LootOpened: false, GroundContainer: { } ground } reward && reward.DeliveryId == delivery.Id)
                     {
-                        (_presentQuestReward ?? throw new InvalidOperationException("No reward presentation owner is composed."))(ground);
+                        // A site transition can unload the actual container while its HUD message
+                        // remains visible. Keep the message until its real loot owner can open.
+                        if (!(_presentQuestReward ?? throw new InvalidOperationException("No reward presentation owner is composed."))(ground)) return false;
                         task.OperationState[index] = task.OperationState[index] with { Reward = reward with { LootOpened = true } };
                     }
-        return true;
+        return Messages.Dismiss(instanceId, entryId);
     }
 }

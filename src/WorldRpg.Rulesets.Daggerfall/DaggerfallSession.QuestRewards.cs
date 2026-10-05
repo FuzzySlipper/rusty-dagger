@@ -18,9 +18,14 @@ internal sealed partial class DaggerfallSession
         return owner.Id;
     }
 
-    private void PresentQuestReward(long? ground)
+    private bool PresentQuestReward(long? ground)
     {
+        if (ground is { } id && !_lootUi.OpenGround(id))
+        {
+            Presentation.SetOutcome("Return to the reward location to collect your quest reward.");
+            return false;
+        }
         Presentation.SetOutcome("Quest completed.");
-        if (ground is { } id) _lootUi.OpenGround(id);
+        return true;
     }
 }
