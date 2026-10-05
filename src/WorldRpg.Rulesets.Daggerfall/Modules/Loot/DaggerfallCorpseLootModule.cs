@@ -312,7 +312,8 @@ internal sealed class DaggerfallCorpseLootModule
         try
         {
             if (_encumbrance is not null && pending.Selection is { } requested
-                && !_encumbrance.CanCarry(_catalog.RequireItem(new DaggerfallItemId(requested.Item.Value)), requested.Quantity))
+                && !_encumbrance.CanCarry(_catalog.RequireItem(new DaggerfallItemId(requested.Item.Value)), requested.Quantity,
+                    requested.UniqueEntityId is ulong entity ? _itemInstances.RequireUnique(_containers.Entities.IdentityOf(new EntityId(entity)).Value) : null))
             {
                 LastCommit = new CorpseLootCommitEvidence(pending.ActorId, false, "You cannot carry any more.");
                 return CorpseLootCommitResult.Rejected;
@@ -395,7 +396,7 @@ internal sealed class DaggerfallCorpseLootModule
         .Select(stack => new InventoryContainerSeed(new InventoryItemId(stack.ItemId), stack.Quantity, Stack: InventoryStackId.Parse(stack.StackId)))
         .Concat(value.UniqueItems.Select(unique => new InventoryContainerSeed(
             new InventoryItemId(unique.ItemId),
-            UniqueItem: new DurableIdentityReference(DurableIdentityKind.Item, unique.EntityId))))
+            UniqueItem: new DurableIdentityReference(DurableIdentityKind.Item, unique.EntityId), CapacityCosts: DaggerfallEncumbrancePolicy.CapacityOverride(unique.Metadata.WeightClassicUnits))))
         .ToArray();
 
     private void RegisterRestoredMetadata(DaggerfallCorpseSave corpse)

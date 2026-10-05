@@ -39,9 +39,11 @@ internal sealed record DaggerfallItemConditionResult(
 internal sealed class DaggerfallItemConditionService(
     DaggerfallDefinitions definitions,
     DaggerfallItemInstances instances,
-    DaggerfallEquipmentMoves equipment)
+    DaggerfallEquipmentMoves equipment,
+    MechanicsInventoryCoordinator? inventory = null, Func<DaggerfallSoulGems>? souls = null)
 {
     internal event Action<ulong>? Enchanted;
+    internal event Action<ulong>? Broken;
 
     internal DaggerfallItemCondition Read(ulong durableItemId) => Condition(instances.RequireUnique(durableItemId));
 
@@ -111,11 +113,13 @@ internal sealed class DaggerfallItemConditionService(
         {
             removed = removeBroken(item);
         }
-        DaggerfallItemInstanceMetadata changed = metadata with { CurrentCondition = current, HeldCast = current == 0 ? null : metadata.HeldCast };
+        bool soulBreak = current == 0 && !metadata.BoundSoulReleased && definitions.Magic.TryEnchantments(metadata, out var payloads) && payloads.Any(value => value.Type == 15);
+        DaggerfallItemInstanceMetadata changed = metadata with { CurrentCondition = current, HeldCast = current == 0 ? null : metadata.HeldCast, BoundSoulReleasePending = soulBreak || metadata.BoundSoulReleasePending };
         instances.ReplaceUnique(durableItemId, changed);
         if (current != 0)
             return new(DaggerfallItemConditionOutcome.Damaged, durableItemId, changed, metadata.CurrentCondition);
-        return new(DaggerfallItemConditionOutcome.Broken, durableItemId, changed, metadata.CurrentCondition, removed);
+        Broken?.Invoke(durableItemId);
+        return new(DaggerfallItemConditionOutcome.Broken, durableItemId, instances.RequireUnique(durableItemId), metadata.CurrentCondition, removed);
     }
 
     /// <summary>Restores an existing condition-bearing item to its authored maximum without changing durable identity.</summary>
@@ -192,11 +196,11 @@ internal sealed class DaggerfallItemConditionService(
     internal DaggerfallItemConditionResult Identify(UniqueInventoryItem item)
     {
         (ulong durableItemId, DaggerfallItemInstanceMetadata metadata) = RequirePlayerItem(item);
-        if (metadata.Enchantment is null || metadata.Identified)
+        if (!metadata.HasEnchantment || metadata.Identified)
             return new(DaggerfallItemConditionOutcome.AlreadyIdentified, durableItemId, metadata, metadata.CurrentCondition);
         // A setting has no published template to disclose, so it is identified by its own param meaning;
         // anything else must still name a published magic item.
-        if (!definitions.Magic.EnchantmentSettings.TryGetValue(metadata.Enchantment, out _)) RequireMagic(metadata);
+        if (metadata.Enchantment is { } key && !definitions.Magic.EnchantmentSettings.TryGetValue(key, out _)) RequireMagic(metadata);
         DaggerfallItemInstanceMetadata identified = metadata with { Identified = true };
         instances.ReplaceUnique(durableItemId, identified);
         return new(DaggerfallItemConditionOutcome.Identified, durableItemId, identified, metadata.CurrentCondition);
@@ -210,9 +214,9 @@ internal sealed class DaggerfallItemConditionService(
         if (metadata.Owner != owner)
             throw new InvalidOperationException($"Item '{durableItemId}' belongs to {metadata.Owner.Scope} {metadata.Owner.Id}, not {owner.Scope} {owner.Id}.");
         RequireItemMetadata(metadata);
-        if (metadata.Enchantment is null || metadata.Identified)
+        if (!metadata.HasEnchantment || metadata.Identified)
             return new(DaggerfallItemConditionOutcome.AlreadyIdentified, durableItemId, metadata, metadata.CurrentCondition);
-        if (!definitions.Magic.EnchantmentSettings.TryGetValue(metadata.Enchantment, out _)) RequireMagic(metadata);
+        if (metadata.Enchantment is { } key && !definitions.Magic.EnchantmentSettings.TryGetValue(key, out _)) RequireMagic(metadata);
         DaggerfallItemInstanceMetadata identified = metadata with { Identified = true };
         instances.ReplaceUnique(durableItemId, identified);
         return new(DaggerfallItemConditionOutcome.Identified, durableItemId, identified, metadata.CurrentCondition);
@@ -226,6 +230,9 @@ internal sealed class DaggerfallItemConditionService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(magicItemKey);
         (ulong durableItemId, DaggerfallItemInstanceMetadata metadata) = RequirePlayerItem(item);
+        if (metadata.MadeEnchantment is not null) throw new InvalidOperationException("This item is already enchanted.");
+        if (definitions.Magic.EnchantmentSettings.TryGetValue(magicItemKey, out var mutation) && mutation.Type is 11 or 15 or 23)
+            return EnchantMade(item, DaggerfallEnchantmentConstruction.Quote(definitions, metadata, definitions.RequireItem(new(metadata.ItemId)).Template!.Name, [magicItemKey]).Enchantment);
         if (metadata.Enchantment is { } existing)
         {
             if (existing == magicItemKey) return new(DaggerfallItemConditionOutcome.AlreadyEnchanted, durableItemId, metadata, metadata.CurrentCondition);
@@ -270,6 +277,37 @@ internal sealed class DaggerfallItemConditionService(
         Enchanted?.Invoke(durableItemId);
         enchanted = instances.RequireUnique(durableItemId);
         return new(DaggerfallItemConditionOutcome.Enchanted, durableItemId, enchanted, metadata.CurrentCondition, unequipped.Change);
+    }
+
+    /// <summary>Commits fully resolved maker settings once, retaining item identity and current condition.</summary>
+    internal DaggerfallItemConditionResult EnchantMade(UniqueInventoryItem item, DaggerfallMadeEnchantment made)
+    {
+        (ulong id, var metadata) = RequirePlayerItem(item);
+        if (metadata.HasEnchantment) throw new InvalidOperationException("This item is already enchanted.");
+        // Validate the complete payload before consuming the selected soul or changing weight.
+        var quote = DaggerfallEnchantmentConstruction.Quote(definitions, metadata, made.Name,
+            made.Settings.Where(value => value.Parent is null).Select(value => value.Key));
+        if (!quote.Enchantment.Settings.SequenceEqual(made.Settings)) throw new ArgumentException("Made settings differ from their forced children.");
+        var settings = made.Settings.Select(value => definitions.Magic.EnchantmentSettings[value.Key]).ToArray();
+        int? soul = settings.Where(value => value.Type == 15).Select(value => (int?)value.Param).SingleOrDefault();
+        DaggerfallSoulGems? gems = soul is not null ? souls?.Invoke() : null;
+        if (soul is int mobile && gems?.HasSoul(mobile) != true) throw new InvalidOperationException("No matching filled soul trap remains.");
+        ulong? weight = metadata.WeightClassicUnits;
+        foreach (var setting in settings)
+        {
+            if (setting.Type == 23) weight = checked(DaggerfallEncumbrancePolicy.ClassicWeightCost(definitions.RequireItem(new(metadata.ItemId)), metadata) * 4);
+            if (setting.Type == 11) weight = 100; // 0.25 kg in classic gold-piece units.
+        }
+        var enchanted = (metadata with { MadeEnchantment = quote.Enchantment, Identified = true, WeightClassicUnits = weight }).Validate();
+        if (weight != metadata.WeightClassicUnits)
+            (inventory ?? throw new InvalidOperationException("Item mutation requires the live inventory owner."))
+                .SetCapacityCosts(item, DaggerfallEncumbrancePolicy.CapacityOverride(weight));
+        var moved = equipment.UnequipForEnchantment(item);
+        if (moved.Outcome != EquipmentMoveOutcome.Applied) throw new InvalidOperationException($"Could not unequip the item: {moved.Detail}");
+        if (soul is int consumed && !gems!.Consume(consumed)) throw new InvalidOperationException("The selected soul is no longer available.");
+        instances.ReplaceUnique(id, enchanted);
+        Enchanted?.Invoke(id);
+        return new(DaggerfallItemConditionOutcome.Enchanted, id, instances.RequireUnique(id), metadata.CurrentCondition, moved.Change);
     }
 
     internal DaggerfallItemCondition Condition(DaggerfallItemInstanceMetadata metadata) =>

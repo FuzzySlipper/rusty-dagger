@@ -14,7 +14,7 @@ internal sealed class DaggerfallSoulGems(MechanicsInventoryCoordinator inventory
     DaggerfallMagicCatalogSet magic, DaggerfallUniqueItemAllocator identities)
 {
     internal static bool IsStar(DaggerfallItemInstanceMetadata item, DaggerfallMagicCatalogSet magic) =>
-        item.Enchantment is { } key && magic.TryEnchantments(key, out var payloads)
+        magic.TryEnchantments(item, out var payloads)
             && payloads.Any(value => value.Type == 26 && value.Param == 9);
     internal static bool IsTrap(DaggerfallItemInstanceMetadata item, DaggerfallMagicCatalogSet magic) =>
         item.ItemId == "template-274" || IsStar(item, magic);
@@ -55,6 +55,11 @@ internal sealed class DaggerfallSoulGems(MechanicsInventoryCoordinator inventory
     }
 
     /// <summary>Ordinary filled gems are consumed first; the Star is emptied and remains reusable.</summary>
+    internal bool HasSoul(int mobileId) => CurrentItems().Any(value => value.Metadata.CapturedSoulMobileId == mobileId && IsTrap(value.Metadata, magic));
+
+    internal int[] AvailableSouls() => CurrentItems().Where(value => IsTrap(value.Metadata, magic) && value.Metadata.CapturedSoulMobileId is not null)
+        .Select(value => value.Metadata.CapturedSoulMobileId!.Value).Distinct().Order().ToArray();
+
     internal bool Consume(int mobileId)
     {
         if (mobileId is < 0 or > 42) throw new ArgumentOutOfRangeException(nameof(mobileId));

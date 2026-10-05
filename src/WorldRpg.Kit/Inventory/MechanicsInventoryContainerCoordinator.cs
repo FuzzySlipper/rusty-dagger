@@ -10,7 +10,8 @@ public sealed record InventoryContainerSeed(
     InventoryItemId Item,
     ulong Quantity = 1,
     DurableIdentityReference? UniqueItem = null,
-    InventoryStackId? Stack = null)
+    InventoryStackId? Stack = null,
+    IReadOnlyList<ItemCapacityCost>? CapacityCosts = null)
 {
     public InventoryContainerSeed Validate()
     {
@@ -26,6 +27,8 @@ public sealed record InventoryContainerSeed(
         }
         else if (Stack is null)
             throw new ArgumentException("Fungible inventory seeds require an explicit stack identity.", nameof(Stack));
+        if (UniqueItem is null && CapacityCosts is not null)
+            throw new ArgumentException("Per-item capacity costs require a unique item.", nameof(CapacityCosts));
         return this;
     }
 }
@@ -186,7 +189,7 @@ public sealed class MechanicsInventoryContainerCoordinator
                 {
                     EntityId item = _entities.CreateItemEntity(identity, new EntityTypeId(definition.Id.Value));
                     created.Add(identity);
-                    candidate.MaterializeUnique(new ItemState(item, definition), owner);
+                    candidate.MaterializeUnique(new ItemState(item, definition, seed.CapacityCosts), owner);
                 }
                 else candidate.Grant(owner, definition, seed.Stack!, seed.Quantity);
             }

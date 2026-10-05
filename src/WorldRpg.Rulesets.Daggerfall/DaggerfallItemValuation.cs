@@ -18,6 +18,7 @@ internal sealed class DaggerfallItemValuation(DaggerfallDefinitions definitions)
         if (!StringComparer.Ordinal.Equals(definition.Id.Value, metadata.ItemId))
             throw new InvalidOperationException($"Item metadata '{metadata.ItemId}' does not belong to definition '{definition.Id.Value}'.");
 
+        if (metadata.MadeEnchantment is { } made) return made.Value;
         if (metadata.Enchantment is { } enchantment)
         {
             // A setting has no published template, so the item is worth what its own definition is worth.

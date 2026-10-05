@@ -91,7 +91,7 @@ internal sealed class DaggerfallInventoryUseService(
 
     private DaggerfallInventoryUseResult Route(string itemId, DaggerfallItemInstanceMetadata metadata, Action consume, string useKey, KitUniqueInventoryItem? unique = null)
     {
-        if (metadata.Enchantment is { } enchantment)
+        if (metadata.HasEnchantment)
         {
             if (DaggerfallSoulGems.IsStar(metadata, definitions.Magic))
             {
@@ -99,21 +99,21 @@ internal sealed class DaggerfallInventoryUseService(
                 if (unique is not { } star) return new(false, "Azura's Star requires a unique item source.");
                 return useAzurasStar?.Invoke(star) ?? new(false, "Azura's Star soul release is unavailable.");
             }
-            if (definitions.Magic.TryEnchantments(enchantment, out var payloads)
+            if (definitions.Magic.TryEnchantments(metadata, out var payloads)
                 && payloads.Any(effect => effect.Type == 26 && effect.Param == 4))
             {
                 if (metadata.CurrentCondition <= 0) return new(false, "The Sanguine Rose is broken.");
                 if (unique is not { } source) return new(false, "Sanguine Rose requires a unique item source.");
                 return useSanguineRose?.Invoke(source) ?? new(false, "Sanguine Rose summoning is unavailable.");
             }
-            if (definitions.Magic.TryEnchantments(enchantment, out var skullPayloads)
+            if (definitions.Magic.TryEnchantments(metadata, out var skullPayloads)
                 && skullPayloads.Any(effect => effect.Type == 26 && effect.Param == 8))
             {
                 if (metadata.CurrentCondition <= 0) return new(false, "The Skull of Corruption is broken.");
                 if (unique is not { } source) return new(false, "Skull of Corruption requires a unique item source.");
                 return useSkullCorruption?.Invoke(source) ?? new(false, "Skull of Corruption copying is unavailable.");
             }
-            if (definitions.Magic.MagicItems.TryGetValue(enchantment, out DaggerfallMagicItemDefinition? magic)
+            if (metadata.Enchantment is { } enchantment && definitions.Magic.MagicItems.TryGetValue(enchantment, out DaggerfallMagicItemDefinition? magic)
                 && magic.Enchantments.Any(effect => effect.ParamMeaning == "artifact-effect" && effect.Param == 5))
             {
                 if (useOghma is null) return new(false, "Oghma Infinium allocation is unavailable.", DaggerfallInventoryUseReceiver.UsedEnchantment);
@@ -121,7 +121,7 @@ internal sealed class DaggerfallInventoryUseService(
                 consume();
                 return new(true, "Oghma Infinium grants 30 attribute points. Allocate them on your character sheet.");
             }
-            if (definitions.Magic.TryEnchantments(enchantment, out var spellPayloads) && spellPayloads.Any(effect => effect.Type is 0 or DaggerfallEnchantmentSettings.HealthLeechType))
+            if (definitions.Magic.TryEnchantments(metadata, out var spellPayloads) && spellPayloads.Any(effect => effect.Type is 0 or DaggerfallEnchantmentSettings.HealthLeechType))
                 return unique is { } spellSource && useItemSpell is not null ? useItemSpell(spellSource)
                     : new(false, "Item casting requires an available unique source.");
             return new(false, "This enchantment has no use effect.");

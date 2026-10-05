@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>A loaded item-maker setting with its donor meaning, display and source.</summary>
 internal readonly record struct DaggerfallEnchantmentSetting(
     string Key, int Type, int Param, int Cost, string Meaning, string DisplayName, string TextKey,
-    string? ParameterTextKey, string SourceClass, IReadOnlyList<int> ParameterVariants, string? SpellKey = null, bool SpellIdentityShared = false);
+    string? ParameterTextKey, string SourceClass, IReadOnlyList<int> ParameterVariants, string? SpellKey = null, bool SpellIdentityShared = false, IReadOnlyList<string>? ForcedSettings = null);
 
 /// <summary>Retained payload vocabulary and content admission; settings themselves come from the pack.</summary>
 internal static class DaggerfallEnchantmentSettings
@@ -50,7 +50,7 @@ internal static class DaggerfallEnchantmentSettings
                 continue;
             }
             string[] meanings = Meanings(setting.Type);
-            int firstParam = setting.Type is 8 or 9 or 12 or 24 ? -1 : 0;
+            int firstParam = setting.Type is 8 or 9 or 11 or 12 or 23 or 24 ? -1 : 0;
             int index = setting.Param - firstParam;
             if (setting.Key != $"enchantment.{setting.Type}.{setting.Param}")
                 problems.Add($"Enchantment setting '{setting.Key}' does not name type {setting.Type} and param {setting.Param}.");
@@ -64,7 +64,7 @@ internal static class DaggerfallEnchantmentSettings
                 problems.Add($"Enchantment setting '{setting.Key}' is below the donor's single-setting sentinel.");
             if (string.IsNullOrWhiteSpace(setting.Meaning))
                 problems.Add($"Enchantment setting '{setting.Key}' has no param meaning.");
-            if (setting.Cost == 0)
+            if (setting.Cost == 0 && setting.Type != 15)
                 problems.Add($"Enchantment setting '{setting.Key}' costs nothing.");
             if (!seen.Add((setting.Type, setting.Param)))
                 problems.Add($"Enchantment setting '{setting.Key}' repeats type {setting.Type} and param {setting.Param}.");
@@ -82,6 +82,9 @@ internal static class DaggerfallEnchantmentSettings
     // type/param pairs independently of the publication's own parameterVariants list.
     private static string[] Meanings(int type) => type switch
     {
+        11 => ["feather-weight"],
+        23 => ["extra-weight"],
+        15 => Enumerable.Range(0, 43).Select(id => $"soul-{id}").ToArray(),
         10 => ["medical", "etiquette", "streetwise", "jumping", "orcish", "harpy", "giantish", "dragonish", "nymph", "daedric", "spriggan", "centaurian", "impish", "lockpicking", "mercantile", "pickpocket", "stealth", "swimming", "climbing", "backstabbing", "dodging", "running", "destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism", "short-blade", "long-blade", "hand-to-hand", "axe", "blunt-weapon", "archery", "critical-strike"],
         3 => ["during-winter", "during-spring", "during-summer", "during-fall", "during-full-moon", "during-half-moon", "during-new-moon", "near-undead", "near-daedra", "near-humanoids", "near-animals"],
         4 or 20 => ["undead", "daedra", "humanoid", "animals"],

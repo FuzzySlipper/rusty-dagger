@@ -423,7 +423,7 @@ internal sealed class DaggerSessionPersistence
         Dictionary<ulong, KitUniqueInventoryItem> unique = [];
         foreach (DaggerfallUniqueSave item in saved.UniqueItems)
         {
-            unique.Add(item.EntityId, equipment.Materialize(new DurableIdentityReference(DurableIdentityKind.Item, item.EntityId), new InventoryItemId(item.ItemId)));
+            unique.Add(item.EntityId, equipment.Materialize(new DurableIdentityReference(DurableIdentityKind.Item, item.EntityId), new InventoryItemId(item.ItemId), DaggerfallEncumbrancePolicy.CapacityOverride(item.Metadata.WeightClassicUnits)));
             State.ItemInstances.RegisterUnique(item.EntityId, DaggerfallItemInstanceMetadata.Restore(item.ItemId, item.Metadata));
         }
         foreach (IGrouping<ulong, DaggerfallEquipmentSave> group in saved.Equipment.GroupBy(value => value.ItemEntityId))

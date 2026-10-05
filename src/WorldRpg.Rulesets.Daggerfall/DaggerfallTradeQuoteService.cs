@@ -125,8 +125,10 @@ internal sealed class DaggerfallTradeQuoteService
     {
         // DFU's current quote caller uses item.value regardless of identification. WorldRpg requires
         // unidentified enchantments to retain the ordinary item's source value until identification.
-        if (metadata.Enchantment is { } enchantment && !metadata.Identified)
+        if (metadata.HasEnchantment && !metadata.Identified)
         {
+            if (metadata.MadeEnchantment is not null) return definition.Value;
+            string enchantment = metadata.Enchantment!;
             if (!StringComparer.Ordinal.Equals(definition.Id.Value, metadata.ItemId))
                 throw new InvalidOperationException($"Item metadata '{metadata.ItemId}' does not belong to '{definition.Id.Value}'.");
             // An item the item maker enchanted carries one of its settings, which has no published magic

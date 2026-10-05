@@ -1047,7 +1047,7 @@ internal sealed record DaggerfallSavePayload(
             var held = item.Metadata.HeldCast!;
             if (held.CasterId != owner.Id || !requireEquipment || item.Metadata.CurrentCondition <= 0
                 || !inventory.Equipment.Any(slot => slot.ItemEntityId == item.EntityId)
-                || item.Metadata.Enchantment is not { } key || !definitions.Magic.TryEnchantments(key, out var payloads)
+                || !definitions.Magic.TryEnchantments(item.Metadata, out var payloads)
                 || !payloads.Any(effect => effect.Type == 1))
                 throw new ArgumentException($"Saved held spell cadence on item {item.EntityId} has no equipped cast source.");
         }
@@ -1085,7 +1085,7 @@ internal sealed record DaggerfallSavePayload(
         if (stack.Quantity > definition.MaximumQuantity)
             throw new ArgumentException($"Saved {owner.Scope} {owner.Id} stack '{stack.ItemId}' exceeds its authored maximum quantity.");
         DaggerfallItemInstanceMetadata metadata = RequireMetadata(definitions, stack.ItemId, stack.Metadata, owner);
-        if (metadata.Enchantment is not null)
+        if (metadata.Enchantment is not null || metadata.MadeEnchantment is not null)
             throw new ArgumentException($"Saved {owner.Scope} {owner.Id} stack '{stack.ItemId}' cannot carry an enchantment.");
     }
 
@@ -1121,6 +1121,15 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException($"Saved item {itemId} names unpublished creature soul {soul}.");
         if (restored.CapturedSoulMobileId is not null && !DaggerfallSoulGems.IsTrap(restored, definitions.Magic))
             throw new ArgumentException($"Saved item {itemId} cannot hold a soul.");
+        restored.MadeEnchantment?.Validate(definitions.Magic);
+        definitions.Magic.TryEnchantments(restored, out var currentPayloads);
+        bool hasBoundSoul = currentPayloads.Any(value => value.Type == 15);
+        if ((restored.BoundSoulReleased || restored.BoundSoulReleasePending) && !hasBoundSoul
+            || restored.BoundSoulReleased && restored.BoundSoulReleasePending)
+            throw new ArgumentException($"Saved item '{itemId}' has invalid bound-soul release state.");
+        if (currentPayloads.Where(value => value.Type == 15).Any(value => !definitions.Actors.Values.Any(actor => actor.Kind == DaggerfallActorKinds.Monster && actor.MobileId == value.Param)))
+            throw new ArgumentException($"Saved item '{itemId}' binds an unavailable creature soul.");
+
         if (restored.Enchantment is not { } enchantment) return restored;
         // An item maker's setting is a legitimate enchantment with no published magic item, so it is
         // stored on the item as it stands rather than being required to name a template.
@@ -1179,8 +1188,7 @@ internal sealed record DaggerfallSavePayload(
                 if (!uniqueItems.TryGetValue(item, out var metadata)) throw new ArgumentException($"Saved effect instance '{effect.Instance}' names missing item {item}.");
                 if (effect.BundleKind == DaggerfallEffectBundleKind.HeldMagicItem
                     && (effect.CasterId is null || effect.TargetId != effect.CasterId || effect.RemainingRounds is not null
-                        || metadata.HeldCast is null && metadata.Enchantment is { } enchantment
-                            && magic.TryEnchantments(enchantment, out var payloads) && payloads.Any(value => value.Type == 1)
+                        || metadata.HeldCast is null && magic.TryEnchantments(metadata, out var payloads) && payloads.Any(value => value.Type == 1)
                         || metadata.HeldCast is { } held && (effect.CasterId != held.CasterId || !held.ActiveEffectInstances.Contains(effect.Instance))))
                     throw new ArgumentException($"Saved held effect '{effect.Instance}' has no matching held source or lifetime.");
                 if (metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0)
@@ -1245,7 +1253,8 @@ internal sealed record DaggerfallItemMetadataSave(
     int? BookId = null,
     int? PotionRecipeKey = null,
     ulong? CreditValue = null,
-    int? PoisonVariant = null, DaggerfallHeldCastState? HeldCast = null, long HealthLeechLastUsedMinute = 0, int? CapturedSoulMobileId = null, DaggerfallConjuredItem? Conjuration = null);
+    int? PoisonVariant = null, DaggerfallHeldCastState? HeldCast = null, long HealthLeechLastUsedMinute = 0, int? CapturedSoulMobileId = null, DaggerfallConjuredItem? Conjuration = null,
+    DaggerfallMadeEnchantment? MadeEnchantment = null, ulong? WeightClassicUnits = null, bool BoundSoulReleased = false, bool BoundSoulReleasePending = false);
 internal sealed record DaggerfallEquipmentSave(string SlotId, ulong ItemEntityId);
 internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);
 

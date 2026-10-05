@@ -290,7 +290,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
             state.Containers.RegisterOwner(owner);
             _custody.Add(value.InstanceId, new(value.InstanceId, value.Id, owner));
             var seeds = value.Inventory.Stacks.Select(stack => new InventoryContainerSeed(new(stack.ItemId), stack.Quantity, Stack: InventoryStackId.Parse(stack.StackId)))
-                .Concat(value.Inventory.UniqueItems.Select(item => new InventoryContainerSeed(new(item.ItemId), UniqueItem: new(DurableIdentityKind.Item, item.EntityId)))).ToArray();
+                .Concat(value.Inventory.UniqueItems.Select(item => new InventoryContainerSeed(new(item.ItemId), UniqueItem: new(DurableIdentityKind.Item, item.EntityId), CapacityCosts: DaggerfallEncumbrancePolicy.CapacityOverride(item.Metadata.WeightClassicUnits)))).ToArray();
             if (seeds.Length > 0) state.Containers.Seed(owner, seeds);
             foreach (var stack in value.Inventory.Stacks) state.ItemInstances.RegisterStack(DaggerfallItemOwner.Quest(value.Id), InventoryStackId.Parse(stack.StackId), DaggerfallItemInstanceMetadata.Restore(stack.ItemId, stack.Metadata));
             foreach (var item in value.Inventory.UniqueItems) state.ItemInstances.RegisterUnique(item.EntityId, DaggerfallItemInstanceMetadata.Restore(item.ItemId, item.Metadata));

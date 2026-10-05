@@ -375,7 +375,7 @@ internal sealed class DaggerfallMerchantService
         if (!RevisionMatches(binding, revision)) return Refused("Stale");
         if (!TrySelection(DaggerfallItemOwner.Player, itemKey, 1, out InventoryContainerSelection selection, out DaggerfallTradeLine line))
             return Refused("ItemUnavailable");
-        if (selection.UniqueEntityId is not ulong itemEntity || line.Metadata.Enchantment is null || line.Metadata.Identified)
+        if (selection.UniqueEntityId is not ulong itemEntity || !line.Metadata.HasEnchantment || line.Metadata.Identified)
             return Refused("AlreadyIdentified");
         ulong itemId = _containers.GetDurableItemId(new EntityId(itemEntity)).Value;
         DaggerfallConcreteGuildServiceRuntimeDecision? guild = ConcreteGuildProvider(context, DaggerfallConcreteGuildService.Identify);
@@ -913,12 +913,12 @@ internal sealed class DaggerfallMerchantService
         {
             InventoryContainerSeed[] seeds = save.Inventory.Stacks.Select(value => new InventoryContainerSeed(new(value.ItemId), value.Quantity,
                     Stack: InventoryStackId.Parse(value.StackId)))
-                .Concat(save.Inventory.UniqueItems.Select(value => new InventoryContainerSeed(new(value.ItemId), UniqueItem: new(DurableIdentityKind.Item, value.EntityId))))
+                .Concat(save.Inventory.UniqueItems.Select(value => new InventoryContainerSeed(new(value.ItemId), UniqueItem: new(DurableIdentityKind.Item, value.EntityId), CapacityCosts: DaggerfallEncumbrancePolicy.CapacityOverride(value.Metadata.WeightClassicUnits))))
                 .ToArray();
             if (seeds.Length != 0) _containers.Seed(binding.MerchantOwner, seeds);
             InventoryContainerSeed[] custody = save.Custody.Stacks.Select(value => new InventoryContainerSeed(new(value.ItemId), value.Quantity,
                     Stack: InventoryStackId.Parse(value.StackId)))
-                .Concat(save.Custody.UniqueItems.Select(value => new InventoryContainerSeed(new(value.ItemId), UniqueItem: new(DurableIdentityKind.Item, value.EntityId))))
+                .Concat(save.Custody.UniqueItems.Select(value => new InventoryContainerSeed(new(value.ItemId), UniqueItem: new(DurableIdentityKind.Item, value.EntityId), CapacityCosts: DaggerfallEncumbrancePolicy.CapacityOverride(value.Metadata.WeightClassicUnits))))
                 .ToArray();
             if (custody.Length != 0) _containers.Seed(binding.CustodyOwner, custody);
             RegisterSavedMetadata(save.Inventory, DaggerfallItemOwner.Merchant(binding.MerchantContainerId));
