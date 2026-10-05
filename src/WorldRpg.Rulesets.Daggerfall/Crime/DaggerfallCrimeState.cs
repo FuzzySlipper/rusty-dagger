@@ -155,8 +155,10 @@ internal sealed record DaggerfallCrimeSave(
     public DaggerfallLegalResponseSave[] LegalResponses { get; init; } = [];
     [System.Text.Json.Serialization.JsonRequired]
     public int[] BanishedRegions { get; init; } = [];
+    public DaggerfallCrimeKind? ScriptedCrime { get; init; }
     internal DaggerfallCrimeSave Validate()
     {
+        if (ScriptedCrime is { } crime && !Enum.IsDefined(crime)) throw new ArgumentException("Unknown scripted crime.");
         ArgumentNullException.ThrowIfNull(Attempts);
         ArgumentNullException.ThrowIfNull(Incidents);
         ArgumentNullException.ThrowIfNull(GuildProgress);
@@ -251,7 +253,15 @@ internal sealed partial class DaggerfallCrimeState
         _murderRequirementTally = restored.MurderRequirementTally;
         _thievesInvitationDueMinute = restored.ThievesInvitationDueMinute;
         _murderInvitationDueMinute = restored.MurderInvitationDueMinute;
+        ScriptedCrime = restored.ScriptedCrime;
         RestoreLegal(restored);
+    }
+
+    internal DaggerfallCrimeKind? ScriptedCrime { get; private set; }
+    internal void SetScriptedCrime(DaggerfallCrimeKind? crime)
+    {
+        if (crime is { } value && !Enum.IsDefined(value)) throw new ArgumentOutOfRangeException(nameof(crime));
+        ScriptedCrime = _suppressed() ? null : crime;
     }
 
     internal event Action<DaggerfallCrimeIncidentSave>? IncidentRecorded;
@@ -403,7 +413,7 @@ internal sealed partial class DaggerfallCrimeState
         _thievingRequirementTally,
         _murderRequirementTally,
         _thievesInvitationDueMinute,
-        _murderInvitationDueMinute) { LegalResponses = [.. _responses.Values.OrderBy(value => value.Region)], BanishedRegions = [.. _banishedRegions.Order()] }.Validate();
+        _murderInvitationDueMinute) { ScriptedCrime = ScriptedCrime, LegalResponses = [.. _responses.Values.OrderBy(value => value.Region)], BanishedRegions = [.. _banishedRegions.Order()] }.Validate();
 
     private static (int Tally, long DueMinute) ApplyProgress(int tally, long dueMinute, int threshold, long gameMinute, int amount)
     {

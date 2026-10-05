@@ -133,6 +133,18 @@ internal sealed partial class DaggerfallSession
 
     private void ObserveCrimeHit(AttackHitFact damage)
     {
+        // SetPlayerCrime supplies a charge, not a fabricated assault or witness query. A real
+        // damaging watch hit admits it to the existing legal-response owner, as in EnemyAttack.
+        if (damage.TargetId == DaggerfallActorIdentity.PlayerEntityId && damage.ActualHealthLost > 0
+            && _roster.Definitions.GetValueOrDefault(damage.AttackerId)?.MobileId == 146
+            && State.Crime.ScriptedCrime is { } crime && _site.Region is int region
+            && State.RacialOverrides.Current?.SuppressCrime != true)
+        {
+            ReportCrime(new($"quest-charge:{damage.OriginatingGeneration}:{damage.OriginatingSimulationStep}:{damage.AttackerId}", crime,
+                DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId, null, region, MinuteIndex(_time.Calendar),
+                DaggerfallCrimeTargetKind.Unknown, DaggerfallCrimeWitnessEvidence.NotQueried, DaggerfallCrimeGuildCredit.None, Reported: true));
+            State.Crime.SetScriptedCrime(null);
+        }
         ObserveLegalAttack(damage.AttackerId, damage.TargetId,
             $"damage:{damage.OriginatingGeneration}:{damage.OriginatingSimulationStep}:{damage.AttackerId}:{damage.TargetId}");
     }
