@@ -295,7 +295,7 @@ internal sealed class DaggerfallInventoryPresentation
         DaggerfallItemInstanceMetadata? metadata = Metadata(key, owner ?? itemOwner);
         ItemDisplay display = Display(definition, metadata);
         return new InventoryItemPresentation(key, itemId, display.Label, quantity.ToString(CultureInfo.InvariantCulture),
-            metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), display.Details, icons.GetValueOrDefault(itemId), gridSlot, equippedSlots ?? [],
+            metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), display.Details, icons.GetValueOrDefault(definition.Template?.Index == 83 && metadata?.PotionRecipeKey is int recipe ? $"potion.{recipe}" : itemId), gridSlot, equippedSlots ?? [],
             definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray(),
             display.Condition, display.Identified);
     }
@@ -349,6 +349,13 @@ internal sealed class DaggerfallInventoryPresentation
         string conditionDetail = condition.Maximum == 0 ? string.Empty : $"Condition: {condition.Current}/{condition.Maximum} ({condition.Percentage}%); ";
         if (metadata.CapturedSoulMobileId is int soul) conditionDetail += $"Captured soul: {definitions.Actors.Values.FirstOrDefault(actor => actor.MobileId == soul)?.Id.Value ?? soul.ToString()}; ";
         if (metadata.Conjuration is { } conjured) conditionDetail += $"Conjured until minute {conjured.ExpiresAtMinute}; ";
+        if (metadata.PotionRecipeKey is int recipeKey)
+        {
+            var recipe = definitions.Magic.PotionRecipes[recipeKey];
+            bool sheet = definition.Template?.Index == 278;
+            string ingredients = string.Join(", ", recipe.Ingredients.Select(value => $"{value.Count} × {definitions.RequireItem(new(value.Item)).Template!.Name}"));
+            return new(sheet ? $"Recipe: {recipe.Name}" : $"Potion of {recipe.Name}", sheet ? ingredients : "Drink to apply its effects to yourself.", presentedCondition, true);
+        }
         if (metadata.MadeEnchantment is { } made)
             return new(metadata.Identified ? made.Name : baseLabel,
                 conditionDetail + (metadata.Identified ? string.Join(", ", made.Settings.Select(value => definitions.Magic.EnchantmentSettings[value.Key].DisplayName)) : "Unidentified magical item"),

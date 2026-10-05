@@ -492,7 +492,7 @@ internal sealed partial class DaggerfallSession
                     RequestPanel(DaggerfallPanel.Character);
                     return true;
                 }, useSanguineRose: UseSanguineRose, useSkullCorruption: UseSkullCorruption, useItemSpell: item => _itemCastTriggers.Use(item),
-                useAzurasStar: UseAzurasStar));
+                useAzurasStar: UseAzurasStar, usePotion: UsePotion));
             _inventoryUi.BookOpened += _ => RequestPanel(DaggerfallPanel.Journal);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi, _groundContainers);
             _interactions = new DaggerfallOpenInteractions(

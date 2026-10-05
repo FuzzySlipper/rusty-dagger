@@ -72,11 +72,18 @@ interface SpellMakerProjection {
   readonly quote:{readonly key:string;readonly gold:number;readonly spellPoints:number;readonly eligible:boolean;readonly reason:string|null}|null;
 }
 
+interface PotionMakerProjection {
+  readonly revision:string; readonly provider:string; readonly eligible:boolean;
+  readonly ingredients:readonly {readonly template:number;readonly name:string;readonly quantity:number}[];
+  readonly recipes:readonly {readonly key:number;readonly name:string;readonly ingredients:readonly number[];readonly available:boolean}[];
+}
+
 interface SpellbookProjection {
   readonly available: readonly {readonly key:string;readonly name:string;readonly cost:number;readonly canCast?:boolean}[];
   readonly ready:string|null;readonly result:string;
   readonly sale?: {readonly revision:string;readonly provider:string;readonly offers:readonly {readonly key:string;readonly name:string;readonly castingCost:number;readonly price:number;readonly known:boolean}[]} | null;
   readonly maker?:SpellMakerProjection|null;
+  readonly potionMaker?:PotionMakerProjection|null;
   readonly information?: {readonly key:string;readonly name:string;readonly element:number;readonly target:string;readonly details:readonly string[]} | null;
 }
 
@@ -152,6 +159,7 @@ interface MerchantProjection {
   readonly quality: number;
   readonly gold: string | number;
   readonly buyAvailable: boolean;
+  readonly shopliftAvailable?: boolean;
   readonly sellAvailable: boolean;
   readonly repairAvailable: boolean;
   readonly identifyAvailable: boolean;
@@ -381,6 +389,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       </section>
       <section class="dagger-dialogue-merchant" aria-label="Merchant services"></section>
       <section class="dagger-dialogue-spells" aria-label="Spells for sale"></section>
+      <section class="dagger-dialogue-potionmaker" aria-label="Potion making"></section>
       <section class="dagger-dialogue-spellmaker" aria-label="Spell construction"></section>
       <ul class="dagger-dialogue-diagnostics" aria-label="Text diagnostics"></ul>
       <button class="dagger-dialogue-close" type="button">End conversation</button>
@@ -642,7 +651,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         row.append(merchantPriceLabel(item, amountInput));
         if (amountInput) row.append(' ', amountInput);
         if (tradeAvailable) row.append(' ', merchantAction(action, merchant, item, action === 'merchant-buy' ? 'Buy' : 'Sell', amountInput));
-        if (action === 'merchant-buy' && tradeAvailable) row.append(' ', merchantAction('merchant-shoplift', merchant, item, 'Steal', amountInput));
+        if (action === 'merchant-buy' && tradeAvailable && merchant.shopliftAvailable !== false) row.append(' ', merchantAction('merchant-shoplift', merchant, item, 'Steal', amountInput));
         if (action === 'merchant-sell' && merchant.repairAvailable && item.key.startsWith('unique:') && item.maximumCondition > item.currentCondition)
           row.append(' ', merchantAction('merchant-repair', merchant, item, 'Repair'));
         if (action === 'merchant-sell' && merchant.identifyAvailable && item.key.startsWith('unique:') && !item.identified)
@@ -741,6 +750,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   };
   const spellsRoot=shell.querySelector<HTMLElement>('.dagger-spells-root')!;
   const spellSalesRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spells')!;
+  const potionMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-potionmaker')!;
   const spellMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spellmaker')!;
   let inventorySuppressed = false;
   let activePanel: 'spells' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
@@ -1207,6 +1217,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     const spellbook = isSpellbookProjection(value.spells) ? value.spells : null;
     renderSpells(spellsRoot,spellbook);
     renderSpellSales(spellSalesRoot,spellbook);
+    renderPotionMaker(potionMakerRoot,spellbook?.potionMaker ?? null,action => context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
     renderSpellMaker(spellMakerRoot,spellbook?.maker ?? null,action =>
       context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
     inventorySuppressed = value.character?.identity?.racialOverride?.suppressInventory === true;
@@ -1643,6 +1654,7 @@ export function isSpellbookProjection(value:unknown):value is SpellbookProjectio
       && v.sale.offers.every(offer=>offer && typeof offer==='object' && typeof offer.key==='string' && typeof offer.name==='string' && Number.isSafeInteger(offer.price)
         && offer.price>=0 && Number.isInteger(offer.castingCost) && offer.castingCost>=0 && typeof offer.known==='boolean'))
     && (v.maker==null || isSpellMakerProjection(v.maker))
+    && (v.potionMaker==null || isPotionMakerProjection(v.potionMaker))
     && (v.information==null || typeof v.information.key==='string' && typeof v.information.name==='string'
       && typeof v.information.target==='string' && Number.isInteger(v.information.element)
       && Array.isArray(v.information.details) && v.information.details.every(line=>typeof line==='string'));
@@ -1910,4 +1922,37 @@ function diagnosticRow(label: string, value: string): HTMLElement {
   const row = document.createElement('div');
   row.append(fragment);
   return row;
+}
+
+export function isPotionMakerProjection(value:unknown):value is PotionMakerProjection {
+  if(!value || typeof value!=='object') return false;
+  const v=value as Partial<PotionMakerProjection>;
+  return typeof v.revision==='string' && typeof v.provider==='string' && typeof v.eligible==='boolean'
+    && Array.isArray(v.ingredients) && v.ingredients.every(i=>i && Number.isInteger(i.template) && typeof i.name==='string' && Number.isSafeInteger(i.quantity) && i.quantity>0)
+    && Array.isArray(v.recipes) && v.recipes.every(r=>r && Number.isInteger(r.key) && typeof r.name==='string' && typeof r.available==='boolean'
+      && Array.isArray(r.ingredients) && r.ingredients.every(Number.isInteger));
+}
+
+export function renderPotionMaker(root:HTMLElement,view:PotionMakerProjection|null,claim:(action:UiAction)=>void):void {
+  const stamp=JSON.stringify(view); if(root.dataset.potionMaker===stamp) return;
+  root.dataset.potionMaker=stamp;root.replaceChildren();if(!view) return;
+  const title=document.createElement('h3');title.textContent=`Make a potion with ${view.provider}`;root.append(title);
+  if(!view.eligible) { const p=document.createElement('p');p.textContent='Your current guild standing does not permit potion making.';root.append(p);return; }
+  const note=document.createElement('p');note.textContent='Choose a recipe you carry, or experiment with up to eight ingredients from your pack and wagon. Mixing uses the ingredients even if it fails.';root.append(note);
+  const form=document.createElement('form');root.append(form);
+  const recipe=document.createElement('select');recipe.setAttribute('aria-label','Recipe');
+  const experiment=document.createElement('option');experiment.value='';experiment.textContent='Experiment';recipe.append(experiment);
+  for(const r of view.recipes) {const option=document.createElement('option');option.value=String(r.key);option.textContent=r.name+(r.available?'':' — ingredients missing');option.disabled=!r.available;recipe.append(option);}form.append(recipe);
+  const inputs=new Map<number,HTMLInputElement>();
+  for(const i of view.ingredients) {
+    const label=document.createElement('label');label.textContent=`${i.name} (${i.quantity} available) `;
+    const input=document.createElement('input');input.type='number';input.min='0';input.max=String(Math.min(8,i.quantity));input.step='1';input.value='0';
+    input.setAttribute('aria-label',i.name);input.addEventListener('input',()=>{recipe.value='';});label.append(input);form.append(label);inputs.set(i.template,input);
+  }
+  recipe.addEventListener('change',()=>{const chosen=view.recipes.find(r=>String(r.key)===recipe.value);for(const [template,input] of inputs) input.value=String(chosen?.ingredients.filter(i=>i===template).length ?? 0);});
+  const mix=document.createElement('button');mix.type='submit';mix.textContent='Mix potion';mix.disabled=view.ingredients.length===0;form.append(mix);
+  form.addEventListener('submit',event=>{event.preventDefault();const selected:number[]=[];for(const [template,input] of inputs) for(let i=0;i<Number(input.value);i++) selected.push(template);
+    if(selected.length<1 || selected.length>8) {note.textContent='Choose one to eight ingredients.';return;}
+    claim({action:'potion-mix',revision:view.revision,text:JSON.stringify(selected)});
+  });
 }

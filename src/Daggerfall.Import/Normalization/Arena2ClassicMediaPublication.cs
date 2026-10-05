@@ -77,6 +77,7 @@ public sealed record Arena2ClassicMediaInputs(
     // The music cues the site admits, taken from the product-wide music publication that carries their
     // bytes. A caller that has not published music passes none, and the site then composes without a
     // score rather than with a substituted track.
+    byte[] Texture205,
     IReadOnlyList<ClassicMusicRecord>? Music = null)
 { }
 
@@ -1160,6 +1161,7 @@ public sealed record Arena2ClassicMediaPublication(
 
     private static readonly InventoryIconSource[] InventoryIconSources =
     [
+        .. Arena2PotionRecipes.Build().Select(row => new InventoryIconSource($"potion.{row!["key"]!.GetValue<int>()}", 205, row["textureRecord"]!.GetValue<int>())),
         new("iron-dagger", 234, 5), new("iron-tanto", 234, 22), new("iron-wakazashi", 234, 26),
         new("iron-shortsword", 234, 19), new("iron-broadsword", 234, 2), new("iron-saber", 234, 17),
         new("iron-katana", 234, 10), new("iron-longsword", 234, 12), new("iron-mace", 234, 14),
@@ -1620,6 +1622,7 @@ public sealed record Arena2ClassicMediaPublication(
     {
         Dictionary<int, TextureArchive> archives = new()
         {
+            [205] = TextureArchive.Parse(sources.Texture205, "arena2/TEXTURE.205"),
             [207] = TextureArchive.Parse(sources.Texture207, "arena2/TEXTURE.207"),
             [216] = TextureArchive.Parse(sources.Texture216, "arena2/TEXTURE.216"),
             [234] = TextureArchive.Parse(sources.Texture234, "arena2/TEXTURE.234"),
@@ -2015,7 +2018,7 @@ public sealed record Arena2ClassicMediaPublication(
         foreach (ClassicInventoryIconPresentation icon in inventoryMap.Values)
         {
             NormalizedImportDocument.RequireLogicalId(icon.MediaId, nameof(icon.MediaId));
-            if (icon.SourceRecordOrdinal < 0 || icon.TextureArchive is not 207 and not 216 and not 234 and not 245)
+            if (icon.SourceRecordOrdinal < 0 || icon.TextureArchive is not 205 and not 207 and not 216 and not 234 and not 245)
             {
                 throw new ArgumentOutOfRangeException(nameof(profile), "Classic inventory mappings must stay within the admitted texture archive closure.");
             }
@@ -2328,6 +2331,7 @@ public sealed record Arena2ClassicMediaPublication(
             Pris00I0Img = inputs.Pris00I0Img;
             Titl00I0Img = inputs.Titl00I0Img;
             Info00I0Img = inputs.Info00I0Img;
+            Texture205 = inputs.Texture205;
             Texture207 = inputs.Texture207;
             Texture216 = inputs.Texture216;
             Texture234 = inputs.Texture234;
@@ -2389,6 +2393,7 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Pris00I0Img { get; }
         public byte[] Titl00I0Img { get; }
         public byte[] Info00I0Img { get; }
+        public byte[] Texture205 { get; }
         public byte[] Texture207 { get; }
         public byte[] Texture216 { get; }
         public byte[] Texture234 { get; }
@@ -2420,7 +2425,7 @@ public sealed record Arena2ClassicMediaPublication(
                 ("INVE08I0.IMG", inputs.Inve08I0Img), ("INVE10I0.IMG", inputs.Inve10I0Img), ("INVE11I0.IMG", inputs.Inve11I0Img),
                 ("INVE12I0.IMG", inputs.Inve12I0Img), ("INVE14I0.IMG", inputs.Inve14I0Img),
                 ("GILD00I0.IMG", inputs.Gild00I0Img), ("BANK00I0.IMG", inputs.Bank00I0Img),
-                ("INFO00I0.IMG", inputs.Info00I0Img), ("TEXTURE.207", inputs.Texture207), ("TEXTURE.216", inputs.Texture216),
+                ("INFO00I0.IMG", inputs.Info00I0Img), ("TEXTURE.205", inputs.Texture205), ("TEXTURE.207", inputs.Texture207), ("TEXTURE.216", inputs.Texture216),
                 ("TEXTURE.234", inputs.Texture234), ("TEXTURE.245", inputs.Texture245), ("FONT0003.FNT", inputs.Font0003Fnt),
                 ("FONT0000.FNT", inputs.Font0000Fnt), ("FONT0001.FNT", inputs.Font0001Fnt), ("FONT0002.FNT", inputs.Font0002Fnt), ("FONT0004.FNT", inputs.Font0004Fnt),
                 ("FMAP_PAL.COL", inputs.FmapPalCol), ("MAP.PAL", inputs.MapPalCol),

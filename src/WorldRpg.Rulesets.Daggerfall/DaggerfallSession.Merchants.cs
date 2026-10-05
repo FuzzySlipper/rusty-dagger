@@ -6,8 +6,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Resolves merchant actions from the current dialogue NPC and the admitted interior source.</summary>
 internal sealed partial class DaggerfallSession
 {
-    private static readonly string[] MerchantServices = ["shop", "merchant", "buy-items", "sell-items", "repair", "identify"];
-    private static readonly string[] BuyServices = ["shop", "merchant", "buy-items"];
+    private static readonly string[] MerchantServices = ["shop", "merchant", "buy-items", "sell-items", "repair", "identify", "buy-potions"];
+    private static readonly string[] BuyServices = ["shop", "merchant", "buy-items", "buy-potions"];
     private static readonly string[] SellServices = ["shop", "merchant", "sell-items"];
 
     private DaggerfallMerchantProviderContext? CurrentMerchantProvider(string? revision = null, string? requestedService = null)

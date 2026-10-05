@@ -1305,3 +1305,22 @@ test('legal interaction shows charges and submits only authoritative arrest tria
     f.publish({legal:null}); assert.equal(panel.hidden,true); assert.equal(panel.children.length,0);
   } finally {f.dispose();}
 });
+
+test('potion maker selects an owned recipe or an ingredient experiment through the dialogue', () => {
+  const f=fixture();
+  try {
+    const potionMaker={revision:'mix-1',provider:'Apothecary',eligible:true,
+      ingredients:[{template:62,name:'Aloe',quantity:2},{template:31,name:'Petals',quantity:1}],
+      recipes:[{key:1,name:'Test recipe',ingredients:[62,31],available:true}]};
+    const publish=()=>f.publish({spells:{available:[],ready:null,result:'',potionMaker},activation:{mode:'talk',message:'',applied:true,
+      dialogue:{revision:'mix-1',targetLabel:'Apothecary',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
+    publish();const root=f.root.querySelector('.dagger-dialogue-potionmaker');const recipe=root.querySelector('select');
+    recipe.value='1';recipe.dispatchEvent(new window.Event('change'));
+    const aloe=root.querySelector('[aria-label="Aloe"]');assert.equal(aloe.value,'1');publish();assert.equal(root.querySelector('[aria-label="Aloe"]'),aloe);
+    root.querySelector('form').dispatchEvent(new window.Event('submit',{cancelable:true}));
+    assert.deepEqual(f.actions.at(-1),{action:'potion-mix',revision:'mix-1',text:'[62,31]'});
+    aloe.value='2';aloe.dispatchEvent(new window.Event('input'));assert.equal(recipe.value,'');
+    root.querySelector('form').dispatchEvent(new window.Event('submit',{cancelable:true}));assert.equal(f.actions.at(-1).text,'[62,62,31]');
+    f.publish({spells:{available:[],ready:null,result:'',potionMaker:{...potionMaker,eligible:false}}});assert.equal(root.querySelector('form'),null);
+  } finally {f.dispose();}
+});

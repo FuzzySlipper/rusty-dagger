@@ -18,6 +18,7 @@ internal sealed class DaggerfallItemValuation(DaggerfallDefinitions definitions)
         if (!StringComparer.Ordinal.Equals(definition.Id.Value, metadata.ItemId))
             throw new InvalidOperationException($"Item metadata '{metadata.ItemId}' does not belong to definition '{definition.Id.Value}'.");
 
+        if (metadata.PotionRecipeKey is int recipe) return _definitions.Magic.PotionRecipes[recipe].Price;
         if (metadata.MadeEnchantment is { } made) return made.Value;
         if (metadata.Enchantment is { } enchantment)
         {
