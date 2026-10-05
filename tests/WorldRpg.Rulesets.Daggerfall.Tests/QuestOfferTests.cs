@@ -21,7 +21,7 @@ public sealed class QuestOfferTests
         Assert.Contains("daedra-summoning", facts.Services);
         var site = session.Site.ActiveSite!;
         long provider = session.State.Npcs.RegisterStable(DaggerfallNpcKind.Static, "coven-work", new(site.Region, site.Name, string.Empty),
-            new("Breton", "Female", 0, 184, 8, faction.Id), facts.Role, facts.Services);
+            new("Breton", "Female", 184, 8, 0, faction.Id), facts.Role, facts.Services);
         var pool = session.State.Quests.OrdinaryWorkPool(faction.Id, false, 20, 100, 0, DaggerfallCharacterGender.Female);
         Assert.Equal(10, pool.Length);
         Assert.All(pool, row => Assert.Equal("Witches", row.Group));

@@ -83,6 +83,11 @@ public sealed class VampirismSessionTests
         using var restored = f.Restore();
         Assert.Equal(s.State.RacialOverrides.Current, restored.State.RacialOverrides.Current);
         Assert.False(restored.State.Character.ForgetSpell(spells[0]));
+        var work = restored.State.Quests.OrdinaryWorkPool(153, true, 20, 100, 20, DaggerfallCharacterGender.Male);
+        Assert.Equal(9, work.Length);
+        Assert.All(work, row => Assert.Equal("Vampires", row.Group));
+        Assert.True(restored.StartVampireQuestOpportunity(Minute(restored) + 1, false), restored.Presentation.LastOutcome);
+        Assert.Contains(restored.State.Quests.All, quest => work.Any(row => row.Name + ".txt" == quest.SourceFile));
         Assert.True(restored.CureVampirism());
         Assert.Null(restored.Casting.ReadyFor(1));
         Assert.Contains(spells[0], restored.State.Character.KnownSpells);
