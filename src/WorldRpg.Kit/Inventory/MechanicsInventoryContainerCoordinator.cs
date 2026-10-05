@@ -226,10 +226,11 @@ public sealed class MechanicsInventoryContainerCoordinator
 
     /// <summary>
     /// Moves all directly contained items from one registered owner to another
-    /// through one detached candidate and one Engine publication.
+    /// through one detached candidate and one Engine publication. Preparation runs
+    /// before the transfers, allowing the owner to unequip carried items in that same edit.
     /// </summary>
-    public InventoryContainerTransferReceipt TransferAll(EntityId source, EntityId destination, Action<InventoryEdit>? additionalChanges = null) =>
-        TransferCore(source, destination, null, additionalChanges);
+    public InventoryContainerTransferReceipt TransferAll(EntityId source, EntityId destination, Action<InventoryEdit>? prepareTransfer = null) =>
+        TransferCore(source, destination, null, prepareTransfer: prepareTransfer);
 
     /// <summary>
     /// Transfers a selected amount. A caller acting on a selection the player made
@@ -250,7 +251,7 @@ public sealed class MechanicsInventoryContainerCoordinator
     }
 
     private InventoryContainerTransferReceipt TransferCore(EntityId source, EntityId destination, InventoryContainerSelection? selection,
-        Action<InventoryEdit>? additionalChanges = null)
+        Action<InventoryEdit>? additionalChanges = null, Action<InventoryEdit>? prepareTransfer = null)
     {
         RequireRegistered(source, nameof(source));
         RequireRegistered(destination, nameof(destination));
@@ -291,6 +292,7 @@ public sealed class MechanicsInventoryContainerCoordinator
             }
         }
 
+        prepareTransfer?.Invoke(candidate);
         foreach (InventoryStack stack in stacks)
         {
             if (selection?.DestinationStack is InventoryStackId destinationStack)

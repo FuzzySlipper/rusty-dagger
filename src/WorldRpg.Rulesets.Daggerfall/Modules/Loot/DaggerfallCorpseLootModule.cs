@@ -194,7 +194,7 @@ internal sealed class DaggerfallCorpseLootModule
         {
             var store = _actors.Entities.Store.Get<InventoryComponent>(state.Actor.Entity).Store;
             var equipped = store.TryGetEquipment(state.Actor.Entity, out var equipment) ? equipment!.Assignments.ToArray() : [];
-            _containers.TransferAll(state.Actor.Entity, owner, edit =>
+            _containers.TransferAll(state.Actor.Entity, owner, prepareTransfer: edit =>
             {
                 foreach (var item in equipped.Select(value => value.Item).Distinct()) edit.Unequip(state.Actor.Entity, item);
             });

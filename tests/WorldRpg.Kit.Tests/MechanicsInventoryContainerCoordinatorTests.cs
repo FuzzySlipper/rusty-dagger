@@ -100,6 +100,60 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public void Unequipping_and_transferring_carried_items_publish_together_or_preserve_equipment_on_failure(bool reject)
+    {
+        EntityDirectory entities = new();
+        InventoryStore store = new();
+        var items = new Dictionary<InventoryItemId, ItemDefinition>
+        {
+            [new("sword")] = new(ItemDefinitionId.Parse("sword"), ItemKind.Unique, 1,
+                classifications: [ItemClassificationId.Parse("blade")], equipment: new ItemEquipmentPolicy(1)),
+            [new("zinc")] = Fungible("zinc", 10),
+        };
+        MechanicsInventoryContainerCoordinator containers = new(store, entities, items);
+        var source = CreateOwner(entities, 10);
+        var destination = CreateOwner(entities, 20);
+        containers.RegisterOwner(source);
+        containers.RegisterOwner(destination);
+        store.RegisterEquipment(new EquipmentState(source));
+        EquipmentComponent component = new(store, source);
+        entities.Store.Add(source, component);
+        MechanicsEquipmentCoordinator equipment = new(entities.Store.Get<InventoryComponent>(source), component, entities, items,
+            new Dictionary<WorldRpg.Kit.Inventory.EquipmentSlotId, EquipmentSlotDefinition>
+            {
+                [new("hand")] = new(Rusty.Engine.Mechanics.EquipmentSlotId.Parse("hand"), [ItemClassificationId.Parse("blade")]),
+            });
+        containers.Seed(source, [new(new("sword"), UniqueItem: Item(40)), new(new("zinc"), 2, Stack: Stack("zinc"))]);
+        var item = Assert.Single(containers.Read(source).UniqueItems).Entity;
+        equipment.Equip(new(item.Value, new("sword")), [new("hand")]);
+        if (reject) containers.Seed(destination, [new(new("zinc"), 9, Stack: Stack("zinc"))]);
+        ulong revision = store.Revision;
+        void Transfer() => containers.TransferAll(source, destination, prepareTransfer: edit => edit.Unequip(source, item));
+        if (reject)
+        {
+            Assert.Throws<MechanicsException>(Transfer);
+            Assert.Equal(revision, store.Revision);
+            Assert.Equal(item.Value, Assert.Single(equipment.Read().Assignments).Item.EntityId);
+            Assert.Equal(item, Assert.Single(containers.Read(source).UniqueItems).Entity);
+            Assert.Empty(containers.Read(destination).UniqueItems);
+            Assert.Equal(2UL, Assert.Single(containers.Read(source).Stacks).Quantity);
+            Assert.Equal(9UL, Assert.Single(containers.Read(destination).Stacks).Quantity);
+        }
+        else
+        {
+            Transfer();
+            Assert.Equal(revision + 1, store.Revision);
+            Assert.Empty(equipment.Read().Assignments);
+            Assert.Empty(containers.Read(source).UniqueItems);
+            Assert.Empty(containers.Read(source).Stacks);
+            Assert.Equal(item, Assert.Single(containers.Read(destination).UniqueItems).Entity);
+            Assert.Equal(2UL, Assert.Single(containers.Read(destination).Stacks).Quantity);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void Retained_seed_and_live_transfer_publish_together_or_leave_both_owners_unchanged(bool reject)
     {
         EntityDirectory entities = new();
