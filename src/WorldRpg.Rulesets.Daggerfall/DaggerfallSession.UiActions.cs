@@ -70,7 +70,7 @@ internal sealed partial class DaggerfallSession
         }
         if (State.RacialOverrides.Current?.SuppressInventory == true && action.Kind is
             DaggerfallUiActionKind.Inventory or DaggerfallUiActionKind.InventoryMove or
-            DaggerfallUiActionKind.InventoryInspect or DaggerfallUiActionKind.InventoryUse or DaggerfallUiActionKind.InventoryDrop)
+            DaggerfallUiActionKind.InventoryInspect or DaggerfallUiActionKind.InventoryUse or DaggerfallUiActionKind.InventoryDrop or DaggerfallUiActionKind.BankOpen)
         {
             Presentation.SetOutcome("You cannot use your inventory in beast form.");
             return;
