@@ -102,6 +102,7 @@ internal static partial class DaggerfallBaseContent
             DaggerfallFactionsSet factions = ReadFactions(root, locations.Regions, diagnostics);
             DaggerfallTerrainSet terrain = ReadTerrain(root, diagnostics);
             DaggerfallItemTemplateSet itemTemplatesCatalog = ReadItemTemplates(root, diagnostics);
+            foreach (var recipe in magic.PotionRecipes.Values) recipe.Validate(itemTemplatesCatalog);
             DaggerfallQuestSourceSet questSources = ReadQuestSources(root, diagnostics);
             DaggerfallCinematicSet cinematics = ReadCinematics(root, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, catalogs, mobiles, hud, diagnostics);
@@ -2647,17 +2648,7 @@ internal static partial class DaggerfallBaseContent
             List<DaggerfallSpellEffectDefinition> effects = [];
             foreach (JsonElement effect in Array(spell, "effects", diagnostics))
             {
-                JsonElement duration = Object(Property(effect, "duration", diagnostics), "duration", diagnostics);
-                JsonElement chance = Object(Property(effect, "chance", diagnostics), "chance", diagnostics);
-                JsonElement magnitude = Object(Property(effect, "magnitude", diagnostics), "magnitude", diagnostics);
-                effects.Add(new DaggerfallSpellEffectDefinition(
-                    Text(effect, "key", diagnostics),
-                    Integer(effect, "type", diagnostics),
-                    Integer(effect, "subType", diagnostics),
-                    Integer(duration, "base", diagnostics), Integer(duration, "mod", diagnostics), Integer(duration, "perLevel", diagnostics),
-                    Integer(chance, "base", diagnostics), Integer(chance, "mod", diagnostics), Integer(chance, "perLevel", diagnostics),
-                    Integer(magnitude, "baseLow", diagnostics), Integer(magnitude, "baseHigh", diagnostics),
-                    Integer(magnitude, "levelBase", diagnostics), Integer(magnitude, "levelHigh", diagnostics), Integer(magnitude, "perLevel", diagnostics)));
+                effects.Add(ReadSpellEffect(effect, diagnostics));
             }
 
             spells[key] = new DaggerfallSpellDefinition(
@@ -2781,7 +2772,37 @@ internal static partial class DaggerfallBaseContent
             if (!settings.TryAdd(key, setting))
                 diagnostics.Add($"Enchantment setting '{key}' is published twice, so a consumer cannot resolve it to one setting.");
         }
-        return new DaggerfallMagicCatalogSet(spells, items, dispositions, sources, costs, settings);
+        Dictionary<int, DaggerfallPotionRecipeDefinition> recipes = [];
+        foreach (JsonElement row in Array(section, "potionRecipes", diagnostics))
+        {
+            DaggerfallPotionSpellPointRestore? restore = row.TryGetProperty("spellPointRestore", out var special) && special.ValueKind == JsonValueKind.Object
+                ? new(Text(special, "effect", diagnostics), Integer(special, "baseLow", diagnostics), Integer(special, "baseHigh", diagnostics),
+                    Integer(special, "levelBase", diagnostics), Integer(special, "levelHigh", diagnostics), Integer(special, "perLevel", diagnostics)) : null;
+            var recipe = new DaggerfallPotionRecipeDefinition(Integer(row, "key", diagnostics), Integer(row, "classicIndex", diagnostics),
+                Text(row, "name", diagnostics), Text(row, "textKey", diagnostics), Integer(row, "price", diagnostics),
+                Integer(row, "textureRecord", diagnostics), Text(row, "sourceClass", diagnostics),
+                [.. Array(row, "ingredients", diagnostics).Select(value => new DaggerfallPotionIngredient(Integer(value, "template", diagnostics), Text(value, "item", diagnostics), Integer(value, "count", diagnostics)))],
+                [.. Array(row, "effects", diagnostics).Select(value => ReadSpellEffect(value, diagnostics))], restore);
+            if (!recipes.TryAdd(recipe.Key, recipe)) diagnostics.Add($"Potion recipe identity {recipe.Key} is duplicated.");
+        }
+        if (recipes.Values.Select(value => value.ClassicIndex).Distinct().Count() != recipes.Count)
+            diagnostics.Add("Potion recipes repeat a classic selection index.");
+        return new DaggerfallMagicCatalogSet(spells, items, dispositions, sources, costs, settings) { PotionRecipes = recipes };
+    }
+
+    private static DaggerfallSpellEffectDefinition ReadSpellEffect(JsonElement effect, DaggerfallContentDiagnostics diagnostics)
+    {
+        JsonElement duration = Object(Property(effect, "duration", diagnostics), "duration", diagnostics);
+        JsonElement chance = Object(Property(effect, "chance", diagnostics), "chance", diagnostics);
+        JsonElement magnitude = Object(Property(effect, "magnitude", diagnostics), "magnitude", diagnostics);
+        return new DaggerfallSpellEffectDefinition(
+                    Text(effect, "key", diagnostics),
+                    Integer(effect, "type", diagnostics),
+                    Integer(effect, "subType", diagnostics),
+                    Integer(duration, "base", diagnostics), Integer(duration, "mod", diagnostics), Integer(duration, "perLevel", diagnostics),
+                    Integer(chance, "base", diagnostics), Integer(chance, "mod", diagnostics), Integer(chance, "perLevel", diagnostics),
+                    Integer(magnitude, "baseLow", diagnostics), Integer(magnitude, "baseHigh", diagnostics),
+                    Integer(magnitude, "levelBase", diagnostics), Integer(magnitude, "levelHigh", diagnostics), Integer(magnitude, "perLevel", diagnostics));
     }
 
     private static DaggerfallItemTemplateLedger ReadItemTemplateLedger(JsonElement root, DaggerfallCatalogSet catalogs, int publishedItems, DaggerfallContentDiagnostics diagnostics)

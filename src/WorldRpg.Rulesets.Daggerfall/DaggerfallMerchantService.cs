@@ -802,7 +802,7 @@ internal sealed class DaggerfallMerchantService
         }
         if (binding.Context.BuildingType == 0 && Roll(stockKey + ":potion-recipe", 25))
         {
-            int recipe = DaggerfallLootPolicy.ChooseClassicPotionRecipe((low, high) =>
+            int recipe = _definitions.Magic.ChoosePotionRecipe((low, high) =>
                 checked((int)_random.DrawKeyed(new KeyedRngRequest(RandomSeed, RandomScope, stockKey + ":potion-recipe:key", low, high)).Value));
             DaggerfallCreatedItem recipeItem = CreateItem(binding, "MiscItems", 4, stockKey + ":potion-recipe:item", recipe);
             AddGenerated(binding, recipeItem, seeds, generated, "potion-recipe");

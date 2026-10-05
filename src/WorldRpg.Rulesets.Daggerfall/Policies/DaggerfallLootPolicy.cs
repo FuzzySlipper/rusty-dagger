@@ -108,8 +108,8 @@ internal static class DaggerfallLootPolicy
             string prefix = $"loot.dungeon.{dungeonType}";
             int mapChance = DungeonMapChances[tableKey[0] - 'J'];
             RollExtra(draw, prefix, "map", MapItem, mapChance, null, extras, drops);
-            RollExtra(draw, prefix, "potion", PotionItem, 4, PotionRecipeKeys, extras, drops);
-            RollExtra(draw, prefix, "potion-recipe", PotionRecipeItem, 2, PotionRecipeKeys, extras, drops);
+            RollExtra(draw, prefix, "potion", PotionItem, 4, definitions.Magic.ClassicPotionRecipeKeys, extras, drops);
+            RollExtra(draw, prefix, "potion-recipe", PotionRecipeItem, 2, definitions.Magic.ClassicPotionRecipeKeys, extras, drops);
         }
         return new(dungeonType, tableKey, ordinary with { Drops = drops }, extras);
     }
@@ -120,7 +120,7 @@ internal static class DaggerfallLootPolicy
     /// 3% potion and 2% potion recipe. A keyless enemy (the City Watch) gets the map roll alone.
     /// </summary>
     internal static DaggerfallEnemyLootExtrasResult GenerateEnemyExtras(
-        int mapChance,
+        DaggerfallMagicCatalogSet magic, int mapChance,
         bool hasLootTable,
         Func<string, int, int, int> draw)
     {
@@ -133,8 +133,8 @@ internal static class DaggerfallLootPolicy
         {
             // CreateRandomPotion picks among the effect broker's registered recipes, which without
             // mods are exactly the twenty classic ones the recipe sheet also picks from.
-            RollExtra(draw, EnemyExtraPrefix, "potion", PotionItem, EnemyPotionChance, PotionRecipeKeys, extras, drops);
-            RollExtra(draw, EnemyExtraPrefix, "potion-recipe", PotionRecipeItem, EnemyPotionRecipeChance, PotionRecipeKeys, extras, drops);
+            RollExtra(draw, EnemyExtraPrefix, "potion", PotionItem, EnemyPotionChance, magic.ClassicPotionRecipeKeys, extras, drops);
+            RollExtra(draw, EnemyExtraPrefix, "potion-recipe", PotionRecipeItem, EnemyPotionRecipeChance, magic.ClassicPotionRecipeKeys, extras, drops);
         }
         return new(extras, drops);
     }
@@ -164,10 +164,6 @@ internal static class DaggerfallLootPolicy
     /// <summary>The loot tables the dungeon-type map selects, which an admitted base pack must therefore carry.</summary>
     internal static IEnumerable<string> DungeonTableKeysInUse => DungeonTableKeys.Distinct(StringComparer.Ordinal);
 
-    internal static bool IsClassicPotionRecipeKey(int key) => PotionRecipeKeys.Contains(key);
-
-    internal static int ChooseClassicPotionRecipe(Func<int, int, int> draw) => PotionRecipeKeys[draw(0, PotionRecipeKeys.Length - 1)];
-
     internal static string GoldRollId(string tableKey) => $"loot.{tableKey}.gold";
     internal static string SuccessRollId(string tableKey, string category, int slot) => $"loot.{tableKey}.{category}.{slot}";
     internal static string PickRollId(string tableKey, string category, int slot) => $"{SuccessRollId(tableKey, category, slot)}.pick";
@@ -188,15 +184,6 @@ internal static class DaggerfallLootPolicy
     private const int EnemyPotionChance = 3;
     private const int EnemyPotionRecipeChance = 2;
     private const string EnemyExtraPrefix = "loot.enemy";
-
-    // The classic-list order is retained from PotionRecipe.classicRecipeKeys.
-    // It is an item-instance identity used by both a potion (template 83) and
-    // a recipe sheet (template 278), not an Engine inventory definition.
-    private static readonly int[] PotionRecipeKeys =
-    [
-        221871, 239524, 4975678, 5017404, 5188896, 111516185, 4826108, 216843, 224588, 220192,
-        240081, 4937012, 228890, 221117, 4870452, 5361377, 112080144, 4842851, 4815872, 2031019196,
-    ];
 
     private static int Draw(Func<string, int, int, int> draw, string id, int minimum, int maximum)
     {

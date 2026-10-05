@@ -52,7 +52,7 @@ internal sealed class DaggerfallLootPopulation
             ? DaggerfallLootPolicy.Generate(_catalog, tableKey, request.PlayerLevel, draw, request.ClothingGroup)
             : null);
         DaggerfallEnemyLootExtrasResult? enemy = request.EnemyMapChance is int mapChance
-            ? DaggerfallLootPolicy.GenerateEnemyExtras(mapChance, request.TableKey is not null, draw)
+            ? DaggerfallLootPolicy.GenerateEnemyExtras(_catalog.Magic, mapChance, request.TableKey is not null, draw)
             : null;
         List<GeneratedLootSeed> seeds = [];
         IEnumerable<DaggerfallLootDrop> drops = (loot?.Drops ?? []).Concat(enemy?.Drops ?? []);

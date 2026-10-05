@@ -92,6 +92,29 @@ public sealed class Arena2MagicCatalogDocumentTests
             settings.Where(row => row!["type"]!.GetValue<int>() == 22).Select(row => row!["cost"]!.GetValue<int>()));
     }
 
+    [Fact]
+    public void Publishes_every_classic_recipe_identity_and_complete_secondary_payload()
+    {
+        var rows = JsonNode.Parse(Arena2MagicCatalogDocument.Build(SpellTable(), MagicItemTable(), "spells", "magic").Json)!["potionRecipes"]!.AsArray();
+        int[] keys = [221871, 239524, 4975678, 5017404, 5188896, 111516185, 4826108, 216843, 224588, 220192,
+            240081, 4937012, 228890, 221117, 4870452, 5361377, 112080144, 4842851, 4815872, 2031019196];
+        Assert.Equal(keys, rows.Select(row => row!["key"]!.GetValue<int>()));
+        Assert.Equal(Enumerable.Range(0, 20), rows.Select(row => row!["classicIndex"]!.GetValue<int>()));
+        foreach (var row in rows)
+        {
+            Assert.EndsWith(".cs#SetPotionProperties", row!["sourceClass"]!.GetValue<string>());
+            var ingredients = row["ingredients"]!.AsArray();
+            Assert.All(ingredients, value => { Assert.Equal(1, value!["count"]!.GetValue<int>()); Assert.Equal($"template-{value["template"]!.GetValue<int>()}", value["item"]!.GetValue<string>()); });
+            Assert.Equal(ingredients.Select(value => value!["template"]!.GetValue<int>()).Order(), ingredients.Select(value => value!["template"]!.GetValue<int>()));
+        }
+        var power = rows[4]!;
+        Assert.Empty(power["effects"]!.AsArray());
+        Assert.Equal("heal-spell-points", power["spellPointRestore"]!["effect"]!.GetValue<string>());
+        var purification = rows[19]!["effects"]!.AsArray();
+        Assert.Equal(new[] { "cure-disease", "heal-health", "invisibility-normal" }, purification.Select(value => value!["key"]!.GetValue<string>()));
+        Assert.All(purification, effect => { Assert.Equal(19, effect!["magnitude"]!["levelBase"]!.GetValue<int>()); Assert.Equal(10, effect["chance"]!["mod"]!.GetValue<int>()); });
+    }
+
     [CorpusFact("SPELLS.STD", "MAGIC.DEF")]
     public void ReportsTheRealCorpusCountsAndLeavesUnresolvedLinksLegible()
     {

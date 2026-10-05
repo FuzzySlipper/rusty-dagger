@@ -207,6 +207,7 @@ public static class Arena2MagicCatalogDocument
             ["spells"] = publishedSpells,
             ["magicItems"] = publishedItems,
             ["enchantmentSettings"] = Arena2EnchantmentSettings.Build(publishedSpells),
+            ["potionRecipes"] = Arena2PotionRecipes.Build(),
             ["unresolvedLinks"] = unresolved,
             ["dispositions"] = dispositions,
         };

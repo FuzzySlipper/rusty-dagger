@@ -1117,6 +1117,10 @@ internal sealed record DaggerfallSavePayload(
         {
             throw new ArgumentException($"Book item '{itemId}' has no selected book identity.");
         }
+        bool potionItem = definitions.RequireItem(new(itemId)).Template?.Index is 83 or 278;
+        if (potionItem != (restored.PotionRecipeKey is not null)
+            || restored.PotionRecipeKey is int recipe && !definitions.Magic.PotionRecipes.ContainsKey(recipe))
+            throw new ArgumentException($"Saved item '{itemId}' requires its published potion recipe identity.");
         if (restored.CapturedSoulMobileId is int soul && !definitions.Actors.Values.Any(actor => actor.Kind == DaggerfallActorKinds.Monster && actor.MobileId == soul))
             throw new ArgumentException($"Saved item {itemId} names unpublished creature soul {soul}.");
         if (restored.CapturedSoulMobileId is not null && !DaggerfallSoulGems.IsTrap(restored, definitions.Magic))
