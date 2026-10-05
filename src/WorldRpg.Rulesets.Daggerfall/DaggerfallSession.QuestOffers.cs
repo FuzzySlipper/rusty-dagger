@@ -63,7 +63,7 @@ internal sealed partial class DaggerfallSession
         if (guild?.Kind is DaggerfallConcreteGuildKind.Mages or DaggerfallConcreteGuildKind.KnightlyOrder)
             rank = Math.Max(rank, State.Progression.Level);
         if (State.Quests.ProviderHasActiveWork(id)) return null;
-        if (!isGuild && (castle || service == "quest-candidate" || service == "quest")
+        if (!isGuild && definition.Type != 8 && (castle || service == "quest-candidate" || service == "quest")
             && !State.Quests.WorkContactAvailable(id, _site.ActiveSite!.Id, castle,
                 service == "quest" ? 100 : castle ? _tuning.QuestOffers.CastleProviderChancePercent : _tuning.QuestOffers.SocialProviderChancePercent)) return null;
         return (npc, faction, member, State.Social.FactionReputation(faction), rank);

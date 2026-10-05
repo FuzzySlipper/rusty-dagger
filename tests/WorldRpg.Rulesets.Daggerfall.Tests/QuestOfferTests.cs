@@ -9,6 +9,31 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class QuestOfferTests
 {
+    [Fact]
+    public void Coven_work_uses_nonmember_witches_pool_and_actual_offer_acceptance()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        fixture.Random = SummonRandom.Create();
+        using var session = fixture.Start(fixture.ExteriorProfile);
+        var faction = TestPayload.Definitions.Factions.Factions[419];
+        var facts = DaggerfallNpcServiceFacts.Resolve(TestPayload.Definitions, faction, -1, 0, "witch");
+        Assert.Contains("quest", facts.Services);
+        Assert.Contains("daedra-summoning", facts.Services);
+        var site = session.Site.ActiveSite!;
+        long provider = session.State.Npcs.RegisterStable(DaggerfallNpcKind.Static, "coven-work", new(site.Region, site.Name, string.Empty),
+            new("Breton", "Female", 0, 184, 8, faction.Id), facts.Role, facts.Services);
+        var pool = session.State.Quests.OrdinaryWorkPool(faction.Id, false, 20, 100, 0, DaggerfallCharacterGender.Female);
+        Assert.Equal(10, pool.Length);
+        Assert.All(pool, row => Assert.Equal("Witches", row.Group));
+        string text = session.OfferQuestWork(provider);
+        var offer = Assert.IsType<DaggerfallQuestOfferSave>(session.State.Quests.PendingOffer);
+        Assert.StartsWith("Q0", offer.Quest.DefinitionName);
+        session.AnswerQuestOffer(offer.Quest.InstanceId, true);
+        Assert.Single(session.State.Quests.All);
+        using var restored = fixture.Restore(session.CaptureSave());
+        Assert.Equal(offer.Quest.InstanceId, Assert.Single(restored.State.Quests.All).InstanceId);
+    }
+
     [Theory]
     [InlineData(40)] [InlineData(510)]
     public void Real_provider_offer_preserves_selected_resources_through_encoded_restore_and_acceptance(int faction)
