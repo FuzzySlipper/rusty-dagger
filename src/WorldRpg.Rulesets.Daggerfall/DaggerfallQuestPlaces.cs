@@ -200,7 +200,7 @@ internal sealed class DaggerfallQuestPlaceAllocator(
                 && building.Source.FactionId != DaggerfallConcreteGuildCatalog.DarkBrotherhoodFactionId
                 && !isOwnedHouse(site.Id, building)
                 && !active.Any(resource => Claims(resource, site.Id, building))
-                && (building.Source.BuildingType == 11 || !parent.Any(resource => Claims(resource, site.Id, building)))
+                && (building.Source.BuildingType == 11 || !parent.Any(resource => resource.SelectedPerson is null && Claims(resource, site.Id, building)))
                 && Markers(site, building).Count > 0)];
 
     private T Choose<T>(IReadOnlyList<T> values, string key) => values.Count > 0

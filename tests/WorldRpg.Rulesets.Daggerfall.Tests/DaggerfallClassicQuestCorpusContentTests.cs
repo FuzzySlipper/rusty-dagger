@@ -63,7 +63,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     }
 
     [Fact]
-    public void Retains_vampire_and_nobility_special_cases_as_diagnostics_instead_of_excluding_sources()
+    public void Retains_vampire_sources_and_admits_nobility_clan_macros_resolved_by_runtime_binding()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -75,8 +75,8 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.nobility.json")), definitions).Select(receipt => receipt.Runtime)];
 
         Assert.Equal(10, vampire.Count(receipt => receipt.Name.StartsWith("P", StringComparison.Ordinal)));
-        Assert.Contains(vampire, receipt => !receipt.Runnable && receipt.Diagnostics.Any(diagnostic => diagnostic.Reason.Contains("runner operation", StringComparison.Ordinal)));
+        Assert.All(vampire, receipt => Assert.True(receipt.Runnable, string.Join("; ", receipt.Diagnostics)));
         DaggerfallFightersGuildQuestRuntimeReceipt vampireClan = Assert.Single(nobility, receipt => receipt.Name == "R0C11Y28");
-        Assert.Contains(vampireClan.Diagnostics, diagnostic => diagnostic.Line == 218 && diagnostic.Text.Contains("%vcn", StringComparison.Ordinal) && diagnostic.Reason.Contains("quest-NPC context", StringComparison.Ordinal));
+        Assert.DoesNotContain(vampireClan.Diagnostics, diagnostic => diagnostic.Reason.Contains("quest-NPC context", StringComparison.Ordinal));
     }
 }

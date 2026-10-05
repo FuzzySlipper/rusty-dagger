@@ -74,7 +74,7 @@ internal static class DaggerfallQuestClockCompiler
                     : clock.StartingSeconds < definition.MinimumSeconds || clock.StartingSeconds > definition.MaximumSeconds)
                 || clock.RemainingSeconds < 0 || clock.RemainingSeconds > clock.StartingSeconds
                 || (clock.Finished && (clock.Enabled || clock.RemainingSeconds != 0))
-                || (!clock.Finished && clock.RemainingSeconds == 0)))
+                || (!clock.Finished && clock.RemainingSeconds == 0 && clock.StartingSeconds != 0)))
                 throw new ArgumentException($"Quest instance '{owner}' clock '{clock.Symbol}' has incompatible remaining state.");
         }
     }

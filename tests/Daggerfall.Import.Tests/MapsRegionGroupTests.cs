@@ -185,6 +185,11 @@ public sealed class MapsRegionGroupTests
         Assert.Equal(layout.Blocks, blocks.Blocks);
         Assert.Contains(layout.Blocks, block => block.IsStart);
 
+        // Crypt is type zero, not an absent dungeon. Its fixed story location must survive the bulk import.
+        MapsDungeonLocation crypt = Assert.Single(dungeons, dungeon => dungeon.Name == "Scourg Barrow");
+        Assert.Equal(MapsDungeonState.Read, crypt.State);
+        Assert.Equal(MapsDecoder.DecodeDungeonLayout(archive, crypt.Region, crypt.Name).Blocks, crypt.Blocks);
+
         // Every dungeon carries a disposition, and a region read twice describes the same dungeons:
         // the region with the starting dungeon is the one compared, since it is known to have one.
         Assert.All(dungeons, dungeon => Assert.True(dungeon.State is MapsDungeonState.Read or MapsDungeonState.NoDungeon or MapsDungeonState.Malformed));
@@ -239,7 +244,7 @@ public sealed class MapsRegionGroupTests
         // tables, and between them the corpus describes this many places and this many dungeons.
         Assert.Equal(15251, locations.Locations.Count);
         Assert.Equal(45, locations.Locations.Select(location => location.Region).Distinct().Count());
-        Assert.Equal(3959, locations.Dungeons.Count);
+        Assert.Equal(4232, locations.Dungeons.Count);
 
         // The location type and the discovered flag come from the same word as the position, and both
         // carry something other than a constant, so neither is a field that was added and never read.

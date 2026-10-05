@@ -83,6 +83,15 @@
     },
     {
       "id": "daggerfall.the-tombs-of-klerd-exterior"
+    },
+    {
+      "id": "daggerfall.quests.story-early"
+    },
+    {
+      "id": "daggerfall.quests.story-late"
+    },
+    {
+      "id": "daggerfall.quests.cures"
     }
   ],
   "tuning": {

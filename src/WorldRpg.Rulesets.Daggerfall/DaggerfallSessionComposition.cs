@@ -36,6 +36,9 @@ internal sealed record DaggerfallSessionComposition(
 
     internal DaggerfallQuestRuntimeAdmission? QuestAdmission { get; init; }
 
+    /// <summary>Named content selected by this bundle for committed new characters; loading never starts it again.</summary>
+    internal IReadOnlyList<string> NewGameQuests { get; init; } = [];
+
     internal DaggerfallDisabledQuestSelection? DisabledQuestSelection { get; init; }
 
     /// <summary>The product-wide music bundle; null composes a silent session.</summary>

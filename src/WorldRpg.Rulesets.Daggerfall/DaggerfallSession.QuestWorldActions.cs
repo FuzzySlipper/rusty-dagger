@@ -16,17 +16,18 @@ internal sealed partial class DaggerfallSession
             (_sites.Profiles ?? throw new NotSupportedException("WorldUpdate requires an admitted site catalog.")).SetLocationVariant(site, update.Variant);
             return true;
         }
-        var binding = DaggerfallQuestPlacements.Destination(instance.Resources, operation.Targets[0]);
-        var targetSite = binding.Places.Single().Require();
         if (operation.Kind == DaggerfallQuestTaskOperationKind.RevealPlace)
         {
+            var revealBinding = DaggerfallQuestPlacements.Destination(instance.Resources, operation.Targets[0]);
+            var targetSite = revealBinding.Places.Single().Require();
             var location = Site.Records.SingleOrDefault(value => value.Id == targetSite)
                 ?? throw new NotSupportedException($"Reveal location '{targetSite}' is absent from the canonical catalog.");
             string? note = operation.Step == 1 ? _definitions.Text.RequireInternalEntry("readMap", 0).Replace("%map", location.Name, StringComparison.Ordinal) : null;
-            Site.Discover(targetSite);
+            Site.Discover(location.Id);
             if (note is not null) _notebook.Add(note);
             return true;
         }
+        var binding = DaggerfallQuestPlacements.Destination(instance.Resources, operation.Targets[0]);
         var profiles = _sites.Profiles?.Keys.Select(key => _sites.Profiles.Require(key)).ToArray() ?? [_sites.Projection.Inputs];
         var destinations = profiles.Where(profile => DaggerfallQuestPlacements.Matches(binding, profile)).ToArray();
         if (destinations.Length != 1) throw new NotSupportedException($"Quest teleport Place '{operation.Targets[0]}' has no unique admitted world profile.");

@@ -133,15 +133,9 @@ public sealed class DaggerfallCinematicPresentationTests
                 nameof(IContentService.ListBundles) => (ReadOnlyMemory<ContentBundleInfo>)new[] { new ContentBundleInfo(DaggerfallCinematicPresentation.BundleId, 1, 1) },
                 nameof(IContentService.OpenBundle) => OpenBundle((ContentBundleOpenRequest)args![0]!),
                 nameof(IContentService.ReadBundleIdentity) => TestSessions.Digest(System.Text.Encoding.UTF8.GetBytes("anim0000.webm\nanim0011.webm\ndag2.webm")),
-                nameof(IContentService.ReadBundleFiles) => (ReadOnlyMemory<ContentReferenceInfo>)new[]
-                {
-                    new ContentReferenceInfo("anim0000.webm", default, 1),
-                    new ContentReferenceInfo("anim0011.webm", default, 1),
-                    new ContentReferenceInfo("dag2.webm", default, 1),
-                    new ContentReferenceInfo("anim0002.webm", default, 1),
-                    new ContentReferenceInfo("anim0004.webm", default, 1),
-                    new ContentReferenceInfo("anim0012.webm", default, 1),
-                },
+                nameof(IContentService.ReadBundleFiles) => (ReadOnlyMemory<ContentReferenceInfo>)Enumerable.Range(0, 16)
+                    .Select(index => new ContentReferenceInfo($"anim{index:0000}.webm", default, 1))
+                    .Append(new("dag2.webm", default, 1)).ToArray(),
                 nameof(IContentService.OpenBundleReference) => OpenReference((ContentBundleReferenceRequest)args![0]!),
                 _ => throw new NotSupportedException(method),
             });

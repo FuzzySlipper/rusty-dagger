@@ -1,0 +1,12 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.quests.story-early",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.named-quest-corpus",
+  "dependencies": [
+    {
+      "id": "daggerfall.base"
+    }
+  ],
+  "payload": "worldrpg/payloads/daggerfall.quests.story-early.json"
+}
