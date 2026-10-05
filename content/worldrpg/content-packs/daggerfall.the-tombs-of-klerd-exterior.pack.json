@@ -1,0 +1,13 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.the-tombs-of-klerd-exterior",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.site",
+  "dependencies": [
+    {
+      "id": "daggerfall.base"
+    }
+  ],
+  "description": "Normalized The Tombs of Klerd exterior and crypt entrance.",
+  "payload": "worldrpg/payloads/daggerfall.the-tombs-of-klerd-exterior.json"
+}

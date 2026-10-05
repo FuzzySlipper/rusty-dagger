@@ -1365,3 +1365,19 @@ test('summoning offers retain semantic accept and refuse actions and close with 
     renderSummoning(root,null,()=>{});assert.equal(root.childElementCount,0);
   }finally{f.dispose();}
 });
+
+test('vampire character projection displays clan and published media while retaining inventory access', () => {
+  const f = fixture();
+  try {
+    const character = { name:'Aubk-i',attributes:[],skills:[],resources:[],progression:{level:1,experience:0},equipment:[],
+      identity:{race:'breton',donorRaceId:1,portrait:'',gender:'female',faceIndex:0,career:'mage',media:[],
+        selectedMedia:[{layer:'background',mediaId:'vampire.background'},{layer:'head.female.0',mediaId:'vampire.head'}],
+        racialOverride:{name:'Vampire',vampireClan:'Lyrezi',beastForm:false,suppressInventory:false}}};
+    f.publish({character,uiArt:{revision:'vampire',images:[{id:'vampire.background',image:'data:image/png;base64,Ym9keQ=='},{id:'vampire.head',image:'data:image/png;base64,aGVhZA=='}]}});
+    assert.match(f.root.querySelector('.dagger-character-overview').textContent,/Vampire · Lyrezi/);
+    assert.equal(f.root.querySelector('[data-action="inventory"]').disabled,false);
+    assert.deepEqual([...f.root.querySelectorAll('.dagger-character-art img')].map(img=>img.dataset.mediaId),['vampire.background','vampire.head']);
+    character.identity.racialOverride=null;character.identity.selectedMedia=[];f.publish({character});
+    assert.doesNotMatch(f.root.querySelector('.dagger-character-overview').textContent,/Vampire/);
+  } finally { f.dispose(); }
+});

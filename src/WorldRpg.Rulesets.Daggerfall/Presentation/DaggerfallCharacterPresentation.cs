@@ -51,7 +51,7 @@ internal sealed record CharacterMediaIdentity(string Layer, string MediaId);
 /// <param name="Media">Every layer the race publishes, in the order the publication names them.</param>
 internal sealed record CharacterIdentityPresentation(
     string Race, int DonorRaceId, string Portrait, CharacterMediaIdentity[] Media,
-    string Gender = "", int FaceIndex = 0, string Career = "", CharacterMediaIdentity[]? SelectedMedia = null, DaggerfallRacialOverrideView? RacialOverride = null)
+    string Gender = "", int FaceIndex = 0, string Career = "", CharacterMediaIdentity[]? SelectedMedia = null, DaggerfallRacialOverrideView? RacialOverride = null, string? VampireClan = null)
 {
     /// <summary>
     /// Resolves an actor's declared race and career through the published presentation set.
@@ -94,7 +94,16 @@ internal sealed record CharacterIdentityPresentation(
     /// <summary>Resolves the committed player identity including its exact gender and face media.</summary>
     internal static CharacterIdentityPresentation From(DaggerfallDefinitions definitions, DaggerfallCharacterIdentity identity, DaggerfallRacialOverrideView? racial)
     {
-        var original = From(definitions, identity) with { RacialOverride = racial };
+        var original = From(definitions, identity) with { RacialOverride = racial,
+            VampireClan = racial?.State.Vampire is { } vampireState ? Policies.DaggerfallVampirismPolicy.ClanName(definitions, vampireState.Clan) : null };
+        if (racial?.IsVampire == true)
+        {
+            string gender = identity.Gender == DaggerfallCharacterGender.Male ? "male" : "female";
+            var vampire = definitions.CharacterPresentation.RacialForms[$"vampire.{identity.RaceId}.{gender}"];
+            return original with { SelectedMedia = [.. original.SelectedMedia!.Select(media => media.Layer == "background"
+                ? new CharacterMediaIdentity(media.Layer, vampire.BodyMediaId) : media.Layer.StartsWith("head.", StringComparison.Ordinal)
+                ? new CharacterMediaIdentity(media.Layer, vampire.HeadMediaId) : media)] };
+        }
         if (racial?.State.BeastForm != true) return original;
         string key = racial.State.Kind == DaggerfallRacialKind.Werewolf ? "werewolf" : "wereboar";
         var form = definitions.CharacterPresentation.RacialForms[key];

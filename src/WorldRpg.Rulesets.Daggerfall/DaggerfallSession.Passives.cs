@@ -61,8 +61,8 @@ internal sealed partial class DaggerfallSession
         bool regeneration = CareerAdvantage("regenerate-health");
         // Classic travel advances atomically and adjusts vulnerable arrivals to dusk before
         // its catch-up pass. Our interruptible journey must not apply daylight exposure en route.
-        bool sunDamage = CareerDisadvantage("damage", "sunlight") && !State.Travel.IsExecuting;
-        bool holyDamage = CareerDisadvantage("damage", "holy-places") && InHolyPlace();
+        bool sunDamage = (CareerDisadvantage("damage", "sunlight") || State.RacialOverrides.Current?.IsVampire == true) && !State.Travel.IsExecuting;
+        bool holyDamage = (CareerDisadvantage("damage", "holy-places") || State.RacialOverrides.Current?.IsVampire == true) && InHolyPlace();
         if (!regeneration && !sunDamage && !holyDamage) return;
         var player = State.Actors.Player;
         long first = (4 - roundBefore % 4) % 4;

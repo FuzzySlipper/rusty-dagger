@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { ChangeRepute, LegalRepute, ReputeExceeds, WhenRepute, SetCrime, AddDialog, DialogLink, When, DroppedAt, RevealPlace, TeleportPlace, WorldUpdate, ClickedItem, TotingItem, ItemUsed, GiveItem, PayMoney, GivePc, FoeTeam, FoeInfighting, FoeRestraint, Enemies, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { ChangeRepute, LegalRepute, ReputeExceeds, WhenRepute, SetCrime, AddDialog, DialogLink, When, DroppedAt, RevealPlace, TeleportPlace, WorldUpdate, ClickedItem, TotingItem, ItemUsed, GiveItem, PayMoney, GivePc, FoeTeam, FoeInfighting, FoeRestraint, Enemies, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, CureVampirism, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
@@ -322,6 +322,8 @@ internal static partial class DaggerfallQuestTaskCompiler
         if (RunQuest.Match(line) is { Success: true } run)
             return new(DaggerfallQuestTaskOperationKind.RunQuest, sourceLine, line,
                 [run.Groups["quest"].Value, Canonical(run.Groups["success"].Value), Canonical(run.Groups["failure"].Value)], [], null);
+        if (line.Equals("cure vampirism", StringComparison.OrdinalIgnoreCase))
+            return new(DaggerfallQuestTaskOperationKind.CureVampirism, sourceLine, line, [], [], null);
         if (line.Equals("cure lycanthropy", StringComparison.OrdinalIgnoreCase))
             return new(DaggerfallQuestTaskOperationKind.CureLycanthropy, sourceLine, line, [], [], null);
         if (StartQuest.Match(line) is { Success: true } startQuest)
@@ -444,6 +446,7 @@ internal interface IDaggerfallQuestTaskLifecycle
     bool IsLevelCompleted(int minimum);
     bool IsAttributeAtLeast(string attribute, int minimum);
     bool IsSkillAtLeast(string skill, int minimum);
+    bool CureVampirism() => throw new NotSupportedException("No permanent vampire owner is composed.");
     bool CureLycanthropy() => throw new NotSupportedException("No permanent curse owner is composed.");
     void Train(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation);
     void JournalNote(DaggerfallQuestRuntimeInstance instance, int messageId, string task, int operationIndex);
@@ -794,6 +797,10 @@ internal static class DaggerfallQuestTaskRunner
                         break;
                     case DaggerfallQuestTaskOperationKind.StartQuest:
                         lifecycle.Schedule(instance, operation);
+                        MarkCompleted(state, operationIndex);
+                        break;
+                    case DaggerfallQuestTaskOperationKind.CureVampirism:
+                        if (!lifecycle.CureVampirism()) return;
                         MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.CureLycanthropy:

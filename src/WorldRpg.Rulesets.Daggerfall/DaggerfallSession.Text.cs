@@ -173,6 +173,7 @@ internal sealed partial class DaggerfallSession
                 Season: calendar.Season.ToString()),
             new DaggerfallTextLocationContext(City: _site.ActiveSite?.Name,
                 Region: _site.Region?.ToString(System.Globalization.CultureInfo.InvariantCulture)),
-            new(), new(), new()), resources);
+            new DaggerfallTextFactionContext(VampireClan: State.RacialOverrides.Current?.State.Vampire is { } vampire
+                ? Policies.DaggerfallVampirismPolicy.ClanName(_definitions, vampire.Clan) : null), new(), new()), resources);
     }
 }

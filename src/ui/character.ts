@@ -47,7 +47,7 @@ export interface CharacterEquipment {
 }
 
 export interface CharacterIdentity {
-  readonly racialOverride?: { readonly name: string; readonly beastForm: boolean; readonly suppressInventory: boolean } | null;
+  readonly racialOverride?: { readonly name: string; readonly vampireClan?: string | null; readonly beastForm: boolean; readonly suppressInventory: boolean } | null;
   readonly race: string;
   readonly donorRaceId: number;
   readonly portrait: string;
@@ -168,7 +168,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
       const published = image('window.character-sheet.chrome');
       if (published !== null && chrome.src !== published) chrome.src = published;
       portrait.replaceChildren(...(value.identity?.selectedMedia ?? []).filter(media =>
-        media.layer.startsWith('head') || value.identity?.racialOverride?.beastForm && media.layer === 'background').flatMap(media => {
+        media.layer.startsWith('head') || (value.identity?.racialOverride?.beastForm || value.identity?.racialOverride?.vampireClan) && media.layer === 'background').flatMap(media => {
           const source = image(media.mediaId); if (source === null) return [];
           const img = document.createElement('img'); img.src = source; img.dataset.mediaId = media.mediaId;
           img.alt = `${value.identity?.racialOverride?.beastForm ? value.identity.racialOverride.name : value.name} ${media.layer.startsWith('head') ? 'portrait' : 'form'}`;
@@ -182,7 +182,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
           overviewRow('Level progress', `${format(value.progression.skillProgress)} / ${format(value.progression.nextLevelSkillProgress)} skill total${value.progression.pendingLevelUp === true ? ' · Level up ready' : ''}`),
         ]),
         ...(value.identity ? [overviewRow('Race', value.identity.race), overviewRow('Career', value.identity.career),
-          ...(value.identity.racialOverride ? [overviewRow('Form', `${value.identity.racialOverride.name} · ${value.identity.racialOverride.beastForm ? 'Beast form' : 'Human form'}`)] : []),
+          ...(value.identity.racialOverride ? [overviewRow('Form', `${value.identity.racialOverride.name} · ${value.identity.racialOverride.vampireClan ?? (value.identity.racialOverride.beastForm ? 'Beast form' : 'Human form')}`)] : []),
           overviewRow('Face', `${value.identity.gender} ${format(value.identity.faceIndex + 1)}`)] : []),
       );
       renderRows(resources.rows, value.resources.map(resource => ({
@@ -400,6 +400,7 @@ function isIdentity(value: unknown): value is CharacterIdentity {
 function isRacialOverride(value: unknown): boolean {
   return typeof value === 'object' && value !== null
     && 'name' in value && typeof value.name === 'string'
+    && (!('vampireClan' in value) || value.vampireClan == null || typeof value.vampireClan === 'string')
     && 'beastForm' in value && typeof value.beastForm === 'boolean'
     && 'suppressInventory' in value && typeof value.suppressInventory === 'boolean';
 }

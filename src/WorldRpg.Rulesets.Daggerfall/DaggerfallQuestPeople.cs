@@ -1,4 +1,5 @@
 using Rusty.Engine;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -90,13 +91,7 @@ internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions defin
         return definitions.Text.RequireInternalEntry(key, 0);
     }
 
-    private string ClanName(int factionId)
-    {
-        // FormulaHelper.GetVampireClan maps the province's 150..158 identity to these localized race keys.
-        string[] keys = ["vraseth", "haarvenu", "thrafey", "lyrezi", "montalion", "khulari", "garlythi", "anthotis", "selenu"];
-        if (factionId is < 150 or > 158) return RequireFaction(factionId).Name;
-        return definitions.Text.RequireInternalEntry(keys[factionId - 150], 0);
-    }
+    private string ClanName(int factionId) => DaggerfallVampirismPolicy.ClanName(definitions, factionId);
 
     private int ResolveFaction(DaggerfallQuestInstanceSave instance, DaggerfallQuestPersonOptions options, int region, string key)
     {
@@ -145,12 +140,7 @@ internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions defin
         throw new ArgumentException("A Person requires a named individual, career group, faction type or alliance.");
     }
 
-    internal DaggerfallFactionDefinition RegionClan(int region)
-    {
-        var clan = RequireFaction(RegionFaction(region, 7).Vampire);
-        if (clan.Type != 6) throw new NotSupportedException($"Region {region} province names non-clan faction {clan.Id}.");
-        return clan;
-    }
+    internal DaggerfallFactionDefinition RegionClan(int region) => DaggerfallVampirismPolicy.GetVampireClan(definitions.Factions, region);
     private DaggerfallFactionDefinition RegionFaction(int region, int type, int? social = null, int? guild = null)
     {
         var matches = definitions.Factions.Factions.Values.Where(value => value.Region == region && value.Type == type

@@ -13,10 +13,17 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
     DaggerfallInfectionConsumption IDaggerfallTransformationConsumer.Consume(DaggerfallInfectionTransition transition)
     {
         if (transition.Kind == DaggerfallInfectionKind.Vampire)
-            return new(false, "Permanent vampire transformation is unavailable.");
+            return ConsumeVampireInfection(transition);
         var kind = transition.Kind == DaggerfallInfectionKind.Werewolf ? DaggerfallRacialKind.Werewolf : DaggerfallRacialKind.Wereboar;
         if (!State.RacialOverrides.Select(kind, $"lycanthropy:{transition.Instance}", MinuteIndex(_time.Calendar)))
             return new(false, "A racial override is already active.");
+        HealRacialTransformation();
+        Presentation.SetOutcome($"You are now a {State.RacialOverrides.Current!.Name.ToLowerInvariant()}.");
+        return new(true, null);
+    }
+
+    private void HealRacialTransformation()
+    {
         foreach (var disease in Enum.GetValues<DaggerfallClassicDisease>()) CureDisease(disease);
         CurePoison();
         foreach (var attribute in DaggerfallMechanicsIds.Attributes)
@@ -27,13 +34,11 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
             var value = State.Actors.Player.Stats.GetTrack(TrackId.Parse(track));
             value.SetCurrent(value.Maximum.Value);
         }
-        Presentation.SetOutcome($"You are now a {State.RacialOverrides.Current!.Name.ToLowerInvariant()}.");
-        return new(true, null);
     }
 
     internal bool MorphPlayer(bool forced = false, long? transitionMinute = null)
     {
-        if (State.RacialOverrides.Current is not { } racial) return false;
+        if (State.RacialOverrides.Current is not { IsVampire: false } racial) return false;
         long minute = transitionMinute ?? MinuteIndex(_time.Calendar);
         if (!racial.State.BeastForm && !forced && !State.HeldEnchantments.HircinesRingEquipped
             && racial.State.LastMorphMinute is long last && minute - last <= _tuning.Lycanthropy.MorphCooldownMinutes)
@@ -52,7 +57,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
 
     internal bool CureLycanthropy(bool fromQuest = false)
     {
-        if (State.RacialOverrides.Current is not { } racial)
+        if (State.RacialOverrides.Current is not { IsVampire: false } racial)
         {
             Presentation.SetOutcome("Lycanthropy cure has no active curse to remove.");
             return false;
@@ -69,7 +74,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
 
     private void AdvanceLycanthropyRound(DaggerfallCalendar before)
     {
-        if (State.RacialOverrides.Current is not { State.BeastForm: false } || State.HeldEnchantments.HircinesRingEquipped) return;
+        if (State.RacialOverrides.Current is not { State.BeastForm: false, IsVampire: false } || State.HeldEnchantments.HircinesRingEquipped) return;
         // Rest and travel admit an interval rather than visiting every minute. A lunar cycle is
         // 32 days; inspect at most one cycle to retain the first forced transformation it crossed.
         var firstRound = before.Advance(60 - before.Second, out _);
@@ -82,7 +87,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
 
     private void RefreshLycanthropy()
     {
-        if (State.RacialOverrides.Current is not { } racial) return;
+        if (State.RacialOverrides.Current is not { IsVampire: false } racial) return;
         var actor = State.Actors.Player;
         var maximum = actor.Stats.GetStat(StatId.Parse("health-maximum"));
         var identity = new EffectSourceIdentity(actor.Actor.Entity, EffectInstanceId.Parse(racial.Source), 1,

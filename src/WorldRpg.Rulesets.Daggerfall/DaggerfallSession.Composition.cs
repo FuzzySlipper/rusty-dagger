@@ -252,7 +252,7 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallDestructionEffects.Definitions(_vitality, AppendEffectDamage, AppendSpellTrackLoss,
                     id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition),
                     ReactToSpellAttack),
-                DaggerfallRacialOverrides.Definition(character, tuning.Lycanthropy),
+                DaggerfallRacialOverrides.Definition(character, tuning.Lycanthropy, tuning.Vampirism),
                 .. DaggerfallTransformationInfectionPolicy.Definitions(effect => Infections!.Advance(effect)),
                 .. DaggerfallDiseasePolicy.Definitions(
                     _random,
@@ -263,7 +263,7 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => character.Career),
                 DaggerfallTempleBlessingEffects.Definition(social, () => character.Career, actors.Player.DurableId),
             ]));
-            character.AttachRacialOverrides(new(effects, character));
+            character.AttachRacialOverrides(new(effects, character, definitions, RacialOverrideRemoved));
             effects.RestoreMagicRounds(saved?.MagicRounds ?? 0);
             Infections = new(effects, () => _time.Calendar.DayNumber, Cinematics, composition.VideosEnabled,
                 message => Presentation.SetOutcome(message), saved?.Infections);
@@ -285,6 +285,7 @@ internal sealed partial class DaggerfallSession
                 skillUses.PermanentSkillValue, DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
             DaggerfallConcreteGuildMembershipRuntime concreteGuildMembership = new(guildMembership);
             assembled.Quests.BindLycanthropyCure(() => CureLycanthropy(fromQuest: true));
+            assembled.Quests.BindVampirismCure(() => CureVampirism(fromQuest: true));
             assembled.Quests.BindRuntime(new DaggerfallQuestRuntime(progression, playerStats, definitions,
                 assembled.QuestTraining, tuning.Locomotion, _random, () => _time.Calendar, AdvanceQuestTime));
             assembled.Quests.BindTravelMinutes(site => _travelPolicy.CautiousQuestLegMinutes(QuestTravelOrigin(), site));
@@ -472,7 +473,8 @@ internal sealed partial class DaggerfallSession
                 State.Social.GuildEligibility, State.RegionalPrices.AdjustmentForRegion, _inventoryUi.DescribeCreatedItem));
             State.Quests.BindPersonAllocator(new(definitions, engine.Random, questNames,
                 instance => new(_site.ActiveSite ?? throw new NotSupportedException("Quest Person selection requires the current site."),
-                    instance.QuestorId is long giver ? State.Npcs.Require(giver) : null, CurrentProfile: _sites.ActiveProfile,
+                    instance.QuestorId is long giver ? State.Npcs.Require(giver) : null,
+                    PermanentPlayerClanFactionId: State.RacialOverrides.Current?.State.Vampire?.Clan, CurrentProfile: _sites.ActiveProfile,
                     Interior: _sites.Projection.Inputs.InteriorBuilding),
                 State.Npcs.SetDisplayName, questPlaces));
             _inventoryUi.UseBank(State.Bank, ActiveBankRegion);

@@ -26,6 +26,7 @@
     "arrestReach": 3.2
   },
   "normalLight": { "distance": 1.4, "heightFraction": 0.25, "range": 15, "intensity": 1 },
+  "vampirism": { "attributeBonus": 20, "skillBonus": 30, "satiationMinutes": 1440 },
   "lycanthropy": {
     "attributeBonus": 40,
     "skillBonus": 30,
@@ -204,6 +205,7 @@
     "beastMaximumDelaySeconds": 20,
     "beastAttackChancePercent": 10,
     "beastBarkChancePercent": 20,
+    "vampireBarkChancePercent": 20,
     "contactPitch": 1.1
   },
   "progression": {

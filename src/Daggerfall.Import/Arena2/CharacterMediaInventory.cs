@@ -57,6 +57,7 @@ public sealed class CharacterMediaInventory
         ("WERE", 2, "lycanthrope heads"),
         ("WOLF", 1, "werewolf paper doll"),
         ("BOAR", 1, "wereboar paper doll"),
+        ("VAMP", 1, "vampire heads by birth race and gender"),
     ];
 
     private CharacterMediaInventory(string source, IReadOnlyList<CharacterMediaRecord> files)

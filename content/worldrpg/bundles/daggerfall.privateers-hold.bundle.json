@@ -71,6 +71,18 @@
     },
     {
       "id": "daggerfall.large-ship"
+    },
+    {
+      "id": "daggerfall.the-hawkston-cemetery"
+    },
+    {
+      "id": "daggerfall.the-tombs-of-klerd"
+    },
+    {
+      "id": "daggerfall.the-hawkston-cemetery-exterior"
+    },
+    {
+      "id": "daggerfall.the-tombs-of-klerd-exterior"
     }
   ],
   "tuning": {

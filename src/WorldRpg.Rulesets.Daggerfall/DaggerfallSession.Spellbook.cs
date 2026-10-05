@@ -49,7 +49,7 @@ internal sealed partial class DaggerfallSession
                 break;
             case DaggerfallUiActionKind.SpellDelete:
                 // Normalized source record for classic spell identity 92. Cure owns removal;
-                // future vampire-granted ordinary spells require per-grant tags from the curse owner.
+                // Vampire and lycanthrope grants carry protected source tags from the racial owner.
                 _spellResult = (action.Key == "spell.085" || State.Character.IsGrantedSpell(action.Key!)) && State.Character.KnownSpells.Contains(action.Key)
                     ? "ProtectedSpell" : !action.Confirm ? "ConfirmationRequired"
                     : State.Character.ForgetSpell(action.Key!) ? "Forgotten" : "UnknownSpell";

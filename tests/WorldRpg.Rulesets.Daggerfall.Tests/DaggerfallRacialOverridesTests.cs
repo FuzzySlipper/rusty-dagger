@@ -71,17 +71,15 @@ public sealed class DaggerfallRacialOverridesTests
     }
 
     [Fact]
-    public void Ordinary_spell_grants_of_either_curse_kind_restore_and_cleanup_with_their_source()
+    public void Saved_curse_grants_must_match_the_actual_racial_owner()
     {
         using var session = FreshSession();
         session.State.RacialOverrides.Select(DaggerfallRacialKind.Werewolf, "curse", 0);
         session.State.Character.GrantSpell("spell.009", "curse", DaggerfallSpellGrantKind.Vampirism);
-        using var restored = Restore(session.CaptureSave());
-        Assert.True(restored.State.Character.IsGrantedSpell("spell.009"));
-        Assert.False(restored.State.Character.ForgetSpell("spell.009"));
-        restored.State.RacialOverrides.Remove("curse");
-        Assert.False(restored.State.Character.IsGrantedSpell("spell.009"));
-        Assert.DoesNotContain("spell.009", restored.State.Character.KnownSpells);
+        Assert.Throws<ArgumentException>(() => Restore(session.CaptureSave()));
+        session.State.RacialOverrides.Remove("curse");
+        Assert.False(session.State.Character.IsGrantedSpell("spell.009"));
+        Assert.DoesNotContain("spell.009", session.State.Character.KnownSpells);
     }
 
     [Theory]
