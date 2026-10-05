@@ -11,7 +11,8 @@ internal sealed partial class DaggerfallSession
     {
         ArgumentNullException.ThrowIfNull(provider);
         provider.Validate();
-        if (!string.Equals(provider.Service, "banking", StringComparison.Ordinal)
+        if (State.RacialOverrides.Current?.SuppressInventory == true
+            || !string.Equals(provider.Service, "banking", StringComparison.Ordinal)
             || State.Services.ProviderAvailable(provider) != DaggerfallServiceDenial.None)
             return false;
         _sites.BankProvider = provider;
@@ -28,7 +29,7 @@ internal sealed partial class DaggerfallSession
         if (npc is null || !TryOpenBank(new(npc.DurableId, npc.Site, "banking")))
         { Presentation.SetOutcome("That bank service is no longer available."); return; }
         _dialogue!.Close();
-        _interactions.RequestPanel("inventory");
+        RequestPanel(DaggerfallPanel.Inventory);
         Presentation.SetOutcome("Bank services opened.");
     }
 
