@@ -1,4 +1,10 @@
 {
+  "questRewards": {
+    "minimumDeliveryHour": 7,
+    "maximumDeliveryHour": 18,
+    "minimumDelaySeconds": 4,
+    "maximumDelaySeconds": 50
+  },
   "questSpawning": {
     "minimumFoeDistance": 5,
     "maximumFoeDistance": 20,

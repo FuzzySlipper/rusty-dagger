@@ -604,7 +604,6 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     internal DaggerfallQuestItemResult TakeItem(string instanceId, string symbol) => Items.Take(Active(instanceId), symbol);
     internal DaggerfallQuestItemResult MakeItemPermanent(string instanceId, string symbol) => Items.MakePermanent(Active(instanceId), symbol);
     internal int? ItemUsedMessage(string instanceId, string symbol) => ItemUsedMessage(Active(instanceId), symbol);
-    internal int? ItemGrantNotification(string instanceId, DaggerfallQuestTaskOperation operation) => ItemGrantNotification(Active(instanceId), operation);
     /// <summary>Resolves retained source letter-use text for the item-use executor without publishing it.</summary>
     internal int? ItemUsedMessage(DaggerfallQuestRuntimeInstance instance, string symbol)
     {
@@ -613,8 +612,6 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
             ?? throw new ArgumentException($"Quest '{instance.SourceFile}' has no Item '{symbol}'.");
         return ResolveItemMessage(instance, declaration.Item?.UsedMessage);
     }
-    /// <summary>#8133 consumes the compiler's exact give-pc notify operand after accepted mutation.</summary>
-    internal int? ItemGrantNotification(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => ResolveItemMessage(instance, operation.MessageAlias);
     private int? ResolveItemMessage(DaggerfallQuestRuntimeInstance instance, string? reference)
     {
         if (reference is null) return null;
@@ -978,6 +975,12 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 operation => Messages.ResolvePromptMessage(instance, operation));
         }
         Messages.Restore(saved.Messages, _instances);
+        foreach (var instance in _instances.Values)
+            foreach (var reward in instance.Tasks.SelectMany(task => task.OperationState).Select(operation => operation.Reward).OfType<DaggerfallQuestRewardState>())
+                if (!reward.LootOpened && reward.GroundContainer is not null && !Messages.Deliveries.Any(delivery =>
+                    delivery.InstanceId == instance.InstanceId && delivery.Id == reward.DeliveryId && delivery.MessageId == 1004
+                    && delivery.Delivery == DaggerfallQuestMessageDelivery.Popup))
+                    throw new ArgumentException("Pending quest reward loot requires its completion notification.");
     }
 
     private DaggerfallQuestInstanceSave Transition(string instanceId, DaggerfallQuestLifecycle lifecycle, string outcome)
@@ -1230,8 +1233,12 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 DaggerfallQuestTaskOperation operation = task.Operations[operationIndex];
                 DaggerfallQuestTaskOperationState receipt = state.OperationState[operationIndex];
                 if (receipt.UnavailableReason is { } reason && (string.IsNullOrWhiteSpace(reason)
-                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
+                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
                     throw new ArgumentException("Quest unsupported world detail must identify its owning action.");
+                if (receipt.Reward is { } reward && (operation.Kind != DaggerfallQuestTaskOperationKind.GivePc
+                    || !double.IsFinite(reward.DelaySeconds) || reward.DelaySeconds < 0 || reward.GroundContainer <= 0 || reward.DeliveryId == 0
+                    || reward.DeliveryId is not null && reward.GroundContainer is null && !reward.LootOpened))
+                    throw new ArgumentException("Quest reward state has an invalid delay or pending loot notification.");
                 if (receipt.GuardSpawn is { } guardSpawn)
                 {
                     if (operation.Kind != DaggerfallQuestTaskOperationKind.SpawnCityGuards) throw new ArgumentException("Quest guard state requires its guard action.");

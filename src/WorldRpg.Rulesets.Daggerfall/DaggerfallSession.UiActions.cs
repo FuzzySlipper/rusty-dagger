@@ -174,7 +174,7 @@ internal sealed partial class DaggerfallSession
                 else Presentation.SetOutcome(DaggerfallUiAction.RuleFor(DaggerfallUiActionKind.QuestChoice).Refusal!);
                 break;
             case DaggerfallUiActionKind.QuestDismiss:
-                _ = State.Quests.Messages.Dismiss(action.QuestInstance!, action.QuestDelivery!);
+                _ = State.Quests.DismissRewardMessage(action.QuestInstance!, action.QuestDelivery!);
                 break;
             case DaggerfallUiActionKind.DungeonTextAnswer:
             case DaggerfallUiActionKind.DungeonTextClose: ApplyDungeonTextInput(action); break;
