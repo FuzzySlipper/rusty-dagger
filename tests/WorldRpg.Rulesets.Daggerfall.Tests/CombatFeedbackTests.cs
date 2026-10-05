@@ -72,12 +72,12 @@ public sealed class CombatFeedbackTests
         AttackHitFact applied = new(1, 11, 5, 5, 0, false, 1, 2);
         presentation.React(applied, actors);
         presentation.React(applied, actors);
-        AudioEmitRequest cue = Assert.Single(audio.Emits);
-        Assert.EndsWith(".hit4", cue.SignalId, StringComparison.Ordinal);
-        Assert.Equal(AudioEmitterKind.World3d, cue.Descriptor.EmitterKind);
-        Assert.Equal(new Vector3(2, 0, 3), cue.Descriptor.Position);
-        Assert.Equal(1F, cue.Descriptor.SpatialBlend);
-        Assert.Equal(1.1F, cue.Descriptor.Pitch);
+        AudioSourceDescriptor cue = Assert.Single(audio.Voices);
+        Assert.Equal((ulong)(MediaInputs().Audio.ToList().FindIndex(value => value.Id == "hit4") + 1), cue.Clip.Handle.Value);
+        Assert.Equal(AudioEmitterKind.World3d, cue.EmitterKind);
+        Assert.Equal(new Vector3(2, 0, 3), cue.Position);
+        Assert.Equal(1F, cue.SpatialBlend);
+        Assert.Equal(1.1F, cue.Pitch);
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public sealed class CombatFeedbackTests
         AttackHitFact blocked = new(1, 11, 0, 0, 0, false, 1, 2) { Feedback = new(true, "swing") };
         presentation.React(blocked, actors);
         presentation.React(blocked, actors);
-        Assert.EndsWith(".sound.436", Assert.Single(audio.Emits).SignalId, StringComparison.Ordinal);
+        Assert.Equal((ulong)(inputs.Audio.ToList().FindIndex(value => value.Id == "sound.436") + 1), Assert.Single(audio.Voices).Clip.Handle.Value);
         Assert.Equal(100, actors.Get(11).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).ValueInt64);
     }
 
@@ -166,10 +166,47 @@ public sealed class CombatFeedbackTests
         Assert.Empty(audio.Emits);
         presentation.AdvanceMobileFeedback(OuterUpdate(3), actors, new(0, 0, 0), (_, _) => true);
         presentation.AdvanceMobileFeedback(OuterUpdate(3), actors, new(0, 0, 0), (_, _) => true);
-        AudioEmitRequest cue = Assert.Single(audio.Emits);
-        Assert.EndsWith(".sound.11", cue.SignalId, StringComparison.Ordinal);
-        Assert.Equal(.25F, cue.Descriptor.Volume);
-        Assert.Equal(AudioEmitterKind.World3d, cue.Descriptor.EmitterKind);
+        AudioSourceDescriptor cue = Assert.Single(audio.Voices);
+        Assert.Equal((ulong)(FeedbackInputs(0).Audio.ToList().FindIndex(value => value.Id == "sound.11") + 1), cue.Clip.Handle.Value);
+        Assert.Equal(.25F, cue.Volume);
+        Assert.Equal(AudioEmitterKind.World3d, cue.EmitterKind);
+    }
+
+    [Fact]
+    public void Hearing_changes_update_the_same_playing_voice_and_completion_and_site_disposal_release_it()
+    {
+        List<string> releases = [];
+        var audio = AudioRecorder.Create();
+        using var actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
+        var presentation = new DaggerfallSiteAppearance(MediaContent(releases), new AppearanceFake(releases),
+            MediaInputs(), audio.Service);
+        float range = 16;
+        presentation.UseEnemyAudibleRange(() => range);
+        presentation.React(new AttackHitFact(1, 11, 5, 5, 0, false, 1, 2), actors);
+        var initial = Assert.Single(audio.Voices);
+        Assert.Equal(16, initial.MaxDistance);
+        Assert.Equal(AudioRolloff.Linear, initial.Rolloff);
+        Assert.False(initial.Looping);
+        foreach (float changed in new[] { 20F, 24F, 20F, 16F })
+        {
+            range = changed;
+            presentation.RefreshEnemyVoices(actors);
+            Assert.Equal(changed, audio.Updates.Last().Descriptor.MaxDistance);
+            Assert.Same(audio.VoiceHandles.Single(), audio.Updates.Last().Voice);
+        }
+        Assert.Single(audio.Voices);
+        Assert.Empty(audio.Controls); // Changing hearing never restarts a cue.
+        audio.RealizationFacts.Add(new(AudioRealizationFactKind.NaturalCompletionRetainedVoice, 1, 0, 0,
+            audio.VoiceHandles.Single().Handle.Value, default));
+        presentation.BeginAdmittedUpdate();
+        Assert.Equal(1, audio.ReleasedVoices);
+        presentation.React(new AttackHitFact(1, 11, 5, 5, 0, false, 1, 3), actors);
+        presentation.RetireActor(11);
+        Assert.Equal(2, audio.ReleasedVoices);
+        Assert.True(actors.TryGet(11, out _)); // Suspension retains the actor, but must stop its cue.
+        presentation.RefreshEnemyVoices(actors);
+        presentation.Dispose();
+        Assert.Equal(2, audio.ReleasedVoices);
     }
 
     [Fact]

@@ -69,6 +69,7 @@ internal sealed partial class DaggerfallCharacterState
         ArgumentNullException.ThrowIfNull(stats);
         ArgumentNullException.ThrowIfNull(player);
         _definitions = definitions;
+        RestoreSpellGrants(restored?.SpellGrants ?? []);
         _stats = stats;
         Identity = restored is null
             ? new DaggerfallCharacterIdentity(
@@ -120,6 +121,7 @@ internal sealed partial class DaggerfallCharacterState
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         if (!_definitions.Magic.Spells.ContainsKey(key))
             throw new ArgumentException($"No published spell carries the key '{key}'.", nameof(key));
+        if (_spellGrants.TryGetValue(key, out var grant)) _spellGrants[key] = grant with { Learned = true };
         return _knownSpells.Add(key);
     }
 
@@ -144,12 +146,19 @@ internal sealed partial class DaggerfallCharacterState
     internal event Action<string>? SpellForgotten;
     internal bool ForgetSpell(string key)
     {
-        if(!_knownSpells.Remove(key)) return false;
+        if (_spellGrants.ContainsKey(key) || !_knownSpells.Remove(key)) return false;
         SpellForgotten?.Invoke(key); return true;
     }
     /// <summary>The committed BIOG text retained with this character, distinct from an editable draft.</summary>
     internal IReadOnlyList<string> History => _background?.Biography ?? [];
-    internal DaggerfallRaceDefinition Race => _definitions.Catalogs.RequireRace(Identity.RaceId);
+    internal DaggerfallRacialOverrides? RacialOverrides { get; private set; }
+    internal void AttachRacialOverrides(DaggerfallRacialOverrides racialOverrides)
+    {
+        if (RacialOverrides is not null) throw new InvalidOperationException("Character racial owner is already composed.");
+        RacialOverrides = racialOverrides;
+    }
+    internal DaggerfallRaceDefinition Race => RacialOverrides?.ApplyToBirthRace(_definitions.Catalogs.RequireRace(Identity.RaceId))
+        ?? _definitions.Catalogs.RequireRace(Identity.RaceId);
 
     internal IReadOnlyList<DaggerfallCareerSkillGrant> GrantedSkills =>
     [
@@ -192,7 +201,7 @@ internal sealed partial class DaggerfallCharacterState
                 _ => "Very low",
             })).ToArray();
         DaggerfallCustomCareerPresentation? custom = (Pending is not null || current.CareerId == DaggerfallCustomCareerPolicy.CareerId) && current.CustomCareer is { } draft
-            ? new(draft, [.. DaggerfallCustomCareerPolicy.Validate(_definitions, draft)], [.. _definitions.Catalogs.Skills.Select(skill => skill.Id)], [.. DaggerfallCustomCareerPolicy.SupportedAdvantages], [.. DaggerfallCustomCareerPolicy.SupportedDisadvantages])
+            ? new(draft, [.. DaggerfallCustomCareerPolicy.Validate(_definitions, draft)], [.. _definitions.Catalogs.Skills.Select(skill => skill.Id)], DaggerfallCustomCareerPolicy.Options(DaggerfallCustomCareerPolicy.SupportedAdvantages), DaggerfallCustomCareerPolicy.Options(DaggerfallCustomCareerPolicy.SupportedDisadvantages))
             : null;
         DaggerfallCharacterBackgroundPresentation? background = current.Background is { } backgroundDraft && (Pending is not null || _background is not null)
             ? DaggerfallCharacterBackgroundPolicy.Present(_definitions, CurrentCareer(current), current.ToIdentity(), backgroundDraft) : null;
@@ -219,7 +228,7 @@ internal sealed partial class DaggerfallCharacterState
 
     internal void AbandonCreation()
     {
-        CancelChoices(); _background = null; _customCareer = null; _knownSpells.Clear();
+        CancelChoices(); _background = null; _customCareer = null; _knownSpells.Clear(); _spellGrants.Clear();
         Identity = _initialIdentity; ApplyCareerBases();
     }
 
@@ -292,7 +301,7 @@ internal sealed partial class DaggerfallCharacterState
 
     internal DaggerfallCharacterSave Capture() => new(
         Identity.Name, Identity.RaceId, Identity.Gender, Identity.FaceIndex, Identity.Reflexes, Identity.CareerId, _customCareer is null ? null : ToChoices(_customCareer), _background,
-        [.. _knownSpells.Order(StringComparer.Ordinal)]);
+        [.. _knownSpells.Order(StringComparer.Ordinal)], [.. _spellGrants.Values.OrderBy(grant => grant.Spell, StringComparer.Ordinal)]);
 
     private void Validate(DaggerfallCharacterIdentity identity)
     {
@@ -352,7 +361,8 @@ internal sealed record DaggerfallCharacterSave(
     string CareerId,
     DaggerfallCustomCareerChoices? CustomCareer = null,
     DaggerfallCharacterBackgroundSave? Background = null,
-    string[]? KnownSpells = null)
+    string[]? KnownSpells = null,
+    DaggerfallSpellGrantSave[]? SpellGrants = null)
 {
     internal void Validate(DaggerfallDefinitions definitions)
     {

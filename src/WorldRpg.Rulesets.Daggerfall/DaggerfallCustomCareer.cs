@@ -48,15 +48,16 @@ internal static class DaggerfallCustomCareerPolicy
     private const int MinimumHp = 4, MaximumHp = 30, DefaultHp = 8, MinimumDifficulty = -12, MaximumDifficulty = 40;
     private static readonly HashSet<string> Advantages = new(StringComparer.Ordinal)
     {
-        "adrenaline-rush", "bonus-to-hit", "expertise", "immunity", "increased-magery", "resistance",
+        "acute-hearing", "adrenaline-rush", "athleticism", "bonus-to-hit", "expertise", "immunity", "increased-magery", "resistance",
+        "rapid-healing", "regenerate-health", "spell-absorption",
     };
     private static readonly HashSet<string> Disadvantages = new(StringComparer.Ordinal)
     {
-        "critical-weakness", "forbidden-armor", "forbidden-material", "forbidden-shield", "forbidden-weapon", "low-tolerance", "phobia",
+        "damage", "darkness-powered-magery", "light-powered-magery", "inability-to-regen", "critical-weakness", "forbidden-armor", "forbidden-material", "forbidden-shield", "forbidden-weapon", "low-tolerance", "phobia",
     };
     private static readonly Dictionary<string, int> TraitDifficulty = new(StringComparer.Ordinal)
     {
-        ["acute-hearing"] = 1, ["adrenaline-rush"] = 4, ["athleticism"] = 4, ["bonus-to-hit"] = 6, ["expertise"] = 2, ["immunity"] = 10,
+        ["acute-hearing"] = 1, ["adrenaline-rush"] = 4, ["athleticism"] = 4, ["bonus-to-hit"] = 6, ["bonus-to-hit:daedra"] = 3, ["expertise"] = 2, ["immunity"] = 10,
         ["increased-magery:1"] = 2, ["increased-magery:1.5"] = 4, ["increased-magery:1.75"] = 6, ["increased-magery:2"] = 8, ["increased-magery:3"] = 10,
         ["rapid-healing:general"] = 4, ["rapid-healing:darkness"] = 3, ["rapid-healing:light"] = 2,
         ["regenerate-health:general"] = 14, ["regenerate-health:darkness"] = 10, ["regenerate-health:light"] = 6, ["regenerate-health:immersed"] = 2,
@@ -72,12 +73,15 @@ internal static class DaggerfallCustomCareerPolicy
     {
         ["bonus-to-hit"] = ["animals", "daedra", "humanoid", "undead"], ["phobia"] = ["animals", "daedra", "humanoid", "undead"],
         ["expertise"] = ["axe", "blunt-weapon", "hand-to-hand", "long-blade", "archery", "short-blade"], ["forbidden-weapon"] = ["axe", "blunt-weapon", "hand-to-hand", "long-blade", "archery", "short-blade"],
-        ["immunity"] = ["disease"], ["resistance"] = ["disease"], ["critical-weakness"] = ["disease"], ["low-tolerance"] = ["disease"],
+        ["immunity"] = ["fire", "frost", "poison", "shock", "magic", "paralysis", "disease"], ["resistance"] = ["fire", "frost", "poison", "shock", "magic", "paralysis", "disease"], ["critical-weakness"] = ["fire", "frost", "poison", "shock", "magic", "paralysis", "disease"], ["low-tolerance"] = ["fire", "frost", "poison", "shock", "magic", "paralysis", "disease"],
         ["increased-magery"] = ["1", "1.5", "1.75", "2", "3"], ["rapid-healing"] = ["general", "darkness", "light"], ["spell-absorption"] = ["general", "darkness", "light"], ["regenerate-health"] = ["general", "darkness", "light", "immersed"], ["damage"] = ["holy-places", "sunlight"], ["darkness-powered-magery"] = ["reduced", "unable"], ["light-powered-magery"] = ["reduced", "unable"], ["forbidden-armor"] = ["chain", "leather", "plate"], ["forbidden-material"] = ["adamantium", "daedric", "dwarven", "ebony", "elven", "iron", "mithril", "orcish", "silver", "steel"], ["forbidden-shield"] = ["buckler", "kite-shield", "round-shield", "tower-shield"],
     };
 
     internal static IReadOnlyList<string> SupportedAdvantages => Advantages.Order(StringComparer.Ordinal).ToArray();
     internal static IReadOnlyList<string> SupportedDisadvantages => Disadvantages.Order(StringComparer.Ordinal).ToArray();
+
+    internal static string[] Options(IReadOnlyList<string> traits) => traits.SelectMany(id => TraitTargets.TryGetValue(id, out var targets)
+        ? targets.Select(target => $"{id}:{target}") : [id]).ToArray();
 
     internal static DaggerfallCustomCareerDefinition Compile(DaggerfallDefinitions definitions, DaggerfallCustomCareerChoices choices, DaggerfallCareerDefinition attributeBase)
     {
@@ -156,8 +160,7 @@ internal static class DaggerfallCustomCareerPolicy
                 errors.Add($"'{trait.Id}' does not take a target.");
         }
         if (all.Select(Key).Distinct(StringComparer.Ordinal).Count() != all.Length) errors.Add($"Duplicate {role}s are not allowed.");
-        foreach (string id in new[] { "increased-magery", "darkness-powered-magery", "light-powered-magery" })
-            if (all.Count(trait => trait.Id == id) > 1) errors.Add($"'{id}' may be chosen only once.");
+
     }
 
     private static void ValidatePairs(IEnumerable<DaggerfallCustomCareerTrait> advantages, IEnumerable<DaggerfallCustomCareerTrait> disadvantages, List<string> errors)
@@ -175,13 +178,13 @@ internal static class DaggerfallCustomCareerPolicy
 
     private static int TraitPoints(DaggerfallCustomCareerTrait trait) => TraitDifficulty.GetValueOrDefault(Key(trait), TraitDifficulty.GetValueOrDefault(trait.Id));
     private static string Key(DaggerfallCustomCareerTrait trait) => trait.Target is { Length: > 0 } target ? $"{trait.Id}:{target}" : trait.Id;
-    private static int MageryMultiplier(IEnumerable<DaggerfallCustomCareerTrait> advantages) => advantages.SingleOrDefault(trait => trait.Id == "increased-magery")?.Target switch
+    private static int MageryMultiplier(IEnumerable<DaggerfallCustomCareerTrait> advantages) => advantages.LastOrDefault(trait => trait.Id == "increased-magery")?.Target switch
     {
         "1" => 1000, "1.5" => 1500, "1.75" => 1750, "2" => 2000, "3" => 3000, _ => 500,
     };
     private static int Flags(IEnumerable<DaggerfallCustomCareerTrait> traits, string id) => traits.Where(trait => trait.Id == id).Aggregate(0, (flags, trait) => flags | Flag(trait.Target));
-    private static int Flag(string? target) => target switch { "fire" => 8, "frost" => 16, "disease" or "poison" => 64, "shock" => 32, "magic" => 2, "paralysis" => 1, _ => 0 };
-    private static IReadOnlyList<string> Elements(int flags) => new[] { (8, "fire"), (16, "frost"), (64, "disease-or-poison"), (32, "shock"), (2, "magic") }.Where(value => (flags & value.Item1) != 0).Select(value => value.Item2).ToArray();
+    private static int Flag(string? target) => target switch { "fire" => 8, "frost" => 16, "disease" => 64, "poison" => 4, "shock" => 32, "magic" => 2, "paralysis" => 1, _ => 0 };
+    private static IReadOnlyList<string> Elements(int flags) => new[] { (8, "fire"), (16, "frost"), (68, "disease-or-poison"), (32, "shock"), (2, "magic") }.Where(value => (flags & value.Item1) != 0).Select(value => value.Item2).ToArray();
 
     /// <summary>Interprets the retained classic restriction choices against the admitted item record.</summary>
     internal static bool Forbids(DaggerfallItemDefinition item, IEnumerable<string> restrictions, out string reason)

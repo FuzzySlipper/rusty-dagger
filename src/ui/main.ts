@@ -737,6 +737,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const spellsRoot=shell.querySelector<HTMLElement>('.dagger-spells-root')!;
   const spellSalesRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spells')!;
   const spellMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spellmaker')!;
+  let inventorySuppressed = false;
   let activePanel: 'spells' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
     reportMap(false);
@@ -784,6 +785,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     else openMenu();
   };
   const showPanel = (action: 'spells' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
+    if (action === 'inventory' && inventorySuppressed) return;
     if (!menu.open) openMenu();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     if (activePanel === 'debug') closeDebug();
@@ -1181,6 +1183,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     renderSpellSales(spellSalesRoot,spellbook);
     renderSpellMaker(spellMakerRoot,spellbook?.maker ?? null,action =>
       context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
+    inventorySuppressed = value.character?.identity?.racialOverride?.suppressInventory === true;
+    for (const button of shell.querySelectorAll<HTMLButtonElement>('[data-action="inventory"]')) button.disabled = inventorySuppressed;
+    if (inventorySuppressed && activePanel === 'inventory') showHome();
     if (value.inventory) inventoryView.update(value.inventory);
     propertyView.update(value.property ?? null, value.inventory);
     transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);

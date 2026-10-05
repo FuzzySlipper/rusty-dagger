@@ -218,8 +218,10 @@ internal sealed class DaggerfallCrimeState
     private long _thievesInvitationDueMinute;
     private long _murderInvitationDueMinute;
 
-    internal DaggerfallCrimeState(DaggerfallCrimeSave? restored = null)
+    private readonly Func<bool> _suppressed;
+    internal DaggerfallCrimeState(DaggerfallCrimeSave? restored = null, Func<bool>? suppressed = null)
     {
+        _suppressed = suppressed ?? (() => false);
         if (restored is null)
             return;
         restored.Validate();
@@ -271,6 +273,7 @@ internal sealed class DaggerfallCrimeState
     internal bool RecordIncident(DaggerfallCrimeIncidentSave incident)
     {
         DaggerfallCrimeIncidentSave value = (incident ?? throw new ArgumentNullException(nameof(incident))).Validate();
+        if (_suppressed()) return false;
         if (_incidents.TryGetValue(value.OperationId, out DaggerfallCrimeIncidentSave? prior))
         {
             if (!SameIncident(prior, value))

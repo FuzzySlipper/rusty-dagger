@@ -672,6 +672,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private void PublishPresentation()
     {
         _heldEnchantments.Refresh();
+        RefreshPassiveMagery();
+        _appearance.RefreshEnemyVoices(State.Actors);
         DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         DaggerfallMagicPresentation.Publish(State.Effects, State.Actors.Player, Slots);
@@ -713,7 +715,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>What is open over the world and which of it holds the world.</summary>
     internal DaggerfallOpenInteractions Interactions => _interactions;
 
-    private void RequestPanel(string panel) => _interactions.RequestPanel(panel);
+    private void RequestPanel(string panel)
+    {
+        if (panel == DaggerfallPanel.Inventory && State.RacialOverrides.Current?.SuppressInventory == true)
+        {
+            Presentation.SetOutcome("You cannot use your inventory in beast form.");
+            return;
+        }
+        _interactions.RequestPanel(panel);
+    }
 
     /// <summary>Optional compiled ranged-flight owner; invoked once for every admitted realtime update.</summary>
     partial void UpdateRangedFlight(ProductUpdateFacts facts);

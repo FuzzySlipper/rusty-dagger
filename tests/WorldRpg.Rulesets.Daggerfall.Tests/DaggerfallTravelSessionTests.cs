@@ -17,6 +17,36 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallTravelSessionTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void Sunlight_career_arrives_at_dusk_at_both_speeds_and_no_regen_preserves_magicka(bool cautious, bool restoreFirst)
+    {
+        using Fixture fixture = new(); fixture.AddGold(1000);
+        CareerPassiveSessionTests.SetCareer(fixture.Session, [new("regenerate-health", "general")],
+            [new("damage", "sunlight"), new("inability-to-regen")]);
+        var baseline = DaggerfallSavePayload.Read(fixture.Session.CaptureSave());
+        // Begin at dawn so the short source-backed route reaches its sunlight arrival adjustment.
+        baseline = baseline with { Calendar = baseline.Calendar with { Hour = 7, Minute = 0, Second = 0 } };
+        using var started = fixture.Restore(DaggerfallSavePayload.Encode(baseline));
+        using var restored = restoreFirst ? fixture.Restore(started.CaptureSave()) : null;
+        var session = restored ?? started;
+        var magicka = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); magicka.SetCurrent(1);
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui(JsonSerializer.Serialize(new { action = "travel-preview",
+            region = fixture.Destination.Site!.Value.Region, destination = fixture.Destination.Site.Value.Index,
+            cautious, inn = true, ship = false }))]));
+        var quote = session.ReadTravelPresentation().Quote!;
+        Assert.NotNull(quote);
+        session.Update(new ProductUpdate(OuterUpdate(2), [Ui(JsonSerializer.Serialize(new { action = "travel-accept", key = quote.Identity, amount = quote.TotalCost }))]));
+        Assert.Equal(DaggerfallTravelOutcome.Arrived, session.State.Travel.LastResult!.Outcome);
+        var arrived = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
+        Assert.False(new DaggerfallCalendar(arrived.Year, arrived.Month, arrived.Day, arrived.Hour, arrived.Minute, arrived.Second).IsDay);
+        Assert.Equal(1, magicka.Current);
+        Assert.False(session.State.Travel.IsExecuting);
+    }
+
     [Fact]
     public void Accepted_ui_journey_pays_once_reaches_real_anchor_and_restores_result()
     {

@@ -28,6 +28,23 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly DaggerfallSiteProfile inputs;
     private readonly Dictionary<string, AudioClip> audioClips = new(StringComparer.Ordinal);
     private readonly HashSet<AudioSignalHandle> oneShotSignals = [];
+    private readonly Dictionary<AudioVoiceHandle, EnemyVoice> enemyVoices = [];
+    private Func<float> enemyAudibleRange = () => 16F;
+    internal void UseEnemyAudibleRange(Func<float> range) => enemyAudibleRange = range;
+    private sealed record EnemyVoice(AudioVoice Voice, AudioSourceDescriptor Descriptor, long ActorId);
+
+    internal void RefreshEnemyVoices(ActorsState state)
+    {
+        foreach (var (handle, entry) in enemyVoices.ToArray())
+        {
+            if (!state.TryGet(entry.ActorId, out var actor))
+            { entry.Voice.Dispose(); enemyVoices.Remove(handle); continue; }
+            var descriptor = entry.Descriptor with { MaxDistance = enemyAudibleRange(), Position = actor.Position.ToVector() };
+            if (descriptor == entry.Descriptor) continue;
+            audio!.UpdateVoice(new(entry.Voice, descriptor));
+            enemyVoices[handle] = entry with { Descriptor = descriptor };
+        }
+    }
     private readonly IReadOnlyList<string> hitCues;
     private readonly IReadOnlyDictionary<string, NormalizedClassicEffect> classicEffects;
     private readonly NormalizedClassicPresentation classicPresentation;
@@ -229,17 +246,17 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
 
     internal void RetireActor(long durableId)
     {
+        List<Exception>? failures = null;
+        foreach (var (handle, entry) in enemyVoices.Where(pair => pair.Value.ActorId == durableId).ToArray())
+        { Dispose(entry.Voice, ref failures); enemyVoices.Remove(handle); }
         if (actors.Remove(durableId, out ActorVisual? visual) && visual is not null)
-        {
-            List<Exception>? failures = null;
             DisposeActorVisual(visual, ref failures);
-            if (failures is { Count: > 0 }) throw new AggregateException(failures);
-        }
+        if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
     internal void RetireAllActors()
     {
-        foreach (long durableId in actors.Keys.ToArray())
+        foreach (long durableId in actors.Keys.Concat(enemyVoices.Values.Select(entry => entry.ActorId)).Distinct().ToArray())
             RetireActor(durableId);
     }
 
@@ -669,6 +686,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         foreach (AudioSignalHandle signal in oneShotSignals)
             try { audio!.RetireOneShot(signal); } catch (Exception exception) { (failures ??= []).Add(exception); }
         oneShotSignals.Clear();
+        foreach (var voice in enemyVoices.Values) Dispose(voice.Voice, ref failures);
+        enemyVoices.Clear();
         foreach (AudioClip clip in audioClips.Values.Reverse()) Dispose(clip, ref failures);
         audioClips.Clear();
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
@@ -1164,13 +1183,13 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 || Vector3.Distance(actor.Position.ToVector(), viewpoint.ToVector()) >= audioTuning.AttractRadius) continue;
             DaggerfallActorFeedback feedback = visual.Sprite.Feedback!;
             string cue = DrawCue(identity, "attract-choice", 1, 100) <= audioTuning.AttractMoveChancePercent ? feedback.MoveCue : feedback.BarkCue;
-            Emit(cue, identity, 0, actor.Position, blockedByCover(actor.Position, viewpoint) ? audioTuning.OccludedVolumeScale : 1F);
+            Emit(cue, identity, 0, actor.Position, blockedByCover(actor.Position, viewpoint) ? audioTuning.OccludedVolumeScale : 1F, enemyActor: actor.DurableId);
             visual.AttractRemainingSeconds = DrawCue(identity, "attract-delay", audioTuning.AttractMinimumDelaySeconds, audioTuning.AttractMaximumDelaySeconds);
         }
     }
 
     private void EmitAtActor(string cue, PresentationEventIdentity identity, long actorId, ActorsState? state, float? pitch = null)
-        => Emit(cue, identity, 0, state is not null && state.TryGet(actorId, out ActorState actor) ? actor.Position : null, pitch: pitch);
+        => Emit(cue, identity, 0, state is not null && state.TryGet(actorId, out ActorState actor) ? actor.Position : null, pitch: pitch, enemyActor: actorId == DaggerfallActorIdentity.PlayerEntityId ? null : actorId);
 
     private void StartState(long entityId, string stateName, NormalizedAttackSequence? attack)
     {
@@ -1250,7 +1269,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
 
     private static PresentationEventIdentity Event(long attacker, long target, ulong generation, ulong simulationStep, string outcome) => new(generation, simulationStep, attacker, target, outcome);
 
-    private void Emit(string clipId, PresentationEventIdentity identity, ulong marker, WorldPoint? position = null, float volumeScale = 1F, float? pitch = null)
+    private void Emit(string clipId, PresentationEventIdentity identity, ulong marker, WorldPoint? position = null, float volumeScale = 1F, float? pitch = null, long? enemyActor = null)
     {
         if (audio is null || string.IsNullOrEmpty(clipId)) return;
         if (!audioClips.TryGetValue(clipId, out AudioClip? clip))
@@ -1260,17 +1279,30 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             audioClips.Add(clipId, clip);
         }
         string signalId = $"daggerfall.media.{identity.Generation}.{identity.SimulationStep}.{identity.Attacker}.{identity.Target}.{identity.Outcome}.{marker}.{clipId}";
-        oneShotSignals.Add(audio.Emit(new AudioEmitRequest(signalId, new AudioSourceDescriptor(clip, AudioBus.Sfx, audioTuning.Volume * volumeScale, pitch ?? audioTuning.Pitch, false, position is null ? audioTuning.SpatialBlend : 1F, audioTuning.MaxDistance, AudioRolloff.Linear, 0F, position is null ? AudioEmitterKind.Global2d : AudioEmitterKind.World3d, position?.ToVector() ?? Vector3.Zero, 0, Vector3.Zero))));
+        var descriptor = new AudioSourceDescriptor(clip, AudioBus.Sfx, audioTuning.Volume * volumeScale,
+            pitch ?? audioTuning.Pitch, false, position is null ? audioTuning.SpatialBlend : 1F,
+            enemyActor is not null && position is not null ? enemyAudibleRange() : audioTuning.MaxDistance, AudioRolloff.Linear, 0F,
+            position is null ? AudioEmitterKind.Global2d : AudioEmitterKind.World3d, position?.ToVector() ?? Vector3.Zero, 0, Vector3.Zero);
+        if (enemyActor is long actorId && position is not null)
+        {
+            var voice = audio.CreateVoice(descriptor);
+            enemyVoices.Add(voice.Handle, new(voice, descriptor, actorId));
+        }
+        else oneShotSignals.Add(audio.Emit(new AudioEmitRequest(signalId, descriptor)));
     }
 
     private void RetireRealizedOneShots()
     {
-        if (oneShotSignals.Count == 0) return;
+        if (oneShotSignals.Count == 0 && enemyVoices.Count == 0) return;
         AudioRealizationResult realization = audio!.ReadRealization();
         foreach (AudioRealizationFact fact in realization.Facts.Span)
+        {
             if (fact.SignalHandle != 0
                 && (fact.Kind is AudioRealizationFactKind.NaturalCompletionOneShot or AudioRealizationFactKind.Diagnostic))
                 oneShotSignals.Remove(new AudioSignalHandle(fact.SignalHandle));
+            if (fact.VoiceValue != 0 && (fact.Kind is AudioRealizationFactKind.NaturalCompletionRetainedVoice or AudioRealizationFactKind.Diagnostic)
+                && enemyVoices.Remove(new(fact.VoiceValue), out var voice)) voice.Voice.Dispose();
+        }
     }
 
     internal sealed class ActorVisual(long entityId, NormalizedActorSprite sprite, SpriteAtlas atlas, Appearance live, SpriteAtlas? corpseAtlas, Appearance? corpse)

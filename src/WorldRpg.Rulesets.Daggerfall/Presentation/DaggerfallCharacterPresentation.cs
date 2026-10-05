@@ -51,7 +51,7 @@ internal sealed record CharacterMediaIdentity(string Layer, string MediaId);
 /// <param name="Media">Every layer the race publishes, in the order the publication names them.</param>
 internal sealed record CharacterIdentityPresentation(
     string Race, int DonorRaceId, string Portrait, CharacterMediaIdentity[] Media,
-    string Gender = "", int FaceIndex = 0, string Career = "", CharacterMediaIdentity[]? SelectedMedia = null)
+    string Gender = "", int FaceIndex = 0, string Career = "", CharacterMediaIdentity[]? SelectedMedia = null, DaggerfallRacialOverrideView? RacialOverride = null)
 {
     /// <summary>
     /// Resolves an actor's declared race and career through the published presentation set.
@@ -205,7 +205,7 @@ internal sealed class DaggerfallCharacterPresentation
             Stats(player, ResistanceStats, requireActorDefinition: false),
             Affiliations(),
             _character is { History.Count: > 0 } character ? new CharacterHistoryPresentation([.. character.History]) : null,
-            _character is null ? CharacterIdentityPresentation.From(_definitions, _playerDefinition) : CharacterIdentityPresentation.From(_definitions, _character.Identity),
+            _character is null ? CharacterIdentityPresentation.From(_definitions, _playerDefinition) : CharacterIdentityPresentation.From(_definitions, _character.Identity) with { RacialOverride = _character.RacialOverrides?.Current },
             _character is null ? [] : [.. _character.GrantedSkills],
             _character?.ReadCreation(),
             _levelUps?.Read());

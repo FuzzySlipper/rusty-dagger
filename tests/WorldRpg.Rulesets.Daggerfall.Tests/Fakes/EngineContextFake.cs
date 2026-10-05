@@ -234,6 +234,7 @@ internal class EngineContextFake : DispatchProxy
             nameof(IAudioService.ReadRealization) => new AudioRealizationResult(RealizationFacts.ToArray(), 0),
             nameof(IAudioService.CreateVoice) => CreateVoice(),
             nameof(IAudioService.ControlVoice) => null,
+            nameof(IAudioService.UpdateVoice) => null,
             _ => throw new NotSupportedException(method?.Name),
         };
 

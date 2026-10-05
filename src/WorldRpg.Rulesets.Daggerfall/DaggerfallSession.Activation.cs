@@ -31,6 +31,7 @@ internal sealed partial class DaggerfallSession
     private void InitializeActivation(IEngineContext engine, DaggerfallLootInteractionTuning reach)
     {
         ArgumentNullException.ThrowIfNull(engine);
+        _appearance.UseEnemyAudibleRange(() => EnemyAudibleRange);
         _dialogue = new DaggerfallDialogueService(
             State.Npcs,
             State.Actors,
@@ -54,7 +55,7 @@ internal sealed partial class DaggerfallSession
             guildService: ResolveGuildProvider,
             activeProfile: () => _sites.ActiveProfile,
             discloseDirection: DiscloseDialogueDirection,
-            dialogueWorld: State.DialogueWorld);
+            dialogueWorld: State.DialogueWorld, suppressTalk: () => State.RacialOverrides.Current?.SuppressTalk == true);
         _dialogue.SynchronizeWorldState();
         _activation = new DaggerfallActivationModule(
             new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),

@@ -72,6 +72,7 @@ internal sealed partial class DaggerfallSession
         _locomotion.SetAthletics(
             State.Character.CustomCareer?.Advantages.Any(trait => trait.Id == "athleticism") == true,
             State.HeldEnchantments.Talents.Athleticism);
+        RefreshPassiveMagery();
         long minuteBefore = MinuteIndex(before);
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
         _weather.Advance(_time.Calendar);
@@ -151,6 +152,7 @@ internal sealed partial class DaggerfallSession
         if (minutes <= 0) return;
 
         long roundBefore = State.Effects.MagicRounds;
+        AdvancePassiveRounds(roundBefore, minutes);
         // The normal path is expressed as its normal one-round operation.  Multiple minutes (whether
         // an unusually long admitted update or an elapsed interval) retain the donor's bounded
         // catch-up policy inside the lifecycle.
