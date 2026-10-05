@@ -227,6 +227,7 @@ public sealed class QuestPersonSelectionTests
         Assert.Equal(firstPerson.Text, saved.Resources.Single().Text);
         var malformed = saved with { Resources = [saved.Resources.Single() with { Text = null }] };
         Assert.Contains("invalid Person home meaning", Assert.Throws<ArgumentException>(malformed.ValidateShape).Message);
+        restored.BindSocial(new(definitions.Factions), new WorldRpg.Rulesets.Daggerfall.Crime.DaggerfallCrimeState(), () => site.Region);
         restored.Complete(first.InstanceId, "completed");
         Assert.False(restored.ClaimsBuilding(site.Id, claimed));
     }

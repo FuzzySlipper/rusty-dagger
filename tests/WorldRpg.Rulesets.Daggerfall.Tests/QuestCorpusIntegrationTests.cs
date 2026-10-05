@@ -45,6 +45,23 @@ public sealed class QuestCorpusIntegrationTests
             {
                 game.State.Quests.Start(new("corpus:" + source.Name, file, source.Name, DaggerfallQuestLifecycle.Active, null, [], []) { QuestorId = questor, FactionId = 368 });
             }
+            catch (NotSupportedException error) when (file == "A0C0XY04.txt")
+            {
+                // The donor requires a local apothecary; this provider's town has none. A catalog
+                // match does not make an invalid current-place binding silently succeed.
+                Assert.Contains("meetingplace/local", error.Message);
+                var definitions = TestPayload.Definitions;
+                var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+                var town = definitions.Locations.Records.First(site => site.Exterior?.Buildings.Values.Any(building => building.Source.BuildingType == 0
+                    && blocks.QuestMarkers.TryGetValue(new(building.Source.Id.SourceKey, building.Source.Id.Index), out var markers) && markers.Count > 0) == true);
+                var sites = new World.DaggerfallSiteContext(definitions.Locations, town.Id, null, []);
+                sites.AdmitBuildingNames(fixture.Random, definitions, blocks);
+                var places = new DaggerfallQuestPlaceAllocator(definitions, sites, fixture.Random, (_, _) => false, _ => "region", (_, _) => "residence");
+                var declared = definitions.QuestSources.Resources.Single(resource => resource.SourceFile == file && resource.CanonicalId == "meetingplace");
+                var selected = places.Allocate("local-apothecary", declared, [], []);
+                Assert.Equal(town.Id, selected.Binding.Places.Single().Require());
+                Assert.NotNull(selected.Binding.Building);
+            }
             catch (Exception error) { failures.Add(file + ": " + error.Message); }
         }
         Assert.True(failures.Count == 0, string.Join('\n', failures));
