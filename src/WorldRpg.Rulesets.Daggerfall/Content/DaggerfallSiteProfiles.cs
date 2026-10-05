@@ -88,7 +88,7 @@ internal sealed record DaggerfallRelocationDestination(
 }
 
 /// <summary>Admitted, normalized world closures selectable by their real Daggerfall site identity.</summary>
-internal sealed class DaggerfallSiteProfiles
+internal sealed partial class DaggerfallSiteProfiles
 {
     private readonly IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile> _profiles;
 
@@ -96,9 +96,11 @@ internal sealed class DaggerfallSiteProfiles
     {
         ArgumentNullException.ThrowIfNull(profiles);
         Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile> admitted = [];
-        foreach (DaggerfallSiteProfile profile in profiles)
+        var all = profiles.ToArray();
+        foreach (DaggerfallSiteProfile profile in all.Where(value => value.VariantName is null))
         {
             ArgumentNullException.ThrowIfNull(profile);
+            if (profile.VariantBaseLogicalId is not null) throw new ArgumentException("A variantOf profile must also declare its variant name.");
             if (profile.Site is not DaggerfallSiteId)
                 throw new ArgumentException("A transition profile must name its selected Daggerfall site.", nameof(profiles));
             DaggerfallWorldProfileKey key = profile.ProfileKey.Validate();
@@ -108,10 +110,15 @@ internal sealed class DaggerfallSiteProfiles
                 throw new ArgumentException($"The selected content repeats world profile '{key.LogicalId}'.", nameof(profiles));
         }
         _profiles = new ReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile>(admitted);
+        AdmitVariants(all.Where(value => value.VariantName is not null));
     }
 
     internal IReadOnlyCollection<DaggerfallWorldProfileKey> Keys => _profiles.Keys.ToArray();
-    internal bool TryGet(DaggerfallWorldProfileKey key, out DaggerfallSiteProfile profile) => _profiles.TryGetValue(key, out profile!);
+    internal bool TryGet(DaggerfallWorldProfileKey key, out DaggerfallSiteProfile profile)
+    {
+        if (_selectedVariants.TryGetValue(key.Site, out var variant)) return _variants.TryGetValue((key, variant), out profile!);
+        return _profiles.TryGetValue(key, out profile!);
+    }
     internal DaggerfallSiteProfile Require(DaggerfallWorldProfileKey key) => TryGet(key, out DaggerfallSiteProfile profile)
         ? profile
         : throw new InvalidOperationException($"No normalized world profile is admitted for '{key.LogicalId}'.");
@@ -120,14 +127,14 @@ internal sealed class DaggerfallSiteProfiles
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(logicalId);
         DaggerfallSiteProfile[] matches = _profiles.Where(entry => StringComparer.Ordinal.Equals(entry.Key.LogicalId, logicalId))
-            .Select(entry => entry.Value).ToArray();
+            .Select(entry => Require(entry.Key)).ToArray();
         return matches.Length == 1 ? matches[0]
             : throw new InvalidOperationException($"No unique admitted world profile has logical id '{logicalId}'.");
     }
 
     internal DaggerfallSiteProfile RequireUniqueSite(DaggerfallSiteId site)
     {
-        DaggerfallSiteProfile[] matches = _profiles.Where(entry => entry.Key.Site == site).Select(entry => entry.Value).ToArray();
+        DaggerfallSiteProfile[] matches = _profiles.Where(entry => entry.Key.Site == site).Select(entry => Require(entry.Key)).ToArray();
         return matches.Length == 1 ? matches[0]
             : throw new InvalidOperationException($"Saved site '{site}' does not identify one world profile.");
     }

@@ -41,6 +41,7 @@ internal sealed partial class DaggerfallSession
     internal static DaggerfallSession StartNew(IEngineContext engine, DaggerfallSessionComposition composition)
     {
         ArgumentNullException.ThrowIfNull(composition);
+        composition = composition with { Profiles = composition.Profiles?.ForSession() };
         return new DaggerfallSession(engine, composition, composition.StartSite, restore: null).AdmitComposition(engine, composition);
     }
 
@@ -52,6 +53,9 @@ internal sealed partial class DaggerfallSession
     {
         ArgumentNullException.ThrowIfNull(composition);
         DaggerfallSavePayload raw = DaggerfallSavePayload.Read(saved);
+        if (raw.WorldVariants is null) throw new ArgumentException("Saved world variants must contain the current selection, including an empty list.");
+        composition = composition with { Profiles = composition.Profiles?.ForSession(raw.WorldVariants) };
+        if (composition.Profiles is null && raw.WorldVariants.Length != 0) throw new ArgumentException("Saved world variants require an admitted site catalog.");
         DaggerfallSiteProfiles? profiles = composition.Profiles;
         DaggerfallSiteProfile activeInputs = profiles is null
             ? composition.StartSite
@@ -492,6 +496,8 @@ internal sealed partial class DaggerfallSession
             };
             State.Quests.BindClickGold(amount => State.Currency.TrySpendGold(amount, []));
             State.Quests.BindWorldRead(() => _sites.ReadQuestLocation());
+            State.Quests.BindWorldActions(ApplyQuestWorldAction);
+            _inventoryUi.BindQuestDrops(State.Quests.CanDropItem, State.Quests.ItemDropped);
             State.Quests.BindFoeCommands(ApplyQuestFoeCommand);
             State.Quests.BindFoeSpawning(SpawnQuestFoe);
             State.Quests.BindEnemyRelations(ApplyAllEnemyCommand, id => actors.TryGet(id, out var actor) && !actor.IsDefeated);
@@ -562,6 +568,7 @@ internal sealed partial class DaggerfallSession
             { if(Casting.ReadyFor(actors.Player.DurableId)?.SpellKey==key) Casting.Cancel(actors.Player.DurableId); };
             _persistence.Infections = Infections.Capture;
             _persistence.Weather = _weather.Capture;
+            _persistence.WorldVariants = () => _sites.Profiles?.CaptureVariants() ?? [];
             _persistence.ReadySpell=()=>Casting.ReadyFor(actors.Player.DurableId);
             _persistence.PendingCreateItem = () => _pendingCreateItem;
             _persistence.PendingDispel = () => _pendingDispel;

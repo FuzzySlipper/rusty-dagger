@@ -94,7 +94,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             DaggerfallSiteProfile[] sites = [.. roles[SiteRole].Select(pack => DaggerfallSiteContent.Read(selected.Content, pack.Payload, definitions))];
             if (sites.Length == 0)
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects no '{SiteRole.Value}' content pack, so a new game has nowhere to start.");
-            DaggerfallSiteProfile inputs = sites[0];
+            DaggerfallSiteProfile inputs = sites.FirstOrDefault(site => site.VariantName is null)
+                ?? throw new InvalidOperationException("A bundle requires a base site before world variants can be selected.");
             IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> fightersGuildQuests =
                 [.. roles[FightersGuildQuestCorpusRole].SelectMany(pack => DaggerfallFightersGuildQuestCorpusContent.Read(selected.Content, pack.Payload, definitions))];
             DaggerfallClassicQuestCorpusReceipt[] classicCorpus =
@@ -106,13 +107,13 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
                 .. disabledQuestSelection.Receipts,
             ];
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(selected.Content, inputs.ClassicPresentation);
-            foreach (DaggerfallSiteProfile site in sites.Skip(1))
+            foreach (DaggerfallSiteProfile site in sites.Where(site => !ReferenceEquals(site, inputs)))
                 _ = DaggerfallPublishedClassicMedia.Read(selected.Content, site.ClassicPresentation);
             // Every admitted site names its cues against the same published manifest, so each one is
             // joined here: a site whose music nothing published would otherwise fail on entry rather
             // than at composition, where the publication it disagrees with is still identifiable.
             DaggerfallMusicBundle? music = DaggerfallMusicBundle.Admit(selected.Content, inputs.Music);
-            foreach (DaggerfallSiteProfile site in sites.Skip(1))
+            foreach (DaggerfallSiteProfile site in sites.Where(site => !ReferenceEquals(site, inputs)))
                 _ = DaggerfallMusicBundle.Admit(selected.Content, site.Music);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
             DaggerfallSiteProfiles profiles = new(sites);

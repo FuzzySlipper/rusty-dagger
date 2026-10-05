@@ -14,6 +14,17 @@ are assigned by the relevant import/publication tasks. “All content” is not 
 
 The authored `daggerfall.base` payload owns the `newGame` starting-loadout section: playable-career weapons and spell keys, custom-class starting items, gender-specific clothing, spellbook and gold. These values resolve through the normalized item and spell catalogs; session construction consumes them once. The selected bundle owns the start site.
 
+Site packs may declare `world.variant` and `world.variantOf` (the base profile's
+logical publication path) for a named location scenery variant. A selected bundle
+must carry a base profile and every profile of each admitted location variant.
+Quest `worldupdate location` selects that variant for the session; `variant -`
+returns to the base. The existing site lifecycle applies the choice on the next
+projection admission, including save restore. Scenery variants retain actor,
+action, dungeon-map and inventory-container topology and their audio bundle.
+Changes to those owners, block/building variants and new-location variants are
+currently reported as unsupported. Variant payloads and normalized closures
+follow the same authored/generated ownership rules as other site packs.
+
 ## Evidence and boundaries
 
 The companion CSV's **file-row disposition** is reconciled against the source

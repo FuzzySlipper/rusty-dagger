@@ -1235,8 +1235,10 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 DaggerfallQuestTaskOperation operation = task.Operations[operationIndex];
                 DaggerfallQuestTaskOperationState receipt = state.OperationState[operationIndex];
                 if (receipt.UnavailableReason is { } reason && (string.IsNullOrWhiteSpace(reason)
-                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.GiveItem or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
+                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.WorldUpdate or DaggerfallQuestTaskOperationKind.TeleportPlace or DaggerfallQuestTaskOperationKind.RevealPlace or DaggerfallQuestTaskOperationKind.GiveItem or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
                     throw new ArgumentException("Quest unsupported world detail must identify its owning action.");
+                if (receipt.ItemDropped && operation.Kind != DaggerfallQuestTaskOperationKind.DroppedAt)
+                    throw new ArgumentException("Quest drop state must belong to a drop trigger.");
                 if (receipt.PaymentBranch is { } branch && (operation.Kind != DaggerfallQuestTaskOperationKind.PayMoney || !operation.Targets.Take(2).Contains(branch)))
                     throw new ArgumentException("Quest payment result must name its paid or unpaid branch.");
                 if (receipt.ItemTransfer is { } transfer)
