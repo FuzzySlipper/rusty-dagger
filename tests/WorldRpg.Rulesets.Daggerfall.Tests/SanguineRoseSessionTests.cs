@@ -255,11 +255,14 @@ public sealed class SanguineRoseSessionTests
         internal readonly ulong Source;
         internal readonly long Enemy;
         private ulong _step;
+        private readonly IRandomService? _random;
         internal int Condition => Session.State.ItemInstances.RequireUnique(Source).CurrentCondition;
         internal string Message => Engine.PublishedNested("inventory", "message")!;
         internal Fixture(bool appearance = true, string magicItemKey = "magic-item.0004", DaggerfallDefinitions? definitions = null,
-            Func<DaggerfallSiteProfile, DaggerfallSiteProfile>? prepareInputs = null)
+            Func<DaggerfallSiteProfile, DaggerfallSiteProfile>? prepareInputs = null,
+            Func<DaggerfallSessionComposition, DaggerfallSessionComposition>? prepareComposition = null, IRandomService? random = null)
         {
+            _random = random;
             var inputs = ReadInputs(TestData.RepositoryRoot);
             if (prepareInputs is not null) inputs = prepareInputs(inputs);
             Inputs = appearance ? inputs : new DaggerfallSiteProfile(inputs.Project, inputs.SpatialArtifact, inputs.StaticMesh,
@@ -272,6 +275,7 @@ public sealed class SanguineRoseSessionTests
                 File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
             var identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
             Composition = new(definitions ?? TestPayload.Definitions, Inputs, DaggerfallTuning.Defaults, identity);
+            if (prepareComposition is not null) Composition = prepareComposition(Composition);
             (Engine, Spatial, Perception, Appearance) = CreateEngine();
             Session = DaggerfallSession.StartNew(Engine.Context, Composition);
             Session.State.PlayerControl.MoveTo(new Vector3(0, 2, 0));
@@ -305,7 +309,7 @@ public sealed class SanguineRoseSessionTests
             { Present = true, Point = new(request.Origin.X, 0, request.Origin.Z), Normal = Vector3.UnitY, Converged = true } : default;
             var perception = PerceptionFake.Create();
             var appearance = new AppearanceFake(releases);
-            return (EngineContextFake.Create(content, spatial.Service, appearance, perception.Service), spatial, perception, appearance);
+            return (EngineContextFake.Create(content, spatial.Service, appearance, perception.Service, random: _random), spatial, perception, appearance);
         }
         internal DaggerfallSession Restore(DaggerfallSiteProfiles? profiles = null) => Restore(out _, profiles);
         internal DaggerfallSession Restore(out EngineContextFake engine, DaggerfallSiteProfiles? profiles = null)

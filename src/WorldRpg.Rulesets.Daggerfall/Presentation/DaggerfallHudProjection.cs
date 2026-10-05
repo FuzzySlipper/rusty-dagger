@@ -93,6 +93,16 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                         ("key", builder.String(offer.Key)), ("name", builder.String(offer.Name)),
                         ("castingCost", builder.Number(offer.CastingCost)), ("price", builder.Number(checked((long)offer.Price))),
                         ("known", builder.Boolean(offer.Known)))).ToArray())))),
+                ("summoning", frame.Spells.Summoning is not { } summon ? builder.Null() : builder.Object(
+                    ("revision",builder.String(summon.Revision)),("provider",builder.String(summon.Provider)),
+                    ("offerRevision",summon.OfferRevision is null ? builder.Null() : builder.String(summon.OfferRevision)),
+                    ("prince",summon.Prince is null ? builder.Null() : builder.String(summon.Prince)),
+                    ("message",summon.Message is null ? builder.Null() : builder.String(summon.Message)),
+                    ("diagnostics",builder.Array(summon.Diagnostics.Select(builder.String).ToArray())),
+                    ("quote",summon.Quote is not { } quote ? builder.Null() : builder.Object(
+                        ("key",builder.String(quote.Key)),("name",builder.String(quote.Name)),("quest",builder.String(quote.Quest)),
+                        ("gold",builder.Number(checked((long)quote.Gold))),("eligible",builder.Boolean(quote.Eligible)),
+                        ("reason",quote.Reason is null ? builder.Null() : builder.String(quote.Reason)))))),
                 ("itemMaker", frame.Spells.ItemMaker is not { } itemMaker ? builder.Null() : ItemMaker(builder, itemMaker)),
                 ("potionMaker", frame.Spells.PotionMaker is not { } potionMaker ? builder.Null() : PotionMaker(builder, potionMaker)),
                 ("information", frame.Spells.Information is not { } information ? builder.Null() : builder.Object(

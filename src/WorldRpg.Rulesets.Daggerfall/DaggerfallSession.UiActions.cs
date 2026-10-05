@@ -88,6 +88,9 @@ internal sealed partial class DaggerfallSession
         {
             // The entry screen's own action is the product's to answer; the product has already left
             // the mode by the time an action in ordinary play could arrive. The DOM owns its panels.
+            case DaggerfallUiActionKind.DaedraSummon:
+            case DaggerfallUiActionKind.DaedraAnswer:
+                ChangeSummoning(action); break;
             case DaggerfallUiActionKind.Begin:
             case DaggerfallUiActionKind.Inventory:
             case DaggerfallUiActionKind.Character:

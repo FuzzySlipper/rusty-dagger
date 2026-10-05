@@ -56,6 +56,7 @@ internal sealed record DaggerfallSavePayload(
     [JsonRequired]
     public long MagicRounds { get; init; }
     [JsonRequired] public DaggerfallInfectionsSave Infections { get; init; } = DaggerfallInfectionsSave.Empty;
+    [JsonRequired] public DaggerfallSummoningSave Summoning { get; init; } = DaggerfallSummoningSave.Empty;
     public long NextCastSequence { get; init; } = 1;
     [JsonRequired]
     public DaggerfallReadySpell? ReadySpell {get;init;}
@@ -195,6 +196,7 @@ internal sealed record DaggerfallSavePayload(
     /// </summary>
     internal DaggerfallResolvedRestore ResolveRestore(DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallSiteProfiles? profiles = null, DaggerfallTuning? tuning = null)
     {
+        Summoning.Last?.PreparedQuest?.Validate(definitions);
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(inputs);
         if (ExteriorResidency is { } savedExterior)
@@ -807,6 +809,8 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(Calendar);
         ArgumentNullException.ThrowIfNull(Weather);
         Weather.Validate();
+        ArgumentNullException.ThrowIfNull(Summoning);
+        Summoning.Validate();
         if (Weather.NextDay != checked(new DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).DayNumber + 1))
             throw new ArgumentException("Saved weather boundary does not follow the saved calendar day.");
         ArgumentNullException.ThrowIfNull(Site);

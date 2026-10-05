@@ -20,7 +20,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
 /// <summary>Every player action the <c>dagger.ui.action.v1</c> contract carries, by meaning.</summary>
 internal enum DaggerfallUiActionKind
 {
-    Begin, CinematicSkip, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellMakerDraft, SpellMakerBuy, PotionMix, ItemMakerDraft, ItemMakerBuy,
+    Begin, CinematicSkip, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellMakerDraft, SpellMakerBuy, PotionMix, ItemMakerDraft, ItemMakerBuy, DaedraSummon, DaedraAnswer,
     ControlsRebind, ControlsReset,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
@@ -160,6 +160,8 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.SpellReady,"spell-ready",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SpellUnready,"spell-unready",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SpellCast,"spell-cast",DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.DaedraSummon,"daedra-summon",DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.DaedraAnswer,"daedra-answer",DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.ItemMakerDraft,"itemmaker-draft",DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.ItemMakerBuy,"itemmaker-buy",DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.PotionMix,"potion-mix",DaggerfallUiPhases.Interaction),
@@ -357,6 +359,12 @@ internal static class DaggerfallUiAction
                 }
             }
             if (amount == 0 && action is not ("lodging-book" or "travel-accept" or "spell-buy" or "itemmaker-buy")) return null;
+            if (action == "daedra-summon")
+                return fields.SetEquals(["action","revision","key","amount","confirm"]) && !string.IsNullOrWhiteSpace(revision)
+                    && !string.IsNullOrWhiteSpace(key) && amount is not null ? new(action, Revision:revision, Key:key, Amount:amount, Confirm:confirm) : null;
+            if (action == "daedra-answer")
+                return fields.SetEquals(["action","revision","confirm"]) && !string.IsNullOrWhiteSpace(revision)
+                    ? new(action,Revision:revision,Confirm:confirm) : null;
             if (action == "travel-accept")
                 return fields.SetEquals(["action", "key", "amount"]) && !string.IsNullOrWhiteSpace(key) && amount is not null
                     ? new(action, Key: key, Amount: amount) : null;

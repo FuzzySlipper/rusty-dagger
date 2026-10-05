@@ -72,6 +72,10 @@ interface SpellMakerProjection {
   readonly quote:{readonly key:string;readonly gold:number;readonly spellPoints:number;readonly eligible:boolean;readonly reason:string|null}|null;
 }
 
+interface SummoningProjection {
+  readonly revision:string;readonly provider:string;readonly offerRevision:string|null;readonly prince:string|null;readonly message:string|null;readonly diagnostics:readonly string[];
+  readonly quote:{readonly key:string;readonly name:string;readonly quest:string;readonly gold:number;readonly eligible:boolean;readonly reason:string|null}|null;
+}
 interface ItemMakerSetting { readonly key:string;readonly name:string;readonly cost:number;readonly forced:readonly string[]; }
 interface ItemMakerProjection {
   readonly revision:string;readonly provider:string;readonly eligible:boolean;
@@ -93,6 +97,7 @@ interface SpellbookProjection {
   readonly maker?:SpellMakerProjection|null;
   readonly potionMaker?:PotionMakerProjection|null;
   readonly itemMaker?:ItemMakerProjection|null;
+  readonly summoning?:SummoningProjection|null;
   readonly information?: {readonly key:string;readonly name:string;readonly element:number;readonly target:string;readonly details:readonly string[]} | null;
 }
 
@@ -398,12 +403,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       </section>
       <section class="dagger-dialogue-merchant" aria-label="Merchant services"></section>
       <section class="dagger-dialogue-spells" aria-label="Spells for sale"></section>
+      <section class="dagger-dialogue-summoning" aria-label="Daedric summoning"></section>
       <section class="dagger-dialogue-itemmaker" aria-label="Item enchanting"></section>
       <section class="dagger-dialogue-potionmaker" aria-label="Potion making"></section>
       <section class="dagger-dialogue-spellmaker" aria-label="Spell construction"></section>
       <ul class="dagger-dialogue-diagnostics" aria-label="Text diagnostics"></ul>
       <button class="dagger-dialogue-close" type="button">End conversation</button>
-    </dialog>`;
+    </dialog><dialog class="dagger-daedric-offer" aria-label="Daedric quest offer"></dialog>`;
   root.append(shell);
 
   const activationMode = shell.querySelector<HTMLSelectElement>('.dagger-activation-mode')!;
@@ -760,6 +766,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   };
   const spellsRoot=shell.querySelector<HTMLElement>('.dagger-spells-root')!;
   const spellSalesRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spells')!;
+  const summoningRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-summoning')!;
+  const summoningOffer=shell.querySelector<HTMLDialogElement>('.dagger-daedric-offer')!;
+  summoningOffer.addEventListener('cancel',event=>event.preventDefault());
   const itemMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-itemmaker')!;
   const potionMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-potionmaker')!;
   const spellMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spellmaker')!;
@@ -1228,6 +1237,11 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     const spellbook = isSpellbookProjection(value.spells) ? value.spells : null;
     renderSpells(spellsRoot,spellbook);
     renderSpellSales(spellSalesRoot,spellbook);
+    const summoning=spellbook?.summoning ?? null;
+    renderSummoning(summoning?.offerRevision ? summoningOffer : summoningRoot,summoning,
+      action=>context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
+    if(summoning?.offerRevision){summoningRoot.replaceChildren();if(!summoningOffer.open)summoningOffer.showModal();}
+    else if(summoningOffer.open)summoningOffer.close();
     renderItemMaker(itemMakerRoot,spellbook?.itemMaker ?? null,action => context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
     renderPotionMaker(potionMakerRoot,spellbook?.potionMaker ?? null,action => context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
     renderSpellMaker(spellMakerRoot,spellbook?.maker ?? null,action =>
@@ -1297,6 +1311,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       ? value.character.creation.mode ?? null : value.character.creation.summary ? 'character-pick' : null : null;
     pickScreens = value.pickScreens ?? [];
     redrawEntry();
+    if(summoningOffer.open)context.ui.setInteractionMode('interface');
 
     title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'
       : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
@@ -1668,6 +1683,7 @@ export function isSpellbookProjection(value:unknown):value is SpellbookProjectio
     && (v.maker==null || isSpellMakerProjection(v.maker))
     && (v.potionMaker==null || isPotionMakerProjection(v.potionMaker))
     && (v.itemMaker==null || isItemMakerProjection(v.itemMaker))
+    && (v.summoning==null || isSummoningProjection(v.summoning))
     && (v.information==null || typeof v.information.key==='string' && typeof v.information.name==='string'
       && typeof v.information.target==='string' && Number.isInteger(v.information.element)
       && Array.isArray(v.information.details) && v.information.details.every(line=>typeof line==='string'));
@@ -2014,5 +2030,33 @@ export function renderItemMaker(root:HTMLElement,view:ItemMakerProjection|null,c
     const buy=document.createElement('button');buy.type='button';buy.textContent='Enchant item';buy.disabled=!quote.eligible;
     form.addEventListener('input',()=>{buy.disabled=true;});form.addEventListener('change',()=>{buy.disabled=true;});
     buy.addEventListener('click',()=>{if(window.confirm(`Enchant ${view.draft.name} for ${quote.gold} gold?`))claim({action:'itemmaker-buy',revision:view.revision,key:quote.key,amount:quote.gold,confirm:true});});root.append(buy);
+  }
+}
+
+export function isSummoningProjection(value:unknown):value is SummoningProjection {
+  if(!value || typeof value!=='object')return false;
+  const v=value as Partial<SummoningProjection>;
+  return typeof v.revision==='string' && typeof v.provider==='string' && (v.offerRevision===null || typeof v.offerRevision==='string')
+    && (v.prince===null || typeof v.prince==='string') && (v.message===null || typeof v.message==='string')
+    && Array.isArray(v.diagnostics) && v.diagnostics.every(x=>typeof x==='string')
+    && (v.quote===null || !!v.quote && typeof v.quote.key==='string' && typeof v.quote.name==='string' && typeof v.quote.quest==='string'
+      && Number.isSafeInteger(v.quote.gold) && v.quote.gold>=0 && typeof v.quote.eligible==='boolean' && (v.quote.reason===null || typeof v.quote.reason==='string'));
+}
+export function renderSummoning(root:HTMLElement,view:SummoningProjection|null,claim:(action:UiAction)=>void):void {
+  root.replaceChildren();if(!view)return;
+  const title=document.createElement('h3');title.textContent=view.offerRevision ? view.prince : 'Daedric summoning';root.append(title);
+  const p=document.createElement('p');root.append(p);
+  if(view.offerRevision){
+    p.textContent=view.message;
+    for(const diagnostic of view.diagnostics){const note=document.createElement('p');note.textContent=diagnostic;root.append(note);}
+    for(const [label,accept] of [['Accept the quest',true],['Refuse the prince',false]] as const){
+      const button=document.createElement('button');button.type='button';button.textContent=label;
+      button.addEventListener('click',()=>claim({action:'daedra-answer',revision:view.offerRevision!,confirm:accept}));root.append(button);
+    }
+  } else if(view.quote){
+    p.textContent=view.quote.eligible ? `Summon ${view.quote.name} for ${view.quote.gold} gold. Payment is lost if the summoning fails.`
+      : view.quote.reason==='WrongDay' ? 'Today is not a summoning day.' : view.quote.reason==='ProviderUnavailable' ? 'Your standing does not permit this service.' : view.quote.reason;
+    const button=document.createElement('button');button.type='button';button.textContent='Pay and summon';button.disabled=!view.quote.eligible;
+    button.addEventListener('click',()=>claim({action:'daedra-summon',revision:view.revision,key:view.quote!.key,amount:view.quote!.gold,confirm:true}));root.append(button);
   }
 }

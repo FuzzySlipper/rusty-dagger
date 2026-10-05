@@ -809,7 +809,32 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         return StartCore(instance);
     }
 
-    private DaggerfallQuestInstanceSave StartCore(DaggerfallQuestInstanceSave instance)
+    internal DaggerfallQuestInstanceSave PrepareSummoned(string identity, DaggerfallQuestInstanceSave instance)
+    {
+        if (_disabledSelection is null || !_disabledSelection.TryResolveSummon(identity, out var resolution)
+            || !resolution!.Runnable || resolution.SourceFile != instance.SourceFile)
+            throw new ArgumentException($"Summoning quest '{identity}' is unavailable.");
+        return PrepareCore(instance);
+    }
+
+    internal DaggerfallQuestInstanceSave AdmitPreparedSummoned(string identity, DaggerfallQuestInstanceSave instance)
+    {
+        if (_disabledSelection is null || !_disabledSelection.TryResolveSummon(identity, out var resolution)
+            || !resolution!.Runnable || resolution.SourceFile != instance.SourceFile)
+            throw new ArgumentException($"Summoning quest '{identity}' is unavailable.");
+        instance.Validate(_definitions);
+        return RegisterPrepared(instance);
+    }
+
+    internal (string Text, IReadOnlyList<string> Diagnostics) RenderPreparedOffer(DaggerfallQuestInstanceSave prepared, int message)
+    {
+        var instance = new DaggerfallQuestRuntimeInstance(prepared, Program(prepared.SourceFile));
+        return Messages.RenderDelivery(instance, new(instance.InstanceId, message, DaggerfallQuestMessageDelivery.Popup, 0), _textContext(instance));
+    }
+
+    private DaggerfallQuestInstanceSave StartCore(DaggerfallQuestInstanceSave instance) => RegisterPrepared(PrepareCore(instance));
+
+    private DaggerfallQuestInstanceSave PrepareCore(DaggerfallQuestInstanceSave instance)
     {
         _admission?.RequireRunnable(instance.SourceFile);
         if (instance.Lifecycle != DaggerfallQuestLifecycle.Active)
@@ -860,12 +885,20 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
             return new DaggerfallQuestClockState(clock.Symbol, duration, duration, clock.Flag, clock.MinRange, clock.MaxRange, false, false);
         })] }, program) { TravelClockSeconds = ResolveTravelClockSeconds };
         InitializeWorldTriggers(started, program);
+        return started.Capture();
+    }
+
+    private DaggerfallQuestInstanceSave RegisterPrepared(DaggerfallQuestInstanceSave prepared)
+    {
+        DaggerfallQuestRuntimeInstance started = new(prepared, Program(prepared.SourceFile)) { TravelClockSeconds = ResolveTravelClockSeconds };
         if (!_instances.TryAdd(started.InstanceId, started)) throw new ArgumentException($"Quest instance '{started.InstanceId}' already exists.");
         foreach (var resource in started.Resources.Where(value => value.SelectedPerson is { Home: not null, QuestorId: null }))
             RequestPlacement(started.InstanceId, "person-home:" + DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "Person home"), resource.Symbol,
                 DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "Person home") + ".home", automaticHome: true);
         return started.Capture();
     }
+
+    internal void ShowMessage(string instanceId, int message) => Messages.Popup(Active(instanceId), message);
 
     internal DaggerfallQuestInstanceSave Complete(string instanceId, string outcome) => Transition(instanceId, DaggerfallQuestLifecycle.Completed, outcome);
     internal DaggerfallQuestInstanceSave Fail(string instanceId, string outcome) => Transition(instanceId, DaggerfallQuestLifecycle.Failed, outcome);

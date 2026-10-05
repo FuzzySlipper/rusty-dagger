@@ -570,6 +570,9 @@ internal sealed partial class DaggerfallSession
             _persistence.Infections = Infections.Capture;
             _persistence.Weather = _weather.Capture;
             _persistence.WorldVariants = () => _sites.Profiles?.CaptureVariants() ?? [];
+            Summoning = new(definitions, State, _random, composition.DisabledQuestSelection ?? DaggerfallDisabledQuestSelection.None,
+                () => _time.Calendar, () => (IsRaining, IsStorming), () => _activeProfileKey, PrepareSummoningQuest, saved?.Summoning);
+            _persistence.Summoning = Summoning.Capture;
             _persistence.ReadySpell=()=>Casting.ReadyFor(actors.Player.DurableId);
             _persistence.PendingCreateItem = () => _pendingCreateItem;
             _persistence.PendingDispel = () => _pendingDispel;
