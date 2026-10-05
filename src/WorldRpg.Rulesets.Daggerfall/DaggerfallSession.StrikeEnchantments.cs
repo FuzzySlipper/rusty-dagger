@@ -16,7 +16,7 @@ internal sealed partial class DaggerfallSession
         {
             if (!State.Actors.TryGet(id, out var actor) || actor.IsDefeated || !_roster.Definitions.TryGetValue(id, out var definition)
                 || definition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)
-                || definition.Team == "player-ally") continue;
+                || EffectiveFoeTeam(id) == "player-ally") continue;
             AppendSpellTransfer(_vitality.ResolveSpellTransfer(State.Actors.Player.Actor, actor.Actor, 1, fatigue: false, permitsFatigueLoss: true));
         }
     }

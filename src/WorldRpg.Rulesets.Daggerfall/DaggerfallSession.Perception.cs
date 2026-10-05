@@ -17,7 +17,7 @@ internal sealed partial class DaggerfallSession
 {
     private bool IsHostileActor(long actorId, DaggerfallActorDefinition definition) =>
         definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass
-        && definition.Team != "player-ally" && !_enemyBehavior.IsPacified(actorId);
+        && EffectiveFoeTeam(actorId) != "player-ally" && !_enemyBehavior.IsPacified(actorId);
 
     /// <summary>
     /// Reads one enemy's perception context from the current session state.

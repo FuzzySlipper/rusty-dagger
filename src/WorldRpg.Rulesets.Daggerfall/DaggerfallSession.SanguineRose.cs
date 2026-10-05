@@ -54,7 +54,7 @@ internal sealed partial class DaggerfallSession
         {
             long id = checked((long)pair.Target);
             // EnemySenses excludes pacified enemies and protected quest actors from ally attacks.
-            if (_enemyBehavior.IsPacified(id) || State.Quests.ProtectsActor(id)) continue;
+            if (_enemyBehavior.IsPacified(id) || !State.Quests.AllowsFoeInfighting(id)) continue;
             return new PursuitTarget(id, State.Actors.Get(id).Position);
         }
         return null;
@@ -66,7 +66,7 @@ internal sealed partial class DaggerfallSession
         PerceptionTarget[] targets = State.Actors.All.Where(actor => actor.DurableId != observerId && !actor.IsDefeated
                 && State.Npcs.IsGameplayActive(actor.DurableId)
                 && _roster.Definitions.TryGetValue(actor.DurableId, out var definition)
-                && definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass && eligible(definition))
+                && definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass && eligible(definition with { Team = EffectiveFoeTeam(actor.DurableId) }))
             .OrderBy(actor => actor.DurableId)
             .Select(actor => new PerceptionTarget(checked((ulong)actor.DurableId), actor.Position.ToVector())).ToArray();
         PerceptionQueryRequest request = new(_spatial.Session,

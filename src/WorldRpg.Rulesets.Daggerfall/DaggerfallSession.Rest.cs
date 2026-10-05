@@ -253,7 +253,7 @@ internal sealed partial class DaggerfallSession
             if (actor.IsDefeated || _enemyBehavior.IsPacified(actor.DurableId)
                 || !_roster.Definitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)
                 || definition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)
-                || definition.Team == "player-ally") continue;
+                || EffectiveFoeTeam(actor.DurableId) == "player-ally") continue;
             bool inSight = _enemyBehavior.LastPerception.TryGetValue(actor.DurableId, out var perception)
                 && perception.InSight;
             if (inSight || Vector3.DistanceSquared(actor.Position.ToVector(), player.ToVector()) <= 12f * 12f)

@@ -314,7 +314,7 @@ internal sealed partial class DaggerfallSession
                 () => assembled.PlayerControl.Position, () => character, _playerSwings.TryGesture, ShotBlockedByCover,
                 () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
                 actorId => effects.ControlsFor(actorId).PhysicalAttacks, TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), DeliverMonsterHit,
-                npcs.IsGameplayActive);
+                npcs.IsGameplayActive, EffectiveFoeTeam);
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
@@ -331,7 +331,7 @@ internal sealed partial class DaggerfallSession
                 tuning.EnemyBehavior,
                 contextProvider: BuildEnemyPerceptionContext,
                 recordSkillUse: use => skillUses.Record(use),
-                isPlayerAllied: id => authored.TryGetValue(id, out var actor) && actor.Team == "player-ally",
+                isPlayerAllied: id => EffectiveFoeTeam(id) == "player-ally",
                 selectAllyTarget: SelectAllyTarget, controlRestrictions: effects.ControlsFor,
                 movementPolicy: id => DaggerfallEnemyBehaviorModule.PolicyFor(
                     id,
@@ -340,7 +340,7 @@ internal sealed partial class DaggerfallSession
                     effects.GrantsWaterWalking(id),
                     effects.GrantsLevitation(id)),
                 canOpenDoors: id => DaggerfallEnemyBehaviorModule.CanOpenDoors(id, authored, definitions),
-                openBlockedDoor: TryOpenDoorForEnemy);
+                openBlockedDoor: TryOpenDoorForEnemy, selectTarget: SelectQuestAwareEnemyTarget, questRestrained: QuestFoeRestrained);
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {
@@ -488,6 +488,7 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindWorldRead(() => _sites.ReadQuestLocation());
             State.Quests.BindFoeCommands(ApplyQuestFoeCommand);
             State.Quests.BindFoeSpawning(SpawnQuestFoe);
+            State.Quests.BindEnemyRelations(ApplyAllEnemyCommand, id => actors.TryGet(id, out var actor) && !actor.IsDefeated);
             State.Quests.BindGuardSpawning(SpawnQuestGuards);
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook,
                 useDrug: variant => UseDrug(variant) == DaggerfallPoisonAdmission.Admitted,
