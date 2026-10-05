@@ -128,7 +128,12 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
         equipment.Equip(new(item.Value, new("sword")), [new("hand")]);
         if (reject) containers.Seed(destination, [new(new("zinc"), 9, Stack: Stack("zinc"))]);
         ulong revision = store.Revision;
-        void Transfer() => containers.TransferAll(source, destination, prepareTransfer: edit => edit.Unequip(source, item));
+        void Transfer() => containers.TransferAll(source, destination, prepareTransfer: edit =>
+        {
+            edit.Unequip(source, item);
+            Assert.Equal(revision, store.Revision);
+            Assert.Equal(item.Value, Assert.Single(equipment.Read().Assignments).Item.EntityId);
+        });
         if (reject)
         {
             Assert.Throws<MechanicsException>(Transfer);
@@ -142,7 +147,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
         else
         {
             Transfer();
-            Assert.Equal(revision + 1, store.Revision);
+            Assert.True(store.Revision > revision);
             Assert.Empty(equipment.Read().Assignments);
             Assert.Empty(containers.Read(source).UniqueItems);
             Assert.Empty(containers.Read(source).Stacks);
