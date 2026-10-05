@@ -61,8 +61,10 @@ internal sealed partial class DaggerfallSession
         State.Transport.Reconcile(State.Inventory.Read(), new DaggerfallTransportAccessContext(
             IsIndoor: _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior,
             IsDungeon: _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon));
+        bool slowfall = State.Effects.GrantsSlowfall(DaggerfallActorIdentity.PlayerEntityId);
         DaggerfallLocomotionStep locomotion = _locomotion.BeginStep([.. update.Inputs], update.DeltaSeconds,
-            State.Actors.Player.Stats, canMove, State.Transport);
+            State.Actors.Player.Stats, canMove, State.Transport,
+            State.Effects.EnhancesJumping(DaggerfallActorIdentity.PlayerEntityId), slowfall);
         CharacterMotion motionBefore = State.PlayerControl.Motion;
         WorldPoint? positionBefore = State.PlayerControl.Position;
         bool activeLocationLoaded = _sites.ActiveLocationLoaded;
@@ -130,9 +132,14 @@ internal sealed partial class DaggerfallSession
             };
         }
         locomotion = locomotion with { Controls = restrictions.Restrict(locomotion.Controls) };
-        bool releasedVerticalDrive = _verticalMovementDriven && !locomotion.Controls.VerticalVelocity.HasValue;
+        // Slowfall is a passive descent constraint, not voluntary movement. Engine still owns
+        // the accepted pose and collision. Climb, levitation and water support take precedence.
+        bool slowfallDescending = slowfall && !motionBefore.Grounded && motionBefore.ControlledVelocity.Y <= 0f
+            && activeWater is null && !climb.Climbing && !levitation.IsLevitating;
+        if (slowfallDescending)
+            locomotion = locomotion with { Controls = locomotion.Controls with { VerticalVelocity = -_tuning.Locomotion.SlowfallDescentSpeed } };
+        bool releasedVerticalDrive = _spatial.IsVerticalDriven && !locomotion.Controls.VerticalVelocity.HasValue;
         CharacterStepReceipt? movement = _spatial.Step(State.PlayerControl, update, doorEnvironment, locomotion.Controls);
-        if (movement is not null) _verticalMovementDriven = locomotion.Controls.VerticalVelocity.HasValue;
         if (movement is not null && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior)
         {
             _sites.UpdateExteriorResidency();
@@ -147,7 +154,7 @@ internal sealed partial class DaggerfallSession
         if (movement is not null && State.DungeonDiscoveries.TryGetValue(_activeProfileKey, out DaggerfallDungeonDiscovery? discovery))
             _dungeonVisibility.Observe(discovery, State.PlayerControl, _doors, doorEnvironment, simulationStep,
                 _tuning.Camera.EyeHeight, _sites.LocalCompensation);
-        CharacterMotion landingBefore = releasedVerticalDrive && positionBefore is WorldPoint releasePosition
+        CharacterMotion landingBefore = (releasedVerticalDrive || slowfallDescending) && positionBefore is WorldPoint releasePosition
             ? motionBefore with { PeakY = releasePosition.Y, FallOriginY = releasePosition.Y }
             : motionBefore;
         DaggerfallSwimmingStep swimming = movement is not null

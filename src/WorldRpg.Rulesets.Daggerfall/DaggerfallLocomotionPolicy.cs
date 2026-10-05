@@ -37,7 +37,7 @@ internal sealed class DaggerfallLocomotionPolicy
 
     /// <summary>Builds one Engine command from the current physical controls and live player mechanics.</summary>
     internal DaggerfallLocomotionStep BeginStep(ReadOnlySpan<ProductInputEvent> inputs, float seconds, StatsComponent stats, bool canMove,
-        DaggerfallTransportPolicy? transport = null)
+        DaggerfallTransportPolicy? transport = null, bool enhancedJumping = false, bool slowfall = false)
     {
         ArgumentNullException.ThrowIfNull(stats);
         FpsInputFrame frame = _input.Consume(inputs, seconds);
@@ -54,14 +54,14 @@ internal sealed class DaggerfallLocomotionPolicy
             ? (float)transport!.MovementSpeed(speed, _tuning.ClassicToEngineSpeedRatio)
             : running ? RunSpeed(speed, runningSkill) : crouching ? CrouchSpeed(speed) : WalkSpeed(speed);
         CharacterStepControls controls = new(
-            JumpPressed: canMove && onFoot && hasJumpFatigue && frame.JumpPressed,
-            JumpHeld: canMove && onFoot && hasJumpFatigue && frame.JumpHeld,
+            JumpPressed: canMove && onFoot && hasJumpFatigue && !slowfall && frame.JumpPressed,
+            JumpHeld: canMove && onFoot && hasJumpFatigue && !slowfall && frame.JumpHeld,
             CrouchRequested: crouching,
             ForwardSpeed: groundSpeed,
             BackwardSpeed: groundSpeed,
             StrafeSpeed: groundSpeed,
-            JumpSpeed: JumpSpeed(jumpingSkill, crouching));
-        return new(controls, running, canMove && onFoot && hasJumpFatigue && (frame.JumpPressed || frame.JumpHeld),
+            JumpSpeed: JumpSpeed(jumpingSkill, crouching, enhancedJumping));
+        return new(controls, running, canMove && onFoot && hasJumpFatigue && !slowfall && (frame.JumpPressed || frame.JumpHeld),
             frame.Movement.Y, frame.CrouchHeld, UpHeld: frame.JumpHeld, DownHeld: frame.CrouchHeld);
     }
 
@@ -148,9 +148,10 @@ internal sealed class DaggerfallLocomotionPolicy
         ((liveSpeed + _tuning.WalkBase) / _tuning.ClassicToEngineSpeedRatio)
         * (_tuning.RunBaseMultiplier + (runningSkill / _tuning.RunningSkillDivisor));
 
-    internal float JumpSpeed(int jumpingSkill, bool crouching)
+    internal float JumpSpeed(int jumpingSkill, bool crouching, bool enhancedJumping = false)
     {
-        float speed = _tuning.JumpBaseSpeed * (1f + ((jumpingSkill * _tuning.JumpSkillMultiplier) / 100f) + _athleticsJumpBonus);
+        float speed = _tuning.JumpBaseSpeed * (1f + ((jumpingSkill * _tuning.JumpSkillMultiplier) / 100f) + _athleticsJumpBonus
+            + (enhancedJumping ? _tuning.EnhancedJumpBonus : 0f));
         return crouching ? speed * _tuning.CrouchedJumpMultiplier : speed;
     }
 
@@ -213,7 +214,9 @@ internal sealed record DaggerfallLocomotionTuning(
     int SwimmingFatiguePerGameMinute = 44,
     float LevitationVerticalSpeed = 4f,
     float AthleticJumpBonus = .1f,
-    float ImprovedAthleticJumpBonus = .1f)
+    float ImprovedAthleticJumpBonus = .1f,
+    float EnhancedJumpBonus = .6f,
+    float SlowfallDescentSpeed = 1.75f)
 {
     internal static DaggerfallLocomotionTuning Classic { get; } = new(39.5f, 150f, 50f, 1.35f, 200f, 30, 11, 88, 11, 4.5f, .5f, .8f);
 
@@ -222,9 +225,10 @@ internal sealed record DaggerfallLocomotionTuning(
         if (!float.IsFinite(ClassicToEngineSpeedRatio) || ClassicToEngineSpeedRatio <= 0f) throw new ArgumentOutOfRangeException(nameof(ClassicToEngineSpeedRatio));
         if (!float.IsFinite(WalkBase) || !float.IsFinite(CrouchBase) || !float.IsFinite(RunBaseMultiplier) || !float.IsFinite(RunningSkillDivisor)
             || !float.IsFinite(JumpBaseSpeed) || !float.IsFinite(JumpSkillMultiplier) || !float.IsFinite(CrouchedJumpMultiplier)
+            || !float.IsFinite(EnhancedJumpBonus) || !float.IsFinite(SlowfallDescentSpeed)
             || !float.IsFinite(LevitationVerticalSpeed) || !float.IsFinite(AthleticJumpBonus) || !float.IsFinite(ImprovedAthleticJumpBonus)
             || RunningSkillDivisor <= 0f || RunBaseMultiplier <= 0f || JumpBaseSpeed <= 0f || JumpSkillMultiplier < 0f || CrouchedJumpMultiplier <= 0f
-            || LevitationVerticalSpeed <= 0f || AthleticJumpBonus < 0f || ImprovedAthleticJumpBonus < 0f) throw new ArgumentOutOfRangeException(nameof(WalkBase));
+            || EnhancedJumpBonus < 0f || SlowfallDescentSpeed <= 0f || LevitationVerticalSpeed <= 0f || AthleticJumpBonus < 0f || ImprovedAthleticJumpBonus < 0f) throw new ArgumentOutOfRangeException(nameof(WalkBase));
         if (MinimumWalkSpeedAttribute < 0 || IdleFatiguePerGameMinute < 0 || RunningFatiguePerGameMinute < 0
             || ClimbingFatiguePerGameMinute < 0 || SwimmingFatiguePerGameMinute < 0 || JumpFatigueCost <= 0)
             throw new ArgumentOutOfRangeException(nameof(MinimumWalkSpeedAttribute));

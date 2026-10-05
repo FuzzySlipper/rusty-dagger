@@ -97,6 +97,9 @@ public sealed class SpatialMovementSystem : IDisposable
     private CharacterContinuationCheckpoint? _restoredCheckpoint;
     private readonly Dictionary<ulong, (string Scope, string Tag, int References, bool Active)> _registeredTriggers = [];
     private bool _verticalDriven;
+
+    /// <summary>Whether the last accepted or restored Engine continuation used controlled vertical motion.</summary>
+    public bool IsVerticalDriven => _verticalDriven;
     private bool _disposed;
 
     /// <summary>The Engine-owned scene session that other named Engine services may query during this system's lifetime.</summary>

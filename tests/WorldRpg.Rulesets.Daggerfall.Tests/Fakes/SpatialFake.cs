@@ -7,6 +7,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 internal class SpatialFake : DispatchProxy
 {
+    internal Func<CharacterStepRequest, CharacterStepReceipt, CharacterStepReceipt>? StepResult { get; set; }
     internal bool KeepPosition { get; set; }
     internal Func<CharacterStepRequest, CharacterMovementFact> MovementFact { get; set; } = _ => default;
     internal Func<SpatialCapsuleQueryRequest, SpatialHit> OverlapHit { get; set; } = _ => default;
@@ -265,7 +266,7 @@ internal class SpatialFake : DispatchProxy
         if (RejectProposedStep) throw new InvalidOperationException("Rejected controller command.");
         StepCalls++;
         StepRequests.Add(request);
-        return default(CharacterStepReceipt) with
+        var result = default(CharacterStepReceipt) with
         {
             Generation = checked((ulong)StepCalls),
             Transform = new Transform(KeepPosition ? request.Position : request.Position + new Vector3(1f, 0f, 0f), Quaternion.Identity, Vector3.One),
@@ -274,6 +275,7 @@ internal class SpatialFake : DispatchProxy
             Ground = default(CharacterGround) with { Present = true },
             Movement = MovementFact(request),
         };
+        return StepResult?.Invoke(request, result) ?? result;
     }
 
     private CharacterContinuationCheckpoint Capture(CharacterContinuationCaptureRequest request)

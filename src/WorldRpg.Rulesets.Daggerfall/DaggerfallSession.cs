@@ -60,7 +60,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private readonly DaggerfallClimbingPolicy _climbing;
     private readonly DaggerfallLevitationPolicy _levitation = new();
     private readonly DaggerfallDungeonVisibility _dungeonVisibility;
-    private bool _verticalMovementDriven;
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
     private readonly DaggerfallEnemyMagicModule _enemyMagic;
     private readonly DaggerfallCorpseLootModule _corpseLoot;
@@ -254,7 +253,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _input.Neutralize();
         _locomotion.Neutralize();
         _climbing.Detach();
-        _verticalMovementDriven = false;
         _lootUi.CloseAll();
         State.PlayerControl.YawRadians = yawRadians;
         State.PlayerControl.PitchRadians = pitchRadians;

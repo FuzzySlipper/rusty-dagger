@@ -44,15 +44,19 @@ internal static class DaggerfallAlterationEffects
                 incumbent.State = ShieldState(prior with { Remaining = (int)Math.Min(prior.Starting, (long)prior.Remaining + added.Starting) });
             }, ExtendIncumbentDuration: true);
 
-        // The donor keeps Water Breathing as an ordinary duration effect whose only gameplay
-        // contribution is a live capability read by the swimming owner.  It therefore belongs in
-        // the compiled alteration catalog rather than in a second swimmer cache.
-        yield return new("water-breathing", "water-breathing", DaggerfallEffectStacking.RefreshDuration, 1, 1,
-            Apply: effect => ValidateWaterBreathing(effect), Resume: effect => ValidateWaterBreathing(effect),
-            MovementProtection: new(PreventsFallDamage: false, GrantsWaterBreathing: true),
-            Spell: new(30, 255, SpellMaker: true, SupportsDuration: true),
-            ExtendIncumbentDuration: true, IncumbentSettingsMatch: (_, _) => true);
+        yield return Movement("climbing", 28, new(false, EnhancesClimbing: true));
+        yield return Movement("jumping", 27, new(false, EnhancesJumping: true));
+        yield return Movement("slowfall", 25, new(false, GrantsSlowfall: true), DaggerfallMagicAllowedTargets.CasterOnly);
+        yield return Movement("water-breathing", 30, new(false, GrantsWaterBreathing: true));
     }
+
+    private static DaggerfallEffectDefinition Movement(string key, int type, DaggerfallMovementProtection protection,
+        DaggerfallMagicAllowedTargets targets = DaggerfallMagicAllowedTargets.All) =>
+        new(key, key, DaggerfallEffectStacking.RefreshDuration, 1, 1,
+            Apply: effect => ValidateMovement(effect, type), Resume: effect => ValidateMovement(effect, type),
+            MovementProtection: protection,
+            Spell: new(type, -1, SpellMaker: true, SupportsDuration: true, AllowedTargets: targets),
+            ExtendIncumbentDuration: true, IncumbentSettingsMatch: (_, _) => true);
 
     internal static DaggerfallShieldState ReadShield(JsonElement state)
     {
@@ -74,12 +78,12 @@ internal static class DaggerfallAlterationEffects
         return [];
     }
 
-    private static IEnumerable<IActiveEffectContribution> ValidateWaterBreathing(DaggerfallActiveEffect effect)
+    private static IEnumerable<IActiveEffectContribution> ValidateMovement(DaggerfallActiveEffect effect, int type)
     {
         DaggerfallCastEffectState? state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
-        if (state?.Settings is not { Type: 30, SubType: 255 } || state.CasterLevel < 1
+        if (state?.Settings is not { Type: var actualType, SubType: -1 } || actualType != type || state.CasterLevel < 1
             || state.Amount != 0 || state.SavePercent is < 1 or > 100)
-            throw new ArgumentException("Water-breathing state does not match its duration-only variant.");
+            throw new ArgumentException($"Alteration movement state does not match its duration-only variant {type}:-1.");
         return [];
     }
 
