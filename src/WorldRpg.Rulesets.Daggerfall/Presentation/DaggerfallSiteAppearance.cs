@@ -129,6 +129,13 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     internal void PlayPlayerDeath(ulong generation, ulong simulationStep) =>
         Emit("playerDeath", Event(DaggerfallActorIdentity.PlayerEntityId, DaggerfallActorIdentity.PlayerEntityId,
             generation, simulationStep, "player-death"), 0);
+    private ulong questSoundEmission;
+    internal void PlayQuestSound(string clip, string quest, int line, int count)
+    {
+        if (audio is null || audioBundle is null && !audioClips.ContainsKey(clip))
+            throw new NotSupportedException($"Quest sound '{clip}' has no admitted audio owner.");
+        Emit(clip, Event(0, 0, checked(++questSoundEmission), checked((ulong)count), $"quest:{quest}:{line}"), 0);
+    }
     // Appearance object identities must be exactly representable in browser snapshots.
     // These transient product visuals use a disjoint descending pool, not resource hashes.
     private ulong nextVisualEntityId = (1UL << 53) - 1;

@@ -105,6 +105,7 @@ internal sealed record DaggerfallQuestResourceState(string Symbol, DaggerfallQue
     [JsonRequired]
     public string[] DialogueLinks { get; init; } = [];
     public bool UseClicked { get; init; }
+    [JsonRequired] public DaggerfallQuestFoeSpell[] FoeSpells { get; init; } = [];
     public DaggerfallQuestFoeRelations? FoeRelations { get; init; }
     public bool IsNpcDestroyed { get; init; }
     public bool IsQuestor { get; init; }
@@ -189,6 +190,11 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
                 || relation.ReleasedRestraint.Distinct().Count() != relation.ReleasedRestraint.Length
                 || relation.ReleasedRestraint.Any(id => !resource.Binding.ActorIds.Contains(id)) || !relation.Restrained && relation.ReleasedRestraint.Length != 0))
                 throw new ArgumentException($"Quest resource '{symbol}' has invalid foe relation policy.");
+            ArgumentNullException.ThrowIfNull(resource.FoeSpells);
+            if (resource.FoeSpells.Any(spell => spell is null || resource.SelectedFoe is null || string.IsNullOrWhiteSpace(spell.Key)
+                || spell.SourceLine <= 0 || spell.DeliveredActors is null || spell.DeliveredActors.Distinct().Count() != spell.DeliveredActors.Length
+                || spell.DeliveredActors.Any(id => !resource.Binding.ActorIds.Contains(id))))
+                throw new ArgumentException("Quest foe spell queue has invalid source or recipient state.");
             ArgumentNullException.ThrowIfNull(resource.DefeatedFoeIds);
             ArgumentNullException.ThrowIfNull(resource.RemovedFoeIds);
             if (resource.FoeInjured && resource.Binding.ActorIds.Length == 0
@@ -292,6 +298,8 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             {
                 if (declared.Kind != "foe") throw new ArgumentException($"Quest resource '{symbol}' selects a foe for a different declaration kind.");
                 _ = definitions.RequireActor(new(selectedFoe.Definition));
+                foreach (var spell in resource.FoeSpells)
+                    if (!definitions.Magic.Spells.ContainsKey(spell.Key)) throw new ArgumentException($"Queued quest spell '{spell.Key}' is unavailable.");
             }
             if (resource.SelectedPerson is { } person)
             {
@@ -357,15 +365,29 @@ internal sealed record DaggerfallQuestStartSave(string InstanceId, string Source
 
 internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[] Instances)
 {
+    [JsonRequired] public DaggerfallQuestWorkPool WorkPool { get; init; } = DaggerfallQuestWorkPool.Empty;
+    [JsonRequired] public string[] AcceptedOneTimeSources { get; init; } = [];
+    [JsonRequired] public long OfferSequence { get; init; }
+    [JsonRequired] public DaggerfallQuestOfferSave? PendingOffer { get; init; }
+
     [JsonRequired]
     public DaggerfallQuestMessagesSave Messages { get; init; } = new([], [], null);
     [JsonRequired]
     public DaggerfallQuestStartSave[] PendingStarts { get; init; } = [];
     internal void Validate()
     {
+        ArgumentNullException.ThrowIfNull(WorkPool); WorkPool.Validate();
+        ArgumentNullException.ThrowIfNull(AcceptedOneTimeSources);
+        if (AcceptedOneTimeSources.Distinct(StringComparer.Ordinal).Count() != AcceptedOneTimeSources.Length)
+            throw new ArgumentException("One-time quest history repeats a source.");
         ArgumentNullException.ThrowIfNull(Instances);
         ArgumentNullException.ThrowIfNull(Messages);
         ArgumentNullException.ThrowIfNull(PendingStarts);
+        if (OfferSequence < 0 || PendingOffer is { } offer && (offer.Sequence <= 0 || offer.Sequence > OfferSequence
+            || offer.Quest.Lifecycle != DaggerfallQuestLifecycle.Active || offer.Quest.QuestorId is null
+            || offer.Quest.InstanceId != $"work:{offer.Sequence}" || Instances.Any(instance => instance.InstanceId == offer.Quest.InstanceId)))
+            throw new ArgumentException("Saved quest offer has an invalid provider or identity.");
+        PendingOffer?.Quest.ValidateShape();
         HashSet<string> ids = new(StringComparer.Ordinal);
         foreach (DaggerfallQuestInstanceSave instance in Instances)
         {
@@ -386,6 +408,11 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
     internal void Validate(DaggerfallDefinitions definitions)
     {
         Validate();
+        foreach (string source in AcceptedOneTimeSources)
+            if (!definitions.QuestSources.Catalog.Rows.Any(row => row.OneTime && source == row.Name + ".txt"))
+                throw new ArgumentException($"One-time quest history names unavailable source '{source}'.");
+        PendingOffer?.Quest.Validate(definitions);
+
         foreach (DaggerfallQuestInstanceSave instance in Instances)
         {
             instance.Validate(definitions);
@@ -408,9 +435,11 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
         ArgumentNullException.ThrowIfNull(identities);
         ArgumentNullException.ThrowIfNull(locations);
         ArgumentNullException.ThrowIfNull(stacks);
+        if (WorkPool.Contacts.Any(contact => !npcs.ContainsKey(contact.Npc)))
+            throw new ArgumentException("Quest work contact names a missing NPC.");
         foreach (var item in items.Values) ValidateQuestItemReference(item.ItemId, item.Metadata);
         foreach (var stack in stacks.Values) ValidateQuestItemReference(stack.ItemId, stack.Metadata);
-        foreach (DaggerfallQuestInstanceSave instance in Instances)
+        foreach (DaggerfallQuestInstanceSave instance in PendingOffer is { } pending ? Instances.Append(pending.Quest) : Instances)
         foreach (DaggerfallQuestResourceState resource in instance.Resources)
         {
             switch (resource.Binding.Kind)
@@ -595,6 +624,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         {
             DialogueLinks = [.. resource.DialogueLinks],
             FoeRelations = resource.FoeRelations?.Copy(),
+            FoeSpells = [.. resource.FoeSpells.Select(spell => spell with { DeliveredActors = [.. spell.DeliveredActors] })],
             Binding = CopyBinding(resource.Binding), DefeatedFoeIds = [.. resource.DefeatedFoeIds], RemovedFoeIds = [.. resource.RemovedFoeIds],
             SelectedPerson = resource.SelectedPerson is { Home: { } home } person
                 ? person with { Home = home with { Binding = CopyBinding(home.Binding) } } : resource.SelectedPerson,
@@ -694,23 +724,32 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     {
         DaggerfallFactionDefinition? faction = _definitions.Factions.Factions.GetValueOrDefault(factionId);
         if (faction is null) return [];
-        string group = faction.GuildGroupName.Length > 0 ? faction.GuildGroupName : faction.SocialGroupName;
-        char[] membership = faction.GuildGroup > 0
+        var templeOwner = Guilds.DaggerfallConcreteGuildCatalog.All.FirstOrDefault(guild => guild.Kind == Guilds.DaggerfallConcreteGuildKind.Temple && guild.ParentFactionId == factionId);
+        if (templeOwner is not null) faction = _definitions.Factions.Factions[templeOwner.FactionId];
+        bool isGuild = Guilds.DaggerfallConcreteGuildCatalog.All.Any(guild => guild.FactionId == faction.Id);
+        string group = isGuild ? faction.GuildGroupName : faction.SocialGroupName;
+        char temple = faction.Id switch { 82 or 21 => 'A', 84 or 22 => 'Z', 88 or 24 => 'R', 92 or 26 => 'T',
+            94 or 27 => 'J', 98 or 29 => 'D', 106 or 33 => 'S', 36 or 35 => 'K', _ => '\0' };
+        char[] membership = faction.GuildGroup == 17 && playerIsMember ? ['M', temple] : isGuild
             ? [playerIsMember ? 'M' : 'N']
             : ['N', playerGender == DaggerfallCharacterGender.Female ? 'F' : 'M'];
 
         return [.. _definitions.QuestSources.Catalog.Rows
             .Where(row => row.Active && row.Group.Equals(group, StringComparison.Ordinal)
                 && row.Membership is { Length: 1 } value && membership.Contains(value[0])
-                && row.MinimumRequirement <= (row.RequirementKind == "reputation" ? playerReputation
-                    : row.RequirementKind == "rank" ? playerRank : playerLevel))
+                && (!isGuild
+                    ? row.MinimumRequirement < 10 && row.MinimumRequirement <= playerLevel || row.MinimumRequirement <= playerReputation
+                    : row.MinimumRequirement <= (row.RequirementKind == "reputation" ? playerReputation
+                        : row.RequirementKind == "rank" ? playerRank : playerLevel)))
             .Where(row => _disabledSelection?.IsOrdinaryOffer(row.Name) != false)
             .Where(row => _definitions.QuestSources.Quests.TryGetValue(row.Name + ".txt", out DaggerfallQuestSourceDefinition? source)
                 && source.Disposition == DaggerfallQuestDisposition.Compiled
-                && (_admission?.IsRunnable(source.SourceFile) ?? true))
-            .Where(row => !row.OneTime || !_instances.Values.Any(instance =>
-                instance.SourceFile.Equals(row.Name + ".txt", StringComparison.Ordinal)
-                || Messages.Journal.Any(entry => entry.SourceFile?.Equals(row.Name + ".txt", StringComparison.Ordinal) == true)))
+                && (_admission?.IsRunnable(source.SourceFile) ?? true) && _programs[source.SourceFile].Tasks.All(task =>
+                    task.Operations.All(OfferActionSupported)))
+            .Where(row => !_acceptedOneTimeSources.Contains(row.Name + ".txt"))
+            .Where(row => !_instances.Values.Any(instance => instance.SourceFile == row.Name + ".txt"
+                && (instance.Lifecycle == DaggerfallQuestLifecycle.Active || row.OneTime))
+                && (!row.OneTime || !Messages.Journal.Any(entry => entry.SourceFile == row.Name + ".txt")))
             .OrderBy(row => row.Name, StringComparer.Ordinal)];
 
     }
@@ -726,12 +765,16 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     internal DaggerfallQuestMessages Messages { get; }
 
     /// <summary>Binds the one session's live player and elapsed-time owners after composition completes.</summary>
+    private Action<DaggerfallQuestRuntimeInstance, DaggerfallQuestTaskOperation>? _diseaseAction;
+    internal void BindDiseaseActions(Action<DaggerfallQuestRuntimeInstance, DaggerfallQuestTaskOperation> action) => _diseaseAction = action;
+    void IDaggerfallQuestTaskLifecycle.DiseaseAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) =>
+        (_diseaseAction ?? throw new NotSupportedException("No quest disease owner is composed."))(instance, operation);
     private Func<bool>? _cureVampirism;
     internal void BindVampirismCure(Func<bool> cure) => _cureVampirism = cure;
-    bool IDaggerfallQuestTaskLifecycle.CureVampirism() => (_cureVampirism ?? throw new InvalidOperationException("No permanent vampire owner is composed."))();
+    bool IDaggerfallQuestTaskLifecycle.CureVampirism() => (_cureVampirism ?? throw new NotSupportedException("No permanent vampire owner is composed."))();
     private Func<bool>? _cureLycanthropy;
     internal void BindLycanthropyCure(Func<bool> cure) => _cureLycanthropy = cure;
-    bool IDaggerfallQuestTaskLifecycle.CureLycanthropy() => (_cureLycanthropy ?? throw new InvalidOperationException("No permanent curse owner is composed."))();
+    bool IDaggerfallQuestTaskLifecycle.CureLycanthropy() => (_cureLycanthropy ?? throw new NotSupportedException("No permanent curse owner is composed."))();
 
     internal void BindRuntime(DaggerfallQuestRuntime runtime) => _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
     internal void BindTextContext(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context) =>
@@ -795,7 +838,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         DaggerfallQuestRenderedMessage? prompt = pending is null ? null
             : deliveries.SingleOrDefault(delivery => delivery.Delivery == DaggerfallQuestMessageDelivery.Prompt
                 && delivery.InstanceId == pending.InstanceId && delivery.MessageId == pending.MessageId);
-        return new(deliveries, Messages.RenderJournal(_instances.Values, context), prompt) { EscortFaces = EscortFaces() };
+        return new(deliveries, Messages.RenderJournal(_instances.Values, context), prompt) { EscortFaces = EscortFaces(), Offer = ReadOffer() };
     }
 
 
@@ -902,6 +945,8 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     {
         DaggerfallQuestRuntimeInstance started = new(prepared, Program(prepared.SourceFile)) { TravelClockSeconds = ResolveTravelClockSeconds };
         if (!_instances.TryAdd(started.InstanceId, started)) throw new ArgumentException($"Quest instance '{started.InstanceId}' already exists.");
+        if (_definitions.QuestSources.Catalog.Rows.Any(row => row.OneTime && started.SourceFile == row.Name + ".txt"))
+            _acceptedOneTimeSources.Add(started.SourceFile);
         foreach (var resource in started.Resources.Where(value => value.SelectedPerson is { Home: not null, QuestorId: null }))
             RequestPlacement(started.InstanceId, "person-home:" + DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "Person home"), resource.Symbol,
                 DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "Person home") + ".home", automaticHome: true);
@@ -935,6 +980,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                     instance.Succeeded ??= false;
                     continue;
                 }
+                AdmitQueuedFoeSpells(instance);
                 DaggerfallQuestTaskRunner.Advance(instance, Program(instance.SourceFile), variables, calendar, Messages, this, elapsedSeconds);
                 AdmitQueuedFoeItems(instance);
                 }
@@ -998,6 +1044,9 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     internal DaggerfallQuestInstancesSave Capture() => new([.. _instances.Values.OrderBy(value => value.InstanceId, StringComparer.Ordinal).Select(instance => instance.Capture())])
     {
         Messages = Messages.Capture(),
+        OfferSequence = _offerSequence, PendingOffer = PendingOffer,
+        WorkPool = _workPool with { Contacts = [.. _workPool.Contacts] },
+        AcceptedOneTimeSources = [.. _acceptedOneTimeSources.Order(StringComparer.Ordinal)],
         PendingStarts = [.. _pendingStarts.Values.OrderBy(value => value.InstanceId, StringComparer.Ordinal)],
     };
 
@@ -1009,6 +1058,10 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         foreach (DaggerfallQuestStartSave start in saved.PendingStarts)
             _admission?.RequireRunnable(start.SourceFile);
         saved.Validate(_definitions);
+        if (saved.PendingOffer is { } offer) _admission?.RequireRunnable(offer.Quest.SourceFile);
+        PendingOffer = saved.PendingOffer; _offerSequence = saved.OfferSequence;
+        _workPool = saved.WorkPool with { Contacts = [.. saved.WorkPool.Contacts] };
+        _acceptedOneTimeSources.Clear(); _acceptedOneTimeSources.UnionWith(saved.AcceptedOneTimeSources);
         Dictionary<string, DaggerfallQuestRuntimeInstance> restored = new(StringComparer.Ordinal);
         foreach (DaggerfallQuestInstanceSave instance in saved.Instances)
         {
@@ -1299,8 +1352,19 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 DaggerfallQuestTaskOperation operation = task.Operations[operationIndex];
                 DaggerfallQuestTaskOperationState receipt = state.OperationState[operationIndex];
                 if (receipt.UnavailableReason is { } reason && (string.IsNullOrWhiteSpace(reason)
-                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.ChangeRepute or DaggerfallQuestTaskOperationKind.LegalRepute or DaggerfallQuestTaskOperationKind.SetCrime or DaggerfallQuestTaskOperationKind.ReputeExceeds or DaggerfallQuestTaskOperationKind.WhenRepute or DaggerfallQuestTaskOperationKind.WorldUpdate or DaggerfallQuestTaskOperationKind.AddDialog or DaggerfallQuestTaskOperationKind.DialogLink or DaggerfallQuestTaskOperationKind.TeleportPlace or DaggerfallQuestTaskOperationKind.RevealPlace or DaggerfallQuestTaskOperationKind.GiveItem or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
+                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.CastSpellDo or DaggerfallQuestTaskOperationKind.CastEffectDo or DaggerfallQuestTaskOperationKind.CastSpellOnFoe or DaggerfallQuestTaskOperationKind.Climate or DaggerfallQuestTaskOperationKind.Season or DaggerfallQuestTaskOperationKind.Weather or DaggerfallQuestTaskOperationKind.PlaySound or DaggerfallQuestTaskOperationKind.PlaySong or DaggerfallQuestTaskOperationKind.PlayVideo or DaggerfallQuestTaskOperationKind.MakePcDiseased or DaggerfallQuestTaskOperationKind.CurePcDisease or DaggerfallQuestTaskOperationKind.CureVampirism or DaggerfallQuestTaskOperationKind.CureLycanthropy or DaggerfallQuestTaskOperationKind.ChangeRepute or DaggerfallQuestTaskOperationKind.LegalRepute or DaggerfallQuestTaskOperationKind.SetCrime or DaggerfallQuestTaskOperationKind.ReputeExceeds or DaggerfallQuestTaskOperationKind.WhenRepute or DaggerfallQuestTaskOperationKind.WorldUpdate or DaggerfallQuestTaskOperationKind.AddDialog or DaggerfallQuestTaskOperationKind.DialogLink or DaggerfallQuestTaskOperationKind.TeleportPlace or DaggerfallQuestTaskOperationKind.RevealPlace or DaggerfallQuestTaskOperationKind.GiveItem or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
                     throw new ArgumentException("Quest unsupported world detail must identify its owning action.");
+                if (receipt.ObservedCastSequence is { } cast && (cast <= 0 || operation.Kind is not (DaggerfallQuestTaskOperationKind.CastSpellDo or DaggerfallQuestTaskOperationKind.CastEffectDo)))
+                    throw new ArgumentException("Quest cast observation must belong to a spell/effect watcher.");
+                if (receipt.FoeSpellIndex is { } spellIndex)
+                {
+                    var target = instance.Resources.SingleOrDefault(resource => resource.Symbol == operation.Targets.ElementAtOrDefault(1));
+                    if (operation.Kind != DaggerfallQuestTaskOperationKind.CastSpellOnFoe || target is null || spellIndex < 0 || spellIndex >= target.FoeSpells.Length
+                        || target.FoeSpells[spellIndex].SourceLine != operation.SourceLine)
+                        throw new ArgumentException("Quest spell queue reference does not match its source action.");
+                }
+                if (receipt.Sound is { } sound && (operation.Kind != DaggerfallQuestTaskOperationKind.PlaySound || sound.Played < 0 || sound.LastPlayedSecond < 0))
+                    throw new ArgumentException("Quest sound state must belong to a sound action and retain a valid count and calendar cursor.");
                 if (receipt.ItemDropped && operation.Kind != DaggerfallQuestTaskOperationKind.DroppedAt)
                     throw new ArgumentException("Quest drop state must belong to a drop trigger.");
                 if (receipt.PaymentBranch is { } branch && (operation.Kind != DaggerfallQuestTaskOperationKind.PayMoney || !operation.Targets.Take(2).Contains(branch)))

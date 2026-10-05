@@ -318,6 +318,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
     private readonly DaggerfallSiteProfile[] _sites;
     private readonly DaggerfallSiteProfiles _profiles;
     private readonly DaggerfallSessionComposition _composition;
+    internal IRandomService? Random { get; set; }
 
     internal DaggerfallSiteProfile BankProfile { get; }
     internal DaggerfallSiteProfile KnightlyProfile { get; }
@@ -350,7 +351,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         SmallShipProfile = smallShip;
     }
 
-    internal static SourceBackedGuildBankSessionFixture Create()
+    internal static SourceBackedGuildBankSessionFixture Create(DaggerfallTuning? tuning = null)
     {
         string root = TestData.RepositoryRoot;
         ProductContent content = FullContent(root);
@@ -376,7 +377,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         ContentPack blocksPack = resolved.ContentPacks.Single(pack => pack.Role == new ContentPackRoleId("daggerfall.blocks"));
         DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(blocksPack.Payload);
         blocks.AdmitLocations(definitions.Locations);
-        DaggerfallSessionComposition composition = new(definitions, bank, DaggerfallTuning.Defaults, resolved.Identity)
+        DaggerfallSessionComposition composition = new(definitions, bank, tuning ?? DaggerfallTuning.Defaults, resolved.Identity)
         {
             Profiles = profiles,
             Blocks = blocks,
@@ -403,7 +404,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         ContentFake content = new(releases);
         foreach (DaggerfallSiteProfile site in _sites) PopulateContent(content, site);
         SpatialFake spatial = SpatialFake.Create(profile.SpatialArtifact.Sha256, releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: Random);
         return DaggerfallSession.StartNew(engine.Context, _composition with { StartSite = profile });
     }
 
@@ -419,7 +420,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         ContentFake content = new(releases);
         foreach (DaggerfallSiteProfile site in _sites) PopulateContent(content, site);
         SpatialFake spatial = SpatialFake.Create(active.SpatialArtifact.Sha256, releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: Random);
         return DaggerfallSession.Restore(engine.Context, _composition with { StartSite = active }, saved);
     }
 

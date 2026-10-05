@@ -63,7 +63,8 @@ internal sealed record DaggerfallDiseaseExposure(
     ulong? ItemId = null,
     int BiographyModifier = 0,
     int? ActiveResistanceChance = null,
-    DaggerfallDiseaseCareerTolerance RaceTolerance = DaggerfallDiseaseCareerTolerance.Normal)
+    DaggerfallDiseaseCareerTolerance RaceTolerance = DaggerfallDiseaseCareerTolerance.Normal,
+    bool BypassSavingThrows = false)
 {
     internal void ValidateSavingThrowInputs()
     {
@@ -180,17 +181,20 @@ internal static class DaggerfallDiseasePolicy
         if (exposure.TargetId != actors.Player.DurableId) return DaggerfallDiseaseAdmission.TargetIsNotPlayer;
         if (actors.Player.Progression.Level <= 1) return DaggerfallDiseaseAdmission.LevelOneImmune;
 
-        StatsComponent stats = actors.Player.Stats;
-        if (exposure.RaceTolerance == DaggerfallDiseaseCareerTolerance.Immune || ReadStat(stats, DaggerfallMechanicsIds.ImmunityDisease) != 0) return DaggerfallDiseaseAdmission.Immune;
-        if (exposure.ActiveResistanceChance is int activeResistance
-            && Draw(random, $"active-resist:{exposure.Instance}", 1, 100) <= activeResistance)
-            return DaggerfallDiseaseAdmission.Resisted;
-        int chance = DiseaseSavingThrowChance(
-            ReadStat(stats, DaggerfallMechanicsIds.Willpower),
-            career is null ? DaggerfallDiseaseCareerTolerance.Normal : CareerTolerance(career),
-            exposure.BiographyModifier, exposure.RaceTolerance);
-        int resistanceRoll = Draw(random, $"resist:{exposure.Instance}", 1, 100);
-        if (DiseaseSavingThrowAmount(chance, resistanceRoll) == 0) return DaggerfallDiseaseAdmission.Resisted;
+        if (!exposure.BypassSavingThrows)
+        {
+            StatsComponent stats = actors.Player.Stats;
+            if (exposure.RaceTolerance == DaggerfallDiseaseCareerTolerance.Immune || ReadStat(stats, DaggerfallMechanicsIds.ImmunityDisease) != 0) return DaggerfallDiseaseAdmission.Immune;
+            if (exposure.ActiveResistanceChance is int activeResistance
+                && Draw(random, $"active-resist:{exposure.Instance}", 1, 100) <= activeResistance)
+                return DaggerfallDiseaseAdmission.Resisted;
+            int chance = DiseaseSavingThrowChance(
+                ReadStat(stats, DaggerfallMechanicsIds.Willpower),
+                career is null ? DaggerfallDiseaseCareerTolerance.Normal : CareerTolerance(career),
+                exposure.BiographyModifier, exposure.RaceTolerance);
+            int resistanceRoll = Draw(random, $"resist:{exposure.Instance}", 1, 100);
+            if (DiseaseSavingThrowAmount(chance, resistanceRoll) == 0) return DaggerfallDiseaseAdmission.Resisted;
+        }
 
         DaggerfallClassicDisease[] candidates = exposure.Candidates?.ToArray()
             ?? throw new ArgumentNullException(nameof(exposure), "Disease candidates cannot be null.");

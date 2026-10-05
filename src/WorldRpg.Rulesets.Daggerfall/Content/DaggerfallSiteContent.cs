@@ -1733,7 +1733,7 @@ internal static class DaggerfallSiteContent
                 string mediaId = DaggerfallBaseContent.Text(clip, "mediaId", diagnostics);
                 if (!resources.TryGetValue(mediaId, out ClassicMediaResource? resource) || resource.Kind != "audio") diagnostics.Add($"Classic audio mapping '{id}' refers to missing audio media '{mediaId}'.");
                 else if (audio.Any(item => item.Id == id)) diagnostics.Add($"Classic media repeats audio mapping '{id}'.");
-                else audio.Add(new NormalizedAudioClip(id, resource.Path, resource.Hash));
+                else audio.Add(new NormalizedAudioClip(id, resource.Path, resource.Hash, DaggerfallBaseContent.Integer(clip, "sourceNumericId", diagnostics)));
             }
             try { OrderedHitCues(audio); }
             catch (InvalidOperationException exception) { diagnostics.Add(exception.Message); }
@@ -2400,7 +2400,7 @@ internal sealed record NormalizedSpriteState(string Name, IReadOnlyList<uint> Fr
     }
 }
 internal sealed record NormalizedAttackSequence(int Chance, IReadOnlyList<int> SourceFrames, string State = "primaryAttack");
-internal sealed record NormalizedAudioClip(string Id, string Path, ContentSha256 Sha256);
+internal sealed record NormalizedAudioClip(string Id, string Path, ContentSha256 Sha256, int? SourceNumericId = null);
 
 /// <summary>
 /// One music cue a site's classic sidecar admits: the donor track it answers, the published artifact

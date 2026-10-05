@@ -82,6 +82,7 @@ public sealed class DaggerfallMusicDirectorTests
 
         music.Update(DaggerfallMusicContext.Tavern);
         Assert.Equal("song_quest", music.Cue("song_quest"));
+        Assert.Equal("song_quest", music.Update(DaggerfallMusicContext.Tavern));
         Assert.Equal(["song_square_2"], audio.Retired);
         music.Resume();
         Assert.Equal("song_square_2", music.Playing);
@@ -111,6 +112,7 @@ public sealed class DaggerfallMusicDirectorTests
 
         // The cue overrides the loop, so the dungeon's voice is released as the quest voice starts.
         Assert.Equal("song_quest", music.Cue("song_quest"));
+        Assert.Equal("song_quest", music.Update(DaggerfallMusicContext.Dungeon));
         Assert.Equal(1, audio.ReleasedVoices);
         music.Stop();
         Assert.Null(music.Playing);

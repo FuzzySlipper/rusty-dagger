@@ -53,7 +53,7 @@ internal sealed partial class DaggerfallSession
             resolveQuestRumor: State.Quests.ResolveDialogueRumor,
             resolveQuestTopic: ResolveQuestTopic,
             calendar: () => _time.Calendar,
-            workAvailable: DialogueWorkAvailable,
+            workAvailable: DialogueWorkAvailable, offerWork: OfferQuestWork,
             variables: () => State.Variables,
             templeService: ResolveTempleService,
             guildService: ResolveGuildProvider,
@@ -170,16 +170,10 @@ internal sealed partial class DaggerfallSession
 
     private bool DialogueWorkAvailable(long npcId)
     {
-        DaggerfallNpc npc;
-        try { npc = State.Npcs.Require(npcId); }
-        catch (InvalidOperationException) { return false; }
-        if (npc.Appearance.FactionId == 0 || !_definitions.Factions.Factions.TryGetValue(npc.Appearance.FactionId, out DaggerfallFactionDefinition? faction))
-            return false;
-        bool member = faction.GuildGroup > 0 && State.Social.GuildEligibility(faction.Id).IsMember;
-        int reputation = State.Social.FactionReputation(faction.Id);
-        int rank = faction.GuildGroup > 0 ? State.Social.GuildEligibility(faction.Id).Rank : 0;
-        return State.Quests.HasOrdinaryWorkOffer(faction.Id, member, State.Progression.Level, reputation, rank,
-            State.Character.Identity.Gender, checked((int)_time.Calendar.DayNumber));
+        if (QuestProvider(npcId) is not { } context) return false;
+        return State.Quests.HasOrdinaryWorkOffer(context.Faction, context.Member, State.Progression.Level, context.Reputation, context.Rank,
+            context.Provider.Appearance.Gender == "Female" ? DaggerfallCharacterGender.Female : DaggerfallCharacterGender.Male,
+            checked((int)_time.Calendar.DayNumber));
     }
 
     /// <summary>Consumes one parsed mode action; it does not turn into a world activation.</summary>

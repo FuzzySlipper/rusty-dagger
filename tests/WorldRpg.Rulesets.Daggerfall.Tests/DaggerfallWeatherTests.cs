@@ -21,7 +21,9 @@ public sealed class DaggerfallWeatherTests
         }
         Assert.Equal(3, DaggerfallWeatherState.ClimateGroup(223));
         Assert.Equal(0, DaggerfallWeatherState.ClimateGroup(225));
-        Assert.Equal(1, DaggerfallWeatherState.ClimateGroup(227));
+        Assert.Equal(1, DaggerfallWeatherState.ClimateGroup(230));
+        Assert.Equal(2, DaggerfallWeatherState.ClimateGroup(227));
+        Assert.Equal(4, DaggerfallWeatherState.ClimateGroup(229));
         Assert.Equal(5, DaggerfallWeatherState.ClimateGroup(232));
     }
 

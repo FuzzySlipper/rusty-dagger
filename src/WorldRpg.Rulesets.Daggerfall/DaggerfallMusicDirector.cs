@@ -115,6 +115,8 @@ public sealed class DaggerfallMusicDirector : IDisposable
     private bool _disposed;
     private string? _playing;
     private string? _interrupted;
+    private DaggerfallMusicContext? _context;
+    private bool _questCue;
     private AudioVoice? _voice;
 
     /// <summary>Creates a director over Engine audio with a track resolver.</summary>
@@ -142,6 +144,9 @@ public sealed class DaggerfallMusicDirector : IDisposable
             throw new ArgumentOutOfRangeException(nameof(context), context, "Music answers to no context the contract declares.");
         }
 
+        if (_questCue && _context == context) return _playing;
+        _questCue = false;
+        _context = context;
         string? track = TrackFor(context, pick);
         if (track is null || string.Equals(_playing, track, StringComparison.Ordinal))
         {
@@ -169,6 +174,7 @@ public sealed class DaggerfallMusicDirector : IDisposable
         }
 
         _interrupted = _playing;
+        _questCue = true;
         Retire();
         AudioClip? clip = _resolve(track);
         if (Start(clip))
@@ -183,6 +189,7 @@ public sealed class DaggerfallMusicDirector : IDisposable
     public void Resume()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        _questCue = false;
         string? interrupted = _interrupted;
         _interrupted = null;
         if (interrupted is null) return;
@@ -198,6 +205,7 @@ public sealed class DaggerfallMusicDirector : IDisposable
     public void Stop()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        _questCue = false;
         _interrupted = null;
         Retire();
     }

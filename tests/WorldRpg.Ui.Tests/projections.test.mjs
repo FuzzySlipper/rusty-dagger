@@ -1381,3 +1381,18 @@ test('vampire character projection displays clan and published media while retai
     assert.doesNotMatch(f.root.querySelector('.dagger-character-overview').textContent,/Vampire/);
   } finally { f.dispose(); }
 });
+
+test('quest offer preserves its identity in accept and decline actions', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'modal', quests: { deliveries: [], journal: [], pending: null, escortFaces: [],
+      offer: { instance: 'work:7', text: 'Retrieve the selected heirloom for this provider.', diagnostics: [] } } });
+    const article = [...f.root.querySelectorAll('.dagger-quest-message')].find(x => x.textContent.includes('Retrieve the selected'));
+    assert.ok(article);
+    const buttons = [...article.querySelectorAll('button')];
+    buttons.find(b => b.textContent === 'Accept').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'quest-offer-answer', questInstance: 'work:7', confirm: true });
+    buttons.find(b => b.textContent === 'Decline').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'quest-offer-answer', questInstance: 'work:7', confirm: false });
+  } finally { f.dispose(); }
+});

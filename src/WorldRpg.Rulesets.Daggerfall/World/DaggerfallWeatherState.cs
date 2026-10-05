@@ -91,10 +91,10 @@ internal sealed class DaggerfallWeatherState
     internal static int ClimateGroup(int sourceClimate) => sourceClimate switch
     {
         224 or 225 => 0, // Desert / Desert2
-        226 or 227 => 1, // Mountain / MountainWoods
-        229 => 2,       // Rainforest
+        226 or 230 => 1, // Mountain / MountainWoods
+        227 => 2,       // Rainforest
         223 or 228 => 3,// Ocean / Swamp
-        230 => 4,       // Subtropical
+        229 => 4,       // Subtropical
         231 or 232 => 5,// Woodlands / HauntedWoodlands
         _ => throw new ArgumentOutOfRangeException(nameof(sourceClimate), sourceClimate, "Weather requires a named normalized climate."),
     };

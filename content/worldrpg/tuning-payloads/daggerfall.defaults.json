@@ -1,4 +1,5 @@
 {
+  "questOffers": { "socialProviderChancePercent": 25, "castleProviderChancePercent": 25 },
   "questRewards": {
     "minimumDeliveryHour": 7,
     "maximumDeliveryHour": 18,

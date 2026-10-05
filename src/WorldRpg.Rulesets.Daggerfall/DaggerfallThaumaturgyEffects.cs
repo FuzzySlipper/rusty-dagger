@@ -32,18 +32,18 @@ internal static class DaggerfallThaumaturgyEffects
     private static DaggerfallEffectDefinition Movement(string key, int type,
         DaggerfallMagicAllowedTargets target, DaggerfallMovementProtection protection) =>
         new(key, key, DaggerfallEffectStacking.RefreshDuration, 1, 1,
-            Apply: effect => ValidateEffect(effect, type, 255),
-            Resume: effect => ValidateEffect(effect, type, 255),
+            Apply: effect => ValidateEffect(effect, type, -1),
+            Resume: effect => ValidateEffect(effect, type, -1),
             MovementProtection: protection,
-            Spell: new(type, 255, SpellMaker: true, SupportsDuration: true, AllowedTargets: target),
+            Spell: new(type, -1, SpellMaker: true, SupportsDuration: true, AllowedTargets: target),
             ExtendIncumbentDuration: true,
             IncumbentSettingsMatch: (_, _) => true);
 
     private static DaggerfallEffectDefinition Defense(string key, int type, bool reflection) =>
         new(key, key, DaggerfallEffectStacking.RefreshDuration, 1, 1,
-            Apply: effect => ValidateEffect(effect, type, 255),
-            Resume: effect => ValidateEffect(effect, type, 255),
-            Spell: new(type, 255, SpellMaker: true, SupportsDuration: true),
+            Apply: effect => ValidateEffect(effect, type, -1),
+            Resume: effect => ValidateEffect(effect, type, -1),
+            Spell: new(type, -1, SpellMaker: true, SupportsDuration: true),
             MagicDefense: effect => DefenseFor(effect, reflection),
             ExtendIncumbentDuration: true,
             IncumbentSettingsMatch: (_, _) => true);

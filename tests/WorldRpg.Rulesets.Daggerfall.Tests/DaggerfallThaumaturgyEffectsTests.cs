@@ -15,15 +15,15 @@ public sealed class DaggerfallThaumaturgyEffectsTests
     public void Spatial_effects_grant_and_remove_typed_support_and_compile_donor_bindings()
     {
         DaggerfallEffectDefinition[] definitions = DaggerfallThaumaturgyEffects.Definitions().ToArray();
-        Assert.Equal((14, 255), Binding(definitions, "levitate"));
-        Assert.Equal((31, 255), Binding(definitions, "water-walking"));
-        Assert.Equal((21, 255), Binding(definitions, "spell-reflection"));
-        Assert.Equal((22, 255), Binding(definitions, "spell-resistance"));
+        Assert.Equal((14, -1), Binding(definitions, "levitate"));
+        Assert.Equal((31, -1), Binding(definitions, "water-walking"));
+        Assert.Equal((21, -1), Binding(definitions, "spell-reflection"));
+        Assert.Equal((22, -1), Binding(definitions, "spell-resistance"));
 
         using ActorsState actors = Actors();
         using DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(definitions));
-        Start(effects, "levitate", 14, 255, target: 1);
-        Start(effects, "water-walking", 31, 255, target: 2);
+        Start(effects, "levitate", 14, -1, target: 1);
+        Start(effects, "water-walking", 31, -1, target: 2);
 
         Assert.True(effects.GrantsLevitation(1));
         Assert.False(effects.GrantsLevitation(2));
@@ -42,8 +42,8 @@ public sealed class DaggerfallThaumaturgyEffectsTests
         DaggerfallEffectDefinition[] definitions = DaggerfallThaumaturgyEffects.Definitions().ToArray();
         using ActorsState actors = Actors();
         using DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(definitions));
-        Start(effects, "spell-reflection", 21, 255, target: 2, chance: 100, rounds: 2);
-        Start(effects, "spell-resistance", 22, 255, target: 2, chance: 100, rounds: 2);
+        Start(effects, "spell-reflection", 21, -1, target: 2, chance: 100, rounds: 2);
+        Start(effects, "spell-resistance", 22, -1, target: 2, chance: 100, rounds: 2);
 
         DaggerfallMagicDefense defense = effects.MagicDefenseFor(2);
         Assert.Equal(100, defense.ReflectionChance);

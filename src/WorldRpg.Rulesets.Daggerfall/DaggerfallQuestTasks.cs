@@ -5,12 +5,15 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { ChangeRepute, LegalRepute, ReputeExceeds, WhenRepute, SetCrime, AddDialog, DialogLink, When, DroppedAt, RevealPlace, TeleportPlace, WorldUpdate, ClickedItem, TotingItem, ItemUsed, GiveItem, PayMoney, GivePc, FoeTeam, FoeInfighting, FoeRestraint, Enemies, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, CureVampirism, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { ChangeRepute, LegalRepute, ReputeExceeds, WhenRepute, SetCrime, AddDialog, DialogLink, When, DroppedAt, RevealPlace, TeleportPlace, WorldUpdate, ClickedItem, TotingItem, ItemUsed, GiveItem, PayMoney, GivePc, FoeTeam, FoeInfighting, FoeRestraint, Enemies, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, CureVampirism, MakePcDiseased, CurePcDisease, CastSpellDo, CastEffectDo, CastSpellOnFoe, Climate, Season, Weather, PlaySound, PlaySong, PlayVideo, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
 internal sealed record DaggerfallQuestTaskOperationState(string? PickedTarget, string? ChildInstanceId)
 {
+    public long? ObservedCastSequence { get; init; }
+    public int? FoeSpellIndex { get; init; }
+    public DaggerfallQuestSoundState? Sound { get; init; }
     public bool ItemDropped { get; init; }
     public DaggerfallQuestItemTransfer? ItemTransfer { get; init; }
     public string? PaymentBranch { get; init; }
@@ -326,6 +329,12 @@ internal static partial class DaggerfallQuestTaskCompiler
             return new(DaggerfallQuestTaskOperationKind.CureVampirism, sourceLine, line, [], [], null);
         if (line.Equals("cure lycanthropy", StringComparison.OrdinalIgnoreCase))
             return new(DaggerfallQuestTaskOperationKind.CureLycanthropy, sourceLine, line, [], [], null);
+        if (Regex.Match(line, @"^make\s+pc\s+ill\s+with\s+([a-zA-Z0-9_.']+)$", RegexOptions.IgnoreCase) is { Success: true } disease)
+            return new(DaggerfallQuestTaskOperationKind.MakePcDiseased, sourceLine, line, [disease.Groups[1].Value], [], null);
+        if (Regex.Match(line, @"^cure\s+([a-zA-Z0-9_.']+)$", RegexOptions.IgnoreCase) is { Success: true } cure)
+            return new(DaggerfallQuestTaskOperationKind.CurePcDisease, sourceLine, line, [cure.Groups[1].Value], [], null);
+        if (CompileMagic(line, sourceLine) is { } magic) return magic;
+        if (CompileEnvironment(line, sourceLine) is { } environment) return environment;
         if (StartQuest.Match(line) is { Success: true } startQuest)
         {
             string target = startQuest.Groups["quest"].Success
@@ -446,6 +455,10 @@ internal interface IDaggerfallQuestTaskLifecycle
     bool IsLevelCompleted(int minimum);
     bool IsAttributeAtLeast(string attribute, int minimum);
     bool IsSkillAtLeast(string skill, int minimum);
+    bool MagicAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, DaggerfallQuestTaskRuntimeState task, int index) => throw new NotSupportedException("No quest casting owner is composed.");
+    bool EnvironmentCondition(DaggerfallQuestTaskOperation operation, World.DaggerfallCalendar calendar) => throw new NotSupportedException("No quest environment owner is composed.");
+    bool MediaAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation, DaggerfallQuestTaskRuntimeState state, int index, World.DaggerfallCalendar calendar) => throw new NotSupportedException("No quest media owner is composed.");
+    void DiseaseAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) => throw new NotSupportedException("No quest disease owner is composed.");
     bool CureVampirism() => throw new NotSupportedException("No permanent vampire owner is composed.");
     bool CureLycanthropy() => throw new NotSupportedException("No permanent curse owner is composed.");
     void Train(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation);
@@ -478,6 +491,7 @@ internal static class DaggerfallQuestTaskRunner
             try
             {
             bool ranPrimaryAlwaysOn = false;
+            bool waitingForCast = false;
             for (int operationIndex = 0; operationIndex < task.Operations.Count; operationIndex++)
             {
                 DaggerfallQuestTaskOperation operation = task.Operations[operationIndex];
@@ -517,6 +531,12 @@ internal static class DaggerfallQuestTaskRunner
                 if (operation.Kind == DaggerfallQuestTaskOperationKind.WhenNpcAvailable)
                 {
                     Set(task, state, lifecycle.NpcAvailable(operation, state, operationIndex), variables);
+                    continue;
+                }
+                if (operation.Kind is DaggerfallQuestTaskOperationKind.Climate or DaggerfallQuestTaskOperationKind.Season or DaggerfallQuestTaskOperationKind.Weather)
+                {
+                    try { Set(task, state, lifecycle.EnvironmentCondition(operation, calendar), variables); }
+                    catch (NotSupportedException unsupported) { Set(task, state, false, variables); DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); }
                     continue;
                 }
                 if (operation.Kind == DaggerfallQuestTaskOperationKind.DailyFrom)
@@ -594,6 +614,7 @@ internal static class DaggerfallQuestTaskRunner
                 }
 
                 if (!state.IsSet || state.OperationCompleted[operationIndex]) continue;
+                if (waitingForCast && operation.Kind is not (DaggerfallQuestTaskOperationKind.CastSpellOnFoe or DaggerfallQuestTaskOperationKind.PlaceFoe or DaggerfallQuestTaskOperationKind.CreateFoe or DaggerfallQuestTaskOperationKind.StartClock)) continue;
                 switch (operation.Kind)
                 {
                     case DaggerfallQuestTaskOperationKind.SpawnCityGuards:
@@ -799,14 +820,43 @@ internal static class DaggerfallQuestTaskRunner
                         lifecycle.Schedule(instance, operation);
                         MarkCompleted(state, operationIndex);
                         break;
-                    case DaggerfallQuestTaskOperationKind.CureVampirism:
-                        if (!lifecycle.CureVampirism()) return;
-                        MarkCompleted(state, operationIndex);
+                    case DaggerfallQuestTaskOperationKind.CastSpellDo:
+                    case DaggerfallQuestTaskOperationKind.CastEffectDo:
+                    case DaggerfallQuestTaskOperationKind.CastSpellOnFoe:
+                        if (operation.Kind != DaggerfallQuestTaskOperationKind.CastSpellOnFoe) _ = Require(operation.Targets[1], indexes, instance.InstanceId, operation);
+                        try
+                        {
+                            if (lifecycle.MagicAction(instance, operation, state, operationIndex))
+                            {
+                                MarkCompleted(state, operationIndex);
+                                if (operation.Kind != DaggerfallQuestTaskOperationKind.CastSpellOnFoe)
+                                    Start(operation.Targets[1], states, indexes, program.Tasks, variables, instance.InstanceId, operation);
+                            }
+                            else waitingForCast = true;
+                        }
+                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); return; }
                         break;
+                    case DaggerfallQuestTaskOperationKind.PlaySound:
+                    case DaggerfallQuestTaskOperationKind.PlaySong:
+                    case DaggerfallQuestTaskOperationKind.PlayVideo:
+                        try { if (lifecycle.MediaAction(instance, operation, state, operationIndex, calendar)) MarkCompleted(state, operationIndex); }
+                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); return; }
+                        break;
+                    case DaggerfallQuestTaskOperationKind.MakePcDiseased:
+                    case DaggerfallQuestTaskOperationKind.CurePcDisease:
+                        try { lifecycle.DiseaseAction(instance, operation); MarkCompleted(state, operationIndex); }
+                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); return; }
+                        break;
+                    case DaggerfallQuestTaskOperationKind.CureVampirism:
                     case DaggerfallQuestTaskOperationKind.CureLycanthropy:
-                        if (!lifecycle.CureLycanthropy())
-                            return;
-                        MarkCompleted(state, operationIndex);
+                        try
+                        {
+                            bool cured = operation.Kind == DaggerfallQuestTaskOperationKind.CureVampirism
+                                ? lifecycle.CureVampirism() : lifecycle.CureLycanthropy();
+                            if (!cured) return;
+                            MarkCompleted(state, operationIndex);
+                        }
+                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); return; }
                         break;
                     case DaggerfallQuestTaskOperationKind.TrainPc:
                         lifecycle.Train(instance, operation);
