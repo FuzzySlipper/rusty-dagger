@@ -101,7 +101,7 @@ public sealed class QuestNpcLifecycleTests
     public void Individual_availability_uses_real_static_click_and_reservation_then_retains_accepted_click_across_save()
     {
         var named = TestPayload.Definitions.QuestSources.Tables.ActorItemTables.Factions.Rows.First(row => row.Active
-            && TestPayload.Definitions.Factions.Factions.TryGetValue(row.P3, out var faction) && faction.Type == 0);
+            && TestPayload.Definitions.Factions.Factions.TryGetValue(row.P3, out var faction) && faction.Type == 4);
         var definitions = QuestNpcOverlayTests.Definitions([], taskBlocks: [["_available_ task:", $"when {named.Name} is available"], ["_hide_ task:", "hide npc _contact_"]]);
         string root = TestData.RepositoryRoot;
         var content = FullContent(root);

@@ -72,6 +72,35 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
         return true;
     }
 
+    private void AdvanceLycanthropyQuestOpportunities(DaggerfallCalendar before)
+    {
+        if (State.RacialOverrides.Current is not { IsVampire: false } racial) return;
+        const long period = 84L * 1440;
+        long first = Math.Max(MinuteIndex(before), racial.State.AcquiredMinute), last = MinuteIndex(_time.Calendar);
+        for (long boundary = ((first + period - 1) / period) * period; boundary < last; boundary += period)
+            StartLycanthropyCureQuestOpportunity(boundary);
+    }
+
+    internal bool StartLycanthropyCureQuestOpportunity(long minute)
+    {
+        if (State.RacialOverrides.Current is not { IsVampire: false } racial) return false;
+        if (_random.DrawKeyed(new(0, "daggerfall.lycanthropy", $"{racial.Source}:{minute}:quest", 1, 100)).Value >= 30) return false;
+        if (State.Quests.All.Any(value => value.SourceFile == "$CUREWER.txt" && value.Lifecycle == DaggerfallQuestLifecycle.Active)) return false;
+        string identity = $"lycanthropy-cure:{racial.Source}:{minute}";
+        if (State.Quests.All.Any(value => value.InstanceId == identity)) return false;
+        try
+        {
+            var source = _definitions.QuestSources.Resolve("$CUREWER.txt");
+            State.Quests.Start(new(identity, source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []));
+            return true;
+        }
+        catch (Exception error) when (error is ArgumentException or NotSupportedException)
+        {
+            Presentation.SetOutcome($"Lycanthropy cure quest is unavailable: {error.Message}");
+            return false;
+        }
+    }
+
     private void AdvanceLycanthropyRound(DaggerfallCalendar before)
     {
         if (State.RacialOverrides.Current is not { State.BeastForm: false, IsVampire: false } || State.HeldEnchantments.HircinesRingEquipped) return;

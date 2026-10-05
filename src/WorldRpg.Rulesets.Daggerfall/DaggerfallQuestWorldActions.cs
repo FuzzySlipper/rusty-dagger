@@ -9,7 +9,7 @@ internal sealed record DaggerfallQuestWorldUpdate(string Kind, int? Region, int?
 internal static partial class DaggerfallQuestTaskCompiler
 {
     private static readonly Regex DroppedAt = Header(@"^dropped\s+(?<item>[a-zA-Z0-9_.-]+)\s+at\s+(?<place>[a-zA-Z0-9_.-]+)(?:\s+saying\s+(?<message>\d+))?$");
-    private static readonly Regex RevealPlace = Header(@"^reveal\s+(?<place>[a-zA-Z0-9_.-]+)(?:\s+(?<map>readmap))?$");
+    private static readonly Regex RevealPlace = Header(@"^reveal\s+(?<place>[a-zA-Z0-9_.-]+)(?:\s+(?<map>readmap)|\s+in\s+province\s+(?<region>\d+)\s+at\s+(?<location>\d+))?$");
     private static readonly Regex TeleportPlace = Header(@"^(?:teleport\s+pc\s+to\s+(?<place>[a-zA-Z0-9_.-]+)|transfer\s+pc\s+inside\s+(?<place>[a-zA-Z0-9_.-]+)\s+marker\s+(?<marker>\d+))$");
     private static readonly Regex[] WorldUpdates =
     [
@@ -24,7 +24,9 @@ internal static partial class DaggerfallQuestTaskCompiler
             return new(DaggerfallQuestTaskOperationKind.DroppedAt, sourceLine, line, [Canonical(drop.Groups["item"].Value), Canonical(drop.Groups["place"].Value)], [],
                 drop.Groups["message"].Success ? Step(drop.Groups["message"].Value, sourceLine) : null);
         if (RevealPlace.Match(line) is { Success: true } reveal)
-            return new(DaggerfallQuestTaskOperationKind.RevealPlace, sourceLine, line, [Canonical(reveal.Groups["place"].Value)], [], null, Step: reveal.Groups["map"].Success ? 1 : 0);
+            return new(DaggerfallQuestTaskOperationKind.RevealPlace, sourceLine, line,
+                reveal.Groups["region"].Success ? [Canonical(reveal.Groups["place"].Value), reveal.Groups["region"].Value, reveal.Groups["location"].Value]
+                    : [Canonical(reveal.Groups["place"].Value)], [], null, Step: reveal.Groups["map"].Success ? 1 : 0);
         if (TeleportPlace.Match(line) is { Success: true } teleport)
             return new(DaggerfallQuestTaskOperationKind.TeleportPlace, sourceLine, line, [Canonical(teleport.Groups["place"].Value)], [], null,
                 MarkerIndex: teleport.Groups["marker"].Success ? Step(teleport.Groups["marker"].Value, sourceLine) : null);

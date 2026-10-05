@@ -23,6 +23,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
     internal static readonly ContentPackRoleId SiteRole = new("daggerfall.site");
     /// <summary>A categorized classic quest corpus; its categories state which entries are offered.</summary>
     internal static readonly ContentPackRoleId QuestCorpusRole = new("daggerfall.quest-corpus");
+    internal static readonly ContentPackRoleId NamedQuestCorpusRole = new("daggerfall.named-quest-corpus");
     /// <summary>The Fighters Guild receipt: the whole active guild group in catalog order, without categories.</summary>
     internal static readonly ContentPackRoleId FightersGuildQuestCorpusRole = new("daggerfall.fighters-guild-quest-corpus");
 
@@ -65,6 +66,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             CinematicContent = admitted.Content,
             VideosEnabled = _videosEnabled,
             QuestAdmission = new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts),
+            NewGameQuests = [.. new[] { "_TUTOR__.txt", "_BRISIEN.txt" }.Where(file => admitted.QuestReceipts.Any(receipt => receipt.SourceFile == file))],
             DisabledQuestSelection = admitted.DisabledQuestSelection,
             Music = admitted.Music,
             Blocks = admitted.Blocks,
@@ -82,7 +84,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             foreach (ContentPack pack in selected.ContentPacks)
             {
                 if (pack.Role != BaseRole && pack.Role != ImportedRole && pack.Role != BlocksRole && pack.Role != SiteRole
-                    && pack.Role != QuestCorpusRole && pack.Role != FightersGuildQuestCorpusRole)
+                    && pack.Role != QuestCorpusRole && pack.Role != FightersGuildQuestCorpusRole && pack.Role != NamedQuestCorpusRole)
                     throw new InvalidOperationException($"Content pack '{pack.Id.Value}' declares role '{pack.Role.Value}', which the Daggerfall ruleset does not interpret.");
             }
             DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
@@ -105,6 +107,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             [
                 .. classicCorpus.Where(receipt => receipt.IsOrdinaryOffer).Select(receipt => receipt.Runtime),
                 .. disabledQuestSelection.Receipts,
+                .. roles[NamedQuestCorpusRole].SelectMany(pack => DaggerfallNamedQuestCorpusContent.Read(pack.Payload, definitions)),
             ];
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(selected.Content, inputs.ClassicPresentation);
             foreach (DaggerfallSiteProfile site in sites.Where(site => !ReferenceEquals(site, inputs)))

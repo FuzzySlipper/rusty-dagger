@@ -402,7 +402,8 @@ public static class MapsDecoder
         ReadOnlyMemory<byte> exterior = GetNamedPayload(archive, "MAPPITEM", region);
         ReadOnlyMemory<byte> dungeons = GetNamedPayload(archive, "MAPDITEM", region);
         List<MapsDungeonLocation> result = [];
-        foreach (MapsLocationRecord location in locations.Where(location => location.DungeonType != 0))
+        // Type zero is Crypt. The MAPDITEM link, rather than the type byte, determines whether a dungeon exists.
+        foreach (MapsLocationRecord location in locations)
         {
             try
             {

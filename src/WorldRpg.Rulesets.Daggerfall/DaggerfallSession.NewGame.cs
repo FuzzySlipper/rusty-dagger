@@ -70,6 +70,12 @@ internal sealed partial class DaggerfallSession
             foreach (var (_, track) in replacement.State.Actors.Player.Stats.Tracks)
                 track.SetCurrent(track.Maximum.Value, clamp: true);
             replacement._newGameInitialized = true;
+            foreach (string sourceFile in _composition.NewGameQuests)
+            {
+                DaggerfallQuestSourceDefinition source = _definitions.QuestSources.Resolve(sourceFile);
+                replacement.State.Quests.Start(new("new-game:" + source.Name, sourceFile, source.Name,
+                    DaggerfallQuestLifecycle.Active, null, [], []));
+            }
             replacement.Presentation.SetOutcome($"New game initialized for {character.Name}.");
             return replacement;
         }

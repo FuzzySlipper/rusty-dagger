@@ -319,6 +319,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
     private readonly DaggerfallSiteProfiles _profiles;
     private readonly DaggerfallSessionComposition _composition;
     internal IRandomService? Random { get; set; }
+    internal IVideoService? Video { get; set; }
 
     internal DaggerfallSiteProfile BankProfile { get; }
     internal DaggerfallSiteProfile KnightlyProfile { get; }
@@ -326,6 +327,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
     internal DaggerfallSiteProfile KynarethProfile { get; }
     internal DaggerfallSiteProfile ExteriorProfile { get; }
     internal DaggerfallSiteProfile SmallShipProfile { get; }
+    internal DaggerfallSiteProfile StartProfile => _sites[0];
 
     private SourceBackedGuildBankSessionFixture(
         DaggerfallDefinitions definitions,
@@ -351,7 +353,8 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         SmallShipProfile = smallShip;
     }
 
-    internal static SourceBackedGuildBankSessionFixture Create(DaggerfallTuning? tuning = null)
+    internal static SourceBackedGuildBankSessionFixture Create(DaggerfallTuning? tuning = null,
+        Func<DaggerfallSessionComposition, DaggerfallSessionComposition>? configure = null)
     {
         string root = TestData.RepositoryRoot;
         ProductContent content = FullContent(root);
@@ -382,7 +385,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
             Profiles = profiles,
             Blocks = blocks,
         };
-        return new(definitions, sites, profiles, composition, bank, knightly, mages, kynareth, exterior, smallShip);
+        return new(definitions, sites, profiles, configure?.Invoke(composition) ?? composition, bank, knightly, mages, kynareth, exterior, smallShip);
     }
 
     private static DaggerfallSiteProfile SourceProfile(IEnumerable<DaggerfallSiteProfile> sites, string sourceKey,
@@ -398,14 +401,15 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         return Assert.Single(matches);
     }
 
-    internal DaggerfallSession Start(DaggerfallSiteProfile profile)
+    internal DaggerfallSession Start(DaggerfallSiteProfile profile, Func<DaggerfallSessionComposition, DaggerfallSessionComposition>? configure = null)
     {
         List<string> releases = [];
         ContentFake content = new(releases);
         foreach (DaggerfallSiteProfile site in _sites) PopulateContent(content, site);
         SpatialFake spatial = SpatialFake.Create(profile.SpatialArtifact.Sha256, releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: Random);
-        return DaggerfallSession.StartNew(engine.Context, _composition with { StartSite = profile });
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: Random, video: Video);
+        DaggerfallSessionComposition composition = _composition with { StartSite = profile };
+        return DaggerfallSession.StartNew(engine.Context, configure?.Invoke(composition) ?? composition);
     }
 
     internal DaggerfallSession Restore(RulesetSavePayload saved)
@@ -420,7 +424,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         ContentFake content = new(releases);
         foreach (DaggerfallSiteProfile site in _sites) PopulateContent(content, site);
         SpatialFake spatial = SpatialFake.Create(active.SpatialArtifact.Sha256, releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: Random);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: Random, video: Video);
         return DaggerfallSession.Restore(engine.Context, _composition with { StartSite = active }, saved);
     }
 

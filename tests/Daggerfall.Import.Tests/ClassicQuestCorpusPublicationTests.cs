@@ -61,6 +61,9 @@ public sealed class ClassicQuestCorpusPublicationTests
         Assert.Contains(disabled.Quests, quest => quest.Name == "K0C00Y06" && quest.Availability == "notOffered");
         Assert.Contains(disabled.Quests, quest => quest.Name == "R0C11Y27" && quest.Availability == "notOffered");
         Assert.Contains(ClassicQuestCorpusPublication.Create("nobility", catalog, sources, originals).Quests, quest => quest.Name == "R0C11Y28");
+        var excluded = Assert.Single(ClassicQuestCorpusPublication.Create("social", catalog, sources, originals).Quests.SelectMany(quest => quest.ExcludedActions));
+        Assert.Equal("_0x3c_ 19", excluded.Text.Trim());
+        Assert.Contains("Explicitly excluded", excluded.Reason);
     }
 
     private static T Section<T>(JsonDocument document, string name) => JsonSerializer.Deserialize<T>(document.RootElement.GetProperty(name).GetRawText(), PublishedJson.SectionRead)!;

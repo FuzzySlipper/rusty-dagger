@@ -42,6 +42,9 @@ internal sealed partial class DaggerfallQuestInstances
 
 internal sealed partial class DaggerfallSession
 {
+    // The operation remains unfinished in the save until Engine reports completion or the player
+    // skips. Restoring an unfinished operation restarts its media through the same presentation owner.
+    private (string Instance, int SourceLine)? _questVideoOwner;
     private bool QuestEnvironmentCondition(DaggerfallQuestTaskOperation operation, DaggerfallCalendar calendar)
     {
         string expected = operation.Targets.Single();
@@ -99,9 +102,19 @@ internal sealed partial class DaggerfallSession
                         throw new NotSupportedException("Quest video requires a source video number from 0 through 9999.");
                     if (!_composition.VideosEnabled) throw new NotSupportedException("Quest video is disabled by the current presentation preference.");
                     if (Cinematics is null) throw new NotSupportedException("Quest video has no admitted Engine cinematic capability.");
+                    if (_questVideoOwner == (instance.InstanceId, operation.SourceLine))
+                    {
+                        if (Cinematics.ActiveSource is not null) return false;
+                        var result = Cinematics.TakeResult();
+                        _questVideoOwner = null;
+                        if (result?.Kind is Rusty.Engine.VideoRealizationFactKind.Completed or Rusty.Engine.VideoRealizationFactKind.Skipped)
+                            return true;
+                        throw new NotSupportedException(result?.Failure ?? "Quest video ended without a completion result.");
+                    }
                     if (Cinematics.ActiveSource is not null) return false;
                     Cinematics.Play($"ANIM{number:0000}.VID");
-                    return true;
+                    _questVideoOwner = (instance.InstanceId, operation.SourceLine);
+                    return false;
                 default: throw new NotSupportedException($"Unknown quest media action '{operation.Kind}'.");
             }
         }

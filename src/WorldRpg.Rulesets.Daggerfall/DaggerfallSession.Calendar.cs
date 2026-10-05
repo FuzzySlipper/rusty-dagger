@@ -95,6 +95,7 @@ internal sealed partial class DaggerfallSession
         State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
         AdvanceLoans();
         AdvanceVampireQuestOpportunities(before);
+        AdvanceLycanthropyQuestOpportunities(before);
         StartDueCriminalInvitations();
         ExpireConjuredItems();
         AdvanceEffectsForCalendar(before, ordinaryPlay, resting);

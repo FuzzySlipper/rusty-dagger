@@ -43,7 +43,7 @@ public static class ClassicQuestCorpusPublication
                 DaggerfallQuestOriginalSource original = originalsByStem[name];
                 source.Validate();
                 receipts.Add(new(category.Id, category.Availability, row.Name, source.SourceFile, row.Group, row.Membership, row.MinimumRequirement, row.RequirementKind, row.Adult, row.OneTime, row.Active, row.SourceLine, row.SourceDisposition, source.Disposition.ToString().ToLowerInvariant(), original.Selection.ToString().ToLowerInvariant(),
-                    ContentDigest.Compute(JsonSerializer.SerializeToUtf8Bytes(source, PublishedJson.SectionCompact)), ActionLines(source), source.Diagnostics));
+                    ContentDigest.Compute(JsonSerializer.SerializeToUtf8Bytes(source, PublishedJson.SectionCompact)), ActionLines(source), source.Diagnostics, QuestCorpusExclusions.Read(source)));
             }
         }
         DaggerfallClassicQuestCorpus unsigned = new(id, catalog.Source, specification.Categories, receipts, default);
@@ -68,7 +68,7 @@ public sealed record DaggerfallClassicQuestCorpus(string Id, PublishedSource Cat
         foreach (DaggerfallClassicQuestReceipt quest in Quests) quest.Validate();
     }
 }
-public sealed record DaggerfallClassicQuestReceipt(string Category, string Availability, string Name, string SourceFile, string CatalogGroup, string? Membership, int MinimumRequirement, string RequirementKind, bool Adult, bool OneTime, bool Active, int CatalogSourceLine, string CatalogSourceDisposition, string SourceDisposition, string OriginalSelection, ContentDigest SourceFingerprint, IReadOnlyList<DaggerfallQuestActionLine> ActionLines, IReadOnlyList<DaggerfallQuestDiagnostic> SourceDiagnostics)
+public sealed record DaggerfallClassicQuestReceipt(string Category, string Availability, string Name, string SourceFile, string CatalogGroup, string? Membership, int MinimumRequirement, string RequirementKind, bool Adult, bool OneTime, bool Active, int CatalogSourceLine, string CatalogSourceDisposition, string SourceDisposition, string OriginalSelection, ContentDigest SourceFingerprint, IReadOnlyList<DaggerfallQuestActionLine> ActionLines, IReadOnlyList<DaggerfallQuestDiagnostic> SourceDiagnostics, IReadOnlyList<DaggerfallQuestDiagnostic> ExcludedActions)
 {
     public void Validate()
     {

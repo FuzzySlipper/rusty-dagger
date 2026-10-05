@@ -132,7 +132,7 @@ internal static partial class DaggerfallQuestTaskCompiler
         foreach (DaggerfallQuestBlockDefinition block in source.Blocks)
         {
             if (block.Lines.Count == 0 || !IsTaskBlock(block.Kind)) continue;
-            tasks.Add(CompileBlock(block));
+            tasks.Add(CompileBlock(block, source.SourceFile));
         }
 
         HashSet<string> symbols = new(StringComparer.Ordinal);
@@ -186,7 +186,12 @@ internal static partial class DaggerfallQuestTaskCompiler
         || kind.Equals("variable", StringComparison.OrdinalIgnoreCase)
         || kind.Equals("global", StringComparison.OrdinalIgnoreCase);
 
-    private static DaggerfallQuestTaskDefinition CompileBlock(DaggerfallQuestBlockDefinition block)
+    // The product explicitly excludes these two unknown classic commands. Preserve them in source and
+    // publication diagnostics; do not manufacture a successful runner operation for it.
+    internal static bool IsExcludedSourceAction(string sourceFile, string line) =>
+        (sourceFile, line.Trim()) is ("S0000007.txt", "location _tavern_ 100 27000") or ("B0B71Y03.txt", "_0x3c_ 19");
+
+    private static DaggerfallQuestTaskDefinition CompileBlock(DaggerfallQuestBlockDefinition block, string sourceFile)
     {
         string header = Trim(block.Lines[0]);
         DaggerfallQuestTaskKind kind;
@@ -236,6 +241,7 @@ internal static partial class DaggerfallQuestTaskCompiler
         {
             string line = Trim(block.Lines[offset]);
             if (line.Length == 0) continue;
+            if (IsExcludedSourceAction(sourceFile, line)) continue;
             operations.Add(CompileOperation(line, checked(block.FirstLine + offset)));
         }
         return new(symbol, kind, target, global, operations);
@@ -329,8 +335,9 @@ internal static partial class DaggerfallQuestTaskCompiler
             return new(DaggerfallQuestTaskOperationKind.CureVampirism, sourceLine, line, [], [], null);
         if (line.Equals("cure lycanthropy", StringComparison.OrdinalIgnoreCase))
             return new(DaggerfallQuestTaskOperationKind.CureLycanthropy, sourceLine, line, [], [], null);
-        if (Regex.Match(line, @"^make\s+pc\s+ill\s+with\s+([a-zA-Z0-9_.']+)$", RegexOptions.IgnoreCase) is { Success: true } disease)
-            return new(DaggerfallQuestTaskOperationKind.MakePcDiseased, sourceLine, line, [disease.Groups[1].Value], [], null);
+        if (Regex.Match(line, @"^make\s+pc\s+ill\s+with\s+([a-zA-Z0-9_.']+)(?:\s+saying\s+(\d+))?$", RegexOptions.IgnoreCase) is { Success: true } disease)
+            return new(DaggerfallQuestTaskOperationKind.MakePcDiseased, sourceLine, line, [disease.Groups[1].Value], [],
+                disease.Groups[2].Success ? Step(disease.Groups[2].Value, sourceLine) : null);
         if (Regex.Match(line, @"^cure\s+([a-zA-Z0-9_.']+)$", RegexOptions.IgnoreCase) is { Success: true } cure)
             return new(DaggerfallQuestTaskOperationKind.CurePcDisease, sourceLine, line, [cure.Groups[1].Value], [], null);
         if (CompileMagic(line, sourceLine) is { } magic) return magic;
@@ -839,12 +846,21 @@ internal static class DaggerfallQuestTaskRunner
                     case DaggerfallQuestTaskOperationKind.PlaySound:
                     case DaggerfallQuestTaskOperationKind.PlaySong:
                     case DaggerfallQuestTaskOperationKind.PlayVideo:
-                        try { if (lifecycle.MediaAction(instance, operation, state, operationIndex, calendar)) MarkCompleted(state, operationIndex); }
+                        try
+                        {
+                            if (lifecycle.MediaAction(instance, operation, state, operationIndex, calendar)) MarkCompleted(state, operationIndex);
+                            else if (operation.Kind == DaggerfallQuestTaskOperationKind.PlayVideo) return;
+                        }
                         catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); return; }
                         break;
                     case DaggerfallQuestTaskOperationKind.MakePcDiseased:
                     case DaggerfallQuestTaskOperationKind.CurePcDisease:
-                        try { lifecycle.DiseaseAction(instance, operation); MarkCompleted(state, operationIndex); }
+                        try
+                        {
+                            lifecycle.DiseaseAction(instance, operation);
+                            if (operation.MessageId is { } illnessMessage) messages.Popup(instance, illnessMessage);
+                            MarkCompleted(state, operationIndex);
+                        }
                         catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); return; }
                         break;
                     case DaggerfallQuestTaskOperationKind.CureVampirism:

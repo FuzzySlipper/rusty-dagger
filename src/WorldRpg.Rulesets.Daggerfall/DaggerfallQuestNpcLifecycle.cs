@@ -66,7 +66,7 @@ internal sealed partial class DaggerfallQuestInstances
     private int AvailableNpcFaction(DaggerfallQuestTaskOperation operation)
     {
         int faction = _definitions.QuestSources.Tables.ActorItemTables.Factions.Resolve(operation.Targets[0]).P3;
-        if (!_definitions.Factions.Factions.TryGetValue(faction, out var definition) || definition.Type != 0)
+        if (!_definitions.Factions.Factions.TryGetValue(faction, out var definition) || definition.Type != 4)
             throw new ArgumentException($"Quest availability at line {operation.SourceLine} requires an individual NPC.");
         return faction;
     }

@@ -135,7 +135,7 @@ public sealed class DaggerfallCharacterMediaContentTests
         DaggerfallDefinitions definitions = Read();
         DaggerfallLocationSet locations = definitions.Locations;
         Assert.Equal(15251, locations.Records.Count);
-        Assert.Equal(3959, locations.Dungeons);
+        Assert.Equal(4232, locations.Dungeons);
         Assert.Equal(17, locations.RegionGaps);
 
         // Every region group's table provenance is validated where the section loads, not only where it

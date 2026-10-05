@@ -104,12 +104,6 @@ internal static class DaggerfallClassicQuestCorpusContent
             try { _ = DaggerfallQuestClockCompiler.Compile(source); }
             catch (ArgumentException exception) { diagnostics.Add(new(1, sourceFile, exception.Message)); }
             if (availability == NotOffered) diagnostics.Add(new(1, sourceFile, "Disabled classic quest entries are not ordinary offers."));
-            if (name == "R0C11Y28")
-            {
-                (int Line, string Text) macro = MessageLines(source).FirstOrDefault(value => value.Text.Contains("%vcn", StringComparison.OrdinalIgnoreCase));
-                if (macro.Text is null) throw new DaggerfallContentException([$"Classic quest receipt '{sourceFile}' lost its retained %vcn macro context."]);
-                diagnostics.Add(new(macro.Line, macro.Text, "The NPC vampire-clan macro requires quest-NPC context, which quest binding resolves at run time."));
-            }
             result.Add(new(availability, new(name, sourceFile, diagnostics.Count == 0, diagnostics)));
         }
         foreach ((string categoryId, JsonElement category) in categories)
@@ -122,7 +116,6 @@ internal static class DaggerfallClassicQuestCorpusContent
     }
 
     private static IEnumerable<(int Line, string Text)> ActionLines(DaggerfallQuestSourceDefinition source) => source.Blocks.Where(block => block.Kind is "headless" or "task" or "variable" or "global").SelectMany(block => block.Lines.Skip(block.Kind == "headless" ? 0 : 1).Select((text, index) => (block.FirstLine + index + (block.Kind == "headless" ? 0 : 1), text)));
-    private static IEnumerable<(int Line, string Text)> MessageLines(DaggerfallQuestSourceDefinition source) => source.Messages.SelectMany(message => message.Lines.Select((text, index) => (message.FirstLine + index + 1, text)));
 }
 
 /// <summary>One admitted classic corpus receipt with the availability its category states.</summary>
