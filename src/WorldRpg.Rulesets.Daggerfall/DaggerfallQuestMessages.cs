@@ -84,6 +84,7 @@ internal sealed record DaggerfallQuestPresentation(
     IReadOnlyList<DaggerfallQuestRenderedMessage> Journal,
     DaggerfallQuestRenderedMessage? Pending)
 {
+    public DaggerfallQuestOfferView? Offer { get; init; }
     public IReadOnlyList<DaggerfallQuestEscortFace> EscortFaces { get; init; } = [];
 }
 

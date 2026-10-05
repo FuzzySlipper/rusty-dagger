@@ -11,7 +11,7 @@ internal static class Arena2PotionRecipes
         Add("stamina", "Stamina", 25, 11, "Restoration/HealFatigue", [59, 30, 27], [Effect("heal-fatigue", 10, 9, magnitude: [5, 5, 4, 4, 1])]);
         Add("orcStrength", "Orc Strength", 50, 13, "Restoration/FortifyStrength", [61, 71, 59], [Effect("fortify-strength", 9, 0, magnitude: [1, 1, 14, 14, 1])]);
         Add("healing", "Healing", 50, 15, "Restoration/HealHealth", [62, 16, 65, 42], [Effect("heal-health", 10, 8, magnitude: [5, 5, 9, 9, 1])]);
-        Add("waterWalking", "Waterwalking", 50, 32, "Thaumaturgy/WaterWalking", [59, 29, 20, 69], [Effect("water-walking", 31, 255)]);
+        Add("waterWalking", "Waterwalking", 50, 32, "Thaumaturgy/WaterWalking", [59, 29, 20, 69], [Effect("water-walking", 31, -1)]);
         Add("restorePower", "Restore Power", 75, 12, "Restoration/HealSpellPoints", [63, 73, 33, 54], [], new JsonObject
         {
             ["effect"] = "heal-spell-points", ["baseLow"] = 5, ["baseHigh"] = 5, ["levelBase"] = 4, ["levelHigh"] = 4, ["perLevel"] = 1,
@@ -23,7 +23,7 @@ internal static class Arena2PotionRecipes
         Add("slowFalling", "Slow Falling", 100, 11, "Alteration/Slowfall", [59, 26, 24], [Effect("slowfall", 25, -1)]);
         Add("waterBreathing", "Water Breathing", 100, 32, "Alteration/WaterBreathing", [60, 62, 76], [Effect("water-breathing", 30, -1)]);
         Add("healTrue", "Heal True", 100, 16, "Restoration/HealHealth", [62, 16, 14, 37], [Effect("heal-health", 10, 8, magnitude: [5, 5, 19, 19, 1])]);
-        Add("levitation", "Levitation", 125, 11, "Thaumaturgy/Levitate", [59, 63, 39], [Effect("levitate", 14, 255)]);
+        Add("levitation", "Levitation", 125, 11, "Thaumaturgy/Levitate", [59, 63, 39], [Effect("levitate", 14, -1)]);
         Add("resistPoison", "Resist Poison", 125, 14, "Alteration/ElementalResistance", [64, 43, 25], [Effect("resist-diseaseorpoison", 8, 2, chance: [5, 19, 1])]);
         Add("freeAction", "Free Action", 125, 14, "Restoration/FreeAction", [64, 41, 8, 28], [Effect("free-action", 26, -1, chance: [5, 19, 1])]);
         Add("curePoison", "Cure Poison", 200, 35, "Restoration/CurePoison", [64, 47, 58, 77], [Effect("cure-poison", 3, 1, chance: [5, 19, 1])]);

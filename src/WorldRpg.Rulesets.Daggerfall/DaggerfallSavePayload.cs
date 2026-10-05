@@ -705,6 +705,9 @@ internal sealed record DaggerfallSavePayload(
             .. Merchants.SelectMany(value => value.Inventory.UniqueItems), .. Merchants.SelectMany(value => value.Custody.UniqueItems),
             .. Property.Storage.SelectMany(value => value.Inventory.UniqueItems), .. SiteDeltas.SelectMany(value => value.ActorInventories).SelectMany(value => value.Inventory.UniqueItems),
             .. SiteDeltas.SelectMany(value => value.Corpses).SelectMany(value => value.UniqueItems)];
+        if (Quests.PendingOffer is { } pendingOffer && (pendingOffer.Quest.QuestorId is not long giver
+            || !savedNpcs.TryGetValue(giver, out var offerNpc) || new DaggerfallNpcSite(offerNpc.Region, offerNpc.Location, offerNpc.Building, offerNpc.ProfileId) != pendingOffer.Site))
+            throw new ArgumentException("Saved quest offer has no matching provider.");
         Quests.ValidateBindings(combatants, savedLedger, locations, questStacks, questUnique.ToDictionary(value => value.EntityId),
             QuestCustody.ToDictionary(value => value.Id, value => value.InstanceId), savedNpcs, definitions, BanishedActors.Concat(SiteDeltas.SelectMany(delta => delta.BanishedActors)).ToHashSet());
         foreach (var reward in Quests.Instances.SelectMany(instance => instance.Tasks).SelectMany(task => task.OperationState)

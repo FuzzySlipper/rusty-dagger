@@ -284,6 +284,9 @@ internal sealed partial class DaggerfallSession
             DaggerfallGuildMembershipPolicy guildMembership = new(social,
                 skillUses.PermanentSkillValue, DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
             DaggerfallConcreteGuildMembershipRuntime concreteGuildMembership = new(guildMembership);
+            assembled.Quests.BindEnvironmentActions(QuestEnvironmentCondition, QuestMediaAction);
+            assembled.Quests.BindOfferCapabilities(QuestOfferCapability);
+            assembled.Quests.BindDiseaseActions(QuestDiseaseAction);
             assembled.Quests.BindLycanthropyCure(() => CureLycanthropy(fromQuest: true));
             assembled.Quests.BindVampirismCure(() => CureVampirism(fromQuest: true));
             assembled.Quests.BindRuntime(new DaggerfallQuestRuntime(progression, playerStats, definitions,
@@ -530,13 +533,14 @@ internal sealed partial class DaggerfallSession
             { effects.CancelItemReferences(item); Casting?.CancelItemReferences(item); if (_pendingIdentify?.SourceItem==item) _pendingIdentify=null; };
             Casting = new(definitions.Magic, effects, CastActor, MagicProfile, item => itemInstances.ContainsUnique(item)
                     && (itemInstances.RequireUnique(item).MaximumCondition == 0 || itemInstances.RequireUnique(item).CurrentCondition > 0),
-                use => State.SkillUses.Record(use), result => _facts.Append(new SpellCastFact(result.Outcome, result.Bundle?.Sequence, result.Bundle?.CasterId,
+                use => State.SkillUses.Record(use), result => { State.Quests.ObserveQuestCast(result); _facts.Append(new SpellCastFact(result.Outcome, result.Bundle?.Sequence, result.Bundle?.CasterId,
                     result.Bundle?.Spell.Key, result.Bundle?.Cost ?? 0, result.Bundle?.Results.ToArray() ?? [], result.Bundle?.Absorptions.ToArray() ?? [],
-                    result.Bundle?.Spell.Name, result.Bundle?.Spell.Element ?? 0, result.Bundle?.ItemId)),
+                    result.Bundle?.Spell.Name, result.Bundle?.Spell.Element ?? 0, result.Bundle?.ItemId)); },
                 _random, actors.Player.DurableId, saved?.NextCastSequence ?? 1, State.Character.KnownSpells.Contains,
                 id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1,
                 (caster, item) => itemInstances.RequireUnique(item).Owner == (caster == actors.Player.DurableId ? DaggerfallItemOwner.Player : DaggerfallItemOwner.Actor(caster)),
                 () => _latestUpdateGeneration, () => _latestSimulationStep, State.Character.IsGrantedSpell);
+            State.Quests.BindCasting(Casting, effects.Catalog);
             _enemyMagic = new(definitions.EnemySpells, definitions.Magic, Casting, _random,
                 id => authored.GetValueOrDefault(id),
                 id => definitions.Mobiles.Mobiles.GetValueOrDefault(id), EnemyRangedSpellPathClear, ExecuteEnemySpell);

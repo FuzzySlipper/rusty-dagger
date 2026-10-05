@@ -67,7 +67,7 @@ internal sealed record DaggerfallCastResult(DaggerfallCastOutcome Outcome, Dagge
 internal sealed record DaggerfallCastEffectResult(int EffectIndex, long? TargetId, DaggerfallCastOutcome Outcome,
     int SavePercent = 100, string? Instance = null);
 internal sealed record DaggerfallSpellAbsorptionResult(long TargetId, int AdmittedSpellPoints, double RestoredSpellPoints, ulong[] SourceItems);
-internal enum DaggerfallCastSource { Spell, ItemUse, ItemHeld, ItemStrike, DungeonAction, Potion }
+internal enum DaggerfallCastSource { Spell, ItemUse, ItemHeld, ItemStrike, DungeonAction, Potion, Quest }
 internal sealed record DaggerfallReadySpell(string SpellKey, ulong? ItemId, int Cost, DaggerfallCastSource Source);
 internal sealed class DaggerfallSpellReadiness { internal DaggerfallReadySpell? Ready { get; set; } }
 
@@ -89,7 +89,7 @@ internal sealed class DaggerfallLiveSpell(long sequence, long? casterId, ulong? 
     internal ulong? ReleaseSimulationStep { get; set; }
     /// <summary>Elapsed movement time for a transient dungeon missile; reset on admission only.</summary>
     internal double DungeonFlightElapsedSeconds { get; set; }
-    internal bool BypassSave => Source is DaggerfallCastSource.Potion or DaggerfallCastSource.ItemHeld || Source == DaggerfallCastSource.ItemUse && Target == DaggerfallSpellTarget.CasterOnly;
+    internal bool BypassSave => Source is DaggerfallCastSource.Potion or DaggerfallCastSource.ItemHeld or DaggerfallCastSource.Quest || Source == DaggerfallCastSource.ItemUse && Target == DaggerfallSpellTarget.CasterOnly;
     internal bool BypassChance => Source == DaggerfallCastSource.Potion || Source == DaggerfallCastSource.ItemUse && Target == DaggerfallSpellTarget.CasterOnly;
     internal long Sequence { get; } = sequence;
     internal long? CasterId { get; } = casterId;
@@ -328,6 +328,20 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
         return Deliver(release.Bundle!, [targetId]);
     }
 
+    internal bool CanCastQuestSpell(string key) => catalog.Spells.TryGetValue(key, out var spell) && spell.Effects.Count > 0 && TryDefinitions(spell, out _);
+
+    /// <summary>Source quest bundles target the foe itself without magicka or saving throws.</summary>
+    internal DaggerfallCastResult TriggerQuestSpell(long targetId, string key)
+    {
+        Actor? target = ResolveSource(targetId, null);
+        if (target is null) return Finish(DaggerfallCastOutcome.TargetUnavailable);
+        if (!catalog.Spells.TryGetValue(key, out var spell)) return Finish(DaggerfallCastOutcome.UnknownSpell);
+        if (!TryDefinitions(spell, out var definitions)) return Finish(DaggerfallCastOutcome.UnsupportedEffect);
+        var release = CreateBundle(target, targetId, new(key, null, 0, DaggerfallCastSource.Quest), spell,
+            definitions, null, null, publishRelease: false, targetOverride: DaggerfallSpellTarget.CasterOnly);
+        return Deliver(release.Bundle!, [targetId]);
+    }
+
     /// <summary>FORM-06's cost-free Spider Touch uses the one live bundle/delivery owner.</summary>
     internal DaggerfallCastResult TriggerMonsterParalysis(long casterId, long targetId)
     {
@@ -383,7 +397,7 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
     }
 
     private DaggerfallCastResult CreateBundle(Actor actor, long casterId, DaggerfallReadySpell ready,
-        DaggerfallSpellDefinition spell, DaggerfallEffectDefinition[] definitions, Vector3? origin, Vector3? direction, bool publishRelease = true)
+        DaggerfallSpellDefinition spell, DaggerfallEffectDefinition[] definitions, Vector3? origin, Vector3? direction, bool publishRelease = true, DaggerfallSpellTarget? targetOverride = null)
     {
         int cost = ready.Cost;
         long sequence = NextSequence;
@@ -394,7 +408,7 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
             magicka.SetCurrent(magicka.Current - cost, clamp: true);
         }
         DaggerfallLiveSpell bundle = new(sequence, casterId, ready.ItemId, spell, cost,
-            DaggerfallMagicAdmissionPolicy.CalculateCasterLevel(casterLevel?.Invoke(casterId) ?? actor.Get<ProgressionState>().Level), definitions, ready.Source, origin, direction);
+            DaggerfallMagicAdmissionPolicy.CalculateCasterLevel(casterLevel?.Invoke(casterId) ?? actor.Get<ProgressionState>().Level), definitions, ready.Source, origin, direction, targetOverride: targetOverride);
         if (casterId == playerId && (ready.Source == DaggerfallCastSource.Spell
             || ready.Source == DaggerfallCastSource.ItemUse && bundle.Target != DaggerfallSpellTarget.CasterOnly))
             foreach (var effect in spell.Effects)

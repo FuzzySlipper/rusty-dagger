@@ -25,6 +25,7 @@ internal sealed record DaggerfallTuning(
     DaggerfallPropertyTuning Property,
     DaggerfallTransportTuning Transport)
 {
+    internal DaggerfallQuestOfferTuning QuestOffers { get; init; } = new(25, 25);
     internal DaggerfallQuestRewardTuning QuestRewards { get; init; } = new(7, 18, 4, 50);
     internal DaggerfallQuestSpawningTuning QuestSpawning { get; init; } = new(5f, 20f, 8f, 25f, 5, 77.5f, 95f, 105.469f, 25);
     internal DaggerfallLawTuning Law { get; init; } = new(5, 10, 2, 5, 12.8f, 51.2f, 3.2d);
@@ -118,6 +119,7 @@ internal sealed record DaggerfallTuning(
         NormalLight = NormalLight.Validate(),
         Law = Law.Validate(),
         QuestSpawning = QuestSpawning.Validate(),
+        QuestOffers = QuestOffers.Validate(),
         QuestRewards = QuestRewards.Validate(),
     };
 
@@ -266,6 +268,7 @@ internal sealed record DaggerfallTuning(
         {
             StrikeEnchantments = new(root.GetProperty("strikeEnchantments").GetProperty("damageAdjustment").GetInt32(),
                 root.GetProperty("strikeEnchantments").GetProperty("vampiricRange").GetDouble()),
+            QuestOffers = new(root.GetProperty("questOffers").GetProperty("socialProviderChancePercent").GetInt32(), root.GetProperty("questOffers").GetProperty("castleProviderChancePercent").GetInt32()),
             QuestRewards = new(root.GetProperty("questRewards").GetProperty("minimumDeliveryHour").GetInt32(),
                 root.GetProperty("questRewards").GetProperty("maximumDeliveryHour").GetInt32(),
                 root.GetProperty("questRewards").GetProperty("minimumDelaySeconds").GetInt32(),
@@ -604,4 +607,10 @@ internal sealed record DaggerfallQuestRewardTuning(int MinimumDeliveryHour, int 
     internal DaggerfallQuestRewardTuning Validate() => MinimumDeliveryHour is >= 0 and <= 23 && MaximumDeliveryHour >= MinimumDeliveryHour
         && MaximumDeliveryHour <= 23 && MinimumDelaySeconds >= 0 && MaximumDelaySeconds >= MinimumDelaySeconds && MaximumDelaySeconds <= int.MaxValue / 10
         ? this : throw new ArgumentException("Quest reward delivery tuning requires ordered hours and bounded nonnegative delays.");
+}
+
+internal sealed record DaggerfallQuestOfferTuning(int SocialProviderChancePercent, int CastleProviderChancePercent)
+{
+    internal DaggerfallQuestOfferTuning Validate() => SocialProviderChancePercent is >= 0 and <= 100 && CastleProviderChancePercent is >= 0 and <= 100
+        ? this : throw new ArgumentException("Quest provider chances must be percentages.");
 }

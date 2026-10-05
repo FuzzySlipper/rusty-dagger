@@ -49,6 +49,10 @@ internal static class DaggerfallNpcServiceFacts
             role = "merchant";
         }
 
+        if (sourceFaction is { Id: not 514, SocialGroupName: "Commoners" or "Merchants" or "Nobility" }
+            && sourceBuildingType is 0 or 2 or 3 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14 or 15 or 16)
+            services.Add("quest-candidate");
+
         // Witches offer their source service even outdoors at a coven; no guild membership is required.
         if (sourceFaction?.Type == 8) { services.Add("daedra-summoning"); role = "witch"; }
         if (sourceBuildingType is 11 or 14)
@@ -78,6 +82,16 @@ internal static class DaggerfallNpcServiceFacts
 
         return (role, services.Distinct(StringComparer.Ordinal).ToArray());
     }
+
+    internal static bool IsChild(DaggerfallNpcAppearance npc) => npc.FactionId == 514 || (npc.BillboardArchive switch {
+        181 or 197 => npc.BillboardRecord == 3,
+        182 => npc.BillboardRecord is 4 or 5 or 6 or 18 or 36 or 37 or 38 or 42 or 43 or 52 or 53,
+        184 => npc.BillboardRecord == 15,
+        186 => npc.BillboardRecord is 4 or 5 or 6 or 7 or 19 or 37 or 38 or 39 or 43 or 44 or 53 or 54,
+        334 => npc.BillboardRecord is 2 or 3 or 6 or 9 or 12,
+        346 => npc.BillboardRecord is 2 or 3 or 12 or 15 or 16 or 18,
+        357 => npc.BillboardRecord is 5 or 6 or 7 or 8,
+        _ => false });
 
     // Arena2's filed values are the donor BuildingTypes enum with Alchemist at zero:
     // Alchemist, Armorer, Bookseller, ClothingStore, FurnitureStore, GemStore, GeneralStore,

@@ -177,6 +177,7 @@ internal sealed partial class DaggerfallSession
                     Presentation.SetOutcome("Quest choice recorded.");
                 else Presentation.SetOutcome(DaggerfallUiAction.RuleFor(DaggerfallUiActionKind.QuestChoice).Refusal!);
                 break;
+            case DaggerfallUiActionKind.QuestOfferAnswer: AnswerQuestOffer(action.QuestInstance!, action.Confirm); break;
             case DaggerfallUiActionKind.QuestDismiss:
                 _ = State.Quests.DismissRewardMessage(action.QuestInstance!, action.QuestDelivery!);
                 break;

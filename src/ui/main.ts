@@ -195,6 +195,7 @@ interface QuestMessageProjection {
   readonly diagnostics: readonly string[];
 }
 interface QuestPresentation {
+  readonly offer?: { readonly instance: string; readonly text: string; readonly diagnostics: readonly string[] } | null;
   readonly escortFaces: readonly { readonly instance: string; readonly symbol: string; readonly name: string; readonly mediaId: string }[];
   readonly deliveries: readonly QuestMessageProjection[];
   readonly journal: readonly QuestMessageProjection[];
@@ -1818,6 +1819,18 @@ export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null
 function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undefined, claim: (action: UiAction) => void): void {
   root.replaceChildren();
   if (!value) return;
+  if (value.offer) {
+    const offer = value.offer;
+    const article = document.createElement('article'); article.className = 'dagger-quest-message';
+    const title = document.createElement('strong'); title.textContent = 'Quest offer';
+    const text = document.createElement('p'); text.textContent = offer.text; article.append(title, text);
+    for (const [label, confirm] of [['Accept', true], ['Decline', false]] as const) {
+      const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
+      button.addEventListener('click', () => claim({ action: 'quest-offer-answer', questInstance: offer.instance, confirm }));
+      article.append(button);
+    }
+    root.append(article);
+  }
   if (value.escortFaces?.length) {
     const escorts = document.createElement('aside'); escorts.className = 'dagger-escort-faces';
     escorts.setAttribute('aria-label', 'Escorted companions');

@@ -122,7 +122,7 @@ internal static class DaggerfallAttributeDrainEffects
             || origin.Source == DaggerfallCastSource.DungeonAction
                 && (origin.CasterId is not null || origin.ItemId is not null || origin.ActionSource is not { IsValid: true })
             || origin.Source == DaggerfallCastSource.Spell && origin.ItemId is not null
-            || origin.Source != DaggerfallCastSource.Spell && origin.Source != DaggerfallCastSource.DungeonAction && origin.ItemId is null)
+            || origin.Source is not (DaggerfallCastSource.Spell or DaggerfallCastSource.Quest or DaggerfallCastSource.DungeonAction or DaggerfallCastSource.Potion) && origin.ItemId is null)
             throw new ArgumentException("Attribute drain state does not match its admitted variant and origin.");
         return state;
     }

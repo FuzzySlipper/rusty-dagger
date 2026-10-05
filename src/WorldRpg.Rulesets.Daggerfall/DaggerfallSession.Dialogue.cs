@@ -98,6 +98,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<long, bool> _muted;
     private readonly Func<long, IReadOnlyList<DaggerfallQuestContact>> _questContacts;
     private readonly Func<long, bool> _workAvailable;
+    private readonly Func<long, string>? _offerWork;
     private readonly Func<DaggerfallVariableStore?>? _variables;
     private readonly Func<DaggerfallWorldProfileKey>? _activeProfile;
     private readonly Func<string, bool>? _discloseDirection;
@@ -128,6 +129,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<long, string, (string Text, IReadOnlyList<string> Diagnostics)?>? resolveQuestTopic = null,
         Func<DaggerfallCalendar>? calendar = null,
         Func<long, bool>? workAvailable = null,
+        Func<long, string>? offerWork = null,
         Func<DaggerfallVariableStore?>? variables = null,
         Func<DaggerfallNpc, DaggerfallDialogueTopic, ulong?, DaggerfallTempleServiceResult>? templeService = null,
         Func<DaggerfallNpc, DaggerfallDialogueTopic, string?, DaggerfallGuildProviderResult>? guildService = null,
@@ -160,6 +162,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _resolveQuestTopic = resolveQuestTopic;
         _calendar = calendar ?? (() => DaggerfallCalendar.Start);
         _workAvailable = workAvailable ?? (_ => false);
+        _offerWork = offerWork;
         _variables = variables;
         _activeProfile = activeProfile;
         _discloseDirection = discloseDirection;
@@ -429,6 +432,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             (session.Reply, IReadOnlyList<string> workDiagnostics) = RenderSelectedRun(
                 Resource(workId), context, $"{session.Revision}:{session.QuestionCount}:work:answer");
             session.Diagnostics.AddRange(workDiagnostics);
+            if (_offerWork is not null && _workAvailable(npc.DurableId)) session.Reply = _offerWork(npc.DurableId);
         }
         else
         {
@@ -729,7 +733,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     {
         if (_current is not { } session) { _publish(null); return; }
         List<DaggerfallDialogueTopicOption> topics = [new("directions", "Where is this place?"), new("news", "Any news?")];
-        if (npc.Services.Contains("quest", StringComparer.Ordinal))
+        if (npc.Services.Any(service => service is "quest" or "quests" or "quest-candidate") || _workAvailable(npc.DurableId))
             topics.Add(new("work", "Do you know of any work?"));
         if (_directionDirectory is not null)
             topics.AddRange(_directionDirectory());

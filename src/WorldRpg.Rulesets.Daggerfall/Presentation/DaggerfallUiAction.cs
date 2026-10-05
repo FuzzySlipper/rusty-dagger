@@ -33,7 +33,7 @@ internal enum DaggerfallUiActionKind
     TravelSearch, TravelPreview, TravelAccept, MapOpen, MapBuilding,
     Rest, LodgingQuote, LodgingBook,
     WagonPut, WagonTake,
-    QuestChoice, QuestDismiss,
+    QuestChoice, QuestDismiss, QuestOfferAnswer,
     DungeonTextAnswer, DungeonTextClose,
     InventoryMove, InventoryInspect, InventoryUse, InventoryDrop,
     NotebookPage, NotebookAdd, NotebookEdit, NotebookRemove, NotebookMove,
@@ -216,6 +216,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.WagonTake, "wagon-take", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.QuestChoice, "quest-choice", DaggerfallUiPhases.Interaction,
             "Quest choice rejected: this prompt is no longer pending or the choice is invalid."),
+        new(DaggerfallUiActionKind.QuestOfferAnswer, "quest-offer-answer", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.QuestDismiss, "quest-dismiss", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DungeonTextAnswer, "dungeon-text-answer", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DungeonTextClose, "dungeon-text-close", DaggerfallUiPhases.Interaction),
@@ -606,6 +607,9 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "questInstance", "questMessage", "questPrompt", "questChoice"])
                     && !string.IsNullOrWhiteSpace(questInstance) && !string.IsNullOrWhiteSpace(questPrompt) && questMessage is > 0 && questChoice is not null
                     ? new(action, QuestInstance: questInstance, QuestMessage: questMessage, QuestChoice: questChoice, QuestPrompt: questPrompt) : null;
+            if (action == "quest-offer-answer")
+                return fields.SetEquals(["action", "questInstance", "confirm"]) && !string.IsNullOrWhiteSpace(questInstance)
+                    ? new(action, QuestInstance: questInstance, Confirm: confirm) : null;
             if (action == "quest-dismiss")
                 return fields.SetEquals(["action", "questInstance", "questDelivery"])
                     && !string.IsNullOrWhiteSpace(questInstance) && !string.IsNullOrWhiteSpace(questDelivery)
