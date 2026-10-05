@@ -101,6 +101,9 @@ internal sealed record DaggerfallQuestBuildingClaim(string SourceKey, int Index,
 /// <summary>Durable state belonging to one declared resource.</summary>
 internal sealed record DaggerfallQuestResourceState(string Symbol, DaggerfallQuestResourceBinding Binding, bool IsHidden = false, bool HasPlayerClicked = false)
 {
+    public bool DialogueVisible { get; init; } = true;
+    [JsonRequired]
+    public string[] DialogueLinks { get; init; } = [];
     public bool UseClicked { get; init; }
     public DaggerfallQuestFoeRelations? FoeRelations { get; init; }
     public bool IsNpcDestroyed { get; init; }
@@ -175,6 +178,10 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             if (!resources.Add(symbol)) throw new ArgumentException($"Quest instance '{InstanceId}' binds resource '{symbol}' more than once.");
             ArgumentNullException.ThrowIfNull(resource.Binding);
             resource.Binding.Validate(symbol);
+            ArgumentNullException.ThrowIfNull(resource.DialogueLinks);
+            if (resource.DialogueLinks.Distinct(StringComparer.Ordinal).Count() != resource.DialogueLinks.Length
+                || resource.DialogueLinks.Any(link => link == symbol || !Resources.Any(other => other.Symbol == link && other.DialogueLinks.Contains(symbol))))
+                throw new ArgumentException($"Quest resource '{symbol}' has invalid dialogue links.");
             if (resource.FoeRelations is { } relation && (resource.SelectedFoe is null || relation.Actors is null || relation.Actors.Any(value => value is null || value.Team < 0 || !resource.Binding.ActorIds.Contains(value.ActorId))
                 || relation.Actors.Select(value => value.ActorId).Distinct().Count() != relation.Actors.Length || relation.ReleasedRestraint is null
                 || relation.ReleasedRestraint.Distinct().Count() != relation.ReleasedRestraint.Length
@@ -577,6 +584,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
     private static DaggerfallQuestResourceState[] CopyResources(IEnumerable<DaggerfallQuestResourceState> resources) =>
         resources.Select(resource => resource with
         {
+            DialogueLinks = [.. resource.DialogueLinks],
             FoeRelations = resource.FoeRelations?.Copy(),
             Binding = CopyBinding(resource.Binding), DefeatedFoeIds = [.. resource.DefeatedFoeIds], RemovedFoeIds = [.. resource.RemovedFoeIds],
             SelectedPerson = resource.SelectedPerson is { Home: { } home } person
@@ -635,7 +643,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _admission = admission;
         _disabledSelection = disabledSelection;
-        Messages = new DaggerfallQuestMessages(definitions, random);
+        Messages = new DaggerfallQuestMessages(definitions, random) { ResourceNamed = RevealDialogueResource };
         _programs = definitions.QuestSources.Quests.Values
             .Where(source => source.Disposition == DaggerfallQuestDisposition.Compiled)
             .ToDictionary(source => source.SourceFile, DaggerfallQuestTaskCompiler.Compile, StringComparer.Ordinal);
@@ -1004,7 +1012,8 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         // Selected resource identities and text remain for journal/post-quest conversation.
         // Visible actors continue under their canonical roster/registry lifetime.
         instance.Placements = [];
-        instance.Resources = instance.Resources.Select(resource => resource with { IsQuestor = false, IsMuted = false, EscortFaceMedia = null, EscortFaceOrder = 0 }).ToArray();
+        Messages.RemoveDialogue(instance.InstanceId);
+        instance.Resources = instance.Resources.Select(resource => resource with { DialogueVisible = false, DialogueLinks = [], IsQuestor = false, IsMuted = false, EscortFaceMedia = null, EscortFaceOrder = 0 }).ToArray();
         _removeCarriedQuestItems?.Invoke(instance.InstanceId);
     }
 
@@ -1235,7 +1244,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 DaggerfallQuestTaskOperation operation = task.Operations[operationIndex];
                 DaggerfallQuestTaskOperationState receipt = state.OperationState[operationIndex];
                 if (receipt.UnavailableReason is { } reason && (string.IsNullOrWhiteSpace(reason)
-                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.WorldUpdate or DaggerfallQuestTaskOperationKind.TeleportPlace or DaggerfallQuestTaskOperationKind.RevealPlace or DaggerfallQuestTaskOperationKind.GiveItem or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
+                    || operation.Kind is not (DaggerfallQuestTaskOperationKind.WorldUpdate or DaggerfallQuestTaskOperationKind.AddDialog or DaggerfallQuestTaskOperationKind.DialogLink or DaggerfallQuestTaskOperationKind.TeleportPlace or DaggerfallQuestTaskOperationKind.RevealPlace or DaggerfallQuestTaskOperationKind.GiveItem or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.SpawnCityGuards or DaggerfallQuestTaskOperationKind.CreateNpc or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits)))
                     throw new ArgumentException("Quest unsupported world detail must identify its owning action.");
                 if (receipt.ItemDropped && operation.Kind != DaggerfallQuestTaskOperationKind.DroppedAt)
                     throw new ArgumentException("Quest drop state must belong to a drop trigger.");

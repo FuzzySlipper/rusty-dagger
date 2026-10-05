@@ -569,9 +569,10 @@ public sealed class QuestWorldAdmissionTests
     }
 
     internal static DaggerfallDefinitions Definitions(bool stackable = false, bool gold = false, bool secondPlace = false, bool endSource = false, bool secondItem = false,
-        string[]? actions = null, bool person = false, bool atHome = false, bool rearmPlacement = false, string[][]? taskBlocks = null, string[]? messages = null, int? foeCount = null, int firstMessageId = 100, string? itemUsedMessage = null, bool personQuestor = false, bool potion = false)
+        string[]? actions = null, bool person = false, bool atHome = false, bool rearmPlacement = false, string[][]? taskBlocks = null, string[]? messages = null, int? foeCount = null, int firstMessageId = 100, string? itemUsedMessage = null, bool personQuestor = false, bool potion = false, string? personInfo = null, string? personRumor = null, string? itemInfo = null, bool noAmbientRumors = false)
     {
         var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        if (noAmbientRumors) foreach (var rumor in root["rumors"]!["entries"]!.AsArray()) rumor!["region"] = 0;
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
         var foe = declarations.First(value => value!["kind"]!.GetValue<string>() == "foe"
             && value["targetSourceSpelling"]!.GetValue<string>() == "Giant_rat")!.DeepClone();
@@ -591,6 +592,7 @@ public sealed class QuestWorldAdmissionTests
             item["item"]!["template"] = 83;
             item["item"]!["key"] = 221871;
         }
+        if (itemInfo is not null) item["item"]!["anyInfoMessage"] = itemInfo;
         if (itemUsedMessage is not null) item["item"]!["usedMessage"] = itemUsedMessage;
         foe["symbol"]!["canonicalId"] = "enemy"; foe["symbol"]!["sourceSpelling"] = "_enemy_";
         if (foeCount is not null) foe["foe"]!["count"] = foeCount.Value;
@@ -600,6 +602,8 @@ public sealed class QuestWorldAdmissionTests
             npc["quest"] = "world-test"; npc["sourceFile"] = "world-test.txt";
             npc["symbol"]!["canonicalId"] = "person"; npc["symbol"]!["sourceSpelling"] = "_person_";
             npc["person"]!["atHome"] = atHome; npc["person"]!["gender"] = "female";
+            if (personInfo is not null) { npc["parameters"]!.AsArray().Add("anyInfo"); npc["parameters"]!.AsArray().Add(personInfo); }
+            if (personRumor is not null) { npc["parameters"]!.AsArray().Add("rumors"); npc["parameters"]!.AsArray().Add(personRumor); }
             declarations.Add(npc);
         }
         if (secondItem)

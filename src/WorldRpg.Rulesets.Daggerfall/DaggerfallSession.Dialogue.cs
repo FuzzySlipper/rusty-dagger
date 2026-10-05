@@ -90,6 +90,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<(string Name, string Hint)?>? _directions;
     private readonly Func<string?, DaggerfallDialogueDestination?>? _resolveDirection;
     private readonly Func<IReadOnlyList<DaggerfallDialogueTopicOption>>? _directionDirectory;
+    private readonly Func<IReadOnlyList<DaggerfallQuestMessageDeliverySave>> _questRumors;
+    private readonly Func<DaggerfallQuestMessageDeliverySave, (string Text, IReadOnlyList<string> Diagnostics)>? _resolveQuestRumor;
     private readonly Func<long, IReadOnlyList<DaggerfallQuestDialogueTopic>> _questTopics;
     private readonly Func<long, string, (string Text, IReadOnlyList<string> Diagnostics)?>? _resolveQuestTopic;
     private readonly Func<DaggerfallCalendar> _calendar;
@@ -131,7 +133,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallNpc, DaggerfallDialogueTopic, string?, DaggerfallGuildProviderResult>? guildService = null,
         Func<DaggerfallWorldProfileKey>? activeProfile = null,
         Func<string, bool>? discloseDirection = null,
-        DaggerfallDialogueWorldState? dialogueWorld = null, Func<bool>? suppressTalk = null)
+        DaggerfallDialogueWorldState? dialogueWorld = null, Func<bool>? suppressTalk = null,
+        Func<IReadOnlyList<DaggerfallQuestMessageDeliverySave>>? questRumors = null,
+        Func<DaggerfallQuestMessageDeliverySave, (string Text, IReadOnlyList<string> Diagnostics)>? resolveQuestRumor = null)
     {
         _suppressTalk = suppressTalk ?? (() => false);
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
@@ -150,6 +154,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _directionDirectory = directionDirectory;
         _muted = muted ?? (_ => false);
         _questContacts = questContacts ?? (_ => []);
+        _questRumors = questRumors ?? (() => []);
+        _resolveQuestRumor = resolveQuestRumor;
         _questTopics = questTopics ?? (_ => []);
         _resolveQuestTopic = resolveQuestTopic;
         _calendar = calendar ?? (() => DaggerfallCalendar.Start);
@@ -486,14 +492,22 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             }
         }
         candidates.RemoveAll(candidate => candidate.TimeLimit > 0 && candidate.TimeLimit <= currentMinute);
-        if (candidates.Count == 0)
+        var questRumors = _resolveQuestRumor is null ? [] : _questRumors();
+        if (candidates.Count + questRumors.Count == 0)
         {
             (string empty, diagnostics) = RenderSelectedRun(Resource(1457), context,
                 $"{session.Revision}:{session.QuestionCount}:news:empty");
             return empty;
         }
 
-        DaggerfallDialogueNewsCandidate candidate = candidates[Draw(session, $"{session.QuestionCount}:news:select", 0, candidates.Count - 1)];
+        int selected = Draw(session, $"{session.QuestionCount}:news:select", 0, candidates.Count + questRumors.Count - 1);
+        if (selected >= candidates.Count)
+        {
+            var answer = _resolveQuestRumor!(questRumors[selected - candidates.Count]);
+            diagnostics = answer.Diagnostics;
+            return answer.Text;
+        }
+        DaggerfallDialogueNewsCandidate candidate = candidates[selected];
         DaggerfallTextRenderResult result = _text.Resolve(candidate.TextKey, RumorContext(npc, site, candidate.Faction1, candidate.Faction2));
         diagnostics = [.. result.Diagnostics.Select(diagnostic => $"{diagnostic.Kind}: {diagnostic.Detail}")];
         return result.Text;
