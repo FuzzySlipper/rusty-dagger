@@ -102,6 +102,7 @@ internal sealed class DaggerfallQuestPlaceAllocator(
                     kind = DaggerfallWorldProfileKind.Dungeon;
                     DaggerfallSiteRecord[] DungeonCandidates(int type) => [.. region.Where(value => IsDungeon(value.Kind)
                         && (type == -1 ? value.DungeonType is >= 0 and <= 16 : value.DungeonType == type)
+                        && Markers(value, null).Count > 0
                         && !parent.Concat(active).SelectMany(LocationBindings).Any(binding => binding.PlaceSelection?.Kind == DaggerfallWorldProfileKind.Dungeon
                             && binding.Places[0].Require() == value.Id))];
                     DaggerfallSiteRecord? SelectDungeon(int type)

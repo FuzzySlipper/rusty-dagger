@@ -371,8 +371,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         Cinematics?.Poll();
         _openingCinematics.Poll();
         if (_mode == ProductMode.Playing) Infections.Poll(_openingCinematics.IsActive);
-        bool playing = _mode == ProductMode.Playing && !LegalModalOpen && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null;
-        bool modal = _mode == ProductMode.Modal || LegalModalOpen || _pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null;
+        ReconcileSummoningFoes();
+        bool playing = _mode == ProductMode.Playing && !Summoning.PendingOffer && !LegalModalOpen && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null;
+        bool modal = _mode == ProductMode.Modal || Summoning.PendingOffer || LegalModalOpen || _pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null;
         DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
             : playing ? DaggerfallUiPhases.Playing
             : modal ? DaggerfallUiPhases.Modal

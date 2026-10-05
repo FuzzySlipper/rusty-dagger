@@ -32,15 +32,15 @@ function fixture() {
   dom.window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   dom.window.HTMLDialogElement.prototype.close = function () { this.open = false; };
   const root = document.getElementById('root');
-  const actions = [];
+  const actions = [];const modes=[];
   let receive;
   const mounted = mountProductUi(root, {
-    ui: { setInteractionMode() {}, focusGameplay() {} },
+    ui: { setInteractionMode(mode) {modes.push(mode);}, focusGameplay() {} },
     projection: { subscribe(callback) { receive = callback; return () => {}; } },
     intents: { claim(_intent, value) { actions.push(value.data); } },
   });
   return {
-    root, actions,
+    root, actions, modes,
     publish(value = {}) {
       receive({ contract: 'dagger.ui.snapshot.v1', value: {
         resources: [], lastOutcome: '', mode: 'playing',
@@ -1341,4 +1341,27 @@ test('item maker edits named settings, shows forced payloads, and confirms the q
     publish();assert.equal(root.querySelector('[name="enchanted-name"]'),name);
     root.querySelector('form').dispatchEvent(new window.Event('submit',{cancelable:true}));assert.deepEqual(JSON.parse(f.actions.at(-1).text),{item:'stack:rubies',name:'Changed',settings:[setting.key]});
   } finally {f.dispose();}
+});
+
+test('summoning offers retain semantic accept and refuse actions and close with the projection', async () => {
+  const f=fixture();
+  try {
+    const { renderSummoning, isSummoningProjection }=await import(pathToFileURL(join(output,'main.js')));
+    const view={revision:'dialogue.3',provider:'Witch',quote:null,offerRevision:'7',prince:'Clavicus Vile',message:'Bring the Masque.',diagnostics:[]};
+    assert.equal(isSummoningProjection(view),true);
+    f.publish({spells:{available:[],ready:null,result:'',summoning:view}});
+    assert.equal(f.root.querySelector('.dagger-daedric-offer').open,true);
+    assert.equal(f.modes.at(-1),'interface');
+    f.publish({spells:{available:[],ready:null,result:'',summoning:null}});
+    assert.equal(f.root.querySelector('.dagger-daedric-offer').open,false);
+    assert.equal(f.modes.at(-1),'gameplay');
+    const root=document.createElement('div');const actions=[];
+    renderSummoning(root,view,action=>actions.push(action));
+    assert.match(root.textContent,/Bring the Masque/);
+    root.querySelectorAll('button')[0].click();root.querySelectorAll('button')[1].click();
+    assert.deepEqual(actions,[{action:'daedra-answer',revision:'7',confirm:true},{action:'daedra-answer',revision:'7',confirm:false}]);
+    renderSummoning(root,{...view,offerRevision:null,quote:{key:'7:1:2:4',name:'Hircine',quest:'X0C00Y00',gold:200000,eligible:false,reason:'WrongDay'}},action=>actions.push(action));
+    assert.match(root.textContent,/not a summoning day/);assert.equal(root.querySelector('button').disabled,true);
+    renderSummoning(root,null,()=>{});assert.equal(root.childElementCount,0);
+  }finally{f.dispose();}
 });

@@ -50,6 +50,7 @@ internal sealed class DaggerSessionPersistence
     private readonly Func<long> _nextCastSequence;
     internal Func<DaggerfallInfectionsSave> Infections { get; set; } = () => DaggerfallInfectionsSave.Empty;
     internal Func<DaggerfallWorldVariantSave[]> WorldVariants { get; set; } = () => [];
+    internal Func<DaggerfallSummoningSave> Summoning { get; set; } = () => DaggerfallSummoningSave.Empty;
     internal Func<DaggerfallWeatherSave> Weather { get; set; } = null!;
     internal Func<DaggerfallReadySpell?> ReadySpell {get;set;}=()=>null;
     internal Func<DaggerfallCreateItemRequest?> PendingCreateItem { get; set; } = () => null;
@@ -183,6 +184,7 @@ internal sealed class DaggerSessionPersistence
             QuestTraining = State.QuestTraining.Capture(),
             RegionalPrices = State.RegionalPrices.Capture(),
             Weather = Weather(),
+            Summoning = Summoning(),
             WorldVariants = WorldVariants(),
             Transport = State.Transport.Capture(),
             Swimming = State.Swimming.Capture(),

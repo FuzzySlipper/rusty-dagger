@@ -49,6 +49,8 @@ internal static class DaggerfallNpcServiceFacts
             role = "merchant";
         }
 
+        // Witches offer their source service even outdoors at a coven; no guild membership is required.
+        if (sourceFaction?.Type == 8) { services.Add("daedra-summoning"); role = "witch"; }
         if (sourceBuildingType is 11 or 14)
         {
             foreach (DaggerfallConcreteGuildDefinition guild in DaggerfallConcreteGuildCatalog.All
