@@ -102,15 +102,40 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
             return DaggerfallQuestItemResult.Unavailable; // Consumption is not a new virtual resource.
         // The first grant publishes directly into its real owner. No seeded custody item
         // or resource binding exists before successful Engine admission.
-        var owner = DaggerfallItemOwner.Player;
-        InventoryStackId? stack = created.Stackable ? InventoryStackId.Parse($"daggerfall.quest.{Uri.EscapeDataString(instance.InstanceId)}.{Symbol(symbol)}") : null;
+        var binding = AdmitItem(created, DaggerfallItemOwner.Player, $"daggerfall.quest.{Uri.EscapeDataString(instance.InstanceId)}.{Symbol(symbol)}");
+        SetResource(instance, resource with { Binding = binding });
+        return DaggerfallQuestItemResult.Changed;
+    }
+
+    internal DaggerfallCreatedItem SnapshotItem(DaggerfallQuestResourceState resource)
+    {
+        var selected = resource.SelectedItem ?? throw new ArgumentException("A selected Item is required.");
+        if (resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Pending) return selected;
+        if (resource.Binding.UniqueItemIds is [var id])
+        {
+            if (!state.ItemInstances.ContainsUnique(id)) throw new NotSupportedException("A consumed quest Item cannot be queued on a foe.");
+            return selected with { Metadata = state.ItemInstances.RequireUnique(id) };
+        }
+        if (resource.Binding.Stacks.FirstOrDefault() is { } stack)
+        {
+            var owner = new DaggerfallItemOwner(stack.Owner.Scope, stack.Owner.Id);
+            var stackId = InventoryStackId.Parse(stack.StackId);
+            return selected with { Metadata = state.ItemInstances.RequireStack(owner, stackId),
+                Quantity = state.Containers.Read(ownerEntity(owner)).Stacks.Single(value => value.Id == stackId).Quantity };
+        }
+        throw new NotSupportedException("A consumed quest Item has no queueable prototype.");
+    }
+
+    internal DaggerfallQuestResourceBinding AdmitItem(DaggerfallCreatedItem created, DaggerfallItemOwner owner, string stackIdentity)
+    {
+        InventoryStackId? stack = created.Stackable ? InventoryStackId.Parse(stackIdentity) : null;
         DurableIdentityReference? identity = created.Stackable ? null : uniqueItems.AllocateReference();
         var metadata = (created.Metadata with { Owner = owner }).Validate();
         if (stack is not null && state.ItemInstances.ContainsStack(owner, stack)) throw new InvalidOperationException("Quest item stack identity already exists.");
         var binding = stack is not null ? DaggerfallQuestResourceBinding.Stack(new(owner.Scope, owner.Id), stack.Value)
             : DaggerfallQuestResourceBinding.UniqueItem(identity!.Value.Value);
-        binding.Validate(symbol);
-        try { state.Containers.Seed(state.Actors.Player.Actor.Entity, [new(created.Item, created.Quantity, identity, stack)]); }
+        try { state.Containers.Seed(ownerEntity(owner), [new(created.Item, created.Quantity, identity, stack,
+            CapacityCosts: created.Stackable ? null : DaggerfallEncumbrancePolicy.CapacityOverride(metadata.WeightClassicUnits))]); }
         catch
         {
             if (identity is { } issued) uniqueItems.Remove(issued);
@@ -118,8 +143,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         }
         if (stack is not null) state.ItemInstances.RegisterStack(owner, stack, metadata);
         else state.ItemInstances.RegisterUnique(identity!.Value.Value, metadata);
-        SetResource(instance, resource with { Binding = binding });
-        return DaggerfallQuestItemResult.Changed;
+        return binding;
     }
 
     internal DaggerfallQuestItemResult MakePermanent(DaggerfallQuestRuntimeInstance instance, string symbol)

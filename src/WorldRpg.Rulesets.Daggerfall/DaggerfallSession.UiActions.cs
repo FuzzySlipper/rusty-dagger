@@ -3,6 +3,7 @@ using WorldRpg.Kit;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -232,7 +233,9 @@ internal sealed partial class DaggerfallSession
             try
             {
                 _groundContainers.TryGet(groundTake.Id, out var source);
+                var questItem = QuestLootMetadata(DaggerfallItemOwner.Ground(groundTake.Id), groundTake.Selection);
                 var transfer = _groundContainers.Take(groundTake.Id, groundTake.Selection, groundTake.ExpectedWorldRevision);
+                if (questItem is not null) State.Quests.ItemClicked(questItem);
                 ObservePropertyLoot(groundTake, source, transfer);
                 _lootUi.CompleteGround(true);
             }
@@ -244,7 +247,12 @@ internal sealed partial class DaggerfallSession
             return;
         }
         if (_lootUi.PrepareTake(action, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl)) is { } take)
-            _lootUi.Complete(_corpseLoot.TryCommitLoot(take, _facts));
+        {
+            var questItem = take.Selection is { } selection ? QuestLootMetadata(DaggerfallItemOwner.Corpse(take.ActorId), selection) : null;
+            var result = _corpseLoot.TryCommitLoot(take, _facts);
+            if (result == CorpseLootCommitResult.Committed && questItem is not null) State.Quests.ItemClicked(questItem);
+            _lootUi.Complete(result);
+        }
         Presentation.SetOutcome(_lootUi.Message);
     }
 }

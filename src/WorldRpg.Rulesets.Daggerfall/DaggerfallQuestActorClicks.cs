@@ -43,7 +43,8 @@ internal sealed partial class DaggerfallQuestInstances
                     .SelectMany(value => value.Operations).Any(operation =>
                         (operation.Kind == DaggerfallQuestTaskOperationKind.ClickedNpc && resource.SelectedPerson is not null
                             || operation.Kind == DaggerfallQuestTaskOperationKind.ClickedFoe && resource.SelectedFoe is not null)
-                        && operation.Targets[0] == DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "clicked resource"));
+                        && operation.Targets[0] == DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "clicked resource")
+                        || operation.Kind == DaggerfallQuestTaskOperationKind.TotingItem && operation.Targets[1] == resource.Symbol);
             }
         }
         return handled;

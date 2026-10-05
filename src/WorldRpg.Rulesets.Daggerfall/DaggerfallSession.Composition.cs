@@ -484,6 +484,12 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindItems(State.QuestItems);
             State.Quests.BindPlacementNpcs(State.Npcs);
             State.Npcs.BindQuestPresence(State.Quests.IsNpcUnavailable);
+            State.Quests.BindItemInteractions((amount, goldOnly) => goldOnly ? State.Currency.TrySpendGold(amount, []) : State.Currency.TrySpendCarried(amount), GiveQuestItem);
+            _equipmentMoves.Changed += change =>
+            {
+                if (change.Equipped is { } item)
+                    State.Quests.UseItem(State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(new(item.EntityId)).Value));
+            };
             State.Quests.BindClickGold(amount => State.Currency.TrySpendGold(amount, []));
             State.Quests.BindWorldRead(() => _sites.ReadQuestLocation());
             State.Quests.BindFoeCommands(ApplyQuestFoeCommand);
@@ -499,7 +505,7 @@ internal sealed partial class DaggerfallSession
                     RequestPanel(DaggerfallPanel.Character);
                     return true;
                 }, useSanguineRose: UseSanguineRose, useSkullCorruption: UseSkullCorruption, useItemSpell: item => _itemCastTriggers.Use(item),
-                useAzurasStar: UseAzurasStar, usePotion: UsePotion));
+                useAzurasStar: UseAzurasStar, usePotion: UsePotion, useQuestItem: State.Quests.UseItem));
             _inventoryUi.BookOpened += _ => RequestPanel(DaggerfallPanel.Journal);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi, _groundContainers);
             _interactions = new DaggerfallOpenInteractions(

@@ -228,8 +228,8 @@ public sealed class MechanicsInventoryContainerCoordinator
     /// Moves all directly contained items from one registered owner to another
     /// through one detached candidate and one Engine publication.
     /// </summary>
-    public InventoryContainerTransferReceipt TransferAll(EntityId source, EntityId destination) =>
-        TransferCore(source, destination, null);
+    public InventoryContainerTransferReceipt TransferAll(EntityId source, EntityId destination, Action<InventoryEdit>? additionalChanges = null) =>
+        TransferCore(source, destination, null, additionalChanges);
 
     /// <summary>
     /// Transfers a selected amount. A caller acting on a selection the player made
