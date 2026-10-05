@@ -72,6 +72,14 @@ interface SpellMakerProjection {
   readonly quote:{readonly key:string;readonly gold:number;readonly spellPoints:number;readonly eligible:boolean;readonly reason:string|null}|null;
 }
 
+interface ItemMakerSetting { readonly key:string;readonly name:string;readonly cost:number;readonly forced:readonly string[]; }
+interface ItemMakerProjection {
+  readonly revision:string;readonly provider:string;readonly eligible:boolean;
+  readonly items:readonly {readonly key:string;readonly name:string;readonly capacity:number;readonly quantity:number}[];
+  readonly settings:readonly ItemMakerSetting[];
+  readonly draft:{readonly item:string;readonly name:string;readonly settings:readonly string[]};
+  readonly quote:{readonly key:string;readonly capacity:number;readonly power:number;readonly gold:number;readonly eligible:boolean;readonly reason:string|null;readonly payloads:readonly ItemMakerSetting[]}|null;
+}
 interface PotionMakerProjection {
   readonly revision:string; readonly provider:string; readonly eligible:boolean;
   readonly ingredients:readonly {readonly template:number;readonly name:string;readonly quantity:number}[];
@@ -84,6 +92,7 @@ interface SpellbookProjection {
   readonly sale?: {readonly revision:string;readonly provider:string;readonly offers:readonly {readonly key:string;readonly name:string;readonly castingCost:number;readonly price:number;readonly known:boolean}[]} | null;
   readonly maker?:SpellMakerProjection|null;
   readonly potionMaker?:PotionMakerProjection|null;
+  readonly itemMaker?:ItemMakerProjection|null;
   readonly information?: {readonly key:string;readonly name:string;readonly element:number;readonly target:string;readonly details:readonly string[]} | null;
 }
 
@@ -389,6 +398,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       </section>
       <section class="dagger-dialogue-merchant" aria-label="Merchant services"></section>
       <section class="dagger-dialogue-spells" aria-label="Spells for sale"></section>
+      <section class="dagger-dialogue-itemmaker" aria-label="Item enchanting"></section>
       <section class="dagger-dialogue-potionmaker" aria-label="Potion making"></section>
       <section class="dagger-dialogue-spellmaker" aria-label="Spell construction"></section>
       <ul class="dagger-dialogue-diagnostics" aria-label="Text diagnostics"></ul>
@@ -750,6 +760,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   };
   const spellsRoot=shell.querySelector<HTMLElement>('.dagger-spells-root')!;
   const spellSalesRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spells')!;
+  const itemMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-itemmaker')!;
   const potionMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-potionmaker')!;
   const spellMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spellmaker')!;
   let inventorySuppressed = false;
@@ -1217,6 +1228,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     const spellbook = isSpellbookProjection(value.spells) ? value.spells : null;
     renderSpells(spellsRoot,spellbook);
     renderSpellSales(spellSalesRoot,spellbook);
+    renderItemMaker(itemMakerRoot,spellbook?.itemMaker ?? null,action => context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
     renderPotionMaker(potionMakerRoot,spellbook?.potionMaker ?? null,action => context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
     renderSpellMaker(spellMakerRoot,spellbook?.maker ?? null,action =>
       context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
@@ -1655,6 +1667,7 @@ export function isSpellbookProjection(value:unknown):value is SpellbookProjectio
         && offer.price>=0 && Number.isInteger(offer.castingCost) && offer.castingCost>=0 && typeof offer.known==='boolean'))
     && (v.maker==null || isSpellMakerProjection(v.maker))
     && (v.potionMaker==null || isPotionMakerProjection(v.potionMaker))
+    && (v.itemMaker==null || isItemMakerProjection(v.itemMaker))
     && (v.information==null || typeof v.information.key==='string' && typeof v.information.name==='string'
       && typeof v.information.target==='string' && Number.isInteger(v.information.element)
       && Array.isArray(v.information.details) && v.information.details.every(line=>typeof line==='string'));
@@ -1955,4 +1968,51 @@ export function renderPotionMaker(root:HTMLElement,view:PotionMakerProjection|nu
     if(selected.length<1 || selected.length>8) {note.textContent='Choose one to eight ingredients.';return;}
     claim({action:'potion-mix',revision:view.revision,text:JSON.stringify(selected)});
   });
+}
+
+export function isItemMakerProjection(value:unknown):value is ItemMakerProjection {
+  if(!value || typeof value!=='object') return false;
+  const v=value as Partial<ItemMakerProjection>;
+  const setting=(s:ItemMakerSetting):boolean=>!!s && typeof s.key==='string' && typeof s.name==='string' && Number.isInteger(s.cost)
+    && Array.isArray(s.forced) && s.forced.every(x=>typeof x==='string');
+  return typeof v.revision==='string' && typeof v.provider==='string' && typeof v.eligible==='boolean'
+    && Array.isArray(v.items) && v.items.every(i=>i && typeof i.key==='string' && typeof i.name==='string' && Number.isInteger(i.capacity) && Number.isSafeInteger(i.quantity) && i.quantity>0)
+    && Array.isArray(v.settings) && v.settings.every(setting) && !!v.draft && typeof v.draft.item==='string' && typeof v.draft.name==='string'
+    && Array.isArray(v.draft.settings) && v.draft.settings.every(x=>typeof x==='string')
+    && (v.quote===null || !!v.quote && typeof v.quote.key==='string' && Number.isInteger(v.quote.capacity) && Number.isInteger(v.quote.power)
+      && Number.isSafeInteger(v.quote.gold) && v.quote.gold>=0 && typeof v.quote.eligible==='boolean' && (v.quote.reason===null || typeof v.quote.reason==='string')
+      && Array.isArray(v.quote.payloads) && v.quote.payloads.every(setting));
+}
+
+export function renderItemMaker(root:HTMLElement,view:ItemMakerProjection|null,claim:(action:UiAction)=>void):void {
+  const stamp=JSON.stringify(view);if(root.dataset.itemMaker===stamp) return;
+  root.dataset.itemMaker=stamp;root.replaceChildren();if(!view)return;
+  const title=document.createElement('h3');title.textContent=`Enchant an item with ${view.provider}`;root.append(title);
+  if(!view.eligible){const p=document.createElement('p');p.textContent='Your current guild standing does not permit item enchanting.';root.append(p);return;}
+  const form=document.createElement('form');root.append(form);
+  const items=document.createElement('select');items.setAttribute('aria-label','Item to enchant');
+  const empty=document.createElement('option');empty.value='';empty.textContent='Choose an item';items.append(empty);
+  for(const i of view.items){const o=document.createElement('option');o.value=i.key;o.textContent=`${i.name} · ${i.capacity} power${i.quantity>1?' · one of '+i.quantity:''}`;items.append(o);}
+  items.value=view.draft.item;form.append(items);
+  const label=document.createElement('label');label.textContent='Enchanted name ';
+  const name=document.createElement('input');name.maxLength=64;name.required=true;name.value=view.draft.name;name.name='enchanted-name';label.append(name);form.append(label);
+  const selected=[...view.draft.settings];
+  const submit=(settings=selected):void=>claim({action:'itemmaker-draft',revision:view.revision,text:JSON.stringify({item:items.value,name:name.value,settings})});
+  items.addEventListener('change',()=>{name.value=view.items.find(i=>i.key===items.value)?.name??'';submit([]);});
+  const powers=document.createElement('select');powers.setAttribute('aria-label','Enchantment');
+  for(const positive of [true,false]){const group=document.createElement('optgroup');group.label=positive?'Powers':'Side effects';
+    for(const setting of view.settings.filter(s=>(s.cost>0)===positive)){const o=document.createElement('option');o.value=setting.key;o.textContent=`${setting.name} (${setting.cost} power)${setting.forced.length?' — also '+setting.forced.join(', '):''}`;group.append(o);}powers.append(group);}
+  form.append(powers);const add=document.createElement('button');add.type='button';add.textContent='Add enchantment';add.disabled=!view.draft.item || !view.settings.length;
+  add.addEventListener('click',()=>submit([...selected,powers.value]));form.append(add);
+  const list=document.createElement('ul');form.append(list);
+  selected.forEach((key,index)=>{const row=document.createElement('li');row.textContent=view.settings.find(s=>s.key===key)?.name??key;
+    const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';remove.addEventListener('click',()=>submit(selected.filter((_,i)=>i!==index)));row.append(' ',remove);list.append(row);});
+  const preview=document.createElement('button');preview.type='submit';preview.textContent='Update preview';form.append(preview);
+  form.addEventListener('submit',event=>{event.preventDefault();submit();});
+  if(view.quote){const quote=view.quote;const summary=document.createElement('p');summary.textContent=quote.eligible?`${quote.power}/${quote.capacity} power · ${quote.gold} gold`:quote.reason??'Choose valid enchantments.';root.append(summary);
+    const payloads=document.createElement('ul');for(const payload of quote.payloads){const row=document.createElement('li');row.textContent=payload.name;payloads.append(row);}root.append(payloads);
+    const buy=document.createElement('button');buy.type='button';buy.textContent='Enchant item';buy.disabled=!quote.eligible;
+    form.addEventListener('input',()=>{buy.disabled=true;});form.addEventListener('change',()=>{buy.disabled=true;});
+    buy.addEventListener('click',()=>{if(window.confirm(`Enchant ${view.draft.name} for ${quote.gold} gold?`))claim({action:'itemmaker-buy',revision:view.revision,key:quote.key,amount:quote.gold,confirm:true});});root.append(buy);
+  }
 }

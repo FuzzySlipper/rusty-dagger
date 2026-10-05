@@ -70,9 +70,18 @@ internal static class DaggerfallTemplateItemDefinitions
             foreach (string material in MaterialsFor(template))
                 Add(result, template, source, material);
         }
+        // A gem stack has no individual identity. The maker admits one selected gem as a
+        // unique item; all unselected units keep their ordinary fungible definition.
+        foreach (var gem in result.Values.Where(item => item.IsFungible && item.Template?.Groups.Contains("Gems", StringComparer.Ordinal) == true).ToArray())
+        {
+            var id = new DaggerfallItemId(MadeGemDefinition(gem.Id.Value));
+            result.Add(id, new(id, DaggerfallItemKind.Unique, 1, gem.Weight, gem.Value, gem.Weapon, gem.Armor, gem.Shield, gem.Equipment, gem.Template));
+        }
         AddMagicDefinitions(result, magic);
         return new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(result);
     }
+
+    internal static string MadeGemDefinition(string source) => source + "-enchantable";
 
     private static void AddMagicDefinitions(Dictionary<DaggerfallItemId, DaggerfallItemDefinition> result, DaggerfallMagicCatalogSet magic)
     {
@@ -80,7 +89,7 @@ internal static class DaggerfallTemplateItemDefinitions
         {
             string[] categories = MagicCategories(magicItem);
             foreach (DaggerfallItemDefinition baseItem in result.Values.ToArray()
-                .Where(item => item.Template is not null && item.Template.Index != 131 && !item.Id.Value.Contains("-magic-", StringComparison.Ordinal)
+                .Where(item => item.Template is not null && item.Template.Index != 131 && !item.Id.Value.Contains("-magic-", StringComparison.Ordinal) && !item.Id.Value.EndsWith("-enchantable", StringComparison.Ordinal)
                     && categories.Any(category => item.Template.Groups.Contains(category, StringComparer.Ordinal))))
             {
                 DaggerfallItemId id = new(DaggerfallMagicItemIds.For(baseItem.Id.Value, magicItem.Key));

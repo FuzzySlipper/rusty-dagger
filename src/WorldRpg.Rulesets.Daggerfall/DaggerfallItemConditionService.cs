@@ -1,5 +1,7 @@
 using Rusty.Engine;
+using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
+using UniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
@@ -280,7 +282,18 @@ internal sealed class DaggerfallItemConditionService(
     }
 
     /// <summary>Commits fully resolved maker settings once, retaining item identity and current condition.</summary>
-    internal DaggerfallItemConditionResult EnchantMade(UniqueInventoryItem item, DaggerfallMadeEnchantment made)
+    internal DaggerfallItemConditionResult EnchantMade(UniqueInventoryItem item, DaggerfallMadeEnchantment made) =>
+        EnchantMadeCore(item, made, null)!;
+
+    /// <summary>Finishes a newly granted item whose final capacity costs already published with payment.</summary>
+    internal DaggerfallItemConditionResult CompleteGrantedEnchantment(UniqueInventoryItem item, DaggerfallMadeEnchantment made) =>
+        EnchantMadeCore(item, made, null, capacityAlreadyApplied: true)!;
+
+    internal DaggerfallItemConditionResult? TryEnchantMade(UniqueInventoryItem item, DaggerfallMadeEnchantment made,
+        Func<Action<InventoryEdit>, bool> publish) => EnchantMadeCore(item, made, publish);
+
+    private DaggerfallItemConditionResult? EnchantMadeCore(UniqueInventoryItem item, DaggerfallMadeEnchantment made,
+        Func<Action<InventoryEdit>, bool>? publish, bool capacityAlreadyApplied = false)
     {
         (ulong id, var metadata) = RequirePlayerItem(item);
         if (metadata.HasEnchantment) throw new InvalidOperationException("This item is already enchanted.");
@@ -292,14 +305,17 @@ internal sealed class DaggerfallItemConditionService(
         int? soul = settings.Where(value => value.Type == 15).Select(value => (int?)value.Param).SingleOrDefault();
         DaggerfallSoulGems? gems = soul is not null ? souls?.Invoke() : null;
         if (soul is int mobile && gems?.HasSoul(mobile) != true) throw new InvalidOperationException("No matching filled soul trap remains.");
-        ulong? weight = metadata.WeightClassicUnits;
-        foreach (var setting in settings)
-        {
-            if (setting.Type == 23) weight = checked(DaggerfallEncumbrancePolicy.ClassicWeightCost(definitions.RequireItem(new(metadata.ItemId)), metadata) * 4);
-            if (setting.Type == 11) weight = 100; // 0.25 kg in classic gold-piece units.
-        }
+        ulong? weight = DaggerfallEnchantmentConstruction.EnchantedWeight(definitions, metadata, made);
         var enchanted = (metadata with { MadeEnchantment = quote.Enchantment, Identified = true, WeightClassicUnits = weight }).Validate();
-        if (weight != metadata.WeightClassicUnits)
+        if (publish is not null)
+        {
+            if (!publish(candidate =>
+            {
+                if (weight != metadata.WeightClassicUnits)
+                    candidate.SetCapacityCosts(new(item.EntityId), DaggerfallEncumbrancePolicy.CapacityOverride(weight));
+            })) return null;
+        }
+        else if (!capacityAlreadyApplied && weight != metadata.WeightClassicUnits)
             (inventory ?? throw new InvalidOperationException("Item mutation requires the live inventory owner."))
                 .SetCapacityCosts(item, DaggerfallEncumbrancePolicy.CapacityOverride(weight));
         var moved = equipment.UnequipForEnchantment(item);
