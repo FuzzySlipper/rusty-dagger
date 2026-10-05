@@ -1265,3 +1265,15 @@ test('racial form projection closes and suppresses inventory until human form re
     assert.equal(f.root.querySelector('.dagger-menu').classList.contains('has-inventory'), true);
   } finally { f.dispose(); }
 });
+
+test('character entry displays the authoritative refusal above its opaque screen', () => {
+  const f = fixture();
+  try {
+    const refusal = 'Character choice was not accepted: Allocate all attribute bonus points before committing.';
+    f.publish({ mode: 'title', lastOutcome: refusal });
+    const entry = f.root.querySelector('.dagger-entry');
+    assert.equal(entry.hidden, false);
+    assert.equal(entry.querySelector('.dagger-entry-outcome').textContent, refusal);
+    assert.equal(entry.querySelector('.dagger-entry-outcome').getAttribute('role'), 'status');
+  } finally { f.dispose(); }
+});

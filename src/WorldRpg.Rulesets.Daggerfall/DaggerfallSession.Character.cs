@@ -120,6 +120,13 @@ internal sealed partial class DaggerfallSession
                 Traits(action.Advantages, "advantages"), Traits(action.Disadvantages, "disadvantages"))
             : null;
         DaggerfallCharacterIdentity identity = new(action.Name, action.Race, gender, face, (DaggerfallCharacterReflexes)reflexes, action.Career);
+        var selected = new DaggerfallCharacterCreationChoices(action.Name, action.Race, gender, face,
+            (DaggerfallCharacterReflexes)reflexes, action.Career, custom, currentBackground);
+        // The visible allocation fields belonged to the previous career. Publish fresh matching
+        // rolls before accepting allocations for a different class or custom skill tier layout.
+        if (currentBackground is not null && State.Character.BackgroundCareerChanged(selected)
+            && action.Kind != DaggerfallUiActionKind.CharacterBackgroundReroll)
+            return State.Character.WithFreshBackground(selected, _random);
         DaggerfallCharacterBackgroundSave? background = currentBackground;
         if (background is not null && background.People.RaceId != identity.RaceId)
             background = background with { People = DaggerfallBiographyPeople.Roll(_definitions, identity.RaceId, _random, background.RollSequence) };
