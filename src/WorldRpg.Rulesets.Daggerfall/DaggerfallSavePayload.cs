@@ -721,9 +721,16 @@ internal sealed record DaggerfallSavePayload(
         {
             if (racial.TargetId != DaggerfallActorIdentity.PlayerEntityId || racial.RemainingRounds is not null || racial.ItemId is not null)
                 throw new ArgumentException("Saved racial override must be a permanent player effect.");
-            if (Character?.SpellGrants?.Count(grant => grant.Source == racial.Instance && grant.Spell == "spell.085"
-                && grant.Kind == DaggerfallSpellGrantKind.Lycanthropy) != 1)
-                throw new ArgumentException("Saved racial override is missing its protected transformation spell.");
+            var state = DaggerfallRacialOverrides.Read(racial.State);
+            string[] required = state.Vampire is { } vampire
+                ? Policies.DaggerfallVampirismPolicy.GrantedSpells(definitions.Magic, vampire.Clan) : ["spell.085"];
+            var kind = state.Vampire is null ? DaggerfallSpellGrantKind.Lycanthropy : DaggerfallSpellGrantKind.Vampirism;
+            var grants = Character?.SpellGrants?.Where(grant => grant.Source == racial.Instance).ToArray() ?? [];
+            if (grants.Length != required.Length || required.Any(spell => grants.Count(grant => grant.Spell == spell && grant.Kind == kind) != 1))
+                throw new ArgumentException("Saved racial override is missing or has unexpected protected curse spells.");
+            long currentMinute = new World.DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).ToAbsoluteSeconds() / 60;
+            if (state.AcquiredMinute > currentMinute || state.Vampire?.LastFedMinute > currentMinute)
+                throw new ArgumentException("Saved racial override contains future transition or feeding time.");
         }
         foreach (var grant in Character?.SpellGrants ?? [])
             if (!Enum.IsDefined(grant.Kind) || !racialEffects.Any(effect => effect.Instance == grant.Source))

@@ -674,26 +674,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     private DaggerfallQuestCatalogRow? SelectOrdinaryWorkOffer(int factionId, bool playerIsMember, int playerLevel, int playerReputation, int playerRank,
         DaggerfallCharacterGender playerGender, int currentDay)
     {
-        DaggerfallFactionDefinition? faction = _definitions.Factions.Factions.GetValueOrDefault(factionId);
-        if (faction is null) return null;
-        string group = faction.GuildGroupName.Length > 0 ? faction.GuildGroupName : faction.SocialGroupName;
-        char[] membership = faction.GuildGroup > 0
-            ? [playerIsMember ? 'M' : 'N']
-            : ['N', playerGender == DaggerfallCharacterGender.Female ? 'F' : 'M'];
-
-        DaggerfallQuestCatalogRow[] eligible = [.. _definitions.QuestSources.Catalog.Rows
-            .Where(row => row.Active && row.Group.Equals(group, StringComparison.Ordinal)
-                && row.Membership is { Length: 1 } value && membership.Contains(value[0])
-                && row.MinimumRequirement <= (row.RequirementKind == "reputation" ? playerReputation
-                    : row.RequirementKind == "rank" ? playerRank : playerLevel))
-            .Where(row => _disabledSelection?.IsOrdinaryOffer(row.Name) != false)
-            .Where(row => _definitions.QuestSources.Quests.TryGetValue(row.Name + ".txt", out DaggerfallQuestSourceDefinition? source)
-                && source.Disposition == DaggerfallQuestDisposition.Compiled
-                && (_admission?.IsRunnable(source.SourceFile) ?? true))
-            .Where(row => !row.OneTime || !_instances.Values.Any(instance =>
-                instance.SourceFile.Equals(row.Name + ".txt", StringComparison.Ordinal)
-                || Messages.Journal.Any(entry => entry.SourceFile?.Equals(row.Name + ".txt", StringComparison.Ordinal) == true)))
-            .OrderBy(row => row.Name, StringComparer.Ordinal)];
+        var eligible = OrdinaryWorkPool(factionId, playerIsMember, playerLevel, playerReputation, playerRank, playerGender);
 
         // Keep the source selection deterministic across one session while still making the
         // calendar a real input to which admitted work is selected.
@@ -708,6 +689,32 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         return eligible[selected];
     }
 
+    internal DaggerfallQuestCatalogRow[] OrdinaryWorkPool(int factionId, bool playerIsMember, int playerLevel, int playerReputation, int playerRank,
+        DaggerfallCharacterGender playerGender)
+    {
+        DaggerfallFactionDefinition? faction = _definitions.Factions.Factions.GetValueOrDefault(factionId);
+        if (faction is null) return [];
+        string group = faction.GuildGroupName.Length > 0 ? faction.GuildGroupName : faction.SocialGroupName;
+        char[] membership = faction.GuildGroup > 0
+            ? [playerIsMember ? 'M' : 'N']
+            : ['N', playerGender == DaggerfallCharacterGender.Female ? 'F' : 'M'];
+
+        return [.. _definitions.QuestSources.Catalog.Rows
+            .Where(row => row.Active && row.Group.Equals(group, StringComparison.Ordinal)
+                && row.Membership is { Length: 1 } value && membership.Contains(value[0])
+                && row.MinimumRequirement <= (row.RequirementKind == "reputation" ? playerReputation
+                    : row.RequirementKind == "rank" ? playerRank : playerLevel))
+            .Where(row => _disabledSelection?.IsOrdinaryOffer(row.Name) != false)
+            .Where(row => _definitions.QuestSources.Quests.TryGetValue(row.Name + ".txt", out DaggerfallQuestSourceDefinition? source)
+                && source.Disposition == DaggerfallQuestDisposition.Compiled
+                && (_admission?.IsRunnable(source.SourceFile) ?? true))
+            .Where(row => !row.OneTime || !_instances.Values.Any(instance =>
+                instance.SourceFile.Equals(row.Name + ".txt", StringComparison.Ordinal)
+                || Messages.Journal.Any(entry => entry.SourceFile?.Equals(row.Name + ".txt", StringComparison.Ordinal) == true)))
+            .OrderBy(row => row.Name, StringComparer.Ordinal)];
+
+    }
+
     /// <summary>A live resource owned by an active quest may not be replaced by an artifact.</summary>
     internal bool ProtectsActor(long actorId) => _instances.Values.Any(instance =>
         instance.Lifecycle == DaggerfallQuestLifecycle.Active
@@ -719,6 +726,9 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     internal DaggerfallQuestMessages Messages { get; }
 
     /// <summary>Binds the one session's live player and elapsed-time owners after composition completes.</summary>
+    private Func<bool>? _cureVampirism;
+    internal void BindVampirismCure(Func<bool> cure) => _cureVampirism = cure;
+    bool IDaggerfallQuestTaskLifecycle.CureVampirism() => (_cureVampirism ?? throw new InvalidOperationException("No permanent vampire owner is composed."))();
     private Func<bool>? _cureLycanthropy;
     internal void BindLycanthropyCure(Func<bool> cure) => _cureLycanthropy = cure;
     bool IDaggerfallQuestTaskLifecycle.CureLycanthropy() => (_cureLycanthropy ?? throw new InvalidOperationException("No permanent curse owner is composed."))();

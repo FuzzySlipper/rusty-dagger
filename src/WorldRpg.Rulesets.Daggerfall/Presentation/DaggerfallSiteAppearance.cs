@@ -29,6 +29,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly Dictionary<string, AudioClip> audioClips = new(StringComparer.Ordinal);
     private readonly HashSet<AudioSignalHandle> oneShotSignals = [];
     private readonly Dictionary<AudioVoiceHandle, EnemyVoice> enemyVoices = [];
+    private Func<bool?> playerVampireFemale = () => null;
+    internal void UsePlayerVampireGender(Func<bool?> female) => playerVampireFemale = female;
     private Func<DaggerfallRacialKind?> playerBeastForm = () => null;
     internal void UsePlayerBeastForm(Func<DaggerfallRacialKind?> form) => playerBeastForm = form;
     private double? playerBeastVoiceSeconds;
@@ -548,6 +550,11 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                         ? beast == DaggerfallRacialKind.Werewolf ? "sound.144" : "sound.159"
                         : DrawCue(hitEvent, "beast-bark", 1, 100) <= audioTuning.BeastBarkChancePercent ? beast == DaggerfallRacialKind.Werewolf ? "sound.143" : "sound.158" : null;
                     if (cue is not null) Emit(cue, hitEvent, 0);
+                }
+                if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && playerVampireFemale() is bool female)
+                {
+                    bool bark = DrawCue(hitEvent, "vampire-bark", 1, 100) <= audioTuning.VampireBarkChancePercent;
+                    Emit(female ? bark ? "sound.199" : "sound.200" : bark ? "sound.205" : "sound.206", hitEvent, 0);
                 }
                 EmitAtActor(SelectHitCue(hitEvent, hit.Feedback.Weapon), hitEvent,
                     hit.TargetId == DaggerfallActorIdentity.PlayerEntityId ? hit.AttackerId : hit.TargetId,

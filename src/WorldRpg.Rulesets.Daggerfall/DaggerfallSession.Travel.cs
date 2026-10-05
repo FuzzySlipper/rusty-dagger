@@ -117,7 +117,7 @@ internal sealed partial class DaggerfallSession
                     _sites.ClearReturnDestination();
                 }
                 long delay = TravelArrivalDelay(_time.Calendar,
-                    State.Character.CustomCareer?.Disadvantages.Any(trait => trait.Id == "damage" && trait.Target == "sunlight") == true,
+                    State.RacialOverrides.Current?.IsVampire == true || State.Character.CustomCareer?.Disadvantages.Any(trait => trait.Id == "damage" && trait.Target == "sunlight") == true,
                     quote.Options.SpeedCautious);
                 // The donor suppresses new random spawns during its arrival adjustment. Effects
                 // and deadlines still run at the actual destination through the shared calendar.
@@ -147,6 +147,8 @@ internal sealed partial class DaggerfallSession
     private string? TravelRefusal(DaggerfallTravelQuote quote, out DaggerfallRelocationDestination? destination)
     {
         destination = null;
+        if (State.RacialOverrides.Current?.IsVampire == true && _time.Calendar.IsDay)
+            return "Vampires cannot start fast travel during daylight.";
         if (State.Actors.Player.IsDefeated) return "You cannot travel while defeated.";
         if (_activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return "Leave the building or dungeon before travelling.";
         if (HasNearbyRestEnemy()) return "Nearby enemies prevent travel.";

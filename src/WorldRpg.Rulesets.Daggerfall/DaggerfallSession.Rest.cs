@@ -51,6 +51,11 @@ internal sealed partial class DaggerfallSession
             return rejected;
         }
 
+        if (VampireNeedsToFeed)
+        {
+            var rejected = DaggerfallRestResult.Rejected(request.Mode, "You must feed before you can rest.");
+            _restPresentation.Publish(rejected); Presentation.SetOutcome(rejected.Message!); return rejected;
+        }
         StatsComponent player = State.Actors.Player.Stats;
         DaggerfallRestResult result = _restRecovery.Apply(
             player,
@@ -108,6 +113,7 @@ internal sealed partial class DaggerfallSession
     {
         bool alive = State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current > 0d;
         if (!alive) return new(false, IsAlive: false, "You cannot rest while defeated.");
+        if (VampireNeedsToFeed) return new(false, Message: "You must feed before you can rest.");
         if (HasNearbyRestEnemy()) return new(false, Message: "Enemies are too close to rest.");
         if (State.PlayerControl.Position is null) return new(false, Message: "You cannot rest before the player has a world position.");
         if (_activeProfileKey.LogicalId.Length == 0) return new(false, Message: "You cannot rest without an admitted world profile.");

@@ -580,7 +580,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         DaggerfallAttackDefinition attack, int body, bool enemy, int attackDamageMod, int backstabChance) => Rules.Damage(participants, damage =>
     {
         damage.Body = body;
-        if (attack.Material is not null && !DaggerfallFormulaPolicy.CanHitMaterial(attack.Material, target.Id == PlayerId && _character()?.RacialOverrides?.Current?.State.BeastForm == true
+        if (attack.Material is not null && !DaggerfallFormulaPolicy.CanHitMaterial(attack.Material, target.Id == PlayerId && _character()?.RacialOverrides?.Current?.RequiresSilver == true
                 ? "silver" : target.Definition.MinimumMaterial, _weaponMaterialRanks))
         {
             damage.Allowed = false;
@@ -1013,14 +1013,15 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     /// <summary>
     /// The career's bonus or penalty against the target's enemy group. The player acts through the
     /// chosen career's attack-modifier byte, every other actor through its authored career or, for a
-    /// monster, the byte its classic enemy configuration record carried. A player target is humanoid
-    /// until character vampirism exists to move it, matching the donor's own pending case.
+    /// monster, the byte its classic enemy configuration record carried. A vampire player is undead;
+    /// other player identities retain the humanoid modifier.
     /// </summary>
     private int EnemyTypeBonus(Combatant attacker, Combatant target)
     {
         int flags = AttackModifierFlagsFor(attacker);
         return flags == 0 ? 0 : DaggerfallFormulaPolicy.BonusOrPenaltyByEnemyType(flags,
-            target.Id == PlayerId ? DaggerfallEnemyGroup.Humanoid : DaggerfallFormulaPolicy.EnemyGroupFor(target.Definition),
+            target.Id == PlayerId ? _character()?.RacialOverrides?.Current?.IsVampire == true ? DaggerfallEnemyGroup.Undead : DaggerfallEnemyGroup.Humanoid
+                : DaggerfallFormulaPolicy.EnemyGroupFor(target.Definition),
             AttackerLevel(attacker));
     }
 

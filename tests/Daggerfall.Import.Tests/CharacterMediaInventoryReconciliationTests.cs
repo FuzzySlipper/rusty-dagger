@@ -24,7 +24,7 @@ public sealed class CharacterMediaInventoryReconciliationTests
         IReadOnlyList<string> undocumented = CharacterMediaPublisher.ReconcileDocumentedInventory(InventoryCsv(), supplied);
 
         Assert.Empty(undocumented);
-        Assert.Equal(92, supplied.Length);
+        Assert.Equal(93, supplied.Length);
     }
 
     [CorpusFact]

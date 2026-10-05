@@ -179,6 +179,14 @@ tool write "${site_common[@]}" --out content/worldrpg/imports/privateers-hold \
 mapfile -t overlay_args < <(site_overlay castle-necromoghan)
 tool write "${site_common[@]}" --out content/worldrpg/imports/castle-necromoghan \
   --source-manifest "$site_records/castle-necromoghan.sources.json" --region 17 --location "Castle Necromoghan" --texture-table default "${overlay_args[@]}"
+tool write "${site_common[@]}" --out content/worldrpg/imports/the-hawkston-cemetery \
+  --source-manifest "$site_records/the-hawkston-cemetery.sources.json" --region 17 --location "The Hawkston Cemetery" --texture-table default
+tool write "${site_common[@]}" --out content/worldrpg/imports/the-tombs-of-klerd \
+  --source-manifest "$site_records/the-tombs-of-klerd.sources.json" --region 0 --location "The Tombs of Klerd" --texture-table default
+tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/the-hawkston-cemetery/exterior \
+  --source-manifest "$site_records/the-hawkston-cemetery-exterior.sources.json" --region 17 --location "The Hawkston Cemetery" --profile exterior
+tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/the-tombs-of-klerd/exterior \
+  --source-manifest "$site_records/the-tombs-of-klerd-exterior.sources.json" --region 0 --location "The Tombs of Klerd" --profile exterior
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/exterior \
   --source-manifest "$site_records/charing-exterior.sources.json" --region 17 --location Charing --profile exterior
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/charing/interior-1-1-0 \

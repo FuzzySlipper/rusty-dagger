@@ -165,6 +165,13 @@ contributions; it changes only remaining rounds. Replacement, cancellation,
 expiry, actor/item retirement and session disposal use the cleanup owner.
 Current saves retain durable references, never runtime entity handles.
 
+The permanent racial override uses this same effect owner for lycanthropy and
+vampirism. It owns reversible stat contributions and protected spell grants;
+cure or replacement removes its grants while retaining independently learned
+spells. Vampire state retains the infection-region clan, feeding time and initial
+clan-quest state. Existing calendar, quest, rest, travel and presentation owners
+consume that state, including awakening in an admitted source cemetery.
+
 Effect capture is read-only; a full session save clears transient spell readiness
 and pending ranged casts. Stat sources carrying effect provenance are rebuilt with
 fresh actor identities before tracks, through Engine's existing capture/rebuild

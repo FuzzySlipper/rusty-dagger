@@ -1,0 +1,13 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.the-hawkston-cemetery",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.site",
+  "dependencies": [
+    {
+      "id": "daggerfall.base"
+    }
+  ],
+  "description": "Normalized The Hawkston Cemetery destination profile.",
+  "payload": "worldrpg/payloads/daggerfall.the-hawkston-cemetery.json"
+}

@@ -133,6 +133,8 @@ internal sealed partial class DaggerfallSession
 
     private void ObserveCrimeHit(AttackHitFact damage)
     {
+        if (damage.AttackerId == DaggerfallActorIdentity.PlayerEntityId && State.RacialOverrides.Current?.IsVampire == true)
+            State.RacialOverrides.Feed(MinuteIndex(_time.Calendar));
         // SetPlayerCrime supplies a charge, not a fabricated assault or witness query. A real
         // damaging watch hit admits it to the existing legal-response owner, as in EnemyAttack.
         if (damage.TargetId == DaggerfallActorIdentity.PlayerEntityId && damage.ActualHealthLost > 0
@@ -162,7 +164,7 @@ internal sealed partial class DaggerfallSession
         int? region = _site.Region ?? npc?.Site.Region;
         if (region is null) return;
         if (State.Crime.HasAttempt(operation)) return;
-        if (dead && State.RacialOverrides.Current is not null) State.RacialOverrides.Satiate(MinuteIndex(_time.Calendar));
+        if (dead && State.RacialOverrides.Current is { IsVampire: false }) State.RacialOverrides.Satiate(MinuteIndex(_time.Calendar));
         var witnesses = QueryCrimeWitnesses();
         var crime = dead && !mobileGuard ? DaggerfallCrimeKind.Murder : DaggerfallCrimeKind.Assault;
         var kind = guard ? DaggerfallCrimeTargetKind.Guard : DaggerfallCrimeTargetKind.Civilian;

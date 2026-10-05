@@ -1,4 +1,5 @@
 using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using Rusty.Engine;
 using System.Text.Json;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
@@ -28,6 +29,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallQuestSpawningTuning QuestSpawning { get; init; } = new(5f, 20f, 8f, 25f, 5, 77.5f, 95f, 105.469f, 25);
     internal DaggerfallLawTuning Law { get; init; } = new(5, 10, 2, 5, 12.8f, 51.2f, 3.2d);
     internal DaggerfallNormalLightTuning NormalLight { get; init; } = new(1.4f, .25f, 15f, 1f);
+    internal DaggerfallVampirismTuning Vampirism { get; init; } = DaggerfallVampirismTuning.Classic;
     internal DaggerfallLycanthropyTuning Lycanthropy { get; init; } = DaggerfallLycanthropyTuning.Classic;
     internal DaggerfallStrikeEnchantmentTuning StrikeEnchantments { get; init; } = new(5, 2.25d);
     internal DaggerfallDetectionTuning Detection { get; init; } = new(14d);
@@ -112,6 +114,7 @@ internal sealed record DaggerfallTuning(
         Weather = Weather.Validate(),
         Ambient = Ambient.Validate(),
         Lycanthropy = Lycanthropy.Validate(),
+        Vampirism = Vampirism.Validate(),
         NormalLight = NormalLight.Validate(),
         Law = Law.Validate(),
         QuestSpawning = QuestSpawning.Validate(),
@@ -218,6 +221,7 @@ internal sealed record DaggerfallTuning(
                 BeastMinimumDelaySeconds = presentationAudio.GetProperty("beastMinimumDelaySeconds").GetInt32(),
                 BeastMaximumDelaySeconds = presentationAudio.GetProperty("beastMaximumDelaySeconds").GetInt32(),
                 BeastAttackChancePercent = presentationAudio.GetProperty("beastAttackChancePercent").GetInt32(),
+                VampireBarkChancePercent = presentationAudio.GetProperty("vampireBarkChancePercent").GetInt32(),
                 BeastBarkChancePercent = presentationAudio.GetProperty("beastBarkChancePercent").GetInt32(),
                 ContactPitch = presentationAudio.GetProperty("contactPitch").GetSingle(),
             },
@@ -282,6 +286,9 @@ internal sealed record DaggerfallTuning(
             NormalLight = new(root.GetProperty("normalLight").GetProperty("distance").GetSingle(),
                 root.GetProperty("normalLight").GetProperty("heightFraction").GetSingle(),
                 root.GetProperty("normalLight").GetProperty("range").GetSingle(), root.GetProperty("normalLight").GetProperty("intensity").GetSingle()),
+            Vampirism = new(root.GetProperty("vampirism").GetProperty("attributeBonus").GetInt32(),
+                root.GetProperty("vampirism").GetProperty("skillBonus").GetInt32(),
+                root.GetProperty("vampirism").GetProperty("satiationMinutes").GetInt32()),
             Lycanthropy = new(root.GetProperty("lycanthropy").GetProperty("attributeBonus").GetInt32(),
                 root.GetProperty("lycanthropy").GetProperty("skillBonus").GetInt32(),
                 root.GetProperty("lycanthropy").GetProperty("morphCooldownMinutes").GetInt32(),
@@ -495,6 +502,7 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
     internal int BeastMinimumDelaySeconds { get; init; } = 4;
     internal int BeastMaximumDelaySeconds { get; init; } = 20;
     internal int BeastAttackChancePercent { get; init; } = 10;
+    internal int VampireBarkChancePercent { get; init; } = 20;
     internal int BeastBarkChancePercent { get; init; } = 20;
     internal float ContactPitch { get; init; } = 1.1F;
     internal DaggerfallPresentationAudioTuning Validate()
@@ -508,7 +516,7 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
         if (AttractMoveChancePercent is < 0 or > 100 || AttackCueChancePercent is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(AttackCueChancePercent));
         if (!float.IsFinite(OccludedVolumeScale) || OccludedVolumeScale is < 0F or > 1F) throw new ArgumentOutOfRangeException(nameof(OccludedVolumeScale));
         if (BeastMinimumDelaySeconds < 0 || BeastMaximumDelaySeconds < BeastMinimumDelaySeconds
-            || BeastAttackChancePercent is < 0 or > 100 || BeastBarkChancePercent is < 0 or > 100)
+            || VampireBarkChancePercent is < 0 or > 100 || BeastAttackChancePercent is < 0 or > 100 || BeastBarkChancePercent is < 0 or > 100)
             throw new ArgumentOutOfRangeException(nameof(BeastMaximumDelaySeconds));
         if (!float.IsFinite(ContactPitch) || ContactPitch <= 0F) throw new ArgumentOutOfRangeException(nameof(ContactPitch));
         return this;

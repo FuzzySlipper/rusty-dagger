@@ -179,7 +179,7 @@ internal sealed class FileAndCanvas : IEqualityComparer<(string File, int Canvas
 /// The donor's race values are one-based (Breton is 1) while its paper-doll file names are zero-based
 /// (<c>BODY00I0.IMG</c> is Breton's male body), so the layer a race is drawn from is its donor value
 /// minus one. Values outside the eight playable races have no paper-doll subclass at all — the donor's
-/// list continues with vampire and werewolf forms that own no media — and those races are recorded as
+/// list continues with racial overrides whose media is bound separately below — and those races are recorded as
 /// having none rather than being mapped onto the next index, which would draw one race with another's
 /// art.
 /// </remarks>
@@ -340,12 +340,21 @@ public static class DaggerfallCharacterPresentationBuilder
             var body = set.Canvases.SingleOrDefault(value => System.IO.Path.GetFileName(value.Path) == bodyFile);
             if (head is not null && body is not null) racialForms.Add(new(id, head.MediaId, body.MediaId));
         }
+        var vampireBackground = set.Canvases.SingleOrDefault(value => System.IO.Path.GetFileName(value.Path) == "SCBG08I0.IMG");
+        if (vampireBackground is not null)
+            foreach (var race in races.Where(value => value.DonorRaceId is >= FirstDonorRaceId and <= LastDonorRaceId))
+            foreach (string gender in new[] { "female", "male" })
+            {
+                int index = race.DonorRaceId - 1 + (gender == "male" ? 8 : 0);
+                var head = set.Canvases.SingleOrDefault(value => System.IO.Path.GetFileName(value.Path) == "VAMP00I0.CIF" && value.CanvasIndex == index);
+                if (head is not null) racialForms.Add(new($"vampire.{race.Id}.{gender}", head.MediaId, vampireBackground.MediaId));
+            }
         HashSet<string> referenced =
         [
             .. layers.Select(layer => System.IO.Path.GetFileName(layer.SourceFile)),
             .. faces.Select(face => face.SourceFile),
             .. childFaces.Select(face => face.SourceFile),
-            .. set.Canvases.Where(value => value.Family is "WERE" or "WOLF" or "BOAR").Select(value => System.IO.Path.GetFileName(value.Path)),
+            .. set.Canvases.Where(value => value.Family is "WERE" or "WOLF" or "BOAR" or "VAMP" || System.IO.Path.GetFileName(value.Path) == "SCBG08I0.IMG").Select(value => System.IO.Path.GetFileName(value.Path)),
             .. careerPortraits.Select(portrait => portrait.SourceFile),
         ];
         Dictionary<string, CharacterMediaUnavailable> unavailable = set.Unavailable.ToDictionary(entry => System.IO.Path.GetFileName(entry.Path), StringComparer.Ordinal);

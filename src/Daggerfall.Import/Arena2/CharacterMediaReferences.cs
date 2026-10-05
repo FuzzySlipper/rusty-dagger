@@ -375,7 +375,7 @@ public static class CharacterMediaReferences
             // and a layer, a background names the scene a race is drawn in, and a class portrait is the
             // family the sheet's portrait lookup draws from.
             string name = System.IO.Path.GetFileNameWithoutExtension(file.Path).ToUpperInvariant();
-            if (file.Family is "CEL" or "WERE" or "WOLF" or "BOAR" || name is "FACES" or "KIDS00I0" || TryRaceAndGender(name, out _, out _) || IsRaceBackground(name))
+            if (file.Family is "CEL" or "WERE" or "WOLF" or "BOAR" or "VAMP" || name is "FACES" or "KIDS00I0" or "SCBG08I0" || TryRaceAndGender(name, out _, out _) || IsRaceBackground(name))
             {
                 bound.Add(file.Path);
             }
