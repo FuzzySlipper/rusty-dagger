@@ -107,6 +107,7 @@ internal sealed partial class DaggerfallSession
                 includeIdleFatigue: !resting);
             return;
         }
+        CheckStandingLaw(minuteBefore, MinuteIndex(_time.Calendar));
         simulate!();
         // Locomotion charges the update's minutes once its steps have recorded how they were spent.
         _locomotion.AdvanceCalendarMinutes(minuteBefore, MinuteIndex(_time.Calendar), State.Actors.Player.Stats);

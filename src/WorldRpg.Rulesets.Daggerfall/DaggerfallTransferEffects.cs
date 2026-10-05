@@ -10,7 +10,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal static class DaggerfallTransferEffects
 {
     internal static IEnumerable<DaggerfallEffectDefinition> Definitions(DaggerfallVitalityConsequences vitality,
-        Action<DaggerfallSpellTransferResult> applied, Func<long, bool> hostile, Action<long, long> attacked)
+        Action<DaggerfallSpellTransferResult> applied, Func<long, bool> hostile, Action<long, long, string> attacked)
     {
         foreach (int subtype in new[] { 8, 9 })
         {
@@ -32,7 +32,7 @@ internal static class DaggerfallTransferEffects
                     // The wrapper protects peaceful foes from fatigue loss, but Transfer explicitly restores and causes aggression.
                     applied(vitality.ResolveSpellTransfer(source, effect.Target, state.Amount, selected == 9,
                         target == DaggerfallActorIdentity.PlayerEntityId || hostile(target)));
-                    attacked(caster, target);
+                    attacked(caster, target, effect.BundleId ?? effect.Context.Instance.Value);
                 },
                 Spell: new(11, selected, SpellMaker: true, SupportsMagnitude: true, AllowedTargets: DaggerfallMagicAllowedTargets.Other));
         }

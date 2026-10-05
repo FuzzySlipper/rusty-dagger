@@ -232,7 +232,7 @@ public sealed class DaggerfallDestructionEffectsTests
                 new Dictionary<(int,int),DaggerfallMagicEffectCostDefinition> { [(setting.Type,setting.SubType)] = cost }, new Dictionary<string,DaggerfallEnchantmentSetting>());
             DaggerfallEffectLifecycle effects = null!;
             var definitions = DaggerfallDestructionEffects.Definitions(new(new CombatResolution()), result => { HealthResults.Add(result); AfterHealth?.Invoke(); }, TrackResults.Add,
-                _ => Hostile, (source,targetId) => Attacks.Add((source,targetId)));
+                _ => Hostile, (source,targetId, _) => Attacks.Add((source,targetId)));
             effects = new(Actors, new([..definitions, ..DaggerfallAlterationEffects.Definitions(effect => effects.Cancel(effect.Context.Instance)),
                 new("ward", "ward", DaggerfallEffectStacking.Stack, 10, 1, MagicDefense: _ => Defense)])); Effects = effects;
             Casting = new(Catalog, Effects, id => id == 1 ? Player : TargetPresent ? target : null, _ => Profile, _ => true, _ => {}, _ => {},

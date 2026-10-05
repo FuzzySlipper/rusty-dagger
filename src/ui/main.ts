@@ -21,6 +21,7 @@ interface DaggerHud {
     readonly items: readonly { readonly id: string; readonly definition: string; readonly quantity: number }[];
   }[] }[];
   readonly spells?: SpellbookProjection | null;
+  readonly legal?: {readonly revision:string; readonly phase:string; readonly title:string; readonly message:string; readonly charges:readonly string[]; readonly choices:readonly {readonly id:string; readonly label:string}[]} | null;
   readonly createItem?: { readonly revision:string; readonly options:readonly { readonly id:string; readonly label:string }[] } | null;
   readonly identify?: { readonly revision:string; readonly cost:number; readonly options:readonly { readonly id:string; readonly label:string }[] } | null;
   readonly teleport?: { readonly revision:string; readonly anchorSet:boolean } | null;
@@ -394,6 +395,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const siteName = shell.querySelector<HTMLElement>('.dagger-title .dagger-site')!;
   const outcome = shell.querySelector<HTMLParagraphElement>('.dagger-outcome')!;
   const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
+  const legal = document.createElement('section');
+  legal.className = 'dagger-legal'; legal.hidden = true; legal.setAttribute('role', 'dialog');
+  legal.setAttribute('aria-modal', 'true'); legal.setAttribute('aria-label', 'Law and court'); shell.append(legal);
   const createItem = document.createElement('section');
   createItem.className = 'dagger-create-item'; createItem.hidden = true; quests.before(createItem);
   const identify = document.createElement('section');
@@ -1098,6 +1102,27 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const unsubscribe = context.projection?.subscribe((projection) => {
     if (projection?.contract !== 'dagger.ui.snapshot.v1' || !isHud(projection.value)) return;
     const value = projection.value;
+    legal.hidden = !value.legal;
+    legal.replaceChildren();
+    if (value.legal) {
+      const caseView = value.legal;
+      legal.dataset.phase = caseView.phase;
+      const prisonArt = caseView.phase === 'prison' ? image('screen.prison') : null;
+      legal.style.backgroundImage = prisonArt === null ? '' : `url("${prisonArt}")`;
+      const card = document.createElement('div'); card.className = 'dagger-legal-card';
+      const title = document.createElement('h2'); title.textContent = caseView.title;
+      const charges = document.createElement('p'); charges.textContent = `Charges: ${caseView.charges.join(', ')}`;
+      const message = document.createElement('p'); message.textContent = caseView.message;
+      card.append(title, charges, message);
+      for (const choice of caseView.choices) {
+        const button = document.createElement('button'); button.textContent = choice.label;
+        button.addEventListener('click', () => context.intents?.claim('dagger.ui', {
+          kind: 'product-payload', contract: UI_ACTION_CONTRACT,
+          data: {action: 'legal-choice', revision: caseView.revision, key: choice.id},
+        })); card.append(button);
+      }
+      legal.append(card);
+    }
     createItem.hidden = !value.createItem;
     createItem.replaceChildren();
     if (value.createItem) {

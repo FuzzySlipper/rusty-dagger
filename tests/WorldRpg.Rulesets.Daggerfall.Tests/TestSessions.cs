@@ -466,10 +466,10 @@ internal static class TestSessions
         return Encoding.UTF8.GetBytes(tuning.ToJsonString());
     }
 
-    internal static DaggerfallSiteProfile SameContentAt(DaggerfallSiteProfile source, DaggerfallSiteId site, DaggerfallWorldProfileKind kind, string logicalId) => new(
-        kind == DaggerfallWorldProfileKind.Exterior
+    internal static DaggerfallSiteProfile SameContentAt(DaggerfallSiteProfile source, DaggerfallSiteId site, DaggerfallWorldProfileKind kind, string logicalId, ProjectFacts? facts = null) => new(
+        facts ?? (kind == DaggerfallWorldProfileKind.Exterior
             ? new ProjectFacts(new WorldPoint(1f, 1f, 1f), source.Project.Actors)
-            : source.Project,
+            : source.Project),
         source.SpatialArtifact,
         source.StaticMesh,
         source.WorldAppearance,

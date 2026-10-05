@@ -131,17 +131,22 @@ internal sealed partial class DaggerfallSession
 
     private void ObserveCrimeHit(AttackHitFact damage)
     {
-        if (damage.AttackerId != DaggerfallActorIdentity.PlayerEntityId) return;
-        var npc = State.Npcs.All.SingleOrDefault(value => value.DurableId == damage.TargetId);
-        bool cityWatch = _roster.Definitions.GetValueOrDefault(damage.TargetId)?.MobileId == 146;
+        ObserveLegalAttack(damage.AttackerId, damage.TargetId,
+            $"damage:{damage.OriginatingGeneration}:{damage.OriginatingSimulationStep}:{damage.AttackerId}:{damage.TargetId}");
+    }
+
+    private void ObserveLegalAttack(long attacker, long target, string operation)
+    {
+        if (attacker != DaggerfallActorIdentity.PlayerEntityId) return;
+        var npc = State.Npcs.All.SingleOrDefault(value => value.DurableId == target);
+        bool cityWatch = _roster.Definitions.GetValueOrDefault(target)?.MobileId == 146;
         bool mobileGuard = npc?.Kind == DaggerfallNpcKind.Civilian && npc.Role == "guard";
         bool guard = cityWatch || mobileGuard;
         bool civilian = npc?.Kind == DaggerfallNpcKind.Civilian;
         if (!civilian && !guard) return;
-        bool dead = State.Actors.Get(damage.TargetId).IsDefeated;
+        bool dead = State.Actors.Get(target).IsDefeated;
         int? region = _site.Region ?? npc?.Site.Region;
         if (region is null) return;
-        string operation = $"damage:{damage.OriginatingGeneration}:{damage.OriginatingSimulationStep}:{damage.AttackerId}:{damage.TargetId}";
         if (State.Crime.HasAttempt(operation)) return;
         if (dead && State.RacialOverrides.Current is not null) State.RacialOverrides.Satiate(MinuteIndex(_time.Calendar));
         var witnesses = QueryCrimeWitnesses();
@@ -149,14 +154,15 @@ internal sealed partial class DaggerfallSession
         var kind = guard ? DaggerfallCrimeTargetKind.Guard : DaggerfallCrimeTargetKind.Civilian;
         var credit = !dead || mobileGuard ? DaggerfallCrimeGuildCredit.None : guard ? DaggerfallCrimeGuildCredit.GuardMurder : DaggerfallCrimeGuildCredit.CivilianMurder;
         long minute = MinuteIndex(_time.Calendar);
-        State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Assault, damage.AttackerId,
-            damage.TargetId, region.Value, minute, DaggerfallCrimeAttemptOutcome.DamageAccepted, witnesses));
-        ReportCrime(new(operation, crime, DaggerfallCrimeStage.Completed, damage.AttackerId, damage.TargetId,
+        State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Assault, attacker,
+            target, region.Value, minute, DaggerfallCrimeAttemptOutcome.DamageAccepted, witnesses));
+        ReportCrime(new(operation, crime, DaggerfallCrimeStage.Completed, attacker, target,
             region.Value, minute, kind, witnesses, credit));
     }
 
     private sealed class DaggerfallCrimeActivationOwner(DaggerfallDialogueService dialogue, ActorsState actors,
-        Func<long, bool> eligible, Func<long, DaggerfallActivationOutcome> pickpocket) : IDaggerfallNpcActivationOwner
+        Func<long, bool> eligible, Func<long, DaggerfallActivationOutcome> pickpocket,
+        Func<long, bool> lawGuard, Func<long, DaggerfallActivationOutcome> surrender) : IDaggerfallNpcActivationOwner
     {
         public IEnumerable<DaggerfallActivationTarget> NpcTargets()
         {
@@ -167,6 +173,10 @@ internal sealed partial class DaggerfallSession
             if (mode != DaggerfallActivationMode.Steal)
             {
                 foreach (var person in dialogue.NpcTargets()) yield return person;
+                if (mode == DaggerfallActivationMode.Talk)
+                    foreach (var guard in actors.All.Where(actor => !actor.IsDefeated && lawGuard(actor.DurableId)))
+                        yield return new(DaggerfallActivationTargetKind.Npc, ActorsState.Identity(guard.DurableId), guard.Actor.Entity,
+                            checked((ulong)guard.DurableId), guard.Position, 1, ReachDistance: 3.2);
                 yield break;
             }
             foreach (var actor in actors.All.Where(actor => !actor.IsDefeated && actor.DurableId != DaggerfallActorIdentity.PlayerEntityId && eligible(actor.DurableId)))
@@ -174,6 +184,7 @@ internal sealed partial class DaggerfallSession
                     checked((ulong)actor.DurableId), actor.Position, 1, ReachDistance: 3.2);
         }
         public DaggerfallActivationOutcome ActivateNpc(DaggerfallActivationSelection selection) => selection.Mode == DaggerfallActivationMode.Steal
-            ? pickpocket(checked((long)selection.Target.Identity.Value)) : dialogue.ActivateNpc(selection);
+            ? pickpocket(checked((long)selection.Target.Identity.Value))
+            : lawGuard(checked((long)selection.Target.Identity.Value)) ? surrender(checked((long)selection.Target.Identity.Value)) : dialogue.ActivateNpc(selection);
     }
 }

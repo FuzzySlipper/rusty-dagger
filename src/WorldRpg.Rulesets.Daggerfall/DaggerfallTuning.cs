@@ -24,6 +24,7 @@ internal sealed record DaggerfallTuning(
     DaggerfallPropertyTuning Property,
     DaggerfallTransportTuning Transport)
 {
+    internal DaggerfallLawTuning Law { get; init; } = new(5, 10, 2, 5, 12.8f, 51.2f, 3.2d);
     internal DaggerfallNormalLightTuning NormalLight { get; init; } = new(1.4f, .25f, 15f, 1f);
     internal DaggerfallLycanthropyTuning Lycanthropy { get; init; } = DaggerfallLycanthropyTuning.Classic;
     internal DaggerfallStrikeEnchantmentTuning StrikeEnchantments { get; init; } = new(5, 2.25d);
@@ -110,6 +111,7 @@ internal sealed record DaggerfallTuning(
         Ambient = Ambient.Validate(),
         Lycanthropy = Lycanthropy.Validate(),
         NormalLight = NormalLight.Validate(),
+        Law = Law.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -255,6 +257,11 @@ internal sealed record DaggerfallTuning(
         {
             StrikeEnchantments = new(root.GetProperty("strikeEnchantments").GetProperty("damageAdjustment").GetInt32(),
                 root.GetProperty("strikeEnchantments").GetProperty("vampiricRange").GetDouble()),
+            Law = new(root.GetProperty("law").GetProperty("minimumResponseSeconds").GetInt32(),
+                root.GetProperty("law").GetProperty("maximumResponseSeconds").GetInt32(),
+                root.GetProperty("law").GetProperty("minimumGuards").GetInt32(), root.GetProperty("law").GetProperty("maximumGuards").GetInt32(),
+                root.GetProperty("law").GetProperty("minimumArrivalDistance").GetSingle(), root.GetProperty("law").GetProperty("maximumArrivalDistance").GetSingle(),
+                root.GetProperty("law").GetProperty("arrestReach").GetDouble()),
             NormalLight = new(root.GetProperty("normalLight").GetProperty("distance").GetSingle(),
                 root.GetProperty("normalLight").GetProperty("heightFraction").GetSingle(),
                 root.GetProperty("normalLight").GetProperty("range").GetSingle(), root.GetProperty("normalLight").GetProperty("intensity").GetSingle()),
@@ -539,4 +546,14 @@ internal sealed record DaggerfallNormalLightTuning(float Distance, float HeightF
     internal DaggerfallNormalLightTuning Validate() => float.IsFinite(Distance) && Distance > 0
         && float.IsFinite(HeightFraction) && HeightFraction is >= 0 and <= 1 && float.IsFinite(Range) && Range > 0
         && float.IsFinite(Intensity) && Intensity > 0 ? this : throw new ArgumentException("Normal light tuning requires a finite pose, range and intensity.");
+}
+
+internal sealed record DaggerfallLawTuning(int MinimumResponseSeconds, int MaximumResponseSeconds,
+    int MinimumGuards, int MaximumGuards, float MinimumArrivalDistance, float MaximumArrivalDistance, double ArrestReach)
+{
+    internal DaggerfallLawTuning Validate() => MinimumResponseSeconds >= 0 && MaximumResponseSeconds >= MinimumResponseSeconds
+        && MinimumGuards > 0 && MaximumGuards >= MinimumGuards && MaximumGuards <= 64
+        && float.IsFinite(MinimumArrivalDistance) && MinimumArrivalDistance > 0 && float.IsFinite(MaximumArrivalDistance)
+        && MaximumArrivalDistance >= MinimumArrivalDistance && double.IsFinite(ArrestReach) && ArrestReach > 0
+        ? this : throw new ArgumentException("Law tuning requires ordered finite response delays, guard counts and arrival distances.");
 }

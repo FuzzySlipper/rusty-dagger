@@ -96,8 +96,11 @@ internal sealed record DaggerfallCrimeIncidentSave(
     DaggerfallCrimeGuildCredit GuildCredit,
     bool Reported = false)
 {
+    public DaggerfallCrimeDisposition? Disposition { get; init; }
     internal DaggerfallCrimeIncidentSave Validate()
     {
+        if (Disposition is { } disposition && (!Enum.IsDefined(disposition.Outcome) || disposition.ResolvedMinute < GameMinute))
+            throw new ArgumentException("Crime disposition has an invalid outcome or resolution time.");
         DaggerfallCrimeValidation.ValidateCommon(OperationId, PerpetratorActorId, AffectedActorOrOwnerId, Region, GameMinute);
         if (!Enum.IsDefined(Crime) || !Enum.IsDefined(Stage) || !Enum.IsDefined(TargetKind)
             || !Enum.IsDefined(GuildCredit))
@@ -148,6 +151,10 @@ internal sealed record DaggerfallCrimeSave(
     long ThievesInvitationDueMinute,
     long MurderInvitationDueMinute)
 {
+    [System.Text.Json.Serialization.JsonRequired]
+    public DaggerfallLegalResponseSave[] LegalResponses { get; init; } = [];
+    [System.Text.Json.Serialization.JsonRequired]
+    public int[] BanishedRegions { get; init; } = [];
     internal DaggerfallCrimeSave Validate()
     {
         ArgumentNullException.ThrowIfNull(Attempts);
@@ -177,6 +184,15 @@ internal sealed record DaggerfallCrimeSave(
             if (!progressIds.Add(progress.OperationId))
                 throw new ArgumentException("Saved crime guild progress must have unique operation identities.", nameof(GuildProgress));
         }
+        ArgumentNullException.ThrowIfNull(LegalResponses);
+        ArgumentNullException.ThrowIfNull(BanishedRegions);
+        if (LegalResponses.Select(response => response.Region).Distinct().Count() != LegalResponses.Length
+            || BanishedRegions.Any(region => region < 0) || BanishedRegions.Distinct().Count() != BanishedRegions.Length)
+            throw new ArgumentException("Legal regions must be valid and unique.");
+        var incidentsById = Incidents.ToDictionary(value => value.OperationId, StringComparer.Ordinal);
+        foreach (var response in LegalResponses) response.Validate(incidentsById);
+        if (LegalResponses.Count(response => response.Modal) > 1)
+            throw new ArgumentException("Current legal state cannot contain multiple active court or arrest interactions.");
         ValidateGuildProgress(ThievingRequirementTally, ThievesInvitationDueMinute, 10, nameof(ThievingRequirementTally));
         ValidateGuildProgress(MurderRequirementTally, MurderInvitationDueMinute, 15, nameof(MurderRequirementTally));
         return this;
@@ -204,7 +220,7 @@ internal sealed record DaggerfallCrimeSave(
 /// Daggerfall legal and guild incident state. It accepts identities and outcomes from real callers;
 /// perception, inventory transfer, damage admission, and law-enforcement response remain their owners.
 /// </summary>
-internal sealed class DaggerfallCrimeState
+internal sealed partial class DaggerfallCrimeState
 {
     internal const long InvitationDelayMinutes = 4_320;
     internal const int ThievingInvitationThreshold = 10;
@@ -235,6 +251,7 @@ internal sealed class DaggerfallCrimeState
         _murderRequirementTally = restored.MurderRequirementTally;
         _thievesInvitationDueMinute = restored.ThievesInvitationDueMinute;
         _murderInvitationDueMinute = restored.MurderInvitationDueMinute;
+        RestoreLegal(restored);
     }
 
     internal event Action<DaggerfallCrimeIncidentSave>? IncidentRecorded;
@@ -386,7 +403,7 @@ internal sealed class DaggerfallCrimeState
         _thievingRequirementTally,
         _murderRequirementTally,
         _thievesInvitationDueMinute,
-        _murderInvitationDueMinute).Validate();
+        _murderInvitationDueMinute) { LegalResponses = [.. _responses.Values.OrderBy(value => value.Region)], BanishedRegions = [.. _banishedRegions.Order()] }.Validate();
 
     private static (int Tally, long DueMinute) ApplyProgress(int tally, long dueMinute, int threshold, long gameMinute, int amount)
     {

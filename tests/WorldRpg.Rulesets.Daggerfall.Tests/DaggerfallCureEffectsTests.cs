@@ -135,7 +135,7 @@ public sealed class DaggerfallCureEffectsTests
         int rounds = 0;
         var inputs = ReadInputs(TestData.RepositoryRoot);
         var catalog = new DaggerfallEffectCatalog([
-            DaggerfallParalysisEffects.Definition((_, _) => { }),
+            DaggerfallParalysisEffects.Definition((_, _, _) => { }),
             .. DaggerfallCureEffects.Definitions(
                 target => DaggerfallDiseasePolicy.CureAllDiseases(session!.State.Effects, target),
                 actor => session!.State.Poisons.Cure(actor),

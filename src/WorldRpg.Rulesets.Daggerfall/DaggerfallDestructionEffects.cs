@@ -12,7 +12,7 @@ internal static class DaggerfallDestructionEffects
 {
     internal static IEnumerable<DaggerfallEffectDefinition> Definitions(DaggerfallVitalityConsequences vitality,
         Action<DaggerfallEffectDamage> healthApplied, Action<DaggerfallSpellTrackResult> trackApplied,
-        Func<long, bool> hostile, Action<long, long> attacked)
+        Func<long, bool> hostile, Action<long, long, string> attacked)
     {
         foreach (var (key, type, subtype) in new[] { ("damage-health", 4, 0), ("damage-fatigue", 4, 1),
             ("damage-spell-points", 4, 2), ("disintegrate", 5, -1) })
@@ -42,7 +42,7 @@ internal static class DaggerfallDestructionEffects
                     // supplies the ordinary consequence owner; there is no actor to notify as an
                     // attacker or to use as an aggro identity.
                     if (effect.Context.Caster is { } liveCaster)
-                        attacked(checked((long)liveCaster.Value), target);
+                        attacked(checked((long)liveCaster.Value), target, effect.BundleId ?? effect.Context.Instance.Value);
                 },
                 Spell: new(type, subtype, SpellMaker: true, SupportsMagnitude: type == 4, RollChanceOnCast: type == 5,
                     AllowedElements: DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
