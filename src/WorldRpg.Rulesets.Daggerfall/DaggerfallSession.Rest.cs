@@ -164,7 +164,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallCustomCareerDefinition? custom = State.Character.CustomCareer;
         if (custom is null) return (false, false);
 
-        bool rapidHealing = custom.Advantages.Any(trait => trait.Id == "rapid-healing" && RapidHealingApplies(trait.Target));
+        bool rapidHealing = custom.Advantages.LastOrDefault(trait => trait.Id == "rapid-healing") is { } healing && RapidHealingApplies(healing.Target);
         bool noRegeneration = custom.Disadvantages.Any(trait => trait.Id == "inability-to-regen");
         return (rapidHealing, noRegeneration);
     }

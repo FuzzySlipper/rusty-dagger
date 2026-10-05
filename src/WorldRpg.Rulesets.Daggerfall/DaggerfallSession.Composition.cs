@@ -246,6 +246,7 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallDestructionEffects.Definitions(_vitality, AppendEffectDamage, AppendSpellTrackLoss,
                     id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition),
                     ReactToSpellAttack),
+                DaggerfallRacialOverrides.Definition(character),
                 .. DaggerfallTransformationInfectionPolicy.Definitions(effect => Infections!.Advance(effect)),
                 .. DaggerfallDiseasePolicy.Definitions(
                     _random,
@@ -256,6 +257,7 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => character.Career),
                 DaggerfallTempleBlessingEffects.Definition(social, () => character.Career, actors.Player.DurableId),
             ]));
+            character.AttachRacialOverrides(new(effects, character));
             effects.RestoreMagicRounds(saved?.MagicRounds ?? 0);
             Infections = new(effects, () => _time.Calendar.DayNumber, Cinematics, composition.VideosEnabled,
                 message => Presentation.SetOutcome(message), saved?.Infections);
@@ -288,6 +290,7 @@ internal sealed partial class DaggerfallSession
                 () => assembled.PlayerControl.Position, () => DaggerfallActorRoster.NearbyCreatures(actors, authored, npcs.IsGameplayActive), InSunlight, _itemCondition, InHolyPlace,
                 amount => AppendEffectDamage(new(_vitality.ResolveHeldEnchantmentDamage(actors.Player.Actor, amount))), social, DrainNearbyHealth);
             effects.UseHeldDefense(actors.Player.DurableId, _heldEnchantments);
+            effects.UseCareerDefense(CareerMagicDefense);
             partiallyConstructed.Add(_heldEnchantments);
             _equipmentMoves.Changed += _ =>
             {
@@ -363,7 +366,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallPropertyState property = new(tuning.Property, saved?.Property);
             _propertyStorage = new DaggerfallPropertyStorage(containers, itemInstances, definitions, _actorIdentities, property, playerEntity);
             if (saved?.Property is { } savedProperty) _propertyStorage.Restore(savedProperty);
-            DaggerfallCrimeState crime = new(saved?.Crime);
+            DaggerfallCrimeState crime = new(saved?.Crime, () => character.RacialOverrides?.Current?.SuppressCrime == true);
             DaggerfallServiceTransactions services = new(npcs, social, inventory, itemInstances,
                 currency, _uniqueItems, containers, playerEntity, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty, _sites.ActiveProfile.LogicalId)

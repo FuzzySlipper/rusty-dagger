@@ -21,6 +21,7 @@ internal sealed class DaggerfallLocomotionPolicy
     private double _climbingGameSeconds;
     private double _swimmingGameSeconds;
     private double _movementFatigueMultiplier = 1d;
+    private float _athleticsJumpBonus;
 
     internal DaggerfallLocomotionPolicy(DaggerfallLocomotionTuning tuning, DaggerfallControlSettings controls)
     {
@@ -125,8 +126,11 @@ internal sealed class DaggerfallLocomotionPolicy
     }
 
     /// <summary>Refreshes the typed athletics multiplier from the current career and held talent owners.</summary>
-    internal void SetAthletics(bool careerAdvantage, bool improvedHeldTalent) =>
+    internal void SetAthletics(bool careerAdvantage, bool improvedHeldTalent)
+    {
         _movementFatigueMultiplier = improvedHeldTalent ? .8d : careerAdvantage ? .9d : 1d;
+        _athleticsJumpBonus = careerAdvantage ? _tuning.AthleticJumpBonus + (improvedHeldTalent ? _tuning.ImprovedAthleticJumpBonus : 0F) : 0F;
+    }
 
     internal double SwimmingGameSeconds => _swimmingGameSeconds;
 
@@ -146,7 +150,7 @@ internal sealed class DaggerfallLocomotionPolicy
 
     internal float JumpSpeed(int jumpingSkill, bool crouching)
     {
-        float speed = _tuning.JumpBaseSpeed * (1f + ((jumpingSkill * _tuning.JumpSkillMultiplier) / 100f));
+        float speed = _tuning.JumpBaseSpeed * (1f + ((jumpingSkill * _tuning.JumpSkillMultiplier) / 100f) + _athleticsJumpBonus);
         return crouching ? speed * _tuning.CrouchedJumpMultiplier : speed;
     }
 
@@ -207,7 +211,9 @@ internal sealed record DaggerfallLocomotionTuning(
     float CrouchedJumpMultiplier,
     int ClimbingFatiguePerGameMinute = 22,
     int SwimmingFatiguePerGameMinute = 44,
-    float LevitationVerticalSpeed = 4f)
+    float LevitationVerticalSpeed = 4f,
+    float AthleticJumpBonus = .1f,
+    float ImprovedAthleticJumpBonus = .1f)
 {
     internal static DaggerfallLocomotionTuning Classic { get; } = new(39.5f, 150f, 50f, 1.35f, 200f, 30, 11, 88, 11, 4.5f, .5f, .8f);
 
@@ -216,9 +222,9 @@ internal sealed record DaggerfallLocomotionTuning(
         if (!float.IsFinite(ClassicToEngineSpeedRatio) || ClassicToEngineSpeedRatio <= 0f) throw new ArgumentOutOfRangeException(nameof(ClassicToEngineSpeedRatio));
         if (!float.IsFinite(WalkBase) || !float.IsFinite(CrouchBase) || !float.IsFinite(RunBaseMultiplier) || !float.IsFinite(RunningSkillDivisor)
             || !float.IsFinite(JumpBaseSpeed) || !float.IsFinite(JumpSkillMultiplier) || !float.IsFinite(CrouchedJumpMultiplier)
-            || !float.IsFinite(LevitationVerticalSpeed)
+            || !float.IsFinite(LevitationVerticalSpeed) || !float.IsFinite(AthleticJumpBonus) || !float.IsFinite(ImprovedAthleticJumpBonus)
             || RunningSkillDivisor <= 0f || RunBaseMultiplier <= 0f || JumpBaseSpeed <= 0f || JumpSkillMultiplier < 0f || CrouchedJumpMultiplier <= 0f
-            || LevitationVerticalSpeed <= 0f) throw new ArgumentOutOfRangeException(nameof(WalkBase));
+            || LevitationVerticalSpeed <= 0f || AthleticJumpBonus < 0f || ImprovedAthleticJumpBonus < 0f) throw new ArgumentOutOfRangeException(nameof(WalkBase));
         if (MinimumWalkSpeedAttribute < 0 || IdleFatiguePerGameMinute < 0 || RunningFatiguePerGameMinute < 0
             || ClimbingFatiguePerGameMinute < 0 || SwimmingFatiguePerGameMinute < 0 || JumpFatigueCost <= 0)
             throw new ArgumentOutOfRangeException(nameof(MinimumWalkSpeedAttribute));

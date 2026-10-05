@@ -576,6 +576,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     private static uint Identity(UiValueBuilder builder, CharacterIdentityPresentation identity) => builder.Object(
         ("race", builder.String(identity.Race)), ("donorRaceId", builder.Number(identity.DonorRaceId)), ("portrait", builder.String(identity.Portrait)),
         ("gender", builder.String(identity.Gender)), ("faceIndex", builder.Number(identity.FaceIndex)), ("career", builder.String(identity.Career)),
+        ("racialOverride", identity.RacialOverride is not { } racial ? builder.Null() : builder.Object(
+            ("name", builder.String(racial.Name)), ("beastForm", builder.Boolean(racial.State.BeastForm)),
+            ("suppressInventory", builder.Boolean(racial.SuppressInventory)))),
         ("media", Media(builder, identity.Media)), ("selectedMedia", Media(builder, identity.SelectedMedia ?? [])));
 
     private static uint Media(UiValueBuilder builder, IEnumerable<CharacterMediaIdentity> media) => builder.Array(media

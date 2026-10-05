@@ -13,6 +13,8 @@ internal class AudioRecorder : DispatchProxy
     internal int ReleasedClips { get; private set; }
     internal int ReleasedVoices { get; private set; }
     internal List<AudioSourceDescriptor> Voices { get; } = [];
+    internal List<AudioVoiceUpdateRequest> Updates { get; } = [];
+    internal List<AudioVoice> VoiceHandles { get; } = [];
     internal List<AudioVoiceControlRequest> Controls { get; } = [];
     private ulong nextHandle = 1;
 
@@ -31,6 +33,7 @@ internal class AudioRecorder : DispatchProxy
         nameof(IAudioService.RetireOneShot) => Retire((AudioSignalHandle)arguments![0]!),
         nameof(IAudioService.ReadRealization) => new AudioRealizationResult(RealizationFacts.ToArray(), 0),
         nameof(IAudioService.CreateVoice) => Voice((AudioSourceDescriptor)arguments![0]!),
+        nameof(IAudioService.UpdateVoice) => Update((AudioVoiceUpdateRequest)arguments![0]!),
         nameof(IAudioService.ControlVoice) => Control((AudioVoiceControlRequest)arguments![0]!),
         _ => throw new NotSupportedException(method?.Name),
     };
@@ -38,8 +41,11 @@ internal class AudioRecorder : DispatchProxy
     private AudioVoice Voice(AudioSourceDescriptor descriptor)
     {
         Voices.Add(descriptor);
-        return new(new AudioVoiceHandle(nextHandle++), () => ReleasedVoices++);
+        var voice = new AudioVoice(new AudioVoiceHandle(nextHandle++), () => ReleasedVoices++);
+        VoiceHandles.Add(voice);
+        return voice;
     }
+    private object? Update(AudioVoiceUpdateRequest request) { Updates.Add(request); return null; }
     private object? Control(AudioVoiceControlRequest request) { Controls.Add(request); return null; }
 
     private object? Retire(AudioSignalHandle signal) { RetiredSignals.Add(signal); return null; }

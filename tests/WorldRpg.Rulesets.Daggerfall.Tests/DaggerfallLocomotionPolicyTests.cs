@@ -8,6 +8,21 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallLocomotionPolicyTests
 {
+    [Theory]
+    [InlineData(false, false, 0F)]
+    [InlineData(false, true, 0F)]
+    [InlineData(true, false, .1F)]
+    [InlineData(true, true, .2F)]
+    public void Athletic_jump_bonus_reaches_engine_controls_and_reverts_when_the_talent_is_removed(bool career, bool held, float bonus)
+    {
+        var stats = Stats(speed: 50, running: 40, stamina: 200);
+        var policy = new DaggerfallLocomotionPolicy(DaggerfallLocomotionTuning.Classic, new());
+        policy.SetAthletics(career, held);
+        Assert.Equal(4.5F * (1.25F + bonus), policy.BeginStep([], 1F / 60F, stats, true).Controls.JumpSpeed);
+        policy.SetAthletics(career, false);
+        Assert.Equal(4.5F * (1.25F + (career ? .1F : 0)), policy.BeginStep([], 1F / 60F, stats, true).Controls.JumpSpeed);
+    }
+
     [Fact]
     public void Classic_speed_modes_use_live_speed_running_skill_and_rebound_physical_keys()
     {

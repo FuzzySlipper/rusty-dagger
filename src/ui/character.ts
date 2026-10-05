@@ -47,6 +47,7 @@ export interface CharacterEquipment {
 }
 
 export interface CharacterIdentity {
+  readonly racialOverride?: { readonly name: string; readonly beastForm: boolean; readonly suppressInventory: boolean } | null;
   readonly race: string;
   readonly donorRaceId: number;
   readonly portrait: string;
@@ -156,6 +157,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
   root.append(shell);
   let disposed = false;
   let held: CharacterProjection | null = null;
+  let creationStamp: string | null = null;
 
   const view: CharacterView = {
     creationElement: creation.element,
@@ -172,6 +174,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
           overviewRow('Level progress', `${format(value.progression.skillProgress)} / ${format(value.progression.nextLevelSkillProgress)} skill total${value.progression.pendingLevelUp === true ? ' · Level up ready' : ''}`),
         ]),
         ...(value.identity ? [overviewRow('Race', value.identity.race), overviewRow('Career', value.identity.career),
+          ...(value.identity.racialOverride ? [overviewRow('Form', `${value.identity.racialOverride.name} · ${value.identity.racialOverride.beastForm ? 'Beast form' : 'Human form'}`)] : []),
           overviewRow('Face', `${value.identity.gender} ${format(value.identity.faceIndex + 1)}`)] : []),
       );
       renderRows(resources.rows, value.resources.map(resource => ({
@@ -213,7 +216,11 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         value: skill.tier,
         testid: `character-sheet-granted-${skill.id}`,
       })));
-      renderCreation(creation.rows, value.creation ?? null, value.creationAvailable === true, send);
+      const nextCreationStamp = JSON.stringify([value.creationAvailable === true, value.creation ?? null]);
+      if (creationStamp !== nextCreationStamp) {
+        renderCreation(creation.rows, value.creation ?? null, value.creationAvailable === true, send);
+        creationStamp = nextCreationStamp;
+      }
       levelUp.heading.textContent = value.levelUp?.title ?? "Level up";
       renderLevelUp(levelUp.rows, value.levelUp ?? null, send);
     },
@@ -371,6 +378,7 @@ function isEquipment(value: unknown): value is CharacterEquipment {
 
 function isIdentity(value: unknown): value is CharacterIdentity {
   return typeof value === 'object' && value !== null
+    && (!('racialOverride' in value) || value.racialOverride == null || isRacialOverride(value.racialOverride))
     && 'race' in value && typeof value.race === 'string'
     && 'donorRaceId' in value && isNumber(value.donorRaceId)
     && 'portrait' in value && typeof value.portrait === 'string'
@@ -379,6 +387,13 @@ function isIdentity(value: unknown): value is CharacterIdentity {
     && 'career' in value && typeof value.career === 'string'
     && 'media' in value && Array.isArray(value.media) && value.media.every(isMedia)
     && 'selectedMedia' in value && Array.isArray(value.selectedMedia) && value.selectedMedia.every(isMedia);
+}
+
+function isRacialOverride(value: unknown): boolean {
+  return typeof value === 'object' && value !== null
+    && 'name' in value && typeof value.name === 'string'
+    && 'beastForm' in value && typeof value.beastForm === 'boolean'
+    && 'suppressInventory' in value && typeof value.suppressInventory === 'boolean';
 }
 
 function isMedia(value: unknown): value is CharacterMedia {
@@ -589,9 +604,19 @@ function customSkills(label: string, selected: readonly string[], skills: readon
   return { element, values: () => selects.map(item => item.value) };
 }
 function traitInput(label: string, traits: readonly CharacterCustomTrait[], supported: readonly string[]): { readonly element: HTMLElement; readonly value: () => string } {
-  const element = document.createElement('label'); element.textContent = `${label} (one id[:target] per line)`;
-  const input = document.createElement('textarea'); input.setAttribute('aria-label', label); input.value = traits.map(trait => trait.target ? `${trait.id}:${trait.target}` : trait.id).join('\n'); input.placeholder = supported.join(', '); element.append(input);
-  return { element, value: () => input.value.split(/\r?\n/).map(item => item.trim()).filter(Boolean).join(',') };
+  const element = document.createElement('fieldset');
+  const legend = document.createElement('legend'); legend.textContent = label; element.append(legend);
+  const values = traits.map(trait => trait.target ? `${trait.id}:${trait.target}` : trait.id);
+  const choices = Array.from({ length: 7 }, (_, index) => {
+    const input = document.createElement('select'); input.setAttribute('aria-label', `${label} ${index + 1}`);
+    const empty = document.createElement('option'); empty.value = ''; empty.textContent = 'None'; input.append(empty);
+    for (const value of supported) {
+      const option = document.createElement('option'); option.value = value;
+      option.textContent = value.replaceAll('-', ' ').replace(':', ': '); option.selected = values[index] === value; input.append(option);
+    }
+    element.append(input); return input;
+  });
+  return { element, value: () => choices.map(item => item.value).filter(Boolean).join(',') };
 }
 
 function select(values: readonly CharacterChoice[], current: string): HTMLSelectElement {

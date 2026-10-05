@@ -692,6 +692,19 @@ internal sealed record DaggerfallSavePayload(
         if (uniqueItems.Values.Any(item => item.HealthLeechLastUsedMinute > new World.DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).ToAbsoluteSeconds() / 60))
             throw new ArgumentException("Saved health-leech last use is later than the current calendar.");
         ValidateActiveEffects(allEffects, combatants, uniqueItems, definitions.Magic);
+        var racialEffects = allEffects.Where(effect => effect.EffectKey == DaggerfallRacialOverrides.EffectKey).ToArray();
+        if (racialEffects.Length > 1) throw new ArgumentException("Saved player has multiple racial overrides.");
+        foreach (var racial in racialEffects)
+        {
+            if (racial.TargetId != DaggerfallActorIdentity.PlayerEntityId || racial.RemainingRounds is not null || racial.ItemId is not null)
+                throw new ArgumentException("Saved racial override must be a permanent player effect.");
+            if (Character?.SpellGrants?.Count(grant => grant.Source == racial.Instance && grant.Spell == "spell.085"
+                && grant.Kind == DaggerfallSpellGrantKind.Lycanthropy) != 1)
+                throw new ArgumentException("Saved racial override is missing its protected transformation spell.");
+        }
+        foreach (var grant in Character?.SpellGrants ?? [])
+            if (!Enum.IsDefined(grant.Kind) || !racialEffects.Any(effect => effect.Instance == grant.Source))
+                throw new ArgumentException($"Saved spell grant '{grant.Spell}' has no matching active racial source '{grant.Source}'.");
         Social.Validate(definitions.Factions);
         Character?.Validate(definitions);
         if (ReadySpell is { } ready && (!Enum.IsDefined(ready.Source) || ready.Cost < 0 || ready.ItemId is not null && ready.Cost != 0
@@ -1642,6 +1655,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
 [JsonSerializable(typeof(DaggerfallStatsSave))]
 [JsonSerializable(typeof(DaggerfallNotebookSave))]
 [JsonSerializable(typeof(DaggerfallCharacterSave))]
+[JsonSerializable(typeof(DaggerfallRacialOverrideState))]
 [JsonSerializable(typeof(DurableIdentityState))]
 [JsonSerializable(typeof(KindAllocatorState))]
 internal partial class DaggerfallSaveJsonContext : JsonSerializerContext;

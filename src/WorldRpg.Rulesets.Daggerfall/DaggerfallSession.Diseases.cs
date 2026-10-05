@@ -13,7 +13,7 @@ internal sealed partial class DaggerfallSession
                     .FirstOrDefault(channel => channel.Element == Policies.DaggerfallMagicResistanceElement.DiseaseOrPoison) is { } resistance
                     ? Math.Min(100, resistance.Chance) : null,
                 BiographyModifier = checked(exposure.BiographyModifier + (State.Character.Background?.Modifiers.DiseaseResistance ?? 0)),
-                RaceTolerance = _definitions.Catalogs.RequireRace(State.Character.Identity.RaceId).Tolerance(Content.DaggerfallCareerTolerances.Disease) }, State.Character.Career);
+                RaceTolerance = State.Character.Race.Tolerance(Content.DaggerfallCareerTolerances.Disease) }, State.Character.Career);
 
     /// <summary>Accepted combat/quest exposures supply stable provenance; #8142 owns monster-hit selection and chance.</summary>
     internal DaggerfallInfectionAdmission InflictTransformationInfection(DaggerfallInfectionExposure exposure) => Infections.Inflict(exposure);

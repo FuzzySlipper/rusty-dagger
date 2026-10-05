@@ -99,6 +99,8 @@ internal sealed partial class DaggerfallSession
 
             DaggerfallNpc? existing = sourceNpcs.FirstOrDefault(npc =>
                 StringComparer.Ordinal.Equals(npc.StableKey, placement.Id));
+            if (State.RacialOverrides.Current?.SuppressPopulationSpawns == true
+                && existing?.Presence != DaggerfallNpcPresence.Active) continue;
             long npcId = existing?.DurableId ?? State.Npcs.RegisterPopulationCivilian(
                 npcSite,
                 placement.Id,

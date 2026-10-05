@@ -37,7 +37,7 @@ internal sealed partial class DaggerfallSession
     /// is the player's own. Race tolerance comes from the normalized selected race catalogue.
     /// </summary>
     private DaggerfallDiseaseCareerTolerance PlayerRacePoisonTolerance =>
-        _definitions.Catalogs.RequireRace(State.Character.Identity.RaceId).Tolerance(DaggerfallCareerTolerances.Poison);
+        State.Character.Race.Tolerance(DaggerfallCareerTolerances.Poison);
 
     internal DaggerfallPoisonExposure PlayerPoisonExposure(bool bypassResistance)
     {

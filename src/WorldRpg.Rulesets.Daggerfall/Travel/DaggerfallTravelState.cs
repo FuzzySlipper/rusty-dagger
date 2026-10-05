@@ -42,6 +42,7 @@ internal sealed record DaggerfallTravelSave([property: JsonRequired] DaggerfallT
 internal sealed class DaggerfallTravelState
 {
     private DaggerfallTravelResult? _active;
+    internal bool IsExecuting => _active is not null;
     internal DaggerfallTravelResult? LastResult { get; private set; }
     internal DaggerfallTravelState(DaggerfallTravelSave? saved = null)
     {

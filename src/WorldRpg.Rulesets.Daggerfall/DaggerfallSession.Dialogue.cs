@@ -102,6 +102,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly DaggerfallDialogueWorldState _dialogueWorld;
     private readonly Func<DaggerfallNpc, DaggerfallDialogueTopic, ulong?, DaggerfallTempleServiceResult>? _templeService;
     private readonly Func<DaggerfallNpc, DaggerfallDialogueTopic, string?, DaggerfallGuildProviderResult>? _guildService;
+    private readonly Func<bool> _suppressTalk;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -130,8 +131,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallNpc, DaggerfallDialogueTopic, string?, DaggerfallGuildProviderResult>? guildService = null,
         Func<DaggerfallWorldProfileKey>? activeProfile = null,
         Func<string, bool>? discloseDirection = null,
-        DaggerfallDialogueWorldState? dialogueWorld = null)
+        DaggerfallDialogueWorldState? dialogueWorld = null, Func<bool>? suppressTalk = null)
     {
+        _suppressTalk = suppressTalk ?? (() => false);
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _social = social ?? throw new ArgumentNullException(nameof(social));
@@ -182,6 +184,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     public DaggerfallActivationOutcome ActivateNpc(DaggerfallActivationSelection selection)
     {
         ArgumentNullException.ThrowIfNull(selection);
+        if (_suppressTalk()) return new(false, "You cannot talk while in beast form.");
         if (selection.Mode != DaggerfallActivationMode.Talk)
             return new(false, "Select Talk mode to speak with someone.");
         if (selection.Target.Kind != DaggerfallActivationTargetKind.Npc

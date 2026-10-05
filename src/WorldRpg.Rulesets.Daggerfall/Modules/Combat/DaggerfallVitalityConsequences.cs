@@ -90,6 +90,13 @@ internal sealed class DaggerfallVitalityConsequences
     /// movement use, so an enchantment that takes the last point of health defeats its wearer the way any
     /// other accepted damage does rather than leaving a track at zero.
     /// </summary>
+    internal DamageResult ResolvePassiveDamage(Actor player, int damage)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(damage);
+        return _combat.ApplyToHealth(new CombatParticipants(player, player, "racial or career passive"), damage, 0,
+            player.Get<StatsComponent>().GetTrack(HealthTrack)).Result;
+    }
+
     internal DamageResult ResolveHeldEnchantmentDamage(Actor player, int damage)
     {
         ArgumentNullException.ThrowIfNull(player);

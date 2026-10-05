@@ -99,6 +99,7 @@ internal sealed class DaggerfallState(
     internal DaggerfallItemInstances ItemInstances { get; } = assembled.ItemInstances;
     /// <summary>The committed player identity and its cancellable creation draft.</summary>
     internal DaggerfallCharacterState Character { get; } = assembled.Character;
+    internal DaggerfallRacialOverrides RacialOverrides => Character.RacialOverrides!;
     /// <summary>Current Daggerfall quest instances over admitted definitions and durable product bindings.</summary>
     internal DaggerfallQuestInstances Quests { get; } = assembled.Quests;
     internal DaggerfallQuestItems QuestItems { get; set; } = null!;

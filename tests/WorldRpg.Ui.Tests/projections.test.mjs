@@ -535,7 +535,7 @@ test('character sheet refreshes owner-published progression, resistance, affilia
 test('custom class editor sends typed skills traits and exposes eligibility reasons', () => {
   const f = fixture();
   try {
-    f.publish({ mode: 'title', character: {
+    const snapshot = { mode: 'title', character: {
       name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true,
       creation: {
         editing: true, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'custom' },
@@ -543,14 +543,23 @@ test('custom class editor sends typed skills traits and exposes eligibility reas
         faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
         custom: { name: 'Nightblade', primarySkills: ['mysticism', 'alteration', 'thaumaturgy'], majorSkills: ['illusion', 'destruction', 'restoration'], minorSkills: ['medical', 'short-blade', 'blunt-weapon', 'dragonish', 'daedric', 'dodging'], hitPointsPerLevel: 12,
           advantages: [{ id: 'increased-magery', target: '1.5' }], disadvantages: [{ id: 'forbidden-material', target: 'steel' }], eligibility: ['Choose each trained skill once.'],
-          skills: ['mysticism', 'alteration', 'thaumaturgy', 'illusion', 'destruction', 'restoration', 'medical', 'short-blade', 'blunt-weapon', 'dragonish', 'daedric', 'dodging'], supportedAdvantages: ['increased-magery'], supportedDisadvantages: ['forbidden-material'] },
+          skills: ['mysticism', 'alteration', 'thaumaturgy', 'illusion', 'destruction', 'restoration', 'medical', 'short-blade', 'blunt-weapon', 'dragonish', 'daedric', 'dodging'], supportedAdvantages: ['increased-magery:1.5', 'acute-hearing', 'regenerate-health:immersed'], supportedDisadvantages: ['forbidden-material:steel', 'damage:sunlight', 'inability-to-regen'] },
       },
-    } });
+    } };
+    f.publish(snapshot);
     assert.equal(f.root.querySelector('[data-testid="character-custom-class"]').hidden, false);
     assert.match(f.root.querySelector('[data-testid="character-custom-eligibility"]').textContent, /Choose each trained skill once/);
     f.root.querySelector('[data-testid="character-custom-update"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'character-update', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'custom',
       primarySkills: 'mysticism,alteration,thaumaturgy', majorSkills: 'illusion,destruction,restoration', minorSkills: 'medical,short-blade,blunt-weapon,dragonish,daedric,dodging', hitPointsPerLevel: 12, advantages: 'increased-magery:1.5', disadvantages: 'forbidden-material:steel' });
+    assert.equal(f.root.querySelectorAll('[aria-label^="Advantages "]').length, 7);
+    f.root.querySelector('[aria-label="Advantages 2"]').value = 'regenerate-health:immersed';
+    f.root.querySelector('[aria-label="Disadvantages 2"]').value = 'damage:sunlight';
+    f.publish(structuredClone(snapshot));
+    f.root.querySelector('[data-testid="character-custom-update"]').click();
+    assert.equal(f.actions.at(-1).advantages, 'increased-magery:1.5,regenerate-health:immersed');
+    assert.equal(f.actions.at(-1).disadvantages, 'forbidden-material:steel,damage:sunlight');
+
   } finally { f.dispose(); }
 });
 
@@ -1233,5 +1242,26 @@ test('quest escort portraits use published art and remove only ended quest overl
     assert.equal(portraits[0].dataset.questInstance, 'second');
     f.publish({ uiArt: art, quests: { deliveries: [], journal: [], pending: null, escortFaces: [] } });
     assert.equal(f.root.querySelector('.dagger-escort-faces'), null);
+  } finally { f.dispose(); }
+});
+
+
+test('racial form projection closes and suppresses inventory until human form returns', () => {
+  const f = fixture();
+  try {
+    const character = { name: 'Aubk-i', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [],
+      identity: { race: 'breton', donorRaceId: 1, portrait: '', gender: 'female', faceIndex: 0, career: 'mage', media: [], selectedMedia: [],
+        racialOverride: { name: 'Werewolf', beastForm: true, suppressInventory: true } } };
+    f.root.querySelector('[data-action="inventory"]').click();
+    f.publish({ character });
+    assert.equal(f.root.querySelector('[data-action="inventory"]').disabled, true);
+    assert.match(f.root.querySelector('.dagger-character-overview').textContent, /Werewolf · Beast form/);
+    assert.equal(f.root.querySelector('.dagger-menu').classList.contains('has-inventory'), false);
+    character.identity.racialOverride.beastForm = false;
+    character.identity.racialOverride.suppressInventory = false;
+    f.publish({ character });
+    assert.equal(f.root.querySelector('[data-action="inventory"]').disabled, false);
+    f.root.querySelector('[data-action="inventory"]').click();
+    assert.equal(f.root.querySelector('.dagger-menu').classList.contains('has-inventory'), true);
   } finally { f.dispose(); }
 });
