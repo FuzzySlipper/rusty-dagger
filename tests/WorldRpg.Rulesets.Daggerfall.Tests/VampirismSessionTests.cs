@@ -167,14 +167,16 @@ public sealed class VampirismSessionTests
     [Fact]
     public void Initial_clan_and_cure_quests_start_real_sources_and_cure_ends_active_clan_work()
     {
-        using var f = new Fixture(); var s = f.Session;
+        using var f = SourceBackedGuildBankSessionFixture.Create();
+        f.Random = VampireRandom.Create();
+        using var s = f.Start(f.ExteriorProfile);
         s.State.RacialOverrides.Select(DaggerfallRacialKind.Vampire, "vampire", Minute(s), vampireClan: 153);
         Assert.True(s.StartVampireQuestOpportunity(Minute(s), false), s.Presentation.LastOutcome);
         Assert.True(s.State.RacialOverrides.Current!.State.Vampire!.InitialQuestStarted);
         var initial = Assert.Single(s.State.Quests.All);
         Assert.Equal("P0A01L00.txt", initial.SourceFile);
         Assert.False(s.StartVampireQuestOpportunity(Minute(s), false));
-        using var restored = f.Restore();
+        using var restored = f.Restore(s.CaptureSave());
         Assert.True(restored.State.RacialOverrides.Current!.State.Vampire!.InitialQuestStarted);
         var work = restored.State.Quests.OrdinaryWorkPool(153, true, 20, 100, 20, DaggerfallCharacterGender.Male);
         Assert.Equal(9, work.Length);

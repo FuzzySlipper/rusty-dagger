@@ -307,7 +307,8 @@ public sealed class LootSessionTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service,
+            random: QuestPlaceRandomMinimum.Create());
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         CapturingDaggerfallRuleset ruleset = new();
 
