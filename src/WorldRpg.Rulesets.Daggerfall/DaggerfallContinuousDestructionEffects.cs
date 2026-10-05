@@ -11,7 +11,7 @@ internal static class DaggerfallContinuousDestructionEffects
 {
     internal static IEnumerable<DaggerfallEffectDefinition> Definitions(IRandomService random, DaggerfallVitalityConsequences vitality,
         Action<DaggerfallEffectDamage> healthApplied, Action<DaggerfallSpellTrackResult> trackApplied,
-        Func<long, bool> hostile, Action<long, long> attacked)
+        Func<long, bool> hostile, Action<long, long, string> attacked)
     {
         foreach (var (key, subtype) in new[] { ("continuous-damage-health", 0), ("continuous-damage-fatigue", 1), ("continuous-damage-spell-points", 2) })
         {
@@ -30,7 +30,7 @@ internal static class DaggerfallContinuousDestructionEffects
                     else trackApplied(vitality.ResolveSpellTrack(effect.Source, effect.Target,
                         TrackId.Parse(selected == 1 ? DaggerfallMechanicsIds.Stamina.Value : DaggerfallMechanicsIds.Magicka.Value),
                         selected == 1 ? DaggerfallFormulaPolicy.SpellFatigueDamage(amount) : amount));
-                    if (effect.Context.Caster is { } caster) attacked(checked((long)caster.Value), target);
+                    if (effect.Context.Caster is { } caster) attacked(checked((long)caster.Value), target, effect.BundleId ?? effect.Context.Instance.Value);
                     if (health.Current <= 0) effect.ExpireAfterCurrentRound = true;
                 },
                 Spell: new(1, selected, SpellMaker: true, SupportsDuration:true, SupportsMagnitude:true,

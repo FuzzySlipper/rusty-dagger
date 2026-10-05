@@ -8,12 +8,12 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 internal static class DaggerfallParalysisEffects
 {
-    internal static DaggerfallEffectDefinition Definition(Action<long, long> attacked) => new(
+    internal static DaggerfallEffectDefinition Definition(Action<long, long, string> attacked) => new(
         "paralyze", "paralyze", DaggerfallEffectStacking.Stack, ushort.MaxValue, 1,
         Apply: effect =>
         {
             Validate(effect);
-            if (effect.Context.Caster is { } caster) attacked(checked((long)caster.Value), checked((long)effect.Context.Target.Value));
+            if (effect.Context.Caster is { } caster) attacked(checked((long)caster.Value), checked((long)effect.Context.Target.Value), effect.BundleId ?? effect.Context.Instance.Value);
             return [];
         }, Resume: effect =>
         {

@@ -1,4 +1,13 @@
 {
+  "law": {
+    "minimumResponseSeconds": 5,
+    "maximumResponseSeconds": 10,
+    "minimumGuards": 2,
+    "maximumGuards": 5,
+    "minimumArrivalDistance": 12.8,
+    "maximumArrivalDistance": 51.2,
+    "arrestReach": 3.2
+  },
   "normalLight": { "distance": 1.4, "heightFraction": 0.25, "range": 15, "intensity": 1 },
   "lycanthropy": {
     "attributeBonus": 40,

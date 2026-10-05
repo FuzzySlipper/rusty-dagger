@@ -614,6 +614,17 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException("Saved active and inactive site actors must not share durable identities.");
         if (!actorInventories.SetEquals(allActors))
             throw new ArgumentException("Current save must carry one actor inventory section for every saved actor.");
+        foreach (var response in Crime.LegalResponses)
+        {
+            var profile = response.Profile.Require();
+            if (!admittedGroundProfiles.Contains(profile) || profile.Site.Region != response.Region)
+                throw new ArgumentException($"Saved legal response '{response.Id}' names an unadmitted or mismatched regional profile.");
+            foreach (long guard in response.Guards)
+                if (guard == DaggerfallActorIdentity.PlayerEntityId ||
+                    !allActors.Contains(guard) && !inactiveAuthoredActorIds.Contains(guard) && !inactiveDynamicActorIds.Contains(guard)
+                    && savedLedger.Classify(new(DurableIdentityKind.Actor, checked((ulong)guard))) != DurableIdentityClassification.Removed)
+                    throw new ArgumentException($"Saved legal response '{response.Id}' names guard {guard} without an actor or removed identity.");
+        }
         if (PendingIdentify?.SourceItem is ulong identifySource
             && (!Inventory.UniqueItems.Any(item => item.EntityId == identifySource)
                 || !uniqueItems.TryGetValue(identifySource, out var identifyMetadata)

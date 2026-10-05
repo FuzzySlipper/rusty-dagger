@@ -499,7 +499,7 @@ internal sealed partial class DaggerfallSession
                 dialogueOpen: () => _activationPresentation.View.Dialogue is not null,
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
-                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => _pendingDispel is not null, identifyOpen: () => _pendingIdentify is not null, teleportOpen: () => _pendingTeleport is not null, createItemOpen: () => _pendingCreateItem is not null);
+                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => _pendingDispel is not null, identifyOpen: () => _pendingIdentify is not null, teleportOpen: () => _pendingTeleport is not null, createItemOpen: () => _pendingCreateItem is not null, legalOpen: () => LegalModalOpen);
             itemInstances.StackChanged += State.Quests.ObserveStackChange;
             itemInstances.SourceUnavailable += item =>
             { effects.CancelItemReferences(item); Casting?.CancelItemReferences(item); if (_pendingIdentify?.SourceItem==item) _pendingIdentify=null; };
@@ -561,6 +561,7 @@ internal sealed partial class DaggerfallSession
                 (profile, clip) => audioBundles?.Require(profile).OpenClip(engine.Audio, clip));
             partiallyConstructed.Add(_weatherPresentation);
             effects.Completed += outcome => _facts.Append(new MagicEffectFact(outcome));
+            crime.IncidentRecorded += AdmitLegalIncident;
             _vitality.PoisonDamageApplied += result=>AppendEffectDamage(new(result));
             _vitality.ConditionTrackLost += AppendSpellTrackLoss;
             _vitality.SpellTrackRestored += (target, track, requested, restored) =>

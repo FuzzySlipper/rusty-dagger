@@ -30,11 +30,11 @@ internal static class DaggerfallAttributeDrainEffects
             Encode(new(new(settings, 1, amount, 100, new(caster, item, DaggerfallCastSource.ItemStrike)), amount))));
     }
 
-    internal static IEnumerable<DaggerfallEffectDefinition> Definitions(Func<DaggerfallCareerDefinition> career, Action<long, long> attacked) =>
+    internal static IEnumerable<DaggerfallEffectDefinition> Definitions(Func<DaggerfallCareerDefinition> career, Action<long, long, string> attacked) =>
         DefinitionsFor(7, career, attacked, null);
 
     internal static IEnumerable<DaggerfallEffectDefinition> TransferDefinitions(Func<DaggerfallCareerDefinition> career,
-        Action<long, long> attacked, Func<long, Actor?> actor, Func<DaggerfallEffectLifecycle> effects) =>
+        Action<long, long, string> attacked, Func<long, Actor?> actor, Func<DaggerfallEffectLifecycle> effects) =>
         DefinitionsFor(11, career, attacked, incoming =>
         {
             if (incoming.Cast.Origin?.CasterId is not long casterId) return;
@@ -44,7 +44,7 @@ internal static class DaggerfallAttributeDrainEffects
         });
 
     private static IEnumerable<DaggerfallEffectDefinition> DefinitionsFor(int type, Func<DaggerfallCareerDefinition> career,
-        Action<long, long> attacked, Action<DaggerfallAttributeDrainState>? healCaster)
+        Action<long, long, string> attacked, Action<DaggerfallAttributeDrainState>? healCaster)
     {
         for (int subtype = 0; subtype < Attributes.Length; subtype++)
         {
@@ -56,7 +56,7 @@ internal static class DaggerfallAttributeDrainEffects
                     var incoming = Read(effect.State, selected, type);
                     Update(effect, incoming with { Magnitude = Bounded(effect, selected, incoming.Magnitude) }, selected, career);
                     if (incoming.Cast.Origin?.CasterId is long casterId)
-                        attacked(casterId, checked((long)effect.Context.Target.Value));
+                        attacked(casterId, checked((long)effect.Context.Target.Value), effect.BundleId ?? effect.Context.Instance.Value);
                     healCaster?.Invoke(incoming);
                     return Cleanup(effect, selected, career);
                 },
@@ -72,7 +72,7 @@ internal static class DaggerfallAttributeDrainEffects
                     var incumbent = Read(effect.State, selected, effect.Definition.Spell!.Type);
                     Update(effect, incumbent with { Magnitude = Bounded(effect, selected, (long)incumbent.Magnitude + incoming.Magnitude) }, selected, career);
                     if (incoming.Cast.Origin?.CasterId is long casterId)
-                        attacked(casterId, checked((long)effect.Context.Target.Value));
+                        attacked(casterId, checked((long)effect.Context.Target.Value), effect.BundleId ?? effect.Context.Instance.Value);
                     healCaster?.Invoke(incoming);
                 },
                 Spell: new(type, selected, SpellMaker: true, SupportsMagnitude: true, UntilHealed: true,

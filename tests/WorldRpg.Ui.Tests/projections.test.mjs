@@ -1282,3 +1282,26 @@ test('character entry displays the authoritative refusal above its opaque screen
     assert.equal(entry.querySelector('.dagger-entry-outcome').getAttribute('role'), 'status');
   } finally { f.dispose(); }
 });
+
+test('legal interaction shows charges and submits only authoritative arrest trial and prison choices', () => {
+  const f = fixture();
+  try {
+    const legal = {revision:'charge:Arrest:1',phase:'arrest',title:'Halt! City watch',charges:['Theft'],message:'Surrender or resist.',
+      choices:[{id:'yield',label:'Surrender'},{id:'resist',label:'Resist arrest'},{id:'escape',label:'Run for it'}]};
+    f.publish({mode:'modal',legal});
+    const panel=f.root.querySelector('.dagger-legal');
+    assert.equal(panel.hidden,false); assert.equal(panel.getAttribute('aria-modal'),'true');
+    assert.match(panel.textContent,/Theft/); assert.equal(panel.querySelectorAll('button').length,3);
+    panel.querySelector('button').click();
+    assert.deepEqual(f.actions.at(-1),{action:'legal-choice',revision:legal.revision,key:'yield'});
+    assert.equal(panel.dataset.phase,'arrest');
+    f.publish({mode:'modal',legal:{...legal,revision:'charge:Court:1',phase:'court',title:'Before the court',
+      choices:[{id:'guilty',label:'Plead guilty'},{id:'etiquette',label:'Debate'},{id:'streetwise',label:'Lie'}]}});
+    panel.querySelectorAll('button')[2].click();
+    assert.deepEqual(f.actions.at(-1),{action:'legal-choice',revision:'charge:Court:1',key:'streetwise'});
+    f.publish({mode:'modal',legal:{...legal,revision:'charge:Prison:1',phase:'prison',title:'In prison',choices:[{id:'continue',label:'Continue sentence'}]}});
+    assert.equal(panel.dataset.phase,'prison'); panel.querySelector('button').click();
+    assert.deepEqual(f.actions.at(-1),{action:'legal-choice',revision:'charge:Prison:1',key:'continue'});
+    f.publish({legal:null}); assert.equal(panel.hidden,true); assert.equal(panel.children.length,0);
+  } finally {f.dispose();}
+});

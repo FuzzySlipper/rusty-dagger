@@ -32,7 +32,7 @@ export const MODE_SCREENS: readonly ModeScreen[] = [
  *
  * `screen.start-menu` is the donor's load, new and exit menu (`DaggerfallStartWindow`) and
  * `screen.prison` is the cell the donor shows while a prison sentence is served (`DaggerfallCourtWindow`,
- * days until freedom); neither is a state this product's lifecycle has, and neither is an opening
+ * days until freedom). Prison is a legal interaction over the world; neither is an opening
  * screen. Character-generation and pick belong to the admitted character draft's questionnaire
  * and choice steps. The pick slot is delivered as a set; the current corpus supplies PICK02I0.
  * PICK03I0 is the donor start menu and retains that separate meaning.

@@ -75,6 +75,9 @@ internal sealed partial class DaggerfallSession
             Presentation.SetOutcome("You cannot use your inventory in beast form.");
             return;
         }
+        if (LegalModalOpen && action.Kind is not (DaggerfallUiActionKind.LegalChoice or DaggerfallUiActionKind.SaveGame
+            or DaggerfallUiActionKind.LoadGame or DaggerfallUiActionKind.SaveSlots or DaggerfallUiActionKind.SaveSlot
+            or DaggerfallUiActionKind.LoadSlot)) return;
         ApplyUiAction(action, firstStep, opensInteraction, ref elapsedSubmitted);
     }
 
@@ -88,6 +91,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.Inventory:
             case DaggerfallUiActionKind.Character:
                 break;
+            case DaggerfallUiActionKind.LegalChoice: ChooseLegal(action.Revision!, action.Key!); break;
             case DaggerfallUiActionKind.CreateItemSelect: ChooseCreateItem(action.Revision!, action.Key!); break;
             case DaggerfallUiActionKind.IdentifySelect: ChooseIdentify(action.Revision!,action.Key); break;
             case DaggerfallUiActionKind.IdentifyCancel: ChooseIdentify(action.Revision!,null); break;

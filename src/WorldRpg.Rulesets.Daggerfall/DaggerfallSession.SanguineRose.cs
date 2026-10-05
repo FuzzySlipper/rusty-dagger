@@ -84,6 +84,14 @@ internal sealed partial class DaggerfallSession
 
     private bool TrySummonPose(KitUniqueInventoryItem source, WorldPoint player, out ActorPose pose, string randomScope = "daggerfall.sanguine-rose.v1")
     {
+        ulong identity = State.Inventory.GetDurableItemId(new(source.EntityId)).Value;
+        int condition = State.ItemInstances.RequireUnique(identity).CurrentCondition;
+        return TrySpawnPose($"source:{identity}:condition:{condition}", randomScope, player,
+            SummonMinimumDistance, SummonMaximumDistance, out pose);
+    }
+
+    private bool TrySpawnPose(string operation, string randomScope, WorldPoint player, float minimumDistance, float maximumDistance, out ActorPose pose)
+    {
         CharacterStepEnvironment environment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
         // These are call-local spawn-clearance envelopes, not another retained collision world.
         SpatialEntityCollider[] actors = State.Actors.All.Where(actor => !actor.IsDefeated && State.Npcs.IsGameplayActive(actor.DurableId)).Select(actor =>
@@ -93,23 +101,21 @@ internal sealed partial class DaggerfallSession
                 center + new Vector3(SummonClearanceRadius), 0, 0, true, false, false);
         }).Append(_spatial.ProjectCharacterCollider(State.PlayerControl, State.Actors.Player.Actor.Entity.Value)).ToArray();
         SpatialEntityCollider[] rayActors = actors.Where(actor => actor.Entity != State.Actors.Player.Actor.Entity.Value).ToArray();
-        ulong identity = State.Inventory.GetDurableItemId(new(source.EntityId)).Value;
-        int condition = State.ItemInstances.RequireUnique(identity).CurrentCondition;
         for (int attempt = 0; attempt < SummonPlacementAttempts; attempt++)
         {
-            string key = $"source:{identity}:condition:{condition}:attempt:{attempt}";
+            string key = $"{operation}:attempt:{attempt}";
             // Like FoeSpawner, start outside the forward view. A refused placement does not consume the source.
             float angle = State.PlayerControl.YawRadians + (float)_random.DrawKeyed(new(0, randomScope, key + ":angle", 90, 270)).Value * MathF.PI / 180f;
             Vector3 direction = new(MathF.Sin(angle), 0f, -MathF.Cos(angle));
-            float distance = (float)_random.DrawKeyed(new(0, randomScope, key + ":distance", (int)SummonMinimumDistance, (int)SummonMaximumDistance)).Value;
-            SpatialHit wall = _spatial.CastRay(player.ToVector(), direction, SummonMaximumDistance, rayActors, environment);
+            float distance = (float)_random.DrawKeyed(new(0, randomScope, key + ":distance", (int)minimumDistance, (int)maximumDistance)).Value;
+            SpatialHit wall = _spatial.CastRay(player.ToVector(), direction, maximumDistance, rayActors, environment);
             if (wall.StartSolid) continue;
             if (wall.Present)
             {
                 float cosine = Vector3.Dot(-direction, wall.Normal);
                 if (cosine <= 0f) continue;
                 distance = MathF.Min(distance, (float)wall.Distance - SummonSeparation / cosine);
-                if (distance < SummonMinimumDistance) continue;
+                if (distance < minimumDistance) continue;
             }
             Vector3 candidate = player.ToVector() + direction * distance;
             SpatialHit floor = _spatial.CastRay(candidate, -Vector3.UnitY, SummonFloorDistance, actors, environment);

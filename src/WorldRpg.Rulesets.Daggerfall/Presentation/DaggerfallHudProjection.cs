@@ -39,7 +39,7 @@ internal sealed record DaggerfallHudFrame(
     DaggerfallTravelPresentation? Travel = null,
     string? SiteName = null,
     DaggerfallLodgingView? Lodging = null,
-    DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, DaggerfallIdentifyView? Identify=null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null, DaggerfallSpellbookView? Spells=null, bool CharacterCreationAvailable = true, DaggerfallPropertyView? Property = null, DaggerfallTeleportView? Teleport = null, DaggerfallCreateItemView? CreateItem = null);
+    DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, DaggerfallIdentifyView? Identify=null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null, DaggerfallSpellbookView? Spells=null, bool CharacterCreationAvailable = true, DaggerfallPropertyView? Property = null, DaggerfallTeleportView? Teleport = null, DaggerfallCreateItemView? CreateItem = null, DaggerfallLegalView? Legal = null);
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
 internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
@@ -60,11 +60,16 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ArgumentNullException.ThrowIfNull(frame);
         var (player, progression, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
-            dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _) = frame;
+            dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _, _) = frame;
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
         [
+            ("legal", frame.Legal is not { } legal ? builder.Null() : builder.Object(
+                ("revision", builder.String(legal.Revision)), ("phase", builder.String(legal.Phase)),
+                ("title", builder.String(legal.Title)), ("message", builder.String(legal.Message)),
+                ("charges", builder.Array(legal.Charges.Select(builder.String).ToArray())),
+                ("choices", builder.Array(legal.Choices.Select(choice => builder.Object(("id", builder.String(choice.Id)), ("label", builder.String(choice.Label)))).ToArray())))),
             ("dispel", dispel is null ? builder.Null() : builder.Object(("revision", builder.String(dispel.Revision)),
                 ("options", builder.Array(dispel.Options.Select(option => builder.Object(("id", builder.String(option.Id)), ("label", builder.String(option.Label)))).ToArray())))),
             ("detectors", builder.Array((detectors ?? []).Select(source => builder.Object(

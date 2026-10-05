@@ -174,6 +174,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _enemyMagic.Clear();
         _enemyBehavior.ClearEnemyMagic();
         ChangeMusicSite();
+        ReconcileLawSite();
     }
 
     void IDaggerfallSiteTransitionHost.SyncCivilianPositions() => SyncCivilianPositions();
@@ -370,8 +371,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         Cinematics?.Poll();
         _openingCinematics.Poll();
         if (_mode == ProductMode.Playing) Infections.Poll(_openingCinematics.IsActive);
-        bool playing = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null;
-        bool modal = _mode == ProductMode.Modal || _pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null;
+        bool playing = _mode == ProductMode.Playing && !LegalModalOpen && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null;
+        bool modal = _mode == ProductMode.Modal || LegalModalOpen || _pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null;
         DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
             : playing ? DaggerfallUiPhases.Playing
             : modal ? DaggerfallUiPhases.Modal
@@ -590,7 +591,14 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         AppendDamage(effect.Result, DaggerfallDamageCause.Effect, 0);
     }
 
-    private void ReactToSpellAttack(long caster, long target)
+    private void ReactToSpellAttack(long caster, long target, string bundle)
+    {
+        bool killed = State.Actors.TryGet(target, out var actor) && actor.IsDefeated;
+        ObserveLegalAttack(caster, target, $"spell-attack:{bundle}:{caster}:{target}:{(killed ? "death" : "attack")}");
+        ReactToAttack(caster, target);
+    }
+
+    private void ReactToAttack(long caster, long target)
     {
         DaggerfallConcealmentEffects.BreakNormal(State.Effects, caster);
         if (caster != DaggerfallActorIdentity.PlayerEntityId || target == caster) return;
@@ -643,7 +651,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             ObserveCrimeHit(hit);
             DaggerfallConcealmentEffects.AfterPhysicalHit(State.Effects, hit);
             if(hit.AttackerId==DaggerfallActorIdentity.PlayerEntityId && hit.TargetId!=hit.AttackerId)
-                ReactToSpellAttack(hit.AttackerId,hit.TargetId);
+                ReactToAttack(hit.AttackerId,hit.TargetId);
         }
         if (fact is ActorDiedFact died)
         {
@@ -701,7 +709,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Lodging: LodgingView,
             Travel: ReadTravelPresentation(),
             SiteName: Site.ActiveSite?.Name,
-            Map: _mapOpen ? ReadMapPresentation() : null, CreateItem: CreateItemView, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
+            Map: _mapOpen ? ReadMapPresentation() : null, Legal: LegalView, CreateItem: CreateItemView, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         Vector3? candlePosition = !State.Actors.Player.IsDefeated && State.PlayerControl.Position is { } playerPosition
             && State.Effects.Active.Any(effect => effect.Definition.Key == DaggerfallIllusionEffects.LightKey)

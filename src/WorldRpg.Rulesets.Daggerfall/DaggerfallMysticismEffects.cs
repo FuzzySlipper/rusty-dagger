@@ -22,13 +22,13 @@ internal static class DaggerfallMysticismEffects
 {
     internal static IEnumerable<DaggerfallEffectDefinition> Definitions(Func<long, int> level,
         Action<DaggerfallDispelRequest> requestDispel, Action<DaggerfallActiveEffect, bool> banish,
-        Action<long, long>? attacked = null, Action<string>? requestTeleport = null)
+        Action<long, long, string>? attacked = null, Action<string>? requestTeleport = null)
     {
         yield return new("silence", "silence", DaggerfallEffectStacking.RefreshDuration, 1, 1,
             Apply: effect =>
             {
                 Read(effect, 19, -1);
-                if (effect.Context.Caster is { } caster) attacked?.Invoke(checked((long)caster.Value), checked((long)effect.Context.Target.Value));
+                if (effect.Context.Caster is { } caster) attacked?.Invoke(checked((long)caster.Value), checked((long)effect.Context.Target.Value), effect.BundleId ?? effect.Context.Instance.Value);
                 return [];
             }, Resume: effect => Validate(effect, 19, -1),
             Spell: new(19, -1, SpellMaker: true, SupportsDuration: true, RollChanceOnCast: true,

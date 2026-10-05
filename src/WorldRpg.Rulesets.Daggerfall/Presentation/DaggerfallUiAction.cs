@@ -27,7 +27,7 @@ internal enum DaggerfallUiActionKind
     CharacterLevelAllocate, CharacterLevelCommit,
     ActivationMode, Attack, Loot, Inventory, Character, Menu,
     DialogueTone, DialogueTopic, DialogueClose, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift,
-    CreateItemSelect, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
+    LegalChoice, CreateItemSelect, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
     TransportSelect, TransportToggle, TransportLeaveShip, TransportBoardShip,
     PropertyBuy, PropertySell, PropertyEnter, PropertyPut, PropertyTake,
     TravelSearch, TravelPreview, TravelAccept, MapOpen, MapBuilding,
@@ -175,6 +175,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.Menu, "menu", DaggerfallUiPhases.Live | DaggerfallUiPhases.Dead),
         new(DaggerfallUiActionKind.IdentifySelect, "identify-select", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.IdentifyCancel, "identify-cancel", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.LegalChoice, "legal-choice", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.CreateItemSelect, "create-item-select", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DispelSelect, "dispel-select", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DispelCancel, "dispel-cancel", DaggerfallUiPhases.Interaction),
@@ -539,6 +540,8 @@ internal static class DaggerfallUiAction
                     ? new(action, Revision: revision, Item: item, Amount: amount) : null;
             if (action == "teleport-select")
                 return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && key is "anchor" or "recall" or "cancel" ? new(action, Revision: revision, Key: key) : null;
+            if (action is "legal-choice")
+                return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && key is "yield" or "resist" or "escape" or "guilty" or "etiquette" or "streetwise" or "accept" or "continue" ? new(action, Revision: revision, Key: key) : null;
             if (action is "dispel-select" or "identify-select" or "create-item-select")
                 return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) ? new(action, Revision: revision, Key: key) : null;
             if (action is "dispel-cancel" or "identify-cancel")

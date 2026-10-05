@@ -42,7 +42,7 @@ public sealed class DaggerfallCrimePolicyTests
         Assert.Equal(10, DaggerfallCrimePolicy.RegionalReputationLoss(DaggerfallCrimeKind.BreakingAndEntering));
         Assert.Equal(8, DaggerfallCrimePolicy.RegionalReputationLoss(DaggerfallCrimeKind.Assault));
         Assert.Equal(20, DaggerfallCrimePolicy.RegionalReputationLoss(DaggerfallCrimeKind.Murder));
-        Assert.Equal(0, DaggerfallCrimePolicy.PeopleFactionReputationLoss(DaggerfallCrimeKind.Arson));
+        Assert.Equal(0, DaggerfallCrimePolicy.PeopleFactionReputationLoss(DaggerfallCrimeKind.Vagrancy));
         Assert.Equal(75, DaggerfallCrimePolicy.RegionalReputationLoss(DaggerfallCrimeKind.HighTreason));
         Assert.Equal(2, DaggerfallCrimePolicy.RegionalReputationLoss(DaggerfallCrimeKind.Pickpocketing));
         Assert.Equal(8, DaggerfallCrimePolicy.RegionalReputationLoss(DaggerfallCrimeKind.Theft));

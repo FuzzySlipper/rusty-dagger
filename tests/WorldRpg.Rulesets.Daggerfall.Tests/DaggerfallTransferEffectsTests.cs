@@ -185,7 +185,7 @@ public sealed class DaggerfallTransferEffectsTests
             var catalog = new DaggerfallMagicCatalogSet(new Dictionary<string, DaggerfallSpellDefinition> { ["spell"] = spell }, new Dictionary<string, DaggerfallMagicItemDefinition>(), [], [],
                 new Dictionary<(int, int), DaggerfallMagicEffectCostDefinition> { [(11, subtype)] = row }, new Dictionary<string, DaggerfallEnchantmentSetting>());
             DaggerfallEffectLifecycle effects = null!;
-            effects = new(Actors, new([.. DaggerfallTransferEffects.Definitions(new(new CombatResolution()), Results.Add, _ => Hostile, (a, b) => Attacks.Add((a, b))),
+            effects = new(Actors, new([.. DaggerfallTransferEffects.Definitions(new(new CombatResolution()), Results.Add, _ => Hostile, (a, b, _) => Attacks.Add((a, b))),
                 .. DaggerfallAlterationEffects.Definitions(effect => effects.Cancel(effect.Context.Instance)),
                 new("ward", "ward", DaggerfallEffectStacking.Stack, 10, 1, MagicDefense: _ => Defense)])); Effects = effects;
             var profile = new DaggerfallMagicTargetProfile(50, new(DaggerfallMagicTolerance.Normal, DaggerfallMagicTolerance.CriticalWeakness,
