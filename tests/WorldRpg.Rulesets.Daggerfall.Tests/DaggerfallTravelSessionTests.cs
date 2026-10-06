@@ -385,7 +385,7 @@ public sealed class DaggerfallTravelSessionTests
     }
     private static readonly Lazy<DaggerfallDefinitions> DeadlineDefinitions = new(() =>
     {
-        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        JsonObject root = TestPayload.Sections("questSources");
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
             {"name":"travel-deadline","displayName":"Travel deadline","sourceFile":"travel-deadline.txt","disposition":"compiled",
             "messages":[{"id":10,"firstLine":1,"lines":["The deadline expired during travel."]}],
@@ -393,7 +393,7 @@ public sealed class DaggerfallTravelSessionTests
             {"kind":"task","firstLine":3,"lines":["_deadline_ task:","log 10 step 1","end quest"],"global":null},
             {"kind":"headless","firstLine":6,"lines":["start timer _deadline_"],"global":null}],"diagnostics":[]}
             """));
-        return DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
     });
     private static readonly Lazy<(DaggerfallSiteProfile Profile, ResolvedCompositionIdentity Identity)> Inputs = new(() =>
         (ReadInputs(TestData.RepositoryRoot), GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot),

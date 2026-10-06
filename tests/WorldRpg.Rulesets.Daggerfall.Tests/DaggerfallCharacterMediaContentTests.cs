@@ -147,10 +147,10 @@ public sealed class DaggerfallCharacterMediaContentTests
         // A dungeon naming a location the section does not carry is a diagnostic, not a silent load.
         // The corruption moves one dungeon's index rather than a region, because moving a region moves
         // its locations with it and the section stays consistent.
-        System.Text.Json.Nodes.JsonNode pack = System.Text.Json.Nodes.JsonNode.Parse(TestPayload.CombinedText)!;
+        System.Text.Json.Nodes.JsonNode pack = TestPayload.Sections("locations");
         pack["locations"]!["dungeons"]![0]!["index"] = 999999;
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(
-            () => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(pack.ToJsonString())));
+            () => DaggerfallBaseContent.Read(TestPayload.Splice(pack.AsObject())));
         Assert.Contains("which no location record carries", error.Message, StringComparison.Ordinal);
     }
 

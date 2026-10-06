@@ -920,7 +920,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
 
     private static DaggerfallDefinitions DefinitionsWithEndingFixture(bool retiredItem = false)
     {
-        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        JsonObject root = TestPayload.Sections("questSources");
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
             {"name":"ending","displayName":"Ending","sourceFile":"ending.txt","disposition":"compiled",
              "messages":[{"id":10,"firstLine":1,"lines":["%pcn met _giver_."]},{"id":1010,"firstLine":2,"lines":["Did you use the painting?"]},{"id":20,"firstLine":3,"lines":["%pcn finished for _giver_."]},{"id":30,"firstLine":4,"lines":["%pcn declined for _giver_."]}],
@@ -933,12 +933,12 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
                 {"quest":"ending","sourceFile":"ending.txt","sourceLine":30,"kind":"item","symbol":{"sourceSpelling":"_gift_","canonicalId":"gift"},"sourceText":"Item _gift_ shortsword","targetSourceSpelling":"shortsword","targetCanonicalId":"shortsword","placeKind":null,"parameters":[],"foe":null,"item":{"artifact":false,"class":null,"subclass":null,"template":116,"key":null,"rangeLow":null,"rangeHigh":null,"usedMessage":null,"anyInfoMessage":null},"person":null,"place":null}
                 """));
         }
-        return DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
     }
 
     private static DaggerfallDefinitions DefinitionsWithLifecycleFixtures(bool hasRewardMessage = true)
     {
-        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        JsonObject root = TestPayload.Sections("questSources");
         JsonArray quests = root["questSources"]!["quests"]!.AsArray();
         quests.Add(JsonNode.Parse("""
             {"name":"startparent","displayName":"Start parent","sourceFile":"startparent.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"headless","firstLine":11,"lines":["start quest independentchild","end quest"],"global":null}],"diagnostics":[]}
@@ -966,7 +966,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
             """));
         if (!hasRewardMessage)
             quests.Single(quest => quest!["sourceFile"]!.GetValue<string>() == "trainquest.txt")!["messages"] = new JsonArray();
-        return DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
     }
 
     private static DaggerfallQuestSourceDefinition Source(params DaggerfallQuestBlockDefinition[] blocks) =>

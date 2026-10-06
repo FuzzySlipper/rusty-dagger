@@ -112,7 +112,7 @@ public sealed class DaggerfallQuestJournalTests
 
     private static DaggerfallDefinitions JournalDefinitions()
     {
-        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        JsonObject root = TestPayload.Sections("questSources");
         JsonArray quests = root["questSources"]!["quests"]!.AsArray();
         quests.Add(JsonNode.Parse("""
             {"name":"timed","displayName":"Timed errand","sourceFile":"timed.txt","disposition":"compiled",
@@ -140,6 +140,6 @@ public sealed class DaggerfallQuestJournalTests
              "messages":[],
              "blocks":[{"kind":"headless","firstLine":1,"lines":["end quest"],"global":null}],"diagnostics":[]}
             """));
-        return DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
     }
 }

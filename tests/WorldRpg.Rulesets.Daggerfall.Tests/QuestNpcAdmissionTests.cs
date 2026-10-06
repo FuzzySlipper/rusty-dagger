@@ -182,7 +182,7 @@ public sealed class QuestNpcAdmissionTests
 
     internal static DaggerfallDefinitions Definitions(bool explicitGiver = false, string[][]? taskBlocks = null)
     {
-        var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        var root = TestPayload.Sections("questSources");
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
         var person = declarations.First(value => value!["kind"]!.GetValue<string>() == "person"
             && (explicitGiver ? value["person"]!["group"]?.GetValue<string>() == "Questor"
@@ -200,6 +200,6 @@ public sealed class QuestNpcAdmissionTests
             for (int i = 0; i < taskBlocks.Length; i++) blocks.Add(new JsonObject { ["kind"] = "task", ["firstLine"] = 10 + i * 10,
                 ["lines"] = System.Text.Json.JsonSerializer.SerializeToNode(taskBlocks[i].Select(line => line.Replace("_person_", symbol))), ["global"] = null });
         }
-        return DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
     }
 }

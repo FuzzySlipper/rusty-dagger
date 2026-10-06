@@ -105,7 +105,7 @@ public sealed class DaggerfallRestSessionTests
     [Fact]
     public void A_quest_prompt_raised_during_rest_stops_the_rest_before_further_time_passes()
     {
-        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        JsonObject root = TestPayload.Sections("questSources");
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
             {"name":"rest-prompt","displayName":"Rest prompt","sourceFile":"rest-prompt.txt","disposition":"compiled",
             "messages":[{"id":1010,"firstLine":1,"lines":["Will you help?"]}],
@@ -115,7 +115,7 @@ public sealed class DaggerfallRestSessionTests
             {"kind":"task","firstLine":5,"lines":["_ask_ task:","prompt 1010 yes _yes_ no _no_"],"global":null},
             {"kind":"headless","firstLine":7,"lines":["start timer _ask_"],"global":null}],"diagnostics":[]}
             """));
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
         DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content);
         List<string> releases = [];

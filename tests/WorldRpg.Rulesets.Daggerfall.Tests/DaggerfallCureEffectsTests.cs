@@ -241,13 +241,13 @@ public sealed class DaggerfallCureEffectsTests
     private const string CureParalysisKey = "spell.cure-paralysis";
     private static readonly Lazy<DaggerfallDefinitions> CureDefinitions = new(() =>
     {
-        System.Text.Json.Nodes.JsonObject root = System.Text.Json.Nodes.JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        System.Text.Json.Nodes.JsonObject root = TestPayload.Sections("magic");
         System.Text.Json.Nodes.JsonArray spells = Spells(root) ?? throw new InvalidOperationException("The payload publishes no spells.");
         System.Text.Json.Nodes.JsonNode cure = spells.Single(spell => spell!["key"]!.GetValue<string>() == "spell.015")!.DeepClone();
         cure["key"] = CureParalysisKey; cure["identity"] = 900; cure["name"] = "Cure Paralyzation";
         cure["effects"]![0]!["key"] = CureParalysisKey + ".effect.1"; cure["effects"]![0]!["subType"] = 2;
         spells.Add(cure);
-        return DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
 
         static System.Text.Json.Nodes.JsonArray? Spells(System.Text.Json.Nodes.JsonNode? node) => node switch
         {

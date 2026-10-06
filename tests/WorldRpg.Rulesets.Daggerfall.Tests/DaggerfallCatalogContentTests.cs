@@ -350,11 +350,11 @@ public sealed class DaggerfallCatalogContentTests
     [InlineData("duplicate-archetype")]
     public void Malformed_questionnaire_cannot_leave_a_live_answer_without_a_recommendation(string mutation)
     {
-        var payload = System.Text.Json.Nodes.JsonNode.Parse(TestPayload.CombinedText)!;
+        var payload = TestPayload.Sections("catalogs");
         var quiz = payload["catalogs"]!["classQuestionnaire"]!;
         if (mutation == "duplicate-outcome") quiz["recommendations"]![0] = quiz["recommendations"]![1]!.DeepClone();
         else quiz["questions"]![0]!["answers"]![0]!["archetype"] = quiz["questions"]![0]!["answers"]![1]!["archetype"]!.DeepClone();
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload.AsObject())));
     }
 
 }

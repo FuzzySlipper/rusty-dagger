@@ -82,7 +82,7 @@ public sealed class CalendarIntervalReconciliationTests
 
     private static readonly Lazy<DaggerfallDefinitions> ClockDefinitions = new(() =>
     {
-        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        JsonObject root = TestPayload.Sections("questSources");
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
             {"name":"clocked-training","displayName":"Clocked training","sourceFile":"clocked-training.txt","disposition":"compiled",
             "messages":[],
@@ -91,6 +91,6 @@ public sealed class CalendarIntervalReconciliationTests
             {"kind":"task","firstLine":3,"lines":["_deadline_ task:","start task _hit_"],"global":null},
             {"kind":"headless","firstLine":5,"lines":["start timer _deadline_","train pc LongBlade"],"global":null}],"diagnostics":[]}
             """));
-        return DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
     });
 }

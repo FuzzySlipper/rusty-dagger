@@ -64,11 +64,11 @@ public sealed partial class DaggerfallEquipmentWearTests
     [Fact]
     public void Razor_magic_immune_career_resists_without_a_random_save()
     {
-        var payload = JsonNode.Parse(TestPayload.CombinedText)!;
+        var payload = TestPayload.Sections("catalogs");
         var career = payload["catalogs"]!["careers"]!.AsArray().First(x => x!["id"]!.GetValue<string>() == "class00")!;
         career["immunityFlags"] = 2;
         career["immunityElements"] = new JsonArray("magic");
-        using WearFixture f = new(DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString())));
+        using WearFixture f = new(DaggerfallBaseContent.Read(TestPayload.Splice(payload.AsObject())));
         f.EquipRazor();
         var immune = f.Definitions.Catalogs.RequireCareer("class00");
         f.ReplaceActor(Enemy, f.Definitions.RequireActor(new DaggerfallActorId("thief")) with { ActionId = "enemy-class-equipped-melee", Career = immune.Id });

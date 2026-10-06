@@ -65,7 +65,7 @@ public sealed class QuestResourceSelectionTests
     [Fact]
     public void Ordinary_start_retains_selected_items_foes_and_names_in_encoded_save_without_minting_entity_ids()
     {
-        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        JsonObject root = TestPayload.Sections("questSources");
         var declarationRows = root["questSources"]!["resources"]!["declarations"]!.AsArray();
         var item = declarationRows.Single(value => value!["sourceFile"]!.GetValue<string>() == "S0000502.txt"
             && value["symbol"]!["canonicalId"]!.GetValue<string>() == "reward")!.DeepClone();
@@ -78,7 +78,7 @@ public sealed class QuestResourceSelectionTests
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
             {"name":"selected","displayName":"","sourceFile":"selected.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[]}
             """));
-        var definitions = DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        var definitions = DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
         DaggerfallQuestInstances quests = new(definitions, RandomMinimum.Create());
         quests.BindResourceAllocator(Allocator(definitions));
         var first = quests.Start(new("first", "selected.txt", "selected", DaggerfallQuestLifecycle.Active, null, [], []));

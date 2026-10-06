@@ -427,14 +427,14 @@ public sealed class DaggerfallSiteContextTests
     {
         // Fifteen is one past the highest value the five-bit field carries. Every consumer that branches
         // on a kind would otherwise answer from a kind nobody published.
-        JsonNode pack = JsonNode.Parse(TestPayload.CombinedText)!;
+        JsonNode pack = TestPayload.Sections("locations");
         JsonNode location = pack["locations"]!["locations"]![0]!;
         Assert.Equal(0, (int)location["region"]!);
         Assert.Equal(0, (int)location["index"]!);
         location["locationType"] = 15;
 
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(
-            () => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(pack.ToJsonString())));
+            () => DaggerfallBaseContent.Read(TestPayload.Splice(pack.AsObject())));
         Assert.Contains("location 0 of region 0 carries locationType 15", error.Message, StringComparison.Ordinal);
         Assert.Contains("site kinds the map table's type field names (0..14)", error.Message, StringComparison.Ordinal);
     }
