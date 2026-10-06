@@ -25,7 +25,7 @@ internal enum DaggerfallUiActionKind
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
     CharacterLevelAllocate, CharacterLevelCommit,
-    ActivationMode, Attack, Loot, Inventory, Character, Menu,
+    ActivationMode, Attack, Loot, Menu,
     DialogueTone, DialogueTopic, DialogueClose, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift,
     LegalChoice, CreateItemSelect, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
     TransportSelect, TransportToggle, TransportLeaveShip, TransportBoardShip,
@@ -172,9 +172,6 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.SpellInfo,"spell-info",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.Attack, "attack", DaggerfallUiPhases.Playing),
         new(DaggerfallUiActionKind.Loot, "loot", DaggerfallUiPhases.Playing),
-        // The DOM owns its panels; these name a panel the DOM opened and the session does nothing with.
-        new(DaggerfallUiActionKind.Inventory, "inventory", DaggerfallUiPhases.Live),
-        new(DaggerfallUiActionKind.Character, "character", DaggerfallUiPhases.Live),
         // The DOM reports whether its game menu (and so any of its panels) is open, because an open
         // menu holds the world. A menu closed over death still reaches the session.
         new(DaggerfallUiActionKind.Menu, "menu", DaggerfallUiPhases.Live | DaggerfallUiPhases.Dead),
@@ -627,7 +624,7 @@ internal static class DaggerfallUiAction
             // "begin" is the entry screen's own action, which the product answers: the session accepts the
             // shape so a slice carrying it is a known action it does not act on, rather than an
             // unrecognized one it reports over the screen that asked.
-            return fields.Count == 1 && action is "attack" or "inventory" or "character" or "loot" or "begin" or "cinematic-skip" or "save-game" or "load-game"
+            return fields.Count == 1 && action is "attack" or "loot" or "begin" or "cinematic-skip" or "save-game" or "load-game"
                 ? new(action) : null;
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException) { return null; }

@@ -244,10 +244,6 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("lastResult", travel.LastResult is null ? builder.Null() : builder.Object(
             ("paidGold", builder.Number(travel.LastResult.PaidGold)),
             ("elapsedSeconds", builder.Number(travel.LastResult.ElapsedSeconds)),
-            ("actualRegion", builder.Number(travel.LastResult.ActualSite.Region)),
-            ("actualIndex", builder.Number(travel.LastResult.ActualSite.Index)),
-            ("actualX", builder.Number(travel.LastResult.ActualPixel.X)),
-            ("actualY", builder.Number(travel.LastResult.ActualPixel.Y)),
             ("message", builder.String(travel.LastResult.Message)))),
         ("quote", travel.Quote is null ? builder.Null() : builder.Object(
             ("identity", builder.String(travel.Quote.Identity)),

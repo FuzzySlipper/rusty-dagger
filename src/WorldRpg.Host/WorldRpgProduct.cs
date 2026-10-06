@@ -15,11 +15,11 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// <summary>Engine persistence scope for ordinary menu saves.</summary>
     private const string SaveStoreScope = "worldrpg.saves";
 
-    /// <summary>The label a quick save gives the new slot it creates.</summary>
-    private const string QuickSaveLabel = "Saved game";
+    /// <summary>The label of the Host's one quick-save slot.</summary>
+    private const string QuickSaveLabel = "Quick save";
 
-    /// <summary>The slot a quick load selects: the first slot the Host names.</summary>
-    private static readonly string QuickLoadKey = SaveSlotKey(1);
+    /// <summary>The key of the Host's one quick-save slot, which quick save overwrites and quick load reads.</summary>
+    private const string QuickSaveKey = "quick";
 
     /// <summary>Engine persistence scope for current ruleset-owned player preferences.</summary>
     private const string PlayerPreferencesScope = "worldrpg.preferences";
@@ -483,10 +483,15 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
                     SaveNamedSlot(requesting, request);
                     return;
                 case SaveSlotOperation.QuickSave:
-                    SaveNamedSlot(requesting, new(SaveSlotOperation.Save, Label: QuickSaveLabel));
+                    QuickSave(requesting);
                     return;
                 case SaveSlotOperation.QuickLoad:
-                    LoadNamedSlot(requesting, QuickLoadKey);
+                    if (!SaveSlots.List().Any(entry => string.Equals(entry.Key, QuickSaveKey, StringComparison.Ordinal)))
+                    {
+                        requesting.ReportSaveOutcome("There is no quick save to load.");
+                        return;
+                    }
+                    LoadNamedSlot(requesting, QuickSaveKey);
                     return;
                 case SaveSlotOperation.Load:
                     if (string.IsNullOrWhiteSpace(request.Key))
@@ -554,6 +559,21 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
         WorldRpgSaveSlotEntry entry = SaveSlots.SaveSlot(key, request.Label.Trim(), new GameSaveEnvelope(saveable.CaptureSave()));
         requesting.ReportSaveOutcome($"Saved '{entry.Label}' (revision {entry.Revision}).");
+        RefreshSaveSlots(requesting);
+    }
+
+    /// <summary>Writes the current game into the one quick-save slot, replacing what it held.</summary>
+    private void QuickSave(ISaveRequestingGameSession requesting)
+    {
+        if (_shutdown) throw new ObjectDisposedException(nameof(WorldRpgProduct));
+        if (_session is not ISaveableGameSession saveable)
+        {
+            requesting.ReportSaveOutcome("Save failed: the selected compiled ruleset does not support save capture.");
+            return;
+        }
+
+        _ = SaveSlots.SaveSlot(QuickSaveKey, QuickSaveLabel, new GameSaveEnvelope(saveable.CaptureSave()));
+        requesting.ReportSaveOutcome("Quick saved.");
         RefreshSaveSlots(requesting);
     }
 

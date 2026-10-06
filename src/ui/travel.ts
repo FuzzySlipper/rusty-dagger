@@ -29,9 +29,9 @@ export interface TravelQuoteProjection {
   };
 }
 
+/** A completed journey; the ruleset's message names what it cost and where it ended. */
 export interface TravelResultProjection {
-  readonly paidGold: number; readonly elapsedSeconds: number;
-  readonly actualRegion: number; readonly actualIndex: number; readonly actualX: number; readonly actualY: number; readonly message: string;
+  readonly paidGold: number; readonly elapsedSeconds: number; readonly message: string;
 }
 
 export interface TravelProjection {

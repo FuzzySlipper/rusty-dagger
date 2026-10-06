@@ -19,8 +19,11 @@ public sealed class DaggerfallUiActionTests
     [Theory]
     [InlineData("{\"action\":\"attack\"}", "attack")]
     [InlineData("{\"action\":\"loot\"}", "loot")]
-    [InlineData("{\"action\":\"inventory\"}", "inventory")]
-    [InlineData("{\"action\":\"character\"}", "character")]
+    // The DOM owns its panels, so opening one is not a product action.
+    [InlineData("{\"action\":\"inventory\"}", null)]
+    [InlineData("{\"action\":\"character\"}", null)]
+    [InlineData("{\"action\":\"save-game\"}", "save-game")]
+    [InlineData("{\"action\":\"load-game\"}", "load-game")]
     [InlineData("{\"action\":\"attack\",\"action\":\"loot\"}", null)]
     [InlineData("{\"action\":\"attack\",\"item\":1}", null)]
     [InlineData("{\"action\":\"transfer-all\"}", null)]
