@@ -17,7 +17,7 @@ internal sealed record DaggerfallGroundContainer(DaggerfallWorldProfileKey Profi
 /// </summary>
 internal sealed class DaggerfallGroundContainers
 {
-    private static readonly EntityTypeId GroundContainerType = new("daggerfall.ground-container");
+    internal static readonly EntityTypeId GroundContainerType = new("daggerfall.ground-container");
     private readonly MechanicsInventoryContainerCoordinator _containers;
     private readonly DaggerfallItemInstances _instances;
     private readonly EntityId _player;
