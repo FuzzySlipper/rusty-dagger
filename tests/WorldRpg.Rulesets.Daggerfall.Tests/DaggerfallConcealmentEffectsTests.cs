@@ -83,7 +83,7 @@ public sealed class DaggerfallConcealmentEffectsTests
         // A used item's effect outlives the item breaking; destroying the item ends it.
         s.State.ItemInstances.ReplaceUnique(item, s.State.ItemInstances.RequireUnique(item) with { CurrentCondition = 0 });
         Assert.True(s.State.Effects.PerceptionFor(1).Blending);
-        s.State.ItemInstances.RemoveUnique(item);
+        s.DestroyUniqueItem(item);
         Assert.False(s.State.Effects.PerceptionFor(1).Blending); s.PublishInitial();
         Assert.DoesNotContain(s.Slots.Read(), row => row.Owner == "magic.concealment");
     }

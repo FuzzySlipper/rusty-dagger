@@ -51,7 +51,7 @@ public sealed class DaggerfallParalysisEffectsTests
         // A used item's effect outlives the item breaking; destroying the item ends it.
         s.State.ItemInstances.ReplaceUnique(itemId, s.State.ItemInstances.RequireUnique(itemId) with { CurrentCondition = 0 });
         Assert.True(s.State.Effects.ControlsFor(1).Movement);
-        s.State.ItemInstances.RemoveUnique(itemId);
+        s.DestroyUniqueItem(itemId);
         Assert.Equal(default, s.State.Effects.ControlsFor(1));
         long target = s.SpawnActor("rat", new ActorPose(new WorldPoint(11,0,11), 0));
         Start(s, "target", 1, target, 10); s.RetireActor(target);

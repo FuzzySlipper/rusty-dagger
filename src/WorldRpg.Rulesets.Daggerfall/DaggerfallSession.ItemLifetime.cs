@@ -16,7 +16,7 @@ internal sealed partial class DaggerfallSession
     };
 
     /// <summary>Completes unique item retirement through the Engine inventory and current identity owners.</summary>
-    private void DestroyUniqueItem(ulong durableId)
+    internal void DestroyUniqueItem(ulong durableId)
     {
         var entities = State.Actors.Entities;
         var store = State.InventoryStore;
