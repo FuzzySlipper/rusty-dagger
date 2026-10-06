@@ -38,8 +38,9 @@ public sealed class UiArtDeliverySessionTests
             .Cast<Dictionary<string, object?>>()
             .ToDictionary(image => Assert.IsType<string>(image["id"]), image => (object?)Assert.IsType<string>(image["image"]), StringComparer.Ordinal);
         // One artifact per identity the DOM draws: the mode screen, the chrome, the three authored
-        // inventory skins, every admitted item icon, and the adult, faction and child portraits the
-        // quest escort HUD selects. Paper-doll backgrounds and bodies stay with the sheet projection.
+        // inventory skins, every admitted item icon, the adult, faction and child portraits the
+        // quest escort HUD selects, and the head and body of each racial form (vampire, were-creature)
+        // the HUD draws while it is held. Other paper-doll backgrounds and bodies stay with the sheet.
         string[] heads = [.. definitions.CharacterPresentation.Races.Values
             .SelectMany(race => race.Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head))
             .Select(layer => layer.MediaId).Distinct(StringComparer.Ordinal)];
@@ -48,7 +49,9 @@ public sealed class UiArtDeliverySessionTests
         Assert.Equal(160, heads.Length);
         Assert.Equal(61, factionFaces.Length);
         Assert.Equal(4, childFaces.Length);
-        string[] portraits = [.. heads, .. factionFaces, .. childFaces];
+        string[] racialForms = [.. definitions.CharacterPresentation.RacialForms.Values
+            .SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId }).Distinct(StringComparer.Ordinal)];
+        string[] portraits = [.. heads, .. factionFaces, .. childFaces, .. racialForms];
         Assert.Equal(10 + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length, images.Count);
         Assert.All(images.Values, image => Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(image), StringComparison.Ordinal));
 
