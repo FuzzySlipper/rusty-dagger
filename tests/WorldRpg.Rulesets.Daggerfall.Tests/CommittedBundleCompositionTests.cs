@@ -30,7 +30,7 @@ public sealed class CommittedBundleCompositionTests
     /// <summary>
     /// A committed bundle is only real if the ruleset can start a game from it: this resolves each one,
     /// admits every pack it selects through the real readers, creates the session through the compiled
-    /// ruleset and takes one admitted update. The session starts at the first site pack the bundle selects.
+    /// ruleset and takes one admitted update. The session starts at the site the authored new-game definition names.
     /// </summary>
     [Theory]
     [MemberData(nameof(CommittedBundles))]
@@ -114,6 +114,54 @@ public sealed class CommittedBundleCompositionTests
         Assert.All(receipts, receipt => Assert.True(receipt.IsOrdinaryOffer));
     }
 
+    [Fact]
+    public void A_new_game_starts_at_the_authored_start_site_whatever_the_bundle_order()
+    {
+        // Site packs listed in reverse put a ship, then dungeons, ahead of Privateer's Hold; the authored
+        // new-game definition still names where play begins.
+        using IGameSession session = CreateWithBundle(bundle =>
+        {
+            JsonArray packs = bundle["contentPacks"]!.AsArray();
+            JsonNode[] reversed = [.. packs.Select(pack => pack!.DeepClone()).Reverse()];
+            packs.Clear();
+            foreach (JsonNode pack in reversed) packs.Add(pack);
+        });
+        DaggerfallSession daggerfall = Assert.IsType<DaggerfallSession>(session);
+        Assert.Equal("daggerfall.privateers-hold", TestPayload.Definitions.NewGame.StartSitePack);
+        Assert.Equal(ReadInputs(TestData.RepositoryRoot).ProfileKey, daggerfall.Sites.ActiveProfile);
+    }
+
+    [Fact]
+    public void A_bundle_without_the_authored_start_site_is_refused_by_name()
+    {
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => CreateWithBundle(bundle =>
+        {
+            JsonArray packs = bundle["contentPacks"]!.AsArray();
+            packs.Remove(packs.Single(pack => pack!["id"]!.GetValue<string>() == "daggerfall.privateers-hold"));
+        }));
+        Assert.Contains("does not select the new-game start site 'daggerfall.privateers-hold'", error.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Resolves the default bundle after editing its descriptor, then creates a session.</summary>
+    private static IGameSession CreateWithBundle(Action<JsonObject> edit)
+    {
+        string root = TestData.RepositoryRoot;
+        ProductContent full = FullContent(root);
+        const string bundlePath = "worldrpg/bundles/daggerfall.classic.bundle.json";
+        JsonObject bundle = JsonNode.Parse(full.ReadBytes(bundlePath).Span)!.AsObject();
+        edit(bundle);
+        ProductContentFile[] files = [.. full.Files.ToArray().Select(file => Encoding.UTF8.GetString(file.Path.Span) == bundlePath
+            ? new ProductContentFile(file.Path.ToArray(), Encoding.UTF8.GetBytes(bundle.ToJsonString()))
+            : file)];
+        ResolvedGameComposition composition = GameCompositionResolver.Resolve(new ProductContent(files), new GameBundleId("daggerfall.classic")).RequireComposition();
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        return new DaggerfallRuleset(videosEnabled: false).CreateSession(new GameSessionContext(engine.Context, composition));
+    }
+
     /// <summary>Resolves the default bundle with one pack's declared role replaced, then creates a session.</summary>
     private static IGameSession CreateWithPackRole(string packId, string role)
     {
@@ -125,7 +173,7 @@ public sealed class CommittedBundleCompositionTests
         ProductContentFile[] files = [.. full.Files.ToArray().Select(file => Encoding.UTF8.GetString(file.Path.Span) == manifestPath
             ? new ProductContentFile(file.Path.ToArray(), Encoding.UTF8.GetBytes(manifest.ToJsonString()))
             : file)];
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(new ProductContent(files), new GameBundleId("daggerfall.privateers-hold")).RequireComposition();
+        ResolvedGameComposition composition = GameCompositionResolver.Resolve(new ProductContent(files), new GameBundleId("daggerfall.classic")).RequireComposition();
         DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);

@@ -476,7 +476,7 @@ public sealed class RangedCombatSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = ReadInputs(root);
-        ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         List<string> releases = [];
         RulesetSavePayload saved;
         double healthAtRelease;
@@ -622,7 +622,7 @@ public sealed class RangedCombatSessionTests
         PopulateContent(resumedContent, inputs);
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
 
         Assert.Equal(11UL, Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(resumed.State.ActorInventories.InventoryFor(archer)).Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Quantity);

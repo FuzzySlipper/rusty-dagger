@@ -92,14 +92,19 @@ internal sealed class DaggerfallSiteLifecycle
         internal IReadOnlySet<long> ActorIds { get; } = actorIds;
     }
 
+    /// <summary>The session-wide classic presentation every site projection draws held items and effects from.</summary>
+    private readonly NormalizedClassicPresentation? _sessionPresentation;
+
     internal DaggerfallSiteLifecycle(IEngineContext engine, DaggerfallState state, DaggerfallDefinitions definitions,
         DaggerfallTuning tuning, DaggerfallWorldTime time, DaggerfallSiteContext site, SpatialMovementSystem spatial,
         FirstPersonCameraSystem camera, DaggerfallSiteAudioBundles? audioBundles, DaggerfallActorRoster roster,
         DaggerSessionPersistence persistence, DaggerfallGroundContainers groundContainers, DaggerfallEnemyBehaviorModule enemyBehavior,
         Func<DaggerfallDungeonActionDefinition, DaggerfallDungeonActionExecution?> executeFamilyAction, IDaggerfallSiteTransitionHost host,
         DaggerfallSiteProjection projection, DaggerfallDungeonActionTriggerRuntime actionTriggers, DaggerfallSiteProfiles? profiles,
-        DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile)
+        DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile,
+        NormalizedClassicPresentation? sessionPresentation = null)
     {
+        _sessionPresentation = sessionPresentation;
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _state = state ?? throw new ArgumentNullException(nameof(state));
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
@@ -456,7 +461,7 @@ internal sealed class DaggerfallSiteLifecycle
         {
             candidate = DaggerfallSiteProjection.Create(_engine, _state.Actors.Entities, _random, _tuning, _time.Calendar,
                 target, AudioFor(target), _spatial, destinationDelta?.Doors, destinationDelta?.Motion,
-                deferMotionCollisionAdmission: true);
+                deferMotionCollisionAdmission: true, sessionPresentation: _sessionPresentation);
             if (target.ProfileKind == DaggerfallWorldProfileKind.Exterior)
                 candidate.Rebase(destinationFrameOffset);
             if (sourceExterior is not null)
@@ -1070,7 +1075,8 @@ internal sealed class DaggerfallSiteLifecycle
                 throw new InvalidOperationException($"Exterior profile '{key.LogicalId}' has no normalized map-pixel identity.");
             Vector3 translation = ExteriorProfileTranslation(profile, origin);
             projection = DaggerfallSiteProjection.Create(_engine, _state.Actors.Entities, _random, _tuning, _time.Calendar,
-                profile, AudioFor(profile), _spatial, delta?.Doors, delta?.Motion, deferMotionCollisionAdmission: true);
+                profile, AudioFor(profile), _spatial, delta?.Doors, delta?.Motion, deferMotionCollisionAdmission: true,
+                sessionPresentation: _sessionPresentation);
             // The profile's authored geometry and actors use its own source frame. Rebase every
             // projection owner before admitting collision so doors, motion, portals, appearance
             // and lighting all share the same active exterior origin as the terrain cell.

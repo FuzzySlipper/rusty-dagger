@@ -397,7 +397,7 @@ public sealed class DaggerfallTravelSessionTests
     });
     private static readonly Lazy<(DaggerfallSiteProfile Profile, ResolvedCompositionIdentity Identity)> Inputs = new(() =>
         (ReadInputs(TestData.RepositoryRoot), GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot),
-            new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity));
+            new GameBundleId("daggerfall.classic")).RequireComposition().Identity));
 
     private sealed class Fixture : IDisposable
     {

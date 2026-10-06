@@ -186,7 +186,7 @@ public sealed class WabbajackSessionTests
         {
             _draw = draw;
             var definitions = TestPayload.Definitions;
-            var identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+            var identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
             Composition = new(definitions, Inputs, DaggerfallTuning.Defaults, identity);
             var engine = Engine();
             Session = DaggerfallSession.StartNew(engine.Context, Composition);

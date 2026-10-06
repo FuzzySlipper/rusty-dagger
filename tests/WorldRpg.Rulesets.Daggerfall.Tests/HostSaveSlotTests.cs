@@ -39,7 +39,7 @@ public sealed class HostSaveSlotTests
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         CapturingDaggerfallRuleset ruleset = new();
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset,
-            new GameBundleId("daggerfall.privateers-hold"));
+            new GameBundleId("daggerfall.classic"));
         product.Start();
         var title = ruleset.RequireSession();
         Assert.Equal(ProductMode.Title, product.Mode);
@@ -83,7 +83,7 @@ public sealed class HostSaveSlotTests
         DaggerfallItemInstanceMetadata savedUniqueMetadata = null!;
         DaggerfallSession sourceSession;
         using (WorldRpgSaveSlots slots = new(sourceEngine.Context, "worldrpg.saves"))
-        using (WorldRpgProduct sourceProduct = new(new ProductCreateContext(sourceEngine.Context, FullContent(root), input), sourceRuleset, new GameBundleId("daggerfall.privateers-hold")))
+        using (WorldRpgProduct sourceProduct = new(new ProductCreateContext(sourceEngine.Context, FullContent(root), input), sourceRuleset, new GameBundleId("daggerfall.classic")))
         {
             sourceProduct.Begin();
             sourceSession = sourceRuleset.RequireSession();
@@ -130,7 +130,7 @@ public sealed class HostSaveSlotTests
         using WorldRpgSaveSlots reopened = new(resumedEngine.Context, "worldrpg.saves");
         (GameSaveEnvelope? envelope, WorldRpgSlotLoadDiagnostic? diagnostic) = reopened.LoadSlot("slot-1", "daggerfall");
         Assert.Null(diagnostic);
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition();
+        ResolvedGameComposition composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition();
         using IGameSession resumed = resumedRuleset.CreateSession(new GameSessionContext(resumedEngine.Context, composition), envelope!.Payload);
         DaggerfallSession restoredSession = resumedRuleset.RequireSession();
         PlayerActorState restoredPlayer = restoredSession.State.Actors.Player;
@@ -185,7 +185,7 @@ public sealed class HostSaveSlotTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service, persistence: persistence);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         CapturingDaggerfallRuleset ruleset = new();
-        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold"));
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
         product.Start();
         NewGameSessionTests.Commit(ruleset.RequireSession());
         product.Begin();
@@ -294,7 +294,7 @@ public sealed class HostSaveSlotTests
             using WorldRpgSaveSlots slots = new(engine.Context, "worldrpg.saves");
             slots.SaveSlot("slot-1", "Forged", new GameSaveEnvelope(DaggerfallSavePayload.Encode(rejected)), PersistenceRevisionGuard.Absent);
             CapturingDaggerfallRuleset ruleset = new();
-            ResolvedGameComposition composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition();
+            ResolvedGameComposition composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition();
 
             // Resolution refuses the save before any session state or Engine resource exists.
             GameSaveEnvelope envelope = slots.LoadSlot("slot-1", "daggerfall").Envelope!;
@@ -320,7 +320,7 @@ public sealed class HostSaveSlotTests
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         string preferenceKey = DaggerfallRuleset.Identity.Value;
         CapturingDaggerfallRuleset scopedRuleset = new();
-        using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), scopedRuleset, new GameBundleId("daggerfall.privateers-hold")))
+        using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), scopedRuleset, new GameBundleId("daggerfall.classic")))
         {
             product.Start();
             NewGameSessionTests.Commit(scopedRuleset.RequireSession());
@@ -348,7 +348,7 @@ public sealed class HostSaveSlotTests
         PopulateContent(resumedContent, inputs);
         EngineContextFake resumed = EngineContextFake.Create(resumedContent, SpatialFake.Create(inputs.SpatialArtifact.Sha256, resumedReleases).Service,
             new AppearanceFake(resumedReleases), persistence: persistence);
-        using WorldRpgProduct reopened = new(new ProductCreateContext(resumed.Context, FullContent(root), input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.privateers-hold"));
+        using WorldRpgProduct reopened = new(new ProductCreateContext(resumed.Context, FullContent(root), input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.classic"));
         Assert.Equal(KeyboardControl.KeyQ, Assert.Single(resumed.PhysicalInput.Mappings, mapping => Encoding.UTF8.GetString(mapping.Intent.Span) == "move.forward").Keyboard);
         using WorldRpgSaveSlots slots = new(resumed.Context, "worldrpg.saves");
         Assert.Equal("Scoped", Assert.Single(slots.List()).Label);

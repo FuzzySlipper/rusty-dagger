@@ -24,7 +24,7 @@ public sealed class MasqueOfClavicusSessionTests
             PopulateContent(content, inputs);
             return EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
         }
-        var identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        var identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         DaggerfallSessionComposition composition = new(definitions, inputs, DaggerfallTuning.Defaults, identity);
         EngineContextFake engine = Engine();
         RulesetSavePayload save;

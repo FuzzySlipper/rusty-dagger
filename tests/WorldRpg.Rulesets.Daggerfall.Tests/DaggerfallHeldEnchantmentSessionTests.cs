@@ -88,7 +88,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service,
             new AppearanceFake(releases), random: RandomMaximum.Create());
         ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root),
-            new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+            new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
             new(definitions, inputs, DaggerfallTuning.Defaults, composition) { Sky = sky }, saved);
         DaggerfallItemInstanceMetadata retained = restored.State.ItemInstances.RequireUnique(durableId);

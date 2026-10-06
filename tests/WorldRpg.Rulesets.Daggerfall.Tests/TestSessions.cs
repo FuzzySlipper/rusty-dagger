@@ -517,7 +517,7 @@ internal sealed class ConditionSessionFixture : IDisposable
         string root = TestData.RepositoryRoot;
         definitions = TestPayload.Definitions;
         inputs = ReadInputs(root);
-        identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);

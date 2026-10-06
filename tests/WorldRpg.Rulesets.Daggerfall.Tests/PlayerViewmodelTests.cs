@@ -49,6 +49,26 @@ public sealed class PlayerViewmodelTests
     }
 
     [Fact]
+    public void A_site_without_its_own_classic_selection_presents_held_weapons_from_the_session()
+    {
+        // Ships and shop interiors publish no classic selection of their own; the session's start site
+        // supplies the player's held-item presentation wherever the player stands.
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        DaggerfallSiteProfile site = MediaInputs();
+        Assert.Null(site.ClassicPresentation.Viewmodel);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, site,
+            sessionPresentation: MediaInputs(classic: ClassicWeapon()).ClassicPresentation);
+
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        Assert.Single(appearance.PlaybackRequests);
+        presentation.Publish(EmptyActors());
+        Assert.Contains(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
+    }
+
+    [Fact]
     public void Compatible_right_hand_creates_a_viewmodel_and_uses_one_shot_strike_playback()
     {
         List<string> releases = [];

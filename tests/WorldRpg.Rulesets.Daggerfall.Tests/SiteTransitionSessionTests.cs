@@ -138,7 +138,7 @@ public sealed class SiteTransitionSessionTests
         ProductContent admitted = FullContent(root);
         DaggerfallSiteProfile destination = ReadProfile(root, admitted, definitions, "daggerfall.castle-necromoghan.json");
         DaggerfallSiteProfiles profiles = new([source, destination]);
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         DaggerfallSessionComposition composition = new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles };
         using DaggerfallSession session = DaggerfallSession.StartNew(EngineFor(source).Context, composition);
         long equippedActor = session.SpawnActor("encounter-warrior", new ActorPose(new WorldPoint(10, 0, 10), 0), level: 4);
@@ -240,7 +240,7 @@ public sealed class SiteTransitionSessionTests
         PopulateContent(restoredContent, destination);
         AppearanceFake restoredAppearance = new(restoredReleases);
         EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, SpatialFake.Create(destination.SpatialArtifact.Sha256, restoredReleases).Service, restoredAppearance);
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using (DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save))
         {
             Assert.Equal(destination.Lights.Count + 1, restoredAppearance.LightRequests.Count);
@@ -311,7 +311,7 @@ public sealed class SiteTransitionSessionTests
         SpatialFake resumedSpatial = SpatialFake.Create(interior.SpatialArtifact.Sha256, resumedReleases);
         PerceptionFake resumedPerception = PerceptionFake.Create();
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases), resumedPerception.Service);
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, exterior, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save);
 
         Assert.Equal(interior.Site, restored.Site.Active);
@@ -381,7 +381,7 @@ public sealed class SiteTransitionSessionTests
         PopulateContent(resumedContent, destination);
         SpatialFake resumedSpatial = SpatialFake.Create(destination.SpatialArtifact.Sha256, resumedReleases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, source, DaggerfallTuning.Defaults, identity) { Effects = catalog, Profiles = profiles }, save);
 
         DaggerfallActiveEffect restoredRetained = Assert.Single(restored.State.Effects.Active);
@@ -552,7 +552,7 @@ public sealed class SiteTransitionSessionTests
         PopulateContent(resumedContent, destination);
         SpatialFake resumedSpatial = SpatialFake.Create(destination.SpatialArtifact.Sha256, resumedReleases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save);
 
         Assert.Equal(destination.Site, restored.Site.Active);
@@ -599,7 +599,7 @@ public sealed class SiteTransitionSessionTests
         PopulateContent(resumedContent, destination);
         SpatialFake resumedSpatial = SpatialFake.Create(destination.SpatialArtifact.Sha256, resumedReleases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save);
 
         Assert.Equal(destination.Site, restored.Site.Active);

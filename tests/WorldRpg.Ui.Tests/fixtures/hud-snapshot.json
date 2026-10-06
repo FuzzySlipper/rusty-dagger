@@ -1429,7 +1429,7 @@
     }
   },
   "composition": {
-    "bundle": "daggerfall.privateers-hold",
+    "bundle": "daggerfall.classic",
     "ruleset": "daggerfall",
     "contentPacks": [
       "daggerfall.imported",

@@ -31,7 +31,7 @@ public sealed class DaggerfallMusicSessionTests
         ContentFake contentService = new(releases);
         PopulateContent(contentService, inputs);
         EngineContextFake engine = EngineContextFake.Create(contentService, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity) { Music = bundle });
 
         session.Update(Update());
@@ -75,7 +75,7 @@ public sealed class DaggerfallMusicSessionTests
         // A transition resolves the destination's own spatial content, so the fake carries both sites.
         PopulateContent(contentService, castle);
         EngineContextFake engine = EngineContextFake.Create(contentService, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity) { Music = bundle });
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([inputs, castle]));
 
@@ -119,7 +119,7 @@ public sealed class DaggerfallMusicSessionTests
         ContentFake contentService = new(releases);
         PopulateContent(contentService, inputs);
         EngineContextFake engine = EngineContextFake.Create(contentService, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity));
 
         session.Update(Update());
@@ -142,7 +142,7 @@ public sealed class DaggerfallMusicSessionTests
         ContentFake contentService = new(releases);
         PopulateContent(contentService, outside);
         EngineContextFake engine = EngineContextFake.Create(contentService, SpatialFake.Create(outside.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, outside, DaggerfallTuning.Defaults, identity) { Music = bundle });
 
         // A game starts at midnight, and the catalogue publishes no night cue, so the first update is

@@ -285,7 +285,7 @@ public sealed class DungeonSpellFlightSessionTests
                 RawIndex: soundIndex);
             DaggerfallSiteProfile inputs = WithAction(source, Action);
             ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(
-                FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+                FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
             DaggerfallSessionComposition selected = new(definitions, inputs, DaggerfallTuning.Defaults, identity);
             composition = useDefaultEffects
                 ? selected
