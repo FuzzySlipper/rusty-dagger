@@ -21,4 +21,28 @@ public sealed class ItemOwnershipSessionTests
         using var restored = f.Restore();
         Assert.Equal(DaggerfallItemOwner.Wagon(wagon.Id), restored.State.ItemInstances.RequireUnique(id).Owner);
     }
+
+    [Fact]
+    public void A_held_item_moved_by_the_engine_alone_drops_its_held_cast_and_stays_mutable_and_saveable()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0035"); var s = f.Session;
+        ItemCastTriggerSessionTests.Equip(s, f.Item);
+        f.Update();
+        Assert.NotNull(s.State.ItemInstances.RequireUnique(f.Source).HeldCast);
+        Assert.Contains(s.State.Effects.Active, effect => effect.Context.Item?.Value == f.Source);
+        var wagon = s.State.Wagon.EnsureCreated();
+
+        // Only the Engine unequips and moves it; no owner stamps the move.
+        s.State.Equipment.Unequip(f.Item);
+        s.State.Containers.Transfer(s.State.Actors.Player.Actor.Entity, wagon.Owner, new(f.Item.Definition, 1, UniqueEntityId: f.Item.EntityId));
+
+        var moved = s.State.ItemInstances.RequireUnique(f.Source);
+        Assert.Equal((DaggerfallItemOwner.Wagon(wagon.Id), (DaggerfallHeldCastState?)null), (moved.Owner, moved.HeldCast));
+        s.State.ItemInstances.ReplaceUnique(f.Source, moved with { Identified = true });
+        f.Update();
+        Assert.DoesNotContain(s.State.Effects.Active, effect => effect.Context.Item?.Value == f.Source);
+        using var restored = f.Restore();
+        var reloaded = restored.State.ItemInstances.RequireUnique(f.Source);
+        Assert.Equal((DaggerfallItemOwner.Wagon(wagon.Id), (DaggerfallHeldCastState?)null, true), (reloaded.Owner, reloaded.HeldCast, reloaded.Identified));
+    }
 }
