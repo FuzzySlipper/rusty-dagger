@@ -31,6 +31,12 @@ interface DaggerHud {
   readonly mode?: string;
   /** The site the session projects the player at; null before any site owns them. */
   readonly site?: { readonly name: string } | null;
+  /** The world calendar's current date and time, worded by the ruleset. */
+  readonly calendar?: CalendarProjection | null;
+  /** The player's active effects, from the effects owner. */
+  readonly effects?: readonly ActiveEffectProjection[];
+  /** The cinematic playing now, when one is; its owner supports skipping it. */
+  readonly cinematic?: { readonly source: string; readonly skipLabel: string } | null;
   readonly composition: CompositionIdentity;
   readonly inventory?: InventoryProjection;
   readonly character?: CharacterProjection;
@@ -55,6 +61,16 @@ interface DaggerHud {
   readonly death?: DeathProjection | null;
   readonly rest?: RestProjection | null;
   readonly lodging?: LodgingProjection | null;
+}
+
+interface CalendarProjection {
+  readonly dayName: string; readonly day: number; readonly monthName: string; readonly year: number;
+  readonly hour: number; readonly minute: number; readonly date: string; readonly time: string;
+}
+
+interface ActiveEffectProjection {
+  readonly id: string; readonly name: string; readonly spell: string; readonly source: string | null;
+  readonly remainingSeconds: number | null; readonly remaining: string; readonly detail: string;
 }
 
 interface SpellMakerSetting {
@@ -310,13 +326,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const shell = document.createElement('section');
   shell.className = 'dagger-hud';
   shell.innerHTML = `
-    <div class="dagger-title"><span class="dagger-site"></span><strong>Exploring</strong></div>
+    <div class="dagger-title"><span class="dagger-site"></span><strong>Exploring</strong><span class="dagger-calendar" aria-live="off"></span></div>
     <div class="dagger-reticle" aria-hidden="true">+</div>
     <section class="dagger-vitals" aria-live="polite">
     </section>
     <p class="dagger-outcome" role="status">Awaiting projection…</p>
     <section class="dagger-quests" aria-live="polite"></section>
-    <p class="dagger-view" aria-live="polite"></p><section class="dagger-detectors" aria-label="Detected nearby objects"></section><section class="dagger-status"></section><button class="dagger-focus-close" hidden></button>
+    <p class="dagger-view" aria-live="polite"></p><section class="dagger-detectors" aria-label="Detected nearby objects"></section><section class="dagger-status"></section><section class="dagger-effects" aria-label="Active effects" hidden><h2>Active effects</h2><ul></ul></section><button class="dagger-cinematic-skip" type="button" hidden>Skip</button><button class="dagger-focus-close" hidden></button>
     <div class="dagger-death" role="alertdialog" aria-labelledby="dagger-death-title" aria-describedby="dagger-death-message" hidden>
       <img class="dagger-death-screen" alt="You have died.">
       <div class="dagger-death-fade" aria-hidden="true"></div>
@@ -445,6 +461,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const view = shell.querySelector<HTMLParagraphElement>('.dagger-view')!;
   const detectors = shell.querySelector<HTMLElement>('.dagger-detectors')!;
   const status = shell.querySelector<HTMLElement>('.dagger-status')!;
+  const calendar = shell.querySelector<HTMLElement>('.dagger-calendar')!;
+  const effects = shell.querySelector<HTMLElement>('.dagger-effects')!;
+  const effectList = effects.querySelector<HTMLUListElement>('ul')!;
+  const cinematicSkip = shell.querySelector<HTMLButtonElement>('.dagger-cinematic-skip')!;
+  cinematicSkip.addEventListener('click', () => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'cinematic-skip' },
+  }));
   const focusClose = shell.querySelector<HTMLButtonElement>('.dagger-focus-close')!;
   focusClose.addEventListener('click', () => { if (focusClose.dataset.container && focusClose.dataset.close) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: focusClose.dataset.close, container: focusClose.dataset.container } }); });
   const vitals = shell.querySelector<HTMLElement>('.dagger-vitals')!;
@@ -1400,6 +1423,24 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       }).join('; ') : 'none nearby');
       detectors.append(row);
     }
+    const date = value.calendar ?? null;
+    calendar.textContent = date === null ? '' : `${date.date} · ${date.time}`;
+    calendar.hidden = date === null;
+    const activeEffects = value.effects ?? [];
+    effects.hidden = activeEffects.length === 0;
+    effectList.replaceChildren(...activeEffects.map(effect => {
+      const item = document.createElement('li');
+      item.dataset.effect = effect.id;
+      const name = document.createElement('strong');
+      name.textContent = effect.spell === effect.name ? effect.name : `${effect.spell}: ${effect.name}`;
+      const detail = document.createElement('span');
+      detail.textContent = effect.detail;
+      item.append(name, ' ', detail);
+      return item;
+    }));
+    const cinematic = value.cinematic ?? null;
+    cinematicSkip.hidden = cinematic === null;
+    cinematicSkip.textContent = cinematic?.skipLabel ?? 'Skip';
     status.replaceChildren(...(value.slots ?? []).map(row => { const item = document.createElement('p'); item.textContent = `${row.label}: ${row.detail}`; return item; }));
     const focus = value.focus ?? null;
     focusClose.hidden = focus === null;

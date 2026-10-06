@@ -7,6 +7,20 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallCalendarTests
 {
     [Fact]
+    public void Names_the_date_and_time_as_the_donor_shows_them()
+    {
+        DaggerfallCalendar start = DaggerfallCalendar.Start;
+        Assert.Equal("Sundas the 1st of Midyear, 3E405", start.DescribeDate());
+        Assert.Equal("00:00", start.DescribeTime());
+        // The donor names the weekday from the day of the month, so day 9 is a Morndas in any month.
+        DaggerfallCalendar later = new(406, 0, 8, 13, 30, 15);
+        Assert.Equal("Morndas", later.DayName);
+        Assert.Equal("Morndas the 9th of Morning Star, 3E406", later.DescribeDate());
+        Assert.Equal("13:30", later.DescribeTime());
+        Assert.Equal("Sundas the 22nd of Evening Star, 3E405", new DaggerfallCalendar(405, 11, 21, 0, 0, 0).DescribeDate());
+    }
+
+    [Fact]
     public void Keeps_the_classic_units_and_starts_where_the_corpus_does()
     {
         Assert.Equal(30, DaggerfallCalendar.DaysPerMonth);

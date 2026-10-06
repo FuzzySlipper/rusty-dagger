@@ -289,7 +289,41 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
         return new DaggerfallCalendarAdvance(advanced, applied, seconds - applied, fired, crossed);
     }
 
-    /// <summary>This instant as seconds from the calendar's own start, which is what arithmetic uses.</summary>
+    /// <summary>The donor's weekday names, Sundas first.</summary>
+    private static readonly string[] DayNames = ["Sundas", "Morndas", "Tirdas", "Middas", "Turdas", "Fredas", "Loredas"];
+
+    /// <summary>The donor's month names, Morning Star first.</summary>
+    private static readonly string[] MonthNames =
+    [
+        "Morning Star", "Sun's Dawn", "First Seed", "Rain's Hand", "Second Seed", "Midyear",
+        "Sun's Height", "Last Seed", "Hearthfire", "Frostfall", "Sun's Dusk", "Evening Star",
+    ];
+
+    /// <summary>
+    /// The weekday name the date shows. The donor's calendar names the day from the day of the month
+    /// (<c>DaggerfallDateTime.GetDayName</c>), so every month starts on Sundas.
+    /// </summary>
+    internal string DayName => DayNames[Day % DaysPerWeek];
+
+    /// <summary>The month's name.</summary>
+    internal string MonthName => MonthNames[Month];
+
+    /// <summary>Player wording for the date: "Sundas the 1st of Midyear, 3E405".</summary>
+    internal string DescribeDate() => string.Create(System.Globalization.CultureInfo.InvariantCulture,
+        $"{DayName} the {Day + 1}{OrdinalSuffix(Day + 1)} of {MonthName}, 3E{Year}");
+
+    /// <summary>Player wording for the time of day on a twenty-four hour clock: "13:30".</summary>
+    internal string DescribeTime() => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{Hour:00}:{Minute:00}");
+
+    /// <summary>The donor's English ordinal suffix for a one-based day of the month.</summary>
+    private static string OrdinalSuffix(int day) => day switch
+    {
+        1 or 21 => "st",
+        2 or 22 => "nd",
+        3 or 23 => "rd",
+        _ => "th",
+    };
+
     /// <summary>
     /// Player wording for an interval of game time in its two largest whole units: "2 days and
     /// 3 hours", "45 minutes", or "less than a minute".
@@ -305,6 +339,7 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
         return string.Join(" and ", words);
     }
 
+    /// <summary>This instant as seconds from the calendar's own start, which is what arithmetic uses.</summary>
     public long ToAbsoluteSeconds() => (DayNumber * SecondsPerDay) + SecondOfDay;
 
     /// <summary>The instant a count of seconds from the calendar's start names.</summary>

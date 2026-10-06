@@ -697,6 +697,30 @@ test('the snapshot the C# projection publishes is a HUD the UI renders, dialogue
     assert.equal(dialogueWindow.open, true);
     assert.equal(f.root.querySelector('.dagger-dialogue-target').textContent, snapshot.activation.dialogue.targetLabel);
     assert.equal(f.root.querySelectorAll('.dagger-dialogue-topics button').length, snapshot.activation.dialogue.topics.length);
+    assert.equal(f.root.querySelector('.dagger-calendar').textContent, `${snapshot.calendar.date} · ${snapshot.calendar.time}`);
+  } finally { f.dispose(); }
+});
+
+test('active effects render as a structured list and a playing cinematic offers its skip action', () => {
+  const f = fixture();
+  try {
+    f.publish({
+      effects: [{ id: 'effect.7', name: 'Shield', spell: 'Ward', source: 'Iron Longsword', remainingSeconds: 3600,
+        remaining: '1 hour remaining', detail: 'Shield. From Iron Longsword. 1 hour remaining.' }],
+      cinematic: { source: 'ANIM0000.VID', skipLabel: 'Skip' },
+    });
+    const effects = f.root.querySelector('.dagger-effects');
+    assert.equal(effects.hidden, false);
+    const row = effects.querySelector('li[data-effect="effect.7"]');
+    assert.match(row.textContent, /Ward: Shield/);
+    assert.match(row.textContent, /From Iron Longsword\. 1 hour remaining\./);
+    const skip = f.root.querySelector('.dagger-cinematic-skip');
+    assert.equal(skip.hidden, false);
+    skip.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'cinematic-skip' });
+    f.publish({ effects: [], cinematic: null });
+    assert.equal(effects.hidden, true);
+    assert.equal(skip.hidden, true);
   } finally { f.dispose(); }
 });
 

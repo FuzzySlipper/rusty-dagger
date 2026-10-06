@@ -40,14 +40,26 @@
   "site": {
     "name": "Privateer\u0027s Hold"
   },
+  "calendar": {
+    "dayName": "Sundas",
+    "day": 1,
+    "monthName": "Midyear",
+    "year": 405,
+    "hour": 0,
+    "minute": 0,
+    "date": "Sundas the 1st of Midyear, 3E405",
+    "time": "00:00"
+  },
   "view": {
     "yawRadians": 3.1415927410125732,
     "pitchRadians": 0,
     "interaction": "aiming"
   },
   "slots": [],
+  "effects": [],
   "focus": null,
   "panelRequest": null,
+  "cinematic": null,
   "saveSlots": {
     "entries": [],
     "diagnostic": null
