@@ -319,11 +319,11 @@ public sealed class DaggerfallItemConditionServiceTests
     [Fact]
     public void The_enchanting_action_quotes_the_loaded_setting_cost()
     {
-        System.Text.Json.Nodes.JsonObject payload = System.Text.Json.Nodes.JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        System.Text.Json.Nodes.JsonObject payload = TestPayload.Sections("magic");
         System.Text.Json.Nodes.JsonObject setting = payload["magic"]!["enchantmentSettings"]!.AsArray()
             .Single(row => row!["key"]!.GetValue<string>() == "enchantment.7.0")!.AsObject();
         setting["cost"] = 417;
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()));
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(TestPayload.Splice(payload.AsObject()));
         using Fixture fixture = new(definitions);
         UniqueItem item = fixture.CreatePlainWeapon(501, 115, "daedric");
         Assert.Equal(417, fixture.Service.QuoteEnchantment(item, "enchantment.7.0").RequiredPoints);

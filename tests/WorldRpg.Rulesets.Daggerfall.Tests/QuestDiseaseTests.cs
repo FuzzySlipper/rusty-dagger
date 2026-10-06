@@ -60,11 +60,11 @@ public sealed class QuestDiseaseTests
 
     internal static DaggerfallDefinitions Definitions(params string[] actions)
     {
-        var root = JsonNode.Parse(TestPayload.CombinedText)!;
+        var root = TestPayload.Sections("questSources");
         Add("quest-actions", actions); Add("quest-cure", ["cure Witches'_Pox"]);
         root["questSources"]!["quests"]!.AsArray()[^2]!["blocks"]!.AsArray().Add(new JsonObject {
             ["kind"] = "task", ["firstLine"] = 100, ["lines"] = new JsonArray("done task:"), ["global"] = null });
-        return DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
         void Add(string name, string[] lines) => root["questSources"]!["quests"]!.AsArray().Add(new JsonObject {
             ["name"] = name, ["displayName"] = "", ["sourceFile"] = name + ".txt", ["disposition"] = "compiled",
             ["messages"] = new JsonArray(), ["diagnostics"] = new JsonArray(), ["blocks"] = new JsonArray(new JsonObject {

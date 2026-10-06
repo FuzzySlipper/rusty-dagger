@@ -262,7 +262,7 @@ public sealed class DaggerfallReferenceCatalogTests
 
     private static DaggerfallContentException Mutate(Action<JsonObject> change)
     {
-        JsonObject pack = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        JsonObject pack = TestPayload.Sections("catalogs");
         change(pack);
         byte[] payload = pack.ContainsKey("catalogs")
             ? System.Text.Encoding.UTF8.GetBytes(TopLevelJsonSectionRewriter.ReplaceOrAppend(

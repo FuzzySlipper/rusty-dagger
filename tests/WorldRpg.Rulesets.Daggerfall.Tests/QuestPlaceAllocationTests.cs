@@ -165,13 +165,13 @@ public sealed class QuestPlaceAllocationTests
 
     internal static DaggerfallDefinitions Definitions()
     {
-        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        JsonObject root = TestPayload.Sections("questSources");
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
             {"name":"allocation","displayName":"","sourceFile":"allocation.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[]}
             """));
         root["questSources"]!["resources"]!["declarations"]!.AsArray().Add(JsonNode.Parse("""
             {"quest":"allocation","sourceFile":"allocation.txt","sourceLine":1,"kind":"place","symbol":{"sourceSpelling":"_house_","canonicalId":"house"},"sourceText":"Place _house_ local house","targetSourceSpelling":"house","targetCanonicalId":"house","placeKind":"local","parameters":[],"foe":null,"item":null,"person":null,"place":{"sites":[{"sourceSpelling":"house","canonicalId":"house"}]}}
             """));
-        return DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
     }
 }

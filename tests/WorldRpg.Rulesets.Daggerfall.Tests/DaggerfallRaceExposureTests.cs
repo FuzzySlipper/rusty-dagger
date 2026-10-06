@@ -97,10 +97,10 @@ public sealed class DaggerfallRaceExposureTests
     {
         // The shipped races have no poison/disease immunity. A normalized catalogue variant tests
         // that the real runtime owner respects such data instead of keeping the previous false literal.
-        JsonObject payload = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        JsonObject payload = TestPayload.Sections("catalogs");
         foreach (JsonNode? race in payload["catalogs"]!["races"]!.AsArray())
             race!["immunityFlags"] = flag;
-        var definitions = DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()));
+        var definitions = DaggerfallBaseContent.Read(TestPayload.Splice(payload.AsObject()));
         var profile = ReadInputs(TestData.RepositoryRoot);
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, profile);

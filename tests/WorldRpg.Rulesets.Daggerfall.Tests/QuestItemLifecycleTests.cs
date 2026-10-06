@@ -382,7 +382,7 @@ public sealed class QuestItemLifecycleTests
     private static DaggerfallQuestResourceState Item(DaggerfallState state) => state.Quests.All.Single().Resources.Single();
     private static DaggerfallDefinitions Definitions(bool stackable, bool gold, bool actions)
     {
-        var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        var root = TestPayload.Sections("questSources");
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
         var item = gold ? declarations.First(value => value!["targetCanonicalId"]?.GetValue<string>() == "gold")!.DeepClone()
             : declarations.Single(value => value!["sourceFile"]!.GetValue<string>() == (stackable ? "R0C11Y28.txt" : "S0000502.txt")
@@ -403,6 +403,6 @@ public sealed class QuestItemLifecycleTests
             [{"kind":"headless","firstLine":2,"lines":["get item _gift_ saying 1010","have _gift_ set _seen_"],"global":null},{"kind":"variable","firstLine":4,"lines":["variable _seen_"],"global":null}]
             """);
         root["questSources"]!["quests"]!.AsArray().Add(source);
-        return DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
     }
 }

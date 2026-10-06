@@ -210,7 +210,7 @@ public sealed class QuestNpcOverlayTests
 
     internal static DaggerfallDefinitions Definitions(string[] actions, bool rearm = false, string[][]? taskBlocks = null)
     {
-        var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        var root = TestPayload.Sections("questSources");
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
         var person = declarations.First(value => value!["kind"]!.GetValue<string>() == "person" && value["person"]!["group"]?.GetValue<string>() == "Questor")!.DeepClone();
         person["quest"] = "overlay"; person["sourceFile"] = "overlay.txt";
@@ -226,6 +226,6 @@ public sealed class QuestNpcOverlayTests
         if (taskBlocks is not null)
             for (int i = 0; i < taskBlocks.Length; i++) blocks.Add(new JsonObject { ["kind"] = "task", ["firstLine"] = 200 + i * 20, ["lines"] = JsonSerializer.SerializeToNode(taskBlocks[i]), ["global"] = null });
         root["questSources"]!["quests"]!.AsArray().Add(new JsonObject { ["name"] = "overlay", ["displayName"] = "", ["sourceFile"] = "overlay.txt", ["disposition"] = "compiled", ["messages"] = new JsonArray(new JsonObject { ["id"] = 100, ["firstLine"] = 1, ["lines"] = new JsonArray("A companion joins you.") }), ["blocks"] = blocks, ["diagnostics"] = new JsonArray() });
-        return DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
     }
 }

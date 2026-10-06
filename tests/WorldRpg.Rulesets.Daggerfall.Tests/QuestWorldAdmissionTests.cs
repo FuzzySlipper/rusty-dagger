@@ -571,7 +571,7 @@ public sealed class QuestWorldAdmissionTests
     internal static DaggerfallDefinitions Definitions(bool stackable = false, bool gold = false, bool secondPlace = false, bool endSource = false, bool secondItem = false,
         string[]? actions = null, bool person = false, bool atHome = false, bool rearmPlacement = false, string[][]? taskBlocks = null, string[]? messages = null, int? foeCount = null, int firstMessageId = 100, string? itemUsedMessage = null, bool personQuestor = false, bool potion = false, string? personInfo = null, string? personRumor = null, string? itemInfo = null, bool noAmbientRumors = false)
     {
-        var root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        var root = TestPayload.Sections("questSources", "rumors");
         if (noAmbientRumors) foreach (var rumor in root["rumors"]!["entries"]!.AsArray()) rumor!["region"] = 0;
         var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
         var foe = declarations.First(value => value!["kind"]!.GetValue<string>() == "foe"
@@ -647,7 +647,7 @@ public sealed class QuestWorldAdmissionTests
                 {"kind":"variable","firstLine":99,"lines":["variable _stop_"],"global":null}
                 """));
         }
-        return DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
     }
 
     internal static DaggerfallSiteProfile WithMarker(DaggerfallSiteProfile source)

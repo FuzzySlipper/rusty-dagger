@@ -28,5 +28,60 @@ internal static class TestPayload
     /// <summary>The joined sections as text.</summary>
     internal static string CombinedText => System.Text.Encoding.UTF8.GetString(Combined.Value);
 
+    /// <summary>
+    /// The named top-level sections of the joined payload, parsed alone, for a fact that edits them.
+    /// Parsing the whole joined payload into a node tree costs gigabytes; a fact that changes one
+    /// section reads only that section and hands the result to <see cref="Splice"/>.
+    /// </summary>
+    internal static System.Text.Json.Nodes.JsonObject Sections(params string[] names)
+    {
+        System.Text.Json.Nodes.JsonObject root = new();
+        foreach ((string name, int start, int end) in SectionRanges(Combined.Value))
+            if (names.Contains(name, StringComparer.Ordinal))
+                root[name] = System.Text.Json.Nodes.JsonNode.Parse(Combined.Value.AsSpan(start, end - start));
+        foreach (string name in names)
+            if (!root.ContainsKey(name)) throw new ArgumentException($"The joined payload has no section '{name}'.", nameof(names));
+        return root;
+    }
+
+    /// <summary>The joined payload with the given sections replaced by the edited ones from <see cref="Sections"/>.</summary>
+    internal static byte[] Splice(System.Text.Json.Nodes.JsonObject sections)
+    {
+        byte[] combined = Combined.Value;
+        using MemoryStream output = new(combined.Length + 1024);
+        int copied = 0;
+        HashSet<string> written = new(StringComparer.Ordinal);
+        foreach ((string name, int start, int end) in SectionRanges(combined))
+        {
+            if (!sections.TryGetPropertyValue(name, out System.Text.Json.Nodes.JsonNode? value)) continue;
+            output.Write(combined, copied, start - copied);
+            byte[] replacement = System.Text.Encoding.UTF8.GetBytes(value?.ToJsonString() ?? "null");
+            output.Write(replacement);
+            copied = end;
+            written.Add(name);
+        }
+        if (sections.Select(property => property.Key).FirstOrDefault(name => !written.Contains(name)) is { } added)
+            throw new ArgumentException($"Section '{added}' is not in the joined payload; splicing replaces sections, it does not add them.", nameof(sections));
+        output.Write(combined, copied, combined.Length - copied);
+        return output.ToArray();
+    }
+
+    private static IEnumerable<(string Name, int Start, int End)> SectionRanges(byte[] combined)
+    {
+        List<(string, int, int)> ranges = [];
+        System.Text.Json.Utf8JsonReader reader = new(combined);
+        if (!reader.Read() || reader.TokenType != System.Text.Json.JsonTokenType.StartObject)
+            throw new InvalidOperationException("The joined payload is not a JSON object.");
+        while (reader.Read() && reader.TokenType == System.Text.Json.JsonTokenType.PropertyName)
+        {
+            string name = reader.GetString()!;
+            reader.Read();
+            int start = checked((int)reader.TokenStartIndex);
+            reader.Skip();
+            ranges.Add((name, start, checked((int)reader.BytesConsumed)));
+        }
+        return ranges;
+    }
+
     private static string PayloadPath(string file) => System.IO.Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads", file);
 }
