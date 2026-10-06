@@ -741,6 +741,7 @@ public sealed class SpriteWorkbenchProductTests
 
         public Material CreateMaterial(MaterialRequest request) => new(new MaterialHandle(1), static () => { });
         public Material CreateAuthoredMaterial(AuthoredMaterialAppearanceRequest request) => CreateMaterial(default);
+        public Material CreateTerrainLayerMaterial(TerrainLayerMaterialRequest request) => CreateMaterial(default);
         public void UpdateMaterial(MaterialUpdateRequest request) { }
         public Material ReplaceMaterial(MaterialUpdateRequest request) => CreateMaterial(request.Replacement);
         public Appearance CreatePrimitive(PrimitiveAppearanceRequest request) => CreateAppearance(request.Color);
