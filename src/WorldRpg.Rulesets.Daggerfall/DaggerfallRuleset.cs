@@ -66,7 +66,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             CinematicContent = admitted.Content,
             VideosEnabled = _videosEnabled,
             QuestAdmission = new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts),
-            NewGameQuests = [.. admitted.Definitions.NewGame.Quests.Where(file => admitted.QuestReceipts.Any(receipt => receipt.SourceFile == file))],
+            NewGameQuests = admitted.Definitions.NewGame.Quests,
             DisabledQuestSelection = admitted.DisabledQuestSelection,
             Music = admitted.Music,
             Blocks = admitted.Blocks,
@@ -119,6 +119,12 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
                 .. disabledQuestSelection.Receipts,
                 .. roles[NamedQuestCorpusRole].SelectMany(pack => DaggerfallNamedQuestCorpusContent.Read(pack.Payload, definitions)),
             ];
+            // The authored new-game definition names the quests a new game starts, so a bundle that does
+            // not admit one is refused by name rather than starting a game silently without it.
+            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> questReceipts = [.. fightersGuildQuests, .. classicQuestReceipts];
+            string[] missingNewGameQuests = [.. definitions.NewGame.Quests.Where(file => !questReceipts.Any(receipt => receipt.SourceFile == file))];
+            if (missingNewGameQuests.Length != 0)
+                throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' admits no quest source for the new-game quests {string.Join(", ", missingNewGameQuests.Select(file => $"'{file}'"))}.");
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(selected.Content, inputs.ClassicPresentation);
             foreach (DaggerfallSiteProfile site in sites.Where(site => !ReferenceEquals(site, inputs)))
                 _ = DaggerfallPublishedClassicMedia.Read(selected.Content, site.ClassicPresentation);
@@ -132,7 +138,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             DaggerfallSiteProfiles profiles = new(sites);
             foreach (DaggerfallWorldProfileKey key in profiles.Keys)
                 profiles.Require(key).InteriorBuilding?.ValidateAgainst(blocks);
-            return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, [.. fightersGuildQuests, .. classicQuestReceipts], disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(selected.Content, profiles), selected.Content, music);
+            return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, questReceipts, disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(selected.Content, profiles), selected.Content, music);
         });
 
     /// <summary>The one pack a bundle must select for a role every session reads exactly once.</summary>

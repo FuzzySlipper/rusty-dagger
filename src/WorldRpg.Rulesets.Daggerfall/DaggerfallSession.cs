@@ -690,7 +690,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         _appearance.RetireUnavailableMagic(State.Actors, State.ItemInstances.ContainsUnique);
-        _hud.Publish(new DaggerfallHudFrame(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots,
+        _hud.Publish(new DaggerfallHudFrame(State.Actors.Player, Presentation, _mode, State.PlayerControl, Slots,
             Inventory: _inventoryUi.Read(),
             Property: ReadPropertyPresentation(),
             Loot: _lootUi.Read(),
