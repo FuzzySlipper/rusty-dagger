@@ -49,7 +49,7 @@ internal static class DaggerfallHealingEffects
             Apply: effect =>
             {
                 var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallSpellPointHealingState);
-                if (state is null || state.Amount < 0 || effect.Context.Caster != effect.Context.Target || effect.Context.Element != "Magic")
+                if (state is null || state.Amount < 0 || effect.Context.Caster != effect.Context.Target || effect.Element != "Magic")
                     throw new ArgumentException("Spell-point healing requires a non-negative Magic self-targeted potion payload.");
                 return [];
             }, Resume: CannotResume, MagicRound: effect =>

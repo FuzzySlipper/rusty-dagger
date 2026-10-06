@@ -43,11 +43,11 @@ public sealed class ActiveEffectLifecycleTests
             context, Provenance(context), 1, 2);
         int rounds = 0;
 
-        Assert.Null(effects.AdvanceInitialMagicRound(context.Instance, _ => rounds++));
+        Assert.Null(effects.AdvanceInitialRound(context.Instance, _ => rounds++));
         Assert.Equal(1, rounds);
         Assert.Equal((uint)1, Assert.Single(effects.Active).RemainingRounds);
 
-        ActiveEffectLifecycleReceipt expired = Assert.Single(effects.AdvanceMagicRounds(1, _ => rounds++));
+        ActiveEffectLifecycleReceipt expired = Assert.Single(effects.AdvanceRounds(1, _ => rounds++));
         Assert.Equal(2, rounds);
         Assert.Equal(ActiveEffectEndReason.Expired, expired.EndReason);
         Assert.Empty(effects.Active);
@@ -61,7 +61,7 @@ public sealed class ActiveEffectLifecycleTests
         _ = effects.Admit(Definition("disease", EffectStackingPolicy.IndependentByProvenance, 1), ActiveEffectAdmissionKind.Apply,
             context, Provenance(context), 1, null);
 
-        ActiveEffectLifecycleReceipt expired = Assert.Single(effects.AdvanceMagicRound(state =>
+        ActiveEffectLifecycleReceipt expired = Assert.Single(effects.AdvanceRound(state =>
         {
             Assert.Equal(context.Instance, state.Context.Instance);
             effects.ExpireAfterCurrentRound(state.Context.Instance);
@@ -139,8 +139,6 @@ public sealed class ActiveEffectLifecycleTests
         new ActiveEffectSource(source),
         null,
         new DurableIdentityReference(DurableIdentityKind.Actor, 17),
-        "settings",
-        "magic",
         null);
 
     private static MechanicsSourceIdentity Provenance(ActiveEffectContext context) => new EffectSourceIdentity(

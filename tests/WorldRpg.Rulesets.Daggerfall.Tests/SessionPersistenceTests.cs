@@ -473,7 +473,7 @@ public sealed class SessionPersistenceTests
             Assert.Equal("session-effect-instance", source.Effect.Value);
             DaggerfallActiveEffect restoredEffect = Assert.Single(restored.State.Effects.Active);
             Assert.Equal(("session-source", "session-settings", (uint)3),
-                (restoredEffect.Context.Source.Key, restoredEffect.Context.Settings, restoredEffect.Lifecycle.RemainingRounds));
+                (restoredEffect.Context.Source.Key, restoredEffect.Settings, restoredEffect.Lifecycle.RemainingRounds));
             Assert.True(restored.State.Effects.Cancel(EffectInstanceId.Parse("session-effect-instance")));
             Assert.Equal(baseMaximum, maximum.Value);
             Assert.Equal(baseMaximum, health.Current);
