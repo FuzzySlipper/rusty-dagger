@@ -135,6 +135,7 @@ function place(element: HTMLElement, frame: TravelMapImageProjection, x: number,
 function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: number, index: number) => void): {
   readonly element: HTMLElement;
   update(map: TravelMapProjection | null, selected: string): void;
+  close(): void;
 } {
   const element = document.createElement('div');
   element.className = 'dagger-travel-map';
@@ -189,6 +190,13 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
 
   return {
     element,
+    close(): void {
+      // Only an open map rides the snapshot, so a closed one needs no word; a repeated hide before the
+      // ruleset answers sends nothing more.
+      if (current === null) return;
+      current = null;
+      claim({ action: 'travel-map', open: false });
+    },
     update(map, selected): void {
       current = map;
       toggle.textContent = map ? 'Close map' : 'Open travel map';
@@ -259,6 +267,8 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
 
 export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => void): {
   update(value: TravelProjection | null): void;
+  /** The travel workflow is no longer shown: an open travel map is closed so it stops being published. */
+  hide(): void;
   dispose(): void;
 } {
   const shell = document.createElement('section');
@@ -371,6 +381,7 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
       accept.disabled = selectionChanged || !value?.executionAvailable || !quote || quote.identity === submittedIdentity;
       lastResult.textContent = value?.lastResult?.message ?? '';
     },
+    hide(): void { map.close(); },
     dispose(): void { shell.remove(); },
   };
 }

@@ -178,6 +178,32 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal("The travel map has no such view of that region.", refused.Message);
         fixture.Submit(new { action = "travel-map", open = false });
         Assert.Null(fixture.Session.ReadTravelPresentation().Map);
+
+        // Leaving play for the entry screen or death leaves the travel workflow and closes the map; a
+        // host pause keeps it for the resume.
+        foreach (ProductMode leaving in new[] { ProductMode.Title, ProductMode.Dead })
+        {
+            fixture.Submit(new { action = "travel-map", open = true, region = destination.Region, page = 0 });
+            Assert.NotNull(fixture.Session.ReadTravelPresentation().Map);
+            fixture.Session.ApplyProductMode(ProductMode.Paused);
+            Assert.NotNull(fixture.Session.ReadTravelPresentation().Map);
+            fixture.Session.ApplyProductMode(leaving);
+            Assert.Null(fixture.Session.ReadTravelPresentation().Map);
+            fixture.Session.ApplyProductMode(ProductMode.Playing);
+        }
+    }
+
+    [Fact]
+    public void Beginning_a_journey_closes_the_travel_map()
+    {
+        using Fixture fixture = new();
+        fixture.AddGold(1000);
+        DaggerfallSiteId destination = fixture.Destination.Site!.Value;
+        fixture.Submit(new { action = "travel-map", open = true, region = destination.Region, page = 0 });
+        Assert.NotNull(fixture.Session.ReadTravelPresentation().Map);
+        fixture.Accept(fixture.Preview(inn: false));
+        Assert.Equal(DaggerfallTravelOutcome.Arrived, fixture.Session.State.Travel.LastResult!.Outcome);
+        Assert.Null(fixture.Session.ReadTravelPresentation().Map);
     }
 
     [Fact]

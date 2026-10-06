@@ -25,7 +25,7 @@ internal sealed partial class DaggerfallSession
     {
         if (!action.Open)
         {
-            _travelMapOpen = false; _travelMapRegion = null; _travelMapPage = 0;
+            CloseTravelMap();
             return;
         }
         if (action.Region is int region && action.Page is int page && page >= DaggerfallTravelMap.PageCount(region))
@@ -36,6 +36,16 @@ internal sealed partial class DaggerfallSession
         _travelMapOpen = true;
         _travelMapRegion = action.Region;
         _travelMapPage = action.Region is null ? 0 : action.Page ?? 0;
+    }
+
+    /// <summary>
+    /// Closes the travel map, so its sheet stops riding every snapshot once the player has left the
+    /// travel workflow: the DOM hid the panel, a journey began, or the product left play for the entry
+    /// screen or death.
+    /// </summary>
+    private void CloseTravelMap()
+    {
+        _travelMapOpen = false; _travelMapRegion = null; _travelMapPage = 0;
     }
 
     private DaggerfallTravelMapView ReadTravelMap()
@@ -126,6 +136,8 @@ internal sealed partial class DaggerfallSession
         }
         // Retiring the selection prevents a second action from repeating the same accepted payment.
         _travelSelectedDestination = null;
+        // As the donor's travel windows close on departure, the journey ends the map view.
+        CloseTravelMap();
         _input.Neutralize(); _locomotion.Neutralize();
         DaggerfallWorldProfileKey origin = _activeProfileKey;
         long started = _time.Calendar.ToAbsoluteSeconds();
