@@ -44,7 +44,7 @@ internal sealed partial class DaggerfallSession
                 long[] convert;
                 if (immediate)
                 {
-                    Vector3 forward = new(MathF.Sin(State.PlayerControl.YawRadians), 0, -MathF.Cos(State.PlayerControl.YawRadians));
+                    Vector3 forward = ActorHeading.Forward(State.PlayerControl.YawRadians);
                     float behind = MathF.Cos(_tuning.QuestSpawning.GuardConversionAngleDegrees * MathF.PI / 180f);
                     convert = candidates.Values.Where(npc => npc.Role == "guard" ||
                         Vector3.Dot(Vector3.Normalize(State.Actors.Get(npc.DurableId).Position.ToVector() - player.ToVector()), forward) <= behind

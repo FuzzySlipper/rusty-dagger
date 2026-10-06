@@ -296,7 +296,7 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
         PursuitTuning tuning,
         PursuitPerceptionOptions options)
     {
-        Vector3 forward = new(MathF.Sin(actor.HeadingYawRadians), 0f, -MathF.Cos(actor.HeadingYawRadians));
+        Vector3 forward = ActorHeading.Forward(actor.HeadingYawRadians);
         return _perception.QueryVisibility(new PerceptionQueryRequest(
             _spatial.Session,
             new PerceptionObserver[] { new(checked((ulong)actor.DurableId), actor.Position.ToVector(), forward, tuning.DetectionDistance, tuning.MinimumFacingCosine, 1d) },

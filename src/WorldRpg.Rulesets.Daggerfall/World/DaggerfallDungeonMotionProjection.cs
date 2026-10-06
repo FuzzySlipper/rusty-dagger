@@ -17,8 +17,6 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
     private const ulong CollisionAssetPrefix = 0xD800_0000_0000_0000UL;
     private const ulong CollisionInstancePrefix = 0xD900_0000_0000_0000UL;
     private const ulong IdentityMask = 0x00FF_FFFF_FFFF_FFFFUL;
-    private const ulong FnvOffset = 14695981039346656037UL;
-    private const ulong FnvPrime = 1099511628211UL;
     private static readonly EntityTypeId MotionModelType = new("daggerfall.dungeon-action-model");
     private static readonly ConditionalWeakTable<EntityStore, object> RegisteredStores = [];
 
@@ -488,16 +486,7 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
         return prefix | (hash == 0 ? 1UL : hash);
     }
 
-    private static ulong HashIdentity(string value)
-    {
-        ulong hash = FnvOffset;
-        foreach (char character in value)
-        {
-            hash ^= character;
-            hash *= FnvPrime;
-        }
-        return hash == 0 ? 1UL : hash;
-    }
+    private static ulong HashIdentity(string value) => StableHash.NonZeroFnv1a64(value);
 
     private void ThrowIfDisposed()
     {

@@ -299,18 +299,8 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         Apply(door);
     }
 
-    private DurableIdentityReference ReferenceFor(DaggerfallRdbDoorId id)
-    {
-        const ulong offset = 14695981039346656037UL;
-        const ulong prime = 1099511628211UL;
-        ulong hash = offset;
-        foreach (char character in $"daggerfall.door.v1|{_profileId}|{id}")
-        {
-            hash ^= character;
-            hash *= prime;
-        }
-        return new(DurableIdentityKind.Resource, hash == 0 ? 1UL : hash);
-    }
+    private DurableIdentityReference ReferenceFor(DaggerfallRdbDoorId id) =>
+        new(DurableIdentityKind.Resource, StableHash.NonZeroFnv1a64($"daggerfall.door.v1|{_profileId}|{id}"));
 
     internal DaggerfallDoorOperationResult Open(DaggerfallRdbDoorId id, DaggerfallDoorOperationSource source)
     {

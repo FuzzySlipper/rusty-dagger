@@ -122,7 +122,7 @@ public sealed class DaggerfallEffectLifecycleTests
         Assert.Equal("weak", active.Settings);
         Assert.Equal("magic", active.Element);
         Assert.Equal((uint)9, active.Lifecycle.RemainingRounds);
-        Assert.Equal((ushort)1, active.Lifecycle.Stacks);
+        Assert.Equal((ushort)1, active.Lifecycle.Effect.Stacks);
         Assert.Equal(101d, target.Stats.GetStat(StatId.Parse("health-maximum")).Value);
         DaggerfallActiveEffectSave saved = Assert.Single(effects.Capture());
         Assert.Equal(("scroll-a", "weak", "magic", (uint)9, (ushort)1),

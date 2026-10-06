@@ -44,7 +44,7 @@ internal sealed partial class DaggerfallSession
     private PursuitTarget? SelectAllyTarget(long observerId)
     {
         if (!State.Actors.TryGet(observerId, out var observer) || observer.IsDefeated) return null;
-        Vector3 forward = new(MathF.Sin(observer.HeadingYawRadians), 0f, -MathF.Cos(observer.HeadingYawRadians));
+        Vector3 forward = ActorHeading.Forward(observer.HeadingYawRadians);
         foreach (PerceptionPair pair in QueryEnemies(observerId, observer.Position, forward,
                      Math.Max(_tuning.EnemyBehavior.DetectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius),
                      DaggerfallPerceptionQueryDefaults.MinimumFacingCosine,
@@ -106,7 +106,7 @@ internal sealed partial class DaggerfallSession
             string key = $"{operation}:attempt:{attempt}";
             // Like FoeSpawner, start outside the forward view. A refused placement does not consume the source.
             float angle = State.PlayerControl.YawRadians + (float)_random.DrawKeyed(new(0, randomScope, key + ":angle", 90, 270)).Value * MathF.PI / 180f;
-            Vector3 direction = new(MathF.Sin(angle), 0f, -MathF.Cos(angle));
+            Vector3 direction = ActorHeading.Forward(angle);
             float distance = (float)_random.DrawKeyed(new(0, randomScope, key + ":distance", (int)minimumDistance, (int)maximumDistance)).Value;
             SpatialHit wall = _spatial.CastRay(player.ToVector(), direction, maximumDistance, rayActors, environment);
             if (wall.StartSolid) continue;

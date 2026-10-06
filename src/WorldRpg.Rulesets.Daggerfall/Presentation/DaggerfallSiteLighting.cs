@@ -1,5 +1,6 @@
 using System.Numerics;
 using Rusty.Engine;
+using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
@@ -273,11 +274,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
 
     private static ulong LogicalLightId(string profile, long instance, string id)
     {
-        const ulong offset = 14695981039346656037UL;
-        const ulong prime = 1099511628211UL;
         const ulong jsonSafeMaximum = (1UL << 53) - 1UL;
-        ulong hash = offset;
-        foreach (char value in $"site-light:{profile}:{instance}:{id}") { hash ^= value; hash *= prime; }
+        ulong hash = StableHash.Fnv1a64($"site-light:{profile}:{instance}:{id}");
         // Engine publishes light IDs through JSON; keep identities inside that exact range.
         return (hash % jsonSafeMaximum) + 1UL;
     }

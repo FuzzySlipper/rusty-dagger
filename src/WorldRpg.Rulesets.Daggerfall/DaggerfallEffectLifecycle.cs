@@ -630,7 +630,7 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
         effect.Element,
         effect.Lifecycle.Context.Item?.Value,
         effect.Lifecycle.RemainingRounds,
-        effect.Lifecycle.Stacks,
+        effect.Lifecycle.Effect.Stacks,
         effect.State.Clone()) { BundleId = effect.BundleId, BundleName = effect.BundleName, BundleKind = effect.BundleKind, BundleSequence = effect.BundleSequence };
 
     internal long MagicRounds { get; private set; }

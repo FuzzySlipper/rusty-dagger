@@ -349,14 +349,7 @@ internal sealed class DaggerfallSitePortalRuntime : IDisposable
                 _entities.Destroy(identity);
     }
 
-    private static ulong StableIdentity(string profile, string id)
-    {
-        const ulong offset = 14695981039346656037UL;
-        const ulong prime = 1099511628211UL;
-        ulong hash = offset;
-        foreach (char value in $"site-portal:{profile}:{id}") { hash ^= value; hash *= prime; }
-        return hash;
-    }
+    private static ulong StableIdentity(string profile, string id) => StableHash.Fnv1a64($"site-portal:{profile}:{id}");
 }
 
 /// <summary>

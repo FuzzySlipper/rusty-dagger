@@ -85,16 +85,17 @@ public sealed class DelegateActiveEffectContribution(Action remove) : IActiveEff
 /// <summary>One active effect's stable context and common lifetime counter.</summary>
 public sealed class ActiveEffectState
 {
-    internal ActiveEffectState(ActiveEffectContext context, ushort stacks, uint? remainingRounds, IReadOnlyList<IActiveEffectContribution> contributions)
+    internal ActiveEffectState(ActiveEffectContext context, ActiveEffect effect, uint? remainingRounds, IReadOnlyList<IActiveEffectContribution> contributions)
     {
         Context = context;
-        Stacks = stacks;
+        Effect = effect;
         RemainingRounds = remainingRounds;
         Contributions = contributions;
     }
 
     public ActiveEffectContext Context { get; }
-    public ushort Stacks { get; }
+    /// <summary>The admitted Engine entry, which owns the stack count and modifier provenance.</summary>
+    public ActiveEffect Effect { get; }
     public uint? RemainingRounds { get; internal set; }
     internal IReadOnlyList<IActiveEffectContribution> Contributions { get; }
 }
@@ -159,7 +160,9 @@ public sealed class ActiveEffectLifecycle : IDisposable
             throw new InvalidOperationException($"Effect '{context.Instance.Value}' already has lifecycle state.");
         }
 
-        ActiveEffectState current = new(context, stacks, remainingRounds, cleanup);
+        if (engineReceipt.Current is not { } admitted || admitted.Instance != context.Instance)
+            throw new InvalidOperationException($"Effect '{context.Instance.Value}' was not admitted as the current Engine entry.");
+        ActiveEffectState current = new(context, admitted, remainingRounds, cleanup);
         _states.Add(context.Instance, current);
         return new(admission, null, current, removed, engineReceipt);
     }

@@ -411,18 +411,8 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
         return written == 0 ? "action" : new string(buffer[..written]);
     }
 
-    internal static ulong StableIdentity(string profile, string action)
-    {
-        const ulong offset = 14695981039346656037UL;
-        const ulong prime = 1099511628211UL;
-        ulong hash = offset;
-        foreach (char value in $"dungeon-action-trigger:{profile}:{action}")
-        {
-            hash ^= value;
-            hash *= prime;
-        }
-        return hash == 0 ? 1 : hash;
-    }
+    internal static ulong StableIdentity(string profile, string action) =>
+        StableHash.NonZeroFnv1a64($"dungeon-action-trigger:{profile}:{action}");
 
     private static IEnumerable<Vector3> Corners(Vector3 min, Vector3 max)
     {

@@ -85,7 +85,7 @@ public sealed class ActiveEffectLifecycleTests
         ActiveEffectState refreshed = effects.RefreshDuration(EffectInstanceId.Parse("refresh"), 9);
 
         Assert.Same(original, refreshed.Context);
-        Assert.Equal((ushort)1, refreshed.Stacks);
+        Assert.Equal((ushort)1, refreshed.Effect.Stacks);
         Assert.Equal((uint)9, refreshed.RemainingRounds);
         Assert.Equal(0, removals);
         Assert.True(effects.Cancel(EffectInstanceId.Parse("refresh")).Removed.Single() == refreshed);

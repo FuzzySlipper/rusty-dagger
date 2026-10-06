@@ -107,7 +107,7 @@ internal sealed partial class DaggerfallSession
                 && npc.Site.Region == _site.Region && npc.Site.Location == _site.ActiveSite?.Name)
              || _roster.Definitions.GetValueOrDefault(actor.DurableId)?.MobileId == 146))
             .Select(actor => new PerceptionObserver(checked((ulong)actor.DurableId), actor.Position.ToVector(),
-                new Vector3(MathF.Sin(actor.HeadingYawRadians), 0, -MathF.Cos(actor.HeadingYawRadians)),
+                ActorHeading.Forward(actor.HeadingYawRadians),
                 maximumDistance ?? DaggerfallPerceptionQueryDefaults.SightRadius, minimumFacingCosine ?? DaggerfallPerceptionQueryDefaults.MinimumFacingCosine, 1d)).ToArray();
         if (observers.Length == 0) return DaggerfallCrimeWitnessEvidence.NotQueried;
         PerceptionQueryRequest query = new(_spatial.Session, observers,

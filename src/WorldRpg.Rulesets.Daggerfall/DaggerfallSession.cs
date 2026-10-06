@@ -722,11 +722,12 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             CinematicSource: Cinematics?.ActiveSource,
             Map: _mapOpen ? ReadMapPresentation() : null, Legal: LegalView, CreateItem: CreateItemView, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
+        Vector3 facing = ActorHeading.Forward(State.PlayerControl.YawRadians);
         Vector3? candlePosition = !State.Actors.Player.IsDefeated && State.PlayerControl.Position is { } playerPosition
             && State.Effects.Active.Any(effect => effect.Definition.Key == DaggerfallIllusionEffects.LightKey)
-            ? playerPosition.ToVector() + new Vector3(MathF.Sin(State.PlayerControl.YawRadians) * _tuning.NormalLight.Distance,
+            ? playerPosition.ToVector() + new Vector3(facing.X * _tuning.NormalLight.Distance,
                 _spatial.CurrentController.Shape.StandingHeight * _tuning.NormalLight.HeightFraction,
-                -MathF.Cos(State.PlayerControl.YawRadians) * _tuning.NormalLight.Distance) : null;
+                facing.Z * _tuning.NormalLight.Distance) : null;
         _sites.Projection.Lighting.UpdateMagicCandle(candlePosition, _tuning.NormalLight);
         _appearance.UpdateMagicCandle(candlePosition);
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
