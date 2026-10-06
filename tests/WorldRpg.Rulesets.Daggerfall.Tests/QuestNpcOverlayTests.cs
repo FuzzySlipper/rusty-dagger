@@ -52,20 +52,20 @@ public sealed class QuestNpcOverlayTests
         Assert.Equal(2, quests.QuestContacts(id).Count);
         Assert.DoesNotContain(dialogue.NpcTargets(), value => value.Identity == ActorsState.Identity(id));
         AssertBaseNpc(original, f.Session.State.Npcs.Require(id));
-        var faces = quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces;
+        var faces = quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces;
         Assert.Equal(2, faces.Count);
         Assert.All(faces, value => Assert.StartsWith("character.head.", value.MediaId));
         using var restored = f.Restore();
-        Assert.Equal(faces, restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces);
+        Assert.Equal(faces, restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces);
         Assert.Equal(2, restored.State.Quests.QuestContacts(id).Count);
         restored.State.Quests.Complete("first", "done");
         Assert.True(restored.State.Quests.IsNpcMuted(id));
         Assert.Equal("second", Assert.Single(restored.State.Quests.QuestContacts(id)).InstanceId);
-        Assert.Equal("second", Assert.Single(restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces).InstanceId);
+        Assert.Equal("second", Assert.Single(restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces).InstanceId);
         restored.State.Quests.Complete("second", "done");
         Assert.False(restored.State.Quests.IsNpcMuted(id));
         Assert.Empty(restored.State.Quests.QuestContacts(id));
-        Assert.Empty(restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces);
+        Assert.Empty(restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces);
         Assert.Equal(original.Appearance, restored.State.Npcs.Require(id).Appearance);
         Assert.Equal(original.Kind, restored.State.Npcs.Require(id).Kind);
         Assert.Contains(restored.Dialogue.NpcTargets(), value => value.Identity == ActorsState.Identity(id));
@@ -80,7 +80,7 @@ public sealed class QuestNpcOverlayTests
         var original = f.Session.State.Npcs.Require(id);
         Start(f, "drop", id); f.Update();
         Assert.Empty(f.Session.State.Quests.QuestContacts(id));
-        Assert.Empty(f.Session.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces);
+        Assert.Empty(f.Session.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces);
         AssertBaseNpc(original, f.Session.State.Npcs.Require(id));
         using var restored = f.Restore();
         Assert.Empty(restored.State.Quests.QuestContacts(id));
@@ -110,11 +110,11 @@ public sealed class QuestNpcOverlayTests
         var definitions = Definitions(["add _contact_ face"]);
         using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
         long id = Giver(f, definitions, 514, gender); Start(f, "child", id); f.Update();
-        var face = Assert.Single(f.Session.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces);
+        var face = Assert.Single(f.Session.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces);
         var media = definitions.CharacterPresentation.ChildFaces.Single(value => value.MediaId == face.MediaId);
         Assert.Equal(gender == "Female" ? 1 : 0, media.Index % 2);
         using var restored = f.Restore();
-        Assert.Equal(face, Assert.Single(restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces));
+        Assert.Equal(face, Assert.Single(restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces));
     }
 
     [Fact]
@@ -126,13 +126,13 @@ public sealed class QuestNpcOverlayTests
         f.Session.State.Quests.Start(new("foe", "world-test.txt", "world-test", DaggerfallQuestLifecycle.Active, null,
             [new("location", DaggerfallQuestResourceBinding.Place(new(site.Region, site.Index)) with { PlaceSelection = new(f.Inputs.ProfileKind, site.MapId, null, 0) })], []));
         f.Update();
-        var face = Assert.Single(f.Session.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces);
+        var face = Assert.Single(f.Session.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces);
         Assert.StartsWith("character.head.male.00.", face.MediaId);
         using var restored = f.Restore();
         restored.Update(new Rusty.Engine.ProductUpdate(TestSessions.OuterUpdate(1), []));
-        Assert.Equal(face, Assert.Single(restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces));
+        Assert.Equal(face, Assert.Single(restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces));
         restored.State.Quests.Complete("foe", "done");
-        Assert.Empty(restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces);
+        Assert.Empty(restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces);
     }
 
     [Fact]
@@ -141,13 +141,13 @@ public sealed class QuestNpcOverlayTests
         var definitions = Definitions(["add _contact_ face saying 100"]);
         using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
         long id = Giver(f, definitions); Start(f, "saying", id); f.Update(); f.Update();
-        var view = f.Session.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty);
+        var view = f.Session.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start);
         var saying = Assert.Single(view.Deliveries);
         Assert.Equal("saying", saying.InstanceId); Assert.Equal(100, saying.MessageId);
         Assert.Equal("A companion joins you.", saying.Text);
         Assert.Single(view.EscortFaces);
         using var restored = f.Restore();
-        Assert.Single(restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).Deliveries);
+        Assert.Single(restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).Deliveries);
     }
 
     [Fact]
@@ -174,12 +174,12 @@ public sealed class QuestNpcOverlayTests
         long id = Giver(f, definitions);
         foreach (string instance in new[] { "z-first", "a-second", "m-third", "n-fourth" }) { Start(f, instance, id); f.Update(); }
         var expected = new[] { "z-first", "a-second", "m-third" };
-        Assert.Equal(expected, f.Session.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces.Select(value => value.InstanceId));
+        Assert.Equal(expected, f.Session.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces.Select(value => value.InstanceId));
         Assert.Equal(4, f.Session.State.Quests.Capture().Instances.Count(value => value.Resources.Single().EscortFaceMedia is not null));
         using var restored = f.Restore();
-        Assert.Equal(expected, restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces.Select(value => value.InstanceId));
+        Assert.Equal(expected, restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces.Select(value => value.InstanceId));
         restored.State.Quests.Complete("z-first", "done");
-        Assert.Equal(new[] { "a-second", "m-third", "n-fourth" }, restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty).EscortFaces.Select(value => value.InstanceId));
+        Assert.Equal(new[] { "a-second", "m-third", "n-fourth" }, restored.State.Quests.ReadPresentation(_ => DaggerfallQuestMessageContext.Empty, World.DaggerfallCalendar.Start).EscortFaces.Select(value => value.InstanceId));
     }
 
     private static void AssertBaseNpc(DaggerfallNpc expected, DaggerfallNpc actual)

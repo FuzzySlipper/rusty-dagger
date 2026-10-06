@@ -481,7 +481,15 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("instance", builder.String(face.InstanceId)), ("symbol", builder.String(face.Symbol)),
             ("name", builder.String(face.Name)), ("mediaId", builder.String(face.MediaId)))).ToArray())),
         ("deliveries", builder.Array(quests.Deliveries.Select(message => QuestMessage(builder, message)).ToArray())),
-        ("journal", builder.Array(quests.Journal.Select(message => QuestMessage(builder, message)).ToArray())),
+        ("journal", builder.Object(
+            ("active", builder.Array(quests.Journal.Active.Select(group => builder.Object(
+                ("instance", builder.String(group.InstanceId)), ("title", builder.String(group.Title)),
+                ("deadline", group.Deadline is null ? builder.Null() : builder.String(group.Deadline)),
+                ("entries", builder.Array(group.Entries.Select(message => QuestMessage(builder, message)).ToArray())))).ToArray())),
+            ("finished", builder.Array(quests.Journal.Finished.Select(group => builder.Object(
+                ("instance", builder.String(group.InstanceId)), ("title", builder.String(group.Title)),
+                ("succeeded", builder.Boolean(group.Succeeded)), ("status", builder.String(group.Status)),
+                ("entries", builder.Array(group.Entries.Select(message => QuestMessage(builder, message)).ToArray())))).ToArray())))),
         ("pending", quests.Pending is null ? builder.Null() : QuestMessage(builder, quests.Pending)));
 
     private static uint Notebook(UiValueBuilder builder, DaggerfallNotebookPresentation notebook) => builder.Object(

@@ -8,6 +8,7 @@ import { mountInventory, type InventoryProjection, type InventoryAction } from '
 import { mountCharacter, isCharacterProjection, type CharacterProjection, type CharacterAction } from './character.js';
 import { mountLoot, type LootProjection, type LootAction } from './loot.js';
 import { mountNotebook, type NotebookProjection, type NotebookAction } from './notebook.js';
+import { mountQuestJournal, type QuestJournalProjection } from './journal.js';
 import { BEGIN_ACTION, TITLE_MODE, screenForMode } from './screens.js';
 import { mountTravel, isTravelProjection, type TravelProjection } from './travel.js';
 
@@ -224,7 +225,7 @@ interface QuestPresentation {
   readonly offer?: { readonly instance: string; readonly text: string; readonly diagnostics: readonly string[] } | null;
   readonly escortFaces: readonly { readonly instance: string; readonly symbol: string; readonly name: string; readonly mediaId: string }[];
   readonly deliveries: readonly QuestMessageProjection[];
-  readonly journal: readonly QuestMessageProjection[];
+  readonly journal: QuestJournalProjection;
   readonly pending: QuestMessageProjection | null;
 }
 
@@ -585,6 +586,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const notebookView = mountNotebook(notebookRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
+  const questJournalView = mountQuestJournal(notebookRoot);
   const lootRoot = shell.querySelector<HTMLElement>('.dagger-loot-root')!;
   const saveSlotsRoot = shell.querySelector<HTMLElement>('.dagger-save-slots')!;
   const saveSlotsDiagnostic = shell.querySelector<HTMLElement>('.dagger-save-slots-diagnostic')!;
@@ -1303,6 +1305,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     travelView.update(isTravelProjection(value.travel) ? value.travel : null);
     if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
     if (value.notebook) notebookView.update(value.notebook);
+    questJournalView.update(value.quests?.journal);
     const dungeonText = value.dungeonText ?? null;
     if (dungeonText?.revision !== currentDungeonText?.revision || dungeonText?.actionId !== currentDungeonText?.actionId)
       dungeonTextAnswer.value = '';
@@ -1368,7 +1371,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     renderQuestMessages(quests, value.quests, (action) => context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
     }));
-    const questMessages = value.quests ? [value.quests.offer, ...value.quests.deliveries, ...value.quests.journal, value.quests.pending] : [];
+    const questMessages = value.quests ? [value.quests.offer, ...value.quests.deliveries,
+      ...[...value.quests.journal.active, ...value.quests.journal.finished].flatMap(group => group.entries), value.quests.pending] : [];
     textDiagnostics.replaceChildren(...[
       ...(value.activation?.dialogue?.diagnostics ?? []),
       ...questMessages.flatMap(message => message?.diagnostics ?? []),
@@ -1480,6 +1484,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     lodgingView.dispose();
     characterView.dispose();
     notebookView.dispose();
+    questJournalView.dispose();
     lootView.dispose();
     document.removeEventListener('keydown', onKeyDown, true);
     menu.removeEventListener('cancel', onCancel);
@@ -1934,7 +1939,6 @@ function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undef
     root.append(article);
   };
   value.deliveries.filter(message => message.delivery !== 'prompt').forEach(message => add(message, message.heading));
-  value.journal.forEach(message => add(message, message.heading));
   if (value.pending) {
     const message = value.pending;
     const prompt = document.createElement('article');

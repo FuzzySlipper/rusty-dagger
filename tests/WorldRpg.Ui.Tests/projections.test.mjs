@@ -322,6 +322,46 @@ test('book reader and notebook render product state and send revision-guarded se
   } finally { f.dispose(); }
 });
 
+test('quest journal shows active quests grouped by title and deadline, and a finished-quests page', () => {
+  const f = fixture();
+  try {
+    const entry = (instance, message, text) => ({ entryId: `quest-journal/${instance}/${message}`, instance, message, delivery: 'journal',
+      heading: 'Journal', text, signoff: null, promptId: null, options: [], diagnostics: [] });
+    const journal = {
+      active: [
+        { instance: 'timed', title: 'Timed errand', deadline: 'Due by Tirdas the 3rd of Hearthfire, 3E405 at 00:00 (2 days left)',
+          entries: [entry('timed', 0, 'Bring the ring within 2 days.'), entry('timed', 1, 'The ring is in the crypt.')] },
+        { instance: 'plain', title: 'Quest', deadline: null, entries: [entry('plain', 0, 'Speak to the smith.')] },
+      ],
+      finished: [{ instance: 'short', title: 'Short errand', succeeded: false, status: 'Ended on Fredas the 4th of Hearthfire, 3E405',
+        entries: [entry('short', 0, 'The errand is done.')] }],
+    };
+    f.publish({ quests: { deliveries: [], journal, pending: null, escortFaces: [] } });
+    f.root.querySelector('[data-action="journal"]').click();
+    const page = f.root.querySelector('.dagger-quest-journal-page');
+    const groups = [...page.querySelectorAll('.dagger-quest-journal-group')];
+    assert.deepEqual(groups.map(group => group.querySelector('h3').textContent), ['Timed errand', 'Quest']);
+    assert.equal(groups[0].querySelector('.dagger-quest-journal-deadline').textContent, journal.active[0].deadline);
+    assert.equal(groups[1].querySelector('.dagger-quest-journal-deadline'), null);
+    assert.deepEqual([...groups[0].querySelectorAll('li')].map(item => item.textContent),
+      ['Bring the ring within 2 days.', 'The ring is in the crypt.']);
+    // Journal entries belong to the journal panel, not the transient quest message stack.
+    assert.equal(f.root.querySelector('.dagger-quests').textContent.includes('Speak to the smith.'), false);
+
+    f.root.querySelector('[data-journal-page="finished"]').click();
+    assert.equal(f.root.querySelector('[data-journal-page="finished"]').getAttribute('aria-selected'), 'true');
+    const finished = page.querySelector('.dagger-quest-journal-group');
+    assert.equal(finished.dataset.questInstance, 'short');
+    assert.equal(finished.querySelector('h3').textContent, 'Short errand');
+    assert.equal(finished.querySelector('.dagger-quest-journal-status').textContent, 'Ended on Fredas the 4th of Hearthfire, 3E405');
+    assert.equal(finished.querySelector('li').textContent, 'The errand is done.');
+
+    // The selected page survives a fresh projection; an empty page says so.
+    f.publish({ quests: { deliveries: [], journal: { active: journal.active, finished: [] }, pending: null, escortFaces: [] } });
+    assert.equal(page.querySelector('.dagger-quest-journal-empty').textContent, 'No finished quests.');
+  } finally { f.dispose(); }
+});
+
 test('repeated notebook projections retain note drafts and the focused textarea', () => {
   const f = fixture();
   try {
@@ -383,14 +423,14 @@ test('quest messages dismiss by durable entry identity even when their text is i
   try {
     const message = { instance: 'quest:1', message: 10, delivery: 'popup', heading: 'Message', text: 'Same text.', signoff: null,
       diagnostics: ['%qdt has no context.'], promptId: null, options: [], entryId: 'quest-message:1' };
-    f.publish({ quests: { deliveries: [message, { ...message, entryId: 'quest-message:2' }], journal: [], pending: null } });
+    f.publish({ quests: { deliveries: [message, { ...message, entryId: 'quest-message:2' }], journal: { active: [], finished: [] }, pending: null } });
     const buttons = f.root.querySelectorAll('.dagger-quest-popup button');
     assert.equal(buttons.length, 2);
     assert.equal(f.root.querySelector('.dagger-quest-popup strong').textContent, 'Message');
     assert.doesNotMatch(f.root.querySelector('.dagger-quest-popup').textContent, /has no context/);
     buttons[1].click();
     assert.deepEqual(f.actions.at(-1), { action: 'quest-dismiss', questInstance: 'quest:1', questDelivery: 'quest-message:2' });
-    f.publish({ quests: { deliveries: [message], journal: [], pending: null } });
+    f.publish({ quests: { deliveries: [message], journal: { active: [], finished: [] }, pending: null } });
     assert.equal(f.root.querySelectorAll('.dagger-quest-popup').length, 1);
   } finally { f.dispose(); }
 });
@@ -399,11 +439,11 @@ test('a projected quest prompt renders once and returns the selected semantic ch
   const f = fixture();
   try {
     const prompt = { instance: 'quest:1', message: 1010, delivery: 'prompt', text: 'Will you help?', signoff: null, diagnostics: [], promptId: 'prompt:1', options: [{ id: 3, label: 'Yes' }, { id: 4, label: 'No' }] };
-    f.publish({ quests: { deliveries: [prompt], journal: [], pending: prompt } });
+    f.publish({ quests: { deliveries: [prompt], journal: { active: [], finished: [] }, pending: prompt } });
     assert.equal(f.root.querySelector('.dagger-quest-prompt p').textContent, 'Will you help?');
     f.root.querySelector('.dagger-quest-prompt button').click();
     assert.deepEqual(f.actions.at(-1), { action: 'quest-choice', questInstance: 'quest:1', questMessage: 1010, questPrompt: 'prompt:1', questChoice: 3 });
-    f.publish({ quests: { deliveries: [], journal: [], pending: null } });
+    f.publish({ quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null } });
     assert.equal(f.root.querySelector('.dagger-quest-prompt'), null);
   } finally { f.dispose(); }
 });
@@ -719,13 +759,13 @@ test('multi-choice prompt uses supplied stable identities and refreshes occurren
   try {
     const prompt = { instance: 'quest:2', message: 1072, delivery: 'prompt', text: 'Choose a direction.', signoff: null,
       diagnostics: [], promptId: 'quest:2/source/0/1', options: [{ id: 24, label: 'South' }, { id: 25, label: 'West' }, { id: 28, label: 'Southwest' }] };
-    f.publish({ quests: { deliveries: [prompt], journal: [], pending: prompt } });
+    f.publish({ quests: { deliveries: [prompt], journal: { active: [], finished: [] }, pending: prompt } });
     const buttons = f.root.querySelectorAll('.dagger-quest-prompt button');
     assert.equal(buttons.length, 3);
     buttons[2].click();
     assert.deepEqual(f.actions.at(-1), { action: 'quest-choice', questInstance: 'quest:2', questMessage: 1072,
       questPrompt: 'quest:2/source/0/1', questChoice: 28 });
-    f.publish({ quests: { deliveries: [], journal: [], pending: { ...prompt, promptId: 'quest:2/source/0/2' } } });
+    f.publish({ quests: { deliveries: [], journal: { active: [], finished: [] }, pending: { ...prompt, promptId: 'quest:2/source/0/2' } } });
     f.root.querySelector('.dagger-quest-prompt button').click();
     assert.equal(f.actions.at(-1).questPrompt, 'quest:2/source/0/2');
   } finally { f.dispose(); }
@@ -1341,16 +1381,16 @@ test('quest escort portraits use published art and remove only ended quest overl
   try {
     const face = { instance: 'first', symbol: 'contact', name: 'Existing Giver', mediaId: 'character.head.male.00.0' };
     const art = { revision: 'escort-art', images: [{ id: face.mediaId, image: 'data:image/png;base64,cG9ydHJhaXQ=' }] };
-    f.publish({ uiArt: art, quests: { deliveries: [], journal: [], pending: null, escortFaces: [face, { ...face, instance: 'second' }] } });
+    f.publish({ uiArt: art, quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null, escortFaces: [face, { ...face, instance: 'second' }] } });
     let portraits = f.root.querySelectorAll('.dagger-escort-faces img');
     assert.equal(portraits.length, 2);
     assert.equal(portraits[0].alt, face.name);
     assert.equal(portraits[0].src, art.images[0].image);
-    f.publish({ uiArt: art, quests: { deliveries: [], journal: [], pending: null, escortFaces: [{ ...face, instance: 'second' }] } });
+    f.publish({ uiArt: art, quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null, escortFaces: [{ ...face, instance: 'second' }] } });
     portraits = f.root.querySelectorAll('.dagger-escort-faces img');
     assert.equal(portraits.length, 1);
     assert.equal(portraits[0].dataset.questInstance, 'second');
-    f.publish({ uiArt: art, quests: { deliveries: [], journal: [], pending: null, escortFaces: [] } });
+    f.publish({ uiArt: art, quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null, escortFaces: [] } });
     assert.equal(f.root.querySelector('.dagger-escort-faces'), null);
   } finally { f.dispose(); }
 });
@@ -1497,7 +1537,7 @@ test('vampire character projection displays clan and published media while retai
 test('quest offer preserves its identity in accept and decline actions', () => {
   const f = fixture();
   try {
-    f.publish({ mode: 'modal', quests: { deliveries: [], journal: [], pending: null, escortFaces: [],
+    f.publish({ mode: 'modal', quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null, escortFaces: [],
       offer: { instance: 'work:7', text: 'Retrieve the selected heirloom for this provider.', diagnostics: [] } } });
     const article = [...f.root.querySelectorAll('.dagger-quest-message')].find(x => x.textContent.includes('Retrieve the selected'));
     assert.ok(article);

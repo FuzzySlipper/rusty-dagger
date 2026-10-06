@@ -77,7 +77,7 @@ public sealed class QuestDialogueLinkTests
         var first = f.Session.State.Quests.Messages.Deliveries.First(value => value.InstanceId == "first");
         f.Session.State.Quests.Messages.Dismiss("second", f.Session.State.Quests.Messages.Deliveries.Last().EntryId);
         var rendered = f.Session.State.Quests.ReadPresentation(q => new(DaggerfallQuestMessageContext.Empty.Text,
-            q.Resources.ToDictionary(value => value.Symbol, value => value.Text ?? new())));
+            q.Resources.ToDictionary(value => value.Symbol, value => value.Text ?? new())), DaggerfallCalendar.Start);
         Assert.Contains(rendered.Deliveries.Single().Diagnostics, message => message.Contains("missing"));
         Assert.Equal("first", Assert.Single(f.Session.State.Quests.DialogueTopics(npc)).InstanceId);
         Assert.False(Quest(f.Session, "first").Resources.Single(value => value.Symbol == "gift").DialogueVisible);
@@ -85,7 +85,7 @@ public sealed class QuestDialogueLinkTests
         var saved = f.Session.State.Quests.Capture();
         f.Session.State.Quests.Restore(saved with { Messages = saved.Messages with { Journal = [new("first", 1, 101)] } });
         f.Session.State.Quests.ReadPresentation(q => new(DaggerfallQuestMessageContext.Empty.Text,
-            q.Resources.ToDictionary(value => value.Symbol, value => value.Text ?? new())));
+            q.Resources.ToDictionary(value => value.Symbol, value => value.Text ?? new())), DaggerfallCalendar.Start);
         Assert.True(Quest(f.Session, "first").Resources.Single(value => value.Symbol == "gift").DialogueVisible);
         using var restored = f.Restore();
         Assert.All(restored.State.Quests.DialogueTopics(npc), topic => Assert.Equal("first", topic.InstanceId));
