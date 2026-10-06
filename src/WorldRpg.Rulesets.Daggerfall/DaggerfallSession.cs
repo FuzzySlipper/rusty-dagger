@@ -369,6 +369,14 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // can see the mode they are in.
         Cinematics?.Poll();
         _openingCinematics.Poll();
+        // The donor ends a playing video on any key or button press (DaggerfallVidPlayerWindow,
+        // AnyKeyDownIgnoreAxisBinds). The shell draws a video above the product UI, so a press is
+        // also the only way to skip that the player can reach while one plays.
+        if ((_openingCinematics.IsActive || Cinematics?.ActiveSource is not null) && PressesAnyKey(input))
+        {
+            if (_openingCinematics.IsActive) _openingCinematics.Skip();
+            else Cinematics?.Skip();
+        }
         if (_mode == ProductMode.Playing) Infections.Poll(_openingCinematics.IsActive);
         ReconcileSummoningFoes();
         bool playing = _mode == ProductMode.Playing && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !LegalModalOpen && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null;
@@ -681,6 +689,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.React(fact, State.Actors);
         _outcomes.React(fact);
+    }
+
+    private static bool PressesAnyKey(ReadOnlySpan<ProductInputEvent> input)
+    {
+        foreach (ProductInputEvent value in input)
+            if (value.Edge == InputEdge.Pressed && value.Kind is InputEventKind.Key or InputEventKind.PointerButton
+                    or InputEventKind.ControllerButton or InputEventKind.MappedDigital or InputEventKind.DirectDigital)
+                return true;
+        return false;
     }
 
     private void PublishPresentation()
