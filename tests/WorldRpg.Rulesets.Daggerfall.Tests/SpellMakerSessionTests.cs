@@ -158,7 +158,7 @@ public sealed class SpellMakerSessionTests
     {
         using var f = new KnownReadySpellSessionTests.Fixture();
         f.Submit(new { action = "spellmaker-draft", revision = "missing", text = "{}" });
-        Assert.Equal("ProviderUnavailable", f.Session.ReadSpells().Result);
+        Assert.Equal("This spellmaker is unavailable to you.", f.Session.ReadSpells().Result);
         Assert.NotNull(DaggerfallUiAction.Parse("{\"action\":\"spellmaker-draft\",\"revision\":\"1\",\"text\":\"{}\"}"u8));
         Assert.Null(DaggerfallUiAction.Parse("{\"action\":\"spellmaker-draft\",\"text\":\"{}\"}"u8));
         Assert.NotNull(DaggerfallUiAction.Parse("{\"action\":\"spellmaker-buy\",\"revision\":\"1\",\"key\":\"2\",\"amount\":10,\"confirm\":true}"u8));

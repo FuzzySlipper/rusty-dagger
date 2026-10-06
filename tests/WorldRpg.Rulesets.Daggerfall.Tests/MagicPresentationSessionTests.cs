@@ -42,7 +42,12 @@ public sealed class MagicPresentationSessionTests
         using Fixture f = new(); var s = f.Session; Fund(s);
         var item = s.State.Inventory.Read().UniqueItems.First(); var id = s.State.Inventory.GetDurableItemId(item.Entity).Value;
         s.Casting.Ready(1,"spell.023",id); s.ReleaseReadySpell(1,Vector3.UnitZ); f.Update();
-        Assert.Contains(s.Slots.Read(), slot => slot.Detail.Contains($"Item {id}")); Assert.Equal(1, EffectCount(Visual(s)));
+        // The status row names the source item and the remaining game time, not ids or magic rounds.
+        var row = Assert.Single(s.Slots.Read(), slot => slot.Owner == DaggerfallMagicPresentation.Owner);
+        Assert.Contains($"From {s.ItemDefinitionName(item.Definition.Value)}.", row.Detail, StringComparison.Ordinal);
+        Assert.DoesNotContain(id.ToString(System.Globalization.CultureInfo.InvariantCulture), row.Detail, StringComparison.Ordinal);
+        Assert.DoesNotContain("magic rounds", row.Detail, StringComparison.Ordinal);
+        Assert.Equal(1, EffectCount(Visual(s)));
         s.State.Effects.CancelItemReferences(id); f.Update(); Assert.Equal(0, EffectCount(Visual(s)));
         Assert.DoesNotContain(s.Slots.Read(), slot => slot.Owner == DaggerfallMagicPresentation.Owner);
         s.State.Character.LearnSpell("spell.023"); s.ReadyPlayerSpell("spell.023"); s.ReleaseReadySpell(1,Vector3.UnitZ); f.Update();

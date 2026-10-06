@@ -689,7 +689,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _appearance.RefreshEnemyVoices(State.Actors);
         DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
-        DaggerfallMagicPresentation.Publish(State.Effects, State.Actors.Player, Slots);
+        DaggerfallMagicPresentation.Publish(State.Effects, State.Actors.Player, Slots, EffectItemName);
         _appearance.RetireUnavailableMagic(State.Actors, State.ItemInstances.ContainsUnique);
         _hud.Publish(new DaggerfallHudFrame(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots,
             Inventory: _inventoryUi.Read(),
@@ -706,7 +706,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Quests: State.Quests.ReadPresentation(QuestTextContext),
             Notebook: _notebook.Read(),
             Transport: DaggerfallTransportProjection.Read(State.Transport, State.Inventory.Read(), TransportAccess(),
-                ownsShip: State.Property.OwnsShip, wagon: State.Wagon),
+                ownsShip: State.Property.OwnsShip, wagon: State.Wagon, itemLabel: ItemDefinitionName),
             DungeonText: _dungeonTextProjection,
             Death: _deathPresentation.View,
             Rest: RestView,
@@ -780,4 +780,16 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             throw new InvalidOperationException($"Unique item identity {entityId} is authored content and cannot be removed.");
         _uniqueItems.Remove(new DurableIdentityReference(DurableIdentityKind.Item, entityId));
     }
+
+    /// <summary>The name of the item a player effect comes from, for the active-effect status row.</summary>
+    private string EffectItemName(ulong item) => State.ItemInstances.ContainsUnique(item)
+        && _definitions.Items.TryGetValue(new(State.ItemInstances.RequireUnique(item).ItemId), out DaggerfallItemDefinition? definition)
+        ? ItemDefinitionName(definition.Id.Value)
+        : "an enchanted item";
+
+    /// <summary>The player name of an item definition, as storage lists name what they hold.</summary>
+    internal string ItemDefinitionName(string definition) =>
+        _definitions.Items.TryGetValue(new(definition), out DaggerfallItemDefinition? item)
+            ? item.Template?.Name ?? DaggerfallInventoryPresentation.Label(definition)
+            : DaggerfallInventoryPresentation.Label(definition);
 }

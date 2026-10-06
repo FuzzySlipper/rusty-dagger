@@ -39,19 +39,22 @@ internal sealed partial class DaggerfallSession
             WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallUiActionKind.SpellUnready=>Casting.Cancel(State.Actors.Player.DurableId),
             _=>ReleaseReadySpell(State.Actors.Player.DurableId,_input.ResolveCurrentLook(State.PlayerControl).Forward),
         };
-        _spellResult=result.Outcome.ToString();
-        Presentation.SetOutcome(result.Outcome switch
-        {
-            DaggerfallCastOutcome.Ready=>"Spell ready.",
-            DaggerfallCastOutcome.Cancelled or DaggerfallCastOutcome.Unready=>"No spell ready.",
-            DaggerfallCastOutcome.UnknownSpell=>"That spell is not known or available.",
-            DaggerfallCastOutcome.UnsupportedEffect=>"That spell has unavailable effects.",
-            DaggerfallCastOutcome.InsufficientMagicka=>"Not enough magicka.",
-            DaggerfallCastOutcome.InvalidTarget=>"Aim at a valid spell target.",
-            DaggerfallCastOutcome.Silenced=>"You cannot cast while silenced.",
-            _=>"Spell cast.",
-        });
+        _spellResult=CastOutcomeText(result.Outcome);
+        Presentation.SetOutcome(_spellResult);
     }
+
+    /// <summary>Player wording for the result of readying, cancelling or releasing the player's spell.</summary>
+    internal static string CastOutcomeText(DaggerfallCastOutcome outcome) => outcome switch
+    {
+        DaggerfallCastOutcome.Ready=>"Spell ready.",
+        DaggerfallCastOutcome.Cancelled or DaggerfallCastOutcome.Unready=>"No spell ready.",
+        DaggerfallCastOutcome.UnknownSpell or DaggerfallCastOutcome.SourceUnavailable=>"That spell is not known or available.",
+        DaggerfallCastOutcome.UnsupportedEffect=>"That spell has unavailable effects.",
+        DaggerfallCastOutcome.InsufficientMagicka=>"Not enough magicka.",
+        DaggerfallCastOutcome.InvalidTarget or DaggerfallCastOutcome.TargetUnavailable=>"Aim at a valid spell target.",
+        DaggerfallCastOutcome.Silenced=>"You cannot cast while silenced.",
+        _=>"Spell cast.",
+    };
 
     internal DaggerfallMagicTargetProfile MagicProfile(long id) => DaggerfallMagicProfiles.Create(
         (CastActor(id) ?? throw new ArgumentException($"Casting actor {id} is unavailable.")).Get<StatsComponent>(),

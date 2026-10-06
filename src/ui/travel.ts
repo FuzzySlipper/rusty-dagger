@@ -3,12 +3,14 @@ export interface TravelDestinationProjection {
   readonly index: number;
   readonly name: string;
   readonly kind: string;
+  readonly regionName: string;
 }
 
 export interface TravelQuoteProjection {
   readonly identity: string;
   readonly destination: string;
   readonly minutes: number;
+  readonly duration: string;
   readonly distance: number;
   readonly oceanPixels: number;
   readonly innCost: number;
@@ -28,7 +30,7 @@ export interface TravelQuoteProjection {
 }
 
 export interface TravelResultProjection {
-  readonly outcome: string; readonly paidGold: number; readonly elapsedSeconds: number;
+  readonly paidGold: number; readonly elapsedSeconds: number;
   readonly actualRegion: number; readonly actualIndex: number; readonly actualX: number; readonly actualY: number; readonly message: string;
 }
 
@@ -125,7 +127,7 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
         option.value = `${site.region}:${site.index}`;
         option.dataset.region = String(site.region);
         option.dataset.index = String(site.index);
-        option.textContent = `${site.name} · ${site.region}:${site.index}`;
+        option.textContent = `${site.name} · ${site.kind} · ${site.regionName}`;
         destination.append(option);
       }
       if (Array.from(destination.options).some(option => option.value === previous)) destination.value = previous;
@@ -140,7 +142,7 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
           ship.input.checked = quote.options.ship;
           lastIdentity = quote.identity;
         }
-        result.textContent = `${quote.destination}: ${quote.distance} map pixels, ${quote.minutes} minutes, `
+        result.textContent = `${quote.destination}: about ${quote.duration}, `
           + `${quote.totalCost} gold (${quote.innCost} inn, ${quote.shipCost} ship). `
           + (quote.canAfford ? 'Affordable.' : 'Insufficient funds.')
           + (value?.message ? ` ${value.message}` : '');

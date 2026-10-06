@@ -96,7 +96,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
         }
         catch (Exception error) when (error is ArgumentException or NotSupportedException)
         {
-            Presentation.SetOutcome($"Lycanthropy cure quest is unavailable: {error.Message}");
+            Presentation.SetOutcome("The cure for lycanthropy cannot be offered right now.");
             return false;
         }
     }

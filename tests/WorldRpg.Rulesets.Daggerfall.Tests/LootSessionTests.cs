@@ -535,7 +535,10 @@ public sealed class LootSessionTests
             Ui("{\"action\":\"currency-deposit-gold\",\"amount\":200}", 1);
             Assert.Equal(new DaggerfallCurrencyTotals(25, 0, 200), session.State.Currency.Read());
             Assert.Equal(200UL, session.State.Bank.BalanceForRegion(bankRegion.Value));
-            Assert.Contains("Deposited 200 gold into region", Assert.IsType<string>(engine.PublishedField("lastOutcome")));
+            // The bank names the account by its published region name, not its index.
+            string deposited = Assert.IsType<string>(engine.PublishedField("lastOutcome"));
+            Assert.Contains($"Deposited 200 gold into your {definitions.BuildingNames.RegionName(bankRegion.Value)} account.", deposited);
+            Assert.DoesNotContain("region", deposited, StringComparison.OrdinalIgnoreCase);
             Ui("{\"action\":\"currency-withdraw-letter\",\"amount\":100}", 2);
             Assert.Equal(new DaggerfallCurrencyTotals(25, 100, 99), session.State.Currency.Read());
             Assert.Equal(99UL, session.State.Bank.BalanceForRegion(bankRegion.Value));

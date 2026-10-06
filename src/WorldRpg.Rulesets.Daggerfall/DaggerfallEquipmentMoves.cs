@@ -140,7 +140,7 @@ internal sealed class DaggerfallEquipmentMoves(
             }
             catch (Exception error) when (error is MechanicsException or ArgumentException or InvalidOperationException)
             {
-                return new(EquipmentMoveOutcome.Rejected, error.Message);
+                return new(EquipmentMoveOutcome.Rejected, "That item cannot be unequipped right now.");
             }
             DaggerfallEquipmentChange change = new(null, [item], Timing(before, equipment.Read()), DaggerfallEquipmentCue.Unequip);
             ReconcileLayout();
@@ -195,7 +195,7 @@ internal sealed class DaggerfallEquipmentMoves(
         }
         catch (Exception error) when (error is MechanicsException or ArgumentException or InvalidOperationException)
         {
-            return new(EquipmentMoveOutcome.Rejected, error.Message);
+            return new(EquipmentMoveOutcome.Rejected, "That item cannot be unequipped right now.");
         }
         DaggerfallEquipmentChange change = new(null, [item], Timing(before, equipment.Read()), DaggerfallEquipmentCue.Unequip);
         ReconcileLayout();
@@ -239,8 +239,9 @@ internal sealed class DaggerfallEquipmentMoves(
         }
         catch (Exception error) when (error is MechanicsException or ArgumentException or InvalidOperationException)
         {
-            // Engine candidates reject atomically; layout changes only follow accepted mutations.
-            return new(EquipmentMoveOutcome.Rejected, error.Message);
+            // Engine candidates reject atomically; layout changes only follow accepted mutations. The
+            // Engine's refusal detail names slots and entities, so the player reads a fixed sentence.
+            return new(EquipmentMoveOutcome.Rejected, "That item cannot be equipped there right now.");
         }
 
         // A displaced occupant takes the mover's old grid cell when it has arrangement.

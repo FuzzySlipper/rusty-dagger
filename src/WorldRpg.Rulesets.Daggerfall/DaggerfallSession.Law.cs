@@ -195,16 +195,7 @@ internal sealed partial class DaggerfallSession
         {
             var response = CurrentLegalResponse;
             if (response?.Modal != true) return null;
-            string[] charges = response.Charges.Select(id => State.Crime.Incidents.Single(value => value.OperationId == id).Crime switch
-            {
-                DaggerfallCrimeKind.AttemptedBreakingAndEntering => "Attempted breaking and entering",
-                DaggerfallCrimeKind.BreakingAndEntering => "Breaking and entering",
-                DaggerfallCrimeKind.TaxEvasion => "Tax evasion",
-                DaggerfallCrimeKind.CriminalConspiracy => "Criminal conspiracy",
-                DaggerfallCrimeKind.HighTreason => "High treason",
-                DaggerfallCrimeKind.LoanDefault => "Loan default",
-                var crime => crime.ToString(),
-            }).ToArray();
+            string[] charges = response.Charges.Select(id => CrimeLabel(State.Crime.Incidents.Single(value => value.OperationId == id).Crime)).ToArray();
             return response.Phase switch
             {
                 DaggerfallLegalPhase.Arrest => new(response.Revision, "arrest", "Halt! City watch", charges,
@@ -325,8 +316,39 @@ internal sealed partial class DaggerfallSession
         var pending = State.Crime.PendingCharges(response.Region);
         if (pending.Count > 0) StartLegalResponse(pending[0], pending.Select(charge => charge.OperationId).ToArray());
         _input.ClearHeldInput();
-        Presentation.SetOutcome($"Court disposition: {response.Sentence.Outcome}. You are free to leave.");
+        Presentation.SetOutcome(CourtReleaseText(response.Sentence.Outcome));
     }
+
+    /// <summary>The player name of a charge, as the court reads it.</summary>
+    internal static string CrimeLabel(DaggerfallCrimeKind crime) => crime switch
+    {
+        DaggerfallCrimeKind.AttemptedBreakingAndEntering => "Attempted breaking and entering",
+        DaggerfallCrimeKind.Trespassing => "Trespassing",
+        DaggerfallCrimeKind.BreakingAndEntering => "Breaking and entering",
+        DaggerfallCrimeKind.Assault => "Assault",
+        DaggerfallCrimeKind.Murder => "Murder",
+        DaggerfallCrimeKind.TaxEvasion => "Tax evasion",
+        DaggerfallCrimeKind.CriminalConspiracy => "Criminal conspiracy",
+        DaggerfallCrimeKind.Vagrancy => "Vagrancy",
+        DaggerfallCrimeKind.Smuggling => "Smuggling",
+        DaggerfallCrimeKind.Piracy => "Piracy",
+        DaggerfallCrimeKind.HighTreason => "High treason",
+        DaggerfallCrimeKind.Pickpocketing => "Pickpocketing",
+        DaggerfallCrimeKind.Theft => "Theft",
+        DaggerfallCrimeKind.Treason => "Treason",
+        DaggerfallCrimeKind.LoanDefault => "Loan default",
+        _ => "An unnamed crime",
+    };
+
+    /// <summary>The player sentence that closes a court case once its disposition has been served.</summary>
+    internal static string CourtReleaseText(DaggerfallCourtOutcome outcome) => outcome switch
+    {
+        DaggerfallCourtOutcome.Convicted => "You have served your sentence. You are free to leave.",
+        DaggerfallCourtOutcome.Acquitted => "You were acquitted. You are free to leave.",
+        DaggerfallCourtOutcome.GuildRescue => "Your guild secured your release. You are free to leave.",
+        DaggerfallCourtOutcome.Banished => "You have been banished from this region.",
+        _ => "Your case is closed. You are free to leave.",
+    };
 
     private DaggerfallWorldProfileKey CourtReleaseProfile()
     {

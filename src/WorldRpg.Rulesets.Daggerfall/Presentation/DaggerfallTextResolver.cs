@@ -177,10 +177,11 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
             _ => null,
         };
         if (value is not null) return value;
-        if (DonorUnresolved.Contains(symbol)) { diagnostics.Add(new(DaggerfallTextDiagnosticKind.DonorUnresolvedMacro, key, symbol)); return $"{symbol}[donor-unresolved]"; }
-        if (KnownGlobal.Contains(symbol)) { diagnostics.Add(new(DaggerfallTextDiagnosticKind.MissingContext, key, symbol)); return $"{symbol}[missing-context]"; }
-        diagnostics.Add(new(DaggerfallTextDiagnosticKind.UnrecognisedMacro, key, symbol));
-        return $"{symbol}[unrecognised]";
+        // An unresolved symbol is reported through the diagnostics list; the player text omits it
+        // rather than showing a marker.
+        diagnostics.Add(new(DonorUnresolved.Contains(symbol) ? DaggerfallTextDiagnosticKind.DonorUnresolvedMacro
+            : KnownGlobal.Contains(symbol) ? DaggerfallTextDiagnosticKind.MissingContext : DaggerfallTextDiagnosticKind.UnrecognisedMacro, key, symbol));
+        return string.Empty;
     }
 
     private static string? FirstName(string? name) => SplitName(name, first: true);

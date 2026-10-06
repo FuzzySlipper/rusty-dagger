@@ -32,24 +32,30 @@ internal sealed partial class DaggerfallSession
                 else
                 {
                     SpellMaker.SetDraft(draft);
-                    _spellResult = SpellMaker.Quote(context.Provider) is { Eligible: true } ? "Preview" : "InvalidSettings";
+                    var preview = SpellMaker.Quote(context.Provider);
+                    _spellResult = preview is { Eligible: true } ? "Preview" : preview?.Reason ?? "InvalidSettings";
                 }
             }
             catch (JsonException) { _spellResult = "InvalidSettings"; }
         }
         else _spellResult = SpellMaker.Buy(context.Provider, action.Key!, action.Amount!.Value, action.Confirm).Outcome;
-        Presentation.SetOutcome(_spellResult switch
-        {
-            "Purchased" => "Custom spell added to your spellbook.",
-            "Preview" => "Spell construction preview updated.",
-            "DraftChanged" or "PriceChanged" => "Check the current spell construction preview before buying.",
-            "SpellbookRequired" => "You need a spellbook to make spells.",
-            "InsufficientFunds" => "You do not have enough gold.",
-            "ProviderUnavailable" => "This spellmaker is unavailable to you.",
-            "InvalidSettings" or "InvalidCombination" => "Choose valid supported effects and settings.",
-            _ => _spellResult,
-        });
+        _spellResult = SpellMakerOutcomeText(_spellResult);
+        Presentation.SetOutcome(_spellResult);
     }
+
+    /// <summary>Player wording for spellmaker previews, refusals and purchases.</summary>
+    internal static string SpellMakerOutcomeText(string outcome) => outcome switch
+    {
+        "Purchased" => "Custom spell added to your spellbook.",
+        "Preview" => "Spell construction preview updated.",
+        "DraftChanged" or "PriceChanged" => "Check the current spell construction preview before buying.",
+        "SpellbookRequired" => "You need a spellbook to make spells.",
+        "ProviderUnavailable" => "This spellmaker is unavailable to you.",
+        "InvalidSettings" => "Choose valid supported effects and settings.",
+        "InvalidCombination" => "Those effects cannot use that target or element.",
+        "IdentityUnavailable" or "IdentityCollision" => "The spellmaker cannot record another spell.",
+        _ => DaggerfallServiceOutcomeText.Common(outcome),
+    };
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,

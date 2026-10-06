@@ -17,7 +17,7 @@ interface UiAction { readonly action: string; readonly [field: string]: string |
 
 interface DaggerHud {
   readonly detectors?: readonly { readonly source: string; readonly kind: string; readonly contacts: readonly {
-    readonly kind: string; readonly id: string; readonly distance: number; readonly bearingRadians: number;
+    readonly kind: string; readonly id: string; readonly label: string; readonly distance: number; readonly bearingRadians: number;
     readonly items: readonly { readonly id: string; readonly definition: string; readonly quantity: number }[];
   }[] }[];
   readonly spells?: SpellbookProjection | null;
@@ -64,10 +64,12 @@ interface SpellMakerSetting {
   readonly magnitudeBaseLow:number; readonly magnitudeBaseHigh:number; readonly magnitudeLevelBase:number;
   readonly magnitudeLevelHigh:number; readonly magnitudePerLevel:number;
 }
+interface SpellMakerOption { readonly value:number; readonly label:string; }
 interface SpellMakerDraft { readonly name:string;readonly element:number;readonly rangeType:number;readonly icon:number;readonly effects:readonly SpellMakerSetting[]; }
 interface SpellMakerProjection {
   readonly revision:string;readonly provider:string;readonly draft:SpellMakerDraft;
-  readonly effects:readonly {readonly key:string;readonly type:number;readonly subType:number;readonly school:string;
+  readonly targets:readonly SpellMakerOption[];readonly elements:readonly SpellMakerOption[];
+  readonly effects:readonly {readonly key:string;readonly name:string;readonly type:number;readonly subType:number;readonly school:string;
     readonly duration:boolean;readonly chance:boolean;readonly magnitude:boolean;readonly targets:number;readonly elements:number}[];
   readonly quote:{readonly key:string;readonly gold:number;readonly spellPoints:number;readonly eligible:boolean;readonly reason:string|null}|null;
 }
@@ -98,7 +100,7 @@ interface SpellbookProjection {
   readonly potionMaker?:PotionMakerProjection|null;
   readonly itemMaker?:ItemMakerProjection|null;
   readonly summoning?:SummoningProjection|null;
-  readonly information?: {readonly key:string;readonly name:string;readonly element:number;readonly target:string;readonly details:readonly string[]} | null;
+  readonly information?: {readonly key:string;readonly name:string;readonly element:string;readonly target:string;readonly details:readonly string[]} | null;
 }
 
 interface RestProjection {
@@ -148,7 +150,7 @@ interface DialogueProjection {
     readonly price: number;
     readonly durationSeconds: number;
     readonly cooldownReadySecond: number;
-    readonly skills: readonly { readonly id: string; readonly permanentValue: number; readonly maximumValue: number }[];
+    readonly skills: readonly { readonly id: string; readonly label: string; readonly permanentValue: number; readonly maximumValue: number }[];
   } | null;
   readonly diagnostics: readonly string[];
 }
@@ -165,6 +167,8 @@ interface MerchantItemProjection {
   readonly stolen: boolean;
   readonly canBuy: boolean;
   readonly canSell: boolean;
+  readonly canRepair?: boolean;
+  readonly canIdentify?: boolean;
 }
 
 interface MerchantProjection {
@@ -190,6 +194,7 @@ interface QuestMessageProjection {
   readonly instance: string;
   readonly message: number;
   readonly delivery: 'popup' | 'letter' | 'rumor' | 'journal' | 'prompt';
+  readonly heading: string;
   readonly text: string;
   readonly signoff: string | null;
   readonly diagnostics: readonly string[];
@@ -228,6 +233,7 @@ interface TransportOptionProjection {
 interface TransportItemProjection {
   readonly key: string;
   readonly definition: string;
+  readonly label: string;
   readonly quantity: string | number;
 }
 
@@ -247,6 +253,7 @@ interface TransportProjection {
   readonly mode: string;
   readonly onShip: boolean;
   readonly canRun: boolean;
+  readonly summary: string;
   readonly travelModifier: number;
   readonly oceanMinutesPerMapPixel: number;
   readonly options: readonly TransportOptionProjection[];
@@ -355,6 +362,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       <section class="dagger-composition" aria-label="Resolved composition diagnostics">
       <strong>Resolved composition</strong>
       <dl></dl>
+      <strong>Text diagnostics</strong>
+      <ul class="dagger-text-diagnostics" aria-label="Text diagnostics"></ul>
     </section>
       <div class="dagger-controls-root" hidden></div>
       <div class="dagger-inventory-root" hidden></div>
@@ -408,7 +417,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       <section class="dagger-dialogue-itemmaker" aria-label="Item enchanting"></section>
       <section class="dagger-dialogue-potionmaker" aria-label="Potion making"></section>
       <section class="dagger-dialogue-spellmaker" aria-label="Spell construction"></section>
-      <ul class="dagger-dialogue-diagnostics" aria-label="Text diagnostics"></ul>
       <button class="dagger-dialogue-close" type="button">End conversation</button>
     </dialog><dialog class="dagger-daedric-offer" aria-label="Daedric quest offer"></dialog>`;
   root.append(shell);
@@ -597,7 +605,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const dialogueTrainingSummary = shell.querySelector<HTMLElement>('.dagger-dialogue-training-summary')!;
   const dialogueTrainingSkills = shell.querySelector<HTMLElement>('.dagger-dialogue-training-skills')!;
   const dialogueMerchant = shell.querySelector<HTMLElement>('.dagger-dialogue-merchant')!;
-  const dialogueDiagnostics = shell.querySelector<HTMLElement>('.dagger-dialogue-diagnostics')!;
+  // Unresolved text symbols are developer diagnostics: they are listed in the composition
+  // diagnostics panel, never in the conversation, quest message or summoning text the player reads.
+  const textDiagnostics = shell.querySelector<HTMLElement>('.dagger-text-diagnostics')!;
   let currentDialogue: DialogueProjection | null = null;
   const merchantAmount = (item: MerchantItemProjection): number | undefined => {
     if (!item.key.startsWith('stack:')) return undefined;
@@ -669,9 +679,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         if (amountInput) row.append(' ', amountInput);
         if (tradeAvailable) row.append(' ', merchantAction(action, merchant, item, action === 'merchant-buy' ? 'Buy' : 'Sell', amountInput));
         if (action === 'merchant-buy' && tradeAvailable && merchant.shopliftAvailable !== false) row.append(' ', merchantAction('merchant-shoplift', merchant, item, 'Steal', amountInput));
-        if (action === 'merchant-sell' && merchant.repairAvailable && item.key.startsWith('unique:') && item.maximumCondition > item.currentCondition)
+        if (action === 'merchant-sell' && item.canRepair === true)
           row.append(' ', merchantAction('merchant-repair', merchant, item, 'Repair'));
-        if (action === 'merchant-sell' && merchant.identifyAvailable && item.key.startsWith('unique:') && !item.identified)
+        if (action === 'merchant-sell' && item.canIdentify === true)
           row.append(' ', merchantAction('merchant-identify', merchant, item, 'Identify'));
         list.append(row);
       }
@@ -1322,6 +1332,12 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     renderQuestMessages(quests, value.quests, (action) => context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
     }));
+    const questMessages = value.quests ? [value.quests.offer, ...value.quests.deliveries, ...value.quests.journal, value.quests.pending] : [];
+    textDiagnostics.replaceChildren(...[
+      ...(value.activation?.dialogue?.diagnostics ?? []),
+      ...questMessages.flatMap(message => message?.diagnostics ?? []),
+      ...(value.spells?.summoning?.diagnostics ?? []),
+    ].map(detail => { const item = document.createElement('li'); item.textContent = detail; return item; }));
     if (value.controls) controlsView.update(value.controls);
     if (value.activation) activationMode.value = value.activation.mode;
     activationMode.disabled = value.mode !== 'playing';
@@ -1357,7 +1373,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
           const button = document.createElement('button');
           button.type = 'button';
           button.dataset.trainingSkill = skill.id;
-          button.textContent = `Train ${skill.id} (${skill.permanentValue}/${skill.maximumValue})`;
+          button.textContent = `Train ${skill.label} (${skill.permanentValue}/${skill.maximumValue})`;
           button.disabled = skill.permanentValue >= skill.maximumValue;
           return button;
         }));
@@ -1370,11 +1386,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         }));
         dialogueTopics.append(bank);
       }
-      dialogueDiagnostics.replaceChildren(...dialogue.diagnostics.map(detail => {
-        const item = document.createElement('li');
-        item.textContent = detail;
-        return item;
-      }));
       if (!dialogueWindow.open) dialogueWindow.showModal();
     }
     view.textContent = value.view ? viewSummary(value.view) : '';
@@ -1385,7 +1396,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       row.dataset.source = source.source;
       row.textContent = `Detect ${source.kind}: ` + (source.contacts.length ? source.contacts.map(contact => {
         const bearing = Math.round(contact.bearingRadians * 180 / Math.PI);
-        return `${contact.kind} ${contact.id}, ${contact.distance.toFixed(1)} m, bearing ${bearing}°`;
+        return `${contact.label}, ${contact.distance.toFixed(1)} m, bearing ${bearing}°`;
       }).join('; ') : 'none nearby');
       detectors.append(row);
     }
@@ -1482,7 +1493,6 @@ function mountTransport(root: HTMLElement, claim: (action: TransportAction) => v
     const parsed = typeof quantity === 'number' ? quantity : Number(quantity);
     return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
   };
-  const itemLabel = (definition: string): string => definition.replaceAll('-', ' ');
   const revision = (): string => currentInventory?.revision ?? '';
   const sendItem = (action: 'wagon-put' | 'wagon-take', item: TransportItemProjection): void => {
     const currentRevision = revision();
@@ -1499,7 +1509,7 @@ function mountTransport(root: HTMLElement, claim: (action: TransportAction) => v
     button.dataset.action = action;
     button.dataset.item = item.key;
     button.disabled = disabled;
-    button.textContent = `${action === 'wagon-put' ? 'Store' : 'Take'} ${itemLabel(item.definition)} × ${itemQuantity(item.quantity)}`;
+    button.textContent = `${action === 'wagon-put' ? 'Store' : 'Take'} ${item.label} × ${itemQuantity(item.quantity)}`;
     button.title = item.key;
     button.addEventListener('click', () => sendItem(action, item));
     row.append(button);
@@ -1522,7 +1532,7 @@ function mountTransport(root: HTMLElement, claim: (action: TransportAction) => v
     const mode = normalizeTransportMode(current.mode);
     const selected = current.options.find(option => option.selected)?.label ?? mode ?? 'Foot';
     status.textContent = current.onShip ? 'You are aboard a ship.' : `${selected} travel selected.`;
-    summary.textContent = `Travel modifier ${current.travelModifier}; ocean travel ${current.oceanMinutesPerMapPixel} minutes per map pixel; running ${current.canRun ? 'allowed' : 'unavailable'}.`;
+    summary.textContent = current.summary;
     toggle.disabled = current.onShip;
     toggle.textContent = current.onShip ? 'Leave ship before choosing a mount' : 'Toggle mount';
     toggle.title = current.onShip ? 'Ship travel is a separate state.' : 'Choose horse, cart, or foot through the ruleset policy.';
@@ -1600,6 +1610,7 @@ function isTransportProjection(value: unknown): value is TransportProjection {
   return typeof candidate.mode === 'string'
     && typeof candidate.onShip === 'boolean'
     && typeof candidate.canRun === 'boolean'
+    && typeof candidate.summary === 'string'
     && typeof candidate.travelModifier === 'number' && Number.isFinite(candidate.travelModifier)
     && typeof candidate.oceanMinutesPerMapPixel === 'number' && Number.isFinite(candidate.oceanMinutesPerMapPixel)
     && Array.isArray(candidate.options) && candidate.options.every(isTransportOptionProjection);
@@ -1636,6 +1647,7 @@ function isTransportItemProjection(value: unknown): value is TransportItemProjec
   const candidate = value as Partial<TransportItemProjection>;
   return typeof candidate.key === 'string'
     && typeof candidate.definition === 'string'
+    && typeof candidate.label === 'string'
     && (typeof candidate.quantity === 'string' || typeof candidate.quantity === 'number');
 }
 
@@ -1686,7 +1698,7 @@ export function isSpellbookProjection(value:unknown):value is SpellbookProjectio
     && (v.itemMaker==null || isItemMakerProjection(v.itemMaker))
     && (v.summoning==null || isSummoningProjection(v.summoning))
     && (v.information==null || typeof v.information.key==='string' && typeof v.information.name==='string'
-      && typeof v.information.target==='string' && Number.isInteger(v.information.element)
+      && typeof v.information.target==='string' && typeof v.information.element==='string'
       && Array.isArray(v.information.details) && v.information.details.every(line=>typeof line==='string'));
 }
 
@@ -1717,7 +1729,7 @@ function renderSpells(root:HTMLElement,view:SpellbookProjection|null):void {
 function renderSpellInformation(root:HTMLElement,view:SpellbookProjection):void {
   if(!view.information) return;
   const section=document.createElement('section');const title=document.createElement('h3');title.textContent=view.information.name;section.append(title);
-  const target=document.createElement('p');target.textContent=`Target: ${({CasterOnly:'Self',ByTouch:'Touch',SingleTargetAtRange:'Single target at range',AreaAroundCaster:'Area around self',AreaAtRange:'Area at range'} as Record<string,string>)[view.information.target] ?? view.information.target}; element: ${['none','fire','cold','poison','shock','magic'][view.information.element] ?? 'unknown'}`;section.append(target);
+  const target=document.createElement('p');target.textContent=`Target: ${view.information.target}; element: ${view.information.element}`;section.append(target);
   for(const line of view.information.details) { const p=document.createElement('p');p.textContent=line;section.append(p); } root.append(section);
 }
 
@@ -1738,8 +1750,9 @@ function renderSpellSales(root:HTMLElement,view:SpellbookProjection|null):void {
 export function isSpellMakerProjection(value:unknown):value is SpellMakerProjection {
   if(!value || typeof value!=='object') return false;
   const v=value as Partial<SpellMakerProjection>;const draft=v.draft;
-  return typeof v.revision==='string' && typeof v.provider==='string' && Array.isArray(v.effects)
-    && v.effects.every(e=>e && typeof e.key==='string' && typeof e.school==='string' && Number.isInteger(e.type)
+  const options=(list:unknown):boolean=>Array.isArray(list) && list.every(o=>o && typeof o==='object' && Number.isInteger(o.value) && typeof o.label==='string');
+  return typeof v.revision==='string' && typeof v.provider==='string' && Array.isArray(v.effects) && options(v.targets) && options(v.elements)
+    && v.effects.every(e=>e && typeof e.key==='string' && typeof e.name==='string' && typeof e.school==='string' && Number.isInteger(e.type)
       && Number.isInteger(e.subType) && typeof e.duration==='boolean' && typeof e.chance==='boolean' && typeof e.magnitude==='boolean'
       && Number.isInteger(e.targets) && Number.isInteger(e.elements))
     && !!draft && typeof draft.name==='string' && Number.isInteger(draft.element) && Number.isInteger(draft.rangeType)
@@ -1767,20 +1780,20 @@ export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null
     wrap.append(field);parent.append(wrap);return field;
   };
   const name=input(form,'Name','name',view.draft.name);name.required=true;
-  const select=(label:string,name:string,values:readonly string[],selected:number):HTMLSelectElement=>{
+  const select=(label:string,name:string,values:readonly SpellMakerOption[],selected:number):HTMLSelectElement=>{
     const wrap=document.createElement('label');wrap.textContent=`${label} `;const field=document.createElement('select');field.name=name;
-    values.forEach((value,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=value;field.append(option);});
+    values.forEach(value=>{const option=document.createElement('option');option.value=String(value.value);option.textContent=value.label;field.append(option);});
     field.value=String(selected);wrap.append(field);form.append(wrap);return field;
   };
-  const target=select('Target','target',['Self','Touch','Single target at range','Area around self','Area at range'],view.draft.rangeType);
-  const element=select('Element','element',['Fire','Cold','Poison','Shock','Magic'],view.draft.element);
-  const icon=select('Icon','icon',Array.from({length:69},(_,i)=>String(i+1)),view.draft.icon);
+  const target=select('Target','target',view.targets,view.draft.rangeType);
+  const element=select('Element','element',view.elements,view.draft.element);
+  const icon=select('Icon','icon',Array.from({length:69},(_,i)=>({value:i,label:String(i+1)})),view.draft.icon);
   const slots:{select:HTMLSelectElement;fields:HTMLElement}[]=[];
   for(let slot=0;slot<3;slot++) {
     const section=document.createElement('fieldset');const legend=document.createElement('legend');legend.textContent=`Effect ${slot+1}`;section.append(legend);form.append(section);
     const picker=document.createElement('select');picker.setAttribute('aria-label',`Effect ${slot+1}`);
     const empty=document.createElement('option');empty.value='';empty.textContent='No effect';picker.append(empty);
-    for(const effect of view.effects) {const option=document.createElement('option');option.value=effect.key;option.textContent=`${effect.school}: ${effect.key.replaceAll('-',' ')}`;picker.append(option);}
+    for(const effect of view.effects) {const option=document.createElement('option');option.value=effect.key;option.textContent=`${effect.school}: ${effect.name}`;picker.append(option);}
     const saved=view.draft.effects[slot];picker.value=saved?.key ?? '';section.append(picker);
     const fields=document.createElement('div');section.append(fields);slots.push({select:picker,fields});
     const settings=():void=>{
@@ -1808,7 +1821,7 @@ export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null
       rangeType:Number(target.value),icon:Number(icon.value),effects})});
   });
   const status=document.createElement('p');status.setAttribute('role','status');
-  status.textContent=view.quote?.eligible ? `${view.quote.gold} gold · ${view.quote.spellPoints} magicka to cast` : 'Update the preview with valid settings.';root.append(status);
+  status.textContent=view.quote?.eligible ? `${view.quote.gold} gold · ${view.quote.spellPoints} magicka to cast` : view.quote?.reason ?? 'Update the preview with valid settings.';root.append(status);
   const buy=document.createElement('button');buy.type='button';buy.textContent='Buy constructed spell';buy.disabled=!view.quote?.eligible;root.append(buy);
   const stale=():void=>{buy.disabled=true;status.textContent='Update the cost preview after editing.';};
   form.addEventListener('input',stale);form.addEventListener('change',stale);
@@ -1864,16 +1877,10 @@ function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undef
       signoff.textContent = message.signoff;
       article.append(signoff);
     }
-    if (message.diagnostics.length > 0) {
-      const diagnostics = document.createElement('p');
-      diagnostics.className = 'dagger-quest-diagnostic';
-      diagnostics.textContent = message.diagnostics.join(' ');
-      article.append(diagnostics);
-    }
     root.append(article);
   };
-  value.deliveries.filter(message => message.delivery !== 'prompt').forEach(message => add(message, message.delivery));
-  value.journal.forEach(message => add(message, 'journal'));
+  value.deliveries.filter(message => message.delivery !== 'prompt').forEach(message => add(message, message.heading));
+  value.journal.forEach(message => add(message, message.heading));
   if (value.pending) {
     const message = value.pending;
     const prompt = document.createElement('article');
@@ -2061,14 +2068,13 @@ export function renderSummoning(root:HTMLElement,view:SummoningProjection|null,c
   const p=document.createElement('p');root.append(p);
   if(view.offerRevision){
     p.textContent=view.message;
-    for(const diagnostic of view.diagnostics){const note=document.createElement('p');note.textContent=diagnostic;root.append(note);}
     for(const [label,accept] of [['Accept the quest',true],['Refuse the prince',false]] as const){
       const button=document.createElement('button');button.type='button';button.textContent=label;
       button.addEventListener('click',()=>claim({action:'daedra-answer',revision:view.offerRevision!,confirm:accept}));root.append(button);
     }
   } else if(view.quote){
     p.textContent=view.quote.eligible ? `Summon ${view.quote.name} for ${view.quote.gold} gold. Payment is lost if the summoning fails.`
-      : view.quote.reason==='WrongDay' ? 'Today is not a summoning day.' : view.quote.reason==='ProviderUnavailable' ? 'Your standing does not permit this service.' : view.quote.reason;
+      : view.quote.reason;
     const button=document.createElement('button');button.type='button';button.textContent='Pay and summon';button.disabled=!view.quote.eligible;
     button.addEventListener('click',()=>claim({action:'daedra-summon',revision:view.revision,key:view.quote!.key,amount:view.quote!.gold,confirm:true}));root.append(button);
   }

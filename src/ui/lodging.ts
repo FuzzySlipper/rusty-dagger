@@ -5,6 +5,7 @@ export interface LodgingProjection {
   readonly price: number;
   readonly remainingHours: number;
   readonly canBook: boolean;
+  readonly maximumDays: number;
 }
 export type LodgingAction =
   | { readonly action: 'lodging-quote'; readonly key: string; readonly days: number }
@@ -13,7 +14,8 @@ export function isLodgingProjection(value: unknown): value is LodgingProjection 
   if (value === null || typeof value !== 'object') return false;
   const v = value as Record<string, unknown>;
   return typeof v.key === 'string' && typeof v.name === 'string' && typeof v.canBook === 'boolean'
-    && Number.isSafeInteger(v.days) && (v.days as number) >= 1 && (v.days as number) <= 350
+    && Number.isSafeInteger(v.maximumDays) && (v.maximumDays as number) >= 1
+    && Number.isSafeInteger(v.days) && (v.days as number) >= 1 && (v.days as number) <= (v.maximumDays as number)
     && Number.isSafeInteger(v.price) && (v.price as number) >= 0
     && Number.isSafeInteger(v.remainingHours) && (v.remainingHours as number) >= 0;
 }
@@ -24,7 +26,7 @@ export function mountLodging(root: HTMLElement, claim: (action: LodgingAction) =
   shell.className = 'dagger-lodging';
   shell.setAttribute('aria-label', 'Tavern lodging');
   shell.innerHTML = `<h3>Tavern lodging</h3><p class="dagger-lodging-status" role="status"></p>
-    <label>Additional days <input class="dagger-lodging-days" type="number" min="1" max="350" step="1" value="1"></label>
+    <label>Additional days <input class="dagger-lodging-days" type="number" min="1" step="1" value="1"></label>
     <button class="dagger-lodging-quote" type="button">Get room quote</button>
     <p class="dagger-lodging-price"></p><button class="dagger-lodging-book" type="button">Book room</button>`;
   root.append(shell);
@@ -35,11 +37,11 @@ export function mountLodging(root: HTMLElement, claim: (action: LodgingAction) =
   const book = shell.querySelector<HTMLButtonElement>('.dagger-lodging-book')!;
   let current: LodgingProjection | null = null;
   const selectedDays = (): number => days.value.trim() === '' ? NaN : Number(days.value);
-  const valid = (): boolean => Number.isSafeInteger(selectedDays()) && selectedDays() >= 1 && selectedDays() <= 350;
+  const valid = (): boolean => !!current && Number.isSafeInteger(selectedDays()) && selectedDays() >= 1 && selectedDays() <= current.maximumDays;
   const changed = (): void => { book.disabled = !current?.canBook || !valid() || current.days !== selectedDays(); };
   const request = (): void => {
     if (!current) return;
-    if (!valid()) { price.textContent = 'Enter a whole number from 1 to 350 days.'; days.focus(); return; }
+    if (!valid()) { price.textContent = `Enter a whole number from 1 to ${current.maximumDays} days.`; days.focus(); return; }
     claim({ action: 'lodging-quote', key: current.key, days: selectedDays() });
   };
   const reserve = (): void => {
@@ -56,8 +58,9 @@ export function mountLodging(root: HTMLElement, claim: (action: LodgingAction) =
       current = value;
       shell.hidden = value === null;
       if (value) {
+        days.max = String(value.maximumDays);
         status.textContent = `${value.name}: ${value.remainingHours > 0 ? `${value.remainingHours} paid hour(s) remaining.` : 'No current room booking.'}`;
-        price.textContent = value.canBook ? `${value.days} additional day(s): ${value.price} gold.` : 'A stay may total up to 350 days.';
+        price.textContent = value.canBook ? `${value.days} additional day(s): ${value.price} gold.` : `A stay may total up to ${value.maximumDays} days.`;
       }
       changed();
     },

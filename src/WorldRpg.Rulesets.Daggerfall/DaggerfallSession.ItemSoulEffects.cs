@@ -107,7 +107,7 @@ internal sealed partial class DaggerfallSession
         catch (MechanicsException failure) when (failure.Reason == MechanicsRefusal.Capacity)
         {
             if (identity is { } rejected) _uniqueItems.Remove(rejected);
-            Presentation.SetOutcome($"Cannot create that item: {failure.Message}");
+            Presentation.SetOutcome($"You cannot carry {option.Label}.");
             return;
         }
         _pendingCreateItem = request.Next;

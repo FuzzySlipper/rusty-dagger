@@ -290,6 +290,21 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
     }
 
     /// <summary>This instant as seconds from the calendar's own start, which is what arithmetic uses.</summary>
+    /// <summary>
+    /// Player wording for an interval of game time in its two largest whole units: "2 days and
+    /// 3 hours", "45 minutes", or "less than a minute".
+    /// </summary>
+    internal static string DescribeDuration(long seconds)
+    {
+        if (seconds < SecondsPerMinute) return "less than a minute";
+        long minutes = seconds / SecondsPerMinute;
+        (long Count, string Unit)[] parts =
+            [(minutes / (MinutesPerHour * HoursPerDay), "day"), (minutes / MinutesPerHour % HoursPerDay, "hour"), (minutes % MinutesPerHour, "minute")];
+        string[] words = [.. parts.SkipWhile(part => part.Count == 0).Take(2).Where(part => part.Count > 0)
+            .Select(part => $"{part.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)} {part.Unit}{(part.Count == 1 ? "" : "s")}")];
+        return string.Join(" and ", words);
+    }
+
     public long ToAbsoluteSeconds() => (DayNumber * SecondsPerDay) + SecondOfDay;
 
     /// <summary>The instant a count of seconds from the calendar's start names.</summary>

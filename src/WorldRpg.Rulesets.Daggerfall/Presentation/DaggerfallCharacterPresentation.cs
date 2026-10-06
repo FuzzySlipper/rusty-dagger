@@ -299,5 +299,6 @@ internal sealed class DaggerfallCharacterPresentation
         : item.Shield is { } shield ? $"Shield armor: {shield.Armor.ToString(CultureInfo.InvariantCulture)}"
         : "Equipment";
 
-    private static string Label(string id) => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(id.Replace('-', ' '));
+    /// <summary>The player name of an attribute, skill or slot id, as the character sheet names it.</summary>
+    internal static string Label(string id) => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(id.Replace('-', ' '));
 }

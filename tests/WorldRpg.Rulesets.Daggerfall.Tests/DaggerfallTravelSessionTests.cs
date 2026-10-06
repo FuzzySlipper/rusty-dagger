@@ -88,6 +88,30 @@ public sealed class DaggerfallTravelSessionTests
             restoredDestination.ToVector())));
         Assert.Null(restored.ReadTravelPresentation().Quote);
         Assert.Contains("Arrived", restored.ReadTravelPresentation().Message);
+        // Elapsed time reads as game time, not raw seconds.
+        Assert.Contains(" passed.", result.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("seconds", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_unquotable_destination_reports_a_player_sentence_instead_of_route_detail()
+    {
+        using Fixture fixture = new();
+        fixture.PreviewSite(fixture.Origin.Site!.Value);
+        DaggerfallTravelPresentation travel = fixture.Session.ReadTravelPresentation();
+        Assert.Null(travel.Quote);
+        Assert.Equal("No travel route to that destination is available right now.", travel.Message);
+    }
+
+    [Fact]
+    public void Destinations_are_labelled_with_their_kind_and_published_region_name()
+    {
+        using Fixture fixture = new();
+        DaggerfallTravelDestination destination = fixture.Preview(inn: false).Destination;
+        DaggerfallTravelPresentation travel = fixture.Session.ReadTravelPresentation();
+        Assert.Equal("City", DaggerfallSiteKinds.Label(destination.Kind));
+        Assert.Equal(TestPayload.Definitions.BuildingNames.RegionNames[destination.Id.Region], travel.RegionName(destination.Id.Region));
+        Assert.Equal("an unnamed region", travel.RegionName(-1));
     }
 
     [Fact]
@@ -438,6 +462,8 @@ public sealed class DaggerfallTravelSessionTests
                 cautious, inn, ship });
             return Session.ReadTravelPresentation().Quote!;
         }
+        internal void PreviewSite(DaggerfallSiteId site) => Submit(new { action = "travel-preview", region = site.Region,
+            destination = site.Index, cautious = false, inn = false, ship = false });
         private void Submit(object action) => Session.Update(new ProductUpdate(OuterUpdate(step++), [Ui(JsonSerializer.Serialize(action))]));
         internal void Accept(DaggerfallTravelQuote quote, bool duplicate = false)
         {

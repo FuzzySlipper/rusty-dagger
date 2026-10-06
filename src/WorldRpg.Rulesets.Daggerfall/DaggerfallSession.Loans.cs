@@ -20,10 +20,7 @@ internal sealed partial class DaggerfallSession
                 : $"Loans defaulted in {day.Defaults.Count} regions; legal and faction standing fell.");
     }
 
-    private string LoanRegionName(int region) =>
-        region >= 0 && region < _definitions.BuildingNames.RegionNames.Count
-            ? _definitions.BuildingNames.RegionNames[region]
-            : $"region {region}";
+    private string LoanRegionName(int region) => _definitions.BuildingNames.RegionName(region);
 
     private void ChangeLoan(DaggerfallPlayerUiAction action)
     {

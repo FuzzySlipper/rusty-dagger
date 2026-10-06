@@ -25,11 +25,13 @@ export interface CurrencyTotals {
 
 export interface BankAccount {
   readonly region: number;
+  readonly regionName: string;
   readonly gold: string;
 }
 
 export interface BankProjection {
   readonly currentRegion: number;
+  readonly currentRegionName: string;
   readonly currentBalance: string;
   readonly accounts: readonly BankAccount[];
   readonly maximumNewLoan: string;
@@ -548,7 +550,7 @@ function createBankControls(): {
         destination.disabled = true;
         return;
       }
-      active.textContent = `Region ${value.currentRegion}: ${value.currentBalance} gold`;
+      active.textContent = `${value.currentRegionName}: ${value.currentBalance} gold`;
       loan.textContent = value.loan === null
         ? `No outstanding loan. Maximum new loan ${value.maximumNewLoan} gold.`
         : value.loan.defaulted
@@ -556,13 +558,13 @@ function createBankControls(): {
           : `Loan: ${value.loan.remaining} gold remains; ${value.loan.daysRemaining} days until due.`;
       balances.replaceChildren(...value.accounts.map((account) => {
         const row = document.createElement('li');
-        row.textContent = `Region ${account.region}: ${account.gold}`;
+        row.textContent = `${account.regionName}: ${account.gold} gold`;
         if (account.region === value.currentRegion) row.className = 'is-current';
         return row;
       }));
       const prior = destination.value;
       destination.replaceChildren(...value.accounts.filter((account) => account.region !== value.currentRegion).map((account) => {
-        const option = new Option(`Region ${account.region}`, String(account.region));
+        const option = new Option(account.regionName, String(account.region));
         return option;
       }));
       if (Array.from(destination.options).some((option) => option.value === prior)) destination.value = prior;

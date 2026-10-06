@@ -10,7 +10,11 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal sealed record DaggerfallPropertyOfferView(string Key, string Name, string Price, string SalePrice, bool Owned, bool CanBuy, bool CanSell, bool CanEnter);
+internal sealed record DaggerfallPropertyOfferView(string Key, string Name, string Price, string SalePrice, bool Owned, bool CanBuy, bool CanSell, bool CanEnter)
+{
+    /// <summary>Whether this property is a house the player can walk into once owned; ships are boarded instead.</summary>
+    internal bool Enterable { get; init; }
+}
 internal sealed record DaggerfallPropertyStorageView(string Key, string Revision, DaggerfallWagonItemPresentation[] Items);
 internal sealed record DaggerfallPropertyView(bool BankAvailable, DaggerfallPropertyOfferView[] Offers, DaggerfallPropertyStorageView? Storage);
 
@@ -85,7 +89,7 @@ internal sealed partial class DaggerfallSession
             offers.Add(new(offer.StorageKey.Value, name, offer.Price.ToString(CultureInfo.InvariantCulture),
                 offer.SalePrice.ToString(CultureInfo.InvariantCulture), owned,
                 bank && HouseProfile(offer.Identity) is not null && !State.Property.OwnsHouseInRegion(offer.Identity.Site.Region), bank && owned,
-                owned && CanEnterProperty(offer.Identity)));
+                owned && CanEnterProperty(offer.Identity)) { Enterable = true });
         }
         foreach (DaggerfallShipOffer offer in CurrentShipOffers())
             offers.Add(new(offer.StorageKey.Value, $"{offer.Type} ship", offer.Price.ToString(CultureInfo.InvariantCulture),
@@ -156,12 +160,12 @@ internal sealed partial class DaggerfallSession
             Presentation.SetOutcome(put ? "Item stored in property." : "Item taken from property.");
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or OverflowException)
-        { Presentation.SetOutcome(error.Message); }
+        { Presentation.SetOutcome(put ? "That item cannot be stored here." : "That item cannot be taken from storage."); }
     }
 
-    private static DaggerfallWagonItemPresentation[] PropertyItems(InventoryView contents) =>
-        [.. contents.UniqueItems.Select(item => new DaggerfallWagonItemPresentation($"unique:{item.Entity.Value}", item.Definition.Value, "1")),
-            .. contents.Stacks.Select(item => new DaggerfallWagonItemPresentation($"stack:{item.Id.Value}", item.Definition.Value, item.Quantity.ToString(CultureInfo.InvariantCulture)))];
+    private DaggerfallWagonItemPresentation[] PropertyItems(InventoryView contents) =>
+        [.. contents.UniqueItems.Select(item => new DaggerfallWagonItemPresentation($"unique:{item.Entity.Value}", item.Definition.Value, "1", ItemDefinitionName(item.Definition.Value))),
+            .. contents.Stacks.Select(item => new DaggerfallWagonItemPresentation($"stack:{item.Id.Value}", item.Definition.Value, item.Quantity.ToString(CultureInfo.InvariantCulture), ItemDefinitionName(item.Definition.Value)))];
 
     private DaggerfallTransportActionResult BoardPropertyShip()
     {

@@ -1,5 +1,6 @@
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Presentation;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -7,7 +8,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal static class DaggerfallMagicPresentation
 {
     internal const string Owner = "magic.effects";
-    internal static void Publish(DaggerfallEffectLifecycle effects, PlayerActorState player, PresentationSlots slots)
+    internal static void Publish(DaggerfallEffectLifecycle effects, PlayerActorState player, PresentationSlots slots,
+        Func<ulong, string> itemName)
     {
         slots.RetireOwner(Owner);
         if (player.IsDefeated) return;
@@ -15,10 +17,14 @@ internal static class DaggerfallMagicPresentation
             && effect.Definition.ShowSpellIcon && effect.Definition.DoorMagic == DaggerfallDoorMagic.None
             && effect.Definition.Perception.Concealment == DaggerfallConcealment.None))
         {
-            string duration = effect.Lifecycle.RemainingRounds is uint rounds ? $"{rounds} magic rounds remaining." : "Active until removed.";
-            string source = effect.Context.Item is { } item ? $"Item {item.Value}. " : "";
-            slots.Publish(new(Owner, effect.Context.Instance.Value, effect.BundleName ?? effect.Definition.Key,
-                $"{effect.Definition.Key}. {source}{duration}", 35));
+            // One magic round is one game minute.
+            string duration = effect.Lifecycle.RemainingRounds is uint rounds
+                ? DaggerfallCalendar.DescribeDuration(checked((long)rounds * DaggerfallCalendar.SecondsPerMinute)) + " remaining."
+                : "Active until removed.";
+            string source = effect.Context.Item is { } item ? $"From {itemName(item.Value)}. " : "";
+            string name = DaggerfallEffectCatalog.Label(effect.Definition.Key);
+            slots.Publish(new(Owner, effect.Context.Instance.Value, effect.BundleName ?? name,
+                $"{name}. {source}{duration}", 35));
         }
     }
 }
