@@ -10,7 +10,8 @@ internal sealed class DaggerfallCinematicPresentation(IEngineContext engine, Pro
     DaggerfallCinematicSet catalog) : IDisposable
 {
     internal const string BundleId = "daggerfall.cinematics";
-    private const string Root = "worldrpg/media/cinematics/";
+    /// <summary>The logical content root the Host stages as this bundle; artifact paths name files below it.</summary>
+    internal const string Root = "worldrpg/media/cinematics/";
     private (string Source, VideoPlaybackHandle Handle)? _active;
     private ulong _lastFact;
     private ulong _lostFacts;
