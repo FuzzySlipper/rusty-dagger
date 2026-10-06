@@ -371,14 +371,7 @@ internal sealed class DaggerfallInventoryPresentation
                 presentedCondition, metadata.Identified);
         if (metadata.Enchantment is null) return new(baseLabel, conditionDetail + Details(definition), presentedCondition, true);
         if (!definitions.Magic.MagicItems.TryGetValue(metadata.Enchantment, out DaggerfallMagicItemDefinition? magic))
-        {
-            // An item maker's setting has no template of its own: it presents the ordinary item, named by
-            // what the setting does when the item is identified.
-            if (!definitions.Magic.EnchantmentSettings.TryGetValue(metadata.Enchantment, out DaggerfallEnchantmentSetting setting))
-                throw new InvalidOperationException($"Item '{metadata.ItemId}' names unpublished magic metadata '{metadata.Enchantment}'.");
-            return new(baseLabel, conditionDetail + (metadata.Identified ? setting.DisplayName : "Unidentified magical item"),
-                presentedCondition, metadata.Identified);
-        }
+            throw new InvalidOperationException($"Item '{metadata.ItemId}' names unpublished magic metadata '{metadata.Enchantment}'.");
         if (!metadata.Identified)
             return new(baseLabel, conditionDetail + "Unidentified magical item", presentedCondition, false);
         string namedMagic = magic.Name.Replace("%it", baseLabel, StringComparison.Ordinal);

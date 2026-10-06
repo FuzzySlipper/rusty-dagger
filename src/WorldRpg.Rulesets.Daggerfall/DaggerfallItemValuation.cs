@@ -22,8 +22,6 @@ internal sealed class DaggerfallItemValuation(DaggerfallDefinitions definitions)
         if (metadata.MadeEnchantment is { } made) return made.Value;
         if (metadata.Enchantment is { } enchantment)
         {
-            // A setting has no published template, so the item is worth what its own definition is worth.
-            if (_definitions.Magic.EnchantmentSettings.TryGetValue(enchantment, out _)) return definition.Value;
             if (!_definitions.Magic.MagicItems.TryGetValue(enchantment, out DaggerfallMagicItemDefinition? magic))
                 throw new InvalidOperationException($"Item '{definition.Id.Value}' names unpublished magic metadata '{enchantment}'.");
             return magic.Value;

@@ -233,11 +233,6 @@ internal sealed record DaggerfallMagicCatalogSet(
             enchantments = magic.Enchantments;
             return true;
         }
-        if (EnchantmentSettings.TryGetValue(key, out var setting))
-        {
-            enchantments = [DaggerfallEnchantmentSettings.ToEffect(setting)];
-            return true;
-        }
         enchantments = [];
         return false;
     }

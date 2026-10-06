@@ -155,8 +155,8 @@ public sealed class DaggerfallRegionalEconomyTests
     [Fact]
     public void An_item_makers_enchantment_is_valued_like_any_other_unidentified_one()
     {
-        // A setting has no published magic item, so quoting a setting-enchanted item must not be rejected
-        // as unpublished metadata: it keeps the ordinary item's value until identification, exactly as an
+        // A made enchantment has no published magic item, so quoting it must not be rejected as
+        // unpublished metadata: it keeps the ordinary item's value until identification, exactly as an
         // unidentified published enchantment does.
         DaggerfallDefinitions definitions = LoadDefinitions();
         string setting = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
@@ -164,7 +164,8 @@ public sealed class DaggerfallRegionalEconomyTests
         DaggerfallItemInstanceMetadata metadata = DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player);
         DaggerfallRegionalPriceState prices = PriceState(definitions);
         DaggerfallTradeQuoteService service = new(definitions, new DaggerfallItemValuation(definitions), prices);
-        DaggerfallTradeLine unidentified = new(definition, metadata with { Enchantment = setting, Identified = false }, 1);
+        DaggerfallMadeEnchantment made = new("Longsword", DaggerfallEnchantmentConstruction.Expand(definitions.Magic, [setting]), definition.Value);
+        DaggerfallTradeLine unidentified = new(definition, metadata with { MadeEnchantment = made, Identified = false }, 1);
         DaggerfallTradeLine plain = new(definition, metadata with { Identified = false }, 1);
 
         DaggerfallTradeQuote enchanted = Assert.IsType<DaggerfallTradeQuote>(service.Quote(DaggerfallTradeSide.BuyFromMerchant,
@@ -176,7 +177,7 @@ public sealed class DaggerfallRegionalEconomyTests
 
         // The identified half of the same rule: an identified setting is worth the ordinary item too, so a
         // regression that invented a magic value for it would fail here.
-        DaggerfallTradeLine identifiedEnchanted = new(definition, metadata with { Enchantment = setting, Identified = true }, 1);
+        DaggerfallTradeLine identifiedEnchanted = new(definition, metadata with { MadeEnchantment = made, Identified = true }, 1);
         DaggerfallTradeLine identifiedPlain = new(definition, metadata with { Identified = true }, 1);
         DaggerfallTradeQuote identifiedSettingQuote = Assert.IsType<DaggerfallTradeQuote>(service.Quote(DaggerfallTradeSide.BuyFromMerchant,
             [identifiedEnchanted], 10, 50, 50, 0, null).Quote);

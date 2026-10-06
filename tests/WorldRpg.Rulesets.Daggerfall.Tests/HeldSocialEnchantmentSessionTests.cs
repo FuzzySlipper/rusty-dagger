@@ -58,7 +58,7 @@ public sealed class HeldSocialEnchantmentSessionTests
         }
         using DaggerfallSession restored = DaggerfallSession.Restore(Engine().Context, composition, save);
         Assert.Equal(baseline + amount, restored.State.Social.ReactionForNpc(npc).Value);
-        Assert.Equal(key, restored.State.ItemInstances.RequireUnique(durableId).Enchantment);
+        Assert.Equal(key, Assert.Single(restored.State.ItemInstances.RequireUnique(durableId).MadeEnchantment!.Settings, value => value.Parent is null).Key);
         var worn = restored.State.Equipment.Read().Assignments.Single(assignment =>
             restored.State.Equipment.GetDurableItemId(new EntityId(assignment.Item.EntityId)).Value == durableId).Item;
         Assert.Equal(EquipmentMoveOutcome.Applied, restored.EquipmentMoves.MoveToGrid(worn, 49).Outcome);
