@@ -200,9 +200,8 @@ internal sealed class DaggerfallItemConditionService(
         (ulong durableItemId, DaggerfallItemInstanceMetadata metadata) = RequirePlayerItem(item);
         if (!metadata.HasEnchantment || metadata.Identified)
             return new(DaggerfallItemConditionOutcome.AlreadyIdentified, durableItemId, metadata, metadata.CurrentCondition);
-        // A setting has no published template to disclose, so it is identified by its own param meaning;
-        // anything else must still name a published magic item.
-        if (metadata.Enchantment is { } key && !definitions.Magic.EnchantmentSettings.TryGetValue(key, out _)) RequireMagic(metadata);
+        // A made enchantment discloses its own settings; the magic-item field names only a published item.
+        if (metadata.Enchantment is not null) RequireMagic(metadata);
         DaggerfallItemInstanceMetadata identified = metadata with { Identified = true };
         instances.ReplaceUnique(durableItemId, identified);
         return new(DaggerfallItemConditionOutcome.Identified, durableItemId, identified, metadata.CurrentCondition);
@@ -218,7 +217,7 @@ internal sealed class DaggerfallItemConditionService(
         RequireItemMetadata(metadata);
         if (!metadata.HasEnchantment || metadata.Identified)
             return new(DaggerfallItemConditionOutcome.AlreadyIdentified, durableItemId, metadata, metadata.CurrentCondition);
-        if (metadata.Enchantment is { } key && !definitions.Magic.EnchantmentSettings.TryGetValue(key, out _)) RequireMagic(metadata);
+        if (metadata.Enchantment is not null) RequireMagic(metadata);
         DaggerfallItemInstanceMetadata identified = metadata with { Identified = true };
         instances.ReplaceUnique(durableItemId, identified);
         return new(DaggerfallItemConditionOutcome.Identified, durableItemId, identified, metadata.CurrentCondition);
@@ -327,10 +326,8 @@ internal sealed class DaggerfallItemConditionService(
     {
         if (!definitions.TryResolveItem(new DaggerfallItemId(metadata.ItemId), out _))
             throw new InvalidOperationException($"Item instance names unpublished definition '{metadata.ItemId}'.");
-        // An item maker's setting is a legitimate enchantment that has no published magic item, so it is
-        // not held to the published-template requirement here; anything else still is.
-        if (metadata.Enchantment is { } enchantment && !definitions.Magic.EnchantmentSettings.TryGetValue(enchantment, out _))
-            _ = RequireMagic(metadata);
+        // Item-maker settings travel only as a made enchantment; the magic-item field names a published item.
+        if (metadata.Enchantment is not null) _ = RequireMagic(metadata);
     }
 
     private void RequireItemMetadata(UniqueInventoryItem item, DaggerfallItemInstanceMetadata metadata)

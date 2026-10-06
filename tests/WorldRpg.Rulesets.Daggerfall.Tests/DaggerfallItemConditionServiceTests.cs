@@ -69,6 +69,21 @@ public sealed class DaggerfallItemConditionServiceTests
     }
 
     [Fact]
+    public void A_live_setting_key_in_the_magic_item_field_is_refused_by_condition_operations()
+    {
+        // Item-maker settings travel only as a made enchantment, so a setting key that reaches the
+        // magic-item field by any path is malformed metadata here as it is in save validation.
+        using Fixture f = new();
+        UniqueItem sword = f.CreatePlainWeapon(408, 115, "daedric");
+        string settingKey = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
+        f.Instances.ReplaceUnique(408, f.Instances.RequireUnique(408) with { Enchantment = settingKey, Identified = false });
+
+        Assert.Throws<InvalidOperationException>(() => f.Service.Identify(sword));
+        Assert.Throws<InvalidOperationException>(() => f.Service.Damage(sword, 1));
+        Assert.False(f.Instances.RequireUnique(408).Identified);
+    }
+
+    [Fact]
     public void A_saved_setting_key_is_not_magic_item_metadata_and_is_refused()
     {
         // An item maker's settings are saved as a made enchantment; the magic-item field names only a
