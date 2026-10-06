@@ -633,8 +633,9 @@ public sealed class DaggerfallHeldEnchantmentTests
         // then moons at 200 then creature groups at 700-1000, weight is 400/600, talents 500/600/600,
         // regeneration 4000/3000/3000 for always/sunlight/darkness, StrengthensArmor and RepairsObjects
         // are single settings at param -1, and the detriments are priced negatively: ItemDeteriorates
-        // -3000/-1500/-500, UserTakesDamage -6000/-1000, WeakensArmor -700.
-        Assert.Equal(164, TestPayload.Definitions.Magic.EnchantmentSettings.Count);
+        // -3000/-1500/-500, UserTakesDamage -6000/-1000, WeakensArmor -700. FeatherWeight and
+        // ExtraWeight are single settings, and SoulBound has one setting per classic mobile (43).
+        Assert.Equal(209, TestPayload.Definitions.Magic.EnchantmentSettings.Count);
         Assert.All(TestPayload.Definitions.Magic.EnchantmentSettings.Values, setting => Assert.Equal(setting.Key, $"enchantment.{setting.Type}.{setting.Param}"));
 
         Assert.Equal(900, SettingCost(10, 29));                       // long blade, the donor's flat price

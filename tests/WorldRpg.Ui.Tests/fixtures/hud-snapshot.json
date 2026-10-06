@@ -8,6 +8,7 @@
     "ready": null,
     "result": "",
     "sale": null,
+    "summoning": null,
     "itemMaker": null,
     "potionMaker": null,
     "information": null
@@ -233,6 +234,7 @@
     }
   },
   "quests": {
+    "offer": null,
     "escortFaces": [],
     "deliveries": [],
     "journal": [],
@@ -1426,7 +1428,14 @@
       "daggerfall.quests.disabled",
       "daggerfall.quests.nobility",
       "daggerfall.small-ship",
-      "daggerfall.large-ship"
+      "daggerfall.large-ship",
+      "daggerfall.the-hawkston-cemetery",
+      "daggerfall.the-tombs-of-klerd",
+      "daggerfall.the-hawkston-cemetery-exterior",
+      "daggerfall.the-tombs-of-klerd-exterior",
+      "daggerfall.quests.story-early",
+      "daggerfall.quests.story-late",
+      "daggerfall.quests.cures"
     ],
     "tuning": "daggerfall.defaults"
   },

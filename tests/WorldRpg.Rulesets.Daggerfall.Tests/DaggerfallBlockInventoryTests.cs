@@ -174,7 +174,8 @@ public sealed class DaggerfallBlockInventoryTests
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)];
 
-        Assert.Equal(179, referenced.Length);
+        // Includes the blocks of the type-zero Crypt dungeons the location section carries.
+        Assert.Equal(187, referenced.Length);
         Assert.Empty(referenced.Except(inventory, StringComparer.Ordinal));
         Assert.All(referenced, name => Assert.Contains(name, inventory));
     }

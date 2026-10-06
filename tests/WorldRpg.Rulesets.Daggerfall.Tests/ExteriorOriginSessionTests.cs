@@ -320,7 +320,9 @@ public sealed class ExteriorOriginSessionTests
         Assert.Equal(expectedActorProfile.X, insideActor.X, 3);
         Assert.Equal(expectedActorProfile.Y, insideActor.Y, 3);
         Assert.Equal(expectedActorProfile.Z, insideActor.Z, 3);
-        DaggerfallGroundContainerSave insideGround = Assert.Single(inside.GroundContainers);
+        // The interior also admits its own property storage; the dropped pile is the exterior one.
+        DaggerfallGroundContainerSave insideGround = Assert.Single(inside.GroundContainers,
+            ground => ground.Profile.Require() == exterior.ProfileKey);
         Assert.Equal(expectedReturnPlayer.X, insideGround.X, 3);
         Assert.Equal(expectedReturnPlayer.Y, insideGround.Y, 3);
         Assert.Equal(expectedReturnPlayer.Z, insideGround.Z, 3);

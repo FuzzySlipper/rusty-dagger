@@ -167,16 +167,22 @@ public sealed class ActorLifecycleSessionTests
         // EnemyBasics gives the City Watch no loot table key; the donor then selects its all-zero "-" matrix.
         Assert.Equal((146, "class18", (string?)null), (definition.MobileId, definition.Career, definition.LootTableKey));
 
+        DaggerfallInventorySave carried = DaggerfallSavePayload.Read(session.CaptureSave()).ActorInventories
+            .Single(entry => entry.EntityId == actorId).Inventory;
+        Assert.NotEmpty(carried.UniqueItems);
         session.State.Actors.Get(actorId).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, actorId, 1, 1, .125));
         Assert.True(session.State.Actors.Get(actorId).IsDefeated);
         Assert.True(session.Corpses.TryGetValue(actorId, out CorpseContainer? corpse));
         Assert.NotNull(corpse);
-        // The corpse can still be searched once, and generation gave it nothing: no inventory is registered
-        // for it, which is how a corpse with no generated loot is held.
+        // The donor moves the dead entity's own items to its loot, and the all-zero matrix generates
+        // nothing beside them: the corpse holds exactly the watchman's carried equipment, no gold or
+        // table items.
         Assert.True(corpse.IsInteractable);
-        Assert.False(corpse.IsRegistered);
+        DaggerfallCorpseSave saved = DaggerfallSavePayload.Read(session.CaptureSave()).Corpses.Single(value => value.ActorId == actorId);
+        Assert.Empty(saved.Stacks);
+        Assert.Equal(carried.UniqueItems.Select(item => item.EntityId).Order(), saved.UniqueItems.Select(item => item.EntityId).Order());
     }
 
     [Fact]

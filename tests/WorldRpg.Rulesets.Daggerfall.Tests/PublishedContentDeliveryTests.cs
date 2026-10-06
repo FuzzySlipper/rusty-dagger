@@ -80,7 +80,8 @@ public sealed class PublishedContentDeliveryTests
         // the archive. The inventory indexes both because both are admitted content; product-wide sky
         // resources have their own manifest and group below.
         Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
-        Assert.Equal(318, listed.Count);
+        // Includes one TEXTURE.205 inventory icon for each of the 20 classic potion recipes.
+        Assert.Equal(338, listed.Count);
 
         // The score is published by its own command into its own group, so it carries its own generated
         // index and the classic index above does not account for it.
@@ -137,9 +138,10 @@ public sealed class PublishedContentDeliveryTests
         // Every artifact the index names is an admitted file, and the group carries no other: an
         // artifact written without an index entry, or an entry with no artifact, fails here.
         // The escort HUD adds four child faces and binds the 61 faction faces alongside the
-        // paper-doll layers and career animation frames.
-        Assert.Equal(425, characterListed.Count);
-        Assert.Equal(305, characters.Artifacts.Count(artifact => artifact.GetProperty("binding").GetString() == "admitted"));
+        // paper-doll layers and career animation frames; the racial forms add the vampire
+        // (VAMP00I0 frames and its SCBG08I0 background) and the were, wolf and boar bodies.
+        Assert.Equal(445, characterListed.Count);
+        Assert.Equal(326, characters.Artifacts.Count(artifact => artifact.GetProperty("binding").GetString() == "admitted"));
         Assert.Equal(
             [.. characterPublished.Except(characterListed).Order(StringComparer.Ordinal)],
             [.. characterListed.Except(characterPublished).Order(StringComparer.Ordinal)]);
@@ -461,8 +463,9 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", identified["font.classic.0000"].Path);
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", identified["weapon.werecreature"].Path);
         // The ambient and weather audio publication added 21 source-backed clips to the classic group;
-        // the separate sky group is validated above and does not belong in this count.
-        Assert.Equal(317, identified.Count);
+        // the separate sky group is validated above and does not belong in this count. The 20 classic
+        // potion recipes each publish their TEXTURE.205 inventory icon.
+        Assert.Equal(337, identified.Count);
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
@@ -513,7 +516,7 @@ public sealed class PublishedContentDeliveryTests
         DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(content, inputs.ClassicPresentation);
         DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(content, castle.ClassicPresentation);
 
-        Assert.Equal(317, media.Paths.Count);
+        Assert.Equal(337, media.Paths.Count);
         JsonElement inventory = JsonDocument.Parse(content.ReadBytes(DaggerfallUiArt.InventoryPath).ToArray()).RootElement;
         Dictionary<string, string> published = inventory.GetProperty("artifacts").EnumerateArray()
             .Where(artifact => artifact.TryGetProperty("mediaId", out _))

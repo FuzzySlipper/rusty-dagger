@@ -85,6 +85,10 @@
     <RustyEngineContentBundle Include="daggerfall.charing-interior-3-2-14-audio" Root="worldrpg/imports/charing/interior-3-2-14/media/audio/clips" />
     <RustyEngineContentBundle Include="daggerfall.small-ship-audio" Root="worldrpg/imports/small-ship/exterior/media/audio/clips" />
     <RustyEngineContentBundle Include="daggerfall.large-ship-audio" Root="worldrpg/imports/large-ship/exterior/media/audio/clips" />
+    <RustyEngineContentBundle Include="daggerfall.the-hawkston-cemetery-audio" Root="worldrpg/imports/the-hawkston-cemetery/media/audio/clips" />
+    <RustyEngineContentBundle Include="daggerfall.the-hawkston-cemetery-exterior-audio" Root="worldrpg/imports/the-hawkston-cemetery/exterior/media/audio/clips" />
+    <RustyEngineContentBundle Include="daggerfall.the-tombs-of-klerd-audio" Root="worldrpg/imports/the-tombs-of-klerd/media/audio/clips" />
+    <RustyEngineContentBundle Include="daggerfall.the-tombs-of-klerd-exterior-audio" Root="worldrpg/imports/the-tombs-of-klerd/exterior/media/audio/clips" />
   </ItemGroup>
 
   <!-- Content derived from the operator's Arena2 files is not tracked; scripts/regenerate-content.sh
