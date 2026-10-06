@@ -1006,7 +1006,7 @@ test('map controls change only presentation and retain live player position with
   } finally { f.dispose(); }
 });
 
-test('dungeon map notes are added at the player and removed through the discovery owner', () => {
+test('dungeon map notes are added at the player, edited and removed through the discovery owner', () => {
   const f = fixture();
   try {
     const map = { id: 'privateers', name: "Privateer's Hold", kind: 'dungeon', region: null, location: null, canAddNote: true,
@@ -1020,6 +1020,11 @@ test('dungeon map notes are added at the player and removed through the discover
     form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
     assert.deepEqual(f.actions.at(-1), { action: 'map-note-add', text: 'Lever room' });
     const note = f.root.querySelector('[data-note="note-1"]');
+    const edit = note.querySelector('.dagger-map-note-edit');
+    assert.equal(edit.querySelector('input').value, 'Stairs down');
+    edit.querySelector('input').value = ' Stairs down, then left ';
+    edit.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'map-note-edit', note: 'note-1', text: 'Stairs down, then left' });
     note.querySelector('button').click();
     assert.deepEqual(f.actions.at(-1), { action: 'map-note-remove', note: 'note-1' });
     assert.equal(f.root.querySelector('.dagger-map-buildings').textContent.match(/Remove note/g).length, 1);

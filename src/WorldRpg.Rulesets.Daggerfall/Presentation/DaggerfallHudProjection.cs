@@ -16,7 +16,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <summary>Everything one HUD snapshot projects, gathered by the session from the owners that hold it.</summary>
 internal sealed record DaggerfallHudFrame(
     PlayerActorState Player,
-    ProgressionState Progression,
     PresentationState Presentation,
     ProductMode Mode,
     PlayerControlState Controls,
@@ -59,7 +58,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     internal void Publish(DaggerfallHudFrame frame)
     {
         ArgumentNullException.ThrowIfNull(frame);
-        var (player, progression, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
+        var (player, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
             dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _, _, calendar, effects, cinematicSource) = frame;
         UiValueBuilder builder = new();
@@ -112,7 +111,6 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("element", builder.String(information.Element)), ("target", builder.String(information.Target)),
                     ("details", builder.Array(information.Details.Select(builder.String).ToArray())))))),
             ("resources", builder.Array(rows)),
-            ("experience", builder.Number(progression.Experience)),
             ("lastOutcome", builder.String(presentation.LastOutcome)),
             // The mode is the product's, and the session is the one place that is told it, so the
             // projection that the thin UI renders carries it rather than the UI keeping one.

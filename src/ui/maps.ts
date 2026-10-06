@@ -11,6 +11,7 @@ export interface MapProjection {
 export type MapAction =
   | { readonly action: 'map-building'; readonly region: number; readonly destination: number; readonly item: string }
   | { readonly action: 'map-note-add'; readonly text: string }
+  | { readonly action: 'map-note-edit'; readonly note: string; readonly text: string }
   | { readonly action: 'map-note-remove'; readonly note: string };
 export function isMapProjection(value: unknown): value is MapProjection {
   if (!value || typeof value !== 'object') return false;
@@ -88,7 +89,19 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
           text.dataset.note = label.id;
           const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remove note';
           remove.addEventListener('click', () => send({ action: 'map-note-remove', note: label.id }));
-          text.append(' ', remove);
+          // Editing rewrites the note's text in place; the discovery owner keeps where it was placed.
+          const edit = document.createElement('form'); edit.className = 'dagger-map-note-edit';
+          const editText = document.createElement('input'); editText.maxLength = 256; editText.autocomplete = 'off'; editText.value = label.name;
+          editText.setAttribute('aria-label', `Edit note ${label.name}`);
+          const save = document.createElement('button'); save.type = 'submit'; save.textContent = 'Save note';
+          edit.append(editText, save);
+          edit.addEventListener('submit', event => {
+            event.preventDefault();
+            const value = editText.value.trim();
+            if (!value) { editText.focus(); return; }
+            send({ action: 'map-note-edit', note: label.id, text: value });
+          });
+          text.append(' ', remove, edit);
         }
         buildings.append(text);
       }
