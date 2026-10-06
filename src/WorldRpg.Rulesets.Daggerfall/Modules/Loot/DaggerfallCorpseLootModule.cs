@@ -194,12 +194,11 @@ internal sealed class DaggerfallCorpseLootModule
         {
             var store = _actors.Entities.Store.Get<InventoryComponent>(state.Actor.Entity).Store;
             var equipped = store.TryGetEquipment(state.Actor.Entity, out var equipment) ? equipment!.Assignments.ToArray() : [];
-            _containers.TransferAll(state.Actor.Entity, owner, prepareTransfer: edit =>
+            var transfer = _containers.TransferAll(state.Actor.Entity, owner, prepareTransfer: edit =>
             {
                 foreach (var item in equipped.Select(value => value.Item).Distinct()) edit.Unequip(state.Actor.Entity, item);
             });
-            foreach (var item in carried.UniqueItems) _itemInstances.MoveUnique(_actors.Entities.IdentityOf(item.Entity).Value, destination);
-            foreach (var stack in carried.Stacks) _itemInstances.TransferStack(source, destination, stack.Id, stack.Id, true);
+            _itemInstances.ApplyTransfer(transfer, _containers.Read(state.Actor.Entity), _actors.Entities, source, destination);
         });
     }
 

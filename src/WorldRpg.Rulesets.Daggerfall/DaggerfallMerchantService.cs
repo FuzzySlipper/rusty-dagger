@@ -143,8 +143,8 @@ internal sealed record DaggerfallMerchantSave(
 /// </summary>
 internal sealed class DaggerfallMerchantService
 {
-    private const string MerchantContainerTypeName = "daggerfall.merchant-container";
-    private const string RepairContainerTypeName = "daggerfall.repair-custody";
+    internal const string MerchantContainerTypeName = "daggerfall.merchant-container";
+    internal const string RepairContainerTypeName = "daggerfall.repair-custody";
     private const int OpenHour = 6;
     private const int CloseHour = 18;
     private const long RandomSeed = 0;

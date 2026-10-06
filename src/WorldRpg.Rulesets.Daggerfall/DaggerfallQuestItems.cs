@@ -13,7 +13,7 @@ internal sealed record DaggerfallQuestCustody(string InstanceId, long Id, Entity
 internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentityAllocator identities,
     DaggerfallUniqueItemAllocator uniqueItems, Func<DaggerfallItemOwner, EntityId> ownerEntity, Action<ulong> destroyUnique, Action<DaggerfallItemOwner, InventoryStackId> consumeStack, DaggerfallEquipmentMoves equipmentMoves)
 {
-    private static readonly EntityTypeId CustodyType = new("daggerfall.quest-custody");
+    internal static readonly EntityTypeId CustodyType = new("daggerfall.quest-custody");
     private readonly Dictionary<string, DaggerfallQuestCustody> _custody = new(StringComparer.Ordinal);
     internal IEnumerable<DaggerfallQuestCustody> Custody => _custody.Values;
 

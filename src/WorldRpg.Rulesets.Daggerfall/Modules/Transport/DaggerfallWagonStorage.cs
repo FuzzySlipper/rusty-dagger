@@ -30,7 +30,7 @@ internal sealed record DaggerfallWagonSave(long Id, DaggerfallInventorySave Inve
 /// </summary>
 internal sealed class DaggerfallWagonStorage
 {
-    private static readonly EntityTypeId WagonContainerType = new("daggerfall.wagon-container");
+    internal static readonly EntityTypeId WagonContainerType = new("daggerfall.wagon-container");
     private readonly MechanicsInventoryContainerCoordinator _containers;
     private readonly DaggerfallItemInstances _instances;
     private readonly DaggerfallDefinitions _definitions;

@@ -163,7 +163,22 @@ internal sealed class DaggerfallItemInstances
     }
     /// <summary>A unique item stopped being usable where it was: it broke, changed owner or was destroyed.</summary>
     internal event Action<ulong, DaggerfallItemSourceChange>? SourceUnavailable;
-    internal IEnumerable<KeyValuePair<ulong, DaggerfallItemInstanceMetadata>> UniqueItems => _unique;
+    internal IEnumerable<KeyValuePair<ulong, DaggerfallItemInstanceMetadata>> UniqueItems =>
+        _unique.Select(entry => KeyValuePair.Create(entry.Key, Resolve(entry.Key, entry.Value)));
+
+    private Func<ulong, DaggerfallItemOwner?>? _residentOwner;
+
+    /// <summary>
+    /// Lets the Engine's containment answer who holds a resident unique item. The stored owner is
+    /// only the record for an item no live container holds (an unloaded site's pile, a retained owner);
+    /// an item a container does hold reports that container's owner even when a transfer never
+    /// stamped it here, so a missed sync cannot leave a stale owner behind.
+    /// </summary>
+    internal void AttachContainment(Func<ulong, DaggerfallItemOwner?> residentOwner) =>
+        _residentOwner = residentOwner ?? throw new ArgumentNullException(nameof(residentOwner));
+
+    private DaggerfallItemInstanceMetadata Resolve(ulong itemId, DaggerfallItemInstanceMetadata stored) =>
+        _residentOwner?.Invoke(itemId) is { } owner && owner != stored.Owner ? stored with { Owner = owner } : stored;
     internal IEnumerable<(DaggerfallItemOwner Owner, InventoryStackId Stack, DaggerfallItemInstanceMetadata Metadata)> StackItems =>
         _stacks.Select(value => (value.Key.Owner, InventoryStackId.Parse(value.Key.Stack), value.Value));
 
@@ -273,7 +288,7 @@ internal sealed class DaggerfallItemInstances
 
     internal DaggerfallItemInstanceMetadata RequireUnique(ulong itemId) =>
         _unique.TryGetValue(itemId, out DaggerfallItemInstanceMetadata? metadata)
-            ? metadata
+            ? Resolve(itemId, metadata)
             : throw new InvalidOperationException($"Unique item '{itemId}' has no Daggerfall metadata.");
 
     /// <summary>Whether a durable item already has product metadata before a grouped grant commits.</summary>
@@ -289,7 +304,7 @@ internal sealed class DaggerfallItemInstances
 
     internal void ReplaceUnique(ulong itemId, DaggerfallItemInstanceMetadata metadata)
     {
-        var previous = RequireUnique(itemId);
+        var previous = StoredUnique(itemId);
         _unique[itemId] = metadata.Validate();
         _revision++;
         if (previous.CurrentCondition > 0 && metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0)
@@ -326,9 +341,13 @@ internal sealed class DaggerfallItemInstances
         }
     }
 
+    /// <summary>
+    /// Stamps the owner a transfer gave the item and reports the move. The stamp is compared with the
+    /// last stamp, not the Engine's answer, because the Engine has already moved a transferred item.
+    /// </summary>
     internal void MoveUnique(ulong itemId, DaggerfallItemOwner owner)
     {
-        var previous = RequireUnique(itemId);
+        var previous = StoredUnique(itemId);
         _unique[itemId] = MetadataFor(owner, previous) with { HeldCast = previous.Owner == owner ? previous.HeldCast : null };
         _revision++;
         if (previous.Owner != owner) SourceUnavailable?.Invoke(itemId, DaggerfallItemSourceChange.Moved);
@@ -359,6 +378,11 @@ internal sealed class DaggerfallItemInstances
     {
         if (_unique.Remove(itemId)) { _revision++; SourceUnavailable?.Invoke(itemId, DaggerfallItemSourceChange.Removed); }
     }
+
+    private DaggerfallItemInstanceMetadata StoredUnique(ulong itemId) =>
+        _unique.TryGetValue(itemId, out DaggerfallItemInstanceMetadata? metadata)
+            ? metadata
+            : throw new InvalidOperationException($"Unique item '{itemId}' has no Daggerfall metadata.");
 
     private static DaggerfallItemInstanceMetadata MetadataFor(DaggerfallItemOwner owner, DaggerfallItemInstanceMetadata metadata) =>
         metadata with { Owner = owner.Validate() };
