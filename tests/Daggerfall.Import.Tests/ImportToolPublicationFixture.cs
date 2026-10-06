@@ -71,7 +71,11 @@ internal sealed partial class ImportToolFixture
                 result.Add(At("output"), FightersGuildQuestCorpusPublication.Serialize(FightersGuildQuestCorpusPublication.Create(Read<DaggerfallQuestCatalog>(Pack, "questCatalog"), Read<DaggerfallQuestPack>(Pack, "questSources"), Read<DaggerfallQuestOriginalSourceSet>(Records, "questOriginalSources")))); break;
             case "classic-quest-corpora":
                 foreach (var spec in ClassicQuestCorpusPublication.Specifications)
-                    result.Add(At($"output/daggerfall.quests.{spec.Id}.json"), ClassicQuestCorpusPublication.Serialize(ClassicQuestCorpusPublication.Create(spec.Id, Read<DaggerfallQuestCatalog>(Pack, "questCatalog"), Read<DaggerfallQuestPack>(Pack, "questSources"), Read<DaggerfallQuestOriginalSourceSet>(Records, "questOriginalSources")))); break;
+                    result.Add(At($"output/daggerfall.quests.{spec.Id}.json"), ClassicQuestCorpusPublication.Serialize(ClassicQuestCorpusPublication.Create(spec.Id, Read<DaggerfallQuestCatalog>(Pack, "questCatalog"), Read<DaggerfallQuestPack>(Pack, "questSources"), Read<DaggerfallQuestOriginalSourceSet>(Records, "questOriginalSources"))));
+                // The same verb publishes the named story and cure selections beside the offer corpora.
+                foreach (string id in NamedQuestCorpusPublication.Selections.Keys)
+                    result.Add(At($"output/daggerfall.quests.{id}.json"), NamedQuestCorpusPublication.Serialize(NamedQuestCorpusPublication.Create(id, Read<DaggerfallQuestPack>(Pack, "questSources"), Read<DaggerfallQuestOriginalSourceSet>(Records, "questOriginalSources"))));
+                break;
             case "source-manifest":
                 var manifest = ImportPublicationManifestSerializer.Deserialize(File.ReadAllBytes(Path.Combine(Publication, ImportPublicationManifestSerializer.ManifestRelativePath)));
                 result.Add(At("report.json"), SourceManifestSerializer.Serialize(SourceManifestPublication.ForPublication(manifest.Sources.Select(source => source.Path), Arena2, Path.GetFileName(Inventory), File.ReadAllBytes(Inventory)))); break;
