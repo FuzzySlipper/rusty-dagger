@@ -134,7 +134,7 @@ public sealed class DaggerfallDetectionEffectsTests
     public void Invalid_detector_payload_and_nonmagic_cast_are_refused_and_tuning_is_validated()
     {
         using Fixture f = new(); var s = f.Session;
-        var setting = Setting(0, 10); var spell = Spell(setting) with { Element = 0 };
+        var setting = Setting(0, 10); var spell = Spell(setting) with { Element = 0, IsCustom = true };
         Assert.Equal(DaggerfallCastOutcome.UnsupportedEffect, Casting(s, spell).Ready(1, spell.Key).Outcome);
         Cast(s, setting); var save = DaggerfallSavePayload.Read(s.CaptureSave()); var effect = Assert.Single(save.ActiveEffects);
         var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)!;

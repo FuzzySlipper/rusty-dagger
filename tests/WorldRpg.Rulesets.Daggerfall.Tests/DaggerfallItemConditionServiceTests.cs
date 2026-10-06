@@ -215,7 +215,8 @@ public sealed class DaggerfallItemConditionServiceTests
         Assert.Equal(f.Definitions.RequireItem(new DaggerfallItemId(magicId)).Template!.Name, unknown.Label);
         Assert.DoesNotContain(magic.Enchantments[0].ParamMeaning, unknown.Details, StringComparison.OrdinalIgnoreCase);
         Assert.True(known.Identified);
-        Assert.Contains(DaggerfallInventoryPresentation.Label(magic.Enchantments[0].ParamMeaning), known.Details, StringComparison.Ordinal);
+        // The identified enchantment is named by its setting, as the donor names it.
+        Assert.Contains("Enchantment: Cast when used: Silence", known.Details, StringComparison.Ordinal);
         Assert.True(restored.Identified);
         Assert.Equal(magicKey, restored.Enchantment);
         Assert.Equal(DaggerfallItemOwner.Corpse(17), restored.Owner);

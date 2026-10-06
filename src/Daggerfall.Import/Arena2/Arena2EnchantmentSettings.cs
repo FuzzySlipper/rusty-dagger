@@ -129,13 +129,13 @@ internal static class Arena2EnchantmentSettings
             (1, -80, "from-animals", "fromAnimals", "from animals"),
             (2, -120, "from-daedra", "fromDaedra", "from Daedra"),
         ]);
-        AddSpellFamily(0, "CastWhenUsed", "cast-when-used",
+        AddSpellFamily(0, "CastWhenUsed", "Cast when used", "cast-when-used",
             [4, 5, 6, 7, 8, 9, 10, 18, 11, 12, 13, 19, 14, 15, 16, 17, 22, 23, 24, 20, 25, 26, 33, 27, 28, 29, 34, 30, 31, 35, 36, 32, 40, 64, 60, 94],
             [330, 250, 540, 480, 380, 480, 1650, 900, 1560, 1560, 1560, 1740, 470, 1020, 990, 1040, 1980, 1530, 920, 1420, 840, 1650, 1020, 1300, 2290, 1020, 1610, 1930, 760, 2140, 3030, 1750, 130, 360, 930, 480]);
-        AddSpellFamily(1, "CastWhenHeld", "cast-when-held",
+        AddSpellFamily(1, "CastWhenHeld", "Cast when held", "cast-when-held",
             [37, 39, 41, 10, 42, 11, 12, 26, 13, 6, 44, 45, 46, 24, 47, 4, 49, 82, 83, 84, 85, 86, 87, 88, 89],
             [240, 1230, 170, 1650, 170, 1560, 1560, 1560, 1560, 540, 210, 150, 1720, 920, 1720, 330, 1590, 1020, 1200, 1200, 1200, 1200, 1200, 1200, 1200]);
-        AddSpellFamily(2, "CastWhenStrikes", "cast-when-strikes",
+        AddSpellFamily(2, "CastWhenStrikes", "Cast when strikes", "cast-when-strikes",
             [50, 53, 52, 54, 56, 33, 20, 25, 16, 7, 55, 67],
             [1620, 780, 1380, 930, 1830, 1020, 840, 840, 990, 480, 4230, 1260]);
         AddFamily(21, "HealthLeech", "Health leech", [(0, -4000, "whenever-used", "wheneverUsed", "whenever used"), (1, -500, "unless-used-daily", "unlessUsedDaily", "unless used daily"), (2, -200, "unless-used-weekly", "unlessUsedWeekly", "unless used weekly")]);
@@ -164,7 +164,7 @@ internal static class Arena2EnchantmentSettings
             row!["forcedSettings"] = new JsonArray([.. forced.GetValueOrDefault(row["param"]!.GetValue<int>(), []).Select(key => (JsonNode?)JsonValue.Create("enchantment." + key))]);
         return settings;
 
-        void AddSpellFamily(int type, string sourceClass, string meaning, int[] identities, int[] costs)
+        void AddSpellFamily(int type, string sourceClass, string primaryDisplayName, string meaning, int[] identities, int[] costs)
         {
             for (int index = 0; index < identities.Length; index++)
             {
@@ -174,7 +174,7 @@ internal static class Arena2EnchantmentSettings
                 {
                     ["key"] = $"enchantment.{type}.{identity}", ["type"] = type, ["param"] = identity,
                     ["cost"] = costs[index], ["meaning"] = meaning,
-                    ["displayName"] = $"{sourceClass}: {spell?["name"]?.GetValue<string>() ?? $"classic spell {identity}"}",
+                    ["displayName"] = $"{primaryDisplayName}: {spell?["name"]?.GetValue<string>() ?? $"classic spell {identity}"}",
                     ["textKey"] = sourceClass, ["parameterTextKey"] = $"spell.{identity}",
                     ["sourceClass"] = $"donor:Assets/Scripts/Game/MagicAndEffects/Effects/Enchanting/{sourceClass}.cs#GetEnchantmentSettings",
                     ["parameterVariants"] = new JsonArray([.. identities.Select(value => (JsonNode?)JsonValue.Create(value))]),
