@@ -48,7 +48,7 @@ public sealed class PlayerAttackSessionTests
 
         session.Update(new ProductUpdate(first, [pressed]));
         // The operation is decided and charged at admission; the delivered hit is what tallies it.
-        appearance.AdvanceReceiptForAll = Reading(2, 2);
+        appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 2, 60, 1, 0, 1d / 60d), []));
         Assert.Equal(1, session.State.Progression.SkillUses["long-blade"]);
         Assert.Equal(1, session.State.Progression.SkillUses["critical-strike"]);
@@ -66,7 +66,7 @@ public sealed class PlayerAttackSessionTests
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 3, 3, 60, 1, 0, 1d / 60d), []));
         appearance.AdvanceReceiptForAll = null;
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 100, 100, 60, 1, 0, 1d / 60d), [pressed]));
-        appearance.AdvanceReceiptForAll = Reading(2, 2);
+        appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2, sequence: 2);
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 101, 101, 60, 1, 0, 1d / 60d), []));
         Assert.Equal(2, session.State.Progression.SkillUses["long-blade"]);
         Assert.Equal(2, session.State.Progression.SkillUses["critical-strike"]);
@@ -399,7 +399,7 @@ public sealed class PlayerAttackSessionTests
         // The visibility receipt selects the target at admission; that same target takes the swing's
         // damage when the animation reaches its hit frame.
         Assert.Equal(healthBefore, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
-        appearance.AdvanceReceiptForAll = Reading(2, 2);
+        appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 0, 1, 1, 1, 60, 1, 0, 1d / 60d), []));
         Assert.True(session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current < healthBefore);
     }
