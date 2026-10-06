@@ -151,7 +151,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
             {
                 GroundTiles = DaggerfallGroundTileGrid.FromBytes(Enumerable.Repeat(tile, 128 * 128).ToArray(), "test"),
             };
-            DaggerfallExteriorEnvironment environment = new();
+            DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
             environment.Reconcile([cell], origin, _ => environmentSurface,
                 new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location }, grids);
             return environment;

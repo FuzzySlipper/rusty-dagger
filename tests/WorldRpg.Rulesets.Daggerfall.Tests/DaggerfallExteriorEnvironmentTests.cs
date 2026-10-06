@@ -12,7 +12,7 @@ public sealed class DaggerfallExteriorEnvironmentTests
     public void Ocean_clamp_publishes_queryable_water_volumes_in_the_cell_frame()
     {
         DaggerfallExteriorCellId cell = new(1, 0);
-        DaggerfallExteriorEnvironment environment = new();
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
         environment.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell),
             _ => Surface(0F), Locations(), Grids(224, "temperate"));
 
@@ -30,7 +30,7 @@ public sealed class DaggerfallExteriorEnvironmentTests
     {
         DaggerfallExteriorCellId cell = new(12, 34);
         DaggerfallExteriorWorldOrigin origin = new(cell.X, cell.Y, new Vector3(4F, 5F, 6F));
-        DaggerfallExteriorEnvironment environment = new();
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
         environment.Reconcile([cell], origin, _ => Surface(0F), Locations(), Grids(224, "temperate"));
 
         CharacterWaterVolume[] projected = [.. environment.CharacterWaterVolumes(origin)];
@@ -63,7 +63,7 @@ public sealed class DaggerfallExteriorEnvironmentTests
     public void Water_rectangles_match_the_exact_generated_tile_occupancy_without_bridging_dry_tiles()
     {
         DaggerfallExteriorCellId cell = new(1, 0);
-        DaggerfallExteriorEnvironment environment = new();
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
         environment.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), _ => SurfaceWithDrySample(64, 64),
             Locations(), Grids(224, "temperate"));
 
@@ -85,7 +85,7 @@ public sealed class DaggerfallExteriorEnvironmentTests
             GroundTiles =
                 DaggerfallGroundTileGrid.FromBytes(CompactGroundTiles((byte)(7 | 0x40), (byte)(8 | 0x80)), "test"),
         };
-        DaggerfallExteriorEnvironment environment = new();
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
         environment.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), _ => Surface(100F),
             new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location },
             Grids(231, "Woodlands"));
@@ -105,7 +105,7 @@ public sealed class DaggerfallExteriorEnvironmentTests
         {
             GroundTiles = DaggerfallGroundTileGrid.FromBytes(CompactGroundTiles(0, 7), "test"),
         };
-        DaggerfallExteriorEnvironment environment = new();
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
         environment.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), _ => Surface(100F),
             new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location },
             Grids(231, "Woodlands"));
@@ -119,7 +119,7 @@ public sealed class DaggerfallExteriorEnvironmentTests
     public void Reconcile_reuses_unchanged_cell_facts_when_only_the_origin_moves()
     {
         DaggerfallExteriorCellId cell = new(1, 0);
-        DaggerfallExteriorEnvironment environment = new();
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
         int builds = 0;
         DaggerfallTerrainSurface Factory(DaggerfallExteriorCellId _) { builds++; return Surface(0F); }
 
@@ -137,8 +137,8 @@ public sealed class DaggerfallExteriorEnvironmentTests
         DaggerfallExteriorCellId cell = new(1, 0);
         DaggerfallSiteExterior location = new(1, 0, 1, 1, 0, 0, false, 2, 60, 68, 60, 68);
         Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> locations = new() { [cell] = location };
-        DaggerfallExteriorEnvironment first = new();
-        DaggerfallExteriorEnvironment second = new();
+        DaggerfallExteriorEnvironment first = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
+        DaggerfallExteriorEnvironment second = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
         first.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), _ => Surface(100F), locations, Grids(224, "temperate"));
         second.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), _ => Surface(100F), locations, Grids(224, "temperate"));
 
@@ -152,9 +152,9 @@ public sealed class DaggerfallExteriorEnvironmentTests
     public void Winter_variant_uses_the_donor_archive_offset_only_for_non_desert_climates()
     {
         DaggerfallExteriorCellId cell = new(1, 0);
-        DaggerfallExteriorEnvironment temperate = new(DaggerfallExteriorSeason.Winter);
+        DaggerfallExteriorEnvironment temperate = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()), DaggerfallExteriorSeason.Winter);
         temperate.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), _ => Surface(0F), Locations(), Grids(231, "Woodlands"));
-        DaggerfallExteriorEnvironment desert = new(DaggerfallExteriorSeason.Winter);
+        DaggerfallExteriorEnvironment desert = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()), DaggerfallExteriorSeason.Winter);
         desert.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), _ => Surface(0F), Locations(), Grids(224, "Desert"));
 
         Assert.Equal(303, Assert.Single(temperate.TerrainVariants).GroundTextureArchive);
@@ -210,7 +210,7 @@ public sealed class DaggerfallExteriorEnvironmentTests
         {
             GroundTiles = DaggerfallGroundTileGrid.FromBytes(Enumerable.Repeat((byte)2, 128 * 128).ToArray(), "test"),
         };
-        DaggerfallExteriorEnvironment environment = new();
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
         environment.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), _ => Surface(sceneHeight, sourceWorldHeight),
             new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location }, Grids(231, "Woodlands"));
         return environment;

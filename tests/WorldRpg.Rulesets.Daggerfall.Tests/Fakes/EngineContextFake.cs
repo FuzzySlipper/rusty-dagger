@@ -74,7 +74,7 @@ internal class EngineContextFake : DispatchProxy
         fake.video = video ?? ServiceProxy<IVideoService, VideoServiceFake>.Create();
         // Minimum rolls keep gameplay deterministic, but a source quest Place retries random towns
         // until one has an eligible building; a constant draw would retry the same town 500 times.
-        fake.random = random ?? QuestPlaceRandomMinimum.Create();
+        fake.random = ScopedStreamRandom.Wrap(random ?? QuestPlaceRandomMinimum.Create());
         fake.ui = UiServiceFake.Create(fake);
         fake.persistence = persistence ?? new InMemoryPersistenceService();
         fake.worldOrigin = worldOrigin ?? DispatchProxy.Create<IWorldOriginService, WorldOriginFake>();

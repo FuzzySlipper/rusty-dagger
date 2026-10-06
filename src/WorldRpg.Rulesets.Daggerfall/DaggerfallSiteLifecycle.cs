@@ -1459,7 +1459,7 @@ internal sealed class DaggerfallSiteLifecycle
         Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaceFactory = _exteriorSurfaceFactory
             ?? throw new InvalidOperationException("Exterior terrain surface factory was not initialized.");
         Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> exteriors = ExteriorLocations();
-        DaggerfallExteriorEnvironment environment = _exteriorEnvironment ??= new();
+        DaggerfallExteriorEnvironment environment = _exteriorEnvironment ??= new(_random);
         environment.Reconcile(residency.ResidentCells, residency.Origin, surfaceFactory, exteriors, _definitions.Grids);
         DaggerfallExteriorTerrainAppearance appearance =
             _exteriorTerrainAppearance ??= new DaggerfallExteriorTerrainAppearance(_engine.Graphics, Projection.Inputs);
@@ -1550,7 +1550,7 @@ internal sealed class DaggerfallSiteLifecycle
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior) return;
         if (_exteriorEnvironment is null)
         {
-            _exteriorEnvironment = new(season);
+            _exteriorEnvironment = new(_random, season);
             return;
         }
         if (_exteriorEnvironment.Season == season) return;
