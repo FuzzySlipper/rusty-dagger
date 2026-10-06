@@ -80,7 +80,10 @@ public sealed class DaggerfallConcealmentEffectsTests
         Start(s, "retired", 24, 0, 10, target: target); s.RetireActor(target); Assert.Equal(default, s.State.Effects.PerceptionFor(target));
         ulong item = s.State.Inventory.Read().UniqueItems.Select(value => s.State.Inventory.GetDurableItemId(value.Entity).Value).First();
         Start(s, "item", 23, 0, 10, item: item); Assert.True(s.State.Effects.PerceptionFor(1).Blending);
+        // A used item's effect outlives the item breaking; destroying the item ends it.
         s.State.ItemInstances.ReplaceUnique(item, s.State.ItemInstances.RequireUnique(item) with { CurrentCondition = 0 });
+        Assert.True(s.State.Effects.PerceptionFor(1).Blending);
+        s.State.ItemInstances.RemoveUnique(item);
         Assert.False(s.State.Effects.PerceptionFor(1).Blending); s.PublishInitial();
         Assert.DoesNotContain(s.Slots.Read(), row => row.Owner == "magic.concealment");
     }
@@ -88,7 +91,7 @@ public sealed class DaggerfallConcealmentEffectsTests
     [Fact]
     public void Nonmagic_element_is_refused_before_payment_and_wrong_magnitude_state_cannot_restore()
     {
-        using Fixture f = new(); var s = f.Session; var casting = Casting(s, Spell(23, 1) with { Element = 0 }); Fund(s);
+        using Fixture f = new(); var s = f.Session; var casting = Casting(s, Spell(23, 1) with { Element = 0, IsCustom = true }); Fund(s);
         Assert.Equal(DaggerfallCastOutcome.UnsupportedEffect, casting.Ready(1, "conceal.test").Outcome);
         Start(s, "bad", 23, 1, 10); var save = DaggerfallSavePayload.Read(s.CaptureSave()); var effect = Assert.Single(save.ActiveEffects);
         var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)!;

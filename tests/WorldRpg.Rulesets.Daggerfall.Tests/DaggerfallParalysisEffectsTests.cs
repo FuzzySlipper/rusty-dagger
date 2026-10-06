@@ -48,7 +48,10 @@ public sealed class DaggerfallParalysisEffectsTests
         ulong itemId = s.State.Inventory.GetDurableItemId(item.Entity).Value;
         Start(s, "item", 1, 1, 10, itemId);
         s.State.Effects.Cancel(EffectInstanceId.Parse("retained"));
+        // A used item's effect outlives the item breaking; destroying the item ends it.
         s.State.ItemInstances.ReplaceUnique(itemId, s.State.ItemInstances.RequireUnique(itemId) with { CurrentCondition = 0 });
+        Assert.True(s.State.Effects.ControlsFor(1).Movement);
+        s.State.ItemInstances.RemoveUnique(itemId);
         Assert.Equal(default, s.State.Effects.ControlsFor(1));
         long target = s.SpawnActor("rat", new ActorPose(new WorldPoint(11,0,11), 0));
         Start(s, "target", 1, target, 10); s.RetireActor(target);
@@ -140,7 +143,8 @@ public sealed class DaggerfallParalysisEffectsTests
         var spell = original with { Effects = [setting] };
         var magicka = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
         magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(10000);
-        var invalid = CastingFor(f, spell with { RangeType = 0 }, 50);
+        // Only a constructed spell is held to its effects' allowed targets; classic records are not.
+        var invalid = CastingFor(f, spell with { RangeType = 0, IsCustom = true }, 50);
         Assert.Equal(DaggerfallCastOutcome.UnsupportedEffect, invalid.Ready(1, spell.Key).Outcome);
         Assert.Equal(10000, magicka.Current); Assert.Empty(s.State.Effects.Active);
         var casting = CastingFor(f, spell, 50);

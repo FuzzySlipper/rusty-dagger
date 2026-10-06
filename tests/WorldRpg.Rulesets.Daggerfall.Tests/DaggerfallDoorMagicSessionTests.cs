@@ -128,12 +128,15 @@ public sealed class DaggerfallDoorMagicSessionTests
     }
 
     [Fact]
-    public void Unavailable_item_source_cancels_ready_operation_before_door_mutation()
+    public void Destroyed_item_source_cancels_ready_operation_before_door_mutation()
     {
         using Fixture f = new(); var s = f.Session;
         ulong item = s.State.Inventory.Read().UniqueItems.Select(value => s.State.Inventory.GetDurableItemId(value.Entity).Value).First();
         f.Cast(s, lockDoor: true, item, DaggerfallCastSource.ItemUse);
+        // A used item's ready effect outlives the item breaking, as in the donor; destroying it ends it.
         s.State.ItemInstances.ReplaceUnique(item, s.State.ItemInstances.RequireUnique(item) with { CurrentCondition = 0 });
+        Assert.Single(s.State.Effects.Active);
+        s.State.ItemInstances.RemoveUnique(item);
         Assert.Empty(s.State.Effects.Active);
         f.Interact(s, f.Door.Id); Assert.Equal(0, s.Doors.Read(f.Door.Id).LockValue); Assert.Equal(DaggerfallDoorMotion.Opening, s.Doors.Read(f.Door.Id).Motion);
     }
