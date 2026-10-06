@@ -15,9 +15,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class NamiraSessionTests
 {
     [Theory]
-    [InlineData(1500, true)]
-    [InlineData(5, false)]
-    public void Namira_restore_reflects_through_normal_corpse_creation_and_retains_condition(int initial, bool remainsEquipped)
+    [InlineData(1500)]
+    [InlineData(5)]
+    public void Namira_restore_reflects_through_normal_corpse_creation_and_never_wears_the_ring(int initial)
     {
         var inputs = ReadInputs(TestData.RepositoryRoot);
         var definitions = TestPayload.Definitions;
@@ -63,13 +63,13 @@ public sealed class NamiraSessionTests
         restored.Update(new ProductUpdate(OuterUpdate(2), []));
         Assert.True(restored.State.Actors.Get(enemy).IsDefeated, $"Enemy {enemy}, behavior {restored.LastEnemyBehavior[enemy].State}, condition {restored.State.ItemInstances.RequireUnique(durable).CurrentCondition}, outcome {restored.Presentation.LastOutcome}");
         Assert.True(restored.Corpses.ContainsKey(enemy));
-        Assert.Equal(Math.Max(0, initial - 13), restored.State.ItemInstances.RequireUnique(durable).CurrentCondition);
-        Assert.Equal(remainsEquipped, restored.State.Equipment.Read().Assignments.Any(assignment => restored.State.Equipment.GetDurableItemId(new EntityId(assignment.Item.EntityId)).Value == durable));
+        Assert.Equal(initial, restored.State.ItemInstances.RequireUnique(durable).CurrentCondition);
+        Assert.True(restored.State.Equipment.Read().Assignments.Any(assignment => restored.State.Equipment.GetDurableItemId(new EntityId(assignment.Item.EntityId)).Value == durable));
         using var after = DaggerfallSession.Restore(Engine(out _, out _).Context, composition, restored.CaptureSave());
         Assert.True(after.State.Actors.Get(enemy).IsDefeated);
         Assert.True(after.Corpses.ContainsKey(enemy));
-        Assert.Equal(Math.Max(0, initial - 13), after.State.ItemInstances.RequireUnique(durable).CurrentCondition);
-        Assert.Equal(remainsEquipped, after.State.Equipment.Read().Assignments.Any(assignment => after.State.Equipment.GetDurableItemId(new EntityId(assignment.Item.EntityId)).Value == durable));
+        Assert.Equal(initial, after.State.ItemInstances.RequireUnique(durable).CurrentCondition);
+        Assert.True(after.State.Equipment.Read().Assignments.Any(assignment => after.State.Equipment.GetDurableItemId(new EntityId(assignment.Item.EntityId)).Value == durable));
     }
 
     private sealed class CertainStrike : ICombatContribution

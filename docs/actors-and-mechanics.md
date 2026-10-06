@@ -194,8 +194,9 @@ The Ring of Namira reflects an accepted enemy physical hit on the player once,
 using the current ring slots and loaded artifact payload. Animal and spriggan
 teams are excluded; daedra receive half and undead twice the incoming damage
 after application defenses. Reflection uses the shared health application and
-ordinary damage/death notifications, then charges that ring's condition through
-the item-condition owner. Two rings do not double the effect. Equipment and item
+ordinary damage/death notifications. The ring itself never wears: the donor hands
+its callback no source item, so the callback's durability cost is discarded. Two
+rings do not double the effect. Equipment and item
 metadata alone determine its state after unequip, break, retirement or restore.
 
 Kit attack execution releases a delayed impact to Dagger's flight policy.

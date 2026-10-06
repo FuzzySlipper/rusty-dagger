@@ -31,6 +31,24 @@ public sealed class PotionMakingSessionTests
     }
 
     [Fact]
+    public void A_second_brew_of_one_recipe_joins_its_stack_and_restores_as_one()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
+        var provider = Provider(s, "make-potions", 840, 3);
+        var recipe = TestPayload.Definitions.Magic.PotionRecipes[4975678];
+        for (int brew = 0; brew < 2; brew++)
+        {
+            foreach (var ingredient in recipe.Ingredients) Ingredient(f, ingredient.Template);
+            Assert.True(s.PotionMaker.Mix(provider, [.. recipe.Ingredients.Select(value => value.Template)]).Accepted);
+        }
+        var potion = Assert.Single(s.State.Inventory.Read().Stacks, value => value.Definition.Value == "template-83");
+        Assert.Equal(2UL, potion.Quantity);
+        Assert.Equal(4975678, s.State.ItemInstances.RequireStack(DaggerfallItemOwner.Player, potion.Id).PotionRecipeKey);
+        using var restored = f.Restore();
+        Assert.Equal(2UL, Assert.Single(restored.State.Inventory.Read().Stacks, value => value.Definition.Value == "template-83").Quantity);
+    }
+
+    [Fact]
     public void Missing_ingredients_and_membership_preserve_inventory_but_failed_experiment_uses_ingredients()
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
