@@ -239,7 +239,7 @@ public sealed class DaggerfallLodgingTests
             Other = Profile(candidates[1].Id, candidates[1].Building, "lodging-other", DaggerfallWorldProfileKind.Interior);
             Exterior = Profile(candidates[0].Id, null, "lodging-exterior", DaggerfallWorldProfileKind.Exterior);
             profiles = new([Interior, Other, Exterior]);
-            identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+            identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
             sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content);
             Session = Create(null);
             DaggerfallSiteProfile Profile(DaggerfallSiteId site, DaggerfallSiteBuildingSource? building, string name, DaggerfallWorldProfileKind kind) => new(

@@ -65,7 +65,7 @@ public sealed class DungeonInteractionSessionTests
         PopulateContent(resumedContent, inputs);
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), session.CaptureSave());
         DaggerfallDungeonDiscoverySnapshot restoredMap = Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).DungeonDiscovery);
         Assert.Equal(discovered.DiscoveredPlacementIds, restoredMap.DiscoveredPlacementIds);
@@ -435,7 +435,7 @@ public sealed class DungeonInteractionSessionTests
         EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent,
             SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases),
             random: RandomMaximum.Create());
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         Assert.Equal(skill, restored.Doors.FailedLockpickingSkill(door.Id));
         Assert.Equal(1, restored.State.Progression.SkillUses[DaggerfallSkills.Lockpicking]);
@@ -641,7 +641,7 @@ public sealed class DungeonInteractionSessionTests
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, spatial.Service, new AppearanceFake(releases));
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         restored.PublishInitial();
 

@@ -332,7 +332,7 @@ public sealed class ControlsInputSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         CapturingDaggerfallRuleset ruleset = new();
-        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold"));
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
         product.Start(); product.Begin();
         ProductInputMapping Mapping(string intent) => Assert.Single(engine.PhysicalInput.Mappings, value => Encoding.UTF8.GetString(value.Intent.Span) == intent);
         Assert.Equal(KeyboardControl.KeyW, Mapping("move.forward").Keyboard);

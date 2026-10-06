@@ -407,7 +407,7 @@ public sealed class PropertySessionTests
             if (automaticQuest) definitions = QuestPlaceAllocationTests.Definitions();
             string root = TestData.RepositoryRoot;
             var content = FullContent(root); var source = ReadInputs(root);
-            identity = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+            identity = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
             blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json")));
             var site = definitions.Locations.Records.First(value => value.Kind == DaggerfallSiteKind.TownCity
                 && value.Exterior is { PortTownAndUnknown: > 0 } exterior

@@ -4487,6 +4487,11 @@
     ]
   },
   "newGame": {
+    "startSite": "daggerfall.privateers-hold",
+    "quests": [
+      "_TUTOR__.txt",
+      "_BRISIEN.txt"
+    ],
     "gold": 100,
     "spellbookTemplate": 132,
     "maleShirtTemplate": 165,

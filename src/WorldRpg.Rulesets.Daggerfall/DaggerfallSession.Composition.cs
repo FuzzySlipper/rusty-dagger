@@ -184,7 +184,8 @@ internal sealed partial class DaggerfallSession
             // The selected site's normalized RDB doors restore their Engine pose/collider projection
             // before activation can query them and before the first character step consumes them.
             DaggerfallSiteProjection projection = DaggerfallSiteProjection.Create(engine, actors.Entities, _random, tuning, _time.Calendar,
-                inputs, audioBundles?.Require(inputs.ProfileKey), _spatial, saved?.Doors, saved?.DungeonMotion);
+                inputs, audioBundles?.Require(inputs.ProfileKey), _spatial, saved?.Doors, saved?.DungeonMotion,
+                sessionPresentation: composition.StartSite.ClassicPresentation);
             partiallyConstructed.Add(projection);
             DaggerfallDungeonActionTriggerRuntime actionTriggers = new(
                 actors.Entities, engine.Spatial, _spatial, DaggerfallSiteLifecycle.ActionProfiles(inputs, profiles), activeProfile);
@@ -470,7 +471,7 @@ internal sealed partial class DaggerfallSession
                 _actorIdentities);
             _groundContainers = new DaggerfallGroundContainers(containers, State.ItemInstances, playerEntity, _actorIdentities, activeProfile);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, () => State.Kit.Targeting.LastEvidence, definitions.Text);
-            _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, inputs.ClassicPresentation.InventoryIcons,
+            _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, composition.StartSite.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
             State.Quests.BindResourceAllocator(new(definitions, engine.Random, new DaggerfallItemFactory(definitions, engine.Random), questNames,
                 () => new(State.Progression.Level, State.Character.Identity.RaceId,
@@ -601,7 +602,8 @@ internal sealed partial class DaggerfallSession
             _persistence.BanishedActors = () => _roster.BanishedActors;
             _sites = new DaggerfallSiteLifecycle(engine, State, definitions, tuning, _time, _site, _spatial, _camera, audioBundles,
                 _roster, _persistence, _groundContainers, _enemyBehavior, ExecuteDungeonFamilyAction, this,
-                projection, actionTriggers, profiles, activeProfile, saved?.Site.ReturnProfile?.Require());
+                projection, actionTriggers, profiles, activeProfile, saved?.Site.ReturnProfile?.Require(),
+                composition.StartSite.ClassicPresentation);
             _weatherPresentation = new DaggerfallWeatherPresentation(engine, composition.Sky, tuning.Weather, tuning.Ambient, tuning.PresentationAudio,
                 (profile, clip) => audioBundles?.Require(profile).OpenClip(engine.Audio, clip));
             partiallyConstructed.Add(_weatherPresentation);
@@ -622,7 +624,7 @@ internal sealed partial class DaggerfallSession
                 engine.Ui,
                 definitions.HudResources,
                 composition.Identity,
-                DaggerfallUiArt.Read(engine.Content, inputs.ClassicPresentation.InventoryIcons.Values,
+                DaggerfallUiArt.Read(engine.Content, composition.StartSite.ClassicPresentation.InventoryIcons.Values,
                     _definitions.CharacterPresentation.Races.Values.SelectMany(race => race.Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head)).Select(layer => layer.MediaId)
                     .Concat(_definitions.CharacterPresentation.FactionFaces.Select(face => face.MediaId))
                     .Concat(_definitions.CharacterPresentation.ChildFaces.Select(face => face.MediaId))

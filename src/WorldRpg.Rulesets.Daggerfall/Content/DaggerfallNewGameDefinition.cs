@@ -7,7 +7,14 @@ internal sealed record DaggerfallInitialItem(int Template, string? Material, ulo
 internal sealed record DaggerfallInitialCareer(string Career, DaggerfallInitialItem[] Items, string[] Spells);
 internal sealed record DaggerfallNewGameDefinition(int Gold, int SpellbookTemplate, int MaleShirtTemplate,
     int MalePantsTemplate, int FemaleShirtTemplate, int FemalePantsTemplate,
-    DaggerfallInitialCareer[] Careers, DaggerfallInitialItem[] CustomItems, string[] CustomMagicSpells);
+    DaggerfallInitialCareer[] Careers, DaggerfallInitialItem[] CustomItems, string[] CustomMagicSpells)
+{
+    /// <summary>The site content pack a new game starts at; a bundle must select it.</summary>
+    internal string StartSitePack { get; init; } = string.Empty;
+
+    /// <summary>The quest sources a new game starts (the donor's tutorial and introduction), when admitted.</summary>
+    internal string[] Quests { get; init; } = [];
+}
 
 internal static partial class DaggerfallBaseContent
 {
@@ -67,8 +74,13 @@ internal static partial class DaggerfallBaseContent
         }
         int gold = Integer(section, "gold", diagnostics);
         if (gold < 0) diagnostics.Add("Starting gold cannot be negative.");
+        string startSite = Text(section, "startSite", diagnostics);
+        if (string.IsNullOrWhiteSpace(startSite)) diagnostics.Add("A new game requires a start site content pack.");
+        string[] quests = [.. Array(section, "quests", diagnostics).Select(value => value.GetString() ?? string.Empty)];
+        if (quests.Any(string.IsNullOrWhiteSpace) || quests.Distinct(StringComparer.Ordinal).Count() != quests.Length)
+            diagnostics.Add("New-game quests must name distinct quest sources.");
         return new(gold, Template("spellbookTemplate", "MiscItems"), Template("maleShirtTemplate", "MensClothing", "chest-clothes"), Template("malePantsTemplate", "MensClothing", "legs-clothes"),
             Template("femaleShirtTemplate", "WomensClothing", "chest-clothes"), Template("femalePantsTemplate", "WomensClothing", "legs-clothes"), careers,
-            Items(section, "customItems"), Spells(section, "customMagicSpells"));
+            Items(section, "customItems"), Spells(section, "customMagicSpells")) { StartSitePack = startSite, Quests = quests };
     }
 }

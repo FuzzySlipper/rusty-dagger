@@ -66,7 +66,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             CinematicContent = admitted.Content,
             VideosEnabled = _videosEnabled,
             QuestAdmission = new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts),
-            NewGameQuests = [.. new[] { "_TUTOR__.txt", "_BRISIEN.txt" }.Where(file => admitted.QuestReceipts.Any(receipt => receipt.SourceFile == file))],
+            NewGameQuests = [.. admitted.Definitions.NewGame.Quests.Where(file => admitted.QuestReceipts.Any(receipt => receipt.SourceFile == file))],
             DisabledQuestSelection = admitted.DisabledQuestSelection,
             Music = admitted.Music,
             Blocks = admitted.Blocks,
@@ -91,13 +91,23 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
                 RequireSingle(selected, roles, BaseRole).Payload, RequireSingle(selected, roles, ImportedRole).Payload);
             DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(RequireSingle(selected, roles, BlocksRole).Payload);
             blocks.AdmitLocations(definitions.Locations);
-            // The composition keeps bundle order with each pack's dependencies ahead of it, so the first
-            // site pack is the first site the bundle selects: that site is where a new game starts.
-            DaggerfallSiteProfile[] sites = [.. roles[SiteRole].Select(pack => DaggerfallSiteContent.Read(selected.Content, pack.Payload, definitions))];
+            ContentPack[] sitePacks = [.. roles[SiteRole]];
+            DaggerfallSiteProfile[] sites = [.. sitePacks.Select(pack => DaggerfallSiteContent.Read(selected.Content, pack.Payload, definitions))];
             if (sites.Length == 0)
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects no '{SiteRole.Value}' content pack, so a new game has nowhere to start.");
-            DaggerfallSiteProfile inputs = sites.FirstOrDefault(site => site.VariantName is null)
-                ?? throw new InvalidOperationException("A bundle requires a base site before world variants can be selected.");
+            // The authored new-game definition names the site a new game starts at; pack order in the
+            // bundle carries no meaning, so adding or reordering sites cannot move the start.
+            string startPack = definitions.NewGame.StartSitePack;
+            int start = Array.FindIndex(sitePacks, pack => pack.Id.Value == startPack);
+            if (start < 0)
+                throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' does not select the new-game start site '{startPack}'.");
+            DaggerfallSiteProfile inputs = sites[start];
+            if (inputs.VariantName is not null)
+                throw new InvalidOperationException($"New-game start site '{startPack}' is a world variant, not a base site.");
+            // The start site's classic selection is the session's held-item and spell presentation at
+            // every site, so a start site without one would leave the player's hands unpresented.
+            if (inputs.ClassicPresentation.Viewmodel is null || inputs.ClassicPresentation.UnarmedVisual is null)
+                throw new InvalidOperationException($"New-game start site '{startPack}' publishes no classic viewmodel selection for the session.");
             IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> fightersGuildQuests =
                 [.. roles[FightersGuildQuestCorpusRole].SelectMany(pack => DaggerfallFightersGuildQuestCorpusContent.Read(selected.Content, pack.Payload, definitions))];
             DaggerfallClassicQuestCorpusReceipt[] classicCorpus =

@@ -67,7 +67,7 @@ public sealed class DaggerfallReferenceCatalogTests
         // is read and validated where the ruleset builds its definitions, and a payload
         // whose catalogs do not hold together fails there rather than at first use.
         ResolvedGameComposition composition = GameCompositionResolver
-            .Resolve(Content(null), new GameBundleId("daggerfall.privateers-hold"))
+            .Resolve(Content(null), new GameBundleId("daggerfall.classic"))
             .RequireComposition();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
             composition.RequireContentPack(new ContentPackId("daggerfall.base")).Payload,
@@ -75,7 +75,7 @@ public sealed class DaggerfallReferenceCatalogTests
         Assert.Equal(19, definitions.Catalogs.Careers.Count);
 
         ResolvedGameComposition broken = GameCompositionResolver
-            .Resolve(Content(root => root["catalogs"]!["careers"]!.AsArray()[0]!["primarySkills"]!.AsArray()[0] = "not-a-skill"), new GameBundleId("daggerfall.privateers-hold"))
+            .Resolve(Content(root => root["catalogs"]!["careers"]!.AsArray()[0]!["primarySkills"]!.AsArray()[0] = "not-a-skill"), new GameBundleId("daggerfall.classic"))
             .RequireComposition();
         ReadOnlyMemory<byte> authoredPayload = broken.RequireContentPack(new ContentPackId("daggerfall.base")).Payload;
         ReadOnlyMemory<byte> brokenPayload = broken.RequireContentPack(new ContentPackId("daggerfall.imported")).Payload;

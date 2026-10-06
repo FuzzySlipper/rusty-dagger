@@ -94,7 +94,7 @@ public sealed class DaggerfallRestSessionTests
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service,
             new AppearanceFake(releases), random: RandomMaximum.Create());
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root),
-            new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+            new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
             new(definitions, inputs, DaggerfallTuning.Defaults, identity) {Sky = sky}, DaggerfallSavePayload.Encode(saved));
         DaggerfallSavePayload after = DaggerfallSavePayload.Read(restored.CaptureSave());
@@ -207,7 +207,7 @@ public sealed class DaggerfallRestSessionTests
         PopulateTerrainContent(resumedContent, inputs);
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using (DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
             new(definitions, inputs, DaggerfallTuning.Defaults, identity) {Sky = sky}, DaggerfallSavePayload.Encode(restedSave)))
         {

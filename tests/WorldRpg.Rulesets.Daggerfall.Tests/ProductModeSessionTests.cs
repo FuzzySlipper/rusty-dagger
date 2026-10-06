@@ -36,7 +36,7 @@ public sealed class ProductModeSessionTests
         // make the first world-step assertion depend on playback timing.
         CapturingDaggerfallRuleset ruleset = new(videosEnabled: false);
 
-        using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold")))
+        using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic")))
         {
             product.Start();
             // The product a launcher starts shows its entry screen, and a client that has read it asks to
@@ -68,7 +68,7 @@ public sealed class ProductModeSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         CapturingDaggerfallRuleset ruleset = new(videosEnabled: false);
-        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold"));
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
 
         product.Start();
         DaggerfallSession title = ruleset.RequireSession();
@@ -100,7 +100,7 @@ public sealed class ProductModeSessionTests
             SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         CapturingDaggerfallRuleset ruleset = new(videosEnabled: true);
-        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.privateers-hold"));
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
 
         product.Start();
         NewGameSessionTests.Commit(ruleset.RequireSession());
@@ -340,7 +340,7 @@ public sealed class ProductModeSessionTests
         PopulateContent(resumedContent, inputs);
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), saved);
         Assert.Equal(committed.Biography, resumed.State.Character.Background!.Biography);
         Assert.Equal(committed.Modifiers, resumed.State.Character.Background!.Modifiers);

@@ -196,7 +196,7 @@ public sealed class ExteriorOriginSessionTests
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted,
-            new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+            new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         RulesetSavePayload save;
         long actorId;
         long npcId;

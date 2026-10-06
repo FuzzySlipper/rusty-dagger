@@ -80,7 +80,7 @@ public sealed class PlayerAttackSessionTests
         PopulateContent(resumedContent, inputs);
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
 
         Assert.Equal(2, restored.State.Progression.SkillUses["long-blade"]);
@@ -365,7 +365,7 @@ public sealed class PlayerAttackSessionTests
         SpatialFake restoredSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, restoredReleases);
         EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, restoredSpatial.Service,
             new AppearanceFake(restoredReleases), PerceptionFake.Create().Service);
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         Assert.Equal(2, restored.State.Progression.SkillUses["backstabbing"]);
     }

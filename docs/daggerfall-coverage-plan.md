@@ -112,8 +112,8 @@ Breakdown:
   identities, distinguished from transient Engine resource handles.
 - Loaded and unloaded world changes, actor creation/removal, ownership of save
   records, and reconstruction after location changes or load.
-- Extend current fixed-scene save assumptions before dynamic spawns: restoration
-  currently matches saved actors to the authored Privateer's Hold actor set.
+- Restoration matches saved actors to the active site's authored actor set and
+  restores dynamic spawns and unloaded site deltas by durable identity.
 - One product game-time model advanced inside admitted updates, with explicit
   elapsed-time operations for rest, travel, and prison. Specify ordering and
   catch-up behavior for deadlines and periodic consequences; no wall-clock loop.

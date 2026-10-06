@@ -182,7 +182,11 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             effect.Position = DaggerfallExteriorSessionOrigin.Shift(effect.Position, delta);
     }
 
-    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null)
+    /// <param name="sessionPresentation">
+    /// The session's classic presentation (weapon viewmodels, held-item visuals, spell effects), which the
+    /// start site publishes for the whole session; null uses this site's own, as a lone-site composition does.
+    /// </param>
+    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
@@ -198,8 +202,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         this.random = random;
         this.audioTuning = (audioTuning ?? DaggerfallTuning.Defaults.PresentationAudio).Validate();
         hitCues = inputs.Audio.Count == 0 ? [] : DaggerfallSiteContent.OrderedHitCues(inputs.Audio);
-        classicPresentation = inputs.ClassicPresentation;
-        classicEffects = inputs.ClassicPresentation.Effects.ToDictionary(effect => effect.Name, StringComparer.Ordinal);
+        classicPresentation = sessionPresentation ?? inputs.ClassicPresentation;
+        classicEffects = classicPresentation.Effects.ToDictionary(effect => effect.Name, StringComparer.Ordinal);
         worldAppearance = inputs.WorldAppearance;
         try
         {

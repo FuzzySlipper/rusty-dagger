@@ -83,7 +83,7 @@ public sealed class RazorSessionTests
             var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;
             return EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
         }
-        var identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        var identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         var tuning = DaggerfallTuning.Defaults with { Progression = DaggerfallTuning.Defaults.Progression with { EnableExperimentalKillExperience = experimentalKillExperience } };
         DaggerfallSessionComposition composition = new(definitions, inputs, tuning, identity);
         RulesetSavePayload save;

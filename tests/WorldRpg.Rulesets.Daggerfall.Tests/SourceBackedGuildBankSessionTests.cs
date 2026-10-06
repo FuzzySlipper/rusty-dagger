@@ -359,7 +359,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         string root = TestData.RepositoryRoot;
         ProductContent content = FullContent(root);
         ResolvedGameComposition resolved = GameCompositionResolver.Resolve(content,
-            new GameBundleId("daggerfall.privateers-hold")).RequireComposition();
+            new GameBundleId("daggerfall.classic")).RequireComposition();
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile[] sites = [.. resolved.ContentPacks
             .Where(pack => pack.Role == new ContentPackRoleId(SiteRole))

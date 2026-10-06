@@ -33,7 +33,7 @@ public sealed class NamiraSessionTests
             perception = PerceptionFake.Create();
             return EngineContextFake.Create(content, spatial.Service, appearance, perception.Service, random: RandomMinimum.Create());
         }
-        var identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        var identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         DaggerfallSessionComposition composition = new(definitions, inputs, DaggerfallTuning.Defaults, identity);
         var engine = Engine(out _, out _);
         RulesetSavePayload save;
