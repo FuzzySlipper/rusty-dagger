@@ -950,6 +950,28 @@ test('map controls change only presentation and retain live player position with
   } finally { f.dispose(); }
 });
 
+test('dungeon map notes are added at the player and removed through the discovery owner', () => {
+  const f = fixture();
+  try {
+    const map = { id: 'privateers', name: "Privateer's Hold", kind: 'dungeon', region: null, location: null, canAddNote: true,
+      player: { x: 1, y: 2, z: 3, yaw: 0 }, areas: [],
+      labels: [{ id: 'note-1', name: 'Stairs down', x: 1, y: 2, z: 3, selected: false, note: true },
+        { id: 'entrance', name: 'Entrance', x: 0, y: 2, z: 0, selected: false, note: false }] };
+    f.publish({ map }); f.root.querySelector('[data-action="map"]').click();
+    const form = f.root.querySelector('.dagger-map-note');
+    assert.equal(form.hidden, false);
+    form.querySelector('input').value = '  Lever room ';
+    form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'map-note-add', text: 'Lever room' });
+    const note = f.root.querySelector('[data-note="note-1"]');
+    note.querySelector('button').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'map-note-remove', note: 'note-1' });
+    assert.equal(f.root.querySelector('.dagger-map-buildings').textContent.match(/Remove note/g).length, 1);
+    f.publish({ map: { ...map, kind: 'city', region: 17, location: 45, canAddNote: false, labels: [] } });
+    assert.equal(form.hidden, true);
+  } finally { f.dispose(); }
+});
+
 test('city map selection sends the actual location and placed building identity to the shared owner', () => {
   const f = fixture();
   try {

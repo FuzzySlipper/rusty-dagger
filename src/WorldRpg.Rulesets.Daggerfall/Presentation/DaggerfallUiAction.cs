@@ -20,7 +20,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
 /// <summary>Every player action the <c>dagger.ui.action.v1</c> contract carries, by meaning.</summary>
 internal enum DaggerfallUiActionKind
 {
-    Begin, CinematicSkip, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellMakerDraft, SpellMakerBuy, PotionMix, ItemMakerDraft, ItemMakerBuy, DaedraSummon, DaedraAnswer,
+    Begin, CinematicSkip, MapNoteAdd, MapNoteEdit, MapNoteRemove, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellMakerDraft, SpellMakerBuy, PotionMix, ItemMakerDraft, ItemMakerBuy, DaedraSummon, DaedraAnswer,
     ControlsRebind, ControlsReset,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
@@ -206,6 +206,9 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.TransportLeaveShip, "transport-leave-ship", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.MapOpen, "map-open", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.MapBuilding, "map-building", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.MapNoteAdd, "map-note-add", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.MapNoteEdit, "map-note-edit", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.MapNoteRemove, "map-note-remove", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelSearch, "travel-search", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelPreview, "travel-preview", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelAccept, "travel-accept", DaggerfallUiPhases.Interaction),
@@ -475,6 +478,13 @@ internal static class DaggerfallUiAction
             if (action == "map-building") return fields.SetEquals(["action", "region", "destination", "item"])
                 && region is >= 0 && destination is >= 0 && !string.IsNullOrWhiteSpace(item)
                 ? new(action, Region: region, Destination: destination, Item: item) : null;
+            if (action == "map-note-add")
+                return fields.SetEquals(["action", "text"]) && ValidMapNoteText(text) ? new(action, Text: text) : null;
+            if (action == "map-note-edit")
+                return fields.SetEquals(["action", "note", "text"]) && !string.IsNullOrWhiteSpace(note) && ValidMapNoteText(text)
+                    ? new(action, Note: note, Text: text) : null;
+            if (action == "map-note-remove")
+                return fields.SetEquals(["action", "note"]) && !string.IsNullOrWhiteSpace(note) ? new(action, Note: note) : null;
             if (action == "menu") return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
             if (action == "save-slots") return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "save-slot")
@@ -631,6 +641,8 @@ internal static class DaggerfallUiAction
 
     private static bool HasTopicTarget(string value, string prefix) =>
         value.StartsWith(prefix, StringComparison.Ordinal) && value.Length > prefix.Length;
+
+    private static bool ValidMapNoteText(string? value) => !string.IsNullOrWhiteSpace(value) && value.Length <= 256;
 
     private static bool ValidNotebookText(string? value) => !string.IsNullOrWhiteSpace(value) && value.Length <= 2048;
 }

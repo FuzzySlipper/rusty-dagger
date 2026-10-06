@@ -16,6 +16,38 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallMapPresentationTests
 {
     [Fact]
+    public void Map_note_actions_add_at_the_player_edit_and_remove_through_the_dungeon_discovery_owner()
+    {
+        using DaggerfallSession session = FreshSession();
+        session.ApplyProductMode(ProductMode.Playing);
+        DaggerfallSiteProfile profile = session.Sites.Projection.Inputs;
+        Assert.Equal(DaggerfallWorldProfileKind.Dungeon, profile.ProfileKind);
+        if (!session.State.DungeonDiscoveries.TryGetValue(profile.ProfileKey, out DaggerfallDungeonDiscovery? discovery))
+            session.State.DungeonDiscoveries.Add(profile.ProfileKey, discovery = new DaggerfallDungeonDiscovery(profile.ProfileKey, profile.DungeonMap!));
+        WorldPoint player = session.State.PlayerControl.Position!.Value;
+
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"map-note-add","text":"  Lever room  "}""")]));
+        DaggerfallDungeonNoteMarker note = Assert.Single(discovery.NoteMarkers);
+        Assert.Equal(("note-1", "Lever room"), (note.Id, note.Text));
+        Assert.Equal(player.X, note.Position.X, 3);
+        Assert.Equal(player.Z, note.Position.Z, 3);
+        Assert.Equal("Note added to the map.", session.Presentation.LastOutcome);
+        Assert.Contains(session.ReadMapPresentation()!.Labels, label => label.Id == "note-1" && label.Note);
+
+        session.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"map-note-add","text":"Second"}""")]));
+        Assert.Equal(["note-1", "note-2"], discovery.NoteMarkers.Select(value => value.Id));
+        session.Update(new ProductUpdate(OuterUpdate(3), [Ui("""{"action":"map-note-edit","note":"note-1","text":"Lever room, pulled"}""")]));
+        Assert.Equal("Lever room, pulled", discovery.NoteMarkers[0].Text);
+        session.Update(new ProductUpdate(OuterUpdate(4), [Ui("""{"action":"map-note-remove","note":"note-1"}""")]));
+        Assert.Equal("Map note removed.", session.Presentation.LastOutcome);
+        Assert.Equal("note-2", Assert.Single(discovery.NoteMarkers).Id);
+        session.Update(new ProductUpdate(OuterUpdate(5), [Ui("""{"action":"map-note-remove","note":"note-1"}""")]));
+        Assert.Equal("That map note no longer exists.", session.Presentation.LastOutcome);
+        Assert.Contains(DaggerfallSavePayload.Read(session.CaptureSave()).DungeonDiscovery
+            .Single(saved => saved.NoteMarkers.Length > 0).NoteMarkers, saved => saved.Id == "note-2");
+    }
+
+    [Fact]
     public void Dungeon_projection_only_exposes_persisted_discovery_and_current_player()
     {
         DaggerfallSiteProfile profile = ReadInputs(TestData.RepositoryRoot);
@@ -34,7 +66,8 @@ public sealed class DaggerfallMapPresentationTests
         Assert.Contains(map.Areas, area => area.Id == geometry.PlacementId);
         Assert.DoesNotContain(map.Areas, area => content.GeometryPlacements.Skip(1).Any(placement => placement.PlacementId == area.Id));
         Assert.Equal(2, map.Labels.Count);
-        Assert.Contains(map.Labels, label => label.Name == "Turn back here");
+        Assert.Contains(map.Labels, label => label.Name == "Turn back here" && label.Note);
+        Assert.True(map.CanAddNote);
         var restored = new DaggerfallDungeonDiscovery(profile.ProfileKey, content, saved);
         var replay = DaggerfallMapProjection.Dungeon(profile, restored, player, .7f);
         Assert.Equal(map.Areas, replay.Areas); Assert.Equal(map.Labels, replay.Labels);

@@ -104,6 +104,9 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.DispelCancel: ChooseDispel(action.Revision!, null); break;
             case DaggerfallUiActionKind.MapOpen: _mapOpen = action.Open; break;
             case DaggerfallUiActionKind.MapBuilding: SelectMapBuilding(action); break;
+            case DaggerfallUiActionKind.MapNoteAdd:
+            case DaggerfallUiActionKind.MapNoteEdit:
+            case DaggerfallUiActionKind.MapNoteRemove: ChangeMapNote(action); break;
             case DaggerfallUiActionKind.Menu: _interactions.SetMenuOpen(action.Open); break;
             case DaggerfallUiActionKind.CinematicSkip:
                 if (_openingCinematics.IsActive) _openingCinematics.Skip();

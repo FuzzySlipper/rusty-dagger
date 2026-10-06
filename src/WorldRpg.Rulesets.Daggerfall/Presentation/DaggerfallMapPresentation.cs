@@ -11,9 +11,11 @@ internal sealed record DaggerfallMapArea(string Id, float MinX, float MinZ, floa
     /// <summary>The semantic category the map draws this area as (room, door, surface, guild, shop, tavern, common).</summary>
     internal string Category { get; init; } = "common";
 }
-internal sealed record DaggerfallMapLabel(string Id, string Name, float X, float Y, float Z, bool Selected = false);
+internal sealed record DaggerfallMapLabel(string Id, string Name, float X, float Y, float Z, bool Selected = false, bool Note = false);
+/// <param name="CanAddNote">Whether this map keeps player notes, which a dungeon's discovery owner does.</param>
 internal sealed record DaggerfallMapPresentation(string Id, string Name, string Kind, WorldPoint Player, float Yaw,
-    IReadOnlyList<DaggerfallMapArea> Areas, IReadOnlyList<DaggerfallMapLabel> Labels, int? Region = null, int? Location = null);
+    IReadOnlyList<DaggerfallMapArea> Areas, IReadOnlyList<DaggerfallMapLabel> Labels, int? Region = null, int? Location = null,
+    bool CanAddNote = false);
 
 /// <summary>Read-only presentation of the discovery owner, with no access to undiscovered placement data.</summary>
 internal static class DaggerfallMapProjection
@@ -41,8 +43,8 @@ internal static class DaggerfallMapProjection
             DaggerfallSiteMarker marker = content.RequireMarker(id);
             labels.Add(new(id, MarkerLabel(marker.Kind), marker.Position.X, marker.Position.Y, marker.Position.Z));
         }
-        labels.AddRange(known.NoteMarkers.Select(note => new DaggerfallMapLabel(note.Id, note.Text, note.Position.X, note.Position.Y, note.Position.Z)));
-        return new(profile.ProfileKey.LogicalId, name ?? "Dungeon", "dungeon", player, yaw, areas, labels);
+        labels.AddRange(known.NoteMarkers.Select(note => new DaggerfallMapLabel(note.Id, note.Text, note.Position.X, note.Position.Y, note.Position.Z, Note: true)));
+        return new(profile.ProfileKey.LogicalId, name ?? "Dungeon", "dungeon", player, yaw, areas, labels, CanAddNote: true);
     }
 
     /// <summary>The player label of a discovered dungeon marker.</summary>
@@ -112,5 +114,7 @@ internal static class DaggerfallMapProjection
             ("minY", builder.Number(area.MinY)), ("maxY", builder.Number(area.MaxY)), ("kind", builder.Number(area.Kind)),
             ("category", builder.String(area.Category)))).ToArray())),
         ("labels", builder.Array(map.Labels.Select(label => builder.Object(("id", builder.String(label.Id)), ("name", builder.String(label.Name)),
-            ("x", builder.Number(label.X)), ("y", builder.Number(label.Y)), ("z", builder.Number(label.Z)), ("selected", builder.Boolean(label.Selected)))).ToArray())));
+            ("x", builder.Number(label.X)), ("y", builder.Number(label.Y)), ("z", builder.Number(label.Z)), ("selected", builder.Boolean(label.Selected)),
+            ("note", builder.Boolean(label.Note)))).ToArray())),
+        ("canAddNote", builder.Boolean(map.CanAddNote)));
 }
