@@ -130,7 +130,7 @@ internal sealed partial class DaggerfallSession
             MechanicsInventoryCoordinator inventory = assembled.Inventory;
             MechanicsEquipmentCoordinator equipmentCoordinator = assembled.Equipment;
             MechanicsInventoryContainerCoordinator containers = assembled.Containers;
-            Presentation = new PresentationState("Ready");
+            Presentation = new PresentationState("Ready", DaggerfallOutcomePresentation.MessageLifetimeSeconds);
             _time = new DaggerfallWorldTime(
                 saved?.Calendar is { } restored
                     ? new DaggerfallCalendar(restored.Year, restored.Month, restored.Day, restored.Hour, restored.Minute, restored.Second)

@@ -13,7 +13,7 @@ public sealed class DaggerfallEffectMovementProtectionTests
     public void Active_compiled_effect_exposes_fall_protection_by_target_until_it_ends()
     {
         using ActorsState actors = new();
-        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(), "health");
+        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(), "health", DaggerActorFactory.PlayerCapabilities);
         DaggerfallEffectCatalog catalog = new(
         [
             new DaggerfallEffectDefinition("feather-fall", "feather-fall", DaggerfallEffectStacking.Stack, 1, 1,
@@ -35,7 +35,7 @@ public sealed class DaggerfallEffectMovementProtectionTests
     public void Active_water_breathing_exposes_typed_capability_until_it_ends()
     {
         using ActorsState actors = new();
-        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(), "health");
+        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(), "health", DaggerActorFactory.PlayerCapabilities);
         DaggerfallEffectCatalog catalog = new(
         [
             new DaggerfallEffectDefinition("water-breathing", "water-breathing", DaggerfallEffectStacking.RefreshDuration, 1, 1,

@@ -190,7 +190,8 @@ internal sealed class DaggerfallCorpseLootModule
         var source = DaggerfallItemOwner.Actor(fact.ActorId);
         var destination = DaggerfallItemOwner.Corpse(fact.ActorId);
         foreach (var stack in carried.Stacks) _itemInstances.EnsureTransferCompatible(source, destination, stack.Id, stack.Id);
-        _corpseLoot.Receive(state.Actor.Get<CorpseLootComponent>(), owner =>
+        CorpseLootComponent corpse = state.Actor.Get<CorpseLootComponent>();
+        ReceiveInto(corpse, owner =>
         {
             var store = _actors.Entities.Store.Get<InventoryComponent>(state.Actor.Entity).Store;
             var equipped = store.TryGetEquipment(state.Actor.Entity, out var equipment) ? equipment!.Assignments.ToArray() : [];
@@ -203,7 +204,17 @@ internal sealed class DaggerfallCorpseLootModule
     }
 
     internal void ReceiveItems(long actorId, Action admit) =>
-        _corpseLoot.Receive(_actors.Get(actorId).Actor.Get<CorpseLootComponent>(), _ => admit());
+        ReceiveInto(_actors.Get(actorId).Actor.Get<CorpseLootComponent>(), _ => admit());
+
+    /// <summary>
+    /// Admits items into a corpse. Like the donor's loot container, a corpse that holds anything is
+    /// offered for interaction again, and one left empty is not.
+    /// </summary>
+    private void ReceiveInto(CorpseLootComponent corpse, Action<EntityId> admit)
+    {
+        InventoryView contents = _corpseLoot.Receive(corpse, admit);
+        corpse.IsInteractable = contents.Stacks.Count > 0 || contents.UniqueItems.Count > 0;
+    }
 
     /// <summary>Reads Engine visibility and prepares, but does not publish, an explicit loot action.</summary>
     internal PendingCorpseLoot? PrepareLoot(PlayerControlState player, LookReceipt look, long? targetActorId = null)
@@ -323,7 +334,8 @@ internal sealed class DaggerfallCorpseLootModule
 
         if (pending.IsEmpty)
         {
-            _corpseLoot.TransferAll(current, _playerOwner);
+            // Donor RemoveLootContainer: a searched corpse that is left empty stops being interactable.
+            current.IsInteractable = !_corpseLoot.TransferAll(current, _playerOwner).IsEmpty;
             facts.Append(new CorpseSearchedEmptyFact(pending.ActorId));
             LastCommit = new CorpseLootCommitEvidence(pending.ActorId, true, null);
             return CorpseLootCommitResult.Committed;
@@ -347,6 +359,7 @@ internal sealed class DaggerfallCorpseLootModule
             CorpseLootTransferResult transfer = pending.Selection is { } selection
                 ? _corpseLoot.Transfer(current, _playerOwner, selection)
                 : _corpseLoot.TransferAll(current, _playerOwner);
+            current.IsInteractable = !transfer.IsEmpty;
             SyncTransferredMetadata(pending.ActorId, current, transfer.Transfer);
         }
         catch (Exception rejection) when (rejection is MechanicsException or InvalidOperationException)

@@ -86,21 +86,21 @@ public sealed class PursuitAndCorpseLootTests
             new InventoryContainerSelection(new InventoryItemId("gold"), 1, InventoryStackId.Parse("corpse-gold"), InventoryStackId.Parse("player-gold")));
 
         Assert.False(first.IsEmpty);
-        Assert.True(corpse.IsInteractable);
         Assert.Equal(1UL, Assert.Single(containers.Read(recipient).Stacks).Quantity);
         Assert.Equal(1UL, Assert.Single(loot.Read(corpse)!.Stacks).Quantity);
 
         CorpseLootTransferResult last = loot.TransferAll(corpse, recipient);
 
         Assert.True(last.IsEmpty);
-        Assert.False(corpse.IsInteractable);
         Assert.Equal(2UL, containers.Read(recipient).Stacks.Aggregate(0UL, (total, stack) => total + stack.Quantity));
         Assert.Empty(loot.Read(corpse)!.Stacks);
-        Assert.Throws<InvalidOperationException>(() => loot.TransferAll(corpse, recipient));
+        // Whether an emptied corpse stays interactable is ruleset eligibility; Kit leaves it as created.
+        Assert.True(corpse.IsInteractable);
+        Assert.True(loot.TransferAll(corpse, recipient).IsEmpty);
     }
 
     [Fact]
-    public void Receiving_new_contents_registers_an_empty_corpse_and_reopens_a_searched_one()
+    public void Receiving_new_contents_registers_an_empty_corpse_and_reports_its_contents()
     {
         EntityDirectory entities = new();
         InventoryStore inventory = new();
@@ -113,14 +113,15 @@ public sealed class PursuitAndCorpseLootTests
         Assert.False(corpse.HasRegisteredInventory);
         Assert.True(loot.TransferAll(corpse, recipient).IsEmpty);
         var owner = corpse.Owner;
-        loot.Receive(corpse, target => containers.Seed(target, [new(new("gold"), 1, Stack: InventoryStackId.Parse("first"))]));
+        InventoryView received = loot.Receive(corpse, target => containers.Seed(target, [new(new("gold"), 1, Stack: InventoryStackId.Parse("first"))]));
         Assert.True(corpse.HasRegisteredInventory);
-        Assert.True(corpse.IsInteractable);
+        Assert.Equal(1UL, Assert.Single(received.Stacks).Quantity);
         Assert.Equal(owner, corpse.Owner);
-        loot.TransferAll(corpse, recipient);
+        Assert.True(loot.TransferAll(corpse, recipient).IsEmpty);
+        corpse.IsInteractable = false;
+        received = loot.Receive(corpse, target => containers.Seed(target, [new(new("gold"), 2, Stack: InventoryStackId.Parse("second"))]));
         Assert.False(corpse.IsInteractable);
-        loot.Receive(corpse, target => containers.Seed(target, [new(new("gold"), 2, Stack: InventoryStackId.Parse("second"))]));
-        Assert.True(corpse.IsInteractable);
+        Assert.Equal(2UL, Assert.Single(received.Stacks).Quantity);
         Assert.Equal(2UL, Assert.Single(loot.Read(corpse)!.Stacks).Quantity);
     }
 

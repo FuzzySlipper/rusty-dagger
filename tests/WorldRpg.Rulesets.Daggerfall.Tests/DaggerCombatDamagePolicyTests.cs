@@ -527,7 +527,7 @@ public sealed class DaggerCombatDamagePolicyTests
             _random = (IRandomService)(object)_scripted;
             _actors = new ActorsState();
             PlayerActorState player = _actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId(playerDefinition.Id.Value),
-                new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, definitions.Catalogs.RequireCareer("class00"))), "health");
+                new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
             _playerEquipment = BuildEquipment(player.Actor.Entity, DaggerfallActorIdentity.PlayerEntityId, player.Actor);
             foreach (DaggerfallLoadoutEntry entry in playerDefinition.Loadout.Where(entry => entry.UniqueEntityId is not null))
             {
@@ -542,7 +542,7 @@ public sealed class DaggerCombatDamagePolicyTests
             // the equipped-enemy action and nothing worn until a test hands it a weapon.
             DaggerfallActorDefinition brigand = definitions.RequireActor(new DaggerfallActorId("thief")) with { ActionId = "enemy-class-equipped-melee" };
             ActorState enemy = _actors.CreateActor(2, new EntityTypeId("brigand"),
-                new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health");
+                new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
             _authored[DaggerfallActorIdentity.PlayerEntityId] = playerDefinition;
             _authored[2] = brigand;
             _actorEquipment[2] = BuildEquipment(enemy.Actor.Entity, 2, enemy.Actor);

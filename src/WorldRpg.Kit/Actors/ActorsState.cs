@@ -11,6 +11,22 @@ using WorldRpg.Kit.Targeting;
 
 namespace WorldRpg.Kit.Actors;
 
+/// <summary>
+/// Optional Kit-owned components a ruleset opts an actor into when it constructs it. Every actor
+/// always carries its stats, effects and defeat track; the rest is the ruleset's choice.
+/// </summary>
+[Flags]
+public enum ActorCapabilities
+{
+    None = 0,
+    /// <summary>Current-target memory read and written by the targeting services.</summary>
+    Targeting = 1 << 0,
+    /// <summary>Attack readiness, cooldown and pending-impact state owned by attack execution.</summary>
+    Attacks = 1 << 1,
+    /// <summary>Experience and level state.</summary>
+    Progression = 1 << 2,
+}
+
 /// <summary>Session actor construction and durable lookup over canonical Engine entities.</summary>
 public sealed class ActorsState : IDisposable
 {
@@ -30,18 +46,19 @@ public sealed class ActorsState : IDisposable
         .Where(entry => entry.Entity != Player?.Actor.Entity)
         .Select(entry => new ActorState(new Actor(Store, entry.Entity)));
 
-    public PlayerActorState CreatePlayer(long id, EntityTypeId type, StatsComponent stats, string defeatTrack)
+    public PlayerActorState CreatePlayer(long id, EntityTypeId type, StatsComponent stats, string defeatTrack,
+        ActorCapabilities capabilities = ActorCapabilities.None)
     {
         if (Player is not null) throw new InvalidOperationException("The session already has a player.");
-        Actor actor = Construct(id, type, stats, defeatTrack);
-        actor.Add(new ProgressionState());
+        Actor actor = Construct(id, type, stats, defeatTrack, capabilities);
         Player = new PlayerActorState(actor);
         return Player;
     }
 
-    public ActorState CreateActor(long id, EntityTypeId type, StatsComponent stats, ActorPose pose, string defeatTrack)
+    public ActorState CreateActor(long id, EntityTypeId type, StatsComponent stats, ActorPose pose, string defeatTrack,
+        ActorCapabilities capabilities = ActorCapabilities.None)
     {
-        Actor actor = Construct(id, type, stats, defeatTrack);
+        Actor actor = Construct(id, type, stats, defeatTrack, capabilities);
         actor.Add(new ActorBody());
         Store.Set(actor.Entity, EngineComponentTypes.Transform, ActorTransform.FromPose(pose, Vector3.One));
         Store.Set(actor.Entity, EngineComponentTypes.CharacterMotion, InitialCharacterMotion());
@@ -57,15 +74,18 @@ public sealed class ActorsState : IDisposable
         PeakY = 0f,
     };
 
-    private Actor Construct(long id, EntityTypeId type, StatsComponent stats, string defeatTrack)
+    private Actor Construct(long id, EntityTypeId type, StatsComponent stats, string defeatTrack, ActorCapabilities capabilities)
     {
+        if ((capabilities & ~(ActorCapabilities.Targeting | ActorCapabilities.Attacks | ActorCapabilities.Progression)) != 0)
+            throw new ArgumentOutOfRangeException(nameof(capabilities));
         EntityId entity = Entities.Create(Identity(id), type);
         Actor actor = new(Store, entity);
         actor.Add(stats);
-        actor.Add(new TargetingComponent());
-        actor.Add(new AttackState());
+        if (capabilities.HasFlag(ActorCapabilities.Targeting)) actor.Add(new TargetingComponent());
+        if (capabilities.HasFlag(ActorCapabilities.Attacks)) actor.Add(new AttackState());
         actor.Add(new EffectsComponent(entity));
         actor.Add(new ActorVitals(TrackId.Parse(defeatTrack)));
+        if (capabilities.HasFlag(ActorCapabilities.Progression)) actor.Add(new ProgressionState());
         return actor;
     }
 

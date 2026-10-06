@@ -72,7 +72,7 @@ public sealed class ActorsAndProgressionTests
         stats.AddTrack(healthId, health);
         stats.AddTrack(healthAliasTrackId, health);
         using ActorsState actors = new();
-        actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health");
+        actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health", ActorCapabilities.Progression);
         ActorState original = actors.CreateActor(101, new EntityTypeId("rat"), stats, Pose(1), "health");
         StatModifierHandle modifier = healthMaximum.AddModifier(10);
         StatSource levelUp = new(
@@ -126,7 +126,7 @@ public sealed class ActorsAndProgressionTests
     public void Actors_state_maps_durable_identities_to_distinct_same_type_runtime_entities()
     {
         using ActorsState actors = new();
-        actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health");
+        actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health", ActorCapabilities.Progression);
         ActorState first = actors.CreateActor(101, new EntityTypeId("rat"), Stats(), Pose(1), "health");
         ActorState second = actors.CreateActor(102, new EntityTypeId("rat"), Stats(), Pose(2), "health");
 
@@ -141,7 +141,7 @@ public sealed class ActorsAndProgressionTests
     public void Actor_wrapping_is_live_and_does_not_construct_components()
     {
         using ActorsState actors = new();
-        actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health");
+        actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health", ActorCapabilities.Progression);
         StatsComponent stats = Stats();
         ActorState created = actors.CreateActor(101, new EntityTypeId("rat"), stats, Pose(1), "health");
         ulong revisionBeforeWrap = actors.Store.Revision;
@@ -159,7 +159,7 @@ public sealed class ActorsAndProgressionTests
     public void Actors_state_lookup_destroy_and_recreate_replace_only_the_runtime_entity()
     {
         using ActorsState actors = new();
-        actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health");
+        actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health", ActorCapabilities.Progression);
         ActorState original = actors.CreateActor(101, new EntityTypeId("rat"), Stats(), Pose(1), "health");
 
         Assert.True(actors.TryGet(101, out ActorState found));

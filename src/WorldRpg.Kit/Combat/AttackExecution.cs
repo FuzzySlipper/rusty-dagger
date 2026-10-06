@@ -111,5 +111,8 @@ public sealed class AttackExecution<TFact>(ActorsState actors, IAttackRules<TFac
             state.RestoredRemainingSteps = 0;
         }
     }
-    private IEnumerable<long> AllActors() => actors.All.Select(a => a.DurableId).Prepend(actors.Player.DurableId);
+    /// <summary>Every actor the ruleset opted into attacks; others own no readiness or cooldown.</summary>
+    private IEnumerable<long> AllActors() => actors.All.Prepend(new ActorState(actors.Player.Actor))
+        .Where(actor => actor.Actor.TryGet<AttackState>(out _))
+        .Select(actor => actor.DurableId);
 }

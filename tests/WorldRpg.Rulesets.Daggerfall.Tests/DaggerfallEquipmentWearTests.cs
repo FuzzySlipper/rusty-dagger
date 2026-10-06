@@ -189,7 +189,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         EquipmentWornFact broken = Assert.Single(facts.OfType<EquipmentWornFact>(), fact => fact.Broken);
         Assert.True(broken.PluralBreak, "the donor's greaves break in the plural");
         // The line is the donor's published plural message with the item substituted.
-        PresentationState presentation = new(string.Empty);
+        PresentationState presentation = new(string.Empty, DaggerfallOutcomePresentation.MessageLifetimeSeconds);
         DaggerfallOutcomePresentation outcome = new(presentation,
             new Dictionary<long, DaggerfallActorDefinition> { [Enemy] = Definitions.RequireActor(new DaggerfallActorId("rat")) },
             text: Definitions.Text);
@@ -279,7 +279,7 @@ public sealed partial class DaggerfallEquipmentWearTests
     [Fact]
     public void The_break_the_hit_caused_is_what_the_outcome_line_reports()
     {
-        PresentationState presentation = new(string.Empty);
+        PresentationState presentation = new(string.Empty, DaggerfallOutcomePresentation.MessageLifetimeSeconds);
         DaggerfallOutcomePresentation outcome = new(presentation,
             new Dictionary<long, DaggerfallActorDefinition> { [Enemy] = Definitions.RequireActor(new DaggerfallActorId("rat")) },
             text: Definitions.Text);
@@ -336,7 +336,7 @@ public sealed partial class DaggerfallEquipmentWearTests
             _random = (IRandomService)(object)_scripted;
             _actors = new ActorsState();
             PlayerActorState player = _actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId(playerDefinition.Id.Value),
-                new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, Definitions.Catalogs.RequireCareer("class00"))), "health");
+                new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, Definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
             PlayerEquipment = BuildEquipment(player.Actor.Entity, player.Actor, out MechanicsInventoryCoordinator playerInventory);
             _playerMoves = new DaggerfallEquipmentMoves(playerInventory, PlayerEquipment, Definitions, itemInstances: _itemInstances);
             _itemCondition = new DaggerfallItemConditionService(Definitions, _itemInstances, _playerMoves);
@@ -358,7 +358,7 @@ public sealed partial class DaggerfallEquipmentWearTests
 
             DaggerfallActorDefinition brigand = Definitions.RequireActor(new DaggerfallActorId("thief")) with { ActionId = "enemy-class-equipped-melee" };
             ActorState enemy = _actors.CreateActor(Enemy, new EntityTypeId("brigand"),
-                new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health");
+                new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
             _authored[DaggerfallActorIdentity.PlayerEntityId] = playerDefinition;
             _authored[Enemy] = brigand;
             _actorEquipment[Enemy] = BuildEquipment(enemy.Actor.Entity, enemy.Actor, out _);

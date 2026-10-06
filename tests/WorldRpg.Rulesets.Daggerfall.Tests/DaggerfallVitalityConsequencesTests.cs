@@ -16,7 +16,7 @@ public sealed class DaggerfallVitalityConsequencesTests
     {
         using ActorsState actors = new();
         StatsComponent stats = Stats(health: 3.75d, stamina: 100d);
-        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health");
+        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
         DaggerfallVitalityConsequences consequences = new(new CombatResolution());
 
         DamageResult? lethal = consequences.ResolveLanding(player.Actor, new DaggerfallLanding(7f), preventsFallDamage: false);
@@ -32,7 +32,7 @@ public sealed class DaggerfallVitalityConsequencesTests
     {
         using ActorsState actors = new();
         StatsComponent stats = Stats(health: 20d, stamina: 100d);
-        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health");
+        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
 
         DamageResult? result = new DaggerfallVitalityConsequences(new CombatResolution())
             .ResolveLanding(player.Actor, new DaggerfallLanding(5f), preventsFallDamage: false);
@@ -46,7 +46,7 @@ public sealed class DaggerfallVitalityConsequencesTests
     {
         using ActorsState actors = new();
         StatsComponent stats = Stats(health: 20d, stamina: 100d);
-        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health");
+        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
 
         DamageResult? result = new DaggerfallVitalityConsequences(new CombatResolution())
             .ResolveLanding(player.Actor, new DaggerfallLanding(7f), preventsFallDamage: true);

@@ -219,8 +219,8 @@ public sealed class DaggerfallDestructionEffectsTests
             DaggerfallMagicTolerance.Normal, DaggerfallMagicTolerance.Normal, DaggerfallMagicTolerance.Normal), null, 0, 0, 0, new(0,0,0,0,0), []);
         internal Harness(int subtype = 0, int element = 4, int count = 1, int amount = 10, bool terminal = false, int chance = 100, int? save = null)
         {
-            Player = Actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health").Actor;
-            var target = Actors.CreateActor(2, new EntityTypeId("target"), Stats(), new(new(0,0,0), 0f), "health").Actor;
+            Player = Actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health", DaggerActorFactory.PlayerCapabilities).Actor;
+            var target = Actors.CreateActor(2, new EntityTypeId("target"), Stats(), new(new(0,0,0), 0f), "health", DaggerActorFactory.NonPlayerCapabilities).Actor;
             foreach (var actor in new[] { Player, target }) { actor.Add(new DaggerfallSpellReadiness()); actor.Add(new CombatContributions()); }
             target.Add(new ProgressionState());
             var setting = new DaggerfallSpellEffectDefinition("setting", terminal ? 5 : 4, terminal ? -1 : subtype,
