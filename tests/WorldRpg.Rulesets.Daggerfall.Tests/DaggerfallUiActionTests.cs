@@ -228,6 +228,18 @@ public sealed class DaggerfallUiActionTests
     public void Rest_actions_require_an_explicit_mode_and_duration_shape(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 
+    [Theory]
+    [InlineData("{\"action\":\"travel-map\",\"open\":true}", true)]
+    [InlineData("{\"action\":\"travel-map\",\"open\":false}", true)]
+    [InlineData("{\"action\":\"travel-map\",\"open\":true,\"region\":17,\"page\":0}", true)]
+    [InlineData("{\"action\":\"travel-map\",\"open\":false,\"region\":17,\"page\":0}", false)]
+    [InlineData("{\"action\":\"travel-map\",\"open\":true,\"region\":17}", false)]
+    [InlineData("{\"action\":\"travel-map\",\"open\":true,\"region\":-1,\"page\":0}", false)]
+    [InlineData("{\"action\":\"travel-map\",\"open\":true,\"region\":17,\"page\":-1}", false)]
+    [InlineData("{\"action\":\"travel-map\"}", false)]
+    public void Travel_map_views_are_opened_closed_or_turned_by_region_and_sheet(string json, bool accepted) =>
+        Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
     [Fact]
     public void Every_action_kind_declares_one_wire_name_and_its_admitted_phases()
     {

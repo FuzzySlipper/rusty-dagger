@@ -954,6 +954,99 @@ test('travel accepts only the current quote and shows actual paid arrival or int
   } finally { f.dispose(); }
 });
 
+test('travel map draws the published world and region art from the projected map and previews a chosen destination', async () => {
+  const { mountTravel } = await import(pathToFileURL(join(output, 'travel.js')));
+  const f = fixture();
+  const warn = console.warn; const warnings = []; console.warn = message => warnings.push(message);
+  try {
+    // The world view, regions and sheet frame are the ones a real session published (HudSnapshotContractTests);
+    // the fixture session discovers no destination on its sheet, so two dots are written into that shape here.
+    const snapshot = JSON.parse(await readFile(new URL('./fixtures/hud-snapshot.json', import.meta.url), 'utf8'));
+    const published = snapshot.travel.map;
+    assert.ok(published.world && published.sheet && published.regions.length > 0);
+    const worldImage = 'data:image/png;base64,d29ybGQ=';
+    const sheetImage = 'data:image/png;base64,c2hlZXQ=';
+    art.adopt({ revision: 'travel-map-art', images: [{ id: published.world.image, image: worldImage }, { id: published.sheet.art.image, image: sheetImage }] });
+    const root = document.createElement('div'); f.root.append(root);
+    const actions = []; const view = mountTravel(root, action => actions.push(action));
+    const value = { destinations: [], quote: null, executionAvailable: false, message: null, lastResult: null, map: null };
+    const percent = element => [parseFloat(element.style.left), parseFloat(element.style.top)];
+    const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} is not ${expected}`);
+
+    view.update(value);
+    assert.equal(root.querySelector('.dagger-travel-map-canvas').hidden, true);
+    root.querySelector('.dagger-travel-map-toggle').click();
+    assert.deepEqual(actions.at(-1), { action: 'travel-map', open: true });
+
+    // World view: the published overview with one marker per region, placed by the projected world pixels.
+    const world = { ...published, sheet: null };
+    view.update({ ...value, map: world });
+    assert.equal(root.querySelector('.dagger-travel-map-canvas').hidden, false);
+    assert.equal(root.querySelector('.dagger-travel-map-canvas img').src, worldImage);
+    assert.equal(root.querySelector('.dagger-travel-map-world').hidden, true);
+    const regions = root.querySelectorAll('.dagger-travel-map-region');
+    assert.equal(regions.length, world.regions.length);
+    const first = world.regions[0];
+    const [left, top] = percent(regions[0]);
+    near(left, (first.x - world.world.left) / (world.world.right - world.world.left) * 100);
+    near(top, (first.y - world.world.top) / (world.world.bottom - world.world.top) * 100);
+    assert.match(regions[0].title, new RegExp(`^${first.name}: ${first.discovered} known`));
+    assert.ok(root.querySelector('.dagger-travel-map-player'));
+    const picker = root.querySelector('.dagger-travel-map-regions');
+    assert.equal(picker.options.length, world.regions.length + 1);
+    assert.equal(picker.value, '');
+    picker.value = String(world.regions[1].region); picker.dispatchEvent(new window.Event('change'));
+    assert.deepEqual(actions.at(-1), { action: 'travel-map', open: true, region: world.regions[1].region, page: 0 });
+    regions[0].click();
+    assert.deepEqual(actions.at(-1), { action: 'travel-map', open: true, region: first.region, page: 0 });
+
+    // Region sheet: the published sheet art with a dot per discovered destination, coloured by its family.
+    const frame = published.sheet.art;
+    const destinations = [
+      { index: 5, name: 'Hand-drawn Hamlet', kind: 'Town', category: 'town', x: frame.left + 70, y: frame.top + 52 },
+      { index: 9, name: 'Hand-drawn Keep', kind: 'Dungeon', category: 'dungeon', x: frame.left + 200, y: frame.top + 100 },
+    ];
+    const open = { ...published, sheet: { ...published.sheet, destinations } };
+    view.update({ ...value, map: open });
+    assert.equal(root.querySelector('.dagger-travel-map-canvas img').src, sheetImage);
+    assert.equal(root.querySelector('.dagger-travel-map-canvas').style.aspectRatio, `${frame.width} / ${frame.height}`);
+    assert.equal(picker.value, String(published.sheet.region));
+    assert.equal(root.querySelector('.dagger-travel-map-world').hidden, false);
+    assert.equal(root.querySelector('.dagger-travel-map-next').hidden, published.sheet.pages < 2);
+    assert.match(root.querySelector('.dagger-travel-map-caption').textContent, new RegExp(published.sheet.name));
+    const dots = root.querySelectorAll('.dagger-travel-map-dot');
+    assert.equal(dots.length, 2);
+    assert.deepEqual([dots[0].dataset.category, dots[1].dataset.category], ['town', 'dungeon']);
+    assert.equal(dots[0].title, 'Hand-drawn Hamlet (Town)');
+    const [dotLeft, dotTop] = percent(dots[0]);
+    near(dotLeft, 70 / (frame.right - frame.left) * 100);
+    near(dotTop, 52 / (frame.bottom - frame.top) * 100);
+
+    // Choosing a dot drives the ordinary preview, and the quote it answers with is the one accepted.
+    dots[1].click();
+    assert.deepEqual(actions.at(-1), { action: 'travel-preview', region: published.sheet.region, destination: 9,
+      cautious: true, inn: false, ship: false });
+    const quote = { identity: 'map-quote', destination: 'Hand-drawn Keep', minutes: 60, duration: '1 hour', distance: 3, oceanPixels: 0,
+      innCost: 0, shipCost: 0, totalCost: 4, canAfford: true,
+      options: { cautious: true, inn: false, ship: false, hasHorse: false, hasCart: false, hasShip: false, availableGold: '9', availableGoldPieces: '9' } };
+    view.update({ ...value, map: open, quote, executionAvailable: true });
+    assert.equal(root.querySelector('.dagger-travel-map-dot[data-index="9"]').getAttribute('aria-pressed'), 'true');
+    root.querySelector('.dagger-travel-accept').click();
+    assert.deepEqual(actions.at(-1), { action: 'travel-accept', key: 'map-quote', amount: 4 });
+    root.querySelector('.dagger-travel-map-world').click();
+    assert.deepEqual(actions.at(-1), { action: 'travel-map', open: true });
+
+    // Art this session has not published is marked rather than drawn from anywhere else.
+    art.adopt({ revision: 'travel-map-partial', images: [{ id: published.world.image, image: worldImage }] });
+    view.update({ ...value, map: { ...open, sheet: { ...open.sheet, destinations: destinations.slice(0, 1) } } });
+    assert.equal(root.querySelector('.dagger-travel-map-canvas').dataset.artMissing, frame.image);
+    assert.ok(warnings.some(message => message.includes(frame.image)));
+    root.querySelector('.dagger-travel-map-toggle').click();
+    assert.deepEqual(actions.at(-1), { action: 'travel-map', open: false });
+    view.dispose();
+  } finally { console.warn = warn; art.adopt({ revision: '', images: [] }); f.dispose(); }
+});
+
 test('changing travel options disables acceptance until a fresh quote arrives, including a free journey', async () => {
   const { mountTravel } = await import(pathToFileURL(join(output, 'travel.js')));
   const f = fixture();

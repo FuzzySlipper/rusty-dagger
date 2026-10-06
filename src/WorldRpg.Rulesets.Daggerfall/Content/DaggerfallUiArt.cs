@@ -68,14 +68,16 @@ internal sealed class DaggerfallUiArt
 
     /// <summary>
     /// Reads the published UI art this session shows. <paramref name="itemIcons"/> are the inventory
-    /// icon identities the content pack names for its items; the rest is what this presentation draws.
+    /// icon identities the content pack names for its items, <paramref name="characterIcons"/> the
+    /// portraits the HUD selects and <paramref name="panelArt"/> the art a panel lays out by identity -
+    /// the travel map's world and region canvases; the rest is what this presentation always draws.
     /// </summary>
     /// <exception cref="InvalidOperationException">
     /// A needed identity is absent from the inventory, or admitted content does not carry the bytes the
     /// inventory describes; the message names the artifact so the producer/consumer disagreement is
     /// visible rather than a blank image at runtime.
     /// </exception>
-    internal static DaggerfallUiArt Read(IContentService content, IEnumerable<string> itemIcons, IEnumerable<string>? characterIcons = null)
+    internal static DaggerfallUiArt Read(IContentService content, IEnumerable<string> itemIcons, IEnumerable<string>? characterIcons = null, IEnumerable<string>? panelArt = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(itemIcons);
@@ -88,7 +90,7 @@ internal sealed class DaggerfallUiArt
         if (pickScreens.Length == 0 || !pickScreens.Contains("screen.pick.02", StringComparer.Ordinal))
             throw new InvalidOperationException("The published pick slot must supply screen.pick.02.");
         List<(string Id, string Image)> images = [];
-        foreach (string id in AlwaysShown.Concat(pickScreens).Concat(itemIcons).Concat(portraits).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        foreach (string id in AlwaysShown.Concat(pickScreens).Concat(itemIcons).Concat(portraits).Concat(panelArt ?? []).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
             if (!inventory.TryGetValue(id, out InventoryEntry entry))
             {

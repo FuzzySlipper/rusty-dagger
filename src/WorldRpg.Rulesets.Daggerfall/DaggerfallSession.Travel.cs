@@ -15,6 +15,37 @@ internal sealed partial class DaggerfallSession
     private DaggerfallSiteId? _travelSelectedDestination;
     private (bool Cautious, bool Inn, bool Ship) _travelSelectedOptions = (true, false, false);
     private string? _travelMessage;
+    private DaggerfallTravelMap? _travelMap;
+    private bool _travelMapOpen;
+    private int? _travelMapRegion;
+    private int _travelMapPage;
+
+    /// <summary>Opens, closes or turns the travel map. Which view is open is presentation state and is not saved.</summary>
+    private void ChangeTravelMap(DaggerfallPlayerUiAction action)
+    {
+        if (!action.Open)
+        {
+            _travelMapOpen = false; _travelMapRegion = null; _travelMapPage = 0;
+            return;
+        }
+        if (action.Region is int region && action.Page is int page && page >= DaggerfallTravelMap.PageCount(region))
+        {
+            _travelMessage = "The travel map has no such view of that region.";
+            return;
+        }
+        _travelMapOpen = true;
+        _travelMapRegion = action.Region;
+        _travelMapPage = action.Region is null ? 0 : action.Page ?? 0;
+    }
+
+    private DaggerfallTravelMapView ReadTravelMap()
+    {
+        _travelMap ??= new DaggerfallTravelMap(_travelPolicy.AllDestinations());
+        DaggerfallTravelMapPixel? player;
+        try { player = QuestTravelOrigin(); }
+        catch (InvalidOperationException) { player = null; }
+        return _travelMap.Read(_travelPolicy.SupportedDestinations(), _definitions.BuildingNames.RegionNames, player, _travelMapRegion, _travelMapPage);
+    }
 
     private void ChangeTravel(DaggerfallPlayerUiAction action)
     {
@@ -74,7 +105,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallTravelQuote? quote = CurrentTravelQuote();
         string? unavailable = quote is null ? null : TravelRefusal(quote, out _);
         return new(_travelSearchResults, quote, _travelMessage ?? unavailable, unavailable is null && quote is { CanAfford: true }, State.Travel.LastResult)
-        { RegionNames = _definitions.BuildingNames.RegionNames };
+        { RegionNames = _definitions.BuildingNames.RegionNames, Map = _travelMapOpen ? ReadTravelMap() : null };
     }
 
     /// <summary>Accepts the live quote once; all elapsed consequences use the session's single calendar.</summary>
@@ -244,6 +275,9 @@ internal sealed record DaggerfallTravelPresentation(
 {
     /// <summary>The published region names a destination is labelled with.</summary>
     internal IReadOnlyList<string> RegionNames { get; init; } = [];
+
+    /// <summary>The open travel map, or null while the player has not opened it.</summary>
+    internal DaggerfallTravelMapView? Map { get; init; }
 
     internal string RegionName(int region) => DaggerfallRegionNames.Name(RegionNames, region);
 }

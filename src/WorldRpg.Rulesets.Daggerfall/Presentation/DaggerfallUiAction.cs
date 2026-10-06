@@ -30,7 +30,7 @@ internal enum DaggerfallUiActionKind
     LegalChoice, CreateItemSelect, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
     TransportSelect, TransportToggle, TransportLeaveShip, TransportBoardShip,
     PropertyBuy, PropertySell, PropertyEnter, PropertyPut, PropertyTake,
-    TravelSearch, TravelPreview, TravelAccept, MapOpen, MapBuilding,
+    TravelSearch, TravelPreview, TravelAccept, TravelMap, MapOpen, MapBuilding,
     Rest, LodgingQuote, LodgingBook,
     WagonPut, WagonTake,
     QuestChoice, QuestDismiss, QuestOfferAnswer,
@@ -209,6 +209,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.TravelSearch, "travel-search", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelPreview, "travel-preview", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelAccept, "travel-accept", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.TravelMap, "travel-map", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LodgingQuote, "lodging-quote", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LodgingBook, "lodging-book", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.Rest, "rest", DaggerfallUiPhases.Interaction),
@@ -451,6 +452,10 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "region", "destination", "cautious", "inn", "ship"])
                     && region is >= 0 && destination is >= 0
                     ? new(action, Region: region, Destination: destination, Cautious: cautious, Inn: inn, Ship: ship) : null;
+            if (action == "travel-map")
+                return fields.SetEquals(["action", "open"]) ? new(action, Open: open)
+                    : fields.SetEquals(["action", "open", "region", "page"]) && open && region is >= 0 && page is >= 0
+                        ? new(action, Open: open, Region: region, Page: page) : null;
             if (action == "dungeon-text-answer")
                 return fields.SetEquals(["action", "revision", "item", "text"])
                     && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)

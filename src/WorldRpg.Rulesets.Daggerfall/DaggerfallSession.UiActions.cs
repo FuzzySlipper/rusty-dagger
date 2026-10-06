@@ -162,6 +162,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.PropertyTake: ChangeProperty(action); break;
             case DaggerfallUiActionKind.TravelSearch:
             case DaggerfallUiActionKind.TravelPreview: ChangeTravel(action); break;
+            case DaggerfallUiActionKind.TravelMap: ChangeTravelMap(action); break;
             case DaggerfallUiActionKind.TravelAccept:
                 if (!elapsedSubmitted) { elapsedSubmitted = true; _ = ExecuteTravel(action.Key!, action.Amount!.Value); }
                 break;

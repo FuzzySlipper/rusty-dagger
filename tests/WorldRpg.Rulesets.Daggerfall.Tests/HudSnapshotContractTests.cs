@@ -48,6 +48,11 @@ public sealed class HudSnapshotContractTests
         DaggerfallActivationTarget target = Assert.Single(session.Dialogue.NpcTargets());
         Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
+        // The travel map is open on the active site's region, so the shared file carries its world view,
+        // region list and sheet with the discovered destinations drawn on it.
+        session.Update(new ProductUpdate(OuterUpdate(2), [Ui(JsonSerializer.Serialize(new { action = "travel-map", open = true, region = site.Id.Region, page = 0 }))]));
+        // The art block rode the first update's snapshot; a fresh attach publishes it again with the map open.
+        session.PublishInitial();
 
         // The art images are content bytes rather than projection shape and would make the shared file
         // hundreds of kilobytes; the revision that names them stays.
@@ -62,6 +67,7 @@ public sealed class HudSnapshotContractTests
         snapshot["uiArtRevision"] = "session-art-revision";
         string published = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true }) + "\n";
         Assert.Contains("\"dialogue\": {", published, StringComparison.Ordinal);
+        Assert.Contains("\"sheet\": {", published, StringComparison.Ordinal);
         string path = Path.Combine(root, HudSnapshotFixture);
         if (Environment.GetEnvironmentVariable("DAGGER_WRITE_UI_FIXTURE") == "1")
         {

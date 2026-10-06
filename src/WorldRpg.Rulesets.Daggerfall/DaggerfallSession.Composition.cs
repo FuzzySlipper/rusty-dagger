@@ -630,7 +630,8 @@ internal sealed partial class DaggerfallSession
                     _definitions.CharacterPresentation.Races.Values.SelectMany(race => race.Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head)).Select(layer => layer.MediaId)
                     .Concat(_definitions.CharacterPresentation.FactionFaces.Select(face => face.MediaId))
                     .Concat(_definitions.CharacterPresentation.ChildFaces.Select(face => face.MediaId))
-                    .Concat(_definitions.CharacterPresentation.RacialForms.Values.SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId }))));
+                    .Concat(_definitions.CharacterPresentation.RacialForms.Values.SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId })),
+                    DaggerfallTravelMap.MediaIds));
             partiallyConstructed.Add(_hud);
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments, RestoreDungeonText);

@@ -230,6 +230,41 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ui.PublishProjection(new UiProjection(_hud, ++_sequence, builder.Build(root)));
     }
 
+    /// <summary>
+    /// The open travel map. Positions are world-map pixels and each image states the world rectangle it
+    /// draws, so the DOM places a dot or a region name by proportion and decides nothing about travel.
+    /// </summary>
+    private static uint TravelMap(UiValueBuilder builder, DaggerfallTravelMapView map)
+    {
+        uint Image(DaggerfallTravelMapImage image) => builder.Object(
+            ("image", builder.String(image.MediaId)),
+            ("width", builder.Number(image.Width)), ("height", builder.Number(image.Height)),
+            ("left", builder.Number(image.Left)), ("top", builder.Number(image.Top)),
+            ("right", builder.Number(image.Right)), ("bottom", builder.Number(image.Bottom)));
+        return builder.Object(
+            ("world", Image(map.World)),
+            ("player", map.Player is not { } player ? builder.Null() : builder.Object(
+                ("x", builder.Number(player.X)), ("y", builder.Number(player.Y)))),
+            ("regions", builder.Array(map.Regions.Select(region => builder.Object(
+                ("region", builder.Number(region.Region)),
+                ("name", builder.String(region.Name)),
+                ("x", builder.Number(region.X)), ("y", builder.Number(region.Y)),
+                ("discovered", builder.Number(region.Discovered)))).ToArray())),
+            ("sheet", map.Sheet is not { } sheet ? builder.Null() : builder.Object(
+                ("region", builder.Number(sheet.Region)),
+                ("name", builder.String(sheet.Name)),
+                ("page", builder.Number(sheet.Page)),
+                ("pages", builder.Number(sheet.Pages)),
+                ("art", Image(sheet.Image)),
+                ("destinations", builder.Array(sheet.Destinations.Select(destination => builder.Object(
+                    ("index", builder.Number(destination.Id.Index)),
+                    ("name", builder.String(destination.Name)),
+                    ("kind", builder.String(DaggerfallSiteKinds.Label(destination.Kind))),
+                    ("category", builder.String(DaggerfallSiteKinds.MapCategory(destination.Kind))),
+                    ("x", builder.Number(destination.MapPixel.X)),
+                    ("y", builder.Number(destination.MapPixel.Y)))).ToArray())))));
+    }
+
     private static uint Travel(UiValueBuilder builder, DaggerfallTravelPresentation travel) => builder.Object(
         ("destinations", builder.Array(travel.Destinations.Select(destination => builder.Object(
             ("region", builder.Number(destination.Id.Region)),
@@ -237,6 +272,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("name", builder.String(destination.Name)),
             ("kind", builder.String(DaggerfallSiteKinds.Label(destination.Kind))),
             ("regionName", builder.String(travel.RegionName(destination.Id.Region))))).ToArray())),
+        ("map", travel.Map is null ? builder.Null() : TravelMap(builder, travel.Map)),
         ("message", travel.Message is null ? builder.Null() : builder.String(travel.Message)),
         ("executionAvailable", builder.Boolean(travel.ExecutionAvailable)),
         ("lastResult", travel.LastResult is null ? builder.Null() : builder.Object(
