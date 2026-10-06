@@ -160,6 +160,10 @@
 .dagger-entry-parts { position: absolute; right: 0; bottom: 0; display: flex; pointer-events: none; }
 .dagger-entry-parts img { max-width: 320px; image-rendering: pixelated; }
 
+.dagger-quests:not(:empty) { position: absolute; left: 50%; top: 120px; transform: translateX(-50%); z-index: 20; display: grid; gap: 12px; width: min(44rem, calc(100vw - 32px)); max-height: calc(100vh - 220px); overflow-y: auto; pointer-events: auto; }
+.dagger-quest-message { display: grid; gap: 8px; padding: 16px 20px; border: 1px solid #d4b56b; background: rgba(12, 13, 10, .94); line-height: 1.5; }
+.dagger-quest-message p { margin: 0; white-space: pre-wrap; }
+.dagger-quest-message button { justify-self: start; margin-right: 8px; padding: 8px 16px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; cursor: pointer; pointer-events: auto; }
 .dagger-escort-faces { display: flex; gap: .5rem; }
 .dagger-escort-faces img { width: 48px; height: 48px; object-fit: contain; image-rendering: pixelated; }
 
