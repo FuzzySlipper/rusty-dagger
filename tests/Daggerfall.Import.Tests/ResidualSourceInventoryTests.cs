@@ -17,10 +17,11 @@ public sealed class ResidualSourceInventoryTests
         string[] documented = DocumentedResidualPaths();
         ResidualSourceInventory inventory = ReadInventory();
 
-        // The manifest's own residual set is the check: 183 rows, all supplied, each classified
-        // once. A path that reached no record would be the silent omission this task forbids.
-        Assert.Equal(183, documented.Length);
-        Assert.Equal(183, inventory.Files.Count);
+        // The manifest's own residual set is the check: 178 rows, all supplied, each classified
+        // once. A path that reached no record would be the silent omission this task forbids. The
+        // lycanthrope (BOAR, WERE, WOLF) and vampire (VAMP) forms left it for character media.
+        Assert.Equal(178, documented.Length);
+        Assert.Equal(178, inventory.Files.Count);
         Assert.Equal(
             documented.Order(StringComparer.Ordinal),
             inventory.Files.Select(file => file.Path).Order(StringComparer.Ordinal));
@@ -45,9 +46,9 @@ public sealed class ResidualSourceInventoryTests
             ["GFX", "CEL", "BSS", "DEF", "RSC"],
             inventory.MissingDocumentedFamilies);
 
-        Assert.Equal(68, inventory.Family("IMG").Count());
+        Assert.Equal(64, inventory.Family("IMG").Count());
         Assert.Equal(43, inventory.Family("DAT").Count());
-        Assert.Equal(40, inventory.Family("CIF").Count());
+        Assert.Equal(39, inventory.Family("CIF").Count());
         Assert.Equal(6, inventory.Family("RCI").Count());
         Assert.Equal(4, inventory.Family("CFA").Count());
         Assert.Equal(4, inventory.Family("PAL").Count());
@@ -76,7 +77,7 @@ public sealed class ResidualSourceInventoryTests
             inventory.Imported.Select(file => file.Path).Order(StringComparer.Ordinal));
         Assert.All(inventory.Imported, file => Assert.Contains("a consumer claims it", file.Note, StringComparison.Ordinal));
 
-        Assert.Equal(112, inventory.Unused.Count());
+        Assert.Equal(107, inventory.Unused.Count());
         Assert.All(inventory.Unused, file => Assert.Contains("no consumer named here claims it", file.Note, StringComparison.Ordinal));
         Assert.All(inventory.Unused, file => Assert.NotEqual(string.Empty, file.Reader));
 
