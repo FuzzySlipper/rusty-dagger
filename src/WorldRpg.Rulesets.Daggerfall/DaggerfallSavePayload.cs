@@ -203,8 +203,7 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(inputs);
         if (ExteriorResidency is { } savedExterior)
         {
-            DaggerfallExteriorWorldOrigin origin = new(savedExterior.Origin.X, savedExterior.Origin.Y,
-                new System.Numerics.Vector3(savedExterior.CompensationX, savedExterior.CompensationY, savedExterior.CompensationZ));
+            DaggerfallExteriorWorldOrigin origin = savedExterior.WorldOrigin;
             DaggerfallExteriorCellId playerCell = DaggerfallExteriorSessionOrigin.CellForLocalPosition(
                 new(Player.X, Player.Y, Player.Z), origin, new(definitions.Terrain.Width, definitions.Terrain.Height));
             if (savedExterior.Center != playerCell)
@@ -866,9 +865,6 @@ internal sealed record DaggerfallSavePayload(
         {
             DaggerfallExteriorWorldBounds.Daggerfall.Require(exterior.Center, nameof(ExteriorResidency));
             DaggerfallExteriorWorldBounds.Daggerfall.Require(exterior.Origin, nameof(ExteriorResidency));
-            if (!float.IsFinite(exterior.CompensationX) || !float.IsFinite(exterior.CompensationY)
-                || !float.IsFinite(exterior.CompensationZ))
-                throw new ArgumentException("Saved exterior origin compensation must be finite.", nameof(ExteriorResidency));
             if (Site.ActiveProfile?.Require().Kind != DaggerfallWorldProfileKind.Exterior)
                 throw new ArgumentException("Saved exterior residency requires an active exterior profile.", nameof(ExteriorResidency));
         }

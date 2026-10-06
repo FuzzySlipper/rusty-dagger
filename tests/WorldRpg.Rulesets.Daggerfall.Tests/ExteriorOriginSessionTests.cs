@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Reflection;
 using Rusty.Engine;
+using Rusty.Engine.Entities;
 using Rusty.Engine.Testing;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
@@ -92,8 +93,7 @@ public sealed class ExteriorOriginSessionTests
             Assert.True(foundTerrainCell, "Charing's admitted terrain window had no non-city collision cell to probe.");
             DaggerfallTerrainSurface terrain = DaggerfallTerrainSurfaceBuilder.Build(
                 definitions.Terrain, terrainCell.X, terrainCell.Y);
-            DaggerfallExteriorWorldOrigin terrainOrigin = new(admitted.Origin.X, admitted.Origin.Y,
-                new Vector3(admitted.CompensationX, admitted.CompensationY, admitted.CompensationZ));
+            DaggerfallExteriorWorldOrigin terrainOrigin = admitted.WorldOrigin;
             int quadsPerSide = DaggerfallTerrainSurfaceBuilder.SampleDimension - 1;
             int centerQuad = quadsPerSide / 2;
             int centerTriangle = ((centerQuad * quadsPerSide) + centerQuad) * 2;
@@ -214,6 +214,11 @@ public sealed class ExteriorOriginSessionTests
                 new("Breton", "Female", address.Archive, address.Record, 1, 0), "quest person", ["talk"]);
             session.State.Npcs.Place(npcId, exterior.ProfileKey, npcPosition);
             session.ReconcileNpcProjection();
+            EntityId npcBody = session.State.Actors.Entities.Resolve(ActorsState.Identity(npcId));
+            WorldPoint npcBeforeRebase = DaggerfallNpcBody.Position(session.State.Actors.Store, npcBody);
+            session.State.Actors.Store.Set(session.State.Actors.Get(actorId).Actor.Entity, EngineComponentTypes.CharacterMotion,
+                session.State.Actors.Store.Get(session.State.Actors.Get(actorId).Actor.Entity, EngineComponentTypes.CharacterMotion)
+                    with { SupportPreviousTranslation = actorPosition.ToVector() });
             session.State.PlayerControl.MoveTo(playerPosition.ToVector());
             session.State.PlayerControl.Motion = session.State.PlayerControl.Motion with
             {
@@ -244,6 +249,13 @@ public sealed class ExteriorOriginSessionTests
             Assert.NotEqual(Vector3.Zero, delta);
             Assert.Equal(playerPosition.ToVector() + delta, session.State.PlayerControl.Position!.Value.ToVector());
             Assert.Equal(actorPosition.ToVector() + delta, session.State.Actors.Get(actorId).Position.ToVector());
+            // The Engine EntityOriginRebaser moved the projected quest person's Transform and the
+            // actor's stored character motion in the same commit; no global position outlives it.
+            Assert.Equal(npcBeforeRebase.ToVector() + delta,
+                DaggerfallNpcBody.Position(session.State.Actors.Store, npcBody).ToVector());
+            Assert.Equal(actorPosition.ToVector() + delta, session.State.Actors.Store.Get(
+                session.State.Actors.Get(actorId).Actor.Entity, EngineComponentTypes.CharacterMotion).SupportPreviousTranslation);
+            Assert.Empty(session.State.Actors.Store.Query(DaggerfallSiteLifecycle.GlobalPositions));
             Vector3 activePortalProfile = session.Sites.LocalToProfile(
                 session.Sites.Projection.Portals.All.First().Portal.Position.ToVector());
             Assert.Equal(exterior.Portals[0].Position.X, activePortalProfile.X, 3);
@@ -257,7 +269,9 @@ public sealed class ExteriorOriginSessionTests
             Assert.Equal(new Vector3(1001, 3, 6) + delta, session.State.PlayerControl.Motion.TetherAnchorPoint);
             save = session.CaptureSave();
             DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
-            Assert.Equal(delta.X, captured.ExteriorResidency!.Value.CompensationX);
+            // The save carries the Engine origin cell read back from WorldOrigin, not a product copy.
+            Assert.Equal(-(long)delta.X, captured.ExteriorResidency!.Value.EngineOriginCellX);
+            Assert.Equal(engine.OriginCommits[^1].OriginAfterCellX, captured.ExteriorResidency!.Value.EngineOriginCellX);
             Assert.Equal(playerPosition.ToVector() + delta,
                 new Vector3(captured.Player.X, captured.Player.Y, captured.Player.Z));
             DaggerfallDynamicActorSave capturedActor = Assert.Single(captured.DynamicActors,
@@ -287,7 +301,7 @@ public sealed class ExteriorOriginSessionTests
         // both the saved origin compensation and Charing's admitted continuous terrain frame;
         // resident player/actor poses already carry that frame in their saved local coordinates.
         WorldPoint expectedNpcLocal = restored.Sites.ProfileToLocal(npcPosition);
-        Vector3 restoredNpcLocal = restored.State.Actors.Store.Get<DaggerfallNpcBody>(npcEntity).Pose.Position.ToVector();
+        Vector3 restoredNpcLocal = DaggerfallNpcBody.Position(restored.State.Actors.Store, npcEntity).ToVector();
         Assert.Equal(expectedNpcLocal.ToVector(), restoredNpcLocal);
         Assert.Equal(restoredNpcLocal,
             restored.Dialogue.NpcTargets().Single(target => target.Identity.Value == (ulong)npcId).Position.ToVector());
@@ -554,22 +568,5 @@ public sealed class ExteriorOriginSessionTests
         Assert.Equal(Vector3.Zero, session.Sites.LocalCompensation);
         Assert.Equal(exterior.ProfileKey, session.Sites.ActiveProfile);
         Assert.Equal(new WorldPoint(1000, 1, 5), session.State.PlayerControl.Position);
-    }
-
-    [Fact]
-    public void Fractional_saved_origin_is_rejected_before_native_commit()
-    {
-        string root = TestData.RepositoryRoot;
-        DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
-        List<string> releases = [];
-        ContentFake content = new(releases);
-        PopulateContent(content, exterior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
-        DaggerfallExteriorCellResidencySave saved = session.Sites.CaptureExteriorResidency()!.Value;
-        Assert.Throws<InvalidOperationException>(() => session.Sites.RestoreExteriorResidency(saved with { CompensationX = .5f }));
-        Assert.Empty(engine.OriginCommits);
     }
 }

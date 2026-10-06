@@ -163,8 +163,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         Casting.Rebase(delta);
         _encounters.RebasePending(_activeProfileKey.LogicalId, delta);
         _dialogue?.Rebase(delta);
-        foreach (var entry in State.Actors.Store.Query<DaggerfallNpcBody>())
-            entry.Value.Pose = new(DaggerfallExteriorSessionOrigin.Shift(entry.Value.Pose.Position, delta), 0);
+        // Projected quest people keep their placement in the Engine Transform, which the origin
+        // commit's EntityOriginRebaser already moved.
         // Ship return pose is detached in the land profile; active-world origin moves do not own it.
     }
 

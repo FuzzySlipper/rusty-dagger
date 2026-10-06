@@ -43,7 +43,7 @@ public sealed class QuestNpcAdmissionTests
         Assert.False(session.State.Actors.Store.Has<StatsComponent>(entity));
         Assert.False(session.State.Actors.Store.Has<InventoryComponent>(entity));
         Assert.Equal(combatants, session.State.Actors.All.Count());
-        var body = session.State.Actors.Store.Get<DaggerfallNpcBody>(entity);
+        var body = DaggerfallNpcBody.Position(session.State.Actors.Store, entity);
         var save = DaggerfallSavePayload.Read(session.CaptureSave());
         var quest = save.Quests.Instances.Single();
         var forged = save with { Quests = save.Quests with { Instances = [quest with
@@ -80,7 +80,7 @@ public sealed class QuestNpcAdmissionTests
         Assert.Equal(npc.DisplayName, restored.State.Npcs.Require(id).DisplayName);
         Assert.Equal(npc.Profile, restored.State.Npcs.Require(id).Profile);
         var restoredEntity = restored.State.Actors.Entities.Resolve(ActorsState.Identity(id));
-        Assert.Equal(body.Pose, restored.State.Actors.Store.Get<DaggerfallNpcBody>(restoredEntity).Pose);
+        Assert.Equal(body, DaggerfallNpcBody.Position(restored.State.Actors.Store, restoredEntity));
         Assert.Equal(combatants, restored.State.Actors.All.Count());
         Assert.NotNull(restored.State.Quests.Capture().Instances.Single().Placements.Single().Applied);
         var dialogue = new DaggerfallDialogueService(restored.State.Npcs, restored.State.Actors, restored.State.Social,
@@ -100,7 +100,7 @@ public sealed class QuestNpcAdmissionTests
         Assert.False(inactive.State.Actors.Entities.TryResolve(ActorsState.Identity(id), out _));
         Assert.True(inactive.TryTransitionTo(fixture.Inputs.ProfileKey));
         var returnedEntity = inactive.State.Actors.Entities.Resolve(ActorsState.Identity(id));
-        Assert.Equal(body.Pose, inactive.State.Actors.Store.Get<DaggerfallNpcBody>(returnedEntity).Pose);
+        Assert.Equal(body, DaggerfallNpcBody.Position(inactive.State.Actors.Store, returnedEntity));
         Assert.Equal(npc.DisplayName, inactive.State.Npcs.Require(id).DisplayName);
         Assert.Single(inactive.State.Npcs.All, value => value.Kind == DaggerfallNpcKind.Questor);
         Assert.Single(inactive.State.Quests.Capture().Instances.Single().Placements);

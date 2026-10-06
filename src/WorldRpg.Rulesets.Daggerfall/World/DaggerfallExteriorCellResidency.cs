@@ -22,6 +22,13 @@ internal readonly record struct DaggerfallExteriorWorldOrigin(
     internal static DaggerfallExteriorWorldOrigin At(DaggerfallExteriorCellId cell) =>
         new(cell.X, cell.Y, Vector3.Zero);
 
+    /// <summary>
+    /// The local-frame compensation an Engine WorldOrigin cell implies. Compensation is never stored
+    /// beside the Engine origin; it is always derived from a WorldOrigin readout.
+    /// </summary>
+    internal static Vector3 CompensationFor(long cellX, long cellY, long cellZ) =>
+        new(-cellX, -cellY, -cellZ);
+
     internal Vector3 LocalTranslation(DaggerfallExteriorCellId cell)
     {
         float x = checked((cell.X - MapPixelX) * DaggerfallExteriorCellResidency.CellSize);
@@ -63,12 +70,22 @@ internal readonly record struct DaggerfallExteriorWorldBounds(int Width, int Hei
 /// buffers are deliberately absent; re-admission rebuilds them from the
 /// durable map-pixel identity and current normalized content.
 /// </summary>
+/// <param name="Center">The streaming window's center map pixel.</param>
+/// <param name="Origin">The map pixel the local frame is anchored to.</param>
+/// <param name="EngineOriginCellX">The Engine WorldOrigin cell read at capture; the Engine does not persist it.</param>
+/// <param name="EngineOriginCellY">The Engine WorldOrigin cell read at capture.</param>
+/// <param name="EngineOriginCellZ">The Engine WorldOrigin cell read at capture.</param>
 internal readonly record struct DaggerfallExteriorCellResidencySave(
     DaggerfallExteriorCellId Center,
     DaggerfallExteriorCellId Origin,
-    float CompensationX,
-    float CompensationY,
-    float CompensationZ);
+    long EngineOriginCellX,
+    long EngineOriginCellY,
+    long EngineOriginCellZ)
+{
+    /// <summary>The saved local frame: the anchor map pixel and the compensation its Engine origin implies.</summary>
+    internal DaggerfallExteriorWorldOrigin WorldOrigin => new(Origin.X, Origin.Y,
+        DaggerfallExteriorWorldOrigin.CompensationFor(EngineOriginCellX, EngineOriginCellY, EngineOriginCellZ));
+}
 
 /// <summary>Durable active-site location state separate from the terrain cell window.</summary>
 internal sealed record DaggerfallExteriorLocationResidencySave(
@@ -255,9 +272,11 @@ internal sealed class DaggerfallExteriorCellResidency
     }
 
     /// <summary>
-    /// Adopts the product-side local origin after Engine has committed its native WorldOrigin
-    /// rebase. Spatial already shifted retained colliders during that commit, so this bookkeeping
-    /// operation deliberately emits no replacement request; a following <see cref="Update"/>
+    /// Adopts the local frame read back from the Engine after it committed its native WorldOrigin
+    /// rebase; the caller derives its compensation from the WorldOrigin readout, so this is the
+    /// frame the retained instances now stand in, not a second origin. Spatial already shifted
+    /// retained colliders during that commit, so this bookkeeping operation deliberately emits no
+    /// replacement request; a following <see cref="Update"/>
     /// admits only cells entering or leaving the selected window.
     /// </summary>
     internal void AdoptRebasedOrigin(DaggerfallExteriorWorldOrigin origin)
@@ -347,30 +366,23 @@ internal sealed class DaggerfallExteriorCellResidency
             receipt);
     }
 
-    internal DaggerfallExteriorCellResidencySave Capture()
+    /// <summary>Captures the window and its anchor with the Engine origin cell the caller read.</summary>
+    internal DaggerfallExteriorCellResidencySave Capture(WorldOriginReadout engineOrigin)
     {
         if (!_initialized)
             throw new InvalidOperationException("Exterior residency has not been initialized.");
         return new(
             _center,
             new DaggerfallExteriorCellId(_origin.MapPixelX, _origin.MapPixelY),
-            _origin.Compensation.X,
-            _origin.Compensation.Y,
-            _origin.Compensation.Z);
+            engineOrigin.CellX,
+            engineOrigin.CellY,
+            engineOrigin.CellZ);
     }
 
     internal DaggerfallExteriorCellResidencyUpdate Restore(DaggerfallExteriorCellResidencySave save)
     {
-        ValidateOrigin(new DaggerfallExteriorWorldOrigin(
-            save.Origin.X,
-            save.Origin.Y,
-            new Vector3(save.CompensationX, save.CompensationY, save.CompensationZ)));
-        return Update(
-            save.Center,
-            new DaggerfallExteriorWorldOrigin(
-                save.Origin.X,
-                save.Origin.Y,
-                new Vector3(save.CompensationX, save.CompensationY, save.CompensationZ)));
+        ValidateOrigin(save.WorldOrigin);
+        return Update(save.Center, save.WorldOrigin);
     }
 
     internal static ulong AssetId(DaggerfallExteriorCellId cell) =>
