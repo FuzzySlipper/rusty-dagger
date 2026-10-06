@@ -20,6 +20,16 @@ internal sealed class DaggerfallRestPresentation
         : new(true, _revision, _result.Mode.ToString(), _result.RequestedSeconds, _result.ElapsedSeconds,
             _result.RecoveryHours, _result.HealthRecovered, _result.FatigueRecovered,
             _result.SpellPointsRecovered, _result.Interruption, _result.Message);
+
+    /// <summary>Player wording for why a rest ended early; an uninterrupted rest has none.</summary>
+    internal static string InterruptionText(DaggerfallRestInterruption interruption) => interruption switch
+    {
+        DaggerfallRestInterruption.None => "",
+        DaggerfallRestInterruption.Encounter => "Your rest was interrupted by an encounter.",
+        DaggerfallRestInterruption.Prevented => "You cannot rest here right now.",
+        DaggerfallRestInterruption.Defeated => "You were defeated.",
+        _ => "Your rest was interrupted.",
+    };
 }
 
 internal sealed record DaggerfallRestView(

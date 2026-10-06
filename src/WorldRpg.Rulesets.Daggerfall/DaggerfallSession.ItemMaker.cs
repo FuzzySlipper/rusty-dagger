@@ -33,18 +33,25 @@ internal sealed partial class DaggerfallSession
             catch (Exception exception) when (exception is JsonException or ArgumentException) { outcome = "InvalidSettings"; }
         }
         else outcome = ItemMaker.Buy(context.Provider, action.Key!, action.Amount!.Value, action.Confirm).Outcome;
-        Presentation.SetOutcome(outcome switch
-        {
-            "Enchanted" => "Your item has been enchanted. Equip or use it to activate its powers.",
-            "Preview" => "Enchantment preview updated.",
-            "DraftChanged" or "PriceChanged" => "Check the current enchantment preview before buying.",
-            "InsufficientFunds" => "You do not have enough gold.",
-            "SoulUnavailable" => "The selected soul is no longer in your pack.",
-            "ItemUnavailable" => "The selected item is no longer available.",
-            "ProviderUnavailable" => "This enchanter is unavailable to you.",
-            _ => outcome,
-        });
+        Presentation.SetOutcome(ItemMakerOutcomeText(outcome));
     }
+
+    /// <summary>
+    /// Player wording for item-maker previews, refusals and purchases. Enchantment construction refuses
+    /// a draft with its own player sentence (capacity, conflicts, weapon-only powers), which passes through.
+    /// </summary>
+    internal static string ItemMakerOutcomeText(string outcome) => outcome switch
+    {
+        "Enchanted" => "Your item has been enchanted. Equip or use it to activate its powers.",
+        "Preview" => "Enchantment preview updated.",
+        "DraftChanged" or "PriceChanged" => "Check the current enchantment preview before buying.",
+        "SoulUnavailable" => "The selected soul is no longer in your pack.",
+        "ItemUnavailable" => "The selected item is no longer available.",
+        "ProviderUnavailable" => "This enchanter is unavailable to you.",
+        "InvalidSettings" => "Choose an item and valid enchantments.",
+        _ when outcome.Contains(' ', StringComparison.Ordinal) => outcome,
+        _ => DaggerfallServiceOutcomeText.Common(outcome),
+    };
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow)]

@@ -111,7 +111,7 @@ internal sealed partial class DaggerfallSession
                 State.Crime.MarkInvitationStarted(requirement, minute, inside);
             }
             catch (Exception error) when (error is ArgumentException or NotSupportedException)
-            { Presentation.SetOutcome("Guild invitation unavailable: " + error.Message); }
+            { Presentation.SetOutcome("A guild invitation could not be delivered."); }
         }
     }
 }

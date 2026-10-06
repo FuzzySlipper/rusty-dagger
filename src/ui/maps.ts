@@ -3,7 +3,7 @@ export interface MapProjection {
   readonly id: string; readonly name: string; readonly kind: 'city' | 'dungeon';
   readonly region: number | null; readonly location: number | null;
   readonly player: { readonly x: number; readonly y: number; readonly z: number; readonly yaw: number };
-  readonly areas: readonly { readonly id: string; readonly minX: number; readonly minZ: number; readonly maxX: number; readonly maxZ: number; readonly minY: number; readonly maxY: number; readonly kind: number }[];
+  readonly areas: readonly { readonly id: string; readonly minX: number; readonly minZ: number; readonly maxX: number; readonly maxZ: number; readonly minY: number; readonly maxY: number; readonly kind: number; readonly category: string }[];
   readonly labels: readonly { readonly id: string; readonly name: string; readonly x: number; readonly y: number; readonly z: number; readonly selected: boolean }[];
 }
 export interface MapAction { readonly action: 'map-building'; readonly region: number; readonly destination: number; readonly item: string; }
@@ -12,11 +12,13 @@ export function isMapProjection(value: unknown): value is MapProjection {
   const map = value as Partial<MapProjection>;
   return typeof map.id === 'string' && typeof map.name === 'string' && (map.kind === 'city' || map.kind === 'dungeon')
     && !!map.player && [map.player.x, map.player.y, map.player.z, map.player.yaw].every(Number.isFinite)
-    && Array.isArray(map.areas) && map.areas.every(area => typeof area.id === 'string' && [area.minX, area.minZ, area.maxX, area.maxZ, area.minY, area.maxY, area.kind].every(Number.isFinite))
+    && Array.isArray(map.areas) && map.areas.every(area => typeof area.id === 'string' && [area.minX, area.minZ, area.maxX, area.maxZ, area.minY, area.maxY, area.kind].every(Number.isFinite) && typeof area.category === 'string')
     && Array.isArray(map.labels) && map.labels.every(label => typeof label.id === 'string' && typeof label.name === 'string' && [label.x, label.y, label.z].every(Number.isFinite))
     && (map.kind !== 'city' || (Number.isInteger(map.region) && Number.isInteger(map.location)));
 }
 const ns = 'http://www.w3.org/2000/svg';
+// Presentation colours for the semantic area categories the ruleset publishes.
+const areaColours: Record<string, string> = { door: '#c49b55', room: '#718694', surface: '#718694', tavern: '#d99845', guild: '#9879b8' };
 function svgElement(name: string, attributes: Record<string, string>): SVGElement {
   const element = document.createElementNS(ns, name);
   for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
@@ -48,7 +50,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
     const slice = Number(level.value), showAll = value.kind === 'city' || all.checked;
     for (const area of value.areas) {
       if (!showAll && (area.minY > slice || area.maxY < slice)) continue;
-      const rect = svgElement('rect', { x: String(area.minX), y: String(area.minZ), width: String(Math.max(.1, area.maxX - area.minX)), height: String(Math.max(.1, area.maxZ - area.minZ)), 'data-id': area.id, 'data-kind': String(area.kind), fill: value.kind === 'dungeon' ? (area.kind === 2 ? '#c49b55' : '#718694') : (area.kind === 16 ? '#d99845' : area.kind === 12 || area.kind === 15 ? '#9879b8' : '#697f94') });
+      const rect = svgElement('rect', { x: String(area.minX), y: String(area.minZ), width: String(Math.max(.1, area.maxX - area.minX)), height: String(Math.max(.1, area.maxZ - area.minZ)), 'data-id': area.id, 'data-kind': String(area.kind), fill: areaColours[area.category] ?? (value.kind === 'dungeon' ? '#718694' : '#697f94') });
       viewport.append(rect);
     }
     for (const label of value.labels) {

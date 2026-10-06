@@ -253,6 +253,27 @@ internal sealed record DaggerfallSiteBuildingSource(DaggerfallSiteBuildingId Id,
 
 internal static class DaggerfallSiteKinds
 {
+    /// <summary>The player label for a site kind, as the travel map names its destinations.</summary>
+    internal static string Label(DaggerfallSiteKind kind) => kind switch
+    {
+        DaggerfallSiteKind.TownCity => "City",
+        DaggerfallSiteKind.TownHamlet => "Town",
+        DaggerfallSiteKind.TownVillage => "Village",
+        DaggerfallSiteKind.HomeFarms => "Farmhouse",
+        DaggerfallSiteKind.DungeonLabyrinth => "Large dungeon",
+        DaggerfallSiteKind.ReligionTemple => "Temple",
+        DaggerfallSiteKind.Tavern => "Tavern",
+        DaggerfallSiteKind.DungeonKeep => "Dungeon",
+        DaggerfallSiteKind.HomeWealthy => "Wealthy home",
+        DaggerfallSiteKind.ReligionCult => "Cult",
+        DaggerfallSiteKind.DungeonRuin => "Small dungeon",
+        DaggerfallSiteKind.HomePoor => "Poor home",
+        DaggerfallSiteKind.Graveyard => "Graveyard",
+        DaggerfallSiteKind.Coven => "Coven",
+        DaggerfallSiteKind.HomeYourShips => "Your ship",
+        _ => "Location",
+    };
+
     /// <summary>The kinds the map table's five-bit type field can name.</summary>
     internal const int PublishedCount = (int)DaggerfallSiteKind.HomeYourShips + 1;
 

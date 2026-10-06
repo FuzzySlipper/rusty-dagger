@@ -98,7 +98,7 @@ internal sealed partial class DaggerfallSession
             { Presentation.SetOutcome("The teleport destination could not be admitted."); return; }
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException)
-        { Presentation.SetOutcome($"Teleport failed: {error.Message}"); return; }
+        { Presentation.SetOutcome("The teleport failed; you remain where you are."); return; }
         _sites.RestoreReturnDestination(anchor.ReturnProfile?.Require(), anchor.ReturnPose is { } entrance
             ? new(new(entrance.X, entrance.Y, entrance.Z), entrance.YawRadians, entrance.PitchRadians) : null);
         if (anchor.ShipReturn is { } aboard) State.Transport.Restore(aboard);

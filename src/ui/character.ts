@@ -59,7 +59,7 @@ export interface CharacterIdentity {
 }
 
 export interface CharacterMedia { readonly layer: string; readonly mediaId: string; }
-export interface CharacterGrantedSkill { readonly id: string; readonly tier: string; }
+export interface CharacterGrantedSkill { readonly id: string; readonly tier: string; readonly label: string; readonly tierLabel: string; }
 export interface CharacterChoice { readonly id: string; readonly label: string; readonly available: boolean; readonly restriction: string | null; }
 export interface CharacterFace { readonly index: number; readonly mediaId: string; }
 export interface CharacterReflex { readonly value: number; readonly label: string; }
@@ -220,8 +220,8 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
       })));
       equipment.rows.replaceChildren(...value.equipment.map(item => equipmentRow(item)));
       renderRows(career.rows, (value.grantedSkills ?? []).map(skill => ({
-        label: skill.id,
-        value: skill.tier,
+        label: skill.label,
+        value: skill.tierLabel,
         testid: `character-sheet-granted-${skill.id}`,
       })));
       const nextCreationStamp = JSON.stringify([value.creationAvailable === true, value.creation ?? null]);
@@ -414,7 +414,9 @@ function isMedia(value: unknown): value is CharacterMedia {
 function isGrantedSkill(value: unknown): value is CharacterGrantedSkill {
   return typeof value === 'object' && value !== null
     && 'id' in value && typeof value.id === 'string'
-    && 'tier' in value && typeof value.tier === 'string';
+    && 'tier' in value && typeof value.tier === 'string'
+    && 'label' in value && typeof value.label === 'string'
+    && 'tierLabel' in value && typeof value.tierLabel === 'string';
 }
 
 function isCreation(value: unknown): value is CharacterCreation {

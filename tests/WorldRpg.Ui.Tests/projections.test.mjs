@@ -150,7 +150,7 @@ test('transport projection exposes land selection and admitted ship boarding', (
   const f = fixture();
   try {
     f.publish({ transport: {
-      mode: 'foot', onShip: false, canRun: true, travelModifier: 256, oceanMinutesPerMapPixel: 255,
+      mode: 'foot', onShip: false, canRun: true, summary: 'Overland journeys take the ordinary time on foot. You can run.', travelModifier: 256, oceanMinutesPerMapPixel: 255,
       options: [
         { id: 'foot', mode: 'foot', available: true, selected: true, label: 'Foot', message: 'Walk.', travelModifier: 256 },
         { id: 'horse', mode: 'horse', available: true, selected: false, label: 'Horse', message: 'Ride.', travelModifier: 128 },
@@ -211,11 +211,11 @@ test('accessible wagon projection sends revision guarded put and take selections
         slots: [],
       },
       transport: {
-        mode: 'cart', onShip: false, canRun: true, travelModifier: 192, oceanMinutesPerMapPixel: 255,
+        mode: 'cart', onShip: false, canRun: true, summary: 'Overland journeys take the ordinary time on foot. You can run.', travelModifier: 192, oceanMinutesPerMapPixel: 255,
         options: [{ id: 'cart', mode: 'cart', available: true, selected: true, label: 'Cart', message: 'Cart.', travelModifier: 192 }],
         wagon: {
           exists: true, accessible: true, id: 7, usedClassicUnits: 12, capacityClassicUnits: 300000, storeRevision: '8', message: 'Available.',
-          items: [{ key: 'stack:daggerfall.wagon.7.gold', definition: 'gold-piece', quantity: '2' }],
+          items: [{ key: 'stack:daggerfall.wagon.7.gold', definition: 'gold-piece', label: 'Gold piece', quantity: '2' }],
           refusedDefinitions: [],
         },
       },
@@ -338,11 +338,13 @@ test('view is cleared when the product no longer supplies it', () => {
 test('quest messages dismiss by durable entry identity even when their text is identical', () => {
   const f = fixture();
   try {
-    const message = { instance: 'quest:1', message: 10, delivery: 'popup', text: 'Same text.', signoff: null,
-      diagnostics: [], promptId: null, options: [], entryId: 'quest-message:1' };
+    const message = { instance: 'quest:1', message: 10, delivery: 'popup', heading: 'Message', text: 'Same text.', signoff: null,
+      diagnostics: ['%qdt has no context.'], promptId: null, options: [], entryId: 'quest-message:1' };
     f.publish({ quests: { deliveries: [message, { ...message, entryId: 'quest-message:2' }], journal: [], pending: null } });
     const buttons = f.root.querySelectorAll('.dagger-quest-popup button');
     assert.equal(buttons.length, 2);
+    assert.equal(f.root.querySelector('.dagger-quest-popup strong').textContent, 'Message');
+    assert.doesNotMatch(f.root.querySelector('.dagger-quest-popup').textContent, /has no context/);
     buttons[1].click();
     assert.deepEqual(f.actions.at(-1), { action: 'quest-dismiss', questInstance: 'quest:1', questDelivery: 'quest-message:2' });
     f.publish({ quests: { deliveries: [message], journal: [], pending: null } });
@@ -504,7 +506,7 @@ test('character sheet refreshes owner-published progression, resistance, affilia
   const f = fixture();
   try {
     f.publish({ mode: 'playing', character: {
-      name: 'Aubk-i', attributes: [], skills: [], equipment: [{ label: 'Iron Longsword', slots: ['Right Hand'], details: 'Condition: 2/2 (100%); Unidentified magical item', condition: { current: 2, maximum: 2, percentage: 100, broken: false }, identified: false }], resources: [], grantedSkills: [], creationAvailable: false,
+      name: 'Aubk-i', attributes: [], skills: [], equipment: [{ label: 'Iron Longsword', slots: ['Right Hand'], details: 'Condition: 2/2 (100%); Unidentified magical item', condition: { current: 2, maximum: 2, percentage: 100, broken: false }, identified: false }], resources: [], grantedSkills: [{ id: 'short-blade', tier: 'minor', label: 'Short Blade', tierLabel: 'Minor skill' }], creationAvailable: false,
       progression: { level: 2, experience: 750, skillProgress: 15, nextLevelSkillProgress: 17, pendingLevelUp: false },
       resistances: [{ id: 'resistance-fire', label: 'Resistance Fire', value: 15, permanent: 25 }],
       affiliations: [{ faction: 'Mephala', guildGroup: 'Daedra', rank: 1, reputation: 6, recognition: 3 }],
@@ -514,6 +516,9 @@ test('character sheet refreshes owner-published progression, resistance, affilia
     assert.match(f.root.querySelector('[data-testid="character-sheet-resistance-resistance-fire"]').textContent, /15 live \/ 25 permanent/);
     assert.match(f.root.querySelector('[data-testid="character-sheet-affiliation-Mephala"]').textContent, /Rank 1.*Reputation 6.*Recognition 3/);
     assert.equal(f.root.querySelector('[data-testid="character-sheet-history-0"]').textContent, 'A first retained account.');
+    const granted = f.root.querySelector('[data-testid="character-sheet-granted-short-blade"]');
+    assert.equal(granted.textContent, 'Minor skill');
+    assert.match(granted.parentElement.textContent, /Short Blade/);
     const equipment = [...f.root.querySelectorAll('.dagger-character-section')].find(section => section.querySelector('h3')?.textContent === 'Equipped items');
     assert.match(equipment.textContent, /Unidentified magical item/);
 
@@ -705,7 +710,7 @@ test('wagon put is refused for the definitions the ruleset names', () => {
         slots: [],
       },
       transport: {
-        mode: 'cart', onShip: false, canRun: true, travelModifier: 192, oceanMinutesPerMapPixel: 255,
+        mode: 'cart', onShip: false, canRun: true, summary: 'Overland journeys take the ordinary time on foot. You can run.', travelModifier: 192, oceanMinutesPerMapPixel: 255,
         options: [{ id: 'cart', mode: 'cart', available: true, selected: true, label: 'Cart', message: 'Cart.', travelModifier: 192 }],
         wagon: {
           exists: true, accessible: true, id: 7, usedClassicUnits: 0, capacityClassicUnits: 300000, storeRevision: '8', message: 'Available.',
@@ -784,7 +789,7 @@ test('Oghma uses the shared attribute controls with its own title and zero healt
 test('tavern lodging renders paid hours and quotes before booking changed duration', () => {
   const f = fixture();
   try {
-    const lodging = { key: '17/3/1/2/8', name: 'The Dancing Chasm', days: 1, price: 3, remainingHours: 23, canBook: true };
+    const lodging = { key: '17/3/1/2/8', name: 'The Dancing Chasm', days: 1, price: 3, remainingHours: 23, canBook: true, maximumDays: 350 };
     f.publish({ lodging });
     f.root.querySelector('[data-action="rest"]').click();
     assert.equal(f.root.querySelector('.dagger-lodging').hidden, false);
@@ -814,24 +819,26 @@ test('travel accepts only the current quote and shows actual paid arrival or int
   try {
     const root = document.createElement('div'); f.root.append(root);
     const actions = []; const view = mountTravel(root, action => actions.push(action));
-    const quote = { identity: 'live-quote', destination: 'Charing', minutes: 120, distance: 2, oceanPixels: 0,
+    const quote = { identity: 'live-quote', destination: 'Charing', minutes: 120, duration: '2 hours', distance: 2, oceanPixels: 0,
       innCost: 5, shipCost: 0, totalCost: 5, canAfford: true,
       options: { cautious: true, inn: true, ship: false, hasHorse: false, hasCart: false, hasShip: false, availableGold: '50', availableGoldPieces: '50' } };
-    const value = { destinations: [{ region: 17, index: 3, name: 'Charing', kind: 'Town' }], quote,
+    const value = { destinations: [{ region: 17, index: 3, name: 'Charing', kind: 'Town', regionName: 'Daggerfall' }], quote,
       executionAvailable: true, message: null, lastResult: null };
     view.update(value);
+    assert.equal(root.querySelector('option').textContent, 'Charing · Town · Daggerfall');
+    assert.match(root.querySelector('[role="status"]').textContent, /^Charing: about 2 hours, 5 gold/);
     root.querySelector('.dagger-travel-accept').click();
     assert.deepEqual(actions.at(-1), { action: 'travel-accept', key: 'live-quote', amount: 5 });
     root.querySelector('.dagger-travel-accept').click();
     assert.equal(actions.length, 1);
-    const message = 'Arrived at Charing. Paid 5 gold; 7200 seconds elapsed.';
+    const message = 'Arrived at Charing. Paid 5 gold; 2 hours passed.';
     view.update({ ...value, quote: null, executionAvailable: false,
-      lastResult: { outcome: 'Arrived', paidGold: 5, elapsedSeconds: 7200, actualRegion: 17, actualIndex: 3, message }, message });
+      lastResult: { paidGold: 5, elapsedSeconds: 7200, actualRegion: 17, actualIndex: 3, message }, message });
     assert.equal(root.querySelector('.dagger-travel-last-result').textContent, message);
     assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
-    const interrupted = 'Travel interrupted (Encounter); you remain at the departure. Paid 5 gold; 60 seconds elapsed.';
+    const interrupted = 'Your journey was interrupted by an encounter. Paid 5 gold; 1 minute passed.';
     view.update({ ...value, executionAvailable: false, message: interrupted, lastResult: { message: interrupted } });
-    assert.match(root.querySelector('.dagger-travel-last-result').textContent, /60 seconds/);
+    assert.match(root.querySelector('.dagger-travel-last-result').textContent, /1 minute passed/);
     assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
     view.dispose();
   } finally { f.dispose(); }
@@ -843,9 +850,9 @@ test('changing travel options disables acceptance until a fresh quote arrives, i
   try {
     const root = document.createElement('div'); f.root.append(root);
     const actions = []; const view = mountTravel(root, action => actions.push(action));
-    const quote = { identity: 'old', destination: 'Known', minutes: 60, distance: 1, oceanPixels: 0, innCost: 0, shipCost: 0, totalCost: 0, canAfford: true,
+    const quote = { identity: 'old', destination: 'Known', minutes: 60, duration: '1 hour', distance: 1, oceanPixels: 0, innCost: 0, shipCost: 0, totalCost: 0, canAfford: true,
       options: { cautious: true, inn: false, ship: false } };
-    const value = { destinations: [{ region: 0, index: 1, name: 'Known', kind: 'Town' }], quote, executionAvailable: true, message: null, lastResult: null };
+    const value = { destinations: [{ region: 0, index: 1, name: 'Known', kind: 'Town', regionName: 'Alik\'r Desert' }], quote, executionAvailable: true, message: null, lastResult: null };
     view.update(value);
     const cautious = root.querySelector('input[type="checkbox"]'); cautious.checked = false;
     cautious.dispatchEvent(new window.Event('change'));
@@ -867,8 +874,8 @@ test('map controls change only presentation and retain live player position with
   try {
     const map = { id: 'privateers', name: "Privateer's Hold", kind: 'dungeon', region: null, location: null,
       player: { x: 1, y: 2, z: 3, yaw: .5 }, labels: [],
-      areas: [{ id: 'known-room', minX: 0, minZ: 0, maxX: 10, maxZ: 10, minY: 1, maxY: 3, kind: 1 },
-        { id: 'known-upper', minX: 0, minZ: 0, maxX: 10, maxZ: 10, minY: 4, maxY: 6, kind: 1 }] };
+      areas: [{ id: 'known-room', minX: 0, minZ: 0, maxX: 10, maxZ: 10, minY: 1, maxY: 3, kind: 1, category: 'room' },
+        { id: 'known-upper', minX: 0, minZ: 0, maxX: 10, maxZ: 10, minY: 4, maxY: 6, kind: 1, category: 'room' }] };
     f.publish({ map }); f.root.querySelector('[data-action="map"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'map-open', open: true });
     const group = f.root.querySelector('.dagger-map-diagram > g');
@@ -1008,12 +1015,12 @@ test('dispel choice renders published bundles and sends current select and cance
 test('detectors render only resolved contacts and clear retired sources without scanning', () => {
   const f = fixture();
   try {
-    f.publish({ detectors: [{ source: 'cast.2', kind: 'magic', contacts: [{ kind: 'actor', id: '2000', distance: 4.5, bearingRadians: Math.PI / 2, items: [] }] },
+    f.publish({ detectors: [{ source: 'cast.2', kind: 'magic', contacts: [{ kind: 'actor', id: '2000', label: 'Imp', distance: 4.5, bearingRadians: Math.PI / 2, items: [] }] },
       { source: 'cast.3', kind: 'treasure', contacts: [] }] });
     const panel = f.root.querySelector('.dagger-detectors');
     assert.equal(panel.hidden, false);
     assert.equal(panel.children.length, 2);
-    assert.match(panel.textContent, /Detect magic: actor 2000, 4.5 m, bearing 90°/);
+    assert.match(panel.textContent, /Detect magic: Imp, 4.5 m, bearing 90°/);
     assert.match(panel.textContent, /Detect treasure: none nearby/);
     f.publish({ detectors: [] });
     assert.equal(panel.hidden, true);
@@ -1090,7 +1097,7 @@ test('spell seller and spellbook use confirmed semantic changes and source setti
       ready:'spell.023',result:'',sale:{revision:'seller-1',provider:'Mage',offers:[
         {key:'spell.002',name:'Cure',castingCost:12,price:48,known:false},
         {key:'spell.023',name:'Heal',castingCost:15,price:60,known:true}]},
-      information:{key:'spell.023',name:'Heal',target:'CasterOnly',element:4,details:['restoration: magnitude 1–10.']}};
+      information:{key:'spell.023',name:'Heal',target:'Self',element:'Magic',details:['restoration: magnitude 1–10.']}};
     f.publish({spells,activation:{mode:'talk',message:'',applied:true,dialogue:{revision:'seller-1',targetLabel:'Mage',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
     const sales=f.root.querySelector('.dagger-dialogue-spells');
     assert.equal(sales.querySelector('[data-action="spell-buy"][data-spell="spell.023"]').disabled,true);
@@ -1102,6 +1109,7 @@ test('spell seller and spellbook use confirmed semantic changes and source setti
     const book=f.root.querySelector('.dagger-spells-root');
     assert.equal(book.querySelector('[data-action="spell-ready"][data-spell="spell.001"]').disabled,true);
     assert.match(book.textContent,/Unavailable spell · Unavailable/);assert.match(book.textContent,/magnitude 1–10/);
+    assert.match(book.textContent,/Target: Self; element: Magic/);
     book.querySelector('[data-action="spell-delete"]').click();assert.deepEqual(f.actions.at(-1),{action:'spell-delete',key:'spell.023',confirm:true});
     accepted=false;book.querySelector('[data-action="spell-delete"]').click();
     assert.equal(f.actions.filter(action=>action.action==='spell-delete').length,1);
@@ -1116,14 +1124,15 @@ test('property projection sends live ownership and store actions through the inv
       details: '', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] };
     f.publish({ inventory: { revision: 'ui-revision', message: '', equipmentChange: null, items: [item], slots: [] },
       property: { bankAvailable: true, offers: [{ key: 'ship/small', name: 'Small ship', price: '100000', salePrice: '85000',
-        owned: false, canBuy: true, canSell: false, canEnter: false }], storage: { key: 'house/17/4/A.RMB/0/0/1', revision: '12',
-          items: [{ key: 'stack:stored', definition: 'gold-piece', quantity: '2' }] } } });
+        owned: false, canBuy: true, canSell: false, canEnter: false, enterable: false }], storage: { key: 'house/17/4/A.RMB/0/0/1', revision: '12',
+          items: [{ key: 'stack:stored', definition: 'gold-piece', label: 'Gold piece', quantity: '2' }] } } });
     f.root.querySelector('[data-action="inventory"]').click();
     const controls = [...f.root.querySelectorAll('.dagger-property-root button')];
     controls.find(button => button.textContent === 'Buy').click();
     assert.deepEqual(f.actions.at(-1), { action: 'property-buy', key: 'ship/small' });
     controls.find(button => button.textContent.startsWith('Store')).click();
     assert.deepEqual(f.actions.at(-1), { action: 'property-put', key: 'house/17/4/A.RMB/0/0/1', item: 'stack:coins', revision: '12', amount: 4 });
+    assert.ok(controls.some(button => button.textContent === 'Take 2 Gold piece'));
     controls.find(button => button.textContent.startsWith('Take')).click();
     assert.deepEqual(f.actions.at(-1), { action: 'property-take', key: 'house/17/4/A.RMB/0/0/1', item: 'stack:stored', revision: '12', amount: 2 });
     f.publish({ property: { bankAvailable: false, offers: [], storage: null } });
@@ -1167,7 +1176,7 @@ test('merchant rows keep unit and selected stack totals explicit and expose serv
     stockRow.querySelector('button').click();
     assert.deepEqual(f.actions.at(-1), { action: 'merchant-buy', revision: 'merchant-1', item: 'stack:shop.arrows', amount: 3 });
 
-    const serviceOnly = { ...baseMerchant, buyAvailable: false, repairAvailable: true, stock: [], playerItems: [player] };
+    const serviceOnly = { ...baseMerchant, buyAvailable: false, repairAvailable: true, stock: [], playerItems: [{ ...player, canRepair: true, canIdentify: false }] };
     f.publish({ activation: { mode: 'talk', dialogue: dialogue(serviceOnly) } });
     const repairRow = [...f.root.querySelectorAll('.dagger-dialogue-merchant li')].find(row => row.textContent.includes('Worn sword'));
     assert.ok(repairRow);
@@ -1175,7 +1184,7 @@ test('merchant rows keep unit and selected stack totals explicit and expose serv
     repairRow.querySelector('button').click();
     assert.deepEqual(f.actions.at(-1), { action: 'merchant-repair', revision: 'merchant-1', item: 'unique:17' });
 
-    const identifyOnly = { ...serviceOnly, repairAvailable: false, identifyAvailable: true };
+    const identifyOnly = { ...serviceOnly, repairAvailable: false, identifyAvailable: true, playerItems: [{ ...player, canRepair: false, canIdentify: true }] };
     f.publish({ activation: { mode: 'talk', dialogue: dialogue(identifyOnly) } });
     const identifyRow = [...f.root.querySelectorAll('.dagger-dialogue-merchant li')].find(row => row.textContent.includes('Worn sword'));
     assert.ok(identifyRow);
@@ -1205,7 +1214,9 @@ test('spellmaker edits supported settings, preserves typing on repeated projecti
     let confirmed=false;window.confirm=()=>confirmed;
     const settings={key:'free-action',type:26,subType:-1,durationBase:3,durationMod:7,durationPerLevel:2,
       chanceBase:1,chanceMod:1,chancePerLevel:1,magnitudeBaseLow:1,magnitudeBaseHigh:1,magnitudeLevelBase:1,magnitudeLevelHigh:1,magnitudePerLevel:1};
-    const maker={revision:'maker-1',provider:'Mage',effects:[{key:'free-action',type:26,subType:-1,school:'restoration',duration:true,chance:false,magnitude:false,targets:31,elements:16}],
+    const targets=['Self','Touch','Single target at range','Area around self','Area at range'].map((label,value)=>({value,label}));
+    const elements=['Fire','Cold','Poison','Shock','Magic'].map((label,value)=>({value,label}));
+    const maker={revision:'maker-1',provider:'Mage',targets,elements,effects:[{key:'free-action',name:'Free action',type:26,subType:-1,school:'restoration',duration:true,chance:false,magnitude:false,targets:31,elements:16}],
       draft:{name:'Freedom',element:4,rangeType:0,icon:68,effects:[settings]},quote:{key:'draft-2',gold:300,spellPoints:15,eligible:true,reason:null}};
     const publish=()=>f.publish({spells:{available:[],ready:null,result:'',maker},activation:{mode:'talk',message:'',applied:true,
       dialogue:{revision:'maker-1',targetLabel:'Mage',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
@@ -1222,6 +1233,9 @@ test('spellmaker edits supported settings, preserves typing on repeated projecti
     const action=f.actions.at(-1);assert.equal(action.action,'spellmaker-draft');assert.equal(action.revision,'maker-1');
     assert.deepEqual(JSON.parse(action.text),{name:'New name',element:4,rangeType:0,icon:68,effects:[settings]});
     assert.equal(root.querySelectorAll('[name="icon"] option').length,69);
+    assert.equal(root.querySelector('[name="element"] option[value="0"]').textContent,'Fire');
+    assert.equal(root.querySelector('[name="element"]').selectedOptions[0].textContent,'Magic');
+    assert.ok([...root.querySelectorAll('option')].some(option=>option.textContent==='restoration: Free action'));
     f.publish({spells:{available:[],ready:null,result:'',maker:null}});assert.equal(root.childElementCount,0);
   } finally {f.dispose();}
 });
@@ -1347,11 +1361,13 @@ test('summoning offers retain semantic accept and refuse actions and close with 
   const f=fixture();
   try {
     const { renderSummoning, isSummoningProjection }=await import(pathToFileURL(join(output,'main.js')));
-    const view={revision:'dialogue.3',provider:'Witch',quote:null,offerRevision:'7',prince:'Clavicus Vile',message:'Bring the Masque.',diagnostics:[]};
+    const view={revision:'dialogue.3',provider:'Witch',quote:null,offerRevision:'7',prince:'Clavicus Vile',message:'Bring the Masque.',diagnostics:['%qdt has no context.']};
     assert.equal(isSummoningProjection(view),true);
     f.publish({spells:{available:[],ready:null,result:'',summoning:view}});
     assert.equal(f.root.querySelector('.dagger-daedric-offer').open,true);
     assert.equal(f.modes.at(-1),'interface');
+    assert.doesNotMatch(f.root.querySelector('.dagger-daedric-offer').textContent,/has no context/);
+    assert.match(f.root.querySelector('.dagger-text-diagnostics').textContent,/%qdt has no context/);
     f.publish({spells:{available:[],ready:null,result:'',summoning:null}});
     assert.equal(f.root.querySelector('.dagger-daedric-offer').open,false);
     assert.equal(f.modes.at(-1),'gameplay');
@@ -1360,8 +1376,8 @@ test('summoning offers retain semantic accept and refuse actions and close with 
     assert.match(root.textContent,/Bring the Masque/);
     root.querySelectorAll('button')[0].click();root.querySelectorAll('button')[1].click();
     assert.deepEqual(actions,[{action:'daedra-answer',revision:'7',confirm:true},{action:'daedra-answer',revision:'7',confirm:false}]);
-    renderSummoning(root,{...view,offerRevision:null,quote:{key:'7:1:2:4',name:'Hircine',quest:'X0C00Y00',gold:200000,eligible:false,reason:'WrongDay'}},action=>actions.push(action));
-    assert.match(root.textContent,/not a summoning day/);assert.equal(root.querySelector('button').disabled,true);
+    renderSummoning(root,{...view,offerRevision:null,quote:{key:'7:1:2:4',name:'Hircine',quest:'X0C00Y00',gold:200000,eligible:false,reason:'Today is not a Daedric summoning day.'}},action=>actions.push(action));
+    assert.match(root.textContent,/not a Daedric summoning day/);assert.equal(root.querySelector('button').disabled,true);
     renderSummoning(root,null,()=>{});assert.equal(root.childElementCount,0);
   }finally{f.dispose();}
 });

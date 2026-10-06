@@ -14,10 +14,10 @@ internal sealed record InventoryItemPresentation(string Key, string Definition, 
 internal sealed record ItemConditionPresentation(int Current, int Maximum, int Percentage, bool Broken);
 internal sealed record EquipmentSlotPresentation(string Id, string Label, string? ItemKey);
 internal sealed record EquipmentChangePresentation(string Cue, int RightHandDelayMilliseconds, int LeftHandDelayMilliseconds);
-internal sealed record DaggerfallBankAccountPresentation(int Region, string Gold);
+internal sealed record DaggerfallBankAccountPresentation(int Region, string Gold, string RegionName);
 internal sealed record DaggerfallLoanPresentation(string Principal, string Remaining, long DueMinute, bool Defaulted, long DaysRemaining);
 internal sealed record DaggerfallBankPresentation(int CurrentRegion, string CurrentBalance, DaggerfallBankAccountPresentation[] Accounts,
-    DaggerfallLoanPresentation? Loan, long MaximumNewLoan);
+    DaggerfallLoanPresentation? Loan, long MaximumNewLoan, string CurrentRegionName = DaggerfallRegionNames.Unnamed);
 internal sealed record InventoryPresentation(string Revision, InventoryItemPresentation[] Items, EquipmentSlotPresentation[] Slots, string Message,
     EquipmentChangePresentation? EquipmentChange = null, DaggerfallEncumbrance? Encumbrance = null, DaggerfallCurrencyTotals? Currency = null,
     DaggerfallBankPresentation? Bank = null);
@@ -121,21 +121,21 @@ internal sealed class DaggerfallInventoryPresentation
         string detail = outcome.Result switch
         {
             DaggerfallBankTransactionResult.Applied => AppliedBankMessage(outcome),
-            DaggerfallBankTransactionResult.InvalidRegion => "The selected region is outside Daggerfall's 62 classic regions.",
+            DaggerfallBankTransactionResult.InvalidRegion => "Choose a region where you hold an account.",
             DaggerfallBankTransactionResult.SameRegion => "Choose a different destination region.",
             DaggerfallBankTransactionResult.InvalidAmount => "Enter a positive amount.",
             DaggerfallBankTransactionResult.LetterTooSmall => "A letter of credit must be worth at least 100 gold.",
-            DaggerfallBankTransactionResult.SourceLimitExceeded => "That amount exceeds Daggerfall's supported transaction limit.",
+            DaggerfallBankTransactionResult.SourceLimitExceeded => "That amount is larger than the bank can handle at once.",
             DaggerfallBankTransactionResult.InsufficientAccountBalance => "That regional account does not contain enough gold.",
-            DaggerfallBankTransactionResult.AccountBalanceLimit => "That regional account would exceed the classic account limit.",
-            DaggerfallBankTransactionResult.CurrencyMovementRejected => "The required gold or letter could not be moved from player inventory.",
+            DaggerfallBankTransactionResult.AccountBalanceLimit => "That account cannot hold any more gold.",
+            DaggerfallBankTransactionResult.CurrencyMovementRejected => "The gold or letter of credit could not be taken from your pack.",
             DaggerfallBankTransactionResult.WagonUnavailable => "The wagon is unavailable here or does not hold enough gold.",
-            DaggerfallBankTransactionResult.InvalidWagonGoldOwnership => "Wagon gold ownership is inconsistent; no bank balance was changed.",
+            DaggerfallBankTransactionResult.InvalidWagonGoldOwnership => "The gold in your wagon cannot be deposited; no balance was changed.",
             DaggerfallBankTransactionResult.WagonTransferPartiallyApplied => $"Moved {outcome.AmountMoved} gold from the wagon into your pack; the bank deposit did not complete.",
             DaggerfallBankTransactionResult.NoLettersOfCredit => "You have no letters of credit to deposit.",
-            DaggerfallBankTransactionResult.InvalidLetterOwnership => "A letter of credit in player inventory is owned by another container.",
-            DaggerfallBankTransactionResult.InvalidLetterMetadata => "A letter of credit has missing or invalid value metadata.",
-            DaggerfallBankTransactionResult.LedgerMismatch => "The regional accounts do not match the bank settlement balance; no transaction was made.",
+            DaggerfallBankTransactionResult.InvalidLetterOwnership or DaggerfallBankTransactionResult.InvalidLetterMetadata
+                => "The bank cannot accept one of your letters of credit.",
+            DaggerfallBankTransactionResult.LedgerMismatch => "The bank's records do not balance; no transaction was made.",
             _ => "The bank transaction was not accepted.",
         };
         Message = detail;
@@ -167,16 +167,18 @@ internal sealed class DaggerfallInventoryPresentation
         long now = loanCalendar is null ? 0 : DaggerfallLoanPolicy.ClassicMinute(loanCalendar());
         return new(region, bank.BalanceForRegion(region).ToString(CultureInfo.InvariantCulture),
             bank.ReadBalances().Select(account => new DaggerfallBankAccountPresentation(account.Region,
-                account.Gold.ToString(CultureInfo.InvariantCulture))).ToArray(),
+                account.Gold.ToString(CultureInfo.InvariantCulture), RegionName(account.Region))).ToArray(),
             loan is null ? null : new(loan.Principal.ToString(CultureInfo.InvariantCulture), loan.Remaining.ToString(CultureInfo.InvariantCulture),
                 loan.DueMinute, loan.Defaulted, loan.Remaining == 0 ? 0 : Math.Max(0, (loan.DueMinute - now) / DaggerfallLoanPolicy.MinutesPerDay)),
-            loanLevel is null ? 0 : DaggerfallLoanPolicy.CalculateMaxBankLoan(loanLevel()));
+            loanLevel is null ? 0 : DaggerfallLoanPolicy.CalculateMaxBankLoan(loanLevel()), RegionName(region));
     }
 
-    private static string AppliedBankMessage(DaggerfallBankTransactionOutcome outcome)
+    private string RegionName(int region) => definitions.BuildingNames.RegionName(region);
+
+    private string AppliedBankMessage(DaggerfallBankTransactionOutcome outcome)
     {
-        string source = outcome.SourceRegion is int from ? $"Region {from}" : "player inventory";
-        string destination = outcome.DestinationRegion is int to ? $"region {to}" : "player inventory";
+        string source = outcome.SourceRegion is int from ? $"your {RegionName(from)} account" : "your pack";
+        string destination = outcome.DestinationRegion is int to ? $"your {RegionName(to)} account" : "your pack";
         string movement = outcome.Kind switch
         {
             DaggerfallBankTransactionKind.DepositGold => $"Deposited {outcome.AmountMoved} gold into {destination}.",
@@ -187,11 +189,11 @@ internal sealed class DaggerfallInventoryPresentation
             _ => "Bank transaction completed.",
         };
         string balances = outcome.SourceRegion is int sourceRegion && outcome.DestinationRegion is int destinationRegion
-            ? $" Balances: region {sourceRegion} {outcome.SourceBalance}; region {destinationRegion} {outcome.DestinationBalance}."
+            ? $" Balances: {RegionName(sourceRegion)} {outcome.SourceBalance} gold; {RegionName(destinationRegion)} {outcome.DestinationBalance} gold."
             : outcome.DestinationRegion is int depositedRegion
-                ? $" Region {depositedRegion} balance: {outcome.DestinationBalance}."
+                ? $" {RegionName(depositedRegion)} balance: {outcome.DestinationBalance} gold."
                 : outcome.SourceRegion is int withdrawnRegion
-                    ? $" Region {withdrawnRegion} balance: {outcome.SourceBalance}."
+                    ? $" {RegionName(withdrawnRegion)} balance: {outcome.SourceBalance} gold."
                     : string.Empty;
         return movement + balances;
     }
@@ -291,7 +293,7 @@ internal sealed class DaggerfallInventoryPresentation
         }
         catch (Exception rejection) when (rejection is InvalidOperationException or ArgumentException)
         {
-            Message = $"Cannot drop that item. {rejection.Message}";
+            Message = $"You cannot drop {row.Label} here.";
         }
     }
 
@@ -354,8 +356,8 @@ internal sealed class DaggerfallInventoryPresentation
         DaggerfallItemCondition condition = itemCondition.Condition(metadata);
         ItemConditionPresentation presentedCondition = new(condition.Current, condition.Maximum, condition.Percentage, condition.IsBroken);
         string conditionDetail = condition.Maximum == 0 ? string.Empty : $"Condition: {condition.Current}/{condition.Maximum} ({condition.Percentage}%); ";
-        if (metadata.CapturedSoulMobileId is int soul) conditionDetail += $"Captured soul: {definitions.Actors.Values.FirstOrDefault(actor => actor.MobileId == soul)?.Id.Value ?? soul.ToString()}; ";
-        if (metadata.Conjuration is { } conjured) conditionDetail += $"Conjured until minute {conjured.ExpiresAtMinute}; ";
+        if (metadata.CapturedSoulMobileId is int soul) conditionDetail += $"Captured soul: {SoulName(soul)}; ";
+        if (metadata.Conjuration is { } conjured) conditionDetail += $"Conjured: {ConjurationRemaining(conjured.ExpiresAtMinute)}; ";
         if (metadata.PotionRecipeKey is int recipeKey)
         {
             var recipe = definitions.Magic.PotionRecipes[recipeKey];
@@ -386,6 +388,19 @@ internal sealed class DaggerfallInventoryPresentation
             definitions.Magic.EnchantmentSettings.TryGetValue($"enchantment.{enchantment.Type}.{enchantment.Param}", out DaggerfallEnchantmentSetting named)
                 ? named.DisplayName : Label(enchantment.ParamMeaning)));
         return new(namedMagic, conditionDetail + Details(definition) + $"; Enchantment: {effects}", presentedCondition, true);
+    }
+
+    /// <summary>The creature a soul gem holds, named by the actor the pack publishes for that mobile.</summary>
+    private string SoulName(int mobile) =>
+        definitions.Actors.Values.FirstOrDefault(actor => actor.MobileId == mobile) is { } actor ? Label(actor.Id.Value) : "an unknown creature";
+
+    /// <summary>How long a conjured item lasts, in game time from now.</summary>
+    private string ConjurationRemaining(long expiresAtMinute)
+    {
+        if (loanCalendar is null) return "fades in time";
+        long remaining = expiresAtMinute - DaggerfallLoanPolicy.ClassicMinute(loanCalendar());
+        return remaining <= 0 ? "fading now"
+            : "fades in " + DaggerfallCalendar.DescribeDuration(checked(remaining * DaggerfallCalendar.SecondsPerMinute));
     }
 
     private sealed record ItemDisplay(string Label, string Details, ItemConditionPresentation? Condition, bool Identified);

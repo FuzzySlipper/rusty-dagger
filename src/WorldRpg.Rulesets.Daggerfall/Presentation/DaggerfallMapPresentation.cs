@@ -6,7 +6,11 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
-internal sealed record DaggerfallMapArea(string Id, float MinX, float MinZ, float MaxX, float MaxZ, float MinY, float MaxY, int Kind);
+internal sealed record DaggerfallMapArea(string Id, float MinX, float MinZ, float MaxX, float MaxZ, float MinY, float MaxY, int Kind)
+{
+    /// <summary>The semantic category the map draws this area as (room, door, surface, guild, shop, tavern, common).</summary>
+    internal string Category { get; init; } = "common";
+}
 internal sealed record DaggerfallMapLabel(string Id, string Name, float X, float Y, float Z, bool Selected = false);
 internal sealed record DaggerfallMapPresentation(string Id, string Name, string Kind, WorldPoint Player, float Yaw,
     IReadOnlyList<DaggerfallMapArea> Areas, IReadOnlyList<DaggerfallMapLabel> Labels, int? Region = null, int? Location = null);
@@ -23,23 +27,45 @@ internal static class DaggerfallMapProjection
         {
             DaggerfallDungeonMapGeometry geometry = content.RequirePlacement(id);
             areas.Add(new(id, geometry.BoundsMin.X, geometry.BoundsMin.Z, geometry.BoundsMax.X, geometry.BoundsMax.Z,
-                geometry.BoundsMin.Y, geometry.BoundsMax.Y, geometry.DoorId is null ? 1 : 2));
+                geometry.BoundsMin.Y, geometry.BoundsMax.Y, geometry.DoorId is null ? 1 : 2) { Category = geometry.DoorId is null ? "room" : "door" });
         }
         foreach (DaggerfallDungeonSurfaceCell cell in known.DiscoveredSurfaceCells)
         {
             float size = DaggerfallDungeonSurfaceCell.Size;
             areas.Add(new($"surface:{cell.X}:{cell.Y}:{cell.Z}", cell.X * size, cell.Z * size, (cell.X + 1) * size, (cell.Z + 1) * size,
-                cell.Y * size, (cell.Y + 1) * size, 3));
+                cell.Y * size, (cell.Y + 1) * size, 3) { Category = "surface" });
         }
         List<DaggerfallMapLabel> labels = [];
         foreach (string id in known.DiscoveredMarkerIds)
         {
             DaggerfallSiteMarker marker = content.RequireMarker(id);
-            labels.Add(new(id, marker.Kind.ToString(), marker.Position.X, marker.Position.Y, marker.Position.Z));
+            labels.Add(new(id, MarkerLabel(marker.Kind), marker.Position.X, marker.Position.Y, marker.Position.Z));
         }
         labels.AddRange(known.NoteMarkers.Select(note => new DaggerfallMapLabel(note.Id, note.Text, note.Position.X, note.Position.Y, note.Position.Z)));
-        return new(profile.ProfileKey.LogicalId, name ?? profile.ProfileKey.LogicalId, "dungeon", player, yaw, areas, labels);
+        return new(profile.ProfileKey.LogicalId, name ?? "Dungeon", "dungeon", player, yaw, areas, labels);
     }
+
+    /// <summary>The player label of a discovered dungeon marker.</summary>
+    internal static string MarkerLabel(DaggerfallSiteMarkerKind kind) => kind switch
+    {
+        DaggerfallSiteMarkerKind.Entrance => "Entrance",
+        DaggerfallSiteMarkerKind.Portal => "Exit",
+        DaggerfallSiteMarkerKind.QuestSpawn => "Quest location",
+        DaggerfallSiteMarkerKind.QuestItem => "Quest item",
+        _ => "Marker",
+    };
+
+    /// <summary>
+    /// The category the classic city automap colours a footprint as, from its source automap value
+    /// (DFU <c>ExteriorAutomap</c>: building type plus one).
+    /// </summary>
+    internal static string FootprintCategory(int kind) => kind switch
+    {
+        12 or 15 => "guild",
+        1 or 3 or 4 or 6 or 7 or 9 or 10 or 11 or 13 or 14 => "shop",
+        16 => "tavern",
+        _ => "common",
+    };
 
     internal static DaggerfallMapPresentation City(DaggerfallSiteContext site, WorldPoint player, float yaw)
     {
@@ -53,7 +79,8 @@ internal static class DaggerfallMapProjection
             float x = placement.X * block.BlockSize, z = -placement.Y * block.BlockSize;
             int index = 0;
             foreach (DaggerfallCityFootprint rect in block.Footprints)
-                areas.Add(new($"{placement.X}/{placement.Y}/{index++}", x + rect.MinX, z + rect.MinZ, x + rect.MaxX, z + rect.MaxZ, 0, 0, rect.Kind));
+                areas.Add(new($"{placement.X}/{placement.Y}/{index++}", x + rect.MinX, z + rect.MinZ, x + rect.MaxX, z + rect.MaxZ, 0, 0, rect.Kind)
+                { Category = FootprintCategory(rect.Kind) });
         }
         List<DaggerfallMapLabel> labels = [];
         foreach (DaggerfallSiteBuildingSource source in site.BuildingsAt(current.Id))
@@ -82,7 +109,8 @@ internal static class DaggerfallMapProjection
         ("player", builder.Object(("x", builder.Number(map.Player.X)), ("y", builder.Number(map.Player.Y)), ("z", builder.Number(map.Player.Z)), ("yaw", builder.Number(map.Yaw)))),
         ("areas", builder.Array(map.Areas.Select(area => builder.Object(("id", builder.String(area.Id)),
             ("minX", builder.Number(area.MinX)), ("minZ", builder.Number(area.MinZ)), ("maxX", builder.Number(area.MaxX)), ("maxZ", builder.Number(area.MaxZ)),
-            ("minY", builder.Number(area.MinY)), ("maxY", builder.Number(area.MaxY)), ("kind", builder.Number(area.Kind)))).ToArray())),
+            ("minY", builder.Number(area.MinY)), ("maxY", builder.Number(area.MaxY)), ("kind", builder.Number(area.Kind)),
+            ("category", builder.String(area.Category)))).ToArray())),
         ("labels", builder.Array(map.Labels.Select(label => builder.Object(("id", builder.String(label.Id)), ("name", builder.String(label.Name)),
             ("x", builder.Number(label.X)), ("y", builder.Number(label.Y)), ("z", builder.Number(label.Z)), ("selected", builder.Boolean(label.Selected)))).ToArray())));
 }

@@ -83,7 +83,7 @@ internal sealed partial class DaggerfallSession
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or OverflowException)
         {
-            Presentation.SetOutcome(error.Message);
+            Presentation.SetOutcome(put ? "That item cannot be stored in the wagon." : "That item cannot be taken from the wagon.");
         }
     }
 

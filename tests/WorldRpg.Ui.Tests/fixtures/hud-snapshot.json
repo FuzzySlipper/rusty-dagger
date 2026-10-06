@@ -9,6 +9,7 @@
     "result": "",
     "sale": null,
     "summoning": null,
+    "maker": null,
     "itemMaker": null,
     "potionMaker": null,
     "information": null
@@ -254,6 +255,7 @@
     "mode": "foot",
     "onShip": false,
     "canRun": true,
+    "summary": "Overland journeys take the ordinary time on foot. You can run.",
     "travelModifier": 256,
     "oceanMinutesPerMapPixel": 255,
     "options": [
@@ -348,7 +350,7 @@
     "healthRecovered": 0,
     "fatigueRecovered": 0,
     "spellPointsRecovered": 0,
-    "interruption": "none",
+    "interruption": "",
     "message": null
   },
   "lodging": null,
@@ -974,51 +976,75 @@
     "grantedSkills": [
       {
         "id": "mysticism",
-        "tier": "primary"
+        "tier": "primary",
+        "label": "Mysticism",
+        "tierLabel": "Primary skill"
       },
       {
         "id": "alteration",
-        "tier": "primary"
+        "tier": "primary",
+        "label": "Alteration",
+        "tierLabel": "Primary skill"
       },
       {
         "id": "thaumaturgy",
-        "tier": "primary"
+        "tier": "primary",
+        "label": "Thaumaturgy",
+        "tierLabel": "Primary skill"
       },
       {
         "id": "illusion",
-        "tier": "major"
+        "tier": "major",
+        "label": "Illusion",
+        "tierLabel": "Major skill"
       },
       {
         "id": "destruction",
-        "tier": "major"
+        "tier": "major",
+        "label": "Destruction",
+        "tierLabel": "Major skill"
       },
       {
         "id": "restoration",
-        "tier": "major"
+        "tier": "major",
+        "label": "Restoration",
+        "tierLabel": "Major skill"
       },
       {
         "id": "medical",
-        "tier": "minor"
+        "tier": "minor",
+        "label": "Medical",
+        "tierLabel": "Minor skill"
       },
       {
         "id": "short-blade",
-        "tier": "minor"
+        "tier": "minor",
+        "label": "Short Blade",
+        "tierLabel": "Minor skill"
       },
       {
         "id": "blunt-weapon",
-        "tier": "minor"
+        "tier": "minor",
+        "label": "Blunt Weapon",
+        "tierLabel": "Minor skill"
       },
       {
         "id": "dragonish",
-        "tier": "minor"
+        "tier": "minor",
+        "label": "Dragonish",
+        "tierLabel": "Minor skill"
       },
       {
         "id": "daedric",
-        "tier": "minor"
+        "tier": "minor",
+        "label": "Daedric",
+        "tierLabel": "Minor skill"
       },
       {
         "id": "dodging",
-        "tier": "minor"
+        "tier": "minor",
+        "label": "Dodging",
+        "tierLabel": "Minor skill"
       }
     ],
     "creationAvailable": false,

@@ -245,7 +245,7 @@ internal sealed partial class DaggerfallSession
             }
             catch (Exception rejection) when (rejection is InvalidOperationException or ArgumentException)
             {
-                _lootUi.CompleteGround(false, rejection.Message);
+                _lootUi.CompleteGround(false, "That item cannot be taken.");
             }
             Presentation.SetOutcome(_lootUi.Message);
             return;

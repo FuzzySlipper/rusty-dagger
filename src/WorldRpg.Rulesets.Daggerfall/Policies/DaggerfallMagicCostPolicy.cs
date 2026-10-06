@@ -259,6 +259,20 @@ internal static class DaggerfallMagicCostPolicy
         _ => throw new ArgumentOutOfRangeException(nameof(rangeType), "A spell must retain a classic range type."),
     };
 
+    /// <summary>Player labels for the classic range types 0..4, in range-type order.</summary>
+    internal static IReadOnlyList<string> TargetLabels { get; } = ["Self", "Touch", "Single target at range", "Area around self", "Area at range"];
+
+    /// <summary>Player labels for the classic element types 0..4 (fire, cold, poison, shock, magic).</summary>
+    internal static IReadOnlyList<string> ElementLabels { get; } = ["Fire", "Cold", "Poison", "Shock", "Magic"];
+
+    internal static string TargetLabel(int rangeType) => TargetLabels[(int)TargetForRangeType(rangeType)];
+
+    internal static string ElementLabel(int element)
+    {
+        ValidateElement(element);
+        return ElementLabels[element];
+    }
+
     private static void ValidateElement(int element)
     {
         if (element is < 0 or > 4)

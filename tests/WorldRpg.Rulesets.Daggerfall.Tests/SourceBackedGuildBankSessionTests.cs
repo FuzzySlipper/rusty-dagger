@@ -168,7 +168,7 @@ public sealed class SourceBackedGuildBankSessionTests
         Submit(session, 1, new { action = "spell-buy", revision = sale.Revision, key = offer.Key,
             amount = offer.Price, confirm = true });
         Assert.Contains(offer.Key, session.State.Character.KnownSpells);
-        Assert.Equal("Purchased", session.ReadSpells().Result);
+        Assert.Equal("Spell added to your spellbook.", session.ReadSpells().Result);
 
         FillMagicka(session);
         Submit(session, 2, new { action = "spell-ready", key = offer.Key });
@@ -196,12 +196,12 @@ public sealed class SourceBackedGuildBankSessionTests
         Assert.True(quote.Eligible);
         Submit(restoredSeller, 4, new { action = "spellmaker-buy", revision = makerView.Revision,
             key = quote.Key, amount = (ulong)quote.Gold, confirm = true });
-        Assert.Equal("Purchased", restoredSeller.ReadSpells().Result);
+        Assert.Equal("Custom spell added to your spellbook.", restoredSeller.ReadSpells().Result);
         string customKey = Assert.Single(restoredSeller.State.Character.KnownSpells,
             value => value.StartsWith("custom-spell.", StringComparison.Ordinal));
         Submit(restoredSeller, 5, new { action = "spellmaker-buy", revision = makerView.Revision,
             key = quote.Key, amount = (ulong)quote.Gold, confirm = true });
-        Assert.Equal("DraftChanged", restoredSeller.ReadSpells().Result);
+        Assert.Equal("Check the current spell construction preview before buying.", restoredSeller.ReadSpells().Result);
 
         FillMagicka(restoredSeller);
         Submit(restoredSeller, 6, new { action = "spell-ready", key = customKey });

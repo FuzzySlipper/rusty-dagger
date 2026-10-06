@@ -30,7 +30,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallSiteBuildingRecord building = Site.SelectBuilding(new(region, index), new(blockX, blockY, buildingIndex));
             Presentation.SetOutcome($"Selected {building.Name}. Ask someone here for directions.");
         }
-        catch (InvalidOperationException exception) { Presentation.SetOutcome(exception.Message); }
+        catch (InvalidOperationException) { Presentation.SetOutcome("That building cannot be selected on this map."); }
     }
 
     private (string Name, string Hint)? MapDirections()

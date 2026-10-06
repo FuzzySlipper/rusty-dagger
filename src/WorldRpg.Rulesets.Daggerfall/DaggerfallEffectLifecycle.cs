@@ -157,6 +157,17 @@ internal sealed class DaggerfallEffectCatalog
 
     internal static DaggerfallEffectCatalog Empty { get; } = new([]);
 
+    /// <summary>
+    /// The player name of a compiled effect. Effect keys are the classic effect names in lower-case
+    /// words ("damage-health", "free-action"), so the label is that name in sentence case.
+    /// </summary>
+    internal static string Label(string key)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        string words = key.Replace('-', ' ');
+        return char.ToUpperInvariant(words[0]) + words[1..];
+    }
+
     internal DaggerfallEffectCatalog(IEnumerable<DaggerfallEffectDefinition> definitions)
     {
         ArgumentNullException.ThrowIfNull(definitions);

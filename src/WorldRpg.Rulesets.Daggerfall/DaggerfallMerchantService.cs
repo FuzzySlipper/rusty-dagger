@@ -27,7 +27,14 @@ internal sealed record DaggerfallMerchantItemView(
     bool Identified,
     bool Stolen,
     bool CanBuy,
-    bool CanSell);
+    bool CanSell)
+{
+    /// <summary>A unique item below its maximum condition is one a repairer can take.</summary>
+    internal bool Repairable => Key.StartsWith("unique:", StringComparison.Ordinal) && MaximumCondition > CurrentCondition;
+
+    /// <summary>A unique item whose powers are not yet known is one an identifier can read.</summary>
+    internal bool Identifiable => Key.StartsWith("unique:", StringComparison.Ordinal) && !Identified;
+}
 
 internal sealed record DaggerfallRepairView(
     string RequestId,

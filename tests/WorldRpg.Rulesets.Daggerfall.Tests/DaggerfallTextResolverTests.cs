@@ -77,7 +77,8 @@ public sealed class DaggerfallTextResolverTests
         Assert.Equal(DaggerfallTextDiagnosticKind.MissingText, Assert.Single(missingRecord.Diagnostics).Kind);
         Assert.Equal(DaggerfallTextDiagnosticKind.MalformedText, Assert.Single(malformedResult.Diagnostics).Kind);
         Assert.Equal("source bytes are truncated", malformedResult.Diagnostics[0].Detail);
-        Assert.Equal("%pcn[missing-context], %hol[donor-unresolved], and %notasymbol[unrecognised]", rendered.Text);
+        // Unresolved symbols stay out of the player text; the diagnostics name each one.
+        Assert.Equal(", , and ", rendered.Text);
         Assert.Equal([DaggerfallTextDiagnosticKind.MissingContext, DaggerfallTextDiagnosticKind.DonorUnresolvedMacro, DaggerfallTextDiagnosticKind.UnrecognisedMacro], rendered.Diagnostics.Select(diagnostic => diagnostic.Kind));
     }
 

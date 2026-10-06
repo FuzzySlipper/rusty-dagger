@@ -8,6 +8,19 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>The donor delivery semantics that retain a message identity instead of copied rendered text.</summary>
 internal enum DaggerfallQuestMessageDelivery { Popup, Letter, Rumor, Journal, Prompt }
 
+internal static class DaggerfallQuestMessageDeliveries
+{
+    /// <summary>The heading the player reads above a delivered quest message.</summary>
+    internal static string Heading(DaggerfallQuestMessageDelivery delivery) => delivery switch
+    {
+        DaggerfallQuestMessageDelivery.Popup => "Message",
+        DaggerfallQuestMessageDelivery.Letter => "Letter",
+        DaggerfallQuestMessageDelivery.Rumor => "Rumor",
+        DaggerfallQuestMessageDelivery.Journal => "Journal",
+        _ => "Question",
+    };
+}
+
 /// <summary>A source-backed message awaiting ordinary DOM presentation.</summary>
 internal sealed record DaggerfallQuestMessageDeliverySave(string InstanceId, int MessageId, DaggerfallQuestMessageDelivery Delivery, int Variant = 0)
 {
@@ -533,7 +546,8 @@ internal sealed class DaggerfallQuestMessages
         };
         if (!string.IsNullOrWhiteSpace(value)) return value;
         issues.Add($"{match.Value}: quest resource '{symbol}' has no {group} value.");
-        return $"{match.Value}[missing-context]";
+        // The issue list carries the diagnostic; the player text omits the unresolved symbol.
+        return string.Empty;
     }
 
     private DaggerfallQuestMessageDefinition RequireMessage(DaggerfallQuestRuntimeInstance instance, int messageId)

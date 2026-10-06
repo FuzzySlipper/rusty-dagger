@@ -47,12 +47,20 @@ internal sealed partial class DaggerfallSession
             if (outcome is "Offered" or "Dismissed") PlaySummoningStory(Summoning.Last!.Prince);
         }
         ReconcileSummoningFoes();
-        Presentation.SetOutcome(outcome switch {
-            "WrongDay" => "Today is not a Daedric summoning day.", "Failed" => "The prince did not answer. The summoning fee has been paid.",
-            "Dismissed" => "This prince remembers your earlier summons and dismisses you.", "Offered" => "The prince has answered. Will you accept the quest?",
-            "Accepted" => "You accepted the prince's quest.", "InsufficientFunds" => "You do not have enough carried gold.",
-            "QuestUnavailable" => "The matching Daedric quest is unavailable. " + Summoning.Last?.Diagnostic, _ => outcome });
+        Presentation.SetOutcome(SummoningOutcomeText(outcome));
     }
+
+    /// <summary>Player wording for summoning quotes, refusals and the prince's answer.</summary>
+    internal static string SummoningOutcomeText(string outcome) => outcome switch {
+        "WrongDay" => "Today is not a Daedric summoning day.", "Failed" => "The prince did not answer. The summoning fee has been paid.",
+        "Dismissed" => "This prince remembers your earlier summons and dismisses you.", "Offered" => "The prince has answered. Will you accept the quest?",
+        "Accepted" => "You accepted the prince's quest.", "InsufficientFunds" => "You do not have enough carried gold.",
+        "ProviderUnavailable" => "Your standing does not permit this service.",
+        "AnswerPendingOffer" => "Answer the prince's offer first.",
+        "HostileArrivalPending" => "The summoned daedra have not finished arriving.",
+        "OfferUnavailable" => "That offer is no longer open.",
+        "QuestUnavailable" => "The prince's quest is unavailable.",
+        _ => DaggerfallServiceOutcomeText.Common(outcome) };
     private DaggerfallQuestInstanceSave PrepareSummoningQuest(DaggerfallSummoningResult result)
     {
         string source=result.Quest+".txt";

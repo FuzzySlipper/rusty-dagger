@@ -78,7 +78,7 @@ internal sealed partial class DaggerfallSession
         }
         catch (Exception error) when (error is ArgumentException or NotSupportedException)
         {
-            Presentation.SetOutcome($"Vampire quest {quest} is unavailable: {error.Message}");
+            Presentation.SetOutcome(cure ? "The cure for vampirism cannot be offered right now." : "Your vampire clan's quest cannot be offered right now.");
             return false;
         }
     }

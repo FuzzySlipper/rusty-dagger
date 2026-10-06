@@ -8,7 +8,11 @@ internal enum DaggerfallDetection { None, Magic, Enemy, Treasure }
 /// <summary>Resolved current contacts retain product identities, never native handles or DOM guesses.</summary>
 internal sealed record DaggerfallDetectedItem(string Id, string Definition, ulong Quantity);
 internal sealed record DaggerfallDetectionFact(string Kind, string Id, double Distance, double BearingRadians,
-    IReadOnlyList<DaggerfallDetectedItem> Items);
+    IReadOnlyList<DaggerfallDetectedItem> Items)
+{
+    /// <summary>The player name of the contact: the detected creature or person, or a treasure container.</summary>
+    internal string Label { get; init; } = Kind == "container" ? "Treasure" : "Someone";
+}
 internal sealed record DaggerfallDetectorView(string Source, string Kind, IReadOnlyList<DaggerfallDetectionFact> Contacts);
 
 internal static class DaggerfallDetectionEffects

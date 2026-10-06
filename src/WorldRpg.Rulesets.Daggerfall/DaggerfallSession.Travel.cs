@@ -57,7 +57,9 @@ internal sealed partial class DaggerfallSession
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or OverflowException)
         {
-            _travelMessage = exception.Message;
+            // The route owner refuses a destination it cannot quote; its detail names map data, not a reason
+            // the player can act on.
+            _travelMessage = "No travel route to that destination is available right now.";
             return null;
         }
     }
@@ -71,7 +73,8 @@ internal sealed partial class DaggerfallSession
         }
         DaggerfallTravelQuote? quote = CurrentTravelQuote();
         string? unavailable = quote is null ? null : TravelRefusal(quote, out _);
-        return new(_travelSearchResults, quote, _travelMessage ?? unavailable, unavailable is null && quote is { CanAfford: true }, State.Travel.LastResult);
+        return new(_travelSearchResults, quote, _travelMessage ?? unavailable, unavailable is null && quote is { CanAfford: true }, State.Travel.LastResult)
+        { RegionNames = _definitions.BuildingNames.RegionNames };
     }
 
     /// <summary>Accepts the live quote once; all elapsed consequences use the session's single calendar.</summary>
@@ -127,13 +130,13 @@ internal sealed partial class DaggerfallSession
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException)
         {
             outcome = DaggerfallTravelOutcome.Unavailable;
-            _travelMessage = exception.Message;
+            _travelMessage = null;
         }
         long ended = _time.Calendar.ToAbsoluteSeconds();
         DaggerfallTravelMapPixel actualPixel = QuestTravelOrigin();
         string status = outcome == DaggerfallTravelOutcome.Arrived ? $"Arrived at {quote.Destination.Name}."
-            : $"Travel interrupted ({outcome}) at map pixel {actualPixel.X}/{actualPixel.Y}.";
-        string message = $"{status} Paid {quote.TotalCost} gold; {ended - started} seconds elapsed."
+            : TravelInterruptionText(outcome);
+        string message = $"{status} Paid {quote.TotalCost} gold; {DaggerfallCalendar.DescribeDuration(ended - started)} passed."
             + (_travelMessage is null ? "" : " " + _travelMessage);
         DaggerfallTravelResult result = State.Travel.Complete(ended, _activeProfileKey.Site, actualPixel, outcome, message);
         _travelMessage = message; Presentation.SetOutcome(message);
@@ -145,6 +148,16 @@ internal sealed partial class DaggerfallSession
         if (ended > started) _itemCastTriggers.CompleteTimeIncrease();
         return result;
     }
+
+    /// <summary>Player wording for a journey that ended before its destination.</summary>
+    internal static string TravelInterruptionText(DaggerfallTravelOutcome outcome) => outcome switch
+    {
+        DaggerfallTravelOutcome.Encounter => "Your journey was interrupted by an encounter.",
+        DaggerfallTravelOutcome.Defeated => "You were defeated on the road.",
+        DaggerfallTravelOutcome.Unavailable => "Your destination could not be reached; the journey ended early.",
+        DaggerfallTravelOutcome.SaveBoundary => "Your journey stopped where it was saved.",
+        _ => "Your journey was interrupted.",
+    };
 
     private string? TravelRefusal(DaggerfallTravelQuote quote, out DaggerfallRelocationDestination? destination)
     {
@@ -226,4 +239,10 @@ internal sealed record DaggerfallTravelPresentation(
     DaggerfallTravelQuote? Quote,
     string? Message,
     bool ExecutionAvailable,
-    DaggerfallTravelResult? LastResult);
+    DaggerfallTravelResult? LastResult)
+{
+    /// <summary>The published region names a destination is labelled with.</summary>
+    internal IReadOnlyList<string> RegionNames { get; init; } = [];
+
+    internal string RegionName(int region) => DaggerfallRegionNames.Name(RegionNames, region);
+}

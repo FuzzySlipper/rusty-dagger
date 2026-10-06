@@ -122,6 +122,28 @@ internal sealed record DaggerfallServiceOutcome(
     internal static DaggerfallServiceOutcome Quoted() => new(true, DaggerfallServiceDenial.None);
 }
 
+/// <summary>
+/// Player wording for the result codes every paid service shares: the payment denials above and the
+/// quote/confirmation codes that guild sellers and makers return. A service names its own codes first
+/// and defers here, so the player never reads a code token.
+/// </summary>
+internal static class DaggerfallServiceOutcomeText
+{
+    internal static string Common(string outcome) => outcome switch
+    {
+        nameof(DaggerfallServiceDenial.InsufficientFunds) => "You do not have enough gold.",
+        nameof(DaggerfallServiceDenial.NotMember) => "You are not a member of the required guild.",
+        nameof(DaggerfallServiceDenial.InsufficientRank) => "Your guild rank is too low for this service.",
+        nameof(DaggerfallServiceDenial.Closed) => "This service is closed right now.",
+        nameof(DaggerfallServiceDenial.MissingItem) or nameof(DaggerfallServiceDenial.ItemChanged) => "The item for this service is no longer available.",
+        nameof(DaggerfallServiceDenial.UnknownProvider) or nameof(DaggerfallServiceDenial.ProviderUnavailable)
+            or nameof(DaggerfallServiceDenial.ServiceUnavailable) or nameof(DaggerfallServiceDenial.SiteChanged) => "This service is no longer available to you.",
+        "ConfirmationRequired" => "Confirm this purchase first.",
+        "DraftChanged" or "PriceChanged" or "QuoteChanged" => "The offer changed. Check the current price before buying.",
+        _ => "That service cannot be completed right now.",
+    };
+}
+
 /// <summary>A quote retains typed requirements, not a mutable service callback or UI command.</summary>
 internal sealed record DaggerfallServiceQuote(
     DaggerfallServiceRequest Request,
