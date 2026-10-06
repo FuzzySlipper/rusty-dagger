@@ -689,7 +689,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _appearance.RefreshEnemyVoices(State.Actors);
         DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
-        DaggerfallMagicPresentation.Publish(State.Effects, State.Actors.Player, Slots, EffectItemName);
         _appearance.RetireUnavailableMagic(State.Actors, State.ItemInstances.ContainsUnique);
         _hud.Publish(new DaggerfallHudFrame(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots,
             Inventory: _inventoryUi.Read(),
@@ -713,6 +712,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Lodging: LodgingView,
             Travel: ReadTravelPresentation(),
             SiteName: Site.ActiveSite?.Name,
+            Calendar: _time.Calendar,
+            Effects: ReadActiveEffects(),
+            CinematicSource: Cinematics?.ActiveSource,
             Map: _mapOpen ? ReadMapPresentation() : null, Legal: LegalView, CreateItem: CreateItemView, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         Vector3? candlePosition = !State.Actors.Player.IsDefeated && State.PlayerControl.Position is { } playerPosition
@@ -728,6 +730,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],
             _tuning.Camera.EyeHeight, State.Effects.PerceptionFor, ReadNpcViews(), ReadDungeonSpellFlights(), State.Npcs.IsGameplayActive);
     }
+
+    /// <summary>The player's active effects as the HUD lists them.</summary>
+    internal IReadOnlyList<DaggerfallActiveEffectView> ReadActiveEffects() =>
+        DaggerfallMagicPresentation.Read(State.Effects, State.Actors.Player, EffectItemName);
 
     /// <summary>The panel the player asked for through a device the DOM has no channel of its own for.</summary>
     internal DaggerfallPanelRequest? LatestPanelRequest => _interactions.LatestPanelRequest;

@@ -39,7 +39,8 @@ internal sealed record DaggerfallHudFrame(
     DaggerfallTravelPresentation? Travel = null,
     string? SiteName = null,
     DaggerfallLodgingView? Lodging = null,
-    DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, DaggerfallIdentifyView? Identify=null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null, DaggerfallSpellbookView? Spells=null, bool CharacterCreationAvailable = true, DaggerfallPropertyView? Property = null, DaggerfallTeleportView? Teleport = null, DaggerfallCreateItemView? CreateItem = null, DaggerfallLegalView? Legal = null);
+    DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, DaggerfallIdentifyView? Identify=null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null, DaggerfallSpellbookView? Spells=null, bool CharacterCreationAvailable = true, DaggerfallPropertyView? Property = null, DaggerfallTeleportView? Teleport = null, DaggerfallCreateItemView? CreateItem = null, DaggerfallLegalView? Legal = null,
+    DaggerfallCalendar? Calendar = null, IReadOnlyList<DaggerfallActiveEffectView>? Effects = null, string? CinematicSource = null);
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
 internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
@@ -60,7 +61,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ArgumentNullException.ThrowIfNull(frame);
         var (player, progression, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
-            dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _, _) = frame;
+            dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _, _, calendar, effects, cinematicSource) = frame;
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
@@ -119,6 +120,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             // The HUD names where the player is from the site the session projects, not from a label
             // the DOM carries, so every site a bundle starts at or moves to names itself.
             ("site", siteName is null ? builder.Null() : builder.Object(("name", builder.String(siteName)))),
+            // The date and time the world's one calendar reads, named by the ruleset.
+            ("calendar", calendar is not { } date ? builder.Null() : builder.Object(
+                ("dayName", builder.String(date.DayName)), ("day", builder.Number(date.Day + 1)),
+                ("monthName", builder.String(date.MonthName)), ("year", builder.Number(date.Year)),
+                ("hour", builder.Number(date.Hour)), ("minute", builder.Number(date.Minute)),
+                ("date", builder.String(date.DescribeDate())), ("time", builder.String(date.DescribeTime())))),
             // Compass and crosshair read the same authoritative look the camera does.
             ("view", builder.Object(
                 ("yawRadians", builder.Number(controls.YawRadians)),
@@ -132,6 +139,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("label", builder.String(slot.Label)),
                 ("detail", builder.String(slot.Detail)),
                 ("order", builder.Number(slot.Order)))).ToArray())),
+            // Active effects are a structured list from the effects owner, not status sentences.
+            ("effects", builder.Array((effects ?? []).Select(effect => builder.Object(
+                ("id", builder.String(effect.Id)), ("name", builder.String(effect.Name)), ("spell", builder.String(effect.Spell)),
+                ("source", effect.Source is null ? builder.Null() : builder.String(effect.Source)),
+                ("remainingSeconds", effect.RemainingSeconds is long seconds ? builder.Number(seconds) : builder.Null()),
+                ("remaining", builder.String(effect.Remaining)), ("detail", builder.String(effect.Detail)))).ToArray())),
             // The modal's own token is what a close has to name, so the UI never invents focus.
             // Focus exists only where the mode lets the interaction act: a dead or paused product
             // ignores the close its own gate would refuse, so advertising one would offer the player
@@ -151,6 +164,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 : builder.Object(
                     ("panel", builder.String(panelRequest.Panel)),
                     ("revision", builder.String(panelRequest.Revision.ToString(CultureInfo.InvariantCulture))))),
+            // A playing cinematic offers the one control its owner supports: skipping it.
+            ("cinematic", cinematicSource is null ? builder.Null() : builder.Object(
+                ("source", builder.String(cinematicSource)), ("skipLabel", builder.String("Skip")))),
             ("saveSlots", builder.Object(
                 ("entries", builder.Array((saveSlots ?? []).Select(slot => builder.Object(
                     ("key", builder.String(slot.Key)),
