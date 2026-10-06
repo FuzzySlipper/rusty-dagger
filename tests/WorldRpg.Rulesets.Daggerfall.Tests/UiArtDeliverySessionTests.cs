@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
@@ -115,6 +116,62 @@ public sealed class UiArtDeliverySessionTests
             .ToDictionary(artifact => artifact.GetProperty("mediaId").GetString()!, artifact => artifact.GetProperty("path").GetString()!);
         Assert.All(portraits, id => Assert.Equal(
             $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content", characterPaths[id])))}", images[id]));
+    }
+
+    /// <summary>
+    /// The DOM draws art only by the identities the session publishes. Every media identity the DOM
+    /// writes as a literal - a mode screen, the sheet chrome, a panel skin - is one the projection's art
+    /// set carries, and the DOM names no media file of its own: art arrives as published bytes or not
+    /// at all, so a renamed or dropped artifact cannot leave a panel pointing at nothing.
+    /// </summary>
+    [Fact]
+    public void Every_art_identity_the_dom_names_is_one_the_projection_publishes()
+    {
+        string root = TestData.RepositoryRoot;
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        PopulateContent(content, inputs);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+        session.PublishInitial();
+        Dictionary<string, object?> hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        Dictionary<string, object?> art = Assert.IsType<Dictionary<string, object?>>(hud["uiArt"]);
+        HashSet<string> published = [.. Assert.IsType<object?[]>(art["images"]).Cast<Dictionary<string, object?>>()
+            .Select(image => Assert.IsType<string>(image["id"]))];
+        // A media identity is dotted, and its first segment is a family the published set uses; the
+        // DOM's own dotted names (the payload contracts, the "dagger.ui" intent) belong to no family.
+        HashSet<string> families = [.. published.Select(id => id.Split('.')[0])];
+
+        string[] sources = [.. Directory.GetFiles(Path.Combine(root, "src/ui"), "*.ts").Where(path => !path.EndsWith(".d.ts", StringComparison.Ordinal)).Order(StringComparer.Ordinal)];
+        Assert.NotEmpty(sources);
+        List<string> named = [];
+        List<string> unpublished = [];
+        foreach (string path in sources)
+        {
+            foreach (Match literal in Regex.Matches(File.ReadAllText(path), @"['""`](?<id>[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+)['""`]"))
+            {
+                string id = literal.Groups["id"].Value;
+                if (!families.Contains(id.Split('.')[0])) continue;
+                named.Add(id);
+                if (!published.Contains(id)) unpublished.Add($"{Path.GetFileName(path)}: {id}");
+            }
+        }
+        Assert.Empty(unpublished);
+        // The check sees the identities the DOM is known to draw by name, so a pattern that stopped
+        // matching them cannot pass on an empty set.
+        Assert.Contains("screen.prison", named);
+        Assert.Contains("window.character-sheet.chrome", named);
+        Assert.Contains("inventory.skin.panel-slate.v1", named);
+
+        // No media file is named by the DOM: images are data the projection carries, never a path the
+        // client stages beside itself.
+        string[] files = [.. Directory.GetFiles(Path.Combine(root, "src/ui"), "*.*")
+            .Where(path => path.EndsWith(".ts", StringComparison.Ordinal) || path.EndsWith(".css", StringComparison.Ordinal))
+            .Where(path => !path.EndsWith(".d.ts", StringComparison.Ordinal))
+            .SelectMany(path => Regex.Matches(File.ReadAllText(path), @"[\w./-]+\.(?:png|jpe?g|gif|webp|bmp|svg|wav|ogg|mp3|mp4|webm)\b", RegexOptions.IgnoreCase)
+                .Select(match => $"{Path.GetFileName(path)}: {match.Value}"))];
+        Assert.Empty(files);
     }
 
     [Fact]
