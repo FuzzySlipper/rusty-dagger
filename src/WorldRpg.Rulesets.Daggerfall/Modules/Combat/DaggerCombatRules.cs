@@ -174,13 +174,14 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         int body = DaggerfallFormulaPolicy.CalculateStruckBodyPart(Draw(explicitRequest, attacker.Id, target.Id, CombatRandomKey.BodySalt, 0, 19, enemyAttack));
         if (attacker.Definition.Kind == DaggerfallActorKinds.Monster && attack.Skill == DaggerfallMechanicsIds.HandToHand.Value)
         {
-            var outcome = MonsterAttackSet(participants, explicitRequest, attacker, target, attack, body, enemyAttack, out var slots);
-            prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, outcome, feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource, MonsterHits: slots);
+            var (outcome, detail) = MonsterAttackSet(participants, explicitRequest, attacker, target, attack, body, enemyAttack, out var slots);
+            prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, outcome, feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource, MonsterHits: slots, Detail: detail);
             return true;
         }
         TryHitEvent hit = ResolveHit(participants, explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.ToHit, backstabChance);
         DamageEvent? damage = hit.Hit ? ResolveDamage(participants, explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.Damage, backstabChance) : null;
-        prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, body, damage?.Damage ?? 0, hit.Roll, hit.Chance), feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource, WeaponPoison: poisonSource);
+        prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, damage?.Damage ?? 0), feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource, WeaponPoison: poisonSource,
+            Detail: new(body, hit.Roll, hit.Chance));
         return true;
     }
     public void Started(AttackRequest request, PreparedAttack attack, FactBuffer<IProductFact> facts)
@@ -198,6 +199,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         { facts.Append(new AttackRejectedFact(AttackRejection.NoTargetInReach)); return; }
         AttackOutcome outcome = attack.Outcome;
         DaggerfallStrikeFeedback feedback = PreparedFeedback(attack);
+        DaggerfallAttackDetail detail = ((DaggerfallPreparedAttack)attack).Detail;
         bool enemyAttack = request.AttackerId != PlayerId;
         // This is the one admitted resolution boundary an enemy attempt reaches. The donor tallies
         // Dodging before damage, so a resolved miss contributes too; a rejected or unknown attack
@@ -240,19 +242,19 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         if (strikes && attack is DaggerfallPreparedAttack { ItemStrikeSource: { } sourceItem })
             strikeDamage = _itemStrike(request.AttackerId, target, sourceItem, strikeDamage);
         if (!outcome.Hit)
-        { facts.Append(new AttackMissedFact(request.AttackerId, target, outcome.Roll, outcome.Chance, enemyAttack, request.Generation, request.SimulationStep) { Feedback = feedback });
+        { facts.Append(new AttackMissedFact(request.AttackerId, target, detail.Roll, detail.Chance, enemyAttack, request.Generation, request.SimulationStep) { Feedback = feedback });
             if (transformation is not null) facts.Append(transformation);
             // The player's weapon runs its Strikes payloads on a miss; Mehrunes Razor's terminal
             // strike has no damage condition, so its saving throw is offered even when nothing landed.
             if (strikeDamage > 0 || request.AttackerId == PlayerId && WieldsRazor(request.AttackerId))
                 ApplyDamage(Participants(request.AttackerId, target, request.Action ?? "attack"), request.AttackerId, target,
-                    strikeDamage, outcome.Body, enemyAttack, request.Generation, request.SimulationStep, feedback, facts, null, emitHitFact: false, admittedBaseDamage: 0);
+                    strikeDamage, detail.Body, enemyAttack, request.Generation, request.SimulationStep, feedback, facts, null, emitHitFact: false, admittedBaseDamage: 0);
             return; }
         string action = request.Action ?? _definitions[request.AttackerId].ActionId ?? "attack";
         // Capture the weapon skill at the admitted operation boundary. Applying the hit may break
         // the weapon through physical wear and unequip it before the skill-use reaction runs.
         string? playerWeaponSkill = request.AttackerId == PlayerId ? PlayerWeaponSkill() : null;
-        ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, strikeDamage, outcome.Body,
+        ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, strikeDamage, detail.Body,
             enemyAttack, request.Generation, request.SimulationStep, feedback, facts, (attack as DaggerfallPreparedAttack)?.MolagBalSource,
             admittedBaseDamage: strikeDamage != outcome.Damage ? outcome.Damage : null);
         if (request.AttackerId == PlayerId)
@@ -327,8 +329,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             bool dodged = Vector3.Distance(currentTarget.ToVector(), shot.Aim.ToVector()) > ArrowDodgeRadiusMeters;
             if (!shot.Release.Attack.Outcome.Hit || dodged)
             {
-                AttackOutcome outcome = shot.Release.Attack.Outcome;
-                facts.Append(new AttackMissedFact(shot.Release.Request.AttackerId, targetId, outcome.Roll, outcome.Chance,
+                DaggerfallAttackDetail detail = ((DaggerfallPreparedAttack)shot.Release.Attack).Detail;
+                facts.Append(new AttackMissedFact(shot.Release.Request.AttackerId, targetId, detail.Roll, detail.Chance,
                     EnemyAttack: shot.Release.Request.AttackerId != PlayerId, shot.Release.Request.Generation, shot.Release.Request.SimulationStep) { Feedback = PreparedFeedback(shot.Release.Attack) });
                 continue;
             }
@@ -568,6 +570,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     {
         hit.Chance = HitChance(request, attacker, target, attack, body, enemy, attackToHitMod, backstabChance, criticalSalt);
         hit.Roll = Draw(request, attacker.Id, target.Id, hitSalt, 1, 100, enemy);
+        // Daggerfall hits when the d100 roll does not exceed the chance; a contribution may override it.
+        hit.Hit = hit.Roll <= hit.Chance;
     });
 
     /// <summary>
@@ -584,7 +588,6 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     private DamageEvent ResolveDamage(CombatParticipants participants, ExplicitMeleeRequest request, Combatant attacker, Combatant target,
         DaggerfallAttackDefinition attack, int body, bool enemy, int attackDamageMod, int backstabChance) => Rules.Damage(participants, damage =>
     {
-        damage.Body = body;
         if (attack.Material is not null && !DaggerfallFormulaPolicy.CanHitMaterial(attack.Material, target.Id == PlayerId && _character()?.RacialOverrides?.Current?.RequiresSilver == true
                 ? "silver" : target.Definition.MinimumMaterial, _weaponMaterialRanks))
         {
@@ -629,7 +632,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     /// those slots cannot shift any other roll. Every eligible slot resolves through the shared hit
     /// rules independently. Damage contributions and application see the combined attack once.
     /// </remarks>
-    private AttackOutcome MonsterAttackSet(CombatParticipants participants, ExplicitMeleeRequest request,
+    private (AttackOutcome Outcome, DaggerfallAttackDetail Detail) MonsterAttackSet(CombatParticipants participants, ExplicitMeleeRequest request,
         Combatant attacker, Combatant target, DaggerfallAttackDefinition attack, int body, bool enemy, out DaggerfallMonsterHit[] hits)
     {
         List<DaggerfallMonsterHit> accepted = [];
@@ -663,12 +666,11 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 
         DamageEvent? damage = landed ? Rules.Damage(participants, damage =>
         {
-            damage.Body = body;
             damage.Damage = Math.Max(0, total);
         }) : null;
         hits = accepted.ToArray();
-        return new(landed, damage?.Allowed ?? true, body, damage?.Damage ?? 0,
-            representative?.Roll ?? 0, representative?.Chance ?? 0);
+        return (new(landed, damage?.Allowed ?? true, damage?.Damage ?? 0),
+            new(body, representative?.Roll ?? 0, representative?.Chance ?? 0));
     }
 
     private readonly Action<long, DaggerfallWeaponPoisonSource> _deliverWeaponPoison;
@@ -689,7 +691,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         Track health = participants.TargetStats.GetTrack(TrackId.Parse(HealthTrack));
         int physicalDamage = damage;
         damage = ApplyRazor(attacker, target, damage, health, enemy, generation, step, facts, out var razorWeapon, out int razorWear);
-        ApplyHitEvent applied = Rules.ApplyToHealth(participants, damage, body, health);
+        ApplyHitEvent applied = Rules.ApplyToHealth(participants, damage, health);
         if (emitHitFact) facts.Append(new AttackHitFact(attacker, target, applied.CalculatedDamage, applied.ActualHealthLost, body, enemy, generation, step) { Feedback = feedback });
         facts.Append(new DamageAppliedFact(attacker, target, DaggerfallDamageCause.PhysicalAttack,
             applied.CalculatedDamage, applied.ActualHealthLost, body, generation, step));
@@ -786,7 +788,10 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     internal sealed record DaggerfallPreparedAttack(double CooldownSeconds, AttackOutcome Outcome,
         DaggerfallStrikeFeedback Feedback, ulong? WabbajackSource = null, bool ReleasedProjectile = false,
         (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? MolagBalSource = null, DaggerfallItemStrikeSource? ItemStrikeSource = null, DaggerfallWeaponPoisonSource? WeaponPoison = null,
-        DaggerfallMonsterHit[]? MonsterHits = null) : PreparedAttack(CooldownSeconds, Outcome);
+        DaggerfallMonsterHit[]? MonsterHits = null, DaggerfallAttackDetail Detail = default) : PreparedAttack(CooldownSeconds, Outcome);
+
+    /// <summary>The struck body part and the d100 hit roll against its chance, kept for hit facts and miss reports.</summary>
+    internal readonly record struct DaggerfallAttackDetail(int Body, int Roll, int Chance);
 
     private static DaggerfallStrikeFeedback PreparedFeedback(PreparedAttack attack) => attack is DaggerfallPreparedAttack accepted
         ? accepted.Feedback : throw new InvalidOperationException("A Daggerfall strike requires its accepted source feedback; re-reading changed equipment would misidentify the strike.");

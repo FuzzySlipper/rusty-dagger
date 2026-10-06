@@ -471,7 +471,7 @@ internal static class DaggerfallDiseasePolicy
         int damage = checked(data.Health * amount);
         if (damage == 0) return;
         Track health = stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
-        ApplyHitEvent applied = combat.ApplyToHealth(new CombatParticipants(effect.Source, effect.Target, $"effect:{data.Key}"), damage, 0, health);
+        ApplyHitEvent applied = combat.ApplyToHealth(new CombatParticipants(effect.Source, effect.Target, $"effect:{data.Key}"), damage, health);
         damageApplied?.Invoke(new DaggerfallEffectDamage(applied.Result));
     }
 

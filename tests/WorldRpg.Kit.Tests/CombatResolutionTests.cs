@@ -29,13 +29,13 @@ public sealed class CombatResolutionTests
         contributions.Rules.Add(protection);
         var resolution = new CombatResolution();
         var participants = new CombatParticipants(actors.Get(2).Actor, target.Actor, "lethal");
-        var result = resolution.ApplyToHealth(participants, 10, 0, health, mode);
+        var result = resolution.ApplyToHealth(participants, 10, health, mode);
         Assert.Equal(1, health.Current); Assert.Equal(2.75, result.ActualHealthLost); Assert.False(result.Defeated);
         Assert.Equal(1, decisions);
         contributions.Rules.Remove(protection);
-        var unprotected = resolution.ApplyToHealth(participants, 10, 0, health, mode);
+        var unprotected = resolution.ApplyToHealth(participants, 10, health, mode);
         Assert.Equal(1, unprotected.ActualHealthLost); Assert.True(unprotected.Defeated);
-        var repeated = resolution.ApplyToHealth(participants, 10, 0, health, mode);
+        var repeated = resolution.ApplyToHealth(participants, 10, health, mode);
         Assert.Equal(0, repeated.ActualHealthLost); Assert.False(repeated.Defeated);
     }
 
@@ -50,10 +50,10 @@ public sealed class CombatResolutionTests
         contributions.Rules.Add(new ApplyingContribution(value => value.Damage = 1));
         var resolution = new CombatResolution();
         var participants = new CombatParticipants(actors.Get(2).Actor, target.Actor, "warded");
-        var reduced = resolution.ApplyToHealth(participants, 10, 0, health);
+        var reduced = resolution.ApplyToHealth(participants, 10, health);
         Assert.Equal(0, decisions); Assert.Equal(1, reduced.ActualHealthLost); Assert.Equal(2.75, health.Current);
         health.SetCurrent(.5);
-        var retained = resolution.ApplyToHealth(participants, 10, 0, health);
+        var retained = resolution.ApplyToHealth(participants, 10, health);
         Assert.Equal(1, decisions); Assert.Equal(.5, health.Current); Assert.Equal(0, retained.ActualHealthLost);
         Assert.False(retained.Defeated);
     }
@@ -67,29 +67,39 @@ public sealed class CombatResolutionTests
         var resolution = new CombatResolution(); var health = target.Stats.GetTrack(TrackId.Parse("health"));
         health.SetCurrent(3.75);
         var participants = new CombatParticipants(actors.Get(2).Actor, target.Actor, "terminal");
-        var result = resolution.ApplyToHealth(participants, 4, 0, health, HealthApplicationMode.Terminal);
+        var result = resolution.ApplyToHealth(participants, 4, health, HealthApplicationMode.Terminal);
         Assert.Equal(0, result.Damage); Assert.Equal(3.75, result.ActualHealthLost); Assert.True(result.Defeated);
         Assert.Equal(HealthApplicationMode.Terminal, result.Mode);
-        var repeated = resolution.ApplyToHealth(participants, 4, 0, health, HealthApplicationMode.Terminal);
+        var repeated = resolution.ApplyToHealth(participants, 4, health, HealthApplicationMode.Terminal);
         Assert.False(repeated.Defeated); Assert.Equal(0, repeated.ActualHealthLost);
     }
 
     [Fact]
-    public void Participant_chance_bonus_changes_hit_without_reapplying_stat_modifiers()
+    public void Participant_chance_contribution_decides_the_hit_without_a_kit_comparison()
     {
         using ActorsState actors = Actors();
         CombatContributions contributions = new();
-        contributions.Rules.Add(new ChanceContribution());
+        contributions.Rules.Add(new HighRollChanceContribution());
         actors.Get(3).Actor.Add(contributions);
         CombatResolution resolution = new();
-        TryHitEvent hit = resolution.TryHit(new(actors.Get(2).Actor, actors.Get(3).Actor, "melee"), value =>
+        CombatParticipants participants = new(actors.Get(2).Actor, actors.Get(3).Actor, "melee");
+
+        // A high-roll rule: the roll must reach the chance. Kit infers nothing from the pair.
+        TryHitEvent unset = resolution.TryHit(new(actors.Get(2).Actor, actors.Get(2).Actor, "melee"), value =>
         { value.Chance = 40; value.Roll = 50; });
-        Assert.True(hit.Hit);
+        Assert.False(unset.Hit);
+        TryHitEvent hit = resolution.TryHit(participants, value =>
+        { value.Chance = 40; value.Roll = 50; value.Hit = value.Roll >= value.Chance; });
+        Assert.False(hit.Hit);
         Assert.Equal(60, hit.Chance);
     }
-    private sealed class ChanceContribution : ICombatContribution
+    private sealed class HighRollChanceContribution : ICombatContribution
     {
-        public void Hit(TryHitEvent interaction) => interaction.Chance += 20;
+        public void Hit(TryHitEvent interaction)
+        {
+            interaction.Chance += 20;
+            interaction.Hit = interaction.Roll >= interaction.Chance;
+        }
     }
 
     [Fact]
@@ -113,10 +123,9 @@ public sealed class CombatResolutionTests
         });
         DamageEvent damage = resolution.Damage(participants, interaction =>
         {
-            interaction.Body = 7;
             interaction.Damage = 10;
         });
-        ApplyHitEvent applied = resolution.Apply(participants, damage.Damage, damage.Body, interaction =>
+        ApplyHitEvent applied = resolution.Apply(participants, damage.Damage, interaction =>
         {
             Track health = interaction.Participants.TargetStats.GetTrack(TrackId.Parse("health"));
             double before = health.Current;
@@ -129,7 +138,6 @@ public sealed class CombatResolutionTests
         Assert.Equal(12, damage.Damage);
         Assert.Equal(8d, applied.ActualHealthLost);
         Assert.Equal(92, target.Stats.GetTrack(TrackId.Parse("health")).ValueInt);
-        Assert.Equal(7, applied.Body);
     }
 
     [Fact]
@@ -143,8 +151,8 @@ public sealed class CombatResolutionTests
         CombatParticipants participants = new(attacker.Actor, target.Actor, "falling");
         CombatResolution resolution = new();
 
-        ApplyHitEvent lethal = resolution.ApplyToHealth(participants, 10, 0, health);
-        ApplyHitEvent repeated = resolution.ApplyToHealth(participants, 10, 0, health);
+        ApplyHitEvent lethal = resolution.ApplyToHealth(participants, 10, health);
+        ApplyHitEvent repeated = resolution.ApplyToHealth(participants, 10, health);
 
         Assert.Equal((10, 3.75d, true), (lethal.Result.CalculatedDamage, lethal.Result.ActualHealthLost, lethal.Result.Defeated));
         Assert.Same(attacker.Actor, lethal.Result.Source);
@@ -163,13 +171,13 @@ public sealed class CombatResolutionTests
         CombatResolution resolution = new();
 
         health.SetCurrent(10.75, clamp: true);
-        ApplyHitEvent ordinary = resolution.ApplyToHealth(participants, 1, 0, health);
+        ApplyHitEvent ordinary = resolution.ApplyToHealth(participants, 1, health);
         Assert.Equal(9.75d, health.Current);
         Assert.Equal(1d, ordinary.ActualHealthLost);
         Assert.False(ordinary.Defeated);
 
         health.SetCurrent(0.5d, clamp: true);
-        ApplyHitEvent bounded = resolution.ApplyToHealth(participants, 1, 0, health);
+        ApplyHitEvent bounded = resolution.ApplyToHealth(participants, 1, health);
         Assert.Equal(0d, health.Current);
         Assert.Equal(0.5d, bounded.ActualHealthLost);
         Assert.True(bounded.Defeated);
@@ -187,9 +195,9 @@ public sealed class CombatResolutionTests
         contributions.Rules.Add(new ApplyingContribution(interaction => interaction.Damage -= 1));
         var health = target.Stats.GetTrack(TrackId.Parse("health"));
         var resolution = new CombatResolution(); var participants = new CombatParticipants(actors.Get(2).Actor, target.Actor, "melee");
-        Assert.Equal(2, resolution.ApplyToHealth(participants, 5, 0, health).ActualHealthLost);
+        Assert.Equal(2, resolution.ApplyToHealth(participants, 5, health).ActualHealthLost);
         Assert.Single(contributions.Rules);
-        Assert.Equal(4, resolution.ApplyToHealth(participants, 5, 0, health).ActualHealthLost);
+        Assert.Equal(4, resolution.ApplyToHealth(participants, 5, health).ActualHealthLost);
     }
 
     [Fact]
@@ -202,7 +210,7 @@ public sealed class CombatResolutionTests
         target.Actor.Add(ward);
         Track health = target.Stats.GetTrack(TrackId.Parse("health"));
 
-        ApplyHitEvent applied = new CombatResolution().ApplyToHealth(new(target.Actor, target.Actor, "effect"), 5, 0, health);
+        ApplyHitEvent applied = new CombatResolution().ApplyToHealth(new(target.Actor, target.Actor, "effect"), 5, health);
 
         Assert.Equal(3d, applied.ActualHealthLost);
         Assert.Equal(97d, health.Current);

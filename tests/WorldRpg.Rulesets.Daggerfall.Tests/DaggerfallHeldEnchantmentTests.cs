@@ -1006,7 +1006,7 @@ public sealed class DaggerfallHeldEnchantmentTests
 
         /// <summary>Applies wearer damage exactly as the session does, through the combat health boundary.</summary>
         private void DamagePlayer(int amount) => _combat.ApplyToHealth(
-            new CombatParticipants(_actors.Player.Actor, _actors.Player.Actor, "held enchantment"), amount, 0,
+            new CombatParticipants(_actors.Player.Actor, _actors.Player.Actor, "held enchantment"), amount,
             _actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)));
 
         /// <summary>Advances the magic rounds the session advances, on the same beat.</summary>
