@@ -83,6 +83,16 @@ internal sealed class DaggerfallSocialState
         return Clamp(checked(permanent + contribution));
     }
 
+    /// <summary>
+    /// The regional legal standings the player has, in region order: every region with a recorded or
+    /// live legal value plus the regions the caller names (such as the current one), each with its
+    /// current value. A region outside the admitted catalog is not one the sheet can name and is skipped.
+    /// </summary>
+    internal IReadOnlyList<(int Region, int Reputation)> ReadRegionalReputations(IEnumerable<int> include) =>
+        [.. _regionalReputations.Keys.Concat(_regionalReputationModifiers.Keys).Concat(include)
+            .Where(region => region is >= 0 and <= 61 && _catalog.Regions.ContainsKey(region))
+            .Distinct().Order().Select(region => (region, RegionalReputation(region)))];
+
     /// <summary>The player record's standing with one donor social group, independent of any NPC instance.</summary>
     internal int PersonalReputation(int socialGroup)
     {

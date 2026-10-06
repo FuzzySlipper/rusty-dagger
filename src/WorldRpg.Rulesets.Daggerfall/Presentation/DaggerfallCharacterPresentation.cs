@@ -19,7 +19,11 @@ internal sealed record CharacterAffiliationPresentation(string Faction, string G
     CharacterGuildRequirementPresentation? CurrentRequirement = null,
     CharacterGuildRequirementPresentation? NextRequirement = null,
     int? DaysUntilReview = null,
-    string[]? Privileges = null);
+    string[]? Privileges = null,
+    string? RankTitle = null);
+/// <summary>The player's legal standing in one region, worded as the donor's %ltn macro words it.</summary>
+internal sealed record CharacterLegalStandingPresentation(int Region, string RegionName, int Reputation, string Standing, bool Banished,
+    bool Current, string Label);
 internal sealed record CharacterHistoryPresentation(string[] Biography);
 internal sealed record CharacterSheetPresentation(
     string Name,
@@ -34,7 +38,8 @@ internal sealed record CharacterSheetPresentation(
     CharacterIdentityPresentation? Identity = null,
     DaggerfallCareerSkillGrant[]? GrantedSkills = null,
     DaggerfallCharacterCreationPresentation? Creation = null,
-    DaggerfallLevelUpPresentation? LevelUp = null);
+    DaggerfallLevelUpPresentation? LevelUp = null,
+    CharacterLegalStandingPresentation[]? LegalStandings = null);
 
 /// <summary>One presentation layer a character is drawn from, by the identity a consumer resolves.</summary>
 /// <param name="Layer">The layer's role, as the publication names it.</param>
@@ -145,6 +150,8 @@ internal sealed class DaggerfallCharacterPresentation
     private readonly DaggerfallSkillUseReactions? _skills;
     private DaggerfallGuildMembershipPolicy? _guildMembership;
     private Func<int>? _currentDay;
+    private Func<int?>? _currentRegion;
+    private Func<int, bool>? _banished;
     private DaggerfallInventoryPresentation? _items;
     private static readonly DaggerfallStatId[] ResistanceStats =
     [
@@ -209,6 +216,49 @@ internal sealed class DaggerfallCharacterPresentation
         _currentDay = currentDay ?? throw new ArgumentNullException(nameof(currentDay));
     }
 
+    /// <summary>Connects regional legal standing to the region the player is in and the crime owner's banishments.</summary>
+    internal void UseLegalStanding(Func<int?> currentRegion, Func<int, bool> banished)
+    {
+        if (_currentRegion is not null) throw new InvalidOperationException("Legal standing projection is already configured.");
+        _currentRegion = currentRegion ?? throw new ArgumentNullException(nameof(currentRegion));
+        _banished = banished ?? throw new ArgumentNullException(nameof(banished));
+    }
+
+    /// <summary>
+    /// The donor's word for a legal reputation (<c>MacroHelper.LegalReputation</c>): "revered" above 80
+    /// down to "hated" below -80, with zero "a common citizen".
+    /// </summary>
+    internal static string LegalStanding(int reputation) => reputation switch
+    {
+        > 80 => "revered",
+        > 60 => "esteemed",
+        > 40 => "honored",
+        > 20 => "admired",
+        > 10 => "respected",
+        > 0 => "dependable",
+        0 => "a common citizen",
+        < -80 => "hated",
+        < -60 => "pond scum",
+        < -40 => "a villain",
+        < -20 => "a criminal",
+        < -10 => "a scoundrel",
+        _ => "undependable",
+    };
+
+    private CharacterLegalStandingPresentation[] LegalStandings()
+    {
+        if (_social is null || _currentRegion is null || _banished is null) return [];
+        int? current = _currentRegion();
+        return [.. _social.ReadRegionalReputations(current is int region ? [region] : []).Select(value =>
+        {
+            string name = _definitions.BuildingNames.RegionName(value.Region);
+            string standing = LegalStanding(value.Reputation);
+            bool banished = _banished(value.Region);
+            return new CharacterLegalStandingPresentation(value.Region, name, value.Reputation, standing, banished, value.Region == current,
+                banished ? $"{name}: {standing}, banished" : $"{name}: {standing}");
+        })];
+    }
+
     internal CharacterSheetPresentation Read(PlayerActorState player, ProgressionState progression)
     {
         ArgumentNullException.ThrowIfNull(player);
@@ -226,7 +276,8 @@ internal sealed class DaggerfallCharacterPresentation
             _character is null ? CharacterIdentityPresentation.From(_definitions, _playerDefinition) : CharacterIdentityPresentation.From(_definitions, _character.Identity, _character.RacialOverrides?.Current),
             _character is null ? [] : [.. _character.GrantedSkills],
             _character?.ReadCreation(),
-            _levelUps?.Read());
+            _levelUps?.Read(),
+            LegalStandings());
     }
 
     /// <summary>Uses the composed inventory projection for equipment naming, identification, and condition.</summary>
@@ -255,14 +306,16 @@ internal sealed class DaggerfallCharacterPresentation
     private CharacterAffiliationPresentation[] Affiliations() => _social?.ReadAffiliations()
         .Select(value =>
         {
+            string? title = DaggerfallGuildRankTitles.Title(value.FactionId, value.Rank,
+                _character?.Identity.Gender == DaggerfallCharacterGender.Female);
             if (_guildMembership is null || _currentDay is null || !_guildMembership.IsConfigured(value.FactionId))
-                return new CharacterAffiliationPresentation(value.Faction, value.GuildGroup, value.Rank, value.Reputation, value.Recognition);
+                return new CharacterAffiliationPresentation(value.Faction, value.GuildGroup, value.Rank, value.Reputation, value.Recognition, RankTitle: title);
             DaggerfallGuildMembershipView guild = _guildMembership.Read(value.FactionId, _currentDay());
             static CharacterGuildRequirementPresentation? Requirement(DaggerfallGuildRankRequirement? rank) => rank is null
                 ? null : new(rank.Rank, rank.MinimumReputation, rank.HighSkillMinimum, rank.LowSkillMinimum);
             return new CharacterAffiliationPresentation(value.Faction, value.GuildGroup, value.Rank, value.Reputation, value.Recognition,
                 Requirement(guild.CurrentRankRequirement), Requirement(guild.NextRankRequirement), guild.DaysUntilReview,
-                [.. guild.Privileges]);
+                [.. guild.Privileges], title);
         })
         .ToArray() ?? [];
 

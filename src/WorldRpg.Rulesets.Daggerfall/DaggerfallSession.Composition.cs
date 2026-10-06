@@ -617,6 +617,7 @@ internal sealed partial class DaggerfallSession
             InitializeActivation(engine, tuning.LootInteraction);
             _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator, State.LevelUps, State.Social, State.SkillUses);
             _characterUi.UseGuildMembership(State.GuildMembership, () => checked((int)_time.Calendar.DayNumber));
+            _characterUi.UseLegalStanding(() => _site.Region, region => State.Crime.BanishedRegions.Contains(region));
             _characterUi.UseItemPresentation(_inventoryUi);
             // The DOM's art comes from admitted content by media identity, so a session reads the
             // published closure once and publishes it to the UI that draws it.

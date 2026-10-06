@@ -984,6 +984,17 @@
       }
     ],
     "affiliations": [],
+    "legalStandings": [
+      {
+        "region": 17,
+        "regionName": "Daggerfall",
+        "reputation": 0,
+        "standing": "a common citizen",
+        "banished": false,
+        "current": true,
+        "label": "Daggerfall: a common citizen"
+      }
+    ],
     "history": null,
     "grantedSkills": [
       {
