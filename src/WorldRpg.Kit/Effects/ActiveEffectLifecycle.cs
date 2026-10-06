@@ -35,8 +35,9 @@ public sealed record ActiveEffectSource
 }
 
 /// <summary>
-/// Product identities and authored settings carried by a live effect. The Engine component owns
-/// stacking and modifier-source provenance; this value is what save reconstruction can name again.
+/// Product identities carried by a live effect. The Engine component owns stacking and
+/// modifier-source provenance; this value is what save reconstruction can name again. Authored
+/// settings and any ruleset classification of the effect belong to the ruleset's own effect state.
 /// </summary>
 public sealed record ActiveEffectContext
 {
@@ -45,19 +46,14 @@ public sealed record ActiveEffectContext
         ActiveEffectSource source,
         DurableIdentityReference? caster,
         DurableIdentityReference target,
-        string settings,
-        string? element,
         DurableIdentityReference? item)
     {
         ArgumentNullException.ThrowIfNull(instance);
         ArgumentNullException.ThrowIfNull(source);
-        ArgumentException.ThrowIfNullOrWhiteSpace(settings);
         Instance = instance;
         Source = source;
         Caster = caster;
         Target = target;
-        Settings = settings;
-        Element = element;
         Item = item;
     }
 
@@ -65,8 +61,6 @@ public sealed record ActiveEffectContext
     public ActiveEffectSource Source { get; }
     public DurableIdentityReference? Caster { get; }
     public DurableIdentityReference Target { get; }
-    public string Settings { get; }
-    public string? Element { get; }
     public DurableIdentityReference? Item { get; }
 }
 
@@ -115,7 +109,8 @@ public sealed record ActiveEffectLifecycleReceipt(
 
 /// <summary>
 /// Coordinates product-stable active-effect state with the attached Engine <see cref="EffectsComponent"/>.
-/// Rulesets choose definitions, like-kind behavior, round payloads, and effect-specific save state;
+/// Rulesets choose definitions, like-kind behavior, what one round means and its payload, and
+/// effect-specific save state;
 /// this owner guarantees one cleanup path for every Engine removal.
 /// </summary>
 public sealed class ActiveEffectLifecycle : IDisposable
@@ -180,7 +175,7 @@ public sealed class ActiveEffectLifecycle : IDisposable
         return state;
     }
 
-    /// <summary>Lets compiled effect policy finish its current magic-round payload through normal Engine expiry.</summary>
+    /// <summary>Lets compiled effect policy finish its current round payload through normal Engine expiry.</summary>
     public void ExpireAfterCurrentRound(EffectInstanceId instance)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -190,8 +185,8 @@ public sealed class ActiveEffectLifecycle : IDisposable
         state.RemainingRounds = 1;
     }
 
-    /// <summary>Runs one ordinary magic round and expires finite effects after their payload.</summary>
-    public IReadOnlyList<ActiveEffectLifecycleReceipt> AdvanceMagicRound(Action<ActiveEffectState> apply)
+    /// <summary>Runs one ordinary round and expires finite effects after their payload.</summary>
+    public IReadOnlyList<ActiveEffectLifecycleReceipt> AdvanceRound(Action<ActiveEffectState> apply)
     {
         ArgumentNullException.ThrowIfNull(apply);
         List<ActiveEffectLifecycleReceipt> results = [];
@@ -217,8 +212,11 @@ public sealed class ActiveEffectLifecycle : IDisposable
         return results;
     }
 
-    /// <summary>Applies the donor-style initial round to one newly admitted effect only.</summary>
-    public ActiveEffectLifecycleReceipt? AdvanceInitialMagicRound(EffectInstanceId instance, Action<ActiveEffectState> apply)
+    /// <summary>
+    /// Runs one round for a single newly admitted effect only, for a ruleset whose effects apply
+    /// their payload once on admission before the next ordinary round.
+    /// </summary>
+    public ActiveEffectLifecycleReceipt? AdvanceInitialRound(EffectInstanceId instance, Action<ActiveEffectState> apply)
     {
         ArgumentNullException.ThrowIfNull(instance);
         ArgumentNullException.ThrowIfNull(apply);
@@ -240,12 +238,12 @@ public sealed class ActiveEffectLifecycle : IDisposable
     }
 
     /// <summary>Runs a caller-chosen number of elapsed rounds without creating another clock.</summary>
-    public IReadOnlyList<ActiveEffectLifecycleReceipt> AdvanceMagicRounds(uint rounds, Action<ActiveEffectState> apply)
+    public IReadOnlyList<ActiveEffectLifecycleReceipt> AdvanceRounds(uint rounds, Action<ActiveEffectState> apply)
     {
         ArgumentNullException.ThrowIfNull(apply);
         List<ActiveEffectLifecycleReceipt> results = [];
         for (uint round = 0; round < rounds; round++)
-            results.AddRange(AdvanceMagicRound(apply));
+            results.AddRange(AdvanceRound(apply));
         return results;
     }
 

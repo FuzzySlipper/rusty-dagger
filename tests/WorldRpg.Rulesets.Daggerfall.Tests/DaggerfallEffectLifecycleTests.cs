@@ -104,7 +104,7 @@ public sealed class DaggerfallEffectLifecycleTests
         DaggerfallEffectDefinition definition = Definition("refresh", "refresh", DaggerfallEffectStacking.RefreshDuration, 0,
             effect =>
             {
-                double amount = effect.Context.Settings == "strong" ? 10 : 1;
+                double amount = effect.Settings == "strong" ? 10 : 1;
                 Stat stat = effect.Target.Get<StatsComponent>().GetStat(StatId.Parse("health-maximum"));
                 StatModifierHandle handle = stat.AddModifier(amount);
                 return [new DelegateActiveEffectContribution(() => stat.RemoveModifier(handle))];
@@ -119,8 +119,8 @@ public sealed class DaggerfallEffectLifecycleTests
         DaggerfallActiveEffect active = Assert.Single(effects.Active);
         Assert.Equal("first", active.Lifecycle.Context.Instance.Value);
         Assert.Equal("scroll-a", active.Context.Source.Key);
-        Assert.Equal("weak", active.Context.Settings);
-        Assert.Equal("magic", active.Context.Element);
+        Assert.Equal("weak", active.Settings);
+        Assert.Equal("magic", active.Element);
         Assert.Equal((uint)9, active.Lifecycle.RemainingRounds);
         Assert.Equal((ushort)1, active.Lifecycle.Stacks);
         Assert.Equal(101d, target.Stats.GetStat(StatId.Parse("health-maximum")).Value);
