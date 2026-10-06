@@ -85,11 +85,11 @@ internal static class TestSessions
     internal static DaggerfallSiteProfile ReadInputs(string root)
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        return DaggerfallSiteContent.Read(ImportContent(root), File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        return DaggerfallSiteContent.Read(ImportContent(root), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
     }
 
     internal static DaggerfallSiteProfile ReadProfile(string root, ProductContent content, DaggerfallDefinitions definitions, string payload) =>
-        DaggerfallSiteContent.Read(content, File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads", payload)), definitions);
+        DaggerfallSiteContent.Read(content, TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads", payload)), definitions);
 
     internal static void RegisterCorpseStack(DaggerfallSession session, DaggerfallDefinitions definitions, long actorId, string stackId)
     {
@@ -152,7 +152,7 @@ internal static class TestSessions
         bundles = new();
         List<ProductContentFile> eager = [];
 
-        foreach (string file in Directory.GetFiles(Path.Combine(contentRoot, "worldrpg"), "*", SearchOption.AllDirectories))
+        foreach (string file in TestContentFiles.AllFiles(Path.Combine(contentRoot, "worldrpg")))
         {
             string relative = Path.GetRelativePath(contentRoot, file).Replace(Path.DirectorySeparatorChar, '/');
             if (selectedPublicationRoots is { Count: > 0 }
@@ -164,11 +164,11 @@ internal static class TestSessions
             (string Root, string Bundle) bundle = declared.FirstOrDefault(value => relative.StartsWith(value.Root + "/", StringComparison.Ordinal));
             if (string.IsNullOrEmpty(bundle.Root))
             {
-                eager.Add(new ProductContentFile(Encoding.UTF8.GetBytes(relative), File.ReadAllBytes(file)));
+                eager.Add(new ProductContentFile(Encoding.UTF8.GetBytes(relative), TestContentFiles.Read(file)));
                 continue;
             }
 
-            bundles.Add(bundle.Bundle, relative[(bundle.Root.Length + 1)..], File.ReadAllBytes(file));
+            bundles.Add(bundle.Bundle, relative[(bundle.Root.Length + 1)..], TestContentFiles.Read(file));
         }
 
         return new ProductContent(eager.ToArray(), bundles);
@@ -188,7 +188,7 @@ internal static class TestSessions
     {
         foreach (string payload in Directory.GetFiles(Path.Combine(root, "content/worldrpg/payloads"), "*.json").Order(StringComparer.Ordinal))
         {
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(payload));
+            using JsonDocument document = JsonDocument.Parse(TestContentFiles.Read(payload));
             if (!document.RootElement.TryGetProperty("world", out JsonElement world) || !world.TryGetProperty("audioBundle", out JsonElement bundle)) continue;
             yield return ($"{world.GetProperty("publicationRoot").GetString()}/media/audio/clips", bundle.GetString()!);
         }
@@ -198,8 +198,8 @@ internal static class TestSessions
     {
         string contentRoot = Path.Combine(root, "content");
         string selected = Path.Combine(contentRoot, relativeDirectory);
-        return new ProductContent(Directory.GetFiles(selected, "*", SearchOption.AllDirectories)
-            .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), File.ReadAllBytes(path)))
+        return new ProductContent(TestContentFiles.AllFiles(selected)
+            .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), TestContentFiles.Read(path)))
             .ToArray());
     }
 
