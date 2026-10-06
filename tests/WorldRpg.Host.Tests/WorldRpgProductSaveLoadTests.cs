@@ -64,6 +64,39 @@ public sealed class WorldRpgProductSaveLoadTests
     }
 
     [Fact]
+    public void Quick_save_overwrites_one_quick_slot_and_quick_load_reads_it()
+    {
+        InMemoryPersistenceService persistence = new();
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+        LoadTestSession session = ruleset.RequireCurrent();
+
+        session.ArmSlotRequest(new(SaveSlotOperation.QuickLoad));
+        product.Update(Update(1));
+        Assert.Equal("There is no quick save to load.", session.Outcome);
+        Assert.Same(session, ruleset.RequireCurrent());
+
+        session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Named slot"));
+        product.Update(Update(2));
+        session.SaveValue = 11;
+        session.ArmSlotRequest(new(SaveSlotOperation.QuickSave));
+        product.Update(Update(3));
+        session.SaveValue = 22;
+        session.ArmSlotRequest(new(SaveSlotOperation.QuickSave));
+        product.Update(Update(4));
+        Assert.Equal("Quick saved.", session.Outcome);
+        SaveSlotSummary quick = Assert.Single(session.SaveSlots, value => value.Label == "Quick save");
+        Assert.Equal(2, session.SaveSlots.Count);
+
+        session.ArmSlotRequest(new(SaveSlotOperation.QuickLoad));
+        product.Update(Update(5));
+        LoadTestSession restored = Assert.IsType<LoadTestSession>(ruleset.Replacement);
+        Assert.Equal((byte)22, restored.SaveValue);
+        Assert.Equal("quick", quick.Key);
+    }
+
+    [Fact]
     public void Named_slot_load_and_catalog_failures_keep_the_live_session_and_publish_diagnostics()
     {
         InMemoryPersistenceService persistence = new();

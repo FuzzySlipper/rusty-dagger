@@ -367,7 +367,7 @@ public sealed class WorldRpgProductModeTests
         // An action the entry screen does not answer leaves the mode where it is.
         using WorldRpgProduct second = Product();
         second.Start();
-        second.Update(Semantic("""{"action":"inventory"}"""));
+        second.Update(Semantic("""{"action":"loot"}"""));
         Assert.Equal(ProductMode.Title, second.Mode);
 
 

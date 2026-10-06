@@ -562,7 +562,7 @@ function createBankControls(): {
         ? `No outstanding loan. Maximum new loan ${value.maximumNewLoan} gold.`
         : value.loan.defaulted
           ? `Defaulted loan: ${value.loan.remaining} gold remains.`
-          : `Loan: ${value.loan.remaining} gold remains; ${value.loan.daysRemaining} days until due.`;
+          : `Loan of ${value.loan.principal} gold: ${value.loan.remaining} gold remains; ${value.loan.daysRemaining} days until due.`;
       balances.replaceChildren(...value.accounts.map((account) => {
         const row = document.createElement('li');
         row.textContent = `${account.regionName}: ${account.gold} gold`;

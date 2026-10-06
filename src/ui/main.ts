@@ -374,6 +374,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         <label>Activation mode <select class="dagger-activation-mode"><option value="grab">Grab</option><option value="info">Information</option><option value="talk">Talk</option><option value="steal">Steal / Lockpick</option><option value="bash">Bash</option></select></label>
         <button data-action="save-game">Save game</button>
         <button data-action="load-game">Load game</button>
+        <button data-action="quick-save">Quick save</button>
+        <button data-action="quick-load">Quick load</button>
         <button data-action="debug">Engine debug console</button>
         <button data-action="diagnostics">Composition diagnostics</button>
         <button data-action="settings">Control settings</button>
@@ -936,6 +938,10 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     else if (action === 'menu') dismiss();
     else if (action === 'loot') claim('loot');
     else if (action === 'save-game') showSaveSlots('save');
+    // Quick save and quick load are the product's own actions over the Host's quick-save slot; a
+    // successful quick load replaces the session, so the menu that asked closes the way a slot load does.
+    else if (action === 'quick-save') claim('save-game');
+    else if (action === 'quick-load') { claim('load-game'); loadRequested = true; }
     else if (action === 'load-game') showSaveSlots('load');
     else if (action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
   };

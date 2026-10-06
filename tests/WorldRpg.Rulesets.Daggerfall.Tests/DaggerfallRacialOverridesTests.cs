@@ -83,18 +83,18 @@ public sealed class DaggerfallRacialOverridesTests
     }
 
     [Theory]
-    [InlineData("inventory")]
-    [InlineData("bank-open")]
-    public void Beast_form_refuses_inventory_actions_and_human_form_restores_admission(string action)
+    [InlineData("{\"action\":\"inventory-use\",\"revision\":\"current\",\"item\":\"unique:1\"}")]
+    [InlineData("{\"action\":\"bank-open\",\"revision\":\"current\"}")]
+    public void Beast_form_refuses_inventory_actions_and_human_form_restores_admission(string payload)
     {
         using var session = FreshSession();
         session.State.RacialOverrides.Select(DaggerfallRacialKind.Werewolf, "curse", 0);
         session.State.RacialOverrides.SetBeastForm(true, 0);
-        session.Update(new ProductUpdate(OuterUpdate(1), [Ui(System.Text.Json.JsonSerializer.Serialize(action == "bank-open" ? new { action, revision = "current" } : (object)new { action }))]));
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui(payload)]));
         Assert.Equal("You cannot use your inventory in beast form.", session.Presentation.LastOutcome);
         session.State.RacialOverrides.SetBeastForm(false, 0);
         session.Presentation.SetOutcome("Human form");
-        session.Update(new ProductUpdate(OuterUpdate(2), [Ui(System.Text.Json.JsonSerializer.Serialize(action == "bank-open" ? new { action, revision = "current" } : (object)new { action }))]));
+        session.Update(new ProductUpdate(OuterUpdate(2), [Ui(payload)]));
         Assert.NotEqual("You cannot use your inventory in beast form.", session.Presentation.LastOutcome);
     }
 

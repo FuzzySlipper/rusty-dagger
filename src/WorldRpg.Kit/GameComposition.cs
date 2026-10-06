@@ -422,9 +422,9 @@ public enum SaveSlotOperation
     Save,
     Load,
     Delete,
-    /// <summary>Saves into a new slot under the Host's own quick-save label.</summary>
+    /// <summary>Saves into the Host's one quick-save slot, replacing what it held.</summary>
     QuickSave,
-    /// <summary>Loads the slot the Host's quick-load convention names.</summary>
+    /// <summary>Loads the Host's quick-save slot.</summary>
     QuickLoad,
 }
 

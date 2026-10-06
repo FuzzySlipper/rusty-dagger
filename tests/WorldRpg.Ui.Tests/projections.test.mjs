@@ -255,6 +255,22 @@ test('inventory renders the ruleset-owned completed equip cue without claiming a
   } finally { f.dispose(); }
 });
 
+test('quick save and quick load send the product actions over the Host quick-save slot', () => {
+  const f = fixture();
+  try {
+    f.publish({});
+    f.root.querySelector('.dagger-menu-toggle').click();
+    f.root.querySelector('[data-action="quick-save"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'save-game' });
+    f.root.querySelector('[data-action="quick-load"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'load-game' });
+    const menu = f.root.querySelector('.dagger-menu');
+    assert.equal(menu.open, true);
+    f.publish({ mode: 'playing' });
+    assert.equal(menu.open, false);
+  } finally { f.dispose(); }
+});
+
 test('inventory use and equip controls follow the ruleset eligibility of the selected item', () => {
   const f = fixture();
   try {
@@ -887,7 +903,7 @@ test('travel accepts only the current quote and shows actual paid arrival or int
     assert.equal(actions.length, 1);
     const message = 'Arrived at Charing. Paid 5 gold; 2 hours passed.';
     view.update({ ...value, quote: null, executionAvailable: false,
-      lastResult: { paidGold: 5, elapsedSeconds: 7200, actualRegion: 17, actualIndex: 3, message }, message });
+      lastResult: { paidGold: 5, elapsedSeconds: 7200, message }, message });
     assert.equal(root.querySelector('.dagger-travel-last-result').textContent, message);
     assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
     const interrupted = 'Your journey was interrupted by an encounter. Paid 5 gold; 1 minute passed.';
