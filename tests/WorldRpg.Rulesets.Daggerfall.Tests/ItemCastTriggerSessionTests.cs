@@ -215,6 +215,11 @@ public sealed class ItemCastTriggerSessionTests
         var ready = Assert.IsType<DaggerfallReadySpell>(s.Casting.ReadyFor(1));
         Assert.Equal(f.Source, ready.ItemId);
         using (var restored = f.Restore()) Assert.Equal(ready, restored.Casting.ReadyFor(1));
+        // The source may be broken or elsewhere, but it must still be a saved item.
+        var saved = DaggerfallSavePayload.Read(s.CaptureSave());
+        var dangling = saved with { ReadySpell = saved.ReadySpell! with { ItemId = 987_654_321UL } };
+        var error = Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(f.Engine.Context, f.Composition, DaggerfallSavePayload.Encode(dangling)));
+        Assert.Contains("missing item", error.Message);
         Assert.Equal(DaggerfallCastOutcome.Released, s.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
         long sequence = s.Casting.NextSequence; f.Use(); Assert.Equal(sequence, s.Casting.NextSequence);
         Assert.Contains("broken", f.Message);
