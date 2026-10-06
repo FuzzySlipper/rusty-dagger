@@ -127,7 +127,7 @@ public sealed class DaggerfallAlterationEffectsTests
     }
 
     [Fact]
-    public void Broken_shield_item_source_removes_its_rule_and_malformed_saved_pool_is_refused()
+    public void Destroyed_shield_item_source_removes_its_rule_and_malformed_saved_pool_is_refused()
     {
         using Fixture f = new(); var s = f.Session;
         var item = s.State.Inventory.Read().UniqueItems.First();
@@ -138,7 +138,10 @@ public sealed class DaggerfallAlterationEffectsTests
         Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(malformed)));
         malformed = saved with { ActiveEffects = [effect with { State = DaggerfallAlterationEffects.ShieldState(new(1, 0)) }] };
         Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(malformed)));
+        // A used item's shield outlives the item breaking, as in the donor; destroying the item ends it.
         s.State.ItemInstances.ReplaceUnique(source, s.State.ItemInstances.RequireUnique(source) with { CurrentCondition = 0 });
+        Assert.Single(s.State.Effects.Active);
+        s.State.ItemInstances.RemoveUnique(source);
         Assert.Empty(s.State.Effects.Active); Assert.Empty(s.State.Actors.Player.Actor.Get<CombatContributions>().Rules);
     }
 
