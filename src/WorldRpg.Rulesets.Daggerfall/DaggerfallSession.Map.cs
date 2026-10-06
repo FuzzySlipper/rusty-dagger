@@ -33,6 +33,46 @@ internal sealed partial class DaggerfallSession
         catch (InvalidOperationException) { Presentation.SetOutcome("That building cannot be selected on this map."); }
     }
 
+    /// <summary>
+    /// Adds a note at the player's position on the current dungeon's map, or edits or removes one.
+    /// Notes belong to the dungeon's discovery owner, which saves them with what the player has explored.
+    /// </summary>
+    private void ChangeMapNote(DaggerfallPlayerUiAction action)
+    {
+        if (_sites.Projection.Inputs.ProfileKind != DaggerfallWorldProfileKind.Dungeon
+            || !State.DungeonDiscoveries.TryGetValue(_activeProfileKey, out DaggerfallDungeonDiscovery? discovery))
+        {
+            Presentation.SetOutcome("Notes can only be added to a dungeon map.");
+            return;
+        }
+        switch (action.Kind)
+        {
+            case DaggerfallUiActionKind.MapNoteAdd:
+                if (State.PlayerControl.Position is not WorldPoint position) { Presentation.SetOutcome("You cannot place a note without a position."); return; }
+                discovery.AddNoteMarker(NextMapNoteId(discovery), position, action.Text!.Trim());
+                Presentation.SetOutcome("Note added to the map.");
+                return;
+            case DaggerfallUiActionKind.MapNoteEdit:
+                if (discovery.NoteMarkers.All(note => note.Id != action.Note)) { Presentation.SetOutcome("That map note no longer exists."); return; }
+                discovery.EditNoteMarker(action.Note!, action.Text!.Trim());
+                Presentation.SetOutcome("Map note changed.");
+                return;
+            default:
+                Presentation.SetOutcome(discovery.RemoveNoteMarker(action.Note!) ? "Map note removed." : "That map note no longer exists.");
+                return;
+        }
+    }
+
+    /// <summary>The next unused note identity on a dungeon's map.</summary>
+    private static string NextMapNoteId(DaggerfallDungeonDiscovery discovery)
+    {
+        int next = 1;
+        foreach (DaggerfallDungeonNoteMarker note in discovery.NoteMarkers)
+            if (note.Id.StartsWith("note-", StringComparison.Ordinal) && int.TryParse(note.Id.AsSpan(5), out int used) && used >= next)
+                next = checked(used + 1);
+        return $"note-{next.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+    }
+
     private (string Name, string Hint)? MapDirections()
     {
         if (Site.SelectedBuilding is not { } selected) return null;

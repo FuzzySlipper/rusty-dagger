@@ -138,6 +138,11 @@ public sealed class DaggerfallUiActionTests
 
     [Theory]
     [InlineData("{\"action\":\"cinematic-skip\"}", true)]
+    [InlineData("{\"action\":\"map-note-add\",\"text\":\"Lever room\"}", true)]
+    [InlineData("{\"action\":\"map-note-add\",\"text\":\" \"}", false)]
+    [InlineData("{\"action\":\"map-note-edit\",\"note\":\"note-1\",\"text\":\"Pulled\"}", true)]
+    [InlineData("{\"action\":\"map-note-remove\",\"note\":\"note-1\"}", true)]
+    [InlineData("{\"action\":\"map-note-remove\",\"note\":\"note-1\",\"text\":\"x\"}", false)]
     [InlineData("{\"action\":\"cinematic-skip\",\"item\":\"unexpected\"}", false)]
     public void Cinematic_skip_is_a_small_semantic_action(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);

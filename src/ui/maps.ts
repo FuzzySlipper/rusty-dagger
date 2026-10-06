@@ -4,9 +4,14 @@ export interface MapProjection {
   readonly region: number | null; readonly location: number | null;
   readonly player: { readonly x: number; readonly y: number; readonly z: number; readonly yaw: number };
   readonly areas: readonly { readonly id: string; readonly minX: number; readonly minZ: number; readonly maxX: number; readonly maxZ: number; readonly minY: number; readonly maxY: number; readonly kind: number; readonly category: string }[];
-  readonly labels: readonly { readonly id: string; readonly name: string; readonly x: number; readonly y: number; readonly z: number; readonly selected: boolean }[];
+  readonly labels: readonly { readonly id: string; readonly name: string; readonly x: number; readonly y: number; readonly z: number; readonly selected: boolean; readonly note?: boolean }[];
+  /** Whether this map keeps player notes; a note is placed at the player's position. */
+  readonly canAddNote?: boolean;
 }
-export interface MapAction { readonly action: 'map-building'; readonly region: number; readonly destination: number; readonly item: string; }
+export type MapAction =
+  | { readonly action: 'map-building'; readonly region: number; readonly destination: number; readonly item: string }
+  | { readonly action: 'map-note-add'; readonly text: string }
+  | { readonly action: 'map-note-remove'; readonly note: string };
 export function isMapProjection(value: unknown): value is MapProjection {
   if (!value || typeof value !== 'object') return false;
   const map = value as Partial<MapProjection>;
@@ -38,6 +43,17 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
   const viewport = svgElement('g', {}); svg.append(viewport);
   const buildings = document.createElement('div'); buildings.className = 'dagger-map-buildings';
   const target = document.createElement('p'); target.className = 'dagger-map-target';
+  const noteForm = document.createElement('form'); noteForm.className = 'dagger-map-note';
+  const noteText = document.createElement('input'); noteText.maxLength = 256; noteText.autocomplete = 'off'; noteText.setAttribute('aria-label', 'Map note text');
+  const noteAdd = document.createElement('button'); noteAdd.type = 'submit'; noteAdd.textContent = 'Add note here';
+  noteForm.append(noteText, noteAdd);
+  noteForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const text = noteText.value.trim();
+    if (!text) { noteText.focus(); return; }
+    send({ action: 'map-note-add', text });
+    noteText.value = '';
+  });
   let drawn = '';
   let current: MapProjection | null = null, identity = '', centerX = 0, centerZ = 0, zoom = 1, rotation = 0, playerUp = false;
   function draw(): void {
@@ -67,7 +83,14 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
         point.addEventListener('click', select); point.addEventListener('keydown', event => { if (event instanceof KeyboardEvent && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); select(); } });
         buildings.append(button);
       } else {
-        const text = document.createElement('p'); text.textContent = label.name; buildings.append(text);
+        const text = document.createElement('p'); text.textContent = label.name;
+        if (label.note) {
+          text.dataset.note = label.id;
+          const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remove note';
+          remove.addEventListener('click', () => send({ action: 'map-note-remove', note: label.id }));
+          text.append(' ', remove);
+        }
+        buildings.append(text);
       }
     }
     const player = svgElement('path', { d: 'M 0 -6 L 4 5 L 0 2 L -4 5 Z', fill: '#73ff98', transform: `translate(${value.player.x} ${value.player.z}) rotate(${value.player.yaw * 180 / Math.PI}) scale(${1 / zoom})`, 'data-player': 'true' });
@@ -90,7 +113,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
   button('Level down', () => { all.checked = false; level.value = String(Number(level.value) - .5); });
   button('Travel destinations', travel);
   level.addEventListener('change', () => { all.checked = false; draw(); }); all.addEventListener('change', draw);
-  controls.append(levelLabel, allLabel); shell.append(heading, controls, status, svg, target, buildings); root.append(shell);
+  controls.append(levelLabel, allLabel); shell.append(heading, controls, status, svg, target, noteForm, buildings); root.append(shell);
   return {
     update(value): void {
       current = value; controls.hidden = buildings.hidden = value === null; svg.style.display = value === null ? 'none' : ''; heading.textContent = value ? `${value.name} map` : 'Map';
@@ -99,6 +122,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
         const extent = Math.max(40, ...value.areas.flatMap(area => [Math.abs(area.minX - centerX), Math.abs(area.maxX - centerX), Math.abs(area.minZ - centerZ), Math.abs(area.maxZ - centerZ)]));
         zoom = Math.max(.01, 140 / extent);
       }
+      noteForm.hidden = value?.canAddNote !== true;
       levelLabel.hidden = value?.kind !== 'dungeon'; allLabel.hidden = value?.kind !== 'dungeon';
       const signature = value ? JSON.stringify([value.id, value.kind, value.areas, value.labels, value.region, value.location]) : '';
       if (value && drawn === signature) {
