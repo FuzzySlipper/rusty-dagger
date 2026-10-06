@@ -431,18 +431,8 @@ internal sealed class DaggerfallCorpseLootModule
     private void SyncTransferredMetadata(long corpseActorId, CorpseLootComponent corpse, InventoryContainerTransferReceipt? transfer)
     {
         if (transfer is null) return;
-        InventoryView remaining = _corpseLoot.Read(corpse)!;
-        DaggerfallItemOwner source = DaggerfallItemOwner.Corpse(corpseActorId);
-        foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
-        {
-            bool exhausted = !remaining.Stacks.Any(value => value.Id == stack.SourceStack);
-            _itemInstances.TransferStack(source, DaggerfallItemOwner.Player, stack.SourceStack, stack.DestinationStack, exhausted);
-        }
-        foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
-        {
-            DurableIdentityReference identity = _actors.Entities.IdentityOf(new EntityId(unique.EntityId));
-            _itemInstances.MoveUnique(identity.Value, DaggerfallItemOwner.Player);
-        }
+        _itemInstances.ApplyTransfer(transfer, _corpseLoot.Read(corpse)!, _actors.Entities,
+            DaggerfallItemOwner.Corpse(corpseActorId), DaggerfallItemOwner.Player);
     }
 
 }

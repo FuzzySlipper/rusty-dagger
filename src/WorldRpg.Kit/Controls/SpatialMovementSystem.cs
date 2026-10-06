@@ -491,6 +491,25 @@ public sealed class SpatialMovementSystem : IDisposable
         return result;
     }
 
+    /// <summary>
+    /// Replaces the Engine's complete active-trigger set with <paramref name="activeTriggers"/> against
+    /// a restored overlap baseline. Every registered trigger outside that set becomes inactive, so the
+    /// registry's active state follows the same restoration rather than running ahead of it.
+    /// </summary>
+    public void RestoreTriggers(ulong[] activeTriggers, SpatialEntityCollider[] baseline)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        ArgumentNullException.ThrowIfNull(activeTriggers);
+        ArgumentNullException.ThrowIfNull(baseline);
+        _spatial.RestoreTriggers(new SpatialTriggerRestoreRequest(_session, activeTriggers, baseline));
+        HashSet<ulong> active = [.. activeTriggers];
+        foreach (ulong trigger in _registeredTriggers.Keys.ToArray())
+        {
+            (string Scope, string Tag, int References, bool Active) registration = _registeredTriggers[trigger];
+            _registeredTriggers[trigger] = (registration.Scope, registration.Tag, registration.References, active.Contains(trigger));
+        }
+    }
+
     private static ReadOnlyMemory<SpatialEntityCollider> SpatialColliders(CharacterStepEnvironment? environment)
     {
         if (environment is not { } selected || selected.Obstacles.IsEmpty)

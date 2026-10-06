@@ -497,30 +497,13 @@ internal sealed class DaggerfallGroundContainers
         return current;
     }
 
-    private void SyncFromPlayer(InventoryContainerTransferReceipt transfer, ulong groundId)
-    {
-        InventoryView sourceAfter = _containers.Read(_player);
-        foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
-        {
-            bool exhausted = !sourceAfter.Stacks.Any(value => value.Id == stack.SourceStack);
-            _instances.TransferStack(DaggerfallItemOwner.Player, DaggerfallItemOwner.Ground(checked((long)groundId)), stack.SourceStack, stack.DestinationStack, exhausted);
-        }
-        foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
-            _instances.MoveUnique(_containers.Entities.IdentityOf(new EntityId(unique.EntityId)).Value, DaggerfallItemOwner.Ground(checked((long)groundId)));
-    }
+    private void SyncFromPlayer(InventoryContainerTransferReceipt transfer, ulong groundId) =>
+        _instances.ApplyTransfer(transfer, _containers.Read(_player), _containers.Entities,
+            DaggerfallItemOwner.Player, DaggerfallItemOwner.Ground(checked((long)groundId)));
 
-    private void SyncToPlayer(InventoryContainerTransferReceipt transfer, long groundId)
-    {
-        DaggerfallGroundContainer container = _ground[groundId];
-        InventoryView sourceAfter = _containers.Read(container.Owner);
-        foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
-        {
-            bool exhausted = !sourceAfter.Stacks.Any(value => value.Id == stack.SourceStack);
-            _instances.TransferStack(DaggerfallItemOwner.Ground(groundId), DaggerfallItemOwner.Player, stack.SourceStack, stack.DestinationStack, exhausted);
-        }
-        foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
-            _instances.MoveUnique(_containers.Entities.IdentityOf(new EntityId(unique.EntityId)).Value, DaggerfallItemOwner.Player);
-    }
+    private void SyncToPlayer(InventoryContainerTransferReceipt transfer, long groundId) =>
+        _instances.ApplyTransfer(transfer, _containers.Read(_ground[groundId].Owner), _containers.Entities,
+            DaggerfallItemOwner.Ground(groundId), DaggerfallItemOwner.Player);
 
     private void RegisterMetadata(DaggerfallGroundContainerSave value)
     {

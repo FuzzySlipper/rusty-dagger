@@ -409,6 +409,14 @@ internal static class TestSessions
 
     /// <summary>One advanced sprite frame whose authored damage frame was crossed.</summary>
     /// <summary>A playback receipt that completes without crossing a marker, which is what clears a swing.</summary>
+    /// <summary>
+    /// The receipt the Engine returns when a player swing reaches its hit frame: the reading plus the
+    /// crossing of the hit marker the swing's playback carries.
+    /// </summary>
+    internal static SpritePlaybackAdvanceResult WeaponHitReading(uint frameId, uint frameIndex, ulong sequence = 1) => new(
+        new[] { new SpritePlaybackMarkerCrossing(1, frameId, frameIndex, 0, sequence) },
+        new SpritePlaybackReadout(frameId, frameIndex, SpritePlaybackState.Playing, 0d, 0, 0, false), true);
+
     internal static SpritePlaybackAdvanceResult CompletedMarker(uint frame) => new(
         Array.Empty<SpritePlaybackMarkerCrossing>(),
         new SpritePlaybackReadout(frame, 1, SpritePlaybackState.Completed, 0D, 0, frame, true),

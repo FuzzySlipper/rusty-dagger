@@ -111,6 +111,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     internal static PursuitPolicy PolicyFor(long actorId,
         IReadOnlyDictionary<long, DaggerfallActorDefinition> actors,
         DaggerfallDefinitions definitions,
+        DaggerfallPursuitManeuverTuning maneuvers,
         bool waterWalking = false,
         bool levitating = false)
     {
@@ -132,9 +133,14 @@ internal sealed class DaggerfallEnemyBehaviorModule
         // water timer is introduced here.
         if (levitating) mode = ActorNavigationMode.Flying;
         else if (waterWalking) mode = ActorNavigationMode.WaterWalking;
-        // EnemyMotor exposes both retreat and strafe decisions to all authored mobile records. The
-        // distance/phase gates belong to the Kit policy; this source mapping supplies the capability.
-        return new PursuitPolicy(mode, CanRetreat: true, CanStrafe: true, EmitTargetLost: true);
+        // EnemyMotor exposes both retreat and strafe decisions to all authored mobile records. The Kit
+        // applies the gates; their distances and strafe cadence are this ruleset's tuning.
+        return new PursuitPolicy(mode, CanRetreat: true, CanStrafe: true, maneuvers.RetreatDistance, maneuvers.StrafeDistance, EmitTargetLost: true)
+        {
+            StrafeWindowMultiplier = maneuvers.StrafeWindowMultiplier,
+            StrafePhaseSteps = maneuvers.StrafePhaseSteps,
+            StrafeChancePeriod = maneuvers.StrafeChancePeriod,
+        };
     }
 
     /// <summary>Reads the donor EnemyBasics CanOpenDoors fact from the composed mobile catalog.</summary>

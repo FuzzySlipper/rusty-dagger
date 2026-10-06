@@ -27,13 +27,12 @@ internal sealed partial class DaggerfallSession
     // donor MeshReader scale once; it is a placement filter, not a second navigation system.
     internal const float PopulationNavGridSpawnRadiusMeters = 96F * 64F * (float)DaggerfallPerceptionQueryDefaults.ClassicGlobalScale;
     internal const float PopulationMaximumOutsideRangeMeters = 2500F * (float)DaggerfallPerceptionQueryDefaults.ClassicGlobalScale;
-    internal const float PopulationRecycleDistanceMeters = 150F;
     internal const float PopulationVisiblePopulationRangeMeters = 120F;
-    private static readonly WanderPolicy PopulationWanderPolicy = new(
-        MovementSpeedUnitsPerSecond: 1.3f,
-        WaypointDistance: 2.5f,
-        IdleDurationSeconds: 2.5f,
-        NavigationMaximumVisited: 64,
+    private WanderPolicy PopulationWanderPolicy => new(
+        _tuning.CivilianWander.MovementSpeedUnitsPerSecond,
+        _tuning.CivilianWander.WaypointDistance,
+        _tuning.CivilianWander.IdleDurationSeconds,
+        _tuning.CivilianWander.NavigationMaximumVisited,
         MaximumFailures: 2,
         NavigationMode: ActorNavigationMode.Ground);
 
@@ -163,7 +162,7 @@ internal sealed partial class DaggerfallSession
                 && _sites.ActiveLocationLoaded
                 && _sites.Projection.Inputs.Project.PlayerPosition is not null
                 && State.PlayerControl.Position is WorldPoint player
-                && actor.Position.HorizontalDistanceTo(player) > PopulationRecycleDistanceMeters)
+                && actor.Position.HorizontalDistanceTo(player) > _tuning.CivilianWander.RecycleDistanceMeters)
             {
                 // Retire only the admitted appearance. The canonical actor, inventory, corpse,
                 // and durable pose remain owned by the existing lifetime/save path for re-entry.
@@ -259,7 +258,7 @@ internal sealed partial class DaggerfallSession
         {
             if (State.Actors.TryGet(existing.DurableId, out ActorState? actor))
                 distance = actor.Position.HorizontalDistanceTo(playerLocal);
-            return distance <= PopulationRecycleDistanceMeters;
+            return distance <= _tuning.CivilianWander.RecycleDistanceMeters;
         }
 
         // Visible population is allowed to change inside the donor's 120m hysteresis range;

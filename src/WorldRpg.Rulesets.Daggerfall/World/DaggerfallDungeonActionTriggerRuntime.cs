@@ -218,11 +218,8 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
     {
         foreach (TriggerRuntime trigger in profile.Triggers.Where(trigger => trigger.ContactEvent is not null))
         {
-            _spatial.SetTriggerActive(new SpatialTriggerSetActiveRequest(
-                _movement.Session,
-                trigger.Entity.Value,
-                Active: false,
-                Tick: _latestTick));
+            // The movement system owns trigger lifecycle, so its registry sees the same change.
+            _movement.SetTriggerActive(trigger.Entity.Value, active: false, _latestTick);
         }
     }
 
@@ -307,10 +304,7 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
             baseline = [.. baseline, player];
         }
 
-        _spatial.RestoreTriggers(new SpatialTriggerRestoreRequest(
-            _movement.Session,
-            activeTriggers,
-            baseline));
+        _movement.RestoreTriggers(activeTriggers, baseline);
     }
 
     private ProfileRuntime RequireActiveProfile() => _profiles.TryGetValue(_activeProfile, out ProfileRuntime? profile)

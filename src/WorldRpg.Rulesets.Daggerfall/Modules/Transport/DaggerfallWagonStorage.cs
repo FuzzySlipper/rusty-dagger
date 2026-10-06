@@ -255,31 +255,13 @@ internal sealed class DaggerfallWagonStorage
         return selection with { DestinationStack = target };
     }
 
-    private void SyncToWagon(InventoryContainerTransferReceipt transfer, long wagonId)
-    {
-        InventoryView playerAfter = _containers.Read(_player);
-        foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
-        {
-            bool exhausted = !playerAfter.Stacks.Any(value => value.Id == stack.SourceStack);
-            _instances.TransferStack(DaggerfallItemOwner.Player, DaggerfallItemOwner.Wagon(wagonId),
-                stack.SourceStack, stack.DestinationStack, exhausted);
-        }
-        foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
-            _instances.MoveUnique(DurableItemId(unique.EntityId), DaggerfallItemOwner.Wagon(wagonId));
-    }
+    private void SyncToWagon(InventoryContainerTransferReceipt transfer, long wagonId) =>
+        _instances.ApplyTransfer(transfer, _containers.Read(_player), _containers.Entities, DaggerfallItemOwner.Player, DaggerfallItemOwner.Wagon(wagonId));
 
     private void SyncFromWagon(InventoryContainerTransferReceipt transfer, long wagonId)
     {
         DaggerfallWagon wagon = _wagon ?? throw new InvalidOperationException("The wagon is not materialized.");
-        InventoryView wagonAfter = _containers.Read(wagon.Owner);
-        foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
-        {
-            bool exhausted = !wagonAfter.Stacks.Any(value => value.Id == stack.SourceStack);
-            _instances.TransferStack(DaggerfallItemOwner.Wagon(wagonId), DaggerfallItemOwner.Player,
-                stack.SourceStack, stack.DestinationStack, exhausted);
-        }
-        foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
-            _instances.MoveUnique(DurableItemId(unique.EntityId), DaggerfallItemOwner.Player);
+        _instances.ApplyTransfer(transfer, _containers.Read(wagon.Owner), _containers.Entities, DaggerfallItemOwner.Wagon(wagonId), DaggerfallItemOwner.Player);
     }
 
     private void RegisterMetadata(DaggerfallWagonSave saved)

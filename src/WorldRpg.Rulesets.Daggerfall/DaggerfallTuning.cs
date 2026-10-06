@@ -36,6 +36,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallDetectionTuning Detection { get; init; } = new(14d);
     internal DaggerfallMusicTuning Music { get; init; } = new(AlternatePlaylists: false);
     internal DaggerfallWorldOriginTuning WorldOrigin { get; init; } = new(500f);
+    internal DaggerfallCivilianWanderTuning CivilianWander { get; init; } = DaggerfallCivilianWanderTuning.Classic;
     internal DaggerfallSwimmingTuning Swimming { get; init; } = DaggerfallSwimmingTuning.Classic;
     internal DaggerfallWeatherTuning Weather { get; init; } = DaggerfallWeatherTuning.Classic;
     internal DaggerfallAmbientTuning Ambient { get; init; } = DaggerfallAmbientTuning.Classic;
@@ -111,6 +112,7 @@ internal sealed record DaggerfallTuning(
         Detection = Detection.Validate(),
         StrikeEnchantments = StrikeEnchantments.Validate(),
         WorldOrigin = WorldOrigin.Validate(),
+        CivilianWander = CivilianWander.Validate(),
         Swimming = Swimming.Validate(),
         Weather = Weather.Validate(),
         Ambient = Ambient.Validate(),
@@ -199,7 +201,15 @@ internal sealed record DaggerfallTuning(
                 enemyBehavior.GetProperty("chaseSpeedUnitsPerSecond").GetSingle(),
                 checked((uint)enemyBehavior.GetProperty("navigationMaximumVisited").GetInt32()),
                 enemyBehavior.GetProperty("spawnGroundProbeLift").GetSingle(),
-                enemyBehavior.GetProperty("spawnGroundProbeDistance").GetDouble()),
+                enemyBehavior.GetProperty("spawnGroundProbeDistance").GetDouble())
+            {
+                Maneuvers = new(
+                    enemyBehavior.GetProperty("maneuvers").GetProperty("retreatDistance").GetSingle(),
+                    enemyBehavior.GetProperty("maneuvers").GetProperty("strafeDistance").GetSingle(),
+                    enemyBehavior.GetProperty("maneuvers").GetProperty("strafeWindowMultiplier").GetSingle(),
+                    enemyBehavior.GetProperty("maneuvers").GetProperty("strafePhaseSteps").GetUInt64(),
+                    enemyBehavior.GetProperty("maneuvers").GetProperty("strafeChancePeriod").GetUInt64()),
+            },
             new DaggerfallLootInteractionTuning(
                 lootInteraction.GetProperty("maximumDistance").GetDouble(),
                 lootInteraction.GetProperty("minimumFacingCosine").GetDouble()),
@@ -302,6 +312,11 @@ internal sealed record DaggerfallTuning(
             Detection = new(root.GetProperty("detection").GetProperty("maximumDistance").GetDouble()),
             Music = new DaggerfallMusicTuning(root.GetProperty("music").GetProperty("alternatePlaylists").GetBoolean()),
             WorldOrigin = new(root.GetProperty("worldOrigin").GetProperty("verticalRebaseDistance").GetSingle()),
+            CivilianWander = new(root.GetProperty("civilianWander").GetProperty("movementSpeedUnitsPerSecond").GetSingle(),
+                root.GetProperty("civilianWander").GetProperty("waypointDistance").GetSingle(),
+                root.GetProperty("civilianWander").GetProperty("idleDurationSeconds").GetSingle(),
+                root.GetProperty("civilianWander").GetProperty("navigationMaximumVisited").GetUInt32(),
+                root.GetProperty("civilianWander").GetProperty("recycleDistanceMeters").GetSingle()),
             Swimming = root.TryGetProperty("swimming", out JsonElement swimming)
                 ? ReadSwimming(swimming)
                 : DaggerfallSwimmingTuning.Classic,
@@ -470,13 +485,59 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
     float SpawnGroundProbeLift = .2f,
     double SpawnGroundProbeDistance = 3d)
 {
+    /// <summary>EnemyMotor's close-range retreat and strafe decisions, which the Kit pursuit policy applies.</summary>
+    internal DaggerfallPursuitManeuverTuning Maneuvers { get; init; } = DaggerfallPursuitManeuverTuning.Classic;
+
     internal DaggerfallEnemyBehaviorTuning Validate()
     {
+        Maneuvers.Validate();
         if (!double.IsFinite(DetectionDistance) || DetectionDistance <= 0d) throw new ArgumentOutOfRangeException(nameof(DetectionDistance));
         if (!float.IsFinite(ChaseSpeedUnitsPerSecond) || ChaseSpeedUnitsPerSecond <= 0f) throw new ArgumentOutOfRangeException(nameof(ChaseSpeedUnitsPerSecond));
         if (!float.IsFinite(SpawnGroundProbeLift) || SpawnGroundProbeLift < 0f) throw new ArgumentOutOfRangeException(nameof(SpawnGroundProbeLift));
         if (!double.IsFinite(SpawnGroundProbeDistance) || SpawnGroundProbeDistance <= SpawnGroundProbeLift) throw new ArgumentOutOfRangeException(nameof(SpawnGroundProbeDistance));
         if (NavigationMaximumVisited == 0) throw new ArgumentOutOfRangeException(nameof(NavigationMaximumVisited));
+        return this;
+    }
+}
+
+/// <summary>
+/// The enemy's close-range maneuvers: retreat inside reach plus <paramref name="RetreatDistance"/>,
+/// and a strafe offered within reach plus <paramref name="StrafeDistance"/> times
+/// <paramref name="StrafeWindowMultiplier"/>, chosen on one phase in <paramref name="StrafeChancePeriod"/>
+/// of <paramref name="StrafePhaseSteps"/> simulation steps (EnemyMotor's one-in-four strafe decision).
+/// </summary>
+internal sealed record DaggerfallPursuitManeuverTuning(float RetreatDistance, float StrafeDistance,
+    float StrafeWindowMultiplier, ulong StrafePhaseSteps, ulong StrafeChancePeriod)
+{
+    internal static DaggerfallPursuitManeuverTuning Classic { get; } = new(2.5f, 1.5f, 4f, 15, 4);
+
+    internal DaggerfallPursuitManeuverTuning Validate()
+    {
+        if (!float.IsFinite(RetreatDistance) || RetreatDistance <= 0f) throw new ArgumentOutOfRangeException(nameof(RetreatDistance));
+        if (!float.IsFinite(StrafeDistance) || StrafeDistance <= 0f) throw new ArgumentOutOfRangeException(nameof(StrafeDistance));
+        if (!float.IsFinite(StrafeWindowMultiplier) || StrafeWindowMultiplier <= 0f) throw new ArgumentOutOfRangeException(nameof(StrafeWindowMultiplier));
+        if (StrafePhaseSteps == 0) throw new ArgumentOutOfRangeException(nameof(StrafePhaseSteps));
+        if (StrafeChancePeriod == 0) throw new ArgumentOutOfRangeException(nameof(StrafeChancePeriod));
+        return this;
+    }
+}
+
+/// <summary>
+/// Outdoor civilians' wander movement (MobilePersonMotor's walk speed and idle distance) and the
+/// distance at which a wandering civilian is recycled away from the player.
+/// </summary>
+internal sealed record DaggerfallCivilianWanderTuning(float MovementSpeedUnitsPerSecond, float WaypointDistance,
+    float IdleDurationSeconds, uint NavigationMaximumVisited, float RecycleDistanceMeters)
+{
+    internal static DaggerfallCivilianWanderTuning Classic { get; } = new(1.3f, 2.5f, 2.5f, 64, 150f);
+
+    internal DaggerfallCivilianWanderTuning Validate()
+    {
+        if (!float.IsFinite(MovementSpeedUnitsPerSecond) || MovementSpeedUnitsPerSecond <= 0f) throw new ArgumentOutOfRangeException(nameof(MovementSpeedUnitsPerSecond));
+        if (!float.IsFinite(WaypointDistance) || WaypointDistance <= 0f) throw new ArgumentOutOfRangeException(nameof(WaypointDistance));
+        if (!float.IsFinite(IdleDurationSeconds) || IdleDurationSeconds < 0f) throw new ArgumentOutOfRangeException(nameof(IdleDurationSeconds));
+        if (NavigationMaximumVisited == 0) throw new ArgumentOutOfRangeException(nameof(NavigationMaximumVisited));
+        if (!float.IsFinite(RecycleDistanceMeters) || RecycleDistanceMeters <= 0f) throw new ArgumentOutOfRangeException(nameof(RecycleDistanceMeters));
         return this;
     }
 }

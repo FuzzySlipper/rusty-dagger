@@ -17,11 +17,12 @@ public enum WanderState
 }
 
 /// <summary>Ruleset-owned limits for one Engine-backed wander update.</summary>
+/// <remarks>The Kit owns no movement numbers; the ruleset supplies speed, waypoint and idle values.</remarks>
 public readonly record struct WanderPolicy(
-    float MovementSpeedUnitsPerSecond = 1.3f,
-    float WaypointDistance = 2.5f,
-    float IdleDurationSeconds = 2.5f,
-    uint NavigationMaximumVisited = 64,
+    float MovementSpeedUnitsPerSecond,
+    float WaypointDistance,
+    float IdleDurationSeconds,
+    uint NavigationMaximumVisited,
     uint MaximumFailures = 2,
     ActorNavigationMode NavigationMode = ActorNavigationMode.Ground)
 {

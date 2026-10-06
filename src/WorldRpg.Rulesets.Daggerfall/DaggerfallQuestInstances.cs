@@ -706,16 +706,11 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     {
         var eligible = OrdinaryWorkPool(factionId, playerIsMember, playerLevel, playerReputation, playerRank, playerGender);
 
-        // Keep the source selection deterministic across one session while still making the
-        // calendar a real input to which admitted work is selected.
+        // The Engine's keyed draw keeps one day's offer stable across asks (the availability check and
+        // the offer itself agree) while the calendar, faction and standing remain real inputs.
         if (eligible.Length == 0) return null;
-        uint hash = 2_166_136_261;
-        foreach (int value in new[] { currentDay, factionId, playerLevel, playerRank })
-        {
-            hash ^= unchecked((uint)value);
-            hash *= 16_777_619;
-        }
-        int selected = (int)(hash % (uint)eligible.Length);
+        int selected = checked((int)_random.DrawKeyed(new KeyedRngRequest(0, "daggerfall.quest.work-offer",
+            $"day:{currentDay}:faction:{factionId}:level:{playerLevel}:rank:{playerRank}", 0, eligible.Length - 1)).Value);
         return eligible[selected];
     }
 

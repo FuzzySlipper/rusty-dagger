@@ -318,8 +318,9 @@ public enum ProductMode
 {
     /// <summary>
     /// The entry screen owns the product: it shows the screen the product offers before a world
-    /// starts, so neither gameplay input nor world time reaches the session until the product leaves
-    /// this mode. A product that never enters it behaves exactly as it did before the mode existed.
+    /// starts. The product still forwards updates so presentation keeps publishing; a mode-aware
+    /// session interprets no gameplay input and takes no world step until the product leaves this
+    /// mode, and a session that does not observe modes runs as it did before the mode existed.
     /// </summary>
     Title,
 
