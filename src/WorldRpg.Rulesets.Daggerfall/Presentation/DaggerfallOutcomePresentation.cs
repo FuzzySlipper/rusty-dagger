@@ -20,6 +20,31 @@ internal sealed class DaggerfallOutcomePresentation(
     private bool _lineIsResult;
     private SoulTrapResolvedFact? _soulTrap;
 
+    /// <summary>
+    /// The donor's line when an effect starts on the player. A drain also speaks when it deepens an
+    /// existing drain of the same attribute; the others speak only when they first take hold.
+    /// Donor: <c>DrainEffect.ShowPlayerDrained</c>, <c>Paralyze</c>, <c>Silence</c>, <c>Slowfall</c>,
+    /// <c>Regenerate.Start</c> and <c>ConcealmentEffect.StartConcealment</c>.
+    /// </summary>
+    internal static string? StartMessage(DaggerfallEffectOutcome effect)
+    {
+        string key = effect.EffectKey;
+        if (key.StartsWith("drain-", StringComparison.Ordinal))
+            return effect.Kind is DaggerfallEffectOutcomeKind.Started or DaggerfallEffectOutcomeKind.Refreshed ? "You feel drained." : null;
+        if (effect.Kind != DaggerfallEffectOutcomeKind.Started) return null;
+        return key switch
+        {
+            "paralyze" => "You are paralyzed.",
+            "silence" => "You are silenced.",
+            "slowfall" => "Slow fall active.",
+            "regenerate" => "You are regenerating.",
+            _ when key.StartsWith("invisibility-", StringComparison.Ordinal) => "You are invisible.",
+            _ when key.StartsWith("chameleon-", StringComparison.Ordinal) => "You are blending.",
+            _ when key.StartsWith("shadow-", StringComparison.Ordinal) => "You are a shade.",
+            _ => null,
+        };
+    }
+
     internal void React(IProductFact fact)
     {
         switch (fact)
@@ -55,6 +80,13 @@ internal sealed class DaggerfallOutcomePresentation(
                     : $"{Name(transferred.CasterId)} drained {transferred.ActualLoss:0} {transferred.Track} from you; restored {transferred.ActualRecovery:0} {transferred.Track}.";
                 if (transferred.TargetDefeated) presentation.AppendOutcome(transferLine);
                 else presentation.SetOutcome(transferLine);
+                break;
+            // The donor tells the player when certain effects take hold of them. A spell the player
+            // cast is already reported by its cast line, so only effects from others are announced.
+            case MagicEffectFact { Outcome: { TargetId: DaggerfallActorIdentity.PlayerEntityId } effect }
+                when effect.CasterId != DaggerfallActorIdentity.PlayerEntityId && StartMessage(effect) is { } started:
+                _lineIsResult = true;
+                presentation.AppendOutcome(started);
                 break;
             case SpellCastFact cast when cast.CasterId == DaggerfallActorIdentity.PlayerEntityId:
                 _lineIsResult = true;
