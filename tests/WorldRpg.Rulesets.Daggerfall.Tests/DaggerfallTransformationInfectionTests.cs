@@ -136,6 +136,22 @@ public sealed class DaggerfallTransformationInfectionTests
     }
 
     [Fact]
+    public void A_key_press_skips_a_playing_cinematic_as_the_donor_does()
+    {
+        var media = new DaggerfallCinematicPresentationTests.Harness(infections: true);
+        using Fixture f = new(videos: true, media); var s = f.Session;
+        s.InflictTransformationInfection(Exposure("vamp", DaggerfallInfectionKind.Vampire));
+        s.AdvanceElapsedTime(4 * 86400);
+        s.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Equal("ANIM0004.VID", s.Cinematics!.ActiveSource);
+
+        s.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "menu")]));
+
+        Assert.NotEqual("ANIM0004.VID", s.Cinematics.ActiveSource);
+        Assert.Equal(DaggerfallInfectionStage.Warned, State(s).Stage);
+    }
+
+    [Fact]
     public void Admitted_cinematic_results_and_skip_drive_stages_and_cure_releases_only_owned_playback()
     {
         var media = new DaggerfallCinematicPresentationTests.Harness(infections: true);
