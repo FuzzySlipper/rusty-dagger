@@ -1,4 +1,5 @@
 using System.Numerics;
+using Rusty.Engine;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -116,9 +117,16 @@ internal sealed class DaggerfallExteriorEnvironment
     private DaggerfallExteriorWorldOrigin _origin;
     private DaggerfallExteriorSeason _season;
     private bool _initialized;
+    private readonly IRandomService _random;
 
-    internal DaggerfallExteriorEnvironment(DaggerfallExteriorSeason season = DaggerfallExteriorSeason.Summer)
+    // Nature decoration draws from one Engine stream per cell, seeded by the cell's terrain key, so a
+    // cell's placements are the same on every admission without consuming gameplay draws.
+    private const string NatureScope = "daggerfall.exterior.nature.v1";
+    private const uint NatureChanceResolution = 1_000_000;
+
+    internal DaggerfallExteriorEnvironment(IRandomService random, DaggerfallExteriorSeason season = DaggerfallExteriorSeason.Summer)
     {
+        _random = random ?? throw new ArgumentNullException(nameof(random));
         _season = season;
     }
 
@@ -451,7 +459,7 @@ internal sealed class DaggerfallExteriorEnvironment
         return result;
     }
 
-    private static IReadOnlyList<DaggerfallExteriorNaturePlacement> BuildNature(
+    private IReadOnlyList<DaggerfallExteriorNaturePlacement> BuildNature(
         DaggerfallExteriorCellId cell,
         DaggerfallTerrainSurface surface,
         DaggerfallExteriorTerrainVariant variant,
@@ -459,7 +467,7 @@ internal sealed class DaggerfallExteriorEnvironment
         IReadOnlyList<DaggerfallExteriorTerrainTile> terrain)
     {
         List<DaggerfallExteriorNaturePlacement> nature = [];
-        DonorRandom random = DonorRandom.FromSeed(unchecked((uint)MakeTerrainKey(cell.X, cell.Y)));
+        using Rng random = _random.CreateScoped(new ScopedRngCreateRequest(unchecked((ulong)(uint)MakeTerrainKey(cell.X, cell.Y)), NatureScope));
         float elevation = Math.Clamp(surface.SourceWorldHeight / 128F, .4F, 1F);
         float climateScale = variant.IsDesert ? .25F : 1F;
         float chanceDirt = BaseChanceOnDirt * elevation * climateScale;
@@ -493,14 +501,14 @@ internal sealed class DaggerfallExteriorEnvironment
                     3 => chanceStone,
                     _ => 0F,
                 };
-                if (chance <= 0F || random.NextFloat() > chance) continue;
+                if (chance <= 0F || NextUnit(random) > chance) continue;
 
                 int heightIndex = (TerrainSampleCoordinate(tileY) * DaggerfallTerrainSurfaceBuilder.SampleDimension)
                     + TerrainSampleCoordinate(tileX);
                 float sourceHeight = surface.NormalizedHeights[heightIndex] * DaggerfallTerrainSurfaceBuilder.MaxTerrainHeight;
                 if (sourceHeight < BeachElevation) continue;
                 float height = Height(surface, tileX, tileY);
-                int record = random.NextInt(1, 32);
+                int record = 1 + checked((int)_random.NextBoundedU32(new ScopedRngBoundedRequest(random, 31)).Value);
                 float y = height - (slope / SlopeSinkRatio);
                 nature.Add(new(
                     cell,
@@ -516,6 +524,9 @@ internal sealed class DaggerfallExteriorEnvironment
         }
         return nature;
     }
+
+    private float NextUnit(Rng stream) =>
+        _random.NextBoundedU32(new ScopedRngBoundedRequest(stream, NatureChanceResolution)).Value / (float)NatureChanceResolution;
 
     internal static float BeachJitter(uint sampleIndex) => DonorRandom.CreateFromIndex(sampleIndex).NextFloat(-1.5F, 1.5F);
 
@@ -589,9 +600,8 @@ internal sealed class DaggerfallExteriorEnvironment
         IReadOnlyList<DaggerfallExteriorNaturePlacement> Nature);
 
     /// <summary>
-    /// Indexed beach jitter follows Unity.Mathematics.Random. Nature uses a stable local sequence
-    /// for deterministic terrain decoration; it does not consume the Engine gameplay random stream.
-    /// The decoration sequence does not claim native UnityEngine.Random bit parity.
+    /// Indexed beach jitter keeps bit parity with the donor's Unity.Mathematics.Random.CreateFromIndex,
+    /// a named algorithm beside the one place it shapes terrain; nature placement draws from the Engine.
     /// </summary>
     private struct DonorRandom(uint state)
     {
@@ -606,20 +616,7 @@ internal sealed class DaggerfallExteriorEnvironment
             return random;
         }
 
-        internal static DonorRandom FromSeed(uint seed)
-        {
-            DonorRandom random = new(seed);
-            random.NextState();
-            return random;
-        }
-
         internal float NextFloat(float min, float max) => NextFloat() * (max - min) + min;
-
-        internal int NextInt(int min, int max)
-        {
-            uint range = checked((uint)(max - min));
-            return checked((int)((NextState() * (ulong)range) >> 32) + min);
-        }
 
         internal float NextFloat()
         {
