@@ -230,7 +230,7 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Null(fixture.Session.State.Travel.LastResult);
         Assert.Equal(100UL, fixture.Session.State.Currency.Read().Gold);
         Assert.Equal(now, fixture.Now);
-        Assert.Contains("arrival profile", fixture.Session.ReadTravelPresentation().Message);
+        Assert.Equal($"You cannot travel to {quote.Destination.Name} from here.", fixture.Session.ReadTravelPresentation().Message);
         Assert.False(fixture.Session.ReadTravelPresentation().ExecutionAvailable);
     }
 

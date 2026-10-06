@@ -60,6 +60,30 @@ internal sealed class DaggerfallInventoryUseService(
         return new(false, "That item is no longer in your inventory.");
     }
 
+    /// <summary>
+    /// Whether the item has a use at all, by the same routes <see cref="Use"/> takes: a usable
+    /// enchantment, a book, a potion, a drug, a map, lamp oil, or a quest item whose quest observes
+    /// its use. A use that can still be refused by the moment (a full lantern, a discovered region)
+    /// is still a use; its refusal is the result's to state.
+    /// </summary>
+    internal bool CanUse(string itemId, DaggerfallItemInstanceMetadata metadata)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+        if (metadata.QuestId is not null && useQuestItem is not null) return true;
+        if (metadata.HasEnchantment)
+        {
+            if (DaggerfallSoulGems.IsStar(metadata, definitions.Magic)) return true;
+            if (definitions.Magic.TryEnchantments(metadata, out var payloads) && payloads.Any(effect => effect.Type == 26 && effect.Param is 4 or 8
+                || effect.Type is 0 or DaggerfallEnchantmentSettings.HealthLeechType)) return true;
+            return metadata.Enchantment is { } enchantment && definitions.Magic.MagicItems.TryGetValue(enchantment, out DaggerfallMagicItemDefinition? magic)
+                && magic.Enchantments.Any(effect => effect.ParamMeaning == "artifact-effect" && effect.Param == 5);
+        }
+        if (metadata.BookId is not null) return true;
+        int? template = Template(itemId);
+        if (metadata.PotionRecipeKey is not null) return template == 83;
+        return template is (>= FirstDrugTemplate and <= LastDrugTemplate) or MapTemplate or OilTemplate;
+    }
+
     private DaggerfallInventoryUseResult UseStack(InventoryView current, InventoryStackId stack)
     {
         InventoryStack? entry = current.Stacks.Where(candidate => candidate.Id == stack)

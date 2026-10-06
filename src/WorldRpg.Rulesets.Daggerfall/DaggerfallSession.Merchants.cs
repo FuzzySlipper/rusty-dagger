@@ -67,8 +67,39 @@ internal sealed partial class DaggerfallSession
                 DaggerfallUiActionKind.MerchantShoplift => State.Merchants.Shoplift(context, action.Revision!, action.Item!, action.Amount ?? 1),
                 _ => new(false, "Unsupported"),
             };
-        Presentation.SetOutcome(result.Outcome);
+        Presentation.SetOutcome(MerchantOutcomeText(result));
         _dialogue?.RefreshEligibility();
+    }
+
+    /// <summary>
+    /// Player wording for a merchant result. The service keeps its result codes for its callers; the
+    /// player reads what happened and, for a paid service, what it cost.
+    /// </summary>
+    internal static string MerchantOutcomeText(DaggerfallMerchantResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        string gold = result.PaidGold.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return result.Outcome switch
+        {
+            "Purchased" => $"Bought for {gold} gold.",
+            "Sold" => $"Sold for {gold} gold.",
+            "Stolen" => "You took it without being seen.",
+            "Caught" => "You were caught stealing.",
+            "RepairAccepted" => $"Paid {gold} gold for the repair. Collect the item when it is ready.",
+            "RepairCollected" => "You collected your repaired item.",
+            "Identified" => result.PaidGold == 0 ? "The item was identified free of charge." : $"Identified for {gold} gold.",
+            "Stale" => "The shop's goods changed. Choose the item again.",
+            "ItemUnavailable" => "That item is no longer available.",
+            "ItemNotAccepted" => "This shop does not buy that kind of item.",
+            "QuoteUnavailable" => "The merchant will not trade that item.",
+            "AlreadyRepaired" => "That item does not need repairing.",
+            "AlreadyIdentified" => "That item is already identified.",
+            "RepairNotReady" => "That repair is not finished yet.",
+            "RepairUnavailable" => "That repair order is no longer available.",
+            "Capacity" => "You cannot carry that much.",
+            "AlreadyAttempted" => "You have already tried to steal that.",
+            _ => DaggerfallServiceOutcomeText.Common(result.Outcome),
+        };
     }
 
     private static string? DialogueRevision(string? merchantRevision)

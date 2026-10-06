@@ -210,6 +210,24 @@ internal sealed class DaggerfallEquipmentMoves(
         return equipment.GetDurableItemId(new Rusty.Engine.Entities.EntityId(item.EntityId)).Value;
     }
 
+    /// <summary>
+    /// Why the player cannot equip an item they carry in any slot, or null when some slot would take it.
+    /// The same rules the move applies, read without moving: a stack, an item no slot takes, a career
+    /// restriction, a broken item, or hands-only equipment in beast form.
+    /// </summary>
+    internal string? EquipRefusal(DaggerfallItemDefinition definition, bool unique, int? currentCondition)
+    {
+        string[] slots = [.. definitions.EquipmentSlots.Keys.Select(slot => slot.Value)
+            .Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot))];
+        if (!unique || slots.Length == 0) return "This item cannot be equipped.";
+        if (forbiddenEquipment?.Invoke() is { } restrictions && DaggerfallCustomCareerPolicy.Forbids(definition, restrictions, out string restriction))
+            return restriction;
+        if (currentCondition is < 1) return "That item is broken.";
+        if (beastForm?.Invoke() == true && slots.All(slot => slot is "right-hand" or "left-hand"))
+            return "You cannot equip your hands in beast form.";
+        return null;
+    }
+
     private EquipmentMoveResult MoveToSlot(UniqueItem item, SlotId slot, DaggerfallEquipmentCue cue, bool publish)
     {
         if (!definitions.TryResolveItem(new DaggerfallItemId(item.Definition.Value), out DaggerfallItemDefinition definition))

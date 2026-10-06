@@ -204,7 +204,14 @@ internal static class DaggerfallCustomCareerPolicy
             };
             if (forbidden)
             {
-                reason = $"Your custom class forbids {target.Replace('-', ' ')} {kind.Replace("forbidden-", string.Empty)}.";
+                string named = target.Replace('-', ' ');
+                reason = $"Your class cannot use {kind switch
+                {
+                    "forbidden-weapon" => $"{named} weapons",
+                    "forbidden-armor" => $"{named} armor",
+                    "forbidden-shield" => $"{named}s",
+                    _ => $"{named} equipment",
+                }}.";
                 return true;
             }
         }

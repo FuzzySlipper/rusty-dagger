@@ -409,13 +409,15 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("result", builder.String(merchant.Result)),
         ("stock", builder.Array(merchant.Stock.Select(item => MerchantItem(builder, item, false, false)).ToArray())),
         ("playerItems", builder.Array(merchant.PlayerItems.Select(item => MerchantItem(builder, item,
-            merchant.CanRepair && item.Repairable, merchant.CanIdentify && item.Identifiable)).ToArray())),
+            merchant.CanRepair && item.RepairCost is not null, merchant.CanIdentify && item.IdentifyCost is not null)).ToArray())),
         ("repairs", builder.Array(merchant.Repairs.Select(repair => builder.Object(
             ("requestId", builder.String(repair.RequestId)),
             ("durableItemId", builder.String(repair.DurableItemId.ToString(CultureInfo.InvariantCulture))),
             ("definition", builder.String(repair.Definition)),
             ("dueMinute", builder.Number(repair.DueMinute)),
-            ("ready", builder.Boolean(repair.Ready)))).ToArray())));
+            ("ready", builder.Boolean(repair.Ready)),
+            ("label", builder.String(repair.Label)),
+            ("status", builder.String(repair.Status)))).ToArray())));
 
     private static uint MerchantItem(UiValueBuilder builder, DaggerfallMerchantItemView item, bool canRepair, bool canIdentify) => builder.Object(
         ("key", builder.String(item.Key)),
@@ -430,7 +432,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("canBuy", builder.Boolean(item.CanBuy)),
         ("canSell", builder.Boolean(item.CanSell)),
         ("canRepair", builder.Boolean(canRepair)),
-        ("canIdentify", builder.Boolean(canIdentify)));
+        ("canIdentify", builder.Boolean(canIdentify)),
+        ("repairCost", canRepair && item.RepairCost is ulong repairCost ? builder.String(repairCost.ToString(CultureInfo.InvariantCulture)) : builder.Null()),
+        ("identifyCost", canIdentify && item.IdentifyCost is ulong identifyCost ? builder.String(identifyCost.ToString(CultureInfo.InvariantCulture)) : builder.Null()));
 
     private static uint Death(UiValueBuilder builder, DaggerfallDeathView death) => builder.Object(
         ("active", builder.Boolean(death.Active)),
@@ -558,7 +562,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("identified", builder.Boolean(item.Identified)),
         ("gridSlot", item.GridSlot is int slot ? builder.Number(slot) : builder.Null()),
         ("equippedSlots", builder.Array(item.EquippedSlots.Select(builder.String).ToArray())),
-        ("compatibleSlots", builder.Array(item.CompatibleSlots.Select(builder.String).ToArray())));
+        ("compatibleSlots", builder.Array(item.CompatibleSlots.Select(builder.String).ToArray())),
+        ("canUse", builder.Boolean(item.CanUse)), ("canEquip", builder.Boolean(item.CanEquip)),
+        ("equipRefusal", item.EquipRefusal is null ? builder.Null() : builder.String(item.EquipRefusal)));
 
     private static uint Loot(UiValueBuilder builder, LootPresentation value) => builder.Object(
         ("container", builder.String(value.Container)), ("revision", builder.String(value.Revision)),

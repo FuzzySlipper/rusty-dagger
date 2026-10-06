@@ -128,11 +128,11 @@ public sealed class SourceBackedServiceSessionTests
         string buyAction = $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(merchant.Revision)}\",\"item\":\"{Escape(stock.Key)}\",\"amount\":1}}";
         SubmitUi(session, 4, buyAction);
 
-        Assert.Equal("Purchased", session.Presentation.LastOutcome);
+        Assert.Equal($"Bought for {stock.UnitPrice} gold.", session.Presentation.LastOutcome);
         Assert.Equal(goldBeforeBuy - stock.UnitPrice, session.State.Currency.Read().Gold);
         Assert.Equal(mercantileBeforeBuy + 1, SkillUseCount(session, "mercantile"));
         SubmitUi(session, 5, buyAction);
-        Assert.Equal("Stale", session.Presentation.LastOutcome);
+        Assert.Equal("The shop's goods changed. Choose the item again.", session.Presentation.LastOutcome);
         Assert.Equal(mercantileBeforeBuy + 1, SkillUseCount(session, "mercantile"));
 
         DaggerfallMerchantView afterBuy = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
@@ -142,11 +142,11 @@ public sealed class SourceBackedServiceSessionTests
         string sellAction = $"{{\"action\":\"merchant-sell\",\"revision\":\"{Escape(afterBuy.Revision)}\",\"item\":\"{Escape(sold.Key)}\",\"amount\":1}}";
         SubmitUi(session, 6, sellAction);
 
-        Assert.Equal("Sold", session.Presentation.LastOutcome);
+        Assert.Equal($"Sold for {sold.UnitPrice} gold.", session.Presentation.LastOutcome);
         Assert.Equal(goldBeforeSell + sold.UnitPrice, session.State.Currency.Read().Gold);
         Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(session, "mercantile"));
         SubmitUi(session, 7, sellAction);
-        Assert.Equal("Stale", session.Presentation.LastOutcome);
+        Assert.Equal("The shop's goods changed. Choose the item again.", session.Presentation.LastOutcome);
         Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(session, "mercantile"));
 
         // The real source caller must keep refusal paths from manufacturing a trade use. The sold
@@ -154,7 +154,7 @@ public sealed class SourceBackedServiceSessionTests
         // the ordinary ItemUnavailable branch rather than replaying the stale accepted action.
         DaggerfallMerchantView afterSell = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
         SubmitUi(session, 8, $"{{\"action\":\"merchant-sell\",\"revision\":\"{Escape(afterSell.Revision)}\",\"item\":\"{Escape(sold.Key)}\",\"amount\":1}}");
-        Assert.Equal("ItemUnavailable", session.Presentation.LastOutcome);
+        Assert.Equal("That item is no longer available.", session.Presentation.LastOutcome);
         Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(session, "mercantile"));
 
         ulong carriedGold = session.State.Currency.Read().Gold;
@@ -163,7 +163,7 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallMerchantItemView unaffordable = afterSell.Stock.First(value => value.CanBuy && value.UnitPrice > 0);
         DaggerfallMerchantView noFunds = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
         SubmitUi(session, 9, $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(noFunds.Revision)}\",\"item\":\"{Escape(unaffordable.Key)}\",\"amount\":1}}");
-        Assert.Equal("InsufficientFunds", session.Presentation.LastOutcome);
+        Assert.Equal("You do not have enough gold.", session.Presentation.LastOutcome);
         Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(session, "mercantile"));
 
         // Shoplifting is an admitted source-backed merchant action even when the deterministic
@@ -175,14 +175,14 @@ public sealed class SourceBackedServiceSessionTests
         int crimeNotifications = 0;
         session.CrimeReported += _ => crimeNotifications++;
         SubmitUi(session, 10, shopliftAction);
-        Assert.Equal("Caught", session.Presentation.LastOutcome);
+        Assert.Equal("You were caught stealing.", session.Presentation.LastOutcome);
         Assert.Equal(pickpocketBeforeShoplift + 1, SkillUseCount(session, "pickpocket"));
         var crime = Assert.Single(session.State.Crime.Incidents);
         Assert.Equal(WorldRpg.Rulesets.Daggerfall.Crime.DaggerfallCrimeKind.Theft, crime.Crime);
         Assert.Equal(WorldRpg.Rulesets.Daggerfall.Crime.DaggerfallCrimeStage.Attempted, crime.Stage);
         Assert.Equal(1, crimeNotifications);
         SubmitUi(session, 11, shopliftAction);
-        Assert.Equal("AlreadyAttempted", session.Presentation.LastOutcome);
+        Assert.Equal("You have already tried to steal that.", session.Presentation.LastOutcome);
         Assert.Equal(pickpocketBeforeShoplift + 1, SkillUseCount(session, "pickpocket"));
         Assert.Single(session.State.Crime.Incidents);
         Assert.Equal(1, crimeNotifications);
@@ -238,17 +238,25 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallMerchantView merchant = Assert.IsType<DaggerfallMerchantView>(dialogue.Merchant);
         Assert.Equal(sourceBuilding.Quality, merchant.Quality);
         Assert.True(merchant.CanRepair);
-        Assert.Contains(merchant.PlayerItems, value => value.Key == itemKey && value.CurrentCondition < value.MaximumCondition);
+        DaggerfallMerchantItemView damaged = Assert.Single(merchant.PlayerItems, value => value.Key == itemKey && value.CurrentCondition < value.MaximumCondition);
+        ulong quotedRepair = Assert.IsType<ulong>(damaged.RepairCost);
+        Assert.Null(damaged.IdentifyCost);
 
         ulong beforeGold = session.State.Currency.Read().Gold;
         SubmitUi(session, 1, $"{{\"action\":\"merchant-repair\",\"revision\":\"{Escape(merchant.Revision)}\",\"item\":\"{Escape(itemKey)}\"}}");
 
-        Assert.Equal("RepairAccepted", session.Presentation.LastOutcome);
         Assert.True(session.State.Currency.Read().Gold < beforeGold);
+        Assert.Equal(quotedRepair, beforeGold - session.State.Currency.Read().Gold);
+        Assert.Equal($"Paid {quotedRepair} gold for the repair. Collect the item when it is ready.",
+            session.Presentation.LastOutcome);
         Assert.DoesNotContain(session.State.Inventory.Read().UniqueItems,
             value => value.Entity.Value == ResolveEntity(session, itemId));
         DaggerfallMerchantView pending = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
         DaggerfallRepairView repair = Assert.Single(pending.Repairs);
+        // The order names the item as the shop rows do and says when it will be ready, not a minute.
+        Assert.NotEqual(repair.Definition, repair.Label);
+        Assert.False(string.IsNullOrWhiteSpace(repair.Label));
+        Assert.StartsWith("Ready in ", repair.Status, StringComparison.Ordinal);
         DaggerfallSavePayload beforeDueSave = DaggerfallSavePayload.Read(session.CaptureSave());
         DaggerfallMerchantSave beforeDueMerchant = Assert.Single(beforeDueSave.Merchants);
         Assert.Equal(sourceBuilding.Quality, beforeDueMerchant.Quality);
@@ -261,7 +269,7 @@ public sealed class SourceBackedServiceSessionTests
         Assert.Equal(beforeDueMerchant.Service, queued.Provider.Service);
 
         SubmitUi(session, 2, $"{{\"action\":\"merchant-collect-repair\",\"revision\":\"{Escape(pending.Revision)}\",\"key\":\"{Escape(repair.RequestId)}\"}}");
-        Assert.Equal("RepairNotReady", session.Presentation.LastOutcome);
+        Assert.Equal("That repair is not finished yet.", session.Presentation.LastOutcome);
         Assert.Contains(DaggerfallSavePayload.Read(session.CaptureSave()).Merchants.Single().Custody.UniqueItems,
             value => value.EntityId == itemId.Value);
 
@@ -282,7 +290,7 @@ public sealed class SourceBackedServiceSessionTests
         Assert.True(readyRepair.Ready);
         SubmitUi(restored, 3, $"{{\"action\":\"merchant-collect-repair\",\"revision\":\"{Escape(ready.Revision)}\",\"key\":\"{Escape(readyRepair.RequestId)}\"}}");
 
-        Assert.Equal("RepairCollected", restored.Presentation.LastOutcome);
+        Assert.Equal("You collected your repaired item.", restored.Presentation.LastOutcome);
         Assert.Contains(restored.State.Inventory.Read().UniqueItems,
             value => value.Entity.Value == ResolveEntity(restored, itemId));
         DaggerfallItemInstanceMetadata repaired = restored.State.ItemInstances.RequireUnique(itemId.Value);
@@ -292,7 +300,7 @@ public sealed class SourceBackedServiceSessionTests
         Assert.Empty(collected.Repairs);
 
         SubmitUi(restored, 4, $"{{\"action\":\"merchant-collect-repair\",\"revision\":\"{Escape(collected.Revision)}\",\"key\":\"{Escape(readyRepair.RequestId)}\"}}");
-        Assert.Equal("RepairUnavailable", restored.Presentation.LastOutcome);
+        Assert.Equal("That repair order is no longer available.", restored.Presentation.LastOutcome);
         using DaggerfallSession reloaded = fixture.Restore(restored.CaptureSave());
         Assert.Contains(reloaded.State.Inventory.Read().UniqueItems,
             value => value.Entity.Value == ResolveEntity(reloaded, itemId));
@@ -343,14 +351,16 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallMerchantView merchant = Assert.IsType<DaggerfallMerchantView>(dialogue.Merchant);
         Assert.True(merchant.CanIdentify);
         Assert.False(merchant.CanSell);
-        Assert.Contains(merchant.PlayerItems, value => value.Key == itemKey && !value.Identified);
+        DaggerfallMerchantItemView unidentified = Assert.Single(merchant.PlayerItems, value => value.Key == itemKey && !value.Identified);
+        ulong quotedIdentify = Assert.IsType<ulong>(unidentified.IdentifyCost);
 
         ulong beforeGold = session.State.Currency.Read().Gold;
         SubmitUi(session, 1, $"{{\"action\":\"merchant-identify\",\"revision\":\"{Escape(merchant.Revision)}\",\"item\":\"{Escape(itemKey)}\"}}");
 
-        Assert.Equal("Identified", session.Presentation.LastOutcome);
         Assert.True(session.State.ItemInstances.RequireUnique(itemId.Value).Identified);
         Assert.True(session.State.Currency.Read().Gold < beforeGold);
+        Assert.Equal(quotedIdentify, beforeGold - session.State.Currency.Read().Gold);
+        Assert.Equal($"Identified for {quotedIdentify} gold.", session.Presentation.LastOutcome);
         ulong afterPayment = session.State.Currency.Read().Gold;
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
 
@@ -363,7 +373,8 @@ public sealed class SourceBackedServiceSessionTests
         Assert.Equal(afterPayment, restored.State.Currency.Read().Gold);
 
         SubmitUi(restored, 2, $"{{\"action\":\"merchant-identify\",\"revision\":\"{Escape(restoredMerchant.Revision)}\",\"item\":\"{Escape(itemKey)}\"}}");
-        Assert.Equal("AlreadyIdentified", restored.Presentation.LastOutcome);
+        Assert.Null(Assert.Single(restoredMerchant.PlayerItems, value => value.Key == itemKey).IdentifyCost);
+        Assert.Equal("That item is already identified.", restored.Presentation.LastOutcome);
         Assert.Equal(afterPayment, restored.State.Currency.Read().Gold);
     }
 
