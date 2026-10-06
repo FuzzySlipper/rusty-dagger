@@ -133,7 +133,7 @@ public sealed class DungeonSpellFlightSessionTests
     [Fact]
     public void Dungeon_action_destruction_uses_player_level_power_without_fabricating_a_caster()
     {
-        using Fixture fixture = new(soundIndex: 6, useDefaultEffects: true);
+        using Fixture fixture = new(soundIndex: 7, useDefaultEffects: true);
         DaggerfallSession session = fixture.Session;
         DaggerfallDungeonActionGraph graph = session.State.DungeonActions.Single().Value;
         DaggerfallDungeonActionDispatch dispatch = graph.Trigger(fixture.Action.Id, DaggerfallDungeonActionEvent.Direct);
@@ -162,7 +162,7 @@ public sealed class DungeonSpellFlightSessionTests
     [Fact]
     public void Dungeon_action_missile_reports_immune_target_without_applying_effect()
     {
-        using Fixture fixture = new(soundIndex: 46, useDefaultEffects: true);
+        using Fixture fixture = new(soundIndex: 50, useDefaultEffects: true);
         DaggerfallSession session = fixture.Session;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.ImmunityParalysis.Value)).BaseValue = 1;
         DaggerfallDungeonActionGraph graph = session.State.DungeonActions.Single().Value;
@@ -189,7 +189,7 @@ public sealed class DungeonSpellFlightSessionTests
     [Fact]
     public void Dungeon_action_missile_reports_removed_target_without_applying_effect()
     {
-        using Fixture fixture = new(soundIndex: 6, useDefaultEffects: true);
+        using Fixture fixture = new(soundIndex: 7, useDefaultEffects: true);
         DaggerfallSession session = fixture.Session;
         DaggerfallDungeonActionGraph graph = session.State.DungeonActions.Single().Value;
         graph.Trigger(fixture.Action.Id, DaggerfallDungeonActionEvent.Direct);
@@ -215,10 +215,10 @@ public sealed class DungeonSpellFlightSessionTests
     [Fact]
     public void Dungeon_action_area_around_caster_keeps_donor_target_mode_and_terminates_as_miss()
     {
-        // spell.024 is the donor's AreaAroundCaster Fire Storm. DFU leaves this target mode on
+        // Identity 25 (spell.024) is the donor's AreaAroundCaster Fire Storm. DFU leaves this target mode on
         // the actorless missile, so the product must not reinterpret it as an area-at-impact cast
         // or leave it travelling forever without a caster-owned center.
-        using Fixture fixture = new(soundIndex: 23, useDefaultEffects: true);
+        using Fixture fixture = new(soundIndex: 25, useDefaultEffects: true);
         DaggerfallSession session = fixture.Session;
         DaggerfallDungeonActionGraph graph = session.State.DungeonActions.Single().Value;
         DaggerfallDungeonActionDispatch dispatch = graph.Trigger(fixture.Action.Id, DaggerfallDungeonActionEvent.Direct);
@@ -262,7 +262,7 @@ public sealed class DungeonSpellFlightSessionTests
         internal SpatialFake Spatial { get; }
         internal DaggerfallDungeonActionDefinition Action { get; }
 
-        internal Fixture(byte soundIndex = 26, bool useDefaultEffects = false)
+        internal Fixture(byte soundIndex = 28, bool useDefaultEffects = false)
         {
             string root = TestData.RepositoryRoot;
             DaggerfallDefinitions definitions = TestPayload.Definitions;

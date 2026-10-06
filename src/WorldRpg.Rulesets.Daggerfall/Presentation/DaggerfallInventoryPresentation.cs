@@ -380,7 +380,11 @@ internal sealed class DaggerfallInventoryPresentation
         if (!metadata.Identified)
             return new(baseLabel, conditionDetail + "Unidentified magical item", presentedCondition, false);
         string namedMagic = magic.Name.Replace("%it", baseLabel, StringComparison.Ordinal);
-        string effects = string.Join(", ", magic.Enchantments.Select(enchantment => Label(enchantment.ParamMeaning)));
+        // The donor names each identified enchantment by its setting ("Cast When Used: Fireball",
+        // "Enhances Skill: Long Blade"); an artifact power or an unpublished setting keeps its meaning.
+        string effects = string.Join(", ", magic.Enchantments.Select(enchantment =>
+            definitions.Magic.EnchantmentSettings.TryGetValue($"enchantment.{enchantment.Type}.{enchantment.Param}", out DaggerfallEnchantmentSetting named)
+                ? named.DisplayName : Label(enchantment.ParamMeaning)));
         return new(namedMagic, conditionDetail + Details(definition) + $"; Enchantment: {effects}", presentedCondition, true);
     }
 

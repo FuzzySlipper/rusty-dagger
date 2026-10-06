@@ -73,6 +73,17 @@ internal sealed partial class DaggerCombatRules
     // MehrunesRazorEffect adds the victim's current health to the accepted strike and charges
     // that same amount to its source. The ordinary damage path applies health once and
     // charges physical wear separately from this magic cost.
+    /// <summary>Whether the attacker wields an unbroken Mehrunes Razor, whose strike payload runs on a miss too.</summary>
+    private bool WieldsRazor(long attacker)
+    {
+        if (_itemCondition is null || EquippedWeapon(attacker) is not { } weapon) return false;
+        var equipment = attacker == PlayerId ? _equipment : _actorEquipment(attacker);
+        ulong source = equipment.GetDurableItemId(new EntityId(weapon.EntityId)).Value;
+        return _itemInstances.ContainsUnique(source) && _itemInstances.RequireUnique(source) is { CurrentCondition: > 0, Enchantment: { } key }
+            && _catalog.Magic.TryEnchantments(key, out var payloads)
+            && payloads.Any(effect => effect.Type == SpecialArtifactEffect && effect.Param == 1);
+    }
+
     private int ApplyRazor(long attacker, long target, int damage, Track health, bool enemy,
         ulong generation, ulong step, FactBuffer<IProductFact> facts, out WorldRpg.Kit.Inventory.UniqueInventoryItem? chargedWeapon, out int chargedUnits)
     {

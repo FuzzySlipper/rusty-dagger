@@ -91,11 +91,16 @@ public static class Arena2MagicCatalogDocument
             for (int slot = 0; slot < spell.Effects.Count; slot++)
             {
                 Arena2SpellEffect effect = spell.Effects[slot];
+                // SPELLS.STD gives "Free Action" (identity 10) the Cure Paralyzation effect 3/2 in its
+                // first slot. The donor patches it to Free Action 26/-1 when it reads the record, so the
+                // spell, its enemy list entry and the cast-when-held enchantment that names it grant
+                // paralysis immunity rather than only curing an existing paralysis.
+                bool freeAction = spell.Index == 10 && slot == 0 && effect.Type == 3 && effect.SubType == 2;
                 effects.Add(new JsonObject
                 {
                     ["key"] = $"{SpellKey(ordinal)}.effect.{slot + 1}",
-                    ["type"] = effect.Type,
-                    ["subType"] = effect.SubType,
+                    ["type"] = freeAction ? 26 : effect.Type,
+                    ["subType"] = freeAction ? -1 : effect.SubType,
                     ["duration"] = Triple(effect.DurationBase, effect.DurationMod, effect.DurationPerLevel),
                     ["chance"] = Triple(effect.ChanceBase, effect.ChanceMod, effect.ChancePerLevel),
                     ["magnitude"] = new JsonObject
@@ -230,6 +235,8 @@ public static class Arena2MagicCatalogDocument
                 .Concat(Enumerable.Range(0, 3).Select(subtype => (Type: 39, SubType: subtype)))
                 .Concat(Enumerable.Range(0, 4).Select(subtype => (Type: 33, SubType: subtype)))
                 .Concat([(Type:34,SubType:-1),(Type:40,SubType:-1)])
+                // Resist Magic, the fifth elemental resistance, has no stock spell but is a crafted effect.
+                .Concat([(Type: 8, SubType: 4)])
                 .Distinct()
                 .Order()
                 .Select(variant => effectCosts.Resolve(variant.Type, variant.SubType))

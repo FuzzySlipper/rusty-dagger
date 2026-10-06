@@ -29,8 +29,9 @@ internal sealed partial class DaggerfallSession
     private void BanishNearby(DaggerfallActiveEffect effect, bool daedra)
     {
         var state = DaggerfallMysticismEffects.Read(effect, 6, daedra ? 2 : 1);
-        long centerId = checked((long)effect.Context.Target.Value);
-        var center = centerId == DaggerfallActorIdentity.PlayerEntityId ? State.PlayerControl.Position!.Value : State.Actors.Get(centerId).Position;
+        // The donor gathers the creatures near the player whatever the spell was delivered to.
+        long centerId = DaggerfallActorIdentity.PlayerEntityId;
+        var center = State.PlayerControl.Position!.Value;
         int chance = DaggerfallMagicAdmissionPolicy.CalculateEffectChance(state.Settings, state.CasterLevel);
         int removed = 0;
         foreach (long id in AreaSpellTargets(centerId, center.ToVector(), true, 14d, exclusive: true))

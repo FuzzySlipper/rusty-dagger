@@ -531,8 +531,15 @@ internal sealed partial class DaggerfallSession
                 levelUpOpen: () => State.LevelUps.Pending is not null,
                 bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => _pendingDispel is not null, identifyOpen: () => _pendingIdentify is not null, teleportOpen: () => _pendingTeleport is not null, createItemOpen: () => _pendingCreateItem is not null, legalOpen: () => LegalModalOpen);
             itemInstances.StackChanged += State.Quests.ObserveStackChange;
-            itemInstances.SourceUnavailable += item =>
-            { effects.CancelItemReferences(item); Casting?.CancelItemReferences(item); if (_pendingIdentify?.SourceItem==item) _pendingIdentify=null; };
+            // Only a held bundle lives as long as its item is worn and whole. A used or striking item's
+            // cast, its readied spell and its missile outlive the item breaking or changing hands, as in
+            // the donor; a destroyed item ends them, since no effect may name an item that no longer exists.
+            itemInstances.SourceUnavailable += (item, change) =>
+            {
+                if (change != DaggerfallItemSourceChange.Removed) { effects.CancelHeldItem(item); return; }
+                effects.CancelItemReferences(item); Casting?.CancelItemReferences(item);
+                if (_pendingIdentify?.SourceItem == item) _pendingIdentify = null;
+            };
             Casting = new(definitions.Magic, effects, CastActor, MagicProfile, item => itemInstances.ContainsUnique(item)
                     && (itemInstances.RequireUnique(item).MaximumCondition == 0 || itemInstances.RequireUnique(item).CurrentCondition > 0),
                 use => State.SkillUses.Record(use), result => { State.Quests.ObserveQuestCast(result); _facts.Append(new SpellCastFact(result.Outcome, result.Bundle?.Sequence, result.Bundle?.CasterId,

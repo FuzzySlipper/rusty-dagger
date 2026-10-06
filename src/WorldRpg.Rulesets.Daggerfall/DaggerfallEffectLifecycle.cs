@@ -133,9 +133,10 @@ internal sealed record DaggerfallEffectDefinition(
     Func<DaggerfallEffectDefinition, bool>? IncumbentDefinitionMatch = null,
     DaggerfallDetection Detection = DaggerfallDetection.None)
 {
-    internal EffectDefinition ToEngineDefinition(string source, ulong? heldItem = null) => new(
+    internal EffectDefinition ToEngineDefinition(string source, ulong? heldItem = null, bool potion = false) => new(
         EffectDefinitionId.Parse($"daggerfall.{Key}"),
-        StackingGroupId.Parse(heldItem is ulong item ? $"daggerfall.{LikeKind}.held.{item}" : $"daggerfall.{LikeKind}"),
+        StackingGroupId.Parse(heldItem is ulong item ? $"daggerfall.{LikeKind}.held.{item}"
+            : potion ? $"daggerfall.{LikeKind}.potion" : $"daggerfall.{LikeKind}"),
         Stacking switch
         {
             DaggerfallEffectStacking.Stack or DaggerfallEffectStacking.Reject => EffectStackingPolicy.IndependentByProvenance,
@@ -339,10 +340,22 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
     internal bool IsLikeKind(DaggerfallActiveEffect effect, DaggerfallEffectDefinition definition, long targetId, JsonElement incoming,
         long? casterId = null, ulong? itemId = null, DaggerfallEffectBundleKind bundleKind = DaggerfallEffectBundleKind.None) =>
         checked((long)effect.Context.Target.Value) == targetId && (effect.Definition.IncumbentDefinitionMatch?.Invoke(definition) ?? effect.Definition.LikeKind == definition.LikeKind)
-        && ((effect.BundleKind == DaggerfallEffectBundleKind.HeldMagicItem) == (bundleKind == DaggerfallEffectBundleKind.HeldMagicItem))
+        && IncumbentBundleClass(effect.BundleKind) == IncumbentBundleClass(bundleKind)
         && (bundleKind != DaggerfallEffectBundleKind.HeldMagicItem || effect.Context.Item?.Value == itemId)
         && (!definition.SourceScopedIncumbent || effect.Context.Caster?.Value == (ulong?)casterId && effect.Context.Item?.Value == itemId)
         && (definition.IncumbentSettingsMatch?.Invoke(effect.State, incoming) ?? true);
+
+    /// <summary>
+    /// The donor's incumbent search stays within one bundle type: a potion's effect never refreshes or
+    /// replaces a spell's, and neither touches a held item's. Effects started outside a cast keep the
+    /// spell class they have always shared.
+    /// </summary>
+    private static int IncumbentBundleClass(DaggerfallEffectBundleKind kind) => kind switch
+    {
+        DaggerfallEffectBundleKind.HeldMagicItem => 2,
+        DaggerfallEffectBundleKind.Potion => 1,
+        _ => 0,
+    };
 
     internal DaggerfallActiveEffect? IncumbentFor(DaggerfallEffectDefinition definition, long targetId, JsonElement state,
         long? casterId = null, ulong? itemId = null, DaggerfallEffectBundleKind bundleKind = DaggerfallEffectBundleKind.None) => Active.Where(effect => IsLikeKind(effect, definition, targetId, state, casterId, itemId, bundleKind))
@@ -645,7 +658,8 @@ internal sealed class DaggerfallEffectLifecycle : IDisposable
             active = new DaggerfallActiveEffect(definition, context, stacks, state,
                 () => SourceFor(context), target) { BundleId = bundleId, BundleName = bundleName, BundleKind = bundleKind, BundleSequence = bundleSequence };
             contributions.AddRange(Apply(active, resumed));
-            ActiveEffectLifecycleReceipt receipt = lifecycle.Admit(definition.ToEngineDefinition(context.Source.Key, bundleKind == DaggerfallEffectBundleKind.HeldMagicItem ? context.Item?.Value : null), admission, context,
+            ActiveEffectLifecycleReceipt receipt = lifecycle.Admit(definition.ToEngineDefinition(context.Source.Key, bundleKind == DaggerfallEffectBundleKind.HeldMagicItem ? context.Item?.Value : null,
+                potion: bundleKind == DaggerfallEffectBundleKind.Potion), admission, context,
                 Provenance(checked((long)context.Target.Value), context), stacks, remainingRounds, contributions);
             active.Attach(receipt.Current!);
             _effects.Add(context.Instance, active);
