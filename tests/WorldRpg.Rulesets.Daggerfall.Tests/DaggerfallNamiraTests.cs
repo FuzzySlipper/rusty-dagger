@@ -20,7 +20,7 @@ public sealed partial class DaggerfallEquipmentWearTests
     [InlineData("undead", 26)]
     [InlineData("criminals", 13)]
     [InlineData("orcs", 13)]
-    public void Namira_reflects_the_donor_team_amount_once_and_charges_its_actual_source(string team, int expected)
+    public void Namira_reflects_the_donor_team_amount_once_without_wearing_the_ring(string team, int expected)
     {
         using WearFixture f = new();
         f.EquipEnemyWeapon("iron-longsword", 9001);
@@ -30,7 +30,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         var facts = f.RunEnemyAttack();
         Assert.Equal(13, AppliedDamage(facts));
         Assert.Equal(200 - expected, f.EnemyActor.Get<StatsComponent>().GetTrack(TrackId.Parse("health")).Current);
-        Assert.Equal(1500 - expected, f.Condition(9501));
+        Assert.Equal(1500, f.Condition(9501));
         if (expected == 0) Assert.Empty(facts.OfType<ArtifactDamageReflectedFact>());
         else
         {
@@ -57,7 +57,7 @@ public sealed partial class DaggerfallEquipmentWearTests
     }
 
     [Fact]
-    public void Namira_miss_charges_nothing_and_two_rings_do_not_double_the_result()
+    public void Namira_miss_reflects_nothing_and_two_rings_do_not_double_the_result()
     {
         using WearFixture f = new();
         f.EquipEnemyWeapon("iron-longsword", 9001);
@@ -68,7 +68,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         Assert.Equal(1500, f.Condition(9501));
         f.Script(9, 50, 1, 15);
         Assert.Single(f.RunEnemyAttack(step: 100).OfType<ArtifactDamageReflectedFact>());
-        Assert.Equal(1487, f.Condition(9501));
+        Assert.Equal(1500, f.Condition(9501));
         Assert.Equal(1500, f.Condition(9502));
     }
 
@@ -88,12 +88,12 @@ public sealed partial class DaggerfallEquipmentWearTests
         var reflection = Assert.Single(facts.OfType<ArtifactDamageReflectedFact>());
         Assert.Equal(4, reflection.ReflectedDamage);
         Assert.Equal(2, reflection.ActualHealthLost);
-        Assert.Equal(1496, f.Condition(9501));
+        Assert.Equal(1500, f.Condition(9501));
         Assert.Equal(198, f.EnemyActor.Get<StatsComponent>().GetTrack(TrackId.Parse("health")).Current);
     }
 
     [Fact]
-    public void Namira_lethal_reflection_emits_one_ordered_death_and_break_removes_the_ring()
+    public void Namira_lethal_reflection_emits_one_ordered_death_and_leaves_a_worn_ring_whole()
     {
         using WearFixture f = new();
         f.EquipEnemyWeapon("iron-longsword", 9001);
@@ -105,9 +105,9 @@ public sealed partial class DaggerfallEquipmentWearTests
         Assert.Equal((Enemy, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.Effect, 3d), (death.ActorId, death.KillerId, death.Cause, death.ActualHealthLost));
         Assert.True(facts.FindIndex(fact => fact is AttackHitFact) < facts.FindIndex(fact => fact is ArtifactDamageReflectedFact));
         Assert.True(facts.FindIndex(fact => fact is ArtifactDamageReflectedFact) < facts.FindIndex(fact => fact is ActorDiedFact));
-        Assert.Equal(0, f.Condition(9501));
-        Assert.DoesNotContain(f.PlayerEquipment.Read().Assignments, assignment => assignment.Slot.Value == "ring0");
-        Assert.Single(facts.OfType<EquipmentWornFact>(), fact => fact.DurableItemId == 9501 && fact.Broken);
+        Assert.Equal(5, f.Condition(9501));
+        Assert.Contains(f.PlayerEquipment.Read().Assignments, assignment => assignment.Slot.Value == "ring0");
+        Assert.DoesNotContain(facts.OfType<EquipmentWornFact>(), fact => fact.DurableItemId == 9501);
     }
 
     private sealed class NamiraDefense : ICombatContribution

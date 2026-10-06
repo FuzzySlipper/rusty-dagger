@@ -16,7 +16,6 @@ internal sealed record DaggerfallPotionMakingResult(bool Accepted, string Outcom
 internal sealed class DaggerfallPotionMaking(DaggerfallDefinitions definitions, DaggerfallState state,
     IRandomService random, Func<DaggerfallCalendar> calendar)
 {
-    private long _nextPotion;
     private sealed record Ingredient(EntityId Owner, DaggerfallItemOwner MetadataOwner, InventoryStack Stack, int Template);
 
     internal bool CanUse(DaggerfallServiceProvider provider)
@@ -96,13 +95,20 @@ internal sealed class DaggerfallPotionMaking(DaggerfallDefinitions definitions, 
             }
             else
             {
-                InventoryStackId stack;
-                do { stack = InventoryStackId.Parse($"daggerfall.potion.made.{checked(++_nextPotion)}"); }
-                while (state.ItemInstances.ContainsStack(DaggerfallItemOwner.Player, stack));
+                // The donor adds a brewed potion to an existing stack of the same recipe
+                // (ItemCollection.AddItem / FindExistingStack); a recipe's own stack holds new ones.
+                InventoryStackId stack = InventoryStackId.Parse($"daggerfall.potion.made.{recipe.Key}");
                 var factory = new DaggerfallItemFactory(definitions, random);
                 var item = factory.Create(new("UselessItems1", stack.Value, DaggerfallItemOwner.Player, Quantity: 1, TemplateIndex: 83, PotionRecipeKey: recipe.Key));
-                state.Containers.Seed(state.Inventory.Component.Owner, [new(item.Item, 1, Stack: stack)], Consume);
-                state.ItemInstances.RegisterStack(DaggerfallItemOwner.Player, stack, item.Metadata);
+                InventoryStackId? existing = state.Containers.Read(state.Inventory.Component.Owner).Stacks
+                    .Where(value => value.Definition.Value == item.Item.Value
+                        && state.ItemInstances.ContainsStack(DaggerfallItemOwner.Player, value.Id)
+                        && state.ItemInstances.RequireStack(DaggerfallItemOwner.Player, value.Id) is { HasEnchantment: false } metadata
+                        && metadata.PotionRecipeKey == recipe.Key)
+                    .Select(value => (InventoryStackId?)value.Id).FirstOrDefault();
+                state.Containers.Seed(state.Inventory.Component.Owner, [new(item.Item, 1, Stack: existing ?? stack)], Consume);
+                if (existing is null && !state.ItemInstances.ContainsStack(DaggerfallItemOwner.Player, stack))
+                    state.ItemInstances.RegisterStack(DaggerfallItemOwner.Player, stack, item.Metadata);
             }
         }
         catch (MechanicsException failure) when (failure.Reason == MechanicsRefusal.Capacity)

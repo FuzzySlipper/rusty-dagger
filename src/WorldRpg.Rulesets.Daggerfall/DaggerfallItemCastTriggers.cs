@@ -67,7 +67,9 @@ internal sealed partial class DaggerfallItemCastTriggers(DaggerfallMagicCatalogS
                 {
                     if (!Available(entry.Key)) break;
                     var result = Trigger(casterId.Value, entry.Key, payload, DaggerfallCastSource.ItemHeld, casterId.Value);
-                    if (result.Bundle is not null && casting.AvailableSpellCost(casterId.Value, payload.SpellKey!) is int cost)
+                    // The donor prices the wear with the player's school skills whoever wears the item
+                    // (FormulaHelper.CalculateCastingCost reads PlayerEntity.Skills).
+                    if (result.Bundle is not null && casting.AvailableSpellCost(DaggerfallActorIdentity.PlayerEntityId, payload.SpellKey!) is int cost)
                         Wear(casterId.Value, item!.Value, Math.Max(1, cost));
                 }
                 RememberActiveEffects(entry.Key);

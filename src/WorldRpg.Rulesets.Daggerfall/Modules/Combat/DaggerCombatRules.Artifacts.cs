@@ -145,8 +145,8 @@ internal sealed partial class DaggerCombatRules
             facts.Append(new ActorDamagedFact(attacker, target, DaggerfallDamageCause.Effect, result.CalculatedDamage, result.ActualHealthLost) { TargetDefeated = result.Defeated });
         if (result.Defeated)
             facts.Append(new ActorDiedFact(attacker, target, DaggerfallDamageCause.Effect, result.CalculatedDamage, result.ActualHealthLost, generation, step));
-        // The callback's cost is its reflected amount, even when the enemy has fewer health points.
-        DamageCondition(equippedRing, target, reflected, generation, step, facts);
+        // The donor hands the ring's callback no source item, so its durability cost is discarded
+        // and the ring never wears (FormulaHelper.CalculateAttackDamage).
     }
 
     internal static int NamiraReflection(string? team, int damage) => team switch
