@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json.Nodes;
 using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
@@ -98,6 +100,43 @@ public sealed class DaggerfallRestSessionTests
         DaggerfallSavePayload after = DaggerfallSavePayload.Read(restored.CaptureSave());
         Assert.Equal(saved.Calendar, after.Calendar);
         Assert.Equal(JsonSerializer.Serialize(saved.Encounters), JsonSerializer.Serialize(after.Encounters));
+    }
+
+    [Fact]
+    public void A_quest_prompt_raised_during_rest_stops_the_rest_before_further_time_passes()
+    {
+        JsonObject root = JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
+            {"name":"rest-prompt","displayName":"Rest prompt","sourceFile":"rest-prompt.txt","disposition":"compiled",
+            "messages":[{"id":1010,"firstLine":1,"lines":["Will you help?"]}],
+            "blocks":[{"kind":"clock","firstLine":2,"lines":["clock _ask_ 30"],"global":null},
+            {"kind":"variable","firstLine":3,"lines":["variable _yes_"],"global":null},
+            {"kind":"variable","firstLine":4,"lines":["variable _no_"],"global":null},
+            {"kind":"task","firstLine":5,"lines":["_ask_ task:","prompt 1010 yes _yes_ no _no_"],"global":null},
+            {"kind":"headless","firstLine":7,"lines":["start timer _ask_"],"global":null}],"diagnostics":[]}
+            """));
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
+        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        PopulateTerrainContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) { Sky = sky });
+        session.State.PlayerControl.MoveTo(new WorldPoint(1000f, 1f, 1000f).ToVector());
+        session.State.Quests.Start(new("rest-prompt", "rest-prompt.txt", "rest-prompt", DaggerfallQuestLifecycle.Active, null, [], []));
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Null(session.State.Quests.Messages.Pending);
+        long before = CalendarSeconds(DaggerfallSavePayload.Read(session.CaptureSave()).Calendar);
+
+        session.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":2}")]));
+
+        Assert.NotNull(session.State.Quests.Messages.Pending);
+        Assert.Equal(DaggerfallRestInterruption.Stopped, session.RestView.Interruption);
+        long elapsed = CalendarSeconds(DaggerfallSavePayload.Read(session.CaptureSave()).Calendar) - before;
+        Assert.InRange(elapsed, 29 * DaggerfallCalendar.SecondsPerMinute, 31 * DaggerfallCalendar.SecondsPerMinute);
     }
 
     [Fact]

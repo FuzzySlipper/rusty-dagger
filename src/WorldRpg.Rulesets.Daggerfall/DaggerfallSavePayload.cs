@@ -58,6 +58,8 @@ internal sealed record DaggerfallSavePayload(
     [JsonRequired] public DaggerfallInfectionsSave Infections { get; init; } = DaggerfallInfectionsSave.Empty;
     [JsonRequired] public DaggerfallSummoningSave Summoning { get; init; } = DaggerfallSummoningSave.Empty;
     public long NextCastSequence { get; init; } = 1;
+    /// <summary>How many poison rolls the player's admissions have drawn, so later draws continue the keyed sequence.</summary>
+    [JsonRequired] public long PoisonDraws { get; init; }
     [JsonRequired]
     public DaggerfallReadySpell? ReadySpell {get;init;}
     [JsonRequired]
@@ -781,6 +783,7 @@ internal sealed record DaggerfallSavePayload(
     {
         if (MagicRounds < 0) throw new ArgumentException("Saved magic-round cadence cannot be negative.");
         if (NextCastSequence < 1) throw new ArgumentException("Saved next cast sequence must be positive.");
+        if (PoisonDraws < 0) throw new ArgumentException("Saved poison draw count cannot be negative.");
         ArgumentNullException.ThrowIfNull(Player);
         PendingDispel?.Validate();
         if (PendingTeleport is not null && string.IsNullOrWhiteSpace(PendingTeleport)) throw new ArgumentException("Saved teleport choice requires its paid cast identity.");

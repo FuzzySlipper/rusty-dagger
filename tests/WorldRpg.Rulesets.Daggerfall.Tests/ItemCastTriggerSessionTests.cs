@@ -295,7 +295,7 @@ public sealed class ItemCastTriggerSessionTests
     }
 
     private static Stat Stat(DaggerfallSession s, string id) => s.State.Actors.Player.Stats.GetStat(StatId.Parse(id));
-    private static void Equip(DaggerfallSession s, UniqueItem item, bool weapon = false)
+    internal static void Equip(DaggerfallSession s, UniqueItem item, bool weapon = false)
     {
         var definition = TestPayload.Definitions.RequireItem(new DaggerfallItemId(item.Definition.Value));
         var slot = weapon ? TestPayload.Definitions.EquipmentSlots.Values.Single(value => value.Id.Value == "right-hand")

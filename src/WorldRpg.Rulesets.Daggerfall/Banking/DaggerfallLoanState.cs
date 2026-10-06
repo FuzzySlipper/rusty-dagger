@@ -94,16 +94,33 @@ internal sealed class DaggerfallLoanState
         return decision;
     }
 
-    /// <summary>Runs donor account-first overdue settlement once after an admitted calendar advance.</summary>
-    internal IReadOnlyList<DaggerfallLoanDueDecision> AdvanceDue(DaggerfallCalendar calendar,
+    /// <summary>
+    /// Runs the donor's daily loan check for an admitted calendar interval. The check runs only when
+    /// the interval changed the date, so a debt falls overdue at the first midnight after its due
+    /// minute. An overdue debt first sweeps its regional account every day, and its one default
+    /// penalty applies once; a debt not yet due reports a reminder when the interval crosses six,
+    /// three or one months before the due minute.
+    /// </summary>
+    internal DaggerfallLoanDayResult AdvanceDue(DaggerfallCalendar before, DaggerfallCalendar calendar,
         DaggerfallRegionalBankState bank, DaggerfallCurrencyService currency,
         DaggerfallLoanSettlementAdapter settlement, DaggerfallSocialState social,
         DaggerfallFactionsSet factions)
     {
+        if (calendar.DayNumber <= before.DayNumber) return DaggerfallLoanDayResult.None;
+        long lastMinute = DaggerfallLoanPolicy.ClassicMinute(before), minute = DaggerfallLoanPolicy.ClassicMinute(calendar);
         List<DaggerfallLoanDueDecision> outcomes = [];
+        List<DaggerfallLoanReminder> reminders = [];
         foreach (DaggerfallLoanRecord initial in _records.Values.OrderBy(record => record.Region).ToArray())
         {
-            if (initial.Defaulted || DaggerfallLoanPolicy.ClassicMinute(calendar) <= initial.DueMinute) continue;
+            if (initial.Remaining == 0) continue;
+            if (minute <= initial.DueMinute)
+            {
+                long lastMonths = (initial.DueMinute - lastMinute) / MinutesPerMonth;
+                long months = (initial.DueMinute - minute) / MinutesPerMonth;
+                if (months < lastMonths && ReminderMonths.Any(month => lastMonths >= month && months < month))
+                    reminders.Add(new(initial.Region, initial.Remaining, months + 1));
+                continue;
+            }
             ulong account = bank.BalanceForRegion(initial.Region);
             if (account > 0)
                 _ = Repay(initial.Region, Math.Min(account, initial.Remaining), fromAccount: true,
@@ -122,6 +139,19 @@ internal sealed class DaggerfallLoanState
                     DaggerfallFactionReputationChange.Propagate);
             outcomes.Add(due);
         }
-        return outcomes;
+        return new(outcomes, reminders);
     }
+
+    private const long MinutesPerMonth = DaggerfallLoanPolicy.MinutesPerDay * DaggerfallCalendar.DaysPerMonth;
+    private static readonly long[] ReminderMonths = [6, 3, 1];
+}
+
+/// <summary>A reminder that a regional debt is due in less than <paramref name="MonthsLeft"/> months.</summary>
+internal sealed record DaggerfallLoanReminder(int Region, ulong Remaining, long MonthsLeft);
+
+/// <summary>What one daily loan check changed: defaults applied and reminders due.</summary>
+internal sealed record DaggerfallLoanDayResult(
+    IReadOnlyList<DaggerfallLoanDueDecision> Defaults, IReadOnlyList<DaggerfallLoanReminder> Reminders)
+{
+    internal static DaggerfallLoanDayResult None { get; } = new([], []);
 }

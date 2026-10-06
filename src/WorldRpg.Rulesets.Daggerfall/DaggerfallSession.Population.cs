@@ -46,6 +46,9 @@ internal sealed partial class DaggerfallSession
         DaggerfallSiteProfile profile = _sites.Projection.Inputs;
         if (profile.ProfileKind != DaggerfallWorldProfileKind.Exterior || profile.Site is not { } siteId)
             return;
+        // An unloaded location keeps its population, hidden or not, in the site delta that holds
+        // its actors; presence is reconciled again when the location is admitted.
+        if (!_sites.ActiveLocationLoaded) return;
 
         DaggerfallSiteRecord site = _site.Require(siteId);
         DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, string.Empty);

@@ -967,6 +967,9 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         // A terminal parent disposes children before any queued start or child operation can advance this admitted step.
         TombstoneAndCleanup(now);
         AdmitPendingStarts();
+        _taskPassDepth++;
+        try
+        {
         foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values.ToArray())
             if (instance.Lifecycle == DaggerfallQuestLifecycle.Active)
             {
@@ -992,8 +995,16 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                     instance.Resources = instance.Resources.Select(resource => resource with { HasPlayerClicked = false }).ToArray();
                 }
             }
+        }
+        finally { _taskPassDepth--; }
         TombstoneAndCleanup(now);
     }
+
+    /// <summary>
+    /// How many quest task passes are running. A task can admit an interval of its own (training, a
+    /// cure), and that interval's clocks must not re-enter a task runner the outer pass is iterating.
+    /// </summary>
+    private int _taskPassDepth;
 
     /// <summary>Records a DOM prompt answer once, then starts its source-declared target task.</summary>
     internal bool ChoosePrompt(DaggerfallVariableStore variables, string instanceId, int messageId, string promptId, int choiceId)
@@ -1007,12 +1018,23 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 operation => Messages.ResolvePromptMessage(instance, operation)), out _, out _);
     }
 
-    /// <summary>Consumes elapsed calendar time once; clocks never own a timer or update loop.</summary>
+    /// <summary>
+    /// Consumes elapsed calendar time once; clocks never own a timer or update loop. A deadline
+    /// reached inside a running task pass, or for a quest whose prompt is still unanswered, only
+    /// triggers its task, which then runs on the next ordinary quest pass.
+    /// </summary>
     internal void AdvanceClocks(DaggerfallVariableStore variables, DaggerfallCalendar before, DaggerfallCalendar after)
     {
         ArgumentNullException.ThrowIfNull(variables);
-        foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values)
-            DaggerfallQuestClockAdvancer.Advance(instance, Program(instance.SourceFile), variables, before, after, Messages, this);
+        bool nested = _taskPassDepth > 0;
+        _taskPassDepth++;
+        try
+        {
+            foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values.ToArray())
+                DaggerfallQuestClockAdvancer.Advance(instance, Program(instance.SourceFile), variables, before, after, Messages, this,
+                    runTasks: !nested && Messages.Pending?.InstanceId != instance.InstanceId);
+        }
+        finally { _taskPassDepth--; }
     }
 
     internal DaggerfallQuestInstanceSave SetResource(string instanceId, DaggerfallQuestResourceState resource)

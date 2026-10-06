@@ -437,6 +437,22 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     [Fact]
+    public void A_restored_session_continues_the_poison_draw_sequence_instead_of_replaying_it()
+    {
+        using var fixture = new ConditionSessionFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallPoisonExposure levelled = session.PlayerPoisonExposure(bypassResistance: true) with { TargetLevel = 5 };
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.InflictPoison(levelled, 136));
+        long draws = DaggerfallSavePayload.Read(session.CaptureSave()).PoisonDraws;
+        Assert.True(draws > 0);
+
+        // The keyed poison draws name their ordinal; a reload that restarted at zero would replay the
+        // session's first rolls rather than continue where the save left off.
+        using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        Assert.Equal(draws, DaggerfallSavePayload.Read(restored.CaptureSave()).PoisonDraws);
+    }
+
+    [Fact]
     public void Taking_a_drug_asks_the_poison_owner_and_names_the_poison_of_its_template()
     {
         using var fixture = new ConditionSessionFixture();

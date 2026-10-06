@@ -1,20 +1,29 @@
 using WorldRpg.Rulesets.Daggerfall.Banking;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed partial class DaggerfallSession
 {
-    private void AdvanceLoans()
+    private void AdvanceLoans(DaggerfallCalendar before, DaggerfallCalendar after)
     {
-        DaggerfallLoanDueDecision[] defaults = [.. State.Loans.AdvanceDue(_time.Calendar,
+        DaggerfallLoanDayResult day = State.Loans.AdvanceDue(before, after,
             State.Bank, State.Currency, DaggerfallLoanSettlementAdapter.ForBank(State.Bank, State.Currency),
-            State.Social, _definitions.Factions)];
-        if (defaults.Length > 0)
-            Presentation.SetOutcome(defaults.Length == 1
-                ? $"Loan defaulted in region {defaults[0].Region}; legal and faction standing fell."
-                : $"Loans defaulted in {defaults.Length} regions; legal and faction standing fell.");
+            State.Social, _definitions.Factions);
+        foreach (DaggerfallLoanReminder reminder in day.Reminders)
+            Presentation.SetOutcome($"You have a loan of {reminder.Remaining} gold pieces due in less than "
+                + $"{reminder.MonthsLeft} months in {LoanRegionName(reminder.Region)}.");
+        if (day.Defaults.Count > 0)
+            Presentation.SetOutcome(day.Defaults.Count == 1
+                ? $"Loan defaulted in {LoanRegionName(day.Defaults[0].Region)}; legal and faction standing fell."
+                : $"Loans defaulted in {day.Defaults.Count} regions; legal and faction standing fell.");
     }
+
+    private string LoanRegionName(int region) =>
+        region >= 0 && region < _definitions.BuildingNames.RegionNames.Count
+            ? _definitions.BuildingNames.RegionNames[region]
+            : $"region {region}";
 
     private void ChangeLoan(DaggerfallPlayerUiAction action)
     {

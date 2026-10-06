@@ -72,11 +72,11 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
         return true;
     }
 
-    private void AdvanceLycanthropyQuestOpportunities(DaggerfallCalendar before)
+    private void AdvanceLycanthropyQuestOpportunities(DaggerfallCalendar before, DaggerfallCalendar after)
     {
         if (State.RacialOverrides.Current is not { IsVampire: false } racial) return;
         const long period = 84L * 1440;
-        long first = Math.Max(MinuteIndex(before), racial.State.AcquiredMinute), last = MinuteIndex(_time.Calendar);
+        long first = Math.Max(MinuteIndex(before), racial.State.AcquiredMinute), last = MinuteIndex(after);
         for (long boundary = ((first + period - 1) / period) * period; boundary < last; boundary += period)
             StartLycanthropyCureQuestOpportunity(boundary);
     }
@@ -101,17 +101,13 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
         }
     }
 
-    private void AdvanceLycanthropyRound(DaggerfallCalendar before)
+    private void AdvanceLycanthropyRound(DaggerfallCalendar after)
     {
         if (State.RacialOverrides.Current is not { State.BeastForm: false, IsVampire: false } || State.HeldEnchantments.HircinesRingEquipped) return;
-        // Rest and travel admit an interval rather than visiting every minute. A lunar cycle is
-        // 32 days; inspect at most one cycle to retain the first forced transformation it crossed.
-        var firstRound = before.Advance(60 - before.Second, out _);
-        for (int day = 0; day <= Math.Min(32, _time.Calendar.DayNumber - firstRound.DayNumber); day++)
-        {
-            var date = day == 0 ? firstRound : firstRound.Advance(day * (long)DaggerfallCalendar.SecondsPerDay - firstRound.SecondOfDay, out _);
-            if (date.IsFullMoon) { MorphPlayer(forced: true, transitionMinute: MinuteIndex(date)); return; }
-        }
+        // The donor's magic round reads the current date, and an elapsed catch-up runs its rounds
+        // after the clock has moved: an interval forces the change only when it ends under a full
+        // moon. Rest and travel deliver minute slices, so they observe every moon they cross.
+        if (after.IsFullMoon) MorphPlayer(forced: true, transitionMinute: MinuteIndex(after));
     }
 
     private void RefreshLycanthropy()

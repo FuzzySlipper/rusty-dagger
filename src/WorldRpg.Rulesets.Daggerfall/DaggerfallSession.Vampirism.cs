@@ -40,10 +40,10 @@ internal sealed partial class DaggerfallSession
         return new(true, null);
     }
 
-    private void AdvanceVampireQuestOpportunities(DaggerfallCalendar before)
+    private void AdvanceVampireQuestOpportunities(DaggerfallCalendar before, DaggerfallCalendar after)
     {
         if (State.RacialOverrides.Current is not { IsVampire: true } racial) return;
-        long first = Math.Max(MinuteIndex(before), racial.State.AcquiredMinute), last = MinuteIndex(_time.Calendar);
+        long first = Math.Max(MinuteIndex(before), racial.State.AcquiredMinute), last = MinuteIndex(after);
         // Classic's clan opportunity is nested inside the weekly and 38-day conditions (266 days).
         // The separate cure opportunity is every 84 days. Both consume this one admitted calendar.
         foreach (var period in new[] { (Minutes: 266L * 1440, Cure: false), (Minutes: 84L * 1440, Cure: true) })
