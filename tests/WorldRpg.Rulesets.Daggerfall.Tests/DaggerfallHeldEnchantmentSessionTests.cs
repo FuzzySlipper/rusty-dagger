@@ -94,7 +94,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         DaggerfallItemInstanceMetadata retained = restored.State.ItemInstances.RequireUnique(durableId);
         Assert.Equal(afterFirstHour, retained.CurrentCondition);
         Assert.Equal(TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(value => value.Type == 16 && value.Param == 0).Key,
-            retained.Enchantment);
+            Assert.Single(retained.MadeEnchantment!.Settings, value => value.Parent is null).Key);
         Assert.Contains(restored.State.Equipment.Read().Assignments,
             assignment => restored.State.Equipment.GetDurableItemId(new EntityId(assignment.Item.EntityId)).Value == durableId);
 

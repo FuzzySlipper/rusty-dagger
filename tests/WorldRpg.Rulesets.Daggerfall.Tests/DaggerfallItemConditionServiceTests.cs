@@ -52,15 +52,15 @@ public sealed class DaggerfallItemConditionServiceTests
     }
 
     [Fact]
-    public void Identifying_an_unidentified_setting_enchantment_succeeds()
+    public void Identifying_an_unidentified_made_enchantment_succeeds()
     {
-        // A save may carry an unidentified setting, so identifying it must disclose what the setting does
-        // rather than demand a published magic template it does not have.
+        // A made enchantment names its settings rather than a published magic template, so identifying it
+        // discloses what the settings do without demanding a template it does not have.
         using Fixture f = new();
         UniqueItem sword = f.CreatePlainWeapon(407, 115, "daedric");
         string settingKey = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(candidate => candidate.Type == 7 && candidate.Param == 0).Key;
-        DaggerfallItemInstanceMetadata before = f.Instances.RequireUnique(407);
-        f.Instances.ReplaceUnique(407, before with { Enchantment = settingKey, Identified = false });
+        f.Service.Enchant(sword, settingKey);
+        f.Instances.ReplaceUnique(407, f.Instances.RequireUnique(407) with { Identified = false });
 
         DaggerfallItemConditionResult result = f.Service.Identify(sword);
 
@@ -69,10 +69,10 @@ public sealed class DaggerfallItemConditionServiceTests
     }
 
     [Fact]
-    public void An_item_makers_setting_survives_a_save_and_restore()
+    public void A_saved_setting_key_is_not_magic_item_metadata_and_is_refused()
     {
-        // The save path used to require a published magic item, so an item the item maker had enchanted
-        // could not be stored at all. A setting is now stored as it stands and comes back on the item.
+        // An item maker's settings are saved as a made enchantment; the magic-item field names only a
+        // published magic item, so a setting key there is malformed current data.
         using var fixture = new ConditionSessionFixture();
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(fixture.Session.CaptureSave());
         DaggerfallUniqueSave target = saved.Inventory.UniqueItems.First();
@@ -87,9 +87,7 @@ public sealed class DaggerfallItemConditionServiceTests
             },
         };
 
-        using DaggerfallSession restored = fixture.Restore(DaggerfallSavePayload.Encode(enchanted));
-
-        Assert.Equal(settingKey, restored.State.ItemInstances.RequireUnique(target.EntityId).Enchantment);
+        Assert.Throws<ArgumentException>(() => fixture.Restore(DaggerfallSavePayload.Encode(enchanted)));
     }
 
     [Fact]
@@ -270,7 +268,7 @@ public sealed class DaggerfallItemConditionServiceTests
     public void Enchanting_with_an_item_makers_setting_keeps_the_items_own_condition()
     {
         // A setting has no template and no uses, so the item keeps its condition and its own identity
-        // while gaining the enchantment and identification; a magic item's uses are not copied onto it.
+        // while gaining a made enchantment and identification; a magic item's uses are not copied onto it.
         using Fixture f = new();
         DaggerfallEnchantmentSetting setting = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(candidate => candidate.Type == 7 && candidate.Param == 0);
         // Daedric carries the largest enchantment capacity, as the published-item fact above uses.
@@ -281,11 +279,12 @@ public sealed class DaggerfallItemConditionServiceTests
         DaggerfallItemConditionResult result = f.Service.Enchant(sword, setting.Key);
 
         Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, result.Outcome);
-        Assert.Equal((before.ItemId, setting.Key, true, before.CurrentCondition, before.MaximumCondition),
+        Assert.Equal((before.ItemId, (string?)null, true, before.CurrentCondition, before.MaximumCondition),
             (result.Metadata.ItemId, result.Metadata.Enchantment, result.Metadata.Identified,
                 result.Metadata.CurrentCondition, result.Metadata.MaximumCondition));
-        Assert.Equal(DaggerfallItemConditionOutcome.AlreadyEnchanted, f.Service.Enchant(sword, setting.Key).Outcome);
-        Assert.Equal(setting.Key, f.Instances.RequireUnique(406).Enchantment);
+        Assert.Equal([setting.Key], MadeKeys(result.Metadata));
+        Assert.Throws<InvalidOperationException>(() => f.Service.Enchant(sword, setting.Key));
+        Assert.Equal([setting.Key], MadeKeys(f.Instances.RequireUnique(406)));
         // A setting-enchanted item is a normal item everywhere else: its metadata round-trips and it
         // presents as the ordinary item named by what the setting does, not as an unpublished template.
         DaggerfallItemInstanceMetadata stored = f.Instances.RequireUnique(406);
@@ -314,7 +313,7 @@ public sealed class DaggerfallItemConditionServiceTests
         UniqueItem item = fixture.CreatePlainWeapon(501, 115, "daedric");
         Assert.Equal(417, fixture.Service.QuoteEnchantment(item, "enchantment.7.0").RequiredPoints);
         Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, fixture.Service.Enchant(item, "enchantment.7.0").Outcome);
-        Assert.Equal("enchantment.7.0", fixture.Instances.RequireUnique(501).Enchantment);
+        Assert.Equal(["enchantment.7.0"], MadeKeys(fixture.Instances.RequireUnique(501)));
         Assert.True(DaggerfallMagicCostPolicy.TryGetNonSpellEnchantmentCost(definitions.Magic,
             DaggerfallEnchantmentSettings.ToEffect(definitions.Magic.EnchantmentSettings["enchantment.7.0"]), out int cost));
         Assert.Equal(417, cost);
@@ -337,7 +336,7 @@ public sealed class DaggerfallItemConditionServiceTests
             DaggerfallItemConditionResult result = f.Service.Enchant(item, setting.Key);
 
             Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, result.Outcome);
-            Assert.Equal(setting.Key, f.Instances.RequireUnique(durable).Enchantment);
+            Assert.Equal([setting.Key], MadeKeys(f.Instances.RequireUnique(durable)));
             Assert.Equal(condition, f.Instances.RequireUnique(durable).CurrentCondition);
             durable++;
         }
@@ -349,8 +348,8 @@ public sealed class DaggerfallItemConditionServiceTests
         int cursedCondition = f.Instances.RequireUnique(durable).CurrentCondition;
         DaggerfallItemConditionResult cursedResult = f.Service.Enchant(cursed, detriment.Key);
         Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, cursedResult.Outcome);
-        Assert.Equal((detriment.Key, cursedCondition),
-            (f.Instances.RequireUnique(durable).Enchantment, f.Instances.RequireUnique(durable).CurrentCondition));
+        Assert.Equal([detriment.Key], MadeKeys(f.Instances.RequireUnique(durable)));
+        Assert.Equal(cursedCondition, f.Instances.RequireUnique(durable).CurrentCondition);
     }
 
     [Fact]
@@ -378,9 +377,9 @@ public sealed class DaggerfallItemConditionServiceTests
         Assert.Throws<InvalidOperationException>(() => f.Service.Enchant(item, "enchantment.14.5"));
         Assert.Equal(before, f.Instances.RequireUnique(507));
         Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, f.Service.Enchant(item, "enchantment.14.0").Outcome);
-        Assert.Equal(DaggerfallItemConditionOutcome.AlreadyEnchanted, f.Service.Enchant(item, "enchantment.14.0").Outcome);
+        Assert.Throws<InvalidOperationException>(() => f.Service.Enchant(item, "enchantment.14.0"));
         Assert.Throws<InvalidOperationException>(() => f.Service.Enchant(item, "enchantment.25.0"));
-        Assert.Equal("enchantment.14.0", f.Instances.RequireUnique(507).Enchantment);
+        Assert.Equal(["enchantment.14.0"], MadeKeys(f.Instances.RequireUnique(507)));
     }
 
     [Fact]
@@ -390,6 +389,10 @@ public sealed class DaggerfallItemConditionServiceTests
         Assert.Equal(66, DaggerfallFormulaPolicy.ConditionPercentage(2, 3));
         Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.ConditionPercentage(4, 3));
     }
+
+    /// <summary>The settings a made enchantment was built from, without the children a setting forces.</summary>
+    private static string[] MadeKeys(DaggerfallItemInstanceMetadata metadata) =>
+        metadata.MadeEnchantment?.Settings.Where(value => value.Parent is null).Select(value => value.Key).ToArray() ?? [];
 
     private sealed class Fixture : IDisposable
     {

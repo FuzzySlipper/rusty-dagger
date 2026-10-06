@@ -928,11 +928,17 @@ public sealed class DaggerfallHeldEnchantmentTests
         {
             DaggerfallItemDefinition definition = Definitions.RequireItem(new DaggerfallItemId(itemId));
             int condition = Definitions.AuthoredMaximumCondition(definition);
+            // An item-maker setting is held as a made enchantment, the one form the item maker writes;
+            // a published magic item is named by its key.
+            bool setting = enchantment is not null && Definitions.Magic.EnchantmentSettings.ContainsKey(enchantment);
             _instances.RegisterUnique(uniqueId, DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player) with
             {
                 CurrentCondition = condition,
                 MaximumCondition = condition,
-                Enchantment = enchantment,
+                Enchantment = setting ? null : enchantment,
+                MadeEnchantment = setting
+                    ? new DaggerfallMadeEnchantment(definition.Template?.Name ?? itemId, DaggerfallEnchantmentConstruction.Expand(Definitions.Magic, [enchantment!]), definition.Value)
+                    : null,
             });
             WorldRpg.Kit.Inventory.UniqueInventoryItem item = _equipment.Materialize(
                 new DurableIdentityReference(DurableIdentityKind.Item, uniqueId), new InventoryItemId(itemId));
