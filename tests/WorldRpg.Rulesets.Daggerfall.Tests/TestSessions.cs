@@ -360,7 +360,7 @@ internal static class TestSessions
     internal static ActorsState EmptyActors()
     {
         ActorsState actors = new();
-        actors.CreatePlayer(99, new EntityTypeId("player"), new StatsComponent(), "health");
+        actors.CreatePlayer(99, new EntityTypeId("player"), new StatsComponent(), "health", DaggerActorFactory.PlayerCapabilities);
         return actors;
     }
     internal static WorldRpg.Kit.Inventory.EquipmentRead RightHand(string itemId) => new([new WorldRpg.Kit.Inventory.EquipmentAssignment(new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand"), new WorldRpg.Kit.Inventory.UniqueInventoryItem(1, new WorldRpg.Kit.Inventory.InventoryItemId(itemId)))], 1, 1);
@@ -369,8 +369,8 @@ internal static class TestSessions
     internal static ActorsState ActorsWithNpc(long durableId, StatsComponent stats, WorldPoint point)
     {
         ActorsState actors = new();
-        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), new StatsComponent(), "health");
-        actors.CreateActor(durableId, new EntityTypeId("test"), stats, new ActorPose(point, 0f), "health");
+        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), new StatsComponent(), "health", DaggerActorFactory.PlayerCapabilities);
+        actors.CreateActor(durableId, new EntityTypeId("test"), stats, new ActorPose(point, 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
         return actors;
     }
 

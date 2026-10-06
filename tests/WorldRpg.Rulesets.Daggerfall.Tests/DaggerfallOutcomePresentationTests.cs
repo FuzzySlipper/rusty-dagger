@@ -12,7 +12,7 @@ public sealed class DaggerfallOutcomePresentationTests
     public void Defeat_names_the_actor_without_formatting_an_identity_record()
     {
         DaggerfallActorDefinition rat = TestPayload.Definitions.RequireActor(new("rat"));
-        PresentationState state = new(string.Empty);
+        PresentationState state = new(string.Empty, DaggerfallOutcomePresentation.MessageLifetimeSeconds);
         DaggerfallOutcomePresentation outcome = new(state, new Dictionary<long, DaggerfallActorDefinition> { [2000] = rat });
 
         outcome.React(new ActorDiedFact(2000, 1, DaggerfallDamageCause.PhysicalAttack, 10, 2, 1, 1));

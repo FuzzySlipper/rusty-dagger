@@ -267,7 +267,7 @@ public sealed class PlayerAttackSessionTests
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallActorDefinition rat = definitions.RequireActor(new DaggerfallActorId("rat"));
-        PresentationState presentation = new("Ready");
+        PresentationState presentation = new("Ready", DaggerfallOutcomePresentation.MessageLifetimeSeconds);
         DaggerfallOutcomePresentation outcomes = new(presentation, new Dictionary<long, DaggerfallActorDefinition> { [2008] = rat });
 
         // A hit lands, and then the attack button stays held: the cooldown rejection repeats every
@@ -284,7 +284,7 @@ public sealed class PlayerAttackSessionTests
         // A miss reports the roll the same way, and once the result has aged out the rejection shows.
         outcomes.React(new AttackMissedFact(1, 2008, 41, 8, false, 1, 200));
         Assert.Equal("Missed rat (41 vs 8)", presentation.LastOutcome);
-        presentation.Advance(PresentationState.LifetimeSeconds);
+        presentation.Advance(presentation.LifetimeSeconds);
         outcomes.React(new AttackRejectedFact(AttackRejection.Cooldown));
         Assert.Equal("Cooldown", presentation.LastOutcome);
     }

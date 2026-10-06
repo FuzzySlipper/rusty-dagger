@@ -33,8 +33,8 @@ internal sealed class DaggerCombatFixture : IDisposable
     {
         Definitions = TestPayload.Definitions;
         Actors = new ActorsState();
-        PlayerActorState player = Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(playerHealth, playerStamina), "health");
-        ActorState source = Actors.CreateActor(2, new EntityTypeId(sourceId), Stats(100d, 600d), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health");
+        PlayerActorState player = Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(playerHealth, playerStamina), "health", DaggerActorFactory.PlayerCapabilities);
+        ActorState source = Actors.CreateActor(2, new EntityTypeId(sourceId), Stats(100d, 600d), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
         Random = RandomMinimum.Create();
         Dictionary<long, DaggerfallActorDefinition> authored = new()
         {

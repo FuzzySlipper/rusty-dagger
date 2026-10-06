@@ -52,6 +52,9 @@ internal sealed record DaggerActorAssembly(
 internal static class DaggerActorFactory
 {
     private const ulong PlayerMechanicsEntityId = (ulong)DaggerfallActorIdentity.PlayerEntityId;
+    /// <summary>Every Daggerfall actor targets and attacks; only the player levels.</summary>
+    internal const ActorCapabilities PlayerCapabilities = ActorCapabilities.Targeting | ActorCapabilities.Attacks | ActorCapabilities.Progression;
+    internal const ActorCapabilities NonPlayerCapabilities = ActorCapabilities.Targeting | ActorCapabilities.Attacks;
     internal static CapacityMetricId ClassicWeightMetric { get; } = CapacityMetricId.Parse("daggerfall.classic-weight");
     internal static DaggerActorAssembly Create(IRandomService random, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallSavePayload? saved,
         DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null,
@@ -71,7 +74,8 @@ internal static class DaggerActorFactory
             Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition> equipmentSlots = definitions.EquipmentSlots.Values
                 .ToDictionary(slot => new KitEquipmentSlotId(slot.Id.Value), ToManagedSlot);
             PlayerActorState player = actors.CreatePlayer(checked((long)PlayerMechanicsEntityId),
-                new EntityTypeId(playerDefinition.Id.Value), mechanics.CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, initialCareer)), playerDefinition.Combat.Health.Value);
+                new EntityTypeId(playerDefinition.Id.Value), mechanics.CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, initialCareer)), playerDefinition.Combat.Health.Value,
+                PlayerCapabilities);
             player.Actor.Add(new DaggerfallSpellReadiness());
             player.Actor.Add(new CombatContributions());
             EntityId playerEntity = player.Actor.Entity;
@@ -384,7 +388,7 @@ internal static class DaggerActorFactory
     internal static ActorState CreateNonPlayerActor(ActorsState actors, long durableId, DaggerfallActorDefinition definition,
         StatsComponent stats, ActorPose pose)
     {
-        ActorState actor = actors.CreateActor(durableId, new EntityTypeId(definition.Id.Value), stats, pose, definition.Combat.Health.Value);
+        ActorState actor = actors.CreateActor(durableId, new EntityTypeId(definition.Id.Value), stats, pose, definition.Combat.Health.Value, NonPlayerCapabilities);
         actor.Actor.Add(new DaggerfallSpellReadiness());
         actor.Actor.Add(new CombatContributions());
         actor.Actor.Add(new PursuitMemoryComponent());

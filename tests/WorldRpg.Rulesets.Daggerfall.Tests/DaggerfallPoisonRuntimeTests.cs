@@ -61,7 +61,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         StatsComponent stats = mechanics.CreateStats(
             player,
             DaggerfallPlayerVitals.Initial(player.Stats, fixture.Definitions.Catalogs.RequireCareer("class00")));
-        return fixture.Actors.CreateActor(3, new EntityTypeId("nymph"), stats, new ActorPose(new WorldPoint(0f, 0f, 0f), 0f), "health").Actor;
+        return fixture.Actors.CreateActor(3, new EntityTypeId("nymph"), stats, new ActorPose(new WorldPoint(0f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities).Actor;
     }
 
     [Fact]

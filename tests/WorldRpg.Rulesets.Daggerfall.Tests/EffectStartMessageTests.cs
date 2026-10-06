@@ -22,7 +22,7 @@ public sealed class EffectStartMessageTests
     [InlineData("shadow-true", "You are a shade.")]
     public void An_effect_another_source_starts_on_the_player_is_announced(string effectKey, string line)
     {
-        PresentationState presentation = new(string.Empty);
+        PresentationState presentation = new(string.Empty, DaggerfallOutcomePresentation.MessageLifetimeSeconds);
         DaggerfallOutcomePresentation outcomes = new(presentation, new Dictionary<long, DaggerfallActorDefinition>());
 
         outcomes.React(new MagicEffectFact(Outcome(DaggerfallEffectOutcomeKind.Started, effectKey, Player, caster: 2)));
@@ -33,7 +33,7 @@ public sealed class EffectStartMessageTests
     [Fact]
     public void Only_a_drain_speaks_again_when_a_like_effect_deepens_it()
     {
-        PresentationState presentation = new(string.Empty);
+        PresentationState presentation = new(string.Empty, DaggerfallOutcomePresentation.MessageLifetimeSeconds);
         DaggerfallOutcomePresentation outcomes = new(presentation, new Dictionary<long, DaggerfallActorDefinition>());
 
         outcomes.React(new MagicEffectFact(Outcome(DaggerfallEffectOutcomeKind.Refreshed, "silence", Player, caster: 2)));
@@ -45,7 +45,7 @@ public sealed class EffectStartMessageTests
     [Fact]
     public void The_players_own_casts_and_effects_on_others_are_not_announced()
     {
-        PresentationState presentation = new(string.Empty);
+        PresentationState presentation = new(string.Empty, DaggerfallOutcomePresentation.MessageLifetimeSeconds);
         DaggerfallOutcomePresentation outcomes = new(presentation, new Dictionary<long, DaggerfallActorDefinition>());
 
         outcomes.React(new MagicEffectFact(Outcome(DaggerfallEffectOutcomeKind.Started, "regenerate", Player, caster: Player)));

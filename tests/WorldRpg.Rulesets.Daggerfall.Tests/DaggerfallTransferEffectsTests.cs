@@ -176,8 +176,8 @@ public sealed class DaggerfallTransferEffectsTests
         internal DaggerfallMagicDefense Defense = DaggerfallMagicDefense.None;
         internal Harness(int subtype, int count = 1, int element = 4, int range = 1)
         {
-            Player = Actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health").Actor;
-            var target = Actors.CreateActor(2, new EntityTypeId("target"), Stats(), new(new(0, 0, 0), 0f), "health").Actor;
+            Player = Actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health", DaggerActorFactory.PlayerCapabilities).Actor;
+            var target = Actors.CreateActor(2, new EntityTypeId("target"), Stats(), new(new(0, 0, 0), 0f), "health", DaggerActorFactory.NonPlayerCapabilities).Actor;
             foreach (var actor in new[] { Player, target }) { actor.Add(new DaggerfallSpellReadiness()); actor.Add(new CombatContributions()); }
             Setting = new("setting", 11, subtype, 0, 0, 1, 0, 0, 1, 10, 10, 0, 0, 1);
             var spell = new DaggerfallSpellDefinition("spell", 1, false, "Transfer", element, range, 0, 0, Enumerable.Repeat(Setting, count).ToArray());

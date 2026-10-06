@@ -416,9 +416,9 @@ public sealed class DaggerfallCastingTests
             null, 0, 0, 0, new(0,0,0,0,0), []);
         internal Harness(int range = 1, int count = 1, bool bind = true, bool paralysis = false, bool chance = false, bool magnitude = true, DaggerfallEffectStacking stacking = DaggerfallEffectStacking.Stack, IRandomService? random = null)
         {
-            Player = Actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health").Actor;
-            Target = Actors.CreateActor(2, new EntityTypeId("target"), Stats(), new(new(0,0,0),0f), "health").Actor;
-            Actors.CreateActor(3, new EntityTypeId("target-other"), Stats(), new(new(0,0,1),0f), "health");
+            Player = Actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health", DaggerActorFactory.PlayerCapabilities).Actor;
+            Target = Actors.CreateActor(2, new EntityTypeId("target"), Stats(), new(new(0,0,0),0f), "health", DaggerActorFactory.NonPlayerCapabilities).Actor;
+            Actors.CreateActor(3, new EntityTypeId("target-other"), Stats(), new(new(0,0,1),0f), "health", DaggerActorFactory.NonPlayerCapabilities);
             foreach (var actor in new[] { Player, Target })
             { actor.Add(new DaggerfallSpellReadiness()); if (actor == Target) actor.Add(new ProgressionState()); }
             DaggerfallSpellEffectDefinition setting = new("settings", 99, -1, 3, 0, 1, chance ? 0 : 100, 0, 1, 10, 10, 0, 0, 1);

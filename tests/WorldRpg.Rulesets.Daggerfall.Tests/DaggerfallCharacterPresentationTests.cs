@@ -216,7 +216,7 @@ public sealed class DaggerfallCharacterPresentationTests
             var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
             Actors = new ActorsState();
             Player = Actors.CreatePlayer(1, new EntityTypeId(PlayerDefinition.Id.Value),
-                new DaggerfallMechanicsState().CreateStats(PlayerDefinition, DaggerfallPlayerVitals.Initial(PlayerDefinition.Stats, Definitions.Catalogs.RequireCareer("class00"))), "health");
+                new DaggerfallMechanicsState().CreateStats(PlayerDefinition, DaggerfallPlayerVitals.Initial(PlayerDefinition.Stats, Definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
             EntityId owner = Player.Actor.Entity;
             InventoryStore world = new();
             world.RegisterInventory(new InventoryState(owner));

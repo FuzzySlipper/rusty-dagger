@@ -98,9 +98,9 @@ public sealed class AttackExecutionTests
     private static ActorsState Actors()
     {
         ActorsState actors = new();
-        actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health");
-        actors.CreateActor(2, new EntityTypeId("attacker"), Stats(), new ActorPose(new WorldRpg.Kit.Controls.WorldPoint(0, 0, 0), 0), "health");
-        actors.CreateActor(3, new EntityTypeId("target"), Stats(), new ActorPose(new WorldRpg.Kit.Controls.WorldPoint(1, 0, 0), 0), "health");
+        actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health", ActorCapabilities.Attacks);
+        actors.CreateActor(2, new EntityTypeId("attacker"), Stats(), new ActorPose(new WorldRpg.Kit.Controls.WorldPoint(0, 0, 0), 0), "health", ActorCapabilities.Attacks);
+        actors.CreateActor(3, new EntityTypeId("target"), Stats(), new ActorPose(new WorldRpg.Kit.Controls.WorldPoint(1, 0, 0), 0), "health", ActorCapabilities.Attacks);
         return actors;
     }
 

@@ -7,16 +7,19 @@ namespace WorldRpg.Kit.Presentation;
 /// A message is transient: it is published for a stated span of admitted world time and then
 /// clears, because a line that never expires stops being a report of what just happened and
 /// becomes permanent scenery. The span is advanced only by admitted updates, so a product that
-/// holds its world still also holds the message, and there is no second clock here.
+/// holds its world still also holds the message, and there is no second clock here. The ruleset
+/// chooses how long a message lives.
 /// </remarks>
-public sealed class PresentationState(string initialOutcome)
+public sealed class PresentationState(string initialOutcome, double lifetimeSeconds)
 {
     /// <summary>Admitted seconds a message stays published before the line clears.</summary>
-    public const double LifetimeSeconds = 6d;
+    public double LifetimeSeconds { get; } = double.IsFinite(lifetimeSeconds) && lifetimeSeconds > 0d
+        ? lifetimeSeconds
+        : throw new ArgumentOutOfRangeException(nameof(lifetimeSeconds));
 
     // An initial message is a message like any other, so it starts its lifetime with the session
     // rather than sitting on screen until something replaces it.
-    private double _remaining = initialOutcome.Length == 0 ? 0d : LifetimeSeconds;
+    private double _remaining = initialOutcome.Length == 0 ? 0d : lifetimeSeconds;
 
     /// <summary>The message currently published, or empty when nothing was reported.</summary>
     public string LastOutcome { get; private set; } = initialOutcome;

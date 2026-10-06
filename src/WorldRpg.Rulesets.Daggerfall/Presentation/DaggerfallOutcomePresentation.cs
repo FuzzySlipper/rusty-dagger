@@ -16,6 +16,9 @@ internal sealed class DaggerfallOutcomePresentation(
     Func<TargetingEvidence?>? meleeEvidence = null,
     DaggerfallTextSet? text = null)
 {
+    /// <summary>Admitted seconds one published outcome line stays on screen.</summary>
+    internal const double MessageLifetimeSeconds = 6d;
+
     // Whether the published line reports something that happened rather than something that did not.
     private bool _lineIsResult;
     private SoulTrapResolvedFact? _soulTrap;

@@ -19,10 +19,13 @@ public sealed class CorpseLootComponent
     public EntityId Owner { get; }
     public ulong OriginatingSequence { get; }
     public bool HasRegisteredInventory { get; private set; }
-    public bool IsInteractable { get; private set; }
+    /// <summary>
+    /// Whether the ruleset still offers this corpse for interaction. The coordinator stores and
+    /// restores it but never decides it: what makes a corpse eligible is ruleset policy.
+    /// </summary>
+    public bool IsInteractable { get; set; }
 
     internal void SetRegisteredInventory() => HasRegisteredInventory = true;
-    internal void SetInteractable(bool value) => IsInteractable = value;
 }
 
 /// <summary>Result of one completed corpse-loot action.</summary>
@@ -31,7 +34,8 @@ public sealed record CorpseLootTransferResult(InventoryContainerTransferReceipt?
 /// <summary>
 /// Creates corpse-owned inventory entities and moves their contents through the
 /// canonical inventory coordinator. Rulesets retain corpse identity, item
-/// generation, UI facts, and interaction eligibility.
+/// generation, UI facts, and interaction eligibility, including whether an
+/// emptied or refilled corpse may still be interacted with.
 /// </summary>
 public sealed class CorpseLootCoordinator
 {
@@ -48,7 +52,8 @@ public sealed class CorpseLootCoordinator
         DurableIdentityReference identity,
         EntityTypeId type,
         ulong originatingSequence,
-        IReadOnlyList<InventoryContainerSeed> seeds)
+        IReadOnlyList<InventoryContainerSeed> seeds,
+        bool isInteractable = true)
     {
         ArgumentNullException.ThrowIfNull(seeds);
         EntityId owner = _entities.Create(identity, type);
@@ -58,7 +63,7 @@ public sealed class CorpseLootCoordinator
             _containers.RegisterOwner(owner);
             _containers.Seed(owner, seeds);
         }
-        return new CorpseLootComponent(owner, originatingSequence, registered, isInteractable: true);
+        return new CorpseLootComponent(owner, originatingSequence, registered, isInteractable);
     }
 
     /// <summary>Restores current corpse inventory data without re-running item generation.</summary>
@@ -80,8 +85,11 @@ public sealed class CorpseLootCoordinator
         return new CorpseLootComponent(owner, originatingSequence, hasRegisteredInventory, isInteractable);
     }
 
-    /// <summary>Admits new loot into the canonical corpse, including an empty or previously searched one.</summary>
-    public void Receive(CorpseLootComponent corpse, Action<EntityId> admit)
+    /// <summary>
+    /// Admits new loot into the canonical corpse, including an empty or previously searched one, and
+    /// returns its contents afterward.
+    /// </summary>
+    public InventoryView Receive(CorpseLootComponent corpse, Action<EntityId> admit)
     {
         ArgumentNullException.ThrowIfNull(corpse);
         ArgumentNullException.ThrowIfNull(admit);
@@ -91,8 +99,7 @@ public sealed class CorpseLootCoordinator
             corpse.SetRegisteredInventory();
         }
         admit(corpse.Owner);
-        var contents = _containers.Read(corpse.Owner);
-        corpse.SetInteractable(contents.Stacks.Count > 0 || contents.UniqueItems.Count > 0);
+        return _containers.Read(corpse.Owner);
     }
 
     public InventoryView? Read(CorpseLootComponent corpse)
@@ -119,19 +126,14 @@ public sealed class CorpseLootCoordinator
         InventoryContainerSelection? selection)
     {
         ArgumentNullException.ThrowIfNull(corpse);
-        if (!corpse.IsInteractable) throw new InvalidOperationException("This corpse is no longer interactable.");
         if (!corpse.HasRegisteredInventory)
-        {
-            corpse.SetInteractable(false);
             return new CorpseLootTransferResult(null, WasEmpty: true, IsEmpty: true);
-        }
 
         InventoryContainerTransferReceipt receipt = selection is null
             ? _containers.TransferAll(corpse.Owner, recipient)
             : _containers.Transfer(corpse.Owner, recipient, selection);
         InventoryView remaining = _containers.Read(corpse.Owner);
         bool empty = remaining.Stacks.Count == 0 && remaining.UniqueItems.Count == 0;
-        corpse.SetInteractable(!empty);
         return new CorpseLootTransferResult(receipt, WasEmpty: false, IsEmpty: empty);
     }
 }

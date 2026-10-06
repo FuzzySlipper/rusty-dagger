@@ -528,10 +528,10 @@ public sealed class DaggerfallDiseasePolicyTests
     private static ActorsState Actors(int level, bool secondTarget = false)
     {
         ActorsState actors = new();
-        actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), DaggerfallMechanicsIds.Health.Value);
+        actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), DaggerfallMechanicsIds.Health.Value, DaggerActorFactory.PlayerCapabilities);
         if (level > 1) actors.Player.Progression.AdvanceTo(500, level);
         if (secondTarget)
-            actors.CreateActor(2, new EntityTypeId("target"), Stats(), new ActorPose(new WorldPoint(1, 0, 0), 0), DaggerfallMechanicsIds.Health.Value);
+            actors.CreateActor(2, new EntityTypeId("target"), Stats(), new ActorPose(new WorldPoint(1, 0, 0), 0), DaggerfallMechanicsIds.Health.Value, DaggerActorFactory.NonPlayerCapabilities);
         return actors;
     }
 
