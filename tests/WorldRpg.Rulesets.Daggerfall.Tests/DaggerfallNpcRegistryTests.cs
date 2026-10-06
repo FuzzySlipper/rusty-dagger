@@ -34,13 +34,24 @@ public sealed class DaggerfallNpcRegistryTests
         Assert.Throws<ArgumentOutOfRangeException>(() => npcs.RegisterStable(DaggerfallNpcKind.Civilian, "key", site, look, "civilian", ["talk"]));
         Assert.Throws<ArgumentOutOfRangeException>(() => npcs.RegisterCivilian(new DaggerfallNpcSite(62, "Nowhere", string.Empty), look, "civilian", ["talk"]));
 
-        // Hiding and relocating preserve the reference.
+        // Placing and hiding preserve the reference; the detached pose is held only until a live
+        // actor owns it.
+        DaggerfallWorldProfileKey profile = new DaggerfallWorldProfileKey(new DaggerfallSiteId(17, 0),
+            DaggerfallWorldProfileKind.Exterior, "daggerfall-exterior").Validate();
+        npcs.Place(first, profile, new(100, 200, 300));
         npcs.SetPresence(first, DaggerfallNpcPresence.Hidden);
-        npcs.Relocate(first, 100, 200, 300);
         DaggerfallNpc questor = npcs.Require(first);
         Assert.Equal(DaggerfallNpcPresence.Hidden, questor.Presence);
         Assert.Equal((100, 200, 300), (questor.X, questor.Y, questor.Z));
         Assert.Equal(site, questor.Site);
+
+        npcs.ReleasePose(first);
+        DaggerfallNpc live = npcs.Require(first);
+        Assert.Equal(profile, live.Profile);
+        Assert.Null(live.X);
+        npcs.Bind(civilianA, profile);
+        Assert.Equal((profile, (float?)null, DaggerfallNpcPresence.Active),
+            (npcs.Require(civilianA).Profile, npcs.Require(civilianA).X, npcs.Require(civilianA).Presence));
     }
 
     [Fact]
@@ -103,7 +114,7 @@ public sealed class DaggerfallNpcRegistryTests
         DaggerfallNpcAppearance source = new("Nord", "Male", 212, 13, 8, 41);
 
         long id = npcs.RegisterPopulationCivilian(site, "population/17-2/0/4", original, "civilian", ["talk"]);
-        npcs.Relocate(id, 1, 2, 3);
+        npcs.Place(id, new DaggerfallWorldProfileKey(new DaggerfallSiteId(17, 2), DaggerfallWorldProfileKind.Exterior, "population").Validate(), new(1, 2, 3));
         npcs.SetPresence(id, DaggerfallNpcPresence.Hidden);
         npcs.RefreshPopulationFacts(id, source, "guard", ["talk", "arrest"]);
 

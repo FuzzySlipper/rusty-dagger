@@ -115,10 +115,15 @@ internal sealed partial class DaggerfallSession
             if (npc.Presence == DaggerfallNpcPresence.Removed)
                 continue;
 
-            // A saved wandering pose is authoritative until the person first enters this profile.
-            // The authored source position is only the initial placement and is never reapplied on
-            // every admitted update.
-            if (npc.Profile != profile.ProfileKey || npc.X is null || npc.Y is null || npc.Z is null)
+            // A live (or site-retained, already restored) actor owns the wandering pose. The authored
+            // source position is only the initial placement of a person with no actor, and is never
+            // reapplied to a live one.
+            if (State.Actors.TryGet(npcId, out _))
+            {
+                if (npc.Profile != profile.ProfileKey) State.Npcs.Bind(npcId, profile.ProfileKey);
+                else State.Npcs.SetPresence(npcId, DaggerfallNpcPresence.Active);
+            }
+            else if (npc.Profile != profile.ProfileKey || npc.X is null || npc.Y is null || npc.Z is null)
                 State.Npcs.Place(npcId, profile.ProfileKey, placement.Position);
             else
                 State.Npcs.SetPresence(npcId, DaggerfallNpcPresence.Active);
@@ -178,44 +183,7 @@ internal sealed partial class DaggerfallSession
 
             actor.Wander.MarkLoaded();
             _ = _enemyBehavior.UpdateCivilian(actor, PopulationWanderPolicy, simulationStep, deltaSeconds);
-            SyncCivilianPosition(actor);
         }
-    }
-
-    /// <summary>Copies accepted Engine actor poses into the durable profile-coordinate registry.</summary>
-    internal void SyncCivilianPositions()
-    {
-        foreach (ActorState actor in State.Actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian))
-            SyncCivilianPosition(actor);
-    }
-
-    private void SyncCivilianPosition(ActorState actor)
-    {
-        DaggerfallNpc? populationNpc = State.Npcs.All.FirstOrDefault(npc =>
-            IsPopulationNpc(npc) && npc.DurableId == actor.DurableId);
-        if (populationNpc is null) return;
-        WorldPoint profilePosition = WorldPoint.From(PopulationProfilePosition(populationNpc, actor.Position.ToVector()));
-        State.Npcs.Relocate(actor.DurableId, profilePosition.X, profilePosition.Y, profilePosition.Z);
-    }
-
-    /// <summary>
-    /// Converts one live population actor back to its durable source profile frame. Active actors
-    /// already use the current profile compensation; a resident actor also carries the exact local
-    /// translation of its owning map pixel, which must be removed before the NPC registry is saved.
-    /// </summary>
-    private Vector3 PopulationProfilePosition(DaggerfallNpc npc, Vector3 localPosition)
-    {
-        if (npc.Profile is not { } profile
-            || profile == _sites.ActiveProfile
-            || profile.Kind != DaggerfallWorldProfileKind.Exterior
-            || !_sites.ResidentExteriorProfiles.Contains(profile))
-            return _sites.LocalToProfile(localPosition);
-
-        Vector3 residentTranslation = _sites.ExteriorProfileFrameTranslation(profile);
-        Vector3 profilePosition = localPosition - residentTranslation;
-        if (!float.IsFinite(profilePosition.X) || !float.IsFinite(profilePosition.Y) || !float.IsFinite(profilePosition.Z))
-            throw new InvalidOperationException($"Resident population NPC {npc.DurableId} produced a non-finite profile position.");
-        return profilePosition;
     }
 
     private void HidePopulationNpc(DaggerfallNpc npc)

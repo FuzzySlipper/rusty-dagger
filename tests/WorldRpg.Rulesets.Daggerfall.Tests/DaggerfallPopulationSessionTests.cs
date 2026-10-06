@@ -138,7 +138,7 @@ public sealed class DaggerfallPopulationSessionTests
     }
 
     [Fact]
-    public void Resident_population_sync_keeps_the_owner_profile_pose_through_unload_and_readmission()
+    public void Resident_population_actor_owns_its_pose_through_save_unload_and_readmission()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -184,28 +184,41 @@ public sealed class DaggerfallPopulationSessionTests
         long residentId = residentNpc.DurableId;
         Assert.True(session.State.Actors.TryGet(residentId, out ActorState? admitted));
         WorldPoint authoredPose = new(1F, 1F, 1F);
-        Assert.Equal(authoredPose.X, residentNpc.X!.Value);
-        Assert.Equal(authoredPose.Y, residentNpc.Y!.Value);
-        Assert.Equal(authoredPose.Z, residentNpc.Z!.Value);
+        // The live actor's Transform is the only pose owner; the registry keeps identity and binding.
+        Assert.Null(residentNpc.X);
         admitted!.ApplyPose(new ActorPose(session.Sites.ProfileToLocal(authoredPose), admitted.HeadingYawRadians));
 
-        // The resident actor remains live while the active source changes. Sync must use its
-        // owning profile cell instead of the active origin compensation alone.
+        // The resident actor remains live while the active source changes. No copy is written into
+        // the registry; the resident actor still owns its pose in its own cell's frame.
         Assert.True(session.TryTransitionTo(source.ProfileKey));
-        DaggerfallNpc synced = session.State.Npcs.Require(residentId);
-        Assert.Equal(authoredPose.X, synced.X!.Value);
-        Assert.Equal(authoredPose.Y, synced.Y!.Value);
-        Assert.Equal(authoredPose.Z, synced.Z!.Value);
+        DaggerfallNpc returnedNpc = session.State.Npcs.Require(residentId);
+        Assert.Equal(resident.ProfileKey, returnedNpc.Profile);
+        Assert.Null(returnedNpc.X);
+        Assert.True(session.State.Actors.TryGet(residentId, out ActorState? live));
+        Vector3 liveExpected = authoredPose.ToVector() + session.Sites.ExteriorProfileFrameTranslation(resident.ProfileKey);
+        Assert.Equal(liveExpected.X, live!.Position.X, 3);
+        Assert.Equal(liveExpected.Z, live.Position.Z, 3);
+
+        // The save detaches the resident closure into its site delta through the one profile-frame
+        // conversion; the NPC entry carries no second pose.
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
         DaggerfallNpcEntry savedNpc = Assert.Single(saved.Npcs.Entries,
             entry => entry.DurableId == residentId);
-        Assert.Equal(authoredPose.X, savedNpc.X!.Value);
-        Assert.Equal(authoredPose.Y, savedNpc.Y!.Value);
-        Assert.Equal(authoredPose.Z, savedNpc.Z!.Value);
+        Assert.Null(savedNpc.X);
+        Assert.Null(savedNpc.Y);
+        Assert.Null(savedNpc.Z);
+        DaggerfallDynamicActorSave savedActor = Assert.Single(saved.SiteDeltas
+            .Where(delta => delta.Profile.LogicalId == resident.ProfileKey.LogicalId)
+            .SelectMany(delta => delta.DynamicActors), actor => actor.EntityId == residentId);
+        Assert.Equal(authoredPose.X, savedActor.X, 3);
+        Assert.Equal(authoredPose.Y, savedActor.Y, 3);
+        Assert.Equal(authoredPose.Z, savedActor.Z, 3);
 
-        // Retire and re-admit the resident closure. The authored profile pose must receive the
-        // cell translation exactly once when its actor becomes live again.
+        // Retire and re-admit the resident closure. The retained actor's profile pose must receive
+        // the cell translation exactly once when its actor becomes live again.
         Assert.True(session.TryTransitionTo(interior.ProfileKey));
+        Assert.False(session.State.Actors.TryGet(residentId, out _));
+        Assert.Null(session.State.Npcs.Require(residentId).X);
         Assert.True(session.TryTransitionTo(source.ProfileKey));
         Assert.True(session.State.Actors.TryGet(residentId, out ActorState? restored));
         Vector3 expected = authoredPose.ToVector()
@@ -214,9 +227,7 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.Equal(expected.Y, restored.Position.Y, 3);
         Assert.Equal(expected.Z, restored.Position.Z, 3);
         DaggerfallNpc restoredNpc = session.State.Npcs.Require(residentId);
-        Assert.Equal(authoredPose.X, restoredNpc.X!.Value);
-        Assert.Equal(authoredPose.Y, restoredNpc.Y!.Value);
-        Assert.Equal(authoredPose.Z, restoredNpc.Z!.Value);
+        Assert.Null(restoredNpc.X);
     }
 
     [Fact]

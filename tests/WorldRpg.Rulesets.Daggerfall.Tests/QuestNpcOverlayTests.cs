@@ -204,7 +204,7 @@ public sealed class QuestNpcOverlayTests
         long id = f.Session.State.Npcs.RegisterCivilian(new(site.Region, site.Name, ""), new("breton", gender, flat.Archive, flat.Record, 17, faction.Id), "quest giver", ["talk"]);
         f.Session.State.Npcs.SetDisplayName(id, "Existing Giver");
         f.Session.MaterializeNpcActor(id, new(new(2, 3, 4), .25f));
-        f.Session.State.Npcs.Place(id, f.Inputs.ProfileKey, new(2, 3, 4));
+        f.Session.State.Npcs.Bind(id, f.Inputs.ProfileKey);
         return id;
     }
 

@@ -137,7 +137,7 @@ public sealed class QuestNpcAdmissionTests
         long id = state.Npcs.RegisterCivilian(new(site.Region, site.Name, ""), new("breton", "Male", flat.Archive, flat.Record, 17, faction.Id), "quest giver", ["talk"]);
         state.Npcs.SetDisplayName(id, "Existing Giver");
         session.MaterializeNpcActor(id, new(new(2, 3, 4), .25f));
-        state.Npcs.Place(id, fixture.Inputs.ProfileKey, new(2, 3, 4));
+        state.Npcs.Bind(id, fixture.Inputs.ProfileKey);
         state.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).SetCurrent(2, clamp: true);
         double health = state.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current;
         var started = state.Quests.Start(new("giver", "npc.txt", "npc", DaggerfallQuestLifecycle.Active, null, [], []) { QuestorId = id });

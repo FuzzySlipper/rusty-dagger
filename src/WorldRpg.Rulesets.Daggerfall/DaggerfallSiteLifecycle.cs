@@ -27,9 +27,6 @@ internal interface IDaggerfallSiteTransitionHost
     /// <summary>The destination became the active site; site-scoped session presentation moves on.</summary>
     void EnteredSite();
 
-    /// <summary>Copies accepted source-civilian poses before the departing site's delta is captured.</summary>
-    void SyncCivilianPositions();
-
     /// <summary>Admits retained source-civilian billboards into a resident projection.</summary>
     void AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection);
 
@@ -393,7 +390,6 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallSiteContextCheckpoint sourceSite = _site.CaptureCheckpoint();
         float sourceYawRadians = player.YawRadians;
         float sourcePitchRadians = player.PitchRadians;
-        _host.SyncCivilianPositions();
         bool sourceLocationLoaded = ActiveLocationLoaded;
         DaggerfallExteriorCellId? sourceLocationCell = _locationCell;
         IReadOnlySet<long> sourceDynamicActorIds = ActiveDynamicActorIds();

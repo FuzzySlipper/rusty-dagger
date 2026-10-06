@@ -269,6 +269,15 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     internal bool IsLiveTalkTarget(DaggerfallNpc npc) =>
         npc is not null && TryReadLiveNpc(npc.DurableId, out _, out _);
 
+    /// <summary>Reads a live talk target's current local position from its actor or projection.</summary>
+    internal bool TryReadLiveTalkPosition(DaggerfallNpc npc, out WorldPoint position)
+    {
+        position = default;
+        if (npc is null || !TryReadLiveNpc(npc.DurableId, out _, out DaggerfallDialogueNpc? actor)) return false;
+        position = actor!.Position;
+        return true;
+    }
+
     /// <summary>
     /// Reconciles generated spoken-world events with the live variable store. Calendar and quest
     /// owners call this after a transition, while a direct dialogue read calls it as a bounded

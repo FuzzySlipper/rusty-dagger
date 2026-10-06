@@ -479,6 +479,17 @@ internal sealed record DaggerfallSavePayload(
             .ToDictionary(actor => actor.EntityId, actor => actor.Definition);
         foreach (var npc in savedNpcs.Values)
         {
+            // One pose owner: a placed NPC is posed either by its saved actor or by a detached
+            // registry pose, never both and never neither.
+            if (npc.Profile is null || npc.Presence == (int)DaggerfallNpcPresence.Removed) continue;
+            bool actorOwned = dynamicDefinitions.ContainsKey(npc.DurableId);
+            if (actorOwned && npc.X is not null)
+                throw new ArgumentException($"Saved NPC {npc.DurableId} carries a second pose beside its saved actor.");
+            if (!actorOwned && npc.X is null)
+                throw new ArgumentException($"Saved NPC {npc.DurableId} is placed with neither a saved actor nor a pose.");
+        }
+        foreach (var npc in savedNpcs.Values)
+        {
             if (npc.DurableId == DaggerfallActorIdentity.PlayerEntityId || savedActorIds.Contains(npc.DurableId)
                 || inactiveAuthoredActorIds.Contains(npc.DurableId) || BanishedActors.Contains(npc.DurableId)
                 || dynamicDefinitions.TryGetValue(npc.DurableId, out var definition)
@@ -1595,12 +1606,12 @@ internal sealed record DaggerfallNpcSave(DaggerfallNpcEntry[] Entries)
             }
 
             ArgumentNullException.ThrowIfNull(entry.Services);
-            if (entry.Profile is { } profile)
-            {
-                _ = profile.Require();
-                if (entry.X is not float x || entry.Y is not float y || entry.Z is not float z || !float.IsFinite(x) || !float.IsFinite(y) || !float.IsFinite(z))
-                    throw new ArgumentException($"Saved NPC {entry.DurableId} has no finite profile position.");
-            }
+            if (entry.Profile is { } profile) _ = profile.Require();
+            // A detached pose is whole and finite; a bound NPC without one is posed by its saved actor.
+            if ((entry.X is null) != (entry.Y is null) || (entry.X is null) != (entry.Z is null)
+                || entry.X is float x && !float.IsFinite(x) || entry.Y is float y && !float.IsFinite(y)
+                || entry.Z is float z && !float.IsFinite(z))
+                throw new ArgumentException($"Saved NPC {entry.DurableId} has no finite profile position.");
             if (entry.DisplayName is not null) ArgumentException.ThrowIfNullOrWhiteSpace(entry.DisplayName);
         }
     }

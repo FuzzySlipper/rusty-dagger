@@ -300,7 +300,7 @@ internal sealed class DaggerfallActorRoster
                     // placement becomes durable only after the actor's appearance has been admitted;
                     // this also lets a transition retry reuse the same live stable identity.
                     appearance.AdmitActor(id, placement.Sprite);
-                    _state.Npcs.Place(id, profile.ProfileKey, placement.Position);
+                    _state.Npcs.Bind(id, profile.ProfileKey);
                     batch.Add(id);
                 }
                 catch
@@ -420,6 +420,8 @@ internal sealed class DaggerfallActorRoster
                     throw new InvalidOperationException($"Restored dynamic actor '{saved.Definition}' has no admitted mobile {mobileId} presentation.");
                 (projection?.Appearance ?? Appearance).AddActor(saved.EntityId, sprite);
             }
+            // A retained NPC actor owns its pose again; the registry keeps identity and binding only.
+            _state.Npcs.ReleasePose(saved.EntityId);
             return actor;
         }
         catch { UnloadActor(saved.EntityId, projection); throw; }
