@@ -130,6 +130,13 @@
 .dagger-note-list { display: grid; gap: 12px; padding-left: 1.5rem; margin: 0; }
 .dagger-note-list li { align-items: start; }
 .dagger-note-list textarea { flex-basis: 100%; }
+.dagger-quest-journal { display: grid; gap: 10px; margin-bottom: 20px; }
+.dagger-quest-journal-tabs { display: flex; gap: 8px; }
+.dagger-quest-journal-tabs [aria-selected="true"] { border-color: #b9ae8c; }
+.dagger-quest-journal-page { display: grid; gap: 14px; max-height: 24rem; overflow-y: auto; }
+.dagger-quest-journal-group h3 { margin: 0 0 4px; }
+.dagger-quest-journal-deadline, .dagger-quest-journal-status { color: #b9ae8c; margin: 0 0 6px; }
+.dagger-quest-journal-entries { display: grid; gap: 8px; margin: 0; padding-left: 1.5rem; white-space: pre-wrap; line-height: 1.5; }
 
 @media (max-width: 44rem) {
   .dagger-notebook { grid-template-columns: 1fr; }

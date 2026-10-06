@@ -250,7 +250,10 @@
     "offer": null,
     "escortFaces": [],
     "deliveries": [],
-    "journal": [],
+    "journal": {
+      "active": [],
+      "finished": []
+    },
     "pending": null
   },
   "notebook": {

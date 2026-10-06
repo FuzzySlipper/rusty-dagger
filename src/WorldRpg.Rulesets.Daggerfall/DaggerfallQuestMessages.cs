@@ -94,7 +94,7 @@ internal sealed record DaggerfallQuestDialogueTopic(
 }
 internal sealed record DaggerfallQuestPresentation(
     IReadOnlyList<DaggerfallQuestRenderedMessage> Deliveries,
-    IReadOnlyList<DaggerfallQuestRenderedMessage> Journal,
+    DaggerfallQuestJournalPresentation Journal,
     DaggerfallQuestRenderedMessage? Pending)
 {
     public DaggerfallQuestOfferView? Offer { get; init; }
@@ -327,7 +327,11 @@ internal sealed class DaggerfallQuestMessages
 
     internal DaggerfallQuestMessagesSave Capture() => new([.. _deliveries], [.. Journal], _pending) { Choices = [.. _choices], LastDeliveryId = _lastDeliveryId };
 
-    internal void RetainJournal(DaggerfallQuestRuntimeInstance instance,
+    /// <summary>
+    /// Binds a terminal quest's journal to its source and text so it outlives the runtime. Answers
+    /// whether the quest left any journal for the finished-quest record to name.
+    /// </summary>
+    internal bool RetainJournal(DaggerfallQuestRuntimeInstance instance,
         Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context)
     {
         if (_pending?.InstanceId == instance.InstanceId)
@@ -336,11 +340,23 @@ internal sealed class DaggerfallQuestMessages
             _pending = null;
         }
         DaggerfallQuestJournalEntrySave[] entries = [.. _journal.Where(entry => entry.InstanceId == instance.InstanceId && entry.SourceFile is null)];
-        if (entries.Length == 0) return;
+        if (entries.Length == 0) return false;
         DaggerfallQuestMessageContext bound = BindSymbols(instance, context(instance));
         foreach (DaggerfallQuestJournalEntrySave entry in entries)
             _journal[_journal.IndexOf(entry)] = entry with { SourceFile = instance.SourceFile, Context = bound };
+        return true;
     }
+
+    /// <summary>Releases a finished quest's retained journal when its finished record leaves the bounded history.</summary>
+    internal void ForgetFinished(string instanceId) =>
+        _journal.RemoveAll(entry => entry.InstanceId == instanceId && entry.SourceFile is not null);
+
+    /// <summary>The canonical symbols a source message names through its details macro (<c>=symbol_</c>).</summary>
+    internal IReadOnlySet<string> DetailSymbols(string sourceFile, int messageId) =>
+        RequireMessage(sourceFile, messageId).Lines
+            .SelectMany(line => ResourceMacro.Matches(line).Where(match => match.Groups["details"].Success))
+            .Select(match => DaggerfallQuestInstanceSave.Canonical(match.Groups["details"].Value, "quest message details"))
+            .ToHashSet(StringComparer.Ordinal);
 
     /// <summary>Releases presentation and prompt history when the owning tombstone expires.</summary>
     internal void RemoveInstances(IReadOnlySet<string> instanceIds)
@@ -463,6 +479,11 @@ internal sealed class DaggerfallQuestMessages
             string symbolKey = DaggerfallQuestInstanceSave.Canonical(symbol.Symbol, "quest message symbol");
             resources.TryAdd(symbolKey, new(symbol.Value, symbol.Value, symbol.Value, symbol.Value, symbol.Value, symbol.Value, symbol.Value));
         }
+        // A clock's details macro reads its whole starting duration in days, rounded up
+        // (Clock.ExpandMacro/GetDaysString with the classic non-countdown default).
+        foreach (DaggerfallQuestClockState clock in instance.Clocks)
+            resources.TryAdd(clock.Symbol, new(Details: ((clock.StartingSeconds + World.DaggerfallCalendar.SecondsPerDay - 1) / World.DaggerfallCalendar.SecondsPerDay)
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)));
         return context with { Resources = resources };
     }
 

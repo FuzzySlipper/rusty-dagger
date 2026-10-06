@@ -81,6 +81,18 @@ the runtime tombstone expires. Runtime deliveries and choice history retire with
 the instance. The journal shares the ordinary text resolver and DOM projection;
 it does not become a user note or retain the quest's actor/resource graph.
 
+`DaggerfallQuestInstances` keeps the finished-quest history: when a terminal
+quest that logged anything retires, it records the instance, source, success and
+the game second it finished (the donor's `PlayerNotebook.AddFinishedQuest`). The
+history is bounded to the latest hundred quests; the oldest record leaves with
+its retained journal, and a save whose records and finished entries disagree is
+rejected. The journal projection groups active entries by quest under the
+corpus display name (or "Quest") with the earliest running clock that a current
+entry names through its `=clock_` details macro as the deadline, and lists the
+finished history with title, outcome and day. The DOM journal panel shows these
+as active and finished pages. A clock's details macro reads its starting
+duration in whole days, rounded up, as the donor's default does.
+
 `log` writes ordered journal entries identified by quest instance and step.
 Replacing a step moves it to its latest write position; `remove log step` removes
 that identity without comparing rendered text. Saves retain this order.

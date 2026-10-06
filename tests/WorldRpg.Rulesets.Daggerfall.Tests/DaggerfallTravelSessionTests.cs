@@ -341,7 +341,7 @@ public sealed class DaggerfallTravelSessionTests
         fixture.Accept(quote);
         Assert.Equal(DaggerfallTravelOutcome.Arrived, fixture.Session.State.Travel.LastResult!.Outcome);
         Assert.DoesNotContain(fixture.Session.State.Quests.All, quest => quest.Lifecycle == DaggerfallQuestLifecycle.Active);
-        var journal = fixture.Session.State.Quests.ReadPresentation(_ => throw new Exception("Ended quest must retain its own text.")).Journal;
+        var journal = fixture.Session.State.Quests.ReadPresentation(_ => throw new Exception("Ended quest must retain its own text."), DaggerfallCalendar.Start).Journal.Entries;
         Assert.Contains(journal, entry => entry.Text == "The deadline expired during travel.");
         using var restored = fixture.Restore(fixture.Session.CaptureSave());
         Assert.DoesNotContain(restored.State.Quests.All, quest => quest.Lifecycle == DaggerfallQuestLifecycle.Active);

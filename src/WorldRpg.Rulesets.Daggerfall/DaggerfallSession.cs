@@ -702,7 +702,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             ControlSettings: _controlSettings,
             ControlDiagnostic: _controlDiagnostic,
             Activation: ActivationView,
-            Quests: State.Quests.ReadPresentation(QuestTextContext),
+            Quests: State.Quests.ReadPresentation(QuestTextContext, _time.Calendar),
             Notebook: _notebook.Read(),
             Transport: DaggerfallTransportProjection.Read(State.Transport, State.Inventory.Read(), TransportAccess(),
                 ownsShip: State.Property.OwnsShip, wagon: State.Wagon, itemLabel: ItemDefinitionName),

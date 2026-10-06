@@ -58,10 +58,10 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
             Assert.Equal(DaggerfallQuestLifecycle.Tombstoned, Assert.Single(tombstone.State.Quests.All).Lifecycle);
         restored.State.Quests.Advance(restored.State.Variables, DaggerfallCalendar.Start.Advance(7 * 24 * 60 * 60 + 1, out _));
         using DaggerfallSession retired = DaggerfallSession.Restore(Engine().Context, composition, restored.CaptureSave());
-        DaggerfallQuestPresentation presentation = retired.State.Quests.ReadPresentation(_ => throw new Exception("Retired journal requested a runtime."));
+        DaggerfallQuestPresentation presentation = retired.State.Quests.ReadPresentation(_ => throw new Exception("Retired journal requested a runtime."), DaggerfallCalendar.Start);
         string player = retired.State.Character.Identity.Name;
-        Assert.Equal([$"{player} met Akorithi with Shortsword.", $"{player} finished for Akorithi."], presentation.Journal.Select(entry => entry.Text));
-        Assert.All(presentation.Journal, entry => Assert.Empty(entry.Diagnostics));
+        Assert.Equal([$"{player} met Akorithi with Shortsword.", $"{player} finished for Akorithi."], presentation.Journal.Entries.Select(entry => entry.Text));
+        Assert.All(presentation.Journal.Entries, entry => Assert.Empty(entry.Diagnostics));
     }
 
     [Theory]
@@ -102,9 +102,9 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
         Assert.Empty(awaiting.Messages.Deliveries);
         DaggerfallQuestInstances retired = Instances(definitions);
         retired.Restore(RoundTrip(awaiting.Capture()));
-        DaggerfallQuestPresentation journal = retired.ReadPresentation(_ => throw new Exception("Retired journal used a live runtime."));
-        Assert.Equal(["Nulfaga met Akorithi.", $"Nulfaga {result} for Akorithi."], journal.Journal.Select(entry => entry.Text));
-        Assert.All(journal.Journal, entry => Assert.Empty(entry.Diagnostics));
+        DaggerfallQuestPresentation journal = retired.ReadPresentation(_ => throw new Exception("Retired journal used a live runtime."), DaggerfallCalendar.Start);
+        Assert.Equal(["Nulfaga met Akorithi.", $"Nulfaga {result} for Akorithi."], journal.Journal.Entries.Select(entry => entry.Text));
+        Assert.All(journal.Journal.Entries, entry => Assert.Empty(entry.Diagnostics));
         Assert.Throws<ArgumentException>(() => retired.Start(new("ending", "ending.txt", "ending", DaggerfallQuestLifecycle.Active, null, [], [])));
     }
 

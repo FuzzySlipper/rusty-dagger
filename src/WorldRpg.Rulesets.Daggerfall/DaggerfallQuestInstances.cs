@@ -374,6 +374,9 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
     public DaggerfallQuestMessagesSave Messages { get; init; } = new([], [], null);
     [JsonRequired]
     public DaggerfallQuestStartSave[] PendingStarts { get; init; } = [];
+    /// <summary>The bounded finished-quest history, oldest first.</summary>
+    [JsonRequired]
+    public DaggerfallFinishedQuestSave[] Finished { get; init; } = [];
     internal void Validate()
     {
         ArgumentNullException.ThrowIfNull(WorkPool); WorkPool.Validate();
@@ -383,6 +386,7 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
         ArgumentNullException.ThrowIfNull(Instances);
         ArgumentNullException.ThrowIfNull(Messages);
         ArgumentNullException.ThrowIfNull(PendingStarts);
+        ArgumentNullException.ThrowIfNull(Finished);
         if (OfferSequence < 0 || PendingOffer is { } offer && (offer.Sequence <= 0 || offer.Sequence > OfferSequence
             || offer.Quest.Lifecycle != DaggerfallQuestLifecycle.Active || offer.Quest.QuestorId is null
             || offer.Quest.InstanceId != $"work:{offer.Sequence}" || Instances.Any(instance => instance.InstanceId == offer.Quest.InstanceId)))
@@ -826,7 +830,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         return destinationSymbol is null ? DaggerfallTravelPolicy.ReturnTripSeconds(seconds) : seconds;
     }
 
-    internal DaggerfallQuestPresentation ReadPresentation(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context)
+    internal DaggerfallQuestPresentation ReadPresentation(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context, DaggerfallCalendar now)
     {
         ArgumentNullException.ThrowIfNull(context);
         DaggerfallQuestRenderedMessage[] deliveries = [.. Messages.Render(_instances.Values, context)];
@@ -834,7 +838,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         DaggerfallQuestRenderedMessage? prompt = pending is null ? null
             : deliveries.SingleOrDefault(delivery => delivery.Delivery == DaggerfallQuestMessageDelivery.Prompt
                 && delivery.InstanceId == pending.InstanceId && delivery.MessageId == pending.MessageId);
-        return new(deliveries, Messages.RenderJournal(_instances.Values, context), prompt) { EscortFaces = EscortFaces(), Offer = ReadOffer() };
+        return new(deliveries, ReadJournal(context, now), prompt) { EscortFaces = EscortFaces(), Offer = ReadOffer() };
     }
 
 
@@ -1062,6 +1066,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     internal DaggerfallQuestInstancesSave Capture() => new([.. _instances.Values.OrderBy(value => value.InstanceId, StringComparer.Ordinal).Select(instance => instance.Capture())])
     {
         Messages = Messages.Capture(),
+        Finished = [.. _finished],
         OfferSequence = _offerSequence, PendingOffer = PendingOffer,
         WorkPool = _workPool with { Contacts = [.. _workPool.Contacts] },
         AcceptedOneTimeSources = [.. _acceptedOneTimeSources.Order(StringComparer.Ordinal)],
@@ -1108,6 +1113,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 operation => Messages.ResolvePromptMessage(instance, operation));
         }
         Messages.Restore(saved.Messages, _instances);
+        RestoreFinished(saved.Finished);
         foreach (var instance in _instances.Values)
             foreach (var reward in instance.Tasks.SelectMany(task => task.OperationState).Select(operation => operation.Reward).OfType<DaggerfallQuestRewardState>())
                 if (!reward.LootOpened && reward.GroundContainer is not null && !Messages.Deliveries.Any(delivery =>
@@ -1270,7 +1276,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
             if (instance.Lifecycle is DaggerfallQuestLifecycle.Completed or DaggerfallQuestLifecycle.Failed or DaggerfallQuestLifecycle.Ended)
             {
                 SettleFaction(instance);
-                Messages.RetainJournal(instance, _textContext);
+                if (Messages.RetainJournal(instance, _textContext)) RecordFinished(instance, now);
                 instance.PendingEndPasses = 0;
                 instance.TerminalMessageId = null;
                 ClearWorldLinks(instance);
