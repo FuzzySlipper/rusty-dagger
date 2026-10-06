@@ -731,6 +731,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             _tuning.Camera.EyeHeight, State.Effects.PerceptionFor, ReadNpcViews(), ReadDungeonSpellFlights(), State.Npcs.IsGameplayActive);
     }
 
+    /// <summary>The carried inventory as the HUD publishes it, eligibility included.</summary>
+    internal InventoryPresentation ReadInventoryPresentation() => _inventoryUi.Read();
+
     /// <summary>The player's active effects as the HUD lists them.</summary>
     internal IReadOnlyList<DaggerfallActiveEffectView> ReadActiveEffects() =>
         DaggerfallMagicPresentation.Read(State.Effects, State.Actors.Player, EffectItemName);

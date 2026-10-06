@@ -185,6 +185,10 @@ interface MerchantItemProjection {
   readonly canSell: boolean;
   readonly canRepair?: boolean;
   readonly canIdentify?: boolean;
+  /** The provider's quoted repair price in gold, where it would repair this item. */
+  readonly repairCost?: string | null;
+  /** The provider's quoted identification price in gold, where it would identify this item. */
+  readonly identifyCost?: string | null;
 }
 
 interface MerchantProjection {
@@ -200,7 +204,8 @@ interface MerchantProjection {
   readonly result: string;
   readonly stock: readonly MerchantItemProjection[];
   readonly playerItems: readonly MerchantItemProjection[];
-  readonly repairs: readonly { readonly requestId: string; readonly durableItemId: string | number; readonly definition: string; readonly dueMinute: number; readonly ready: boolean }[];
+  readonly repairs: readonly { readonly requestId: string; readonly durableItemId: string | number; readonly definition: string; readonly dueMinute: number; readonly ready: boolean;
+    readonly label?: string; readonly status?: string }[];
 }
 
 interface QuestMessageProjection {
@@ -695,7 +700,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       const list = document.createElement('ul');
       for (const item of items) {
         const row = document.createElement('li');
-        row.textContent = `${item.label} × ${item.quantity}${item.stolen ? ' · stolen' : ''} · `;
+        const condition = action === 'merchant-sell' && item.maximumCondition > 0 && item.currentCondition < item.maximumCondition
+          ? ` · condition ${item.currentCondition}/${item.maximumCondition}` : '';
+        row.textContent = `${item.label} × ${item.quantity}${item.stolen ? ' · stolen' : ''}${condition} · `;
         const tradeAvailable = predicate(item);
         const amountInput = tradeAvailable ? merchantQuantityInput(item) : undefined;
         row.append(merchantPriceLabel(item, amountInput));
@@ -703,9 +710,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         if (tradeAvailable) row.append(' ', merchantAction(action, merchant, item, action === 'merchant-buy' ? 'Buy' : 'Sell', amountInput));
         if (action === 'merchant-buy' && tradeAvailable && merchant.shopliftAvailable !== false) row.append(' ', merchantAction('merchant-shoplift', merchant, item, 'Steal', amountInput));
         if (action === 'merchant-sell' && item.canRepair === true)
-          row.append(' ', merchantAction('merchant-repair', merchant, item, 'Repair'));
+          row.append(' ', merchantAction('merchant-repair', merchant, item, item.repairCost == null ? 'Repair' : `Repair (${item.repairCost} gold)`));
         if (action === 'merchant-sell' && item.canIdentify === true)
-          row.append(' ', merchantAction('merchant-identify', merchant, item, 'Identify'));
+          row.append(' ', merchantAction('merchant-identify', merchant, item, item.identifyCost == null ? 'Identify' : `Identify (${item.identifyCost} gold)`));
         list.append(row);
       }
       if (items.length === 0) { const empty = document.createElement('li'); empty.textContent = 'None.'; list.append(empty); }
@@ -719,7 +726,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       const sectionHeading = document.createElement('h4'); sectionHeading.textContent = 'Repairs';
       const list = document.createElement('ul');
       for (const repair of merchant.repairs) {
-        const row = document.createElement('li'); row.textContent = `${repair.definition} · ${repair.ready ? 'ready' : 'in progress'}`;
+        const row = document.createElement('li'); row.textContent = `${repair.label ?? repair.definition} · ${repair.status ?? (repair.ready ? 'ready' : 'in progress')}`;
         if (repair.ready) {
           const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Collect';
           button.addEventListener('click', () => context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,

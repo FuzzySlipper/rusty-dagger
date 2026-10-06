@@ -255,6 +255,33 @@ test('inventory renders the ruleset-owned completed equip cue without claiming a
   } finally { f.dispose(); }
 });
 
+test('inventory use and equip controls follow the ruleset eligibility of the selected item', () => {
+  const f = fixture();
+  try {
+    const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
+      condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
+    f.publish({ inventory: {
+      revision: '5:1', message: '', equipmentChange: null,
+      slots: [{ id: 'right-hand', label: 'Right hand', itemKey: null }, { id: 'head', label: 'Head', itemKey: null }],
+      items: [
+        row('unique:1', { gridSlot: 0, compatibleSlots: ['right-hand'], canUse: false, canEquip: false, equipRefusal: 'Your class cannot use long blade weapons.' }),
+        row('stack:potion', { gridSlot: 1, canUse: true, canEquip: false, equipRefusal: 'This item cannot be equipped.' }),
+      ],
+    } });
+    const pick = key => f.root.querySelector(`[data-inventory-item="${key}"]`).click();
+    pick('unique:1');
+    const use = f.root.querySelector('[data-inventory-action="use"]');
+    const equip = f.root.querySelector('[data-inventory-action="move-equipment"]');
+    assert.equal(use.disabled, true);
+    assert.equal(equip.disabled, true);
+    assert.equal(f.root.querySelector('.dagger-inventory-equip-refusal').textContent, 'Your class cannot use long blade weapons.');
+    pick('stack:potion');
+    assert.equal(use.disabled, false);
+    use.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'inventory-use', revision: '5:1', item: 'stack:potion' });
+  } finally { f.dispose(); }
+});
+
 test('book reader and notebook render product state and send revision-guarded semantic actions', () => {
   const f = fixture();
   try {
@@ -1203,19 +1230,23 @@ test('merchant rows keep unit and selected stack totals explicit and expose serv
     stockRow.querySelector('button').click();
     assert.deepEqual(f.actions.at(-1), { action: 'merchant-buy', revision: 'merchant-1', item: 'stack:shop.arrows', amount: 3 });
 
-    const serviceOnly = { ...baseMerchant, buyAvailable: false, repairAvailable: true, stock: [], playerItems: [{ ...player, canRepair: true, canIdentify: false }] };
+    const serviceOnly = { ...baseMerchant, buyAvailable: false, repairAvailable: true, stock: [], playerItems: [{ ...player, canRepair: true, canIdentify: false, repairCost: '45', identifyCost: null }],
+      repairs: [{ requestId: 'repair-1', durableItemId: '9', definition: 'iron-dagger', dueMinute: 900, ready: false, label: 'Iron Dagger', status: 'Ready in 2 hours' }] };
     f.publish({ activation: { mode: 'talk', dialogue: dialogue(serviceOnly) } });
     const repairRow = [...f.root.querySelectorAll('.dagger-dialogue-merchant li')].find(row => row.textContent.includes('Worn sword'));
     assert.ok(repairRow);
-    assert.ok([...repairRow.querySelectorAll('button')].some(button => button.textContent === 'Repair'));
+    assert.ok([...repairRow.querySelectorAll('button')].some(button => button.textContent === 'Repair (45 gold)'));
+    assert.match(repairRow.textContent, /condition 3\/10/);
+    const order = [...f.root.querySelectorAll('.dagger-dialogue-merchant li')].find(row => row.textContent.includes('Iron Dagger'));
+    assert.equal(order.textContent, 'Iron Dagger · Ready in 2 hours');
     repairRow.querySelector('button').click();
     assert.deepEqual(f.actions.at(-1), { action: 'merchant-repair', revision: 'merchant-1', item: 'unique:17' });
 
-    const identifyOnly = { ...serviceOnly, repairAvailable: false, identifyAvailable: true, playerItems: [{ ...player, canRepair: false, canIdentify: true }] };
+    const identifyOnly = { ...serviceOnly, repairAvailable: false, identifyAvailable: true, playerItems: [{ ...player, canRepair: false, canIdentify: true, identifyCost: '0' }] };
     f.publish({ activation: { mode: 'talk', dialogue: dialogue(identifyOnly) } });
     const identifyRow = [...f.root.querySelectorAll('.dagger-dialogue-merchant li')].find(row => row.textContent.includes('Worn sword'));
     assert.ok(identifyRow);
-    assert.ok([...identifyRow.querySelectorAll('button')].some(button => button.textContent === 'Identify'));
+    assert.ok([...identifyRow.querySelectorAll('button')].some(button => button.textContent === 'Identify (0 gold)'));
     identifyRow.querySelector('button').click();
     assert.deepEqual(f.actions.at(-1), { action: 'merchant-identify', revision: 'merchant-1', item: 'unique:17' });
   } finally { f.dispose(); }

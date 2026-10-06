@@ -170,9 +170,10 @@ internal sealed partial class DaggerfallSession
         if (!quote.CanAfford) return "You cannot afford the route and its coin-only inn cost.";
         DaggerfallWorldProfileKey[] profiles = [.. (_sites.Profiles?.Keys ?? [])
             .Where(profile => profile.Site == quote.Destination.Id && profile.Kind == DaggerfallWorldProfileKind.Exterior)];
-        if (profiles.Length != 1) return $"{quote.Destination.Name} has no unique admitted exterior arrival profile.";
-        if (!_sites.Profiles!.Require(profiles[0]).Anchors.ContainsKey("start"))
-            return $"{quote.Destination.Name} has no admitted arrival anchor.";
+        // A destination this bundle carries no single arrival place for cannot be travelled to; the
+        // player reads that rather than the content gap behind it.
+        if (profiles.Length != 1 || !_sites.Profiles!.Require(profiles[0]).Anchors.ContainsKey("start"))
+            return $"You cannot travel to {quote.Destination.Name} from here.";
         destination = new(profiles[0], "start"); return null;
     }
 

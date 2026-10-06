@@ -60,6 +60,12 @@ export interface InventoryItem {
   readonly gridSlot: number | null;
   readonly equippedSlots: readonly string[];
   readonly compatibleSlots: readonly string[];
+  /** Whether the ruleset has a use for this carried item. */
+  readonly canUse?: boolean;
+  /** Whether some equipment slot would take this carried item now. */
+  readonly canEquip?: boolean;
+  /** The ruleset's reason this item cannot be equipped, when it cannot. */
+  readonly equipRefusal?: string | null;
 }
 
 export interface ItemCondition {
@@ -417,6 +423,8 @@ function createDetails(): {
   const description = document.createElement('p');
   const metadata = document.createElement('p');
   metadata.className = 'dagger-inventory-metadata';
+  const refusal = document.createElement('p');
+  refusal.className = 'dagger-inventory-equip-refusal';
   const actions = document.createElement('div');
   actions.className = 'dagger-inventory-keyboard-actions';
   const gridTarget = targetSelect('Pack slot');
@@ -449,7 +457,7 @@ function createDetails(): {
   use.dataset.inventoryAction = 'use';
   use.textContent = 'Use';
   actions.append(gridTarget, moveGrid, equipmentTarget, moveEquipment, dropQuantity, drop, inspect, use);
-  element.append(heading, name, description, metadata, actions);
+  element.append(heading, name, description, metadata, refusal, actions);
 
   return {
     element,
@@ -465,20 +473,19 @@ function createDetails(): {
       const prior = equipmentTarget.value;
       equipmentTarget.replaceChildren();
       const compatible = item === undefined ? new Set<string>() : new Set(item.compatibleSlots);
-      for (const slot of slots) {
-        const option = new Option(slot.label, slot.id);
-        option.textContent = compatible.has(slot.id) ? slot.label : `${slot.label} (may be rejected)`;
-        equipmentTarget.append(option);
-      }
+      // Only the slots the ruleset says take this item are offered.
+      for (const slot of slots) if (compatible.has(slot.id)) equipmentTarget.append(new Option(slot.label, slot.id));
       if (Array.from(equipmentTarget.options).some((option) => option.value === prior)) equipmentTarget.value = prior;
       moveGrid.disabled = item === undefined;
       gridTarget.disabled = item === undefined;
-      equipmentTarget.disabled = item === undefined || equipmentTarget.options.length === 0;
+      equipmentTarget.disabled = item === undefined || item.canEquip !== true || equipmentTarget.options.length === 0;
+      refusal.textContent = item?.equipRefusal ?? '';
+      refusal.hidden = !item?.equipRefusal;
       moveEquipment.disabled = equipmentTarget.disabled;
       dropQuantity.disabled = item === undefined;
       drop.disabled = item === undefined;
       inspect.disabled = item === undefined;
-      use.disabled = item === undefined;
+      use.disabled = item === undefined || item.canUse !== true;
       if (item !== undefined) {
         dropQuantity.max = item.quantity;
         if (Number(dropQuantity.value) > Number(item.quantity)) dropQuantity.value = item.quantity;

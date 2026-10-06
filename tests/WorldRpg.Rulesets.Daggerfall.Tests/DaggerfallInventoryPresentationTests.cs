@@ -15,6 +15,21 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallInventoryPresentationTests
 {
     [Fact]
+    public void Carried_rows_publish_use_and_equip_eligibility_from_the_ruleset_owners()
+    {
+        using DaggerfallSession session = TestSessions.FreshSession();
+        InventoryPresentation inventory = session.ReadInventoryPresentation();
+        InventoryItemPresentation gold = Assert.Single(inventory.Items, item => item.Definition == "gold-piece");
+        Assert.Equal((false, false, "This item cannot be equipped."), (gold.CanUse, gold.CanEquip, gold.EquipRefusal));
+        InventoryItemPresentation dagger = Assert.Single(inventory.Items, item => item.Definition == "iron-dagger");
+        Assert.Equal((false, true, (string?)null), (dagger.CanUse, dagger.CanEquip, dagger.EquipRefusal));
+        // The starting career is the Mage, whose class table forbids long blades.
+        Assert.Equal("class00", session.State.Character.Career.Id);
+        InventoryItemPresentation longsword = Assert.Single(inventory.Items, item => item.Definition == "iron-longsword");
+        Assert.Equal((false, "Your class cannot use long blade weapons."), (longsword.CanEquip, longsword.EquipRefusal));
+    }
+
+    [Fact]
     public void Grid_swap_equip_replacement_and_unequip_keep_engine_items_and_layout_coherent()
     {
         using Fixture f = new();

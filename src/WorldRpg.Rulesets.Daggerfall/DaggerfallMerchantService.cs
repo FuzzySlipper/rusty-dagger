@@ -16,6 +16,10 @@ using EngineUniqueInventoryItem = Rusty.Engine.Mechanics.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>One row projected from an Engine-backed merchant or player container.</summary>
+/// <remarks>
+/// <see cref="RepairCost"/> and <see cref="IdentifyCost"/> are the provider's current quote for a
+/// player row this provider would repair or identify, and null where the action would be refused.
+/// </remarks>
 internal sealed record DaggerfallMerchantItemView(
     string Key,
     string Definition,
@@ -27,21 +31,18 @@ internal sealed record DaggerfallMerchantItemView(
     bool Identified,
     bool Stolen,
     bool CanBuy,
-    bool CanSell)
-{
-    /// <summary>A unique item below its maximum condition is one a repairer can take.</summary>
-    internal bool Repairable => Key.StartsWith("unique:", StringComparison.Ordinal) && MaximumCondition > CurrentCondition;
-
-    /// <summary>A unique item whose powers are not yet known is one an identifier can read.</summary>
-    internal bool Identifiable => Key.StartsWith("unique:", StringComparison.Ordinal) && !Identified;
-}
+    bool CanSell,
+    ulong? RepairCost = null,
+    ulong? IdentifyCost = null);
 
 internal sealed record DaggerfallRepairView(
     string RequestId,
     ulong DurableItemId,
     string Definition,
     long DueMinute,
-    bool Ready);
+    bool Ready,
+    string Label = "",
+    string Status = "");
 
 /// <summary>Provider-facing merchant projection. Contents and quantities are read from Kit owners.</summary>
 internal sealed record DaggerfallMerchantView(
@@ -345,11 +346,7 @@ internal sealed class DaggerfallMerchantService
         // its canonical membership gate and rank-based price reduction.
         if (guild is null && !IsGenericRepairProvider(context)) return Refused("ProviderUnavailable");
         if (guild is { CanUse: false }) return Refused(GuildRefusal(guild));
-        int cost = DaggerfallRegionalEconomyPolicy.CalculateItemRepairCost(line.Definition.Value, binding.Context.Quality,
-            line.Metadata.CurrentCondition, line.Metadata.MaximumCondition, binding.Context.Provider.Site.Region,
-            _regionalPrices.AdjustmentForRegion(binding.Context.Provider.Site.Region));
-        if (guild is { Definition.FactionId: DaggerfallConcreteGuildCatalog.FightersFactionId, CanUse: true })
-            cost = DaggerfallConcreteGuildPolicy.FightersRepairCost(cost, guild.Membership.Rank);
+        int cost = RepairCost(binding, line.Definition, line.Metadata, guild);
         long due = checked(CurrentMinute() + Math.Max(1, (DaggerfallRegionalEconomyPolicy.CalculateItemRepairTime(
             line.Metadata.CurrentCondition, line.Metadata.MaximumCondition) + DaggerfallCalendar.SecondsPerMinute - 1) / DaggerfallCalendar.SecondsPerMinute));
         string requestId = RequestId(binding, "repair", itemKey, revision);
@@ -404,12 +401,7 @@ internal sealed class DaggerfallMerchantService
         DaggerfallConcreteGuildServiceRuntimeDecision? guild = ConcreteGuildProvider(context, DaggerfallConcreteGuildService.Identify);
         if (guild is null) return Refused("ProviderUnavailable");
         if (guild is { CanUse: false }) return Refused(GuildRefusal(guild));
-        int sourceValue = IdentifySourceValue(line.Definition, line.Metadata);
-        // The donor makes identification free during Witches Festival. Mages Guild does not
-        // override ReducedIdentifyCost, so its canonical service admission changes eligibility
-        // and provider identity while leaving the ordinary cost unchanged outside that holiday.
-        int cost = _calendar().GetHolidayId(binding.Context.Provider.Site.Region) == WitchesFestival
-            ? 0 : DaggerfallRegionalEconomyPolicy.CalculateItemIdentifyCost(sourceValue);
+        int cost = IdentifyCost(binding, line.Definition, line.Metadata);
         string requestId = RequestId(binding, "identify", itemKey, revision);
         DaggerfallServiceRequest request = new(requestId, binding.Context.Provider,
             new(itemId, line.Definition.Id.Value, line.Metadata.CurrentCondition));
@@ -506,6 +498,28 @@ internal sealed class DaggerfallMerchantService
         return _npcs.Require(context.Provider.NpcId).Services.Contains("repair", StringComparer.Ordinal);
     }
 
+    /// <summary>The price this provider asks to repair an item, with a Fighters Guild member's rank reduction.</summary>
+    private int RepairCost(Binding binding, DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata,
+        DaggerfallConcreteGuildServiceRuntimeDecision? guild)
+    {
+        int cost = DaggerfallRegionalEconomyPolicy.CalculateItemRepairCost(definition.Value, binding.Context.Quality,
+            metadata.CurrentCondition, metadata.MaximumCondition, binding.Context.Provider.Site.Region,
+            _regionalPrices.AdjustmentForRegion(binding.Context.Provider.Site.Region));
+        if (guild is { Definition.FactionId: DaggerfallConcreteGuildCatalog.FightersFactionId, CanUse: true })
+            cost = DaggerfallConcreteGuildPolicy.FightersRepairCost(cost, guild.Membership.Rank);
+        return cost;
+    }
+
+    /// <summary>
+    /// The price this provider asks to identify an item. The donor makes identification free during
+    /// Witches Festival. Mages Guild does not override ReducedIdentifyCost, so its canonical service
+    /// admission changes eligibility and provider identity while leaving the ordinary cost unchanged
+    /// outside that holiday.
+    /// </summary>
+    private int IdentifyCost(Binding binding, DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata) =>
+        _calendar().GetHolidayId(binding.Context.Provider.Site.Region) == WitchesFestival
+            ? 0 : DaggerfallRegionalEconomyPolicy.CalculateItemIdentifyCost(IdentifySourceValue(definition, metadata));
+
     private static string GuildRefusal(DaggerfallConcreteGuildServiceRuntimeDecision decision) =>
         !decision.Policy.Eligible ? decision.Policy.Denial.ToString()
         : decision.ProviderDenial != DaggerfallServiceDenial.None ? decision.ProviderDenial.ToString()
@@ -517,23 +531,49 @@ internal sealed class DaggerfallMerchantService
         InventoryView player = _inventory.Read();
         DaggerfallNpc npc = _npcs.Require(binding.Context.Provider.NpcId);
         DaggerfallMerchantItemView[] stockRows = Rows(stock, DaggerfallItemOwner.Merchant(binding.MerchantContainerId), binding, buying: true);
-        DaggerfallMerchantItemView[] playerRows = Rows(player, DaggerfallItemOwner.Player, binding, buying: false);
+        bool repairService = npc.Services.Contains("repair", StringComparer.Ordinal);
+        bool identifyService = npc.Services.Contains("identify", StringComparer.Ordinal);
+        DaggerfallConcreteGuildServiceRuntimeDecision? repairGuild = repairService ? ConcreteGuildProvider(binding.Context, DaggerfallConcreteGuildService.Repair) : null;
+        DaggerfallMerchantItemView[] playerRows = Rows(player, DaggerfallItemOwner.Player, binding, buying: false,
+            // A cost is quoted where the matching action would be admitted: a guild repairer the player
+            // may use or a generic repair shop, and an identifier whose guild service admits the player.
+            quoteRepair: repairService && (repairGuild is { CanUse: true } || repairGuild is null && IsGenericRepairProvider(binding.Context)),
+            repairGuild: repairGuild,
+            quoteIdentify: identifyService && ConcreteGuildProvider(binding.Context, DaggerfallConcreteGuildService.Identify) is { CanUse: true });
+        long now = CurrentMinute();
         DaggerfallRepairView[] repairs = binding.Repairs.Values.OrderBy(value => value.DueMinute).ThenBy(value => value.RequestId, StringComparer.Ordinal)
             .Select(value => new DaggerfallRepairView(value.RequestId, value.DurableItemId, value.Definition, value.DueMinute,
-                CurrentMinute() >= value.DueMinute)).ToArray();
+                now >= value.DueMinute, RepairLabel(value), now >= value.DueMinute ? "Ready to collect"
+                    : "Ready in " + DaggerfallCalendar.DescribeDuration(checked((value.DueMinute - now) * DaggerfallCalendar.SecondsPerMinute)))).ToArray();
         string merchantRevision = MakeRevision(binding);
         string revision = string.IsNullOrWhiteSpace(dialogueRevision) ? merchantRevision : $"{dialogueRevision}|{merchantRevision}";
         bool canBuy = npc.Services.Any(value => value is "shop" or "merchant" or "buy-items")
             || binding.Context.Provider.Service == "buy-potions" && ConcreteGuildProvider(binding.Context, DaggerfallConcreteGuildService.BuyPotions) is { CanUse: true };
         bool canSell = npc.Services.Any(value => value is "shop" or "merchant" or "sell-items");
-        bool canRepair = npc.Services.Contains("repair", StringComparer.Ordinal);
-        bool canIdentify = npc.Services.Contains("identify", StringComparer.Ordinal);
+        bool canRepair = repairService;
+        bool canIdentify = identifyService;
         return new(revision, npc.DisplayName ?? npc.Role, binding.Context.Quality, _currency.Read().Gold,
             canBuy, canSell, canRepair, canIdentify, stockRows, playerRows, repairs, result, binding.Context.Provider.Service != "buy-potions");
     }
 
-    private DaggerfallMerchantItemView[] Rows(InventoryView inventory, DaggerfallItemOwner owner, Binding binding, bool buying)
+    /// <summary>The name a repair order shows: the item in custody, as the merchant rows name items.</summary>
+    private string RepairLabel(DaggerfallMerchantRepairSave order)
     {
+        DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(order.Definition));
+        try { return ItemLabel(definition, _instances.RequireUnique(order.DurableItemId)); }
+        catch (InvalidOperationException) { return definition.Template?.Name ?? definition.Id.Value; }
+    }
+
+    private DaggerfallMerchantItemView[] Rows(InventoryView inventory, DaggerfallItemOwner owner, Binding binding, bool buying,
+        bool quoteRepair = false, DaggerfallConcreteGuildServiceRuntimeDecision? repairGuild = null, bool quoteIdentify = false)
+    {
+        // Costs are quoted only for the player's rows, and only for services this provider offers.
+        ulong? Repair(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata) =>
+            quoteRepair && metadata.MaximumCondition > 0 && metadata.CurrentCondition < metadata.MaximumCondition
+                ? checked((ulong)Math.Max(0, RepairCost(binding, definition, metadata, repairGuild))) : null;
+        ulong? Identify(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata) =>
+            quoteIdentify && metadata.HasEnchantment && !metadata.Identified
+                ? checked((ulong)Math.Max(0, IdentifyCost(binding, definition, metadata))) : null;
         List<DaggerfallMerchantItemView> rows = [];
         foreach (InventoryStack stack in inventory.Stacks.OrderBy(value => value.Id.Value, StringComparer.Ordinal))
         {
@@ -557,7 +597,8 @@ internal sealed class DaggerfallMerchantService
                 new(definition, metadata, 1));
             rows.Add(new("unique:" + id, definition.Id.Value, ItemLabel(definition, metadata), 1, price,
                 metadata.CurrentCondition, metadata.MaximumCondition, metadata.Identified, metadata.Stolen,
-                buying, !buying && CanSellToBuilding(binding.Context.BuildingType, metadata)));
+                buying, !buying && CanSellToBuilding(binding.Context.BuildingType, metadata),
+                Repair(definition, metadata), Identify(definition, metadata)));
         }
         return [.. rows];
     }

@@ -10,7 +10,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 internal sealed record InventoryItemPresentation(string Key, string Definition, string Label, string Quantity, int Weight, int Value,
     string Details, string? Icon, int? GridSlot, string[] EquippedSlots, string[] CompatibleSlots,
-    ItemConditionPresentation? Condition = null, bool Identified = true);
+    ItemConditionPresentation? Condition = null, bool Identified = true, bool CanUse = false, bool CanEquip = false, string? EquipRefusal = null);
 internal sealed record ItemConditionPresentation(int Current, int Maximum, int Percentage, bool Broken);
 internal sealed record EquipmentSlotPresentation(string Id, string Label, string? ItemKey);
 internal sealed record EquipmentChangePresentation(string Cue, int RightHandDelayMilliseconds, int LeftHandDelayMilliseconds);
@@ -303,10 +303,15 @@ internal sealed class DaggerfallInventoryPresentation
         DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(itemId));
         DaggerfallItemInstanceMetadata? metadata = Metadata(key, owner ?? itemOwner);
         ItemDisplay display = Display(definition, metadata);
+        // Eligibility belongs to the carried rows only: a loot or container row is taken before it is used.
+        bool carried = owner is null;
+        string? equipRefusal = carried ? moves.EquipRefusal(definition, key.StartsWith("unique:", StringComparison.Ordinal), metadata?.CurrentCondition) : null;
         return new InventoryItemPresentation(key, itemId, display.Label, quantity.ToString(CultureInfo.InvariantCulture),
             metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), display.Details, icons.GetValueOrDefault(definition.Template?.Index == 83 && metadata?.PotionRecipeKey is int recipe ? $"potion.{recipe}" : itemId), gridSlot, equippedSlots ?? [],
             definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray(),
-            display.Condition, display.Identified);
+            display.Condition, display.Identified,
+            CanUse: carried && metadata is not null && itemUse?.CanUse(itemId, metadata) == true,
+            CanEquip: carried && equipRefusal is null, EquipRefusal: equipRefusal);
     }
 
     private DaggerfallItemInstanceMetadata? Metadata(string key, DaggerfallItemOwner? owner)

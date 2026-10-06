@@ -408,7 +408,10 @@
         "identified": true,
         "gridSlot": 0,
         "equippedSlots": [],
-        "compatibleSlots": []
+        "compatibleSlots": [],
+        "canUse": false,
+        "canEquip": false,
+        "equipRefusal": "This item cannot be equipped."
       },
       {
         "key": "unique:2",
@@ -433,7 +436,10 @@
         "compatibleSlots": [
           "right-hand",
           "left-hand"
-        ]
+        ],
+        "canUse": false,
+        "canEquip": false,
+        "equipRefusal": "Your class cannot use long blade weapons."
       },
       {
         "key": "unique:3",
@@ -456,7 +462,10 @@
         "compatibleSlots": [
           "right-hand",
           "left-hand"
-        ]
+        ],
+        "canUse": false,
+        "canEquip": true,
+        "equipRefusal": null
       },
       {
         "key": "unique:4",
@@ -480,7 +489,10 @@
         ],
         "compatibleSlots": [
           "chest-armor"
-        ]
+        ],
+        "canUse": false,
+        "canEquip": false,
+        "equipRefusal": "Your class cannot use plate armor."
       }
     ],
     "slots": [
