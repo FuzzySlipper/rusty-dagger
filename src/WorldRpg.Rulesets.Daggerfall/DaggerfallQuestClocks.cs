@@ -112,7 +112,9 @@ internal static class DaggerfallQuestClockAdvancer
             DaggerfallQuestClockState clock = instance.Clocks[deadline];
             instance.Clocks[deadline] = clock with { RemainingSeconds = 0, Enabled = false, Finished = true };
             DaggerfallQuestTaskRunner.TriggerClockDeadline(instance, program, variables, clock.Symbol);
-            if (runTasks)
+            // A prompt opened by an earlier deadline of this interval holds the quest's later
+            // deadline tasks too: they are triggered and run on the next pass after the answer.
+            if (runTasks && messages.Pending?.InstanceId != instance.InstanceId)
                 DaggerfallQuestTaskRunner.Advance(instance, program, variables, before.Advance(elapsed, out _), messages, lifecycle);
         }
 

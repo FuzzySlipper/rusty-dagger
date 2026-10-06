@@ -1032,7 +1032,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         {
             foreach (DaggerfallQuestRuntimeInstance instance in _instances.Values.ToArray())
                 DaggerfallQuestClockAdvancer.Advance(instance, Program(instance.SourceFile), variables, before, after, Messages, this,
-                    runTasks: !nested && Messages.Pending?.InstanceId != instance.InstanceId);
+                    runTasks: !nested);
         }
         finally { _taskPassDepth--; }
     }
