@@ -597,7 +597,13 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("currentRequirement", Requirement(affiliation.CurrentRequirement)),
                 ("nextRequirement", Requirement(affiliation.NextRequirement)),
                 ("daysUntilReview", affiliation.DaysUntilReview is int days ? builder.Number(days) : builder.Null()),
-                ("privileges", builder.Array((affiliation.Privileges ?? []).Select(builder.String).ToArray())))).ToArray())),
+                ("privileges", builder.Array((affiliation.Privileges ?? []).Select(builder.String).ToArray())),
+                ("rankTitle", affiliation.RankTitle is null ? builder.Null() : builder.String(affiliation.RankTitle)))).ToArray())),
+            ("legalStandings", builder.Array((value.LegalStandings ?? []).Select(standing => builder.Object(
+                ("region", builder.Number(standing.Region)), ("regionName", builder.String(standing.RegionName)),
+                ("reputation", builder.Number(standing.Reputation)), ("standing", builder.String(standing.Standing)),
+                ("banished", builder.Boolean(standing.Banished)), ("current", builder.Boolean(standing.Current)),
+                ("label", builder.String(standing.Label)))).ToArray())),
             ("history", value.History is null ? builder.Null() : builder.Object(("biography", builder.Array(value.History.Biography.Select(builder.String).ToArray())))),
             ("grantedSkills", builder.Array((value.GrantedSkills ?? []).Select(skill => builder.Object(
                 ("id", builder.String(skill.SkillId)), ("tier", builder.String(skill.Tier.ToString().ToLowerInvariant())),

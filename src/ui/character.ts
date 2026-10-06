@@ -32,6 +32,19 @@ export interface CharacterAffiliation {
   readonly nextRequirement?: GuildRankRequirement | null;
   readonly daysUntilReview?: number | null;
   readonly privileges?: readonly string[];
+  /** The rank's title in this guild, from the ruleset; null outside a concrete guild. */
+  readonly rankTitle?: string | null;
+}
+
+/** The player's legal standing in one region; the label is the ruleset's own wording. */
+export interface CharacterLegalStanding {
+  readonly region: number;
+  readonly regionName: string;
+  readonly reputation: number;
+  readonly standing: string;
+  readonly banished: boolean;
+  readonly current: boolean;
+  readonly label: string;
 }
 
 interface GuildRankRequirement { readonly rank: number; readonly reputation: number; readonly highSkill: number; readonly lowSkill: number; }
@@ -101,6 +114,7 @@ export interface CharacterProjection {
   readonly equipment: readonly CharacterEquipment[];
   readonly resistances?: readonly CharacterStat[];
   readonly affiliations?: readonly CharacterAffiliation[];
+  readonly legalStandings?: readonly CharacterLegalStanding[];
   readonly history?: CharacterHistory | null;
   readonly identity?: CharacterIdentity | null;
   readonly grantedSkills?: readonly CharacterGrantedSkill[];
@@ -145,6 +159,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
   const skills = section('Skills');
   const resistances = section('Resistances');
   const affiliations = section('Affiliations');
+  const legal = section('Legal standing');
   const history = section('History');
   const equipment = section('Equipped items');
   const portrait = document.createElement('div'); portrait.className = 'dagger-character-art';
@@ -153,7 +168,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
   const creation = section('Character choices');
   const columns = document.createElement('div');
   columns.className = 'dagger-character-columns';
-  columns.append(resources.element, attributes.element, skills.element, resistances.element, affiliations.element, history.element, career.element, equipment.element, levelUp.element, creation.element);
+  columns.append(resources.element, attributes.element, skills.element, resistances.element, affiliations.element, legal.element, history.element, career.element, equipment.element, levelUp.element, creation.element);
   shell.append(chrome, heading, portrait, overview, columns);
   root.append(shell);
   let disposed = false;
@@ -207,11 +222,16 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
       })));
       renderRows(affiliations.rows, (value.affiliations ?? []).map(affiliation => ({
         label: affiliation.faction,
-        value: `${affiliation.guildGroup || 'Guild'} · Rank ${format(affiliation.rank)} · Reputation ${format(affiliation.reputation)} · Recognition ${format(affiliation.recognition)}`
+        value: `${affiliation.guildGroup || 'Guild'} · ${affiliation.rankTitle ?? `Rank ${format(affiliation.rank)}`} · Reputation ${format(affiliation.reputation)} · Recognition ${format(affiliation.recognition)}`
           + (affiliation.nextRequirement ? ` · Next rank ${format(affiliation.nextRequirement.rank)}: reputation ${format(affiliation.nextRequirement.reputation)}, skills ${format(affiliation.nextRequirement.highSkill)}/${format(affiliation.nextRequirement.lowSkill)}` : '')
           + (affiliation.daysUntilReview != null ? ` · Review in ${format(affiliation.daysUntilReview)} days` : '')
           + (affiliation.privileges?.length ? ` · Privileges: ${affiliation.privileges.join(', ')}` : ''),
         testid: `character-sheet-affiliation-${affiliation.faction}`,
+      })));
+      renderRows(legal.rows, (value.legalStandings ?? []).map(standing => ({
+        label: standing.label,
+        value: `Reputation ${format(standing.reputation)}`,
+        testid: `character-sheet-legal-${standing.region}`,
       })));
       renderRows(history.rows, (value.history?.biography ?? []).map((line, index) => ({
         label: `History ${format(index + 1)}`,
@@ -256,6 +276,7 @@ export function isCharacterProjection(value: unknown): value is CharacterProject
     && 'equipment' in value && Array.isArray(value.equipment) && value.equipment.every(isEquipment)
     && (!('resistances' in value) || Array.isArray(value.resistances) && isStats(value.resistances))
     && (!('affiliations' in value) || Array.isArray(value.affiliations) && value.affiliations.every(isAffiliation))
+    && (!('legalStandings' in value) || Array.isArray(value.legalStandings) && value.legalStandings.every(isLegalStanding))
     && (!('history' in value) || value.history === null || isHistory(value.history))
     && (!('identity' in value) || value.identity === null || isIdentity(value.identity))
     && (!('grantedSkills' in value) || Array.isArray(value.grantedSkills) && value.grantedSkills.every(isGrantedSkill))
@@ -357,7 +378,19 @@ function isAffiliation(value: unknown): value is CharacterAffiliation {
     && (!('currentRequirement' in value) || value.currentRequirement === null || isGuildRankRequirement(value.currentRequirement))
     && (!('nextRequirement' in value) || value.nextRequirement === null || isGuildRankRequirement(value.nextRequirement))
     && (!('daysUntilReview' in value) || value.daysUntilReview === null || isNumber(value.daysUntilReview))
-    && (!('privileges' in value) || Array.isArray(value.privileges) && value.privileges.every(item => typeof item === 'string'));
+    && (!('privileges' in value) || Array.isArray(value.privileges) && value.privileges.every(item => typeof item === 'string'))
+    && (!('rankTitle' in value) || value.rankTitle === null || typeof value.rankTitle === 'string');
+}
+
+function isLegalStanding(value: unknown): value is CharacterLegalStanding {
+  return typeof value === 'object' && value !== null
+    && 'region' in value && isNumber(value.region)
+    && 'regionName' in value && typeof value.regionName === 'string'
+    && 'reputation' in value && isNumber(value.reputation)
+    && 'standing' in value && typeof value.standing === 'string'
+    && 'banished' in value && typeof value.banished === 'boolean'
+    && 'current' in value && typeof value.current === 'boolean'
+    && 'label' in value && typeof value.label === 'string';
 }
 
 function isGuildRankRequirement(value: unknown): value is GuildRankRequirement {

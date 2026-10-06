@@ -100,6 +100,53 @@ public sealed class DaggerfallCharacterPresentationTests
     }
 
     [Fact]
+    public void Sheet_names_guild_rank_titles_and_regional_legal_standing_with_banishment()
+    {
+        using Fixture f = new();
+        DaggerfallCharacterState character = new(f.Definitions, f.Player.Stats, f.PlayerDefinition);
+        DaggerfallSocialState social = new(f.Definitions.Factions);
+        _ = social.JoinGuild(Guilds.DaggerfallConcreteGuildCatalog.MagesFactionId, currentDay: 3);
+        _ = social.PromoteGuild(Guilds.DaggerfallConcreteGuildCatalog.MagesFactionId, currentDay: 4);
+        _ = social.PromoteGuild(Guilds.DaggerfallConcreteGuildCatalog.MagesFactionId, currentDay: 5);
+        int current = f.Definitions.Factions.Regions.Keys.Where(key => key is >= 0 and <= 61).Min();
+        int region = f.Definitions.Factions.Regions.Keys.Where(key => key is >= 0 and <= 61 && key != current).Min();
+        _ = social.ChangeRegionalReputation(region, -25);
+        DaggerfallCharacterPresentation presentation = new(f.Definitions, character, f.PlayerDefinition, f.Equipment, social);
+        presentation.UseLegalStanding(() => current, candidate => candidate == region);
+
+        CharacterSheetPresentation sheet = presentation.Read(f.Player, f.Progression);
+
+        Assert.Equal("Evoker", Assert.Single(sheet.Affiliations).RankTitle);
+        Assert.NotNull(sheet.LegalStandings);
+        CharacterLegalStandingPresentation home = Assert.Single(sheet.LegalStandings, value => value.Region == current);
+        Assert.True(home.Current);
+        Assert.Equal("a common citizen", home.Standing);
+        CharacterLegalStandingPresentation wanted = Assert.Single(sheet.LegalStandings, value => value.Region == region);
+        Assert.Equal((-25, "a criminal", true, false), (wanted.Reputation, wanted.Standing, wanted.Banished, wanted.Current));
+        Assert.Equal($"{f.Definitions.BuildingNames.RegionName(region)}: a criminal, banished", wanted.Label);
+    }
+
+    [Theory]
+    [InlineData(81, "revered")]
+    [InlineData(11, "respected")]
+    [InlineData(1, "dependable")]
+    [InlineData(0, "a common citizen")]
+    [InlineData(-1, "undependable")]
+    [InlineData(-11, "a scoundrel")]
+    [InlineData(-61, "pond scum")]
+    [InlineData(-81, "hated")]
+    public void Legal_standing_uses_the_donor_reputation_words(int reputation, string expected)
+        => Assert.Equal(expected, DaggerfallCharacterPresentation.LegalStanding(reputation));
+
+    [Theory]
+    [InlineData(Guilds.DaggerfallConcreteGuildCatalog.FightersFactionId, 9, false, "Master")]
+    [InlineData(Guilds.DaggerfallConcreteGuildCatalog.DarkBrotherhoodFactionId, 8, true, "Dark Sister")]
+    [InlineData(Guilds.DaggerfallConcreteGuildCatalog.DarkBrotherhoodFactionId, 8, false, "Dark Brother")]
+    [InlineData(Guilds.DaggerfallConcreteGuildCatalog.ThievesFactionId, 0, false, "Apprentice")]
+    public void Guild_rank_titles_follow_the_donor_guild_tables(int faction, int rank, bool female, string expected)
+        => Assert.Equal(expected, Guilds.DaggerfallGuildRankTitles.Title(faction, rank, female));
+
+    [Fact]
     public void Sheet_reuses_identification_and_condition_presentation_for_equipped_magic_items()
     {
         using Fixture f = new();

@@ -526,12 +526,15 @@ test('character sheet refreshes owner-published progression, resistance, affilia
       name: 'Aubk-i', attributes: [], skills: [], equipment: [{ label: 'Dagger of Fire', slots: ['Right Hand'], details: 'Condition: 1/2 (50%); Enchantment: Fire', condition: { current: 1, maximum: 2, percentage: 50, broken: false }, identified: true }], resources: [], grantedSkills: [], creationAvailable: false,
       progression: { level: 2, experience: 900, skillProgress: 17, nextLevelSkillProgress: 17, pendingLevelUp: true },
       resistances: [{ id: 'resistance-fire', label: 'Resistance Fire', value: 25, permanent: 25 }],
-      affiliations: [{ faction: 'Mephala', guildGroup: 'Daedra', rank: 2, reputation: 9, recognition: 4 }],
+      affiliations: [{ faction: 'Mephala', guildGroup: 'Daedra', rank: 2, reputation: 9, recognition: 4, rankTitle: 'Journeyman' }],
+      legalStandings: [{ region: 17, regionName: 'Daggerfall', reputation: -25, standing: 'a criminal', banished: true, current: true, label: 'Daggerfall: a criminal, banished' }],
       history: { biography: ['A revised retained account.'] },
     } });
     assert.match(f.root.querySelector('[aria-label="Player progression"]').textContent, /17 \/ 17 skill total.*Level up ready/);
     assert.match(f.root.querySelector('[data-testid="character-sheet-resistance-resistance-fire"]').textContent, /^25$/);
-    assert.match(f.root.querySelector('[data-testid="character-sheet-affiliation-Mephala"]').textContent, /Rank 2.*Reputation 9.*Recognition 4/);
+    assert.match(f.root.querySelector('[data-testid="character-sheet-affiliation-Mephala"]').textContent, /Journeyman.*Reputation 9.*Recognition 4/);
+    const legal = f.root.querySelector('[data-testid="character-sheet-legal-17"]');
+    assert.match(legal.parentElement.textContent, /Daggerfall: a criminal, banished/);
     assert.equal(f.root.querySelector('[data-testid="character-sheet-history-0"]').textContent, 'A revised retained account.');
     assert.match(equipment.textContent, /Dagger of Fire.*Condition: 1\/2 \(50%\).*Enchantment: Fire/);
   } finally { f.dispose(); }
