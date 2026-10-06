@@ -127,6 +127,37 @@ public sealed class DaggerfallQuestClockTests
     }
 
     [Fact]
+    public void A_prompt_opened_by_an_earlier_deadline_holds_a_later_deadline_task_in_the_same_interval()
+    {
+        DaggerfallQuestSourceDefinition source = new("test", string.Empty, "prompted.txt", DaggerfallQuestDisposition.Compiled,
+            [new(1010, 1, ["Will you help?"])],
+            [Clock(1, "clock _early_ 1"),
+             Clock(2, "clock _late_ 2"),
+             // The later deadline's task precedes the prompting task, so a task pass would reach it.
+             Block("task", 3, "_late_ task:", "start task _result_"),
+             Block("task", 5, "_early_ task:", "prompt 1010 yes _yes_ no _no_"),
+             Block("variable", 7, "variable _yes_"),
+             Block("variable", 8, "variable _no_"),
+             Block("variable", 9, "variable _result_")], []);
+        DaggerfallQuestTaskProgram program = DaggerfallQuestTaskCompiler.Compile(source);
+        DaggerfallQuestRuntimeInstance runtime = Runtime(source, program,
+            [new("early", 60, 60, 0, 0, 0, true, false), new("late", 120, 120, 0, 0, 0, true, false)]);
+        DaggerfallQuestMessages messages = DaggerfallQuestTaskRuntimeTests.Messages(source);
+        DaggerfallVariableStore variables = new(new Dictionary<string, int>(StringComparer.Ordinal));
+
+        DaggerfallQuestClockAdvancer.Advance(runtime, program, variables, DaggerfallCalendar.Start, DaggerfallCalendar.Start.Advance(120, out _),
+            messages, new DaggerfallQuestTaskRuntimeTests.LifecycleFake());
+
+        // Both clocks are consumed and the later one's task is triggered, but its action waits for
+        // the prompt the earlier deadline opened.
+        DaggerfallQuestInstanceSave advanced = runtime.Capture();
+        Assert.NotNull(messages.Pending);
+        Assert.All(advanced.Clocks, clock => Assert.True(clock.Finished));
+        Assert.True(advanced.Tasks.Single(task => task.Symbol == "late").IsSet);
+        Assert.False(advanced.Tasks.Single(task => task.Symbol == "result").IsSet);
+    }
+
+    [Fact]
     public void Deadline_task_that_logs_the_journal_runs_through_the_quest_owners_instead_of_failing()
     {
         // The ordinary instance owner advances clocks with its message and lifecycle owners; a deadline
