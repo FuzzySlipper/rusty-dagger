@@ -33,7 +33,7 @@ internal sealed partial class DaggerfallSession
         PursuitTarget? selected = player is { } position ? new(DaggerfallActorIdentity.PlayerEntityId, position) : null;
         if (!State.Quests.AllowsFoeInfighting(observerId) || !State.Quests.HasInfightingFoes) return selected;
         double best = player is { } target ? Vector3.Distance(observer.Position.ToVector(), target.ToVector()) : double.PositiveInfinity;
-        Vector3 forward = new(MathF.Sin(observer.HeadingYawRadians), 0, -MathF.Cos(observer.HeadingYawRadians));
+        Vector3 forward = ActorHeading.Forward(observer.HeadingYawRadians);
         string? team = EffectiveFoeTeam(observerId);
         foreach (var pair in QueryEnemies(observerId, observer.Position, forward,
             Math.Max(_tuning.EnemyBehavior.DetectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius),

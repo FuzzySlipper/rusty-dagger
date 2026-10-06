@@ -363,4 +363,12 @@ public sealed class DurableIdentityTests
         Assert.Equal([first.Value], restored.RemovedIdentities(DurableIdentityKind.Item));
         Assert.Throws<InvalidOperationException>(() => restored.Allocate(DurableIdentityKind.Item));
     }
+
+    [Fact]
+    public void Stable_hash_is_fnv1a_over_utf16_code_units()
+    {
+        Assert.Equal(14695981039346656037UL, StableHash.Fnv1a64(""));
+        Assert.Equal(0xaf63dc4c8601ec8cUL, StableHash.Fnv1a64("a"));
+        Assert.Equal(StableHash.Fnv1a64("site:a"), StableHash.NonZeroFnv1a64("site:a"));
+    }
 }

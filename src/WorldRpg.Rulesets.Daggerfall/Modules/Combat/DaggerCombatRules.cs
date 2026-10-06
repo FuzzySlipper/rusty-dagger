@@ -956,7 +956,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         // DFU rounds the target-to-player angle into eight 45-degree facings using
         // nearest-even ties, then treats facing indices 3, 4 and 5 as back-facing.
         // ActorPose's zero heading faces -Z and positive yaw turns toward +X.
-        Vector3 targetForward = new(MathF.Sin(targetActor.HeadingYawRadians), 0f, -MathF.Cos(targetActor.HeadingYawRadians));
+        Vector3 targetForward = ActorHeading.Forward(targetActor.HeadingYawRadians);
         float inverseDistance = 1f / MathF.Sqrt(distanceSquared);
         float dot = Math.Clamp(((targetForward.X * dx) + (targetForward.Z * dz)) * inverseDistance, -1f, 1f);
         float facingSector = MathF.Acos(dot) / (MathF.PI / 4f);

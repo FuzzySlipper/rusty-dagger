@@ -2,6 +2,7 @@ using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
@@ -188,18 +189,8 @@ internal sealed class DaggerfallSiteLifecycle
             water.Values.OrderBy(value => value.Trigger).ToArray());
     }
 
-    private static ulong LocationPlacementId(DaggerfallWorldProfileKey profile)
-    {
-        const ulong offset = 14695981039346656037UL;
-        const ulong prime = 1099511628211UL;
-        ulong hash = offset;
-        foreach (char value in $"daggerfall.location-artifact.v1|{profile.LogicalId}")
-        {
-            hash ^= value;
-            hash *= prime;
-        }
-        return hash == 0 ? 1UL : hash;
-    }
+    private static ulong LocationPlacementId(DaggerfallWorldProfileKey profile) =>
+        StableHash.NonZeroFnv1a64($"daggerfall.location-artifact.v1|{profile.LogicalId}");
 
     private SpatialContentArtifactPlacement LocationPlacement(
         DaggerfallSiteProfile profile,
