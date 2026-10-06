@@ -40,12 +40,13 @@ public sealed class KnownReadySpellSessionTests
         f.Submit(new{action="spell-ready",key="missing-record"});
         Assert.Null(s.ReadSpells().Ready);Assert.Equal("That spell is not known or available.",s.ReadSpells().Result);
         Assert.Throws<ArgumentException>(()=>s.State.Character.LearnSpell("missing-record"));
-        var unavailable=TestPayload.Definitions.Magic.Spells.Values.First(spell=>!spell.Name.StartsWith('!')
+        // Every published classic record is castable; a hidden (!) record no grant reached is not.
+        var unavailable=TestPayload.Definitions.Magic.Spells.Values.First(spell=>spell.Name.StartsWith('!')
             && s.Casting.AvailableSpellCost(1,spell.Key) is null);
         s.State.Character.LearnSpell(unavailable.Key);
         Assert.False(Assert.Single(s.ReadSpells().Available,row=>row.Key==unavailable.Key).CanCast);
         f.Submit(new{action="spell-ready",key=unavailable.Key});
-        Assert.Equal("That spell has unavailable effects.",s.ReadSpells().Result);Assert.Null(s.Casting.ReadyFor(1));
+        Assert.Equal("That spell is not known or available.",s.ReadSpells().Result);Assert.Null(s.Casting.ReadyFor(1));
         f.Submit(new{action="spell-ready",key="spell.023"});
         Assert.True(s.State.Character.ForgetSpell("spell.023"));Assert.Null(s.Casting.ReadyFor(1));
         Assert.Null(DaggerfallSavePayload.Read(s.CaptureSave()).ReadySpell);

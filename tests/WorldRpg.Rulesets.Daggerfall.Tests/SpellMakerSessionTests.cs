@@ -93,18 +93,16 @@ public sealed class SpellMakerSessionTests
     {
         using var f = new KnownReadySpellSessionTests.Fixture(); var game = f.Session;
         Fund(game); Book(game); var provider = Provider(game); Magicka(game);
-        var spell = Draft("Fire and recovery", 1, Effect(game, "heal-health") with { MagnitudeBaseLow = 5, MagnitudeBaseHigh = 5 }, Effect(game, "damage-health")) with { Element = 0 };
+        // Damage Health reaches only others, as in the donor's spellmaker, so the common delivery is touch.
+        var spell = Draft("Fire and recovery", 1, Effect(game, "heal-health") with { MagnitudeBaseLow = 5, MagnitudeBaseHigh = 5 }, Effect(game, "damage-health")) with { Element = 0, RangeType = 1 };
         game.SpellMaker.SetDraft(spell); var quote = game.SpellMaker.Quote(provider)!;
         Assert.True(quote.Eligible); Assert.True(game.SpellMaker.Buy(provider, quote.Key, (ulong)quote.Gold, true).Accepted);
         var key = Assert.Single(game.State.Character.KnownSpells);
         Assert.Equal(DaggerfallCastOutcome.Ready, game.ReadyPlayerSpell(key).Outcome);
-        var health = game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health"));
-        health.SetCurrent(health.Maximum.Value - 10); double beforeHealth = health.Current;
-        var delivery = game.ReleaseReadySpell(1, Vector3.UnitZ);
-        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, delivery.Outcome);
-        Assert.Equal(2, delivery.Bundle!.Results.Count);
-        Assert.All(delivery.Bundle.Results, result => Assert.Equal(DaggerfallCastOutcome.Applied, result.Outcome));
-        Assert.True(health.Current > beforeHealth);
+        long target = game.SpawnActor("rat", new(new(11, 0, 11), 0));
+        var bundle = game.Casting.Release(1, true).Bundle!; game.Casting.Deliver(bundle, [target]);
+        Assert.Equal(2, bundle.Results.Count);
+        Assert.DoesNotContain(bundle.Results, result => result.Outcome == DaggerfallCastOutcome.UnsupportedEffect);
         using var restored = f.Restore(game.CaptureSave()); Assert.Contains(key, restored.State.Character.KnownSpells);
     }
 

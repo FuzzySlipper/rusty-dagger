@@ -45,12 +45,13 @@ public sealed partial class DaggerfallEquipmentWearTests
     }
 
     [Fact]
-    public void Razor_miss_and_unequipped_or_removed_source_have_no_artifact_result()
+    public void Razor_miss_offers_its_save_and_a_removed_source_has_no_artifact_result()
     {
+        // The donor runs the player's Strikes payloads on a miss too.
         using WearFixture miss = new();
         miss.EquipRazor();
-        miss.Script(body: 9, critical: 50, hit: 100);
-        Assert.Empty(miss.RunPlayerAttack().OfType<ArtifactTerminalStrikeFact>());
+        miss.Script(body: 9, critical: 50, hit: 100, razorSave: 1);
+        Assert.Equal(0, Assert.Single(miss.RunPlayerAttack().OfType<ArtifactTerminalStrikeFact>()).AddedDamage);
         Assert.Equal(1500, miss.Condition(9501));
         using WearFixture removed = new();
         removed.EquipRazor();
