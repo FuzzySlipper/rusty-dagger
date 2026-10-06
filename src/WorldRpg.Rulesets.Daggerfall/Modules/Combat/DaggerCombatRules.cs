@@ -29,24 +29,24 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly Func<long, MechanicsInventoryCoordinator?> _actorInventories;
     private readonly Func<long, MechanicsEquipmentCoordinator> _actorEquipment;
     private readonly DaggerfallItemInstances _itemInstances;
-    private readonly DaggerfallItemConditionService? _itemCondition;
+    private readonly DaggerfallItemConditionService _itemCondition;
     private readonly DaggerfallDefinitions _catalog;
     private readonly IReadOnlyDictionary<string, int> _weaponMaterialRanks;
     private readonly IReadOnlyDictionary<string, int> _weaponMaterialModifiers;
     private readonly IReadOnlyDictionary<string, DaggerfallActionDefinition> _actions;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _definitions;
-    private readonly Action<DaggerfallSkillUse>? _skillUses;
+    private readonly Action<DaggerfallSkillUse> _skillUses;
     private readonly Func<int> _playerBiographyAvoidHit;
     private readonly Func<long, DaggerfallAdrenalineRush> _adrenalineRush;
     private readonly Func<WorldPoint?> _playerPosition;
     private readonly Func<DaggerfallCharacterState?> _character;
     private readonly Func<DaggerfallSwingDirection> _playerSwing;
     /// <summary>Whether admitted static geometry stands between a shot's release and its aim.</summary>
-    private readonly Func<WorldPoint, WorldPoint, bool>? coverBlocksShot;
+    private readonly Func<WorldPoint, WorldPoint, bool> coverBlocksShot;
     /// <summary>The armor-value shift the defender's worn enchantments give, zero when none do.</summary>
     private readonly Func<int> _armorValueModifier;
     private readonly Func<int> _attackChanceModifier;
-    private readonly Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? _transformActor;
+    private readonly Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult> _transformActor;
     internal AttackCapabilities<IProductFact> Attacks { get; }
     internal TargetingService Targeting { get; }
     internal AttackExecution<IProductFact> Execution { get; }
@@ -62,56 +62,56 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly Func<long, bool> _physicalAttacksBlocked;
     private readonly Func<long, bool> _actorGameplayActive;
     private readonly Func<long, string?> _actorTeam;
-    private readonly Func<long, long, DaggerfallItemStrikeSource, int, int>? _itemStrike;
-    private readonly Action<DaggerfallMonsterHitExposure>? _monsterHit;
+    private readonly Func<long, long, DaggerfallItemStrikeSource, int, int> _itemStrike;
+    private readonly Action<DaggerfallMonsterHitExposure> _monsterHit;
     internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
         Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallItemInstances itemInstances,
         DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity,
-        TargetingService targeting, Action<DaggerfallSkillUse>? skillUses = null, Func<int>? playerBiographyAvoidHit = null,
-        Func<long, MechanicsEquipmentCoordinator>? actorEquipment = null, DaggerfallItemConditionService? itemCondition = null,
-        CombatResolution? rules = null, Func<long, DaggerfallAdrenalineRush>? adrenalineRush = null,
-        Func<WorldPoint?>? playerPosition = null, Func<DaggerfallCharacterState?>? character = null,
-        Func<DaggerfallSwingDirection>? playerSwing = null, Func<WorldPoint, WorldPoint, bool>? coverBlocksShot = null,
-        Func<int>? armorValueModifier = null,
-        Action<long, DaggerfallWeaponPoisonSource>? deliverWeaponPoison = null, Func<int>? attackChanceModifier = null,
-        Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult>? transformActor = null, Func<long, DaggerfallMagicDefense>? magicDefense = null,
-        Func<long, bool>? physicalAttacksBlocked = null,
-        Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)>? molagBalStrike = null, Func<long, long, DaggerfallItemStrikeSource, int, int>? itemStrike = null,
-        Action<DaggerfallMonsterHitExposure>? monsterHit = null, Func<long, bool>? actorGameplayActive = null, Func<long, string?>? actorTeam = null)
+        TargetingService targeting, Action<DaggerfallSkillUse> skillUses, Func<int> playerBiographyAvoidHit,
+        Func<long, MechanicsEquipmentCoordinator> actorEquipment, DaggerfallItemConditionService itemCondition,
+        CombatResolution rules, Func<long, DaggerfallAdrenalineRush> adrenalineRush,
+        Func<WorldPoint?> playerPosition, Func<DaggerfallCharacterState?> character,
+        Func<DaggerfallSwingDirection> playerSwing, Func<WorldPoint, WorldPoint, bool> coverBlocksShot,
+        Func<int> armorValueModifier,
+        Action<long, DaggerfallWeaponPoisonSource> deliverWeaponPoison, Func<int> attackChanceModifier,
+        Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult> transformActor, Func<long, DaggerfallMagicDefense> magicDefense,
+        Func<long, bool> physicalAttacksBlocked,
+        Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)> molagBalStrike, Func<long, long, DaggerfallItemStrikeSource, int, int> itemStrike,
+        Action<DaggerfallMonsterHitExposure> monsterHit, Func<long, bool> actorGameplayActive, Func<long, string?> actorTeam)
     {
-        _physicalAttacksBlocked = physicalAttacksBlocked ?? (_ => false);
-        _actorGameplayActive = actorGameplayActive ?? (_ => true);
-        _actorTeam = actorTeam ?? (id => definitionsByEntity.GetValueOrDefault(id)?.Team);
-        _molagBalStrike = molagBalStrike;
-        _itemStrike = itemStrike;
-        _monsterHit = monsterHit;
-        _magicDefense = magicDefense ?? (_ => DaggerfallMagicDefense.None);
-        _random = random;
-        _transformActor = transformActor;
-        _deliverWeaponPoison = deliverWeaponPoison;
-        Rules = rules ?? new CombatResolution();
-        Execution = new(actors, this, DeferRangedImpact);
-        _actors = actors;
-        _equipment = equipment;
-        _actorInventories = actorInventories;
-        _actorEquipment = actorEquipment ?? (_ => equipment);
+        _random = random ?? throw new ArgumentNullException(nameof(random));
+        _actors = actors ?? throw new ArgumentNullException(nameof(actors));
+        _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
+        _actorInventories = actorInventories ?? throw new ArgumentNullException(nameof(actorInventories));
         _itemInstances = itemInstances ?? throw new ArgumentNullException(nameof(itemInstances));
-        _itemCondition = itemCondition;
-        _catalog = definitions;
+        _catalog = definitions ?? throw new ArgumentNullException(nameof(definitions));
+        _definitions = definitionsByEntity ?? throw new ArgumentNullException(nameof(definitionsByEntity));
+        Targeting = targeting ?? throw new ArgumentNullException(nameof(targeting));
+        _skillUses = skillUses ?? throw new ArgumentNullException(nameof(skillUses));
+        _playerBiographyAvoidHit = playerBiographyAvoidHit ?? throw new ArgumentNullException(nameof(playerBiographyAvoidHit));
+        _actorEquipment = actorEquipment ?? throw new ArgumentNullException(nameof(actorEquipment));
+        _itemCondition = itemCondition ?? throw new ArgumentNullException(nameof(itemCondition));
+        Rules = rules ?? throw new ArgumentNullException(nameof(rules));
+        _adrenalineRush = adrenalineRush ?? throw new ArgumentNullException(nameof(adrenalineRush));
+        _playerPosition = playerPosition ?? throw new ArgumentNullException(nameof(playerPosition));
+        _character = character ?? throw new ArgumentNullException(nameof(character));
+        _playerSwing = playerSwing ?? throw new ArgumentNullException(nameof(playerSwing));
+        this.coverBlocksShot = coverBlocksShot ?? throw new ArgumentNullException(nameof(coverBlocksShot));
+        _armorValueModifier = armorValueModifier ?? throw new ArgumentNullException(nameof(armorValueModifier));
+        _deliverWeaponPoison = deliverWeaponPoison ?? throw new ArgumentNullException(nameof(deliverWeaponPoison));
+        _attackChanceModifier = attackChanceModifier ?? throw new ArgumentNullException(nameof(attackChanceModifier));
+        _transformActor = transformActor ?? throw new ArgumentNullException(nameof(transformActor));
+        _magicDefense = magicDefense ?? throw new ArgumentNullException(nameof(magicDefense));
+        _physicalAttacksBlocked = physicalAttacksBlocked ?? throw new ArgumentNullException(nameof(physicalAttacksBlocked));
+        _molagBalStrike = molagBalStrike ?? throw new ArgumentNullException(nameof(molagBalStrike));
+        _itemStrike = itemStrike ?? throw new ArgumentNullException(nameof(itemStrike));
+        _monsterHit = monsterHit ?? throw new ArgumentNullException(nameof(monsterHit));
+        _actorGameplayActive = actorGameplayActive ?? throw new ArgumentNullException(nameof(actorGameplayActive));
+        _actorTeam = actorTeam ?? throw new ArgumentNullException(nameof(actorTeam));
+        Execution = new(actors, this, DeferRangedImpact);
         _weaponMaterialRanks = DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks;
         _weaponMaterialModifiers = DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers;
         _actions = definitions.Actions;
-        _definitions = definitionsByEntity;
-        _skillUses = skillUses;
-        _playerBiographyAvoidHit = playerBiographyAvoidHit ?? (() => 0);
-        _adrenalineRush = adrenalineRush ?? (_ => default);
-        _playerPosition = playerPosition ?? (() => null);
-        _character = character ?? (() => null);
-        _playerSwing = playerSwing ?? (() => DaggerfallSwingDirection.None);
-        this.coverBlocksShot = coverBlocksShot;
-        _armorValueModifier = armorValueModifier ?? (() => 0);
-        _attackChanceModifier = attackChanceModifier ?? (() => 0);
-        Targeting = targeting;
         Attacks = new(PlayerId, Targeting, Execution, ReachOf, facts => facts.Append(new AttackRejectedFact(AttackRejection.MissingPlayerPosition)));
     }
 
@@ -164,7 +164,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         CombatParticipants participants = Participants(attacker.Id, targetId, request.Action ?? attacker.Definition.ActionId ?? "attack");
         bool backstabOpportunity = BackstabOpportunity(attacker, target);
         if (backstabOpportunity)
-            _skillUses?.Invoke(new DaggerfallSkillUse("backstabbing", DaggerfallSkillUseReason.BackstabbingOpportunity, DaggerfallSkillUseOutcome.Accepted));
+            _skillUses(new DaggerfallSkillUse("backstabbing", DaggerfallSkillUseReason.BackstabbingOpportunity, DaggerfallSkillUseOutcome.Accepted));
         // The donor computes the swing, proficiency and racial attack modifiers once and rides both
         // the hit roll and the damage roll with them; the career's enemy-type bonus and the backstab
         // chance cross the same two rolls at their own points. Resolve them once here and carry them
@@ -203,7 +203,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         // Dodging before damage, so a resolved miss contributes too; a rejected or unknown attack
         // never reaches this method and therefore cannot manufacture a use.
         if (request.AttackerId != PlayerId && target == PlayerId)
-            _skillUses?.Invoke(new DaggerfallSkillUse(DaggerfallMechanicsIds.Dodging.Value, DaggerfallSkillUseReason.DodgingEnemyAttack, DaggerfallSkillUseOutcome.Attempted));
+            _skillUses(new DaggerfallSkillUse(DaggerfallMechanicsIds.Dodging.Value, DaggerfallSkillUseReason.DodgingEnemyAttack, DaggerfallSkillUseOutcome.Attempted));
         if (outcome.Hit && !outcome.Allowed)
         { facts.Append(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial)); return; }
         // Natural consequences and coatings belong to positive admitted physical hits, before
@@ -215,10 +215,10 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
                 if (slot.Consequence == DaggerfallMonsterHitConsequence.Fatigue)
                     ApplyFatigueConsequence(request.AttackerId, target, slot.Damage, request.Generation, request.SimulationStep, facts);
                 else if (slot.Consequence != DaggerfallMonsterHitConsequence.None)
-                    _monsterHit?.Invoke(new(request.AttackerId, target, request.Generation, request.SimulationStep, slot));
+                    _monsterHit(new(request.AttackerId, target, request.Generation, request.SimulationStep, slot));
             }
             if (outcome.Damage > 0 && accepted.WeaponPoison is { } coating)
-                _deliverWeaponPoison?.Invoke(target, coating);
+                _deliverWeaponPoison(target, coating);
         }
         // WeaponManager invokes Strikes even when contact misses. Wabbajack's replacement
         // inherits prior wounds before the removed enemy receives this strike's damage.
@@ -238,7 +238,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         // the player's own weapon, and one enemy striking another, run them on every swing.
         bool strikes = !(request.AttackerId != PlayerId && target == PlayerId && strikeDamage <= 0);
         if (strikes && attack is DaggerfallPreparedAttack { ItemStrikeSource: { } sourceItem })
-            strikeDamage = _itemStrike?.Invoke(request.AttackerId, target, sourceItem, strikeDamage) ?? strikeDamage;
+            strikeDamage = _itemStrike(request.AttackerId, target, sourceItem, strikeDamage);
         if (!outcome.Hit)
         { facts.Append(new AttackMissedFact(request.AttackerId, target, outcome.Roll, outcome.Chance, enemyAttack, request.Generation, request.SimulationStep) { Feedback = feedback });
             if (transformation is not null) facts.Append(transformation);
@@ -264,8 +264,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 
     private void RecordPlayerWeaponHit(string weaponSkill)
     {
-        _skillUses?.Invoke(new DaggerfallSkillUse(weaponSkill, DaggerfallSkillUseReason.WeaponHit, DaggerfallSkillUseOutcome.Succeeded));
-        _skillUses?.Invoke(new DaggerfallSkillUse("critical-strike", DaggerfallSkillUseReason.CriticalStrikeHit, DaggerfallSkillUseOutcome.Succeeded));
+        _skillUses(new DaggerfallSkillUse(weaponSkill, DaggerfallSkillUseReason.WeaponHit, DaggerfallSkillUseOutcome.Succeeded));
+        _skillUses(new DaggerfallSkillUse("critical-strike", DaggerfallSkillUseReason.CriticalStrikeHit, DaggerfallSkillUseOutcome.Succeeded));
     }
 
     /// <summary>
@@ -300,7 +300,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 
             // Cover is asked once, on the line the shot was released along: a missile that meets a wall
             // dies there, so neither the shooter's roll nor the target's later movement decides it.
-            if (coverBlocksShot is not null && coverBlocksShot(origin, aim))
+            if (coverBlocksShot(origin, aim))
             {
                 facts.Append(new RangedShotBlockedFact(release.Request.AttackerId, targetId, generation, simulationStep));
                 continue;
@@ -671,7 +671,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             representative?.Roll ?? 0, representative?.Chance ?? 0);
     }
 
-    private readonly Action<long, DaggerfallWeaponPoisonSource>? _deliverWeaponPoison;
+    private readonly Action<long, DaggerfallWeaponPoisonSource> _deliverWeaponPoison;
 
     private DaggerfallWeaponPoisonSource? CaptureWeaponPoison(long attacker)
     {
@@ -737,7 +737,6 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     /// </summary>
     private void ApplyPhysicalWear(long attacker, long target, int body, int damage, bool enemy, ulong generation, ulong step, FactBuffer<IProductFact> facts)
     {
-        if (_itemCondition is null) return;
         if (EquippedWeapon(attacker) is not WorldRpg.Kit.Inventory.UniqueInventoryItem weapon) return;
         WorldRpg.Kit.Inventory.UniqueInventoryItem? shield = EquippedShield(target, body);
         WorldRpg.Kit.Inventory.UniqueInventoryItem? armour = shield is null ? EquippedArmour(target, body) : null;
@@ -763,8 +762,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     {
         if (units <= 0) return;
         DaggerfallItemConditionResult result = owner == PlayerId
-            ? _itemCondition!.Damage(item, units)
-            : _itemCondition!.Damage(item, DaggerfallItemOwner.Actor(owner), _actorEquipment(owner), units);
+            ? _itemCondition.Damage(item, units)
+            : _itemCondition.Damage(item, DaggerfallItemOwner.Actor(owner), _actorEquipment(owner), units);
         // The plural break belongs to the item's native template, not to the identifier the line
         // prints: a materialized 'template-104-iron' instance is the donor's greaves.
         int? templateIndex = _catalog.TryResolveItem(new DaggerfallItemId(item.Definition.Value), out DaggerfallItemDefinition wornDefinition)

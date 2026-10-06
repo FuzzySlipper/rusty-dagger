@@ -194,22 +194,17 @@ public sealed class DaggerfallSkillUseReactionTests
     [Fact]
     public void Resolved_enemy_miss_tallies_dodging_once_before_the_miss_returns()
     {
-        DaggerfallDefinitions definitions = LoadDefinitions();
-        using ActorsState actors = new();
-        List<DaggerfallSkillUse> uses = [];
-        DaggerCombatRules combat = new(
-            null!, actors, null!, _ => null, new DaggerfallItemInstances(), definitions,
-            new Dictionary<long, DaggerfallActorDefinition>(), null!, uses.Add);
+        using DaggerCombatFixture fixture = new("rat");
         FactBuffer<IProductFact> facts = new();
 
-        combat.Apply(
+        fixture.Rules.Apply(
             new AttackRequest(99, DaggerfallActorIdentity.PlayerEntityId, 1, 2, 1d, Delayed: true),
             new DaggerCombatRules.DaggerfallPreparedAttack(1d,
                 new AttackOutcome(Hit: false, Allowed: true, Body: 0, Damage: 0, Roll: 99, Chance: 1),
                 DaggerfallStrikeFeedback.Unarmed),
             facts);
 
-        Assert.Equal([new DaggerfallSkillUse("dodging", DaggerfallSkillUseReason.DodgingEnemyAttack, DaggerfallSkillUseOutcome.Attempted)], uses);
+        Assert.Equal([new DaggerfallSkillUse("dodging", DaggerfallSkillUseReason.DodgingEnemyAttack, DaggerfallSkillUseOutcome.Attempted)], fixture.SkillUses);
     }
 
     [Fact]

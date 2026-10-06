@@ -510,6 +510,8 @@ public sealed class DaggerCombatDamagePolicyTests
         private readonly Dictionary<long, DaggerfallActorDefinition> _authored = [];
         private readonly Dictionary<long, MechanicsEquipmentCoordinator> _actorEquipment = [];
         private readonly Dictionary<long, MechanicsInventoryCoordinator> _actorInventories = [];
+        private readonly SpatialMovementSystem _spatial;
+        private readonly DaggerfallItemConditionService _itemCondition;
         private readonly MechanicsEquipmentCoordinator _playerEquipment;
         private readonly ScriptedRandom _scripted = (ScriptedRandom)(object)DispatchProxy.Create<IRandomService, ScriptedRandom>();
         private readonly IRandomService _random;
@@ -544,12 +546,23 @@ public sealed class DaggerCombatDamagePolicyTests
             _authored[DaggerfallActorIdentity.PlayerEntityId] = playerDefinition;
             _authored[2] = brigand;
             _actorEquipment[2] = BuildEquipment(enemy.Actor.Entity, 2, enemy.Actor);
+            _itemCondition = new DaggerfallItemConditionService(definitions, _itemInstances,
+                new DaggerfallEquipmentMoves(_actorInventories[DaggerfallActorIdentity.PlayerEntityId], _playerEquipment, definitions, itemInstances: _itemInstances));
             _combat = new DaggerCombatRules(_random, _actors, _playerEquipment,
                 id => _actorInventories.TryGetValue(id, out MechanicsInventoryCoordinator? quiver) ? quiver : null,
-                _itemInstances, definitions, _authored, null!,
+                _itemInstances, definitions, _authored, CombatCollaborators.Targeting(_actors, _authored, out _spatial),
+                skillUses: _ => { }, playerBiographyAvoidHit: () => 0,
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : _playerEquipment,
-                playerPosition: () => _playerPosition, character: () => _character, coverBlocksShot: coverBlocks,
-                armorValueModifier: () => armorValueShift, attackChanceModifier: () => attackChanceShift);
+                itemCondition: _itemCondition, rules: new CombatResolution(), adrenalineRush: _ => default,
+                playerPosition: () => _playerPosition, character: () => _character, playerSwing: () => DaggerfallSwingDirection.None,
+                coverBlocksShot: coverBlocks ?? ((_, _) => false), armorValueModifier: () => armorValueShift,
+                deliverWeaponPoison: (_, _) => throw new InvalidOperationException("This fixture coats no weapon."),
+                attackChanceModifier: () => attackChanceShift,
+                transformActor: (_, target, _, _, _) => new DaggerfallWabbajackResult(DaggerfallWabbajackOutcome.InvalidTarget, target),
+                magicDefense: _ => DaggerfallMagicDefense.None, physicalAttacksBlocked: _ => false,
+                molagBalStrike: (_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture arms no Mace of Molag Bal."),
+                itemStrike: (_, _, _, damage) => damage,
+                monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team);
         }
 
         internal void Script(int body, int critical, int hit, int? damage = null, int? backstabRoll = null)
@@ -685,7 +698,11 @@ public sealed class DaggerCombatDamagePolicyTests
             return collected;
         }
 
-        public void Dispose() => _actors.Dispose();
+        public void Dispose()
+        {
+            _spatial.Dispose();
+            _actors.Dispose();
+        }
 
         private MechanicsEquipmentCoordinator BuildEquipment(EntityId owner, long durableId, Actor actor)
         {
