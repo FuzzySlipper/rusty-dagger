@@ -172,3 +172,20 @@
 .dagger-legal-card { width: min(620px, 85%); padding: 2rem; border: 2px solid #b9985b; color: #f6ddb0; background: #181b1c; }
 .dagger-legal-card button { margin: .5rem .5rem 0 0; padding: .7rem 1rem; font: inherit; cursor: pointer; }
 .dagger-legal[data-phase="prison"] { background: repeating-linear-gradient(90deg, #060809 0 12px, #272b2d 12px 22px, #080b0d 22px 90px); }
+
+/* Travel map: published map art with ruleset-placed regions and destinations drawn over it. */
+.dagger-travel-map { display: grid; gap: 6px; margin-bottom: 8px; }
+.dagger-travel-map-toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dagger-travel-map-caption { color: #dfc987; font-size: .85rem; }
+.dagger-travel-map-canvas { position: relative; width: 100%; max-width: 640px; background: #10100c; border: 1px solid #a88b4f; }
+.dagger-travel-map-canvas[data-art-missing] { border-style: dashed; min-height: 8rem; }
+.dagger-travel-map-canvas > img { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.dagger-travel-map-layer { position: absolute; inset: 0; }
+.dagger-travel-map-layer > * { position: absolute; transform: translate(-50%, -50%); padding: 0; cursor: pointer; }
+.dagger-travel-map-region { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff0a7; background: #6d2b14; }
+.dagger-travel-map-dot { width: 7px; height: 7px; border: 1px solid rgb(0 0 0 / .5); background: #e3b490; }
+.dagger-travel-map-dot[data-category="dungeon"] { background: #d7772b; }
+.dagger-travel-map-dot[data-category="home"] { background: #9b696a; }
+.dagger-travel-map-dot[data-category="temple"] { background: #b0cdff; }
+.dagger-travel-map-dot[aria-pressed="true"], .dagger-travel-map-layer > button:focus-visible { outline: 2px solid #fff0a7; outline-offset: 1px; }
+.dagger-travel-map-player { width: 9px; height: 9px; border: 2px solid #a3270f; border-radius: 50%; pointer-events: none; cursor: default; }

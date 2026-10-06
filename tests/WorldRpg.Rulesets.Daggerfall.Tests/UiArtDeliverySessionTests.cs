@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -53,7 +54,7 @@ public sealed class UiArtDeliverySessionTests
         string[] racialForms = [.. definitions.CharacterPresentation.RacialForms.Values
             .SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId }).Distinct(StringComparer.Ordinal)];
         string[] portraits = [.. heads, .. factionFaces, .. childFaces, .. racialForms];
-        Assert.Equal(10 + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length, images.Count);
+        Assert.Equal(10 + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length + DaggerfallTravelMap.MediaIds.Count, images.Count);
         Assert.All(images.Values, image => Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(image), StringComparison.Ordinal));
 
         // The bytes are the published artifacts, read from admitted content by their content name.
@@ -95,8 +96,18 @@ public sealed class UiArtDeliverySessionTests
             "inventory.skin.titlebar-slate.v1",
             .. inputs.ClassicPresentation.InventoryIcons.Values,
             .. portraits,
+            // The travel map's world canvas and every region sheet it lays out.
+            .. DaggerfallTravelMap.MediaIds,
         ];
         Assert.Equal([.. expected.Order(StringComparer.Ordinal)], [.. images.Keys.Order(StringComparer.Ordinal)]);
+
+        // The travel map's canvases arrive byte for byte from the published map artifacts.
+        Assert.Equal(
+            $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/maps/map-trav0i00.png")))}",
+            images["map.trav0i00"]);
+        Assert.Equal(
+            $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/maps/map-fmap0i17.png")))}",
+            images["map.fmap0i17"]);
 
         // One icon byte for byte, from the path the inventory states, so a wrong file under a right
         // identity cannot pass on a prefix check.

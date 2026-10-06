@@ -114,6 +114,19 @@ internal sealed class DaggerfallTravelPolicy
     }
 
     /// <summary>
+    /// Every exterior-backed destination the admitted location set carries, discovered or not, in
+    /// stable site identity order. Only a reader that never names a site to the player - such as where
+    /// a region sits on the world map - may use the undiscovered ones.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallTravelDestination> AllDestinations()
+    {
+        List<DaggerfallTravelDestination> destinations = [];
+        foreach (DaggerfallSiteRecord site in _sites.Records)
+            if (TryDestination(site, out DaggerfallTravelDestination destination)) destinations.Add(destination);
+        return destinations;
+    }
+
+    /// <summary>
     /// Calculates a route from an explicit current map pixel to a site destination.
     /// </summary>
     /// <param name="origin">The current map pixel, including an ocean pixel while on a ship.</param>

@@ -274,6 +274,22 @@ internal static class DaggerfallSiteKinds
         _ => "Location",
     };
 
+    /// <summary>
+    /// The travel map's dot family for a site kind, as the donor's travel window colours and filters
+    /// them: dungeons (labyrinths, keeps, ruins, graveyards, covens), homes, temples (including cults)
+    /// and towns (including taverns).
+    /// </summary>
+    internal static string MapCategory(DaggerfallSiteKind kind) => kind switch
+    {
+        DaggerfallSiteKind.DungeonLabyrinth or DaggerfallSiteKind.DungeonKeep or DaggerfallSiteKind.DungeonRuin
+            or DaggerfallSiteKind.Graveyard or DaggerfallSiteKind.Coven => "dungeon",
+        DaggerfallSiteKind.HomeFarms or DaggerfallSiteKind.HomeWealthy or DaggerfallSiteKind.HomePoor => "home",
+        DaggerfallSiteKind.ReligionTemple or DaggerfallSiteKind.ReligionCult => "temple",
+        DaggerfallSiteKind.TownCity or DaggerfallSiteKind.TownHamlet or DaggerfallSiteKind.TownVillage
+            or DaggerfallSiteKind.Tavern => "town",
+        _ => "other",
+    };
+
     /// <summary>The kinds the map table's five-bit type field can name.</summary>
     internal const int PublishedCount = (int)DaggerfallSiteKind.HomeYourShips + 1;
 

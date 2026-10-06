@@ -371,6 +371,347 @@
   "map": null,
   "travel": {
     "destinations": [],
+    "map": {
+      "world": {
+        "image": "map.trav0i00",
+        "width": 320,
+        "height": 200,
+        "left": 0,
+        "top": -37.5,
+        "right": 1000,
+        "bottom": 587.5
+      },
+      "player": {
+        "x": 109,
+        "y": 158
+      },
+      "regions": [
+        {
+          "region": 0,
+          "name": "Alik\u0027r Desert",
+          "x": 372,
+          "y": 420,
+          "discovered": 0
+        },
+        {
+          "region": 1,
+          "name": "Dragontail Mountains",
+          "x": 743,
+          "y": 359,
+          "discovered": 0
+        },
+        {
+          "region": 5,
+          "name": "Dwynnen",
+          "x": 541,
+          "y": 84,
+          "discovered": 0
+        },
+        {
+          "region": 9,
+          "name": "Isle of Balfiera",
+          "x": 685,
+          "y": 194,
+          "discovered": 0
+        },
+        {
+          "region": 11,
+          "name": "Dak\u0027fron",
+          "x": 597,
+          "y": 420,
+          "discovered": 0
+        },
+        {
+          "region": 16,
+          "name": "Wrothgarian Mountains",
+          "x": 738,
+          "y": 80,
+          "discovered": 0
+        },
+        {
+          "region": 17,
+          "name": "Daggerfall",
+          "x": 109,
+          "y": 158,
+          "discovered": 0
+        },
+        {
+          "region": 18,
+          "name": "Glenpoint",
+          "x": 180,
+          "y": 109,
+          "discovered": 0
+        },
+        {
+          "region": 19,
+          "name": "Betony",
+          "x": 120,
+          "y": 262.75,
+          "discovered": 0
+        },
+        {
+          "region": 20,
+          "name": "Sentinel",
+          "x": 377,
+          "y": 373,
+          "discovered": 0
+        },
+        {
+          "region": 21,
+          "name": "Anticlere",
+          "x": 423,
+          "y": 159,
+          "discovered": 0
+        },
+        {
+          "region": 22,
+          "name": "Lainlyn",
+          "x": 708,
+          "y": 299,
+          "discovered": 0
+        },
+        {
+          "region": 23,
+          "name": "Wayrest",
+          "x": 840,
+          "y": 226,
+          "discovered": 0
+        },
+        {
+          "region": 26,
+          "name": "Orsinium Area",
+          "x": 840,
+          "y": 160,
+          "discovered": 0
+        },
+        {
+          "region": 32,
+          "name": "Northmoor",
+          "x": 201,
+          "y": 80,
+          "discovered": 0
+        },
+        {
+          "region": 33,
+          "name": "Menevia",
+          "x": 820,
+          "y": 181,
+          "discovered": 0
+        },
+        {
+          "region": 34,
+          "name": "Alcaire",
+          "x": 738,
+          "y": 120,
+          "discovered": 0
+        },
+        {
+          "region": 35,
+          "name": "Koegria",
+          "x": 685,
+          "y": 83,
+          "discovered": 0
+        },
+        {
+          "region": 36,
+          "name": "Bhoriane",
+          "x": 600,
+          "y": 120,
+          "discovered": 0
+        },
+        {
+          "region": 37,
+          "name": "Kambria",
+          "x": 608,
+          "y": 80,
+          "discovered": 0
+        },
+        {
+          "region": 38,
+          "name": "Phrygias",
+          "x": 526,
+          "y": 80,
+          "discovered": 0
+        },
+        {
+          "region": 39,
+          "name": "Urvaius",
+          "x": 460,
+          "y": 88,
+          "discovered": 0
+        },
+        {
+          "region": 40,
+          "name": "Ykalon",
+          "x": 362,
+          "y": 80,
+          "discovered": 0
+        },
+        {
+          "region": 41,
+          "name": "Daenia",
+          "x": 383,
+          "y": 86,
+          "discovered": 0
+        },
+        {
+          "region": 42,
+          "name": "Shalgora",
+          "x": 308,
+          "y": 156,
+          "discovered": 0
+        },
+        {
+          "region": 43,
+          "name": "Abibon-Gora",
+          "x": 175,
+          "y": 420,
+          "discovered": 0
+        },
+        {
+          "region": 44,
+          "name": "Kairou",
+          "x": 221,
+          "y": 420,
+          "discovered": 0
+        },
+        {
+          "region": 45,
+          "name": "Pothago",
+          "x": 246,
+          "y": 418,
+          "discovered": 0
+        },
+        {
+          "region": 46,
+          "name": "Myrkwasa",
+          "x": 292,
+          "y": 420,
+          "discovered": 0
+        },
+        {
+          "region": 47,
+          "name": "Ayasofya",
+          "x": 504,
+          "y": 389,
+          "discovered": 0
+        },
+        {
+          "region": 48,
+          "name": "Tigonus",
+          "x": 541,
+          "y": 331,
+          "discovered": 0
+        },
+        {
+          "region": 49,
+          "name": "Kozanset",
+          "x": 713,
+          "y": 335,
+          "discovered": 0
+        },
+        {
+          "region": 50,
+          "name": "Satakalaam",
+          "x": 821,
+          "y": 297,
+          "discovered": 0
+        },
+        {
+          "region": 51,
+          "name": "Totambu",
+          "x": 832,
+          "y": 355,
+          "discovered": 0
+        },
+        {
+          "region": 52,
+          "name": "Mournoth",
+          "x": 840,
+          "y": 336,
+          "discovered": 0
+        },
+        {
+          "region": 53,
+          "name": "Ephesus",
+          "x": 840,
+          "y": 420,
+          "discovered": 0
+        },
+        {
+          "region": 54,
+          "name": "Santaki",
+          "x": 651,
+          "y": 420,
+          "discovered": 0
+        },
+        {
+          "region": 55,
+          "name": "Antiphyllos",
+          "x": 453,
+          "y": 420,
+          "discovered": 0
+        },
+        {
+          "region": 56,
+          "name": "Bergama",
+          "x": 423,
+          "y": 420,
+          "discovered": 0
+        },
+        {
+          "region": 57,
+          "name": "Gavaudon",
+          "x": 840,
+          "y": 237,
+          "discovered": 0
+        },
+        {
+          "region": 58,
+          "name": "Tulune",
+          "x": 177,
+          "y": 133,
+          "discovered": 0
+        },
+        {
+          "region": 59,
+          "name": "Glenumbra Moors",
+          "x": 160,
+          "y": 80,
+          "discovered": 0
+        },
+        {
+          "region": 60,
+          "name": "Ilessan Hills",
+          "x": 267,
+          "y": 91,
+          "discovered": 0
+        },
+        {
+          "region": 61,
+          "name": "Cybiades",
+          "x": 433.75,
+          "y": 343.75,
+          "discovered": 0
+        }
+      ],
+      "sheet": {
+        "region": 17,
+        "name": "Daggerfall",
+        "page": 0,
+        "pages": 1,
+        "art": {
+          "image": "map.fmap0i17",
+          "width": 320,
+          "height": 160,
+          "left": 39,
+          "top": 106,
+          "right": 359,
+          "bottom": 266
+        },
+        "destinations": []
+      }
+    },
     "message": null,
     "executionAvailable": false,
     "lastResult": null,
