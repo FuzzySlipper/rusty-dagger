@@ -823,6 +823,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     reportMap(false);
     controlsView.cancel();
     const previous = activePanel;
+    if (previous === 'transport') travelView.hide();
     if (previous === 'debug') closeDebug();
     if (previous === 'loot') closeLoot();
     activePanel = null;
@@ -839,6 +840,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   });
   const closeMenu = (): void => {
     reportMap(false);
+    travelView.hide();
     controlsView.cancel();
     controllerDirection = 0;
     if (activePanel === 'loot') closeLoot();
@@ -870,6 +872,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     if (activePanel === 'debug') closeDebug();
     reportMap(action === 'map');
+    if (action !== 'transport') travelView.hide();
     activePanel = action;
     home.hidden = true;
     panel.hidden = false;

@@ -514,6 +514,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     {
         if (mode == _mode) return;
         _mode = mode;
+        // Travel is offered in play and modal interaction; the entry screen and death leave it. A host
+        // pause keeps the map, since resuming returns to the same workflow.
+        if (mode is ProductMode.Title or ProductMode.Dead) CloseTravelMap();
         _input.Neutralize();
         _locomotion.Neutralize();
         ApplyDeathPresentationMode(mode);

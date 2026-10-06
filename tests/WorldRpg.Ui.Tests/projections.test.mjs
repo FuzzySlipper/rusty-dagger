@@ -1047,6 +1047,35 @@ test('travel map draws the published world and region art from the projected map
   } finally { console.warn = warn; art.adopt({ revision: '', images: [] }); f.dispose(); }
 });
 
+test('hiding the travel panel closes an open travel map so its sheet stops being published', async () => {
+  const f = fixture();
+  try {
+    const snapshot = JSON.parse(await readFile(new URL('./fixtures/hud-snapshot.json', import.meta.url), 'utf8'));
+    const travel = { destinations: [], quote: null, executionAvailable: false, message: null, lastResult: null, map: snapshot.travel.map };
+    const closes = () => f.actions.filter(action => action.action === 'travel-map' && action.open === false).length;
+    f.publish({ travel });
+    f.root.querySelector('[data-action="transport"]').click();
+    assert.equal(f.root.querySelector('.dagger-travel-map-canvas').hidden, false);
+    assert.equal(closes(), 0);
+    // Leaving the panel for the menu home closes the map once, even before the ruleset answers.
+    f.root.querySelector('[data-action="back"]').click();
+    assert.deepEqual(f.actions.filter(action => action.action === 'travel-map').at(-1), { action: 'travel-map', open: false });
+    assert.equal(closes(), 1);
+    f.root.querySelector('[data-action="back"]').click();
+    assert.equal(closes(), 1);
+    // Switching straight to another panel closes it too.
+    f.publish({ travel });
+    f.root.querySelector('[data-action="transport"]').click();
+    f.root.querySelector('[data-action="map"]').click();
+    assert.equal(closes(), 2);
+    // A closed map needs no word when the panel is left.
+    f.publish({ travel: { ...travel, map: null } });
+    f.root.querySelector('[data-action="transport"]').click();
+    f.root.querySelector('[data-action="back"]').click();
+    assert.equal(closes(), 2);
+  } finally { f.dispose(); }
+});
+
 test('changing travel options disables acceptance until a fresh quote arrives, including a free journey', async () => {
   const { mountTravel } = await import(pathToFileURL(join(output, 'travel.js')));
   const f = fixture();
