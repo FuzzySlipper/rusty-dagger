@@ -320,6 +320,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         private readonly DaggerCombatRules _combat;
         private readonly DaggerfallEquipmentMoves _playerMoves;
         private readonly DaggerfallItemConditionService _itemCondition;
+        private readonly SpatialMovementSystem _spatial;
 
         internal DaggerfallDefinitions Definitions { get; }
         internal MechanicsEquipmentCoordinator PlayerEquipment { get; }
@@ -361,9 +362,20 @@ public sealed partial class DaggerfallEquipmentWearTests
             _authored[DaggerfallActorIdentity.PlayerEntityId] = playerDefinition;
             _authored[Enemy] = brigand;
             _actorEquipment[Enemy] = BuildEquipment(enemy.Actor.Entity, enemy.Actor, out _);
-            _combat = new DaggerCombatRules(_random, _actors, PlayerEquipment, _ => null, _itemInstances, Definitions, _authored, null!,
+            _combat = new DaggerCombatRules(_random, _actors, PlayerEquipment, _ => null, _itemInstances, Definitions, _authored,
+                CombatCollaborators.Targeting(_actors, _authored, out _spatial),
+                skillUses: _ => { }, playerBiographyAvoidHit: () => 0,
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : PlayerEquipment,
-                itemCondition: _itemCondition, playerPosition: () => new WorldPoint(0f, 0f, 0f), molagBalStrike: molagBalStrike);
+                itemCondition: _itemCondition, rules: new CombatResolution(), adrenalineRush: _ => default,
+                playerPosition: () => new WorldPoint(0f, 0f, 0f), character: () => null, playerSwing: () => DaggerfallSwingDirection.None,
+                coverBlocksShot: (_, _) => false, armorValueModifier: () => 0,
+                deliverWeaponPoison: (_, _) => throw new InvalidOperationException("This fixture coats no weapon."),
+                attackChanceModifier: () => 0,
+                transformActor: (_, target, _, _, _) => new DaggerfallWabbajackResult(DaggerfallWabbajackOutcome.InvalidTarget, target),
+                magicDefense: _ => DaggerfallMagicDefense.None, physicalAttacksBlocked: _ => false,
+                molagBalStrike: molagBalStrike ?? ((_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture was given no Mace of Molag Bal transfer.")),
+                itemStrike: (_, _, _, damage) => damage,
+                monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team);
         }
 
         internal void Script(int body, int critical, int hit, int? damage = null, int? wornWeaponRoll = null, int? wornArmourRoll = null, int? razorSave = null)
@@ -480,7 +492,11 @@ public sealed partial class DaggerfallEquipmentWearTests
             return collected;
         }
 
-        public void Dispose() => _actors.Dispose();
+        public void Dispose()
+        {
+            _spatial.Dispose();
+            _actors.Dispose();
+        }
 
         private MechanicsEquipmentCoordinator BuildEquipment(EntityId owner, Actor actor, out MechanicsInventoryCoordinator inventory)
         {

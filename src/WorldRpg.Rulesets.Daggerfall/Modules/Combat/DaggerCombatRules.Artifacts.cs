@@ -13,11 +13,11 @@ internal sealed partial class DaggerCombatRules
     private const int SpecialArtifactEffect = 26;
     private const int NamiraArtifact = 7;
     private const string NamiraDamage = "artifact.namira";
-    private readonly Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)>? _molagBalStrike;
+    private readonly Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)> _molagBalStrike;
 
     private (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? CaptureMolagBalSource(long attacker)
     {
-        if (_molagBalStrike is null || EquippedWeapon(attacker) is not { } weapon) return null;
+        if (EquippedWeapon(attacker) is not { } weapon) return null;
         var equipment = attacker == PlayerId ? _equipment : _actorEquipment(attacker);
         ulong identity = equipment.GetDurableItemId(new EntityId(weapon.EntityId)).Value;
         if (!_itemInstances.ContainsUnique(identity)) return null;
@@ -41,7 +41,7 @@ internal sealed partial class DaggerCombatRules
             () => Draw(request, attacker, target, CombatRandomKey.MolagBalSavingThrowSalt, 1, 100, enemy)) == 0) return;
         int strength = victim.Stats.GetTrack(TrackId.Parse("magicka")).Current <= 0
             ? Draw(request, attacker, target, CombatRandomKey.MolagBalStrengthSalt, 1, 6, enemy) : 0;
-        var transferred = _molagBalStrike!(attacker, target, source.Identity, damage, strength, generation, step);
+        var transferred = _molagBalStrike(attacker, target, source.Identity, damage, strength, generation, step);
         facts.Append(new ArtifactResourceTransferredFact(source.Identity, attacker, target,
             transferred.Magicka, transferred.Strength, generation, step));
         DamageCondition(source.Weapon, attacker, damage, generation, step, facts);
@@ -63,8 +63,7 @@ internal sealed partial class DaggerCombatRules
     {
         transformation = null;
         if (request.TargetId is not long target || attack is not DaggerfallPreparedAttack { WabbajackSource: ulong source }) return false;
-        DaggerfallWabbajackResult result = _transformActor?.Invoke(request.AttackerId, target, source, request.Generation, request.SimulationStep)
-            ?? new(DaggerfallWabbajackOutcome.InvalidTarget, target);
+        DaggerfallWabbajackResult result = _transformActor(request.AttackerId, target, source, request.Generation, request.SimulationStep);
         transformation = new ActorTransformedFact(source, request.AttackerId, target, result.Outcome, result.Definition, request.Generation, request.SimulationStep);
         if (result.Outcome == DaggerfallWabbajackOutcome.Transformed) facts.Append(transformation);
         return result.Outcome == DaggerfallWabbajackOutcome.Transformed;
@@ -76,7 +75,7 @@ internal sealed partial class DaggerCombatRules
     /// <summary>Whether the attacker wields an unbroken Mehrunes Razor, whose strike payload runs on a miss too.</summary>
     private bool WieldsRazor(long attacker)
     {
-        if (_itemCondition is null || EquippedWeapon(attacker) is not { } weapon) return false;
+        if (EquippedWeapon(attacker) is not { } weapon) return false;
         var equipment = attacker == PlayerId ? _equipment : _actorEquipment(attacker);
         ulong source = equipment.GetDurableItemId(new EntityId(weapon.EntityId)).Value;
         return _itemInstances.ContainsUnique(source) && _itemInstances.RequireUnique(source) is { CurrentCondition: > 0, Enchantment: { } key }
@@ -88,7 +87,7 @@ internal sealed partial class DaggerCombatRules
         ulong generation, ulong step, FactBuffer<IProductFact> facts, out WorldRpg.Kit.Inventory.UniqueInventoryItem? chargedWeapon, out int chargedUnits)
     {
         chargedWeapon = null; chargedUnits = 0;
-        if (health.Current <= health.Minimum || _itemCondition is null
+        if (health.Current <= health.Minimum
             || EquippedWeapon(attacker) is not { } weapon) return damage;
         var equipment = attacker == PlayerId ? _equipment : _actorEquipment(attacker);
         ulong source = equipment.GetDurableItemId(new EntityId(weapon.EntityId)).Value;
@@ -116,7 +115,7 @@ internal sealed partial class DaggerCombatRules
     private void ReflectNamira(CombatParticipants incoming, long attacker, long target, ApplyHitEvent applied,
         ulong generation, ulong step, FactBuffer<IProductFact> facts)
     {
-        if (target != PlayerId || attacker == PlayerId || applied.Damage <= 0 || _itemCondition is null
+        if (target != PlayerId || attacker == PlayerId || applied.Damage <= 0
             || !_definitions.TryGetValue(attacker, out var enemy)) return;
         int reflected = NamiraReflection(_actorTeam(attacker), applied.Damage);
         if (reflected == 0) return;
