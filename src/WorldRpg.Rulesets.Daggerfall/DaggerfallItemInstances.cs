@@ -177,8 +177,23 @@ internal sealed class DaggerfallItemInstances
     internal void AttachContainment(Func<ulong, DaggerfallItemOwner?> residentOwner) =>
         _residentOwner = residentOwner ?? throw new ArgumentNullException(nameof(residentOwner));
 
+    // A held cast belongs to the wearer it was admitted for, so a holder the stamp has not caught up
+    // with presents the item without it, exactly as a stamped move clears it.
     private DaggerfallItemInstanceMetadata Resolve(ulong itemId, DaggerfallItemInstanceMetadata stored) =>
-        _residentOwner?.Invoke(itemId) is { } owner && owner != stored.Owner ? stored with { Owner = owner } : stored;
+        _residentOwner?.Invoke(itemId) is { } owner && owner != stored.Owner ? stored with { Owner = owner, HeldCast = null } : stored;
+
+    /// <summary>
+    /// Stamps every resident item whose holding container no longer matches its stamp, so a transfer
+    /// that skipped its owner still reports the move (which ends a held source) before the update's
+    /// equipment sources are rebuilt and before a save is captured.
+    /// </summary>
+    internal void ReconcileResidentOwners()
+    {
+        if (_residentOwner is null) return;
+        foreach (ulong itemId in _unique.Keys.ToArray())
+            if (_residentOwner(itemId) is { } owner && owner != _unique[itemId].Owner)
+                MoveUnique(itemId, owner);
+    }
     internal IEnumerable<(DaggerfallItemOwner Owner, InventoryStackId Stack, DaggerfallItemInstanceMetadata Metadata)> StackItems =>
         _stacks.Select(value => (value.Key.Owner, InventoryStackId.Parse(value.Key.Stack), value.Value));
 
@@ -309,6 +324,9 @@ internal sealed class DaggerfallItemInstances
         _revision++;
         if (previous.CurrentCondition > 0 && metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0)
             SourceUnavailable?.Invoke(itemId, DaggerfallItemSourceChange.Broken);
+        // A replacement read through the Engine's answer can carry a holder the stamp never saw; it is
+        // that move's report.
+        if (previous.Owner != metadata.Owner) SourceUnavailable?.Invoke(itemId, DaggerfallItemSourceChange.Moved);
     }
 
     /// <summary>Rejoins retained meaning before applying the canonical source-owner change.</summary>

@@ -302,6 +302,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // that actually owns the items, rather than a prior frame's held stat sources.
         Casting.ClearPending();
         DaggerfallMolagBalEffects.Reconcile(State.Effects, MolagBalEquipped);
+        State.ItemInstances.ReconcileResidentOwners();
         _heldEnchantments.Refresh();
         SyncCivilianPositions();
         using IDisposable detachedResidents = _sites.SuspendResidentExteriorLocationsForSave();
@@ -417,6 +418,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
         // The worn set is recomputed before the round advances, so a payload that ticks with the clock
         // reads the body the player is wearing now rather than the one the previous update saw.
+        State.ItemInstances.ReconcileResidentOwners();
         State.HeldEnchantments.Refresh();
         _itemCastTriggers.Refresh();
         ReleasePendingBoundSouls();
