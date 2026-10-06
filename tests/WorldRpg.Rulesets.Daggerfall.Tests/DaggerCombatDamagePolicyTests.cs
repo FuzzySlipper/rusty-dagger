@@ -217,7 +217,7 @@ public sealed class DaggerCombatDamagePolicyTests
 
         Assert.True(result.Outcome.Hit);
         Assert.Equal(11, result.Outcome.Damage);
-        Assert.Equal(1, result.Outcome.Roll);
+        Assert.Equal(1, result.Detail.Roll);
     }
 
     [Theory]
@@ -269,19 +269,19 @@ public sealed class DaggerCombatDamagePolicyTests
     [InlineData("dark-elf", true, 3)]
     public void Racial_weapon_bonuses_require_an_equipped_weapon(string race, bool armed, int bonus)
     {
-        AttackOutcome Attack(string selectedRace)
+        PreparedResolution Attack(string selectedRace)
         {
             using DamagePolicyFixture fixture = new(armed);
             fixture.PlayerRace(selectedRace, 12);
             fixture.Script(body: 0, critical: 100, hit: 1, damage: 3);
-            return fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false)).Outcome;
+            return fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
         }
 
-        AttackOutcome baseline = Attack("breton");
-        AttackOutcome racial = Attack(race);
-        Assert.True(racial.Hit);
-        Assert.Equal(baseline.Chance + bonus, racial.Chance);
-        Assert.Equal(baseline.Damage + bonus, racial.Damage);
+        PreparedResolution baseline = Attack("breton");
+        PreparedResolution racial = Attack(race);
+        Assert.True(racial.Outcome.Hit);
+        Assert.Equal(baseline.Detail.Chance + bonus, racial.Detail.Chance);
+        Assert.Equal(baseline.Outcome.Damage + bonus, racial.Outcome.Damage);
     }
 
     [Fact]
@@ -411,7 +411,7 @@ public sealed class DaggerCombatDamagePolicyTests
         PreparedResolution armoured = strengthened.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
         Assert.True(unarmoured.Admitted && armoured.Admitted);
-        Assert.Equal(unarmoured.Outcome.Chance - 5, armoured.Outcome.Chance);
+        Assert.Equal(unarmoured.Detail.Chance - 5, armoured.Detail.Chance);
         Assert.Equal(unarmoured.Outcome.Hit, armoured.Outcome.Hit);
     }
 
@@ -423,13 +423,13 @@ public sealed class DaggerCombatDamagePolicyTests
         AttackRequest playerAttack = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
         plain.Script(body: 5, critical: 50, hit: 1, damage: 7);
         penalized.Script(body: 5, critical: 50, hit: 1, damage: 7);
-        Assert.Equal(plain.Run(playerAttack).Outcome.Chance - 10, penalized.Run(playerAttack).Outcome.Chance);
+        Assert.Equal(plain.Run(playerAttack).Detail.Chance - 10, penalized.Run(playerAttack).Detail.Chance);
         plain.EquipNpcWeapon(2, "iron-longsword", 9001);
         penalized.EquipNpcWeapon(2, "iron-longsword", 9001);
         AttackRequest enemyAttack = new(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true);
         plain.Script(body: 5, critical: 50, hit: 1, damage: 7);
         penalized.Script(body: 5, critical: 50, hit: 1, damage: 7);
-        Assert.Equal(plain.Run(enemyAttack).Outcome.Chance, penalized.Run(enemyAttack).Outcome.Chance);
+        Assert.Equal(plain.Run(enemyAttack).Detail.Chance, penalized.Run(enemyAttack).Detail.Chance);
     }
 
     [Fact]
@@ -665,7 +665,8 @@ public sealed class DaggerCombatDamagePolicyTests
         {
             FactBuffer<IProductFact> facts = new();
             bool admitted = _combat.TryPrepare(request, facts, out PreparedAttack prepared);
-            return new PreparedResolution(admitted, prepared.Outcome, _scripted.Ranges);
+            return new PreparedResolution(admitted, prepared.Outcome,
+                (prepared as DaggerCombatRules.DaggerfallPreparedAttack)?.Detail ?? default, _scripted.Ranges);
         }
 
         /// <summary>Admits one swing through the shared attack lifecycle and delivers what it published.</summary>
@@ -721,7 +722,8 @@ public sealed class DaggerCombatDamagePolicyTests
         }
     }
 
-    private sealed record PreparedResolution(bool Admitted, AttackOutcome Outcome, IReadOnlyList<(int Minimum, int Maximum)> Ranges);
+    private sealed record PreparedResolution(bool Admitted, AttackOutcome Outcome, DaggerCombatRules.DaggerfallAttackDetail Detail,
+        IReadOnlyList<(int Minimum, int Maximum)> Ranges);
 
     private class ScriptedRandom : DispatchProxy
     {

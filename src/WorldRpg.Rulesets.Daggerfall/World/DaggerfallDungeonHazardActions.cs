@@ -205,7 +205,6 @@ internal static class DaggerfallDungeonHazardActions
         ApplyHitEvent applied = combat.ApplyToHealth(
             new CombatParticipants(context.Source, context.Target, "dungeon-hazard"),
             damage,
-            0,
             health);
         DaggerfallDungeonActionOutcome outcome = applied.ActualHealthLost > 0d
             ? DaggerfallDungeonActionOutcome.Applied

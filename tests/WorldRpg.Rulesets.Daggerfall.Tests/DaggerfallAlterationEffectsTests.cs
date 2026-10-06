@@ -87,7 +87,7 @@ public sealed class DaggerfallAlterationEffectsTests
         Assert.True(initial.Starting > 2);
         var health = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health"));
         double before = health.Current;
-        var partial = s.State.Kit.Rules.ApplyToHealth(new(s.State.Actors.Player.Actor, s.State.Actors.Player.Actor, "falling"), 2, 0, health);
+        var partial = s.State.Kit.Rules.ApplyToHealth(new(s.State.Actors.Player.Actor, s.State.Actors.Player.Actor, "falling"), 2, health);
         Assert.Equal(2, partial.CalculatedDamage); Assert.Equal(0, partial.ActualHealthLost);
         Assert.Equal(initial.Starting - 2, DaggerfallAlterationEffects.ReadShield(effect.State).Remaining);
         using var restored = f.Restore(s.CaptureSave());
@@ -100,13 +100,13 @@ public sealed class DaggerfallAlterationEffectsTests
         Assert.Equal(initial.Starting, DaggerfallAlterationEffects.ReadShield(savedEffect.State).Remaining);
         Assert.True(savedEffect.Lifecycle.RemainingRounds > priorRounds);
         Track restoredHealth = restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health"));
-        var hit = restored.State.Kit.Rules.ApplyToHealth(new(restored.State.Actors.Player.Actor, restored.State.Actors.Player.Actor, "poison"), initial.Starting + 3, 0, restoredHealth);
+        var hit = restored.State.Kit.Rules.ApplyToHealth(new(restored.State.Actors.Player.Actor, restored.State.Actors.Player.Actor, "poison"), initial.Starting + 3, restoredHealth);
         Assert.Equal(3, hit.ActualHealthLost); Assert.Equal(before - 3, restoredHealth.Current);
         Assert.Empty(restored.State.Effects.Active); Assert.Empty(restored.State.Actors.Player.Actor.Get<CombatContributions>().Rules);
         restored.ReadyPlayerSpell("spell.017"); restored.ReleaseReadySpell(1, Vector3.UnitZ);
         restored.State.Effects.AdvanceElapsedRounds(100);
         Assert.Empty(restored.State.Effects.Active); Assert.Empty(restored.State.Actors.Player.Actor.Get<CombatContributions>().Rules);
-        var after = restored.State.Kit.Rules.ApplyToHealth(new(restored.State.Actors.Player.Actor, restored.State.Actors.Player.Actor, "melee"), 1, 0, restoredHealth);
+        var after = restored.State.Kit.Rules.ApplyToHealth(new(restored.State.Actors.Player.Actor, restored.State.Actors.Player.Actor, "melee"), 1, restoredHealth);
         Assert.Equal(1, after.ActualHealthLost);
     }
 
@@ -118,10 +118,10 @@ public sealed class DaggerfallAlterationEffectsTests
         var effect = Assert.Single(s.State.Effects.Active); var initial = DaggerfallAlterationEffects.ReadShield(effect.State);
         var player = s.State.Actors.Player; var health = player.Stats.GetTrack(TrackId.Parse("health"));
         health.SetCurrent(0);
-        Assert.Equal(0, s.State.Kit.Rules.ApplyToHealth(new(player.Actor, player.Actor, "dead"), 100, 0, health).ActualHealthLost);
+        Assert.Equal(0, s.State.Kit.Rules.ApplyToHealth(new(player.Actor, player.Actor, "dead"), 100, health).ActualHealthLost);
         Assert.Equal(initial, DaggerfallAlterationEffects.ReadShield(effect.State));
         health.SetCurrent(health.Maximum.Value);
-        var applied = s.State.Kit.Rules.ApplyToHealth(new(player.Actor, player.Actor, "magic"), initial.Remaining, 0, health);
+        var applied = s.State.Kit.Rules.ApplyToHealth(new(player.Actor, player.Actor, "magic"), initial.Remaining, health);
         Assert.Equal(0, applied.ActualHealthLost); Assert.False(applied.Defeated);
         Assert.Empty(s.State.Effects.Active); Assert.Empty(player.Actor.Get<CombatContributions>().Rules);
     }

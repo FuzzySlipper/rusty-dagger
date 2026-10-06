@@ -119,7 +119,7 @@ public sealed class ItemSoulEffectsSessionTests
         var actor = s.State.Actors.Get(target).Actor; var health = actor.Get<StatsComponent>().GetTrack(TrackId.Parse("health")); health.Maximum.BaseValue = 10; health.SetCurrent(10);
         s.State.Effects.Start(new("shield", "shield", "spell.shield", 1, target, "shield", "Magic", null, 1, 20,
             DaggerfallAlterationEffects.ShieldState(new(50, 50))));
-        var shielded = new CombatResolution().ApplyToHealth(new(s.State.Actors.Player.Actor, actor, "test"), 20, 0, health).Result;
+        var shielded = new CombatResolution().ApplyToHealth(new(s.State.Actors.Player.Actor, actor, "test"), 20, health).Result;
         Assert.False(shielded.Defeated); Assert.Equal(10d, health.Current);
         var trap = s.State.Effects.Active.Single(value => value.Definition.Key == "soul-trap");
         Assert.Equal(0, trap.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallSoulTrapState)!.Attempts);
@@ -127,7 +127,7 @@ public sealed class ItemSoulEffectsSessionTests
             JsonSerializer.SerializeToElement(new DaggerfallSoulTrapState(new(Setting(12, 0), 1, 0, 100)), DaggerfallSaveJsonContext.Default.DaggerfallSoulTrapState)));
         Assert.Equal(16u, trap.Lifecycle.RemainingRounds);
         using var restored = f.Restore(); actor = restored.State.Actors.Get(target).Actor; health = actor.Get<StatsComponent>().GetTrack(TrackId.Parse("health"));
-        var tethered = new CombatResolution().ApplyToHealth(new(restored.State.Actors.Player.Actor, actor, "terminal"), 100, 0, health, HealthApplicationMode.Terminal).Result;
+        var tethered = new CombatResolution().ApplyToHealth(new(restored.State.Actors.Player.Actor, actor, "terminal"), 100, health, HealthApplicationMode.Terminal).Result;
         Assert.False(tethered.Defeated); Assert.Equal(1d, health.Current);
         var savedTrap = DaggerfallSavePayload.Read(restored.CaptureSave()).ActiveEffects.Single(value => value.EffectKey == "soul-trap");
         Assert.Equal(1, savedTrap.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallSoulTrapState)!.Attempts);
@@ -183,11 +183,11 @@ public sealed class ItemSoulEffectsSessionTests
         var actor = s.State.Actors.Get(target).Actor;
         var health = actor.Get<StatsComponent>().GetTrack(TrackId.Parse("health")); health.Maximum.BaseValue = 30; health.SetCurrent(30);
         var rules = new CombatResolution();
-        var denied = rules.ApplyToHealth(new(s.State.Actors.Player.Actor, actor, "test"), 100, 0, health,
+        var denied = rules.ApplyToHealth(new(s.State.Actors.Player.Actor, actor, "test"), 100, health,
             terminal ? HealthApplicationMode.Terminal : HealthApplicationMode.Damage).Result;
         Assert.False(denied.Defeated); Assert.Equal(1d, health.Current);
         AddGem(s, f, "first");
-        var accepted = rules.ApplyToHealth(new(s.State.Actors.Player.Actor, actor, "test"), 100, 0, health).Result;
+        var accepted = rules.ApplyToHealth(new(s.State.Actors.Player.Actor, actor, "test"), 100, health).Result;
         Assert.True(accepted.Defeated);
         var gem = Assert.Single(s.State.ItemInstances.UniqueItems.Where(value => value.Value.CapturedSoulMobileId == 0));
         Assert.True(s.SoulGems.Consume(0)); Assert.False(s.State.ItemInstances.ContainsUnique(gem.Key));
@@ -201,11 +201,11 @@ public sealed class ItemSoulEffectsSessionTests
         long target = s.SpawnActor("rat", new(new(1, 0, 1), 0));
         Trap(s, target, 0);
         var actor = s.State.Actors.Get(target).Actor; var health = actor.Get<StatsComponent>().GetTrack(TrackId.Parse("health"));
-        Assert.True(new CombatResolution().ApplyToHealth(new(s.State.Actors.Player.Actor, actor, "test"), 10000, 0, health).Result.Defeated);
+        Assert.True(new CombatResolution().ApplyToHealth(new(s.State.Actors.Player.Actor, actor, "test"), 10000, health).Result.Defeated);
         long next = s.SpawnActor("rat", new(new(2, 0, 2), 0)); Trap(s, next, 100);
         s.State.Effects.AdvanceElapsedRounds(10);
         actor = s.State.Actors.Get(next).Actor; health = actor.Get<StatsComponent>().GetTrack(TrackId.Parse("health"));
-        Assert.True(new CombatResolution().ApplyToHealth(new(s.State.Actors.Player.Actor, actor, "test"), 10000, 0, health).Result.Defeated);
+        Assert.True(new CombatResolution().ApplyToHealth(new(s.State.Actors.Player.Actor, actor, "test"), 10000, health).Result.Defeated);
     }
 
     [Fact]

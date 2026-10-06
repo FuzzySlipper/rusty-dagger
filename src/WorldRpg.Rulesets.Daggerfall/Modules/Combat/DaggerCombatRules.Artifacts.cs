@@ -136,7 +136,7 @@ internal sealed partial class DaggerCombatRules
         if (ring is not { } equippedRing) return;
         ulong sourceItem = _equipment.GetDurableItemId(new EntityId(equippedRing.EntityId)).Value;
         CombatParticipants participants = new(incoming.Target, incoming.Source, NamiraDamage);
-        ApplyHitEvent result = Rules.ApplyToHealth(participants, reflected, 0,
+        ApplyHitEvent result = Rules.ApplyToHealth(participants, reflected,
             participants.TargetStats.GetTrack(TrackId.Parse(HealthTrack)));
         facts.Append(new ArtifactDamageReflectedFact(sourceItem, target, attacker, reflected, result.ActualHealthLost, generation, step));
         facts.Append(new DamageAppliedFact(target, attacker, DaggerfallDamageCause.Effect,

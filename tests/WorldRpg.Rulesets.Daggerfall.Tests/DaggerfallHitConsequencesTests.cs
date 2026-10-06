@@ -170,8 +170,9 @@ public sealed class DaggerfallHitConsequencesTests
         using DaggerCombatFixture f = new("nymph", playerHealth: 1, playerStamina: 1000);
         var request = new AttackRequest(2, 1, 7, 13, .125, true);
         var prepared = new DaggerCombatRules.DaggerfallPreparedAttack(.5,
-            new(true, true, 0, 5, 1, 100), DaggerfallStrikeFeedback.Unarmed,
-            MonsterHits: [new(0, 2, DaggerfallMonsterHitConsequence.Fatigue), new(1, 3, DaggerfallMonsterHitConsequence.Fatigue)]);
+            new(true, true, 5), DaggerfallStrikeFeedback.Unarmed,
+            MonsterHits: [new(0, 2, DaggerfallMonsterHitConsequence.Fatigue), new(1, 3, DaggerfallMonsterHitConsequence.Fatigue)],
+            Detail: new(0, 1, 100));
         f.Rules.Apply(request, prepared, f.Facts);
         var facts = f.Deliver();
         Assert.Equal(new[] { 256, 384 }, facts.OfType<FatigueAppliedFact>().Select(value => value.CalculatedFatigueLoss));

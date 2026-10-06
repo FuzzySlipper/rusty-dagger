@@ -23,7 +23,7 @@ internal sealed class DaggerfallVitalityConsequences
         Track health = target.Get<StatsComponent>().GetTrack(HealthTrack);
         int calculated = terminal ? checked((int)Math.Ceiling(health.Current - health.Minimum)) : amount;
         return _combat.ApplyToHealth(new(caster, target, terminal ? "disintegrate" : "spell health damage"),
-            calculated, 0, health, terminal ? HealthApplicationMode.Terminal : HealthApplicationMode.Damage).Result;
+            calculated, health, terminal ? HealthApplicationMode.Terminal : HealthApplicationMode.Damage).Result;
     }
 
     /// <summary>Quest-commanded death uses the same accepted health and defeat contributions as combat.</summary>
@@ -31,7 +31,7 @@ internal sealed class DaggerfallVitalityConsequences
     {
         Track health = target.Get<StatsComponent>().GetTrack(HealthTrack);
         return _combat.ApplyToHealth(new(target, target, "quest foe death"), checked((int)Math.Ceiling(health.Current - health.Minimum)),
-            0, health, HealthApplicationMode.Terminal).Result;
+            health, HealthApplicationMode.Terminal).Result;
     }
 
     /// <summary>Drowning is a terminal accepted health consequence, sharing combat defeat and fact publication.</summary>
@@ -41,7 +41,7 @@ internal sealed class DaggerfallVitalityConsequences
         Track health = victim.Get<StatsComponent>().GetTrack(HealthTrack);
         int calculated = checked((int)Math.Ceiling(Math.Max(0d, health.Current - health.Minimum)));
         return _combat.ApplyToHealth(new CombatParticipants(victim, victim, "drowning"), calculated,
-            0, health, HealthApplicationMode.Terminal).Result;
+            health, HealthApplicationMode.Terminal).Result;
     }
 
     internal DaggerfallSpellTrackResult ResolveSpellTrack(Actor caster, Actor target, TrackId trackId, int amount, bool permitted = true)
@@ -93,7 +93,7 @@ internal sealed class DaggerfallVitalityConsequences
     internal DamageResult ResolvePassiveDamage(Actor player, int damage)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(damage);
-        return _combat.ApplyToHealth(new CombatParticipants(player, player, "racial or career passive"), damage, 0,
+        return _combat.ApplyToHealth(new CombatParticipants(player, player, "racial or career passive"), damage,
             player.Get<StatsComponent>().GetTrack(HealthTrack)).Result;
     }
 
@@ -102,7 +102,7 @@ internal sealed class DaggerfallVitalityConsequences
         ArgumentNullException.ThrowIfNull(player);
         if (damage <= 0) throw new ArgumentOutOfRangeException(nameof(damage));
         Track health = player.Get<StatsComponent>().GetTrack(HealthTrack);
-        return _combat.ApplyToHealth(new CombatParticipants(player, player, "held enchantment"), damage, 0, health).Result;
+        return _combat.ApplyToHealth(new CombatParticipants(player, player, "held enchantment"), damage, health).Result;
     }
 
     /// <summary>
@@ -115,7 +115,7 @@ internal sealed class DaggerfallVitalityConsequences
         ArgumentNullException.ThrowIfNull(victim);
         if (damage <= 0) throw new ArgumentOutOfRangeException(nameof(damage));
         Track health = victim.Get<StatsComponent>().GetTrack(HealthTrack);
-        var result = _combat.ApplyToHealth(new CombatParticipants(victim, victim, "poison"), damage, 0, health).Result;
+        var result = _combat.ApplyToHealth(new CombatParticipants(victim, victim, "poison"), damage, health).Result;
         PoisonDamageApplied?.Invoke(result);
         return result;
     }
@@ -127,7 +127,7 @@ internal sealed class DaggerfallVitalityConsequences
         int damage = DaggerfallFormulaPolicy.FallDamage(accepted.Validate().Distance);
         if (damage == 0) return null;
         Track health = player.Get<StatsComponent>().GetTrack(HealthTrack);
-        return _combat.ApplyToHealth(new CombatParticipants(player, player, "fall"), damage, 0, health).Result;
+        return _combat.ApplyToHealth(new CombatParticipants(player, player, "fall"), damage, health).Result;
     }
 }
 

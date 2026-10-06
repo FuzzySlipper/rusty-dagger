@@ -122,7 +122,7 @@ public sealed class AttackExecutionTests
         public List<AttackRefusal> Refusals { get; } = [];
         public bool TryPrepare(AttackRequest request, FactBuffer<TestFact> facts, out PreparedAttack attack)
         {
-            attack = new(cooldown, new AttackOutcome(true, true, 0, 10, 1, 100));
+            attack = new(cooldown, new AttackOutcome(true, true, 10));
             return true;
         }
         public void Refused(AttackRefusal reason, FactBuffer<TestFact> facts) => Refusals.Add(reason);

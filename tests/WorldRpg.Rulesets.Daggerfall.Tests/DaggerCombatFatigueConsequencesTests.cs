@@ -56,6 +56,7 @@ public sealed class DaggerCombatFatigueConsequencesTests
 
     private static PreparedAttack Prepared() =>
         new DaggerCombatRules.DaggerfallPreparedAttack(.5d,
-            new AttackOutcome(Hit: true, Allowed: true, Body: 0, Damage: 2, Roll: 1, Chance: 100),
-            DaggerfallStrikeFeedback.Unarmed, MonsterHits: [new(0, 2, DaggerfallMonsterHitConsequence.Fatigue)]);
+            new AttackOutcome(Hit: true, Allowed: true, Damage: 2),
+            DaggerfallStrikeFeedback.Unarmed, MonsterHits: [new(0, 2, DaggerfallMonsterHitConsequence.Fatigue)],
+            Detail: new(Body: 0, Roll: 1, Chance: 100));
 }

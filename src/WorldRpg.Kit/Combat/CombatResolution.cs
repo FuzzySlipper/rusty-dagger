@@ -11,19 +11,22 @@ public sealed record CombatParticipants(Actor Source, Actor Target, string Cause
     public EffectsComponent SourceEffects => Source.Get<EffectsComponent>();
     public EffectsComponent TargetEffects => Target.Get<EffectsComponent>();
 }
+/// <summary>
+/// One hit decision. The ruleset's base resolution decides <see cref="Hit"/>; Kit never compares
+/// <see cref="Chance"/> and <see cref="Roll"/>, which are carried only for the ruleset's own policy
+/// and for contributions that report or adjust them. A contribution that changes either value and
+/// means it to decide the hit sets <see cref="Hit"/> itself.
+/// </summary>
 public sealed class TryHitEvent(CombatParticipants participants)
 {
     public CombatParticipants Participants { get; } = participants;
     public int Chance { get; set; }
     public int Roll { get; set; }
-    private bool? _hit;
-    /// <summary>Chance contributions affect the result unless a rule explicitly overrides the hit.</summary>
-    public bool Hit { get => _hit ?? Roll <= Chance; set => _hit = value; }
+    public bool Hit { get; set; }
 }
 public sealed class DamageEvent(CombatParticipants participants)
 {
     public CombatParticipants Participants { get; } = participants;
-    public int Body { get; set; }
     public int Damage { get; set; }
     /// <summary>Damage after base policy and ordered calculation contributions, before application contributions.</summary>
     public int CalculatedDamage { get => Damage; set => Damage = value; }
@@ -31,14 +34,13 @@ public sealed class DamageEvent(CombatParticipants participants)
 }
 /// <summary>Ordinary damage or an admitted terminal health application, both using the same live track owner.</summary>
 public enum HealthApplicationMode { Damage, Terminal }
-public sealed class ApplyHitEvent(CombatParticipants participants, int damage, int body, HealthApplicationMode mode = HealthApplicationMode.Damage)
+public sealed class ApplyHitEvent(CombatParticipants participants, int damage, HealthApplicationMode mode = HealthApplicationMode.Damage)
 {
     public HealthApplicationMode Mode { get; } = mode;
     public CombatParticipants Participants { get; } = participants;
     /// <summary>The calculated amount handed to application before application contributions may reduce it.</summary>
     public int CalculatedDamage { get; } = damage;
     public int Damage { get; set; } = damage;
-    public int Body { get; } = body;
     /// <summary>Health actually removed from the canonical live track; this is never inferred from calculated damage.</summary>
     public double ActualHealthLost { get; set; }
     /// <summary>True only when this application crossed a living target to its health minimum.</summary>
@@ -96,10 +98,10 @@ public sealed class CombatResolution
         foreach (ICombatContribution rule in Gather(participants)) rule.Damage(interaction);
         return interaction;
     }
-    public ApplyHitEvent Apply(CombatParticipants participants, int damage, int body, Action<ApplyHitEvent> apply,
+    public ApplyHitEvent Apply(CombatParticipants participants, int damage, Action<ApplyHitEvent> apply,
         HealthApplicationMode mode = HealthApplicationMode.Damage)
     {
-        ApplyHitEvent interaction = new(participants, damage, body, mode);
+        ApplyHitEvent interaction = new(participants, damage, mode);
         // A contribution may expire its own source while applying (for example, a depleted pool).
         foreach (ICombatContribution rule in Gather(participants).ToArray()) rule.Applying(interaction);
         apply(interaction);
@@ -109,11 +111,11 @@ public sealed class CombatResolution
     /// Runs application contributions then mutates the supplied canonical health track once. A
     /// target already at its minimum has no second death transition and loses no additional health.
     /// </summary>
-    public ApplyHitEvent ApplyToHealth(CombatParticipants participants, int damage, int body, Track health,
+    public ApplyHitEvent ApplyToHealth(CombatParticipants participants, int damage, Track health,
         HealthApplicationMode mode = HealthApplicationMode.Damage)
     {
         ArgumentNullException.ThrowIfNull(health);
-        return Apply(participants, damage, body, interaction =>
+        return Apply(participants, damage, interaction =>
         {
             double before = health.Current;
             if (before <= health.Minimum) return;

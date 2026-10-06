@@ -5,9 +5,11 @@ namespace WorldRpg.Kit.Combat;
 
 public readonly record struct AttackRequest(long AttackerId, long? TargetId, ulong Generation, ulong SimulationStep,
     double FixedDeltaSeconds, bool Delayed, string? Action = null);
-public readonly record struct AttackOutcome(bool Hit, bool Allowed, int Body, int Damage, int Roll, int Chance);
-/// <summary>One accepted decision. A compiled ruleset may extend it with captured source meaning;
-/// pending and deferred delivery retain that same decision without a second attack ledger.</summary>
+/// <summary>The accepted decision every ruleset shares: whether it hit, whether it may apply, and its damage.</summary>
+public readonly record struct AttackOutcome(bool Hit, bool Allowed, int Damage);
+/// <summary>One accepted decision. A compiled ruleset extends it with captured source meaning and any
+/// roll or hit-location detail its own policy uses; pending and deferred delivery retain that same
+/// decision without a second attack ledger.</summary>
 public record PreparedAttack(double CooldownSeconds, AttackOutcome Outcome);
 public readonly record struct PendingAttack(AttackRequest Request, PreparedAttack Attack);
 /// <summary>A resolved delayed attack whose authored impact has been released for delivery.</summary>
