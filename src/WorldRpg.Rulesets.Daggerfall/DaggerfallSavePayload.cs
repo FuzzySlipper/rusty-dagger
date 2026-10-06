@@ -749,9 +749,7 @@ internal sealed record DaggerfallSavePayload(
             || ready.Source == DaggerfallCastSource.DungeonAction
                 && DaggerfallMagicCostPolicy.TargetForRangeType(definitions.Magic.Spells[ready.SpellKey].RangeType) != DaggerfallSpellTarget.CasterOnly
             || ready.Source == DaggerfallCastSource.DungeonAction && ready.Cost != 0
-            || ready.Source != DaggerfallCastSource.DungeonAction && ready.ItemId is null && Character?.KnownSpells?.Contains(ready.SpellKey) != true
-            || ready.ItemId is ulong item && !Inventory.UniqueItems.Any(value => value.EntityId == item
-                && value.Metadata.CurrentCondition > 0)))
+            || ready.Source != DaggerfallCastSource.DungeonAction && ready.ItemId is null && Character?.KnownSpells?.Contains(ready.SpellKey) != true))
             throw new ArgumentException($"Saved ready spell '{ready.SpellKey}' has an invalid spell or item source.");
 
         ValidateEffectSourceReferences(
@@ -1240,8 +1238,9 @@ internal sealed record DaggerfallSavePayload(
                         || metadata.HeldCast is null && magic.TryEnchantments(metadata, out var payloads) && payloads.Any(value => value.Type == 1)
                         || metadata.HeldCast is { } held && (effect.CasterId != held.CasterId || !held.ActiveEffectInstances.Contains(effect.Instance))))
                     throw new ArgumentException($"Saved held effect '{effect.Instance}' has no matching held source or lifetime.");
-                if (metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0)
-                    throw new ArgumentException($"Saved effect instance '{effect.Instance}' names broken item {item}.");
+                // A held bundle ends with its item's break; a used or striking item's effect outlives it.
+                if (effect.BundleKind == DaggerfallEffectBundleKind.HeldMagicItem && metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0)
+                    throw new ArgumentException($"Saved held effect '{effect.Instance}' names broken item {item}.");
             }
         }
     }

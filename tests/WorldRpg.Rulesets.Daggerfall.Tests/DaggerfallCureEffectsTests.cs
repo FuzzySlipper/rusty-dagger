@@ -15,7 +15,7 @@ public sealed class DaggerfallCureEffectsTests
 {
     [Theory]
     [InlineData("spell.059", 0)] [InlineData("spell.015", 1)]
-    [InlineData("spell.058", 1)] [InlineData("spell.010", 2)]
+    [InlineData("spell.058", 1)] [InlineData(CureParalysisKey, 2)]
     public void Published_cures_report_no_match_after_real_payment_and_do_not_leave_active_effects(string key, int subtype)
     {
         using Fixture f = new(); var s = f.Session;
@@ -32,11 +32,11 @@ public sealed class DaggerfallCureEffectsTests
         Assert.Equal(after, Magicka(s).Current);
         using var restored = f.Restore(s.CaptureSave());
         Assert.Empty(restored.State.Effects.Active); Assert.Equal(after, Magicka(restored).Current);
-        Assert.Equal(subtype, TestPayload.Definitions.Magic.Spells[key].Effects[0].SubType);
+        Assert.Equal(subtype, CureDefinitions.Value.Magic.Spells[key].Effects[0].SubType);
     }
 
     [Theory]
-    [InlineData("spell.059", 0)] [InlineData("spell.015", 1)] [InlineData("spell.010", 2)]
+    [InlineData("spell.059", 0)] [InlineData("spell.015", 1)] [InlineData(CureParalysisKey, 2)]
     public void Real_cure_delivery_selects_all_matching_sources_and_preserves_other_conditions_and_targets(string key, int subtype)
     {
         using Fixture f = new(); var s = f.Session;
@@ -78,7 +78,7 @@ public sealed class DaggerfallCureEffectsTests
         Assert.Equal(Vector2.Zero, f.Spatial.StepRequests.Last().Command.PlanarIntent);
         double before = Health(s, 2000).Current;
         s.ResolveExplicitMelee(new(1, 2000, 1, 1000, .125)); Assert.Equal(before, Health(s, 2000).Current);
-        Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(Cast(s, "spell.010").Results).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(Cast(s, CureParalysisKey).Results).Outcome);
         Assert.Equal(default, s.State.Effects.ControlsFor(1));
         s.Update(new ProductUpdate(OuterUpdate(2), []));
         Assert.NotEqual(Vector2.Zero, f.Spatial.StepRequests.Last().Command.PlanarIntent);
@@ -145,11 +145,11 @@ public sealed class DaggerfallCureEffectsTests
                 MagicRound: effect =>
                 {
                     if (++rounds != 2) return;
-                    Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(Cast(session!, "spell.010").Results).Outcome);
+                    Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(Cast(session!, CureParalysisKey).Results).Outcome);
                     effect.ExpireAfterCurrentRound = true;
                 }),
         ]);
-        var composition = new DaggerfallSessionComposition(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Effects = catalog };
+        var composition = new DaggerfallSessionComposition(CureDefinitions.Value, inputs, DaggerfallTuning.Defaults) { Effects = catalog };
         List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, inputs);
         var engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service,
             new AppearanceFake(releases), random: RandomMaximum.Create());
@@ -181,7 +181,8 @@ public sealed class DaggerfallCureEffectsTests
             Assert.Equal(DaggerfallCastOutcome.NoMatch, Assert.Single(bundle.Results).Outcome);
             for (int element = 0; element < 4; element++)
             {
-                casting = CastingFor(s, spell with { Element = element }, 100);
+                // Element gates apply to constructed spells; the donor reads classic records unfiltered.
+                casting = CastingFor(s, spell with { Element = element, IsCustom = true }, 100);
                 double before = Magicka(s).Current;
                 Assert.Equal(DaggerfallCastOutcome.UnsupportedEffect, casting.Ready(1, spell.Key).Outcome);
                 Assert.Equal(before, Magicka(s).Current);
@@ -233,9 +234,34 @@ public sealed class DaggerfallCureEffectsTests
     private sealed class CertainStrike : ICombatContribution
     { public void Hit(TryHitEvent interaction) => interaction.Hit = true; }
 
+    /// <summary>
+    /// No published spell cures paralysis: SPELLS.STD's only Cure Paralyzation slot is Free Action's,
+    /// which the donor patches to Free Action. A constructed copy of Cure Poison carries the subtype.
+    /// </summary>
+    private const string CureParalysisKey = "spell.cure-paralysis";
+    private static readonly Lazy<DaggerfallDefinitions> CureDefinitions = new(() =>
+    {
+        System.Text.Json.Nodes.JsonObject root = System.Text.Json.Nodes.JsonNode.Parse(TestPayload.CombinedText)!.AsObject();
+        System.Text.Json.Nodes.JsonArray spells = Spells(root) ?? throw new InvalidOperationException("The payload publishes no spells.");
+        System.Text.Json.Nodes.JsonNode cure = spells.Single(spell => spell!["key"]!.GetValue<string>() == "spell.015")!.DeepClone();
+        cure["key"] = CureParalysisKey; cure["identity"] = 900; cure["name"] = "Cure Paralyzation";
+        cure["effects"]![0]!["key"] = CureParalysisKey + ".effect.1"; cure["effects"]![0]!["subType"] = 2;
+        spells.Add(cure);
+        return DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(root.ToJsonString()));
+
+        static System.Text.Json.Nodes.JsonArray? Spells(System.Text.Json.Nodes.JsonNode? node) => node switch
+        {
+            System.Text.Json.Nodes.JsonObject value => value.TryGetPropertyValue("spells", out var found) && found is System.Text.Json.Nodes.JsonArray { Count: > 0 } array
+                && array[0] is System.Text.Json.Nodes.JsonObject first && first.ContainsKey("identity")
+                ? array : value.Select(property => Spells(property.Value)).FirstOrDefault(result => result is not null),
+            System.Text.Json.Nodes.JsonArray value => value.Select(Spells).FirstOrDefault(result => result is not null),
+            _ => null,
+        };
+    });
+
     private sealed class Fixture : IDisposable
     {
-        private readonly DaggerfallSessionComposition _composition = new(TestPayload.Definitions, ReadInputs(TestData.RepositoryRoot), DaggerfallTuning.Defaults);
+        private readonly DaggerfallSessionComposition _composition = new(CureDefinitions.Value, ReadInputs(TestData.RepositoryRoot), DaggerfallTuning.Defaults);
         internal SpatialFake Spatial = null!;
         internal DaggerfallSession Session { get; }
         internal Fixture()

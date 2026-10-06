@@ -225,20 +225,23 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
     }
 
     /// <summary>
-    /// Admits a normalized dungeon action's spell ordinal through the same catalog and effect
+    /// Admits a normalized dungeon action's classic spell identity through the same catalog and effect
     /// definitions used by ordinary casting.  Caster-only actions arm the player's real readiness
     /// component at no cost; other actions create an actorless missile whose source is the admitted
     /// action resource and whose target is the player.
     /// </summary>
-    internal DaggerfallCastResult TriggerDungeonAction(DaggerfallActionCastSource source, int spellOrdinal,
+    internal DaggerfallCastResult TriggerDungeonAction(DaggerfallActionCastSource source, int spellIdentity,
         Vector3? targetPosition = null)
     {
         if (!source.IsValid || source.TargetId != playerId) return Finish(DaggerfallCastOutcome.SourceUnavailable);
-        if (spellOrdinal < 0) return Finish(DaggerfallCastOutcome.UnknownSpell);
-        string key = $"spell.{checked(spellOrdinal + 1):D3}";
-        if (!catalog.Spells.TryGetValue(key, out DaggerfallSpellDefinition? spell)
-            || (!spell.IsCustom && spell.Name.StartsWith('!')) || spell.Effects.Count == 0)
+        if (spellIdentity < 0) return Finish(DaggerfallCastOutcome.UnknownSpell);
+        // The donor resolves an action's index as a classic spell identity, keeping the first record
+        // in file order where two records share one (Holy Touch and Holy Word).
+        DaggerfallSpellDefinition? spell = catalog.Spells.Values.Where(value => !value.IsCustom && value.Identity == spellIdentity)
+            .OrderBy(value => value.Key, StringComparer.Ordinal).FirstOrDefault();
+        if (spell is null || spell.Name.StartsWith('!') || spell.Effects.Count == 0)
             return Finish(DaggerfallCastOutcome.UnknownSpell);
+        string key = spell.Key;
         if (!TryDefinitions(spell, out DaggerfallEffectDefinition[] definitions))
             return Finish(DaggerfallCastOutcome.UnsupportedEffect);
 
@@ -298,7 +301,7 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
         if (!Enum.IsDefined(ready.Source) || ready.Source is DaggerfallCastSource.ItemHeld or DaggerfallCastSource.ItemStrike
             || (ready.ItemId is null) != (ready.Source is DaggerfallCastSource.Spell or DaggerfallCastSource.DungeonAction)
             || ready.Cost < 0 || ready.ItemId is not null && ready.Cost != 0
-            || ResolveSource(playerId, ready.ItemId) is null
+            || ResolveSource(playerId, null) is null
             || !catalog.Spells.TryGetValue(ready.SpellKey, out var spell) || ((!spell.IsCustom && spell.Name.StartsWith('!')) && !(ready.Source == DaggerfallCastSource.Spell && playerGrantedSpell?.Invoke(ready.SpellKey) == true)) || !TryDefinitions(spell, out _)
             || ready.Source == DaggerfallCastSource.DungeonAction && DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType) != DaggerfallSpellTarget.CasterOnly
             || ready.Source == DaggerfallCastSource.DungeonAction && ready.Cost != 0
@@ -319,12 +322,17 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
     internal DaggerfallCastResult Trigger(long casterId, string key, ulong itemId, DaggerfallCastSource source, long targetId)
     {
         if (source == DaggerfallCastSource.Spell) throw new ArgumentException("An item trigger requires item provenance.", nameof(source));
-        var actor = ResolveSource(casterId, itemId);
+        // A blow's strike payloads were admitted with the weapon whole; one that broke it on an
+        // earlier payload of the same blow still delivers the rest.
+        var actor = ResolveSource(casterId, source == DaggerfallCastSource.ItemStrike ? null : itemId);
         if (actor is null) return Finish(DaggerfallCastOutcome.SourceUnavailable);
         if (!catalog.Spells.TryGetValue(key, out var spell) || (!spell.IsCustom && spell.Name.StartsWith('!')) || spell.Effects.Count == 0)
             return Finish(DaggerfallCastOutcome.UnknownSpell);
         if (!TryDefinitions(spell, out var definitions)) return Finish(DaggerfallCastOutcome.UnsupportedEffect);
-        var release = CreateBundle(actor, casterId, new(key, itemId, 0, source), spell, definitions, null, null, publishRelease: false);
+        // The donor plays the element's cast sound when a held item casts for the player (on equip
+        // and on reroll); strikes and caster-only uses stay silent.
+        var release = CreateBundle(actor, casterId, new(key, itemId, 0, source), spell, definitions, null, null,
+            publishRelease: source == DaggerfallCastSource.ItemHeld && casterId == playerId);
         return Deliver(release.Bundle!, [targetId]);
     }
 
@@ -382,7 +390,9 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
     {
         if (resolveActor(casterId) is null) return Finish(DaggerfallCastOutcome.SourceUnavailable);
         if (ReadyFor(casterId) is not { } ready) return Finish(DaggerfallCastOutcome.Unready);
-        Actor? actor = ResolveSource(casterId, ready.ItemId);
+        // A used item is checked when it is used; the spell it readied is the caster's afterwards and
+        // survives the item breaking or changing hands, as in the donor.
+        Actor? actor = ResolveSource(casterId, null);
         if (actor is null) { if (Readiness(casterId) is { } state) { state.Ready = null; _armed.Remove(state); } return Finish(DaggerfallCastOutcome.SourceUnavailable); }
         if (casterId==playerId && ready.ItemId is null && ready.Source != DaggerfallCastSource.DungeonAction
             && playerKnowsSpell is not null && !playerKnowsSpell(ready.SpellKey))
@@ -597,7 +607,7 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
     }
 
     private bool SourceAvailable(DaggerfallLiveSpell bundle) => bundle.CasterId is long caster
-        ? ResolveSource(caster, bundle.ItemId) is not null
+        ? ResolveSource(caster, bundle.Source == DaggerfallCastSource.ItemHeld ? bundle.ItemId : null) is not null
         : bundle.Source == DaggerfallCastSource.DungeonAction && bundle.ItemId is null
             && bundle.ActionSource is { IsValid: true };
 
@@ -615,8 +625,11 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
         var allowedElements = DaggerfallMagicAllowedElements.Magic;
         foreach (var setting in spell.Effects)
         {
-            if (!effects.Catalog.TryResolveSpell(setting, out var definition) || (!spell.IsCustom && (definition.Spell!.AllowedElements & element) == 0)
-                || (definition.Spell!.AllowedTargets & target) == 0
+            // The donor reads classic records without element or target filtering (several published
+            // spells, such as Buoyancy or Holy Touch, use a delivery the spellmaker would refuse); only a
+            // constructed spell is held to its effects' allowed targets.
+            if (!effects.Catalog.TryResolveSpell(setting, out var definition)
+                || spell.IsCustom && (definition.Spell!.AllowedTargets & target) == 0
                 || definition.Apply is null && definition.MagicRound is null && definition.MagicDefense is null
                     && definition.MovementProtection == default && definition.Perception == default && definition.ControlRestrictions == default)
             { definitions = []; return false; }

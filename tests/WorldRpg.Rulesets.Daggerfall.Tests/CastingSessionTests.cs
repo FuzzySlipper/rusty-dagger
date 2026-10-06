@@ -75,11 +75,13 @@ public sealed class CastingSessionTests
     }
 
     [Fact]
-    public void Broken_and_removed_actual_item_sources_cancel_live_effect_contributions()
+    public void A_used_item_effect_outlives_its_item_breaking_and_ends_only_when_the_item_is_destroyed()
     {
         using Fixture f = new("spell.075");
         var s = f.Session;
-        var item = s.State.Inventory.Read().UniqueItems.First();
+        var equipped = s.State.Equipment.Read().Assignments.Select(value => value.Item.EntityId).ToHashSet();
+        var item = s.State.Inventory.Read().UniqueItems.First(item => !equipped.Contains(item.Entity.Value)
+            && s.State.ItemInstances.RequireUnique(s.State.Inventory.GetDurableItemId(item.Entity).Value).MaximumCondition > 0);
         ulong id = s.State.Inventory.GetDurableItemId(item.Entity).Value;
         var metadata = s.State.ItemInstances.RequireUnique(id);
         s.State.ItemInstances.ReplaceUnique(id, metadata with { CurrentCondition = 10, MaximumCondition = 10 });
@@ -87,30 +89,15 @@ public sealed class CastingSessionTests
         var result = s.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(0, result.Bundle!.Cost);
         Assert.Single(s.State.Effects.Active);
+        // The donor ties only held bundles to their item: a used item's effect survives its break
+        // and a save carrying it restores, while the broken item cannot be used again.
         s.State.ItemInstances.ReplaceUnique(id, s.State.ItemInstances.RequireUnique(id) with { CurrentCondition = 0 });
-        Assert.Empty(s.State.Effects.Active);
-        Assert.Equal(DaggerfallCastOutcome.SourceUnavailable, s.Casting.Ready(1, f.Spell.Key, id).Outcome);
-        s.State.ItemInstances.ReplaceUnique(id, s.State.ItemInstances.RequireUnique(id) with { CurrentCondition = 10 });
-        s.Casting.Ready(1, f.Spell.Key, id); s.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Single(s.State.Effects.Active);
+        Assert.Equal(DaggerfallCastOutcome.SourceUnavailable, s.Casting.Ready(1, f.Spell.Key, id).Outcome);
+        using (var restored = f.Restore(s.CaptureSave())) Assert.Single(restored.State.Effects.Active);
+        // Destroying the item ends what names it, since no effect may name an item that no longer exists.
         s.State.ItemInstances.RemoveUnique(id);
         Assert.Empty(s.State.Effects.Active);
-    }
-
-    [Fact]
-    public void Current_save_refuses_an_active_effect_whose_retained_item_identity_is_broken()
-    {
-        using Fixture f = new("spell.075");
-        var s = f.Session;
-        var item = s.State.Inventory.Read().UniqueItems.First(item =>
-            s.State.ItemInstances.RequireUnique(s.State.Inventory.GetDurableItemId(item.Entity).Value).MaximumCondition > 0);
-        ulong id = s.State.Inventory.GetDurableItemId(item.Entity).Value;
-        s.Casting.Ready(1,f.Spell.Key,id); s.ReleaseReadySpell(1,Vector3.UnitZ);
-        var saved = DaggerfallSavePayload.Read(s.CaptureSave());
-        var malformed = saved with { Inventory = saved.Inventory with { Equipment = saved.Inventory.Equipment.Where(value => value.ItemEntityId != id).ToArray(), UniqueItems = saved.Inventory.UniqueItems.Select(item =>
-            item.EntityId == id ? item with { Metadata = item.Metadata with { CurrentCondition = 0 } } : item).ToArray() } };
-        var error = Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(malformed)));
-        Assert.Contains("broken item",error.Message);
     }
 
     [Theory]

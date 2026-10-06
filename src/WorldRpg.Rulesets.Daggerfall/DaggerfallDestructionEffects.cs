@@ -44,7 +44,9 @@ internal static class DaggerfallDestructionEffects
                     if (effect.Context.Caster is { } liveCaster)
                         attacked(checked((long)liveCaster.Value), target, effect.BundleId ?? effect.Context.Instance.Value);
                 },
+                // DamageHealth/Fatigue/SpellPoints and Disintegrate are TargetFlags_Other in the donor.
                 Spell: new(type, subtype, SpellMaker: true, SupportsMagnitude: type == 4, RollChanceOnCast: type == 5,
+                    AllowedTargets: DaggerfallMagicAllowedTargets.Other,
                     AllowedElements: DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
                         | DaggerfallMagicAllowedElements.Poison | DaggerfallMagicAllowedElements.Shock | DaggerfallMagicAllowedElements.Magic));
         }

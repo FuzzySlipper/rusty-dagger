@@ -146,7 +146,7 @@ public sealed class Arena2MagicCatalogDocumentTests
         JsonArray costs = JsonNode.Parse(publication.Json)!["effectCosts"]!.AsArray();
 
         // Both spells carry one effect without a subtype, so each type resolves through its first slot.
-        Assert.Equal([2, 4, 7, 7, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 12, 13, 16, 23, 24, 26, 28, 31, 33, 33, 33, 33, 34, 39, 39, 39, 40], costs.Select(cost => cost!["type"]!.GetValue<int>()));
+        Assert.Equal([2, 4, 7, 7, 8, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 12, 13, 16, 23, 24, 26, 28, 31, 33, 33, 33, 33, 34, 39, 39, 39, 40], costs.Select(cost => cost!["type"]!.GetValue<int>()));
         JsonObject first = costs.Single(cost => cost!["type"]!.GetValue<int>() == 16)!.AsObject();
         Assert.Equal(-1, first["subType"]!.GetValue<int>());
         Assert.Equal(3, first["settingsType"]!.GetValue<int>());
@@ -175,7 +175,7 @@ public sealed class Arena2MagicCatalogDocumentTests
         HashSet<(int, int)> used = [.. document["spells"]!.AsArray().SelectMany(spell => spell!["effects"]!.AsArray())
             .Select(effect => (effect!["type"]!.GetValue<int>(), effect["subType"]!.GetValue<int>()))];
 
-        Assert.Equal(90, rows.Count);
+        Assert.Equal(91, rows.Count);
         used.Add((2, -1)); used.Add((12, -1));
         used.Add((4, 1));
         used.Add((13, 1)); used.Add((23, 1)); used.Add((24, 1));
@@ -186,6 +186,11 @@ public sealed class Arena2MagicCatalogDocumentTests
         Assert.Contains((26, -1), rows);
         used.Add((26, -1)); used.Add((28, -1));
         used.Add((7, 4)); used.Add((7, 7));
+        // Resist Magic is a crafted-only resistance. Cure Paralyzation keeps the row its raw Free Action
+        // slot priced, although the published spell carries the donor's Free Action patch instead.
+        used.Add((8, 4)); used.Add((3, 2));
+        Assert.Contains((26, -1), document["spells"]!.AsArray().Single(spell => spell!["identity"]!.GetValue<int>() == 10)!["effects"]!.AsArray()
+            .Select(effect => (effect!["type"]!.GetValue<int>(), effect["subType"]!.GetValue<int>())));
         for (int subtype = 0; subtype < 8; subtype++) Assert.Contains((7, subtype), rows);
         Assert.True(used.SetEquals(rows));
         // Paralysis: settings type 1, alteration, the donor's first coefficient row.

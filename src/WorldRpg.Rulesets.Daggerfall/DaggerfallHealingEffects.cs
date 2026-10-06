@@ -57,7 +57,9 @@ internal static class DaggerfallHealingEffects
                 effect.ExpireAfterCurrentRound = true;
                 if (Alive(effect)) vitality.RestoreSpellTrack(effect.Target, TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value),
                     effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallSpellPointHealingState)!.Amount);
-            });
+            },
+            // Restore Power sparkles on its drinker like every other potion effect.
+            Feedback: DaggerfallEffectFeedback.MagicSparkle);
     }
 
     private static bool Alive(DaggerfallActiveEffect effect)

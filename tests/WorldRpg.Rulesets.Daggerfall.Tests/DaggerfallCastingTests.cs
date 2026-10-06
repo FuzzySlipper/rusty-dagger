@@ -23,8 +23,8 @@ public sealed class DaggerfallCastingTests
         h.Known = false;
         var source = new DaggerfallActionCastSource("action/test", 41, 1, new(4, 2, 3), 7);
 
-        Assert.Equal(DaggerfallCastOutcome.Ready, h.Casting.TriggerDungeonAction(source, 0).Outcome);
-        Assert.Equal(new DaggerfallReadySpell("spell.001", null, 0, DaggerfallCastSource.DungeonAction),
+        Assert.Equal(DaggerfallCastOutcome.Ready, h.Casting.TriggerDungeonAction(source, 1).Outcome);
+        Assert.Equal(new DaggerfallReadySpell("spell", null, 0, DaggerfallCastSource.DungeonAction),
             h.Casting.ReadyFor(1));
         Assert.Equal(1000, h.Magicka(1).Current);
 
@@ -39,14 +39,14 @@ public sealed class DaggerfallCastingTests
     {
         using Harness h = new(range: 1);
         var source = new DaggerfallActionCastSource("action/test", 42, 1, new(4, 2, 3), 9);
-        var bundle = Assert.IsType<DaggerfallLiveSpell>(h.Casting.TriggerDungeonAction(source, 0).Bundle);
+        var bundle = Assert.IsType<DaggerfallLiveSpell>(h.Casting.TriggerDungeonAction(source, 1).Bundle);
         Assert.Null(bundle.CasterId);
         Assert.Equal(source, bundle.ActionSource);
         Assert.Equal(DaggerfallCastOutcome.InvalidTarget, h.Casting.Deliver(bundle, [1, 2]).Outcome);
 
         using Harness immune = new(range: 1, paralysis: true);
         immune.Target.Get<StatsComponent>().GetStat(StatId.Parse(DaggerfallMechanicsIds.ImmunityParalysis.Value)).BaseValue = 1;
-        var immuneBundle = Assert.IsType<DaggerfallLiveSpell>(immune.Casting.TriggerDungeonAction(source, 0).Bundle);
+        var immuneBundle = Assert.IsType<DaggerfallLiveSpell>(immune.Casting.TriggerDungeonAction(source, 1).Bundle);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, immune.Casting.Deliver(immuneBundle, [2]).Outcome);
         Assert.Contains(immuneBundle.Results, result => result.Outcome == DaggerfallCastOutcome.Immune);
     }
@@ -56,7 +56,7 @@ public sealed class DaggerfallCastingTests
     {
         using Harness h = new(range: 1);
         var source = new DaggerfallActionCastSource("action/test", 43, 1, new(10, 2, 10), 5);
-        var bundle = Assert.IsType<DaggerfallLiveSpell>(h.Casting.TriggerDungeonAction(source, 0).Bundle);
+        var bundle = Assert.IsType<DaggerfallLiveSpell>(h.Casting.TriggerDungeonAction(source, 1).Bundle);
         h.Casting.Rebase(new System.Numerics.Vector3(-9, 0, -7));
         Assert.Equal(new System.Numerics.Vector3(1, 2, 3), bundle.ActionSource!.Origin);
         Assert.Null(bundle.CasterId);
@@ -68,14 +68,14 @@ public sealed class DaggerfallCastingTests
     {
         using Harness ranged = new(range: 1);
         var source = new DaggerfallActionCastSource("action/ranged", 44, 1, Vector3.Zero, 5);
-        var bundle = Assert.IsType<DaggerfallLiveSpell>(ranged.Casting.TriggerDungeonAction(source, 0, new(0, 0, 10)).Bundle);
+        var bundle = Assert.IsType<DaggerfallLiveSpell>(ranged.Casting.TriggerDungeonAction(source, 1, new(0, 0, 10)).Bundle);
 
         Assert.Equal(new Vector3(0, 1, 0), bundle.ReleaseOrigin);
         Assert.Equal(Vector3.UnitZ, bundle.ReleaseDirection);
         Assert.Equal(DaggerfallSpellTarget.SingleTargetAtRange, bundle.Target);
 
         using Harness area = new(range: 3);
-        var areaBundle = Assert.IsType<DaggerfallLiveSpell>(area.Casting.TriggerDungeonAction(source, 0, new(0, 0, 10)).Bundle);
+        var areaBundle = Assert.IsType<DaggerfallLiveSpell>(area.Casting.TriggerDungeonAction(source, 1, new(0, 0, 10)).Bundle);
         Assert.Equal(DaggerfallSpellTarget.AreaAroundCaster, areaBundle.Target);
         Assert.Equal(new Vector3(0, 1, 0), areaBundle.ReleaseOrigin);
         Assert.Equal(Vector3.UnitZ, areaBundle.ReleaseDirection);
@@ -255,9 +255,12 @@ public sealed class DaggerfallCastingTests
         Assert.Equal(DaggerfallCastOutcome.TargetUnavailable, Assert.Single(bundle.Results).Outcome);
         h.TargetPresent = true;
         Assert.Equal(DaggerfallCastOutcome.Ready, h.Casting.Ready(1, "spell", 42).Outcome);
+        // A used item is checked when it readies the spell; the released bundle is the caster's and
+        // still delivers once the item is gone, as the donor's missile does.
         bundle = h.Casting.Release(1, true).Bundle!; h.ItemPresent = false;
-        Assert.Equal(DaggerfallCastOutcome.SourceUnavailable, h.Casting.Deliver(bundle, [2]).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, h.Casting.Deliver(bundle, [2]).Outcome);
         h.ItemPresent = true;
+        foreach (var effect in h.Effects.Active.ToArray()) h.Effects.Cancel(effect.Context.Instance);
         bundle = h.Release(); h.Casting.ClearTransient();
         Assert.Equal(DaggerfallCastOutcome.AlreadyDelivered, h.Casting.Deliver(bundle, [2]).Outcome);
         Assert.Null(h.Casting.ReadyFor(1));
@@ -376,7 +379,12 @@ public sealed class DaggerfallCastingTests
         using Harness h = new(range: 0);
         var result = h.Casting.Trigger(1, "spell", 101, (DaggerfallCastSource)source, 1);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, result.Outcome);
-        Assert.Equal(result, Assert.Single(h.Completed));
+        // A held item casting for the player also publishes its release, which is what plays the
+        // donor's equip cast sound; the terminal outcome is still published once.
+        if ((DaggerfallCastSource)source == DaggerfallCastSource.ItemHeld)
+            Assert.Equal([DaggerfallCastOutcome.Released, DaggerfallCastOutcome.DeliveryCompleted], h.Completed.Select(value => value.Outcome));
+        else Assert.Equal(result, Assert.Single(h.Completed));
+        Assert.Equal(result, h.Completed[^1]);
     }
 
     [Fact]

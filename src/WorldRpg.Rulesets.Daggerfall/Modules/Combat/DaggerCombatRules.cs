@@ -234,12 +234,17 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             return;
         }
         int strikeDamage = outcome.Hit ? outcome.Damage : 0;
-        if (attack is DaggerfallPreparedAttack { ItemStrikeSource: { } sourceItem })
+        // An enemy's weapon runs its Strikes payloads against the player only on a damaging blow;
+        // the player's own weapon, and one enemy striking another, run them on every swing.
+        bool strikes = !(request.AttackerId != PlayerId && target == PlayerId && strikeDamage <= 0);
+        if (strikes && attack is DaggerfallPreparedAttack { ItemStrikeSource: { } sourceItem })
             strikeDamage = _itemStrike?.Invoke(request.AttackerId, target, sourceItem, strikeDamage) ?? strikeDamage;
         if (!outcome.Hit)
         { facts.Append(new AttackMissedFact(request.AttackerId, target, outcome.Roll, outcome.Chance, enemyAttack, request.Generation, request.SimulationStep) { Feedback = feedback });
             if (transformation is not null) facts.Append(transformation);
-            if (strikeDamage > 0)
+            // The player's weapon runs its Strikes payloads on a miss; Mehrunes Razor's terminal
+            // strike has no damage condition, so its saving throw is offered even when nothing landed.
+            if (strikeDamage > 0 || request.AttackerId == PlayerId && WieldsRazor(request.AttackerId))
                 ApplyDamage(Participants(request.AttackerId, target, request.Action ?? "attack"), request.AttackerId, target,
                     strikeDamage, outcome.Body, enemyAttack, request.Generation, request.SimulationStep, feedback, facts, null, emitHitFact: false, admittedBaseDamage: 0);
             return; }

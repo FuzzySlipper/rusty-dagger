@@ -102,7 +102,8 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
         for (int element=0;element<5;element++)
         {
             var spell=original with {Element=element,RangeType=0,Effects=[Setting(subtype)]};
-            var casting=CastingFor(s,spell);
+            // Target gates apply to constructed spells; the donor reads classic records unfiltered.
+            var casting=CastingFor(s,spell with {IsCustom=true});
             double before=Track(s,1,"magicka").Current;
             Assert.Equal(DaggerfallCastOutcome.UnsupportedEffect,casting.Ready(1,spell.Key).Outcome);
             Assert.Equal(before,Track(s,1,"magicka").Current);
@@ -154,7 +155,10 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
         var item=s.State.Inventory.Read().UniqueItems.First();ulong itemId=s.State.Inventory.GetDurableItemId(item.Entity).Value;
         Start(s,"item",0,100,item:itemId);Start(s,"other",0,100,caster:target);
         Assert.Equal(2,s.State.Effects.Active.Count);
+        // An item's break leaves a non-held effect it started; destroying the item ends it.
         s.State.ItemInstances.ReplaceUnique(itemId,s.State.ItemInstances.RequireUnique(itemId) with {CurrentCondition=0});
+        Assert.Equal(2,s.State.Effects.Active.Count);
+        s.State.ItemInstances.RemoveUnique(itemId);
         Assert.Equal("other",Assert.Single(s.State.Effects.Active).Context.Instance.Value);
         s.RetireActor(target);Assert.Empty(s.State.Effects.Active);
     }

@@ -204,14 +204,33 @@ public sealed class ItemCastTriggerSessionTests
     }
 
     [Fact]
-    public void A_breaking_use_cleans_readiness_and_cannot_cast_again()
+    public void A_breaking_use_keeps_the_spell_it_readied_but_the_broken_item_cannot_cast_again()
     {
+        // The donor readies a used item's spell and then wears the item; the readied spell is the
+        // caster's from then on and survives the break.
         using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0019");
         var s = f.Session;
         s.State.ItemInstances.ReplaceUnique(f.Source, s.State.ItemInstances.RequireUnique(f.Source) with { CurrentCondition = 10 });
-        f.Update(); f.Use(); Assert.Equal(0, f.Condition); Assert.Null(s.Casting.ReadyFor(1));
+        f.Update(); f.Use(); Assert.Equal(0, f.Condition);
+        var ready = Assert.IsType<DaggerfallReadySpell>(s.Casting.ReadyFor(1));
+        Assert.Equal(f.Source, ready.ItemId);
+        using (var restored = f.Restore()) Assert.Equal(ready, restored.Casting.ReadyFor(1));
+        Assert.Equal(DaggerfallCastOutcome.Released, s.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
         long sequence = s.Casting.NextSequence; f.Use(); Assert.Equal(sequence, s.Casting.NextSequence);
         Assert.Contains("broken", f.Message);
+    }
+
+    [Fact]
+    public void A_self_use_effect_outlives_the_wear_that_breaks_its_item()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0025");
+        var s = f.Session;
+        s.State.ItemInstances.ReplaceUnique(f.Source, s.State.ItemInstances.RequireUnique(f.Source) with { CurrentCondition = 10 });
+        f.Update(); f.Use();
+        Assert.Equal(0, f.Condition);
+        Assert.Equal("shield", Assert.Single(s.State.Effects.Capture(), value => value.ItemId == f.Source).EffectKey);
+        using var restored = f.Restore();
+        Assert.Single(restored.State.Effects.Capture(), value => value.ItemId == f.Source);
     }
 
     [Theory]
@@ -257,7 +276,7 @@ public sealed class ItemCastTriggerSessionTests
     [Theory]
     [InlineData("magic-item.0035", true)]
     [InlineData("magic-item.0019", false)]
-    public void Ordinary_drop_transfers_source_and_cleans_held_or_ready_state(string key, bool held)
+    public void Ordinary_drop_transfers_source_and_ends_held_state_but_keeps_a_used_readiness(string key, bool held)
     {
         using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: key);
         var s = f.Session;
@@ -273,7 +292,9 @@ public sealed class ItemCastTriggerSessionTests
         }
         var metadata = s.State.ItemInstances.RequireUnique(f.Source);
         Assert.Equal("ground", metadata.Owner.Scope); Assert.Null(metadata.HeldCast);
-        Assert.Null(s.Casting.ReadyFor(1));
+        // A held bundle ends with its item; a used item's readied spell is already the caster's.
+        if (held) Assert.Null(s.Casting.ReadyFor(1));
+        else Assert.Equal(f.Source, Assert.IsType<DaggerfallReadySpell>(s.Casting.ReadyFor(1)).ItemId);
         Assert.DoesNotContain(s.State.Effects.Capture(), value => value.ItemId == f.Source);
         using var restored = f.Restore();
         Assert.Equal(metadata, restored.State.ItemInstances.RequireUnique(f.Source));

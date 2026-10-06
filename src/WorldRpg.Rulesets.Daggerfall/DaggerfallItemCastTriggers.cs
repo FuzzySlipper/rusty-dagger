@@ -126,14 +126,15 @@ internal sealed partial class DaggerfallItemCastTriggers(DaggerfallMagicCatalogS
         if (sourceDamage < 0 || !OwnsItem(casterId, id) || (instances.RequireUnique(id).Enchantment != source.Enchantment || instances.RequireUnique(id).MadeEnchantment != source.MadeEnchantment) || !Available(id) || Equipped(casterId, id) is not { } item) return sourceDamage;
         var payloads = Enchantments(instances.RequireUnique(id));
         int adjusted = sourceDamage;
+        // The donor runs every Strikes payload of the blow even when an earlier one wears the item
+        // out; only its later magic rounds and rerolls stop with the break.
         foreach (var payload in payloads)
         {
-            if (!Available(id)) break;
             switch (payload.Type)
             {
                 case StrikeType when sourceDamage > 0:
                     var result = Trigger(casterId, id, payload, DaggerfallCastSource.ItemStrike, targetId);
-                    if (result.Bundle is not null) Wear(casterId, item, ActivationWear);
+                    if (result.Bundle is not null && Available(id)) Wear(casterId, item, ActivationWear);
                     break;
                 case DaggerfallEnchantmentSettings.HealthLeechType:
                     ApplyLeechUse(casterId, id, [payload], strike: true);

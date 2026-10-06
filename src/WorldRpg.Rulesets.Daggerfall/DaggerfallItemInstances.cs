@@ -159,7 +159,8 @@ internal sealed class DaggerfallItemInstances
         else RegisterStack(destination, id, metadata with { Owner = destination });
         StackChanged?.Invoke(new(source, id, destination, id));
     }
-    internal event Action<ulong>? SourceUnavailable;
+    /// <summary>A unique item stopped being usable where it was: it broke, changed owner or was destroyed.</summary>
+    internal event Action<ulong, DaggerfallItemSourceChange>? SourceUnavailable;
     internal IEnumerable<KeyValuePair<ulong, DaggerfallItemInstanceMetadata>> UniqueItems => _unique;
     internal IEnumerable<(DaggerfallItemOwner Owner, InventoryStackId Stack, DaggerfallItemInstanceMetadata Metadata)> StackItems =>
         _stacks.Select(value => (value.Key.Owner, InventoryStackId.Parse(value.Key.Stack), value.Value));
@@ -290,7 +291,7 @@ internal sealed class DaggerfallItemInstances
         _unique[itemId] = metadata.Validate();
         _revision++;
         if (previous.CurrentCondition > 0 && metadata.MaximumCondition > 0 && metadata.CurrentCondition == 0)
-            SourceUnavailable?.Invoke(itemId);
+            SourceUnavailable?.Invoke(itemId, DaggerfallItemSourceChange.Broken);
     }
 
     /// <summary>Rejoins retained meaning before applying the canonical source-owner change.</summary>
@@ -305,7 +306,7 @@ internal sealed class DaggerfallItemInstances
         var previous = RequireUnique(itemId);
         _unique[itemId] = MetadataFor(owner, previous) with { HeldCast = previous.Owner == owner ? previous.HeldCast : null };
         _revision++;
-        if (previous.Owner != owner) SourceUnavailable?.Invoke(itemId);
+        if (previous.Owner != owner) SourceUnavailable?.Invoke(itemId, DaggerfallItemSourceChange.Moved);
     }
 
     /// <summary>Retires all stack meaning whose Engine owner has been removed.</summary>
@@ -331,9 +332,12 @@ internal sealed class DaggerfallItemInstances
 
     internal void RemoveUnique(ulong itemId)
     {
-        if (_unique.Remove(itemId)) { _revision++; SourceUnavailable?.Invoke(itemId); }
+        if (_unique.Remove(itemId)) { _revision++; SourceUnavailable?.Invoke(itemId, DaggerfallItemSourceChange.Removed); }
     }
 
     private static DaggerfallItemInstanceMetadata MetadataFor(DaggerfallItemOwner owner, DaggerfallItemInstanceMetadata metadata) =>
         metadata with { Owner = owner.Validate() };
 }
+
+/// <summary>Why a unique item stopped being available as an effect source.</summary>
+internal enum DaggerfallItemSourceChange { Broken, Moved, Removed }
