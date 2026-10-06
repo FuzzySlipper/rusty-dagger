@@ -676,15 +676,8 @@ internal sealed class DaggerfallMerchantService
         return candidate;
     }
 
-    private void SyncTransfer(InventoryContainerTransferReceipt transfer, DaggerfallItemOwner sourceOwner, DaggerfallItemOwner destinationOwner)
-    {
-        InventoryView sourceAfter = _containers.Read(transfer.SourceBefore.Owner);
-        foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
-            _instances.TransferStack(sourceOwner, destinationOwner, stack.SourceStack, stack.DestinationStack,
-                !sourceAfter.Stacks.Any(value => value.Id == stack.SourceStack));
-        foreach (InventoryContainerUniqueTransfer item in transfer.UniqueItems)
-            _instances.MoveUnique(_containers.GetDurableItemId(new EntityId(item.EntityId)).Value, destinationOwner);
-    }
+    private void SyncTransfer(InventoryContainerTransferReceipt transfer, DaggerfallItemOwner sourceOwner, DaggerfallItemOwner destinationOwner) =>
+        _instances.ApplyTransfer(transfer, _containers.Read(transfer.SourceBefore.Owner), _containers.Entities, sourceOwner, destinationOwner);
 
     private void MarkStolen(InventoryContainerSelection selection, ulong quantity)
     {

@@ -1,3 +1,5 @@
+using Rusty.Engine.Entities;
+using WorldRpg.Kit.World;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -299,6 +301,29 @@ internal sealed class DaggerfallItemInstances
     {
         RegisterUnique(itemId, metadata);
         MoveUnique(itemId, destination);
+    }
+
+    /// <summary>
+    /// Records what a completed Engine container transfer means for item meaning: each moved stack's
+    /// metadata follows it (a source stack the transfer emptied is retired) and each moved unique item
+    /// takes the destination owner. Every container transfer between durable owners comes through here.
+    /// </summary>
+    internal void ApplyTransfer(InventoryContainerTransferReceipt transfer, InventoryView sourceAfter, EntityDirectory entities,
+        DaggerfallItemOwner source, DaggerfallItemOwner destination)
+    {
+        ArgumentNullException.ThrowIfNull(transfer);
+        ArgumentNullException.ThrowIfNull(sourceAfter);
+        ArgumentNullException.ThrowIfNull(entities);
+        foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
+            TransferStack(source, destination, stack.SourceStack, stack.DestinationStack,
+                !sourceAfter.Stacks.Any(value => value.Id == stack.SourceStack));
+        foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
+        {
+            DurableIdentityReference identity = entities.IdentityOf(new EntityId(unique.EntityId));
+            if (identity.Kind != DurableIdentityKind.Item)
+                throw new InvalidOperationException($"Transferred entity {unique.EntityId} is not a durable item.");
+            MoveUnique(identity.Value, destination);
+        }
     }
 
     internal void MoveUnique(ulong itemId, DaggerfallItemOwner owner)

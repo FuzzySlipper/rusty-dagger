@@ -170,7 +170,21 @@
     "chaseSpeedUnitsPerSecond": 3.0,
     "navigationMaximumVisited": 1024,
     "spawnGroundProbeLift": 0.2,
-    "spawnGroundProbeDistance": 3.0
+    "spawnGroundProbeDistance": 3.0,
+    "maneuvers": {
+      "retreatDistance": 2.5,
+      "strafeDistance": 1.5,
+      "strafeWindowMultiplier": 4.0,
+      "strafePhaseSteps": 15,
+      "strafeChancePeriod": 4
+    }
+  },
+  "civilianWander": {
+    "movementSpeedUnitsPerSecond": 1.3,
+    "waypointDistance": 2.5,
+    "idleDurationSeconds": 2.5,
+    "navigationMaximumVisited": 64,
+    "recycleDistanceMeters": 150.0
   },
   "lootInteraction": {
     "maximumDistance": 2.25,

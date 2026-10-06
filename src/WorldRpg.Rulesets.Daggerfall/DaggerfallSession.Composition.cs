@@ -347,6 +347,7 @@ internal sealed partial class DaggerfallSession
                     id,
                     authored,
                     definitions,
+                    tuning.EnemyBehavior.Maneuvers,
                     effects.GrantsWaterWalking(id),
                     effects.GrantsLevitation(id)),
                 canOpenDoors: id => DaggerfallEnemyBehaviorModule.CanOpenDoors(id, authored, definitions),

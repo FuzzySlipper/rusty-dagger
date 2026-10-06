@@ -607,6 +607,9 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     }
 
     /// <summary>Called exactly once from the outer Product.Update, never from a private catch-up step.</summary>
+    /// <summary>The marker a weapon swing's playback carries at its hit frame.</summary>
+    private const ulong WeaponHitMarkerId = 1;
+
     internal void Advance(ProductUpdateFacts update)
     {
         if (disposed) return;
@@ -667,15 +670,17 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         if (viewmodel is { } weapon && weapon.Playback is { } weaponPlayback && weapon.LastOuterUpdate != identity)
         {
             SpritePlaybackAdvanceResult receipt = appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(weaponPlayback));
-            // The classic swing's damage lands on its hit frame. One decided swing owns one beat, so
-            // the first frame at or past it reports and later frames of the same swing do not.
-            if (weapon.Strike && weapon.PendingAttackVoice is { } voice && receipt.Readout.FrameIndex >= weapon.HitFrame)
+            // The classic swing's damage lands on its hit frame. One decided swing owns one beat: the
+            // Engine reports the hit marker's crossing once, and later frames of the same swing do not.
+            foreach (SpritePlaybackMarkerCrossing crossing in receipt.Crossings.Span)
+                if (crossing.MarkerId == WeaponHitMarkerId) weapon.HitCrossed = true;
+            if (weapon.Strike && weapon.PendingAttackVoice is { } voice && weapon.HitCrossed)
             {
                 weapon.PendingAttackVoice = null;
                 EmitPlayerVampireVoice(voice);
             }
             if (weapon.Strike && weapon.PendingImpact is { } pending && !weapon.ImpactReported
-                && receipt.Readout.FrameIndex >= weapon.HitFrame)
+                && weapon.HitCrossed)
             {
                 weapon.ImpactReported = true;
                 attackImpacts.Add(new AttackImpactNotice(pending.Attacker, pending.Target, pending.Generation, pending.SimulationStep, Expired: false));
@@ -1158,13 +1163,18 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             double framesPerSecond = frameSeconds > 0d ? 1d / frameSeconds : action.FramesPerSecond;
             SpritePlaybackFrame[] frames = SpriteAtlasAdapter.ToPlaybackFrames((action.Sequence ?? Enumerable.Range(action.FrameStart, action.FrameCount).ToArray())
                 .Select(index => weapon.Frames.Single(frame => frame.Id == index).Id).ToArray(), checked((float)framesPerSecond));
-            staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(viewmodel.Appearance, viewmodel.Atlas, frames, Array.Empty<SpritePlaybackMarker>(), action.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
+            // A swing's hit frame is an Engine playback marker, so its one crossing is reported even
+            // when an update skips past the frame.
+            SpritePlaybackMarker[] markers = name != "idle" && viewmodel.HitFrame >= 0 && viewmodel.HitFrame < frames.Length
+                ? [new SpritePlaybackMarker(WeaponHitMarkerId, checked((uint)viewmodel.HitFrame))] : [];
+            staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(viewmodel.Appearance, viewmodel.Atlas, frames, markers, action.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(staged, SpritePlaybackControl.Start));
             SpritePlayback? old = viewmodel.Playback;
             viewmodel.Playback = staged;
             // Imported cells retain classic placement; Engine fits the complete
             // canvas to the viewport and advances the selected sequence.
             viewmodel.Strike = name != "idle";
+            viewmodel.HitCrossed = false;
             viewmodel.CompletedOuterUpdate = false;
             viewmodel.LastOuterUpdate = null;
             if (old is not null) Retire(old);
@@ -1491,6 +1501,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         internal PresentationEventIdentity? PendingAttackVoice { get; set; }
         /// <summary>The frame of this swing's own animation that releases its impact.</summary>
         internal int HitFrame { get; set; } = DaggerfallFormulaPolicy.MeleeWeaponHitFrame;
+        /// <summary>Whether the Engine has reported this swing's hit-frame marker crossing.</summary>
+        internal bool HitCrossed { get; set; }
         internal bool ImpactReported { get; set; }
         internal bool CompletedOuterUpdate { get; set; }
         internal AppearanceOuterUpdate? LastOuterUpdate { get; set; }

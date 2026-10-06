@@ -414,14 +414,7 @@ internal sealed class DaggerfallServiceTransactions
     {
         MechanicsInventoryContainerCoordinator containers = _containers
             ?? throw new InvalidOperationException("The composed service transaction owner has no inventory container coordinator.");
-        InventoryView sourceAfter = containers.Read(source);
-        foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
-        {
-            bool exhausted = !sourceAfter.Stacks.Any(value => value.Id == stack.SourceStack);
-            _instances.TransferStack(sourceOwner, destinationOwner, stack.SourceStack, stack.DestinationStack, exhausted);
-        }
-        foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
-            _instances.MoveUnique(containers.Entities.IdentityOf(new EntityId(unique.EntityId)).Value, destinationOwner);
+        _instances.ApplyTransfer(transfer, containers.Read(source), containers.Entities, sourceOwner, destinationOwner);
     }
 
     private void RegisterGrant(DaggerfallServiceGrant grant)

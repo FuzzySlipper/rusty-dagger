@@ -21,22 +21,48 @@ public enum PursuitState
 }
 
 /// <summary>Ruleset policy for an actor's movement medium and close-range maneuvers.</summary>
+/// <remarks>
+/// The Kit owns no maneuver numbers: a ruleset that enables retreat or strafe supplies its distances and
+/// its strafe cadence. Strafing is offered within <c>reach + StrafeDistance * StrafeWindowMultiplier</c>,
+/// and chosen on one phase in <see cref="StrafeChancePeriod"/>, each phase lasting
+/// <see cref="StrafePhaseSteps"/> simulation steps, so the choice needs no second random source.
+/// </remarks>
 public readonly record struct PursuitPolicy(
     ActorNavigationMode NavigationMode = ActorNavigationMode.Ground,
     bool CanRetreat = false,
     bool CanStrafe = false,
-    float RetreatDistance = 2.5f,
-    float StrafeDistance = 1.5f,
+    float RetreatDistance = 0f,
+    float StrafeDistance = 0f,
     bool EmitTargetLost = false)
 {
+    /// <summary>How many strafe distances beyond reach the strafe window extends.</summary>
+    public float StrafeWindowMultiplier { get; init; }
+
+    /// <summary>How many simulation steps one strafe decision phase lasts.</summary>
+    public ulong StrafePhaseSteps { get; init; }
+
+    /// <summary>One phase in this many chooses to strafe.</summary>
+    public ulong StrafeChancePeriod { get; init; }
+
+    /// <summary>Consecutive failed navigation probes that make pursuit explicitly blocked; the first is a transient observation.</summary>
+    public uint BlockedFailures { get; init; } = 2;
+
     public PursuitPolicy Validate()
     {
         if (!Enum.IsDefined(NavigationMode)) throw new ArgumentOutOfRangeException(nameof(NavigationMode));
-        if (!float.IsFinite(RetreatDistance) || RetreatDistance <= 0f) throw new ArgumentOutOfRangeException(nameof(RetreatDistance));
-        if (!float.IsFinite(StrafeDistance) || StrafeDistance <= 0f) throw new ArgumentOutOfRangeException(nameof(StrafeDistance));
+        if (CanRetreat && (!float.IsFinite(RetreatDistance) || RetreatDistance <= 0f)) throw new ArgumentOutOfRangeException(nameof(RetreatDistance));
+        if (CanStrafe)
+        {
+            if (!float.IsFinite(StrafeDistance) || StrafeDistance <= 0f) throw new ArgumentOutOfRangeException(nameof(StrafeDistance));
+            if (!float.IsFinite(StrafeWindowMultiplier) || StrafeWindowMultiplier <= 0f) throw new ArgumentOutOfRangeException(nameof(StrafeWindowMultiplier));
+            if (StrafePhaseSteps == 0) throw new ArgumentOutOfRangeException(nameof(StrafePhaseSteps));
+            if (StrafeChancePeriod == 0) throw new ArgumentOutOfRangeException(nameof(StrafeChancePeriod));
+        }
+        if (BlockedFailures == 0) throw new ArgumentOutOfRangeException(nameof(BlockedFailures));
         return this;
     }
 }
+
 
 /// <summary>Entity-local memory for one actor's current pursuit decision.</summary>
 public sealed class PursuitMemoryComponent
@@ -230,7 +256,7 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
                 {
                     memory.RecordNavigationSuccess();
                 }
-                else if (memory.RecordNavigationFailure() >= 2)
+                else if (memory.RecordNavigationFailure() >= policy.BlockedFailures)
                 {
                     // The first failed probe is a normal transient collision/door observation.  A
                     // repeated failure becomes an explicit blocked state while retaining Engine's
@@ -256,10 +282,10 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
     {
         if (policy.CanRetreat && distance <= reach + policy.RetreatDistance)
             return PursuitState.Retreat;
-        if (policy.CanStrafe && distance <= reach + (policy.StrafeDistance * 4f)
+        if (policy.CanStrafe && distance <= reach + (policy.StrafeDistance * policy.StrafeWindowMultiplier)
             // A deterministic phase gives the actor a real strafe choice without creating a second
             // random source or making movement depend on frame ordering.
-            && ((simulationStep + checked((ulong)Math.Abs(actorId))) / 15UL) % 4UL == 0UL)
+            && ((simulationStep + checked((ulong)Math.Abs(actorId))) / policy.StrafePhaseSteps) % policy.StrafeChancePeriod == 0UL)
             return PursuitState.Strafe;
         return PursuitState.Chase;
     }

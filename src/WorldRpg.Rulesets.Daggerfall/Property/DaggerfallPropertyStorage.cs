@@ -263,33 +263,13 @@ internal sealed class DaggerfallPropertyStorage
         return selection with { DestinationStack = target };
     }
 
-    private void SyncToProperty(InventoryContainerTransferReceipt transfer, DaggerfallPropertyStorageKey key)
-    {
-        long id = RequirePropertyContainerId(Ensure(key));
-        DaggerfallItemOwner propertyOwner = DaggerfallItemOwnerFor(id);
-        InventoryView playerAfter = _containers.Read(_player);
-        foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
-        {
-            bool exhausted = !playerAfter.Stacks.Any(value => value.Id == stack.SourceStack);
-            _instances.TransferStack(DaggerfallItemOwner.Player, propertyOwner, stack.SourceStack, stack.DestinationStack, exhausted);
-        }
-        foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
-            _instances.MoveUnique(DurableItemId(unique.EntityId), propertyOwner);
-    }
+    private void SyncToProperty(InventoryContainerTransferReceipt transfer, DaggerfallPropertyStorageKey key) =>
+        _instances.ApplyTransfer(transfer, _containers.Read(_player), _containers.Entities, DaggerfallItemOwner.Player,
+            DaggerfallItemOwnerFor(RequirePropertyContainerId(Ensure(key))));
 
-    private void SyncFromProperty(InventoryContainerTransferReceipt transfer, DaggerfallPropertyStorageKey key)
-    {
-        long id = RequirePropertyContainerId(Ensure(key));
-        DaggerfallItemOwner propertyOwner = DaggerfallItemOwnerFor(id);
-        InventoryView propertyAfter = _containers.Read(Ensure(key));
-        foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
-        {
-            bool exhausted = !propertyAfter.Stacks.Any(value => value.Id == stack.SourceStack);
-            _instances.TransferStack(propertyOwner, DaggerfallItemOwner.Player, stack.SourceStack, stack.DestinationStack, exhausted);
-        }
-        foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
-            _instances.MoveUnique(DurableItemId(unique.EntityId), DaggerfallItemOwner.Player);
-    }
+    private void SyncFromProperty(InventoryContainerTransferReceipt transfer, DaggerfallPropertyStorageKey key) =>
+        _instances.ApplyTransfer(transfer, _containers.Read(Ensure(key)), _containers.Entities,
+            DaggerfallItemOwnerFor(RequirePropertyContainerId(Ensure(key))), DaggerfallItemOwner.Player);
 
     private void EnsureUniqueMetadata(InventoryContainerSelection selection, DaggerfallItemOwner expectedOwner)
     {

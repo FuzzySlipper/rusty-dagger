@@ -43,7 +43,7 @@ public sealed class PlayerViewmodelTests
         void Frame(ulong step, uint frame)
         {
             appearance.AdvanceReceipts.Enqueue(default); // The existing actor playback advances first.
-            appearance.AdvanceReceipts.Enqueue(Reading(0, frame));
+            appearance.AdvanceReceipts.Enqueue(frame == DaggerfallFormulaPolicy.MeleeWeaponHitFrame ? WeaponHitReading(0, frame) : Reading(0, frame));
             presentation.Advance(OuterUpdate(step));
         }
     }
@@ -107,7 +107,7 @@ public sealed class PlayerViewmodelTests
         Assert.Empty(presentation.TakeAttackImpacts());
 
         // The hit frame delivers the admitted swing exactly once.
-        appearance.AdvanceReceiptForAll = Reading(DaggerfallFormulaPolicy.MeleeWeaponHitFrame, (uint)DaggerfallFormulaPolicy.MeleeWeaponHitFrame);
+        appearance.AdvanceReceiptForAll = WeaponHitReading(DaggerfallFormulaPolicy.MeleeWeaponHitFrame, (uint)DaggerfallFormulaPolicy.MeleeWeaponHitFrame);
         presentation.Advance(OuterUpdate(2));
         AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
         Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, impact.AttackerId);
@@ -164,7 +164,7 @@ public sealed class PlayerViewmodelTests
         presentation.Advance(OuterUpdate(1));
         Assert.Empty(presentation.TakeAttackImpacts());
 
-        appearance.AdvanceReceiptForAll = Reading(2, 2);
+        appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);
         presentation.Advance(OuterUpdate(2));
 
         AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());

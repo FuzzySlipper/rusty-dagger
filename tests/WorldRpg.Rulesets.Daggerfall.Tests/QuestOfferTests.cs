@@ -72,11 +72,11 @@ public sealed class QuestOfferTests
     [Fact]
     public void Ordinary_work_dialogue_prepares_an_offer_and_refusal_admits_no_quest()
     {
-        using var f = new SanguineRoseSessionTests.Fixture(random: SummonRandom.Create(), prepareComposition: c => c with {
+        using var f = new SanguineRoseSessionTests.Fixture(random: FirstWorkOffer(), prepareComposition: c => c with {
             Blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) });
         long giver = Provider(f.Session, 510);
         string text = f.Session.OfferQuestWork(giver);
-        Assert.NotNull(f.Session.State.Quests.PendingOffer);
+        Assert.Equal("K0C00Y02.txt", f.Session.State.Quests.PendingOffer!.Quest.SourceFile);
         Assert.Equal(text, f.Session.State.Quests.ReadOffer()!.Text);
         string id = f.Session.State.Quests.PendingOffer!.Quest.InstanceId;
         f.Session.AnswerQuestOffer(id, false);
@@ -99,7 +99,7 @@ public sealed class QuestOfferTests
     [Fact]
     public void Offer_expires_when_its_provider_is_unavailable()
     {
-        using var f = new SanguineRoseSessionTests.Fixture(random: SummonRandom.Create(), prepareComposition: c => c with {
+        using var f = new SanguineRoseSessionTests.Fixture(random: FirstWorkOffer(), prepareComposition: c => c with {
             Blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) });
         long giver = Provider(f.Session, 510);
         f.Session.OfferQuestWork(giver);
@@ -168,6 +168,17 @@ public sealed class QuestOfferTests
         using var restored = f.Restore(session.CaptureSave());
         restored.AdvanceElapsedTime(60);
         Assert.Single(restored.State.Quests.All, quest => quest.SourceFile == source + ".txt");
+    }
+
+    /// <summary>
+    /// Selects the first quest of the provider's ordinary pool (K0C00Y02), which this fixture's site can
+    /// place; the pool's other quest needs a local home the fixture's town does not carry.
+    /// </summary>
+    private static Rusty.Engine.IRandomService FirstWorkOffer()
+    {
+        var (random, fake) = WorkOfferRandom.Create();
+        fake.WorkOffer = _ => 0;
+        return random;
     }
 
     private static long Provider(DaggerfallSession session, int faction)
