@@ -636,6 +636,10 @@ internal sealed record DaggerfallSavePayload(
                 || !uniqueItems.TryGetValue(identifySource, out var identifyMetadata)
                 || (identifyMetadata.MaximumCondition > 0 && identifyMetadata.CurrentCondition == 0)))
             throw new ArgumentException("Pending identify requires an available item source in the player inventory.");
+        // A used item's readied spell is the caster's and may outlive its source breaking or changing
+        // hands, but the source it names must still be a saved item somewhere.
+        if (ReadySpell?.ItemId is ulong readySource && !uniqueItems.ContainsKey(readySource))
+            throw new ArgumentException($"Saved ready spell '{ReadySpell.SpellKey}' names missing item {readySource}.");
         RequireLiveUniqueItems(savedLedger, uniqueItems.Keys);
         Encounters.Validate();
         HashSet<string> admittedEncounterProfiles = profiles is null
