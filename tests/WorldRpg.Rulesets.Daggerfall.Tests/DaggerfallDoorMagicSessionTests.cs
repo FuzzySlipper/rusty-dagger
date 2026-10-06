@@ -136,7 +136,7 @@ public sealed class DaggerfallDoorMagicSessionTests
         // A used item's ready effect outlives the item breaking, as in the donor; destroying it ends it.
         s.State.ItemInstances.ReplaceUnique(item, s.State.ItemInstances.RequireUnique(item) with { CurrentCondition = 0 });
         Assert.Single(s.State.Effects.Active);
-        s.State.ItemInstances.RemoveUnique(item);
+        s.DestroyUniqueItem(item);
         Assert.Empty(s.State.Effects.Active);
         f.Interact(s, f.Door.Id); Assert.Equal(0, s.Doors.Read(f.Door.Id).LockValue); Assert.Equal(DaggerfallDoorMotion.Opening, s.Doors.Read(f.Door.Id).Motion);
     }

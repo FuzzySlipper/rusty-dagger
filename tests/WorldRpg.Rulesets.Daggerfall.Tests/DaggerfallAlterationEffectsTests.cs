@@ -141,7 +141,7 @@ public sealed class DaggerfallAlterationEffectsTests
         // A used item's shield outlives the item breaking, as in the donor; destroying the item ends it.
         s.State.ItemInstances.ReplaceUnique(source, s.State.ItemInstances.RequireUnique(source) with { CurrentCondition = 0 });
         Assert.Single(s.State.Effects.Active);
-        s.State.ItemInstances.RemoveUnique(source);
+        s.DestroyUniqueItem(source);
         Assert.Empty(s.State.Effects.Active); Assert.Empty(s.State.Actors.Player.Actor.Get<CombatContributions>().Rules);
     }
 
