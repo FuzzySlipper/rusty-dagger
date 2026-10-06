@@ -43,6 +43,41 @@ public sealed class ItemCastTriggerSessionTests
     }
 
     [Fact]
+    public void A_non_player_wearer_pays_held_cast_wear_at_the_players_spell_cost()
+    {
+        // The donor prices held-cast wear with the player's school skills whoever wears the item
+        // (FormulaHelper.CalculateCastingCost reads PlayerEntity.Skills).
+        using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0035");
+        var s = f.Session;
+        string[] schools = ["destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism"];
+        foreach (string school in schools) s.State.Actors.Player.Stats.GetStat(StatId.Parse(school)).BaseValue = 100;
+        var wearerStats = s.State.Actors.Get(f.Enemy).Stats;
+        foreach (string school in schools)
+            if (wearerStats.TryGetStat(StatId.Parse(school), out var stat)) stat!.BaseValue = 0;
+        Assert.True(TestPayload.Definitions.Magic.TryEnchantments(s.State.ItemInstances.RequireUnique(f.Source), out var payloads));
+        string spell = payloads.First(value => value.Type == 1).SpellKey!;
+        int playerCost = Assert.IsType<int>(s.Casting.AvailableSpellCost(DaggerfallActorIdentity.PlayerEntityId, spell));
+        int wearerCost = Assert.IsType<int>(s.Casting.AvailableSpellCost(f.Enemy, spell));
+        Assert.NotEqual(playerCost, wearerCost);
+
+        var wearer = s.State.Actors.Get(f.Enemy).Actor.Entity;
+        s.State.Containers.Transfer(s.State.Actors.Player.Actor.Entity, wearer, new(f.Item.Definition, 1, UniqueEntityId: f.Item.EntityId));
+        s.State.ItemInstances.MoveUnique(f.Source, DaggerfallItemOwner.Actor(f.Enemy));
+        var definition = TestPayload.Definitions.RequireItem(new DaggerfallItemId(f.Item.Definition.Value));
+        var slot = TestPayload.Definitions.EquipmentSlots.Values.First(value => value.AllowedClassifications.Intersect(definition.Equipment!.Classifications).Any());
+        var wearerEquipment = s.State.ActorInventories.EquipmentFor(f.Enemy);
+        foreach (var occupant in wearerEquipment.Read().Assignments.Where(value => value.Slot.Value == slot.Id.Value).Select(value => value.Item).ToArray())
+            wearerEquipment.Unequip(occupant);
+        wearerEquipment.Equip(f.Item, [new SlotId(slot.Id.Value)]);
+        int before = f.Condition;
+
+        f.Update();
+
+        Assert.NotNull(s.State.ItemInstances.RequireUnique(f.Source).HeldCast);
+        Assert.Equal(before - Math.Max(1, playerCost), f.Condition);
+    }
+
+    [Fact]
     public void Rest_schedules_rerolls_until_completion_then_rerolls_once_at_the_final_calendar()
     {
         using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0035");
