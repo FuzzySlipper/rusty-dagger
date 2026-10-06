@@ -141,6 +141,8 @@ internal sealed partial class DaggerfallSession
         {
             State.SkillUses.RaiseSkills(ended); State.LevelUps.BeginIfEligible();
         }
+        // Like rest, a journey is one synthetic time increase: held items reroll once, on arrival.
+        if (ended > started) _itemCastTriggers.CompleteTimeIncrease();
         return result;
     }
 
@@ -170,7 +172,7 @@ internal sealed partial class DaggerfallSession
             if (_activeProfileKey != origin) return DaggerfallTravelOutcome.Relocated;
             long now = _time.Calendar.ToAbsoluteSeconds();
             long slice = Math.Min(requestedSeconds - (now - started), DaggerfallCalendar.SecondsPerMinute - now % DaggerfallCalendar.SecondsPerMinute);
-            DaggerfallCalendarAdvance advance = AdvanceElapsedTime(slice, deferSkillAdvancement: true);
+            DaggerfallCalendarAdvance advance = AdvanceElapsedTime(slice, deferSkillAdvancement: true, completeTimeIncrease: false);
             if (State.Actors.Player.IsDefeated) return DaggerfallTravelOutcome.Defeated;
             if (_activeProfileKey != origin) return DaggerfallTravelOutcome.Relocated;
             if (advance.AppliedSeconds != slice) return DaggerfallTravelOutcome.Stopped;

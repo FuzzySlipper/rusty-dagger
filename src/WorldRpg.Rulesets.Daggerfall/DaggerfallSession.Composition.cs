@@ -290,7 +290,9 @@ internal sealed partial class DaggerfallSession
             assembled.Quests.BindLycanthropyCure(() => CureLycanthropy(fromQuest: true));
             assembled.Quests.BindVampirismCure(() => CureVampirism(fromQuest: true));
             assembled.Quests.BindRuntime(new DaggerfallQuestRuntime(progression, playerStats, definitions,
-                assembled.QuestTraining, tuning.Locomotion, _random, () => _time.Calendar, AdvanceQuestTime));
+                assembled.QuestTraining, tuning.Locomotion, _random, () => _time.Calendar,
+                // Training spends its own source fatigue cost, so its minutes charge no idle loss.
+                seconds => AdvanceQuestTime(seconds, idleFatigue: false)));
             assembled.Quests.BindTravelMinutes(site => _travelPolicy.CautiousQuestLegMinutes(QuestTravelOrigin(), site));
             character.BindCareerCommitted(skillUses.RebaseForCareerSelection);
             DaggerfallLevelUpState levelUps = new(progression, skillUses, playerStats,
@@ -393,7 +395,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallKnightlyOrderClaimRuntime knightlyClaimActions = new(concreteGuildServices, knightlyClaims, _random);
             DaggerfallSkillTrainingService skillTraining = new(services, npcs, social,
                 progression, skillUses, assembled.QuestTraining, playerStats,
-                tuning.Locomotion, () => _time.Calendar, seconds => { _ = AdvanceElapsedTime(seconds); });
+                tuning.Locomotion, () => _time.Calendar, seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); });
             DaggerfallRegionalPriceState regionalPrices = new(definitions.Factions, _random,
                 _time.Calendar.DayNumber, saved?.RegionalPrices);
             regionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
@@ -579,6 +581,8 @@ internal sealed partial class DaggerfallSession
             Summoning = new(definitions, State, _random, composition.DisabledQuestSelection ?? DaggerfallDisabledQuestSelection.None,
                 () => _time.Calendar, () => (IsRaining, IsStorming), () => _activeProfileKey, PrepareSummoningQuest, saved?.Summoning);
             _persistence.Summoning = Summoning.Capture;
+            _poisonDraws = saved?.PoisonDraws ?? 0;
+            _persistence.PoisonDraws = () => _poisonDraws;
             _persistence.ReadySpell=()=>Casting.ReadyFor(actors.Player.DurableId);
             _persistence.PendingCreateItem = () => _pendingCreateItem;
             _persistence.PendingDispel = () => _pendingDispel;
@@ -600,7 +604,6 @@ internal sealed partial class DaggerfallSession
             _vitality.SpellTrackRestored += (target, track, requested, restored) =>
                 _facts.Append(new SpellTrackRestoredFact(checked((long)actors.Entities.IdentityOf(target.Entity).Value),
                     track.Value, requested, restored));
-            ReconcileNpcProjection();
             InitializeActivation(engine, tuning.LootInteraction);
             _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator, State.LevelUps, State.Social, State.SkillUses);
             _characterUi.UseGuildMembership(State.GuildMembership, () => checked((int)_time.Calendar.DayNumber));
@@ -627,8 +630,9 @@ internal sealed partial class DaggerfallSession
             ExpireConjuredItems();
             _roster.MaterializeStaticNpcs(inputs);
             _sites.AdmitInitialResidency(saved?.ExteriorResidency, saved?.ExteriorLocationResidency);
-            // Registry positions are profile coordinates; restore the projection after the
-            // saved origin has been admitted so dialogue and the first snapshot share its frame.
+            // Registry positions are profile coordinates; project NPCs and the civilian population
+            // only once the save is restored and the saved origin admitted, so dialogue and the
+            // first snapshot share its frame and no restored presence is decided from the start pose.
             ReconcileNpcProjection();
             _itemCastTriggers.Refresh();
         }

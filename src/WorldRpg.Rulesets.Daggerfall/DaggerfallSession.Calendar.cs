@@ -50,15 +50,19 @@ internal sealed partial class DaggerfallSession
 
     /// <summary>
     /// Delivers one calendar interval, already applied to the clock, to its consumers in their one
-    /// order. Each consumer reads the live calendar rather than a captured end point: a quest clock
-    /// can run a training interval of its own, and the consumers after it observe that time too.
+    /// order. A quest step inside the fan-out (or inside ordinary play's simulation steps) can admit
+    /// an interval of its own, such as training or a cure; that nested interval runs this fan-out
+    /// itself and so reaches every consumer once. Consumers that count minutes or rounds therefore
+    /// take this interval's own end point, captured before any nested interval, while consumers
+    /// that compare against an absolute date read the live calendar and are idempotent.
     /// </summary>
     /// <param name="before">The calendar before the interval was applied.</param>
     /// <param name="kind">What admitted the interval; see <see cref="DaggerfallCalendarAdvanceKind"/>.</param>
     /// <param name="encounter">An elapsed interval's encounter request, selected after effects advance.</param>
     /// <param name="simulate">Ordinary play's admitted simulation steps, which run between the fan-out and locomotion.</param>
     private void AdvanceCalendar(DaggerfallCalendar before, DaggerfallCalendarAdvanceKind kind,
-        DaggerfallEncounterRequest? encounter = null, Action? simulate = null, bool resting = false)
+        DaggerfallEncounterRequest? encounter = null, Action? simulate = null, bool resting = false,
+        bool idleFatigue = true)
     {
         bool ordinaryPlay = kind == DaggerfallCalendarAdvanceKind.OrdinaryPlay;
         if (ordinaryPlay != simulate is not null)
@@ -73,7 +77,8 @@ internal sealed partial class DaggerfallSession
             State.Character.CustomCareer?.Advantages.Any(trait => trait.Id == "athleticism") == true,
             State.HeldEnchantments.Talents.Athleticism);
         RefreshPassiveMagery();
-        long minuteBefore = MinuteIndex(before);
+        DaggerfallCalendar after = _time.Calendar;
+        long minuteBefore = MinuteIndex(before), minuteAfter = MinuteIndex(after);
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
         _weather.Advance(_time.Calendar);
         _sites.Projection.Lighting.UpdateAmbient(_time.Calendar, _tuning.Weather.Daylight(_time.Calendar, CurrentWeather));
@@ -92,28 +97,30 @@ internal sealed partial class DaggerfallSession
             State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());
             State.LevelUps.BeginIfEligible();
         }
-        State.Social.AdvanceElapsedMinutes(minuteBefore, MinuteIndex(_time.Calendar));
-        AdvanceLoans();
-        AdvanceVampireQuestOpportunities(before);
-        AdvanceLycanthropyQuestOpportunities(before);
+        State.Social.AdvanceElapsedMinutes(minuteBefore, minuteAfter);
+        AdvanceLoans(before, after);
+        AdvanceVampireQuestOpportunities(before, after);
+        AdvanceLycanthropyQuestOpportunities(before, after);
         StartDueCriminalInvitations();
         ExpireConjuredItems();
-        AdvanceEffectsForCalendar(before, ordinaryPlay, resting);
+        AdvanceEffectsForCalendar(before, after, ordinaryPlay, resting);
         if (encounter is not null) QueueEncounter(encounter);
         AnnounceHoliday();
         if (!ordinaryPlay)
         {
-            // Rest suppresses newly incurred idle loss, while travel, prison, and other elapsed
-            // callers still settle every calendar minute through this existing owner. Any accepted
-            // movement seconds carried from the prior admitted update are settled before reset.
-            _locomotion.AdvanceCalendarMinutes(minuteBefore, MinuteIndex(_time.Calendar), State.Actors.Player.Stats,
-                includeIdleFatigue: !resting);
+            // Rest suppresses newly incurred idle loss, and training charges its own source fatigue
+            // cost instead, while travel, prison, and other elapsed callers still settle every
+            // calendar minute through this existing owner. Any accepted movement seconds carried
+            // from the prior admitted update are settled before reset.
+            _locomotion.AdvanceCalendarMinutes(minuteBefore, minuteAfter, State.Actors.Player.Stats,
+                includeIdleFatigue: !resting && idleFatigue);
             return;
         }
-        CheckStandingLaw(minuteBefore, MinuteIndex(_time.Calendar));
+        CheckStandingLaw(minuteBefore, minuteAfter);
         simulate!();
         // Locomotion charges the update's minutes once its steps have recorded how they were spent.
-        _locomotion.AdvanceCalendarMinutes(minuteBefore, MinuteIndex(_time.Calendar), State.Actors.Player.Stats);
+        // A training interval admitted inside a step has already settled its own minutes.
+        _locomotion.AdvanceCalendarMinutes(minuteBefore, minuteAfter, State.Actors.Player.Stats);
     }
 
     /// <summary>
@@ -124,40 +131,42 @@ internal sealed partial class DaggerfallSession
     internal DaggerfallCalendarAdvance AdvanceElapsedTime(long gameSeconds,
         IReadOnlyList<(int Identity, long SecondsFromNow)>? consequences = null,
         DaggerfallEncounterRequest? encounter = null,
-        bool deferSkillAdvancement = false, bool resting = false)
+        bool deferSkillAdvancement = false, bool resting = false, bool idleFatigue = true,
+        bool completeTimeIncrease = true)
     {
         DaggerfallCalendar calendarBefore = _time.Calendar;
         DaggerfallCalendarAdvance advance = _time.AdvanceInterval(gameSeconds, consequences ?? []);
         AdvanceCalendar(calendarBefore,
             deferSkillAdvancement ? DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills : DaggerfallCalendarAdvanceKind.Elapsed,
-            advance.AppliedSeconds > 0 ? encounter : null, resting: resting);
+            advance.AppliedSeconds > 0 ? encounter : null, resting: resting, idleFatigue: idleFatigue);
         // Elapsed rest/travel/service time can cross the donor outdoor population's dawn or dusk
         // boundary without an Engine admitted frame. Reconcile through the existing NPC/lifetime
         // owner so source civilians hide, retire, restore and preserve their durable identities.
         if (advance.AppliedSeconds > 0)
             ReconcileNpcProjection();
-        if (!resting && advance.AppliedSeconds > 0) _itemCastTriggers.CompleteTimeIncrease();
+        // Rest and travel admit many slices and complete the time increase once, at their end.
+        if (!resting && completeTimeIncrease && advance.AppliedSeconds > 0) _itemCastTriggers.CompleteTimeIncrease();
         return advance;
     }
 
     /// <summary>Applies a quest-owned elapsed interval through the existing calendar without recursively re-running quest tasks.</summary>
-    private void AdvanceQuestTime(long gameSeconds)
+    private void AdvanceQuestTime(long gameSeconds, bool idleFatigue = true)
     {
         DaggerfallCalendar calendarBefore = _time.Calendar;
         var advance = _time.AdvanceInterval(gameSeconds, []);
-        AdvanceCalendar(calendarBefore, DaggerfallCalendarAdvanceKind.QuestAction);
+        AdvanceCalendar(calendarBefore, DaggerfallCalendarAdvanceKind.QuestAction, idleFatigue: idleFatigue);
         if (advance.AppliedSeconds > 0) _itemCastTriggers.CompleteTimeIncrease();
     }
 
-    private void AdvanceEffectsForCalendar(DaggerfallCalendar before, bool ordinaryPlay, bool resting)
+    private void AdvanceEffectsForCalendar(DaggerfallCalendar before, DaggerfallCalendar after, bool ordinaryPlay, bool resting)
     {
         long minuteBefore = MinuteIndex(before);
-        long minutes = MinuteIndex(_time.Calendar) - minuteBefore;
+        long minutes = MinuteIndex(after) - minuteBefore;
         if (minutes <= 0) return;
 
         long roundBefore = State.Effects.MagicRounds;
         AdvancePassiveRounds(roundBefore, minutes);
-        AdvanceLycanthropyRound(before);
+        AdvanceLycanthropyRound(after);
         RefreshLycanthropy();
         // The normal path is expressed as its normal one-round operation.  Multiple minutes (whether
         // an unusually long admitted update or an elapsed interval) retain the donor's bounded

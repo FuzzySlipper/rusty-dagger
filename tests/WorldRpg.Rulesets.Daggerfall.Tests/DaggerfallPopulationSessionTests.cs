@@ -119,6 +119,25 @@ public sealed class DaggerfallPopulationSessionTests
     }
 
     [Fact]
+    public void Restore_reconciles_civilians_from_the_restored_save_without_changing_their_registry()
+    {
+        using ResidentPopulationFixture fixture = ResidentPopulationFixture.Create();
+        DaggerfallSession session = fixture.Session;
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
+        Assert.Contains(saved.Npcs.Entries, entry => entry.Presence == (int)DaggerfallNpcPresence.Active);
+
+        // Civilians are projected only after the save, its effects and its residency are restored:
+        // the restored registry, identities and presences are exactly the saved ones.
+        (EngineContextFake restoredEngine, _) = fixture.CreateEngine();
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, fixture.Composition, session.CaptureSave());
+        DaggerfallSavePayload again = DaggerfallSavePayload.Read(restored.CaptureSave());
+        Assert.Equal(saved.Npcs.Entries.Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)),
+            again.Npcs.Entries.Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)));
+        Assert.Equal(saved.DynamicActors.Select(actor => actor.EntityId), again.DynamicActors.Select(actor => actor.EntityId));
+    }
+
+    [Fact]
     public void Resident_population_sync_keeps_the_owner_profile_pose_through_unload_and_readmission()
     {
         string root = TestData.RepositoryRoot;

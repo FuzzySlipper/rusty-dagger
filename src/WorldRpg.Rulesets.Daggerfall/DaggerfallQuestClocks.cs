@@ -98,7 +98,7 @@ internal static class DaggerfallQuestClockAdvancer
 {
     internal static void Advance(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskProgram program,
         DaggerfallVariableStore variables, DaggerfallCalendar before, DaggerfallCalendar after,
-        DaggerfallQuestMessages messages, IDaggerfallQuestTaskLifecycle lifecycle)
+        DaggerfallQuestMessages messages, IDaggerfallQuestTaskLifecycle lifecycle, bool runTasks = true)
     {
         long remainingInterval = after.ToAbsoluteSeconds() - before.ToAbsoluteSeconds();
         if (remainingInterval <= 0 || instance.Lifecycle != DaggerfallQuestLifecycle.Active) return;
@@ -112,7 +112,8 @@ internal static class DaggerfallQuestClockAdvancer
             DaggerfallQuestClockState clock = instance.Clocks[deadline];
             instance.Clocks[deadline] = clock with { RemainingSeconds = 0, Enabled = false, Finished = true };
             DaggerfallQuestTaskRunner.TriggerClockDeadline(instance, program, variables, clock.Symbol);
-            DaggerfallQuestTaskRunner.Advance(instance, program, variables, before.Advance(elapsed, out _), messages, lifecycle);
+            if (runTasks)
+                DaggerfallQuestTaskRunner.Advance(instance, program, variables, before.Advance(elapsed, out _), messages, lifecycle);
         }
 
         if (remainingInterval > 0 && instance.Lifecycle == DaggerfallQuestLifecycle.Active)

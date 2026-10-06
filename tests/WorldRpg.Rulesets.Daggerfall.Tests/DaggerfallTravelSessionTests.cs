@@ -90,6 +90,31 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Contains("Arrived", restored.ReadTravelPresentation().Message);
     }
 
+    [Fact]
+    public void A_journey_rerolls_a_held_item_once_on_arrival_like_one_synthetic_time_increase()
+    {
+        using Fixture fixture = new(distant: true);
+        fixture.AddGold(100_000);
+        DaggerfallSession session = fixture.Session;
+        var created = new DaggerfallItemFactory(TestPayload.Definitions, RandomMinimum.Create())
+            .Create(new("Magic", "sanguine-rose", DaggerfallItemOwner.Player, MagicItemKey: "magic-item.0035", Race: "breton", Gender: "male"));
+        var identity = session.UniqueItemAllocator.AllocateReference();
+        var item = session.State.Equipment.Materialize(identity, created.Item);
+        session.State.ItemInstances.RegisterUnique(identity.Value, created.Metadata);
+        ItemCastTriggerSessionTests.Equip(session, item);
+        long sequence = session.Casting.NextSequence;
+
+        fixture.Accept(fixture.Preview(inn: true));
+
+        var result = Assert.IsType<DaggerfallTravelResult>(session.State.Travel.LastResult);
+        Assert.Equal(DaggerfallTravelOutcome.Arrived, result.Outcome);
+        Assert.True(result.EndedSeconds - result.StartedSeconds > DaggerfallCalendar.SecondsPerDay);
+        var held = session.State.ItemInstances.RequireUnique(identity.Value).HeldCast!;
+        Assert.Equal(sequence + 1, session.Casting.NextSequence);
+        Assert.False(held.RerollPending);
+        Assert.Equal(result.EndedSeconds / DaggerfallCalendar.SecondsPerMinute, held.LastRerollMinute);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

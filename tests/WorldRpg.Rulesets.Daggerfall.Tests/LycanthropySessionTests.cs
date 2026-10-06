@@ -180,13 +180,24 @@ public sealed class LycanthropySessionTests
     }
 
     [Fact]
-    public void Elapsed_interval_crossing_a_full_moon_retains_first_forced_transition_after_the_moon_passes()
+    public void An_elapsed_catch_up_forces_the_change_only_when_it_ends_under_a_full_moon()
     {
+        // The donor's catch-up rounds read the date the interval ended on, so a long interval
+        // (prison, a synthetic skip) that crosses a full moon and ends after it leaves the player
+        // unchanged, while one that ends under the moon forces the change at that minute.
+        int first = Enumerable.Range(1, 32).First(day => World.DaggerfallCalendar.Start.Advance(day * 86400L, out _).IsFullMoon);
+        int after = Enumerable.Range(first + 1, 32).First(day => !World.DaggerfallCalendar.Start.Advance(day * 86400L, out _).IsFullMoon);
+        using (var passed = FreshSession())
+        {
+            passed.State.RacialOverrides.Select(DaggerfallRacialKind.Wereboar, "curse", Minute(passed));
+            passed.AdvanceElapsedTime(after * 86400L);
+            Assert.False(passed.State.RacialOverrides.Current!.State.BeastForm);
+        }
+
         using var s = FreshSession();
         s.State.RacialOverrides.Select(DaggerfallRacialKind.Wereboar, "curse", Minute(s));
-        int first = Enumerable.Range(1, 32).First(day => World.DaggerfallCalendar.Start.Advance(day * 86400L, out _).IsFullMoon);
         long start = Minute(s);
-        s.AdvanceElapsedTime((first + 1) * 86400L);
+        s.AdvanceElapsedTime(first * 86400L);
         Assert.True(s.State.RacialOverrides.Current!.State.BeastForm);
         Assert.Equal(start + first * 1440L, s.State.RacialOverrides.Current.State.LastMorphMinute);
         using var restored = Restore(s.CaptureSave());

@@ -193,6 +193,33 @@ public sealed class DaggerfallRegionalBankTests
     }
 
     [Fact]
+    public void A_daily_loan_check_reminds_once_at_six_three_and_one_months_before_the_due_date()
+    {
+        using Fixture fixture = new();
+        DaggerfallCurrencyService currency = fixture.Currency();
+        DaggerfallRegionalBankState bank = fixture.Bank(currency);
+        DaggerfallLoanSettlementAdapter settlement = DaggerfallLoanSettlementAdapter.ForBank(bank, currency);
+        DaggerfallLoanState loans = new();
+        DaggerfallSocialState social = new(fixture.Definitions.Factions);
+        Assert.True(loans.Issue(17, 1, 100, DaggerfallCalendar.Start, settlement).Approved);
+
+        // One long interval and day-by-day checks report the same crossings: DFU compares the
+        // whole months left before and after each date change.
+        List<long> stepped = [];
+        DaggerfallCalendar day = DaggerfallCalendar.Start;
+        for (int index = 0; index < DaggerfallLoanPolicy.LoanTermDays - 1; index++)
+        {
+            DaggerfallCalendar next = day.Advance(DaggerfallCalendar.SecondsPerDay, out _);
+            DaggerfallLoanDayResult result = loans.AdvanceDue(day, next, bank, currency, settlement, social, fixture.Definitions.Factions);
+            Assert.Empty(result.Defaults);
+            stepped.AddRange(result.Reminders.Select(reminder => reminder.MonthsLeft));
+            day = next;
+        }
+        Assert.Equal([6L, 3L, 1L], stepped);
+        Assert.Empty(loans.AdvanceDue(day, day, bank, currency, settlement, social, fixture.Definitions.Factions).Reminders);
+    }
+
+    [Fact]
     public void Loan_issue_due_settlement_and_restore_use_the_real_bank_and_social_owners()
     {
         using Fixture fixture = new();
@@ -208,18 +235,32 @@ public sealed class DaggerfallRegionalBankTests
         Assert.Equal(DaggerfallLoanIssueResult.AlreadyHaveLoan,
             loans.Issue(17, 1, 100, DaggerfallCalendar.Start, settlement).Result);
 
-        DaggerfallCalendar overdue = DaggerfallCalendar.FromAbsoluteSeconds((loans.Read(17)!.DueMinute + 1) * 60);
-        Assert.Single(loans.AdvanceDue(overdue, bank, currency, settlement, social, fixture.Definitions.Factions));
+        long dueMinute = loans.Read(17)!.DueMinute;
+        DaggerfallCalendar dueDay = DaggerfallCalendar.FromAbsoluteSeconds(dueMinute * 60);
+        DaggerfallCalendar overdue = DaggerfallCalendar.FromAbsoluteSeconds((dueMinute + 1) * 60);
+        // The daily check runs on a date change: a debt past its due minute on the same day is not yet in default.
+        Assert.Equal(dueDay.DayNumber, overdue.DayNumber);
+        Assert.Empty(loans.AdvanceDue(dueDay, overdue, bank, currency, settlement, social, fixture.Definitions.Factions).Defaults);
+        Assert.False(loans.Read(17)!.Defaulted);
+        DaggerfallCalendar previous = overdue;
+        overdue = overdue.Advance(DaggerfallCalendar.SecondsPerDay, out _);
+        Assert.Single(loans.AdvanceDue(previous, overdue, bank, currency, settlement, social, fixture.Definitions.Factions).Defaults);
         Assert.Equal(0UL, bank.BalanceForRegion(17));
         Assert.Equal(10UL, loans.Read(17)!.Remaining);
         Assert.True(loans.Read(17)!.Defaulted);
         Assert.Equal(-10, social.RegionalReputation(17));
-        Assert.Empty(loans.AdvanceDue(overdue, bank, currency, settlement, social, fixture.Definitions.Factions));
+        // A defaulted debt still sweeps a later deposit at each date change, without a second penalty.
+        fixture.GrantGold(4);
+        Assert.True(bank.DepositGold(17, 4).Applied);
+        DaggerfallCalendar nextDay = overdue.Advance(DaggerfallCalendar.SecondsPerDay, out _);
+        Assert.Empty(loans.AdvanceDue(overdue, nextDay, bank, currency, settlement, social, fixture.Definitions.Factions).Defaults);
         Assert.Equal(-10, social.RegionalReputation(17));
+        Assert.Equal(0UL, bank.BalanceForRegion(17));
+        Assert.Equal(6UL, loans.Read(17)!.Remaining);
 
         DaggerfallLoanState restored = new(loans.Capture());
-        fixture.GrantGold(10);
-        Assert.True(restored.Repay(17, 10, fromAccount: false, bank, currency, settlement).Applied);
+        fixture.GrantGold(6);
+        Assert.True(restored.Repay(17, 6, fromAccount: false, bank, currency, settlement).Applied);
         Assert.Equal(0UL, restored.Read(17)!.Remaining);
         Assert.True(restored.Read(17)!.Defaulted);
         Assert.Equal(0UL, currency.Read().Gold);

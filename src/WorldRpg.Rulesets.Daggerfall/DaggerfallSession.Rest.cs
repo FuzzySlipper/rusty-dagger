@@ -191,6 +191,7 @@ internal sealed partial class DaggerfallSession
     private DaggerfallRestTimeAdvance AdvanceRestInterval(long requestedSeconds)
     {
         if (HasNearbyRestEnemy()) return new(requestedSeconds, 0, DaggerfallRestInterruption.Encounter);
+        if (State.Quests.Messages.Pending is not null) return new(requestedSeconds, 0, DaggerfallRestInterruption.Stopped);
         long applied = 0;
         while (applied < requestedSeconds)
         {
@@ -207,6 +208,10 @@ internal sealed partial class DaggerfallSession
             applied = checked(applied + advance.AppliedSeconds);
             if (State.Actors.Player.IsDefeated)
                 return new(requestedSeconds, applied, DaggerfallRestInterruption.Defeated);
+            // The donor's rest stops advancing while a quest popup holds the screen; a prompt that
+            // appeared inside this slice owns the player's attention before any further rest time.
+            if (State.Quests.Messages.Pending is not null)
+                return new(requestedSeconds, applied, DaggerfallRestInterruption.Stopped);
             if (HasNearbyRestEnemy())
                 return new(requestedSeconds, applied, DaggerfallRestInterruption.Encounter);
             if (advance.AppliedSeconds != slice)

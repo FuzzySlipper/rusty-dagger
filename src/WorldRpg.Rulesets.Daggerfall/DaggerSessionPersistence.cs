@@ -51,6 +51,7 @@ internal sealed class DaggerSessionPersistence
     internal Func<DaggerfallInfectionsSave> Infections { get; set; } = () => DaggerfallInfectionsSave.Empty;
     internal Func<DaggerfallWorldVariantSave[]> WorldVariants { get; set; } = () => [];
     internal Func<DaggerfallSummoningSave> Summoning { get; set; } = () => DaggerfallSummoningSave.Empty;
+    internal Func<long> PoisonDraws { get; set; } = () => 0;
     internal Func<DaggerfallWeatherSave> Weather { get; set; } = null!;
     internal Func<DaggerfallReadySpell?> ReadySpell {get;set;}=()=>null;
     internal Func<DaggerfallCreateItemRequest?> PendingCreateItem { get; set; } = () => null;
@@ -152,6 +153,7 @@ internal sealed class DaggerSessionPersistence
             MagicRounds = State.Effects.MagicRounds,
             Infections = Infections(),
             NextCastSequence = _nextCastSequence(),
+            PoisonDraws = PoisonDraws(),
             ReadySpell=ReadySpell(),
             PendingCreateItem = PendingCreateItem(),
             PendingDispel = PendingDispel(),
