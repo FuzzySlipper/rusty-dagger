@@ -804,9 +804,19 @@ test('active effects render as a structured list and a playing cinematic offers 
     assert.equal(skip.hidden, false);
     skip.click();
     assert.deepEqual(f.actions.at(-1), { action: 'cinematic-skip' });
+    // The shell draws the video above the UI, so any key press skips it and goes no further.
+    const before = f.actions.length;
+    const escape = new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true });
+    document.dispatchEvent(escape);
+    assert.equal(f.actions.length, before + 1);
+    assert.deepEqual(f.actions.at(-1), { action: 'cinematic-skip' });
+    assert.equal(escape.defaultPrevented, true);
     f.publish({ effects: [], cinematic: null });
     assert.equal(effects.hidden, true);
     assert.equal(skip.hidden, true);
+    const later = f.actions.length;
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyX', bubbles: true, cancelable: true }));
+    assert.ok(f.actions.slice(later).every(action => action.action !== 'cinematic-skip'));
   } finally { f.dispose(); }
 });
 

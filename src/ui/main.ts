@@ -473,9 +473,21 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const effects = shell.querySelector<HTMLElement>('.dagger-effects')!;
   const effectList = effects.querySelector<HTMLUListElement>('ul')!;
   const cinematicSkip = shell.querySelector<HTMLButtonElement>('.dagger-cinematic-skip')!;
-  cinematicSkip.addEventListener('click', () => context.intents?.claim('dagger.ui', {
+  const sendCinematicSkip = (): void => { context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'cinematic-skip' },
-  }));
+  }); };
+  cinematicSkip.addEventListener('click', sendCinematicSkip);
+  // The shell draws a playing video above this UI, so the button cannot be reached while one plays.
+  // As in the classic game, any key or button press skips the film instead; the press goes no further.
+  let cinematicPlaying = false;
+  const skipOnPress = (event: KeyboardEvent | PointerEvent): void => {
+    if (!cinematicPlaying || (event instanceof KeyboardEvent && event.repeat)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    sendCinematicSkip();
+  };
+  document.addEventListener('keydown', skipOnPress, true);
+  document.addEventListener('pointerdown', skipOnPress, true);
   const focusClose = shell.querySelector<HTMLButtonElement>('.dagger-focus-close')!;
   focusClose.addEventListener('click', () => { if (focusClose.dataset.container && focusClose.dataset.close) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: focusClose.dataset.close, container: focusClose.dataset.container } }); });
   const vitals = shell.querySelector<HTMLElement>('.dagger-vitals')!;
@@ -1459,6 +1471,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       return item;
     }));
     const cinematic = value.cinematic ?? null;
+    cinematicPlaying = cinematic !== null;
     cinematicSkip.hidden = cinematic === null;
     cinematicSkip.textContent = cinematic?.skipLabel ?? 'Skip';
     status.replaceChildren(...(value.slots ?? []).map(row => { const item = document.createElement('p'); item.textContent = `${row.label}: ${row.detail}`; return item; }));
@@ -1490,6 +1503,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     questJournalView.dispose();
     lootView.dispose();
     document.removeEventListener('keydown', onKeyDown, true);
+    document.removeEventListener('keydown', skipOnPress, true);
+    document.removeEventListener('pointerdown', skipOnPress, true);
     menu.removeEventListener('cancel', onCancel);
     menu.removeEventListener('click', onMenuClick);
     menuToggle.removeEventListener('click', onMenuToggle);
