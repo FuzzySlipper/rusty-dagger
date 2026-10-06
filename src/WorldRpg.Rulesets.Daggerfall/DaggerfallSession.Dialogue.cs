@@ -724,8 +724,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (_actors.TryGet(id, out ActorState currentActor))
             actor = new(currentActor.Actor.Entity, currentActor.Position);
         else if (_actors.Entities.TryResolve(ActorsState.Identity(id), out var entity)
-            && _actors.Store.TryGet<DaggerfallNpcBody>(entity, out var body))
-            actor = new(entity, body.Pose.Position);
+            && _actors.Store.Has<DaggerfallNpcBody>(entity))
+            actor = new(entity, DaggerfallNpcBody.Position(_actors.Store, entity));
         return actor is not null;
     }
 

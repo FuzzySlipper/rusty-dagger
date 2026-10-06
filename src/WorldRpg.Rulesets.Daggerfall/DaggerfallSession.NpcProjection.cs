@@ -1,3 +1,4 @@
+using Rusty.Engine;
 using Rusty.Engine.Entities;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
@@ -6,10 +7,18 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>Transient noncombat projection of a registry-owned person; no fabricated combat mechanics.</summary>
-internal sealed class DaggerfallNpcBody(ActorPose pose)
+/// <summary>
+/// Marker for the transient noncombat projection of a registry-owned person; no fabricated combat
+/// mechanics. Its placement lives in the entity's Engine Transform, so the Engine origin helpers
+/// rebase it with every other root.
+/// </summary>
+internal sealed class DaggerfallNpcBody
 {
-    internal ActorPose Pose { get; set; } = pose;
+    internal static WorldPoint Position(EntityStore store, EntityId entity) =>
+        WorldPoint.From(store.Get(entity, EngineComponentTypes.Transform).Translation);
+
+    internal static Transform Placement(WorldPoint position) =>
+        new(position.ToVector(), System.Numerics.Quaternion.Identity, System.Numerics.Vector3.One);
 }
 internal sealed record DaggerfallNpcView(long Id, WorldPoint Position);
 
@@ -52,23 +61,25 @@ internal sealed partial class DaggerfallSession
         var identity = ActorsState.Identity(npc.DurableId);
         if (entities.TryResolve(identity, out var existing))
         {
-            if (!entities.Store.TryGet<DaggerfallNpcBody>(existing, out var body))
+            if (!entities.Store.Has<DaggerfallNpcBody>(existing))
                 throw new InvalidOperationException($"NPC {npc.DurableId} is already materialized by a different actor owner.");
-            body.Pose = new(localPosition, 0);
+            entities.Store.Set(existing, EngineComponentTypes.Transform, DaggerfallNpcBody.Placement(localPosition));
             _appearance.AddNpc(npc.DurableId, sprite);
             return;
         }
         var entity = entities.Create(identity, QuestNpcType);
         try
         {
-            entities.Store.Add(entity, new DaggerfallNpcBody(new(localPosition, 0)));
+            entities.Store.Add(entity, new DaggerfallNpcBody());
+            entities.Store.Set(entity, EngineComponentTypes.Transform, DaggerfallNpcBody.Placement(localPosition));
             _appearance.AddNpc(npc.DurableId, sprite);
         }
         catch { _appearance.RetireNpc(npc.DurableId); entities.Destroy(identity); throw; }
     }
 
     private IReadOnlyList<DaggerfallNpcView> ReadNpcViews() => State.Actors.Store.Query<DaggerfallNpcBody>()
-        .Select(entry => new DaggerfallNpcView(checked((long)State.Actors.Entities.IdentityOf(entry.Entity).Value), entry.Value.Pose.Position)).ToArray();
+        .Select(entry => new DaggerfallNpcView(checked((long)State.Actors.Entities.IdentityOf(entry.Entity).Value),
+            DaggerfallNpcBody.Position(State.Actors.Store, entry.Entity))).ToArray();
 
     private DaggerfallQuestResourceBinding PlaceQuestPerson(string instanceId, DaggerfallQuestResourceState resource,
         DaggerfallSiteProfile profile, WorldPoint position)

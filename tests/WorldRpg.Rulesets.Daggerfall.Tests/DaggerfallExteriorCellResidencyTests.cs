@@ -142,7 +142,7 @@ public sealed class DaggerfallExteriorCellResidencyTests
         using SpatialSession session = new(new SpatialSessionHandle(45), static () => { });
         DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
         residency.Update(new(20, 20));
-        DaggerfallExteriorCellResidencySave saved = residency.Capture();
+        DaggerfallExteriorCellResidencySave saved = residency.Capture(new WorldOriginReadout(0, 0, 0, 0, 8192F, 0, 0));
         ulong originalAsset = DaggerfallExteriorCellResidency.AssetId(new(20, 20));
 
         residency.Update(new(900, 400));
@@ -182,7 +182,7 @@ public sealed class DaggerfallExteriorCellResidencyTests
         using SpatialSession session = new(new SpatialSessionHandle(48), static () => { });
         DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
         residency.Update(new(20, 20));
-        DaggerfallExteriorCellResidencySave saved = residency.Capture();
+        DaggerfallExteriorCellResidencySave saved = residency.Capture(new WorldOriginReadout(0, 0, 0, 0, 8192F, 0, 0));
 
         DaggerfallExteriorCellResidencyUpdate cleared = residency.Clear();
 

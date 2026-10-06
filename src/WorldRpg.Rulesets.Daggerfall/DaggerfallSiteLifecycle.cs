@@ -1,5 +1,6 @@
 using System.Numerics;
 using Rusty.Engine;
+using Rusty.Engine.Entities;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
@@ -42,6 +43,14 @@ internal interface IDaggerfallSiteTransitionHost
 /// </summary>
 internal sealed class DaggerfallSiteLifecycle
 {
+    /// <summary>
+    /// The product column the Engine <see cref="EntityOriginRebaser"/> reads global positions from.
+    /// Values exist only for the duration of one origin commit.
+    /// </summary>
+    internal static readonly ComponentType<WorldOriginGlobalPosition> GlobalPositions =
+        ComponentType<WorldOriginGlobalPosition>.Create(ProductComponentKeys.Create(GlobalPositionComponentId));
+    private const uint GlobalPositionComponentId = 1;
+
     private readonly IEngineContext _engine;
     private readonly DaggerfallState _state;
     private readonly DaggerfallDefinitions _definitions;
@@ -105,6 +114,8 @@ internal sealed class DaggerfallSiteLifecycle
         _sessionPresentation = sessionPresentation;
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _state = state ?? throw new ArgumentNullException(nameof(state));
+        if (!_state.Actors.Store.Diagnostics(0).Components.Any(component => component.Key == GlobalPositions.Key))
+            _state.Actors.Store.Register(GlobalPositions);
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
         _random = engine.Random;
@@ -166,7 +177,7 @@ internal sealed class DaggerfallSiteLifecycle
             || _exteriorEnvironment is not { IsInitialized: true } environment)
             return projection;
 
-        CharacterWaterVolume[] sourceWater = [.. environment.CharacterWaterVolumes(residency.Origin)];
+        CharacterWaterVolume[] sourceWater = [.. environment.CharacterWaterVolumes(ActiveOrigin(residency))];
         Dictionary<ulong, CharacterWaterVolume> water = [];
         foreach (CharacterWaterVolume volume in projection.WaterVolumes.Span)
         {
@@ -200,7 +211,7 @@ internal sealed class DaggerfallSiteLifecycle
             throw new InvalidOperationException($"Exterior artifact '{profile.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
         DaggerfallExteriorWorldOrigin origin = exteriorOrigin
             ?? (_exteriorResidency is { IsInitialized: true } residency
-                ? residency.Origin
+                ? ActiveOrigin(residency)
                 : DaggerfallExteriorWorldOrigin.At(cell));
         long columnOffset = checked((long)(cell.X - origin.MapPixelX) * NavigationCellsPerExteriorCell);
         long rowOffset = checked((long)(origin.MapPixelY - cell.Y) * NavigationCellsPerExteriorCell);
@@ -579,10 +590,7 @@ internal sealed class DaggerfallSiteLifecycle
                 {
                     if (sourceLocationLoaded)
                         _ = _spatial.ApplyContentArtifactResidency([LocationPlacement(source.Inputs,
-                            sourceExterior is { } saved
-                                ? new DaggerfallExteriorWorldOrigin(saved.Origin.X, saved.Origin.Y,
-                                    new Vector3(saved.CompensationX, saved.CompensationY, saved.CompensationZ))
-                                : null)],
+                            sourceExterior is { } saved ? saved.WorldOrigin : null)],
                             [LocationPlacementId(destination)], source.Inputs.SpatialArtifact.NavigationGridId);
                     else
                         _ = _spatial.ApplyContentArtifactResidency([], [LocationPlacementId(destination)], source.Inputs.SpatialArtifact.NavigationGridId);
@@ -618,9 +626,7 @@ internal sealed class DaggerfallSiteLifecycle
                     RestoreExteriorResidency(priorExterior);
                     if (sourceLocationLoaded && sourceProfile.Kind == DaggerfallWorldProfileKind.Exterior)
                         RebaseActors(ProfileActorIds(source.Inputs, sourceDelta),
-                            ExteriorProfileTranslation(source.Inputs,
-                                new DaggerfallExteriorWorldOrigin(priorExterior.Origin.X, priorExterior.Origin.Y,
-                                    new Vector3(priorExterior.CompensationX, priorExterior.CompensationY, priorExterior.CompensationZ))));
+                            ExteriorProfileTranslation(source.Inputs, priorExterior.WorldOrigin));
                     if (adjacentLocationsRetired && _exteriorResidency is { IsInitialized: true } restoredResidency)
                         ReconcileResidentExteriorLocations(restoredResidency);
                 }
@@ -710,7 +716,7 @@ internal sealed class DaggerfallSiteLifecycle
         finally { _admittingInitialResidency = false; }
         _locationCell ??= ActiveExteriorCell();
         DaggerfallExteriorWorldOrigin activeOrigin = _exteriorResidency is { IsInitialized: true } residency
-            ? residency.Origin
+            ? ActiveOrigin(residency)
             : throw new InvalidOperationException("Initial exterior admission did not establish a world origin.");
         bool restoringSavedFrame = savedExterior is not null;
         Vector3 locationFrameOffset = ExteriorProfileTranslation(Projection.Inputs, activeOrigin,
@@ -770,7 +776,7 @@ internal sealed class DaggerfallSiteLifecycle
     {
         DaggerfallExteriorCellId site = ActiveExteriorCell();
         DaggerfallExteriorWorldOrigin origin = _exteriorResidency is { IsInitialized: true } residency
-            ? residency.Origin : DaggerfallExteriorWorldOrigin.At(site);
+            ? ActiveOrigin(residency) : DaggerfallExteriorWorldOrigin.At(site);
         Vector3 translation = origin.LocalTranslation(site)
             + (Vector3.UnitY * ExteriorLocationFrameHeight(Projection.Inputs));
         return new(position.X - translation.X, position.Y - translation.Y, position.Z - translation.Z);
@@ -809,7 +815,7 @@ internal sealed class DaggerfallSiteLifecycle
     {
         DaggerfallExteriorCellId site = ActiveExteriorCell();
         DaggerfallExteriorWorldOrigin origin = _exteriorResidency is { IsInitialized: true } residency
-            ? residency.Origin
+            ? ActiveOrigin(residency)
             : DaggerfallExteriorWorldOrigin.At(site);
         return _state.PlayerControl.Position is WorldPoint position
             ? DaggerfallExteriorSessionOrigin.CellForLocalPosition(
@@ -832,10 +838,10 @@ internal sealed class DaggerfallSiteLifecycle
         // player whenever the landing pose lies outside the site's own cell, and the next step would
         // then read the unmoved player as standing in yet another cell.
         DaggerfallExteriorWorldOrigin origin = residency.IsInitialized
-            ? residency.Origin
+            ? ActiveOrigin(residency)
             : DaggerfallExteriorWorldOrigin.At(ActiveExteriorCell());
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin);
-        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, residency.Origin);
+        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
         ReconcileExteriorTerrainAppearance(residency);
         UpdateExteriorLocation(center);
         return update;
@@ -854,7 +860,7 @@ internal sealed class DaggerfallSiteLifecycle
             : ActiveExteriorCell();
         DaggerfallExteriorCellResidency residency = EnsureExteriorResidency();
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin);
-        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, residency.Origin);
+        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
         ReconcileExteriorTerrainAppearance(residency);
         UpdateExteriorLocation(center);
         return update;
@@ -923,7 +929,7 @@ internal sealed class DaggerfallSiteLifecycle
             throw new InvalidOperationException($"Exterior profile '{profile.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
         DaggerfallExteriorWorldOrigin resolvedOrigin = origin
             ?? (_exteriorResidency is { IsInitialized: true } residency
-                ? residency.Origin
+                ? ActiveOrigin(residency)
                 : throw new InvalidOperationException("An exterior profile requires initialized terrain residency."));
         Vector3 translation = resolvedOrigin.LocalTranslation(cell);
         if (!includeOriginCompensation) translation -= resolvedOrigin.Compensation;
@@ -1056,7 +1062,7 @@ internal sealed class DaggerfallSiteLifecycle
         try
         {
             DaggerfallExteriorWorldOrigin origin = _exteriorResidency is { IsInitialized: true } residency
-                ? residency.Origin
+                ? ActiveOrigin(residency)
                 : throw new InvalidOperationException("An adjacent exterior location requires initialized terrain residency.");
             if (!TryExteriorProfileCell(profile, out DaggerfallExteriorCellId cell))
                 throw new InvalidOperationException($"Exterior profile '{key.LogicalId}' has no normalized map-pixel identity.");
@@ -1213,7 +1219,7 @@ internal sealed class DaggerfallSiteLifecycle
     /// <summary>Captures only durable exterior identity/origin facts; Engine handles stay native.</summary>
     internal DaggerfallExteriorCellResidencySave? CaptureExteriorResidency() =>
         _exteriorResidency is { IsInitialized: true }
-            ? _exteriorResidency.Capture()
+            ? _exteriorResidency.Capture(ReadEngineOrigin())
             : null;
 
     internal DaggerfallExteriorLocationResidencySave? CaptureExteriorLocationResidency()
@@ -1230,14 +1236,8 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallExteriorCellResidencySave save)
     {
         RequireExteriorProfile();
-        Vector3 compensation = new(save.CompensationX, save.CompensationY, save.CompensationZ);
-        if (!float.IsFinite(compensation.X) || !float.IsFinite(compensation.Y) || !float.IsFinite(compensation.Z)
-            || compensation.X != MathF.Truncate(compensation.X)
-            || compensation.Y != MathF.Truncate(compensation.Y)
-            || compensation.Z != MathF.Truncate(compensation.Z))
-            throw new InvalidOperationException("Saved exterior compensation must represent whole Engine origin units.");
         using (WorldOriginPrepared prepared = _engine.WorldOrigin.Prepare(new(_spatial.Session,
-            checked(-(long)compensation.X), checked(-(long)compensation.Y), checked(-(long)compensation.Z),
+            save.EngineOriginCellX, save.EngineOriginCellY, save.EngineOriginCellZ,
             ReadOnlyMemory<WorldOriginEntityRow>.Empty)))
         {
             WorldOriginCommitReceipt receipt = _engine.WorldOrigin.Commit(new(prepared));
@@ -1250,13 +1250,29 @@ internal sealed class DaggerfallSiteLifecycle
         }
         DaggerfallExteriorCellResidency residency = EnsureExteriorResidency();
         DaggerfallExteriorCellResidencyUpdate update = residency.Restore(save);
-        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, residency.Origin);
+        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
         ReconcileExteriorTerrainAppearance(residency);
         return update;
     }
 
-    internal Vector3 LocalCompensation => _exteriorResidency is { IsInitialized: true } residency
-        ? residency.Origin.Compensation : Vector3.Zero;
+    /// <summary>
+    /// The active exterior frame's compensation, derived from the Engine WorldOrigin readout. The
+    /// product keeps no compensation of its own beside the Engine origin cell.
+    /// </summary>
+    internal Vector3 LocalCompensation => _exteriorResidency is { IsInitialized: true }
+        ? EngineCompensation() : Vector3.Zero;
+
+    private WorldOriginReadout ReadEngineOrigin() => _engine.WorldOrigin.Read(new(_spatial.Session));
+
+    private Vector3 EngineCompensation()
+    {
+        WorldOriginReadout origin = ReadEngineOrigin();
+        return DaggerfallExteriorWorldOrigin.CompensationFor(origin.CellX, origin.CellY, origin.CellZ);
+    }
+
+    /// <summary>The residency's anchor map pixel in the Engine's current local frame.</summary>
+    private DaggerfallExteriorWorldOrigin ActiveOrigin(DaggerfallExteriorCellResidency residency) =>
+        residency.Origin with { Compensation = EngineCompensation() };
 
     private Vector3 ActiveExteriorFrameOffset() =>
         ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior
@@ -1279,27 +1295,35 @@ internal sealed class DaggerfallSiteLifecycle
         bool horizontal = MathF.Abs(position.X) >= cellSize || MathF.Abs(position.Z) >= cellSize;
         bool vertical = MathF.Abs(position.Y) > _tuning.WorldOrigin.VerticalRebaseDistance;
         if (!horizontal && !vertical) return;
-        WorldOriginReadout origin = _engine.WorldOrigin.Read(new(_spatial.Session));
-        RequireOriginPair(origin);
+        WorldOriginReadout origin = ReadEngineOrigin();
         long x = horizontal ? checked(origin.CellX + (long)Math.Floor(position.X)) : origin.CellX;
         long y = vertical ? checked(origin.CellY + (long)Math.Floor(position.Y)) : origin.CellY;
         long z = horizontal ? checked(origin.CellZ + (long)Math.Floor(position.Z)) : origin.CellZ;
-        using WorldOriginPrepared prepared = _engine.WorldOrigin.Prepare(new(_spatial.Session,
-            x, y, z, ReadOnlyMemory<WorldOriginEntityRow>.Empty));
-        CommitExteriorOrigin(prepared);
+        CommitExteriorOrigin(origin, x, y, z);
     }
 
+    /// <summary>
+    /// Returns the Engine origin to cell zero so detached site state is captured in profile frames.
+    /// Unlike an in-play rebase this cannot use <see cref="EntityOriginRebaser"/>: the Engine
+    /// rejects any root whose rebased local translation leaves its local-coordinate envelope, and
+    /// after a long walk from the active site the normalized frame legitimately does. The roots'
+    /// Transforms are therefore shifted by the committed receipt's delta instead.
+    /// </summary>
     internal void NormalizeExteriorOrigin()
     {
-        WorldOriginReadout origin = _engine.WorldOrigin.Read(new(_spatial.Session));
-        RequireOriginPair(origin);
+        WorldOriginReadout origin = ReadEngineOrigin();
         if (origin.CellX == 0 && origin.CellY == 0 && origin.CellZ == 0) return;
-        using WorldOriginPrepared prepared = _engine.WorldOrigin.Prepare(new(_spatial.Session,
-            0, 0, 0, ReadOnlyMemory<WorldOriginEntityRow>.Empty));
-        CommitExteriorOrigin(prepared);
+        CommitExteriorOrigin(origin, 0, 0, 0, throughRebaser: false);
     }
 
-    private void CommitExteriorOrigin(WorldOriginPrepared prepared)
+    /// <summary>
+    /// Moves the Engine origin and rebases every actor-family root (canonical actors and projected
+    /// quest people). An in-play rebase goes through the Engine's <see cref="EntityOriginRebaser"/>,
+    /// which publishes the rebased Transforms and every stored character motion in one batch. Each
+    /// root's global position is a call-time projection of its Transform in the current origin cell,
+    /// attached only for the prepare and removed afterwards, so no second pose survives the commit.
+    /// </summary>
+    private void CommitExteriorOrigin(WorldOriginReadout current, long x, long y, long z, bool throughRebaser = true)
     {
         RequireExteriorProfile();
         if (_state.PlayerControl.Position is not WorldPoint position)
@@ -1307,8 +1331,17 @@ internal sealed class DaggerfallSiteLifecycle
         _ = DaggerfallExteriorSessionOrigin.Shift(position, Vector3.Zero);
         if (_exteriorResidency is not { IsInitialized: true })
             throw new InvalidOperationException("An origin commit requires admitted exterior residency; otherwise world coordinates would detach from their cell.");
-        WorldOriginCommitReceipt receipt = _engine.WorldOrigin.Commit(new(prepared));
-        try { ApplyExteriorOriginCommit(receipt); }
+        EntityStore store = _state.Actors.Store;
+        EntityId[] roots = [.. _state.Actors.All.Select(actor => actor.Actor.Entity),
+            .. store.Query<DaggerfallNpcBody>().Select(entry => entry.Entity)];
+        WorldOriginCommitReceipt receipt = throughRebaser
+            ? CommitThroughRebaser(store, roots, current, x, y, z)
+            : CommitNativeOrigin(x, y, z);
+        try
+        {
+            if (!throughRebaser) ShiftRoots(store, roots, receipt.LocalDelta);
+            ApplyExteriorOriginCommit(receipt);
+        }
         catch (Exception error)
         {
             // A native commit is immediate. Reporting a recoverable transition refusal here
@@ -1317,10 +1350,44 @@ internal sealed class DaggerfallSiteLifecycle
         }
     }
 
-    private void RequireOriginPair(WorldOriginReadout origin)
+    private WorldOriginCommitReceipt CommitThroughRebaser(EntityStore store, EntityId[] roots,
+        WorldOriginReadout current, long x, long y, long z)
     {
-        if (LocalCompensation != new Vector3(-origin.CellX, -origin.CellY, -origin.CellZ))
-            throw new InvalidOperationException("Exterior product compensation does not match the Engine origin; rebasing would corrupt world positions.");
+        try
+        {
+            foreach (EntityId root in roots)
+            {
+                Vector3 local = store.Get(root, EngineComponentTypes.Transform).Translation;
+                store.Set(root, GlobalPositions, new WorldOriginGlobalPosition(
+                    current.CellX, current.CellY, current.CellZ, local.X, local.Y, local.Z));
+            }
+            EntityOriginRebaser rebaser = new(store, _engine.WorldOrigin, _spatial.Session, GlobalPositions);
+            using EntityOriginRebaserPrepared prepared = rebaser.Prepare(x, y, z);
+            return prepared.Commit().Native;
+        }
+        finally
+        {
+            foreach (EntityId root in roots)
+                if (store.IsAlive(root)) store.Remove(root, GlobalPositions);
+        }
+    }
+
+    private WorldOriginCommitReceipt CommitNativeOrigin(long x, long y, long z)
+    {
+        using WorldOriginPrepared prepared = _engine.WorldOrigin.Prepare(new(_spatial.Session,
+            x, y, z, ReadOnlyMemory<WorldOriginEntityRow>.Empty));
+        return _engine.WorldOrigin.Commit(new(prepared));
+    }
+
+    private static void ShiftRoots(EntityStore store, EntityId[] roots, Vector3 delta)
+    {
+        if (delta == Vector3.Zero) return;
+        foreach (EntityId root in roots)
+        {
+            Transform transform = store.Get(root, EngineComponentTypes.Transform);
+            Vector3 shifted = DaggerfallExteriorSessionOrigin.Shift(WorldPoint.From(transform.Translation), delta).ToVector();
+            store.Set(root, EngineComponentTypes.Transform, transform with { Translation = shifted });
+        }
     }
 
     /// <summary>
@@ -1365,15 +1432,10 @@ internal sealed class DaggerfallSiteLifecycle
         Vector3 localDelta = DaggerfallExteriorSessionOrigin.LocalDelta(receipt);
         if (localDelta != Vector3.Zero)
         {
+            // Actor and projected-person Transforms were rebased with the commit (by the Engine
+            // helper in play, by the receipt delta on normalization); the player's pose lives in
+            // its control state.
             ShiftPlayer(localDelta);
-            foreach (ActorState actor in _state.Actors.All)
-            {
-                ActorPose pose = actor.Pose;
-                actor.ApplyPose(new ActorPose(
-                    DaggerfallExteriorSessionOrigin.Shift(pose.Position, localDelta),
-                    pose.HeadingYawRadians));
-            }
-
             Projection.Rebase(localDelta);
             foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values)
                 resident.Projection.Rebase(localDelta);
@@ -1387,16 +1449,15 @@ internal sealed class DaggerfallSiteLifecycle
             ReleaseExteriorWaterTriggers();
             ActionTriggers.RebaseRestoredPlayer(_state.PlayerControl, _state.Actors.Player.Actor.Entity);
 
-            DaggerfallExteriorWorldOrigin prior = residency.Origin;
-            residency.AdoptRebasedOrigin(prior with { Compensation = prior.Compensation + localDelta });
+            residency.AdoptRebasedOrigin(ActiveOrigin(residency));
         }
 
         // The camera is Engine-owned but its descriptor is derived from the product player pose.
         // Refresh it after shifting that pose, before the caller publishes the next presentation
         // snapshot.
         _camera.Update(_state.PlayerControl);
-        DaggerfallExteriorCellResidencyUpdate update = residency.Update(CurrentExteriorCell(), residency.Origin);
-        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, residency.Origin);
+        DaggerfallExteriorCellResidencyUpdate update = residency.Update(CurrentExteriorCell(), ActiveOrigin(residency));
+        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
         ReconcileExteriorTerrainAppearance(residency);
         ReconcileResidentExteriorLocations(residency);
         return update;
@@ -1447,13 +1508,13 @@ internal sealed class DaggerfallSiteLifecycle
             ?? throw new InvalidOperationException("Exterior terrain surface factory was not initialized.");
         Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> exteriors = ExteriorLocations();
         DaggerfallExteriorEnvironment environment = _exteriorEnvironment ??= new(_random);
-        environment.Reconcile(residency.ResidentCells, residency.Origin, surfaceFactory, exteriors, _definitions.Grids);
+        environment.Reconcile(residency.ResidentCells, ActiveOrigin(residency), surfaceFactory, exteriors, _definitions.Grids);
         DaggerfallExteriorTerrainAppearance appearance =
             _exteriorTerrainAppearance ??= new DaggerfallExteriorTerrainAppearance(_engine.Graphics, Projection.Inputs);
         appearance.ConfigureProfile(Projection.Inputs);
         Projection.Appearance.SetSnapshotSupplement(appearance.AppendFacts, appearance.CompleteAcceptedSnapshot);
-        appearance.Reconcile(residency.ResidentCells, residency.Origin, surfaceFactory, environment);
-        ReconcileExteriorWaterTriggers(environment.CharacterWaterVolumes(residency.Origin));
+        appearance.Reconcile(residency.ResidentCells, ActiveOrigin(residency), surfaceFactory, environment);
+        ReconcileExteriorWaterTriggers(environment.CharacterWaterVolumes(ActiveOrigin(residency)));
         TrimExteriorSurfaceCache(residency.ResidentCells);
     }
 

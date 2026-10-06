@@ -113,6 +113,7 @@ internal class EngineContextFake : DispatchProxy
         {
             nameof(IWorldOriginService.Read) => origin,
             nameof(IWorldOriginService.Prepare) => Prepare((WorldOriginPrepareRequest)arguments![0]!),
+            nameof(IWorldOriginService.ReadPrepared) => ReadPrepared((WorldOriginPreparedReadRequest)arguments![0]!),
             nameof(IWorldOriginService.Commit) => Commit((WorldOriginCommitRequest)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
@@ -122,6 +123,22 @@ internal class EngineContextFake : DispatchProxy
             ulong id = ++next;
             prepared.Add(id, request);
             return new(new WorldOriginPreparedHandle(id), () => prepared.Remove(id));
+        }
+
+        // Like Engine prepare: each root's local translation in the target frame comes only from its
+        // global position; rotation and scale pass through.
+        private WorldOriginPreparedResult ReadPrepared(WorldOriginPreparedReadRequest request)
+        {
+            WorldOriginPrepareRequest candidate = prepared[request.Prepared.Handle.Value];
+            WorldOriginAffectedTransform[] affected = [.. candidate.Entities.ToArray().Select(row =>
+                new WorldOriginAffectedTransform(row.EntityId, row.LocalTransform with
+                {
+                    Translation = new System.Numerics.Vector3(
+                        (float)(row.GlobalPosition.CellX - candidate.TargetCellX) + (float)row.GlobalPosition.OffsetX,
+                        (float)(row.GlobalPosition.CellY - candidate.TargetCellY) + (float)row.GlobalPosition.OffsetY,
+                        (float)(row.GlobalPosition.CellZ - candidate.TargetCellZ) + (float)row.GlobalPosition.OffsetZ),
+                }))];
+            return new(affected, candidate.TargetCellX, candidate.TargetCellY, candidate.TargetCellZ, origin.LocalEnvelope);
         }
 
         private WorldOriginCommitReceipt Commit(WorldOriginCommitRequest request)

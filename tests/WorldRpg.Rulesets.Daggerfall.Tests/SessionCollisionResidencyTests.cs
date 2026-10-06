@@ -159,7 +159,7 @@ public sealed class SessionCollisionResidencyTests
         Assert.Equal(leaving.Select(DaggerfallExteriorCellResidency.AssetId).ToHashSet(), crossing.RemovedAssets.ToArray().ToHashSet());
         Assert.Equal(leaving.Select(DaggerfallExteriorCellResidency.InstanceId).ToHashSet(), crossing.RemovedInstances.ToArray().ToHashSet());
         DaggerfallExteriorCellResidencySave moved = session.Sites.CaptureExteriorResidency()!.Value;
-        DaggerfallExteriorWorldOrigin origin = new(window.Origin.X, window.Origin.Y, new Vector3(window.CompensationX, window.CompensationY, window.CompensationZ));
+        DaggerfallExteriorWorldOrigin origin = window.WorldOrigin;
         // The entering column is admitted before the same update commits the Engine origin rebase,
         // so the request carries the prior local frame. The Engine commit then shifts retained
         // collision; the receipt and the product poses below cover that later frame.
@@ -171,8 +171,9 @@ public sealed class SessionCollisionResidencyTests
         Assert.Equal(window.Origin, moved.Origin);
         WorldOriginCommitReceipt rebase = Assert.Single(engine.OriginCommits.Skip(originCommitsBeforeCrossing));
         Assert.NotEqual(Vector3.Zero, rebase.LocalDelta);
-        Assert.Equal(origin.Compensation + rebase.LocalDelta,
-            new Vector3(moved.CompensationX, moved.CompensationY, moved.CompensationZ));
+        Assert.Equal(origin.Compensation + rebase.LocalDelta, moved.WorldOrigin.Compensation);
+        Assert.Equal((rebase.OriginAfterCellX, rebase.OriginAfterCellY, rebase.OriginAfterCellZ),
+            (moved.EngineOriginCellX, moved.EngineOriginCellY, moved.EngineOriginCellZ));
         Assert.Equal(east, session.Sites.CurrentExteriorCell());
 
         // The crossing preserves world-space poses and vitals. Both player and actor adopt the
