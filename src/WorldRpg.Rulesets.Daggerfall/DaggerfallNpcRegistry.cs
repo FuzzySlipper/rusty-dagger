@@ -49,9 +49,9 @@ public readonly record struct DaggerfallNpcAppearance(string Race, string Gender
 /// <param name="Role">The role: questor, civilian, guard, shopkeeper.</param>
 /// <param name="Services">The services it offers: talk, shop, quest.</param>
 /// <param name="Presence">Whether it currently answers the world.</param>
-/// <param name="X">The X position it was relocated to, when any.</param>
-/// <param name="Y">The Y position it was relocated to, when any.</param>
-/// <param name="Z">The Z position it was relocated to, when any.</param>
+/// <param name="X">The detached profile-frame X position, held only while no live actor owns the pose.</param>
+/// <param name="Y">The detached profile-frame Y position, held only while no live actor owns the pose.</param>
+/// <param name="Z">The detached profile-frame Z position, held only while no live actor owns the pose.</param>
 public sealed record DaggerfallNpc(
     long DurableId,
     DaggerfallNpcKind Kind,
@@ -207,11 +207,11 @@ public sealed class DaggerfallNpcRegistry
         _npcs[durableId] = Require(durableId) with { Presence = presence };
     }
 
-    /// <summary>Relocates one NPC; the site binding stays where it belongs.</summary>
-    public void Relocate(long durableId, float x, float y, float z) =>
-        _npcs[durableId] = Require(durableId) with { X = x, Y = y, Z = z };
-
-    /// <summary>Every written NPC in durable order, for the save owner.</summary>
+    /// <summary>
+    /// Places one NPC in a physical profile at a detached profile-frame pose. The pose is the
+    /// placement for a person with no live actor (a projected questor, or a civilian about to be
+    /// materialized); once an actor exists its Engine Transform owns the pose.
+    /// </summary>
     internal void Place(long durableId, DaggerfallWorldProfileKey profile, WorldPoint position)
     {
         profile.Validate();
@@ -219,6 +219,24 @@ public sealed class DaggerfallNpcRegistry
             throw new ArgumentException("NPC profile position must be finite.");
         _npcs[durableId] = Require(durableId) with { Profile = profile, X = position.X, Y = position.Y, Z = position.Z,
             Presence = DaggerfallNpcPresence.Active };
+    }
+
+    /// <summary>
+    /// Binds one NPC to the physical profile where its live actor stands. The live actor's Transform
+    /// is the only pose owner, so any detached registry pose is dropped.
+    /// </summary>
+    internal void Bind(long durableId, DaggerfallWorldProfileKey profile)
+    {
+        profile.Validate();
+        _npcs[durableId] = Require(durableId) with { Profile = profile, X = null, Y = null, Z = null,
+            Presence = DaggerfallNpcPresence.Active };
+    }
+
+    /// <summary>Drops the detached pose once a live actor owns this NPC's pose.</summary>
+    internal void ReleasePose(long durableId)
+    {
+        if (!_npcs.TryGetValue(durableId, out DaggerfallNpc? npc) || npc.X is null && npc.Y is null && npc.Z is null) return;
+        _npcs[durableId] = npc with { X = null, Y = null, Z = null };
     }
 
     /// <summary>Removes a failed admission's current placement while retaining its stable identity.</summary>
@@ -239,7 +257,8 @@ public sealed class DaggerfallNpcRegistry
             ValidateSite(npc.Site);
             ValidateAppearance(npc.Appearance);
             npc.Profile?.Validate();
-            if (npc.Profile is not null && (npc.X is null || npc.Y is null || npc.Z is null)
+            // A profile binding without a pose is valid: the NPC's live or site-retained actor owns it.
+            if ((npc.X is null) != (npc.Y is null) || (npc.X is null) != (npc.Z is null)
                 || npc.X is float x && !float.IsFinite(x) || npc.Y is float y && !float.IsFinite(y) || npc.Z is float z && !float.IsFinite(z))
                 throw new ArgumentException($"NPC {npc.DurableId} has invalid current profile coordinates.");
             if (npc.DisplayName is not null) ArgumentException.ThrowIfNullOrWhiteSpace(npc.DisplayName);

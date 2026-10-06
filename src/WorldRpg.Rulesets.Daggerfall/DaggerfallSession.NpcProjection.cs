@@ -91,7 +91,9 @@ internal sealed partial class DaggerfallSession
         else if (State.Actors.TryGet(id, out var actor)) actor.ApplyPose(new(position, actor.HeadingYawRadians));
         else ProjectNpc(npc, profile, position);
         State.Npcs.SetDisplayName(id, person.DisplayName);
-        State.Npcs.Place(id, profile.ProfileKey, WorldPoint.From(_sites.LocalToProfile(position.ToVector())));
+        // A live actor owns its own pose; only a projected questor keeps a detached registry placement.
+        if (State.Actors.TryGet(id, out _)) State.Npcs.Bind(id, profile.ProfileKey);
+        else State.Npcs.Place(id, profile.ProfileKey, WorldPoint.From(_sites.LocalToProfile(position.ToVector())));
         return DaggerfallQuestResourceBinding.Actors(id);
     }
 }

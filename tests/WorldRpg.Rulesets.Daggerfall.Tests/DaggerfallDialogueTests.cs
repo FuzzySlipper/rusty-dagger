@@ -194,7 +194,7 @@ public sealed class DaggerfallDialogueTests
                 new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
                 new DaggerfallNpcAppearance("Breton", "Female", archive, record, 0, faction), role, ["talk"]);
             session.MaterializeNpcActor(id, session.State.Actors.Get(2000).Pose);
-            session.State.Npcs.Place(id, session.Sites.ActiveProfile, session.State.Actors.Get(id).Position);
+            session.State.Npcs.Bind(id, session.Sites.ActiveProfile);
             return id;
         }
 
@@ -259,7 +259,7 @@ public sealed class DaggerfallDialogueTests
         using ConditionSessionFixture fixture = new();
         TalkTarget talk = new(fixture.Session, fixture.Definitions);
         DaggerfallWorldProfileKey stale = fixture.Session.Sites.ActiveProfile with { LogicalId = "stale-profile" };
-        fixture.Session.State.Npcs.Place(talk.Npc.DurableId, stale, talk.Actor.Position);
+        fixture.Session.State.Npcs.Bind(talk.Npc.DurableId, stale);
 
         Assert.Empty(talk.Service.NpcTargets());
         DaggerfallActivationOutcome refused = talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target));
@@ -296,7 +296,7 @@ public sealed class DaggerfallDialogueTests
                 new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
                 new DaggerfallNpcAppearance("Breton", "Female", archive, record, 0, 0), "guard", ["talk"]);
             session.MaterializeNpcActor(id, session.State.Actors.Get(2000).Pose);
-            session.State.Npcs.Place(id, session.Sites.ActiveProfile, session.State.Actors.Get(id).Position);
+            session.State.Npcs.Bind(id, session.Sites.ActiveProfile);
             Npc = session.State.Npcs.Require(id);
             Actor = session.State.Actors.Get(id);
             Service = new DaggerfallDialogueService(

@@ -49,6 +49,8 @@ internal sealed partial class DaggerfallSession
                 throw;
             }
         }
+        // The live actor's Transform now owns the pose; the registry's detached placement is dropped.
+        State.Npcs.ReleasePose(npcId);
         return actorId;
     }
 

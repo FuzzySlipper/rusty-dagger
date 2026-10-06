@@ -178,8 +178,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         ReconcileLawSite();
     }
 
-    void IDaggerfallSiteTransitionHost.SyncCivilianPositions() => SyncCivilianPositions();
-
     void IDaggerfallSiteTransitionHost.AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection) =>
         AdmitResidentCivilianAppearances(projection);
 
@@ -304,7 +302,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         DaggerfallMolagBalEffects.Reconcile(State.Effects, MolagBalEquipped);
         State.ItemInstances.ReconcileResidentOwners();
         _heldEnchantments.Refresh();
-        SyncCivilianPositions();
         using IDisposable detachedResidents = _sites.SuspendResidentExteriorLocationsForSave();
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _roster.Dynamic, _encounters,
             _sites.Deltas, _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
