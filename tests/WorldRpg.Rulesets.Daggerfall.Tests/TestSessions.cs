@@ -183,15 +183,47 @@ internal static class TestSessions
         || relative.StartsWith("worldrpg/media/", StringComparison.Ordinal)
             && string.Equals(Path.GetExtension(relative), ".json", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>The audio bundle every committed site payload declares, rooted at its publication's clips.</summary>
-    internal static IEnumerable<(string Root, string Bundle)> SiteAudioBundles(string root)
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Root, string Bundle)[]> SiteAudioBundlesByRoot =
+        new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The audio bundle every committed site payload declares, rooted at its publication's clips. The
+    /// answer is read once per checkout: the payloads do not change while tests run, and the directory
+    /// also holds the imported base payload, hundreds of megabytes with no world section.
+    /// </summary>
+    internal static IEnumerable<(string Root, string Bundle)> SiteAudioBundles(string root) =>
+        SiteAudioBundlesByRoot.GetOrAdd(Path.GetFullPath(root), ReadSiteAudioBundles);
+
+    private static (string Root, string Bundle)[] ReadSiteAudioBundles(string root)
     {
+        List<(string Root, string Bundle)> bundles = [];
         foreach (string payload in Directory.GetFiles(Path.Combine(root, "content/worldrpg/payloads"), "*.json").Order(StringComparer.Ordinal))
         {
-            using JsonDocument document = JsonDocument.Parse(TestContentFiles.Read(payload));
-            if (!document.RootElement.TryGetProperty("world", out JsonElement world) || !world.TryGetProperty("audioBundle", out JsonElement bundle)) continue;
-            yield return ($"{world.GetProperty("publicationRoot").GetString()}/media/audio/clips", bundle.GetString()!);
+            // Only the world section is parsed; the reader steps over every other top-level value
+            // without building it.
+            if (TopLevelSection(TestContentFiles.Read(payload), "world") is not { } section) continue;
+            using JsonDocument document = JsonDocument.Parse(section);
+            JsonElement world = document.RootElement;
+            if (world.ValueKind != JsonValueKind.Object || !world.TryGetProperty("audioBundle", out JsonElement bundle)) continue;
+            bundles.Add(($"{world.GetProperty("publicationRoot").GetString()}/media/audio/clips", bundle.GetString()!));
         }
+        return [.. bundles];
+    }
+
+    /// <summary>The bytes of one top-level property's value, or null when the document has no such property.</summary>
+    private static ReadOnlyMemory<byte>? TopLevelSection(byte[] document, string name)
+    {
+        Utf8JsonReader reader = new(document);
+        if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject) return null;
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            bool match = reader.ValueTextEquals(name);
+            if (!reader.Read()) return null;
+            int start = checked((int)reader.TokenStartIndex);
+            reader.Skip();
+            if (match) return document.AsMemory(start, checked((int)reader.BytesConsumed) - start);
+        }
+        return null;
     }
 
     internal static ProductContent ContentAt(string root, string relativeDirectory)
