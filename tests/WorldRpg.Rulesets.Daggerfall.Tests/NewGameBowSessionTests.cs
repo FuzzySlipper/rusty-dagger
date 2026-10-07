@@ -85,7 +85,7 @@ public sealed class NewGameBowSessionTests
             f.Appearance.PlaybackRequests.Last().Frames.ToArray().Select(frame => (int)frame.FrameId));
 
         uint releaseFrame = DaggerfallFormulaPolicy.BowWeaponHitFrame;
-        f.Appearance.AdvanceReceiptForAll = Reading(
+        f.Appearance.AdvanceReceiptForAll = WeaponHitReading(
             f.Appearance.PlaybackRequests.Last().Frames.Span[(int)releaseFrame].FrameId, releaseFrame);
         f.Game.Update(new ProductUpdate(OuterUpdate(3), []));
         Assert.Null(f.Game.State.Actors.Player.Attack.Pending);
