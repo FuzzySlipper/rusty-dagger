@@ -13,7 +13,7 @@ for argument in "$@"; do
     --record) record=true ;;
     -h|--help)
       echo "usage: scripts/verify.sh [--aot] [--play] [--record]"
-      echo "  no arguments  pinned pair install, UI tests, restore, build, every test project, CoreCLR staging"
+      echo "  no arguments  pinned pair install, restore, build, UI tests, every test project, CoreCLR staging"
       echo "  --aot         also run the NativeAOT fidelity publish"
       echo "  --play        also start the product on its runtime and press Begin until it reaches ordinary play"
       echo "  --record      on success, attach the run's summary to HEAD as a git note (refs/notes/verify) and push it"
@@ -94,7 +94,6 @@ if [[ ${#generated_missing[@]} -ne 0 ]] && [[ "$play" == true || "$aot" == true 
 fi
 
 npm ci
-node --test tests/WorldRpg.Ui.Tests/*.test.mjs
 
 # Installs the pinned pair when it is missing (a no-op offline once installed),
 # then restores and stages the host through rusty, which supplies the pair's
@@ -110,6 +109,9 @@ fi
 pair_version=$(sed -n 's|.*<RustyEnginePackageVersion>\([^<]*\)</RustyEnginePackageVersion>.*|\1|p' Directory.Build.props)
 dotnet restore tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 dotnet build src/WorldRpg.Host/WorldRpg.Host.csproj --configuration Release --no-restore
+# The UI tests type-check the DOM against the Engine's UI types, which the Host build copies into
+# src/ui/engine-types; on a fresh checkout they exist only from here on.
+node --test tests/WorldRpg.Ui.Tests/*.test.mjs
 dotnet build src/WorldRpg.SpriteWorkbench/WorldRpg.SpriteWorkbench.csproj --configuration Release
 
 # The importer's tool is a product of its own and nothing else in this script compiles it, so a

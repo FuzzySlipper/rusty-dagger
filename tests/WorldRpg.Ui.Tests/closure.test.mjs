@@ -19,6 +19,11 @@ const config = ts.getParsedCommandLineOfConfigFile(join(ui, 'tsconfig.json'), {}
   onUnRecoverableConfigFileDiagnostic: diagnostic => { throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')); },
 });
 const program = ts.createProgram(config.fileNames, config.options);
+// The Engine's UI types are copied in by the Host build. Without them the Engine-typed values read
+// as `any`, and the closure facts below report a different, wrong set of read fields.
+const engineTypes = join(ui, 'engine-types/rusty-engine-product-ui.d.ts');
+assert.ok(program.getSourceFile(engineTypes),
+  `${engineTypes} is missing: the Host build copies it from the pinned Engine SDK, so build src/WorldRpg.Host before these tests`);
 const checker = program.getTypeChecker();
 const domSources = program.getSourceFiles().filter(file => file.fileName.startsWith(ui) && !file.fileName.endsWith('.d.ts'));
 assert.ok(domSources.some(file => basename(file.fileName) === 'main.ts'), 'the UI program does not include main.ts');
