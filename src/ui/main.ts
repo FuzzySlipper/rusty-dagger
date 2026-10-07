@@ -57,7 +57,6 @@ interface DaggerHud {
   readonly notebook?: NotebookProjection;
   readonly view?: { readonly yawRadians: number; readonly pitchRadians: number; readonly interaction: string };
   readonly slots?: readonly { readonly owner: string; readonly id: string; readonly label: string; readonly detail: string; readonly order: number }[];
-  readonly focus?: { readonly interaction: string; readonly container: string; readonly close: string } | null;
   readonly dungeonText?: { readonly actionId: string; readonly kind: string; readonly text: string; readonly revision: string; readonly requiresAnswer: boolean } | null;
   readonly death?: DeathProjection | null;
   readonly rest?: RestProjection | null;
@@ -338,13 +337,12 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     </section>
     <p class="dagger-outcome" role="status">Awaiting projection…</p>
     <section class="dagger-quests" aria-live="polite"></section>
-    <p class="dagger-view" aria-live="polite"></p><section class="dagger-detectors" aria-label="Detected nearby objects"></section><section class="dagger-status"></section><section class="dagger-effects" aria-label="Active effects" hidden><h2>Active effects</h2><ul></ul></section><button class="dagger-cinematic-skip" type="button" hidden>Skip</button><button class="dagger-focus-close" hidden></button>
-    <div class="dagger-death" role="alertdialog" aria-labelledby="dagger-death-title" aria-describedby="dagger-death-message" hidden>
+    <p class="dagger-view" aria-live="polite"></p><section class="dagger-detectors" aria-label="Detected nearby objects"></section><section class="dagger-status"></section><section class="dagger-effects" aria-label="Active effects" hidden><h2>Active effects</h2><ul></ul></section><button class="dagger-cinematic-skip" type="button" hidden>Skip</button>
+    <div class="dagger-death" role="alertdialog" aria-labelledby="dagger-death-title" hidden>
       <img class="dagger-death-screen" alt="You have died.">
       <div class="dagger-death-fade" aria-hidden="true"></div>
       <section class="dagger-death-panel">
-        <h1 id="dagger-death-title">You have died.</h1>
-        <p class="dagger-death-message" id="dagger-death-message"></p>
+        <h1 class="dagger-death-message" id="dagger-death-title"></h1>
         <label class="dagger-death-load">Load saved game <select class="dagger-death-load-slot"><option value="">Choose a saved game</option></select></label>
         <div class="dagger-death-actions">
           <button class="dagger-death-new" type="button">New game</button>
@@ -488,8 +486,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   };
   document.addEventListener('keydown', skipOnPress, true);
   document.addEventListener('pointerdown', skipOnPress, true);
-  const focusClose = shell.querySelector<HTMLButtonElement>('.dagger-focus-close')!;
-  focusClose.addEventListener('click', () => { if (focusClose.dataset.container && focusClose.dataset.close) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: focusClose.dataset.close, container: focusClose.dataset.container } }); });
   const vitals = shell.querySelector<HTMLElement>('.dagger-vitals')!;
   const composition = shell.querySelector<HTMLDListElement>('.dagger-composition dl')!;
   const claim = (action: string): void => context.intents?.claim('dagger.ui', {
@@ -1475,11 +1471,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     cinematicSkip.hidden = cinematic === null;
     cinematicSkip.textContent = cinematic?.skipLabel ?? 'Skip';
     status.replaceChildren(...(value.slots ?? []).map(row => { const item = document.createElement('p'); item.textContent = `${row.label}: ${row.detail}`; return item; }));
-    const focus = value.focus ?? null;
-    focusClose.hidden = focus === null;
-    focusClose.dataset.container = focus?.container ?? '';
-    focusClose.dataset.close = focus?.close ?? '';
-    focusClose.textContent = focus === null ? '' : `Close ${focus.interaction}`;
     if (isSaveSlots(value.saveSlots)) {
       saveSlots = value.saveSlots;
       redrawSaveSlots();
