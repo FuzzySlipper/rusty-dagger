@@ -1,5 +1,6 @@
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -44,6 +45,26 @@ public sealed class NewGameSessionTests
         Assert.Equal(Gold(game), Assert.Single(inventory.Stacks, stack => stack.Definition.Value == "template-276").Quantity);
         Assert.DoesNotContain(inventory.UniqueItems, item => item.Definition.Value == "iron-longsword");
         Assert.NotNull(f.Title.State.Character.ReadCreation().Summary);
+    }
+
+    [Fact]
+    public void The_final_summary_names_race_attributes_and_skills_and_states_gold_once()
+    {
+        using Fixture f = new();
+        Commit(f.Title, "class16");
+        var character = f.Title.State.Character;
+        string[] summary = Assert.IsType<string[]>(character.ReadCreation().Summary);
+        var career = f.Definitions.Catalogs.RequireCareer("class16");
+        Assert.StartsWith($"New adventurer — {DaggerfallCharacterPresentation.Label(character.Identity.RaceId)}, male, {career.Name};", summary[0], StringComparison.Ordinal);
+        Assert.DoesNotContain(character.Identity.RaceId + ",", summary[0], StringComparison.Ordinal);
+        foreach (string skill in career.SkillReferences)
+            Assert.Contains(summary, line => line.StartsWith(DaggerfallCharacterPresentation.Label(skill) + ": ", StringComparison.Ordinal));
+        Assert.DoesNotContain(summary, line => career.SkillReferences.Concat(career.Attributes).Any(id => id.Contains('-') && line.StartsWith(id + ":", StringComparison.Ordinal)));
+        Assert.Contains(summary, line => line.StartsWith("Health: ", StringComparison.Ordinal));
+        ulong biographyGold = character.Capture().Background!.StartingGrants.Where(item => item.ItemId == "template-276").Aggregate(0UL, (total, item) => total + item.Quantity);
+        string gold = Assert.Single(summary, line => line.Contains(" gold", StringComparison.Ordinal));
+        Assert.StartsWith($"{(ulong)f.Definitions.NewGame.Gold + biographyGold} gold", gold, StringComparison.Ordinal);
+        Assert.DoesNotContain(summary, line => line.Contains("Gold Pieces", StringComparison.Ordinal));
     }
 
     [Fact]

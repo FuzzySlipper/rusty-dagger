@@ -40,7 +40,7 @@ internal sealed record DaggerfallCharacterBackgroundPresentation(
 internal sealed record DaggerfallBiographyQuestionPresentation(int Number, string Text, DaggerfallBiographyAnswerPresentation[] Answers, string? SelectedLetter);
 internal sealed record DaggerfallBiographyAnswerPresentation(string Letter, string Text);
 internal sealed record DaggerfallCreationAttributePresentation(string Id, string Label, int Rolled, int Allocated, int Value, bool CanAllocate);
-internal sealed record DaggerfallCreationSkillPresentation(string Id, string Tier, int Rolled, int Allocated, int BiographyBonus, int Value, bool CanAllocate);
+internal sealed record DaggerfallCreationSkillPresentation(string Id, string Label, string Tier, int Rolled, int Allocated, int BiographyBonus, int Value, bool CanAllocate);
 
 /// <summary>Classic creation policy interpreted from the normalized BIOG and catalog records.</summary>
 internal static class DaggerfallCharacterBackgroundPolicy
@@ -98,7 +98,7 @@ internal static class DaggerfallCharacterBackgroundPolicy
             string tier = Tier(career, value.Id);
             int remaining = RemainingTier(tier, background.SkillAllocations, career);
             int allocated = skillAllocations.GetValueOrDefault(value.Id);
-            return new DaggerfallCreationSkillPresentation(value.Id, tier, value.Points, allocated, skillBonuses.GetValueOrDefault(value.Id),
+            return new DaggerfallCreationSkillPresentation(value.Id, Label(value.Id), tier, value.Points, allocated, skillBonuses.GetValueOrDefault(value.Id),
                 checked(value.Points + allocated + skillBonuses.GetValueOrDefault(value.Id)), remaining > 0);
         }).ToArray();
         return new(background.BiographyClassIndex, background.Biography,
@@ -107,10 +107,21 @@ internal static class DaggerfallCharacterBackgroundPolicy
                 background.Answers.Single(answer => answer.Question == question.Number).Letter)).ToArray(),
             attributes, background.AttributeBonusPool, Remaining(background.AttributeBonusPool, background.AttributeAllocations), skills,
             RemainingTier("primary", background.SkillAllocations, career), RemainingTier("major", background.SkillAllocations, career), RemainingTier("minor", background.SkillAllocations, career),
-            background.StartingGrants.Select(grant => new DaggerfallStartingGrantPresentation(grant.ItemId, grant.TemplateIndex, grant.Quantity, grant.SourceEffect,
+            CombinedGrants(background.StartingGrants).Select(grant => new DaggerfallStartingGrantPresentation(grant.ItemId, grant.TemplateIndex, grant.Quantity, grant.SourceEffect,
                 definitions.RequireItem(new DaggerfallItemId(grant.ItemId)).Template!.Name)).ToArray(),
             background.Modifiers, UnsupportedEffects(biography, background.Answers, background.Modifiers));
     }
+
+    /// <summary>
+    /// The grants a player reads: several answers that each award the same item (most often gold)
+    /// are one line with their summed quantity, in the order the first award appears. Each source
+    /// effect stays named, in answer order. The save keeps every grant separately.
+    /// </summary>
+    internal static DaggerfallStartingGrant[] CombinedGrants(IEnumerable<DaggerfallStartingGrant> grants) => grants
+        .GroupBy(grant => (grant.ItemId, grant.TemplateIndex))
+        .Select(group => new DaggerfallStartingGrant(group.Key.ItemId, group.Key.TemplateIndex,
+            group.Aggregate(0UL, (total, grant) => checked(total + grant.Quantity)), string.Join("; ", group.Select(grant => grant.SourceEffect))))
+        .ToArray();
 
     internal static void ApplyStats(DaggerfallDefinitions definitions, DaggerfallCareerDefinition career, DaggerfallCharacterBackgroundSave background, StatsComponent stats)
     {
@@ -178,7 +189,7 @@ internal static class DaggerfallCharacterBackgroundPolicy
     private static int RemainingTier(string tier, IEnumerable<DaggerfallCreationAllocationSave> values, DaggerfallCareerDefinition career) => checked(TierPool - values.Where(value => Tier(career, value.Id) == tier).Sum(value => value.Points));
     private static string Tier(DaggerfallCareerDefinition career, string skill) => career.PrimarySkills.Contains(skill) ? "primary" : career.MajorSkills.Contains(skill) ? "major" : career.MinorSkills.Contains(skill) ? "minor" : throw new ArgumentException($"'{skill}' is not trained by the selected career.");
     private static int Number(string text) => int.Parse(text, System.Globalization.CultureInfo.InvariantCulture);
-    private static string Label(string id) => System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(id.Replace('-', ' '));
+    private static string Label(string id) => DaggerfallCharacterPresentation.Label(id);
     private static string Text(DaggerfallDefinitions definitions, IEnumerable<DaggerfallTextKey> keys) => string.Join(" ", keys.SelectMany(key => definitions.Text.Require(key).TextRuns)).Trim();
     private static IEnumerable<DaggerfallBiographyEffectDefinition> Effects(DaggerfallBiographyDefinition biography, IEnumerable<DaggerfallBiographyAnswerSave> answers) =>
         answers.Select(answer => biography.Questions.Single(question => question.Number == answer.Question).Answers.Single(value => value.Letter == answer.Letter)).SelectMany(answer => answer.Effects);
@@ -210,7 +221,10 @@ internal static class DaggerfallCharacterBackgroundPolicy
             foreach (DaggerfallBiographyEffectDefinition effect in answer.Effects.Where(effect => effect.Kind == DaggerfallBiographyEffectKind.TextMacro && effect.MacroTargetDisposition == DaggerfallBiographyLinkDisposition.Resolved && effect.MacroTarget is not null))
             {
                 int index = selected.Question - 1;
-                string fragment = definitions.TextPresentation.Resolve(effect.MacroTarget!.Value, fragmentContext).Text;
+                // A fragment record lists alternative wordings as subrecords. The donor's %q macros
+                // read only the record's first wording (BiogFileMCP.Q1: GetRSCTokens(id)[0].text) and
+                // draw nothing, so the backstory names one alternative rather than all of them.
+                string fragment = definitions.TextPresentation.ResolveSubrecord(effect.MacroTarget!.Value, 0, fragmentContext).Text;
                 switch (effect.First)
                 {
                     case "#": primary[index] = fragment; break;

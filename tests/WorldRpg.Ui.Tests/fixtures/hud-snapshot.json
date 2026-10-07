@@ -1208,7 +1208,7 @@
       },
       {
         "id": "hand-to-hand",
-        "label": "Hand To Hand",
+        "label": "Hand-to-Hand",
         "value": 40,
         "permanent": 40
       },
@@ -1442,49 +1442,49 @@
       "races": [
         {
           "id": "breton",
-          "label": "breton",
+          "label": "Breton",
           "available": true,
           "restriction": null
         },
         {
           "id": "redguard",
-          "label": "redguard",
+          "label": "Redguard",
           "available": true,
           "restriction": null
         },
         {
           "id": "nord",
-          "label": "nord",
+          "label": "Nord",
           "available": true,
           "restriction": null
         },
         {
           "id": "dark-elf",
-          "label": "dark-elf",
+          "label": "Dark Elf",
           "available": true,
           "restriction": null
         },
         {
           "id": "high-elf",
-          "label": "high-elf",
+          "label": "High Elf",
           "available": true,
           "restriction": null
         },
         {
           "id": "wood-elf",
-          "label": "wood-elf",
+          "label": "Wood Elf",
           "available": true,
           "restriction": null
         },
         {
           "id": "khajiit",
-          "label": "khajiit",
+          "label": "Khajiit",
           "available": true,
           "restriction": null
         },
         {
           "id": "argonian",
-          "label": "argonian",
+          "label": "Argonian",
           "available": true,
           "restriction": null
         }
@@ -1682,6 +1682,7 @@
     "levelUp": null,
     "identity": {
       "race": "breton",
+      "raceLabel": "Breton",
       "donorRaceId": 1,
       "portrait": "character.portrait.mage.0",
       "gender": "male",

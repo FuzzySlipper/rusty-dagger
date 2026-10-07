@@ -104,7 +104,19 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
 {
     private static readonly SearchValues<char> MacroTerminators = SearchValues.Create(" %.,'?!/(){}[]\";:|".AsSpan());
 
-    internal DaggerfallTextRenderResult Resolve(DaggerfallTextKey key, DaggerfallTextContext context)
+    internal DaggerfallTextRenderResult Resolve(DaggerfallTextKey key, DaggerfallTextContext context) => Resolve(key, context, subrecord: null);
+
+    /// <summary>
+    /// Renders only one subrecord of a record whose subrecords are alternative wordings. The caller
+    /// names which alternative the donor reads; a record without that subrecord is reported missing.
+    /// </summary>
+    internal DaggerfallTextRenderResult ResolveSubrecord(DaggerfallTextKey key, int subrecord, DaggerfallTextContext context)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(subrecord);
+        return Resolve(key, context, subrecord);
+    }
+
+    private DaggerfallTextRenderResult Resolve(DaggerfallTextKey key, DaggerfallTextContext context, int? subrecord)
     {
         ArgumentNullException.ThrowIfNull(context);
         List<DaggerfallTextDiagnostic> diagnostics = [];
@@ -113,13 +125,21 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
         if (value!.State == DaggerfallTextState.Malformed)
             return new(string.Empty, [new(DaggerfallTextDiagnosticKind.MalformedText, key, value.Reason)]);
         StringBuilder output = new();
+        int current = 0;
         foreach (DaggerfallTextElement token in value.Tokens)
         {
+            if (subrecord is int selected)
+            {
+                if (token.Code == DaggerfallTextCode.SubrecordSeparator) { current++; continue; }
+                if (current != selected) continue;
+            }
             if (token.Code == DaggerfallTextCode.Text) Expand(output, token.Text!, key, context, diagnostics);
             else if (token.Code is DaggerfallTextCode.NewLineOffset or DaggerfallTextCode.EndOfPage or DaggerfallTextCode.SubrecordSeparator) output.Append('\n');
             else if (token.Code is not (DaggerfallTextCode.SameLineOffset or DaggerfallTextCode.PullPreceeding or DaggerfallTextCode.InputCursorPositioner or DaggerfallTextCode.FontPrefix or DaggerfallTextCode.PositionPrefix or DaggerfallTextCode.JustifyLeft or DaggerfallTextCode.JustifyCenter))
                 diagnostics.Add(new(DaggerfallTextDiagnosticKind.UnknownLayoutToken, key, $"The normalized text value carries unsupported layout token '{token.Code}'."));
         }
+        if (subrecord is int wanted && current < wanted)
+            return new(string.Empty, [new(DaggerfallTextDiagnosticKind.MissingText, key, $"The normalized text value for '{key}' has no subrecord {wanted}.")]);
         return new(output.ToString(), diagnostics);
     }
 

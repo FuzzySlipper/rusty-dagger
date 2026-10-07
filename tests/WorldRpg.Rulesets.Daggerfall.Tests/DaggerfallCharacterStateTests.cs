@@ -438,6 +438,93 @@ public sealed class DaggerfallCharacterStateTests
         }
     }
 
+    [Fact]
+    public void Creation_names_races_and_skills_as_the_player_reads_them()
+    {
+        DaggerfallCharacterState character = Create(out DaggerfallDefinitions definitions, out _);
+        character.BeginChoices(RandomMinimum.Create());
+        DaggerfallCharacterCreationPresentation creation = character.ReadCreation();
+
+        Assert.Equal("Dark Elf", creation.Races.Single(race => race.Id == "dark-elf").Label);
+        Assert.Equal("Breton", creation.Races.Single(race => race.Id == "breton").Label);
+        Assert.All(creation.Races, race => Assert.DoesNotContain("-", race.Label, StringComparison.Ordinal));
+        DaggerfallCharacterBackgroundPresentation background = Assert.IsType<DaggerfallCharacterBackgroundPresentation>(creation.Background);
+        Assert.All(background.Skills, skill => Assert.Equal(DaggerfallCharacterPresentation.Label(skill.Id), skill.Label));
+        Assert.Equal("Long Blade", DaggerfallCharacterPresentation.Label("long-blade"));
+        Assert.Equal("Blunt Weapon", DaggerfallCharacterPresentation.Label("blunt-weapon"));
+        Assert.Equal("Hand-to-Hand", DaggerfallCharacterPresentation.Label("hand-to-hand"));
+        Assert.All(definitions.Catalogs.Skills.Where(skill => skill.Id != "hand-to-hand"),
+            skill => Assert.DoesNotContain("-", DaggerfallCharacterPresentation.Label(skill.Id), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_biography_fragment_names_the_first_of_its_alternative_wordings_as_the_donor_does()
+    {
+        Create(out DaggerfallDefinitions definitions, out _);
+        DaggerfallCareerDefinition warrior = definitions.Catalogs.RequireCareer("class16");
+        DaggerfallCharacterIdentity identity = new("Aubk-i", "breton", DaggerfallCharacterGender.Male, 0, DaggerfallCharacterReflexes.Average, warrior.Id);
+        DaggerfallCharacterBackgroundSave rolled = DaggerfallCharacterBackgroundPolicy.Roll(definitions, warrior, identity, RandomMinimum.Create(), 1);
+        DaggerfallBiographyDefinition biography = definitions.Biographies.Biographies.Single(value => value.ClassIndex == rolled.BiographyClassIndex);
+        int checkedFragments = 0;
+        foreach (DaggerfallBiographyQuestionDefinition question in biography.Questions)
+        foreach (DaggerfallBiographyAnswerDefinition answer in question.Answers)
+        {
+            DaggerfallBiographyAnswerSave[] answers = rolled.Answers.Select(value => value.Question == question.Number ? new DaggerfallBiographyAnswerSave(question.Number, answer.Letter) : value).ToArray();
+            string prose = string.Join(" ", DaggerfallCharacterBackgroundPolicy.Update(definitions, warrior, identity, rolled, answers, [], []).Biography);
+            foreach (DaggerfallBiographyEffectDefinition effect in answer.Effects.Where(effect => effect.Kind == DaggerfallBiographyEffectKind.TextMacro && effect.MacroTarget is not null))
+            {
+                DaggerfallTextValue value = definitions.Text.Require(effect.MacroTarget!.Value);
+                if (value.Subrecords < 2 || value.Macros.Count != 0) continue;
+                string[] wordings = Wordings(value);
+                // A fragment the backstory template does not use for this answer names nothing.
+                if (!wordings.Any(wording => prose.Contains(wording, StringComparison.Ordinal))) continue;
+                Assert.Contains(wordings[0], prose, StringComparison.Ordinal);
+                // The backstory never runs one wording into the next.
+                Assert.DoesNotContain($"{wordings[0]} {wordings[1]}", prose, StringComparison.Ordinal);
+                Assert.DoesNotContain($"{wordings[0]}\n{wordings[1]}", prose, StringComparison.Ordinal);
+                checkedFragments++;
+            }
+        }
+        Assert.True(checkedFragments > 0, "the warrior questionnaire has no fragment with alternative wordings");
+
+        static string[] Wordings(DaggerfallTextValue value)
+        {
+            List<string> wordings = [""];
+            foreach (DaggerfallTextElement token in value.Tokens)
+                if (token.Code == DaggerfallTextCode.SubrecordSeparator) wordings.Add("");
+                else if (token.Code == DaggerfallTextCode.Text) wordings[^1] += token.Text;
+            return [.. wordings.Select(wording => wording.Trim())];
+        }
+    }
+
+    [Fact]
+    public void Starting_grants_of_one_item_read_as_one_summed_line_while_the_save_keeps_each_award()
+    {
+        DaggerfallStartingGrant[] awards =
+        [
+            new("template-276", 276, 500, "500 GP"), new("template-276", 276, 200, "200 GP"),
+            new("template-100", 100, 1, "item"), new("template-276", 276, 100, "100 GP"),
+        ];
+        DaggerfallStartingGrant[] combined = DaggerfallCharacterBackgroundPolicy.CombinedGrants(awards);
+        Assert.Equal(2, combined.Length);
+        Assert.Equal(new DaggerfallStartingGrant("template-276", 276, 800, "500 GP; 200 GP; 100 GP"), combined[0]);
+        Assert.Equal(awards[2], combined[1]);
+    }
+
+    [Fact]
+    public void Text_resolves_one_subrecord_and_reports_a_missing_one()
+    {
+        Create(out DaggerfallDefinitions definitions, out _);
+        DaggerfallTextValue value = definitions.Text.Values.Values.First(candidate => candidate.Subrecords >= 3 && candidate.Macros.Count == 0
+            && candidate.State == DaggerfallTextState.Read && candidate.Tokens.All(token => token.Code is DaggerfallTextCode.Text or DaggerfallTextCode.SubrecordSeparator));
+        string[] runs = [.. value.TextRuns];
+        Assert.Equal(runs[0], definitions.TextPresentation.ResolveSubrecord(value.Key, 0, DaggerfallTextContext.Empty).Text);
+        Assert.Equal(runs[1], definitions.TextPresentation.ResolveSubrecord(value.Key, 1, DaggerfallTextContext.Empty).Text);
+        DaggerfallTextRenderResult missing = definitions.TextPresentation.ResolveSubrecord(value.Key, value.Subrecords, DaggerfallTextContext.Empty);
+        Assert.False(missing.IsComplete);
+        Assert.Equal(DaggerfallTextDiagnosticKind.MissingText, Assert.Single(missing.Diagnostics).Kind);
+    }
+
     private static DaggerfallCharacterState Create(out DaggerfallDefinitions definitions, out StatsComponent stats)
     {
         definitions = TestPayload.Definitions;
