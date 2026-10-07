@@ -86,22 +86,27 @@ internal static class TestPayload
     internal static byte[] Splice(System.Text.Json.Nodes.JsonObject sections)
     {
         byte[] combined = Combined.Value;
-        using MemoryStream output = new(combined.Length + 1024);
-        int copied = 0;
-        HashSet<string> written = new(StringComparer.Ordinal);
+        // The result is allocated once at its exact size: a growable stream and its copy would hold two
+        // payload-sized arrays at once.
+        List<(int Start, int End, byte[] Replacement)> edits = [];
         foreach ((string name, int start, int end) in SectionRanges(combined))
-        {
-            if (!sections.TryGetPropertyValue(name, out System.Text.Json.Nodes.JsonNode? value)) continue;
-            output.Write(combined, copied, start - copied);
-            byte[] replacement = System.Text.Encoding.UTF8.GetBytes(value?.ToJsonString() ?? "null");
-            output.Write(replacement);
-            copied = end;
-            written.Add(name);
-        }
-        if (sections.Select(property => property.Key).FirstOrDefault(name => !written.Contains(name)) is { } added)
+            if (sections.TryGetPropertyValue(name, out System.Text.Json.Nodes.JsonNode? value))
+                edits.Add((start, end, System.Text.Encoding.UTF8.GetBytes(value?.ToJsonString() ?? "null")));
+        HashSet<string> present = [.. SectionRanges(combined).Select(range => range.Name)];
+        if (sections.Select(property => property.Key).FirstOrDefault(name => !present.Contains(name)) is { } added)
             throw new ArgumentException($"Section '{added}' is not in the joined payload; splicing replaces sections, it does not add them.", nameof(sections));
-        output.Write(combined, copied, combined.Length - copied);
-        return output.ToArray();
+        byte[] result = new byte[combined.Length + edits.Sum(edit => edit.Replacement.Length - (edit.End - edit.Start))];
+        int read = 0, write = 0;
+        foreach ((int start, int end, byte[] replacement) in edits)
+        {
+            combined.AsSpan(read, start - read).CopyTo(result.AsSpan(write));
+            write += start - read;
+            replacement.CopyTo(result.AsSpan(write));
+            write += replacement.Length;
+            read = end;
+        }
+        combined.AsSpan(read).CopyTo(result.AsSpan(write));
+        return result;
     }
 
     private static IEnumerable<(string Name, int Start, int End)> SectionRanges(byte[] combined)
