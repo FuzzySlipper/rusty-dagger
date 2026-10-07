@@ -33,6 +33,25 @@ public sealed class AttackExecutionTests
     }
 
     [Fact]
+    public void A_second_start_names_the_waiting_impact_before_the_cooldown()
+    {
+        using ActorsState actors = Actors();
+        RecordingRules rules = new(cooldown: .5d);
+        AttackExecution<TestFact> execution = new(actors, rules);
+        FactBuffer<TestFact> facts = new();
+        AttackRequest request = new(2, 3, 7, 10, 1d, Delayed: true);
+
+        Assert.True(execution.Start(request, facts));
+        // The delayed swing still waits for its impact, which is a different answer from its recovery.
+        Assert.False(execution.Start(request with { SimulationStep = 20 }, facts));
+        execution.ApplyImpacts([new AttackImpactNotice(2, 3, 7, 10, Expired: false)], 7, facts);
+        Assert.True(execution.Start(request with { SimulationStep = 21, Delayed = false }, facts));
+        Assert.False(execution.Start(request with { SimulationStep = 21, Delayed = false }, facts));
+
+        Assert.Equal([AttackRefusal.InProgress, AttackRefusal.Cooldown], rules.Refusals);
+    }
+
+    [Fact]
     public void A_ruleset_can_defer_a_released_impact_until_its_own_delivery_arrives()
     {
         using ActorsState actors = Actors();
@@ -125,7 +144,7 @@ public sealed class AttackExecutionTests
             attack = new(cooldown, new AttackOutcome(true, true, 10));
             return true;
         }
-        public void Refused(AttackRefusal reason, FactBuffer<TestFact> facts) => Refusals.Add(reason);
+        public void Refused(long attackerId, AttackRefusal reason, FactBuffer<TestFact> facts) => Refusals.Add(reason);
         public void Started(AttackRequest request, PreparedAttack attack, FactBuffer<TestFact> facts) => StartedRequests.Add(request);
         public void Apply(AttackRequest request, PreparedAttack attack, FactBuffer<TestFact> facts) => Applied.Add(request);
     }

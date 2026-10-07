@@ -313,7 +313,7 @@ internal sealed class CanarySession : IGameSession, IModeAwareGameSession, IEntr
             return true;
         }
 
-        public void Refused(AttackRefusal reason, FactBuffer<CanaryFact> facts) => facts.Append(new CanaryRefusedFact(reason));
+        public void Refused(long attackerId, AttackRefusal reason, FactBuffer<CanaryFact> facts) => facts.Append(new CanaryRefusedFact(reason));
 
         public void Started(AttackRequest request, PreparedAttack attack, FactBuffer<CanaryFact> facts) { }
 

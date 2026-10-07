@@ -200,37 +200,32 @@ internal sealed partial class DaggerfallSession
         if (State.Actors.Player.IsDefeated
             || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d)
             return;
-        if (_appearance.HasPendingEnemyHitTarget(DaggerfallActorIdentity.PlayerEntityId)) return;
-        LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
         // The swing gesture is measured from the look turns this admitted update committed, so the
         // attack below reads the gesture the player actually drew in the moments before it.
         _playerSwings.Observe(update.DeltaSeconds, State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians);
         _staminaRecovery.Update(State.Actors.Player.Stats, update.DeltaSeconds);
-        if (update.IsRequested(DaggerfallInput.ToggleWeapon)) _appearance.ToggleWeaponDrawn();
-        _appearance.UpdateRightHandEquipment(State.Equipment.Read());
-        // Interaction owns this slice once requested. Direct semantic input can carry both intents
-        // in the same Engine delivery, and it must follow the same no-attack rule as a DOM loot action.
-        bool contextualInteraction = update.IsRequested(DaggerfallInput.Interact);
-        restrictions = State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId);
-        if (!restrictions.PhysicalAttacks && !contextualInteraction && update.IsRequested(DaggerfallInput.Attack) && _appearance.CanStartPlayerAttack)
+        DaggerfallPlayerActs acts = new(
+            ToggleWeapon: update.IsRequested(DaggerfallInput.ToggleWeapon),
+            Attack: update.IsRequested(DaggerfallInput.Attack) ? new(generation, simulationStep, update.DeltaSeconds) : null,
+            Interact: update.IsRequested(DaggerfallInput.Interact),
+            Inventory: update.IsRequested(DaggerfallInput.Inventory),
+            Character: update.IsRequested(DaggerfallInput.Character),
+            Menu: update.IsRequested(DaggerfallInput.Menu));
+        // An enemy hit on the player that is already in flight lands at its damage frame, which the
+        // outer admitted update reaches after these steps. The player's own acts wait for that same
+        // boundary rather than being dropped, so a lethal frame reached there still resolves first and
+        // a frame that is not reached yet lets the player act in this update, as the donor's
+        // independent attack timing does. Once one step defers, the rest of the update defers behind it
+        // so the acts keep their order.
+        if (_deferredPlayerActs is not null || acts.Any && _appearance.HasPendingEnemyHitTarget(DaggerfallActorIdentity.PlayerEntityId))
         {
-            State.Kit.Attacks.TryPlayerMelee(State.PlayerControl, currentLook, generation, simulationStep, update.DeltaSeconds, _facts);
-            // WeaponManager sends Attack to an action on the environment after the ordinary hit
-            // query. The safe Engine hit reports a static surface rather than a source id, so the
-            // normalized placement resolver above is the product-side identity join.
-            _ = TryTriggerDungeonActionRay(currentLook.Forward, _tuning.MeleeTargeting.MaximumDistance, DaggerfallDungeonActionEvent.Attack);
+            _deferredPlayerActs = _deferredPlayerActs?.Then(acts) ?? acts;
+            _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         }
-        if (contextualInteraction)
-            _ = TryActivateContextual(currentLook);
-        // A panel button asks the DOM for a panel during ordinary play, which is where the keyboard's
-        // own I, C and Escape are heard. While a modal or a death holds the world the DOM already has
-        // a panel in front of the player, so a request there would fight the mode rather than serve it.
-        // Two panel buttons in one admitted slice ask in a fixed order and the last one stands, which
-        // is what the DOM's own key handling does with two keys in one frame: one panel can open, so
-        // the earlier press must not swallow the later one.
-        if (update.IsRequested(DaggerfallInput.Inventory)) RequestPanel(DaggerfallPanel.Inventory);
-        if (update.IsRequested(DaggerfallInput.Character)) RequestPanel(DaggerfallPanel.Character);
-        if (update.IsRequested(DaggerfallInput.Menu)) RequestPanel(DaggerfallPanel.Menu);
+        else
+        {
+            ApplyPlayerActs(acts);
+        }
         // Tasks consume the state committed by this admitted step. Clock actions mutate only the
         // quest clock state; elapsed duration is still consumed by the calendar owner above.
         State.Quests.Advance(State.Variables, _time.Calendar, update.DeltaSeconds);
@@ -240,6 +235,72 @@ internal sealed partial class DaggerfallSession
         ReconcileNpcProjection();
         UpdateCivilianPopulation(simulationStep, update.DeltaSeconds);
         _dialogue?.RefreshEligibility();
+    }
+
+    /// <summary>
+    /// The player's own requests from one simulation step: the weapon toggle, a swing, contextual
+    /// interaction and the panel buttons. A swing keeps the step that asked for it, since cooldown is
+    /// measured from there.
+    /// </summary>
+    private sealed record DaggerfallPlayerActs(bool ToggleWeapon, DaggerfallPlayerSwingRequest? Attack, bool Interact,
+        bool Inventory, bool Character, bool Menu)
+    {
+        internal bool Any => ToggleWeapon || Attack is not null || Interact || Inventory || Character || Menu;
+
+        /// <summary>Folds a later step's requests into acts still waiting; the earliest swing request stands.</summary>
+        internal DaggerfallPlayerActs Then(DaggerfallPlayerActs later) => new(
+            ToggleWeapon || later.ToggleWeapon, Attack ?? later.Attack, Interact || later.Interact,
+            Inventory || later.Inventory, Character || later.Character, Menu || later.Menu);
+    }
+
+    private readonly record struct DaggerfallPlayerSwingRequest(ulong Generation, ulong SimulationStep, double DeltaSeconds);
+
+    /// <summary>Acts waiting for this admitted update's enemy impacts; never carried past the update.</summary>
+    private DaggerfallPlayerActs? _deferredPlayerActs;
+
+    private void ApplyPlayerActs(DaggerfallPlayerActs acts)
+    {
+        if (acts.ToggleWeapon) _appearance.ToggleWeaponDrawn();
+        _appearance.UpdateRightHandEquipment(State.Equipment.Read());
+        LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
+        // Interaction owns this slice once requested. Direct semantic input can carry both intents
+        // in the same Engine delivery, and it must follow the same no-attack rule as a DOM loot action.
+        ActorControlRestrictions restrictions = State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId);
+        if (!restrictions.PhysicalAttacks && !acts.Interact && acts.Attack is { } swing && _appearance.CanStartPlayerAttack)
+        {
+            State.Kit.Attacks.TryPlayerMelee(State.PlayerControl, currentLook, swing.Generation, swing.SimulationStep, swing.DeltaSeconds, _facts);
+            // WeaponManager sends Attack to an action on the environment after the ordinary hit
+            // query. The safe Engine hit reports a static surface rather than a source id, so the
+            // normalized placement resolver above is the product-side identity join.
+            _ = TryTriggerDungeonActionRay(currentLook.Forward, _tuning.MeleeTargeting.MaximumDistance, DaggerfallDungeonActionEvent.Attack);
+        }
+        if (acts.Interact)
+            _ = TryActivateContextual(currentLook);
+        // A panel button asks the DOM for a panel during ordinary play, which is where the keyboard's
+        // own I, C and Escape are heard. While a modal or a death holds the world the DOM already has
+        // a panel in front of the player, so a request there would fight the mode rather than serve it.
+        // Two panel buttons in one admitted slice ask in a fixed order and the last one stands, which
+        // is what the DOM's own key handling does with two keys in one frame: one panel can open, so
+        // the earlier press must not swallow the later one.
+        if (acts.Inventory) RequestPanel(DaggerfallPanel.Inventory);
+        if (acts.Character) RequestPanel(DaggerfallPanel.Character);
+        if (acts.Menu) RequestPanel(DaggerfallPanel.Menu);
+    }
+
+    /// <summary>
+    /// Runs the acts a step deferred behind an enemy hit on the player, once this update's impacts have
+    /// landed. A lethal impact, a legal modal or an unloaded location leaves them unperformed, as it
+    /// would have in the step itself.
+    /// </summary>
+    private void ApplyDeferredPlayerActs()
+    {
+        if (_deferredPlayerActs is not { } acts) return;
+        _deferredPlayerActs = null;
+        if (LegalModalOpen || !_sites.ActiveLocationLoaded || State.Actors.Player.IsDefeated
+            || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d)
+            return;
+        ApplyPlayerActs(acts);
+        DeliverFacts();
     }
 
     private void ApplyAttackImpacts()

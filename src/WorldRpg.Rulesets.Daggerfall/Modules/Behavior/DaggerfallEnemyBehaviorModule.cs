@@ -309,8 +309,11 @@ internal sealed class DaggerfallEnemyBehaviorModule
                     _admittedActions.Add(actor.DurableId);
                     _combat.InterruptPendingAttack(actor.DurableId, generation);
                 }
-                else if (_combat.TryBeginEnemyAttack(actor.DurableId, target.Value.DurableId, generation,
-                    simulationStep, deltaSeconds, facts))
+                // An enemy that is still swinging or recovering simply waits: its pacing is not a refused
+                // request, and reporting it as one would put the enemy's cooldown on the player's line.
+                else if (_combat.IsReady(actor.DurableId, generation, simulationStep)
+                    && _combat.TryBeginEnemyAttack(actor.DurableId, target.Value.DurableId, generation,
+                        simulationStep, deltaSeconds, facts))
                 {
                     _admittedActions.Add(actor.DurableId);
                 }

@@ -16,7 +16,12 @@ public readonly record struct PendingAttack(AttackRequest Request, PreparedAttac
 public readonly record struct DeferredAttackImpact(AttackRequest Request, PreparedAttack Attack);
 public readonly record struct AttackCooldown(long AttackerId, ulong RemainingSteps);
 public readonly record struct AttackImpactNotice(long AttackerId, long TargetId, ulong Generation, ulong SimulationStep, bool Expired);
-public enum AttackRefusal { UnknownActor, TargetDefeated, Cooldown }
+/// <summary>
+/// Why execution refused to start an attack. <see cref="InProgress"/> is an attacker whose own delayed
+/// attack still waits for its impact; <see cref="Cooldown"/> is one whose last attack has resolved but
+/// whose recovery has not elapsed.
+/// </summary>
+public enum AttackRefusal { UnknownActor, TargetDefeated, Cooldown, InProgress }
 
 public sealed class AttackState
 {
@@ -30,7 +35,7 @@ public sealed class AttackState
 public interface IAttackRules<TFact> where TFact : IWorldRpgFact
 {
     bool TryPrepare(AttackRequest request, FactBuffer<TFact> facts, out PreparedAttack attack);
-    void Refused(AttackRefusal reason, FactBuffer<TFact> facts);
+    void Refused(long attackerId, AttackRefusal reason, FactBuffer<TFact> facts);
     void Started(AttackRequest request, PreparedAttack attack, FactBuffer<TFact> facts);
     void Apply(AttackRequest request, PreparedAttack attack, FactBuffer<TFact> facts);
 }
@@ -52,13 +57,14 @@ public sealed class AttackExecution<TFact>(ActorsState actors, IAttackRules<TFac
     public bool Start(AttackRequest request, FactBuffer<TFact> facts)
     {
         if (!Exists(request.AttackerId) || request.TargetId is long target && !Exists(target))
-        { rules.Refused(AttackRefusal.UnknownActor, facts); return false; }
+        { rules.Refused(request.AttackerId, AttackRefusal.UnknownActor, facts); return false; }
         if (Defeated(request.AttackerId) || request.TargetId is long victim && Defeated(victim))
-        { rules.Refused(AttackRefusal.TargetDefeated, facts); return false; }
+        { rules.Refused(request.AttackerId, AttackRefusal.TargetDefeated, facts); return false; }
         AttackState state = State(request.AttackerId);
-        if (state.Pending is PendingAttack pending && pending.Request.Generation == request.Generation) return false;
+        if (state.Pending is PendingAttack pending && pending.Request.Generation == request.Generation)
+        { rules.Refused(request.AttackerId, AttackRefusal.InProgress, facts); return false; }
         if (!IsReady(request.AttackerId, request.Generation, request.SimulationStep))
-        { rules.Refused(AttackRefusal.Cooldown, facts); return false; }
+        { rules.Refused(request.AttackerId, AttackRefusal.Cooldown, facts); return false; }
         if (!rules.TryPrepare(request, facts, out PreparedAttack attack)) return false;
         state.Generation = request.Generation;
         state.ReadyAtStep = checked(request.SimulationStep + (ulong)Math.Max(1d, Math.Ceiling(attack.CooldownSeconds / request.FixedDeltaSeconds)));

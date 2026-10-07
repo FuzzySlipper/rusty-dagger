@@ -180,6 +180,54 @@ public sealed class EnemyCombatSessionTests
     }
 
     [Fact]
+    public void A_player_swing_is_admitted_while_an_enemy_swing_at_the_player_waits_for_its_frame()
+    {
+        List<string> releases = [];
+        (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases);
+        using DaggerfallSession disposable = session;
+        double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
+        ProductInputEvent attack = Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack");
+
+        // The enemy decides a hitting swing; its damage frame has not been reached.
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+
+        // The player swings while that strike is still in flight. The swing is admitted in this update
+        // and starts the player's own cooldown; the enemy's strike has still not landed.
+        Assert.True(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 2));
+        session.Update(new ProductUpdate(OuterUpdate(2), [attack]));
+        Assert.NotNull(session.LastMeleeTargeting);
+        Assert.False(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 3));
+        Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
+
+        // The enemy's strike lands at its own frame, independently of the player's swing.
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.True(session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current < healthBefore);
+    }
+
+    [Fact]
+    public void A_lethal_enemy_frame_in_the_same_update_resolves_before_a_deferred_player_swing()
+    {
+        List<string> releases = [];
+        (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases);
+        using DaggerfallSession disposable = session;
+
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+
+        // The swing asked for in the update whose frame kills the player is never made.
+        session.Update(new ProductUpdate(OuterUpdate(2), [
+            Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack"),
+        ]));
+
+        Assert.True(session.State.Actors.Player.IsDefeated);
+        Assert.Null(session.LastMeleeTargeting);
+    }
+
+    [Fact]
     public void Grounded_rat_melee_aim_uses_its_visible_body_above_the_floor()
     {
         DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
