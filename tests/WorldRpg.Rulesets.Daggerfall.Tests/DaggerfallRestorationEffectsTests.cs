@@ -42,7 +42,7 @@ public sealed class DaggerfallRestorationEffectsTests
     }
 
     [DonorFact(Arena2MagicEffectCostTable.DonorSourcePath)]
-    public void Normalized_free_action_cast_has_regular_cost_binding_and_nonmagic_element_is_refused_before_payment()
+    public void Normalized_free_action_cast_has_regular_cost_binding_and_a_classic_record_is_read_without_its_element_gate()
     {
         using Fixture f = new(); var s = f.Session; Fund(s);
         var spell = new DaggerfallSpellDefinition("free-spell", 1, false, "Free Action", 4, 0, 0, 0, [Setting(26)]);
@@ -53,10 +53,10 @@ public sealed class DaggerfallRestorationEffectsTests
         casting.Deliver(release.Bundle, [1]);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(release.Bundle.Results).Outcome);
         Assert.True(s.State.Effects.MagicDefenseFor(1).PreventsParalysis);
-        var invalid = CastingFor(s, spell with { Element = 0 }, 1);
-        double before = Magicka(s, 1).Current;
-        Assert.Equal(DaggerfallCastOutcome.UnsupportedEffect, invalid.Ready(1, spell.Key).Outcome);
-        Assert.Equal(before, Magicka(s, 1).Current);
+        // The donor reads a classic record without the spellmaker's element gate; only construction
+        // holds a crafted spell to its effects' allowed elements.
+        var fireElement = CastingFor(s, spell with { Element = 0 }, 1);
+        Assert.Equal(DaggerfallCastOutcome.Ready, fireElement.Ready(1, spell.Key).Outcome);
     }
 
     [Fact]
@@ -164,12 +164,16 @@ public sealed class DaggerfallRestorationEffectsTests
     [InlineData("free-action", 26)]
     [InlineData("spell-absorption", 20)]
     [InlineData("regenerate", 18)]
-    public void Broken_item_source_removes_recovery_defense_and_restriction_mask(string key, int type)
+    public void Used_item_source_outlives_its_item_breaking_and_destruction_removes_recovery_defense_and_restriction_mask(string key, int type)
     {
         using Fixture f = new(); var s = f.Session; DaggerfallParalysisEffectsTests.Start(s, "paralyzed", 2000, 1, 100);
         var item = s.State.Inventory.Read().UniqueItems.First(); ulong id = s.State.Inventory.GetDurableItemId(item.Entity).Value;
         Start(s, "item", key, Setting(type), 100, item:id);
+        // Only a held bundle is tied to its item; a used item's cast outlives the item breaking, as in the
+        // donor, and ends when no item remains for it to name.
         s.State.ItemInstances.ReplaceUnique(id, s.State.ItemInstances.RequireUnique(id) with { CurrentCondition = 0 });
+        Assert.Contains(s.State.Effects.Active, e => e.Context.Instance.Value == "item");
+        s.DestroyUniqueItem(id);
         Assert.DoesNotContain(s.State.Effects.Active, e => e.Context.Instance.Value == "item");
         Assert.True(s.State.Effects.ControlsFor(1).Movement);
         Assert.False(s.State.Effects.MagicDefenseFor(1).PreventsParalysis);
@@ -192,10 +196,12 @@ public sealed class DaggerfallRestorationEffectsTests
         Assert.Equal(3, s.State.Effects.Active.Count);
         using var restored = f.Restore(s.CaptureSave());
         restored.State.ItemInstances.ReplaceUnique(first, restored.State.ItemInstances.RequireUnique(first) with { CurrentCondition = 0 });
+        Assert.Equal(3, restored.State.Effects.Active.Count);
+        restored.DestroyUniqueItem(first);
         Assert.DoesNotContain(restored.State.Effects.Active, e => e.Context.Instance.Value == "first-item");
         Assert.Contains(restored.State.Effects.Active, e => e.Context.Instance.Value == "spell-source" && e.Lifecycle.RemainingRounds == 19);
         Assert.Contains(restored.State.Effects.Active, e => e.Context.Instance.Value == "second-item" && e.Lifecycle.RemainingRounds == 29);
-        restored.State.ItemInstances.ReplaceUnique(second, restored.State.ItemInstances.RequireUnique(second) with { CurrentCondition = 0 });
+        restored.DestroyUniqueItem(second);
         Assert.Equal("spell-source", Assert.Single(restored.State.Effects.Active).Context.Instance.Value);
         Assert.True(restored.State.Effects.Cure(EffectInstanceId.Parse("spell-source"))); Assert.Empty(restored.State.Effects.Active);
     }
