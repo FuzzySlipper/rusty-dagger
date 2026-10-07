@@ -212,7 +212,8 @@ internal static class TestSessions
 
     /// <summary>The bytes of one top-level property's value, or null when the document has no such property.</summary>
     internal static ReadOnlyMemory<byte>? TopLevelSection(byte[] document, string name) =>
-        TopLevelSectionRange(document, name) is (int start, int length) ? document.AsMemory(start, length) : null;
+        // The explicit nullable matters: a bare null here converts through byte[] to an empty memory.
+        TopLevelSectionRange(document, name) is (int start, int length) ? document.AsMemory(start, length) : (ReadOnlyMemory<byte>?)null;
 
     /// <summary>
     /// The document with one top-level property's value replaced by <paramref name="json"/>, every other
