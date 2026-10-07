@@ -49,7 +49,9 @@ internal static partial class DaggerfallBaseContent
                 foreach (JsonProperty section in authoredRoot.EnumerateObject().Concat(importedRoot.EnumerateObject()))
                 {
                     writer.WritePropertyName(section.Name);
-                    writer.WriteRawValue(section.Value.GetRawText(), skipInputValidation: true);
+                    // The section's own UTF-8 bytes: a string copy of the imported sections would cost
+                    // twice their size again for every admission.
+                    writer.WriteRawValue(System.Runtime.InteropServices.JsonMarshal.GetRawUtf8Value(section.Value), skipInputValidation: true);
                 }
                 writer.WriteEndObject();
             }
