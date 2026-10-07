@@ -18,4 +18,11 @@
     <!-- The contract round trip reads published sections through the importer's own records. -->
     <ProjectReference Include="../../src/Daggerfall.Import/Daggerfall.Import.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Parallel facts churn large byte arrays (payloads, content files) at gigabytes per second while
+         the live set stays a few gigabytes. Uncapped, the large-object heap grew to ~30 GB between full
+         collections and the kernel killed the test host. A hard limit makes the collector reclaim it as
+         the limit nears instead. -->
+    <RuntimeHostConfigurationOption Include="System.GC.HeapHardLimitPercent" Value="40" />
+  </ItemGroup>
 </Project>
