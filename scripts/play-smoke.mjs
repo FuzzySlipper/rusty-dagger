@@ -76,11 +76,11 @@ function freePort() {
   });
 }
 
-function launch(command, args, options = {}) {
+function launch(command, args, options = {}, output = () => '') {
   const child = spawn(command, args, { cwd: repository, detached: true, ...options });
   children.push(child);
   child.once('exit', (code, signal) => {
-    if (!stopping) fail(`${command} exited early (code ${code}, signal ${signal})`);
+    if (!stopping) fail(`${command} exited early (code ${code}, signal ${signal})${output() ? `:\n${output().slice(-2000)}` : ''}`);
   });
   return child;
 }
@@ -91,9 +91,11 @@ const debugPort = await freePort();
 const origin = `http://127.0.0.1:${hostPort}`;
 
 log(`starting the product at ${origin}`);
-const host = launch('rusty', ['dev', '--project', project, '--live-debug', '--bind-host', '127.0.0.1', '--port', String(hostPort)],
-  { stdio: ['ignore', 'pipe', 'pipe'] });
 const hostOutput = [];
+// The port was just taken from the operating system's free ports, which lie in its ephemeral range;
+// rusty refuses a fixed port there unless told the choice is deliberate.
+const host = launch('rusty', ['dev', '--project', project, '--live-debug', '--bind-host', '127.0.0.1', '--port', String(hostPort),
+  '--allow-ephemeral-port'], { stdio: ['ignore', 'pipe', 'pipe'] }, () => hostOutput.join(''));
 await new Promise(ready => {
   const deadline = setTimeout(() => fail(`the host did not listen within 180s:\n${hostOutput.join('').slice(-2000)}`), 180_000);
   const read = chunk => {
