@@ -102,9 +102,17 @@ public sealed class DaggerfallTransferEffectsTests
 
     [Theory]
     [InlineData(0, 1)] [InlineData(4, 0)]
-    public void Unsupported_element_or_self_only_target_refuses_before_payment(int element, int range)
+    public void A_classic_record_readies_without_the_spellmakers_element_and_target_gates(int element, int range)
     {
+        // The donor reads classic records unfiltered; only a constructed spell is held to its effects' targets.
         using Harness h = new(8, element: element, range: range);
+        Assert.Equal(DaggerfallCastOutcome.Ready, h.Casting.Ready(1, "spell").Outcome);
+    }
+
+    [Fact]
+    public void A_constructed_self_only_transfer_refuses_before_payment()
+    {
+        using Harness h = new(8, range: 0, custom: true);
         Assert.Equal(DaggerfallCastOutcome.UnsupportedEffect, h.Casting.Ready(1, "spell").Outcome);
         Assert.Equal(1000, h.Track(1, "magicka").Current); Assert.Empty(h.Results);
     }
@@ -174,13 +182,13 @@ public sealed class DaggerfallTransferEffectsTests
         internal List<(long, long)> Attacks { get; } = [];
         internal bool Hostile = true;
         internal DaggerfallMagicDefense Defense = DaggerfallMagicDefense.None;
-        internal Harness(int subtype, int count = 1, int element = 4, int range = 1)
+        internal Harness(int subtype, int count = 1, int element = 4, int range = 1, bool custom = false)
         {
             Player = Actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health", DaggerActorFactory.PlayerCapabilities).Actor;
             var target = Actors.CreateActor(2, new EntityTypeId("target"), Stats(), new(new(0, 0, 0), 0f), "health", DaggerActorFactory.NonPlayerCapabilities).Actor;
             foreach (var actor in new[] { Player, target }) { actor.Add(new DaggerfallSpellReadiness()); actor.Add(new CombatContributions()); }
             Setting = new("setting", 11, subtype, 0, 0, 1, 0, 0, 1, 10, 10, 0, 0, 1);
-            var spell = new DaggerfallSpellDefinition("spell", 1, false, "Transfer", element, range, 0, 0, Enumerable.Repeat(Setting, count).ToArray());
+            var spell = new DaggerfallSpellDefinition("spell", 1, false, "Transfer", element, range, 0, 0, Enumerable.Repeat(Setting, count).ToArray()) { IsCustom = custom };
             var row = new DaggerfallMagicEffectCostDefinition(11, subtype, 1, "destruction", 1, 1, 0, 0, DaggerfallMagicCostMetadata.For(11, subtype));
             var catalog = new DaggerfallMagicCatalogSet(new Dictionary<string, DaggerfallSpellDefinition> { ["spell"] = spell }, new Dictionary<string, DaggerfallMagicItemDefinition>(), [], [],
                 new Dictionary<(int, int), DaggerfallMagicEffectCostDefinition> { [(11, subtype)] = row }, new Dictionary<string, DaggerfallEnchantmentSetting>());
