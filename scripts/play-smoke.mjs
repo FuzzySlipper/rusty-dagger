@@ -254,11 +254,22 @@ await press('[data-testid="character-commit"]', 'Commit character');
 await press('[data-testid="new-game-launch"]', 'Begin new game');
 const pressed = Date.now();
 
+// The new game opens with the classic cinematics. A player skips them with any key, and so does the
+// smoke: it is checking that play is reached, not watching the films, and a headless browser can take
+// minutes over them.
+async function skipCinematic() {
+  if (await visibleCenter('.dagger-cinematic-skip') === null) return;
+  for (const type of ['keyDown', 'keyUp'])
+    await cdp('Input.dispatchKeyEvent', { type, key: ' ', code: 'Space', windowsVirtualKeyCode: 32 });
+  log('skipped a cinematic with a key press');
+}
+
 let mode = await observedMode();
 while (mode !== 'Playing') {
   if (Date.now() - pressed > playDeadlineMs) fail(`the product stayed in ${mode} for ${playDeadlineMs / 1000}s after Begin new game`);
   await readDiagnostics();
   if (faults.length > 0) fail(`diagnostics before play:\n  ${faults.join('\n  ')}`);
+  await skipCinematic();
   await sleep(2_000);
   mode = await observedMode();
 }
