@@ -62,8 +62,10 @@ public sealed class PlayerViewmodelTests
         using DaggerfallSiteAppearance presentation = new(content, appearance, site,
             sessionPresentation: MediaInputs(classic: ClassicWeapon()).ClassicPresentation);
 
+        // The session's selection already gives the bare hands a viewmodel; the dagger adds its own.
+        int before = appearance.PlaybackRequests.Count;
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
-        Assert.Single(appearance.PlaybackRequests);
+        Assert.Equal(before + 1, appearance.PlaybackRequests.Count);
         presentation.Publish(EmptyActors());
         Assert.Contains(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
     }
