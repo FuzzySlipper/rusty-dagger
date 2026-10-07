@@ -138,6 +138,14 @@ test('quest message text keeps its line breaks but not the spaces classic text u
   assert.match(rule, /white-space:\s*pre-line/);
 });
 
+test('the death screen stacks above quest messages and the legal screen', async () => {
+  const css = await readFile(new URL('../../src/ui/styles.css', import.meta.url), 'utf8');
+  const layer = selector => Number(new RegExp(`${selector.replace(/[.()[\]:]/g, '\\$&')} \\{[^}]*z-index:\\s*(\\d+)`).exec(css)?.[1]);
+  const death = layer('.dagger-death');
+  assert.ok(death > layer('.dagger-quests:not(:empty)'), 'quest messages cover the death screen');
+  assert.ok(death > layer('.dagger-legal:not([hidden])'), 'the legal screen covers the death screen');
+});
+
 test('status rows preserve owner-published order and disappear when removed', () => {
   const f = fixture();
   try {

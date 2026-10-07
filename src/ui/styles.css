@@ -41,8 +41,9 @@
 
 /* Death outranks the HUD: the published screen the mode owns covers it. The fade is a DOM-owned
    presentation effect driven by the ruleset's semantic effect value, so the screen does not merely
-   expose an unused data attribute. */
-.dagger-death { position: absolute; inset: 0; display: grid; place-items: center; background: #05060a; pointer-events: auto; isolation: isolate; overflow: hidden; }
+   expose an unused data attribute. It stacks above quest messages and the legal screen, which a
+   death ends. */
+.dagger-death { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; background: #05060a; pointer-events: auto; isolation: isolate; overflow: hidden; }
 .dagger-death[hidden] { display: none; }
 .dagger-death-screen { max-width: min(100%, 1280px); max-height: 100%; image-rendering: pixelated; }
 .dagger-death-fade { position: absolute; inset: 0; z-index: 1; background: #000; opacity: 0; pointer-events: none; transition: opacity 900ms linear; }
