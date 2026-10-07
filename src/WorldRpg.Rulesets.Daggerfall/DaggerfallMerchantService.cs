@@ -490,13 +490,17 @@ internal sealed class DaggerfallMerchantService
                 new DaggerfallConcreteGuildServiceInput(context.Provider, context.Provider.Site.Region));
     }
 
-    private bool IsGenericRepairProvider(DaggerfallMerchantProviderContext context)
-    {
-        if (!StringComparer.Ordinal.Equals(context.Provider.Service, "repair")
-            || !DaggerfallNpcServiceFacts.IsGenericRepairShop(context.BuildingType))
-            return false;
-        return _npcs.Require(context.Provider.NpcId).Services.Contains("repair", StringComparer.Ordinal);
-    }
+    private bool IsGenericRepairProvider(DaggerfallMerchantProviderContext context) =>
+        StringComparer.Ordinal.Equals(context.Provider.Service, "repair") && OffersGenericRepair(context);
+
+    /// <summary>
+    /// Whether this provider repairs without a guild: a generic repair shop whose NPC offers repair. The
+    /// merchant window is opened as the shop's trade service, so the quote asks this rather than which
+    /// service the window was opened for.
+    /// </summary>
+    private bool OffersGenericRepair(DaggerfallMerchantProviderContext context) =>
+        DaggerfallNpcServiceFacts.IsGenericRepairShop(context.BuildingType)
+        && _npcs.Require(context.Provider.NpcId).Services.Contains("repair", StringComparer.Ordinal);
 
     /// <summary>The price this provider asks to repair an item, with a Fighters Guild member's rank reduction.</summary>
     private int RepairCost(Binding binding, DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata,
@@ -537,7 +541,7 @@ internal sealed class DaggerfallMerchantService
         DaggerfallMerchantItemView[] playerRows = Rows(player, DaggerfallItemOwner.Player, binding, buying: false,
             // A cost is quoted where the matching action would be admitted: a guild repairer the player
             // may use or a generic repair shop, and an identifier whose guild service admits the player.
-            quoteRepair: repairService && (repairGuild is { CanUse: true } || repairGuild is null && IsGenericRepairProvider(binding.Context)),
+            quoteRepair: repairService && (repairGuild is { CanUse: true } || repairGuild is null && OffersGenericRepair(binding.Context)),
             repairGuild: repairGuild,
             quoteIdentify: identifyService && ConcreteGuildProvider(binding.Context, DaggerfallConcreteGuildService.Identify) is { CanUse: true });
         long now = CurrentMinute();
