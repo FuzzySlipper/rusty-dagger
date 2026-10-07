@@ -211,7 +211,26 @@ internal static class TestSessions
     }
 
     /// <summary>The bytes of one top-level property's value, or null when the document has no such property.</summary>
-    private static ReadOnlyMemory<byte>? TopLevelSection(byte[] document, string name)
+    internal static ReadOnlyMemory<byte>? TopLevelSection(byte[] document, string name) =>
+        TopLevelSectionRange(document, name) is (int start, int length) ? document.AsMemory(start, length) : null;
+
+    /// <summary>
+    /// The document with one top-level property's value replaced by <paramref name="json"/>, every other
+    /// byte as it was. The reader steps over the other values without building them.
+    /// </summary>
+    internal static byte[] ReplaceTopLevelSection(byte[] document, string name, string json)
+    {
+        (int start, int length) = TopLevelSectionRange(document, name)
+            ?? throw new ArgumentException($"The document has no top-level '{name}' property.", nameof(name));
+        byte[] value = Encoding.UTF8.GetBytes(json);
+        byte[] result = new byte[document.Length - length + value.Length];
+        document.AsSpan(0, start).CopyTo(result);
+        value.CopyTo(result.AsSpan(start));
+        document.AsSpan(start + length).CopyTo(result.AsSpan(start + value.Length));
+        return result;
+    }
+
+    private static (int Start, int Length)? TopLevelSectionRange(byte[] document, string name)
     {
         Utf8JsonReader reader = new(document);
         if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject) return null;
@@ -221,7 +240,7 @@ internal static class TestSessions
             if (!reader.Read()) return null;
             int start = checked((int)reader.TokenStartIndex);
             reader.Skip();
-            if (match) return document.AsMemory(start, checked((int)reader.BytesConsumed) - start);
+            if (match) return (start, checked((int)reader.BytesConsumed) - start);
         }
         return null;
     }

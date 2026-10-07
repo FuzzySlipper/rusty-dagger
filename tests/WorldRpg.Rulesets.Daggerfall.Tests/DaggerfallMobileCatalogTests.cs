@@ -62,13 +62,13 @@ public sealed class DaggerfallMobileCatalogTests
     {
         // A mobile that names an actor the pack does not define, and a published mobile with no actor at
         // all: both would leave a consumer resolving a record that points nowhere.
-        JsonObject payload = JsonNode.Parse(PayloadJson())!.AsObject();
+        JsonObject payload = TestPayload.Sections("mobiles", "actors");
         JsonObject named = payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["disposition"]!.GetValue<string>() == "published")!.AsObject();
         named["actor"] = "no-such-actor";
         JsonObject stripped = payload["mobiles"]!["mobiles"]!.AsArray().Last(mobile => mobile!["disposition"]!.GetValue<string>() == "published")!.AsObject();
         stripped["actor"] = null;
 
-        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
+        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
 
         Assert.True(
             failure.Diagnostics.Any(message => message.Contains("'no-such-actor'", StringComparison.Ordinal) && message.Contains("does not define", StringComparison.Ordinal)),
@@ -81,17 +81,19 @@ public sealed class DaggerfallMobileCatalogTests
     [Fact]
     public void RefusesADuplicateDonorIdAndAPayloadWithNoMobileCatalog()
     {
-        JsonObject payload = JsonNode.Parse(PayloadJson())!.AsObject();
+        JsonObject payload = TestPayload.Sections("mobiles", "actors");
         JsonObject rat = payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!.AsObject();
         payload["mobiles"]!["mobiles"]!.AsArray().Add(rat.DeepClone());
-        DaggerfallContentException duplicate = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
+        DaggerfallContentException duplicate = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
         Assert.True(
             duplicate.Diagnostics.Any(message => message.Contains("donor id 0 twice", StringComparison.Ordinal)),
             $"the duplicate donor id was not named: {string.Join(" | ", duplicate.Diagnostics)}");
 
-        JsonObject withoutMobiles = JsonNode.Parse(PayloadJson())!.AsObject();
-        Assert.True(withoutMobiles.Remove("mobiles"), "the published payload carries no mobile section to remove");
-        DaggerfallContentException missing = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(withoutMobiles.ToJsonString())));
+        JsonObject withoutMobiles = TestPayload.Sections("mobiles", "actors");
+        // A mobiles value that is not a catalog object is refused by the same check as an absent one.
+        Assert.True(withoutMobiles.ContainsKey("mobiles"), "the published payload carries no mobile section to replace");
+        withoutMobiles["mobiles"] = null;
+        DaggerfallContentException missing = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(withoutMobiles)));
         Assert.True(
             missing.Diagnostics.Any(message => message.Contains("no mobile catalog section", StringComparison.Ordinal)),
             $"the missing catalog was not named: {string.Join(" | ", missing.Diagnostics)}");
@@ -102,25 +104,23 @@ public sealed class DaggerfallMobileCatalogTests
     {
         // An actor's mobile id is a media reference, so a reference the catalog does not carry is refused
         // with the actor and the id named rather than leaving the actor without a source record.
-        JsonObject payload = JsonNode.Parse(PayloadJson())!.AsObject();
+        JsonObject payload = TestPayload.Sections("mobiles", "actors");
         JsonObject rat = payload["actors"]!.AsArray().First(actor => actor!["id"]!.GetValue<string>() == "rat")!.AsObject();
         rat["mobileId"] = 999;
-        DaggerfallContentException dangling = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
+        DaggerfallContentException dangling = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
         Assert.True(
             dangling.Diagnostics.Any(message => message.Contains("'rat'", StringComparison.Ordinal) && message.Contains("mobile 999", StringComparison.Ordinal) && message.Contains("does not carry", StringComparison.Ordinal)),
             $"the dangling mobile reference was not named: {string.Join(" | ", dangling.Diagnostics)}");
 
         // A reference that resolves to another actor would give this actor that mobile's media.
-        JsonObject swapped = JsonNode.Parse(PayloadJson())!.AsObject();
+        JsonObject swapped = TestPayload.Sections("mobiles", "actors");
         JsonObject imp = swapped["actors"]!.AsArray().First(actor => actor!["id"]!.GetValue<string>() == "imp")!.AsObject();
         imp["mobileId"] = 0;
-        DaggerfallContentException mismatch = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(swapped.ToJsonString())));
+        DaggerfallContentException mismatch = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(swapped)));
         Assert.True(
             mismatch.Diagnostics.Any(message => message.Contains("'imp'", StringComparison.Ordinal) && message.Contains("resolves to actor 'rat'", StringComparison.Ordinal)),
             $"the mismatched mobile reference was not named: {string.Join(" | ", mismatch.Diagnostics)}");
     }
 
-    private static byte[] Payload() => System.Text.Encoding.UTF8.GetBytes(PayloadJson());
-
-    private static string PayloadJson() => TestPayload.CombinedText;
+    private static byte[] Payload() => TestPayload.CombinedBytes;
 }

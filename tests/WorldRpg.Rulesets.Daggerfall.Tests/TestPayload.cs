@@ -28,6 +28,44 @@ internal static class TestPayload
     /// <summary>The joined sections as text.</summary>
     internal static string CombinedText => System.Text.Encoding.UTF8.GetString(Combined.Value);
 
+    /// <summary>Whether the joined payload carries this text.</summary>
+    internal static bool Contains(string text) =>
+        Combined.Value.AsSpan().IndexOf(System.Text.Encoding.UTF8.GetBytes(text)) >= 0;
+
+    /// <summary>
+    /// The joined payload with every occurrence of each edit's text replaced, edit by edit, exactly as an
+    /// ordinal string replace would leave it. The edit runs on the UTF-8 bytes: decoding the whole payload
+    /// to a string and encoding it back costs gigabytes per fact, which parallel facts cannot afford.
+    /// </summary>
+    internal static byte[] Replaced(params (string Before, string After)[] edits)
+    {
+        byte[] current = Combined.Value;
+        foreach ((string before, string after) in edits)
+            current = ReplaceAll(current, System.Text.Encoding.UTF8.GetBytes(before), System.Text.Encoding.UTF8.GetBytes(after));
+        return ReferenceEquals(current, Combined.Value) ? (byte[])current.Clone() : current;
+    }
+
+    private static byte[] ReplaceAll(byte[] source, byte[] before, byte[] after)
+    {
+        if (before.Length == 0) throw new ArgumentException("An edit must name the text it replaces.", nameof(before));
+        List<int> found = [];
+        for (int from = 0, index; (index = source.AsSpan(from).IndexOf(before)) >= 0; from += index + before.Length)
+            found.Add(from + index);
+        if (found.Count == 0) return source;
+        byte[] result = new byte[source.Length + found.Count * (after.Length - before.Length)];
+        int read = 0, write = 0;
+        foreach (int index in found)
+        {
+            source.AsSpan(read, index - read).CopyTo(result.AsSpan(write));
+            write += index - read;
+            after.CopyTo(result.AsSpan(write));
+            write += after.Length;
+            read = index + before.Length;
+        }
+        source.AsSpan(read).CopyTo(result.AsSpan(write));
+        return result;
+    }
+
     /// <summary>
     /// The named top-level sections of the joined payload, parsed alone, for a fact that edits them.
     /// Parsing the whole joined payload into a node tree costs gigabytes; a fact that changes one
