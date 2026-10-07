@@ -17,7 +17,6 @@ public sealed class DaggerfallTextSetTests
     /// The parsed payload, kept so each mutation pays for one clone rather than one parse of eight
     /// megabytes of normalized corpus.
     /// </summary>
-    private static readonly Lazy<JsonObject> PayloadTemplate = new(() => JsonNode.Parse(TestPayload.CombinedBytes)!.AsObject());
 
     [Fact]
     public void Loads_the_published_text_and_resolves_a_key_by_its_own_identity()
@@ -252,8 +251,9 @@ public sealed class DaggerfallTextSetTests
     [Fact]
     public void Rejects_a_payload_that_publishes_no_text_section()
     {
+        // A text value that is not a section object is refused by the same check as an absent one.
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => payload.Remove("text"))));
+            Payload(payload => payload["text"] = null)));
 
         Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("publishes no text section", StringComparison.Ordinal));
     }
@@ -462,11 +462,15 @@ public sealed class DaggerfallTextSetTests
     private static DaggerfallDefinitions Definitions(Action<JsonObject>? mutate = null) =>
         DaggerfallBaseContent.Read(mutate is null ? TestPayload.CombinedBytes : Payload(mutate));
 
+    /// <summary>
+    /// The joined payload with its text section edited. Only that section is parsed: a node tree of the
+    /// whole payload costs gigabytes, and a static one stayed resident for the rest of the run.
+    /// </summary>
     private static byte[] Payload(Action<JsonObject> mutate)
     {
-        JsonObject payload = PayloadTemplate.Value.DeepClone().AsObject();
-        mutate(payload);
-        return Encoding.UTF8.GetBytes(payload.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        JsonObject sections = TestPayload.Sections("text");
+        mutate(sections);
+        return TestPayload.Splice(sections);
     }
 
     private static JsonObject Text(JsonObject payload) => payload["text"]!.AsObject();
