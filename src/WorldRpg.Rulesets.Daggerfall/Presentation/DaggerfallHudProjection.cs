@@ -143,17 +143,6 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("source", effect.Source is null ? builder.Null() : builder.String(effect.Source)),
                 ("remainingSeconds", effect.RemainingSeconds is long seconds ? builder.Number(seconds) : builder.Null()),
                 ("remaining", builder.String(effect.Remaining)), ("detail", builder.String(effect.Detail)))).ToArray())),
-            // The modal's own token is what a close has to name, so the UI never invents focus.
-            // Focus exists only where the mode lets the interaction act: a dead or paused product
-            // ignores the close its own gate would refuse, so advertising one would offer the player
-            // a control that silently does nothing.
-            ("focus", loot is null || mode != ProductMode.Modal
-                ? builder.Null()
-                : builder.Object(
-                    ("interaction", builder.String("loot")),
-                    ("container", builder.String(loot.Container)),
-                    ("revision", builder.String(loot.Revision)),
-                    ("close", builder.String("loot-close")))),
             // A pad has no pointer and the DOM, not the product, owns whether a panel is open, so a
             // button that opens one asks for the DOM's own menu action. Publishing it with a revision
             // lets the DOM act on each request exactly once while the request itself stays visible.

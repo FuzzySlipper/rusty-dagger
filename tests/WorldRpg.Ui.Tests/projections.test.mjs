@@ -71,7 +71,9 @@ test('death projection renders semantic choices, selected save slots, and suppre
     const root = f.root.querySelector('.dagger-death');
     assert.equal(root.hidden, false);
     assert.equal(f.root.querySelector('.dagger-menu-toggle').hidden, true);
-    assert.equal(f.root.querySelector('.dagger-death-message').textContent, 'You have died.');
+    // The ruleset's message is the screen's one heading; it is not repeated beneath itself.
+    assert.equal(f.root.querySelector('#dagger-death-title').textContent, 'You have died.');
+    assert.equal([...root.querySelectorAll('*')].filter(node => node.children.length === 0 && node.textContent === 'You have died.').length, 1);
     assert.equal(f.root.querySelector('.dagger-death-load-slot').options.length, 2);
 
     const select = f.root.querySelector('.dagger-death-load-slot');
@@ -114,21 +116,26 @@ test('death closes retained dialogue and exposes a real fade consumer', () => {
   } finally { f.dispose(); }
 });
 
-test('focus close follows the current projected interaction and null clears its token', () => {
+test('loot offers only its panel Exit, which closes the projected container', () => {
   const f = fixture();
   try {
-    const close = f.root.querySelector('.dagger-focus-close');
-    f.publish({ mode: 'modal', focus: { interaction: 'loot', container: 'first', close: 'loot-close' } });
-    assert.equal(close.hidden, false);
-    f.publish({ mode: 'modal', focus: { interaction: 'loot', container: 'second', close: 'loot-close' } });
-    close.click();
-    assert.deepEqual(f.actions.at(-1), { action: 'loot-close', container: 'second' });
-    const count = f.actions.length;
-    f.publish({ focus: null });
-    assert.equal(close.hidden, true);
-    close.click();
-    assert.equal(f.actions.length, count, 'Even a queued click must not send the old token.');
+    assert.equal(f.root.querySelector('.dagger-focus-close'), null, 'no unstyled duplicate close control is drawn over the HUD');
+    const loot = (container) => ({ container, revision: 'r1', title: 'Corpse', empty: false, message: '', items: [] });
+    f.publish({ mode: 'modal', loot: loot('first') });
+    f.publish({ mode: 'modal', loot: loot('second') });
+    const exit = f.root.querySelector('[data-action="loot-exit"]');
+    assert.equal(exit.hidden, false);
+    const before = f.actions.length;
+    exit.click();
+    assert.deepEqual(f.actions.slice(before).filter(action => action.action === 'loot-close'), [{ action: 'loot-close', container: 'second' }]);
   } finally { f.dispose(); }
+});
+
+test('quest message text keeps its line breaks but not the spaces classic text used to centre a line', async () => {
+  const css = await readFile(new URL('../../src/ui/styles.css', import.meta.url), 'utf8');
+  const rule = /\.dagger-quest-message p \{([^}]*)\}/.exec(css)?.[1];
+  assert.ok(rule, 'the quest message paragraph rule was not found');
+  assert.match(rule, /white-space:\s*pre-line/);
 });
 
 test('status rows preserve owner-published order and disappear when removed', () => {

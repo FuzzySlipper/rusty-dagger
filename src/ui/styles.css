@@ -49,7 +49,7 @@
 .dagger-death[data-fade-effect="to-black"] .dagger-death-fade { opacity: 1; }
 .dagger-death-panel { position: absolute; z-index: 2; bottom: 10%; width: min(32rem, calc(100vw - 2rem)); padding: 1.2rem; display: grid; gap: .8rem; background: rgb(8 9 11 / .92); border: 1px solid #c6a05a; box-shadow: 0 12px 44px rgb(0 0 0 / .7); }
 .dagger-death-panel h1 { margin: 0; font-size: 1.5rem; }
-.dagger-death-message { min-height: 1.3em; margin: 0; color: #f6ddb0; }
+.dagger-death-message { min-height: 1.3em; color: #f6ddb0; }
 .dagger-death-load { display: grid; gap: .35rem; color: #b9ae8c; font: .78rem ui-monospace, monospace; }
 .dagger-death-load select { padding: .55rem; color: #f7e7bd; background: #151712; border: 1px solid #aa9c7a; font: inherit; }
 .dagger-death-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
@@ -162,7 +162,9 @@
 
 .dagger-quests:not(:empty) { position: absolute; left: 50%; top: 120px; transform: translateX(-50%); z-index: 20; display: grid; gap: 12px; width: min(44rem, calc(100vw - 32px)); max-height: calc(100vh - 220px); overflow-y: auto; pointer-events: auto; }
 .dagger-quest-message { display: grid; gap: 8px; padding: 16px 20px; border: 1px solid #d4b56b; background: rgba(12, 13, 10, .94); line-height: 1.5; }
-.dagger-quest-message p { margin: 0; white-space: pre-wrap; }
+/* pre-line keeps the record's line breaks but drops the leading spaces the classic text used to
+   centre a line, which would otherwise indent it in a proportional font. */
+.dagger-quest-message p { margin: 0; white-space: pre-line; }
 .dagger-quest-message button { justify-self: start; margin-right: 8px; padding: 8px 16px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; cursor: pointer; pointer-events: auto; }
 .dagger-escort-faces { display: flex; gap: .5rem; }
 .dagger-escort-faces img { width: 48px; height: 48px; object-fit: contain; image-rendering: pixelated; }

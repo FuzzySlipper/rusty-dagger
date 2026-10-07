@@ -505,11 +505,10 @@ public sealed class ProductModeSessionTests
         LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
         InventoryItemPresentation gold = opened.Items.Single(item => item.Key == DaggerfallInventoryPresentation.StackKey(InventoryStackId.Parse("test.loot.4534")));
 
-        // The projection the thin UI renders carries the mode the product decided and the token a
-        // close has to name, so the UI keeps no focus authority of its own.
+        // The projection the thin UI renders carries the mode the product decided and the container
+        // token the loot panel's own Exit has to name, so the UI keeps no focus authority of its own.
         Assert.Equal("modal", engine.PublishedField("mode"));
-        Assert.Equal(opened.Container, engine.PublishedNested("focus", "container"));
-        Assert.Equal("loot-close", engine.PublishedNested("focus", "close"));
+        Assert.Equal(opened.Container, engine.PublishedNested("loot", "container"));
         Assert.Equal("modal", engine.PublishedNested("view", "interaction"));
 
         // A status row an owner publishes reaches the projection without the projection knowing
@@ -529,7 +528,7 @@ public sealed class ProductModeSessionTests
         session.ApplyProductMode(ProductMode.Playing);
         Assert.Null(session.OpenLoot);
         Assert.Equal("playing", engine.PublishedField("mode"));
-        Assert.Null(engine.PublishedNested("focus", "container"));
+        Assert.Null(engine.PublishedNested("loot", "container"));
 
 
         session.Update(new ProductUpdate(OuterUpdate(5), []));
@@ -559,10 +558,8 @@ public sealed class ProductModeSessionTests
         Assert.Equal(afterDeath, session.State.Inventory.Read().StoreRevision);
 
         // A dead product advertises no closable interaction: its own gate would ignore the close, so
-        // offering the token would be a control that silently does nothing. The contents panel is
-        // the same affordance and is withheld for the same reason.
+        // offering the loot panel and its token would be a control that silently does nothing.
         Assert.Equal("dead", engine.PublishedField("mode"));
-        Assert.Null(engine.PublishedNested("focus", "container"));
         Assert.Null(engine.PublishedNested("loot", "container"));
         Assert.Equal(ulong.Parse(remaining.Quantity), ulong.Parse(session.OpenLoot!.Items.Single(item => item.Key == remaining.Key).Quantity));
 
