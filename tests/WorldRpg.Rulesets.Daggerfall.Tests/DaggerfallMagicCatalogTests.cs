@@ -54,13 +54,13 @@ public sealed class DaggerfallMagicCatalogTests
     [InlineData(false)] [InlineData(true)]
     public void Rejects_trigger_content_without_a_normalized_spell_link(bool setting)
     {
-        var payload = JsonNode.Parse(PayloadJson())!.AsObject();
+        var payload = TestPayload.Sections("magic");
         JsonNode row = setting
             ? payload["magic"]!["enchantmentSettings"]!.AsArray().First(value => value!["type"]!.GetValue<int>() is 0 or 1 or 2)!
             : payload["magic"]!["magicItems"]!.AsArray().SelectMany(value => value!["enchantments"]!.AsArray())
                 .First(value => value!["type"]!.GetValue<int>() is 0 or 1 or 2)!;
         row["spell"] = null;
-        var failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
+        var failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
         Assert.Contains(failure.Diagnostics, value => value.Contains(setting ? "trigger metadata" : "normalized spell link"));
     }
 
@@ -69,13 +69,13 @@ public sealed class DaggerfallMagicCatalogTests
     {
         // A link to a spell the catalog does not define, and a record that claims an identity is unique
         // while another record carries it, are both refused rather than resolved silently.
-        JsonObject payload = JsonNode.Parse(PayloadJson())!.AsObject();
+        JsonObject payload = TestPayload.Sections("magic");
         JsonObject link = payload["magic"]!["magicItems"]!.AsArray()[0]!["enchantments"]!.AsArray()[0]!.AsObject();
         link["spell"] = "spell.999";
         JsonObject shared = payload["magic"]!["spells"]!.AsArray()
             .First(spell => spell!["identityShared"]!.GetValue<bool>())!.AsObject();
         shared["identityShared"] = false;
-        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
+        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
 
         Assert.True(
             failure.Diagnostics.Any(message => message.Contains("'spell.999'", StringComparison.Ordinal) && message.Contains("does not define", StringComparison.Ordinal)),
@@ -90,9 +90,11 @@ public sealed class DaggerfallMagicCatalogTests
     {
         // No spell can resolve through a payload that carries no catalog, so the loss is named where the
         // payload is read rather than surfacing later as an empty resolution.
-        JsonObject payload = JsonNode.Parse(PayloadJson())!.AsObject();
-        Assert.True(payload.Remove("magic"), "the published payload carries no magic section to remove");
-        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
+        JsonObject payload = TestPayload.Sections("magic");
+        // A magic value that is not a catalog object is refused by the same check as an absent one.
+        Assert.True(payload.ContainsKey("magic"), "the published payload carries no magic section to replace");
+        payload["magic"] = null;
+        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
 
         Assert.True(
             failure.Diagnostics.Any(message => message.Contains("no magic catalog section", StringComparison.Ordinal)),
@@ -127,7 +129,7 @@ public sealed class DaggerfallMagicCatalogTests
     [InlineData("parameterVariants")]
     public void Malformed_published_settings_fail_at_content_admission(string field)
     {
-        JsonObject payload = JsonNode.Parse(PayloadJson())!.AsObject();
+        JsonObject payload = TestPayload.Sections("magic");
         JsonArray settings = payload["magic"]!["enchantmentSettings"]!.AsArray();
         JsonObject row = settings.First(value => value!["type"]!.GetValue<int>() == 3)!.AsObject();
         if (field == "param") { row["param"] = 11; row["key"] = "enchantment.3.11"; }
@@ -135,14 +137,14 @@ public sealed class DaggerfallMagicCatalogTests
         else if (field == "parameterVariants") row["parameterVariants"] = new JsonArray(0, 11);
         else settings.Add(row.DeepClone());
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() =>
-            DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
+            DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
         Assert.Contains(error.Diagnostics, message => message.Contains("Enchantment setting", StringComparison.Ordinal));
     }
 
     [Fact]
     public void Normalized_custom_offer_requires_explicit_source_sale_eligibility_and_keeps_classic_rows()
     {
-        var payload = JsonNode.Parse(PayloadJson())!.AsObject();
+        var payload = TestPayload.Sections("magic");
         var spells = payload["magic"]!["spells"]!.AsArray();
         var source = spells[0]!.DeepClone();
         var entry = source["effects"]![0]!.DeepClone(); entry["type"] = 26; entry["subType"] = -1;
@@ -155,7 +157,7 @@ public sealed class DaggerfallMagicCatalogTests
         spells.Add(source);
         var privateRow = source.DeepClone(); privateRow["key"] = "authored.custom.private";
         privateRow.AsObject().Remove("spellsForSale"); spells.Add(privateRow);
-        var definitions = DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()));
+        var definitions = DaggerfallBaseContent.Read(TestPayload.Splice(payload));
         var session = definitions.ForSession([]);
         Assert.True(session.Magic.Spells["authored.custom.freedom"].SpellsForSale);
         Assert.False(session.Magic.Spells["authored.custom.private"].SpellsForSale);
@@ -163,7 +165,5 @@ public sealed class DaggerfallMagicCatalogTests
         Assert.True(session.Magic.Spells["spell.023"].SpellsForSale);
     }
 
-    private static byte[] Payload() => System.Text.Encoding.UTF8.GetBytes(PayloadJson());
-
-    private static string PayloadJson() => TestPayload.CombinedText;
+    private static byte[] Payload() => TestPayload.CombinedBytes;
 }

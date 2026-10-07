@@ -116,14 +116,14 @@ public sealed class DaggerfallCharacterMediaContentTests
     {
         // The reference resolves to nothing if the file it names was never accounted for, so the pack
         // is refused with the file named rather than loading a reference that points nowhere.
-        string pack = TestPayload.CombinedText.Replace("\"sourceFile\": \"BODY00I0.IMG\"", "\"sourceFile\": \"ABSENT01I0.IMG\"", StringComparison.Ordinal);
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(pack)));
+        byte[] pack = TestPayload.Replaced(("\"sourceFile\": \"BODY00I0.IMG\"", "\"sourceFile\": \"ABSENT01I0.IMG\""));
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(pack));
         Assert.Contains("ABSENT01I0.IMG", error.Message, StringComparison.Ordinal);
         Assert.Contains("does not account for", error.Message, StringComparison.Ordinal);
 
         // A layer name this reader does not know is refused rather than given a role by position.
-        string unknown = TestPayload.CombinedText.Replace("\"layer\": \"background\"", "\"layer\": \"backdrop\"", StringComparison.Ordinal);
-        DaggerfallContentException named = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(unknown)));
+        byte[] unknown = TestPayload.Replaced(("\"layer\": \"background\"", "\"layer\": \"backdrop\""));
+        DaggerfallContentException named = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(unknown));
         Assert.Contains("not a layer name this reader knows", named.Message, StringComparison.Ordinal);
     }
 

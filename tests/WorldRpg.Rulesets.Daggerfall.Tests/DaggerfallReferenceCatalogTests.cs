@@ -92,16 +92,16 @@ public sealed class DaggerfallReferenceCatalogTests
                 byte[] bytes = File.ReadAllBytes(path);
                 if (path.EndsWith("daggerfall.imported.json", StringComparison.Ordinal) && change is not null)
                 {
-                    JsonObject pack = JsonNode.Parse(bytes)!.AsObject();
+                    // This fixture only changes catalogs, so only that section is parsed and only its
+                    // bytes are replaced; the rest of the imported payload keeps its published form.
+                    JsonObject pack = new()
+                    {
+                        ["catalogs"] = JsonNode.Parse((TestSessions.TopLevelSection(bytes, "catalogs")
+                            ?? throw new InvalidOperationException("The imported payload publishes no catalogs section.")).Span),
+                    };
                     change(pack);
-                    // Keep the generated locations section in its published form. Re-serializing the
-                    // whole JsonNode expands that value beyond Utf8JsonWriter's raw-value envelope;
-                    // this fixture only changes catalogs, so replace that root value in place.
-                    bytes = System.Text.Encoding.UTF8.GetBytes(TopLevelJsonSectionRewriter.ReplaceOrAppend(
-                        File.ReadAllText(path), new Dictionary<string, string>(StringComparer.Ordinal)
-                        {
-                            ["catalogs"] = pack["catalogs"]!.ToJsonString(PublishedJson.SectionCompact),
-                        }));
+                    bytes = TestSessions.ReplaceTopLevelSection(bytes, "catalogs",
+                        pack["catalogs"]!.ToJsonString(PublishedJson.SectionCompact));
                 }
 
                 return new ProductContentFile(System.Text.Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), bytes);
@@ -265,11 +265,7 @@ public sealed class DaggerfallReferenceCatalogTests
         JsonObject pack = TestPayload.Sections("catalogs");
         change(pack);
         byte[] payload = pack.ContainsKey("catalogs")
-            ? System.Text.Encoding.UTF8.GetBytes(TopLevelJsonSectionRewriter.ReplaceOrAppend(
-                TestPayload.CombinedText, new Dictionary<string, string>(StringComparer.Ordinal)
-                {
-                    ["catalogs"] = pack["catalogs"]!.ToJsonString(PublishedJson.SectionCompact),
-                }))
+            ? TestPayload.Splice(pack)
             : RemoveTopLevelSection(TestPayload.CombinedText, "catalogs");
         return Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(payload));
     }
