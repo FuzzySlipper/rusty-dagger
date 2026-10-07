@@ -163,7 +163,15 @@ public sealed class QuestPlaceAllocationTests
         else Assert.Contains("no eligible building", Assert.Throws<NotSupportedException>(() => allocator.Allocate("remote", declaration, [], [])).Message);
     }
 
-    internal static DaggerfallDefinitions Definitions()
+    /// <summary>
+    /// The base definitions with the allocation quest's place declaration. The edit never varies, so one
+    /// parsed copy is shared, as <see cref="TestPayload.Definitions"/> is; property fixtures build on it.
+    /// </summary>
+    internal static DaggerfallDefinitions Definitions() => AllocationDefinitions.Value;
+
+    private static readonly Lazy<DaggerfallDefinitions> AllocationDefinitions = new(ReadAllocationDefinitions);
+
+    private static DaggerfallDefinitions ReadAllocationDefinitions()
     {
         JsonObject root = TestPayload.Sections("questSources");
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""

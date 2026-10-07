@@ -24,5 +24,8 @@
          kernel killed the test host; a hard limit makes the collector reclaim it as the limit nears. The
          limit leaves room for eight facts parsing payloads at once: 40% raised OutOfMemoryException. -->
     <RuntimeHostConfigurationOption Include="System.GC.HeapHardLimitPercent" Value="60" />
+    <!-- Payload-sized arrays need one contiguous block each; under the limit a fragmented large-object
+         heap raised OutOfMemoryException well below it, so the collector compacts that heap when it is. -->
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="7" />
   </ItemGroup>
 </Project>
