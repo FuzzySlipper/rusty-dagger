@@ -169,7 +169,7 @@ public sealed class QuestPlaceAllocationTests
     /// </summary>
     internal static DaggerfallDefinitions Definitions() => AllocationDefinitions.Value;
 
-    private static readonly Lazy<DaggerfallDefinitions> AllocationDefinitions = new(ReadAllocationDefinitions);
+    private static readonly SharedFixture<DaggerfallDefinitions> AllocationDefinitions = new(ReadAllocationDefinitions);
 
     private static DaggerfallDefinitions ReadAllocationDefinitions()
     {

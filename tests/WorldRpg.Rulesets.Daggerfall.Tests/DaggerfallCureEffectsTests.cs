@@ -239,7 +239,7 @@ public sealed class DaggerfallCureEffectsTests
     /// which the donor patches to Free Action. A constructed copy of Cure Poison carries the subtype.
     /// </summary>
     private const string CureParalysisKey = "spell.cure-paralysis";
-    private static readonly Lazy<DaggerfallDefinitions> CureDefinitions = new(() =>
+    private static readonly SharedFixture<DaggerfallDefinitions> CureDefinitions = new(() =>
     {
         System.Text.Json.Nodes.JsonObject root = TestPayload.Sections("magic");
         System.Text.Json.Nodes.JsonArray spells = Spells(root) ?? throw new InvalidOperationException("The payload publishes no spells.");

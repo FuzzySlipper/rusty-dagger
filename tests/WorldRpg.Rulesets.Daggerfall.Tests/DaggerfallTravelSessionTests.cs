@@ -475,7 +475,7 @@ public sealed class DaggerfallTravelSessionTests
         var date = DaggerfallSavePayload.Read(save).Calendar;
         return new DaggerfallCalendar(date.Year, date.Month, date.Day, date.Hour, date.Minute, date.Second).ToAbsoluteSeconds();
     }
-    private static readonly Lazy<DaggerfallDefinitions> DeadlineDefinitions = new(() =>
+    private static readonly SharedFixture<DaggerfallDefinitions> DeadlineDefinitions = new(() =>
     {
         JsonObject root = TestPayload.Sections("questSources");
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
@@ -487,7 +487,7 @@ public sealed class DaggerfallTravelSessionTests
             """));
         return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
     });
-    private static readonly Lazy<(DaggerfallSiteProfile Profile, ResolvedCompositionIdentity Identity)> Inputs = new(() =>
+    private static readonly SharedFixture<(DaggerfallSiteProfile Profile, ResolvedCompositionIdentity Identity)> Inputs = new(() =>
         (ReadInputs(TestData.RepositoryRoot), GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot),
             new GameBundleId("daggerfall.classic")).RequireComposition().Identity));
 

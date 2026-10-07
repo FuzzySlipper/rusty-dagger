@@ -11,7 +11,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class ExteriorBuildingDoorSessionTests
 {
-    private static readonly Lazy<(DaggerfallSiteProfile Exterior, DaggerfallSiteProfile Interior)> Profiles = new(() =>
+    private static readonly SharedFixture<(DaggerfallSiteProfile Exterior, DaggerfallSiteProfile Interior)> Profiles = new(() =>
     {
         string root = TestData.RepositoryRoot;
         ProductContent content = FullContent(root);

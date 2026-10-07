@@ -12,8 +12,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// </summary>
 internal static class TestPayload
 {
-    private static readonly Lazy<DaggerfallDefinitions> Shared = new(() => DaggerfallBaseContent.Read(CombinedBytes));
-    private static readonly Lazy<byte[]> Combined = new(() => DaggerfallBaseContent.Combine(
+    private static readonly SharedFixture<DaggerfallDefinitions> Shared = new(() => DaggerfallBaseContent.Read(CombinedBytes));
+    private static readonly SharedFixture<byte[]> Combined = new(() => DaggerfallBaseContent.Combine(
         File.ReadAllBytes(PayloadPath("daggerfall.base.json")), File.ReadAllBytes(PayloadPath("daggerfall.imported.json"))));
 
     /// <summary>The parsed base definitions.</summary>

@@ -80,7 +80,7 @@ public sealed class CalendarIntervalReconciliationTests
             .ToAbsoluteSeconds() / DaggerfallCalendar.SecondsPerMinute;
     }
 
-    private static readonly Lazy<DaggerfallDefinitions> ClockDefinitions = new(() =>
+    private static readonly SharedFixture<DaggerfallDefinitions> ClockDefinitions = new(() =>
     {
         JsonObject root = TestPayload.Sections("questSources");
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
