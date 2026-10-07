@@ -205,6 +205,20 @@ internal sealed partial class DaggerfallSession
         w.WriteString("visibilityCoverage", "Current gameplay perception checks retained geometry; call-local moving doors/supports are not included. Visible is not a walking route or full collision clearance.");
         w.WriteString("angleOrigin", "character center used by gameplay targeting; visual angles also supplied from camera viewpoint");
         w.WriteString("attackVisibilityMeaning", "Player's current weapon-reach query; unavailable beyond its envelope is not an enemy perception result. enemyBehavior contains the last admitted enemy decision.");
+        // What the last admitted melee request's perception query compared. The player's line only
+        // says nothing was in reach; these counts are what explain why.
+        if (LastMeleeTargeting is { } melee)
+        {
+            PerceptionReadoutResult receipt = melee.Receipt;
+            w.WriteStartObject("lastMeleeQuery");
+            if (melee.SelectedTargetId is long selected) w.WriteString("selectedTarget", $"actor:{selected}"); else w.WriteNull("selectedTarget");
+            w.WriteNumber("observers", receipt.SelectedObservers); w.WriteNumber("targets", receipt.SelectedTargets);
+            w.WriteNumber("compared", receipt.SelectionComparisons); w.WriteNumber("outOfRange", receipt.DistanceRejects);
+            w.WriteNumber("outOfCone", receipt.FacingRejects); w.WriteNumber("visibilityCasts", receipt.VisibilityCasts);
+            w.WriteNumber("occluded", receipt.OcclusionRejects);
+            w.WriteEndObject();
+        }
+        else w.WriteNull("lastMeleeQuery");
         var pairs = combat?.Receipt.Pairs.ToArray() ?? [];
         w.WriteStartArray("actors");
         foreach (var actor in State.Actors.All.OrderBy(a => origin?.HorizontalDistanceTo(a.Position) ?? 0).Take(compact ? 24 : int.MaxValue))

@@ -471,7 +471,7 @@ internal sealed partial class DaggerfallSession
                 _actorIdentities);
             _groundContainers = new DaggerfallGroundContainers(containers, State.ItemInstances, playerEntity, _actorIdentities, activeProfile);
             State.ItemInstances.AttachContainment(ResidentItemOwner);
-            _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, () => State.Kit.Targeting.LastEvidence, definitions.Text);
+            _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, definitions.Text);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, composition.StartSite.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
             State.Quests.BindResourceAllocator(new(definitions, engine.Random, new DaggerfallItemFactory(definitions, engine.Random), questNames,

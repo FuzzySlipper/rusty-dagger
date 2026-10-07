@@ -238,7 +238,7 @@ public sealed class PlayerAttackSessionTests
     }
 
     [Fact]
-    public void A_melee_request_that_found_nothing_reports_what_the_query_actually_saw()
+    public void A_melee_request_that_found_nothing_tells_the_player_plainly_and_keeps_the_query_counts_in_diagnostics()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -251,15 +251,23 @@ public sealed class PlayerAttackSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        // Every placed actor is outside melee reach: the receipt says so, and the product has to say so
-        // too rather than printing the same line it would print in a world where nothing is visible.
+        // Every placed actor is outside melee reach. The player reads only that nothing was in reach;
+        // what the perception query compared belongs to the playtest diagnostics, not the outcome line.
         perception.Receipt = new PerceptionReadoutResult(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 42, 42, 42, 41, 1, 0, 0);
         session.Update(new ProductUpdate(OuterUpdate(1), [PadButton(ControllerButton.Button0, InputEdge.Pressed)]));
 
-        Assert.Equal("No target in melee reach (42 observer(s) against 42 target(s), 42 compared: 41 out of range, 1 out of cone, 0 cast, 0 occluded)", session.Presentation.LastOutcome);
-        // The same line is what the DOM draws, so a human sees the counters too.
+        Assert.Equal("Nothing in reach.", session.Presentation.LastOutcome);
         Dictionary<string, object?> published = (Dictionary<string, object?>)engine.Published()!;
-        Assert.Contains("No target in melee reach (42 observer(s) against 42 target(s)", (string)published["lastOutcome"]!, StringComparison.Ordinal);
+        Assert.Equal("Nothing in reach.", (string)published["lastOutcome"]!);
+        using System.Text.Json.JsonDocument readout = System.Text.Json.JsonDocument.Parse(session.ReadPlaytestTargets().Message);
+        System.Text.Json.JsonElement query = readout.RootElement.GetProperty("lastMeleeQuery");
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, query.GetProperty("selectedTarget").ValueKind);
+        Assert.Equal(42, query.GetProperty("observers").GetInt32());
+        Assert.Equal(42, query.GetProperty("targets").GetInt32());
+        Assert.Equal(42, query.GetProperty("compared").GetInt32());
+        Assert.Equal(41, query.GetProperty("outOfRange").GetInt32());
+        Assert.Equal(1, query.GetProperty("outOfCone").GetInt32());
+        Assert.Equal(0, query.GetProperty("occluded").GetInt32());
     }
 
     [Fact]
@@ -281,9 +289,12 @@ public sealed class PlayerAttackSessionTests
 
         Assert.Equal("Hit rat for 7 damage", presentation.LastOutcome);
 
-        // A miss reports the roll the same way, and once the result has aged out the rejection shows.
+        // A miss is a result too, and once the result has aged out the rejection shows. As in the
+        // donor, the player's line names no roll or chance.
         outcomes.React(new AttackMissedFact(1, 2008, 41, 8, false, 1, 200));
-        Assert.Equal("Missed rat (41 vs 8)", presentation.LastOutcome);
+        Assert.Equal("Missed rat", presentation.LastOutcome);
+        outcomes.React(new AttackMissedFact(2008, DaggerfallActorIdentity.PlayerEntityId, 0, 0, true, 1, 201));
+        Assert.Equal("rat missed you", presentation.LastOutcome);
         presentation.Advance(presentation.LifetimeSeconds);
         outcomes.React(new AttackRejectedFact(AttackRejection.Cooldown));
         Assert.Equal("Cooldown", presentation.LastOutcome);
