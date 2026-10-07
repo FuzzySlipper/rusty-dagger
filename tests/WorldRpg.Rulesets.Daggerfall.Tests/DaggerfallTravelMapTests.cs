@@ -11,7 +11,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>The travel map's placement of the published map art and the views it reads from travel destinations.</summary>
 public sealed class DaggerfallTravelMapTests
 {
-    private static readonly Lazy<IReadOnlyList<DaggerfallTravelDestination>> All = new(() =>
+    private static readonly SharedFixture<IReadOnlyList<DaggerfallTravelDestination>> All = new(() =>
         new DaggerfallTravelPolicy(new DaggerfallSiteContext(TestPayload.Definitions.Locations), TestPayload.Definitions.Grids,
             DaggerfallTuning.Defaults.Transport).AllDestinations());
 

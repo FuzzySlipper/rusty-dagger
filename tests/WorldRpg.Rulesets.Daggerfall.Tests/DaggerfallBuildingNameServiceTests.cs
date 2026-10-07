@@ -8,7 +8,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallBuildingNameServiceTests
 {
-    private static readonly Lazy<(DaggerfallDefinitions Definitions, DaggerfallBlocksSnapshot Blocks)> Inputs = new(ReadInputs);
+    private static readonly SharedFixture<(DaggerfallDefinitions Definitions, DaggerfallBlocksSnapshot Blocks)> Inputs = new(ReadInputs);
 
     [Fact]
     public void Generates_every_donor_building_type_from_actual_rmb_fields()
