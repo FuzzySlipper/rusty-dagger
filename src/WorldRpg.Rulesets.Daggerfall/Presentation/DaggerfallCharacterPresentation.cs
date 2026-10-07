@@ -352,6 +352,11 @@ internal sealed class DaggerfallCharacterPresentation
         : item.Shield is { } shield ? $"Shield armor: {shield.Armor.ToString(CultureInfo.InvariantCulture)}"
         : "Equipment";
 
-    /// <summary>The player name of an attribute, skill or slot id, as the character sheet names it.</summary>
-    internal static string Label(string id) => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(id.Replace('-', ' '));
+    /// <summary>
+    /// The player name of an attribute, skill, race or slot id, as the character sheet names it. The
+    /// one hyphenated classic name keeps its hyphens and lower-case joining word.
+    /// </summary>
+    internal static string Label(string id) => id == "hand-to-hand"
+        ? "Hand-to-Hand"
+        : CultureInfo.InvariantCulture.TextInfo.ToTitleCase(id.Replace('-', ' '));
 }

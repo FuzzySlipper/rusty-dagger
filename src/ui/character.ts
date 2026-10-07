@@ -62,6 +62,7 @@ export interface CharacterEquipment {
 export interface CharacterIdentity {
   readonly racialOverride?: { readonly name: string; readonly vampireClan?: string | null; readonly beastForm: boolean; readonly suppressInventory: boolean } | null;
   readonly race: string;
+  readonly raceLabel: string;
   readonly donorRaceId: number;
   readonly portrait: string;
   readonly gender: string;
@@ -92,14 +93,15 @@ export interface CharacterCreation {
 export interface CharacterBackgroundAnswer { readonly letter: string; readonly text: string; }
 export interface CharacterBackgroundQuestion { readonly number: number; readonly text: string; readonly selectedLetter: string | null; readonly answers: readonly CharacterBackgroundAnswer[]; }
 export interface CharacterBackgroundAttribute { readonly id: string; readonly label: string; readonly rolled: number; readonly allocated: number; readonly value: number; readonly canAllocate: boolean; }
-export interface CharacterBackgroundSkill { readonly id: string; readonly tier: string; readonly rolled: number; readonly allocated: number; readonly biographyBonus: number; readonly value: number; readonly canAllocate: boolean; }
+export interface CharacterBackgroundSkill { readonly id: string; readonly label: string; readonly tier: string; readonly rolled: number; readonly allocated: number; readonly biographyBonus: number; readonly value: number; readonly canAllocate: boolean; }
 export interface CharacterStartingGrant { readonly itemId: string; readonly label: string; readonly templateIndex: number; readonly quantity: number; readonly sourceEffect: string; }
 export interface CharacterBackground { readonly biographyClassIndex: number; readonly biography: readonly string[]; readonly questions: readonly CharacterBackgroundQuestion[]; readonly attributes: readonly CharacterBackgroundAttribute[]; readonly attributeBonusPool: number; readonly remainingAttributePoints: number; readonly skills: readonly CharacterBackgroundSkill[]; readonly primarySkillPoints: number; readonly majorSkillPoints: number; readonly minorSkillPoints: number; readonly startingGrants: readonly CharacterStartingGrant[]; readonly unsupportedEffects: readonly string[]; }
+export interface CharacterSkillChoice { readonly id: string; readonly label: string; }
 export interface CharacterCustomTrait { readonly id: string; readonly target: string | null; }
 export interface CharacterCustomClass {
   readonly name: string; readonly primarySkills: readonly string[]; readonly majorSkills: readonly string[]; readonly minorSkills: readonly string[];
   readonly hitPointsPerLevel: number; readonly advantages: readonly CharacterCustomTrait[]; readonly disadvantages: readonly CharacterCustomTrait[];
-  readonly eligibility: readonly string[]; readonly skills: readonly string[]; readonly supportedAdvantages: readonly string[]; readonly supportedDisadvantages: readonly string[];
+  readonly eligibility: readonly string[]; readonly skills: readonly CharacterSkillChoice[]; readonly supportedAdvantages: readonly string[]; readonly supportedDisadvantages: readonly string[];
 }
 export interface CharacterLevelUpAttribute { readonly id: string; readonly label: string; readonly permanent: number; readonly live: number; readonly pending: number; readonly canAllocate: boolean; }
 export interface CharacterLevelUp { readonly title: string; readonly level: number; readonly bonusPool: number; readonly remainingPoints: number; readonly healthGain: number; readonly canCommit: boolean; readonly attributes: readonly CharacterLevelUpAttribute[]; }
@@ -196,7 +198,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         ...(value.progression.nextLevelSkillProgress == null || value.progression.skillProgress == null ? [] : [
           overviewRow('Level progress', `${format(value.progression.skillProgress)} / ${format(value.progression.nextLevelSkillProgress)} skill total${value.progression.pendingLevelUp === true ? ' · Level up ready' : ''}`),
         ]),
-        ...(value.identity ? [overviewRow('Race', value.identity.race), overviewRow('Career', value.identity.career),
+        ...(value.identity ? [overviewRow('Race', value.identity.raceLabel), overviewRow('Career', value.identity.career),
           ...(value.identity.racialOverride ? [overviewRow('Form', `${value.identity.racialOverride.name} · ${value.identity.racialOverride.vampireClan ?? (value.identity.racialOverride.beastForm ? 'Beast form' : 'Human form')}`)] : []),
           overviewRow('Face', `${value.identity.gender} ${format(value.identity.faceIndex + 1)}`)] : []),
       );
@@ -421,6 +423,7 @@ function isIdentity(value: unknown): value is CharacterIdentity {
   return typeof value === 'object' && value !== null
     && (!('racialOverride' in value) || value.racialOverride == null || isRacialOverride(value.racialOverride))
     && 'race' in value && typeof value.race === 'string'
+    && 'raceLabel' in value && typeof value.raceLabel === 'string'
     && 'donorRaceId' in value && isNumber(value.donorRaceId)
     && 'portrait' in value && typeof value.portrait === 'string'
     && 'gender' in value && typeof value.gender === 'string'
@@ -483,7 +486,7 @@ function isBackground(value: unknown): value is CharacterBackground {
     && 'primarySkillPoints' in value && isNumber(value.primarySkillPoints) && 'majorSkillPoints' in value && isNumber(value.majorSkillPoints) && 'minorSkillPoints' in value && isNumber(value.minorSkillPoints)
     && 'questions' in value && Array.isArray(value.questions) && value.questions.every(question => typeof question === 'object' && question !== null && 'number' in question && isNumber(question.number) && 'text' in question && typeof question.text === 'string' && 'selectedLetter' in question && (question.selectedLetter === null || typeof question.selectedLetter === 'string') && 'answers' in question && Array.isArray(question.answers))
     && 'attributes' in value && Array.isArray(value.attributes) && value.attributes.every(allocation)
-    && 'skills' in value && Array.isArray(value.skills) && value.skills.every(allocation)
+    && 'skills' in value && Array.isArray(value.skills) && value.skills.every(skill => allocation(skill) && typeof skill === 'object' && skill !== null && 'label' in skill && typeof skill.label === 'string')
     && 'startingGrants' in value && Array.isArray(value.startingGrants)
     && 'unsupportedEffects' in value && Array.isArray(value.unsupportedEffects) && value.unsupportedEffects.every(effect => typeof effect === 'string');
 }
@@ -495,7 +498,7 @@ function isCustomClass(value: unknown): value is CharacterCustomClass {
   return typeof value === 'object' && value !== null && 'name' in value && typeof value.name === 'string'
     && 'primarySkills' in value && strings(value.primarySkills) && 'majorSkills' in value && strings(value.majorSkills) && 'minorSkills' in value && strings(value.minorSkills)
     && 'hitPointsPerLevel' in value && isNumber(value.hitPointsPerLevel) && 'advantages' in value && traits(value.advantages) && 'disadvantages' in value && traits(value.disadvantages)
-    && 'eligibility' in value && strings(value.eligibility) && 'skills' in value && strings(value.skills) && 'supportedAdvantages' in value && strings(value.supportedAdvantages) && 'supportedDisadvantages' in value && strings(value.supportedDisadvantages);
+    && 'eligibility' in value && strings(value.eligibility) && 'skills' in value && Array.isArray(value.skills) && value.skills.every(skill => typeof skill === 'object' && skill !== null && 'id' in skill && typeof skill.id === 'string' && 'label' in skill && typeof skill.label === 'string') && 'supportedAdvantages' in value && strings(value.supportedAdvantages) && 'supportedDisadvantages' in value && strings(value.supportedDisadvantages);
 }
 
 function isCreationCurrent(value: unknown): value is CharacterCreation['current'] {
@@ -555,9 +558,10 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   const customFields = document.createElement('fieldset'); customFields.dataset.testid = 'character-custom-class';
   const customLegend = document.createElement('legend'); customLegend.textContent = 'Custom class'; customFields.append(customLegend);
   const skillValues = [...(custom?.skills ?? [])];
-  const primary = customSkills('Primary skills', custom?.primarySkills ?? skillValues.slice(0, 3), skillValues, 3);
-  const major = customSkills('Major skills', custom?.majorSkills ?? skillValues.slice(3, 6), skillValues, 3);
-  const minor = customSkills('Minor skills', custom?.minorSkills ?? skillValues.slice(6, 12), skillValues, 6);
+  const skillIds = skillValues.map(skill => skill.id);
+  const primary = customSkills('Primary skills', custom?.primarySkills ?? skillIds.slice(0, 3), skillValues, 3);
+  const major = customSkills('Major skills', custom?.majorSkills ?? skillIds.slice(3, 6), skillValues, 3);
+  const minor = customSkills('Minor skills', custom?.minorSkills ?? skillIds.slice(6, 12), skillValues, 6);
   const hp = document.createElement('input'); hp.type = 'number'; hp.min = '4'; hp.max = '30'; hp.value = String(custom?.hitPointsPerLevel ?? 8); hp.setAttribute('aria-label', 'Hit points per level');
   const advantages = traitInput('Advantages', custom?.advantages ?? [], custom?.supportedAdvantages ?? []);
   const disadvantages = traitInput('Disadvantages', custom?.disadvantages ?? [], custom?.supportedDisadvantages ?? []);
@@ -594,7 +598,7 @@ function backgroundEditor(value: CharacterBackground | null): { readonly element
     input.setAttribute('aria-label', `Background question ${question.number}`); label.append(input); element.append(label); return { question: question.number, input };
   });
   const attributes = allocationEditor('Attributes', value.attributes.map(attribute => ({ id: attribute.id, label: `${attribute.label}: ${attribute.value}`, allocated: attribute.allocated, canAllocate: attribute.canAllocate })));
-  const skills = allocationEditor('Skills', value.skills.map(skill => ({ id: skill.id, label: `${skill.id} (${skill.tier}): ${skill.value}`, allocated: skill.allocated, canAllocate: skill.canAllocate })));
+  const skills = allocationEditor('Skills', value.skills.map(skill => ({ id: skill.id, label: `${skill.label} (${skill.tier}): ${skill.value}`, allocated: skill.allocated, canAllocate: skill.canAllocate })));
   const pools = document.createElement('p'); pools.dataset.testid = 'character-allocation-pools'; pools.setAttribute('aria-live', 'polite');
   const updatePools = (): void => {
     const remainingAttributes = value.remainingAttributePoints + value.attributes.reduce((total, attribute) => total + attribute.allocated, 0) - [...attributes.allocations().values()].reduce((total, points) => total + points, 0);
@@ -642,9 +646,9 @@ function renderLevelUp(root: HTMLElement, value: CharacterLevelUp | null, send?:
 }
 
 function labeled(label: string, input: HTMLElement): HTMLElement { const item = document.createElement('label'); item.textContent = label; item.append(input); return item; }
-function customSkills(label: string, selected: readonly string[], skills: readonly string[], count: number): { readonly element: HTMLElement; readonly values: () => string[] } {
+function customSkills(label: string, selected: readonly string[], skills: readonly CharacterSkillChoice[], count: number): { readonly element: HTMLElement; readonly values: () => string[] } {
   const element = document.createElement('fieldset'); const legend = document.createElement('legend'); legend.textContent = label; element.append(legend);
-  const selects = Array.from({ length: count }, (_, index) => { const input = select(skills.map(id => ({ id, label: id, available: true, restriction: null })), selected[index] ?? skills[index] ?? ''); input.setAttribute('aria-label', `${label} ${index + 1}`); element.append(input); return input; });
+  const selects = Array.from({ length: count }, (_, index) => { const input = select(skills.map(skill => ({ id: skill.id, label: skill.label, available: true, restriction: null })), selected[index] ?? skills[index]?.id ?? ''); input.setAttribute('aria-label', `${label} ${index + 1}`); element.append(input); return input; });
   return { element, values: () => selects.map(item => item.value) };
 }
 function traitInput(label: string, traits: readonly CharacterCustomTrait[], supported: readonly string[]): { readonly element: HTMLElement; readonly value: () => string } {

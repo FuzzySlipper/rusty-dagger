@@ -506,12 +506,13 @@ test('title creation renders normalized questions and sends the selected backgro
         background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 6, remainingAttributePoints: 4, primarySkillPoints: 5, majorSkillPoints: 6, minorSkillPoints: 6,
           questions: [{ number: 1, text: 'Where did you study?', selectedLetter: 'a', answers: [{ letter: 'a', text: 'At home.' }, { letter: 'b', text: 'At court.' }] }],
           attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 2, value: 52, canAllocate: true }],
-          skills: [{ id: 'medical', tier: 'primary', rolled: 28, allocated: 1, biographyBonus: 0, value: 29, canAllocate: true }],
+          skills: [{ id: 'medical', label: 'Medical', tier: 'primary', rolled: 28, allocated: 1, biographyBonus: 0, value: 29, canAllocate: true }],
           startingGrants: [{ itemId: 'template-113-iron', label: 'Longsword', templateIndex: 113, quantity: 1, sourceEffect: 'IT 3 0 0' }], unsupportedEffects: ['The source retains this fatigue background effect without a gameplay consequence.'] },
       },
     } });
     assert.match(f.root.querySelector('[data-testid="character-biography"]').textContent, /readable biography/);
     assert.equal(f.root.querySelector('[data-testid="character-starting-grants"]').textContent, 'Starting grants: 1 × Longsword.');
+    assert.match(f.root.querySelector('[aria-label="Skills medical"]').parentElement.textContent, /^Medical \(primary\): 29/);
     assert.match(f.root.querySelector('[data-testid="character-background-unsupported-effects"]').textContent, /fatigue background effect/);
     const pools = f.root.querySelector('[data-testid="character-allocation-pools"]');
     assert.match(pools.textContent, /^4 of 6 attribute points remain; 5\/6\/6/);
@@ -634,12 +635,17 @@ test('custom class editor sends typed skills traits and exposes eligibility reas
         faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
         custom: { name: 'Nightblade', primarySkills: ['mysticism', 'alteration', 'thaumaturgy'], majorSkills: ['illusion', 'destruction', 'restoration'], minorSkills: ['medical', 'short-blade', 'blunt-weapon', 'dragonish', 'daedric', 'dodging'], hitPointsPerLevel: 12,
           advantages: [{ id: 'increased-magery', target: '1.5' }], disadvantages: [{ id: 'forbidden-material', target: 'steel' }], eligibility: ['Choose each trained skill once.'],
-          skills: ['mysticism', 'alteration', 'thaumaturgy', 'illusion', 'destruction', 'restoration', 'medical', 'short-blade', 'blunt-weapon', 'dragonish', 'daedric', 'dodging'], supportedAdvantages: ['increased-magery:1.5', 'acute-hearing', 'regenerate-health:immersed'], supportedDisadvantages: ['forbidden-material:steel', 'damage:sunlight', 'inability-to-regen'] },
+          skills: [['mysticism', 'Mysticism'], ['alteration', 'Alteration'], ['thaumaturgy', 'Thaumaturgy'], ['illusion', 'Illusion'], ['destruction', 'Destruction'], ['restoration', 'Restoration'], ['medical', 'Medical'], ['short-blade', 'Short Blade'], ['blunt-weapon', 'Blunt Weapon'], ['dragonish', 'Dragonish'], ['daedric', 'Daedric'], ['dodging', 'Dodging']].map(([id, label]) => ({ id, label })), supportedAdvantages: ['increased-magery:1.5', 'acute-hearing', 'regenerate-health:immersed'], supportedDisadvantages: ['forbidden-material:steel', 'damage:sunlight', 'inability-to-regen'] },
       },
     } };
     f.publish(snapshot);
     assert.equal(f.root.querySelector('[data-testid="character-custom-class"]').hidden, false);
     assert.match(f.root.querySelector('[data-testid="character-custom-eligibility"]').textContent, /Choose each trained skill once/);
+    // The skill choices read as the ruleset names them while their values stay skill ids.
+    const minorSkill = f.root.querySelector('[aria-label="Minor skills 2"]');
+    assert.equal(minorSkill.value, 'short-blade');
+    assert.equal(minorSkill.selectedOptions[0].textContent, 'Short Blade');
+    assert.ok(![...minorSkill.options].some(option => option.textContent.includes('-')), 'no option shows a raw skill id');
     f.root.querySelector('[data-testid="character-custom-update"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'character-update', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'custom',
       primarySkills: 'mysticism,alteration,thaumaturgy', majorSkills: 'illusion,destruction,restoration', minorSkills: 'medical,short-blade,blunt-weapon,dragonish,daedric,dodging', hitPointsPerLevel: 12, advantages: 'increased-magery:1.5', disadvantages: 'forbidden-material:steel' });
@@ -1537,7 +1543,7 @@ test('racial form projection closes and suppresses inventory until human form re
   const f = fixture();
   try {
     const character = { name: 'Aubk-i', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [],
-      identity: { race: 'breton', donorRaceId: 1, portrait: '', gender: 'female', faceIndex: 0, career: 'mage', media: [], selectedMedia: [],
+      identity: { race: 'breton', raceLabel: 'Breton', donorRaceId: 1, portrait: '', gender: 'female', faceIndex: 0, career: 'mage', media: [], selectedMedia: [],
         racialOverride: { name: 'Werewolf', beastForm: true, suppressInventory: true } } };
     f.root.querySelector('[data-action="inventory"]').click();
     character.identity.selectedMedia = [{layer:'background',mediaId:'beast.body'},{layer:'head',mediaId:'beast.head'}];
@@ -1659,11 +1665,13 @@ test('vampire character projection displays clan and published media while retai
   const f = fixture();
   try {
     const character = { name:'Aubk-i',attributes:[],skills:[],resources:[],progression:{level:1,experience:0},equipment:[],
-      identity:{race:'breton',donorRaceId:1,portrait:'',gender:'female',faceIndex:0,career:'mage',media:[],
+      identity:{race:'dark-elf',raceLabel:'Dark Elf',donorRaceId:4,portrait:'',gender:'female',faceIndex:0,career:'mage',media:[],
         selectedMedia:[{layer:'background',mediaId:'vampire.background'},{layer:'head.female.0',mediaId:'vampire.head'}],
         racialOverride:{name:'Vampire',vampireClan:'Lyrezi',beastForm:false,suppressInventory:false}}};
     f.publish({character,uiArt:{revision:'vampire',images:[{id:'vampire.background',image:'data:image/png;base64,Ym9keQ=='},{id:'vampire.head',image:'data:image/png;base64,aGVhZA=='}]}});
     assert.match(f.root.querySelector('.dagger-character-overview').textContent,/Vampire · Lyrezi/);
+    assert.match(f.root.querySelector('.dagger-character-overview').textContent,/Dark Elf/);
+    assert.doesNotMatch(f.root.querySelector('.dagger-character-overview').textContent,/dark-elf/);
     assert.equal(f.root.querySelector('[data-action="inventory"]').disabled,false);
     assert.deepEqual([...f.root.querySelectorAll('.dagger-character-art img')].map(img=>img.dataset.mediaId),['vampire.background','vampire.head']);
     character.identity.racialOverride=null;character.identity.selectedMedia=[];f.publish({character});

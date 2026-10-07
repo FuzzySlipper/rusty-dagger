@@ -684,7 +684,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("advantages", Traits(builder, custom.Current.Advantages)),
         ("disadvantages", Traits(builder, custom.Current.Disadvantages)),
         ("eligibility", builder.Array(custom.Eligibility.Select(builder.String).ToArray())),
-        ("skills", builder.Array(custom.Skills.Select(builder.String).ToArray())),
+        ("skills", builder.Array(custom.Skills.Select(skill => builder.Object(("id", builder.String(skill)), ("label", builder.String(DaggerfallCharacterPresentation.Label(skill))))).ToArray())),
         ("supportedAdvantages", builder.Array(custom.SupportedAdvantages.Select(builder.String).ToArray())),
         ("supportedDisadvantages", builder.Array(custom.SupportedDisadvantages.Select(builder.String).ToArray())));
 
@@ -718,7 +718,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("selectedLetter", question.SelectedLetter is null ? builder.Null() : builder.String(question.SelectedLetter)), ("answers", builder.Array(question.Answers.Select(answer => builder.Object(("letter", builder.String(answer.Letter)), ("text", builder.String(answer.Text)))).ToArray())))).ToArray())),
         ("attributes", builder.Array(background.Attributes.Select(attribute => builder.Object(("id", builder.String(attribute.Id)), ("label", builder.String(attribute.Label)),
             ("rolled", builder.Number(attribute.Rolled)), ("allocated", builder.Number(attribute.Allocated)), ("value", builder.Number(attribute.Value)), ("canAllocate", builder.Boolean(attribute.CanAllocate)))).ToArray())),
-        ("skills", builder.Array(background.Skills.Select(skill => builder.Object(("id", builder.String(skill.Id)), ("tier", builder.String(skill.Tier)),
+        ("skills", builder.Array(background.Skills.Select(skill => builder.Object(("id", builder.String(skill.Id)), ("label", builder.String(skill.Label)), ("tier", builder.String(skill.Tier)),
             ("rolled", builder.Number(skill.Rolled)), ("allocated", builder.Number(skill.Allocated)), ("biographyBonus", builder.Number(skill.BiographyBonus)), ("value", builder.Number(skill.Value)), ("canAllocate", builder.Boolean(skill.CanAllocate)))).ToArray())),
         ("startingGrants", builder.Array(background.StartingGrants.Select(grant => builder.Object(("itemId", builder.String(grant.ItemId)), ("label", builder.String(grant.Label)), ("templateIndex", builder.Number(grant.TemplateIndex)), ("quantity", builder.Number((long)grant.Quantity)), ("sourceEffect", builder.String(grant.SourceEffect)))).ToArray())),
         ("unsupportedEffects", builder.Array(background.UnsupportedEffects.Select(builder.String).ToArray())));
@@ -731,7 +731,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         .Select(trait => builder.Object(("id", builder.String(trait.Id)), ("target", trait.Target is null ? builder.Null() : builder.String(trait.Target)))).ToArray());
 
     private static uint Identity(UiValueBuilder builder, CharacterIdentityPresentation identity) => builder.Object(
-        ("race", builder.String(identity.Race)), ("donorRaceId", builder.Number(identity.DonorRaceId)), ("portrait", builder.String(identity.Portrait)),
+        ("race", builder.String(identity.Race)), ("raceLabel", builder.String(identity.Race.Length == 0 ? "" : DaggerfallCharacterPresentation.Label(identity.Race))), ("donorRaceId", builder.Number(identity.DonorRaceId)), ("portrait", builder.String(identity.Portrait)),
         ("gender", builder.String(identity.Gender)), ("faceIndex", builder.Number(identity.FaceIndex)), ("career", builder.String(identity.Career)),
         ("racialOverride", identity.RacialOverride is not { } racial ? builder.Null() : builder.Object(
             ("name", builder.String(racial.Name)), ("vampireClan", identity.VampireClan is null ? builder.Null() : builder.String(identity.VampireClan)), ("beastForm", builder.Boolean(racial.State.BeastForm)),

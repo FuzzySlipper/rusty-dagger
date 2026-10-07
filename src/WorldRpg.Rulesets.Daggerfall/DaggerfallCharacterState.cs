@@ -1,5 +1,7 @@
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -183,7 +185,7 @@ internal sealed partial class DaggerfallCharacterState
                 && layers.Heads(DaggerfallCharacterGender.Male).Count != 0 && layers.Heads(DaggerfallCharacterGender.Female).Count != 0;
             string? restriction = available ? null : _definitions.CharacterPresentation.RacesWithoutMedia
                 .FirstOrDefault(value => value.RaceId == race.Id)?.Reason ?? "No complete character media is published.";
-            return new DaggerfallCharacterChoice(race.Id, race.Id, available, restriction);
+            return new DaggerfallCharacterChoice(race.Id, DaggerfallCharacterPresentation.Label(race.Id), available, restriction);
         }).ToArray();
         DaggerfallCharacterChoice[] careers = _definitions.Catalogs.Careers.Select(career => new DaggerfallCharacterChoice(
             career.Id, career.Name, _definitions.NewGame.Careers.Any(value => value.Career == career.Id),
@@ -192,14 +194,7 @@ internal sealed partial class DaggerfallCharacterState
         DaggerfallCharacterFaceChoice[] faces = _definitions.CharacterPresentation.Races.TryGetValue(current.RaceId, out DaggerfallRaceLayers? selected)
             ? [.. selected.Heads(current.Gender).Select(face => new DaggerfallCharacterFaceChoice(face.HeadIndex, face.MediaId))] : [];
         DaggerfallCharacterReflexChoice[] reflexes = Enum.GetValues<DaggerfallCharacterReflexes>()
-            .Select(value => new DaggerfallCharacterReflexChoice((int)value, value switch
-            {
-                DaggerfallCharacterReflexes.VeryHigh => "Very high",
-                DaggerfallCharacterReflexes.High => "High",
-                DaggerfallCharacterReflexes.Average => "Average",
-                DaggerfallCharacterReflexes.Low => "Low",
-                _ => "Very low",
-            })).ToArray();
+            .Select(value => new DaggerfallCharacterReflexChoice((int)value, ReflexLabel(value))).ToArray();
         DaggerfallCustomCareerPresentation? custom = (Pending is not null || current.CareerId == DaggerfallCustomCareerPolicy.CareerId) && current.CustomCareer is { } draft
             ? new(draft, [.. DaggerfallCustomCareerPolicy.Validate(_definitions, draft)], [.. _definitions.Catalogs.Skills.Select(skill => skill.Id)], DaggerfallCustomCareerPolicy.Options(DaggerfallCustomCareerPolicy.SupportedAdvantages), DaggerfallCustomCareerPolicy.Options(DaggerfallCustomCareerPolicy.SupportedDisadvantages))
             : null;
@@ -239,15 +234,35 @@ internal sealed partial class DaggerfallCharacterState
         var spells = _customCareer is null ? config.Careers.Single(value => value.Career == Career.Id).Spells
             : Career.PrimarySkills.Concat(Career.MajorSkills).Any(skill => skill is "destruction" or "restoration" or "illusion" or "alteration" or "thaumaturgy" or "mysticism")
                 ? config.CustomMagicSpells : [];
-        return [ $"{Identity.Name} — {Identity.RaceId}, {Identity.Gender.ToString().ToLowerInvariant()}, {Career.Name}; reflexes {Identity.Reflexes}.",
-            .. Career.Attributes.Select(id => $"{id}: {_stats.GetStat(StatId.Parse(id)).ValueInt}"),
-            .. GrantedSkills.Select(skill => $"{skill.SkillId}: {_stats.GetStat(StatId.Parse(skill.SkillId)).ValueInt} ({skill.Tier})"),
-            .. _stats.Tracks.Select(pair => $"{pair.Key.Value}: {pair.Value.Maximum.ValueInt}"),
-            "Starting clothing and spellbook.", $"{config.Gold} gold plus biography grants.",
-            .. items.Select(item => $"{item.Quantity} × {item.Material} {_definitions.ItemTemplateCatalog.Templates[item.Template].Name}"),
-            .. _background!.StartingGrants.Select(item => $"{item.Quantity} × {_definitions.RequireItem(new DaggerfallItemId(item.ItemId)).Template!.Name}"),
+        ulong biographyGold = _background!.StartingGrants.Where(item => item.TemplateIndex == GoldTemplateIndex).Aggregate(0UL, (total, item) => checked(total + item.Quantity));
+        return [ $"{Identity.Name} — {DaggerfallCharacterPresentation.Label(Identity.RaceId)}, {Identity.Gender.ToString().ToLowerInvariant()}, {Career.Name}; {ReflexLabel(Identity.Reflexes).ToLowerInvariant()} reflexes.",
+            .. Career.Attributes.Select(id => $"{DaggerfallCharacterPresentation.Label(id)}: {_stats.GetStat(StatId.Parse(id)).ValueInt}"),
+            .. GrantedSkills.Select(skill => $"{DaggerfallCharacterPresentation.Label(skill.SkillId)}: {_stats.GetStat(StatId.Parse(skill.SkillId)).ValueInt} ({skill.Tier.ToString().ToLowerInvariant()})"),
+            .. _definitions.HudResources.Where(resource => _stats.Tracks.ContainsKey(TrackId.Parse(resource.Track.Value))).Select(resource => ResourceLine(resource)),
+            "Starting clothing and spellbook.",
+            biographyGold == 0 ? $"{config.Gold} gold." : $"{(ulong)config.Gold + biographyGold} gold ({config.Gold} starting, {biographyGold} from your background).",
+            .. items.Select(item => $"{item.Quantity} × {(item.Material is null ? "" : DaggerfallCharacterPresentation.Label(item.Material) + " ")}{_definitions.ItemTemplateCatalog.Templates[item.Template].Name}"),
+            .. DaggerfallCharacterBackgroundPolicy.CombinedGrants(_background.StartingGrants.Where(item => item.TemplateIndex != GoldTemplateIndex))
+                .Select(item => $"{item.Quantity} × {_definitions.RequireItem(new DaggerfallItemId(item.ItemId)).Template!.Name}"),
             .. spells.Select(key => $"Spell: {_definitions.Magic.Spells[key].Name}") ];
     }
+
+    private const int GoldTemplateIndex = 276;
+
+    private string ResourceLine(DaggerfallHudResourceDefinition resource)
+    {
+        long maximum = _stats.GetTrack(TrackId.Parse(resource.Track.Value)).Maximum.ValueInt64;
+        return $"{resource.Label}: {(resource.Track == DaggerfallMechanicsIds.Stamina ? DaggerfallFormulaPolicy.DisplayFatigue(maximum) : maximum)}";
+    }
+
+    private static string ReflexLabel(DaggerfallCharacterReflexes reflexes) => reflexes switch
+    {
+        DaggerfallCharacterReflexes.VeryHigh => "Very high",
+        DaggerfallCharacterReflexes.High => "High",
+        DaggerfallCharacterReflexes.Average => "Average",
+        DaggerfallCharacterReflexes.Low => "Low",
+        _ => "Very low",
+    };
 
     internal void RerollBackground(Rusty.Engine.IRandomService random)
     {
