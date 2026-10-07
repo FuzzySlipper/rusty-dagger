@@ -44,7 +44,7 @@ public sealed class ControlsInputSessionTests
         // waits for the classic hit frame of the swing the viewmodel is playing.
         Assert.Equal(before, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
         Assert.True(session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current < staminaBefore);
-        appearance.AdvanceReceiptForAll = Reading(2, 2);
+        appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 2, 60, 3, 0, 1d / 60d), []));
         double after = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         Assert.True(after < before);

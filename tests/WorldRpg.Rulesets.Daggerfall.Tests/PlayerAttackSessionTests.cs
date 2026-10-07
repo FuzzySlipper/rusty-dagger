@@ -138,7 +138,7 @@ public sealed class PlayerAttackSessionTests
         combat.Attacks.TryPlayerMelee(session.State.PlayerControl, ForwardLook(), 7, 14, .125, facts);
         List<IProductFact> coolingDown = [];
         facts.Deliver(coolingDown.Add);
-        Assert.Equal([new AttackRejectedFact(AttackRejection.Cooldown)], coolingDown);
+        Assert.Equal([new AttackRejectedFact(AttackRejection.Cooldown, DaggerfallActorIdentity.PlayerEntityId)], coolingDown);
         Assert.Equal(staminaBefore - 5, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
 
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 8, 20, .125), facts);

@@ -121,16 +121,18 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         if (request.AttackerId != PlayerId) throw new ArgumentException("Enemy attacks use the delayed attack capability.", nameof(request));
         Execution.Start(new(request.AttackerId, request.TargetId, request.Generation, request.SimulationStep, request.FixedDeltaSeconds, false, request.Action?.Value), facts);
     }
-    public void Refused(AttackRefusal reason, FactBuffer<IProductFact> facts) => facts.Append(new AttackRejectedFact(reason switch
+    public void Refused(long attackerId, AttackRefusal reason, FactBuffer<IProductFact> facts) => facts.Append(new AttackRejectedFact(reason switch
     {
         AttackRefusal.UnknownActor => AttackRejection.UnknownExplicitCombatant,
         AttackRefusal.TargetDefeated => AttackRejection.TargetDefeated,
-        _ => AttackRejection.Cooldown,
-    }));
+        AttackRefusal.InProgress => AttackRejection.AttackInProgress,
+        AttackRefusal.Cooldown => AttackRejection.Cooldown,
+        _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, "Attack execution reported a refusal this ruleset does not know."),
+    }, attackerId));
     public bool TryPrepare(AttackRequest request, FactBuffer<IProductFact> facts, out PreparedAttack prepared)
     {
         prepared = null!;
-        if (!TryResolve(request.AttackerId, out Combatant attacker)) { Refused(AttackRefusal.UnknownActor, facts); return false; }
+        if (!TryResolve(request.AttackerId, out Combatant attacker)) { Refused(request.AttackerId, AttackRefusal.UnknownActor, facts); return false; }
         if (_physicalAttacksBlocked(request.AttackerId))
         { facts.Append(new AttackRejectedFact(AttackRejection.Incapacitated, request.AttackerId)); return false; }
         // Whether an attack is the player's or an enemy's decides the admission policy, the random
@@ -159,7 +161,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         var strikeSource = DaggerfallItemCastTriggers.CaptureStrike(_catalog.Magic, _itemInstances, _actors.Entities, EquippedWeapon(request.AttackerId));
         if (request.TargetId is not long targetId)
         { prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, default, feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource); return true; }
-        if (!TryResolve(targetId, out Combatant target)) { Refused(AttackRefusal.UnknownActor, facts); return false; }
+        if (!TryResolve(targetId, out Combatant target)) { Refused(request.AttackerId, AttackRefusal.UnknownActor, facts); return false; }
         ExplicitMeleeRequest explicitRequest = new(request.AttackerId, targetId, request.Generation, request.SimulationStep, request.FixedDeltaSeconds);
         CombatParticipants participants = Participants(attacker.Id, targetId, request.Action ?? attacker.Definition.ActionId ?? "attack");
         bool backstabOpportunity = BackstabOpportunity(attacker, target);

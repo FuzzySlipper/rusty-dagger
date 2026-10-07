@@ -330,6 +330,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             // flight advances and presentation publishes against what the player is wearing now.
             _heldEnchantments.Refresh();
             ApplyAttackImpacts();
+            // Acts a step held behind an enemy hit on the player run once that hit's frame had its chance.
+            ApplyDeferredPlayerActs();
             UpdateRangedFlight(update.Facts);
             PublishPresentation();
             // The score follows the world this admitted update settled: a site change or a change of day
@@ -342,6 +344,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             && update.Facts.Mode == ProductUpdateMode.Realtime && update.Facts.AdmittedStepCount > 0
             && double.IsFinite(update.Facts.FixedDeltaSeconds) && update.Facts.FixedDeltaSeconds > 0;
         SyncWeatherContext(ambientPlaying ? update.Facts.FixedDeltaSeconds * update.Facts.AdmittedStepCount : 0, ambientPlaying);
+        // A paused or held update reached no impact boundary, so acts it deferred are not performed.
+        _deferredPlayerActs = null;
         _appearance.CompleteAdmittedUpdate();
         return ProductUpdateResult.None;
     }
@@ -534,6 +538,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _enemyBehavior.BeginAdmittedUpdate();
         SimulateStep(update, 0, 0);
         DeliverFacts();
+        // A direct step has no animation boundary of its own; its end is that boundary.
+        ApplyDeferredPlayerActs();
         PublishPresentation();
         AdvanceMusic();
     }

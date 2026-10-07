@@ -127,6 +127,7 @@ internal sealed class DaggerfallOutcomePresentation(
                     AttackRejection.MissingPlayerPosition => "No authored player position",
                     AttackRejection.NoTargetInReach => NothingInMeleeReach(),
                     AttackRejection.Cooldown => "Cooldown",
+                    AttackRejection.AttackInProgress => "Attack in progress",
                     AttackRejection.InsufficientStamina => "Too exhausted to attack",
                     AttackRejection.InsufficientWeaponMaterial => "Weapon material cannot harm this target",
                     AttackRejection.TargetDefeated => "Target already defeated",
