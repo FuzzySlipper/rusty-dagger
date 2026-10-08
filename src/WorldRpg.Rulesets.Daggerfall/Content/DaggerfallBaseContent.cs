@@ -133,6 +133,44 @@ internal static partial class DaggerfallBaseContent
         }
     }
 
+    /// <summary>The root sections only the quest source reader consults.</summary>
+    internal static readonly IReadOnlyList<string> QuestSectionNames = ["questSources", "questTables", "questCatalog"];
+
+    /// <summary>
+    /// Already-admitted definitions with their quest sections replaced by the ones this document carries.
+    /// The quest sections are read by <see cref="ReadQuestSources"/> alone, and no other section's reader
+    /// or cross-section check consults them or the set it returns, so reading the replacement here
+    /// admits exactly what <see cref="Read(ReadOnlyMemory{byte})"/> would for a payload carrying it
+    /// beside the admitted sections, without re-reading every other section. The document must carry
+    /// only quest sections: anything else would be silently ignored.
+    /// </summary>
+    internal static DaggerfallDefinitions ReadQuestSections(DaggerfallDefinitions admitted, ReadOnlyMemory<byte> sections)
+    {
+        DaggerfallContentDiagnostics diagnostics = new();
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(sections);
+            JsonElement root = Object(document.RootElement, "root", diagnostics);
+            diagnostics.ThrowIfAny();
+            RejectDuplicateProperties(root, "root", diagnostics);
+            foreach (JsonProperty section in root.EnumerateObject().Where(section => !QuestSectionNames.Contains(section.Name, StringComparer.Ordinal)))
+                diagnostics.Add($"Section '{section.Name}' is not a quest section; replacing quest sections cannot admit it.");
+            DaggerfallQuestSourceSet questSources = ReadQuestSources(root, diagnostics);
+            diagnostics.ThrowIfAny();
+            return admitted.WithQuestSources(questSources);
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add($"Base payload is not valid JSON: {exception.Message}");
+            throw diagnostics.Exception();
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or FormatException or OverflowException && exception is not DaggerfallContentException)
+        {
+            diagnostics.Add($"Base payload is malformed: {exception.Message}");
+            throw diagnostics.Exception();
+        }
+    }
+
     private static DaggerfallEncounterSet ReadEncounters(JsonElement root, DaggerfallCatalogSet catalogs, DaggerfallMobileCatalogSet mobiles, DaggerfallContentDiagnostics diagnostics)
     {
         if (!root.TryGetProperty("encounters", out JsonElement section) || section.ValueKind != JsonValueKind.Object)

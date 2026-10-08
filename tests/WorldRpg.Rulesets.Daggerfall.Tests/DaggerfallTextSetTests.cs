@@ -460,7 +460,7 @@ public sealed class DaggerfallTextSetTests
     }
 
     private static DaggerfallDefinitions Definitions(Action<JsonObject>? mutate = null) =>
-        DaggerfallBaseContent.Read(mutate is null ? TestPayload.CombinedBytes : Payload(mutate));
+        mutate is null ? TestPayload.Definitions : DaggerfallBaseContent.Read(Payload(mutate));
 
     /// <summary>
     /// The joined payload with its text section edited. Only that section is parsed: a node tree of the

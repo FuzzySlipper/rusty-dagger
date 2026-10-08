@@ -140,6 +140,6 @@ public sealed class DaggerfallQuestJournalTests
              "messages":[],
              "blocks":[{"kind":"headless","firstLine":1,"lines":["end quest"],"global":null}],"diagnostics":[]}
             """));
-        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
+        return TestPayload.WithQuestSections(root.AsObject());
     }
 }

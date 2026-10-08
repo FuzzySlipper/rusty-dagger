@@ -110,6 +110,39 @@ internal static class TestPayload
     }
 
     /// <summary>
+    /// The shared base definitions with the quest sections replaced by the edited ones from
+    /// <see cref="Sections"/>; a quest section the edit does not carry keeps the joined payload's bytes.
+    /// The ruleset reads the replacement through its own quest reader against the admitted base, so a
+    /// fact that only edits quest sources reads those few megabytes instead of splicing and re-reading
+    /// the whole payload.
+    /// </summary>
+    internal static DaggerfallDefinitions WithQuestSections(System.Text.Json.Nodes.JsonObject sections)
+    {
+        byte[] combined = Combined.Value;
+        List<(string Name, int Start, int End)> quest = [.. SectionRanges(combined)
+            .Where(range => DaggerfallBaseContent.QuestSectionNames.Contains(range.Name, StringComparer.Ordinal))];
+        if (sections.Select(property => property.Key).FirstOrDefault(name => !quest.Any(range => range.Name == name)) is { } other)
+            throw new ArgumentException($"Section '{other}' is not a quest section of the joined payload; splice it and read the whole payload instead.", nameof(sections));
+        System.Buffers.ArrayBufferWriter<byte> buffer = new();
+        using (System.Text.Json.Utf8JsonWriter writer = new(buffer))
+        {
+            writer.WriteStartObject();
+            foreach ((string name, int start, int end) in quest)
+            {
+                writer.WritePropertyName(name);
+                if (sections.TryGetPropertyValue(name, out System.Text.Json.Nodes.JsonNode? edited))
+                {
+                    if (edited is null) writer.WriteNullValue();
+                    else edited.WriteTo(writer);
+                }
+                else writer.WriteRawValue(combined.AsSpan(start, end - start), skipInputValidation: true);
+            }
+            writer.WriteEndObject();
+        }
+        return DaggerfallBaseContent.ReadQuestSections(Definitions, buffer.WrittenMemory);
+    }
+
+    /// <summary>
     /// The joined payload with one top-level section omitted, property and separating comma included, so
     /// a fact about a missing section reads a document that truly lacks the property. Every other byte is
     /// kept; nothing is parsed into a tree.

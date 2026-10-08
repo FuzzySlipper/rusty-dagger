@@ -200,6 +200,6 @@ public sealed class QuestNpcAdmissionTests
             for (int i = 0; i < taskBlocks.Length; i++) blocks.Add(new JsonObject { ["kind"] = "task", ["firstLine"] = 10 + i * 10,
                 ["lines"] = System.Text.Json.JsonSerializer.SerializeToNode(taskBlocks[i].Select(line => line.Replace("_person_", symbol))), ["global"] = null });
         }
-        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
+        return TestPayload.WithQuestSections(root.AsObject());
     }
 }
