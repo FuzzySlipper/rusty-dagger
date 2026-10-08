@@ -203,7 +203,7 @@ public sealed class HostSaveSlotTests
             ?? throw new InvalidOperationException("The player has no position.");
         WorldPoint positionBefore = PlayerPos(session);
         product.Update(new ProductUpdate(
-            new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 3, 3, 60, 3, 0, 1d / 60d),
+            new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 3, 3, 60, 3, 0, 1d / 60d),
             [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
         WorldPoint positionStepped = PlayerPos(session);
         Assert.True(positionStepped.X > positionBefore.X);
@@ -216,7 +216,7 @@ public sealed class HostSaveSlotTests
 
         // More ordinary input produces a distinct second slot state.
         product.Update(new ProductUpdate(
-            new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 6, 6, 60, 3, 0, 1d / 60d),
+            new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 6, 6, 60, 3, 0, 1d / 60d),
             [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
         WorldPoint movedSecondPosition = PlayerPos(session);
         Assert.True(movedSecondPosition.X > firstPosition.X);
@@ -226,7 +226,7 @@ public sealed class HostSaveSlotTests
         // Overwriting an explicit selection requires a confirmation action and cannot alter the
         // second slot. The confirmed overwrite records the later world state in slot 1.
         product.Update(new ProductUpdate(
-            new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 8, 8, 60, 3, 0, 1d / 60d),
+            new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 8, 8, 60, 3, 0, 1d / 60d),
             [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
         WorldPoint overwrittenPosition = PlayerPos(session);
         product.Update(new ProductUpdate(OuterUpdate(9), [Ui("{\"action\":\"save-slot\",\"key\":\"slot-1\",\"label\":\"Revisited dungeon\"}")]));

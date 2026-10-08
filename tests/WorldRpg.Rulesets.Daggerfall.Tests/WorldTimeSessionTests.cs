@@ -156,5 +156,5 @@ public sealed class WorldTimeSessionTests
     }
 
     private static ProductUpdateFacts FactsWithDelta(double deltaSeconds) =>
-        new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, deltaSeconds);
+        new(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, deltaSeconds);
 }

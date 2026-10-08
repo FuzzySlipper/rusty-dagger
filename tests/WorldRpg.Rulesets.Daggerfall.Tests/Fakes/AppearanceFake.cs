@@ -12,6 +12,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     internal List<StaticMeshContentAppearanceRequest> StaticMeshContentRequests { get; } = [];
     internal Dictionary<string, Appearance> StaticMeshByPath { get; } = new(StringComparer.Ordinal);
     internal List<MeshMaterialBinding> StaticMeshBindings { get; } = [];
+    internal List<StaticMeshMaterialFactorsRequest> StaticMeshFactorUpdates { get; } = [];
     internal List<SpriteAtlasCreateRequest> AtlasRequests { get; } = [];
     internal List<SpriteFromAtlasRequest> SpriteRequests { get; } = [];
     internal List<SpritePlaybackCreateRequest> PlaybackRequests { get; } = [];
@@ -97,6 +98,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     public Appearance ReplaceStaticMesh(Appearance appearance, StaticMeshAppearanceRequest request) => CreateAppearance();
     public Appearance ReplaceStaticMeshFromContent(Appearance appearance, StaticMeshContentAppearanceRequest request) => CreateAppearance();
     public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest request) => StaticMeshBindings.AddRange(request.Bindings.ToArray());
+    public void UpdateStaticMeshMaterialFactors(StaticMeshMaterialFactorsRequest request) => StaticMeshFactorUpdates.Add(request);
     public Appearance CreateSprite(SpriteAppearanceRequest request) => CreateAppearance();
     public Appearance ReplaceSprite(SpriteAppearanceReplaceRequest request) => CreateAppearance();
     public SpriteAtlas CreateSpriteAtlas(SpriteAtlasCreateRequest request)

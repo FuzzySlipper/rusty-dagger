@@ -142,6 +142,6 @@ public sealed class DaggerfallWeatherSessionTests
         var appearance = new AppearanceFake(releases);
         return (EngineContextFake.Create(content,spatial.Service,appearance),spatial,appearance);
     }
-    private static ProductUpdate Update(ulong step) => new(new(ProductUpdateMode.Realtime,ProductLifecycleState.Running,
+    private static ProductUpdate Update(ulong step) => new(new(ProductLifecycleState.Running,
         step,1,step,step,60,1,0,1d/60d),[]);
 }

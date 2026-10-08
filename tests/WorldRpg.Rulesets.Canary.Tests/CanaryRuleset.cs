@@ -153,7 +153,6 @@ internal sealed class CanarySession : IGameSession, IModeAwareGameSession, IEntr
         // The entry screen, a modal and death hold the world still; only ordinary play steps it.
         if (Mode != ProductMode.Playing
             || update.Facts.LifecycleState != ProductLifecycleState.Running
-            || update.Facts.Mode != ProductUpdateMode.Realtime
             || update.Facts.AdmittedStepCount == 0)
             return ProductUpdateResult.None;
 

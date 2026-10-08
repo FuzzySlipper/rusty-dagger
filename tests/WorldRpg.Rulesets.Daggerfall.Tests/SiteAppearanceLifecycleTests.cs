@@ -55,7 +55,7 @@ public sealed class SiteAppearanceLifecycleTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         // The outer update owns final publication: simulation completes first, then one snapshot.
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d), []));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d), []));
 
         AppearanceFact[] snapshot = appearance.Snapshots.Last();
         foreach (AuthoredActor actor in inputs.Project.Actors.Values)

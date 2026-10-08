@@ -414,7 +414,7 @@ public sealed class WorldRpgProductModeTests
         };
 
     private static ProductUpdateFacts OuterUpdate(ulong step) =>
-        new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, step, step, step, step, 60, 1, 0, 1d / 60d);
+        new(ProductLifecycleState.Running, step, step, step, step, 60, 1, 0, 1d / 60d);
 
     /// <summary>
     /// Starts a product and leaves its entry screen, which is the two steps a launcher and a client take.
@@ -428,7 +428,7 @@ public sealed class WorldRpgProductModeTests
     }
 
     private static ProductUpdate Update(ulong step) =>
-        new(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, step, step, step, step, 60, 1, 0, 1d / 60d), ReadOnlySpan<ProductInputEvent>.Empty);
+        new(new ProductUpdateFacts(ProductLifecycleState.Running, step, step, step, step, 60, 1, 0, 1d / 60d), ReadOnlySpan<ProductInputEvent>.Empty);
 
     private static WorldRpgProduct Product(ModeRecordingRuleset? ruleset = null) =>
         new(Context(), ruleset ?? new ModeRecordingRuleset(), new GameBundleId("test.bundle"));

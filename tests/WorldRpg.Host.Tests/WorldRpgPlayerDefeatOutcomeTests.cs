@@ -86,7 +86,7 @@ public sealed class WorldRpgPlayerDefeatOutcomeTests
     }
 
     private static ProductUpdate Update(ulong step) => new(
-        new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running,
+        new ProductUpdateFacts(ProductLifecycleState.Running,
             step, step, step, step, 60, 1, 0, 1d / 60d), ReadOnlySpan<ProductInputEvent>.Empty);
 
     private static ProductCreateContext Context() => new(

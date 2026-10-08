@@ -23,6 +23,7 @@ public sealed class DaggerfallSessionExteriorTests
             9,
             10,
             2,
+            0,
             8192F);
 
         Assert.Equal(
@@ -45,6 +46,7 @@ public sealed class DaggerfallSessionExteriorTests
             0,
             0,
             1,
+            0,
             2048F);
         Vector3 delta = DaggerfallExteriorSessionOrigin.LocalDelta(receipt);
 

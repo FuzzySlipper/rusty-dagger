@@ -39,18 +39,18 @@ public sealed class ControlsInputSessionTests
         double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed, pressed]));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed, pressed]));
         // Two copies of one press are one admitted swing and one stamina charge, and the damage itself
         // waits for the classic hit frame of the swing the viewmodel is playing.
         Assert.Equal(before, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
         Assert.True(session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current < staminaBefore);
         appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 2, 60, 3, 0, 1d / 60d), []));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 2, 60, 3, 0, 1d / 60d), []));
         double after = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         Assert.True(after < before);
         // Held input cannot start a second swing while the first is still playing.
         appearance.AdvanceReceiptForAll = null;
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 2, 1, 1, 100, 60, 3, 0, 1d / 60d),
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 2, 1, 1, 100, 60, 3, 0, 1d / 60d),
             [Input(InputEventKind.MappedDigital, InputEdge.Held, x: 1, phase: InputPhase.Held, intent: "attack")]));
         Assert.Equal(after, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
     }
@@ -126,7 +126,7 @@ public sealed class ControlsInputSessionTests
         {
             // No keyboard and no synthetic pointer step: one stick pushed forward with the other
             // pushed right is the whole input slice.
-            session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
+            session.Update(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
             [
                 PadAxis(ControllerAxis.Axis1, -1f),
                 PadAxis(ControllerAxis.Axis2, 1f),

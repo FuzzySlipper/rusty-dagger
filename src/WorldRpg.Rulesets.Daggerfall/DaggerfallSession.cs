@@ -321,7 +321,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // must not run while the world is holding still.
         if (_mode == ProductMode.Playing
             && update.Facts.LifecycleState == ProductLifecycleState.Running
-            && update.Facts.Mode == ProductUpdateMode.Realtime
             && update.Facts.AdmittedStepCount > 0)
         {
             _appearance.Advance(update.Facts);
@@ -341,7 +340,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         bool ambientPlaying = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null
             && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null
             && update.Facts.LifecycleState == ProductLifecycleState.Running
-            && update.Facts.Mode == ProductUpdateMode.Realtime && update.Facts.AdmittedStepCount > 0
+            && update.Facts.AdmittedStepCount > 0
             && double.IsFinite(update.Facts.FixedDeltaSeconds) && update.Facts.FixedDeltaSeconds > 0;
         SyncWeatherContext(ambientPlaying ? update.Facts.FixedDeltaSeconds * update.Facts.AdmittedStepCount : 0, ambientPlaying);
         // A paused or held update reached no impact boundary, so acts it deferred are not performed.
@@ -352,10 +351,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     internal void Update(ProductUpdateFacts facts, ReadOnlySpan<ProductInputEvent> input)
     {
-        // Daggerfall is a realtime simulation. Demand and external turns have no
-        // fixed delta, so this ruleset deliberately does not interpret them as steps.
+        // An update admits fixed steps only while the lifecycle runs; a held or paused one carries none.
         if (facts.LifecycleState != ProductLifecycleState.Running
-            || facts.Mode != ProductUpdateMode.Realtime
             || facts.AdmittedStepCount == 0
             || !double.IsFinite(facts.FixedDeltaSeconds)
             || facts.FixedDeltaSeconds <= 0d

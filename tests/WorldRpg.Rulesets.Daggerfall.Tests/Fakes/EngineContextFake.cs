@@ -126,28 +126,42 @@ internal class EngineContextFake : DispatchProxy
         }
 
         // Like Engine prepare: each root's local translation in the target frame comes only from its
-        // global position; rotation and scale pass through.
+        // global position; rotation and scale pass through. A request that opts in leaves out the rows
+        // whose local position would fall outside the envelope and names them; one that does not refuses.
         private WorldOriginPreparedResult ReadPrepared(WorldOriginPreparedReadRequest request)
         {
+            (WorldOriginAffectedTransform[] affected, WorldOriginExcludedEntity[] excluded) = Rebased(prepared[request.Prepared.Handle.Value]);
             WorldOriginPrepareRequest candidate = prepared[request.Prepared.Handle.Value];
-            WorldOriginAffectedTransform[] affected = [.. candidate.Entities.ToArray().Select(row =>
-                new WorldOriginAffectedTransform(row.EntityId, row.LocalTransform with
-                {
-                    Translation = new System.Numerics.Vector3(
-                        (float)(row.GlobalPosition.CellX - candidate.TargetCellX) + (float)row.GlobalPosition.OffsetX,
-                        (float)(row.GlobalPosition.CellY - candidate.TargetCellY) + (float)row.GlobalPosition.OffsetY,
-                        (float)(row.GlobalPosition.CellZ - candidate.TargetCellZ) + (float)row.GlobalPosition.OffsetZ),
-                }))];
-            return new(affected, candidate.TargetCellX, candidate.TargetCellY, candidate.TargetCellZ, origin.LocalEnvelope);
+            return new(affected, excluded, candidate.TargetCellX, candidate.TargetCellY, candidate.TargetCellZ, origin.LocalEnvelope);
+        }
+
+        private (WorldOriginAffectedTransform[] Affected, WorldOriginExcludedEntity[] Excluded) Rebased(WorldOriginPrepareRequest candidate)
+        {
+            List<WorldOriginAffectedTransform> affected = [];
+            List<WorldOriginExcludedEntity> excluded = [];
+            foreach (var row in candidate.Entities.ToArray())
+            {
+                System.Numerics.Vector3 local = new(
+                    (float)(row.GlobalPosition.CellX - candidate.TargetCellX) + (float)row.GlobalPosition.OffsetX,
+                    (float)(row.GlobalPosition.CellY - candidate.TargetCellY) + (float)row.GlobalPosition.OffsetY,
+                    (float)(row.GlobalPosition.CellZ - candidate.TargetCellZ) + (float)row.GlobalPosition.OffsetZ);
+                bool outside = MathF.Abs(local.X) > origin.LocalEnvelope || MathF.Abs(local.Y) > origin.LocalEnvelope
+                    || MathF.Abs(local.Z) > origin.LocalEnvelope;
+                if (outside && candidate.ExcludeOutsideEnvelope) { excluded.Add(new WorldOriginExcludedEntity(row.EntityId)); continue; }
+                if (outside) throw new InvalidOperationException($"Entity {row.EntityId} would fall outside the local coordinate envelope.");
+                affected.Add(new WorldOriginAffectedTransform(row.EntityId, row.LocalTransform with { Translation = local }));
+            }
+            return ([.. affected], [.. excluded]);
         }
 
         private WorldOriginCommitReceipt Commit(WorldOriginCommitRequest request)
         {
             WorldOriginPrepareRequest candidate = prepared[request.Prepared.Handle.Value];
+            (WorldOriginAffectedTransform[] affected, WorldOriginExcludedEntity[] excluded) = Rebased(candidate);
             prepared.Remove(request.Prepared.Handle.Value);
             WorldOriginCommitReceipt receipt = new(origin.Revision, origin.Revision + 1,
                 origin.CellX, origin.CellY, origin.CellZ, candidate.TargetCellX, candidate.TargetCellY, candidate.TargetCellZ,
-                0, 0, 0, origin.LocalEnvelope);
+                0, 0, checked((uint)affected.Length), checked((uint)excluded.Length), origin.LocalEnvelope);
             origin = origin with { CellX = candidate.TargetCellX, CellY = candidate.TargetCellY,
                 CellZ = candidate.TargetCellZ, Revision = receipt.RevisionAfter };
             Commits.Add(receipt);
