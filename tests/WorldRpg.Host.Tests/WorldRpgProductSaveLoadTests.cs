@@ -207,7 +207,7 @@ public sealed class WorldRpgProductSaveLoadTests
     }
 
     private static ProductUpdate Update(ulong step) =>
-        new(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, step, step, step, step, 60, 1, 0, 1d / 60d), ReadOnlySpan<ProductInputEvent>.Empty);
+        new(new ProductUpdateFacts(ProductLifecycleState.Running, step, step, step, step, 60, 1, 0, 1d / 60d), ReadOnlySpan<ProductInputEvent>.Empty);
 
     private static ProductCreateContext Context(IPersistenceService persistence) =>
         new(Engine(persistence), Content(), EmptyInput());

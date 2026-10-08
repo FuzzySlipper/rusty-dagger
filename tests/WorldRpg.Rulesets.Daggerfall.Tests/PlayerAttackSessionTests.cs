@@ -44,12 +44,12 @@ public sealed class PlayerAttackSessionTests
         DaggerfallItemInstanceMetadata sword = session.State.ItemInstances.RequireUnique(1001);
         session.State.ItemInstances.ReplaceUnique(1001, sword with { CurrentCondition = 100, MaximumCondition = 100 });
         ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
-        ProductUpdateFacts first = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
+        ProductUpdateFacts first = new(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
 
         session.Update(new ProductUpdate(first, [pressed]));
         // The operation is decided and charged at admission; the delivered hit is what tallies it.
         appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 2, 60, 1, 0, 1d / 60d), []));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 2, 60, 1, 0, 1d / 60d), []));
         Assert.Equal(1, session.State.Progression.SkillUses["long-blade"]);
         Assert.Equal(1, session.State.Progression.SkillUses["critical-strike"]);
 
@@ -62,12 +62,12 @@ public sealed class PlayerAttackSessionTests
         // Clear the presentation strike latch, then submit a distinct later operation in the same
         // generation after its combat cooldown. It is an independent admitted hit, so it counts.
         appearance.AdvanceReceiptForAll = CompletedMarker(1);
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 2, 2, 60, 1, 0, 1d / 60d), []));
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 3, 3, 60, 1, 0, 1d / 60d), []));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 2, 2, 60, 1, 0, 1d / 60d), []));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 3, 3, 60, 1, 0, 1d / 60d), []));
         appearance.AdvanceReceiptForAll = null;
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 100, 100, 60, 1, 0, 1d / 60d), [pressed]));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 100, 100, 60, 1, 0, 1d / 60d), [pressed]));
         appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2, sequence: 2);
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 101, 101, 60, 1, 0, 1d / 60d), []));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 101, 101, 60, 1, 0, 1d / 60d), []));
         Assert.Equal(2, session.State.Progression.SkillUses["long-blade"]);
         Assert.Equal(2, session.State.Progression.SkillUses["critical-strike"]);
 
@@ -411,7 +411,7 @@ public sealed class PlayerAttackSessionTests
         // damage when the animation reaches its hit frame.
         Assert.Equal(healthBefore, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
         appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 0, 1, 1, 1, 60, 1, 0, 1d / 60d), []));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 0, 1, 1, 1, 60, 1, 0, 1d / 60d), []));
         Assert.True(session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current < healthBefore);
     }
 
@@ -438,7 +438,7 @@ public sealed class PlayerAttackSessionTests
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
 
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed]));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed]));
         double targetHealth = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         double playerHealth = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
 

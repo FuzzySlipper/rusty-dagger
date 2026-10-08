@@ -422,7 +422,7 @@ public sealed class SpatialMovementSessionTests
 
         using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
-            session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), input);
+            session.Update(new ProductUpdateFacts(ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), input);
         }
 
         Assert.Equal([1UL, 2UL, 3UL], spatial.StepRequests.Select(request => request.Command.Sequence));
@@ -448,7 +448,7 @@ public sealed class SpatialMovementSessionTests
 
         using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
-            session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), [Input(InputEventKind.DirectAxis, x: .5f, y: .75f, intent: "move")]);
+            session.Update(new ProductUpdateFacts(ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), [Input(InputEventKind.DirectAxis, x: .5f, y: .75f, intent: "move")]);
         }
 
         Assert.Equal(new Vector2(.5f, .75f), spatial.StepRequests[0].Command.PlanarIntent);
@@ -470,7 +470,7 @@ public sealed class SpatialMovementSessionTests
 
         using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
-            session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), [Input(InputEventKind.DirectDigital, x: 1f, intent: "move")]);
+            session.Update(new ProductUpdateFacts(ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), [Input(InputEventKind.DirectDigital, x: 1f, intent: "move")]);
         }
 
         Assert.Equal(new Vector2(0f, 1f), spatial.StepRequests[0].Command.PlanarIntent);
@@ -497,7 +497,7 @@ public sealed class SpatialMovementSessionTests
         float pitchBefore = session.State.PlayerControl.PitchRadians;
         spatial.RejectProposedStep = true;
 
-        Assert.Throws<InvalidOperationException>(() => session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
+        Assert.Throws<InvalidOperationException>(() => session.Update(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
         [
             Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW),
             Input(InputEventKind.PointerDelta, x: .25f, y: -.5f),
@@ -574,7 +574,7 @@ public sealed class SpatialMovementSessionTests
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         static ProductUpdateFacts ThreeSteps(ulong step) =>
-            new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, step, step, 60, 3, 0, 1d / 60d);
+            new(ProductLifecycleState.Running, 1, 1, step, step, 60, 3, 0, 1d / 60d);
 
         int stepsBefore = spatial.StepCalls;
         int publishesBefore = appearance.PublishCalls;
@@ -593,7 +593,7 @@ public sealed class SpatialMovementSessionTests
         Assert.Equal(modalPublishesBefore + 1, appearance.PublishCalls);
 
         // An update with no admitted steps publishes nothing and steps nothing.
-        ProductUpdateFacts noSteps = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 7, 7, 60, 0, 0, 1d / 60d);
+        ProductUpdateFacts noSteps = new(ProductLifecycleState.Running, 1, 1, 7, 7, 60, 0, 0, 1d / 60d);
         session.Update(new ProductUpdate(noSteps, []));
         Assert.Equal(stepsBefore + 3, spatial.StepCalls);
         Assert.Equal(modalPublishesBefore + 1, appearance.PublishCalls);

@@ -418,7 +418,7 @@ public sealed class EnemyCombatSessionTests
 
         // Three admitted catch-up steps own one swing, and none of them damages: the
         // strike still waits for its authored frame.
-        ProductUpdateFacts facts = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d);
+        ProductUpdateFacts facts = new(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d);
         session.Update(new ProductUpdate(facts, []));
 
         Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);

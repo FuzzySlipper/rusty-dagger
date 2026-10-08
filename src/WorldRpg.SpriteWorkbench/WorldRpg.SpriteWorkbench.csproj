@@ -22,7 +22,6 @@
     <RustyEngineProductUiBuildCommand>node &quot;$(MSBuildThisFileDirectory)../../node_modules/typescript/bin/tsc&quot; -p &quot;$(MSBuildThisFileDirectory)../sprite-ui/tsconfig.json&quot; --outDir &quot;$(RustyEngineProductUiRoot)&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductUiProjectionStream>worldrpg.sprite-workbench</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>worldrpg.sprite-workbench.snapshot.v1</RustyEngineProductUiProjectionContract>
-    <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
     <RustyEngineProductFixedStepHz>60</RustyEngineProductFixedStepHz>
     <RustyEngineProductFixedStepMaxCatchUpSteps>4</RustyEngineProductFixedStepMaxCatchUpSteps>
     <RustyEngineWatchPaths>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../sprite-ui'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)workbench-content'))</RustyEngineWatchPaths>

@@ -192,7 +192,7 @@ public sealed class SessionPersistenceTests
         Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
         double maximum = stamina.MaximumValue;
         session.Update(new ProductUpdate(
-            new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 4d),
+            new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 4d),
             [Input(InputEventKind.Key, InputEdge.Pressed, KeyboardControl.KeyW), PhysicalKey(KeyboardControl.KeyW), PhysicalKey(KeyboardControl.ShiftLeft)]));
 
         Assert.Equal(maximum, stamina.Current);
@@ -210,7 +210,7 @@ public sealed class SessionPersistenceTests
         using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
 
         restored.Update(new ProductUpdate(
-            new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 2, 2, 60, 1, 0, 1d),
+            new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 2, 2, 60, 1, 0, 1d),
             [Input(InputEventKind.Key, InputEdge.Pressed, KeyboardControl.KeyW), PhysicalKey(KeyboardControl.KeyW), PhysicalKey(KeyboardControl.ShiftLeft)]));
 
         Assert.Equal(maximum - 88d, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
@@ -393,7 +393,7 @@ public sealed class SessionPersistenceTests
         Assert.Equal(4, resumed.State.GetProperty("ticks").GetInt32());
 
         static ProductUpdateFacts MinuteUpdate(ulong step) =>
-            new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, step, step, 60, 1, 0, 5d);
+            new(ProductLifecycleState.Running, 1, 1, step, step, 60, 1, 0, 5d);
 
         static DaggerfallEffectCatalog TimedEffectCatalog() => new(
         [new DaggerfallEffectDefinition("timed", "timed", DaggerfallEffectStacking.Stack, 1, 1,

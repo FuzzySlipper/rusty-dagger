@@ -457,7 +457,7 @@ internal static class TestSessions
 
     internal static long PlayerHealth(DaggerfallSession session) => session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).ValueInt64;
 
-    internal static ProductUpdateFacts OuterUpdate(ulong simulationStep) => new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, simulationStep, simulationStep, 60, 1, 0, 1d / 60d);
+    internal static ProductUpdateFacts OuterUpdate(ulong simulationStep) => new(ProductLifecycleState.Running, 1, 1, simulationStep, simulationStep, 60, 1, 0, 1d / 60d);
 
     /// <summary>One advanced sprite frame whose authored damage frame was crossed.</summary>
     /// <summary>A playback receipt that completes without crossing a marker, which is what clears a swing.</summary>

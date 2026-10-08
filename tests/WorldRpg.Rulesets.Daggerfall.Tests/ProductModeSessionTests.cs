@@ -45,7 +45,7 @@ public sealed class ProductModeSessionTests
             NewGameSessionTests.Commit(ruleset.RequireSession());
             product.Begin();
             Assert.Equal(ProductMode.Playing, product.Mode);
-            ProductUpdateFacts facts = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
+            ProductUpdateFacts facts = new(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
             Assert.Equal(ProductUpdateResult.None, product.Update(new ProductUpdate(facts, ReadOnlySpan<ProductInputEvent>.Empty)));
             Assert.Equal(1, spatial.StepCalls);
             product.Shutdown();

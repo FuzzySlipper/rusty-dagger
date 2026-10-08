@@ -25,7 +25,6 @@
     <RustyEngineProductUiBuildCommand>node &quot;$(MSBuildThisFileDirectory)../../node_modules/typescript/bin/tsc&quot; -p &quot;$(MSBuildThisFileDirectory)../ui/tsconfig.json&quot; --outDir &quot;$(RustyEngineProductUiRoot)&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductUiProjectionStream>dagger.hud</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>dagger.ui.snapshot.v1</RustyEngineProductUiProjectionContract>
-    <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
     <RustyEngineProductFixedStepHz>60</RustyEngineProductFixedStepHz>
     <RustyEngineProductFixedStepMaxCatchUpSteps>4</RustyEngineProductFixedStepMaxCatchUpSteps>
     <RustyEngineWatchPaths>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../WorldRpg.Kit'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../WorldRpg.Rulesets.Daggerfall'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineWatchPaths>

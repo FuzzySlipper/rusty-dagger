@@ -155,13 +155,13 @@ public sealed class CombatFeedbackTests
         using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(20, 0, 0));
         using DaggerfallSiteAppearance presentation = new(MediaContent(releases), new AppearanceFake(releases), FeedbackInputs(0), audio.Service,
             DaggerfallTuning.Defaults.PresentationAudio with { AttractMinimumDelaySeconds = 1, AttractMaximumDelaySeconds = 1, AttractMoveChancePercent = 0 });
-        ProductUpdateFacts update = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 120, 0, 1d / 60);
+        ProductUpdateFacts update = new(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 120, 0, 1d / 60);
         presentation.AdvanceMobileFeedback(update, actors, new(0, 0, 0), (_, _) => false);
         Assert.Empty(audio.Emits);
         actors.Get(11).ApplyPose(new(new(2, 0, 0), 0));
         presentation.AdvanceMobileFeedback(update, actors, new(0, 0, 0), (_, _) => false);
         Assert.Empty(audio.Emits);
-        ProductUpdateFacts held = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 2, 2, 60, 0, 0, 1d / 60);
+        ProductUpdateFacts held = new(ProductLifecycleState.Running, 1, 1, 2, 2, 60, 0, 0, 1d / 60);
         presentation.AdvanceMobileFeedback(held, actors, new(0, 0, 0), (_, _) => false);
         Assert.Empty(audio.Emits);
         presentation.AdvanceMobileFeedback(OuterUpdate(3), actors, new(0, 0, 0), (_, _) => true);

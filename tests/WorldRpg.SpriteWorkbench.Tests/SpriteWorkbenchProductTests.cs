@@ -578,7 +578,7 @@ public sealed class SpriteWorkbenchProductTests
             }
         }
 
-        internal ProductUpdateFacts UpdateFacts() => new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 0, 1, 60, 1, 0, 1D / 60D);
+        internal ProductUpdateFacts UpdateFacts() => new(ProductLifecycleState.Running, 1, 1, 0, 1, 60, 1, 0, 1D / 60D);
 
         internal ProductUpdate Update() => new(UpdateFacts(), ReadOnlySpan<ProductInputEvent>.Empty);
 
@@ -751,6 +751,7 @@ public sealed class SpriteWorkbenchProductTests
         public Appearance ReplaceStaticMesh(Appearance appearance, StaticMeshAppearanceRequest request) => CreateAppearance(request.Color);
         public Appearance ReplaceStaticMeshFromContent(Appearance appearance, StaticMeshContentAppearanceRequest request) => CreateAppearance(request.Color);
         public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest request) { }
+        public void UpdateStaticMeshMaterialFactors(StaticMeshMaterialFactorsRequest request) { }
         public MeshResource CreateMeshResource(MeshResourceCreateRequest request) => throw new NotSupportedException();
         public Appearance CreateMeshAppearance(MeshResource resource) => throw new NotSupportedException();
         public MeshPartition PartitionMesh(MeshPartitionRequest request) => throw new NotSupportedException();

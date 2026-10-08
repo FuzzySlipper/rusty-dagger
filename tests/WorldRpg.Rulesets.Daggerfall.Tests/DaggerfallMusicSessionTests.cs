@@ -255,6 +255,6 @@ public sealed class DaggerfallMusicSessionTests
     /// An ordinary admitted update: one fixed step with no input, which is what a standing player sees.
     /// </summary>
     private static ProductUpdate Update() => new(
-        new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d),
+        new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d),
         []);
 }

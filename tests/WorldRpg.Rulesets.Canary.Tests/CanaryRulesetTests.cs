@@ -207,7 +207,7 @@ public sealed class CanaryRulesetTests
     }
 
     private static ProductUpdate Update(ulong step, params ProductInputEvent[] input) =>
-        new(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, step, 60, 1, 0, 1d / 60d), input);
+        new(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, step, 60, 1, 0, 1d / 60d), input);
 
     private static ProductInputEvent Action(string action) =>
         new ProductInputEvent(InputEventKind.DirectDigital, InputEdge.None, InputDevice.None, InputChannel.None,
