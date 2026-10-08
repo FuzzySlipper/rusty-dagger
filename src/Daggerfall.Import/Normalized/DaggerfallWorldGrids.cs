@@ -79,6 +79,13 @@ public sealed record DaggerfallGridRun(int Count, int Value)
 /// <param name="Values">The distinct cell values with the climate each names, in first-appearance order.</param>
 public sealed record DaggerfallClimateGrid(PublishedSource Source, IReadOnlyList<DaggerfallGridRow> Rows, IReadOnlyList<DaggerfallClimateValue> Values)
 {
+    /// <summary>
+    /// The exterior climate and season texture swaps: every source archive and record range a location in
+    /// another climate base or season draws from another archive, with that archive. An archive or range
+    /// not listed keeps its own archive. A location's base is its climate value's <see cref="DaggerfallClimateValue.ClimateBase"/>.
+    /// </summary>
+    public IReadOnlyList<DaggerfallClimateSwap> Swaps { get; init; } = [];
+
     public void Validate()
     {
         ArgumentNullException.ThrowIfNull(Source);
@@ -116,6 +123,9 @@ public sealed record DaggerfallClimateValue(int Value, string Name, DaggerfallCl
     /// <summary>The donor's source People race for this subclimate, when the source table names one.</summary>
     public string People { get; init; } = string.Empty;
 
+    /// <summary>The climate texture base the donor's climate settings give the value, which selects its swaps.</summary>
+    public ClassicClimateBase? ClimateBase { get; init; }
+
     public void Validate()
     {
         if (Value is < 0 or > 0xff)
@@ -139,6 +149,13 @@ public sealed record DaggerfallClimateValue(int Value, string Name, DaggerfallCl
         }
     }
 }
+
+/// <summary>
+/// One climate texture swap: in <paramref name="Climate"/> and <paramref name="Season"/>, records
+/// <paramref name="FirstRecord"/> through <paramref name="LastRecord"/> (every later record when it is null)
+/// of <paramref name="Archive"/> are drawn from <paramref name="TargetArchive"/>.
+/// </summary>
+public sealed record DaggerfallClimateSwap(int Archive, ClassicClimateBase Climate, ClassicClimateSeason Season, int FirstRecord, int? LastRecord, int TargetArchive);
 
 /// <summary>One normalized politic grid: every cell the source states, sentinel column kept.</summary>
 /// <param name="Source">The source the grid was read from.</param>
@@ -247,7 +264,36 @@ public static class DaggerfallWorldGridsBuilder
         return new DaggerfallClimateGrid(
             PublishedSource.Of(label, bytes),
             Rows(map),
-            ClimateValues(map));
+            ClimateValues(map))
+        {
+            Swaps = ClimateSwaps(),
+        };
+    }
+
+    /// <summary>
+    /// Every swap <see cref="ClassicClimateSwaps.Apply"/> makes, as record ranges: a swap depends on the record
+    /// only below <see cref="ClassicClimateSwaps.RecordIndependentFrom"/>, so the last range is open.
+    /// </summary>
+    public static IReadOnlyList<DaggerfallClimateSwap> ClimateSwaps()
+    {
+        List<DaggerfallClimateSwap> swaps = [];
+        for (int archive = 0; archive <= ClassicClimateSwaps.MaximumArchive; archive++)
+        foreach (ClassicClimateBase climate in Enum.GetValues<ClassicClimateBase>())
+        foreach (ClassicClimateSeason season in Enum.GetValues<ClassicClimateSeason>())
+        {
+            int first = 0;
+            for (int record = 1; record <= ClassicClimateSwaps.RecordIndependentFrom + 1; record++)
+            {
+                int target = ClassicClimateSwaps.Apply(archive, first, climate, season);
+                if (record <= ClassicClimateSwaps.RecordIndependentFrom && ClassicClimateSwaps.Apply(archive, record, climate, season) == target)
+                    continue;
+                if (target != archive)
+                    swaps.Add(new(archive, climate, season, first, record > ClassicClimateSwaps.RecordIndependentFrom ? null : record - 1, target));
+                first = record;
+            }
+        }
+
+        return swaps;
     }
 
     /// <summary>Builds the politic grid and the rows it tiles.</summary>
@@ -313,6 +359,7 @@ public static class DaggerfallWorldGridsBuilder
                     226 => "Nord",
                     _ => string.Empty,
                 },
+                ClimateBase = named ? ClassicClimateSwaps.BaseOf(value) : null,
             });
         }
 

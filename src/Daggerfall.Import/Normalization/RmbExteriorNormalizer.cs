@@ -137,62 +137,35 @@ public static class RmbExteriorNormalizer
         private readonly List<NormalizedStaticNpcPlacement> staticNpcs = [];
         private readonly List<NormalizedPropertyContainer> propertyContainers = [];
 
+        /// <summary>
+        /// Places one block's exterior: the block-level content in the block's frame, moved by its grid origin
+        /// and named by its grid position.
+        /// </summary>
         public void AddExterior(MapsExteriorBlock reference)
         {
-            (RmbBlockSummary summary, RmbBlockPlacements placements, BsaRecord record) = ReadBlock(reference);
-            for (int index = 0; index < summary.Buildings.Count; index++)
-            {
-                RmbBuildingSlot slot = summary.Buildings[index];
-                foreach (RmbFlatPlacement flat in placements.Buildings[index].Exterior.Flats)
-                {
-                    Matrix3 rotation = Matrix3.Yaw(Arena2SourceTransform.ToRmbYawDegrees(slot.YRotation));
-                    Arena2ImportPoint point = Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z);
-                    AddSourceMarker(flat.TextureArchive, flat.TextureRecord, Add(Arena2SourceTransform.ToExteriorBlockOrigin(reference),
-                        Add(Arena2SourceTransform.ToRmbBuildingOrigin(slot), rotation.Transform(point))));
-                }
-                foreach (RmbModelPlacement model in placements.Buildings[index].Exterior.Models)
-                    AddModel(model, Arena2SourceTransform.ToExteriorBlockOrigin(reference), slot, reference, index, $"{Slug(reference.SourceName)}/{index}");
-                foreach ((RmbPeoplePlacement person, int personIndex) in placements.Buildings[index].Exterior.People.Select((person, personIndex) => (person, personIndex)))
-                {
-                    Matrix3 rotation = Matrix3.Yaw(Arena2SourceTransform.ToRmbYawDegrees(slot.YRotation));
-                    Arena2ImportPoint point = Arena2SourceTransform.ToRmbImportPoint(person.X, person.Y, person.Z);
-                    Arena2ImportPoint placed = Add(Arena2SourceTransform.ToExteriorBlockOrigin(reference),
-                        Add(Arena2SourceTransform.ToRmbBuildingOrigin(slot), rotation.Transform(point)));
-                    string id = $"population/{Slug(reference.SourceName)}/{index}/{personIndex}";
-                    population.Add(new NormalizedPopulationPlacement(
-                        id,
-                        MeshGeometry.ToRightHanded(placed),
-                        person.TextureArchive,
-                        person.TextureRecord,
-                        person.FactionId,
-                        person.Flags)
-                    {
-                        // Source offsets are provenance only.  The runtime name seed has a
-                        // ushort width, so derive it from the stable normalized identity rather
-                        // than truncating an archive offset.
-                        NameSeed = StablePopulationSeed(id),
-                        SourceBuildingType = slot.BuildingType,
-                        SourceBuildingFactionId = slot.FactionId,
-                    });
-                }
-            }
+            RmbBlockContent content = RmbBlockContent.Read(blocks, reference.SourceName);
             Arena2ImportPoint origin = Arena2SourceTransform.ToExteriorBlockOrigin(reference);
-            foreach (RmbModelPlacement model in placements.MiscModels)
-                AddMiscModel(model, origin, reference, $"{Slug(reference.SourceName)}/misc");
-            foreach (RmbFlatPlacement flat in placements.MiscFlats)
-                AddSourceMarker(flat.TextureArchive, flat.TextureRecord, Add(origin,
-                    Add(Arena2SourceTransform.ToRmbImportPoint(0, 0, 4096), Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z))));
-            AddGround(summary, origin, reference);
-        }
-
-        private static ushort StablePopulationSeed(string sourceKey)
-        {
-            unchecked
+            foreach (RmbBlockFlat flat in content.ExteriorFlats)
+                AddSourceMarker(flat.TextureArchive, flat.TextureRecord, RmbBlockContent.Add(origin, flat.Point));
+            foreach (RmbBlockModel model in content.ExteriorModels)
+                AddMesh(model, point => RmbBlockContent.Add(origin, point), reference, model.BuildingIndex, model.StartingLockValue);
+            foreach (RmbBlockPerson person in content.ExteriorPeople)
             {
-                uint hash = 2166136261;
-                foreach (char value in sourceKey) hash = (hash ^ value) * 16777619;
-                return (ushort)(hash & ushort.MaxValue);
+                string id = RmbBlockContent.PopulationId(reference.SourceName, person.BuildingIndex, person.PersonIndex);
+                population.Add(new NormalizedPopulationPlacement(
+                    id,
+                    MeshGeometry.ToRightHanded(RmbBlockContent.Add(origin, person.Point)),
+                    person.Person.TextureArchive,
+                    person.Person.TextureRecord,
+                    person.Person.FactionId,
+                    person.Person.Flags)
+                {
+                    NameSeed = RmbBlockContent.StablePopulationSeed(id),
+                    SourceBuildingType = person.Slot.BuildingType,
+                    SourceBuildingFactionId = person.Slot.FactionId,
+                });
             }
+            AddGround(content, origin, reference);
         }
 
         /// <summary>
@@ -234,7 +207,7 @@ public static class RmbExteriorNormalizer
                 MapsExteriorBlock block = sourceBlocks[(cell.X / 64, cell.Z / 64)];
                 int sourceX = cell.X - (block.X * 64);
                 int sourceY = 63 - (cell.Z - (block.Y * 64));
-                Arena2ImportPoint placed = Add(Arena2SourceTransform.ToExteriorBlockOrigin(block),
+                Arena2ImportPoint placed = RmbBlockContent.Add(Arena2SourceTransform.ToExteriorBlockOrigin(block),
                     Arena2SourceTransform.ToRmbImportPoint((sourceX * 64) + 32, 0, (sourceY * 64) + 32));
                 string id = $"population/{location}/dynamic/{index:D3}";
                 int flat = people.Flats[index % people.Flats.Count];
@@ -246,7 +219,7 @@ public static class RmbExteriorNormalizer
                     people.Id,
                     (byte)(index % people.Flats.Count == 1 ? 0x20 : 0))
                 {
-                    NameSeed = StablePopulationSeed(id),
+                    NameSeed = RmbBlockContent.StablePopulationSeed(id),
                 });
             }
         }
@@ -256,109 +229,49 @@ public static class RmbExteriorNormalizer
         /// MeshReader renders it; CityNavigation's automap is a navigation mask, never a reason to cut a
         /// physical hole in the source ground mesh.
         /// </summary>
-        private void AddGround(RmbBlockSummary summary, Arena2ImportPoint origin, MapsExteriorBlock block)
+        private void AddGround(RmbBlockContent content, Arena2ImportPoint origin, MapsExteriorBlock block)
         {
-            if (summary.GroundTiles.Count != 256 || summary.AutoMapData.Count != 64 * 64)
-                throw new InvalidOperationException($"RMB block '{block.SourceName}' has no complete FLD ground and automap data.");
-            for (int sourceY = 0; sourceY < 64; sourceY++)
-            for (int sourceX = 0; sourceX < 64; sourceX++)
-                if (summary.AutoMapData[(sourceY * 64) + sourceX] == 0)
-                    outdoorNavigationCells.Add((checked((block.X * 64) + sourceX), checked((block.Y * 64) + (63 - sourceY))));
+            foreach ((int x, int z) in content.ClearOutdoorCells)
+                outdoorNavigationCells.Add((checked((block.X * RmbBlockContent.AutomapSide) + x), checked((block.Y * RmbBlockContent.AutomapSide) + z)));
 
-            foreach (RmbGroundTile tile in summary.GroundTiles)
+            foreach (RmbBlockGroundTile tile in content.Ground)
             {
-                // MeshReader maps the six-bit source record to its four-frame texture record and
-                // substitutes grass for 56..63. TextureArchive exposes that same four-frame group
-                // by its base ordinal, so retain the group ordinal and make the donor fallback explicit.
-                ushort textureRecord = tile.TextureRecord < 56 ? tile.TextureRecord : (ushort)2;
-                TextureInfo texture = Texture(groundTextureArchive, textureRecord);
-                NormalizedMeshBuilder group = Geometry(groundTextureArchive, textureRecord, texture.MaterialId);
-                const int side = 256;
-                int y = 15 - tile.Y; // MeshReader's ground plane reverses donor tile rows.
-                Arena2ImportPoint a = Add(origin, Arena2SourceTransform.ToRmbImportPoint(tile.X * side, 0, y * side));
-                Arena2ImportPoint b = Add(origin, Arena2SourceTransform.ToRmbImportPoint((tile.X + 1) * side, 0, y * side));
-                Arena2ImportPoint c = Add(origin, Arena2SourceTransform.ToRmbImportPoint((tile.X + 1) * side, 0, (y + 1) * side));
-                Arena2ImportPoint d = Add(origin, Arena2SourceTransform.ToRmbImportPoint(tile.X * side, 0, (y + 1) * side));
-                IReadOnlyList<NormalizedVector2> uv = tile.Rotated
-                    ? [new(0F, 1F), new(0F, 0F), new(1F, 0F), new(1F, 1F)]
-                    : [new(0F, 0F), new(1F, 0F), new(1F, 1F), new(0F, 1F)];
-                if (tile.Flipped) uv = uv.Reverse().ToArray();
-                NormalizedVector3[] quad = [MeshGeometry.ToRightHanded(a), MeshGeometry.ToRightHanded(b), MeshGeometry.ToRightHanded(c), MeshGeometry.ToRightHanded(d)];
-                group.Add(quad, uv, MeshGeometry.Normal(quad));
+                // TextureArchive exposes the four-frame group by its base ordinal, so the block-level
+                // record is the group ordinal the climate's ground archive is read at.
+                TextureInfo texture = Texture(groundTextureArchive, tile.TextureRecord);
+                NormalizedMeshBuilder group = Geometry(groundTextureArchive, tile.TextureRecord, texture.MaterialId);
+                NormalizedVector3[] quad = [.. tile.Corners.Select(corner => MeshGeometry.ToRightHanded(RmbBlockContent.Add(origin, corner)))];
+                group.Add(quad, tile.Uvs, MeshGeometry.Normal(quad));
             }
         }
 
         public void AddInterior(MapsExteriorBlock reference, int buildingIndex)
         {
-            (RmbBlockSummary summary, RmbBlockPlacements placements, _) = ReadBlock(reference);
-            if (buildingIndex >= summary.Buildings.Count)
-                throw new ArgumentOutOfRangeException(nameof(buildingIndex), $"RMB block '{reference.SourceName}' has {summary.Buildings.Count} buildings, not {buildingIndex + 1}.");
-            RmbBuildingSlot selected = summary.Buildings[buildingIndex];
+            RmbBlockContent content = RmbBlockContent.Read(blocks, reference.SourceName);
+            IReadOnlyList<RmbBlockModel> models = content.InteriorModels(buildingIndex);
+            RmbBuildingSlot selected = content.Summary.Buildings[buildingIndex];
             interiorBuilding = new(reference.X, reference.Y, reference.SourceName, buildingIndex, selected.BuildingType, selected.FactionId);
             // The donor's DaggerfallInterior creates this half in its own local frame; it does not carry the
             // exterior block or building-subrecord transform into the interior scene.
-            foreach (var (model, ordinal) in placements.Buildings[buildingIndex].Interior.Models.Select((model, ordinal) => (model, ordinal)))
+            foreach (RmbBlockModel model in models)
             {
-                var container = RmbPropertyContainerFacts.Read(model, ordinal, selected.BuildingType);
+                var container = RmbPropertyContainerFacts.Read(model.Frame.Model, model.Ordinal, selected.BuildingType);
                 List<NormalizedVector3>? interactionPoints = container is null ? null : [];
-                AddInteriorModel(model, reference, $"{Slug(reference.SourceName)}/{buildingIndex}/interior", interactionPoints);
+                AddMesh(model, point => point, reference, null, 0, interactionPoints);
                 if (container is not null) propertyContainers.Add(container with { InteractionPoints = interactionPoints! });
             }
-            foreach (var (flat, index) in placements.Buildings[buildingIndex].Interior.Flats.Select((flat, index) => (flat, index)))
-                AddInteriorMarker(flat, index);
+            foreach (RmbBlockFlat flat in content.InteriorFlats(buildingIndex))
+                AddInteriorMarker(flat);
             int buildingKey = (reference.X << 16) + (reference.Y << 8) + buildingIndex;
             if (buildingKey == 0) buildingKey = 1 << 24;
-            IReadOnlyDictionary<int, ClassicFaction> factions = placements.Buildings[buildingIndex].Interior.People.Count == 0
-                ? new Dictionary<int, ClassicFaction>()
-                : FactionReader.Read(Encoding.UTF8.GetString(request.Sources.Require("FACTION.TXT").Bytes.Span),
-                    request.Sources.Require("FACTION.TXT").Label).ToDictionary(faction => faction.Id);
-            foreach ((RmbPeoplePlacement person, int ordinal) in placements.Buildings[buildingIndex].Interior.People.Select((person, ordinal) => (person, ordinal)))
+            foreach ((RmbPeoplePlacement person, int ordinal) in content.Placements.Buildings[buildingIndex].Interior.People.Select((person, ordinal) => (person, ordinal)))
                 staticNpcs.Add(new($"person/{ordinal}",
                     MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbImportPoint(person.X, person.Y, person.Z)),
                     person.TextureArchive, person.TextureRecord, person.FactionId,
-                    StaticNpcRace(person.FactionId, factions),
+                    RmbBlockContent.StaticNpcRace(person.FactionId, sourceFactions),
                     (person.Flags & 32) != 0 ? "Female" : "Male",
                     person.SourceOffset ^ (buildingKey + layout.LocationIndex)));
         }
-
-        /// <summary>StaticNPC.GetRaceFromFaction, RaceTemplate and MapsFile.RegionRaces source policy.</summary>
-        private static string? StaticNpcRace(int factionId, IReadOnlyDictionary<int, ClassicFaction> factions)
-        {
-            string? race = factions.GetValueOrDefault(factionId)?.Race switch
-            {
-                0 => "nord", 1 => "khajiit", 2 => "redguard", 3 => "breton",
-                4 => "argonian", 5 => "wood-elf", 6 => "high-elf", 7 => "dark-elf", _ => null,
-            };
-            // A null faction race requests the existing published regional name-bank table at
-            // ruleset content admission; this normalizer never carries another copy of that table.
-            return factionId != 0 ? race : null;
-        }
-
-        private (RmbBlockSummary Summary, RmbBlockPlacements Placements, BsaRecord Record) ReadBlock(MapsExteriorBlock reference)
-        {
-            if (!blocks.TryGetByName(reference.SourceName, out BsaRecord? record) || record is null)
-                throw new InvalidOperationException($"BLOCKS.BSA is missing requested RMB block '{reference.SourceName}'.");
-            ReadOnlyMemory<byte> bytes = blocks.GetPayload(record);
-            if (!RmbBlockSummaryReader.TryRead(bytes.ToArray(), blocks.Source, 0, bytes.Length, out RmbBlockSummary? summary, out string reason) || summary is null)
-                throw new InvalidOperationException($"RMB block '{reference.SourceName}' cannot be read: {reason}.");
-            return (summary, RmbPlacementReader.Read(bytes.ToArray(), 0, summary, blocks.Source), record);
-        }
-
-        private void AddModel(RmbModelPlacement model, Arena2ImportPoint exteriorOrigin, RmbBuildingSlot building,
-            MapsExteriorBlock block, int buildingIndex, string identity)
-        {
-            Matrix3 buildingRotation = Matrix3.Yaw(Arena2SourceTransform.ToRmbYawDegrees(building.YRotation));
-            Arena2ImportPoint buildingOrigin = Arena2SourceTransform.ToRmbBuildingOrigin(building);
-            AddMesh(model, point => Add(exteriorOrigin, Add(buildingOrigin, buildingRotation.Transform(point))), identity,
-                block, buildingIndex, building.Quality / 2, Arena2SourceTransform.ToRmbYawDegrees(building.YRotation));
-        }
-
-        private void AddMiscModel(RmbModelPlacement model, Arena2ImportPoint exteriorOrigin, MapsExteriorBlock block, string identity) =>
-            AddMesh(model, point => Add(exteriorOrigin, Add(Arena2SourceTransform.ToRmbImportPoint(0, 0, 4096), point)), identity,
-                block, -1, 0, 0F);
-
-        private void AddInteriorModel(RmbModelPlacement model, MapsExteriorBlock block, string identity, List<NormalizedVector3>? interactionPoints) =>
-            AddMesh(model, point => point, identity, block, -1, 0, 0F, interactionPoints);
 
         private void AddSourceMarker(int archive, int record, Arena2ImportPoint point)
         {
@@ -369,33 +282,24 @@ public static class RmbExteriorNormalizer
                 enterMarker ??= new NormalizedMarker("marker/enter", position);
         }
 
-        private void AddInteriorMarker(RmbFlatPlacement flat, int index)
+        private void AddInteriorMarker(RmbBlockFlat flat)
         {
-            NormalizedVector3 position = MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z));
-            if (QuestMarkerNormalization.Read($"quest/{index}", flat.TextureArchive, flat.TextureRecord, position,
-                interiorBuilding!.SourceKey, interiorBuilding.BuildingIndex, index) is { } marker)
+            if (QuestMarkerNormalization.Read($"quest/{flat.Ordinal}", flat.TextureArchive, flat.TextureRecord, MeshGeometry.ToRightHanded(flat.Point),
+                interiorBuilding!.SourceKey, interiorBuilding.BuildingIndex, flat.Ordinal) is { } marker)
                 questMarkers.Add(marker);
-            if (flat.TextureArchive == RdbSourceClassification.EditorFlatArchive && flat.TextureRecord == RdbSourceClassification.StartMarkerRecord)
-                startMarker ??= new NormalizedMarker("marker/start", position);
-            else if (flat.TextureArchive == RdbSourceClassification.EditorFlatArchive && flat.TextureRecord == RdbSourceClassification.EnterMarkerRecord)
-                enterMarker ??= new NormalizedMarker("marker/enter", position);
+            AddSourceMarker(flat.TextureArchive, flat.TextureRecord, flat.Point);
         }
 
-        private void AddMesh(RmbModelPlacement model, Func<Arena2ImportPoint, Arena2ImportPoint> parent, string identity,
-            MapsExteriorBlock block, int buildingIndex, int startingLockValue, float parentYaw, List<NormalizedVector3>? interactionPoints = null)
+        private void AddMesh(RmbBlockModel model, Func<Arena2ImportPoint, Arena2ImportPoint> parent,
+            MapsExteriorBlock block, int? buildingIndex, int startingLockValue, List<NormalizedVector3>? interactionPoints = null)
         {
             referencedMeshes.Add(model.ModelId);
-            if (!uint.TryParse(model.ModelId, NumberStyles.None, CultureInfo.InvariantCulture, out uint id)
-                || !arch.TryGetByNumericId(id, out BsaRecord? record) || record is null)
-                throw new InvalidOperationException($"ARCH3D.BSA has no RMB model '{model.ModelId}' named by '{identity}'.");
-            Arch3dMesh mesh = Arch3dDecoder.Decode(arch.GetPayload(record).Span, arch.Source, id);
-            Matrix3 rotation = Matrix3.Yaw(Arena2SourceTransform.ToRmbYawDegrees(model.YRotation));
-            Arena2ImportPoint modelOrigin = Arena2SourceTransform.ToRmbImportPoint(model.X, model.Y, model.Z);
+            Arch3dMesh mesh = RmbBlockContent.Mesh(arch, model);
             foreach (Arch3dPlane plane in mesh.Planes.Where(plane => plane.Points.Count >= 3))
             {
                 TextureInfo texture = Texture(plane.TextureArchive, plane.TextureRecord);
                 string? doorId = null;
-                if (request.ProfileKind == RmbWorldProfileKind.Exterior && IsBuildingDoor(plane.TextureArchive))
+                if (request.ProfileKind == RmbWorldProfileKind.Exterior && RmbBlockContent.IsBuildingDoor(plane.TextureArchive))
                 {
                     int ordinal = NextDoorOrdinal(block);
                     doorId = $"door/{Slug(block.SourceName)}-rmb/{block.X}/{block.Y}/{ordinal}";
@@ -405,38 +309,20 @@ public static class RmbExteriorNormalizer
                 List<NormalizedVector2> uvs = [];
                 foreach (Arch3dPoint point in plane.Points)
                 {
-                    Arena2ImportPoint placed = parent(Add(modelOrigin, rotation.Transform(Arena2SourceTransform.ToImportPoint(point))));
-                    polygon.Add(MeshGeometry.ToRightHanded(placed));
+                    polygon.Add(MeshGeometry.ToRightHanded(parent(model.Frame.Place(Arena2SourceTransform.ToImportPoint(point)))));
                     Arena2TextureUv uv = Arena2SourceTransform.ToTextureUv(point, texture.Width, texture.Height);
                     uvs.Add(new(uv.U, uv.V));
                 }
                 NormalizedVector3 surfaceNormal = MeshGeometry.Normal(polygon);
                 group.Add(polygon, uvs, surfaceNormal);
-                // Searchable furniture uses exposed authored faces, not the source pivot which
-                // can lie below the floor or inside the solid. Engine still decides visibility.
-                if (interactionPoints is not null && surfaceNormal.Y >= -.5f)
-                {
-                    const float surfaceSeparation = .01f;
-                    interactionPoints.Add(new(polygon.Average(point => point.X) + surfaceNormal.X * surfaceSeparation,
-                        polygon.Average(point => point.Y) + surfaceNormal.Y * surfaceSeparation,
-                        polygon.Average(point => point.Z) + surfaceNormal.Z * surfaceSeparation));
-                }
+                // Engine still decides whether a furniture surface point is visible.
+                if (interactionPoints is not null && RmbBlockContent.InteractionPoint(polygon, surfaceNormal) is { } interaction)
+                    interactionPoints.Add(interaction);
                 if (doorId is not null)
                 {
-                    // DFU GameObjectHelper.GetStaticDoors uses the opposite source corners for
-                    // the centre and a uniform horizontal volume, because ARCH3D doors are planes.
-                    Arena2ImportPoint first = Arena2SourceTransform.ToImportPoint(plane.Points[0]);
-                    Arena2ImportPoint opposite = Arena2SourceTransform.ToImportPoint(plane.Points[2]);
-                    float thickness = MathF.Max(MathF.Abs(opposite.XMetres - first.XMetres), MathF.Abs(opposite.ZMetres - first.ZMetres));
-                    float height = MathF.Abs(opposite.YMetres - first.YMetres);
-                    NormalizedVector3 half = new(thickness / 2F, MathF.Max(height, thickness) / 2F, MathF.Min(height, thickness) / 2F);
-                    NormalizedVector3 centre = new((polygon[0].X + polygon[2].X) / 2F,
-                        (polygon[0].Y + polygon[2].Y) / 2F, (polygon[0].Z + polygon[2].Z) / 2F);
-                    NormalizedVector3 normal = MeshGeometry.Normal(polygon);
-                    float yaw = MathF.Atan2(normal.X, normal.Z) * (180F / MathF.PI);
-                    doorDrafts.Add(new(doorId, "door/rmb-exterior", centre, new(0F, yaw, 0F), "normal",
-                        buildingIndex >= 0 ? startingLockValue : 0,
-                        new(new(-half.X, -half.Y, -half.Z), half), buildingIndex >= 0 ? buildingIndex : null));
+                    (NormalizedVector3 centre, NormalizedVector3 rotation, NormalizedBounds bounds) = RmbBlockContent.Door(plane, polygon);
+                    doorDrafts.Add(new(doorId, "door/rmb-exterior", centre, rotation, "normal",
+                        buildingIndex is not null ? startingLockValue : 0, bounds, buildingIndex));
                 }
             }
         }
@@ -470,16 +356,6 @@ public static class RmbExteriorNormalizer
             int ordinal = doorOrdinals.TryGetValue(key, out int current) ? current : 0;
             doorOrdinals[key] = checked(ordinal + 1);
             return ordinal;
-        }
-
-        private static bool IsBuildingDoor(int textureArchive)
-        {
-            // MeshReader classifies climate door archives by their base archive. The two source
-            // archives below are dungeon/Scourge exceptions and do not represent RMB building doors.
-            int baseArchive = textureArchive > 100 && textureArchive != 331 && textureArchive != 156
-                ? textureArchive % 100
-                : textureArchive;
-            return baseArchive == 74;
         }
 
         public RmbExteriorNormalizationResult Build()
@@ -558,30 +434,13 @@ public static class RmbExteriorNormalizer
                 ? $"mesh/{root}/texture-{key.Archive}-{key.Record}"
                 : $"mesh/{key.DoorId}/texture-{key.Archive}-{key.Record}";
 
-        private bool IsClearOutdoorGroundCell(NormalizedNavigationCell cell)
-        {
-            // CityNavigation has one 64-by-64 automap value per 64 raw-unit (1.6m) square. Sample the
-            // derived cell centre against that exact source grid after the normalized right-handed Z flip.
-            // The exterior navigation profile intentionally admits the original ground plane only: roofs
-            // and interior floors are collision geometry, not outdoor walkable ground.
-            if (MathF.Abs(cell.SupportHeight) > 0.0001F) return false;
-            const float sourceAutomapCellMetres = 64F * Arena2SourceTransform.SourceUnitMetres;
-            int x = checked((int)MathF.Floor(((cell.Column + 0.5F) * request.Navigation.CellSize) / sourceAutomapCellMetres));
-            int z = checked((int)MathF.Floor((-((cell.Row + 0.5F) * request.Navigation.CellSize)) / sourceAutomapCellMetres));
-            return outdoorNavigationCells.Contains((x, z));
-        }
-
-        private static Arena2ImportPoint Add(Arena2ImportPoint left, Arena2ImportPoint right) => new(left.XMetres + right.XMetres, left.YMetres + right.YMetres, left.ZMetres + right.ZMetres);
+        private bool IsClearOutdoorGroundCell(NormalizedNavigationCell cell) =>
+            RmbBlockContent.IsClearOutdoorGroundCell(cell, request.Navigation.CellSize, outdoorNavigationCells);
     }
 
     private sealed record TextureInfo(int Width, int Height, string TextureId, string MaterialId);
     private sealed record DoorDraft(string Id, string DoorResourceId, NormalizedVector3 Position,
         NormalizedVector3 RotationDegrees, string Kind, int StartingLockValue,
         NormalizedBounds CollisionBounds, int? ExteriorBuildingIndex);
-    private readonly record struct Matrix3(float C, float S)
-    {
-        public static Matrix3 Yaw(float degrees) { float radians = degrees * MathF.PI / 180F; return new(MathF.Cos(radians), MathF.Sin(radians)); }
-        public Arena2ImportPoint Transform(Arena2ImportPoint value) => new((C * value.XMetres) + (S * value.ZMetres), value.YMetres, (-S * value.XMetres) + (C * value.ZMetres));
-    }
     private static string Slug(string value) => PublishedIds.Slug(value);
 }

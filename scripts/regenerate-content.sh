@@ -171,7 +171,14 @@ tool world-media --arena2 "$arena2" --ui-authored-assets "$ui_assets" --ui-origi
   --pack "$imported" --music-manifest "$music_manifest" --classic-group "$classic_group" --out "$world_media" \
   --source-manifest import-records/world-media.sources.json
 
-# 5. Site closures. Each names the published music cues and the actors the imported mobile catalog lets the
+# 5. The per-block world publication: every RMB exterior, building interior and RDB block a location places,
+#    normalized in its own frame with its collision/navigation, its static meshes placing the world media
+#    publication's meshes. It reads the catalog's locations for the blocks the world places. Nothing at runtime
+#    opens it yet, so it is written to the import records, outside the runtime content root the Host stages.
+tool world-blocks --arena2 "$arena2" --pack "$imported" --shared "$world_media" --inventory "$inventory" \
+  --out import-records/world-blocks --source-manifest import-records/world-blocks.sources.json
+
+# 6. Site closures. Each names the published music cues and the actors the imported mobile catalog lets the
 #    runtime spawn, and writes only what is its own: every body and shared sidecar entry is referenced from
 #    the world media publication above. Its source manifest (the corpus scanned against the inventory) goes
 #    to the import records.
@@ -228,7 +235,7 @@ for ship in small-ship large-ship; do
     --source-manifest "$site_records/$ship.sources.json" --region 31 --location "Your Ship" --location-index "$ship_index" --profile exterior
 done
 
-# 6. Reconcile all current producer citations and raw-record ledgers. This is import coverage,
+# 7. Reconcile all current producer citations and raw-record ledgers. This is import coverage,
 #    not runtime parity certification; unknown identities and dangling required references fail.
 tool source-coverage --arena2 "$arena2" --inventory "$inventory" --repository "$PWD" \
   --output import-records/source-coverage.json
