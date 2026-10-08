@@ -61,7 +61,9 @@ public sealed class SourceBackedServiceSessionTests
     {
         using SourceBackedServiceSessionFixture fixture = SourceBackedServiceSessionFixture.Create();
         using DaggerfallSession session = fixture.Start(fixture.TrainingProvider.Profile);
-        session.AdvanceElapsedTime(6 * 60 * 60);
+        // Waiting for opening hours stands for a rest: six hours of idle fatigue loss plus the lesson's
+        // own fatigue cost would otherwise empty the pool and collapse the player.
+        session.AdvanceElapsedTime(6 * 60 * 60, idleFatigue: false);
 
         DaggerfallNpc provider = SourceNpc(session, fixture.TrainingProvider.Placement.Id);
         Assert.Contains("training", provider.Services);
@@ -280,7 +282,8 @@ public sealed class SourceBackedServiceSessionTests
             Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue).Merchant);
         DaggerfallRepairView restoredRepair = Assert.Single(restoredPending.Repairs);
         Assert.False(restoredRepair.Ready);
-        restored.AdvanceElapsedTime(2 * DaggerfallCalendar.SecondsPerDay);
+        // Two days of waiting stand for rest; two days of idle fatigue loss would collapse the player.
+        restored.AdvanceElapsedTime(2 * DaggerfallCalendar.SecondsPerDay, idleFatigue: false);
 
         OpenSourceNpc(restored, restoredProvider);
         DaggerfallMerchantView ready = Assert.IsType<DaggerfallMerchantView>(
