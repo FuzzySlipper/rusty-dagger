@@ -6,6 +6,7 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -175,18 +176,17 @@ public sealed class DaggerfallDiseasePolicyTests
     [Fact]
     public void Formula_admission_rejects_level_one_immune_resisted_and_non_player_targets_before_effect_mutation()
     {
-        Assert.Equal(55, DaggerfallDiseasePolicy.DiseaseSavingThrowChance(50));
-        Assert.Equal(95, DaggerfallDiseasePolicy.DiseaseSavingThrowChance(500));
-        Assert.Equal(5, DaggerfallDiseasePolicy.DiseaseSavingThrowChance(-500));
-        Assert.Equal(100, DaggerfallDiseasePolicy.DiseaseSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Immune));
-        Assert.Equal(80, DaggerfallDiseasePolicy.DiseaseSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Resistant));
-        Assert.Equal(30, DaggerfallDiseasePolicy.DiseaseSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.LowTolerance));
-        Assert.Equal(5, DaggerfallDiseasePolicy.DiseaseSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.CriticalWeakness));
-        Assert.Equal(0, DaggerfallDiseasePolicy.DiseaseSavingThrowAmount(55, 35));
-        Assert.Equal(5, DaggerfallDiseasePolicy.DiseaseSavingThrowAmount(55, 36));
-        Assert.Equal(100, DaggerfallDiseasePolicy.DiseaseSavingThrowAmount(55, 55));
-        Assert.Equal(100, DaggerfallDiseasePolicy.DiseaseSavingThrowAmount(55, 56));
-        Assert.Equal(0, DaggerfallDiseasePolicy.DiseaseSavingThrowAmount(100, 100));
+        Assert.Equal(55, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50));
+        Assert.Equal(95, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(500));
+        Assert.Equal(5, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(-500));
+        Assert.Equal(DaggerfallMagicAdmissionPolicy.CompleteResistance, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Immune));
+        Assert.Equal(80, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Resistant));
+        Assert.Equal(30, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.LowTolerance));
+        Assert.Equal(DaggerfallMagicAdmissionPolicy.NoResistance, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.CriticalWeakness));
+        Assert.Equal(0, DaggerfallMagicAdmissionPolicy.SavingThrowAmount(55, () => 35));
+        Assert.Equal(5, DaggerfallMagicAdmissionPolicy.SavingThrowAmount(55, () => 36));
+        Assert.Equal(100, DaggerfallMagicAdmissionPolicy.SavingThrowAmount(55, () => 55));
+        Assert.Equal(100, DaggerfallMagicAdmissionPolicy.SavingThrowAmount(55, () => 56));
         long day = 1;
         IRandomService random = Random(100, 0);
         using (ActorsState levelOne = Actors(level: 1))
@@ -222,6 +222,85 @@ public sealed class DaggerfallDiseasePolicyTests
             Assert.Empty(effects.Active);
         }
     }
+
+    /// <summary>
+    /// One saving-throw rule (#9707): a spell, a disease and a poison facing the same tolerance and roll
+    /// come to the same result. Immunity resists and critical weakness takes the full effect, both without
+    /// a roll; resistance and low tolerance move the throw before Willpower's MagicResist (50 / 10 here).
+    /// </summary>
+    [Theory]
+    [InlineData(false, (int)DaggerfallDiseaseCareerTolerance.Normal, 56, 100)]
+    [InlineData(false, (int)DaggerfallDiseaseCareerTolerance.Normal, 36, 5)]
+    [InlineData(false, (int)DaggerfallDiseaseCareerTolerance.Normal, 35, 0)]
+    [InlineData(false, (int)DaggerfallDiseaseCareerTolerance.Resistant, 81, 100)]
+    [InlineData(false, (int)DaggerfallDiseaseCareerTolerance.Resistant, 60, 0)]
+    [InlineData(false, (int)DaggerfallDiseaseCareerTolerance.LowTolerance, 31, 100)]
+    [InlineData(false, (int)DaggerfallDiseaseCareerTolerance.LowTolerance, 10, 0)]
+    [InlineData(false, (int)DaggerfallDiseaseCareerTolerance.Immune, null, 0)]
+    [InlineData(false, (int)DaggerfallDiseaseCareerTolerance.CriticalWeakness, null, 100)]
+    [InlineData(true, (int)DaggerfallDiseaseCareerTolerance.Resistant, 86, 100)]
+    [InlineData(true, (int)DaggerfallDiseaseCareerTolerance.Resistant, 65, 0)]
+    [InlineData(true, (int)DaggerfallDiseaseCareerTolerance.LowTolerance, 31, 100)]
+    [InlineData(true, (int)DaggerfallDiseaseCareerTolerance.LowTolerance, 10, 0)]
+    [InlineData(true, (int)DaggerfallDiseaseCareerTolerance.Immune, null, 0)]
+    [InlineData(true, (int)DaggerfallDiseaseCareerTolerance.CriticalWeakness, null, 100)]
+    public void Spells_diseases_and_poisons_resolve_one_saving_throw_rule(bool race, int toleranceValue, int? roll, int expectedPercent)
+    {
+        var tolerance = (DaggerfallDiseaseCareerTolerance)toleranceValue;
+        Func<int> percentile = () => roll ?? throw new Xunit.Sdk.XunitException("A tolerance that decides the throw must not roll.");
+        bool takes = expectedPercent > 0;
+
+        // A spell: a Magic-element effect against the same career or race tolerance on its Magic flag.
+        DaggerfallMagicTolerance magic = tolerance switch
+        {
+            DaggerfallDiseaseCareerTolerance.Resistant => DaggerfallMagicTolerance.Resistant,
+            DaggerfallDiseaseCareerTolerance.Immune => DaggerfallMagicTolerance.Immune,
+            DaggerfallDiseaseCareerTolerance.LowTolerance => DaggerfallMagicTolerance.LowTolerance,
+            DaggerfallDiseaseCareerTolerance.CriticalWeakness => DaggerfallMagicTolerance.CriticalWeakness,
+            _ => DaggerfallMagicTolerance.Normal,
+        };
+        const DaggerfallMagicTolerance normal = DaggerfallMagicTolerance.Normal;
+        var spellTarget = new DaggerfallMagicTargetProfile(50,
+            new(normal, race ? normal : magic, normal, normal, normal, normal, normal),
+            race ? Race(tolerance, (int)DaggerfallMagicEffectFlags.Magic) : null, 0, 0, 0, new(0, 0, 0, 0, 0), []);
+        Assert.Equal(expectedPercent, DaggerfallMagicAdmissionPolicy.SavingThrow(DaggerfallMagicResistanceElement.Magic,
+            DaggerfallMagicEffectFlags.Magic, spellTarget, 0, percentile));
+
+        // A disease: the scripted draw holds the throw only when one is needed, then the candidate pick.
+        // A throw drawn where none is needed would read the pick's 0 and fall outside 1-100.
+        long day = 1;
+        IRandomService random = roll is int value ? Random(value, 0) : Random(0);
+        using (ActorsState actors = Actors(level: 2))
+        {
+            int Flag(DaggerfallDiseaseCareerTolerance slot) => !race && tolerance == slot ? DaggerfallCareerTolerances.Disease : 0;
+            DaggerfallCareerDefinition career = Career(
+                resistance: Flag(DaggerfallDiseaseCareerTolerance.Resistant),
+                immunity: Flag(DaggerfallDiseaseCareerTolerance.Immune),
+                low: Flag(DaggerfallDiseaseCareerTolerance.LowTolerance),
+                critical: Flag(DaggerfallDiseaseCareerTolerance.CriticalWeakness));
+            DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog(DaggerfallDiseasePolicy.Definitions(random, () => day, () => career)));
+            DaggerfallDiseaseAdmission disease = DaggerfallDiseasePolicy.InflictDisease(effects, actors, random, () => day,
+                Exposure("one-rule", DaggerfallClassicDisease.BrainFever) with { RaceTolerance = race ? tolerance : DaggerfallDiseaseCareerTolerance.Normal },
+                career);
+            Assert.Equal(takes, disease == DaggerfallDiseaseAdmission.Started);
+            Assert.Equal(takes ? 1 : 0, effects.Active.Count);
+        }
+
+        // A poison: the same tolerance on the poison exposure and the same throw.
+        DaggerfallPoisonExposure poison = new(TargetId: 2, TargetLevel: 5, CareerImmune: false, RaceImmune: false, Willpower: 50,
+            Tolerance: race ? DaggerfallDiseaseCareerTolerance.Normal : tolerance,
+            RaceTolerance: race ? tolerance : DaggerfallDiseaseCareerTolerance.Normal);
+        Assert.Equal(takes, DaggerfallPoisonPolicy.Admit(poison, roll ?? 1) == DaggerfallPoisonAdmission.Admitted);
+    }
+
+    private static DaggerfallRaceDefinition Race(DaggerfallDiseaseCareerTolerance tolerance, int flag) =>
+        new("one-rule-race", 0, new DaggerfallCatalogCitation("test"))
+        {
+            ResistanceFlags = tolerance == DaggerfallDiseaseCareerTolerance.Resistant ? flag : 0,
+            ImmunityFlags = tolerance == DaggerfallDiseaseCareerTolerance.Immune ? flag : 0,
+            LowToleranceFlags = tolerance == DaggerfallDiseaseCareerTolerance.LowTolerance ? flag : 0,
+            CriticalWeaknessFlags = tolerance == DaggerfallDiseaseCareerTolerance.CriticalWeakness ? flag : 0,
+        };
 
     [Fact]
     public void Career_disease_tolerance_uses_the_donor_raw_flag_priority()

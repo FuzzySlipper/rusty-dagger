@@ -2,6 +2,7 @@ using System.Text.Json;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
@@ -396,8 +397,8 @@ public sealed class DaggerfallPoisonRuntimeTests
         // The resistance the caller puts on the exposure is what the throw reads: the same roll that a plain
         // attempt resists is admitted once a background's own modifier is behind it, and vice versa.
         DaggerfallPoisonExposure modified = levelled with { BypassResistance = false, BiographyModifier = 30 };
-        int plain = DaggerfallPoisonPolicy.SavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Normal);
-        int strengthened = DaggerfallPoisonPolicy.SavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Normal, modified.BiographyModifier);
+        int plain = DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Normal);
+        int strengthened = DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Normal, modified.BiographyModifier);
         Assert.True(strengthened > plain);
         int between = plain - 15;
         Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.Admit(modified with { BiographyModifier = 0 }, between));

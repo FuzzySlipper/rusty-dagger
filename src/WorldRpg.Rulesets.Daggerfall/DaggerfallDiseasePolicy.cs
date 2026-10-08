@@ -188,12 +188,14 @@ internal static class DaggerfallDiseasePolicy
             if (exposure.ActiveResistanceChance is int activeResistance
                 && Draw(random, $"active-resist:{exposure.Instance}", 1, 100) <= activeResistance)
                 return DaggerfallDiseaseAdmission.Resisted;
-            int chance = DiseaseSavingThrowChance(
+            int chance = DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(
                 ReadStat(stats, DaggerfallMechanicsIds.Willpower),
                 career is null ? DaggerfallDiseaseCareerTolerance.Normal : CareerTolerance(career),
                 exposure.BiographyModifier, exposure.RaceTolerance);
-            int resistanceRoll = Draw(random, $"resist:{exposure.Instance}", 1, 100);
-            if (DiseaseSavingThrowAmount(chance, resistanceRoll) == 0) return DaggerfallDiseaseAdmission.Resisted;
+            // A near successful throw produces a reduced nonzero payload and therefore still admits a
+            // disease, as FORM-06 does; only a zero payload cancels it.
+            if (DaggerfallMagicAdmissionPolicy.SavingThrowAmount(chance, () => Draw(random, $"resist:{exposure.Instance}", 1, 100)) == 0)
+                return DaggerfallDiseaseAdmission.Resisted;
         }
 
         DaggerfallClassicDisease[] candidates = exposure.Candidates?.ToArray()
@@ -223,50 +225,8 @@ internal static class DaggerfallDiseasePolicy
         return DaggerfallDiseaseAdmission.Started;
     }
 
-    /// <summary>The current actor baseline of the donor saving throw, before its single 1–100 roll.</summary>
-    internal static int DiseaseSavingThrowChance(int willpower, DaggerfallDiseaseCareerTolerance tolerance = DaggerfallDiseaseCareerTolerance.Normal, int biographyModifier = 0, DaggerfallDiseaseCareerTolerance raceTolerance = DaggerfallDiseaseCareerTolerance.Normal)
-    {
-        int raceModifier = raceTolerance switch
-        {
-            DaggerfallDiseaseCareerTolerance.Normal => 0, DaggerfallDiseaseCareerTolerance.Resistant => 30,
-            DaggerfallDiseaseCareerTolerance.Immune => 50, DaggerfallDiseaseCareerTolerance.LowTolerance => -25,
-            DaggerfallDiseaseCareerTolerance.CriticalWeakness => -50, _ => throw new ArgumentOutOfRangeException(nameof(raceTolerance)),
-        };
-        if (raceTolerance == DaggerfallDiseaseCareerTolerance.Immune) return 100;
-        int chance = checked(50 + CareerToleranceModifier(tolerance) + raceModifier + biographyModifier);
-        // The donor makes career immunity complete before adding magic resistance and applying the
-        // ordinary 5–95 window.
-        if (chance >= 100) return 100;
-        return Math.Clamp(checked(chance + DaggerfallFormulaPolicy.MagicResist(willpower)), 5, 95);
-    }
-
-    /// <summary>
-    /// The donor saving-throw result. Zero cancels an incoming disease; a near successful throw
-    /// produces a reduced nonzero payload and therefore still admits a disease, as FORM-06 does.
-    /// </summary>
-    internal static int DiseaseSavingThrowAmount(int chance, int roll)
-    {
-        if (chance is < 5 or > 100) throw new ArgumentOutOfRangeException(nameof(chance));
-        if (roll is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(roll));
-        // FormulaHelper returns immediately for immunity instead of treating a natural 100 as a
-        // near miss through the ordinary prorating branch.
-        if (chance == 100) return 0;
-        if (roll > chance) return 100;
-        return Math.Clamp(checked(100 - (5 * (chance - roll))), 0, 100);
-    }
-
     internal static DaggerfallDiseaseCareerTolerance CareerTolerance(DaggerfallCareerDefinition career) =>
         DaggerfallCareerTolerances.Tolerance(career, DaggerfallCareerTolerances.Disease);
-
-    private static int CareerToleranceModifier(DaggerfallDiseaseCareerTolerance tolerance) => tolerance switch
-    {
-        DaggerfallDiseaseCareerTolerance.Normal => 0,
-        DaggerfallDiseaseCareerTolerance.Immune => 50,
-        DaggerfallDiseaseCareerTolerance.Resistant => 25,
-        DaggerfallDiseaseCareerTolerance.LowTolerance => -25,
-        DaggerfallDiseaseCareerTolerance.CriticalWeakness => -50,
-        _ => throw new ArgumentOutOfRangeException(nameof(tolerance)),
-    };
 
     /// <summary>Cures every live instance of one classic disease on the named target; direct vital loss remains while attribute sources are removed.</summary>
     internal static int CureDisease(DaggerfallEffectLifecycle effects, long targetId, DaggerfallClassicDisease disease)
