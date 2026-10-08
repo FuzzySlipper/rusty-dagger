@@ -46,12 +46,13 @@ not an accidental successful no-op.
 | Leaf IDs (prefix `SUP-04.`) | Behavior family / prerequisites |
 | --- | --- |
 | `Translation`, `Rotation`, `PositiveX`, `NegativeX`, `PositiveZ`, `NegativeZ`, `PositiveY`, `NegativeY` | Motion parameters, duration, activation/reversal and persistent state; Engine motion/spatial property must be verified. |
-| `CastSpell` | Normalized spell reference, caster/target and common effect admission; defer this leaf until casting exists. |
+| `CastSpell` | Landed: normalized spell reference, caster/target and common effect admission through the shared casting path, with the source cooldown. |
 | `ShowText`, `ShowTextWithInput`, `DoorText` | Text lookup, input/answer conditions and action-chain outcome; thin UI. |
-| `Teleport` | Target/source identity and actual relocation through the shared world/movement owner. |
+| `Teleport` | Target/source identity and actual relocation through the shared world/movement owner. Remaining: flag 0x0E is not yet executed; the action graph diagnoses it as having no admitted executor, where the donor moves the player to the next object's position and rotation. |
 | `LockDoor`, `UnlockDoor`, `OpenDoor`, `CloseDoor` | Same persistent door operations as player activation and spells. |
 | `Hurt21`, `Hurt22`, `Hurt23`, `Hurt24`, `Hurt25` | Distinct source damage modes/parameters through common actor tracks; preserve random versus level-scaled semantics. |
-| `Poison`, `DrainMagicka` | Shared effect/track state, immunity and timing rules where applicable. |
+| `DrainMagicka` | Shared effect/track state, immunity and timing rules where applicable. |
+| `Poison` | Explicit exclusion: the donor handler is empty, so the record keeps its raw facts and reports an unsupported action. |
 | `Activate`, `SetGlobalVar` | Linked activation and persistent variable changes; explicit bounded ordering, not a generic downstream scheduler. |
 
 Trigger enumeration in the same donor file: `None`, `ActionObject`, `Direct`,
