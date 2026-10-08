@@ -440,6 +440,16 @@ public sealed class SpatialMovementSystem : IDisposable
         return true;
     }
 
+    /// <summary>The registered triggers that are currently active, in no particular order.</summary>
+    public IEnumerable<ulong> ActiveTriggers
+    {
+        get
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+            return _registeredTriggers.Where(entry => entry.Value.Active).Select(entry => entry.Key).ToArray();
+        }
+    }
+
     /// <summary>Reactivates a retained trigger after its prior projection released the last reference.</summary>
     public void ActivateTrigger(ulong trigger, ulong tick)
     {
