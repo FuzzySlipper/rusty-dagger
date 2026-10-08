@@ -355,7 +355,7 @@ internal sealed class DaggerfallSiteLifecycle
             _host.RelocatePlayer(ProfileToLocal(pose.Position), pose.YawRadians, pose.PitchRadians);
             if (profile.Kind == DaggerfallWorldProfileKind.Exterior)
             {
-                RebaseExteriorIfNeeded();
+                _ = RebaseExteriorIfNeeded();
                 UpdateExteriorResidency();
             }
             return true;
@@ -1287,19 +1287,21 @@ internal sealed class DaggerfallSiteLifecycle
         position - LocalCompensation - ActiveExteriorFrameOffset();
 
     /// <summary>Rebase at a terrain-cell boundary, inside the existing admitted update.</summary>
-    internal void RebaseExteriorIfNeeded()
+    /// <summary>Moves the exterior origin under the player once it strays a cell away; true when it moved.</summary>
+    internal bool RebaseExteriorIfNeeded()
     {
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
-            || _state.PlayerControl.Position is not WorldPoint position) return;
+            || _state.PlayerControl.Position is not WorldPoint position) return false;
         float cellSize = DaggerfallExteriorCellResidency.CellSize;
         bool horizontal = MathF.Abs(position.X) >= cellSize || MathF.Abs(position.Z) >= cellSize;
         bool vertical = MathF.Abs(position.Y) > _tuning.WorldOrigin.VerticalRebaseDistance;
-        if (!horizontal && !vertical) return;
+        if (!horizontal && !vertical) return false;
         WorldOriginReadout origin = ReadEngineOrigin();
         long x = horizontal ? checked(origin.CellX + (long)Math.Floor(position.X)) : origin.CellX;
         long y = vertical ? checked(origin.CellY + (long)Math.Floor(position.Y)) : origin.CellY;
         long z = horizontal ? checked(origin.CellZ + (long)Math.Floor(position.Z)) : origin.CellZ;
         CommitExteriorOrigin(origin, x, y, z);
+        return true;
     }
 
     /// <summary>

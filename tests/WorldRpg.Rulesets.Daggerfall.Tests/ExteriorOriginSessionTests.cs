@@ -431,6 +431,39 @@ public sealed class ExteriorOriginSessionTests
     }
 
     [Fact]
+    public void A_rebasing_step_leaves_the_water_trigger_rows_in_the_new_frame_for_actor_navigation()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        ProductContent admitted = FullContent(root);
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
+            new DaggerfallSessionComposition(definitions, exterior, DaggerfallTuning.Defaults));
+        session.State.PlayerControl.MoveTo(new Vector3(1000, 1, 5));
+
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        // The step moved the origin under the player, so every water volume now sits in a new frame.
+        Assert.NotEqual(Vector3.Zero, session.Sites.LocalCompensation);
+        CharacterWaterVolume[] water = session.Sites.CharacterEnvironment(session.State.PlayerControl.Motion).WaterVolumes.ToArray();
+        Assert.NotEmpty(water);
+        // Actor navigation asks the Engine's trigger rows whether an actor is in water; those rows are
+        // the volumes as they now stand, not as they stood before the origin moved.
+        foreach (CharacterWaterVolume volume in water)
+        {
+            SpatialEntityCollider row = spatial.TriggerRows[volume.Trigger];
+            Assert.Equal(volume.Minimum, row.Min);
+            Assert.Equal(volume.Maximum, row.Max);
+        }
+    }
+
+    [Fact]
     public void Same_profile_relocation_updates_the_exterior_window_and_rebases_before_returning()
     {
         string root = TestData.RepositoryRoot;
