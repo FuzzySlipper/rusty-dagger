@@ -191,7 +191,7 @@ internal sealed partial class DaggerfallSession
         DeliverFacts();
         ApplyAttackImpacts();
         // Enemy reactions resolve inside this admitted step. A lethal reaction owns the rest of
-        // the step: do not recover stamina, toggle equipment, attack, activate a target, or advance
+        // the step: do not toggle equipment, attack, activate a target, or advance
         // quests after the player has been defeated. DeliverFacts still runs at the caller boundary,
         // so the mode transition and death presentation are published from the committed outcome.
         if (State.Actors.Player.IsDefeated
@@ -200,7 +200,6 @@ internal sealed partial class DaggerfallSession
         // The swing gesture is measured from the look turns this admitted update committed, so the
         // attack below reads the gesture the player actually drew in the moments before it.
         _playerSwings.Observe(update.DeltaSeconds, State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians);
-        _staminaRecovery.Update(State.Actors.Player.Stats, update.DeltaSeconds);
         DaggerfallPlayerActs acts = new(
             ToggleWeapon: update.IsRequested(DaggerfallInput.ToggleWeapon),
             Attack: update.IsRequested(DaggerfallInput.Attack) ? new(generation, simulationStep, update.DeltaSeconds) : null,

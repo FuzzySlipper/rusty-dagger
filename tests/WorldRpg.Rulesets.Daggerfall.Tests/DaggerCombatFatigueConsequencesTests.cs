@@ -31,12 +31,9 @@ public sealed class DaggerCombatFatigueConsequencesTests
         Assert.Equal(344d, fixture.Stamina);
         Assert.Equal(98d, fixture.Health);
 
-        DaggerfallStaminaRecoveryModule recovery = new(new DaggerfallStaminaRecoveryTuning(5d, 0d));
-        recovery.Update(fixture.Actors.Player.Stats, 1d);
-        Assert.Equal(349d, fixture.Stamina);
         DaggerfallStatsSave saved = DaggerfallStatsSaveBoundary.Capture(fixture.Actors.Player.Stats, fixture.Actors.Player.Actor.Entity);
         DaggerfallRestoredStats restored = DaggerfallStatsSaveBoundary.Restore(saved, new EntityId(DaggerfallActorIdentity.PlayerEntityId));
-        Assert.Equal(349d, restored.Component.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+        Assert.Equal(344d, restored.Component.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
     }
 
     [Fact]

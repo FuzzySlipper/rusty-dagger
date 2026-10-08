@@ -11,7 +11,6 @@ internal sealed class DaggerfallClimbingPolicy
 {
     private static readonly StatId Climbing = StatId.Parse(DaggerfallMechanicsIds.Climbing.Value);
     private static readonly StatId Luck = StatId.Parse(DaggerfallMechanicsIds.Luck.Value);
-    private static readonly TrackId Stamina = TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value);
     private readonly DaggerfallClimbingTuning _tuning;
     private float _startSeconds;
     private float _holdSeconds;
@@ -34,7 +33,8 @@ internal sealed class DaggerfallClimbingPolicy
         ArgumentNullException.ThrowIfNull(stats);
         ArgumentNullException.ThrowIfNull(rollHundred);
         if (!float.IsFinite(seconds) || seconds <= 0f) throw new ArgumentOutOfRangeException(nameof(seconds));
-        if (!canMove || stats.GetTrack(Stamina).Current <= 0d || input.CrouchHeld || input.JumpRequested)
+        // The donor's climbing motor never lets go for fatigue; an empty pool is the exhaustion owner's.
+        if (!canMove || input.CrouchHeld || input.JumpRequested)
         {
             Detach();
             return default;

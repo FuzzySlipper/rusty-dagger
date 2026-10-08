@@ -30,8 +30,10 @@ internal sealed partial class DaggerfallSession
         _sites.ClearReturnDestination();
         foreach (long id in DefinitionsByActor.Where(pair => pair.Key != DaggerfallActorIdentity.PlayerEntityId
             && pair.Value.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass).Select(pair => pair.Key).ToArray()) _roster.Banish(id);
-        // Synthetic time uses the existing calendar fan-out without an encounter request.
-        AdvanceQuestTime(14L * DaggerfallCalendar.SecondsPerDay + (DaggerfallCalendar.DuskHour + 1 - _time.Calendar.Hour) * 3600L);
+        // Synthetic time uses the existing calendar fan-out without an encounter request, and like the
+        // donor's raised clock it charges no per-minute fatigue loss.
+        AdvanceQuestTime(14L * DaggerfallCalendar.SecondsPerDay + (DaggerfallCalendar.DuskHour + 1 - _time.Calendar.Hour) * 3600L,
+            idleFatigue: false);
         if (!State.RacialOverrides.Select(DaggerfallRacialKind.Vampire, $"vampirism:{transition.Instance}",
             MinuteIndex(_time.Calendar), vampireClan: clan)) return new(false, "A racial override is already active.");
         HealRacialTransformation();

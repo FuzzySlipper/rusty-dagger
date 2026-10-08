@@ -129,7 +129,6 @@ internal sealed class DaggerfallOutcomePresentation(
                     AttackRejection.NoTargetInReach => "Nothing in reach.",
                     AttackRejection.Cooldown => "Cooldown",
                     AttackRejection.AttackInProgress => "Attack in progress",
-                    AttackRejection.InsufficientStamina => "Too exhausted to attack",
                     AttackRejection.InsufficientWeaponMaterial => "Weapon material cannot harm this target",
                     AttackRejection.TargetDefeated => "Target already defeated",
                     // An actor that reached its swing with no authored policy is a missing capability,

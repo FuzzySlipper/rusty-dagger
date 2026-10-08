@@ -44,6 +44,19 @@ internal sealed class DaggerfallVitalityConsequences
             health, HealthApplicationMode.Terminal).Result;
     }
 
+    /// <summary>
+    /// Collapsing from exhaustion where it cannot be survived (in water, or with enemies near) is a
+    /// terminal accepted health consequence, sharing combat defeat and fact publication.
+    /// </summary>
+    internal DamageResult ResolveExhaustionDeath(Actor victim)
+    {
+        ArgumentNullException.ThrowIfNull(victim);
+        Track health = victim.Get<StatsComponent>().GetTrack(HealthTrack);
+        int calculated = checked((int)Math.Ceiling(Math.Max(0d, health.Current - health.Minimum)));
+        return _combat.ApplyToHealth(new CombatParticipants(victim, victim, "exhaustion"), calculated,
+            health, HealthApplicationMode.Terminal).Result;
+    }
+
     internal DaggerfallSpellTrackResult ResolveSpellTrack(Actor caster, Actor target, TrackId trackId, int amount, bool permitted = true)
     {
         Track track = target.Get<StatsComponent>().GetTrack(trackId);

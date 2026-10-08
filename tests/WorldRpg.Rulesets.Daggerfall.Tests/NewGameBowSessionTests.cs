@@ -35,7 +35,7 @@ public sealed class NewGameBowSessionTests
         Assert.Equal(TestPayload.Definitions.Actions["bow-shot"].Reach,
             targeting.Request.Observers.Span[0].MaximumDistance);
         Assert.Equal(23UL, f.Arrows().Quantity);
-        Assert.Equal(stamina - 5, f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(stamina - 11, f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
         Assert.NotNull(f.Game.State.Actors.Player.Attack.Pending);
     }
 

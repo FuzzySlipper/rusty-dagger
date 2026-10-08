@@ -249,16 +249,11 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal(cautious ? stats.GetTrack(TrackId.Parse("magicka")).Maximum.Value : 1,
             stats.GetTrack(TrackId.Parse("magicka")).Current);
 
-        // Cautious recovery happens before travel. Elapsed travel and its arrival delay then
-        // settle every covered calendar minute through the locomotion owner's idle fatigue rule.
+        // Cautious recovery happens before travel. As in the donor, the journey's raised clock then
+        // charges no per-minute fatigue loss, so a long trip cannot end in an exhaustion collapse.
         Track stamina = stats.GetTrack(TrackId.Parse("stamina"));
-        long coveredMinutes = result.EndedSeconds / DaggerfallCalendar.SecondsPerMinute
-            - result.StartedSeconds / DaggerfallCalendar.SecondsPerMinute;
-        Assert.True(coveredMinutes > 0);
-        double startingStamina = cautious ? stamina.Maximum.Value : 1;
-        double expectedStamina = Math.Max(0, startingStamina
-            - (coveredMinutes * (long)DaggerfallTuning.Defaults.Locomotion.IdleFatiguePerGameMinute));
-        Assert.Equal(expectedStamina, stamina.Current);
+        Assert.True(result.EndedSeconds > result.StartedSeconds);
+        Assert.Equal(cautious ? stamina.Maximum.Value : 1, stamina.Current);
     }
 
     [Theory]
