@@ -77,7 +77,7 @@ public sealed class ClassicWorldVisualTests
         byte[] palette = File.ReadAllBytes(TestData.Corpus("PAL.PAL"));
         foreach (ClassicWorldVisualTexture texture in visual.Materials)
         {
-            byte[] png = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold", texture.RelativePath));
+            byte[] png = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/shared", texture.RelativePath));
             Assert.Equal(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(png)), texture.ContentDigest.Value);
             Assert.Equal(png.LongLength, texture.ByteLength);
 
@@ -176,7 +176,7 @@ public sealed class ClassicWorldVisualTests
     {
         string root = TestData.RepositoryRoot;
         using JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(
-            Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
+            Path.Combine(root, "content/worldrpg/imports/shared/media/classic/manifest.json")));
         return Assert.Single(manifest.RootElement.GetProperty("worldVisuals").Deserialize<List<ClassicWorldVisualManifest>>(PublishedJson.SectionRead)!);
     }
 

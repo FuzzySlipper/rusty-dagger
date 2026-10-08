@@ -34,9 +34,28 @@ rm -rf -- "$stage_dir"
 mkdir -p "$stage_dir"
 trap 'rm -rf -- "$stage_dir"' EXIT INT TERM
 cp -a "$publication_root/." "$stage_dir/"
+# A site closure carries only what is its own and references every sprite atlas from the product-wide
+# world media and the classic media group, so it is inspected with both and the atlases it names are
+# staged beside it from whichever publication carries them. The world media publication itself is read alone.
+world_media="$repo_root/content/worldrpg/imports/shared"
+classic_group="$repo_root/content/worldrpg"
+product_args=()
+if [[ "$publication_root" != "$world_media" ]]; then
+  product_args=(--shared "$world_media" --classic-group "$classic_group")
+fi
 # The workbench reads the importer's neutral inspection document, never the publication's sidecars.
 dotnet run --project "$repo_root/src/Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj" -- \
-  sprite-inspection --publication "$publication_root" --output "$stage_dir/sprite-inspection.json"
+  sprite-inspection --publication "$publication_root" "${product_args[@]}" --output "$stage_dir/sprite-inspection.json"
+node -e 'const fs = require("node:fs"); const path = require("node:path");
+const [stage, ...roots] = process.argv.slice(1);
+for (const entry of JSON.parse(fs.readFileSync(path.join(stage, "sprite-inspection.json"))).catalog.entries) {
+  const target = path.join(stage, entry.closure.relativePath);
+  if (fs.existsSync(target)) continue;
+  const source = roots.map(root => path.join(root, entry.closure.relativePath)).find(candidate => fs.existsSync(candidate));
+  if (!source) throw new Error(`no publication carries sprite atlas ${entry.closure.relativePath}`);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(source, target);
+}' "$stage_dir" "$world_media" "$classic_group"
 node -e 'const fs = require("node:fs"); fs.writeFileSync(process.argv[1], JSON.stringify({ publicationSeparationRoot: process.argv[2], authoringRoot: process.argv[3], overlayPath: process.argv[4] }) + "\n");' "$stage_dir/sprite-workbench.json" "$publication_root" "$authoring_root" "$overlay_path"
 
 exec rusty dev \

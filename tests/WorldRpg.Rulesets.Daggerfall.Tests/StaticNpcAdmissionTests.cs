@@ -319,6 +319,6 @@ public sealed class StaticNpcAdmissionTests
             source.ClassicPresentation, source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId,
             source.Portals, source.Anchors.Values.ToArray(), source.Lights, source.GroundContainerSprite,
             source.DungeonMap, source.DungeonActions, source.DungeonActionModels, building, source.Music,
-            source.AudioBundle, source.QuestMarkers, billboards, placements);
+            source.QuestMarkers, billboards, placements);
     }
 }

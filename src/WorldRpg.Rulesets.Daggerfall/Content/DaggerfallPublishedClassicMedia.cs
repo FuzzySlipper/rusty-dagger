@@ -8,8 +8,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// Admits the public classic-media inventory against the selected normalized site's descriptors.
 /// The sidecar owns source interpretation; this join gives the ruleset one source-free public
 /// path for each image, font and atlas descriptor without reopening generated bodies at session
-/// start. Audio descriptors are outside the join: their bodies are published only in the site's own
-/// closure and opened through the audio bundle its payload declares.
+/// start. Audio descriptors are outside the join: their bodies are published once in the product-wide
+/// world media publication and opened through its audio bundle.
 /// </summary>
 internal sealed class DaggerfallPublishedClassicMedia
 {

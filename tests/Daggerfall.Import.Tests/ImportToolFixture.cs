@@ -34,8 +34,12 @@ internal sealed partial class ImportToolFixture : IDisposable
     private string RmbLocation => Interior ? "Charing" : "Caarcun Manor";
     private string Authored => At("authored.json");
     private string Publication => Repo("content/worldrpg/imports/privateers-hold");
+    // The site closures reference the product-wide world media and the classic media group they were written against.
+    private string Shared => Repo("content/worldrpg/imports/shared");
+    private string ClassicGroup => Repo("content/worldrpg");
+    private ProductWorldMedia ProductMedia => ProductWorldMedia.Read(Shared, ClassicGroup);
     internal string OverlayFile => At("authoring/sprites/test.json");
-    private SpritePublicationSnapshot Sprites => SpritePublicationReader.Read(Publication);
+    private SpritePublicationSnapshot Sprites => SpritePublicationReader.Read(Publication, ProductMedia);
     private IReadOnlyList<SourceInventoryRow> Rows => SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Inventory));
 
     internal ImportToolFixture()
@@ -112,6 +116,7 @@ internal sealed partial class ImportToolFixture : IDisposable
             ["--ui-authored-assets"] = Repo("data/ui-authored-assets.json"), ["--ui-original"] = Repo("data/ui-original"),
             ["--authoring"] = name == "sprite-overlay-write" ? At("writer-authoring") : At("authoring"),
             ["--overlay"] = "sprites/test.json", ["--input"] = OverlayFile, ["--id"] = Sprites.Catalog.Entries.First().Id,
+            ["--shared"] = Shared, ["--classic-group"] = ClassicGroup,
         };
         if (name == "internal-strings") values["--label"] = PublishedSourcePath.Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv");
         List<string> args = [name];
@@ -122,6 +127,9 @@ internal sealed partial class ImportToolFixture : IDisposable
         if (name == "classic-media") args.AddRange(["--ui-authored-assets", values["--ui-authored-assets"], "--ui-original", values["--ui-original"]]);
         if (name == "cinematic-media" && CinematicKind == DaggerfallCinematicKind.Flc) args.AddRange(["--kind", "flc"]);
         if (name == "rmb-spatial" && Interior) args.AddRange(["--block-x", "1", "--block-y", "1", "--building", "0"]);
+        // A sprite command reads the site closure together with the product-wide media it references.
+        if (name.StartsWith("sprite-", StringComparison.Ordinal) && global::Daggerfall.Import.Tool.Program.Commands[name].Options.Any(option => option.Name == "--shared"))
+            args.AddRange(["--shared", Shared, "--classic-group", ClassicGroup]);
         return [.. args];
     }
 

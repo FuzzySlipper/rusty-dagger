@@ -1570,7 +1570,7 @@ public sealed record Arena2ClassicMediaPublication(
 
             byte[] wave = sounds.CreateWave(source.SourceRecordOrdinal);
             RequireArtifactQuota(wave, options, source.MediaId);
-            // The WAV bodies live below the clips root a site's audio bundle declares. The producer
+            // The WAV bodies live below the clips root of the world media audio bundle. The producer
             // still owns this closure-relative name; consumers resolve the published media identity
             // through the manifest, never by constructing a source filename.
             result.Add(new(source.MediaId, NormalizedMediaKind.Audio, $"media/audio/clips/{Slug(source.MediaId)}.wav", wave, 0, 0, null, "audio/wav"));

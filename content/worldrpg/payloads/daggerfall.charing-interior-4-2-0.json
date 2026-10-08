@@ -8,7 +8,6 @@
   "placements": [],
   "world": {
     "publicationRoot": "worldrpg/imports/charing/interior-4-2-0",
-    "audioBundle": "daggerfall.charing-interior-4-2-0-audio",
     "appearance": {
       "tint": [0.72, 0.7, 0.65, 1],
       "position": [0, 0, 0],

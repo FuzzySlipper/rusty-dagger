@@ -161,9 +161,20 @@ tool building-name-inputs --maps-file "$donor/Assets/Scripts/API/MapsFile.cs" \
 tool fighters-quest-corpus --pack "$imported" --records "$records" --out content/worldrpg/payloads/daggerfall.quests.fighters.json
 tool classic-quest-corpora --pack "$imported" --records "$records" --out content/worldrpg/payloads
 
-# 4. Site closures. Each names the published music cues and publishes media for every actor the imported
-#    mobile catalog lets the runtime spawn; its source manifest (the corpus scanned against the inventory)
-#    goes to the import records.
+# 4. The product-wide world media every site closure references: every mesh, material texture, billboard
+#    and actor atlas, terrain texture, the classic sidecar and its audio clips, published once. It reads the
+#    imported mobile and faction catalogs for the actors and flats the runtime may spawn anywhere, the music
+#    manifest for the cues every site names, and the classic media group so its images are not copied.
+world_media=content/worldrpg/imports/shared
+classic_group=content/worldrpg
+tool world-media --arena2 "$arena2" --ui-authored-assets "$ui_assets" --ui-original "$ui_original" --inventory "$inventory" \
+  --pack "$imported" --music-manifest "$music_manifest" --classic-group "$classic_group" --out "$world_media" \
+  --source-manifest import-records/world-media.sources.json
+
+# 5. Site closures. Each names the published music cues and the actors the imported mobile catalog lets the
+#    runtime spawn, and writes only what is its own: every body and shared sidecar entry is referenced from
+#    the world media publication above. Its source manifest (the corpus scanned against the inventory) goes
+#    to the import records.
 site_overlay() {
   local overlay="sprites/$1.json"
   if [[ -n "$sprite_authoring" && -f "$sprite_authoring/$overlay" ]]; then
@@ -171,7 +182,7 @@ site_overlay() {
   fi
 }
 site_common=(--arena2 "$arena2" --ui-authored-assets "$ui_assets" --ui-original "$ui_original" --inventory "$inventory"
-  --pack "$imported" --music-manifest "$music_manifest")
+  --pack "$imported" --music-manifest "$music_manifest" --shared "$world_media" --classic-group "$classic_group")
 site_records=import-records/sites
 mapfile -t overlay_args < <(site_overlay privateers-hold)
 tool write "${site_common[@]}" --out content/worldrpg/imports/privateers-hold \
@@ -217,7 +228,7 @@ for ship in small-ship large-ship; do
     --source-manifest "$site_records/$ship.sources.json" --region 31 --location "Your Ship" --location-index "$ship_index" --profile exterior
 done
 
-# 5. Reconcile all current producer citations and raw-record ledgers. This is import coverage,
+# 6. Reconcile all current producer citations and raw-record ledgers. This is import coverage,
 #    not runtime parity certification; unknown identities and dangling required references fail.
 tool source-coverage --arena2 "$arena2" --inventory "$inventory" --repository "$PWD" \
   --output import-records/source-coverage.json

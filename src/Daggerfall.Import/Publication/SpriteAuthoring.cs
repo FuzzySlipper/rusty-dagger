@@ -325,9 +325,14 @@ public static class SpritePublicationReader
         ArgumentException.ThrowIfNullOrWhiteSpace(publicationDirectory);
         byte[] manifestBytes = ReadRequired(publicationDirectory, ImportPublicationManifestSerializer.ManifestRelativePath);
         byte[] dungeonBytes = ReadRequired(publicationDirectory, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath);
+        DungeonMediaManifestSidecar dungeon = Deserialize<DungeonMediaManifestSidecar>(dungeonBytes, "dungeon sprite sidecar");
+        if (dungeon.Shared is not null)
+        {
+            throw new FormatException("This site closure references the product-wide world media; read it together with the world media publication and the classic media group.");
+        }
+
         byte[] classicBytes = ReadRequired(publicationDirectory, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath);
         CanonicalImportManifest manifest = Deserialize<CanonicalImportManifest>(manifestBytes, "publication manifest");
-        DungeonMediaManifestSidecar dungeon = Deserialize<DungeonMediaManifestSidecar>(dungeonBytes, "dungeon sprite sidecar");
         ClassicMediaManifestSidecar classic = Deserialize<ClassicMediaManifestSidecar>(classicBytes, "classic sprite sidecar");
         try
         {
@@ -350,6 +355,62 @@ public static class SpritePublicationReader
         return Read(paths.Distinct(StringComparer.Ordinal)
             .Select(path => new SpritePublicationFile(path, ReadRequired(publicationDirectory, path)))
             .ToArray());
+    }
+
+    /// <summary>
+    /// Reads a site closure written against the product-wide world media: its own sidecar entries joined to
+    /// the product-wide entries it admits, its own manifest joined to the product-wide artifacts its
+    /// descriptors name, and each body read from whichever publication carries it. The snapshot is the one
+    /// <see cref="FromPlan"/> builds from the complete closure before it was reduced, so an overlay authored
+    /// against the written closure validates when the site is regenerated.
+    /// </summary>
+    public static SpritePublicationSnapshot Read(string publicationDirectory, ProductWorldMedia product)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicationDirectory);
+        ArgumentNullException.ThrowIfNull(product);
+        byte[] manifestBytes = ReadRequired(publicationDirectory, ImportPublicationManifestSerializer.ManifestRelativePath);
+        byte[] dungeonBytes = ReadRequired(publicationDirectory, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath);
+        CanonicalImportManifest own = Deserialize<CanonicalImportManifest>(manifestBytes, "publication manifest");
+        DungeonMediaManifestSidecar dungeon;
+        ClassicMediaManifestSidecar classic;
+        CanonicalImportManifest manifest;
+        SpriteInspectionCatalog catalog;
+        HashSet<string> ownPaths;
+        try
+        {
+            own.Validate();
+            ValidateManifestArtifact(own, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes);
+            ownPaths = own.Artifacts.Select(artifact => artifact.RelativePath).ToHashSet(StringComparer.Ordinal);
+            if (ownPaths.Contains(Arena2MediaBundlePublication.ClassicMediaManifestRelativePath))
+            {
+                byte[] classicBytes = ReadRequired(publicationDirectory, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath);
+                ValidateManifestArtifact(own, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes);
+                classic = Deserialize<ClassicMediaManifestSidecar>(classicBytes, "classic sprite sidecar");
+            }
+            else classic = product.Classic;
+
+            dungeon = product.Rehydrate(Deserialize<DungeonMediaManifestSidecar>(dungeonBytes, "dungeon sprite sidecar"));
+            ImportPublicationManifestArtifact[] referenced = [.. dungeon.Media.Resources.Concat(classic.Media.Resources)
+                .Select(resource => resource.RelativePath)
+                .Distinct(StringComparer.Ordinal)
+                .Where(path => !ownPaths.Contains(path))
+                .Select(path => product.TryGetArtifact(path, out ImportPublicationManifestArtifact? artifact)
+                    ? artifact
+                    : throw new FormatException($"Published media artifact '{path}' is carried by neither the site closure nor the product-wide media."))];
+            manifest = own with { Artifacts = [.. own.Artifacts, .. referenced] };
+            catalog = SpriteInspectionCatalogBuilder.Create(manifest, dungeon, classic);
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NullReferenceException or OverflowException)
+        {
+            throw new FormatException("The sprite publication metadata violates the canonical contract.", exception);
+        }
+
+        NormalizedMediaDescriptor[] descriptors = [.. dungeon.Media.Resources, .. classic.Media.Resources];
+        VerifyMediaArtifacts(descriptors.Select(descriptor => descriptor.RelativePath).Distinct(StringComparer.Ordinal).ToDictionary(
+            path => path,
+            path => (ReadOnlyMemory<byte>)(ownPaths.Contains(path) ? ReadRequired(publicationDirectory, path) : product.ReadBody(path)),
+            StringComparer.Ordinal), descriptors);
+        return new(catalog, SpriteAuthoringBasis.Compute(manifest, catalog), manifest);
     }
 
     /// <summary>Builds the same authoring identity from an in-memory generated plan before publication.</summary>

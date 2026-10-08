@@ -44,16 +44,15 @@ internal sealed class DaggerfallAudioBundle
     }
 
     /// <summary>
-    /// Constructs the audio bundle a site declares, rooted at the audio clips under its publication root.
+    /// Constructs a site's audio through the one product-wide world media bundle: every site's sidecar names
+    /// clips the world media publication carries once, so the site contributes the cue mapping and the
+    /// bodies stay in that bundle.
     /// </summary>
     internal static DaggerfallAudioBundle ForProfile(ProductContent content, DaggerfallSiteProfile profile)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(profile);
-        string root = profile.ProfileKey.LogicalId;
-        string bundleId = profile.AudioBundle
-            ?? throw new InvalidOperationException($"World profile '{root}' declares no audio bundle, so its audio cues could not be opened.");
-        return new DaggerfallAudioBundle(content, bundleId, $"{root}/media/audio/clips/", profile.Audio);
+        return new DaggerfallAudioBundle(content, DaggerfallWorldMedia.AudioBundleId, $"{DaggerfallWorldMedia.AudioRoot}/", profile.Audio);
     }
 
     /// <summary>Constructs the one music bundle every site's cues are opened through.</summary>

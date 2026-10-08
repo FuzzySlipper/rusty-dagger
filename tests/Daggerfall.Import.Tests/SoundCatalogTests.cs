@@ -166,7 +166,7 @@ public sealed class SoundCatalogTests
             // A site closure delivers that same artifact under its closure-relative name, below the
             // clips root its audio bundle declares: the samples come from the same archive ordinal
             // whichever closure cuts them.
-            Assert.Equal(artifact.Bytes.ToArray(), File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "imports", "privateers-hold", resource.RelativePath)));
+            Assert.Equal(artifact.Bytes.ToArray(), File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "imports", "shared", resource.RelativePath)));
         }
 
         // The product-wide group carries neither clips nor a catalog of them: each site stages and opens

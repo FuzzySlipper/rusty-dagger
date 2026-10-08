@@ -333,7 +333,6 @@ public sealed class DaggerfallPopulationSessionTests
             exterior.DungeonActionModels,
             exterior.InteriorBuilding,
             exterior.Music,
-            exterior.AudioBundle,
             exterior.QuestMarkers,
             billboardSprites: billboardSprites,
             // SameContentAt intentionally trims optional content for generic fixtures. Keep the

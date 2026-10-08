@@ -20,7 +20,7 @@ must carry a base profile and every profile of each admitted location variant.
 Quest `worldupdate location` selects that variant for the session; `variant -`
 returns to the base. The existing site lifecycle applies the choice on the next
 projection admission, including save restore. Scenery variants retain actor,
-action, dungeon-map and inventory-container topology and their audio bundle.
+action, dungeon-map and inventory-container topology and their audio.
 Changes to those owners, block/building variants and new-location variants are
 currently reported as unsupported. Variant payloads and normalized closures
 follow the same authored/generated ownership rules as other site packs.
@@ -153,7 +153,7 @@ silently omitted. This manifest contains metadata only, not game payloads.
 | CNT-020 | Main/guild/misc UI and service art | `MAIN*.IMG` 6; `GILD*.IMG` 2; `BANK*.IMG` 4; `SHOP*.IMG` 9; `TALK*.IMG` 4; `REST*.IMG` 3; `INFO00I0.IMG` 1; `INVE*.IMG` 17 plus `INVE16I0.CIF` 1; `ITEM*.IMG` 2; `BOOK00I0.IMG` 1; `SCRL*` 12 (2 GFX and 10 IMG) | Current import selects four MAIN files plus INFO/INVE inputs and selected authored UI; guild/bank/shop/talk/rest/item/book/scroll families are not complete | `current-partial`: enumerate every file/record and bind it to thin DOM projections and semantic actions owned by the relevant gameplay task. Exact DFU window/widget topology is excluded. |
 | CNT-021 | Character and NPC art | `BODY*` 32 IMG; `FACE00`–`FACE07` and `FACE10`–`FACE17` 16 CIF plus `FACES.CIF`; `CHAR*` 9 IMG; `CUST*` 10 IMG; `NITE*` 4 IMG; `SCBG*` 9 IMG; `CEL` 3 (`MAGE`, `ROGUE`, `WARRIOR`); `BSS` 3; `KIDS00I0.CIF` child escort portraits | Current publication contains selected dungeon actor media and selected authored UI, not the full character/social set | `pending-import`/`uninspected`: preserve source identity and determine which records are required for race, gender, face, class, NPC, faction and story presentation. |
 | CNT-022 | World map, automap, travel and town art | `FMAP*.IMG` 54 plus `FMAP_PAL.COL`; `AMAP*.IMG` 2; `TMAP00I0.IMG` 1; `TRAV*` 12; `TOWN00I0.IMG` 1 | Automap and FMAP art are published as `map.*` UI entries; the travel map draws `TRAV0I00` and the region `FMAP` sheets from the session's art block, with the ruleset placing each sheet over the world map; the automap, town caption and remaining travel chrome stay unread | `current-partial`: enumerate regional/map/travel records and semantic actions; map art does not replace world/map data. |
-| CNT-023 | Ordinary sound: `DAGGER.SND` | 459 numeric BSA clips (`0x0200` header), 7,661,766 bytes | `SoundArchive` inventories every source record; classic publication admits contact/death cues and mobile, weapon and parry sound families through normalized media identities. Each site closure publishes those clips under its own audio bundle; the product-wide classic media group publishes no audio, and the importer's catalog of all 459 records is a `classic-media` report, not published content | `current-partial`: enumerate every clip ID/ordinal and usage/disposition, with ordinary runtime audio included in the target. |
+| CNT-023 | Ordinary sound: `DAGGER.SND` | 459 numeric BSA clips (`0x0200` header), 7,661,766 bytes | `SoundArchive` inventories every source record; classic publication admits contact/death cues and mobile, weapon and parry sound families through normalized media identities. The product-wide world media publication carries those clips once, under the one audio bundle the Host declares; the classic media group publishes no audio, and the importer's catalog of all 459 records is a `classic-media` report, not published content | `current-partial`: enumerate every clip ID/ordinal and usage/disposition, with ordinary runtime audio included in the target. |
 | CNT-024 | Fonts: `FONT0000.FNT`–`FONT0004.FNT` | 5 files; current `FntDecoder` uses the fixed 240-glyph/32-byte record shape | Only `FONT0003.FNT` is in the current classic media input | `current-partial`: enumerate all five glyph tables and their text/UI consumers. |
 | CNT-025 | Original video/cinematic media: `ANIM0000.VID`–`ANIM0015.VID` and `DAG2.VID` | 17 VID files; `DAG2.VID` is retained as a distinct cinematic asset and is the last of the donor's new-game opening sequence, which plays `ANIM0000.VID`, then `ANIM0011.VID`, then `DAG2.VID`; the remaining fourteen files are not yet bound to a caller | All 17 VID files are published as cinematics; the new-game opening sequence plays them through Engine video, and the remaining fourteen have no caller | `current-partial`: preserve metadata and story hooks for all 17 files, including explicit story/ending bindings where the donor calls for them; raw media shipping is a separate product decision. The new-game opening sequence is a resolved binding and is a cinematic rather than a published UI screen, so no screen mode owns it. |
 | CNT-026 | Daedric/artifact cinematic media: `AZURA.FLC`, `BOETHIAH.FLC`, `CLAVICUS.FLC`, `HERMAEUS.FLC`, `HIRCINE.FLC`, `MALACATH.FLC`, `MEHRUNES.FLC`, `MEPHALA.FLC`, `MERIDIA.FLC`, `MOLAGBAL.FLC`, `NAMIRA.FLC`, `NOCTURNA.FLC`, `PERYITE.FLC`, `SANGUINE.FLC`, `SHEOGRTH.FLC`, `VAERNIMA.FLC` | 16 FLC files | No current FLC import/presentation | `pending-import`: retain all source identities and determine story/artifact presentation contracts; do not silently omit them because they are not in the map-only inventory. |
@@ -294,7 +294,7 @@ Daggerfall Unity checkout (`--donor`/`DAGGER_DONOR_ROOT`), the song folder `loca
 (`--sound`) and FFmpeg, checks that each is present before writing anything, removes the generated
 files, and runs the import tool's commands in their dependency order: music and classic media, the
 imported payload's sections with the block document and the import records, the quest corpus
-payloads, then the four site closures. Two runs at the same importer source and FFmpeg build write
+payloads, the product-wide world media publication, then the site closures. Two runs at the same importer source and FFmpeg build write
 identical bytes. A clone that has not run it builds and runs the content-free suites, but staging
 the product (`rusty dev`, `rusty build`, `StageRustyEngineCoreClrProduct`) stops with a message
 naming the script, `scripts/verify.sh` skips the ruleset suite and staging with the reason printed,
@@ -304,12 +304,20 @@ Generated, listed in `.gitignore` syntax in `scripts/generated-content-paths.txt
 copies; an architecture law keeps the copy complete, and the script fails a run that leaves a
 generated file Git would pick up):
 
-- `content/worldrpg/imports/**` — the Privateer's Hold, Castle Necromoghan and Charing
-  exterior/interior closures (`write`, `rmb-spatial`). Each carries actor media for every mobile the
-  imported `mobiles` catalog lets the runtime spawn, not only the ones its placements name.
+- `content/worldrpg/imports/shared/` — the product-wide world media publication (`world-media`):
+  every mesh the classic mesh archive serves, a material texture and a billboard atlas for every
+  usable record of every supplied texture leaf, actor media for every mobile the imported `mobiles`
+  catalog lets the runtime spawn, the runtime terrain textures, the classic sidecar with its audio
+  clips (the Host's `daggerfall.world-audio` bundle) and missile world visuals, and its own
+  `import-manifest.json`. It is published once and scales to any number of closures.
+- `content/worldrpg/imports/**` (other directories) — the Privateer's Hold, Castle Necromoghan,
+  cemetery, tomb, ship and Charing exterior/interior closures (`write`, `rmb-spatial`, with
+  `--shared` naming the world media publication). Each carries only what is its own: the normalized
+  document, spatial and resource artifacts, its geometry index and a dungeon sidecar that binds its
+  material slots and names the product-wide entries it admits.
 - `content/worldrpg/media/**` — classic media, character media, music and cinematics
   (`classic-media`, `character-presentation`, `music-media`, `cinematic-media`). The classic group
-  carries no audio: the sound clips are published only inside each site closure.
+  carries no audio; the world media publication and the site closures reference its images.
 - `content/worldrpg/payloads/daggerfall.imported.json` — the `daggerfall.imported` pack's payload:
   `catalogs`, `itemTemplateLedger`, `characterPresentation`, `locations`, `magic`, `mobiles`, `text`,
   `names`, `rumors`, `biographies`, `books`, `climate`, `politic`, `factions`, `terrain`,
@@ -328,9 +336,9 @@ generated file Git would pick up):
   root: `daggerfall.import-records.json` (the mesh inventory `geometry` and the original quest-source
   selections `questOriginalSources` the quest corpus payloads are built from),
   `daggerfall.blocks.json` (`blocks --document`: the complete block document, which `geometry` reads
-  for mesh use sites) and `sites/SITE.sources.json` (each site closure's source manifest: the supplied
+  for mesh use sites), `sites/SITE.sources.json` (each site closure's source manifest: the supplied
   corpus scanned against the documented inventory, written by `write` and `rmb-spatial` through
-  `--source-manifest`).
+  `--source-manifest`) and `world-media.sources.json` (the same for the world media publication).
 
 The base definitions come from two packs. `daggerfall.base` is authored and tracked: its payload
 `content/worldrpg/payloads/daggerfall.base.json` carries `ruleset`, `vocabulary`,
@@ -355,16 +363,18 @@ and the importer's tracked inputs: the source inventory, `data/ui-authored-asset
 operator's `sprites/SITE.json` overlays to the dungeon sites. Third-party origins are in
 `THIRD_PARTY_NOTICES.md`.
 
-The Host stages the whole `content/` directory as the runtime content root. One duplication there is
-known and kept: each site closure carries its own classic media (fonts, UI, maps, combat, effect and
-world-visual art and its classic sidecar, about 3.7 MB) beside the product-wide
-`content/worldrpg/media/` group. Audio is not duplicated: a site's clips exist only in its closure,
-staged as the audio bundle its payload declares, which is the only place a session opens them. A closure is self-contained and hash-verified by its own
-`import-manifest.json`; its classic sidecar is built with that site's authored sprite overlays and
-with the missile world visuals checked against that site's geometry publication; and the sprite
-workbench inspects and authors a site's classic sprites from its closure. Publishing the classic
-media once would make closures reference artifacts outside themselves and move overlays from
-per-site to product-wide, which is a change to the closure contract rather than a deduplication.
+The Host stages the whole `content/` directory as the runtime content root, and nothing in it is
+copied per site. A site closure names a shared artifact by the same closure-relative path it would
+have carried; the ruleset resolves such a path in the site's own `import-manifest.json`, then in the
+world media publication's, then in the classic media group's inventory, and verifies the digest
+there. The importer builds each site's complete closure in memory, then writes only what differs
+from the product-wide media: a body the product-wide media carries with other bytes, or a body it does
+not carry at all, stops the write rather than being copied. Authored sprite overlays stay per site:
+an overlaid descriptor, billboard or actor entry differs from the product-wide one, so the site keeps
+that entry (and a classic sidecar that differs) in its own closure, while the atlas bytes, which an
+overlay never changes, stay shared. The sprite tools read a site closure together with the
+product-wide media (`--shared`, `--classic-group`) and see the same complete closure the site's
+regeneration validates overlays against.
 
 Every published source path is written in one vocabulary (`PublishedSourcePath`): an Arena2 file is
 `arena2/NAME` and a Daggerfall Unity file `daggerfall-unity/PATH`, as the documented inventory spells

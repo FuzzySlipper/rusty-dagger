@@ -263,7 +263,6 @@ public sealed class DaggerfallRestSessionTests
         [],
         null,
         source.Music,
-        source.AudioBundle,
         source.QuestMarkers,
         source.BillboardSprites,
         [],

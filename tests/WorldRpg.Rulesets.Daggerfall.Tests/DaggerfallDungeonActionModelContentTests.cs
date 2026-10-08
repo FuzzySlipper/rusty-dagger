@@ -5,6 +5,7 @@ using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -60,11 +61,12 @@ public sealed class DaggerfallDungeonActionModelContentTests
         Dictionary<string, ContentSha256> artifacts = new(StringComparer.Ordinal) { [visualPath] = hash };
         NormalizedMaterial[] materials = [new(7, "worldrpg/materials/stone.png", hash, "material/stone")];
         DaggerfallContentDiagnostics diagnostics = new();
+        // The fixture closure carries its own visual; content without the world media publication reads as none.
+        using DaggerfallWorldMedia product = DaggerfallWorldMedia.Read(new ProductContent(contentFiles));
 
         DaggerfallDungeonActionModelDefinition model = Assert.Single(DaggerfallSiteContent.ReadNormalizedActionModels(
             normalized,
-            publicationRoot,
-            artifacts,
+            new DaggerfallClosureArtifacts(publicationRoot, artifacts, product),
             files,
             materials,
             diagnostics));
@@ -119,6 +121,7 @@ public sealed class DaggerfallDungeonActionModelContentTests
             .Select(path => new ProductContentFile(
                 Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')),
                 File.ReadAllBytes(path)))
+            .Concat(ClassicGroupFiles(root))
             .ToArray();
         return new ProductContent(files);
     }

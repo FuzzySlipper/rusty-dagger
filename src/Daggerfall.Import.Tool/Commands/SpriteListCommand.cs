@@ -6,11 +6,11 @@ namespace Daggerfall.Import.Tool.Commands;
 /// <summary>Lists a site closure's sprite inspection entries, optionally of one kind.</summary>
 internal static class SpriteListCommand
 {
-    public static ToolCommand Command { get; } = new("sprite-list", [SpriteOverlays.Publication, CommandOption.Optional("--kind", "KIND")], Run);
+    public static ToolCommand Command { get; } = new("sprite-list", [.. SpriteOverlays.PublicationOptions, CommandOption.Optional("--kind", "KIND")], Run);
 
     private static int Run(CommandArguments args)
     {
-        IEnumerable<SpriteInspectionEntry> entries = SpritePublicationReader.Read(SpriteOverlays.PublicationDirectory(args)).Catalog.Entries;
+        IEnumerable<SpriteInspectionEntry> entries = SpriteOverlays.ReadPublication(args).Catalog.Entries;
         if (args.Optional("--kind") is { } kindName)
         {
             if (!Enum.TryParse(kindName, ignoreCase: true, out SpriteInspectionKind kind) || !Enum.IsDefined(kind))

@@ -49,7 +49,7 @@ internal static class RmbSpatialCommand
             SiteInputs.ParseLocation(args),
             building,
             SiteInputs.Media(args, AuthoredUi.Profile(args, required: true)), locationIndex);
-        plan = plan.WithInvocation(SiteInputs.Invocation(args));
+        plan = SiteInputs.Reference(args, plan.WithInvocation(SiteInputs.Invocation(args)));
         ImportPublicationWriter.Write(plan, Path.GetFullPath(args[SiteInputs.Output.Name]));
         SiteInputs.WriteSourceManifest(args, plan);
         Console.WriteLine($"rmb spatial: {result.Layout.LocationName} {args[Profile.Name]}, {result.Document.Meshes.Count} meshes, {result.SpatialPublication.Navigation.Cells.Count} navigation cells, {plan.Artifacts.Count} closure artifacts");

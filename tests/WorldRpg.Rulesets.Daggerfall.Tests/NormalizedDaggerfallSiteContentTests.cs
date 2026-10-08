@@ -7,6 +7,7 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -114,16 +115,16 @@ public sealed class NormalizedDaggerfallSiteContentTests
         // evidence that the descriptor's digests are the import manifest's own.
         DaggerfallMissileVisual visual = Assert.Single(inputs.ClassicPresentation.WorldVisuals);
         Assert.Equal("visual.missile.arrow", visual.MediaId);
-        Assert.Equal("worldrpg/imports/privateers-hold/geometry/mesh-99800.rstatmsh", visual.Path);
+        Assert.Equal("worldrpg/imports/shared/geometry/mesh-99800.rstatmsh", visual.Path);
         Assert.Equal([0u, 1u], visual.Textures.Select(texture => texture.MeshSlot));
         Assert.All(visual.Textures, texture =>
-            Assert.StartsWith("worldrpg/imports/privateers-hold/media/world-visuals/", texture.TexturePath, StringComparison.Ordinal));
+            Assert.StartsWith("worldrpg/imports/shared/media/world-visuals/", texture.TexturePath, StringComparison.Ordinal));
         Assert.Equal(2, visual.Textures.Select(texture => texture.TextureSha256).Distinct().Count());
         Assert.All(visual.Textures, texture => Assert.NotEqual(default, texture.TextureSha256));
 
         // The published mesh selects two textures, and the artifact states the same two slots.
         using EngineBinaryContent.StaticMesh artifact = EngineBinaryContent.ReadStaticMesh(
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/geometry/mesh-99800.rstatmsh")));
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/shared/geometry/mesh-99800.rstatmsh")));
         Assert.Equal(2, artifact.Root.GetProperty("materialSlots").GetArrayLength());
 
         // The visual's textures travel with the visual rather than through the site's static-mesh
@@ -196,7 +197,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        const string classicRelativePath = "worldrpg/imports/privateers-hold/media/classic/manifest.json";
+        const string classicRelativePath = "worldrpg/imports/shared/media/classic/manifest.json";
         string contentRoot = Path.Combine(root, "content");
         ProductContentFile[] files = Directory.GetFiles(contentRoot, "*", SearchOption.AllDirectories)
             .Select(path =>
@@ -226,7 +227,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
     private static ProductContent ContentWithMutatedClassicVisual(string root, Action<JsonObject> mutate)
     {
         string contentRoot = Path.Combine(root, "content");
-        const string classicRelativePath = "worldrpg/imports/privateers-hold/media/classic/manifest.json";
+        const string classicRelativePath = "worldrpg/imports/shared/media/classic/manifest.json";
         ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports"), "*", SearchOption.AllDirectories)
             .Select(path =>
             {
@@ -241,6 +242,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
 
                 return new ProductContentFile(Encoding.UTF8.GetBytes(relative), bytes);
             })
+            .Concat(ClassicGroupFiles(root))
             .ToArray();
         return new ProductContent(files);
     }
@@ -255,7 +257,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
 
         Assert.NotNull(inputs.GroundContainerSprite);
         NormalizedBillboardSprite visual = inputs.GroundContainerSprite!;
-        Assert.Equal("worldrpg/imports/privateers-hold/media/dungeon/billboards/texture-216-0.png", visual.TexturePath);
+        Assert.Equal("worldrpg/imports/shared/media/dungeon/billboards/texture-216-0.png", visual.TexturePath);
         Assert.Equal(new Vector2(.5F, .5F), visual.Pivot);
         Assert.Equal(new Vector2(.975F, .65F), visual.Size);
         Assert.Equal(0u, visual.InitialFrameId);
@@ -348,7 +350,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
-        using JsonDocument media = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/dungeon/manifest.json")));
+        using JsonDocument media = JsonDocument.Parse(CompleteDungeonSidecar(root, "worldrpg/imports/privateers-hold").ToJsonString());
 
         JsonElement actor = media.RootElement.GetProperty("actors").EnumerateArray().Single(value => value.GetProperty("mobileId").GetInt32() == 0);
         Vector2 worldSize = Vector(actor.GetProperty("worldSize"));
@@ -437,6 +439,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
         string contentRoot = Path.Combine(root, "content");
         ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports"), "*", SearchOption.AllDirectories)
             .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), File.ReadAllBytes(path)))
+            .Concat(ClassicGroupFiles(root))
             .ToArray();
         return new ProductContent(files);
     }

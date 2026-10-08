@@ -14,7 +14,7 @@ public sealed class MapMediaLocationJoinTests
     {
         string root = TestData.RepositoryRoot;
         JsonDocument pack = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.imported.json")));
-        JsonDocument sidecar = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
+        JsonDocument sidecar = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/shared/media/classic/manifest.json")));
 
         // The normalized regions the locations task publishes.
         HashSet<int> regions = [.. pack.RootElement.GetProperty("locations").GetProperty("regions").EnumerateArray().Select(region => region.GetProperty("region").GetInt32())];
@@ -34,7 +34,7 @@ public sealed class MapMediaLocationJoinTests
                 JsonElement image = images.EnumerateArray().Single(entry => entry.GetProperty("mediaId").GetString() == mediaId);
                 Assert.Contains(id, image.GetProperty("regions").EnumerateArray().Select(entry => entry.GetInt32()));
                 string path = Assert.Contains(mediaId, descriptors);
-                Assert.True(File.Exists(Path.Combine(root, "content/worldrpg/imports/privateers-hold", path)), $"Published map image '{mediaId}' has no bytes at '{path}'.");
+                Assert.True(File.Exists(Path.Combine(root, "content/worldrpg", path)), $"Published map image '{mediaId}' has no bytes at '{path}'.");
                 joined++;
             }
         }

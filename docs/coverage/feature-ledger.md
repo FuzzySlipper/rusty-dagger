@@ -153,7 +153,7 @@ contract and decision register; Den owns tasks, their ID mapping and dependencie
 | F117 | Sound importer | A | 3 / I,E | F117 | Reuse offline sound decoder/publication; exclude Unity AudioClip importer and use Engine playback. |
 | F118 | Ambient audio/visual effects | M | 8 / D,P,E | F118 | Ambient selection/timing/lightning cues via game state and Engine audio/appearance, not a second timer. |
 | F119 | Material/image importer | A | 3 / I,E | F119 | Reuse texture/palette/image normalization; exclude Unity materials and material reader topology. |
-| F120 | Mesh importer | A | 3 / I,E | F120 | Reuse ARCH3D/RDB decoding/publication; exclude Unity Mesh objects. Remaining (I,P): normalized publication of block-referenced models outside the admitted site closures. |
+| F120 | Mesh importer | A | 3 / I,E | F120 | Reuse ARCH3D/RDB decoding/publication; exclude Unity Mesh objects. The product-wide world media publication carries every mesh the archive serves, once, and site closures reference it. |
 | F121 | Texture archive reader | E | 3 / I,P | F121 | Texture archive decoding and publication for admitted sites; no Texture2D runtime reader. Remaining (I,P): archives used by block-referenced models, now marked unused, for the supported corpus. |
 | F122 | General image reader | E | 3 / I,P,U | F122 | Normalize required image/UI records with current IMG/palette/media paths; adapt DOM presentation. Remaining (I,P,U): spell icons (ICON00I0.IMG), compass images and CMPA BSS banks. |
 | F123 | Model combiner | A | 3 / I,E | F123 | Reuse offline geometry publication and Engine resource batching where applicable; no donor ModelCombiner class port. |

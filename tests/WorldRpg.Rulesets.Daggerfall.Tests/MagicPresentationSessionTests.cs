@@ -128,9 +128,9 @@ public sealed class MagicPresentationSessionTests
         internal Fixture()
         {
             var site=composition.StartSite; BundleContentFake bundles=new();
-            string prefix=site.ProfileKey.LogicalId+"/media/audio/clips/";
+            string prefix=DaggerfallWorldMedia.AudioRoot+"/";
             foreach(var clip in site.Audio)
-                bundles.Add(site.AudioBundle!,clip.Path[prefix.Length..],File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot,"content",clip.Path)));
+                bundles.Add(DaggerfallWorldMedia.AudioBundleId,clip.Path[prefix.Length..],File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot,"content",clip.Path)));
             ProductContent content=new(Array.Empty<ProductContentFile>(),bundles);
             composition=composition with { Audio=new DaggerfallSiteAudioBundles(content,new DaggerfallSiteProfiles([site])) };
             Engine=CreateEngine();Session=DaggerfallSession.StartNew(Engine.Context,composition);

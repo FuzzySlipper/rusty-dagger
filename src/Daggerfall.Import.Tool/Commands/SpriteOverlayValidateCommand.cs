@@ -7,14 +7,14 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class SpriteOverlayValidateCommand
 {
     public static ToolCommand Command { get; } = new("sprite-overlay-validate",
-        [SpriteOverlays.Publication, SpriteOverlays.Authoring, SpriteOverlays.Overlay], Run);
+        [.. SpriteOverlays.PublicationOptions, SpriteOverlays.Authoring, SpriteOverlays.Overlay], Run);
 
     private static int Run(CommandArguments args)
     {
         string publicationDirectory = SpriteOverlays.PublicationDirectory(args);
         string authoring = SpriteOverlays.AuthoringDirectory(args);
         string overlayPath = SpriteOverlays.OverlayPath(args);
-        SpritePublicationSnapshot publication = SpritePublicationReader.Read(publicationDirectory);
+        SpritePublicationSnapshot publication = SpriteOverlays.ReadPublication(args);
         SpriteAuthoredOverlayStore.ValidateRootSeparation(publicationDirectory, authoring);
         SpriteAuthoredOverlayDocument overlay = SpriteAuthoredOverlayStore.Read(SpriteOverlays.ReadBytes(authoring, overlayPath));
         SpriteAuthoredOverlayStore.Validate(overlay, publication.Catalog, publication.AuthoringBasisDigest);

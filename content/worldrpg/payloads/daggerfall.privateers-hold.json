@@ -477,7 +477,6 @@
   ],
   "world": {
     "publicationRoot": "worldrpg/imports/privateers-hold",
-    "audioBundle": "daggerfall.privateers-hold-audio",
     "appearance": {
       "tint": [
         0.72,

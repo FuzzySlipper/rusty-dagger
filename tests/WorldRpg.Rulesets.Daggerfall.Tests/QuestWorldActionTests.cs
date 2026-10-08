@@ -153,7 +153,7 @@ public sealed class QuestWorldActionTests
         source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites,
         source.Audio, source.ClassicPresentation, source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId,
         source.Portals, source.Anchors.Values.ToArray(), [new("variant-light", new(1, 2, 3), 8, 17, Vector3.One)], source.GroundContainerSprite, source.DungeonMap,
-        source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, source.Music, source.AudioBundle, markers ?? source.QuestMarkers, source.BillboardSprites,
+        source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, source.Music, markers ?? source.QuestMarkers, source.BillboardSprites,
         source.StaticNpcs, source.WaterVolumes, source.TerrainTextures, source.Population)
         { VariantName = "lit", VariantBaseLogicalId = source.ProfileKey.LogicalId, AmbientZones = source.AmbientZones, PropertyContainers = source.PropertyContainers };
     private static void Drop(SanguineRoseSessionTests.Fixture f, ulong entity) => f.Submit(new { action = "inventory-drop", revision = f.Engine.PublishedNested("inventory", "revision"), item = $"unique:{entity}", amount = 1 });

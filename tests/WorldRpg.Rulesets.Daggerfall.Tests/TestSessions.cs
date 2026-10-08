@@ -102,7 +102,39 @@ internal static class TestSessions
 
     internal static NormalizedActorSprite SpriteFor(DaggerfallSiteProfile inputs, string actorId) => inputs.ActorSprites.First(pair => inputs.Project.Actors[pair.Key].ActorId.Value == actorId).Value;
 
-    internal static ProductContent ImportContent(string root) => ContentAt(root, "worldrpg/imports/privateers-hold");
+    /// <summary>
+    /// Privateer's Hold's closure with the product-wide media it references: the world media publication
+    /// and the classic media group's inventory and the artifacts it lists.
+    /// </summary>
+    internal static ProductContent ImportContent(string root) => new(
+        ContentAt(root, "worldrpg/imports/privateers-hold").Files.ToArray().Concat(ProductMediaFiles(root)).ToArray());
+
+    /// <summary>
+    /// The eager product-wide media every site closure references: every world media artifact other than
+    /// the audio clips its bundle serves, and the classic media group's inventory with the artifacts it lists.
+    /// </summary>
+    internal static IEnumerable<ProductContentFile> ProductMediaFiles(string root)
+    {
+        string contentRoot = Path.Combine(root, "content");
+        foreach (string file in TestContentFiles.AllFiles(Path.Combine(contentRoot, DaggerfallWorldMedia.Root)))
+        {
+            string relative = Path.GetRelativePath(contentRoot, file).Replace(Path.DirectorySeparatorChar, '/');
+            if (!relative.StartsWith(DaggerfallWorldMedia.AudioRoot + "/", StringComparison.Ordinal))
+                yield return new ProductContentFile(Encoding.UTF8.GetBytes(relative), TestContentFiles.Read(file));
+        }
+
+        foreach (ProductContentFile file in ClassicGroupFiles(root)) yield return file;
+    }
+
+    /// <summary>The classic media group's inventory and the artifacts it lists, which site closures reference.</summary>
+    internal static IEnumerable<ProductContentFile> ClassicGroupFiles(string root)
+    {
+        string contentRoot = Path.Combine(root, "content");
+        yield return new ProductContentFile(Encoding.UTF8.GetBytes(DaggerfallWorldMedia.ClassicInventoryPath),
+            TestContentFiles.Read(Path.Combine(contentRoot, DaggerfallWorldMedia.ClassicInventoryPath)));
+        foreach (string path in ClassicGroupArtifacts(root))
+            yield return new ProductContentFile(Encoding.UTF8.GetBytes(path), TestContentFiles.Read(Path.Combine(contentRoot, path)));
+    }
 
     internal static ProductContent FullContent(string root, params string[] selectedPublicationRoots)
     {
@@ -112,24 +144,19 @@ internal static class TestSessions
             .Select(root => root.TrimEnd('/'))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
-        List<(string Root, string Bundle)> audioBundles = [];
+        // Every site's clips are staged once, as the world media publication's audio bundle; the full form
+        // also stages the score and the sky as their own bundles.
+        List<(string Root, string Bundle)> audioBundles = [SharedAudioBundle];
         if (selectedRoots.Length == 0)
         {
-            // The score's clips are staged as their own bundle, and each site's clips are staged as
-            // the bundle its payload declares.
             audioBundles.Add(("worldrpg/media/music/clips", "daggerfall.music"));
             audioBundles.Add(("worldrpg/media/sky/resources", "daggerfall.sky"));
-            audioBundles.AddRange(SiteAudioBundles(root));
         }
-        else
-        {
-            // The selected-closure form omits unrelated audio bodies while retaining the selected
-            // profile's own source closure and bundle declaration.
-            audioBundles.AddRange(SiteAudioBundles(root).Where(bundle => selectedRoots.Any(selected =>
-                bundle.Root.StartsWith(selected + "/", StringComparison.Ordinal)
-                || string.Equals(bundle.Root, selected, StringComparison.Ordinal))));
-        }
-        return ContentWithBundles(root, audioBundles.ToArray(), out _, selectedRoots);
+
+        // The selected-closure form omits unrelated closures but keeps the product-wide media every
+        // selected closure references.
+        return ContentWithBundles(root, audioBundles.ToArray(), out _,
+            selectedRoots.Length == 0 ? selectedRoots : [.. selectedRoots, DaggerfallWorldMedia.Root, .. ClassicGroupArtifacts(root)]);
     }
 
     /// <summary>
@@ -182,31 +209,39 @@ internal static class TestSessions
         || relative.StartsWith("worldrpg/media/", StringComparison.Ordinal)
             && string.Equals(Path.GetExtension(relative), ".json", StringComparison.OrdinalIgnoreCase);
 
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Root, string Bundle)[]> SiteAudioBundlesByRoot =
-        new(StringComparer.Ordinal);
-
     /// <summary>
-    /// The audio bundle every committed site payload declares, rooted at its publication's clips. The
-    /// answer is read once per checkout: the payloads do not change while tests run, and the directory
-    /// also holds the imported base payload, hundreds of megabytes with no world section.
+    /// The complete dungeon sidecar a site closure stands for: its own entries joined to the product-wide
+    /// entries its <c>shared</c> selection admits, in the canonical order a complete sidecar is written in.
     /// </summary>
-    internal static IEnumerable<(string Root, string Bundle)> SiteAudioBundles(string root) =>
-        SiteAudioBundlesByRoot.GetOrAdd(Path.GetFullPath(root), ReadSiteAudioBundles);
-
-    private static (string Root, string Bundle)[] ReadSiteAudioBundles(string root)
+    internal static JsonObject CompleteDungeonSidecar(string root, string publicationRoot)
     {
-        List<(string Root, string Bundle)> bundles = [];
-        foreach (string payload in Directory.GetFiles(Path.Combine(root, "content/worldrpg/payloads"), "*.json").Order(StringComparer.Ordinal))
+        string contentRoot = Path.Combine(root, "content");
+        JsonObject site = JsonNode.Parse(File.ReadAllBytes(Path.Combine(contentRoot, publicationRoot, "media/dungeon/manifest.json")))!.AsObject();
+        if (site["shared"] is not JsonObject selection) return site;
+        JsonObject shared = JsonNode.Parse(File.ReadAllBytes(Path.Combine(contentRoot, DaggerfallWorldMedia.Root, "media/dungeon/manifest.json")))!.AsObject();
+        JsonArray Join(JsonArray own, JsonArray product, string family, string key)
         {
-            // Only the world section is parsed; the reader steps over every other top-level value
-            // without building it.
-            if (TopLevelSection(TestContentFiles.Read(payload), "world") is not { } section) continue;
-            using JsonDocument document = JsonDocument.Parse(section);
-            JsonElement world = document.RootElement;
-            if (world.ValueKind != JsonValueKind.Object || !world.TryGetProperty("audioBundle", out JsonElement bundle)) continue;
-            bundles.Add(($"{world.GetProperty("publicationRoot").GetString()}/media/audio/clips", bundle.GetString()!));
+            HashSet<string> admitted = [.. selection[family]!.AsArray().Select(id => id!.GetValue<string>())];
+            return new JsonArray([.. own.Select(value => value!.DeepClone())
+                .Concat(product.Where(value => admitted.Contains(value![key]!.GetValue<string>())).Select(value => value!.DeepClone()))
+                .OrderBy(value => value![key]!.GetValue<string>(), StringComparer.Ordinal)]);
         }
-        return [.. bundles];
+
+        site["media"]!["resources"] = Join(site["media"]!["resources"]!.AsArray(), shared["media"]!["resources"]!.AsArray(), "resources", "id");
+        site["billboards"] = Join(site["billboards"]!.AsArray(), shared["billboards"]!.AsArray(), "billboards", "spriteResourceId");
+        site["actors"] = Join(site["actors"]!.AsArray(), shared["actors"]!.AsArray(), "actors", "actorResourceId");
+        site["shared"] = null;
+        return site;
+    }
+
+    /// <summary>The one audio bundle every site's clips are opened through: the world media publication's.</summary>
+    internal static (string Root, string Bundle) SharedAudioBundle => (DaggerfallWorldMedia.AudioRoot, DaggerfallWorldMedia.AudioBundleId);
+
+    /// <summary>The content paths of the classic media group's artifacts, which the site closures reference.</summary>
+    private static IReadOnlyList<string> ClassicGroupArtifacts(string root)
+    {
+        using JsonDocument document = JsonDocument.Parse(TestContentFiles.Read(Path.Combine(root, "content", DaggerfallWorldMedia.ClassicInventoryPath)));
+        return [.. document.RootElement.GetProperty("artifacts").EnumerateArray().Select(artifact => artifact.GetProperty("path").GetString()!)];
     }
 
     /// <summary>The bytes of one top-level property's value, or null when the document has no such property.</summary>
@@ -489,7 +524,7 @@ internal static class TestSessions
         JsonObject placement = profile["placements"]!.AsArray().Select(value => value!.AsObject())
             .Single(value => value["entityId"]!.GetValue<long>() == placedEntityId);
         DaggerfallActorDefinition actor = definitions.RequireActor(new DaggerfallActorId(placement["actor"]!.GetValue<string>()));
-        JsonObject media = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/dungeon/manifest.json")))!.AsObject();
+        JsonObject media = CompleteDungeonSidecar(root, "worldrpg/imports/privateers-hold");
         JsonObject mobile = media["actors"]!.AsArray().Select(value => value!.AsObject())
             .Single(value => value["mobileId"]!.GetValue<int>() == actor.MobileId);
         List<int> frames = [.. mobile["sourceAttackSequence"]![framesProperty]!.AsArray().Select(value => value!.GetValue<int>())];

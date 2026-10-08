@@ -343,7 +343,6 @@ public sealed class DungeonSpellFlightSessionTests
             source.DungeonActionModels,
             source.InteriorBuilding,
             source.Music,
-            source.AudioBundle,
             source.QuestMarkers,
             source.BillboardSprites);
 

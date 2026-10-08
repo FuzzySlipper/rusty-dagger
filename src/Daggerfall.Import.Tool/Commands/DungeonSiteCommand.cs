@@ -18,7 +18,7 @@ internal static class DungeonSiteCommand
 
     public static ToolCommand Write { get; } = new("write", SiteOptions, args =>
     {
-        ImportPublicationPlan plan = BuildPlan(args);
+        ImportPublicationPlan plan = SiteInputs.Reference(args, BuildPlan(args));
         SiteInputs.PrintComparison(ImportPublicationWriter.Write(plan, Path.GetFullPath(args[SiteInputs.Output.Name])));
         SiteInputs.WriteSourceManifest(args, plan);
         return 0;
@@ -26,7 +26,7 @@ internal static class DungeonSiteCommand
 
     public static ToolCommand Plan { get; } = new("plan", SiteOptions, args =>
     {
-        SiteInputs.PrintComparison(BuildPlan(args).Compare(Path.GetFullPath(args[SiteInputs.Output.Name])));
+        SiteInputs.PrintComparison(SiteInputs.Reference(args, BuildPlan(args)).Compare(Path.GetFullPath(args[SiteInputs.Output.Name])));
         return 0;
     });
 
@@ -35,8 +35,8 @@ internal static class DungeonSiteCommand
         string root = Path.Combine(Path.GetTempPath(), $"daggerfall-import-verify-{Guid.NewGuid():N}");
         try
         {
-            ImportPublicationWriter.Write(BuildPlan(args), Path.Combine(root, "first"));
-            ImportPublicationWriter.Write(BuildPlan(args), Path.Combine(root, "second"));
+            ImportPublicationWriter.Write(SiteInputs.Reference(args, BuildPlan(args)), Path.Combine(root, "first"));
+            ImportPublicationWriter.Write(SiteInputs.Reference(args, BuildPlan(args)), Path.Combine(root, "second"));
             IReadOnlyDictionary<string, ContentDigest> first = HashClosure(Path.Combine(root, "first"));
             IReadOnlyDictionary<string, ContentDigest> second = HashClosure(Path.Combine(root, "second"));
             if (first.Count != second.Count || first.Any(entry => !second.TryGetValue(entry.Key, out ContentDigest hash) || hash != entry.Value))

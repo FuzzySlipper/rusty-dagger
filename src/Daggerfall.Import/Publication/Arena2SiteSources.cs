@@ -86,6 +86,31 @@ public sealed class Arena2SiteSources
         return sources;
     }
 
+    /// <summary>
+    /// The sources the product-wide world media publication starts from: the classic media inputs, the mesh
+    /// archive and the palette. Texture leaves are admitted by the selection that names them.
+    /// </summary>
+    public static Arena2SiteSources ForWorldMedia(string arena2Directory)
+    {
+        Arena2SiteSources sources = ForClassicMedia(arena2Directory);
+        sources.LoadDungeon("ARCH3D.BSA");
+        sources.LoadDungeon("PAL.PAL");
+        return sources;
+    }
+
+    /// <summary>Admits one texture leaf to the dungeon media source closure.</summary>
+    public void AdmitTextureLeaf(ushort archive) => LoadDungeon($"TEXTURE.{archive:000}");
+
+    /// <summary>
+    /// Parses one supplied texture leaf without admitting it, so a selection can ask which of its records
+    /// are publishable before the exact closure is fixed.
+    /// </summary>
+    public TextureArchive ParseTextureLeaf(ushort archive)
+    {
+        DungeonLogicalSource source = ReadSource($"TEXTURE.{archive:000}");
+        return TextureArchive.Parse(source.Bytes.Span, source.Label);
+    }
+
     /// <summary>The world sources and the classic media inputs a site closure starts from.</summary>
     public static Arena2SiteSources ForSite(string arena2Directory)
     {

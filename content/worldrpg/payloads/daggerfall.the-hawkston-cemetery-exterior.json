@@ -98,7 +98,6 @@
   "placements": [],
   "world": {
     "publicationRoot": "worldrpg/imports/the-hawkston-cemetery/exterior",
-    "audioBundle": "daggerfall.the-hawkston-cemetery-exterior-audio",
     "appearance": {
       "tint": [
         0.72,

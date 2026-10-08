@@ -18,6 +18,17 @@ internal static class DaggerfallSiteContent
 {
     internal static DaggerfallSiteProfile Read(ProductContent content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
     {
+        using DaggerfallWorldMedia product = DaggerfallWorldMedia.Read(content);
+        return Read(content, payload, definitions, product);
+    }
+
+    /// <summary>
+    /// Reads one site pack against the product-wide world media its closure references, which the caller
+    /// reads once for every site it admits.
+    /// </summary>
+    internal static DaggerfallSiteProfile Read(ProductContent content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions, DaggerfallWorldMedia product)
+    {
+        ArgumentNullException.ThrowIfNull(product);
         DaggerfallContentDiagnostics diagnostics = new();
         try
         {
@@ -42,6 +53,7 @@ internal static class DaggerfallSiteContent
                 root,
                 start,
                 definitions,
+                product,
                 diagnostics);
             diagnostics.ThrowIfAny();
             return inputs;
@@ -58,13 +70,10 @@ internal static class DaggerfallSiteContent
         }
     }
 
-    private static DaggerfallSiteProfile ReadNormalizedClosure(AdmittedFiles files, JsonElement root, ScenarioStart start, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallSiteProfile ReadNormalizedClosure(AdmittedFiles files, JsonElement root, ScenarioStart start, DaggerfallDefinitions definitions, DaggerfallWorldMedia product, DaggerfallContentDiagnostics diagnostics)
     {
         JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics);
         string publicationRoot = DaggerfallBaseContent.Text(world, "publicationRoot", diagnostics);
-        // The Engine bundle that carries this site's audio bodies under its publication root. The site
-        // names it rather than the ruleset deriving a name from the root, so a new site declares its own.
-        string audioBundle = DaggerfallBaseContent.Text(world, "audioBundle", diagnostics);
         DaggerfallWorldProfileKind profileKind = DaggerfallBaseContent.Text(world, "profileKind", diagnostics) switch
         {
             "exterior" => DaggerfallWorldProfileKind.Exterior,
@@ -78,17 +87,21 @@ internal static class DaggerfallSiteContent
         }
 
         string Prefix(string relativePath) => $"{publicationRoot.TrimEnd('/')}/{relativePath}";
-        Dictionary<string, ContentSha256> artifacts = ReadImportArtifacts(files, Prefix("import-manifest.json"), publicationRoot, diagnostics);
+        // The closure's own artifacts, and the product-wide world media it references by the same
+        // closure-relative paths instead of carrying copies.
+        DaggerfallClosureArtifacts artifacts = new(publicationRoot, ReadImportArtifacts(files, Prefix("import-manifest.json"), publicationRoot, diagnostics), product);
         string spatialPath = Prefix(DaggerfallBaseContent.Text(world, "collisionNavigationPath", diagnostics));
         string meshPath = Prefix(DaggerfallBaseContent.Text(world, "staticMeshPath", diagnostics));
         string normalizedPath = Prefix("normalized.json");
-        string mediaPath = Prefix("media/dungeon/manifest.json");
-        string classicMediaPath = Prefix("media/classic/manifest.json");
+        string mediaPath = Prefix(DaggerfallWorldMedia.DungeonSidecarRelativePath);
         ContentSha256 spatialHash = RequireArtifact(artifacts, spatialPath, diagnostics);
         ContentSha256 meshHash = RequireArtifact(artifacts, meshPath, diagnostics);
         _ = RequireArtifact(artifacts, normalizedPath, diagnostics);
-        ContentSha256 mediaHash = RequireArtifact(artifacts, mediaPath, diagnostics);
-        ContentSha256 classicMediaHash = RequireArtifact(artifacts, classicMediaPath, diagnostics);
+        _ = RequireArtifact(artifacts, mediaPath, diagnostics);
+        // A site presents the product-wide classic sidecar unless it carries its own (an authored overlay).
+        ReadOnlyMemory<byte>? classicMedia = artifacts.SiteCarries(DaggerfallWorldMedia.ClassicSidecarRelativePath)
+            ? files.GetExactlyOne(Prefix(DaggerfallWorldMedia.ClassicSidecarRelativePath))
+            : product.ClassicSidecar;
         ulong gridId = UnsignedInteger(world, "navigationGridId", diagnostics);
         AuthoredWorldAppearance worldAppearance = ReadWorldAppearance(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(world, "appearance", diagnostics), "world.appearance", diagnostics), diagnostics);
         IReadOnlyList<DaggerfallSitePortal> portals = ReadSitePortals(world, diagnostics);
@@ -96,8 +109,8 @@ internal static class DaggerfallSiteContent
         Dictionary<long, AuthoredActor> actors = ReadNormalizedPlacements(root, definitions, diagnostics);
         (IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<int, NormalizedActorSprite> sprites, NormalizedBillboardSprite? groundContainerSprite, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> billboardSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> terrainTextures) = ReadDungeonMedia(
             files.GetExactlyOne(mediaPath),
-            publicationRoot,
             artifacts,
+            product,
             definitions,
             diagnostics);
         // Every normal encounter table can select any entry at a valid player level. Refuse a
@@ -111,9 +124,9 @@ internal static class DaggerfallSiteContent
         IReadOnlyList<DaggerfallSiteLight> lights = ReadNormalizedLights(normalizedWorld, diagnostics);
         IReadOnlyList<DaggerfallPopulationPlacement> population = ReadNormalizedPopulation(normalizedWorld, diagnostics);
         IReadOnlyList<DaggerfallDungeonActionModelDefinition> actionModels = ReadNormalizedActionModels(
-            normalizedWorld, publicationRoot, artifacts, files, materials, diagnostics);
+            normalizedWorld, artifacts, files, materials, diagnostics);
         IReadOnlyList<DaggerfallRdbDoorDefinition> doors = ReadNormalizedDoors(
-            normalizedWorld, publicationRoot, meshPath, artifacts, materials, actionModels, profileKind, diagnostics);
+            normalizedWorld, meshPath, artifacts, materials, actionModels, profileKind, diagnostics);
         IReadOnlyList<DaggerfallDungeonActionDefinition> dungeonActions = ReadNormalizedActions(normalizedWorld, doors, diagnostics);
         HashSet<string> actionIds = dungeonActions.Select(action => action.Id).ToHashSet(StringComparer.Ordinal);
         foreach (DaggerfallDungeonActionModelDefinition model in actionModels)
@@ -123,7 +136,7 @@ internal static class DaggerfallSiteContent
             ? ReadNormalizedDungeonMap(normalizedWorld, doors, portals, diagnostics)
             : null;
         (IReadOnlyList<NormalizedAudioClip> audio, IReadOnlyList<NormalizedMusicCue> music, NormalizedClassicPresentation classicPresentation) = ReadClassicPresentation(
-            files, files.GetExactlyOne(classicMediaPath), publicationRoot, artifacts, diagnostics);
+            files, classicMedia, artifacts, diagnostics);
         classicPresentation = ReadClassicSelection(root, classicPresentation, definitions, diagnostics);
         Dictionary<long, NormalizedActorSprite> actorSprites = [];
         foreach (AuthoredActor actor in actors.Values)
@@ -167,7 +180,6 @@ internal static class DaggerfallSiteContent
             actionModels,
             ReadInteriorBuilding(normalizedWorld, profileKind, diagnostics),
             music,
-            audioBundle,
             DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics), billboardSprites,
             DaggerfallStaticNpcPlacement.Read(normalizedWorld, billboardSprites, definitions, start.Site, diagnostics), terrainTextures: terrainTextures, population: population)
         { VariantName = DaggerfallBaseContent.OptionalText(world, "variant", diagnostics),
@@ -514,8 +526,7 @@ internal static class DaggerfallSiteContent
     /// </summary>
     internal static IReadOnlyList<DaggerfallDungeonActionModelDefinition> ReadNormalizedActionModels(
         ReadOnlyMemory<byte>? bytes,
-        string publicationRoot,
-        IReadOnlyDictionary<string, ContentSha256> artifacts,
+        DaggerfallClosureArtifacts artifacts,
         AdmittedFiles files,
         IReadOnlyList<NormalizedMaterial> materials,
         DaggerfallContentDiagnostics diagnostics)
@@ -544,7 +555,7 @@ internal static class DaggerfallSiteContent
                 JsonElement artifact = DaggerfallBaseContent.Object(candidate, "normalized action-model artifact", diagnostics);
                 string id = DaggerfallBaseContent.Text(artifact, "id", diagnostics);
                 string relativePath = DaggerfallBaseContent.Text(artifact, "relativePath", diagnostics);
-                string path = $"{publicationRoot.TrimEnd('/')}/{relativePath}";
+                string path = artifacts.Resolve(relativePath);
                 if (!artifacts.TryGetValue(path, out ContentSha256 hash))
                     diagnostics.Add($"Normalized action-model artifact '{id}' is absent from the admitted import manifest.");
                 else if (!artifactById.TryAdd(id, new ContentArtifact(path, hash)))
@@ -728,9 +739,8 @@ internal static class DaggerfallSiteContent
     /// </summary>
     private static IReadOnlyList<DaggerfallRdbDoorDefinition> ReadNormalizedDoors(
         ReadOnlyMemory<byte>? bytes,
-        string publicationRoot,
         string staticMeshPath,
-        IReadOnlyDictionary<string, ContentSha256> artifacts,
+        DaggerfallClosureArtifacts artifacts,
         IReadOnlyList<NormalizedMaterial> materials,
         IReadOnlyList<DaggerfallDungeonActionModelDefinition> actionModels,
         DaggerfallWorldProfileKind profileKind,
@@ -753,7 +763,7 @@ internal static class DaggerfallSiteContent
                 JsonElement artifact = DaggerfallBaseContent.Object(candidate, "normalized artifact", diagnostics);
                 string id = DaggerfallBaseContent.Text(artifact, "id", diagnostics);
                 string relativePath = DaggerfallBaseContent.Text(artifact, "relativePath", diagnostics);
-                string path = $"{publicationRoot.TrimEnd('/')}/{relativePath}";
+                string path = artifacts.Resolve(relativePath);
                 if (!artifacts.TryGetValue(path, out ContentSha256 hash)) diagnostics.Add($"Normalized artifact '{id}' is absent from the admitted import manifest.");
                 else if (!artifactById.TryAdd(id, new ContentArtifact(path, hash))) diagnostics.Add($"Normalized world repeats artifact '{id}'.");
             }
@@ -1337,7 +1347,7 @@ internal static class DaggerfallSiteContent
         return artifacts;
     }
 
-    private static ContentSha256 RequireArtifact(IReadOnlyDictionary<string, ContentSha256> artifacts, string path, DaggerfallContentDiagnostics diagnostics)
+    private static ContentSha256 RequireArtifact(DaggerfallClosureArtifacts artifacts, string path, DaggerfallContentDiagnostics diagnostics)
     {
         if (artifacts.TryGetValue(path, out ContentSha256 hash)) return hash;
         diagnostics.Add($"Generated import manifest does not describe required artifact '{path}'.");
@@ -1361,8 +1371,8 @@ internal static class DaggerfallSiteContent
 
     private static (IReadOnlyList<NormalizedMaterial> Materials, IReadOnlyDictionary<int, NormalizedActorSprite> Sprites, NormalizedBillboardSprite? GroundContainerSprite, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> BillboardSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> TerrainTextures) ReadDungeonMedia(
         ReadOnlyMemory<byte>? bytes,
-        string publicationRoot,
-        IReadOnlyDictionary<string, ContentSha256> artifacts,
+        DaggerfallClosureArtifacts artifacts,
+        DaggerfallWorldMedia product,
         DaggerfallDefinitions definitions,
         DaggerfallContentDiagnostics diagnostics)
     {
@@ -1373,7 +1383,9 @@ internal static class DaggerfallSiteContent
             JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "dungeon media manifest", diagnostics);
             Dictionary<string, MediaResource> resources = [];
             JsonElement media = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "media", diagnostics), "dungeon media", diagnostics);
-            foreach (JsonElement value in DaggerfallBaseContent.Array(media, "resources", diagnostics))
+            (IReadOnlyList<JsonElement> sharedResources, IReadOnlyList<JsonElement> sharedBillboards, IReadOnlyList<JsonElement> sharedActors) =
+                ReadSharedDungeonSelection(root, product, diagnostics);
+            foreach (JsonElement value in DaggerfallBaseContent.Array(media, "resources", diagnostics).Concat(sharedResources))
             {
                 JsonElement resource = DaggerfallBaseContent.Object(value, "dungeon media resource", diagnostics);
                 string id = DaggerfallBaseContent.Text(resource, "id", diagnostics);
@@ -1401,7 +1413,7 @@ internal static class DaggerfallSiteContent
                 {
                     diagnostics.Add($"Generated atlas resource '{id}' exceeds Daggerfall's 4096-frame publication admission limit or repeats a frame id.");
                 }
-                string path = $"{publicationRoot.TrimEnd('/')}/{relativePath}";
+                string path = artifacts.Resolve(relativePath);
                 if (!artifacts.TryGetValue(path, out ContentSha256 artifactHash) || artifactHash != hash)
                 {
                     diagnostics.Add($"Generated media resource '{id}' does not agree with the import manifest.");
@@ -1421,7 +1433,7 @@ internal static class DaggerfallSiteContent
             if (materials.Select(material => material.Slot).Distinct().Count() != materials.Count) diagnostics.Add("Generated dungeon materials repeat a static-mesh material slot.");
 
             Dictionary<int, NormalizedActorSprite> sprites = [];
-            foreach (JsonElement value in DaggerfallBaseContent.Array(root, "actors", diagnostics))
+            foreach (JsonElement value in DaggerfallBaseContent.Array(root, "actors", diagnostics).Concat(sharedActors))
             {
                 JsonElement actor = DaggerfallBaseContent.Object(value, "dungeon actor media", diagnostics);
                 int mobileId = DaggerfallBaseContent.Integer(actor, "mobileId", diagnostics);
@@ -1437,7 +1449,7 @@ internal static class DaggerfallSiteContent
                 if (preferredRestState is not null && !states.ContainsKey(preferredRestState)) diagnostics.Add($"Generated actor mobile '{mobileId}' preferredRestState '{preferredRestState}' is not a published state.");
                 IReadOnlyList<NormalizedAttackSequence> attacks = ReadAttackSequences(actor, states, mobileId, diagnostics);
                 NormalizedAttackSequence? rangedAttack = ReadRangedAttackSequence(actor, states, mobileId, diagnostics);
-                NormalizedActorSprite? corpse = ReadCorpse(actor, resources, publicationRoot, artifacts, mobileId, diagnostics);
+                NormalizedActorSprite? corpse = ReadCorpse(actor, resources, mobileId, diagnostics);
                 if (!sprites.TryAdd(mobileId, new NormalizedActorSprite(texture.Path, texture.Hash, texture.AtlasWidth, texture.AtlasHeight, frames, texture.Frames[0].Id, pivot, size)
                 {
                     States = states,
@@ -1448,7 +1460,7 @@ internal static class DaggerfallSiteContent
                     Feedback = ReadActorFeedback(actor, mobileId, diagnostics),
                 })) diagnostics.Add($"Generated actor media repeats mobile '{mobileId}'.");
             }
-            var billboards = ReadBillboardSprites(root, resources, diagnostics);
+            var billboards = ReadBillboardSprites([.. DaggerfallBaseContent.Array(root, "billboards", diagnostics), .. sharedBillboards], resources, diagnostics);
             Dictionary<(int Archive, int Record), NormalizedTerrainTexture> terrainTextures = [];
             foreach ((string id, MediaResource resource) in resources)
             {
@@ -1467,11 +1479,47 @@ internal static class DaggerfallSiteContent
         }
     }
 
+    /// <summary>
+    /// The product-wide dungeon entries a site sidecar admits by identity: descriptors by media id,
+    /// billboards by sprite resource id and actors by actor resource id. A sidecar that carries every
+    /// entry itself states no selection; an identity the world media publication does not carry is
+    /// reported rather than skipped, so a closure cannot silently lose an admitted sprite.
+    /// </summary>
+    private static (IReadOnlyList<JsonElement> Resources, IReadOnlyList<JsonElement> Billboards, IReadOnlyList<JsonElement> Actors) ReadSharedDungeonSelection(
+        JsonElement root, DaggerfallWorldMedia product, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("shared", out JsonElement selection) || selection.ValueKind == JsonValueKind.Null) return ([], [], []);
+        JsonElement shared = DaggerfallBaseContent.Object(selection, "dungeon media shared selection", diagnostics);
+        if (!product.IsPublished)
+        {
+            diagnostics.Add($"The site's dungeon media references the product-wide world media, which admitted content does not carry at '{DaggerfallWorldMedia.Root}'.");
+            return ([], [], []);
+        }
+
+        List<JsonElement> Select(string family, string kind, Func<string, (bool Found, JsonElement Entry)> lookup)
+        {
+            List<JsonElement> entries = [];
+            foreach (JsonElement value in DaggerfallBaseContent.Array(shared, family, diagnostics))
+            {
+                string id = value.ValueKind == JsonValueKind.String ? value.GetString()! : string.Empty;
+                (bool found, JsonElement entry) = lookup(id);
+                if (found) entries.Add(entry);
+                else diagnostics.Add($"The site's dungeon media admits product-wide {kind} '{id}', which the world media publication does not carry.");
+            }
+            return entries;
+        }
+
+        return (
+            Select("resources", "descriptor", id => (product.TryGetResource(id, out JsonElement entry), entry)),
+            Select("billboards", "billboard", id => (product.TryGetBillboard(id, out JsonElement entry), entry)),
+            Select("actors", "actor", id => (product.TryGetActor(id, out JsonElement entry), entry)));
+    }
+
     private static IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> ReadBillboardSprites(
-        JsonElement root, IReadOnlyDictionary<string, MediaResource> resources, DaggerfallContentDiagnostics diagnostics)
+        IReadOnlyList<JsonElement> entries, IReadOnlyDictionary<string, MediaResource> resources, DaggerfallContentDiagnostics diagnostics)
     {
         Dictionary<(int, int), NormalizedBillboardSprite> result = [];
-        foreach (var billboard in DaggerfallBaseContent.Array(root, "billboards", diagnostics))
+        foreach (var billboard in entries)
         {
             string id = DaggerfallBaseContent.Text(billboard, "spriteResourceId", diagnostics);
             if (!resources.TryGetValue(id, out var resource) || resource.Frames.Count == 0)
@@ -1646,7 +1694,7 @@ internal static class DaggerfallSiteContent
             blood);
     }
 
-    private static NormalizedActorSprite? ReadCorpse(JsonElement actor, IReadOnlyDictionary<string, MediaResource> resources, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, int mobileId, DaggerfallContentDiagnostics diagnostics)
+    private static NormalizedActorSprite? ReadCorpse(JsonElement actor, IReadOnlyDictionary<string, MediaResource> resources, int mobileId, DaggerfallContentDiagnostics diagnostics)
     {
         if (!actor.TryGetProperty("corpse", out JsonElement corpse) || corpse.ValueKind == JsonValueKind.Null) return null;
         JsonElement value = DaggerfallBaseContent.Object(corpse, "actor corpse", diagnostics);
@@ -1664,7 +1712,7 @@ internal static class DaggerfallSiteContent
 
     private sealed record MediaResource(string Path, ContentSha256 Hash, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames);
 
-    private static (IReadOnlyList<NormalizedAudioClip> Audio, IReadOnlyList<NormalizedMusicCue> Music, NormalizedClassicPresentation Presentation) ReadClassicPresentation(AdmittedFiles files, ReadOnlyMemory<byte>? bytes, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, DaggerfallContentDiagnostics diagnostics)
+    private static (IReadOnlyList<NormalizedAudioClip> Audio, IReadOnlyList<NormalizedMusicCue> Music, NormalizedClassicPresentation Presentation) ReadClassicPresentation(AdmittedFiles files, ReadOnlyMemory<byte>? bytes, DaggerfallClosureArtifacts artifacts, DaggerfallContentDiagnostics diagnostics)
     {
         if (bytes is null) { diagnostics.Add("Generated classic media manifest is unavailable."); return ([], [], NormalizedClassicPresentation.Empty); }
         try
@@ -1682,7 +1730,9 @@ internal static class DaggerfallSiteContent
                 string id = DaggerfallBaseContent.Text(resource, "id", diagnostics);
                 string kind = DaggerfallBaseContent.Text(resource, "kind", diagnostics);
                 string relativePath = DaggerfallBaseContent.Text(resource, "relativePath", diagnostics);
-                string path = $"{publicationRoot.TrimEnd('/')}/{relativePath}";
+                // Audio resolves into the world media publication and the images into the classic media
+                // group, by the closure-relative path the sidecar states.
+                string path = artifacts.Resolve(relativePath);
                 ContentSha256 hash = ContentHash(DaggerfallBaseContent.Text(resource, "contentDigest", diagnostics), diagnostics);
                 if (!artifacts.TryGetValue(path, out ContentSha256 artifact) || artifact != hash) diagnostics.Add($"Generated classic audio '{id}' does not agree with the import manifest.");
                 long byteLength = Long(resource, "byteLength", diagnostics);
@@ -1691,9 +1741,9 @@ internal static class DaggerfallSiteContent
                 int sourceHeight = DaggerfallBaseContent.Integer(resource, "sourceHeight", diagnostics);
                 int atlasWidth = DaggerfallBaseContent.Integer(resource, "atlasWidth", diagnostics);
                 int atlasHeight = DaggerfallBaseContent.Integer(resource, "atlasHeight", diagnostics);
-                // WAV descriptors retain their import-manifest identity and digest in eager content,
-                // but their bodies are opened from the declared Engine bundle on the first cue.
-                // Everything else remains part of the eagerly admitted closure.
+                // WAV descriptors retain their published identity and digest in eager content, but
+                // their bodies are opened from the world media audio bundle on the first cue.
+                // Everything else is part of the eagerly admitted content.
                 bool hasExpectedBody = kind == "audio"
                     || files.GetExactlyOne(path) is ReadOnlyMemory<byte> artifactBytes && artifactBytes.Length == byteLength;
                 if (!ValidLogicalId(id) || !ValidLogicalPath(relativePath) || !KnownClassicMediaKind(kind) || byteLength <= 0 || string.IsNullOrWhiteSpace(mimeType) || sourceWidth < 0 || sourceHeight < 0
@@ -1760,7 +1810,7 @@ internal static class DaggerfallSiteContent
                     resource => new NormalizedClassicMediaResource(resource.Id, resource.Kind, resource.RelativePath, resource.Hash, resource.ByteLength),
                     StringComparer.Ordinal));
             IReadOnlyList<DaggerfallMissileVisual> worldVisuals = ReadClassicWorldVisuals(
-                root, publicationRoot, artifacts, files, diagnostics);
+                root, artifacts, files, diagnostics);
             IReadOnlyList<NormalizedMusicCue> music = ReadClassicMusic(root, diagnostics);
             return (Array.AsReadOnly(audio.ToArray()), music, new NormalizedClassicPresentation(weapons, effects)
             {
@@ -1841,8 +1891,7 @@ internal static class DaggerfallSiteContent
     /// </remarks>
     private static IReadOnlyList<DaggerfallMissileVisual> ReadClassicWorldVisuals(
         JsonElement root,
-        string publicationRoot,
-        IReadOnlyDictionary<string, ContentSha256> artifacts,
+        DaggerfallClosureArtifacts artifacts,
         AdmittedFiles files,
         DaggerfallContentDiagnostics diagnostics)
     {
@@ -1870,7 +1919,7 @@ internal static class DaggerfallSiteContent
             string use = DaggerfallBaseContent.Text(visual, "use", diagnostics);
             string meshId = DaggerfallBaseContent.Text(visual, "meshId", diagnostics);
             string relativePath = DaggerfallBaseContent.Text(visual, "relativePath", diagnostics);
-            string path = $"{publicationRoot.TrimEnd('/')}/{relativePath}";
+            string path = artifacts.Resolve(relativePath);
             ContentSha256 digest = ContentHash(DaggerfallBaseContent.Text(visual, "contentDigest", diagnostics), diagnostics);
             string sourceArchive = DaggerfallBaseContent.Text(visual, "sourceArchive", diagnostics);
             long sourceRecordId = Long(visual, "sourceRecordId", diagnostics);
@@ -1918,7 +1967,7 @@ internal static class DaggerfallSiteContent
                 string materialResourceId = DaggerfallBaseContent.Text(texture, "materialResourceId", diagnostics);
                 int slot = DaggerfallBaseContent.Integer(texture, "slot", diagnostics);
                 string textureRelativePath = DaggerfallBaseContent.Text(texture, "relativePath", diagnostics);
-                string texturePath = $"{publicationRoot.TrimEnd('/')}/{textureRelativePath}";
+                string texturePath = artifacts.Resolve(textureRelativePath);
                 ContentSha256 textureDigest = ContentHash(DaggerfallBaseContent.Text(texture, "contentDigest", diagnostics), diagnostics);
                 long byteLength = Long(texture, "byteLength", diagnostics);
                 if (!ValidLogicalPath(textureRelativePath)
@@ -2511,7 +2560,7 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     internal NormalizedAttackSequence? RangedAttackSequence { get; init; }
     internal NormalizedActorSprite? Corpse { get; init; }
 }
-internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedBillboardSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null, string? audioBundle = null, IReadOnlyList<DaggerfallSiteMarker>? questMarkers = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite>? billboardSprites = null, IReadOnlyList<DaggerfallStaticNpcPlacement>? staticNpcs = null, IReadOnlyList<CharacterWaterVolume>? waterVolumes = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture>? terrainTextures = null, IReadOnlyList<DaggerfallPopulationPlacement>? population = null)
+internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedBillboardSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null, IReadOnlyList<DaggerfallSiteMarker>? questMarkers = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite>? billboardSprites = null, IReadOnlyList<DaggerfallStaticNpcPlacement>? staticNpcs = null, IReadOnlyList<CharacterWaterVolume>? waterVolumes = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture>? terrainTextures = null, IReadOnlyList<DaggerfallPopulationPlacement>? population = null)
 {
     internal string? VariantName { get; init; }
     internal string? VariantBaseLogicalId { get; init; }
@@ -2530,8 +2579,6 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, SpatialContent
     /// <summary>The music cues this site admits, keyed by the donor track the score resolves.</summary>
     internal IReadOnlyList<NormalizedMusicCue> Music { get; } = Array.AsReadOnly((music ?? []).ToArray());
     internal NormalizedClassicPresentation ClassicPresentation { get; } = classicPresentation ?? NormalizedClassicPresentation.Empty;
-    /// <summary>The Engine content bundle the site declares for its audio bodies.</summary>
-    internal string? AudioBundle { get; } = audioBundle;
     internal DaggerfallWorldProfileKind ProfileKind { get; } = profileKind;
     internal DaggerfallInteriorBuilding? InteriorBuilding { get; } = interiorBuilding?.Validate();
     internal DaggerfallWorldProfileKey ProfileKey => Site is { } selected

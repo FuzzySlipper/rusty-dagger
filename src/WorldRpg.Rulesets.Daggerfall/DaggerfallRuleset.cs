@@ -92,7 +92,10 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(RequireSingle(selected, roles, BlocksRole).Payload);
             blocks.AdmitLocations(definitions.Locations);
             ContentPack[] sitePacks = [.. roles[SiteRole]];
-            DaggerfallSiteProfile[] sites = [.. sitePacks.Select(pack => DaggerfallSiteContent.Read(selected.Content, pack.Payload, definitions))];
+            // Every site closure references the one product-wide world media publication, read once for all of them.
+            DaggerfallSiteProfile[] sites;
+            using (DaggerfallWorldMedia worldMedia = DaggerfallWorldMedia.Read(selected.Content))
+                sites = [.. sitePacks.Select(pack => DaggerfallSiteContent.Read(selected.Content, pack.Payload, definitions, worldMedia))];
             if (sites.Length == 0)
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects no '{SiteRole.Value}' content pack, so a new game has nowhere to start.");
             // The authored new-game definition names the site a new game starts at; pack order in the
