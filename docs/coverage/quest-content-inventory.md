@@ -38,10 +38,10 @@ file is found, and preserve the source path and donor revision in the record.
 
 ## Local anchors and ownership
 
-The archived feature survey (`[doc: rusty-dagger/daggerfall-feature-map-2026-09]`)
-marked the quest machine, instance, parser, tasks/clock, places/persons,
-foes/items, messages/symbols, action library, and macro expansion as absent; the
-[feature ledger](feature-ledger.md) carries their current dispositions. The plan's
+The [feature ledger](feature-ledger.md) (F079–F087) carries the current
+dispositions of the quest machine, instance, parser, tasks/clock,
+places/persons, foes/items, messages/symbols, action library, and macro
+expansion. The plan's
 [quest machinery section](../daggerfall-coverage-plan.md#11-quest-machinery-and-action-families)
 requires normalized classic source data, persistent instances and symbols,
 task/deadline/message behavior, stable world bindings, actual operations for
@@ -51,15 +51,25 @@ Current product owners:
 
 * `Daggerfall.Import` converts quest sources (`Arena2/QuestSourceReader.cs`,
   `Normalized/DaggerfallQuests.cs` and the quest table readers) and publishes the
-  quest corpora (`Publication/ClassicQuestCorpusPublication.cs`).
+  quest corpora (`Publication/ClassicQuestCorpusPublication.cs`,
+  `FightersGuildQuestCorpusPublication.cs` and `NamedQuestCorpusPublication.cs`,
+  with excluded source lines in `QuestCorpusExclusions.cs`).
 * `content/worldrpg/content-packs/` holds the published `daggerfall.quests.*`
   packs beside the base and location packs.
 * The ruleset interprets them: `Content/DaggerfallQuests.cs` and the corpus
-  content readers; `DaggerfallQuestInstances.cs` (durable instance, resource and
-  symbol state), `DaggerfallQuestTasks.cs`, `DaggerfallQuestClocks.cs`,
-  `DaggerfallQuestMessages.cs` and `DaggerfallQuestRuntime.cs` (the session
-  adapter to player, progression and calendar owners). `DaggerfallState.Quests`
-  holds the instances and `DaggerfallSavePayload` persists them.
+  content readers (`DaggerfallClassicQuestCorpusContent`,
+  `DaggerfallFightersGuildQuestCorpusContent` and
+  `DaggerfallNamedQuestCorpusContent`); `DaggerfallQuestInstances.cs` (durable
+  instance, resource and symbol state), `DaggerfallQuestTasks.cs` (compiler and
+  runner), `DaggerfallQuestClocks.cs`, `DaggerfallQuestMessages.cs` and
+  `DaggerfallQuestRuntime.cs` (the session adapter to player, progression and
+  calendar owners). Action families have their own owners, among them
+  `DaggerfallQuestItems`, `DaggerfallQuestPlaces`, `DaggerfallQuestPeople`,
+  `DaggerfallQuestPlacements`, `DaggerfallQuestSpawning`, `DaggerfallQuestSocial`,
+  `DaggerfallQuestMagic`, `DaggerfallQuestEnvironment`, `DaggerfallQuestJournal`
+  and `DaggerfallQuestOffers`, with `DaggerfallSession.Quest*.cs` session
+  adapters. `DaggerfallState.Quests` holds the instances and
+  `DaggerfallSavePayload` persists them.
 * Reusable identity/state coordination may belong to Kit. The Host must not
   acquire Daggerfall quest semantics.
 
@@ -73,39 +83,41 @@ can point to a source owner:
 
 | ID | Donor file | Source role | Local disposition |
 | --- | --- | --- | --- |
-| QST-CORE-001 | `Game/Questing/Clock.cs` | Quest-clock resource, alarms, ranges, flags, game-time countdown | Runtime Daggerfall quest/calendar state inside Engine admission; clock flags/catch-up semantics to specify |
-| QST-CORE-002 | `Game/Questing/Foe.cs` | Symbolic quest foe and party/resource resolution | Runtime candidate; stable actor identity and spawn ownership unresolved |
-| QST-CORE-003 | `Game/Questing/Item.cs` | Symbolic quest item, artifact and placement resolution | Runtime candidate; use Kit/Engine inventory substrate with Daggerfall definitions |
-| QST-CORE-004 | `Game/Questing/Message.cs` | Popup, journal, letter, rumor text and variants | Runtime candidate; thin DOM projection and localization format unresolved |
-| QST-CORE-005 | `Game/Questing/Parser.cs` | QRC/QBN source parser and resource/task construction | Offline Import candidate; no runtime donor parser topology |
-| QST-CORE-006 | `Game/Questing/Person.cs` | Symbolic NPC and faction/person resolution | Runtime candidate; stable world/NPC identity unresolved |
-| QST-CORE-007 | `Game/Questing/Place.cs` | Permanent, remote, local, and random quest locations | Offline catalog plus runtime world binding; marker normalization unresolved |
-| QST-CORE-008 | `Game/Questing/Quest.cs` | Live quest instance, lifecycle, tasks, resources, save state | Runtime candidate; Daggerfall ruleset/save owner absent locally |
-| QST-CORE-009 | `Game/Questing/QuestAction.cs` | Action interface/template, trigger flags, update/check/save contract | Runtime candidate; compile to explicit ruleset operations, no reflection registry |
-| QST-CORE-010 | `Game/Questing/QuestListsManager.cs` | Classic/DFU list loading, guild/social selection, pack discovery | Offline catalog/import plus ruleset selection policy |
-| QST-CORE-011 | `Game/Questing/QuestMCP.cs` | Quest macro/context data source | Runtime candidate; replace global singleton/context access with explicit state |
-| QST-CORE-012 | `Game/Questing/QuestMachine.cs` | Quest loading, action registration, scheduling, ticking, protected quests | Adapt Daggerfall lifecycle inside existing Engine admission; no donor scheduler/singleton |
-| QST-CORE-013 | `Game/Questing/QuestResource.cs` | Shared resource parent/symbol/message/click/hidden behavior | Runtime candidate; local stable resource model absent |
-| QST-CORE-014 | `Game/Questing/Symbol.cs` | Named quest symbol and value/resource references | Runtime candidate; typed identities and serialization unresolved |
-| QST-CORE-015 | `Game/Questing/Task.cs` | Task conditions, action sequence, trigger/repeating state | Runtime candidate; task ordering and persistence unresolved |
+| QST-CORE-001 | `Game/Questing/Clock.cs` | Quest-clock resource, alarms, ranges, flags, game-time countdown | Runtime Daggerfall quest/calendar state inside Engine admission; `DaggerfallQuestClocks` implements the duration forms, flags, ranges and in-order deadline catch-up |
+| QST-CORE-002 | `Game/Questing/Foe.cs` | Symbolic quest foe and party/resource resolution | Runtime; `DaggerfallQuestResourceAllocator`, `DaggerfallQuestSpawning` and `DaggerfallQuestFoeLifecycle` own selection, spawn and durable actor identity |
+| QST-CORE-003 | `Game/Questing/Item.cs` | Symbolic quest item, artifact and placement resolution | Runtime; `DaggerfallQuestItems` binds quest items over the Kit/Engine inventory substrate with Daggerfall definitions |
+| QST-CORE-004 | `Game/Questing/Message.cs` | Popup, journal, letter, rumor text and variants | Runtime; `DaggerfallQuestMessages` owns variants, macros and delivery to thin DOM projections; base language only (DEC-05) |
+| QST-CORE-005 | `Game/Questing/Parser.cs` | QRC/QBN source parser and resource/task construction | Offline Import (`QuestSourceReader`); every published source compiles; no runtime donor parser topology |
+| QST-CORE-006 | `Game/Questing/Person.cs` | Symbolic NPC and faction/person resolution | Runtime; `DaggerfallQuestPeople` and `DaggerfallQuestNpcOverlays` bind stable world/NPC identity |
+| QST-CORE-007 | `Game/Questing/Place.cs` | Permanent, remote, local, and random quest locations | Offline catalog plus runtime world binding; `DaggerfallQuestPlaces` allocates and `DaggerfallQuestPlacements` places against normalized quest markers. Remaining: destinations outside published site profiles (see quest destinations) |
+| QST-CORE-008 | `Game/Questing/Quest.cs` | Live quest instance, lifecycle, tasks, resources, save state | Runtime; `DaggerfallQuestInstances` owns the live instance, tombstone and save state, persisted through `DaggerfallSavePayload` |
+| QST-CORE-009 | `Game/Questing/QuestAction.cs` | Action interface/template, trigger flags, update/check/save contract | Runtime; compiled to typed ruleset operations in `DaggerfallQuestTasks`, no reflection registry |
+| QST-CORE-010 | `Game/Questing/QuestListsManager.cs` | Classic/DFU list loading, guild/social selection, pack discovery | Offline catalog/import plus ruleset selection policy (`DaggerfallQuestOffers`) |
+| QST-CORE-011 | `Game/Questing/QuestMCP.cs` | Quest macro/context data source | Runtime; explicit quest text context in `DaggerfallQuestMessages`, no global singleton |
+| QST-CORE-012 | `Game/Questing/QuestMachine.cs` | Quest loading, action registration, scheduling, ticking, protected quests | Adapted lifecycle inside existing Engine admission (`DaggerfallQuestInstances`); the three protected quests are a published source decision; no donor scheduler/singleton |
+| QST-CORE-013 | `Game/Questing/QuestResource.cs` | Shared resource parent/symbol/message/click/hidden behavior | Runtime; `DaggerfallQuestResourceAllocator` owns the stable resource model |
+| QST-CORE-014 | `Game/Questing/Symbol.cs` | Named quest symbol and value/resource references | Runtime; typed resource symbols persisted in the canonical instance save |
+| QST-CORE-015 | `Game/Questing/Task.cs` | Task conditions, action sequence, trigger/repeating state | Runtime; typed task kinds with ordering, rearm and persistence rules in `DaggerfallQuestTasks` |
 
 The helper source used by quest messages is outside `Game/Questing` and is
 listed separately because it is a prerequisite rather than an action file:
 
 | ID | Donor file | Disposition |
 | --- | --- | --- |
-| QST-HELPER-001 | `Assets/Scripts/Utility/QuestMacroHelper.cs` | Runtime semantic candidate; preserve token meanings while adapting context and localization ownership |
-| QST-HELPER-002 | `Assets/Scripts/Utility/MacroHelper.cs` | Donor macro catalog; audit each supported macro against Daggerfall state, do not port the static Unity helper |
+| QST-HELPER-001 | `Assets/Scripts/Utility/QuestMacroHelper.cs` | Runtime; `DaggerfallQuestMessages` implements the context, binding, detail, faction, resource and `%vcn` token forms |
+| QST-HELPER-002 | `Assets/Scripts/Utility/MacroHelper.cs` | Donor macro catalog; context macros resolve through the shared text resolver, and their caller-context values follow F091; do not port the static Unity helper |
 
 ## Prerequisite groups
 
-The action inventory is grouped by the capability it needs first. A row marked
-`R` is a runtime semantic candidate. A row marked `U` is still a runtime
-candidate, but a source-format, Engine capability, UI, or product-ownership
-detail must be resolved while drafting its task. Ownership follows the coverage plan;
-these flags do not reopen settled Engine/Kit/ruleset boundaries or block unrelated
-task creation. `H` is a donor helper/demo
-and is not a classic runtime parity promise.
+The action inventory is grouped by the capability it needs first. Every
+production action compiles to a typed operation in `DaggerfallQuestTasks`; an
+unmatched source line becomes `Unsupported` and fails its instance rather than
+succeeding, and the published corpus has none. A row marked `R` is implemented
+by the named owner. A row marked `U` is implemented with an open detail named in
+its **Remaining** clause. Ownership follows the coverage plan; these flags do not
+reopen settled Engine/Kit/ruleset boundaries. `H` is a donor helper/demo and is
+not a classic runtime parity promise. "No classic usage" marks a form that the
+published classic corpus never uses.
 
 The grouping is dependency guidance, not an implementation sequence. For
 example, a quest action can be parsed before the actual world operation exists,
@@ -118,16 +130,16 @@ Prerequisites: `QST-CORE-005`, `QST-CORE-006`, `QST-CORE-008` through
 
 | ID | File | Semantic role | Disposition |
 | --- | --- | --- | --- |
-| QST-ACT-010 | `ClearTask.cs` | Clear a named task | R |
-| QST-ACT-019 | `DailyFrom.cs` | Always-on daily time-window condition | U — donor day/time units and calendar admission need exact audit |
-| QST-ACT-026 | `EndQuest.cs` | End a quest, optionally showing text | R |
-| QST-ACT-046 | `PickOneOf.cs` | Select one task/resource from alternatives | U — random choice and saved result must use ruleset random state |
-| QST-ACT-062 | `RunQuest.cs` | Start a child quest and branch on result | U — catalog, faction, cycle, and lifetime policy need explicit rules |
-| QST-ACT-067 | `StartQuest.cs` | Start a named/indexed quest | U — list selection, faction, and duplicate-start policy need explicit rules |
-| QST-ACT-068 | `StartStopTimer.cs` | Start or stop a `Clock` resource | U — timer flags/range and calendar units are partly undocumented in donor |
-| QST-ACT-069 | `StartTask.cs` | Start/set a named task | R |
-| QST-ACT-075 | `UnsetTask.cs` | Unset a named task | R |
-| QST-ACT-082 | `WhenTask.cs` | Condition on task state, including `and`/`and not` forms | R — preserve repeating/always-on ordering |
+| QST-ACT-010 | `ClearTask.cs` | Clear a named task | R — `DaggerfallQuestTasks` runner |
+| QST-ACT-019 | `DailyFrom.cs` | Always-on daily time-window condition | R — inclusive daily window on the admitted calendar, as in the donor |
+| QST-ACT-026 | `EndQuest.cs` | End a quest, optionally showing text | R — ends the instance through pending-end passes |
+| QST-ACT-046 | `PickOneOf.cs` | Select one task/resource from alternatives | R — `DaggerfallQuestInstances` picks through Engine keyed random and persists the result |
+| QST-ACT-062 | `RunQuest.cs` | Start a child quest and branch on result | R — child start with cycle rejection and result branch; no classic usage |
+| QST-ACT-067 | `StartQuest.cs` | Start a named/indexed quest | R — scheduled start; the `S0000999` references to sources 997/998, absent from the donor, are diagnosed |
+| QST-ACT-068 | `StartStopTimer.cs` | Start or stop a `Clock` resource | R — `DaggerfallQuestClocks`; a missing clock fails the quest explicitly |
+| QST-ACT-069 | `StartTask.cs` | Start/set a named task | R — `DaggerfallQuestTasks` runner |
+| QST-ACT-075 | `UnsetTask.cs` | Unset a named task | R — `DaggerfallQuestTasks` runner |
+| QST-ACT-082 | `WhenTask.cs` | Condition on task state, including `and`/`and not` forms | R — `TryCompileWhen`/`CheckCondition` preserve repeating/always-on ordering |
 
 ### World places, markers, and movement
 
@@ -136,16 +148,16 @@ normalized markers, and the existing spatial/session owner.
 
 | ID | File | Semantic role | Disposition |
 | --- | --- | --- | --- |
-| QST-ACT-017 | `CreateNpcAt.cs` | Create an NPC at a named place | U — place marker and dynamic actor identity need local ownership |
-| QST-ACT-025 | `DroppedItemAtPlace.cs` | Trigger when an item is dropped at a place | U — item identity, placement lifetime, and trigger timing need audit |
-| QST-ACT-045 | `PcAt.cs` | Condition on the player reaching a place; donor accepts `set` and `do` forms | U — classic syntax difference and marker/`any` place semantics unresolved |
-| QST-ACT-047 | `PlaceFoe.cs` | Place a foe at a place or marker | U — queued-before-spawn behavior and world ownership unresolved |
-| QST-ACT-048 | `PlaceItem.cs` | Place an item at a place, quest marker, or any marker | U — normalized marker and item-instance persistence unresolved |
-| QST-ACT-049 | `PlaceNpc.cs` | Place an NPC at a place or marker | U — stable NPC identity and relocation semantics unresolved |
-| QST-ACT-060 | `RevealLocation.cs` | Reveal a quest location/map target | U — map/discovery owner and location key normalization unresolved |
-| QST-ACT-071 | `TeleportPc.cs` | Transfer the player to a place/marker | U — actual session transition and return state need local operation |
-| QST-ACT-079 | `WhenPcEntersExits.cs` | Trigger on exterior entry/exit type | U — donor `p1=2` exterior requirement and local transition events need audit |
-| QST-ACT-083 | `WorldUpdate.cs` | Mutate world/block/building variant | U — source meaning and world-content owner need direct audit |
+| QST-ACT-017 | `CreateNpcAt.cs` | Create an NPC at a named place | R — reserves the place and places the resource through `DaggerfallQuestPlacements` |
+| QST-ACT-025 | `DroppedItemAtPlace.cs` | Trigger when an item is dropped at a place | R — `DaggerfallQuestWorldActions` checks the bound item and place and latches once |
+| QST-ACT-045 | `PcAt.cs` | Condition on the player reaching a place; donor accepts `set` and `do` forms | R — `DaggerfallQuestWorldTriggers` accepts both `set` and `do`; an unknown `any` discriminator is diagnosed |
+| QST-ACT-047 | `PlaceFoe.cs` | Place a foe at a place or marker | R — `DaggerfallQuestPlacements` queues placement until the destination is visited |
+| QST-ACT-048 | `PlaceItem.cs` | Place an item at a place, quest marker, or any marker | R — `DaggerfallQuestPlacements` queues placement until the destination is visited |
+| QST-ACT-049 | `PlaceNpc.cs` | Place an NPC at a place or marker | R — `DaggerfallQuestPlacements` queues placement until the destination is visited |
+| QST-ACT-060 | `RevealLocation.cs` | Reveal a quest location/map target | R — `DaggerfallSession.QuestWorldActions` discovers the site and records the map note |
+| QST-ACT-071 | `TeleportPc.cs` | Transfer the player to a place/marker | U — `DaggerfallSession.QuestWorldActions` moves the player to an admitted profile's quest marker. Remaining: a destination without a published profile is diagnosed (see quest destinations) |
+| QST-ACT-079 | `WhenPcEntersExits.cs` | Trigger on exterior entry/exit type | R — `DaggerfallQuestWorldTriggers` enforces the exterior `p1=2` requirement |
+| QST-ACT-083 | `WorldUpdate.cs` | Mutate world/block/building variant | U — the `location` form executes. Remaining: `locationnew`, `block`, `building`, `blockAll` and `buildingAll` compile but are diagnosed and stall their task; no classic usage |
 
 ### Actors, questors, foes, and presentation identity
 
@@ -154,27 +166,27 @@ catalogs, combat/effect admission, and thin presentation projections.
 
 | ID | File | Semantic role | Disposition |
 | --- | --- | --- | --- |
-| QST-ACT-001 | `AddAsQuestor.cs` | Register a resource as a questor | R — persistent quest-resource relation |
-| QST-ACT-003 | `AddFace.cs` | Add a face/presentation identity to an NPC or foe | U — face identity and presentation resource ownership unresolved |
-| QST-ACT-007 | `ChangeFoeInfighting.cs` | Change foe attackability/infighting state | U — AI state and cleanup semantics need ruleset audit |
-| QST-ACT-008 | `ChangeFoeTeam.cs` | Change foe team by numeric or symbolic value | U — team identity and behavior owner unresolved |
-| QST-ACT-015 | `CreateFoe.cs` | Create/spawn foe parties, including periodic/percent forms | U — spawn schedule, count, and dynamic identity need exact audit |
-| QST-ACT-016 | `CreateNpc.cs` | Create a quest NPC | U — authored definition versus dynamic resource policy unresolved |
-| QST-ACT-021 | `DestroyNpc.cs` | Destroy a quest NPC | U — save/lifetime semantics and references after removal unresolved |
-| QST-ACT-023 | `DropAsQuestor.cs` | Remove a resource from questor registration | R |
-| QST-ACT-024 | `DropFace.cs` | Remove a face/presentation identity | U — cleanup and presentation ownership unresolved |
-| QST-ACT-027 | `Enemies.cs` | Make foes hostile or clear enemy state | U — combat/AI policy and target relation need audit |
-| QST-ACT-032 | `HideNpc.cs` | Hide an NPC | U — visibility versus lifecycle semantics need local owner |
-| QST-ACT-033 | `InjuredFoe.cs` | Trigger on foe injury | R — actual damage event and repeat policy must be wired |
-| QST-ACT-036 | `KillFoe.cs` | Command a foe death | R — use the existing actor damage/death owner |
-| QST-ACT-037 | `KilledFoe.cs` | Trigger on foe death/count | U — dynamic identity, count, and persistence need audit |
-| QST-ACT-043 | `MuteNpc.cs` | Mute NPC dialogue | U — dialogue/presentation state and cleanup unresolved |
-| QST-ACT-055 | `RemoveFoe.cs` | Remove a foe | U — despawn versus defeated/corpse semantics unresolved |
-| QST-ACT-058 | `RestoreNpc.cs` | Restore a hidden/destroyed NPC | U — identity and prior state reconstruction unresolved |
-| QST-ACT-059 | `RestrainFoe.cs` | Restrain a foe | U — combat/movement state and save semantics unresolved |
-| QST-ACT-066 | `SpawnCityGuards.cs` | Spawn city guards immediately or normally | U — guard catalog, legal state, and dynamic actor lifecycle unresolved |
-| QST-ACT-074 | `UnrestrainFoe.cs` | Release a restrained foe | U — inverse state and cleanup need audit |
-| QST-ACT-078 | `WhenNpcIsAvailable.cs` | Always-on NPC availability condition | U — availability, schedule, and world identity need local rules |
+| QST-ACT-001 | `AddAsQuestor.cs` | Register a resource as a questor | R — `DaggerfallQuestNpcOverlays` |
+| QST-ACT-003 | `AddFace.cs` | Add a face/presentation identity to an NPC or foe | R — `DaggerfallQuestNpcOverlays`, with portrait order and visible slots persisted |
+| QST-ACT-007 | `ChangeFoeInfighting.cs` | Change foe attackability/infighting state | R — `DaggerfallQuestFoeRelations`; no classic usage |
+| QST-ACT-008 | `ChangeFoeTeam.cs` | Change foe team by numeric or symbolic value | R — `DaggerfallQuestFoeRelations`; no classic usage |
+| QST-ACT-015 | `CreateFoe.cs` | Create/spawn foe parties, including periodic/percent forms | R — `DaggerfallQuestSpawning`, including the `indefinitely` and `send` forms |
+| QST-ACT-016 | `CreateNpc.cs` | Create a quest NPC | R — `DaggerfallQuestNpcLifecycle` |
+| QST-ACT-021 | `DestroyNpc.cs` | Destroy a quest NPC | R — `DaggerfallQuestNpcLifecycle`; a destroyed resource cannot be restored or recreated |
+| QST-ACT-023 | `DropAsQuestor.cs` | Remove a resource from questor registration | R — `DaggerfallQuestNpcOverlays` |
+| QST-ACT-024 | `DropFace.cs` | Remove a face/presentation identity | R — `DaggerfallQuestNpcOverlays` |
+| QST-ACT-027 | `Enemies.cs` | Make foes hostile or clear enemy state | R — `DaggerfallQuestFoeRelations`; no classic usage |
+| QST-ACT-032 | `HideNpc.cs` | Hide an NPC | R — `DaggerfallQuestNpcLifecycle` keeps identity across hide and restore |
+| QST-ACT-033 | `InjuredFoe.cs` | Trigger on foe injury | R — `DaggerfallQuestFoeLifecycle` records actual damage |
+| QST-ACT-036 | `KillFoe.cs` | Command a foe death | R — `DaggerfallQuestFoeLifecycle` uses the accepted death and corpse path |
+| QST-ACT-037 | `KilledFoe.cs` | Trigger on foe death/count | R — `DaggerfallQuestFoeLifecycle` counts actual group deaths, persisted |
+| QST-ACT-043 | `MuteNpc.cs` | Mute NPC dialogue | R — `DaggerfallQuestNpcOverlays`, with mute rearm |
+| QST-ACT-055 | `RemoveFoe.cs` | Remove a foe | R — `DaggerfallQuestFoeLifecycle`; removal before placement creates no death or corpse |
+| QST-ACT-058 | `RestoreNpc.cs` | Restore a hidden/destroyed NPC | R — `DaggerfallQuestNpcLifecycle` |
+| QST-ACT-059 | `RestrainFoe.cs` | Restrain a foe | R — `DaggerfallQuestFoeRelations`; an accepted player strike breaks only that foe's restraint |
+| QST-ACT-066 | `SpawnCityGuards.cs` | Spawn city guards immediately or normally | R — `DaggerfallQuestGuardSpawning`; no classic usage |
+| QST-ACT-074 | `UnrestrainFoe.cs` | Release a restrained foe | R — `DaggerfallQuestFoeRelations` |
+| QST-ACT-078 | `WhenNpcIsAvailable.cs` | Always-on NPC availability condition | R — `DaggerfallQuestNpcLifecycle` reads static-NPC availability and reservation |
 
 ### Items, rewards, and economy
 
@@ -184,16 +196,16 @@ policy.
 
 | ID | File | Semantic role | Disposition |
 | --- | --- | --- | --- |
-| QST-ACT-012 | `ClickedItem.cs` | Trigger when a quest item is clicked | U — interaction event and thin UI result need local audit |
-| QST-ACT-028 | `GetItem.cs` | Acquire a quest item | R — bind to actual inventory grant/quest item identity |
-| QST-ACT-029 | `GiveItem.cs` | Give a quest item to a resource | U — recipient identity and inventory transfer semantics unresolved |
-| QST-ACT-030 | `GivePc.cs` | Give the player reward/notification and mark quest success | U — reward types, success ordering, and one-shot behavior need audit |
-| QST-ACT-031 | `HaveItem.cs` | Condition on item possession | R — use actual inventory reads and quest binding |
-| QST-ACT-034 | `ItemUsedDo.cs` | Trigger a task when an item is used | U — item-use event and action ordering unresolved |
-| QST-ACT-042 | `MakePermanent.cs` | Make a quest item permanent | U — durable item binding and save ownership unresolved |
-| QST-ACT-044 | `PayMoney.cs` | Payment branch to paid/unpaid task | U — currency operation, failure branch, and transaction ordering need audit |
-| QST-ACT-070 | `TakeItem.cs` | Remove an item from the player | R — use guarded inventory removal |
-| QST-ACT-072 | `TotingItemAndClickedNpc.cs` | Trigger while carrying an item and clicking an NPC | U — interaction and item-instance identity need local operation |
+| QST-ACT-012 | `ClickedItem.cs` | Trigger when a quest item is clicked | R — `DaggerfallQuestItemInteractions` on actual item selection |
+| QST-ACT-028 | `GetItem.cs` | Acquire a quest item | R — `DaggerfallQuestItems` grants bound quest items |
+| QST-ACT-029 | `GiveItem.cs` | Give a quest item to a resource | R — `DaggerfallQuestItemInteractions` gives once to current and future recipient inventories |
+| QST-ACT-030 | `GivePc.cs` | Give the player reward/notification and mark quest success | R — `DaggerfallQuestRewards`: real loot, success after admission, town delivery delay |
+| QST-ACT-031 | `HaveItem.cs` | Condition on item possession | R — actual inventory reads with quest binding |
+| QST-ACT-034 | `ItemUsedDo.cs` | Trigger a task when an item is used | R — `DaggerfallQuestItemInteractions` on actual inventory use |
+| QST-ACT-042 | `MakePermanent.cs` | Make a quest item permanent | R — `DaggerfallQuestItems` |
+| QST-ACT-044 | `PayMoney.cs` | Payment branch to paid/unpaid task | R — `DaggerfallQuestItemInteractions` atomic paid/unpaid branch; no classic usage |
+| QST-ACT-070 | `TakeItem.cs` | Remove an item from the player | R — guarded removal with no partial mutation |
+| QST-ACT-072 | `TotingItemAndClickedNpc.cs` | Trigger while carrying an item and clicking an NPC | R — `DaggerfallQuestItemInteractions` NPC handoff of the bound item |
 
 ### Dialogue, messages, rumors, and journal
 
@@ -203,17 +215,17 @@ actions.
 
 | ID | File | Semantic role | Disposition |
 | --- | --- | --- | --- |
-| QST-ACT-002 | `AddDialog.cs` | Add dialogue for location/person/item combinations | U — dialogue catalog and thin DOM projection unresolved |
-| QST-ACT-011 | `ClickedFoe.cs` | Trigger when a foe is clicked; may say or branch | U — interaction event and combat-state relation need audit |
-| QST-ACT-013 | `ClickedNpc.cs` | Trigger when an NPC is clicked; may say or branch | U — interaction event, availability, and dialogue ownership unresolved |
-| QST-ACT-022 | `DialogLink.cs` | Link dialogue to location/person/item | U — stable link identity and cleanup unresolved |
-| QST-ACT-035 | `JournalNote.cs` | Write a journal note | R — persist ordered semantic text, not donor widgets |
-| QST-ACT-040 | `LogMessage.cs` | Add a quest log step/message | R — preserve ordering and quest lifetime |
-| QST-ACT-053 | `Prompt.cs` | Show a yes/no prompt and branch | U — semantic action and result persistence need UI contract |
-| QST-ACT-054 | `PromptMulti.cs` | Show a multi-choice prompt and branch | U — choice catalog and result persistence need UI contract |
-| QST-ACT-056 | `RemoveLogMessage.cs` | Remove a journal/log step | R — preserve ordering and durable reference |
-| QST-ACT-061 | `RumorMill.cs` | Add quest rumor to social dialogue | U — rumor lifetime, macro expansion, and talk owner unresolved |
-| QST-ACT-063 | `Say.cs` | Show quest message; donor action is one-shot | R — thin semantic message projection |
+| QST-ACT-002 | `AddDialog.cs` | Add dialogue for location/person/item combinations | R — `DaggerfallQuestDialogueLinks` |
+| QST-ACT-011 | `ClickedFoe.cs` | Trigger when a foe is clicked; may say or branch | R — `DaggerfallQuestActorClicks`; no classic usage |
+| QST-ACT-013 | `ClickedNpc.cs` | Trigger when an NPC is clicked; may say or branch | R — `DaggerfallQuestActorClicks` |
+| QST-ACT-022 | `DialogLink.cs` | Link dialogue to location/person/item | R — `DaggerfallQuestDialogueLinks`; a stale link is diagnosed |
+| QST-ACT-035 | `JournalNote.cs` | Write a journal note | R — writes the personal notebook; no classic usage |
+| QST-ACT-040 | `LogMessage.cs` | Add a quest log step/message | R — `DaggerfallQuestJournal` preserves order across restore |
+| QST-ACT-053 | `Prompt.cs` | Show a yes/no prompt and branch | R — compiled prompt with persisted result |
+| QST-ACT-054 | `PromptMulti.cs` | Show a multi-choice prompt and branch | R — compiled choices with persisted result; no classic usage |
+| QST-ACT-056 | `RemoveLogMessage.cs` | Remove a journal/log step | R — `DaggerfallQuestJournal` |
+| QST-ACT-061 | `RumorMill.cs` | Add quest rumor to social dialogue | R — quest rumors through `DaggerfallQuestMessages` |
+| QST-ACT-063 | `Say.cs` | Show quest message; donor action is one-shot | R — once per action; an unresolved alias fails the quest explicitly |
 
 ### Factions, progression, conditions, and disease
 
@@ -222,17 +234,17 @@ actual disease/effect operations, progression events, and quest persistence.
 
 | ID | File | Semantic role | Disposition |
 | --- | --- | --- | --- |
-| QST-ACT-009 | `ChangeReputeWith.cs` | Change reputation with a faction/resource | U — faction identity, bounds, and persistence need audit |
-| QST-ACT-018 | `CurePcDisease.cs` | Cure disease, vampirism, or lycanthropy | U — disease/transformation handoff and quest state unresolved |
-| QST-ACT-038 | `LegalRepute.cs` | Change legal reputation | U — crime/legal owner and value semantics unresolved |
-| QST-ACT-039 | `LevelCompleted.cs` | Trigger at a minimum player level | R — consume the actual progression level |
-| QST-ACT-041 | `MakePcDiseased.cs` | Inflict disease on the player | U — disease catalog, duration, and effect owner unresolved |
-| QST-ACT-057 | `ReputeExceedsDo.cs` | Branch when reputation exceeds a threshold | U — faction lookup and branch ordering need audit |
-| QST-ACT-065 | `SetPlayerCrime.cs` | Set a player crime flag | U — legal state and save semantics need local owner |
-| QST-ACT-073 | `TrainPc.cs` | Train a skill with cost/time/reward semantics | U — guild/economy/progression integration unresolved |
-| QST-ACT-077 | `WhenAttributeLevel.cs` | Trigger on minimum attribute | U — stat identity and modifier/read semantics need audit |
-| QST-ACT-080 | `WhenReputeWith.cs` | Always-on reputation threshold condition | U — faction identity and continuous trigger ordering unresolved |
-| QST-ACT-081 | `WhenSkillLevel.cs` | Trigger on minimum skill | U — skill identity and advancement event semantics unresolved |
+| QST-ACT-009 | `ChangeReputeWith.cs` | Change reputation with a faction/resource | R — `DaggerfallQuestSocial` |
+| QST-ACT-018 | `CurePcDisease.cs` | Cure disease, vampirism, or lycanthropy | R — `DaggerfallSession.QuestDiseases`; transformation cures use the permanent transformation owner |
+| QST-ACT-038 | `LegalRepute.cs` | Change legal reputation | R — `DaggerfallQuestSocial` |
+| QST-ACT-039 | `LevelCompleted.cs` | Trigger at a minimum player level | R — `DaggerfallQuestRuntime` reads the actual level |
+| QST-ACT-041 | `MakePcDiseased.cs` | Inflict disease on the player | R — `DaggerfallSession.QuestDiseases`; a source disease bypasses the saving throw |
+| QST-ACT-057 | `ReputeExceedsDo.cs` | Branch when reputation exceeds a threshold | R — `DaggerfallQuestSocial` |
+| QST-ACT-065 | `SetPlayerCrime.cs` | Set a player crime flag | R — `DaggerfallQuestSocial`; no classic usage |
+| QST-ACT-073 | `TrainPc.cs` | Train a skill with cost/time/reward semantics | R — `DaggerfallQuestRuntime` (time, fatigue, skill tally); no classic usage |
+| QST-ACT-077 | `WhenAttributeLevel.cs` | Trigger on minimum attribute | R — `DaggerfallQuestRuntime`; no classic usage |
+| QST-ACT-080 | `WhenReputeWith.cs` | Always-on reputation threshold condition | R — `DaggerfallQuestSocial` |
+| QST-ACT-081 | `WhenSkillLevel.cs` | Trigger on minimum skill | R — `DaggerfallQuestRuntime`; no classic usage |
 
 ### Magic and effects
 
@@ -241,9 +253,9 @@ actor targeting, resistance/cure policy, and elapsed-time state.
 
 | ID | File | Semantic role | Disposition |
 | --- | --- | --- | --- |
-| QST-ACT-004 | `CastEffectDo.cs` | Cast an effect, then perform a task | U — effect identity and completion ordering need audit |
-| QST-ACT-005 | `CastSpellDo.cs` | Cast a spell, then perform a task | U — spell catalog, target, and effect result need local owner |
-| QST-ACT-006 | `CastSpellOnFoe.cs` | Cast a classic/custom spell on a foe | U — target identity and effect admission unresolved |
+| QST-ACT-004 | `CastEffectDo.cs` | Cast an effect, then perform a task | R — `DaggerfallQuestMagic` requires a real successful delivery |
+| QST-ACT-005 | `CastSpellDo.cs` | Cast a spell, then perform a task | R — `DaggerfallQuestMagic` requires a real successful delivery |
+| QST-ACT-006 | `CastSpellOnFoe.cs` | Cast a classic/custom spell on a foe | R — `DaggerfallQuestMagic`; a spell queued before placement is delivered once |
 
 ### Climate, sound, song, video, and weather
 
@@ -253,12 +265,12 @@ MIDI playback; it does not silently turn song references into successful audio.
 
 | ID | File | Semantic role | Disposition |
 | --- | --- | --- | --- |
-| QST-ACT-014 | `Climate.cs` | Always-on climate condition/update | U — climate state and presentation owner unresolved |
-| QST-ACT-050 | `PlaySong.cs` | Play a song/MIDI resource | U — adapt retained music cues to ordinary admitted audio assets; MIDI excluded, mapping to be specified, no fake playback success |
-| QST-ACT-051 | `PlaySound.cs` | Play a quest sound, including count/periodic forms | U — `Quests-Sounds` identity and Engine Audio capability need verification |
-| QST-ACT-052 | `PlayVideo.cs` | Play quest video | U — preserve retained original story/cinematic triggers (SUP-18); verify Engine media capability, exclude Unity player/UI topology |
-| QST-ACT-064 | `Season.cs` | Always-on season condition | U — calendar and environment policy unresolved |
-| QST-ACT-076 | `Weather.cs` | Always-on weather condition/update | U — weather state and presentation owner unresolved |
+| QST-ACT-014 | `Climate.cs` | Always-on climate condition/update | R — `DaggerfallQuestEnvironment`; no classic usage |
+| QST-ACT-050 | `PlaySong.cs` | Play a song/MIDI resource | R — `DaggerfallQuestEnvironment` maps to an ordinary music cue and diagnoses a missing track; MIDI excluded; no classic usage |
+| QST-ACT-051 | `PlaySound.cs` | Play a quest sound, including count/periodic forms | U — `DaggerfallQuestEnvironment` plays periodic and counted sounds with persisted state and diagnoses a missing admitted clip. Remaining: the diagnosis halts the whole quest instance, and sound 386 (`vengence`, `S0000977`) is in no site media manifest |
+| QST-ACT-052 | `PlayVideo.cs` | Play quest video | U — Engine Cinematics waits for completion or skip (SUP-18). Remaining: with videos disabled the action is diagnosed and the story quest stalls, where the donor completes; needs a product decision |
+| QST-ACT-064 | `Season.cs` | Always-on season condition | R — `DaggerfallQuestEnvironment`; no classic usage |
+| QST-ACT-076 | `Weather.cs` | Always-on weather condition/update | R — `DaggerfallQuestEnvironment`; no classic usage |
 
 ### Donor helper/demo
 
@@ -316,14 +328,31 @@ has been read.
   Preserve token meaning and deterministic references while making text a thin
   DOM projection. Do not port `MacroHelper` as a global Unity singleton.
 
-The relevant open differences for task records are: classic versus DFU list
-membership; source rows whose QRC/QBN file is missing; `PcAt`'s observed
-`set`/`do` forms; clock flags and random ranges; dynamic actor and item
-identity; queued placement before spawn; world update semantics; faction,
-disease, and transformation state; macro coverage; prompt result persistence;
-media/audio behavior; and the three protected main-quest names. Each must be
-resolved or explicitly excluded by a later task. No unsupported action may be a
-successful no-op.
+The open differences for task records are:
+
+* `WorldUpdate` block, building and new-location forms (QST-ACT-083).
+* An unavailable sound, spell, disease or media operation returns out of the
+  whole instance's advance, so every later task of that quest stops evaluating;
+  world, item and social actions end only their own task. Sound 386
+  (`vengence`) in the protected `S0000977` is the concrete case (QST-ACT-051).
+* Quest video with videos disabled stalls the story quests, where the donor
+  always completes (QST-ACT-052, SUP-18).
+* Quest destinations outside the published site profiles (below).
+
+Macro context values follow F091. No unsupported action may be a successful
+no-op.
+
+## Quest destinations
+
+Place allocation (`DaggerfallQuestPlaceAllocator` in `DaggerfallQuestPlaces.cs`)
+selects from the whole imported location catalog, its RMB building records and
+the RDB/RMB quest markers, and binds durable region, location and building
+identity without consulting site profiles. Travel arrival, building entry,
+portals, transitions, relocation and quest teleport admit only the site profiles
+the bundle publishes. A quest that selects an unpublished town, building or
+dungeon therefore binds correctly, but its destination cannot be entered and the
+operation is diagnosed; most `permanent` places, including Daggerfall, Sentinel
+and Wayrest, have no profile. Full-world destination publication is open work.
 
 ## Shipped quest corpus and deterministic catalog scope
 
@@ -365,8 +394,8 @@ listed here; dynamic mod packs require a separate discovered-input inventory.
 ### Active classic guild, temple, social, and misc catalog
 
 The names below are the active rows (no leading `-`) in the exact donor table.
-They are catalog references, not promises that the corresponding scripts are
-currently supported locally. The category labels preserve the donor enum; the
+All of them are published and compiled (see the published corpus below). The
+category labels preserve the donor enum; the
 `GeneralPopulace` section is the donor's Thieves Guild section.
 
 | Catalog group | Active count | Deterministic source filenames (without `.txt`) |
@@ -462,6 +491,25 @@ content, not active list rows. `CUSTOM01.txt` is listed only by
 40. It is a DFU addition and must be classified separately from original-game
 coverage. `__DEMO01.txt` through `__DEMO21.txt` are DFU demo fixtures and are
 not a substitute for missing classic records.
+
+### Published corpus
+
+The quest packs (`daggerfall.quests.*`) publish 243 quests, each compiled from
+its source with no source diagnostics:
+
+| Published set | Quests |
+| --- | ---: |
+| Active classic list rows | 187 |
+| Disabled rows with sources: 16 Daedra (`summonOnly`), `K0C00Y06` and `R0C11Y27` (`notOffered`) | 18 |
+| Main/tutorial (`story-early` 20, `story-late` 16) | 36 |
+| Cures | 2 |
+| **Total** | **243** |
+
+The five list rows with no source are absent from every pack, which gives 243 =
+248 − 5. `CUSTOM01` and the `__DEMO` scripts are unpublished under DEC-06. Two
+source lines (`S0000007:538` and `B0B71Y03:437`) are excluded as provenance only,
+and the three `S0000999` references to quests 997 and 998, which have no donor
+source, are diagnosed.
 
 ## Source tables and catalog references
 
