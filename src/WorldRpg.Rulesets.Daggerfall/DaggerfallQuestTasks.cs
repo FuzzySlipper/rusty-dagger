@@ -841,7 +841,7 @@ internal static class DaggerfallQuestTaskRunner
                             }
                             else waitingForCast = true;
                         }
-                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); return; }
+                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); operationIndex = task.Operations.Count; }
                         break;
                     case DaggerfallQuestTaskOperationKind.PlaySound:
                     case DaggerfallQuestTaskOperationKind.PlaySong:
@@ -851,7 +851,7 @@ internal static class DaggerfallQuestTaskRunner
                             if (lifecycle.MediaAction(instance, operation, state, operationIndex, calendar)) MarkCompleted(state, operationIndex);
                             else if (operation.Kind == DaggerfallQuestTaskOperationKind.PlayVideo) return;
                         }
-                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); return; }
+                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); operationIndex = task.Operations.Count; }
                         break;
                     case DaggerfallQuestTaskOperationKind.MakePcDiseased:
                     case DaggerfallQuestTaskOperationKind.CurePcDisease:
@@ -861,7 +861,7 @@ internal static class DaggerfallQuestTaskRunner
                             if (operation.MessageId is { } illnessMessage) messages.Popup(instance, illnessMessage);
                             MarkCompleted(state, operationIndex);
                         }
-                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); return; }
+                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); operationIndex = task.Operations.Count; }
                         break;
                     case DaggerfallQuestTaskOperationKind.CureVampirism:
                     case DaggerfallQuestTaskOperationKind.CureLycanthropy:
@@ -872,7 +872,7 @@ internal static class DaggerfallQuestTaskRunner
                             if (!cured) return;
                             MarkCompleted(state, operationIndex);
                         }
-                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); return; }
+                        catch (NotSupportedException unsupported) { DiagnoseWorldAction(state, operationIndex, operation, unsupported.Message); operationIndex = task.Operations.Count; }
                         break;
                     case DaggerfallQuestTaskOperationKind.TrainPc:
                         lifecycle.Train(instance, operation);
@@ -1156,6 +1156,11 @@ internal static class DaggerfallQuestTaskRunner
         DaggerfallQuestTaskOperationKind.ChangeRepute or DaggerfallQuestTaskOperationKind.DroppedAt or DaggerfallQuestTaskOperationKind.GivePc or DaggerfallQuestTaskOperationKind.WhenNpcAvailable or DaggerfallQuestTaskOperationKind.PcAt or DaggerfallQuestTaskOperationKind.PcAtAny or DaggerfallQuestTaskOperationKind.WhenPcEnters or DaggerfallQuestTaskOperationKind.WhenPcExits or
         DaggerfallQuestTaskOperationKind.StartQuest or DaggerfallQuestTaskOperationKind.RunQuest or DaggerfallQuestTaskOperationKind.TrainPc
         or DaggerfallQuestTaskOperationKind.Say or DaggerfallQuestTaskOperationKind.JournalNote or DaggerfallQuestTaskOperationKind.AddFace;
+    /// <summary>
+    /// Records why a step cannot run, tracing it only when the reason changes. The caller then ends that
+    /// task's pass: the step and the task's later steps stay unfinished, so missing work never reads as
+    /// done, while the quest's other tasks keep running as the donor ticks each task on its own.
+    /// </summary>
     private static void DiagnoseWorldAction(DaggerfallQuestTaskRuntimeState state, int index, DaggerfallQuestTaskOperation operation, string reason)
     {
         string diagnostic = $"Quest world action at line {operation.SourceLine} is unavailable: {reason}";
