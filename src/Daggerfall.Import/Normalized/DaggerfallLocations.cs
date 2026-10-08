@@ -29,6 +29,13 @@ public sealed record DaggerfallLocationMap(
     /// </summary>
     public DaggerfallLocationExterior? Exterior { get; init; }
 
+    /// <summary>
+    /// The CLIMATE.PAK value at the location's own map pixel, which <c>MapsFile</c> reads as the location's
+    /// climate: its climate texture base for building swaps (the climate section's swap table) and the seed
+    /// climate of its dungeon's texture table. Absent when the caller supplied no climate grid.
+    /// </summary>
+    public int? Climate { get; init; }
+
     internal void ValidateExterior()
     {
         if (Exterior is null)
@@ -96,9 +103,32 @@ public sealed record DaggerfallDungeonRecord(
 {
     /// <summary>The source placements needed to distinguish repeated RDB blocks.</summary>
     public IReadOnlyList<DaggerfallDungeonBlockPlacement> BlockPlacements { get; init; } = [];
+
+    /// <summary>
+    /// The classic per-location texture table the dungeon is built with (DEC-11.dungeon-textures), seeded
+    /// from <see cref="DungeonLocationId"/> and its location's <see cref="DaggerfallLocationMap.Climate"/>.
+    /// Absent when the caller supplied no climate grid.
+    /// </summary>
+    public DaggerfallDungeonTextureTable? TextureTable { get; init; }
 }
 
-public sealed record DaggerfallDungeonBlockPlacement(string SourceKey, int X, int Z);
+/// <summary>One placed RDB block: its source key, its grid position, and whether it is the start block.</summary>
+/// <param name="SourceKey">The RDB record the placement builds.</param>
+/// <param name="X">The block's grid column.</param>
+/// <param name="Z">The block's grid row.</param>
+public sealed record DaggerfallDungeonBlockPlacement(string SourceKey, int X, int Z)
+{
+    /// <summary>Whether this is the block the location's start and enter markers are taken from.</summary>
+    public bool Start { get; init; }
+}
+
+/// <summary>A dungeon's classic texture table, as <see cref="DungeonTextureTableTransform"/> recreates it.</summary>
+/// <param name="Archives">
+/// The archives the six classic dungeon wall and floor archives (119, 120, 122, 123, 124 and 168, in that
+/// order) are drawn from in this dungeon.
+/// </param>
+/// <param name="DoorArchiveOffset">What the location's climate adds to the door archive (74): 0, 100, 300 or 400.</param>
+public sealed record DaggerfallDungeonTextureTable(IReadOnlyList<int> Archives, int DoorArchiveOffset);
 
 /// <summary>
 /// The published locations of every region, for the site and world consumers that place things on
@@ -224,7 +254,7 @@ public static class DaggerfallLocationBuilder
     /// placement/flattening contract beside each location. The two archives stay separate because
     /// MAPS owns location identity while BLOCKS owns the RMB/FLD bytes referenced by MAPPITEM.
     /// </summary>
-    public static DaggerfallLocations Build(BsaArchive archive, BsaArchive? blocks, BsaArchive? models = null)
+    public static DaggerfallLocations Build(BsaArchive archive, BsaArchive? blocks, BsaArchive? models = null, PakMap? climate = null)
     {
         ArgumentNullException.ThrowIfNull(archive);
         if (blocks is not null && StringComparer.Ordinal.Equals(archive.Source, blocks.Source))
@@ -237,6 +267,7 @@ public static class DaggerfallLocationBuilder
         List<DaggerfallDungeonGap> dungeonGaps = [];
         List<DaggerfallRegionGap> withoutTables = [];
         List<DaggerfallRegionProvenance> regions = [];
+        Dictionary<(int Region, int Index), int> climates = [];
         DaggerfallLocationExteriorBuilder? exteriorBuilder = blocks is null ? null : new DaggerfallLocationExteriorBuilder(blocks, models);
         foreach (MapsRegionGroup group in MapsDecoder.DecodeRegionGroups(archive))
         {
@@ -283,6 +314,12 @@ public static class DaggerfallLocationBuilder
                     };
                 }
 
+                if (climate is not null)
+                {
+                    publishedLocation = publishedLocation with { Climate = LocationClimate(climate, publishedLocation) };
+                    climates.TryAdd((publishedLocation.Region, publishedLocation.Index), publishedLocation.Climate.Value);
+                }
+
                 locations.Add(publishedLocation);
             }
 
@@ -299,6 +336,15 @@ public static class DaggerfallLocationBuilder
 
                     continue;
                 }
+                DaggerfallDungeonTextureTable? textureTable = null;
+                if (climate is not null)
+                {
+                    int dungeonClimate = climates[(dungeon.Region, dungeon.Index)];
+                    textureTable = new(
+                        [.. DungeonTextureTableTransform.CreateClassic(dungeon.DungeonLocationId, checked((byte)dungeonClimate)).Select(archive => (int)archive)],
+                        (int)ClassicClimateSwaps.BaseOf(dungeonClimate));
+                }
+
                 dungeons.Add(new DaggerfallDungeonRecord(
                     dungeon.Region,
                     dungeon.Index,
@@ -306,7 +352,10 @@ public static class DaggerfallLocationBuilder
                     dungeon.ExteriorLocationId,
                     dungeon.DungeonLocationId,
                     [.. dungeon.Blocks.Select(block => block.SourceName)])
-                { BlockPlacements = [.. dungeon.Blocks.Select(block => new DaggerfallDungeonBlockPlacement(block.SourceName, block.X, block.Z))] });
+                {
+                    BlockPlacements = [.. dungeon.Blocks.Select(block => new DaggerfallDungeonBlockPlacement(block.SourceName, block.X, block.Z) { Start = block.IsStart })],
+                    TextureTable = textureTable,
+                });
             }
         }
 
@@ -316,8 +365,22 @@ public static class DaggerfallLocationBuilder
             [.. withoutTables.OrderBy(gap => gap.Region)],
             [.. dungeonGaps.OrderBy(gap => gap.Region).ThenBy(gap => gap.Index)],
             [.. regions.OrderBy(region => region.Region)],
-            blocks is null ? [archive.Source] : models is null ? [archive.Source, blocks.Source] : [archive.Source, blocks.Source, models.Source]);
+            [archive.Source, .. Sources(blocks?.Source, models?.Source, climate?.Source)]);
         published.Validate();
         return published;
+    }
+
+    private static IEnumerable<string> Sources(params string?[] sources) => sources.OfType<string>();
+
+    /// <summary>
+    /// The climate <c>MapsFile</c> gives a location: the CLIMATE.PAK value at its own map pixel. (The terrain
+    /// reads the next pixel east to align the climate and height grids; a location's climate does not.)
+    /// </summary>
+    private static int LocationClimate(PakMap climate, DaggerfallLocationMap location)
+    {
+        (int x, int y) = MapsDecoder.ToMapPixel(location.Longitude, location.Latitude);
+        return climate.TryGetPixel(x, y, out byte value)
+            ? value
+            : throw new InvalidOperationException($"CLIMATE.PAK has no pixel at ({x}, {y}) for location '{location.Name}' in region {location.Region}.");
     }
 }

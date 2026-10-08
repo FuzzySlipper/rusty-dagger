@@ -28,14 +28,17 @@ internal static class QuestMarkerNormalization
     internal static NormalizedQuestMarker? Read(string id, int archive, int record, NormalizedVector3 position,
         string sourceKey, int? buildingIndex, int sourceOrdinal, int blockX = 0, int blockZ = 0)
     {
-        if (archive != RdbSourceClassification.EditorFlatArchive) return null;
-        NormalizedQuestMarkerKind? kind = record switch
+        return KindOf(archive, record) is { } selected ? new(id, selected, position)
+        { SourceKey = sourceKey, BuildingIndex = buildingIndex, SourceOrdinal = sourceOrdinal, BlockX = blockX, BlockZ = blockZ } : null;
+    }
+
+    /// <summary>The quest marker an editor flat's texture names, or null when it names none.</summary>
+    internal static NormalizedQuestMarkerKind? KindOf(int archive, int record) => archive != RdbSourceClassification.EditorFlatArchive
+        ? null
+        : record switch
         {
             RdbSourceClassification.QuestSpawnMarkerRecord => NormalizedQuestMarkerKind.Spawn,
             RdbSourceClassification.QuestItemMarkerRecord => NormalizedQuestMarkerKind.Item,
             _ => null,
         };
-        return kind is { } selected ? new(id, selected, position)
-        { SourceKey = sourceKey, BuildingIndex = buildingIndex, SourceOrdinal = sourceOrdinal, BlockX = blockX, BlockZ = blockZ } : null;
-    }
 }

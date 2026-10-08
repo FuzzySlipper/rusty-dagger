@@ -135,7 +135,7 @@ silently omitted. This manifest contains metadata only, not game payloads.
 | CNT-002 | `CLIMATE.PAK` | 14,771 bytes; existing `PakDecoder` knows the 1001 × 500 grid shape including sentinel cells | Selected Privateer’s Hold climate data only | `current-partial`: enumerate required climate cells and region/terrain interpretation; keep source-format decoding in `Daggerfall.Import`. |
 | CNT-003 | `POLITIC.PAK` | 19,597 bytes; same PAK family and grid capacity | No current admitted source in the privateer import manifest | `pending-import`: enumerate political/faction map cells and their consumers. |
 | CNT-004 | `WOODS.WLD` | 26,001,168 bytes; record count not asserted without an existing wilderness decoder | No current importer or published wilderness pack | `pending-import`/`uninspected`: inventory wilderness records, terrain transitions, seasonal data and references to maps/regions. |
-| CNT-005 | `BLOCKS.BSA` | 1,295 named BSA records (`0x0100` header) | `RdbDecoder` and `DungeonNormalizer` handle bounded RDB facts and the Privateer’s Hold closure; RMB is not corpus-complete | `current-structural`: enumerate all RDB and RMB records, preserve block kind/letter/number, referenced objects, doors, triggers, textures and placements. |
+| CNT-005 | `BLOCKS.BSA` | 1,295 named BSA records (`0x0100` header) | Every RMB exterior and building interior a location places and every RDB block is normalized per block (`world-blocks`, from the same block-level content the site closures place); 262 RMB records no location places are named, not normalized | `current-structural`: enumerate all RDB and RMB records, preserve block kind/letter/number, referenced objects, doors, triggers, textures and placements. |
 | CNT-006 | `ARCH3D.BSA` | 10,251 numeric BSA records (`0x0200` header) | Meshes referenced by Privateer’s Hold are normalized; no all-world closure | `current-partial`: map every required mesh record to its normalized geometry/material references and disposition unused/duplicate records explicitly. |
 | CNT-007 | `MONSTER.BSA` | 103 named BSA records (`0x0100` header), including `ASCR*.ANC` and `ENEMY*.CFG` families | Seven dungeon actor media entries; base payload has 45 actor definitions | `current-partial`: enumerate all archive records and links from actor definitions, animations, corpses, sounds and loot. |
 | CNT-008 | Classic mobile actor definitions | Donor `EnemyBasics.Enemies` contains 63 static definitions; `MONSTER.BSA` is a separate source candidate, not proof of missing runtime fields | A smaller authored actor catalog is published in `daggerfall.base.json`; static `MobileSourceMetadata` is not a complete archive import | `current-partial`: reconcile every supported classic actor identity, authored combat/map/loot metadata and source media to one Daggerfall ruleset/content record. |
@@ -294,7 +294,7 @@ Daggerfall Unity checkout (`--donor`/`DAGGER_DONOR_ROOT`), the song folder `loca
 (`--sound`) and FFmpeg, checks that each is present before writing anything, removes the generated
 files, and runs the import tool's commands in their dependency order: music and classic media, the
 imported payload's sections with the block document and the import records, the quest corpus
-payloads, the product-wide world media publication, then the site closures. Two runs at the same importer source and FFmpeg build write
+payloads, the product-wide world media publication, the per-block world publication, then the site closures. Two runs at the same importer source and FFmpeg build write
 identical bytes. A clone that has not run it builds and runs the content-free suites, but staging
 the product (`rusty dev`, `rusty build`, `StageRustyEngineCoreClrProduct`) stops with a message
 naming the script, `scripts/verify.sh` skips the ruleset suite and staging with the reason printed,
@@ -322,6 +322,13 @@ generated file Git would pick up):
   `catalogs`, `itemTemplateLedger`, `characterPresentation`, `locations`, `magic`, `mobiles`, `text`,
   `names`, `rumors`, `biographies`, `books`, `climate`, `politic`, `factions`, `terrain`,
   `itemTemplates`, `questTables`, `questCatalog`, `questSources`, `cinematics` and `buildingNames`.
+  The `locations` section states each location's `climate` (the CLIMATE.PAK value at its own map pixel,
+  as `MapsFile` reads a location's climate) and, for each dungeon, which block placement is the `start`
+  block and its classic `textureTable` (DEC-11.dungeon-textures: the six wall/floor archives and the door
+  offset, seeded from `dungeonLocationId` and the location's climate). The `climate` section states each
+  value's `climateBase` and the exterior climate/season texture `swaps` (`ClimateSwaps.ApplyClimate`:
+  every archive and record range a climate base or season draws from another archive). A per-location
+  assembly reads these with the per-block facts below.
   The `catalogs` section includes the forty class questions from TEXT.RSC resource 9000,
   their donor answer archetypes and the sixty-six CLASSES.DAT recommendation rows. The ruleset
   consumes these normalized values in the existing character draft; it never opens source files.
@@ -338,7 +345,22 @@ generated file Git would pick up):
   `daggerfall.blocks.json` (`blocks --document`: the complete block document, which `geometry` reads
   for mesh use sites), `sites/SITE.sources.json` (each site closure's source manifest: the supplied
   corpus scanned against the documented inventory, written by `write` and `rmb-spatial` through
-  `--source-manifest`) and `world-media.sources.json` (the same for the world media publication).
+  `--source-manifest`), `world-media.sources.json` (the same for the world media publication) and
+  `world-blocks.sources.json` (the same for the per-block world publication).
+- `import-records/world-blocks/` — the per-block world publication (`world-blocks`): normalized facts for
+  every RMB exterior (658), every building interior those blocks declare (4,521) and every RDB block (187)
+  a location places, each in its own frame. A block document (`rmb/BLOCK/exterior.json`,
+  `rmb/BLOCK/interior-N.json`, `rdb/BLOCK.json`) places the world media publication's meshes by
+  `geometry/mesh-N` id and states the block's doors, start/enter and quest markers, people, furniture,
+  lights, billboards, fixed mobiles, treasure markers, action graph, ground tiles, clear automap cells,
+  RDB water level and ambient area; its `.rspatial` beside it is the block's collision and navigation in
+  the Engine's binary form, ready to place beside its neighbours by whole navigation cells. `blocks.json`
+  indexes every block and names the RMB records no location places. Identities are the site closures'
+  with the grid position left out (`door/BLOCK-rmb/N` where a site says `door/BLOCK-rmb/X/Y/N`), and a
+  location supplies its position, climate, texture table, start block and dungeon type. The site
+  closures' normalizers read each block through the same block-level content. Nothing at runtime opens
+  it yet: hundreds of megabytes in thousands of files, it stays outside the runtime content root the Host stages
+  eagerly until its resolver declares it as a lazily opened content bundle.
 
 The base definitions come from two packs. `daggerfall.base` is authored and tracked: its payload
 `content/worldrpg/payloads/daggerfall.base.json` carries `ruleset`, `vocabulary`,

@@ -214,9 +214,6 @@ public sealed record DungeonNormalizationResult(
 public static class DungeonNormalizer
 {
     private const string ImporterId = "daggerfall-import/dungeon-normalizer";
-    // Classic Arena2 coordinate units use a fixed conversion to metres. This
-    // is a source-format invariant, not a product or presentation setting.
-    private const float LightRangeMultiplier = 3F;
 
     public static DungeonNormalizationResult Normalize(DungeonNormalizationRequest request)
     {
@@ -293,6 +290,7 @@ public static class DungeonNormalizer
         private readonly ushort[] textureTable;
         private readonly ushort climateBase;
         private readonly Dictionary<(ushort Archive, ushort Record), TextureInfo> textures = [];
+        private readonly Dictionary<string, RdbBlockContent> contents = new(StringComparer.Ordinal);
         private readonly SortedSet<string> referencedMeshIds = new(StringComparer.Ordinal);
         private readonly List<GeometryUnresolvedMeshReference> unresolvedMeshReferences = [];
         private readonly HashSet<string> unresolvedMeshIds = new(StringComparer.Ordinal);
@@ -326,139 +324,110 @@ public static class DungeonNormalizer
             this.climateBase = climateBase;
         }
 
+        /// <summary>
+        /// Places one block: the block-level content in the block's frame, moved by its grid origin, named
+        /// by its grid position, and given the location's start block, dungeon type and texture table.
+        /// </summary>
         public void AddBlock(MapsDungeonBlock reference)
         {
-            if (!blocks.TryGetByName(reference.SourceName, out BsaRecord? record) || record is null)
+            if (!contents.TryGetValue(reference.SourceName, out RdbBlockContent? block))
             {
-                throw new InvalidOperationException($"BLOCKS.BSA is missing requested block '{reference.SourceName}'.");
+                block = RdbBlockContent.Read(blocks, reference.SourceName);
+                contents.Add(reference.SourceName, block);
             }
 
-            RdbBlockSource block = RdbDecoder.Decode(blocks.GetPayload(record).Span, blocks.Source);
             string blockPlacementId = $"{Slug(reference.SourceName)}/{reference.X}/{reference.Z}";
             string blockId = $"block/{blockPlacementId}";
-            AddProvenance(blockId, "rdb-block", blocks.Source, record.Ordinal);
-            bool castleBlock = false;
+            AddProvenance(blockId, "rdb-block", blocks.Source, block.SourceOrdinal);
             Arena2ImportPoint origin = Arena2SourceTransform.ToBlockOrigin(reference);
-            for (int index = 0; index < block.Lights.Count; index++)
+            foreach (RdbBlockLight light in block.Lights)
             {
-                RdbLightSource light = block.Lights[index];
                 AddPlacement();
-                string id = $"light/{blockPlacementId}/{index}";
-                AddProvenance(id, "rdb-light", blocks.Source, index);
-                NormalizedVector3 position = MeshGeometry.ToRightHanded(Place(light.X, light.Y, light.Z, reference));
+                string id = $"light/{blockPlacementId}/{light.Index}";
+                AddProvenance(id, "rdb-light", blocks.Source, light.Index);
                 // An RDB light record carries position and radius only; the donor lights it white.
-                lights.Add(new(id, position, ToMetres(light.Radius) * LightRangeMultiplier, 1F, new(1F, 1F, 1F)));
+                lights.Add(new(id, Place(light.Point, reference), light.Range, 1F, new(1F, 1F, 1F)));
             }
 
-            for (int index = 0; index < block.Flats.Count; index++)
+            foreach (RdbBlockFlat flat in block.Flats)
             {
-                RdbFlatSource flat = block.Flats[index];
-                NormalizedVector3 position = MeshGeometry.ToRightHanded(Place(flat.X, flat.Y, flat.Z, reference));
-                if (QuestMarkerNormalization.Read($"quest/{blockPlacementId}/{index}", flat.TextureArchive, flat.TextureRecord, position,
-                    reference.SourceName, null, index, reference.X, reference.Z) is { } marker)
+                int index = flat.Index;
+                NormalizedVector3 position = Place(flat.Point, reference);
+                switch (flat.Kind)
                 {
-                    questMarkers.Add(marker);
-                    AddProvenance(marker.Id, "rdb-quest-marker", blocks.Source, index);
-                    continue;
-                }
-                if (RdbSourceClassification.IsStartMarker(flat))
-                {
-                    castleBlock |= flat.Magnitude != 0;
-                    if (reference.IsStart)
-                    {
+                    case RdbFlatKind.QuestMarker:
+                        NormalizedQuestMarker marker = QuestMarkerNormalization.Read($"quest/{blockPlacementId}/{index}", flat.Source.TextureArchive, flat.Source.TextureRecord, position,
+                            reference.SourceName, null, index, reference.X, reference.Z)!;
+                        questMarkers.Add(marker);
+                        AddProvenance(marker.Id, "rdb-quest-marker", blocks.Source, index);
+                        break;
+                    case RdbFlatKind.StartMarker when reference.IsStart:
                         startMarker ??= new("marker/start", position);
                         AddProvenance("marker/start", "rdb-start-marker", blocks.Source, index);
-                        continue;
-                    }
-                }
+                        break;
+                    case RdbFlatKind.EnterMarker when reference.IsStart:
+                        enterMarker ??= new("marker/enter", position);
+                        AddProvenance("marker/enter", "rdb-enter-marker", blocks.Source, index);
+                        break;
+                    case RdbFlatKind.Treasure:
+                        AddPlacement();
+                        string treasurePlacementId = $"treasure/{blockPlacementId}/{index}";
+                        treasures.Add(new(treasurePlacementId, $"treasure/dungeon-type-{layout.DungeonType}", position));
+                        AddProvenance(treasurePlacementId, "rdb-treasure-marker", blocks.Source, index);
+                        break;
+                    case RdbFlatKind.FixedMobile:
+                        AddPlacement();
+                        string actorPlacementId = $"actor/{blockPlacementId}/{index}";
+                        actors.Add(new(actorPlacementId, $"actor/mobile-{flat.Mobile!.Id.Value}", position));
+                        AddProvenance(actorPlacementId, "rdb-mobile-placement", blocks.Source, index);
+                        break;
+                    case RdbFlatKind.Billboard:
+                        (ushort archiveId, ushort recordId) = RemapTexture(flat.Source.TextureArchive, flat.Source.TextureRecord);
+                        TextureInfo texture = ResolveTexture(archiveId, recordId);
+                        string lightId = $"light-flat/{blockPlacementId}/{index}";
+                        if (DaggerfallInteriorLightFacts.TryProject(lightId, flat.Source, position, ToMetres(texture.Height), out NormalizedLightPlacement flatLight))
+                        {
+                            AddPlacement();
+                            lights.Add(flatLight);
+                            AddProvenance(lightId, "rdb-interior-light-flat", blocks.Source, index);
+                        }
 
-                if (reference.IsStart && RdbSourceClassification.IsEnterMarker(flat))
-                {
-                    enterMarker ??= new("marker/enter", position);
-                    AddProvenance("marker/enter", "rdb-enter-marker", blocks.Source, index);
-                    continue;
+                        AddPlacement();
+                        string id = $"billboard/{blockPlacementId}/{index}";
+                        billboards.Add(new(id, texture.SpriteId, position, new(ToMetres(texture.Width), ToMetres(texture.Height))));
+                        AddProvenance(id, "rdb-billboard", blocks.Source, index);
+                        break;
                 }
-
-                if (RdbSourceClassification.IsRandomTreasureMarker(flat))
-                {
-                    AddPlacement();
-                    string treasurePlacementId = $"treasure/{blockPlacementId}/{index}";
-                    string resourceId = $"treasure/dungeon-type-{layout.DungeonType}";
-                    treasures.Add(new(treasurePlacementId, resourceId, position));
-                    AddProvenance(treasurePlacementId, "rdb-treasure-marker", blocks.Source, index);
-                    continue;
-                }
-
-                // Daggerfall's fixed-mobile meaning is carried only by the
-                // editor flat marker (archive 199, record 16).  Its classic
-                // source data has garbage high bits; mobile zero is valid and
-                // 99 is the one reserved invalid value.  Do not classify an
-                // ordinary billboard from an incidental faction low byte.
-                byte mobileId = unchecked((byte)flat.FactionOrMobileId);
-                if (RdbSourceClassification.IsFixedMobileMarker(flat)
-                    && mobileId != 99
-                    && MobileSourceMetadata.TryGet(new Arena2MobileId(mobileId), out Arena2MobileSource? mobile))
-                {
-                    AddPlacement();
-                    string actorPlacementId = $"actor/{blockPlacementId}/{index}";
-                    string resourceId = $"actor/mobile-{mobile.Id.Value}";
-                    actors.Add(new(actorPlacementId, resourceId, position));
-                    AddProvenance(actorPlacementId, "rdb-mobile-placement", blocks.Source, index);
-                    continue;
-                }
-
-                if (flat.TextureArchive == RdbSourceClassification.EditorFlatArchive)
-                {
-                    continue;
-                }
-
-                (ushort archiveId, ushort recordId) = RemapTexture(flat.TextureArchive, flat.TextureRecord);
-                TextureInfo texture = ResolveTexture(archiveId, recordId);
-                string lightId = $"light-flat/{blockPlacementId}/{index}";
-                if (DaggerfallInteriorLightFacts.TryProject(lightId, flat, position, ToMetres(texture.Height), out NormalizedLightPlacement light))
-                {
-                    AddPlacement();
-                    lights.Add(light);
-                    AddProvenance(lightId, "rdb-interior-light-flat", blocks.Source, index);
-                }
-
-                AddPlacement();
-                string id = $"billboard/{blockPlacementId}/{index}";
-                billboards.Add(new(id, texture.SpriteId, position, new(ToMetres(texture.Width), ToMetres(texture.Height))));
-                AddProvenance(id, "rdb-billboard", blocks.Source, index);
             }
 
-            for (int index = 0; index < block.Models.Count; index++)
+            foreach (RdbBlockModel model in block.Models)
             {
                 AddModel();
-                RdbModelSource model = block.Models[index];
+                int index = model.Index;
                 string modelId = $"model/{blockPlacementId}/{index}";
                 AddProvenance(modelId, "rdb-model", blocks.Source, index);
-                bool ordinaryActionDoor = RdbSourceClassification.HasActionDoorTag(model);
-                bool specialDoorAction = RdbSourceClassification.HasSpecialDoorAction(model);
-                bool actionDoor = ordinaryActionDoor || specialDoorAction;
-                bool actionModel = model.Action is not null && model.ObjectOffset > 0;
+                bool actionDoor = model.ActionDoor;
+                bool actionModel = model.ActionModel;
                 string? actionId = actionModel ? $"action/{blockPlacementId}/model-{index}" : null;
                 string? doorId = null;
                 if (actionDoor)
                 {
                     AddPlacement();
                     doorId = $"door/{blockPlacementId}/{index}";
-                    string doorResourceId = $"door/model-{Slug(model.ModelId)}";
-                    Arena2EulerDegrees degrees = Arena2SourceTransform.ToEulerDegrees(model);
-                    doorDrafts.Add(new(doorId, doorResourceId, MeshGeometry.ToRightHanded(Place(model.X, model.Y, model.Z, reference)), new(degrees.X, degrees.Y, degrees.Z),
-                        specialDoorAction ? "special" : "normal",
-                        ordinaryActionDoor ? StartingLockValue(model.TriggerFlagStartingLock, blocks.Source, index) : 0,
-                        model.Action is { } action ? new NormalizedDoorAction(action.Axis, action.Duration, action.Magnitude, action.NextObjectOffset, action.Flags) : null));
+                    Arena2EulerDegrees degrees = model.RotationDegrees;
+                    doorDrafts.Add(new(doorId, $"door/model-{Slug(model.Source.ModelId)}", Place(model.Point, reference), new(degrees.X, degrees.Y, degrees.Z),
+                        model.SpecialDoorAction ? "special" : "normal",
+                        model.StartingLockValue,
+                        model.Source.Action is { } action ? new NormalizedDoorAction(action.Axis, action.Duration, action.Magnitude, action.NextObjectOffset, action.Flags) : null));
                     AddProvenance(doorId, "rdb-action-door", blocks.Source, index);
                 }
 
-                referencedMeshIds.Add(model.ModelId);
-                if (!TryResolveMesh(model.ModelId, out Arch3dMesh? mesh, out string reason))
+                referencedMeshIds.Add(model.Source.ModelId);
+                if (!TryResolveMesh(model.Source.ModelId, out Arch3dMesh? mesh, out string reason))
                 {
                     // A placement whose mesh the archive cannot serve keeps the fact that it named one: the
                     // reference is reported unresolved and no geometry stands in for what is not there.
-                    AddUnresolvedMesh(model.ModelId, reason: reason);
+                    AddUnresolvedMesh(model.Source.ModelId, reason: reason);
                     continue;
                 }
 
@@ -466,11 +435,10 @@ public static class DungeonNormalizer
                 {
                     // The record decodes but declares nothing drawable, which is the same edge the geometry
                     // publication refuses: reporting it here keeps one definition of an unserved mesh.
-                    AddUnresolvedMesh(model.ModelId, reason: $"ARCH3D.BSA model '{model.ModelId}' declares no drawable plane");
+                    AddUnresolvedMesh(model.Source.ModelId, reason: $"ARCH3D.BSA model '{model.Source.ModelId}' declares no drawable plane");
                     continue;
                 }
 
-                Matrix3 rotation = Matrix3.ForModel(model);
                 HashSet<GeometryGroupKey> placementMeshKeys = [];
                 List<NormalizedVector3> placementVertices = [];
                 List<NormalizedVector3> localModelVertices = [];
@@ -503,12 +471,7 @@ public static class DungeonNormalizer
                     foreach (Arch3dPoint point in plane.Points)
                     {
                         Arena2ImportPoint local = Arena2SourceTransform.ToImportPoint(point);
-                        Arena2ImportPoint rotated = rotation.Transform(local);
-                        Arena2ImportPoint placed = new(
-                            rotated.XMetres + ToMetres(model.X) + origin.XMetres,
-                            rotated.YMetres - ToMetres(model.Y) + origin.YMetres,
-                            rotated.ZMetres + ToMetres(model.Z) + origin.ZMetres);
-                        NormalizedVector3 worldPoint = MeshGeometry.ToRightHanded(placed);
+                        NormalizedVector3 worldPoint = MeshGeometry.ToRightHanded(model.Place(model.Rotate(local), origin));
                         worldPolygon.Add(worldPoint);
                         polygon.Add(actionModel
                             ? MeshGeometry.ToRightHanded(local)
@@ -535,35 +498,36 @@ public static class DungeonNormalizer
 
                 if (actionModel && localModelVertices.Count > 0)
                 {
-                    Arena2EulerDegrees degrees = Arena2SourceTransform.ToEulerDegrees(model);
+                    Arena2EulerDegrees degrees = model.RotationDegrees;
                     actionModelDrafts.Add(new(
                         actionId!,
-                        model.ModelId,
-                        model.Description,
-                        model.ModelIndex,
-                        model.SoundIndex,
+                        model.Source.ModelId,
+                        model.Source.Description,
+                        model.Source.ModelIndex,
+                        model.Source.SoundIndex,
                         doorId,
-                        MeshGeometry.ToRightHanded(Place(model.X, model.Y, model.Z, reference)),
+                        Place(model.Point, reference),
                         new(degrees.X, degrees.Y, degrees.Z),
                         placementMeshKeys,
                         localModelVertices));
                 }
             }
 
-            AddActions(block, blockPlacementId, reference);
-
-            if (castleBlock || StringComparer.OrdinalIgnoreCase.Equals(reference.SourceName, "S0000161.RDB"))
+            foreach (NormalizedDungeonAction action in block.Actions(blockPlacementId, point => Place(point, reference)))
             {
-                NormalizedAmbientZoneKind kind = StringComparer.OrdinalIgnoreCase.Equals(reference.SourceName, "S0000161.RDB")
-                    ? NormalizedAmbientZoneKind.SpecialArea
-                    : NormalizedAmbientZoneKind.Castle;
+                actions.Add(action);
+                AddProvenance(action.Id, action.IsFlat ? "rdb-action-flat" : "rdb-action-model", blocks.Source, action.SourceOffset);
+            }
+
+            if (block.AmbientZone is { } kind)
+            {
                 string zoneId = $"ambient/{blockPlacementId}/{kind.ToString().ToLowerInvariant()}";
                 // RDB header Width/Height describe the source file's object-root grid. A dungeon
                 // block's world footprint is the fixed 2048-unit RDBSide used by DaggerfallDungeon;
                 // using the object-root dimensions here would expand a castle zone over neighboring
                 // blocks when a source block happens to use an 8x8 root grid.
                 ambientZoneDrafts.Add(new(zoneId, kind, reference.SourceName, reference.X, reference.Z));
-                AddProvenance(zoneId, "rdb-ambient-zone", blocks.Source, record.Ordinal);
+                AddProvenance(zoneId, "rdb-ambient-zone", blocks.Source, block.SourceOrdinal);
             }
         }
 
@@ -727,100 +691,6 @@ public static class DungeonNormalizer
 
         private static float ToMetres(int sourceUnits) => sourceUnits * Arena2SourceTransform.SourceUnitMetres;
 
-        private void AddActions(RdbBlockSource block, string blockPlacementId, MapsDungeonBlock reference)
-        {
-            Dictionary<int, string> actionIdsByOffset = new();
-            Dictionary<int, string?> doorIdsByOffset = new();
-            foreach ((RdbModelSource model, int index) in block.Models.Select((model, index) => (model, index)))
-            {
-                if (model.Action is null || model.ObjectOffset <= 0)
-                    continue;
-
-                string id = $"action/{blockPlacementId}/model-{index}";
-                if (!actionIdsByOffset.TryAdd(model.ObjectOffset, id))
-                    throw new InvalidOperationException($"RDB block '{blockPlacementId}' repeats action object offset {model.ObjectOffset}.");
-
-                doorIdsByOffset[model.ObjectOffset] = RdbSourceClassification.HasActionDoorTag(model)
-                    || RdbSourceClassification.HasSpecialDoorAction(model)
-                    ? $"door/{blockPlacementId}/{index}"
-                    : null;
-            }
-
-            foreach ((RdbFlatSource flat, int index) in block.Flats.Select((flat, index) => (flat, index)))
-            {
-                // Offset zero is Arena2's absolute null-link sentinel. Preserve that authored node
-                // even when all other action fields are zero; only the negative no-object sentinel
-                // can prove that a flat carries no action record at all.
-                if (flat.ObjectOffset <= 0 || flat.Action == 0 && flat.Flags == 0 && flat.NextObjectOffset < 0)
-                    continue;
-
-                string id = $"action/{blockPlacementId}/flat-{index}";
-                if (!actionIdsByOffset.TryAdd(flat.ObjectOffset, id))
-                    throw new InvalidOperationException($"RDB block '{blockPlacementId}' repeats action object offset {flat.ObjectOffset}.");
-                doorIdsByOffset[flat.ObjectOffset] = null;
-            }
-
-            foreach ((RdbModelSource model, int index) in block.Models.Select((model, index) => (model, index)))
-            {
-                if (model.Action is not { } action || model.ObjectOffset <= 0)
-                    continue;
-
-                string id = actionIdsByOffset[model.ObjectOffset];
-                actions.Add(new(
-                    id,
-                    model.ObjectOffset,
-                    model.TriggerFlagStartingLock,
-                    action.Flags,
-                    action.Axis,
-                    action.Duration,
-                    action.Magnitude,
-                    action.NextObjectOffset,
-                    action.NextObjectOffset > 0 && actionIdsByOffset.TryGetValue(action.NextObjectOffset, out string? next) ? next : null,
-                    doorIdsByOffset[model.ObjectOffset],
-                    IsFlat: false,
-                    SoundIndex: model.SoundIndex,
-                    Position: null,
-                    RawIndex: model.SoundIndex,
-                    Poison: action.Flags == 0x1A ? new(reference.SourceName, "source-unresolved") : null));
-                AddProvenance(id, "rdb-action-model", blocks.Source, model.ObjectOffset);
-            }
-
-            foreach ((RdbFlatSource flat, int index) in block.Flats.Select((flat, index) => (flat, index)))
-            {
-                if (flat.ObjectOffset <= 0 || !actionIdsByOffset.TryGetValue(flat.ObjectOffset, out string? id))
-                    continue;
-                if (flat.Action == 0x1A && (flat.TextureArchive != 199 || flat.TextureRecord != 19))
-                    throw new InvalidOperationException($"RDB Poison action '{id}' is not the owner-approved unresolved treasure marker.");
-
-                actions.Add(new(
-                    id,
-                    flat.ObjectOffset,
-                    flat.Flags,
-                    flat.Action,
-                    flat.Magnitude,
-                    0,
-                    flat.Magnitude,
-                    flat.NextObjectOffset,
-                    flat.NextObjectOffset > 0 && actionIdsByOffset.TryGetValue(flat.NextObjectOffset, out string? next) ? next : null,
-                    DoorId: null,
-                    IsFlat: true,
-                    SoundIndex: flat.SoundIndex,
-                    Position: MeshGeometry.ToRightHanded(Place(flat.X, flat.Y, flat.Z, reference)),
-                    RawIndex: flat.SoundIndex,
-                    Poison: flat.Action == 0x1A ? new(reference.SourceName, "source-unresolved") : null));
-                AddProvenance(id, "rdb-action-flat", blocks.Source, flat.ObjectOffset);
-            }
-        }
-
-        private static int StartingLockValue(uint sourceValue, string source, int modelIndex)
-        {
-            ReadOnlySpan<int> values = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 25, 30, 50, 128, 255];
-            uint selector = sourceValue >> 4;
-            if (selector >= (uint)values.Length)
-                throw new Arena2FormatException(source, modelIndex, $"RDB action-door lock selector {selector} is outside the classic lock table.");
-            return values[(int)selector];
-        }
-
         private List<NormalizedResourceCatalogEntry> ResourceCatalog(string resourceCatalogArtifactId, IReadOnlyList<NormalizedDoorPlacement> doors)
         {
             List<NormalizedResourceCatalogEntry> resources = [];
@@ -960,8 +830,8 @@ public static class DungeonNormalizer
         private (ushort Archive, ushort Record) RemapTexture(ushort archiveId, ushort recordId) =>
             (DungeonTextureTableTransform.RemapArchive(archiveId, textureTable, climateBase), recordId);
 
-        private Arena2ImportPoint Place(int x, int y, int z, MapsDungeonBlock reference) =>
-            Arena2SourceTransform.PlaceInBlock(Arena2SourceTransform.ToImportPoint(x, y, z), reference);
+        private static NormalizedVector3 Place(Arena2ImportPoint point, MapsDungeonBlock reference) =>
+            MeshGeometry.ToRightHanded(Arena2SourceTransform.PlaceInBlock(point, reference));
 
         private void AddModel()
         {
@@ -1056,48 +926,6 @@ public static class DungeonNormalizer
                     new(MathF.Max(sourceOrigin.X, sourceFar.X), worldBounds.Maximum.Y, MathF.Max(sourceOrigin.Z, sourceFar.Z))));
         }
     }
-
-    private readonly record struct Matrix3(float M11, float M12, float M13, float M21, float M22, float M23, float M31, float M32, float M33)
-    {
-        public static Matrix3 ForModel(RdbModelSource model)
-        {
-            Arena2EulerDegrees degrees = Arena2SourceTransform.ToEulerDegrees(model);
-            return RotationZ(degrees.Z) * RotationX(degrees.X) * RotationY(degrees.Y);
-        }
-
-        public Arena2ImportPoint Transform(Arena2ImportPoint value) => new(
-            (M11 * value.XMetres) + (M12 * value.YMetres) + (M13 * value.ZMetres),
-            (M21 * value.XMetres) + (M22 * value.YMetres) + (M23 * value.ZMetres),
-            (M31 * value.XMetres) + (M32 * value.YMetres) + (M33 * value.ZMetres));
-
-        public static Matrix3 operator *(Matrix3 left, Matrix3 right) => new(
-            (left.M11 * right.M11) + (left.M12 * right.M21) + (left.M13 * right.M31), (left.M11 * right.M12) + (left.M12 * right.M22) + (left.M13 * right.M32), (left.M11 * right.M13) + (left.M12 * right.M23) + (left.M13 * right.M33),
-            (left.M21 * right.M11) + (left.M22 * right.M21) + (left.M23 * right.M31), (left.M21 * right.M12) + (left.M22 * right.M22) + (left.M23 * right.M32), (left.M21 * right.M13) + (left.M22 * right.M23) + (left.M23 * right.M33),
-            (left.M31 * right.M11) + (left.M32 * right.M21) + (left.M33 * right.M31), (left.M31 * right.M12) + (left.M32 * right.M22) + (left.M33 * right.M32), (left.M31 * right.M13) + (left.M32 * right.M23) + (left.M33 * right.M33));
-
-        private static Matrix3 RotationX(float degrees)
-        {
-            (float sin, float cos) = MathF.SinCos(DegreesToRadians(degrees));
-            return new(1F, 0F, 0F, 0F, cos, -sin, 0F, sin, cos);
-        }
-
-        private static Matrix3 RotationY(float degrees)
-        {
-            (float sin, float cos) = MathF.SinCos(DegreesToRadians(degrees));
-            return new(cos, 0F, sin, 0F, 1F, 0F, -sin, 0F, cos);
-        }
-
-        private static Matrix3 RotationZ(float degrees)
-        {
-            (float sin, float cos) = MathF.SinCos(DegreesToRadians(degrees));
-            return new(cos, -sin, 0F, sin, cos, 0F, 0F, 0F, 1F);
-        }
-
-        private static float DegreesToRadians(float degrees) => degrees * (MathF.PI / 180F);
-    }
-
-
-
 
     private static string Slug(string value) => PublishedIds.Slug(value);
 }

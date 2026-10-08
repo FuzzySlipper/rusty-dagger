@@ -40,6 +40,7 @@ internal static class Program
         ClassicQuestCorporaCommand.Command,
         // The product-wide world media the site closures reference, then the site closures.
         WorldMediaCommand.Command,
+        WorldBlocksCommand.Command,
         DungeonSiteCommand.Write,
         DungeonSiteCommand.Plan,
         DungeonSiteCommand.VerifyRealData,
