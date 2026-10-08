@@ -93,14 +93,9 @@ internal static partial class DaggerfallBaseContent
             DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
             DaggerfallEnemySpells enemySpells = ReadEnemySpells(root, mobiles, magic, diagnostics);
             DaggerfallLocationSet locations = ReadLocations(root, diagnostics);
-            DaggerfallTextSet text = ReadText(root, diagnostics);
+            (DaggerfallTextSet text, DaggerfallNameTablesSet names, DaggerfallRumorCatalogSet rumors, DaggerfallDialogueWorldRules dialogueWorldRules, DaggerfallBiographiesSet biographies, DaggerfallBooksSet books) = ReadTextAndKeyedSections(root, diagnostics);
             DaggerfallBuildingNameInputs buildingNames = ReadBuildingNameInputs(root, locations.Regions, diagnostics);
-            DaggerfallNameTablesSet names = ReadNameTables(root, text, diagnostics);
-            DaggerfallRumorCatalogSet rumors = ReadRumorCatalog(root, text, diagnostics);
-            DaggerfallDialogueWorldRules dialogueWorldRules = ReadDialogueWorldRules(root, text, diagnostics);
-            DaggerfallBiographiesSet biographies = ReadBiographies(root, text, diagnostics);
             DaggerfallWorldGridsSet grids = ReadWorldGrids(root, diagnostics);
-            DaggerfallBooksSet books = ReadBooks(root, text, diagnostics);
             DaggerfallFactionsSet factions = ReadFactions(root, locations.Regions, diagnostics);
             DaggerfallTerrainSet terrain = ReadTerrain(root, diagnostics);
             DaggerfallItemTemplateSet itemTemplatesCatalog = ReadItemTemplates(root, diagnostics);
@@ -120,6 +115,58 @@ internal static partial class DaggerfallBaseContent
                 DialogueWorldRules = dialogueWorldRules,
                 NewGame = newGame,
             };
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add($"Base payload is not valid JSON: {exception.Message}");
+            throw diagnostics.Exception();
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or FormatException or OverflowException && exception is not DaggerfallContentException)
+        {
+            diagnostics.Add($"Base payload is malformed: {exception.Message}");
+            throw diagnostics.Exception();
+        }
+    }
+
+    /// <summary>
+    /// The text section and the sections whose readers resolve their keys against it. No other reader or
+    /// cross-section check consults any of them, or the sets they produce.
+    /// </summary>
+    internal static readonly IReadOnlyList<string> TextSectionNames = ["text", "names", "rumors", "dialogueWorldRules", "biographies", "books"];
+
+    /// <summary>
+    /// Reads the text section and then every section that resolves text keys through it, so each key
+    /// check runs against the text this document carries.
+    /// </summary>
+    private static (DaggerfallTextSet Text, DaggerfallNameTablesSet Names, DaggerfallRumorCatalogSet Rumors, DaggerfallDialogueWorldRules DialogueWorldRules, DaggerfallBiographiesSet Biographies, DaggerfallBooksSet Books) ReadTextAndKeyedSections(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        DaggerfallTextSet text = ReadText(root, diagnostics);
+        return (text, ReadNameTables(root, text, diagnostics), ReadRumorCatalog(root, text, diagnostics), ReadDialogueWorldRules(root, text, diagnostics), ReadBiographies(root, text, diagnostics), ReadBooks(root, text, diagnostics));
+    }
+
+    /// <summary>
+    /// Already-admitted definitions with their text section, and every section whose keys resolve through
+    /// it, replaced by the ones this document carries. Those sections are read by
+    /// <see cref="ReadTextAndKeyedSections"/> alone — the same readers and key checks
+    /// <see cref="Read(ReadOnlyMemory{byte})"/> runs — and nothing else consults them, so this admits
+    /// exactly what a full read of a payload carrying them beside the admitted sections would, without
+    /// re-reading every other section. The document must carry each text-keyed section the admitted
+    /// payload carried: one it omits is read as absent, as a full read would.
+    /// </summary>
+    internal static DaggerfallDefinitions ReadTextSections(DaggerfallDefinitions admitted, ReadOnlyMemory<byte> sections)
+    {
+        DaggerfallContentDiagnostics diagnostics = new();
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(sections);
+            JsonElement root = Object(document.RootElement, "root", diagnostics);
+            diagnostics.ThrowIfAny();
+            RejectDuplicateProperties(root, "root", diagnostics);
+            foreach (JsonProperty section in root.EnumerateObject().Where(section => !TextSectionNames.Contains(section.Name, StringComparer.Ordinal)))
+                diagnostics.Add($"Section '{section.Name}' is not a text-keyed section; replacing text cannot admit it.");
+            (DaggerfallTextSet text, DaggerfallNameTablesSet names, DaggerfallRumorCatalogSet rumors, DaggerfallDialogueWorldRules dialogueWorldRules, DaggerfallBiographiesSet biographies, DaggerfallBooksSet books) = ReadTextAndKeyedSections(root, diagnostics);
+            diagnostics.ThrowIfAny();
+            return admitted.WithText(text, names, rumors, dialogueWorldRules, biographies, books);
         }
         catch (JsonException exception)
         {

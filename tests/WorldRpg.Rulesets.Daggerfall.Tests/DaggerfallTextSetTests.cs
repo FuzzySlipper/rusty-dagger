@@ -459,8 +459,59 @@ public sealed class DaggerfallTextSetTests
         Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("or with a payload it does not take", StringComparison.Ordinal));
     }
 
-    private static DaggerfallDefinitions Definitions(Action<JsonObject>? mutate = null) =>
-        mutate is null ? TestPayload.Definitions : DaggerfallBaseContent.Read(Payload(mutate));
+    [Fact]
+    public void An_unchanged_text_edit_keeps_every_section_whose_keys_resolve_through_text()
+    {
+        // The narrow read replaces only the text-keyed sections; reading them unchanged admits what the
+        // full read admitted, and every unrelated section is the shared base's own.
+        DaggerfallDefinitions edited = Definitions(_ => { });
+
+        Assert.Equal(TestPayload.Definitions.Books.Books.Count, edited.Books.Books.Count);
+        Assert.Equal(TestPayload.Definitions.Rumors.Entries.Count, edited.Rumors.Entries.Count);
+        Assert.Equal(TestPayload.Definitions.DialogueWorldRules.News.Count, edited.DialogueWorldRules.News.Count);
+        Assert.NotEmpty(edited.DialogueWorldRules.News);
+        Assert.Same(TestPayload.Definitions.Locations, edited.Locations);
+        Assert.Same(TestPayload.Definitions.QuestSources, edited.QuestSources);
+        Assert.NotSame(TestPayload.Definitions.Text, edited.Text);
+    }
+
+    [Fact]
+    public void A_text_edit_still_runs_the_key_checks_of_the_sections_that_read_through_it()
+    {
+        // Books and the authored dialogue world rules resolve their keys through text, so moving the
+        // values they name to keys nothing cites is refused by the narrow read as a full read refuses it.
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => Definitions(payload =>
+        {
+            foreach (JsonObject key in Records(payload).Select(record => record!["key"]!.AsObject()).Where(key =>
+                key["kind"]!.GetValue<string>() == "book" || (key["kind"]!.GetValue<string>() == "resource" && key["id"]!.GetValue<string>() == "1410")))
+                key["id"] = key["id"]!.GetValue<string>() + "-uncited";
+        }));
+
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("cites missing text key", StringComparison.Ordinal));
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("Dialogue world news 11/1410 names text key", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Replacing_text_refuses_a_section_that_does_not_read_through_it()
+    {
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() =>
+            DaggerfallBaseContent.ReadTextSections(TestPayload.Definitions, System.Text.Encoding.UTF8.GetBytes("{\"cinematics\":{}}")));
+
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("Section 'cinematics' is not a text-keyed section", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The shared base definitions, or with the text section edited: the edit is read through the
+    /// ruleset's text reader and the key checks that consult it, against the shared base, rather than by
+    /// re-reading the whole payload.
+    /// </summary>
+    private static DaggerfallDefinitions Definitions(Action<JsonObject>? mutate = null)
+    {
+        if (mutate is null) return TestPayload.Definitions;
+        JsonObject sections = TestPayload.Sections("text");
+        mutate(sections);
+        return TestPayload.WithTextSections(sections);
+    }
 
     /// <summary>
     /// The joined payload with its text section edited. Only that section is parsed: a node tree of the
