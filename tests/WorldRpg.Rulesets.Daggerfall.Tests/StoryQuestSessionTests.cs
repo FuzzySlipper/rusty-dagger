@@ -49,6 +49,47 @@ public sealed class StoryQuestSessionTests
 
     private static ulong Gold(DaggerfallSession session) => session.State.Currency.Read().Gold;
 
+    [Fact]
+    public void Lysandus_revenge_advances_past_its_video_when_videos_are_disabled()
+    {
+        // #9703: a disabled video counts as skipped, so the main quest lifts the curse and hands on to
+        // S0000008 exactly as it does after the player skips ANIM0013.VID.
+        using var fixture = SourceBackedGuildBankSessionFixture.Create(configure: composition => composition with { VideosEnabled = false });
+        using var game = fixture.Start(fixture.StartProfile);
+        game.State.Quests.Start(new("revenge", "S0000015.txt", "S0000015", DaggerfallQuestLifecycle.Active, null, [], []));
+        game.State.Variables.WriteGlobal("MyniseraSatisfied", true);
+        game.State.Variables.WriteGlobal("KingOfWormsSatisfied", true);
+        // Start-up has run; Woodborne stands at a quest marker and is then killed.
+        var saved = game.State.Quests.Capture();
+        game.State.Quests.Restore(saved with { Instances = [saved.Instances.Single() with
+        {
+            Tasks = saved.Instances.Single().Tasks.Select(task => task.Kind == DaggerfallQuestTaskKind.Headless ? task with { IsDropped = true } : task).ToArray(),
+        }] });
+        var woodborne = game.State.Quests.All.Single().Resources.Single(resource => resource.Symbol == "woodborne");
+        var binding = ((IDaggerfallQuestWorldAdmission)game).Place("revenge", woodborne, fixture.StartProfile,
+            fixture.StartProfile.QuestMarkers.First(marker => marker.Kind == DaggerfallSiteMarkerKind.QuestSpawn));
+        game.State.Quests.SetResource("revenge", woodborne with { Binding = binding! });
+        ((IDaggerfallQuestTaskLifecycle)game.State.Quests).FoeCommand(
+            new(game.State.Quests.All.Single(), DaggerfallQuestTaskCompiler.Compile(TestPayload.Definitions.QuestSources.Resolve("S0000015.txt"))),
+            new(DaggerfallQuestTaskOperationKind.KillFoe, 1, "kill foe woodborne", ["woodborne"], [], null));
+        game.State.Quests.ReconcileFoeCommands();
+        game.ApplyProductMode(WorldRpg.Kit.ProductMode.Title);
+        game.Update(new Rusty.Engine.ProductUpdate(TestSessions.OuterUpdate(1), []));
+        Assert.Single(game.State.Quests.All.Single().Resources.Single(resource => resource.Symbol == "woodborne").DefeatedFoeIds);
+
+        using var session = fixture.Restore(game.CaptureSave());
+        for (int pass = 0; pass < 4; pass++) QuestDiseaseTests.Advance(session);
+
+        Assert.Null(session.Cinematics?.ActiveSource);
+        Assert.True(session.State.Variables.ReadGlobal("LiftedCurse"));
+        // The curse task's video and the two log removals after it all completed, none left unavailable.
+        var curse = session.State.Quests.All.Single(quest => quest.SourceFile == "S0000015.txt").Tasks.Single(task => task.Symbol == "s.08");
+        Assert.All(curse.OperationCompleted.Skip(1), Assert.True);
+        Assert.All(curse.OperationState, state => Assert.Null(state.UnavailableReason));
+        Assert.DoesNotContain(session.State.Quests.All, quest => quest.SourceFile == "S0000015.txt" && quest.Lifecycle == DaggerfallQuestLifecycle.Active);
+        Assert.Contains(session.State.Quests.All, quest => quest.SourceFile == "S0000008.txt");
+    }
+
     [Theory]
     [InlineData("Gothryd", 14, false)]
     [InlineData("Brisienna", 10, true)]

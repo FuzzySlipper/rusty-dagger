@@ -100,7 +100,9 @@ internal sealed partial class DaggerfallSession
                 case DaggerfallQuestTaskOperationKind.PlayVideo:
                     if (!int.TryParse(operation.Targets.Single(), out int number) || number is < 0 or > 9999)
                         throw new NotSupportedException("Quest video requires a source video number from 0 through 9999.");
-                    if (!_composition.VideosEnabled) throw new NotSupportedException("Quest video is disabled by the current presentation preference.");
+                    // A disabled video counts as skipped: the presentation preference never holds back the
+                    // quest that plays it, as the donor completes such quests whatever its video setting.
+                    if (!_composition.VideosEnabled) return true;
                     if (Cinematics is null) throw new NotSupportedException("Quest video has no admitted Engine cinematic capability.");
                     if (_questVideoOwner == (instance.InstanceId, operation.SourceLine))
                     {
