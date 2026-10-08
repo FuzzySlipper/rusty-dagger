@@ -148,6 +148,7 @@ public sealed class ActorNavigationAndCameraTests
         using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(0f, 0f, 0f), 0f));
         ActorState actor = actors.Get(42);
         CharacterWaterVolume water = new(1, new Vector3(-4f, -4f, -4f), new Vector3(4f, 4f, 4f));
+        spatial.TriggerRows.Add(SpatialMovementSystem.ProjectWaterCollider(water));
         ActorNavigationCoordinator navigation = new(
             spatial.Service,
             session,
@@ -166,6 +167,34 @@ public sealed class ActorNavigationAndCameraTests
         Assert.Equal(.1f, spatial.CharacterRequests[0].Command.StepSeconds);
         Assert.Equal(new WorldPoint(0f, 1f, 0f), actor.Position);
         Assert.Equal(new Vector3(0f, 1f, 0f), actors.Store.Get(actor.Actor.Entity, EngineComponentTypes.Transform).Translation);
+    }
+
+    [Fact]
+    public void A_swimming_actor_finds_its_water_through_the_engine_trigger_query_only()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(12), () => { });
+        SpatialDouble spatial = SpatialDouble.Create();
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(0f, 0f, 0f), 0f));
+        ActorState actor = actors.Get(42);
+        CharacterWaterVolume reconciled = new(1, new Vector3(-4f, -4f, -4f), new Vector3(4f, 4f, 4f));
+        CharacterWaterVolume unregistered = new(2, new Vector3(-8f, -8f, -8f), new Vector3(8f, 8f, 8f));
+        ActorNavigationCoordinator navigation = new(spatial.Service, session, actors.Store, default,
+            _ => new CharacterStepEnvironment(default, ReadOnlyMemory<CharacterObstacle>.Empty,
+                ReadOnlyMemory<CharacterMeshInstance>.Empty, new[] { unregistered }));
+        ActorNavigationRequest swim = new(new WorldPoint(0f, 1f, 0f), 1f, 8, ActorNavigationMode.Swimming, .1f);
+
+        // A volume the environment offers but the Engine holds no trigger row for is not water.
+        Assert.Equal(NavigationPathOutcome.ProjectionUnavailable, navigation.Evaluate(actor, swim).Outcome);
+        Assert.Empty(spatial.CharacterRequests);
+
+        // A trigger row the environment does not offer is not this actor's water either.
+        spatial.TriggerRows.Add(SpatialMovementSystem.ProjectWaterCollider(reconciled));
+        Assert.Equal(NavigationPathOutcome.ProjectionUnavailable, navigation.Evaluate(actor, swim).Outcome);
+
+        // An offered volume with a current row is, and its containment is the Engine's rule.
+        spatial.TriggerRows.Add(SpatialMovementSystem.ProjectWaterCollider(unregistered));
+        Assert.Equal(NavigationPathOutcome.Reached, navigation.Evaluate(actor, swim).Outcome);
+        Assert.Equal(CharacterMovementMode.Swimming, Assert.Single(spatial.CharacterRequests).Command.Movement.Mode);
     }
 
     [Fact]
@@ -273,6 +302,8 @@ public sealed class ActorNavigationAndCameraTests
         internal List<CharacterStepRequest> CharacterRequests { get; } = [];
         internal NavigationStepResult Receipt { get; set; }
         internal Vector3 CharacterDisplacement { get; set; } = Vector3.UnitX;
+        /// <summary>The trigger rows the Engine would hold from the product's last trigger reconcile.</summary>
+        internal List<SpatialEntityCollider> TriggerRows { get; } = [];
 
         internal static SpatialDouble Create()
         {
@@ -308,6 +339,21 @@ public sealed class ActorNavigationAndCameraTests
                     Displacement = CharacterDisplacement,
                     BlockFlags = CharacterBlockFlags.None,
                 };
+            }
+
+            if (method?.Name == nameof(ISpatialService.QueryTriggersAtPoints))
+            {
+                // Engine rule: a trigger contains a point strictly inside its row; a point on a face is outside.
+                SpatialTriggerPointQueryRequest query = (SpatialTriggerPointQueryRequest)arguments![0]!;
+                List<SpatialTriggerPointHit> hits = [];
+                Vector3[] points = query.Points.ToArray();
+                for (int index = 0; index < points.Length; index++)
+                    foreach (SpatialEntityCollider row in TriggerRows.OrderBy(row => row.Entity))
+                        if (points[index].X > row.Min.X && points[index].X < row.Max.X
+                            && points[index].Y > row.Min.Y && points[index].Y < row.Max.Y
+                            && points[index].Z > row.Min.Z && points[index].Z < row.Max.Z)
+                            hits.Add(new SpatialTriggerPointHit(checked((uint)index), row.Entity));
+                return new SpatialTriggerPointQueryResult(hits.ToArray(), checked((uint)points.Length));
             }
 
             throw new NotSupportedException(method?.Name);

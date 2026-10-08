@@ -72,14 +72,7 @@ internal sealed partial class DaggerfallSession
         _doors.Advance(update.DeltaSeconds);
         _sites.Projection.AdvanceMotion(update.DeltaSeconds);
         CharacterStepEnvironment doorEnvironment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
-        SpatialEntityCollider[] waterTriggers =
-        [
-            .. doorEnvironment.WaterVolumes.Span.ToArray().Select(SpatialMovementSystem.ProjectWaterCollider),
-            _spatial.ProjectCharacterCollider(State.PlayerControl, State.Actors.Player.Actor.Entity.Value),
-        ];
-        SpatialTriggerReconcileResult triggerReconciliation = _spatial.ReconcileTriggers(simulationStep, waterTriggers);
-        State.Swimming.ObserveTriggers(triggerReconciliation.Facts.Span,
-            State.Actors.Player.Actor.Entity.Value, doorEnvironment.WaterVolumes.Span);
+        ReconcileWaterTriggers(doorEnvironment, simulationStep);
         CharacterWaterVolume? activeWater = State.Swimming.ActiveVolume(doorEnvironment.WaterVolumes.Span);
         bool waterWalking = State.Effects.GrantsWaterWalking(DaggerfallActorIdentity.PlayerEntityId);
         bool wallAhead = _spatial.TryProbeClimbWall(State.PlayerControl, CharacterWallProbeDirection.Forward, out SpatialHit forwardHit, doorEnvironment)
@@ -176,7 +169,11 @@ internal sealed partial class DaggerfallSession
             AppendDamage(_vitality.ResolveDrowning(State.Actors.Player.Actor), DaggerfallDamageCause.Drowning, 0);
         if (_vitality.ResolveLanding(State.Actors.Player.Actor, landing, State.Effects.PreventsFallDamage(DaggerfallActorIdentity.PlayerEntityId)) is { } fall)
             AppendDamage(fall, DaggerfallDamageCause.Fall, 0);
-        _sites.RebaseExteriorIfNeeded();
+        // Trigger geometry is the row each trigger last reconciled with. Actor navigation asks those rows
+        // whether an actor stands in water, so after the origin moves they are reconciled again in the new
+        // frame before any actor steps. The player's place relative to the water is unchanged by it.
+        if (_sites.RebaseExteriorIfNeeded())
+            ReconcileWaterTriggers(_sites.CharacterEnvironment(State.PlayerControl.Motion), simulationStep);
         _camera.Update(State.PlayerControl);
         if (!activeLocationLoaded) return;
         if (!alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
@@ -301,6 +298,23 @@ internal sealed partial class DaggerfallSession
             return;
         ApplyPlayerActs(acts);
         DeliverFacts();
+    }
+
+    /// <summary>
+    /// Reconciles the environment's water volumes and the player's collider with the Engine trigger
+    /// service. The player's swimming reads the overlap facts; every other actor's water is the trigger
+    /// rows this leaves current.
+    /// </summary>
+    private void ReconcileWaterTriggers(CharacterStepEnvironment environment, ulong simulationStep)
+    {
+        SpatialEntityCollider[] waterTriggers =
+        [
+            .. environment.WaterVolumes.Span.ToArray().Select(SpatialMovementSystem.ProjectWaterCollider),
+            _spatial.ProjectCharacterCollider(State.PlayerControl, State.Actors.Player.Actor.Entity.Value),
+        ];
+        SpatialTriggerReconcileResult reconciliation = _spatial.ReconcileTriggers(simulationStep, waterTriggers);
+        State.Swimming.ObserveTriggers(reconciliation.Facts.Span,
+            State.Actors.Player.Actor.Entity.Value, environment.WaterVolumes.Span);
     }
 
     private void ApplyAttackImpacts()

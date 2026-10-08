@@ -98,8 +98,9 @@ internal class SpatialFake : DispatchProxy
         // edge behavior is exercised by its dedicated Spatial fake.
         nameof(ISpatialService.RegisterTrigger) => RegisterTrigger((SpatialTriggerRegisterRequest)arguments![0]!),
         nameof(ISpatialService.SetTriggerActive) => SetTriggerActive((SpatialTriggerSetActiveRequest)arguments![0]!),
-        nameof(ISpatialService.RestoreTriggers) => default(SpatialTriggerRestoreReceipt),
-        nameof(ISpatialService.ReconcileTriggers) => default(SpatialTriggerReconcileResult),
+        nameof(ISpatialService.RestoreTriggers) => RestoreTriggerRows((SpatialTriggerRestoreRequest)arguments![0]!),
+        nameof(ISpatialService.ReconcileTriggers) => ReconcileTriggerRows((SpatialTriggerReconcileRequest)arguments![0]!),
+        nameof(ISpatialService.QueryTriggersAtPoints) => QueryTriggerRows((SpatialTriggerPointQueryRequest)arguments![0]!),
         // Navigation is not under test here: an honest no-path receipt leaves the
         // actor's pose intact instead of reporting a bogus waypoint.
         nameof(ISpatialService.EvaluateNavigationStep) => NoNavigationPath((NavigationStepRequest)arguments![0]!),
@@ -117,9 +118,53 @@ internal class SpatialFake : DispatchProxy
         return null;
     }
 
+    // Like Engine: a trigger's geometry is its row from the last reconcile or restore, and an inactive
+    // trigger contains nothing. Overlap facts are not modelled here.
+    private readonly Dictionary<ulong, SpatialEntityCollider> triggerRows = [];
+    private readonly HashSet<ulong> inactiveTriggers = [];
+    internal int TriggerReconcileCalls { get; private set; }
+    /// <summary>Each trigger's row from the last reconcile or restore, as the Engine holds it.</summary>
+    internal IReadOnlyDictionary<ulong, SpatialEntityCollider> TriggerRows => triggerRows;
+
+    private SpatialTriggerReconcileResult ReconcileTriggerRows(SpatialTriggerReconcileRequest request)
+    {
+        TriggerReconcileCalls++;
+        foreach (SpatialEntityCollider row in request.Entities.Span)
+            if (row.Trigger) triggerRows[row.Entity] = row;
+        return default;
+    }
+
+    private SpatialTriggerRestoreReceipt RestoreTriggerRows(SpatialTriggerRestoreRequest request)
+    {
+        foreach (SpatialEntityCollider row in request.Entities.Span)
+            if (row.Trigger) triggerRows[row.Entity] = row;
+        // A restore replaces the complete active set: every known trigger outside it becomes inactive.
+        HashSet<ulong> active = [.. request.ActiveTriggers.ToArray()];
+        inactiveTriggers.Clear();
+        foreach (ulong trigger in triggerRows.Keys.Concat(TriggerRegistrations.Select(registration => registration.Trigger)))
+            if (!active.Contains(trigger)) inactiveTriggers.Add(trigger);
+        return default;
+    }
+
+    private SpatialTriggerPointQueryResult QueryTriggerRows(SpatialTriggerPointQueryRequest request)
+    {
+        Vector3[] points = request.Points.ToArray();
+        List<SpatialTriggerPointHit> hits = [];
+        for (int index = 0; index < points.Length; index++)
+            foreach (SpatialEntityCollider row in triggerRows.Values.OrderBy(row => row.Entity))
+                if (!inactiveTriggers.Contains(row.Entity)
+                    && points[index].X > row.Min.X && points[index].X < row.Max.X
+                    && points[index].Y > row.Min.Y && points[index].Y < row.Max.Y
+                    && points[index].Z > row.Min.Z && points[index].Z < row.Max.Z)
+                    hits.Add(new SpatialTriggerPointHit(checked((uint)index), row.Entity));
+        return new SpatialTriggerPointQueryResult(hits.ToArray(), checked((uint)points.Length));
+    }
+
     private SpatialTriggerLifecycleResult SetTriggerActive(SpatialTriggerSetActiveRequest request)
     {
         TriggerLifecycleRequests.Add(request);
+        if (request.Active) inactiveTriggers.Remove(request.Trigger);
+        else inactiveTriggers.Add(request.Trigger);
         return new SpatialTriggerLifecycleResult(ReadOnlyMemory<SpatialTriggerFact>.Empty, request.Trigger, request.Active, 0);
     }
 

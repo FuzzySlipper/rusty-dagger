@@ -128,16 +128,9 @@ public sealed class ActorNavigationCoordinator
         if (distance <= .0001f)
             return CharacterReceipt(NavigationPathOutcome.Reached, before.Position.ToVector(), 1);
 
-        CharacterWaterVolume? water = null;
-        if (request.Mode == ActorNavigationMode.Swimming)
-        {
-            foreach (CharacterWaterVolume volume in environment.WaterVolumes.Span)
-            {
-                if (!Contains(volume, before.Position.ToVector())) continue;
-                water = volume;
-                break;
-            }
-        }
+        CharacterWaterVolume? water = request.Mode == ActorNavigationMode.Swimming
+            ? WaterAt(environment, before.Position.ToVector())
+            : null;
         if (request.Mode == ActorNavigationMode.Swimming && water is null)
             return CharacterReceipt(NavigationPathOutcome.ProjectionUnavailable, before.Position.ToVector(), 0);
 
@@ -214,10 +207,25 @@ public sealed class ActorNavigationCoordinator
         return CharacterReceipt(outcome, position, 0);
     }
 
-    private static bool Contains(CharacterWaterVolume volume, Vector3 position) =>
-        position.X >= volume.Minimum.X && position.X <= volume.Maximum.X
-        && position.Y >= volume.Minimum.Y && position.Y <= volume.Maximum.Y
-        && position.Z >= volume.Minimum.Z && position.Z <= volume.Maximum.Z;
+    /// <summary>
+    /// The first of the environment's water volumes whose Engine trigger contains the position. The
+    /// environment says which volumes apply to this actor; the Engine trigger point query decides
+    /// containment, under the same rule as trigger overlap, from each trigger's current registered row.
+    /// A product that offers water to a swimming actor therefore registers each volume as a spatial
+    /// trigger under its <see cref="CharacterWaterVolume.Trigger"/> identity and keeps its row current
+    /// through the trigger reconcile, as it does for the player's own water.
+    /// </summary>
+    private CharacterWaterVolume? WaterAt(CharacterStepEnvironment environment, Vector3 position)
+    {
+        if (environment.WaterVolumes.IsEmpty) return null;
+        SpatialTriggerPointQueryResult containing = _spatial.QueryTriggersAtPoints(
+            new SpatialTriggerPointQueryRequest(_session, new[] { position }));
+        if (containing.Hits.IsEmpty) return null;
+        foreach (CharacterWaterVolume volume in environment.WaterVolumes.Span)
+            foreach (SpatialTriggerPointHit hit in containing.Hits.Span)
+                if (hit.Trigger == volume.Trigger) return volume;
+        return null;
+    }
 
     private static NavigationStepResult CharacterReceipt(NavigationPathOutcome outcome, Vector3 waypoint, uint reached) =>
         new(ReadOnlyMemory<PlanarNavCell>.Empty, ReadOnlyMemory<NavigationPathEdge>.Empty, outcome, waypoint,
