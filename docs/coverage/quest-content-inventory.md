@@ -267,7 +267,7 @@ MIDI playback; it does not silently turn song references into successful audio.
 | --- | --- | --- | --- |
 | QST-ACT-014 | `Climate.cs` | Always-on climate condition/update | R — `DaggerfallQuestEnvironment`; no classic usage |
 | QST-ACT-050 | `PlaySong.cs` | Play a song/MIDI resource | R — `DaggerfallQuestEnvironment` maps to an ordinary music cue and diagnoses a missing track; MIDI excluded; no classic usage |
-| QST-ACT-051 | `PlaySound.cs` | Play a quest sound, including count/periodic forms | U — `DaggerfallQuestEnvironment` plays periodic and counted sounds with persisted state and diagnoses a missing admitted clip. Remaining: the diagnosis halts the whole quest instance, and sound 386 (`vengence`, `S0000977`) is in no site media manifest |
+| QST-ACT-051 | `PlaySound.cs` | Play a quest sound, including count/periodic forms | U — `DaggerfallQuestEnvironment` plays periodic and counted sounds with persisted state and diagnoses a missing admitted clip. A missing clip leaves only its own task unfinished; the quest's other tasks keep running. Remaining: sound 386 (`vengence`, `S0000977`) is a publication gap, not a disposition: `DAGGER.SND` carries it (ordinal 455), but the importer's fixed site audio list does not name it, so it is in no site media manifest |
 | QST-ACT-052 | `PlayVideo.cs` | Play quest video | U — Engine Cinematics waits for completion or skip (SUP-18). Decision: with videos disabled the action completes as a skipped video, so story quests such as S0000015, S0000016 and S0000022 advance as the donor's do |
 | QST-ACT-064 | `Season.cs` | Always-on season condition | R — `DaggerfallQuestEnvironment`; no classic usage |
 | QST-ACT-076 | `Weather.cs` | Always-on weather condition/update | R — `DaggerfallQuestEnvironment`; no classic usage |
@@ -331,10 +331,9 @@ has been read.
 The open differences for task records are:
 
 * `WorldUpdate` block, building and new-location forms (QST-ACT-083).
-* An unavailable sound, spell, disease or media operation returns out of the
-  whole instance's advance, so every later task of that quest stops evaluating;
-  world, item and social actions end only their own task. Sound 386
-  (`vengence`) in the protected `S0000977` is the concrete case (QST-ACT-051).
+* Sound 386 (`vengence`) in the protected `S0000977` is unpublished: an
+  importer publication gap, not a disposition (QST-ACT-051). Like every
+  unavailable step it leaves only its own task unfinished.
 * Quest destinations outside the published site profiles (below).
 
 Macro context values follow F091. No unsupported action may be a successful
