@@ -222,25 +222,26 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// The published name tables, loaded from the pack alone: each bank resolves to its donor
     /// identity, its composition, and the text keys its fragments read through.
     /// </summary>
-    internal DaggerfallNameTablesSet Names { get; } = names;
+    internal DaggerfallNameTablesSet Names { get; private set; } = names;
 
     /// <summary>
     /// The published rumor catalog, loaded from the pack alone: each record resolves to the
     /// region, type, faction and quest references its consumers match on, and the text key it reads.
     /// </summary>
-    internal DaggerfallRumorCatalogSet Rumors { get; } = rumors;
+    internal DaggerfallRumorCatalogSet Rumors { get; private set; } = rumors;
 
     /// <summary>
     /// The authored links between live region variables and donor non-quest news resources. The
     /// values are policy data; the session variable store remains the sole source of live state.
     /// </summary>
-    internal DaggerfallDialogueWorldRules DialogueWorldRules { get; init; } = DaggerfallDialogueWorldRules.Empty;
+    internal DaggerfallDialogueWorldRules DialogueWorldRules { get => dialogueWorldRules; init => dialogueWorldRules = value; }
+    private DaggerfallDialogueWorldRules dialogueWorldRules = DaggerfallDialogueWorldRules.Empty;
 
     /// <summary>
     /// The published biographies, loaded from the pack alone: each questionnaire resolves to its
     /// questions, answers and effect references with the text keys and link states they carry.
     /// </summary>
-    internal DaggerfallBiographiesSet Biographies { get; } = biographies;
+    internal DaggerfallBiographiesSet Biographies { get; private set; } = biographies;
 
     /// <summary>
     /// The published climate and politic grids, loaded from the pack alone: each stored cell resolves
@@ -253,7 +254,7 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// The published book catalog, loaded from the pack alone: a classic message resolves to the
     /// book it names with the text keys its pages read through.
     /// </summary>
-    internal DaggerfallBooksSet Books { get; } = books;
+    internal DaggerfallBooksSet Books { get; private set; } = books;
 
     /// <summary>
     /// The published faction catalog, loaded from the pack alone: each faction resolves to its
@@ -381,10 +382,28 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// miss and a value it carries but could not read answers with the reason, so neither is confused
     /// with text that is legitimately empty.
     /// </summary>
-    internal DaggerfallTextSet Text { get; } = text;
+    internal DaggerfallTextSet Text { get; private set; } = text;
 
     /// <summary>The Daggerfall presentation owner for normalized lookup, layout and global macro expansion.</summary>
-    internal DaggerfallTextResolver TextPresentation { get; } = new(text);
+    internal DaggerfallTextResolver TextPresentation { get; private set; } = new(text);
+
+    /// <summary>
+    /// These definitions with other text, the sections whose keys resolve through it, and every other
+    /// section shared. Only <see cref="DaggerfallBaseContent.ReadTextSections"/> calls it, after reading
+    /// the replacements through the same readers and key checks the full payload uses.
+    /// </summary>
+    internal DaggerfallDefinitions WithText(DaggerfallTextSet text, DaggerfallNameTablesSet names, DaggerfallRumorCatalogSet rumors, DaggerfallDialogueWorldRules dialogueWorldRules, DaggerfallBiographiesSet biographies, DaggerfallBooksSet books)
+    {
+        var replaced = (DaggerfallDefinitions)MemberwiseClone();
+        replaced.Text = text;
+        replaced.TextPresentation = new(text);
+        replaced.Names = names;
+        replaced.Rumors = rumors;
+        replaced.dialogueWorldRules = dialogueWorldRules;
+        replaced.Biographies = biographies;
+        replaced.Books = books;
+        return replaced;
+    }
     internal DaggerfallActorDefinition RequireActor(DaggerfallActorId id) => Actors.TryGetValue(id, out DaggerfallActorDefinition? actor) ? actor : throw new InvalidOperationException($"Daggerfall definitions do not contain actor '{id.Value}'.");
 
     /// <summary>

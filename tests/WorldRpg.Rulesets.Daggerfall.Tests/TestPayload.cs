@@ -116,18 +116,35 @@ internal static class TestPayload
     /// fact that only edits quest sources reads those few megabytes instead of splicing and re-reading
     /// the whole payload.
     /// </summary>
-    internal static DaggerfallDefinitions WithQuestSections(System.Text.Json.Nodes.JsonObject sections)
+    internal static DaggerfallDefinitions WithQuestSections(System.Text.Json.Nodes.JsonObject sections) =>
+        DaggerfallBaseContent.ReadQuestSections(Definitions, SectionDocument(DaggerfallBaseContent.QuestSectionNames, "quest", sections));
+
+    /// <summary>
+    /// The shared base definitions with the text section, and the sections whose keys resolve through it,
+    /// replaced by the edited ones from <see cref="Sections"/>; one the edit does not carry keeps the
+    /// joined payload's bytes. The ruleset reads them through its own text reader and key checks against
+    /// the admitted base, so a fact that only edits text reads those few megabytes instead of splicing
+    /// and re-reading the whole payload.
+    /// </summary>
+    internal static DaggerfallDefinitions WithTextSections(System.Text.Json.Nodes.JsonObject sections) =>
+        DaggerfallBaseContent.ReadTextSections(Definitions, SectionDocument(DaggerfallBaseContent.TextSectionNames, "text-keyed", sections));
+
+    /// <summary>
+    /// A document of the joined payload's sections among <paramref name="names"/>, each edited one taken
+    /// from <paramref name="sections"/> and every other kept as its bytes.
+    /// </summary>
+    private static ReadOnlyMemory<byte> SectionDocument(IReadOnlyList<string> names, string family, System.Text.Json.Nodes.JsonObject sections)
     {
         byte[] combined = Combined.Value;
-        List<(string Name, int Start, int End)> quest = [.. SectionRanges(combined)
-            .Where(range => DaggerfallBaseContent.QuestSectionNames.Contains(range.Name, StringComparer.Ordinal))];
-        if (sections.Select(property => property.Key).FirstOrDefault(name => !quest.Any(range => range.Name == name)) is { } other)
-            throw new ArgumentException($"Section '{other}' is not a quest section of the joined payload; splice it and read the whole payload instead.", nameof(sections));
+        List<(string Name, int Start, int End)> carried = [.. SectionRanges(combined)
+            .Where(range => names.Contains(range.Name, StringComparer.Ordinal))];
+        if (sections.Select(property => property.Key).FirstOrDefault(name => !carried.Any(range => range.Name == name)) is { } other)
+            throw new ArgumentException($"Section '{other}' is not a {family} section of the joined payload; splice it and read the whole payload instead.", nameof(sections));
         System.Buffers.ArrayBufferWriter<byte> buffer = new();
         using (System.Text.Json.Utf8JsonWriter writer = new(buffer))
         {
             writer.WriteStartObject();
-            foreach ((string name, int start, int end) in quest)
+            foreach ((string name, int start, int end) in carried)
             {
                 writer.WritePropertyName(name);
                 if (sections.TryGetPropertyValue(name, out System.Text.Json.Nodes.JsonNode? edited))
@@ -139,7 +156,7 @@ internal static class TestPayload
             }
             writer.WriteEndObject();
         }
-        return DaggerfallBaseContent.ReadQuestSections(Definitions, buffer.WrittenMemory);
+        return buffer.WrittenMemory;
     }
 
     /// <summary>
