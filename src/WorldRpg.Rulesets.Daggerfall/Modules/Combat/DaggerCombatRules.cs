@@ -497,8 +497,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             if (!quiver.Read().Stacks.Any(stack => IsArrow(stack) && stack.Quantity > 0))
                 return AttackRejection.EmptyQuiver;
         }
-        return player.Stats.GetTrack(TrackId.Parse(StaminaTrack)).Current < action.StaminaCost!.Value
-            ? AttackRejection.InsufficientStamina : null;
+        // Low fatigue never refuses a swing: the donor charges the swing and lets exhaustion decide.
+        return null;
     }
 
     private bool TryAdmitPlayerAttack(AttackRequest request, Combatant player, out DaggerfallAttackDefinition attack, FactBuffer<IProductFact> facts)
@@ -528,7 +528,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
                 DaggerfallFormulaPolicy.HandToHandMaximumDamage(ReadStat(player, DaggerfallMechanicsIds.HandToHand)),
                 playerCooldown,
                 DamageBonus: playerAction.DamageBonus);
-        if (!SpendPlayerStamina(player, staminaCost, facts)) return false;
+        SpendPlayerStamina(player, staminaCost);
         // A targeted swing hands its timing to the strike animation: the tick time the classic
         // animation plays at, and the target whose impact frame will deliver it.
         bool deferred = request.Delayed && request.TargetId is not null;
@@ -549,17 +549,14 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         .OrderBy(value => value, StringComparer.Ordinal)
         .FirstOrDefault();
 
-    private bool SpendPlayerStamina(Combatant player, int staminaCost, FactBuffer<IProductFact> facts)
+    /// <summary>
+    /// Charges the admitted swing's fatigue, clamped at zero. The donor (WeaponManager) never refuses a
+    /// swing for fatigue; a swing that empties the pool leaves the session's exhaustion owner to decide.
+    /// </summary>
+    private static void SpendPlayerStamina(Combatant player, int staminaCost)
     {
         Track stamina = player.Stats.GetTrack(TrackId.Parse(StaminaTrack));
-        if (stamina.Current < staminaCost)
-        {
-            facts.Append(new AttackRejectedFact(AttackRejection.InsufficientStamina));
-            return false;
-        }
-        if (stamina.TrySpend(staminaCost)) return true;
-        facts.Append(new AttackRejectedFact(AttackRejection.StaminaSpendNotAccepted));
-        return false;
+        _ = stamina.Spend(Math.Min(stamina.Current, staminaCost));
     }
 
     private CombatParticipants Participants(long attacker, long target, string action) => new(

@@ -129,7 +129,7 @@ public sealed class PlayerAttackSessionTests
         List<IProductFact> emptySpace = [];
         facts.Deliver(emptySpace.Add);
 
-        Assert.Equal(staminaBefore - 5, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(staminaBefore - 11, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
         Assert.Equal(new PlayerAttackStartedFact(7, 13) { Feedback = new(true, "sound.347") },
             Assert.Single(emptySpace.OfType<PlayerAttackStartedFact>()));
         Assert.Contains(new AttackRejectedFact(AttackRejection.NoTargetInReach), emptySpace);
@@ -139,7 +139,7 @@ public sealed class PlayerAttackSessionTests
         List<IProductFact> coolingDown = [];
         facts.Deliver(coolingDown.Add);
         Assert.Equal([new AttackRejectedFact(AttackRejection.Cooldown, DaggerfallActorIdentity.PlayerEntityId)], coolingDown);
-        Assert.Equal(staminaBefore - 5, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(staminaBefore - 11, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
 
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 8, 20, .125), facts);
         List<IProductFact> materialImmune = [];

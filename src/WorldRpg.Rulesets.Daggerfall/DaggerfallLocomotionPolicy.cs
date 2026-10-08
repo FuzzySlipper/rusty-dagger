@@ -41,10 +41,9 @@ internal sealed class DaggerfallLocomotionPolicy
     {
         ArgumentNullException.ThrowIfNull(stats);
         FpsInputFrame frame = _input.Consume(inputs, seconds);
-        Track stamina = stats.GetTrack(Stamina);
-        bool hasJumpFatigue = stamina.Current >= MovementFatigue(_tuning.JumpFatigueCost);
+        // The donor never refuses a run or a jump for fatigue; an empty pool is the exhaustion owner's.
         bool onFoot = transport?.IsOnFoot ?? true;
-        bool running = canMove && onFoot && stamina.Current > 0d && frame.SprintHeld;
+        bool running = canMove && onFoot && frame.SprintHeld;
         bool crouching = !running && frame.CrouchHeld;
         if (!onFoot) crouching = false;
         int speed = stats.GetStat(Speed).ValueInt;
@@ -54,14 +53,14 @@ internal sealed class DaggerfallLocomotionPolicy
             ? (float)transport!.MovementSpeed(speed, _tuning.ClassicToEngineSpeedRatio)
             : running ? RunSpeed(speed, runningSkill) : crouching ? CrouchSpeed(speed) : WalkSpeed(speed);
         CharacterStepControls controls = new(
-            JumpPressed: canMove && onFoot && hasJumpFatigue && !slowfall && frame.JumpPressed,
-            JumpHeld: canMove && onFoot && hasJumpFatigue && !slowfall && frame.JumpHeld,
+            JumpPressed: canMove && onFoot && !slowfall && frame.JumpPressed,
+            JumpHeld: canMove && onFoot && !slowfall && frame.JumpHeld,
             CrouchRequested: crouching,
             ForwardSpeed: groundSpeed,
             BackwardSpeed: groundSpeed,
             StrafeSpeed: groundSpeed,
             JumpSpeed: JumpSpeed(jumpingSkill, crouching, enhancedJumping));
-        return new(controls, running, canMove && onFoot && hasJumpFatigue && !slowfall && (frame.JumpPressed || frame.JumpHeld),
+        return new(controls, running, canMove && onFoot && !slowfall && (frame.JumpPressed || frame.JumpHeld),
             frame.Movement.Y, frame.CrouchHeld, UpHeld: frame.JumpHeld, DownHeld: frame.CrouchHeld);
     }
 
@@ -88,12 +87,9 @@ internal sealed class DaggerfallLocomotionPolicy
         if (!_jumpInFlight && step.JumpRequested && rising)
         {
             Track stamina = stats.GetTrack(Stamina);
-            int jumpFatigue = MovementFatigue(_tuning.JumpFatigueCost);
-            if (stamina.TrySpend(jumpFatigue))
-            {
-                _jumpInFlight = true;
-                recordSkillUse(new DaggerfallSkillUse(DaggerfallMechanicsIds.Jumping.Value, DaggerfallSkillUseReason.Jumping, DaggerfallSkillUseOutcome.Accepted));
-            }
+            _ = stamina.Spend(Math.Min(stamina.Current, MovementFatigue(_tuning.JumpFatigueCost)));
+            _jumpInFlight = true;
+            recordSkillUse(new DaggerfallSkillUse(DaggerfallMechanicsIds.Jumping.Value, DaggerfallSkillUseReason.Jumping, DaggerfallSkillUseOutcome.Accepted));
         }
         if (accepted.Motion.Grounded) _jumpInFlight = false;
         return !before.Grounded && accepted.Motion.Grounded && before.PeakY > accepted.Transform.Translation.Y
@@ -102,7 +98,15 @@ internal sealed class DaggerfallLocomotionPolicy
     }
 
     /// <summary>Consumes each calendar minute exactly once; the session calendar remains the only time authority.</summary>
-    internal void AdvanceCalendarMinutes(long before, long after, StatsComponent stats, bool includeIdleFatigue = true)
+    /// <remarks>
+    /// Each minute pays one donor rate (PlayerEntity's per-minute loss): climbing, else running while
+    /// moving, else swimming, else idle, each scaled by the athletics multiplier and truncated per minute.
+    /// A swimming minute pays the swimming rate only when <paramref name="swimmingFatigueApplies"/> says
+    /// that minute's Swimming roll failed; otherwise it pays the idle rate. A missing callback charges
+    /// every swimming minute at the swimming rate.
+    /// </remarks>
+    internal void AdvanceCalendarMinutes(long before, long after, StatsComponent stats, bool includeIdleFatigue = true,
+        Func<long, bool>? swimmingFatigueApplies = null)
     {
         if (after < before) throw new ArgumentOutOfRangeException(nameof(after));
         if (after == before) return;
@@ -114,11 +118,18 @@ internal sealed class DaggerfallLocomotionPolicy
         long swimmingMinutes = Math.Min(minutes - climbingMinutes - runningMinutes,
             checked((long)Math.Ceiling(_swimmingGameSeconds / DaggerfallCalendar.SecondsPerMinute)));
         long idleMinutes = includeIdleFatigue ? checked(minutes - climbingMinutes - runningMinutes - swimmingMinutes) : 0;
-        double movementFatigue = checked((climbingMinutes * (long)_tuning.ClimbingFatiguePerGameMinute)
-            + (runningMinutes * (long)_tuning.RunningFatiguePerGameMinute)
-            + (swimmingMinutes * (long)_tuning.SwimmingFatiguePerGameMinute));
-        double fatigue = Math.Truncate(movementFatigue * _movementFatigueMultiplier)
-            + (idleMinutes * (long)_tuning.IdleFatiguePerGameMinute);
+        long failedSwimmingMinutes = 0;
+        for (long index = 0; index < swimmingMinutes; index++)
+            if (swimmingFatigueApplies?.Invoke(checked(before + climbingMinutes + runningMinutes + index)) ?? true)
+                failedSwimmingMinutes++;
+        // A swimming minute whose roll passed is an ordinary minute and pays the idle rate, as the donor's
+        // default amount does, unless the caller suppresses newly incurred idle loss.
+        long passedSwimmingMinutes = includeIdleFatigue ? swimmingMinutes - failedSwimmingMinutes : 0;
+        long fatigue = checked((climbingMinutes * MovementFatigue(_tuning.ClimbingFatiguePerGameMinute))
+            + (runningMinutes * MovementFatigue(_tuning.RunningFatiguePerGameMinute))
+            + (failedSwimmingMinutes * MovementFatigue(_tuning.SwimmingFatiguePerGameMinute))
+            + (passedSwimmingMinutes * MovementFatigue(_tuning.IdleFatiguePerGameMinute))
+            + (idleMinutes * MovementFatigue(_tuning.IdleFatiguePerGameMinute)));
         _ = stamina.Spend(Math.Min(stamina.Current, fatigue));
         _runningGameSeconds = 0d;
         _climbingGameSeconds = 0d;
@@ -126,9 +137,13 @@ internal sealed class DaggerfallLocomotionPolicy
     }
 
     /// <summary>Refreshes the typed athletics multiplier from the current career and held talent owners.</summary>
+    /// <remarks>
+    /// The donor slows every fatigue loss to 0.9 for a career with Athleticism, and to 0.8 only when that
+    /// career also holds the improved talent; the talent alone changes nothing.
+    /// </remarks>
     internal void SetAthletics(bool careerAdvantage, bool improvedHeldTalent)
     {
-        _movementFatigueMultiplier = improvedHeldTalent ? .8d : careerAdvantage ? .9d : 1d;
+        _movementFatigueMultiplier = careerAdvantage ? improvedHeldTalent ? .8d : .9d : 1d;
         _athleticsJumpBonus = careerAdvantage ? _tuning.AthleticJumpBonus + (improvedHeldTalent ? _tuning.ImprovedAthleticJumpBonus : 0F) : 0F;
     }
 

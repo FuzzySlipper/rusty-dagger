@@ -42,12 +42,13 @@ policy.
 ## Stats and recovery
 
 `DaggerfallMechanicsState.CreateStats` builds an Engine `StatsComponent` directly.
-Combat, HUD, rewards and stamina recovery use those same `Stat`/`Track` objects.
+Combat, HUD, rewards and fatigue drains use those same `Stat`/`Track` objects.
 A track shares its maximum Stat; changing that stat reconciles the live track.
 Player progression is attached, while Dagger retains XP and level-up policy.
-`PassiveTrackRecovery` in Kit implements rate, quiet delay and fractional carry;
-Dagger decides which admitted actions delay stamina recovery and when recovery
-is allowed. The active-effect lifecycle is described below; individual spell and
+`PassiveTrackRecovery` in Kit implements rate, quiet delay and fractional carry
+for a ruleset that wants real-time recovery; Daggerfall has none. Its fatigue
+returns only through rest, travel and the exhaustion collapse's recovery hour,
+and an emptied pool collapses the player once (`DaggerfallSession.Exhaustion.cs`). The active-effect lifecycle is described below; individual spell and
 effect families remain separate gameplay work. Attribute drains keep one permanent, target-owned
 incumbent per attribute and an additive Engine stat source, with a floor of one relative to
 the permanent base. Matching partial healing updates that source; complete healing removes

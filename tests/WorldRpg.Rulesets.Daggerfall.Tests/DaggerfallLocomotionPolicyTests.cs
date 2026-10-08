@@ -49,13 +49,11 @@ public sealed class DaggerfallLocomotionPolicyTests
     }
 
     [Fact]
-    public void Low_fatigue_or_overweight_input_cannot_request_a_jump_and_an_accepted_airborne_transition_charges_once()
+    public void Overweight_input_cannot_request_a_jump_and_an_accepted_airborne_transition_charges_once()
     {
-        StatsComponent stats = Stats(speed: 50, running: 40, stamina: 10);
+        StatsComponent stats = Stats(speed: 50, running: 40, stamina: 100);
         DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
 
-        Assert.False(policy.BeginStep([Key(KeyboardControl.Space, InputEdge.Pressed)], 1f / 60f, stats, canMove: true).Controls.JumpPressed);
-        stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).SetCurrent(100);
         Assert.False(policy.BeginStep([Key(KeyboardControl.Space, InputEdge.Pressed)], 1f / 60f, stats, canMove: false).Controls.JumpPressed);
 
         DaggerfallLocomotionStep jump = policy.BeginStep([Key(KeyboardControl.Space, InputEdge.Pressed)], 1f / 60f, stats, canMove: true);
@@ -69,6 +67,30 @@ public sealed class DaggerfallLocomotionPolicyTests
         policy.CompleteStep(jump, default, airborne, 1d, stats, uses.Add);
 
         Assert.Equal(89d, stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+        Assert.Equal(DaggerfallSkillUseReason.Jumping, Assert.Single(uses).Reason);
+    }
+
+    [Fact]
+    public void Low_or_empty_fatigue_never_refuses_a_run_or_a_jump_and_the_jump_charge_clamps_at_zero()
+    {
+        StatsComponent stats = Stats(speed: 50, running: 40, stamina: 0);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+
+        DaggerfallLocomotionStep run = policy.BeginStep([Key(KeyboardControl.ShiftLeft, InputEdge.Pressed)], 1f / 60f, stats, canMove: true);
+        Assert.True(run.Running);
+        policy.Neutralize();
+        stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).SetCurrent(5);
+        DaggerfallLocomotionStep jump = policy.BeginStep([Key(KeyboardControl.Space, InputEdge.Pressed)], 1f / 60f, stats, canMove: true);
+        Assert.True(jump.Controls.JumpPressed);
+        Assert.True(jump.JumpRequested);
+        List<DaggerfallSkillUse> uses = [];
+        policy.CompleteStep(jump, default, default(CharacterStepReceipt) with
+        {
+            Displacement = new Vector3(0f, .1f, 0f),
+            Motion = default(CharacterMotion) with { ControlledVelocity = new Vector3(0f, 4f, 0f), Grounded = false },
+        }, 1d, stats, uses.Add);
+
+        Assert.Equal(0d, stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
         Assert.Equal(DaggerfallSkillUseReason.Jumping, Assert.Single(uses).Reason);
     }
 
@@ -94,7 +116,7 @@ public sealed class DaggerfallLocomotionPolicyTests
     }
 
     [Fact]
-    public void Movement_fatigue_uses_the_donor_activity_rates_and_keeps_idle_base_loss_unscaled()
+    public void Movement_fatigue_uses_the_donor_activity_rates_and_scales_idle_loss_with_athleticism()
     {
         static CharacterStepReceipt Moved() => default(CharacterStepReceipt) with
         {
@@ -118,30 +140,75 @@ public sealed class DaggerfallLocomotionPolicyTests
         DaggerfallLocomotionPolicy idle = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
         idle.SetAthletics(careerAdvantage: true, improvedHeldTalent: false);
         idle.AdvanceCalendarMinutes(0, 1, idleStats);
-        Assert.Equal(189d, idleStats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+        // (int)(11 * 0.9): the donor scales the default per-minute loss as well.
+        Assert.Equal(191d, idleStats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+    }
+
+    public enum Activity { Idle, Run, Climb }
+
+    [Theory]
+    [InlineData(Activity.Idle, false, false, 11d)]
+    [InlineData(Activity.Idle, true, false, 9d)]
+    [InlineData(Activity.Idle, true, true, 8d)]
+    [InlineData(Activity.Idle, false, true, 11d)]
+    [InlineData(Activity.Run, false, false, 88d)]
+    [InlineData(Activity.Run, true, false, 79d)]
+    [InlineData(Activity.Run, true, true, 70d)]
+    [InlineData(Activity.Run, false, true, 88d)]
+    [InlineData(Activity.Climb, false, false, 22d)]
+    [InlineData(Activity.Climb, true, false, 19d)]
+    [InlineData(Activity.Climb, true, true, 17d)]
+    [InlineData(Activity.Climb, false, true, 22d)]
+    public void Each_game_minute_pays_the_donor_rate_scaled_by_career_athleticism_and_the_improved_talent_only_with_it(
+        Activity activity, bool career, bool improved, double expectedLoss)
+    {
+        StatsComponent stats = Stats(speed: 50, running: 40, stamina: 200);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+        policy.SetAthletics(career, improved);
+        CharacterStepReceipt moved = default(CharacterStepReceipt) with
+        {
+            Displacement = new Vector3(.1f, 0f, 0f),
+            Motion = default(CharacterMotion) with { Grounded = true },
+        };
+        if (activity != Activity.Idle)
+            policy.CompleteStep(new DaggerfallLocomotionStep(default, Running: activity == Activity.Run, JumpRequested: false,
+                Climbing: activity == Activity.Climb), default, moved, 60d, stats, _ => { });
+        policy.AdvanceCalendarMinutes(0, 1, stats);
+        Assert.Equal(expectedLoss, 200d - stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
     }
 
     [Fact]
-    public void Movement_fatigue_applies_career_and_held_athleticism_only_to_activity_loss()
+    public void Running_in_place_pays_only_the_idle_rate()
     {
-        static double RunLoss(double multiplier)
-        {
-            StatsComponent stats = Stats(speed: 50, running: 40, stamina: 200);
-            DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
-            policy.SetAthletics(multiplier == .9d, multiplier == .8d);
-            policy.CompleteStep(new DaggerfallLocomotionStep(default, Running: true, JumpRequested: false), default,
-                default(CharacterStepReceipt) with
-                {
-                    Displacement = new Vector3(.1f, 0f, 0f),
-                    Motion = default(CharacterMotion) with { Grounded = true },
-                }, 60d, stats, _ => { });
-            policy.AdvanceCalendarMinutes(0, 1, stats);
-            return 200d - stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
-        }
+        StatsComponent stats = Stats(speed: 50, running: 40, stamina: 200);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+        policy.CompleteStep(new DaggerfallLocomotionStep(default, Running: true, JumpRequested: false), default,
+            default(CharacterStepReceipt) with { Motion = default(CharacterMotion) with { Grounded = true } }, 60d, stats, _ => { });
+        policy.AdvanceCalendarMinutes(0, 1, stats);
+        Assert.Equal(189d, stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+    }
 
-        Assert.Equal(88d, RunLoss(1d));
-        Assert.Equal(79d, RunLoss(.9d));
-        Assert.Equal(70d, RunLoss(.8d));
+    [Theory]
+    [InlineData(false, false, 44d)]
+    [InlineData(true, false, 39d)]
+    [InlineData(false, true, 11d)]
+    [InlineData(true, true, 9d)]
+    public void A_swimming_minute_pays_the_swimming_rate_only_when_its_roll_fails_and_otherwise_the_idle_rate(
+        bool career, bool passed, double expected)
+    {
+        StatsComponent stats = Stats(speed: 50, running: 40, stamina: 200);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+        policy.SetAthletics(career, false);
+        policy.CompleteStep(default, default, default(CharacterStepReceipt) with
+        {
+            Displacement = new Vector3(.1f, 0f, 0f),
+            Motion = default(CharacterMotion) with { Grounded = true },
+        }, 60d, stats, _ => { }, swimming: true);
+        List<long> asked = [];
+        policy.AdvanceCalendarMinutes(40, 41, stats, swimmingFatigueApplies: minute => { asked.Add(minute); return !passed; });
+
+        Assert.Equal(expected, 200d - stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+        Assert.Equal([40L], asked);
     }
 
     [Fact]

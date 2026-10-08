@@ -87,13 +87,7 @@ internal sealed class DaggerfallRestRecoveryModule
                 if (request.Mode == DaggerfallRestMode.Loiter) continue;
                 var inputs = currentRecoveryInputs?.Invoke()
                     ?? (endurance, medical, rapidHealing, noRegeneration);
-                (int healthRate, int fatigueRate, int spellRate) = DaggerfallRestPolicy.RecoveryRates(
-                    inputs.Endurance, inputs.Medical,
-                    Maximum(player, DaggerfallMechanicsIds.HealthMaximum),
-                    Maximum(player, DaggerfallMechanicsIds.StaminaMaximum),
-                    Maximum(player, DaggerfallMechanicsIds.MagickaMaximum),
-                    inputs.RapidHealing, inputs.NoRegeneration);
-                Recover(player, healthRate, fatigueRate, spellRate);
+                RecoverOneHour(player, inputs.Endurance, inputs.Medical, inputs.RapidHealing, inputs.NoRegeneration);
                 recordMedicalRest();
             }
 
@@ -125,6 +119,22 @@ internal sealed class DaggerfallRestRecoveryModule
         Recover(player, Maximum(player, DaggerfallMechanicsIds.HealthMaximum),
             Maximum(player, DaggerfallMechanicsIds.StaminaMaximum),
             noRegeneration ? 0 : Maximum(player, DaggerfallMechanicsIds.MagickaMaximum));
+    }
+
+    /// <summary>
+    /// One hour of rest recovery outside a rest: the donor's exhaustion collapse applies the same hourly
+    /// health, fatigue and spell point rates as a rest hour once it has raised the time by an hour.
+    /// </summary>
+    internal static void RecoverOneHour(StatsComponent player, int endurance, int medical, bool rapidHealing, bool noRegeneration)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        (int healthRate, int fatigueRate, int spellRate) = DaggerfallRestPolicy.RecoveryRates(
+            endurance, medical,
+            Maximum(player, DaggerfallMechanicsIds.HealthMaximum),
+            Maximum(player, DaggerfallMechanicsIds.StaminaMaximum),
+            Maximum(player, DaggerfallMechanicsIds.MagickaMaximum),
+            rapidHealing, noRegeneration);
+        Recover(player, healthRate, fatigueRate, spellRate);
     }
 
     private static void Recover(StatsComponent player, int health, int fatigue, int spellPoints)

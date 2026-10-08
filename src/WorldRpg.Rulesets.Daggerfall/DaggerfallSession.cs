@@ -54,7 +54,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     // session draws the same values.
     private readonly DaggerfallPoisonRuntime _poisons;
     private long _poisonDraws;
-    private readonly DaggerfallStaminaRecoveryModule _staminaRecovery;
     private readonly CombatResolution _combatResolution;
     private readonly DaggerfallLocomotionPolicy _locomotion;
     private readonly DaggerfallClimbingPolicy _climbing;
@@ -332,6 +331,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             // Acts a step held behind an enemy hit on the player run once that hit's frame had its chance.
             ApplyDeferredPlayerActs();
             UpdateRangedFlight(update.Facts);
+            // Every fatigue sink this update reached has now settled, so an emptied pool collapses once here.
+            ResolveExhaustion();
             PublishPresentation();
             // The score follows the world this admitted update settled: a site change or a change of day
             // is real once the step applied it, and the director is told once per admitted update.
@@ -526,7 +527,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _input.Neutralize();
         _locomotion.Neutralize();
         ApplyDeathPresentationMode(mode);
-        Presentation.SetOutcome(_interactions.ModeMessage(_mode));
+        // A death from exhaustion keeps the donor's collapse text rather than the generic death line.
+        Presentation.SetOutcome(mode == ProductMode.Dead && _exhaustionDeathLine is { } exhausted
+            ? exhausted : _interactions.ModeMessage(_mode));
+        if (mode is ProductMode.Playing or ProductMode.Title) _exhaustionDeathLine = null;
         PublishPresentation();
     }
 
@@ -537,6 +541,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         DeliverFacts();
         // A direct step has no animation boundary of its own; its end is that boundary.
         ApplyDeferredPlayerActs();
+        ResolveExhaustion();
         PublishPresentation();
         AdvanceMusic();
     }
@@ -662,7 +667,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     {
         State.Quests.ObserveFoeFact(fact);
         ObservePlaytestCombatFact(fact);
-        _staminaRecovery.React(fact);
         if (fact is AttackHitFact hit)
         {
             ObserveCrimeHit(hit);

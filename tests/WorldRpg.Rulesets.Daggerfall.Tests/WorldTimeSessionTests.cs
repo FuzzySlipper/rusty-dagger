@@ -8,29 +8,9 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-/// <summary>World time in the session: stamina recovery, reputation normalization and holiday announcements.</summary>
+/// <summary>World time in the session: reputation normalization and holiday announcements.</summary>
 public sealed class WorldTimeSessionTests
 {
-    [Fact]
-    public void Session_fixed_steps_restore_exhausted_player_stamina()
-    {
-        string root = TestData.RepositoryRoot;
-        DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile inputs = ReadInputs(root);
-        List<string> releases = [];
-        ContentFake content = new(releases);
-        PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        var stamina = Rusty.Engine.Mechanics.TrackId.Parse("stamina");
-        session.State.Actors.Player.Stats.GetTrack(stamina).SetCurrent(0);
-
-        for (int step = 0; step < 8; step++) session.Update(new ProductUpdateState(.125f));
-
-        Assert.Equal(5d, session.State.Actors.Player.Stats.GetTrack(stamina).Current);
-    }
-
     [Fact]
     public void Elapsed_calendar_time_normalizes_social_faction_and_regional_reputation_once_per_112_days()
     {
@@ -119,8 +99,9 @@ public sealed class WorldTimeSessionTests
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Null(session.HolidayAnnouncement);
 
-        // Two admitted hours cross midnight into the holiday.
-        session.Update(new ProductUpdate(FactsWithDelta(7200d), []));
+        // Two admitted game hours cross midnight into the holiday. A whole admitted day would empty the
+        // fatigue pool and the exhaustion collapse would take the line.
+        session.Update(new ProductUpdate(FactsWithDelta(2d * 3600d / DaggerfallTuning.Defaults.Time.GameSecondsPerRealSecond), []));
         Assert.Equal(18, session.HolidayAnnouncement?.HolidayId);
         Assert.Contains("Day of the Dead", session.Presentation.LastOutcome, StringComparison.Ordinal);
     }

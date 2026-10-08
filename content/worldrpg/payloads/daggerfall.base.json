@@ -2941,7 +2941,7 @@
       "reach": 10.0,
       "interpretation": "player-equipped-ranged",
       "skill": "archery",
-      "staminaCost": 5
+      "staminaCost": 11
     },
     {
       "id": "melee-attack",
@@ -2953,7 +2953,7 @@
       "cooldownSeconds": 0.75,
       "interpretation": "player-equipped-melee",
       "skill": "equipped",
-      "staminaCost": 5
+      "staminaCost": 11
     },
     {
       "id": "monster-strike",
@@ -3015,19 +3015,6 @@
       "minimumDamage": 2,
       "maximumDamage": 8,
       "reach": 2.0
-    },
-    {
-      "id": "power-attack",
-      "tags": [
-        "attack",
-        "melee"
-      ],
-      "reach": 2.25,
-      "cooldownSeconds": 1.2,
-      "interpretation": "player-equipped-melee",
-      "skill": "equipped",
-      "staminaCost": 25,
-      "damageBonus": 4
     }
   ],
   "lootTables": [

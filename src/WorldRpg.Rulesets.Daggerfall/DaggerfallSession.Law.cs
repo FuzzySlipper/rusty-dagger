@@ -292,7 +292,8 @@ internal sealed partial class DaggerfallSession
 
     private void ServePrison(DaggerfallLegalResponseSave response)
     {
-        var elapsed = AdvanceElapsedTime(response.PrisonSecondsRemaining);
+        // The donor's court raises the clock by the sentence with no per-minute fatigue loss.
+        var elapsed = AdvanceElapsedTime(response.PrisonSecondsRemaining, idleFatigue: false);
         response = response with { PrisonSecondsRemaining = elapsed.RemainingSeconds };
         State.Crime.SetResponse(response);
         if (elapsed.RemainingSeconds > 0 || State.Actors.Player.IsDefeated) return;

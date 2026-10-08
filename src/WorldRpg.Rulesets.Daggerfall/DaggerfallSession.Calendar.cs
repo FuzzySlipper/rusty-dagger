@@ -113,14 +113,15 @@ internal sealed partial class DaggerfallSession
             // calendar minute through this existing owner. Any accepted movement seconds carried
             // from the prior admitted update are settled before reset.
             _locomotion.AdvanceCalendarMinutes(minuteBefore, minuteAfter, State.Actors.Player.Stats,
-                includeIdleFatigue: !resting && idleFatigue);
+                includeIdleFatigue: !resting && idleFatigue, swimmingFatigueApplies: SwimmingFatigueApplies);
             return;
         }
         CheckStandingLaw(minuteBefore, minuteAfter);
         simulate!();
         // Locomotion charges the update's minutes once its steps have recorded how they were spent.
         // A training interval admitted inside a step has already settled its own minutes.
-        _locomotion.AdvanceCalendarMinutes(minuteBefore, minuteAfter, State.Actors.Player.Stats);
+        _locomotion.AdvanceCalendarMinutes(minuteBefore, minuteAfter, State.Actors.Player.Stats,
+            swimmingFatigueApplies: SwimmingFatigueApplies);
     }
 
     /// <summary>

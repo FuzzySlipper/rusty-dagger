@@ -229,7 +229,10 @@ internal sealed partial class DaggerfallSession
             if (_activeProfileKey != origin) return DaggerfallTravelOutcome.Relocated;
             long now = _time.Calendar.ToAbsoluteSeconds();
             long slice = Math.Min(requestedSeconds - (now - started), DaggerfallCalendar.SecondsPerMinute - now % DaggerfallCalendar.SecondsPerMinute);
-            DaggerfallCalendarAdvance advance = AdvanceElapsedTime(slice, deferSkillAdvancement: true, completeTimeIncrease: false);
+            // The donor's travel raises the clock without a per-minute fatigue loss; only cautious
+            // travel touches fatigue, by refilling it before the journey.
+            DaggerfallCalendarAdvance advance = AdvanceElapsedTime(slice, deferSkillAdvancement: true, idleFatigue: false,
+                completeTimeIncrease: false);
             if (State.Actors.Player.IsDefeated) return DaggerfallTravelOutcome.Defeated;
             if (_activeProfileKey != origin) return DaggerfallTravelOutcome.Relocated;
             if (advance.AppliedSeconds != slice) return DaggerfallTravelOutcome.Stopped;

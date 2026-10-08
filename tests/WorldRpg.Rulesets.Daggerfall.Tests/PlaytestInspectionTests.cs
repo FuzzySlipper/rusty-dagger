@@ -54,16 +54,17 @@ public sealed class PlaytestInspectionTests
     }
 
     [Fact]
-    public void Playtest_attack_reports_resource_refusal_without_spending_or_advancing()
+    public void Playtest_attack_stays_available_at_empty_fatigue_without_spending_or_advancing()
     {
         using ConditionSessionFixture fixture = new();
         var session = fixture.Session;
         session.ApplyProductMode(ProductMode.Playing);
         var stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
         stamina.SetCurrent(0);
+        // The donor never refuses a swing for fatigue; an empty pool is the exhaustion collapse's.
         var action = session.InspectPlaytestAction("attack");
-        Assert.False(action.Available);
-        Assert.Equal("InsufficientStamina", action.Reason);
+        Assert.True(action.Available);
+        Assert.Null(action.Reason);
         Assert.Equal(0, stamina.Current);
         Assert.Null(session.State.Actors.Player.Attack.Pending);
         session.ApplyProductMode(ProductMode.Modal);

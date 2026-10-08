@@ -17,7 +17,6 @@ internal sealed record DaggerfallTuning(
     DaggerfallEnemyBehaviorTuning EnemyBehavior,
     DaggerfallLootInteractionTuning LootInteraction,
     DaggerfallTimeTuning Time,
-    DaggerfallStaminaRecoveryTuning StaminaRecovery,
     DaggerfallPresentationAudioTuning PresentationAudio,
     DaggerfallProgressionTuning Progression,
     DaggerfallSiteLightingTuning SiteLighting,
@@ -65,7 +64,6 @@ internal sealed record DaggerfallTuning(
         new DaggerfallEnemyBehaviorTuning(12d, 3f, 1024),
         new DaggerfallLootInteractionTuning(2.25d, .5d),
         new DaggerfallTimeTuning(12d),
-        new DaggerfallStaminaRecoveryTuning(5d, 2d),
         new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 16F),
         new DaggerfallProgressionTuning(EnableExperimentalKillExperience: false, ExperiencePerLevel: 500),
         DaggerfallSiteLightingTuning.Classic,
@@ -102,7 +100,6 @@ internal sealed record DaggerfallTuning(
         EnemyBehavior = EnemyBehavior.Validate(),
         LootInteraction = LootInteraction.Validate(),
         Time = Time.Validate(),
-        StaminaRecovery = StaminaRecovery.Validate(),
         PresentationAudio = PresentationAudio.Validate(),
         Progression = Progression.Validate(),
         SiteLighting = SiteLighting.Validate(),
@@ -142,7 +139,6 @@ internal sealed record DaggerfallTuning(
         JsonElement meleeTargeting = root.GetProperty("meleeTargeting");
         JsonElement enemyBehavior = root.GetProperty("enemyBehavior");
         JsonElement lootInteraction = root.GetProperty("lootInteraction");
-        JsonElement staminaRecovery = root.GetProperty("staminaRecovery");
         JsonElement time = root.GetProperty("time");
         JsonElement presentationAudio = root.GetProperty("presentationAudio");
         JsonElement progression = root.GetProperty("progression");
@@ -214,9 +210,6 @@ internal sealed record DaggerfallTuning(
                 lootInteraction.GetProperty("maximumDistance").GetDouble(),
                 lootInteraction.GetProperty("minimumFacingCosine").GetDouble()),
             new DaggerfallTimeTuning(time.GetProperty("gameSecondsPerRealSecond").GetDouble()),
-            new DaggerfallStaminaRecoveryTuning(
-                staminaRecovery.GetProperty("pointsPerSecond").GetDouble(),
-                staminaRecovery.GetProperty("delayAfterAttackSeconds").GetDouble()),
             new DaggerfallPresentationAudioTuning(
                 presentationAudio.GetProperty("volume").GetSingle(),
                 presentationAudio.GetProperty("pitch").GetSingle(),
@@ -444,17 +437,6 @@ internal sealed record DaggerfallTimeTuning(double GameSecondsPerRealSecond)
     internal DaggerfallTimeTuning Validate()
     {
         if (!double.IsFinite(GameSecondsPerRealSecond) || GameSecondsPerRealSecond <= 0d) throw new ArgumentOutOfRangeException(nameof(GameSecondsPerRealSecond));
-        return this;
-    }
-}
-
-/// <summary>Product-selected real-time stamina recovery; this is not the donor's per-rest-hour fatigue formula.</summary>
-internal sealed record DaggerfallStaminaRecoveryTuning(double PointsPerSecond, double DelayAfterAttackSeconds)
-{
-    internal DaggerfallStaminaRecoveryTuning Validate()
-    {
-        if (!double.IsFinite(PointsPerSecond) || PointsPerSecond <= 0d) throw new ArgumentOutOfRangeException(nameof(PointsPerSecond));
-        if (!double.IsFinite(DelayAfterAttackSeconds) || DelayAfterAttackSeconds < 0d) throw new ArgumentOutOfRangeException(nameof(DelayAfterAttackSeconds));
         return this;
     }
 }

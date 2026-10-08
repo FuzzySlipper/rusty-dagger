@@ -84,15 +84,16 @@ public sealed class DaggerfallClimbingPolicyTests
     }
 
     [Fact]
-    public void Exhaustion_detaches_and_accepted_climbing_time_charges_the_calendar_owner_once()
+    public void An_empty_fatigue_pool_keeps_the_hold_and_accepted_climbing_time_charges_the_calendar_owner_once()
     {
         StatsComponent stats = Stats(stamina: 200);
         DaggerfallClimbingPolicy climbing = new(DaggerfallClimbingTuning.Classic);
         DaggerfallClimbStep attached = climbing.BeginStep(Forward(), default(CharacterMotion) with { Grounded = true },
             true, true, false, true, stats, false, false, .8f, () => 1);
         climbing.CompleteStep(attached, Receipt(.1f), _ => { });
+        // The donor's climbing motor never lets go for fatigue; exhaustion is the session's collapse.
         stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).SetCurrent(0);
-        Assert.False(climbing.BeginStep(Forward(), default, true, true, false, true, stats, false, false, .1f, () => 1).Climbing);
+        Assert.True(climbing.BeginStep(Forward(), default, true, true, false, true, stats, false, false, .1f, () => 1).Climbing);
 
         stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).SetCurrent(200);
         DaggerfallLocomotionPolicy locomotion = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());

@@ -171,36 +171,6 @@ public sealed class ProductModeSessionTests
     }
 
     [Fact]
-    public void Stamina_recovery_is_held_back_outside_ordinary_play_and_resumes_with_it()
-    {
-        using DaggerfallSession session = FreshSession();
-        StatsComponent mechanics = session.State.Actors.Player.Stats;
-        TrackId stamina = TrackId.Parse("stamina");
-
-        // Ordinary play recovers stamina over admitted world time, which is the calibration: without
-        // it the held-back assertion below would pass on a mechanic that never runs at all.
-        double maximum = mechanics.GetTrack(stamina).MaximumValue;
-        mechanics.GetTrack(stamina).SetCurrent(1, clamp: true);
-        // Recovery is per second against an integer track, so one step of a sixtieth recovers less
-        // than one unit: the calibration has to give the mechanic enough admitted time to show.
-        for (ulong step = 1; step <= 120; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
-        double recovered = mechanics.GetTrack(stamina).Current;
-        Assert.True(recovered > 1, $"ordinary play should recover stamina, but it stayed at {recovered}");
-
-        // A modal holds the world still, so the same amount of admitted time recovers nothing.
-        mechanics.GetTrack(stamina).SetCurrent(1, clamp: true);
-        session.ApplyProductMode(ProductMode.Modal);
-        for (ulong step = 121; step <= 240; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
-        Assert.Equal(1d, mechanics.GetTrack(stamina).Current);
-
-        // And ordinary play resumes it, so the gate is a gate rather than a stopped mechanic.
-        session.ApplyProductMode(ProductMode.Playing);
-        for (ulong step = 241; step <= 360; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
-        Assert.True(mechanics.GetTrack(stamina).Current > 1);
-        Assert.True(mechanics.GetTrack(stamina).Current <= maximum);
-    }
-
-    [Fact]
     public void Paused_mode_holds_enemy_facts_stamina_and_sprite_playback_until_play_resumes()
     {
         string root = TestData.RepositoryRoot;
@@ -216,7 +186,7 @@ public sealed class ProductModeSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
-        stamina.SetCurrent(1, clamp: true);
+        stamina.SetCurrent(100, clamp: true);
 
         session.ApplyProductMode(ProductMode.Paused);
         int factReactionsBefore = appearance.ControlRequests.Count;
@@ -225,23 +195,21 @@ public sealed class ProductModeSessionTests
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
         // A held update republishes the existing scene for the mode UI, but does not simulate an
-        // enemy, deliver its EnemyAttackStartedFact into appearance, recover stamina, or advance
+        // enemy, deliver its EnemyAttackStartedFact into appearance, charge fatigue, or advance
         // any sprite playback.
         Assert.Empty(session.LastEnemyBehavior);
-        Assert.Equal(1d, stamina.Current);
+        Assert.Equal(100d, stamina.Current);
         Assert.Equal(factReactionsBefore, appearance.ControlRequests.Count);
         Assert.Equal(playbackAdvancesBefore, appearance.AdvanceRequests.Count);
         Assert.Equal(snapshotBefore, appearance.Snapshots[^1]);
 
         // Ordinary play is the sensitivity control: the same perception now runs behavior, its
-        // delivered attack-start fact drives appearance, recovery advances, and the outer path
-        // advances playback.
+        // delivered attack-start fact drives appearance and the outer path advances playback.
         session.ApplyProductMode(ProductMode.Playing);
         // Complete each authored swing so this fixture does not leave a hit marker pending forever.
         appearance.AdvanceReceiptForAll = CompletedMarker(1);
         for (ulong step = 2; step <= 121; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
         Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
-        Assert.True(stamina.Current > 1d);
         Assert.True(appearance.ControlRequests.Count > factReactionsBefore);
         Assert.True(appearance.AdvanceRequests.Count > playbackAdvancesBefore);
     }
