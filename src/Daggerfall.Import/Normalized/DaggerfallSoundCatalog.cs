@@ -1,6 +1,4 @@
-using System.Text.Json;
 using Daggerfall.Import.Arena2;
-using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Normalized;
 
@@ -56,7 +54,8 @@ public sealed record DaggerfallSoundClip(
     string Reason);
 
 /// <summary>
-/// The published catalog of every clip the numeric sound archive carries.
+/// The catalog of every clip the numeric sound archive carries. It is an importer-side disposition
+/// report the classic-media command prints; nothing at runtime reads it, so it is not published.
 /// </summary>
 /// <param name="Clips">Every clip, in the archive's own directory order.</param>
 /// <param name="Sources">The source identity the catalog was read from.</param>
@@ -98,9 +97,9 @@ public sealed record DaggerfallSoundCatalog(
             }
 
             // One artifact cannot stand for two clips. The builder refuses such a closure before it
-            // becomes a catalog, and the record refuses it again because this is the check a persisted
-            // catalog crosses: a consumer following an ordinal to a media identity would otherwise be
-            // sent to the same bytes for both clips and could not tell which one it asked for.
+            // becomes a catalog, and the record refuses it again so a catalog built any other way cannot
+            // carry it: an ordinal followed to a media identity would otherwise reach the same bytes for
+            // both clips and could not tell which one it asked for.
             if (Clips[index].MediaId is { } mediaId)
             {
                 NormalizedImportDocument.RequireLogicalId(mediaId, nameof(DaggerfallSoundClip.MediaId));
@@ -114,53 +113,13 @@ public sealed record DaggerfallSoundCatalog(
 }
 
 /// <summary>
-/// The published JSON section for <see cref="DaggerfallSoundCatalog"/>, written and read with the
-/// repository's canonical dialect so the published references a consumer follows are the same ones
-/// this repository validates.
-/// </summary>
-public static class DaggerfallSoundCatalogJson
-{
-    /// <summary>
-    /// The name the catalog is published under within a content group, beside the clips it describes.
-    /// The group is the caller's, exactly as it is for every other artifact the publication emits: the
-    /// content-root-relative name a consumer holds is the group joined to this path.
-    /// </summary>
-    public const string RelativePath = "media/audio/classic-sound-catalog.json";
-
-    public static byte[] Write(DaggerfallSoundCatalog catalog)
-    {
-        ArgumentNullException.ThrowIfNull(catalog);
-        catalog.Validate();
-        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(catalog, PublishedJson.Section);
-        return [.. bytes, (byte)'\n'];
-    }
-
-    public static DaggerfallSoundCatalog Read(ReadOnlySpan<byte> bytes)
-    {
-        DaggerfallSoundCatalog catalog;
-        try
-        {
-            catalog = JsonSerializer.Deserialize<DaggerfallSoundCatalog>(bytes, PublishedJson.Section)
-                ?? throw new InvalidOperationException("The published sound catalog carries no section.");
-        }
-        catch (JsonException exception)
-        {
-            throw new InvalidOperationException($"The published sound catalog is not valid JSON: {exception.Message}", exception);
-        }
-
-        catalog.Validate();
-        return catalog;
-    }
-}
-
-/// <summary>
-/// Builds the published catalog from the numeric sound archive and the media closure that carries
+/// Builds the catalog from the numeric sound archive and the media closure that carries
 /// its clips.
 /// </summary>
 /// <remarks>
 /// The archive carries 459 numeric records and no names; the donor's own clip enum is where a name
 /// comes from, and only the clips this product has a use for are named here. Everything else is
-/// published as readable with no consumer rather than dropped, because a clip that is absent from the
+/// stated as readable with no consumer rather than dropped, because a clip that is absent from the
 /// catalog cannot be counted and one that says it has no consumer can. The admitted set is supplied
 /// by the producer that emits the artifacts, so an admitted entry is a reference to real published
 /// bytes rather than a list this catalog maintains beside them.

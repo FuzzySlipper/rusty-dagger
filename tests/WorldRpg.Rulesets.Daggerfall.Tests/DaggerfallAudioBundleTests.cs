@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text;
-using System.Text.Json;
 using Rusty.Engine;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -25,7 +24,7 @@ public sealed class DaggerfallAudioBundleTests
         const string bundlePath = "audio-melee-dagger-swing.wav";
         BundleContentFake contentService = BundleContentFake.Create(bundlePath);
         ProductContent content = new(
-            new ProductContentFile[] { new(Encoding.UTF8.GetBytes("worldrpg/media/audio/classic-sound-catalog.json"), "catalog"u8.ToArray()) },
+            new ProductContentFile[] { new(Encoding.UTF8.GetBytes("worldrpg/media/classic-media-inventory.json"), "inventory"u8.ToArray()) },
             contentService.Service);
         DaggerfallAudioBundle audio = new(content, SiteBundle, SiteRoot, [new NormalizedAudioClip(mediaId, contentPath, default)]);
         AudioFake engineAudio = AudioFake.Create();
@@ -150,35 +149,6 @@ public sealed class DaggerfallAudioBundleTests
         {
             Assert.Throws<AggregateException>(appearance.Dispose);
         }
-    }
-
-    [Fact]
-    public void Published_catalog_admissions_close_over_the_generated_audio_bundle_paths()
-    {
-        string root = TestData.RepositoryRoot;
-        using JsonDocument catalog = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/audio/classic-sound-catalog.json")));
-        using JsonDocument inventory = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/classic-media-inventory.json")));
-        using JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
-
-        Dictionary<string, string> publicPaths = inventory.RootElement.GetProperty("artifacts").EnumerateArray()
-            .Where(entry => entry.TryGetProperty("mediaId", out JsonElement id) && id.ValueKind == JsonValueKind.String)
-            .ToDictionary(entry => entry.GetProperty("mediaId").GetString()!, entry => entry.GetProperty("path").GetString()!, StringComparer.Ordinal);
-        Dictionary<string, string> importedPaths = manifest.RootElement.GetProperty("media").GetProperty("resources").EnumerateArray()
-            .Where(resource => resource.GetProperty("kind").GetString() == "audio")
-            .ToDictionary(resource => resource.GetProperty("id").GetString()!, resource => resource.GetProperty("relativePath").GetString()!, StringComparer.Ordinal);
-        string[] admitted = [.. catalog.RootElement.GetProperty("clips").EnumerateArray()
-            .Where(clip => clip.GetProperty("disposition").GetString() == "admitted")
-            .Select(clip => clip.GetProperty("mediaId").GetString()!)
-            .Order(StringComparer.Ordinal)];
-
-        Assert.Equal(admitted, publicPaths.Keys.Where(id => id.StartsWith("audio.", StringComparison.Ordinal)).Order(StringComparer.Ordinal));
-        Assert.Equal(admitted, importedPaths.Keys.Order(StringComparer.Ordinal));
-        Assert.All(admitted, id =>
-        {
-            Assert.StartsWith("worldrpg/media/audio/clips/", publicPaths[id], StringComparison.Ordinal);
-            Assert.StartsWith("media/audio/clips/", importedPaths[id], StringComparison.Ordinal);
-        });
-        Assert.True(File.Exists(Path.Combine(root, "content/worldrpg/media/audio/classic-sound-catalog.json")));
     }
 
     private class BundleContentFake : DispatchProxy

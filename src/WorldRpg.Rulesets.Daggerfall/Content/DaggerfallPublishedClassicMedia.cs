@@ -7,11 +7,15 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>
 /// Admits the public classic-media inventory against the selected normalized site's descriptors.
 /// The sidecar owns source interpretation; this join gives the ruleset one source-free public
-/// path for each descriptor without reopening generated image or audio bodies at session start.
+/// path for each image, font and atlas descriptor without reopening generated bodies at session
+/// start. Audio descriptors are outside the join: their bodies are published only in the site's own
+/// closure and opened through the audio bundle its payload declares.
 /// </summary>
 internal sealed class DaggerfallPublishedClassicMedia
 {
     internal const string InventoryPath = "worldrpg/media/classic-media-inventory.json";
+
+    private const string AudioKind = "audio";
 
     private DaggerfallPublishedClassicMedia(IReadOnlyDictionary<string, string> paths) => Paths = paths;
 
@@ -22,7 +26,10 @@ internal sealed class DaggerfallPublishedClassicMedia
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(presentation);
-        if (presentation.Resources.Count == 0)
+        Dictionary<string, NormalizedClassicMediaResource> resources = presentation.Resources.Values
+            .Where(resource => resource.Kind != AudioKind)
+            .ToDictionary(resource => resource.Id, StringComparer.Ordinal);
+        if (resources.Count == 0)
         {
             throw new InvalidOperationException("The selected classic-media sidecar contains no descriptors.");
         }
@@ -46,7 +53,7 @@ internal sealed class DaggerfallPublishedClassicMedia
                 string path = RequiredString(artifact, "path", id);
                 long byteLength = RequiredInt64(artifact, "byteLength", id);
                 string sha256 = RequiredString(artifact, "sha256", id);
-                if (!presentation.Resources.TryGetValue(id, out NormalizedClassicMediaResource? resource))
+                if (!resources.TryGetValue(id, out NormalizedClassicMediaResource? resource))
                 {
                     throw new InvalidOperationException($"Published classic media inventory names unknown descriptor '{id}'.");
                 }
@@ -65,8 +72,8 @@ internal sealed class DaggerfallPublishedClassicMedia
                 }
             }
 
-            if (paths.Count != presentation.Resources.Count
-                || presentation.Resources.Keys.Except(paths.Keys, StringComparer.Ordinal).Any())
+            if (paths.Count != resources.Count
+                || resources.Keys.Except(paths.Keys, StringComparer.Ordinal).Any())
             {
                 throw new InvalidOperationException("Published classic media inventory does not close over the selected normalized descriptor set.");
             }

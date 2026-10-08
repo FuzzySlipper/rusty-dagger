@@ -89,7 +89,7 @@ public sealed class CommittedBundleCompositionTests
     /// The Host stages exactly the bundles the default composition opens. Each named bundle the
     /// ruleset opens by id, and each audio bundle a selected site payload declares, is a Host item at
     /// the root its reader strips; every clip a selected site publishes is a file under that root; and
-    /// every Host item is one of those or a named staging-only declaration nothing opens.
+    /// every Host item is one of those, so the Host stages no bundle nothing opens.
     /// </summary>
     [Fact]
     public void The_host_stages_exactly_the_bundles_the_default_composition_opens()
@@ -119,15 +119,8 @@ public sealed class CommittedBundleCompositionTests
         }
         Assert.Empty(missingClips);
 
-        // Declared and staged but opened by no owner. The classic catalog's WAV bodies are a lazy bundle
-        // only so they stay out of the eager startup snapshot; each site stages and opens its own clips.
-        Dictionary<string, string> stagingOnly = new(StringComparer.Ordinal) { ["daggerfall.classic-audio"] = "worldrpg/media/audio/clips" };
-        string[] rulesetSources = [.. Directory.GetFiles(Path.Combine(root, "src/WorldRpg.Rulesets.Daggerfall"), "*.cs", SearchOption.AllDirectories)
-            .Select(File.ReadAllText)];
-        Assert.All(stagingOnly.Keys, id => Assert.DoesNotContain(rulesetSources, source => source.Contains($"\"{id}\"", StringComparison.Ordinal)));
-
         Assert.Equal(
-            opened.Concat(stagingOnly).OrderBy(entry => entry.Key, StringComparer.Ordinal).ToArray(),
+            opened.OrderBy(entry => entry.Key, StringComparer.Ordinal).ToArray(),
             declared.OrderBy(entry => entry.Key, StringComparer.Ordinal).ToArray());
         Assert.All(declared.Values, staged => Assert.True(Directory.Exists(Path.Combine(root, "content", staged)), $"Staged bundle root '{staged}' was not generated."));
     }
