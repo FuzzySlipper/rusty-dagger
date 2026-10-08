@@ -1,5 +1,7 @@
 using WorldRpg.Kit.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Facts;
 
@@ -50,9 +52,13 @@ internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId 
 /// A swing with a target delivers its impact when the strike animation reaches the classic hit frame,
 /// so <paramref name="FrameSeconds"/> carries that animation's tick time and <paramref name="TargetId"/>
 /// its admitted target. An admitted swing with neither resolves inside its own update.
+/// <paramref name="Swing"/> is the strike the rules chose: the bow's fixed strike, or the direction the
+/// player drew a melee swing in, which is also the direction its swing modifiers read. None means the
+/// player attacked without a gesture, and the presentation plays the donor's click-attack choice.
 /// </summary>
 internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep,
-    long? TargetId = null, double FrameSeconds = 0d, int HitFrame = 2) : IProductFact
+    long? TargetId = null, double FrameSeconds = 0d, int HitFrame = DaggerfallFormulaPolicy.MeleeWeaponHitFrame,
+    DaggerfallSwingDirection Swing = DaggerfallSwingDirection.None) : IProductFact
 { internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
 /// <summary>
 /// One enemy melee swing began. The attack's outcome is already decided, so the

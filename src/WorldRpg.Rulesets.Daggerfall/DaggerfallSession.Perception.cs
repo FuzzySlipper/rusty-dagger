@@ -77,7 +77,7 @@ internal sealed partial class DaggerfallSession
             EnemySeesThroughInvisibility: mobile?.SeesThroughInvisibility == true,
             TargetPacified: targetPacified,
             EnemyHostile: IsHostileActor(actorId, definition),
-            TargetWeaponSheathed: !_appearance.IsWeaponDrawn,
+            TargetWeaponSheathed: !State.WeaponDrawn,
             ComprehendLanguagesBonus: perceptionEffects.ComprehendLanguagesBonus,
             Noise: horizontalSpeed,
             RollPercent: rollPercent,

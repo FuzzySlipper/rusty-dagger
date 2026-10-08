@@ -390,7 +390,8 @@ internal static class TestSessions
     {
         IReadOnlyList<NormalizedAtlasFrame> frames = [new NormalizedAtlasFrame(0, 0, 0, 8, 8)];
         string[] names = ["idle", "strikeDown", "strikeDownLeft", "strikeLeft", "strikeRight", "strikeDownRight", "strikeUp"];
-        IReadOnlyDictionary<string, NormalizedClassicWeaponAction> actions = names.Select((name, sourceRecordOrdinal) => new NormalizedClassicWeaponAction(name, sourceRecordOrdinal, 0, 1, "right", name == "idle" ? .1F : .4F, 10F, name == "idle", 0, 0)).ToDictionary(action => action.Name);
+        // Each strike plays the one cell five times, as long as a classic melee strike, so it reaches the hit frame.
+        IReadOnlyDictionary<string, NormalizedClassicWeaponAction> actions = names.Select((name, sourceRecordOrdinal) => new NormalizedClassicWeaponAction(name, sourceRecordOrdinal, 0, 1, "right", name == "idle" ? .1F : .4F, 10F, name == "idle", 0, 0) { Sequence = name == "idle" ? null : [0, 0, 0, 0, 0] }).ToDictionary(action => action.Name);
         return new NormalizedClassicPresentation(new Dictionary<string, NormalizedClassicWeapon> { ["weapon.dagger.steel"] = new("weapon.dagger.steel", "weapon/dagger.png", Hash, 8, 8, frames, new Vector2(.5F, .5F), Vector2.One, [0], actions) }, [])
         {
             CompatibleItemVisuals = new Dictionary<string, string> { ["iron-dagger"] = "weapon.dagger.steel" },

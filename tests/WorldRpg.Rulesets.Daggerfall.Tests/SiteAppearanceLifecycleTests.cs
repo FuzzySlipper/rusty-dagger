@@ -289,7 +289,7 @@ public sealed class SiteAppearanceLifecycleTests
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
         int constructionResourceRequests = appearance.OpenResourceRequests.Count;
         appearance.RejectLateResourceOpen = true;
-        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
         SpritePlayback actorPlayback = Visual(presentation).Playback!;
         presentation.BeginAdmittedUpdate();
         presentation.React(new PlayerAttackStartedFact(2, 3));

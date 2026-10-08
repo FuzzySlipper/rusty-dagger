@@ -65,6 +65,11 @@ internal sealed class DaggerfallState(
     /// <summary>Current donor quest-training timestamp, separate from the calendar that advances it.</summary>
     internal DaggerfallQuestTrainingState QuestTraining { get; } = assembled.QuestTraining;
     internal PlayerControlState PlayerControl { get; } = assembled.PlayerControl;
+    /// <summary>
+    /// Whether the player holds the weapon drawn. It gates the player's attacks and is what a sheathed
+    /// weapon tells perception, so it is saved; the viewmodel only shows it.
+    /// </summary>
+    internal bool WeaponDrawn { get; set; } = true;
     internal ActorsState Actors { get; } = assembled.Actors;
     internal ProgressionState Progression => Actors.Player.Progression;
     internal MechanicsInventoryCoordinator Inventory { get; } = assembled.Inventory;

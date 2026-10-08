@@ -1629,6 +1629,8 @@ internal sealed record DaggerfallVariablesSave(DaggerfallVariableSave[] Entries)
 
 internal sealed record DaggerfallPlayerSave(float X, float Y, float Z, float YawRadians, float PitchRadians, DaggerfallStatsSave Stats)
 {
+    /// <summary>Whether the player held the weapon drawn; a sheathed weapon stays sheathed across a load.</summary>
+    [JsonRequired] public bool WeaponDrawn { get; init; } = true;
     internal void Validate()
     {
         if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z) || !float.IsFinite(YawRadians) || !float.IsFinite(PitchRadians))

@@ -92,7 +92,8 @@ internal sealed class DaggerSessionPersistence
         DaggerfallPlayerSave player = new(
             playerPosition.X, playerPosition.Y, playerPosition.Z,
             control.YawRadians, control.PitchRadians,
-            DaggerfallStatsSaveBoundary.Capture(State.Actors.Player.Stats, State.Actors.Player.Actor.Entity));
+            DaggerfallStatsSaveBoundary.Capture(State.Actors.Player.Stats, State.Actors.Player.Actor.Entity))
+        { WeaponDrawn = State.WeaponDrawn };
         DaggerfallActorSave[] actors = State.Actors.All
             .Where(actor => !dynamicActors.ContainsKey(actor.DurableId))
             .OrderBy(actor => actor.DurableId)
@@ -381,6 +382,7 @@ internal sealed class DaggerSessionPersistence
         WorldPoint position = new(saved.Player.X, saved.Player.Y, saved.Player.Z);
         State.PlayerControl.YawRadians = saved.Player.YawRadians;
         State.PlayerControl.PitchRadians = saved.Player.PitchRadians;
+        State.WeaponDrawn = saved.Player.WeaponDrawn;
         State.PlayerControl.Restore(position, default(CharacterMotion) with { PeakY = position.Y, FallOriginY = position.Y });
         // Native continuation and held input start fresh; durable pose and corpse relationships are restored.
         _corpseLoot.Restore(saved.Corpses, CorpseIdentities(saved.Corpses));

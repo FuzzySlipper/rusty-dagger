@@ -89,15 +89,18 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly Dictionary<long, ulong> dungeonSpellVisualEntityIds = [];
     private readonly List<EffectVisual> effects = [];
     private ViewmodelVisual? viewmodel;
-    private bool weaponDrawn = true;
     // The next swing may select any authored strike. Report a bounded observation window
     // covering its longest animation at the current ruleset tick rate (or authored fallback).
-    internal double InspectPlayerStrikeSeconds(EquipmentRead equipment, double frameSeconds) =>
-        SelectPlayerWeapon(equipment)?.Actions.Where(pair => pair.Key.StartsWith("strike", StringComparison.Ordinal))
-            .Select(pair => (pair.Value.Sequence?.Count ?? pair.Value.FrameCount) *
+    internal double InspectPlayerStrikeSeconds(EquipmentRead equipment, bool weaponDrawn, double frameSeconds) =>
+        SelectPlayerWeapon(equipment, weaponDrawn)?.Actions.Where(pair => pair.Key.StartsWith("strike", StringComparison.Ordinal))
+            .Select(pair => pair.Value.PlayedFrameCount *
                 (frameSeconds > 0 ? frameSeconds : 1d / pair.Value.FramesPerSecond)).DefaultIfEmpty(0).Max() ?? 0;
 
-    internal bool CanStartPlayerAttack => weaponDrawn && viewmodel?.Strike != true;
+    /// <summary>
+    /// Whether the viewmodel is free for a new swing: no strike is still playing. Whether the weapon is
+    /// drawn at all is session state the caller checks beside this.
+    /// </summary>
+    internal bool CanStartPlayerAttack => viewmodel?.Strike != true;
     /// <summary>
     /// Reports an enemy hit swing whose authored damage frame has not been consumed yet.
     /// The session uses this presentation-owned state to keep post-enemy actions behind the
@@ -108,9 +111,6 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         visual.ActiveAttack is { Identity.Target: var target, Identity.Attacker: var attacker, Identity.Outcome: "hit", ImpactReported: false }
         && target == targetId
         && attacker != DaggerfallActorIdentity.PlayerEntityId);
-    /// <summary>Reads the authored weapon draw state without conflating it with an active strike.</summary>
-    internal bool IsWeaponDrawn => weaponDrawn;
-    internal void ToggleWeaponDrawn() => weaponDrawn = !weaponDrawn;
 
     /// <summary>
     /// Registers a product-owned visual coordinator to contribute facts to this class's one
@@ -526,7 +526,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 // frame is what delivers the admitted impact. A viewmodel that cannot play the
                 // authored strike has no frame to wait for, so the impact lands in this update
                 // rather than being withheld by a presentation the composition does not have.
-                if (!StartWeaponStrike(swing, started.FrameSeconds, started.TargetId, started.HitFrame))
+                if (!StartWeaponStrike(swing, started.Swing, started.FrameSeconds, started.TargetId, started.HitFrame))
                 {
                     attackImpacts.Add(new AttackImpactNotice(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0,
                         started.OriginatingGeneration, started.OriginatingSimulationStep, Expired: false));
@@ -589,17 +589,20 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         }
     }
 
-    /// <summary>Selects authored equipped art, falling back to empty hands; Engine owns sprite realization.</summary>
-    internal void UpdateRightHandEquipment(EquipmentRead equipment)
+    /// <summary>
+    /// Selects authored equipped art, falling back to empty hands, or none while the session holds the
+    /// weapon sheathed; Engine owns sprite realization.
+    /// </summary>
+    internal void UpdateRightHandEquipment(EquipmentRead equipment, bool weaponDrawn)
     {
         ArgumentNullException.ThrowIfNull(equipment);
-        NormalizedClassicWeapon? selected = SelectPlayerWeapon(equipment);
+        NormalizedClassicWeapon? selected = SelectPlayerWeapon(equipment, weaponDrawn);
         if (viewmodel?.Weapon.ResourceId == selected?.ResourceId) return;
         RetireViewmodel();
         if (selected is not null && classicPresentation.Viewmodel is not null) CreateViewmodel(selected);
     }
 
-    private NormalizedClassicWeapon? SelectPlayerWeapon(EquipmentRead equipment)
+    private NormalizedClassicWeapon? SelectPlayerWeapon(EquipmentRead equipment, bool weaponDrawn)
     {
         string? resource = playerBeastForm() is not null ? "weapon.werecreature" : null;
         foreach (string slot in new[] { "right-hand", "left-hand" })
@@ -1131,14 +1134,22 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     /// a viewmodel-less or action-less composition reports false so the caller can land the impact in
     /// the update that admitted it instead of waiting for a frame nothing will play.
     /// </summary>
-    private bool StartWeaponStrike(PresentationEventIdentity identity, double frameSeconds = 0d, long? target = null,
-        int hitFrame = DaggerfallFormulaPolicy.MeleeWeaponHitFrame)
+    private bool StartWeaponStrike(PresentationEventIdentity identity, DaggerfallSwingDirection swing, double frameSeconds = 0d,
+        long? target = null, int hitFrame = DaggerfallFormulaPolicy.MeleeWeaponHitFrame)
     {
         if (viewmodel is null) return false;
-        string[] choices = ["strikeDown", "strikeDownLeft", "strikeLeft", "strikeRight", "strikeDownRight", "strikeUp"];
-        int selected = random is null ? 0 : checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, "daggerfall.media.weapon-strike.v1", CombatRandomKey.For(identity.Generation, identity.SimulationStep, identity.Attacker, identity.Target, 44), 0, choices.Length - 1)).Value);
-        string name = choices[selected];
-        if (!viewmodel.Weapon.Actions.ContainsKey(name)) return false;
+        // The rules chose the swing: the bow's fixed strike or the direction the player drew. A swing
+        // drawn without a gesture is the donor's click attack, which picks uniformly among the six
+        // directions UpRight..DownRight, i.e. among the six strike states.
+        IReadOnlyList<string> choices = NormalizedClassicWeapon.StrikeActions;
+        string name = swing != DaggerfallSwingDirection.None ? NormalizedClassicWeapon.StrikeAction(swing)
+            : choices[random is null ? 0 : checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, "daggerfall.media.weapon-strike.v1", CombatRandomKey.For(identity.Generation, identity.SimulationStep, identity.Attacker, identity.Target, 44), 0, choices.Count - 1)).Value)];
+        if (!viewmodel.Weapon.Actions.TryGetValue(name, out NormalizedClassicWeaponAction? strike)) return false;
+        // Admission refuses art whose strikes end before the hit frame the rules use, so a strike that
+        // cannot reach it is a broken composition: playing it would spend the swing (and a bow's arrow)
+        // and retire its impact unreported.
+        if (hitFrame < 0 || hitFrame >= strike.PlayedFrameCount)
+            throw new InvalidOperationException($"Classic weapon '{viewmodel.Weapon.ResourceId}' strike '{name}' plays {strike.PlayedFrameCount} frames and cannot reach the swing's hit frame {hitFrame}.");
         // A new swing replaces whatever the last one left undelivered, then owns the impact its own
         // hit frame will deliver; an untargeted swing has none.
         RetireUnreportedImpact();
@@ -1169,7 +1180,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 .Select(index => weapon.Frames.Single(frame => frame.Id == index).Id).ToArray(), checked((float)framesPerSecond));
             // A swing's hit frame is an Engine playback marker, so its one crossing is reported even
             // when an update skips past the frame.
-            SpritePlaybackMarker[] markers = name != "idle" && viewmodel.HitFrame >= 0 && viewmodel.HitFrame < frames.Length
+            SpritePlaybackMarker[] markers = name != "idle"
                 ? [new SpritePlaybackMarker(WeaponHitMarkerId, checked((uint)viewmodel.HitFrame))] : [];
             staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(viewmodel.Appearance, viewmodel.Atlas, frames, markers, action.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(staged, SpritePlaybackControl.Start));

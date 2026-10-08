@@ -7,6 +7,8 @@ using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Presentation;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
@@ -2007,8 +2009,14 @@ internal static class DaggerfallSiteContent
         }
         foreach (NormalizedClassicWeaponAction action in actions.Values)
             if (action.Sequence is { } sequence && (sequence.Count == 0 || sequence.Any(frame => frame < action.FrameStart || frame >= (long)action.FrameStart + action.FrameCount))) diagnostics.Add($"Classic weapon action '{action.Name}' sequence is outside its frame range.");
-        string[] requiredActions = ["idle", "strikeDown", "strikeDownLeft", "strikeLeft", "strikeRight", "strikeDownRight", "strikeUp"];
+        string[] requiredActions = ["idle", .. NormalizedClassicWeapon.StrikeActions];
         if (actions.Count != requiredActions.Length || requiredActions.Any(name => !actions.ContainsKey(name))) diagnostics.Add("Classic weapons require the normalized ready and six directional attack actions.");
+        // Every strike can play a melee swing, whose impact is delivered on the melee hit frame; a strike
+        // that ends before it would spend the swing and never land it. The bow's own frame is checked
+        // where the selection says which weapons are bows.
+        foreach (string strike in NormalizedClassicWeapon.StrikeActions)
+            if (actions.TryGetValue(strike, out NormalizedClassicWeaponAction? played) && played.PlayedFrameCount <= DaggerfallFormulaPolicy.MeleeWeaponHitFrame)
+                diagnostics.Add($"Classic weapon '{resource.Id}' strike '{strike}' plays {played.PlayedFrameCount} frames, so it never reaches the melee hit frame {DaggerfallFormulaPolicy.MeleeWeaponHitFrame}.");
         {
             if (!resource.Frames.Select(frame => frame.Id).Order().SequenceEqual(Enumerable.Range(0, resource.Frames.Count).Select(index => (uint)index))) diagnostics.Add("Classic weaponSprite frames must use contiguous canonical frame indexes.");
             HashSet<int> covered = [];
@@ -2079,6 +2087,18 @@ internal static class DaggerfallSiteContent
             foreach (DaggerfallItemDefinition item in definitions.TemplateItems.Values.Where(item =>
                 item.Weapon is not null && item.Template?.Index == template))
                 mappings.TryAdd(item.Id.Value, resource);
+        }
+        // A bow looses on its one fixed strike at the bow hit frame; art that ends that strike sooner
+        // would spend the arrow and never release it.
+        string bowStrike = NormalizedClassicWeapon.StrikeAction(DaggerfallFormulaPolicy.BowSwing);
+        foreach ((string itemId, string resource) in mappings)
+        {
+            DaggerfallItemId id = new(itemId);
+            DaggerfallItemDefinition? item = definitions.Items.GetValueOrDefault(id) ?? definitions.TemplateItems.GetValueOrDefault(id);
+            if (item?.Weapon is not { IsBow: true } || !classic.Weapons.TryGetValue(resource, out NormalizedClassicWeapon? art)
+                || !art.Actions.TryGetValue(bowStrike, out NormalizedClassicWeaponAction? loosed)) continue;
+            if (loosed.PlayedFrameCount <= DaggerfallFormulaPolicy.BowWeaponHitFrame)
+                diagnostics.Add($"Bow '{itemId}' selects classic weapon '{resource}', whose '{bowStrike}' plays {loosed.PlayedFrameCount} frames and never reaches the bow hit frame {DaggerfallFormulaPolicy.BowWeaponHitFrame}.");
         }
         string unarmed = DaggerfallBaseContent.Text(presentation, "unarmedVisual", diagnostics);
         if (!classic.Weapons.ContainsKey(unarmed)) diagnostics.Add("Unarmed presentation must select admitted weaponSprite media.");
@@ -2416,8 +2436,29 @@ internal sealed record NormalizedMusicCue(string MediaId, string Track, string C
 internal sealed record NormalizedClassicWeaponAction(string Name, int SourceRecordOrdinal, int FrameStart, int FrameCount, string Alignment, float ScreenOffset, float FramesPerSecond, bool Loops, short SourceXOffset, short SourceYOffset)
 {
     internal IReadOnlyList<int>? Sequence { get; init; }
+    /// <summary>How many frames the action plays: its authored sequence, or its frame range.</summary>
+    internal int PlayedFrameCount => Sequence?.Count ?? FrameCount;
 }
-internal sealed record NormalizedClassicWeapon(string ResourceId, string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, IReadOnlyList<int> Sequence, IReadOnlyDictionary<string, NormalizedClassicWeaponAction> Actions);
+internal sealed record NormalizedClassicWeapon(string ResourceId, string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, IReadOnlyList<int> Sequence, IReadOnlyDictionary<string, NormalizedClassicWeaponAction> Actions)
+{
+    /// <summary>
+    /// The six directional strike actions, in the order the presentation's click-attack draw indexes
+    /// them. Each one is a donor FPSWeapon strike state.
+    /// </summary>
+    internal static IReadOnlyList<string> StrikeActions { get; } = ["strikeDown", "strikeDownLeft", "strikeLeft", "strikeRight", "strikeDownRight", "strikeUp"];
+
+    /// <summary>The strike action that plays a swing the rules chose; a swing without a direction has none.</summary>
+    internal static string StrikeAction(DaggerfallSwingDirection swing) => swing switch
+    {
+        DaggerfallSwingDirection.StrikeDown => "strikeDown",
+        DaggerfallSwingDirection.StrikeDownLeft => "strikeDownLeft",
+        DaggerfallSwingDirection.StrikeLeft => "strikeLeft",
+        DaggerfallSwingDirection.StrikeRight => "strikeRight",
+        DaggerfallSwingDirection.StrikeDownRight => "strikeDownRight",
+        DaggerfallSwingDirection.StrikeUp => "strikeUp",
+        _ => throw new ArgumentOutOfRangeException(nameof(swing), swing, "A swing without a direction names no strike action."),
+    };
+}
 internal sealed record NormalizedClassicEffect(string Name, int SourceRecordOrdinal, string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, IReadOnlyList<int> Sequence, float FramesPerSecond, bool Loops);
 internal sealed record NormalizedClassicPresentation(IReadOnlyDictionary<string, NormalizedClassicWeapon> Weapons, IReadOnlyList<NormalizedClassicEffect> Effects)
 {

@@ -29,7 +29,7 @@ public sealed class PlayerViewmodelTests
                 new NormalizedAudioClip("sound.205", "audio/vampire.wav", Hash)]), audio.Service,
             DaggerfallTuning.Defaults.PresentationAudio with { VampireAttackChancePercent = 100, VampireBarkChancePercent = 100 });
         presentation.UsePlayerVampireGender(() => false);
-        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
         presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: targeted ? 12 : null) { Feedback = new(false, "") });
         Assert.Empty(audio.EmittedSignals);
         Frame(1, 1);
@@ -64,7 +64,7 @@ public sealed class PlayerViewmodelTests
 
         // The session's selection already gives the bare hands a viewmodel; the dagger adds its own.
         int before = appearance.PlaybackRequests.Count;
-        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
         Assert.Equal(before + 1, appearance.PlaybackRequests.Count);
         presentation.Publish(EmptyActors());
         Assert.Contains(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
@@ -79,9 +79,9 @@ public sealed class PlayerViewmodelTests
         AppearanceFake appearance = new(releases);
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
 
-        presentation.UpdateRightHandEquipment(RightHand("iron-longsword"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-longsword"), weaponDrawn: true);
         Assert.Single(appearance.PlaybackRequests);
-        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
         Assert.Equal(2, appearance.PlaybackRequests.Count);
         Assert.All(appearance.AtlasRequests.Last().Frames.Span.ToArray(), frame => Assert.False(frame.HasSize));
         Assert.Equal(new Vector2(8, 8), appearance.SpriteRequests.Last().Size);
@@ -100,7 +100,7 @@ public sealed class PlayerViewmodelTests
         presentation.Advance(OuterUpdate(2));
         Assert.Equal(4, appearance.PlaybackRequests.Count);
 
-        presentation.UpdateRightHandEquipment(RightHand("iron-longsword"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-longsword"), weaponDrawn: true);
         presentation.Publish(EmptyActors());
         Assert.DoesNotContain(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
     }
@@ -113,7 +113,7 @@ public sealed class PlayerViewmodelTests
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
-        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
 
         presentation.BeginAdmittedUpdate();
         presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12, FrameSeconds: .25d));
@@ -150,7 +150,7 @@ public sealed class PlayerViewmodelTests
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
-        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
         presentation.React(new PlayerAttackStartedFact(1, 1));
         Assert.False(presentation.CanStartPlayerAttack);
 
@@ -173,7 +173,7 @@ public sealed class PlayerViewmodelTests
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
-        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
         presentation.BeginAdmittedUpdate();
         presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12, FrameSeconds: .25d));
         presentation.CompleteAdmittedUpdate();
@@ -202,7 +202,7 @@ public sealed class PlayerViewmodelTests
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
-        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
 
         presentation.BeginAdmittedUpdate();
         presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12, FrameSeconds: .25d));
@@ -219,7 +219,7 @@ public sealed class PlayerViewmodelTests
     }
 
     [Fact]
-    public void Drawn_weapon_swaps_and_empty_hands_replace_art_and_sheathing_suppresses_attacks()
+    public void Drawn_weapon_swaps_and_empty_hands_replace_art_and_sheathing_retires_it()
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -241,18 +241,18 @@ public sealed class PlayerViewmodelTests
         };
         AppearanceFake appearance = new(releases);
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
-        presentation.UpdateRightHandEquipment(RightHand("iron-longsword"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-longsword"), weaponDrawn: true);
         Assert.Equal("weapon.longblade", Viewmodel(presentation).Weapon.ResourceId);
         presentation.React(new PlayerAttackStartedFact(1, 1));
         Assert.False(presentation.CanStartPlayerAttack);
-        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
         Assert.Equal(dagger.ResourceId, Viewmodel(presentation).Weapon.ResourceId);
         Assert.True(presentation.CanStartPlayerAttack);
-        presentation.UpdateRightHandEquipment(RightHand("gold"));
+        presentation.UpdateRightHandEquipment(RightHand("gold"), weaponDrawn: true);
         Assert.Equal("weapon.unarmed", Viewmodel(presentation).Weapon.ResourceId);
-        presentation.ToggleWeaponDrawn();
-        presentation.UpdateRightHandEquipment(RightHand("gold"));
-        Assert.False(presentation.CanStartPlayerAttack);
+        // The session holds the weapon sheathed: the viewmodel shows no art. Refusing the attack itself
+        // is the session's (see SessionPersistenceTests and the playtest inspection).
+        presentation.UpdateRightHandEquipment(RightHand("gold"), weaponDrawn: false);
         using ActorsState actors = EmptyActors();
         presentation.Publish(actors);
         Assert.DoesNotContain(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
@@ -266,7 +266,7 @@ public sealed class PlayerViewmodelTests
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
-        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
         using ActorsState actors = EmptyActors();
 
         presentation.Publish(actors);

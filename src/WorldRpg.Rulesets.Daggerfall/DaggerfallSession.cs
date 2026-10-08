@@ -693,7 +693,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
                 _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);
         if (fact is SpellCastFact cast)
             _appearance.ReactSpellCast(cast, State.Actors, State.PlayerControl.Position);
-        _appearance.UpdateRightHandEquipment(State.Equipment.Read());
+        _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         _appearance.React(fact, State.Actors);
         _outcomes.React(fact);
     }
@@ -742,7 +742,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Effects: ReadActiveEffects(),
             CinematicSource: Cinematics?.ActiveSource,
             Map: _mapOpen ? ReadMapPresentation() : null, Legal: LegalView, CreateItem: CreateItemView, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
-        _appearance.UpdateRightHandEquipment(State.Equipment.Read());
+        _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         Vector3 facing = ActorHeading.Forward(State.PlayerControl.YawRadians);
         Vector3? candlePosition = !State.Actors.Player.IsDefeated && State.PlayerControl.Position is { } playerPosition
             && State.Effects.Active.Any(effect => effect.Definition.Key == DaggerfallIllusionEffects.LightKey)

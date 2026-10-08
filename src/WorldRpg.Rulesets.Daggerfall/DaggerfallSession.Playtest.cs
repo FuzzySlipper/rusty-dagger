@@ -65,9 +65,9 @@ internal sealed partial class DaggerfallSession
                 && State.Kit.Targeting.Inspect(attackOrigin, _input.ResolveCurrentLook(State.PlayerControl).Forward,
                     _combat.ReachOf(DaggerfallActorIdentity.PlayerEntityId)).SelectedTargetId is not null;
             duration = Math.Clamp(Math.Ceiling(Math.Max(timing.CooldownSeconds,
-                _appearance.InspectPlayerStrikeSeconds(State.Equipment.Read(), targeted ? timing.FrameSeconds : 0)) * 1000), 1, 2000);
+                _appearance.InspectPlayerStrikeSeconds(State.Equipment.Read(), State.WeaponDrawn, targeted ? timing.FrameSeconds : 0)) * 1000), 1, 2000);
             equipment = timing.Equipment;
-            if (available && !_appearance.IsWeaponDrawn) { available = false; reason = "weapon-sheathed; toggle-weapon"; }
+            if (available && !State.WeaponDrawn) { available = false; reason = "weapon-sheathed; toggle-weapon"; }
             else if (available && !_appearance.CanStartPlayerAttack)
             { available = false; reason = "attack-animation-active; advance then inspect"; }
             else if (available && !State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId,
@@ -161,7 +161,7 @@ internal sealed partial class DaggerfallSession
         w.WriteStartObject("movement"); w.WriteBoolean("grounded", player.Motion.Grounded);
         w.WriteString("stance", player.Motion.Stance.ToString()); Vector(w, "velocity", player.Motion.ControlledVelocity);
         w.WriteBoolean("canMove", State.Encumbrance.Read().CanMove); w.WriteEndObject();
-        w.WriteBoolean("weaponDrawn", _appearance.IsWeaponDrawn);
+        w.WriteBoolean("weaponDrawn", State.WeaponDrawn);
         w.WriteString("equipment", _combat.InspectPlayerTiming().Equipment);
         w.WriteString("attackUnavailableReason", InspectPlaytestAction("attack").Reason);
         w.WriteNumber("attackReadyAtStep", State.Actors.Player.Attack.ReadyAtStep);

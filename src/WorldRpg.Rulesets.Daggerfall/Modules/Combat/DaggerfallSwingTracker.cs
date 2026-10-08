@@ -9,9 +9,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 /// </summary>
 /// <remarks>
 /// Only the motion within the trailing window counts, matching the donor's one-second gesture trail:
-/// a turn held long enough ago is part of aiming, not of the swing that is being classified. The
-/// gesture is classified only for weapon attacks, as the donor classifies the screen weapon's swing;
-/// a stationary hand-to-hand attack has no gesture to read.
+/// a turn held long enough ago is part of aiming, not of the swing that is being classified. Every
+/// admitted swing reads the trail once: the direction names the strike the viewmodel plays, hands
+/// included, while only a weapon's swing carries the direction's to-hit and damage modifiers.
 /// </remarks>
 internal sealed class DaggerfallSwingTracker(double minimumGestureRadians, double gestureWindowSeconds = 1d)
 {
