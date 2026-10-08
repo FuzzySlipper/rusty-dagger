@@ -1306,16 +1306,18 @@ internal sealed class DaggerfallSiteLifecycle
 
     /// <summary>
     /// Returns the Engine origin to cell zero so detached site state is captured in profile frames.
-    /// Unlike an in-play rebase this cannot use <see cref="EntityOriginRebaser"/>: the Engine
-    /// rejects any root whose rebased local translation leaves its local-coordinate envelope, and
-    /// after a long walk from the active site the normalized frame legitimately does. The roots'
-    /// Transforms are therefore shifted by the committed receipt's delta instead.
+    /// After a long walk from the active site, a root's local translation in that frame can leave the
+    /// Engine's local-coordinate envelope, so the reset asks <see cref="EntityOriginRebaser"/> to
+    /// exclude such roots rather than refuse the commit. Every other root is rebased with its motion
+    /// in the Engine's one batch; the excluded ones are about to be captured and unloaded with the
+    /// site, so only their Transforms are carried into the new frame, by the committed delta, for that
+    /// capture to read.
     /// </summary>
     internal void NormalizeExteriorOrigin()
     {
         WorldOriginReadout origin = ReadEngineOrigin();
         if (origin.CellX == 0 && origin.CellY == 0 && origin.CellZ == 0) return;
-        CommitExteriorOrigin(origin, 0, 0, 0, throughRebaser: false);
+        CommitExteriorOrigin(origin, 0, 0, 0, excludeOutsideEnvelope: true);
     }
 
     /// <summary>
@@ -1324,8 +1326,10 @@ internal sealed class DaggerfallSiteLifecycle
     /// which publishes the rebased Transforms and every stored character motion in one batch. Each
     /// root's global position is a call-time projection of its Transform in the current origin cell,
     /// attached only for the prepare and removed afterwards, so no second pose survives the commit.
+    /// The player is shifted beside it: its pose is player-control state rather than an entity
+    /// Transform the rebaser could see, and its motion anchors move through CharacterMotion.Rebased.
     /// </summary>
-    private void CommitExteriorOrigin(WorldOriginReadout current, long x, long y, long z, bool throughRebaser = true)
+    private void CommitExteriorOrigin(WorldOriginReadout current, long x, long y, long z, bool excludeOutsideEnvelope = false)
     {
         RequireExteriorProfile();
         if (_state.PlayerControl.Position is not WorldPoint position)
@@ -1336,12 +1340,10 @@ internal sealed class DaggerfallSiteLifecycle
         EntityStore store = _state.Actors.Store;
         EntityId[] roots = [.. _state.Actors.All.Select(actor => actor.Actor.Entity),
             .. store.Query<DaggerfallNpcBody>().Select(entry => entry.Entity)];
-        WorldOriginCommitReceipt receipt = throughRebaser
-            ? CommitThroughRebaser(store, roots, current, x, y, z)
-            : CommitNativeOrigin(x, y, z);
+        (WorldOriginCommitReceipt receipt, EntityId[] excluded) = CommitThroughRebaser(store, roots, current, x, y, z, excludeOutsideEnvelope);
         try
         {
-            if (!throughRebaser) ShiftRoots(store, roots, receipt.LocalDelta);
+            ShiftRoots(store, excluded, receipt.LocalDelta);
             ApplyExteriorOriginCommit(receipt);
         }
         catch (Exception error)
@@ -1352,8 +1354,8 @@ internal sealed class DaggerfallSiteLifecycle
         }
     }
 
-    private WorldOriginCommitReceipt CommitThroughRebaser(EntityStore store, EntityId[] roots,
-        WorldOriginReadout current, long x, long y, long z)
+    private (WorldOriginCommitReceipt Receipt, EntityId[] Excluded) CommitThroughRebaser(EntityStore store, EntityId[] roots,
+        WorldOriginReadout current, long x, long y, long z, bool excludeOutsideEnvelope)
     {
         try
         {
@@ -1364,21 +1366,15 @@ internal sealed class DaggerfallSiteLifecycle
                     current.CellX, current.CellY, current.CellZ, local.X, local.Y, local.Z));
             }
             EntityOriginRebaser rebaser = new(store, _engine.WorldOrigin, _spatial.Session, GlobalPositions);
-            using EntityOriginRebaserPrepared prepared = rebaser.Prepare(x, y, z);
-            return prepared.Commit().Native;
+            using EntityOriginRebaserPrepared prepared = rebaser.Prepare(x, y, z, excludeOutsideEnvelope);
+            EntityId[] excluded = [.. prepared.Receipt.Excluded.ToArray().Select(row => new EntityId(row.EntityId))];
+            return (prepared.Commit().Native, excluded);
         }
         finally
         {
             foreach (EntityId root in roots)
                 if (store.IsAlive(root)) store.Remove(root, GlobalPositions);
         }
-    }
-
-    private WorldOriginCommitReceipt CommitNativeOrigin(long x, long y, long z)
-    {
-        using WorldOriginPrepared prepared = _engine.WorldOrigin.Prepare(new(_spatial.Session,
-            x, y, z, ReadOnlyMemory<WorldOriginEntityRow>.Empty));
-        return _engine.WorldOrigin.Commit(new(prepared));
     }
 
     private static void ShiftRoots(EntityStore store, EntityId[] roots, Vector3 delta)
