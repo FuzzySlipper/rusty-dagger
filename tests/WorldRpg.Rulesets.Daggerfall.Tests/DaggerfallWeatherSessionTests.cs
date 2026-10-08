@@ -70,7 +70,7 @@ public sealed class DaggerfallWeatherSessionTests
             source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId, source.Portals,
             source.Anchors.Values.ToArray(), source.Lights, source.GroundContainerSprite, source.DungeonMap,
             source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, source.Music,
-            source.AudioBundle, source.QuestMarkers, source.BillboardSprites) {AmbientZones = zones};
+            source.QuestMarkers, source.BillboardSprites) {AmbientZones = zones};
 
     [Fact]
     public void Real_exterior_shelter_indoor_return_pause_and_restore_keep_weather_and_retire_resources()

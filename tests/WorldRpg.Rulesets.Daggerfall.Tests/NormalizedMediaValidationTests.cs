@@ -54,7 +54,7 @@ public sealed class NormalizedMediaValidationTests
     public void Generated_media_declares_ranged_states_only_for_mobiles_the_donor_makes_ranged()
     {
         string root = TestData.RepositoryRoot;
-        JsonObject media = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/dungeon/manifest.json")))!.AsObject();
+        JsonObject media = CompleteDungeonSidecar(root, "worldrpg/imports/privateers-hold");
         Dictionary<int, JsonObject> actors = media["actors"]!.AsArray()
             .Select(value => value!.AsObject())
             .ToDictionary(actor => actor["mobileId"]!.GetValue<int>(), actor => actor);
@@ -157,7 +157,7 @@ public sealed class NormalizedMediaValidationTests
         .Single(value => value["action"]!.GetValue<string>() == action);
 
     private static JsonObject ClassicMedia(string repositoryRoot) => JsonNode.Parse(File.ReadAllBytes(
-        Path.Combine(repositoryRoot, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")))!.AsObject();
+        Path.Combine(repositoryRoot, "content", DaggerfallWorldMedia.Root, "media/classic/manifest.json")))!.AsObject();
 
     private static JsonObject FirstActorState(JsonObject media, string name) => media["actors"]!.AsArray()
         .Select(value => value!.AsObject())
@@ -173,49 +173,41 @@ public sealed class NormalizedMediaValidationTests
         .Select(value => value!.AsObject())
         .Single(resource => resource["id"]!.GetValue<string>() == id);
 
-    private static ProductContent MutateDungeonMedia(string repositoryRoot, Action<JsonObject> mutate)
+    /// <summary>
+    /// Privateer's Hold with a complete dungeon sidecar of its own, as a closure carries one that overrides
+    /// every product-wide entry, mutated: the reader validates each entry whichever publication carries it.
+    /// </summary>
+    private static ProductContent MutateDungeonMedia(string repositoryRoot, Action<JsonObject> mutate) =>
+        WithOwnSidecar(repositoryRoot, "media/dungeon/manifest.json", CompleteDungeonSidecar(repositoryRoot, "worldrpg/imports/privateers-hold"), mutate);
+
+    /// <summary>Privateer's Hold carrying its own copy of the product-wide classic sidecar, mutated.</summary>
+    private static ProductContent MutateClassicMedia(string repositoryRoot, Action<JsonObject> mutate) =>
+        WithOwnSidecar(repositoryRoot, "media/classic/manifest.json",
+            JsonNode.Parse(File.ReadAllBytes(Path.Combine(repositoryRoot, "content", DaggerfallWorldMedia.Root, "media/classic/manifest.json")))!.AsObject(), mutate);
+
+    private static ProductContent WithOwnSidecar(string repositoryRoot, string relativePath, JsonObject sidecar, Action<JsonObject> mutate)
     {
+        const string site = "worldrpg/imports/privateers-hold";
         string contentRoot = Path.Combine(repositoryRoot, "content");
-        ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports/privateers-hold"), "*", SearchOption.AllDirectories)
-            .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), File.ReadAllBytes(path)))
-            .ToArray();
-        int mediaIndex = Array.FindIndex(files, file => Encoding.UTF8.GetString(file.Path.Span).EndsWith("media/dungeon/manifest.json", StringComparison.Ordinal));
-        int importsIndex = Array.FindIndex(files, file => Encoding.UTF8.GetString(file.Path.Span).EndsWith("import-manifest.json", StringComparison.Ordinal));
-        Assert.True(mediaIndex >= 0 && importsIndex >= 0);
+        List<ProductContentFile> files = [.. Directory.GetFiles(Path.Combine(contentRoot, site), "*", SearchOption.AllDirectories)
+            .Select(path => Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/'))
+            .Where(path => path != $"{site}/{relativePath}" && path != $"{site}/import-manifest.json")
+            .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(path), File.ReadAllBytes(Path.Combine(contentRoot, path))))];
+        mutate(sidecar);
+        byte[] sidecarBytes = Encoding.UTF8.GetBytes(sidecar.ToJsonString());
+        files.Add(new ProductContentFile(Encoding.UTF8.GetBytes($"{site}/{relativePath}"), sidecarBytes));
 
-        JsonObject media = JsonNode.Parse(files[mediaIndex].Bytes.Span)!.AsObject();
-        mutate(media);
-        byte[] mediaBytes = Encoding.UTF8.GetBytes(media.ToJsonString());
-        files[mediaIndex] = new ProductContentFile(files[mediaIndex].Path, mediaBytes);
+        JsonObject imports = JsonNode.Parse(File.ReadAllBytes(Path.Combine(contentRoot, site, "import-manifest.json")))!.AsObject();
+        JsonArray artifacts = imports["artifacts"]!.AsArray();
+        JsonObject? artifact = artifacts.Select(value => value!.AsObject()).SingleOrDefault(value => value["relativePath"]!.GetValue<string>() == relativePath);
+        if (artifact is null)
+        {
+            artifact = new JsonObject { ["relativePath"] = relativePath, ["byteLen"] = sidecarBytes.Length, ["dependsOnPaths"] = new JsonArray() };
+            artifacts.Add(artifact);
+        }
 
-        JsonObject imports = JsonNode.Parse(files[importsIndex].Bytes.Span)!.AsObject();
-        JsonObject artifact = imports["artifacts"]!.AsArray().Select(value => value!.AsObject())
-            .Single(value => value["relativePath"]!.GetValue<string>() == "media/dungeon/manifest.json");
-        artifact["contentHash"] = Convert.ToHexString(SHA256.HashData(mediaBytes));
-        files[importsIndex] = new ProductContentFile(files[importsIndex].Path, Encoding.UTF8.GetBytes(imports.ToJsonString()));
-        return new ProductContent(files);
-    }
-
-    private static ProductContent MutateClassicMedia(string repositoryRoot, Action<JsonObject> mutate)
-    {
-        string contentRoot = Path.Combine(repositoryRoot, "content");
-        ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports/privateers-hold"), "*", SearchOption.AllDirectories)
-            .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), File.ReadAllBytes(path)))
-            .ToArray();
-        int mediaIndex = Array.FindIndex(files, file => Encoding.UTF8.GetString(file.Path.Span).EndsWith("media/classic/manifest.json", StringComparison.Ordinal));
-        int importsIndex = Array.FindIndex(files, file => Encoding.UTF8.GetString(file.Path.Span).EndsWith("import-manifest.json", StringComparison.Ordinal));
-        Assert.True(mediaIndex >= 0 && importsIndex >= 0);
-
-        JsonObject media = JsonNode.Parse(files[mediaIndex].Bytes.Span)!.AsObject();
-        mutate(media);
-        byte[] mediaBytes = Encoding.UTF8.GetBytes(media.ToJsonString());
-        files[mediaIndex] = new ProductContentFile(files[mediaIndex].Path, mediaBytes);
-
-        JsonObject imports = JsonNode.Parse(files[importsIndex].Bytes.Span)!.AsObject();
-        JsonObject artifact = imports["artifacts"]!.AsArray().Select(value => value!.AsObject())
-            .Single(value => value["relativePath"]!.GetValue<string>() == "media/classic/manifest.json");
-        artifact["contentHash"] = Convert.ToHexString(SHA256.HashData(mediaBytes));
-        files[importsIndex] = new ProductContentFile(files[importsIndex].Path, Encoding.UTF8.GetBytes(imports.ToJsonString()));
-        return new ProductContent(files);
+        artifact["contentHash"] = Convert.ToHexString(SHA256.HashData(sidecarBytes)).ToLowerInvariant();
+        files.Add(new ProductContentFile(Encoding.UTF8.GetBytes($"{site}/import-manifest.json"), Encoding.UTF8.GetBytes(imports.ToJsonString())));
+        return new ProductContent(files.Concat(ProductMediaFiles(repositoryRoot)).ToArray());
     }
 }

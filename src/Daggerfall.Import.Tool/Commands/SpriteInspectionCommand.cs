@@ -10,7 +10,7 @@ namespace Daggerfall.Import.Tool.Commands;
 /// </summary>
 internal static class SpriteInspectionCommand
 {
-    public static ToolCommand Command { get; } = new("sprite-inspection", [SpriteOverlays.Publication, CommandOption.Required("--output", "FILE")], Run);
+    public static ToolCommand Command { get; } = new("sprite-inspection", [.. SpriteOverlays.PublicationOptions, CommandOption.Required("--output", "FILE")], Run);
 
     private static int Run(CommandArguments args)
     {
@@ -22,7 +22,7 @@ internal static class SpriteInspectionCommand
             throw new ArgumentException("--output must name a file outside the generated publication directory.");
         }
 
-        SpriteInspectionDocument document = SpritePublicationReader.Read(publicationDirectory).ToInspectionDocument();
+        SpriteInspectionDocument document = SpriteOverlays.ReadPublication(args).ToInspectionDocument();
         PayloadFiles.WriteFile(output, SpriteInspectionDocumentSerializer.Serialize(document));
         Console.WriteLine("sprite inspection document written");
         return 0;

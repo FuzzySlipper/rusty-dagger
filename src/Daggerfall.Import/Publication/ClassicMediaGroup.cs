@@ -10,9 +10,11 @@ namespace Daggerfall.Import.Publication;
 /// clips, and the generated inventory that indexes them.
 /// </summary>
 /// <remarks>
-/// The group publishes no audio. Each site closure publishes the clips its sidecar maps from its own
-/// classic media publication, under the audio bundle its payload declares, and the session opens clips
-/// only from that bundle, so product-wide copies of the same WAV bodies would be bytes nothing opens.
+/// The group publishes no audio. The product-wide world media publication carries the clips every site's
+/// classic sidecar maps, under the one audio bundle the Host declares for it, and the session opens clips
+/// only from that bundle, so copies of the same WAV bodies here would be bytes nothing opens. The images
+/// this group publishes are, in turn, referenced by the world media publication and the site closures
+/// rather than copied into them.
 /// The sound catalog is built from the same publication as an importer-side disposition report of the
 /// numeric archive; nothing at runtime reads it, so it is reported by the command rather than published.
 /// </remarks>

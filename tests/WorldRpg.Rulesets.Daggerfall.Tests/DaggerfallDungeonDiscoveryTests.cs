@@ -6,6 +6,7 @@ using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -212,6 +213,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
             .Select(path => new ProductContentFile(
                 Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')),
                 File.ReadAllBytes(path)))
+            .Concat(ClassicGroupFiles(root))
             .ToArray();
         return new ProductContent(files);
     }

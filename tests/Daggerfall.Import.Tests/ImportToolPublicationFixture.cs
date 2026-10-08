@@ -99,7 +99,7 @@ internal sealed partial class ImportToolFixture
                 ImportPublicationPlan plan = name == "write"
                     ? Arena2SitePublication.Dungeon(Arena2SiteSources.ForSite(Arena2), 17, "Privateer's Hold", siteMedia)
                     : Arena2SitePublication.Rmb(Arena2SiteSources.ForSite(Arena2), RmbRegion, RmbLocation, Interior ? new RmbBuildingSelection(1, 1, 0) : null, siteMedia).Item1;
-                plan = plan.WithInvocation(new ImportInvocation(["daggerfall-import-tool", .. Arguments(name)], []));
+                plan = ProductMedia.Partition(plan.WithInvocation(new ImportInvocation(["daggerfall-import-tool", .. Arguments(name)], [])));
                 Artifacts(At("output"), plan.Artifacts);
                 result.Add(At("site.sources.json"), SourceManifestSerializer.Serialize(SourceManifestPublication.ForPublication(plan.Manifest.Sources.Select(source => source.Path), Arena2, Path.GetFileName(Inventory), File.ReadAllBytes(Inventory)))); break;
             default: throw new ArgumentException($"No expected builder output for {name}.");

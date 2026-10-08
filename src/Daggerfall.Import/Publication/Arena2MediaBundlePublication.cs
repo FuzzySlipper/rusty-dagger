@@ -18,7 +18,23 @@ public sealed record DungeonMediaManifestSidecar(
     IReadOnlyList<DungeonBillboardMediaManifest> Billboards,
     IReadOnlyList<DungeonActorMediaManifest> Actors)
 {
+    /// <summary>
+    /// The entries a site closure admits from the product-wide world media sidecar instead of carrying
+    /// them, or null for a sidecar that carries every entry it admits. Only a site closure written against
+    /// that publication states it; <see cref="ProductWorldMedia.Rehydrate"/> restores the complete sidecar.
+    /// </summary>
+    public DungeonSharedMediaSelection? Shared { get; init; }
 }
+
+/// <summary>
+/// The product-wide dungeon media entries one site closure admits by identity: descriptors by media id,
+/// billboards by sprite resource id and actors by actor resource id. Each names an entry the product-wide
+/// sidecar carries exactly as the site would have written it.
+/// </summary>
+public sealed record DungeonSharedMediaSelection(
+    IReadOnlyList<string> Resources,
+    IReadOnlyList<string> Billboards,
+    IReadOnlyList<string> Actors);
 
 /// <summary>One generated dungeon material texture and its resource meaning.</summary>
 public sealed record DungeonMaterialMediaManifest(
@@ -208,6 +224,76 @@ public sealed record Arena2MediaBundlePublication(
             normalizedDependencies));
 
         return new(document, ImportPublicationPlan.Create(mergedProvenance, artifacts));
+    }
+
+    /// <summary>
+    /// Composes the product-wide world media publication: every mesh, material, billboard, actor and
+    /// terrain artifact and the classic sidecar, with the classic artifacts the classic media group does not
+    /// already publish. Its dungeon sidecar binds no material slot, because a slot belongs to one site's
+    /// static mesh; a site closure binds its slots to these descriptors by media identity.
+    /// </summary>
+    /// <param name="provenance">The mesh, palette and texture sources the world media pass read.</param>
+    /// <param name="classicGroup">
+    /// The classic media group's artifacts by group-relative path. A classic artifact the group carries is
+    /// referenced through the group and must be the same bytes; a different body is a concrete collision
+    /// between two product-wide publications and is refused.
+    /// </param>
+    public static ImportPublicationPlan CreateWorldMedia(
+        ImportProvenance provenance,
+        Arena2DungeonMediaPublication dungeonMedia,
+        Arena2ClassicMediaPublication classicMedia,
+        GeometryPublication geometry,
+        IReadOnlyDictionary<string, ImportPublicationManifestArtifact> classicGroup)
+    {
+        ArgumentNullException.ThrowIfNull(provenance);
+        ArgumentNullException.ThrowIfNull(dungeonMedia);
+        ArgumentNullException.ThrowIfNull(classicMedia);
+        ArgumentNullException.ThrowIfNull(geometry);
+        ArgumentNullException.ThrowIfNull(classicGroup);
+        geometry.Validate();
+        ValidateDungeonMedia(dungeonMedia);
+        ValidateClassicMedia(classicMedia);
+        ValidateClassicWorldVisuals(classicMedia.WorldVisuals, geometry);
+        ImportProvenance mergedProvenance = MergeProvenance(provenance, classicMedia.Sources);
+
+        DungeonMediaManifestSidecar dungeonSidecar = CreateDungeonSidecar(null, dungeonMedia);
+        ClassicMediaManifestSidecar classicSidecar = CreateClassicSidecar(classicMedia);
+        ValidatePersistedSidecars(dungeonSidecar, classicSidecar);
+
+        List<ImportPublicationArtifact> classicArtifacts = [];
+        foreach (ImportPublicationArtifact artifact in classicMedia.Artifacts)
+        {
+            if (!classicGroup.TryGetValue(artifact.RelativePath, out ImportPublicationManifestArtifact? published))
+            {
+                classicArtifacts.Add(artifact);
+                continue;
+            }
+
+            if (published.ContentHash != artifact.ContentHash || published.ByteLen != artifact.Bytes.Length)
+            {
+                throw new InvalidOperationException($"Classic artifact '{artifact.RelativePath}' differs from the one the classic media group publishes; regenerate the classic media group from the same inputs first.");
+            }
+        }
+
+        Dictionary<string, string> geometryPathsById = geometry.Artifacts
+            .ToDictionary(artifact => artifact.Id, artifact => artifact.RelativePath, StringComparer.Ordinal);
+        List<ImportPublicationArtifact> artifacts = [
+            .. geometry.Artifacts.Select(artifact => new ImportPublicationArtifact(
+                artifact.RelativePath,
+                artifact.Bytes.Span,
+                artifact.DependsOnArtifactIds.Select(id => geometryPathsById[id]).ToArray())),
+            .. dungeonMedia.Artifacts,
+            .. classicArtifacts,
+            new ImportPublicationArtifact(
+                DungeonMediaManifestRelativePath,
+                SerializeCompactSidecar(dungeonSidecar),
+                dungeonMedia.Artifacts.Select(artifact => artifact.RelativePath).ToArray()),
+            new ImportPublicationArtifact(
+                ClassicMediaManifestRelativePath,
+                SerializeSidecar(classicSidecar),
+                classicArtifacts.Select(artifact => artifact.RelativePath).ToArray()),
+        ];
+        return ImportPublicationPlan.Create(mergedProvenance, artifacts);
     }
 
     /// <summary>
@@ -622,13 +708,17 @@ public sealed record Arena2MediaBundlePublication(
             sources.Values.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray());
     }
 
-    private static DungeonMediaManifestSidecar CreateDungeonSidecar(DungeonSpatialPublication spatial, Arena2DungeonMediaPublication publication)
+    /// <summary>
+    /// Creates a dungeon sidecar. With a spatial publication every material binds the static-mesh slot it is
+    /// drawn with; without one (the product-wide publication) the material descriptors stand alone and no
+    /// slot is bound, because a slot is a fact about one site's static mesh.
+    /// </summary>
+    private static DungeonMediaManifestSidecar CreateDungeonSidecar(DungeonSpatialPublication? spatial, Arena2DungeonMediaPublication publication)
     {
-        ArgumentNullException.ThrowIfNull(spatial);
         ArgumentNullException.ThrowIfNull(publication);
-        Dictionary<string, uint> slotByMaterial = spatial.MaterialSlots
+        Dictionary<string, uint> slotByMaterial = (spatial?.MaterialSlots ?? [])
             .ToDictionary(binding => binding.MaterialResourceId, binding => binding.Slot, StringComparer.Ordinal);
-        if (slotByMaterial.Count != spatial.MaterialSlots.Count)
+        if (spatial is not null && slotByMaterial.Count != spatial.MaterialSlots.Count)
         {
             throw new InvalidOperationException("Spatial publication has duplicate material-slot resource IDs.");
         }
@@ -638,7 +728,7 @@ public sealed record Arena2MediaBundlePublication(
             .OrderBy(id => id, StringComparer.Ordinal)
             .ToArray();
         if (generatedMaterials.Distinct(StringComparer.Ordinal).Count() != generatedMaterials.Length
-            || !generatedMaterials.SequenceEqual(slotByMaterial.Keys.OrderBy(id => id, StringComparer.Ordinal), StringComparer.Ordinal))
+            || spatial is not null && !generatedMaterials.SequenceEqual(slotByMaterial.Keys.OrderBy(id => id, StringComparer.Ordinal), StringComparer.Ordinal))
         {
             throw new InvalidOperationException("Dungeon media materials must exactly match the static-mesh material-slot publication.");
         }
@@ -646,6 +736,7 @@ public sealed record Arena2MediaBundlePublication(
         return new(
         CanonicalizeMedia(publication.MediaManifest),
         publication.MaterialTextures
+            .Where(_ => spatial is not null)
             .OrderBy(media => media.TextureResourceId, StringComparer.Ordinal)
             .Select(media => new DungeonMaterialMediaManifest(
                 media.TextureResourceId,
@@ -744,9 +835,19 @@ public sealed record Arena2MediaBundlePublication(
             .ToArray());
     }
 
-    private static byte[] SerializeSidecar<T>(T sidecar)
+    internal static byte[] SerializeSidecar<T>(T sidecar)
     {
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(sidecar, JsonOptions);
+        return [.. bytes, (byte)'\n'];
+    }
+
+    /// <summary>
+    /// The product-wide dungeon sidecar describes every texture record, so whitespace would dominate its
+    /// bytes; it is written in the compact dialect, which parses to the same document.
+    /// </summary>
+    internal static byte[] SerializeCompactSidecar<T>(T sidecar)
+    {
+        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(sidecar, PublishedJson.SectionCompact);
         return [.. bytes, (byte)'\n'];
     }
 

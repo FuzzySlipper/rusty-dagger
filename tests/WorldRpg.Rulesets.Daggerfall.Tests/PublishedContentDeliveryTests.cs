@@ -461,7 +461,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", identified["map.fmap0i17"].Path);
         Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", identified["font.classic.0000"].Path);
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", identified["weapon.werecreature"].Path);
-        // The group states no audio identity: each site closure publishes its own clips. The separate
+        // The group states no audio identity: the world media publication carries the clips. The separate
         // sky group is validated above and does not belong in this count. The 20 classic potion recipes
         // each publish their TEXTURE.205 inventory icon.
         Assert.DoesNotContain(identified.Keys, id => id.StartsWith("audio.", StringComparison.Ordinal));
@@ -469,7 +469,7 @@ public sealed class PublishedContentDeliveryTests
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
-        JsonElement classic = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json"))).RootElement;
+        JsonElement classic = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/shared/media/classic/manifest.json"))).RootElement;
         Dictionary<string, string> packPaths = [];
         foreach (JsonElement resource in classic.GetProperty("media").GetProperty("resources").EnumerateArray())
             packPaths[resource.GetProperty("id").GetString()!] = resource.GetProperty("relativePath").GetString()!;
@@ -529,14 +529,16 @@ public sealed class PublishedContentDeliveryTests
     }
 
     [Fact]
-    public void Each_site_sidecar_binds_its_audio_cues_to_archive_clips_its_closure_carries()
+    public void The_shared_classic_sidecar_binds_its_audio_cues_to_archive_clips_the_world_media_carries()
     {
         ProductContent content = AdmittedContent();
-        JsonElement manifest = JsonDocument.Parse(content.ReadBytes("worldrpg/imports/privateers-hold/media/classic/manifest.json").ToArray()).RootElement;
+        // A site closure carries no classic sidecar of its own unless an overlay changed it, so this is
+        // the record every site's session reads its clips from.
+        Assert.False(File.Exists(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
+        JsonElement manifest = JsonDocument.Parse(content.ReadBytes("worldrpg/imports/shared/media/classic/manifest.json").ToArray()).RootElement;
 
-        // The site's classic sidecar is the record a session reads its clips from, so each cue states
-        // the archive ordinal it was cut from and names a descriptor the closure carries under the
-        // clips root its audio bundle declares.
+        // Each cue states the archive ordinal it was cut from and names a descriptor the world media
+        // publication carries under the clips root of its audio bundle.
         Dictionary<string, JsonElement> resources = manifest.GetProperty("media").GetProperty("resources").EnumerateArray()
             .ToDictionary(resource => resource.GetProperty("id").GetString()!, StringComparer.Ordinal);
         JsonElement[] admitted = [.. manifest.GetProperty("audio").EnumerateArray()];
@@ -547,7 +549,7 @@ public sealed class PublishedContentDeliveryTests
             Assert.Equal("audio", resource.GetProperty("kind").GetString());
             string path = resource.GetProperty("relativePath").GetString()!;
             Assert.StartsWith("media/audio/clips/", path, StringComparison.Ordinal);
-            Assert.True(File.Exists(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/privateers-hold", path)), path);
+            Assert.True(File.Exists(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/shared", path)), path);
         });
         Assert.Equal(admitted.Length, resources.Values.Count(resource => resource.GetProperty("kind").GetString() == "audio"));
 

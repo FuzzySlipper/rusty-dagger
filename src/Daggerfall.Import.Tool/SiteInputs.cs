@@ -13,13 +13,32 @@ internal static class SiteInputs
     public static readonly CommandOption Output = CommandOption.Required("--out", "OUTPUT_DIR");
     public static readonly CommandOption SourceManifest = CommandOption.Required("--source-manifest", "FILE");
     public static readonly CommandOption MusicManifest = CommandOption.Optional("--music-manifest", "MANIFEST.json");
+    public static readonly CommandOption Shared = CommandOption.Required("--shared", "WORLD_MEDIA_DIR");
+    public static readonly CommandOption ClassicGroup = CommandOption.Required("--classic-group", "CLASSIC_GROUP_DIR");
 
     /// <summary>The options every site closure takes, before its own.</summary>
     public static IReadOnlyList<CommandOption> Common =>
     [
         Options.Arena2, Output, Region, Location, AuthoredUi.Manifest, AuthoredUi.Originals,
-        Options.Inventory, Options.Pack, SourceManifest, MusicManifest,
+        Options.Inventory, Options.Pack, SourceManifest, MusicManifest, Shared, ClassicGroup,
     ];
+
+    /// <summary>
+    /// The product-wide media a site closure references: the world media publication the world-media command
+    /// wrote and the classic media group the classic-media command wrote.
+    /// </summary>
+    public static ProductWorldMedia ProductMedia(CommandArguments args) => ProductWorldMedia.Read(args[Shared.Name], args[ClassicGroup.Name]);
+
+    /// <summary>
+    /// The site closure as it is written: what is its own, with every shared body, entry and classic sidecar
+    /// referenced from the product-wide media instead of copied.
+    /// </summary>
+    public static ImportPublicationPlan Reference(CommandArguments args, ImportPublicationPlan complete)
+    {
+        ImportPublicationPlan plan = ProductMedia(args).Partition(complete);
+        Console.WriteLine($"site closure: {plan.Artifacts.Count} of {complete.Artifacts.Count} artifacts written, the rest referenced from the product-wide media");
+        return plan;
+    }
 
     public static int ParseRegion(CommandArguments args) =>
         int.TryParse(args[Region.Name], NumberStyles.None, CultureInfo.InvariantCulture, out int region) && region is >= 0 and <= 999

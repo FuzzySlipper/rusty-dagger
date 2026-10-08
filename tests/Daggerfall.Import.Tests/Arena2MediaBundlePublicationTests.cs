@@ -282,6 +282,99 @@ public sealed class Arena2MediaBundlePublicationTests
         Arena2MediaBundlePublication.ValidatePersistedSidecars(dungeon, classic);
     }
 
+    [Fact]
+    public void TheWorldMediaPublicationCarriesTheBodiesOnceWithASlotFreeSidecarAndReferencesTheClassicGroup()
+    {
+        Arena2ClassicMediaPublication classic = CreateClassicMedia();
+        ImportPublicationArtifact grouped = classic.Artifacts.Single(artifact => artifact.RelativePath == "media/classic/weapon.png");
+        ImportPublicationPlan world = CreateWorldMedia(classic, ClassicGroup(grouped));
+
+        string[] paths = [.. world.Artifacts.Select(artifact => artifact.RelativePath)];
+        Assert.Contains("media/dungeon/materials/minimal.png", paths);
+        Assert.Contains(GeometryPublication.IndexRelativePath, paths);
+        Assert.Contains("media/classic/font.bin", paths);
+        // The classic media group already publishes the weapon atlas, so the world media references it.
+        Assert.DoesNotContain("media/classic/weapon.png", paths);
+        DungeonMediaManifestSidecar dungeon = JsonSerializer.Deserialize<DungeonMediaManifestSidecar>(
+            world.Artifacts.Single(artifact => artifact.RelativePath == Arena2MediaBundlePublication.DungeonMediaManifestRelativePath).Bytes.Span, PublishedJson.SectionRead)!;
+        Assert.Empty(dungeon.Materials);
+        Assert.Null(dungeon.Shared);
+        Assert.Contains(dungeon.Media.Resources, resource => resource.Id == "material/texture-2-0");
+
+        // A classic artifact the group publishes with other bytes is two bodies at one path.
+        ImportPublicationManifestArtifact stale = new(grouped.RelativePath, ContentDigest.Compute("other"u8), 5, []);
+        Assert.Throws<InvalidOperationException>(() => CreateWorldMedia(classic, new Dictionary<string, ImportPublicationManifestArtifact>(StringComparer.Ordinal) { [stale.RelativePath] = stale }));
+    }
+
+    [Fact]
+    public void ASiteClosureWritesOnlyWhatIsItsOwnAndRehydratesToTheCompleteClosure()
+    {
+        Arena2ClassicMediaPublication classic = CreateClassicMedia();
+        ImportPublicationArtifact grouped = classic.Artifacts.Single(artifact => artifact.RelativePath == "media/classic/weapon.png");
+        Dictionary<string, ImportPublicationManifestArtifact> group = ClassicGroup(grouped);
+        ProductWorldMedia product = ProductWorldMedia.FromPlan(CreateWorldMedia(classic, group), group);
+        Arena2MediaBundlePublication site = CreateBundle(reverseClassicActions: false);
+
+        ImportPublicationPlan written = product.Partition(site.Plan);
+
+        Assert.Equal(
+            [
+                "geometry/index.json",
+                "import-manifest.json",
+                Arena2MediaBundlePublication.DungeonMediaManifestRelativePath,
+                Arena2MediaBundlePublication.NormalizedDocumentRelativePath,
+                "resources/test/catalog.json",
+                "spatial/test/collision-navigation.rspatial",
+                "spatial/test/static-mesh.rstatmsh",
+            ],
+            written.Artifacts.Select(artifact => artifact.RelativePath).Order(StringComparer.Ordinal));
+        Assert.Equal(site.Plan.Manifest.Sources, written.Manifest.Sources);
+        Assert.All(written.Manifest.Artifacts, artifact => Assert.All(artifact.DependsOnPaths, dependency =>
+            Assert.Contains(written.Manifest.Artifacts, other => other.RelativePath == dependency)));
+
+        DungeonMediaManifestSidecar reduced = JsonSerializer.Deserialize<DungeonMediaManifestSidecar>(
+            written.Artifacts.Single(artifact => artifact.RelativePath == Arena2MediaBundlePublication.DungeonMediaManifestRelativePath).Bytes.Span, PublishedJson.SectionRead)!;
+        DungeonMediaManifestSidecar complete = JsonSerializer.Deserialize<DungeonMediaManifestSidecar>(
+            site.Plan.Artifacts.Single(artifact => artifact.RelativePath == Arena2MediaBundlePublication.DungeonMediaManifestRelativePath).Bytes.Span, PublishedJson.SectionRead)!;
+        // The slot binding is the site's own; the descriptor it binds is the product-wide one.
+        Assert.Equal(complete.Materials, reduced.Materials);
+        Assert.Empty(reduced.Media.Resources);
+        Assert.Equal(["material/texture-2-0"], reduced.Shared!.Resources);
+        Assert.Equal(
+            JsonSerializer.Serialize(complete, PublishedJson.Section),
+            JsonSerializer.Serialize(product.Rehydrate(reduced), PublishedJson.Section));
+        Assert.Same(product.Classic, product.ClassicFor(null));
+    }
+
+    [Fact]
+    public void ASiteKeepsAClassicSidecarThatDiffersAndRefusesABodyTheProductWideMediaLacks()
+    {
+        Arena2ClassicMediaPublication classic = CreateClassicMedia();
+        Dictionary<string, ImportPublicationManifestArtifact> group = new(StringComparer.Ordinal);
+        ProductWorldMedia product = ProductWorldMedia.FromPlan(CreateWorldMedia(classic, group), group);
+
+        // A site whose classic sidecar names cues the product-wide one does not keeps its own sidecar.
+        ImportPublicationPlan scored = product.Partition(CreateBundle(reverseClassicActions: false, music: MusicCues()).Plan);
+        Assert.Contains(scored.Artifacts, artifact => artifact.RelativePath == Arena2MediaBundlePublication.ClassicMediaManifestRelativePath);
+
+        // A body the product-wide media does not carry would have to be copied into the site, so it is refused.
+        ProductWorldMedia withoutMaterial = ProductWorldMedia.FromPlan(
+            Arena2MediaBundlePublication.CreateWorldMedia(WorldProvenance(), CreateDungeonMediaWithBillboard(), classic, CreateGeometry(), group), group);
+        InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => withoutMaterial.Partition(CreateBundle(reverseClassicActions: false).Plan));
+        Assert.Contains("media/dungeon/materials/minimal.png", missing.Message, StringComparison.Ordinal);
+    }
+
+    private static ImportPublicationPlan CreateWorldMedia(Arena2ClassicMediaPublication classic, IReadOnlyDictionary<string, ImportPublicationManifestArtifact> group) =>
+        Arena2MediaBundlePublication.CreateWorldMedia(WorldProvenance(), CreateDungeonMedia(), classic, CreateGeometry(), group);
+
+    private static ImportProvenance WorldProvenance() => new(
+        Arena2SitePublication.WorldMediaImporterId, "test", [new LogicalSourceRecord("arena2/ARCH3D.BSA", ContentDigest.Compute("arch"u8), 4)]);
+
+    private static Dictionary<string, ImportPublicationManifestArtifact> ClassicGroup(ImportPublicationArtifact artifact) => new(StringComparer.Ordinal)
+    {
+        [artifact.RelativePath] = new(artifact.RelativePath, artifact.ContentHash, artifact.Bytes.Length, []),
+    };
+
     private static Arena2MediaBundlePublication CreateBundle(bool reverseClassicActions, IReadOnlyList<ClassicMusicRecord>? music = null)
     {
         Arena2ClassicMediaPublication classic = CreateClassicMedia(music: music);

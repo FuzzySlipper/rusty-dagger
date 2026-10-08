@@ -98,7 +98,6 @@
   "placements": [],
   "world": {
     "publicationRoot": "worldrpg/imports/the-tombs-of-klerd",
-    "audioBundle": "daggerfall.the-tombs-of-klerd-audio",
     "appearance": {
       "tint": [
         0.72,

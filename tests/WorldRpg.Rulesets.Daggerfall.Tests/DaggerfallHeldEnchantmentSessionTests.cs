@@ -128,7 +128,6 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         [],
         null,
         source.Music,
-        source.AudioBundle,
         source.QuestMarkers,
         source.BillboardSprites,
         [],

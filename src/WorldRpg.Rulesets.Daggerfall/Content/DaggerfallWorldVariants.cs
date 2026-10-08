@@ -33,8 +33,8 @@ internal sealed partial class DaggerfallSiteProfiles
                 || original.StaticNpcs.Zip(variant.StaticNpcs).Any(pair => pair.First.Id != pair.Second.Id || pair.First.Position != pair.Second.Position
                     || pair.First.Appearance != pair.Second.Appearance || pair.First.Role != pair.Second.Role || !pair.First.Services.SequenceEqual(pair.Second.Services)))
                 throw new NotSupportedException($"World variant '{variant.VariantName}' changes retained actor or action topology; scenery variants must preserve these owners.");
-            if (original.AudioBundle != variant.AudioBundle || !original.Audio.SequenceEqual(variant.Audio))
-                throw new NotSupportedException($"World variant '{variant.VariantName}' changes the retained audio bundle; location scenery variants currently preserve its audio.");
+            if (!original.Audio.SequenceEqual(variant.Audio))
+                throw new NotSupportedException($"World variant '{variant.VariantName}' changes the retained audio; location scenery variants currently preserve its audio.");
             if (!_variants.TryAdd((key, variant.VariantName!), variant)) throw new ArgumentException($"Duplicate world variant '{variant.VariantName}' for '{key.LogicalId}'.");
         }
         foreach (var group in _variants.Keys.GroupBy(value => (value.Profile.Site, value.Variant)))

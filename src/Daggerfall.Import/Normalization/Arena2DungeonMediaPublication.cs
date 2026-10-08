@@ -154,11 +154,22 @@ public sealed record Arena2DungeonMediaQuotas(
 }
 
 /// <summary>Pure request for normalized dungeon media generation.</summary>
+/// <param name="Dungeon">
+/// The normalized world whose meshes, billboards and actors select media, or null for the product-wide
+/// publication, whose selection is stated entirely by the runtime resource lists.
+/// </param>
 public sealed record Arena2DungeonMediaRequest(
-    NormalizedImportDocument Dungeon,
+    NormalizedImportDocument? Dungeon,
     Arena2DungeonMediaSourceSet Sources,
     Arena2DungeonMediaQuotas Quotas)
 {
+    /// <summary>
+    /// Material textures selected by a climate or dungeon texture table rather than by this document's
+    /// meshes, as <c>texture/&lt;archive&gt;-&lt;record&gt;</c> handles. The product-wide publication
+    /// names every usable record so any block's remapped material resolves to one published texture.
+    /// </summary>
+    public IReadOnlyList<string> RuntimeMaterialResources { get; init; } = [];
+
     /// <summary>
     /// Narrow authored tuning may name generated sprite artifact IDs only.
     /// Layout, bytes, dimensions, and digests are always regenerated.
@@ -197,12 +208,15 @@ public sealed record Arena2DungeonMediaRequest(
 
     public void Validate()
     {
-        ArgumentNullException.ThrowIfNull(Dungeon);
         ArgumentNullException.ThrowIfNull(Sources);
         ArgumentNullException.ThrowIfNull(Quotas);
-        Dungeon.Validate();
+        Dungeon?.Validate();
         Quotas.Validate();
         ArgumentNullException.ThrowIfNull(AuthoredOverlays);
+        ArgumentNullException.ThrowIfNull(RuntimeMaterialResources);
+        if (RuntimeMaterialResources.Any(string.IsNullOrWhiteSpace)
+            || RuntimeMaterialResources.Distinct(StringComparer.Ordinal).Count() != RuntimeMaterialResources.Count)
+            throw new ArgumentException("Runtime material resources must be distinct non-empty source resource IDs.", nameof(RuntimeMaterialResources));
         ArgumentNullException.ThrowIfNull(RuntimeActorResources);
         if (RuntimeActorResources.Any(string.IsNullOrWhiteSpace)
             || RuntimeActorResources.Distinct(StringComparer.Ordinal).Count() != RuntimeActorResources.Count)
@@ -548,7 +562,7 @@ public sealed record Arena2DungeonMediaPublication(
         EnforceSourceQuotas(request.Sources, request.Quotas);
 
         Arena2Palette palette = request.Sources.DecodePalette();
-        Selection selection = Select(request.Dungeon, request.RuntimeActorResources, request.RuntimeBillboardResources, request.RuntimeTerrainResources);
+        Selection selection = Select(request.Dungeon, request.RuntimeMaterialResources, request.RuntimeActorResources, request.RuntimeBillboardResources, request.RuntimeTerrainResources);
         EnforceExactTextureClosure(request.Sources, selection.RequiredArchives);
         if (request.TextureLeaves is not null)
         {
@@ -1046,14 +1060,15 @@ public sealed record Arena2DungeonMediaPublication(
     }
 
     private static Selection Select(
-        NormalizedImportDocument document,
+        NormalizedImportDocument? document,
+        IReadOnlyList<string> runtimeMaterialResources,
         IReadOnlyList<string> runtimeActorResources,
         IReadOnlyList<string> runtimeBillboardResources,
         IReadOnlyList<string> runtimeTerrainResources)
     {
-        Dictionary<string, NormalizedResourceCatalogEntry> resources = document.Resources.ToDictionary(resource => resource.Id, StringComparer.Ordinal);
+        Dictionary<string, NormalizedResourceCatalogEntry> resources = (document?.Resources ?? []).ToDictionary(resource => resource.Id, StringComparer.Ordinal);
         List<MaterialSelection> materials = [];
-        foreach (string materialId in document.Meshes.SelectMany(mesh => mesh.MaterialGroups).Select(group => group.MaterialResourceId).Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal))
+        foreach (string materialId in (document?.Meshes ?? []).SelectMany(mesh => mesh.MaterialGroups).Select(group => group.MaterialResourceId).Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal))
         {
             NormalizedResourceCatalogEntry material = resources[materialId];
             string textureId = material.Dependencies.SingleOrDefault(dependency => resources[dependency].Kind == NormalizedResourceKind.Texture)
@@ -1067,7 +1082,17 @@ public sealed record Arena2DungeonMediaPublication(
             materials.Add(new(materialId, textureId, archive, record));
         }
 
-        List<BillboardSelection> billboards = document.World.Billboards
+        // A runtime material keeps the material resource name a document gives the same texture, so the
+        // product-wide descriptor and a site's slot binding name one artifact.
+        HashSet<string> documentTextures = materials.Select(material => material.TextureResourceId).ToHashSet(StringComparer.Ordinal);
+        foreach (string textureId in runtimeMaterialResources.Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal))
+        {
+            if (!documentTextures.Add(textureId)) continue;
+            (ushort archive, ushort record) = ParseTextureResourceId(textureId, "texture/");
+            materials.Add(new($"material/texture-{archive}-{record}", textureId, archive, record));
+        }
+
+        List<BillboardSelection> billboards = (document?.World.Billboards ?? [])
             .Select(billboard => billboard.SpriteResourceId)
             .Concat(runtimeBillboardResources)
             .Distinct(StringComparer.Ordinal)
@@ -1087,7 +1112,7 @@ public sealed record Arena2DungeonMediaPublication(
                 return new TerrainTextureSelection(id, archive, record);
             })
             .ToList();
-        List<ActorSelection> actors = document.World.Actors
+        List<ActorSelection> actors = (document?.World.Actors ?? [])
             .Select(actor => actor.ActorResourceId)
             .Concat(runtimeActorResources)
             .Distinct(StringComparer.Ordinal)

@@ -452,7 +452,7 @@ public sealed class DungeonInteractionSessionTests
             source.Site, source.Doors.Select(door => door with { LockSurface = DaggerfallLockInteractionSurface.Exterior }).ToArray(),
             DaggerfallWorldProfileKind.Exterior, "test/exterior", source.Portals, source.Anchors.Values.ToArray(), source.Lights,
             source.GroundContainerSprite, dungeonMap: null, dungeonActions: [], dungeonActionModels: [], source.InteriorBuilding,
-            source.Music, source.AudioBundle, source.QuestMarkers, source.BillboardSprites, source.StaticNpcs,
+            source.Music, source.QuestMarkers, source.BillboardSprites, source.StaticNpcs,
             source.WaterVolumes, source.TerrainTextures, source.Population);
         List<string> releases = [];
         ContentFake content = new(releases);

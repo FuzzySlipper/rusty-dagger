@@ -65,30 +65,34 @@ public sealed class CommittedBundleCompositionTests
     }
 
     /// <summary>
-    /// A site's audio bodies are opened through the bundle its payload names, and the SDK stages only the
-    /// bundles the Host declares, so every site payload's declaration must match one Host item exactly.
+    /// Every site's audio bodies are published once, in the world media publication, and opened through
+    /// its one bundle; the SDK stages only the bundles the Host declares, so the Host must declare that
+    /// bundle at the root the ruleset strips, and no site payload names a bundle of its own.
     /// </summary>
     [Fact]
-    public void Every_site_payload_names_an_audio_bundle_the_host_stages_at_its_publication_root()
+    public void The_host_stages_the_world_media_audio_bundle_and_no_site_names_its_own()
     {
         string root = TestData.RepositoryRoot;
         Dictionary<string, string> declared = XDocument.Load(Path.Combine(root, "src/WorldRpg.Host/WorldRpg.Host.csproj"))
             .Descendants("RustyEngineContentBundle")
             .ToDictionary(item => item.Attribute("Include")!.Value, item => item.Attribute("Root")!.Value, StringComparer.Ordinal);
-        (string Root, string Bundle)[] sites = [.. SiteAudioBundles(root)];
 
-        Assert.NotEmpty(sites);
-        Assert.All(sites, site =>
+        Assert.True(declared.TryGetValue(DaggerfallWorldMedia.AudioBundleId, out string? stagedRoot), $"The Host does not declare the world media audio bundle '{DaggerfallWorldMedia.AudioBundleId}'.");
+        Assert.Equal(DaggerfallWorldMedia.AudioRoot, stagedRoot);
+        string[] sitePayloads = [.. Directory.GetFiles(Path.Combine(root, "content/worldrpg/payloads"), "daggerfall.*.json")
+            .Where(path => TopLevelSection(TestContentFiles.Read(path), "world") is not null)];
+        Assert.NotEmpty(sitePayloads);
+        Assert.All(sitePayloads, path =>
         {
-            Assert.True(declared.TryGetValue(site.Bundle, out string? stagedRoot), $"The Host does not declare site audio bundle '{site.Bundle}'.");
-            Assert.Equal(site.Root, stagedRoot);
+            using JsonDocument world = JsonDocument.Parse(TopLevelSection(TestContentFiles.Read(path), "world")!.Value);
+            Assert.False(world.RootElement.TryGetProperty("audioBundle", out _), $"Site payload '{Path.GetFileName(path)}' names an audio bundle of its own.");
         });
     }
 
     /// <summary>
     /// The Host stages exactly the bundles the default composition opens. Each named bundle the
-    /// ruleset opens by id, and each audio bundle a selected site payload declares, is a Host item at
-    /// the root its reader strips; every clip a selected site publishes is a file under that root; and
+    /// ruleset opens by id, the world media audio bundle every site's clips open through included, is a
+    /// Host item at the root its reader strips; every clip a selected site names is a file under that root; and
     /// every Host item is one of those, so the Host stages no bundle nothing opens.
     /// </summary>
     [Fact]
@@ -103,6 +107,7 @@ public sealed class CommittedBundleCompositionTests
             [DaggerfallMusicBundle.BundleId] = DaggerfallMusicBundle.LogicalRoot,
             [DaggerfallSkyMedia.BundleId] = DaggerfallSkyMedia.LogicalRoot,
             [DaggerfallCinematicPresentation.BundleId] = DaggerfallCinematicPresentation.Root.TrimEnd('/'),
+            [DaggerfallWorldMedia.AudioBundleId] = DaggerfallWorldMedia.AudioRoot,
         };
         ProductContent content = FullContent(root);
         ResolvedGameComposition composition = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();
@@ -110,9 +115,8 @@ public sealed class CommittedBundleCompositionTests
         foreach (ContentPack pack in composition.ContentPacks.Where(pack => pack.Role.Value == SiteRole))
         {
             DaggerfallSiteProfile site = DaggerfallSiteContent.Read(content, pack.Payload, TestPayload.Definitions);
-            string bundle = site.AudioBundle ?? throw new InvalidOperationException($"Site pack '{pack.Id.Value}' declares no audio bundle.");
-            string clips = $"{site.ProfileKey.LogicalId}/media/audio/clips";
-            Assert.True(opened.TryAdd(bundle, clips), $"Audio bundle '{bundle}' is opened by two owners.");
+            string clips = DaggerfallWorldMedia.AudioRoot;
+            Assert.NotEmpty(site.Audio);
             missingClips.AddRange(site.Audio
                 .Where(clip => !clip.Path.StartsWith(clips + "/", StringComparison.Ordinal) || !File.Exists(Path.Combine(root, "content", clip.Path)))
                 .Select(clip => $"{pack.Id.Value}: {clip.Id} -> {clip.Path}"));

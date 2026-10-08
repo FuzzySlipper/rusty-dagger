@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Daggerfall.Import.Publication;
 using WorldRpg.SpriteAuthoring;
 
 namespace Daggerfall.Import.Tool;
@@ -10,6 +11,11 @@ internal static class SpriteOverlays
     public static readonly CommandOption Publication = CommandOption.Required("--publication", "GENERATED_DIR");
     public static readonly CommandOption Authoring = CommandOption.Required("--authoring", "SOURCE_DIR");
     public static readonly CommandOption Overlay = CommandOption.Required("--overlay", "sprites/RELATIVE.json");
+    public static readonly CommandOption Shared = CommandOption.Optional("--shared", "WORLD_MEDIA_DIR");
+    public static readonly CommandOption ClassicGroup = CommandOption.Optional("--classic-group", "CLASSIC_GROUP_DIR");
+
+    /// <summary>The options a sprite command that reads a publication takes.</summary>
+    public static IReadOnlyList<CommandOption> PublicationOptions => [Publication, Shared, ClassicGroup];
 
     private const int MaximumOverlayBytes = 1024 * 1024;
 
@@ -21,6 +27,23 @@ internal static class SpriteOverlays
     };
 
     public static string PublicationDirectory(CommandArguments args) => Path.GetFullPath(args[Publication.Name]);
+
+    /// <summary>
+    /// Reads the publication a sprite command names. A site closure written against the product-wide world
+    /// media is read with it (<c>--shared</c> and <c>--classic-group</c>, supplied together); the world media
+    /// publication itself, or a closure that carries everything, is read alone.
+    /// </summary>
+    public static SpritePublicationSnapshot ReadPublication(CommandArguments args)
+    {
+        if (args.Has(Shared.Name) != args.Has(ClassicGroup.Name))
+        {
+            throw args.Invalid($"{Shared.Name} and {ClassicGroup.Name} are supplied together.");
+        }
+
+        return args.Has(Shared.Name)
+            ? SpritePublicationReader.Read(PublicationDirectory(args), ProductWorldMedia.Read(args[Shared.Name], args[ClassicGroup.Name]))
+            : SpritePublicationReader.Read(PublicationDirectory(args));
+    }
 
     public static string AuthoringDirectory(CommandArguments args)
     {

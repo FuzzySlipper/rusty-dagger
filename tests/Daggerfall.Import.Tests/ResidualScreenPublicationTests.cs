@@ -17,7 +17,7 @@ public sealed class ResidualScreenPublicationTests
     public void Screens_publish_with_their_embedded_palette_scaled_by_four()
     {
         string root = TestData.RepositoryRoot;
-        JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
+        JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/shared/media/classic/manifest.json")));
         Dictionary<string, JsonElement> ui = manifest.RootElement.GetProperty("uiImages").EnumerateArray().ToDictionary(image => image.GetProperty("sourceFile").GetString()!);
 
         foreach (string screen in Screens)

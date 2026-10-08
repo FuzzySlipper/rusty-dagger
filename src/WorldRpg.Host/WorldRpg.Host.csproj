@@ -62,29 +62,13 @@
     <RustyEngineProductInputMapping Include="move.backward.key-s" Intent="move.backward" Trigger="key:key-s:held" />
     <RustyEngineProductInputMapping Include="move.right.key-d" Intent="move.right" Trigger="key:key-d:held" />
     <!-- The score is one product-wide bundle: its manifest sits above the root and stays eager while the
-         cue bodies are opened on the first cue, exactly as each site's effect clips below are. -->
+         cue bodies are opened on the first cue, exactly as the world media's effect clips below are. -->
     <RustyEngineContentBundle Include="daggerfall.music" Root="worldrpg/media/music/clips" />
     <RustyEngineContentBundle Include="daggerfall.sky" Root="worldrpg/media/sky/resources" />
     <RustyEngineContentBundle Include="daggerfall.cinematics" Root="worldrpg/media/cinematics" />
-    <!-- One bundle per site: its id is the site payload's world.audioBundle and its root is the audio
-         clips under that payload's publicationRoot. The SDK stages exactly the items declared here, one
-         per bundle, so a new site adds its one line; a ruleset test checks each payload against it. -->
-    <RustyEngineContentBundle Include="daggerfall.privateers-hold-audio" Root="worldrpg/imports/privateers-hold/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.castle-necromoghan-audio" Root="worldrpg/imports/castle-necromoghan/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.charing-exterior-audio" Root="worldrpg/imports/charing/exterior/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.charing-interior-2-1-0-audio" Root="worldrpg/imports/charing/interior-2-1-0/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.charing-interior-1-1-0-audio" Root="worldrpg/imports/charing/interior-1-1-0/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.charing-interior-3-4-0-audio" Root="worldrpg/imports/charing/interior-3-4-0/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.charing-interior-3-1-13-audio" Root="worldrpg/imports/charing/interior-3-1-13/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.charing-interior-4-2-0-audio" Root="worldrpg/imports/charing/interior-4-2-0/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.charing-interior-1-5-17-audio" Root="worldrpg/imports/charing/interior-1-5-17/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.charing-interior-3-2-14-audio" Root="worldrpg/imports/charing/interior-3-2-14/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.small-ship-audio" Root="worldrpg/imports/small-ship/exterior/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.large-ship-audio" Root="worldrpg/imports/large-ship/exterior/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.the-hawkston-cemetery-audio" Root="worldrpg/imports/the-hawkston-cemetery/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.the-hawkston-cemetery-exterior-audio" Root="worldrpg/imports/the-hawkston-cemetery/exterior/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.the-tombs-of-klerd-audio" Root="worldrpg/imports/the-tombs-of-klerd/media/audio/clips" />
-    <RustyEngineContentBundle Include="daggerfall.the-tombs-of-klerd-exterior-audio" Root="worldrpg/imports/the-tombs-of-klerd/exterior/media/audio/clips" />
+    <!-- The audio clips every site names are published once, in the product-wide world media publication
+         the site closures reference; its sidecar stays eager and the clip bodies open on the first cue. -->
+    <RustyEngineContentBundle Include="daggerfall.world-audio" Root="worldrpg/imports/shared/media/audio/clips" />
   </ItemGroup>
 
   <!-- Content derived from the operator's Arena2 files is not tracked; scripts/regenerate-content.sh

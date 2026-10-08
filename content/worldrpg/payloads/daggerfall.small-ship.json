@@ -13,7 +13,6 @@
   "placements": [],
   "world": {
     "publicationRoot": "worldrpg/imports/small-ship/exterior",
-    "audioBundle": "daggerfall.small-ship-audio",
     "appearance": {
       "tint": [
         0.72,

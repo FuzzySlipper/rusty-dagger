@@ -136,12 +136,71 @@ public static class Arena2SitePublication
         });
     }
 
+    /// <summary>
+    /// Publishes the product-wide world media every site closure references instead of carrying a copy:
+    /// a material texture for every usable record of every supplied texture leaf (a block's climate and
+    /// dungeon texture tables remap its archives, so any record can be a site's material), a billboard
+    /// atlas for every record whose frames fit one atlas strip, the actors, flats and terrain the runtime
+    /// may materialize anywhere, every mesh the classic mesh archive serves, and the classic sidecar with
+    /// the audio clips and world visuals the classic media group does not already publish.
+    /// </summary>
+    /// <param name="sources">The Arena2 sources, loaded with the classic media inputs and the mesh archive.</param>
+    /// <param name="media">The runtime resources and classic profile every site shares.</param>
+    /// <param name="classicGroup">
+    /// The artifacts the product-wide classic media group publishes, by group-relative path. A classic artifact
+    /// the group already carries is referenced through it, never copied a second time.
+    /// </param>
+    public static Arena2WorldMediaPublication WorldMedia(
+        Arena2SiteSources sources,
+        Arena2SiteMedia media,
+        IReadOnlyDictionary<string, ImportPublicationManifestArtifact> classicGroup)
+    {
+        ArgumentNullException.ThrowIfNull(sources);
+        ArgumentNullException.ThrowIfNull(media);
+        ArgumentNullException.ThrowIfNull(classicGroup);
+        Arena2WorldTextureSelection textures = Arena2WorldTextureSelection.Select(sources.TextureLeaves(), sources.ParseTextureLeaf, WorldMediaQuotas);
+        // The texture closure is exact, so exactly the leaves a selected record lives in are admitted; a
+        // leaf an actor or terrain set needs beyond them is loaded on demand like any site's.
+        foreach (ushort archive in textures.Archives) sources.AdmitTextureLeaf(archive);
+        Arch3dMeshInventory meshes = Arch3dInventoryReader.Read(sources.MeshArchive.Bytes.ToArray(), sources.MeshArchive.Label);
+        string[] meshIds = [.. meshes.Records
+            .Where(record => record.DuplicateOf is null && record.State == Arch3dRecordState.Read)
+            .Select(record => record.RecordId.ToString(System.Globalization.CultureInfo.InvariantCulture))];
+        return sources.LoadingOnDemand(() =>
+        {
+            (GeometryPublication geometry, Arena2DungeonMediaPublication dungeonMedia, Arena2ClassicMediaPublication classicMedia) = PublishMedia(
+                sources, null, meshIds, media with { DungeonOverlays = [] }, "product-wide world media", textures.Materials, textures.Billboards, WorldMediaQuotas);
+            ImportProvenance provenance = new(WorldMediaImporterId, ImporterBuild.Revision, [.. sources.DungeonSources
+                .Select(source => new LogicalSourceRecord(source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length))]);
+            return new Arena2WorldMediaPublication(
+                Arena2MediaBundlePublication.CreateWorldMedia(provenance, dungeonMedia, classicMedia, geometry, classicGroup),
+                textures,
+                geometry.Summary);
+        });
+    }
+
+    /// <summary>The importer identity the product-wide world media publication records.</summary>
+    public const string WorldMediaImporterId = "daggerfall-import/world-media";
+
+    /// <summary>
+    /// The product-wide pass reads every supplied texture leaf, so its source and artifact quotas are the
+    /// corpus's rather than one site's; the per-atlas limits are the ones every site publishes under.
+    /// </summary>
+    public static Arena2DungeonMediaQuotas WorldMediaQuotas { get; } = Arena2DungeonMediaQuotas.Default with
+    {
+        MaximumSources = TextureLeafInventory.MaximumLeafId + 2,
+        MaximumSourceBytes = Arena2SiteSources.MaximumTotalSourceBytes,
+    };
+
     private static (GeometryPublication, Arena2DungeonMediaPublication, Arena2ClassicMediaPublication) PublishMedia(
         Arena2SiteSources sources,
-        NormalizedImportDocument document,
+        NormalizedImportDocument? document,
         IReadOnlyList<string> referencedMeshIds,
         Arena2SiteMedia media,
-        string textureLeafConsumer)
+        string textureLeafConsumer,
+        IReadOnlyList<string>? runtimeMaterials = null,
+        IReadOnlyList<string>? runtimeBillboards = null,
+        Arena2DungeonMediaQuotas? quotas = null)
     {
         TextureLeafInventory textureLeaves = sources.TextureLeaves();
         (GeometryPublication geometry, IReadOnlyList<ClassicWorldVisualRequest> worldVisuals) =
@@ -152,14 +211,16 @@ public static class Arena2SitePublication
         }
 
         Arena2DungeonMediaPublication dungeonMedia = Arena2DungeonMediaPublication.Create(
-            Arena2DungeonMediaRequest.Create(document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources)) with
+            new Arena2DungeonMediaRequest(document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources), quotas ?? Arena2DungeonMediaQuotas.Default) with
             {
                 RuntimeActorResources = media.RuntimeActorResources,
+                RuntimeMaterialResources = runtimeMaterials ?? [],
                 RuntimeBillboardResources = [.. media.RuntimeNpcResources
                     .Concat(media.RuntimeNatureResources)
                     .Concat([GroundContainerBillboard, "sprite/texture-210-3"])
-                    .Concat(document.World.StaticNpcs.Select(npc => $"sprite/texture-{npc.BillboardArchive}-{npc.BillboardRecord}"))
-                    .Concat(document.World.Population.Select(person => $"sprite/texture-{person.BillboardArchive}-{person.BillboardRecord}"))
+                    .Concat((document?.World.StaticNpcs ?? []).Select(npc => $"sprite/texture-{npc.BillboardArchive}-{npc.BillboardRecord}"))
+                    .Concat((document?.World.Population ?? []).Select(person => $"sprite/texture-{person.BillboardArchive}-{person.BillboardRecord}"))
+                    .Concat(runtimeBillboards ?? [])
                     .Distinct(StringComparer.Ordinal)],
                 RuntimeTerrainResources = media.RuntimeTerrainResources,
                 AuthoredOverlays = media.DungeonOverlays,

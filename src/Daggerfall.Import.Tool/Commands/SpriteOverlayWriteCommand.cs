@@ -7,14 +7,14 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class SpriteOverlayWriteCommand
 {
     public static ToolCommand Command { get; } = new("sprite-overlay-write",
-        [SpriteOverlays.Publication, SpriteOverlays.Authoring, SpriteOverlays.Overlay, CommandOption.Required("--input", "FILE")], Run);
+        [.. SpriteOverlays.PublicationOptions, SpriteOverlays.Authoring, SpriteOverlays.Overlay, CommandOption.Required("--input", "FILE")], Run);
 
     private static int Run(CommandArguments args)
     {
         string publicationDirectory = SpriteOverlays.PublicationDirectory(args);
         string authoring = SpriteOverlays.AuthoringDirectory(args);
         string overlayPath = SpriteOverlays.OverlayPath(args);
-        SpritePublicationSnapshot publication = SpritePublicationReader.Read(publicationDirectory);
+        SpritePublicationSnapshot publication = SpriteOverlays.ReadPublication(args);
         SpriteAuthoredOverlayDocument overlay = SpriteAuthoredOverlayStore.Read(SpriteOverlays.ReadBytes(args["--input"]));
         SpriteAuthoredOverlayStore.Write(publicationDirectory, authoring, overlayPath, overlay, publication.Catalog, publication.AuthoringBasisDigest);
         Console.WriteLine("sprite overlay written; a later import write consumes it through --sprite-authoring and --sprite-overlay.");

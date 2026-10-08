@@ -38,7 +38,8 @@ internal static class Program
         // Quest corpus payloads.
         FightersQuestCorpusCommand.Command,
         ClassicQuestCorporaCommand.Command,
-        // Site closures.
+        // The product-wide world media the site closures reference, then the site closures.
+        WorldMediaCommand.Command,
         DungeonSiteCommand.Write,
         DungeonSiteCommand.Plan,
         DungeonSiteCommand.VerifyRealData,
