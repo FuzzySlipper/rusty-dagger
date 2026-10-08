@@ -140,9 +140,10 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         // player swing and every enemy swing wait for their animation's impact frame.
         bool enemyAttack = request.AttackerId != PlayerId;
         DaggerfallAttackDefinition attack;
+        DaggerfallSwingDirection gesture = DaggerfallSwingDirection.None;
         if (!enemyAttack)
         {
-            if (!TryAdmitPlayerAttack(request, attacker, out attack, facts)) return false;
+            if (!TryAdmitPlayerAttack(request, attacker, out attack, out gesture, facts)) return false;
         }
         else
         {
@@ -171,7 +172,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         // the hit roll and the damage roll with them; the career's enemy-type bonus and the backstab
         // chance cross the same two rolls at their own points. Resolve them once here and carry them
         // to both resolutions so one admitted attack shares one set of modifier values.
-        var modifiers = attacker.Id == PlayerId ? PlayerAttackModifiers(attack) : default;
+        var modifiers = attacker.Id == PlayerId ? PlayerAttackModifiers(attack, gesture) : default;
         int backstabChance = DaggerfallFormulaPolicy.CalculateBackstabChance(ReadStat(attacker, new DaggerfallStatId("backstabbing")), backstabOpportunity);
         int body = DaggerfallFormulaPolicy.CalculateStruckBodyPart(Draw(explicitRequest, attacker.Id, target.Id, CombatRandomKey.BodySalt, 0, 19, enemyAttack));
         if (attacker.Definition.Kind == DaggerfallActorKinds.Monster && attack.Skill == DaggerfallMechanicsIds.HandToHand.Value)
@@ -393,7 +394,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     {
         EquipmentRead equipment = _equipment.Read();
         DaggerfallEquippedWeapon? selected = ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand");
-        bool bow = selected is { Weapon.Skill: DaggerfallSkills.Archery };
+        bool bow = selected is { Weapon.IsBow: true };
         int speed = _actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Speed.Value)).ValueInt;
         string? actionId = bow ? RangedPlayerActionId() : _definitions[PlayerId].ActionId;
         double cooldown = bow ? DaggerfallFormulaPolicy.BowCooldownSeconds(speed)
@@ -405,7 +406,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     {
         EquipmentRead equipment = _equipment.Read();
         return (ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand"))
-            is { Weapon.Skill: DaggerfallSkills.Archery };
+            is { Weapon.IsBow: true };
     }
 
     private bool IsLiveCombatant(long actorId)
@@ -472,7 +473,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     {
         EquipmentRead equipment = _equipment.Read();
         weapon = ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand");
-        bool bow = weapon is { Weapon.Skill: DaggerfallSkills.Archery };
+        bool bow = weapon is { Weapon.IsBow: true };
         string? id = requested ?? (bow ? RangedPlayerActionId() : player.Definition.ActionId);
         action = null!;
         if (id is null || !_actions.TryGetValue(id, out var selected)
@@ -501,9 +502,11 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         return null;
     }
 
-    private bool TryAdmitPlayerAttack(AttackRequest request, Combatant player, out DaggerfallAttackDefinition attack, FactBuffer<IProductFact> facts)
+    private bool TryAdmitPlayerAttack(AttackRequest request, Combatant player, out DaggerfallAttackDefinition attack,
+        out DaggerfallSwingDirection gesture, FactBuffer<IProductFact> facts)
     {
         ulong generation = request.Generation, simulationStep = request.SimulationStep;
+        gesture = DaggerfallSwingDirection.None;
         if (!TryReadPlayerAttackPolicy(player, request.Action, out DaggerfallEquippedWeapon? equippedWeapon,
             out DaggerfallActionDefinition playerAction))
         {
@@ -529,13 +532,19 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
                 playerCooldown,
                 DamageBonus: playerAction.DamageBonus);
         SpendPlayerStamina(player, staminaCost);
+        // The swing reads the player's gesture once, so the direction it plays and the modifiers its
+        // rolls carry describe the same swing. A bow looses on its fixed draw-and-release strike
+        // (WeaponManager forces the bow's attack direction); every other attack swings the way the
+        // player drew it, or, with no gesture, leaves the presentation the donor's click-attack choice.
+        gesture = _playerSwing();
         // A targeted swing hands its timing to the strike animation: the tick time the classic
         // animation plays at, and the target whose impact frame will deliver it.
         bool deferred = request.Delayed && request.TargetId is not null;
         facts.Append(new PlayerAttackStartedFact(generation, simulationStep,
             deferred ? request.TargetId : null,
             deferred ? DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(ReadStat(player, DaggerfallMechanicsIds.Speed)) : 0d,
-            ranged ? DaggerfallFormulaPolicy.BowWeaponHitFrame : DaggerfallFormulaPolicy.MeleeWeaponHitFrame) { Feedback = StrikeFeedback(PlayerId) });
+            DaggerfallFormulaPolicy.WeaponHitFrame(ranged),
+            ranged ? DaggerfallFormulaPolicy.BowSwing : gesture) { Feedback = StrikeFeedback(PlayerId) });
         return true;
     }
 
@@ -1004,11 +1013,11 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     /// roll. Swing and racial modifiers require a weapon; expert proficiency also applies to
     /// hand-to-hand under the selected donor policy. An enemy attempt carries none of them.
     /// </summary>
-    private (int ToHit, int Damage) PlayerAttackModifiers(DaggerfallAttackDefinition attack)
+    private (int ToHit, int Damage) PlayerAttackModifiers(DaggerfallAttackDefinition attack, DaggerfallSwingDirection gesture)
     {
         int level = _actors.Player.Progression.Level;
         (int swingToHit, int swingDamage) = attack.Material is not null
-            ? DaggerfallFormulaPolicy.CalculateSwingModifiers(_playerSwing())
+            ? DaggerfallFormulaPolicy.CalculateSwingModifiers(gesture)
             : (0, 0);
         (int proficiencyToHit, int proficiencyDamage) = DaggerfallFormulaPolicy.CalculateProficiencyModifiers(
             _character()?.Career.ExpertProficiencies.Contains(attack.Skill, StringComparer.Ordinal) == true, level);

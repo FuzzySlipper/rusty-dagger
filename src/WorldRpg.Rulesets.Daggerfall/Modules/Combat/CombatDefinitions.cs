@@ -24,8 +24,9 @@ internal readonly record struct DaggerfallAdrenalineRush(bool Enabled, bool Impr
 /// WeaponStates the donor reads off the on-screen FPSWeapon. Classic steers these states from the
 /// mouse: vertical motion strikes up or down, horizontal motion angles the down strike left or
 /// right, and the last direction holds until the next deliberate movement, which the session's
-/// look tracker reproduces. None covers hand-to-hand attacks and every attacker without a drawn
-/// weapon, where the donor's swing modifier guard never fires.
+/// look tracker reproduces. The same direction names the strike animation the viewmodel plays.
+/// None is an attack without a gesture (the presentation then plays the donor's click-attack
+/// choice); the swing modifiers additionally require a weapon, as the donor's guard does.
 /// </summary>
 internal enum DaggerfallSwingDirection
 {

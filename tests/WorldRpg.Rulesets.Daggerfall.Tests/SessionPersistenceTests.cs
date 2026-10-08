@@ -78,6 +78,51 @@ public sealed class SessionPersistenceTests
     }
 
     [Fact]
+    public void A_sheathed_weapon_stays_sheathed_across_save_restore()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        RulesetSavePayload payload;
+        using (DaggerfallSession original = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
+        {
+            Assert.True(original.State.WeaponDrawn);
+            original.Update(new ProductUpdate(OuterUpdate(1), [ToggleWeapon()]));
+            Assert.False(original.State.WeaponDrawn);
+            payload = original.CaptureSave();
+            Assert.False(DaggerfallSavePayload.Read(payload).Player.WeaponDrawn);
+        }
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
+        Assert.False(restored.State.WeaponDrawn);
+
+        // A sheathed weapon refuses the swing after the load as it did before the save.
+        Track stamina = restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
+        double before = stamina.Current;
+        restored.Update(new ProductUpdate(OuterUpdate(2),
+            [Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack")]));
+        Assert.Equal(before, stamina.Current);
+        Assert.Null(restored.State.Actors.Player.Attack.Pending);
+
+        restored.Update(new ProductUpdate(OuterUpdate(3), [ToggleWeapon()]));
+        Assert.True(restored.State.WeaponDrawn);
+        Assert.True(DaggerfallSavePayload.Read(restored.CaptureSave()).Player.WeaponDrawn);
+
+        static ProductInputEvent ToggleWeapon() =>
+            Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "toggle-weapon");
+    }
+
+    [Fact]
     public void Quest_instances_keep_same_definition_runs_and_typed_bindings_across_save_restore()
     {
         string root = TestData.RepositoryRoot;

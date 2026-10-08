@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -123,6 +124,40 @@ public sealed class NormalizedMediaValidationTests
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["sourceWidth"] = -1), payload, definitions));
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["relativePath"] = "../weapon.png"), payload, definitions));
     }
+
+    [Fact]
+    public void Classic_weapon_admission_refuses_a_strike_that_ends_before_its_hit_frame()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+
+        // A melee strike shorter than the melee hit frame: every strike can play a melee swing.
+        DaggerfallContentException melee = Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media =>
+            WeaponAction(media, "weapon.dagger.steel", "strikeUp")["sequence"] = new JsonArray(26, 27)), payload, definitions));
+        Assert.Contains(melee.Diagnostics, message => message.Contains("'weapon.dagger.steel' strike 'strikeUp' plays 2 frames", StringComparison.Ordinal)
+            && message.Contains($"melee hit frame {DaggerfallFormulaPolicy.MeleeWeaponHitFrame}", StringComparison.Ordinal));
+
+        // The bow's loosing strike shorter than the bow hit frame: the arrow would never leave.
+        DaggerfallContentException bow = Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(MutateClassicMedia(root, media =>
+            WeaponAction(media, "weapon.bow", "strikeDown")["sequence"] = new JsonArray(0, 1, 2, 3, 4)), payload, definitions));
+        Assert.Contains(bow.Diagnostics, message => message.Contains("Bow 'iron-short-bow' selects classic weapon 'weapon.bow', whose 'strikeDown' plays 5 frames", StringComparison.Ordinal)
+            && message.Contains($"bow hit frame {DaggerfallFormulaPolicy.BowWeaponHitFrame}", StringComparison.Ordinal));
+
+        // The bow's up strike is shorter than the bow hit frame, as published, and is admitted: a bow
+        // never plays it.
+        Assert.Equal(4, WeaponAction(ClassicMedia(root), "weapon.bow", "strikeUp")["frameCount"]!.GetValue<int>());
+        _ = DaggerfallSiteContent.Read(MutateClassicMedia(root, _ => { }), payload, definitions);
+    }
+
+    private static JsonObject WeaponAction(JsonObject media, string resource, string action) => media["weaponMedia"]!.AsArray()
+        .Select(value => value!.AsObject())
+        .Single(weapon => weapon["resourceId"]!.GetValue<string>() == resource)["actions"]!.AsArray()
+        .Select(value => value!.AsObject())
+        .Single(value => value["action"]!.GetValue<string>() == action);
+
+    private static JsonObject ClassicMedia(string repositoryRoot) => JsonNode.Parse(File.ReadAllBytes(
+        Path.Combine(repositoryRoot, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")))!.AsObject();
 
     private static JsonObject FirstActorState(JsonObject media, string name) => media["actors"]!.AsArray()
         .Select(value => value!.AsObject())

@@ -782,6 +782,16 @@ internal static class DaggerfallFormulaPolicy
     /// </summary>
     internal const int BowWeaponHitFrame = 5;
 
+    /// <summary>The classic animation frame a player attack's impact leaves on, by whether a bow looses it.</summary>
+    internal static int WeaponHitFrame(bool bow) => bow ? BowWeaponHitFrame : MeleeWeaponHitFrame;
+
+    /// <summary>
+    /// The strike a bow always plays. The donor's WeaponManager forces a bow's attack direction to Down
+    /// (its optional draw-back mode is off by default), which FPSWeapon plays as StrikeDown; a bow's
+    /// other strikes are never played by an attack.
+    /// </summary>
+    internal const DaggerfallSwingDirection BowSwing = DaggerfallSwingDirection.StrikeDown;
+
     /// <summary>
     /// The donor's item-condition display unit. Items without condition use are complete rather than
     /// dividing by zero; otherwise the classic integer percentage truncates toward zero.

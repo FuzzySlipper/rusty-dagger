@@ -215,7 +215,7 @@ internal sealed partial class DaggerfallSession
         if (_deferredPlayerActs is not null || acts.Any && _appearance.HasPendingEnemyHitTarget(DaggerfallActorIdentity.PlayerEntityId))
         {
             _deferredPlayerActs = _deferredPlayerActs?.Then(acts) ?? acts;
-            _appearance.UpdateRightHandEquipment(State.Equipment.Read());
+            _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         }
         else
         {
@@ -255,13 +255,13 @@ internal sealed partial class DaggerfallSession
 
     private void ApplyPlayerActs(DaggerfallPlayerActs acts)
     {
-        if (acts.ToggleWeapon) _appearance.ToggleWeaponDrawn();
-        _appearance.UpdateRightHandEquipment(State.Equipment.Read());
+        if (acts.ToggleWeapon) State.WeaponDrawn = !State.WeaponDrawn;
+        _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
         // Interaction owns this slice once requested. Direct semantic input can carry both intents
         // in the same Engine delivery, and it must follow the same no-attack rule as a DOM loot action.
         ActorControlRestrictions restrictions = State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId);
-        if (!restrictions.PhysicalAttacks && !acts.Interact && acts.Attack is { } swing && _appearance.CanStartPlayerAttack)
+        if (!restrictions.PhysicalAttacks && !acts.Interact && acts.Attack is { } swing && State.WeaponDrawn && _appearance.CanStartPlayerAttack)
         {
             State.Kit.Attacks.TryPlayerMelee(State.PlayerControl, currentLook, swing.Generation, swing.SimulationStep, swing.DeltaSeconds, _facts);
             // WeaponManager sends Attack to an action on the environment after the ordinary hit

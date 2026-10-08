@@ -145,7 +145,15 @@ internal sealed record DaggerfallActorPresentationDefinition(string? PreferredRe
     internal static DaggerfallActorPresentationDefinition None { get; } = new(null, new ReadOnlyDictionary<string, float>(new Dictionary<string, float>()));
 }
 
-internal sealed record DaggerfallWeaponDefinition(int MinimumDamage, int MaximumDamage, string Material, string Skill, string Handedness, int Value, int Weight);
+internal sealed record DaggerfallWeaponDefinition(int MinimumDamage, int MaximumDamage, string Material, string Skill, string Handedness, int Value, int Weight)
+{
+    /// <summary>
+    /// Whether this weapon is a bow: the one reading of an item that the attack rules (ranged
+    /// admission, cooldown and hit frame) and the classic weapon admission (the strike its art must
+    /// carry to the bow's hit frame) share.
+    /// </summary>
+    internal bool IsBow => Skill == DaggerfallSkills.Archery;
+}
 internal sealed record DaggerfallArmorDefinition(string Material, string Part);
 internal sealed record DaggerfallShieldDefinition(int Armor);
 internal enum DaggerfallItemKind { Fungible, Unique }

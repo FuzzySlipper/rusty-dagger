@@ -311,6 +311,37 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Empty(fixture.DeliverImpact(request));
     }
 
+    [Theory]
+    [InlineData("StrikeUp", 10, -4)]
+    [InlineData("StrikeDown", -10, 4)]
+    [InlineData("StrikeLeft", 0, 0)]
+    public void A_player_swing_publishes_the_direction_it_rolls_with(string direction, int toHit, int damage)
+    {
+        DaggerfallSwingDirection gesture = Enum.Parse<DaggerfallSwingDirection>(direction);
+        // The gesture is read once per swing: the strike the viewmodel plays and the swing modifiers the
+        // rolls carry describe the same swing, and the swing consumes it.
+        PreparedResolution Attack(DaggerfallSwingDirection drawn, out PlayerAttackStartedFact started)
+        {
+            using DamagePolicyFixture fixture = new();
+            fixture.Gesture = drawn;
+            fixture.Script(body: 0, critical: 100, hit: 1, damage: 10);
+            PreparedResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: true),
+                out IReadOnlyList<IProductFact> published);
+            Assert.Equal(DaggerfallSwingDirection.None, fixture.Gesture);
+            started = Assert.Single(published.OfType<PlayerAttackStartedFact>());
+            return result;
+        }
+
+        PreparedResolution baseline = Attack(DaggerfallSwingDirection.None, out PlayerAttackStartedFact straight);
+        PreparedResolution swung = Attack(gesture, out PlayerAttackStartedFact drawnSwing);
+
+        Assert.Equal(DaggerfallSwingDirection.None, straight.Swing);
+        Assert.Equal(gesture, drawnSwing.Swing);
+        Assert.Equal(DaggerfallFormulaPolicy.MeleeWeaponHitFrame, drawnSwing.HitFrame);
+        Assert.Equal(baseline.Detail.Chance + toHit, swung.Detail.Chance);
+        Assert.Equal(baseline.Outcome.Damage + damage, swung.Outcome.Damage);
+    }
+
     [Fact]
     public void A_swing_whose_animation_never_reaches_its_hit_frame_delivers_nothing()
     {
@@ -384,6 +415,8 @@ public sealed class DaggerCombatDamagePolicyTests
         PlayerAttackStartedFact opening = Assert.Single(admitted.OfType<PlayerAttackStartedFact>());
         Assert.Equal(2L, opening.TargetId);
         Assert.Equal(5, opening.HitFrame);   // the donor's bow animation releases on frame 5
+        // WeaponManager forces a bow's attack direction to Down, which FPSWeapon plays as StrikeDown.
+        Assert.Equal(DaggerfallSwingDirection.StrikeDown, opening.Swing);
         Assert.Equal(2UL, fixture.PlayerArrows());
         // (10 * (100 - 50) + 800) / 980 seconds, latched in 0.125s steps.
         Assert.Equal((ulong)Math.Ceiling((10d * (100 - 50) + 800) / 980d / .125d), fixture.CooldownRemaining(DaggerfallActorIdentity.PlayerEntityId, 5, 9));
@@ -519,6 +552,14 @@ public sealed class DaggerCombatDamagePolicyTests
         private WorldPoint? _playerPosition;
 
         private DaggerfallCharacterState? _character;
+        /// <summary>The gesture the next swing reads; reading it consumes it, as the session's tracker does.</summary>
+        internal DaggerfallSwingDirection Gesture { get; set; }
+        private DaggerfallSwingDirection TakeGesture()
+        {
+            DaggerfallSwingDirection gesture = Gesture;
+            Gesture = DaggerfallSwingDirection.None;
+            return gesture;
+        }
 
         internal DamagePolicyFixture(bool armed = true, Func<WorldPoint, WorldPoint, bool>? coverBlocks = null, int armorValueShift = 0, int attackChanceShift = 0)
         {
@@ -554,7 +595,7 @@ public sealed class DaggerCombatDamagePolicyTests
                 skillUses: _ => { }, playerBiographyAvoidHit: () => 0,
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : _playerEquipment,
                 itemCondition: _itemCondition, rules: new CombatResolution(), adrenalineRush: _ => default,
-                playerPosition: () => _playerPosition, character: () => _character, playerSwing: () => DaggerfallSwingDirection.None,
+                playerPosition: () => _playerPosition, character: () => _character, playerSwing: TakeGesture,
                 coverBlocksShot: coverBlocks ?? ((_, _) => false), armorValueModifier: () => armorValueShift,
                 deliverWeaponPoison: (_, _) => throw new InvalidOperationException("This fixture coats no weapon."),
                 attackChanceModifier: () => attackChanceShift,
@@ -661,10 +702,13 @@ public sealed class DaggerCombatDamagePolicyTests
             _actors.Get(targetEntityId).ApplyPose(new ActorPose(new WorldPoint(0f, 0f, -1f), facingAway ? 0f : MathF.PI));
         }
 
-        internal PreparedResolution Run(AttackRequest request)
+        internal PreparedResolution Run(AttackRequest request) => Run(request, out _);
+
+        internal PreparedResolution Run(AttackRequest request, out IReadOnlyList<IProductFact> published)
         {
             FactBuffer<IProductFact> facts = new();
             bool admitted = _combat.TryPrepare(request, facts, out PreparedAttack prepared);
+            published = Delivered(facts);
             return new PreparedResolution(admitted, prepared.Outcome,
                 (prepared as DaggerCombatRules.DaggerfallPreparedAttack)?.Detail ?? default, _scripted.Ranges);
         }
