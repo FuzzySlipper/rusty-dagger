@@ -118,7 +118,6 @@ internal static class TestSessions
             // The score's clips are staged as their own bundle, and each site's clips are staged as
             // the bundle its payload declares.
             audioBundles.Add(("worldrpg/media/music/clips", "daggerfall.music"));
-            audioBundles.Add(("worldrpg/media/audio/clips", "daggerfall.classic-audio"));
             audioBundles.Add(("worldrpg/media/sky/resources", "daggerfall.sky"));
             audioBundles.AddRange(SiteAudioBundles(root));
         }

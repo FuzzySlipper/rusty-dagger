@@ -43,7 +43,6 @@ public sealed class PublishedContentDeliveryTests
         // The directory read sees the published group without being told its members: this is what the
         // generated inventory replaces a hand-maintained list with.
         Assert.Contains(content.ReadDirectory("worldrpg/media/ui"), file => Encoding.UTF8.GetString(file.Path.Span) == "worldrpg/media/ui/screen-death.png");
-        Assert.Contains(content.ReadDirectory("worldrpg/media/audio"), file => Encoding.UTF8.GetString(file.Path.Span).StartsWith("worldrpg/media/audio/", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -76,12 +75,12 @@ public sealed class PublishedContentDeliveryTests
                 && !path.Contains("/music/", StringComparison.Ordinal)
                 && !path.StartsWith("worldrpg/media/sky/", StringComparison.Ordinal))];
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
-        // The published group carries every classic descriptor and the sound catalog that describes
-        // the archive. The inventory indexes both because both are admitted content; product-wide sky
-        // resources have their own manifest and group below.
-        Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
+        // The published group carries every classic descriptor except audio: each site closure publishes
+        // the clips it maps and opens them through its own audio bundle, so the group carries neither WAV
+        // bodies nor a catalog of them. Product-wide sky resources have their own manifest and group below.
+        Assert.DoesNotContain(GeneratedContentFiles(content), path => path.StartsWith("worldrpg/media/audio/", StringComparison.Ordinal));
         // Includes one TEXTURE.205 inventory icon for each of the 20 classic potion recipes.
-        Assert.Equal(338, listed.Count);
+        Assert.Equal(167, listed.Count);
 
         // The score is published by its own command into its own group, so it carries its own generated
         // index and the classic index above does not account for it.
@@ -462,10 +461,11 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", identified["map.fmap0i17"].Path);
         Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", identified["font.classic.0000"].Path);
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", identified["weapon.werecreature"].Path);
-        // The ambient and weather audio publication added 21 source-backed clips to the classic group;
-        // the separate sky group is validated above and does not belong in this count. The 20 classic
-        // potion recipes each publish their TEXTURE.205 inventory icon.
-        Assert.Equal(337, identified.Count);
+        // The group states no audio identity: each site closure publishes its own clips. The separate
+        // sky group is validated above and does not belong in this count. The 20 classic potion recipes
+        // each publish their TEXTURE.205 inventory icon.
+        Assert.DoesNotContain(identified.Keys, id => id.StartsWith("audio.", StringComparison.Ordinal));
+        Assert.Equal(167, identified.Count);
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
@@ -516,7 +516,7 @@ public sealed class PublishedContentDeliveryTests
         DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(content, inputs.ClassicPresentation);
         DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(content, castle.ClassicPresentation);
 
-        Assert.Equal(337, media.Paths.Count);
+        Assert.Equal(167, media.Paths.Count);
         JsonElement inventory = JsonDocument.Parse(content.ReadBytes(DaggerfallUiArt.InventoryPath).ToArray()).RootElement;
         Dictionary<string, string> published = inventory.GetProperty("artifacts").EnumerateArray()
             .Where(artifact => artifact.TryGetProperty("mediaId", out _))
@@ -529,19 +529,27 @@ public sealed class PublishedContentDeliveryTests
     }
 
     [Fact]
-    public void The_published_sound_catalog_names_clips_the_admitted_media_carries()
+    public void Each_site_sidecar_binds_its_audio_cues_to_archive_clips_its_closure_carries()
     {
         ProductContent content = AdmittedContent();
-        JsonElement catalog = JsonDocument.Parse(content.ReadBytes("worldrpg/media/audio/classic-sound-catalog.json").ToArray()).RootElement;
+        JsonElement manifest = JsonDocument.Parse(content.ReadBytes("worldrpg/imports/privateers-hold/media/classic/manifest.json").ToArray()).RootElement;
 
-        // The catalog is the availability record for the whole archive, delivered by name like any
-        // other artifact, so a consumer can see every clip and its disposition rather than assuming
-        // a fixed subset of melee cues.
-        JsonElement[] clips = [.. catalog.GetProperty("clips").EnumerateArray()];
-        Assert.Equal(459, clips.Length);
-        JsonElement[] admitted = [.. clips.Where(clip => clip.GetProperty("disposition").GetString() == "admitted")];
+        // The site's classic sidecar is the record a session reads its clips from, so each cue states
+        // the archive ordinal it was cut from and names a descriptor the closure carries under the
+        // clips root its audio bundle declares.
+        Dictionary<string, JsonElement> resources = manifest.GetProperty("media").GetProperty("resources").EnumerateArray()
+            .ToDictionary(resource => resource.GetProperty("id").GetString()!, StringComparer.Ordinal);
+        JsonElement[] admitted = [.. manifest.GetProperty("audio").EnumerateArray()];
         Assert.Equal(170, admitted.Length);
-        Assert.All(clips.Where(clip => clip.GetProperty("disposition").GetString() != "admitted"), clip => Assert.Equal(JsonValueKind.Null, clip.GetProperty("mediaId").ValueKind));
+        Assert.All(admitted, clip =>
+        {
+            JsonElement resource = resources[clip.GetProperty("mediaId").GetString()!];
+            Assert.Equal("audio", resource.GetProperty("kind").GetString());
+            string path = resource.GetProperty("relativePath").GetString()!;
+            Assert.StartsWith("media/audio/clips/", path, StringComparison.Ordinal);
+            Assert.True(File.Exists(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/privateers-hold", path)), path);
+        });
+        Assert.Equal(admitted.Length, resources.Values.Count(resource => resource.GetProperty("kind").GetString() == "audio"));
 
         // Which archive clip each cue is belongs to the product rather than to the producer that just
         // stated it, so the binding is pinned here as literals: a republish that swapped two identities
@@ -566,15 +574,7 @@ public sealed class PublishedContentDeliveryTests
         int[] sourceOrdinals = [3, 105, .. Enumerable.Range(115, 116), .. Enumerable.Range(237, 9), 347, .. Enumerable.Range(428, 9)];
         Assert.Equal(
             semanticCues.Concat(sourceOrdinals.Select(ordinal => (ordinal, $"audio.source.{ordinal}"))).OrderBy(cue => cue.Item1),
-            admitted.Select(clip => (clip.GetProperty("ordinal").GetInt32(), clip.GetProperty("mediaId").GetString()!)));
-
-        // Every admitted reference resolves inside admitted content: the classic media manifest the
-        // pack reads carries exactly those media identities, so the catalog's references are the ones
-        // the product can follow rather than names only the importer knows.
-        JsonElement manifest = JsonDocument.Parse(content.ReadBytes("worldrpg/imports/privateers-hold/media/classic/manifest.json").ToArray()).RootElement;
-        HashSet<string> carried = [.. manifest.GetProperty("media").GetProperty("resources").EnumerateArray().Select(resource => resource.GetProperty("id").GetString()!)];
-        Assert.All(admitted, clip => Assert.Contains(clip.GetProperty("mediaId").GetString()!, carried));
-        Assert.Equal(admitted.Length, manifest.GetProperty("audio").EnumerateArray().Count());
+            admitted.Select(clip => (clip.GetProperty("sourceRecordOrdinal").GetInt32(), clip.GetProperty("mediaId").GetString()!)).OrderBy(cue => cue.Item1));
     }
 
     [Fact]

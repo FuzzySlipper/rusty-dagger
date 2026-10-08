@@ -1176,7 +1176,7 @@ public sealed record Arena2ClassicMediaPublication(
 
     /// <summary>
     /// The clips this publication emits, stated in the sound catalog's own admission vocabulary. The
-    /// catalog an importer publishes beside these artifacts is built from this list, so its admitted
+    /// catalog the classic-media command reports is built from this list, so its admitted
     /// entries name artifacts this publication actually produced rather than a second table kept in
     /// agreement by hand.
     /// </summary>
@@ -1570,10 +1570,9 @@ public sealed record Arena2ClassicMediaPublication(
 
             byte[] wave = sounds.CreateWave(source.SourceRecordOrdinal);
             RequireArtifactQuota(wave, options, source.MediaId);
-            // Keep the availability catalog at media/audio while the WAV bodies live below a
-            // declared bundle root. The producer still owns this content-root-relative name;
-            // consumers resolve the published media identity through the manifest, never by
-            // constructing a source filename.
+            // The WAV bodies live below the clips root a site's audio bundle declares. The producer
+            // still owns this closure-relative name; consumers resolve the published media identity
+            // through the manifest, never by constructing a source filename.
             result.Add(new(source.MediaId, NormalizedMediaKind.Audio, $"media/audio/clips/{Slug(source.MediaId)}.wav", wave, 0, 0, null, "audio/wav"));
             ClassicAudioManifest manifest = new(source.Id, source.MediaId, source.SourceRecordOrdinal, clip.NumericId, SoundArchive.SampleRate);
             manifest.Validate();

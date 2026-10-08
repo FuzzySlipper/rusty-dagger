@@ -1,6 +1,5 @@
 using System.Buffers.Binary;
 using System.Text;
-using System.Text.Json;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
@@ -9,7 +8,7 @@ using Xunit;
 
 namespace Daggerfall.Import.Tests;
 
-/// <summary>The published catalog of the numeric sound archive and the artifacts its references name.</summary>
+/// <summary>The importer-side catalog of the numeric sound archive and the artifacts its references name.</summary>
 public sealed class SoundCatalogTests
 {
     [CorpusFact]
@@ -89,8 +88,8 @@ public sealed class SoundCatalogTests
     }
 
     /// <summary>
-    /// The reference closure the task asks for: every admitted catalog entry names the artifact the
-    /// publication emitted for it, and the delivered content is what this build produces.
+    /// The reference closure: every admitted catalog entry names the artifact the publication emitted
+    /// for it, a site closure delivers that artifact, and the product-wide group publishes no audio.
     /// </summary>
     [CorpusAndGeneratedContentFact]
     public void Every_admitted_clip_is_carried_by_the_artifact_the_publication_emitted()
@@ -164,49 +163,40 @@ public sealed class SoundCatalogTests
             AssertWave(artifact.Bytes.Span);
             Assert.True(artifact.Bytes.Span[44..].SequenceEqual(archive.GetClip(clip.Ordinal).PcmUnsigned8.Span));
 
-            // The delivered tree carries that same artifact under its content-relative name, which is
-            // the name a consumer holds rather than a path relative to this publication.
-            Assert.Equal(artifact.Bytes.ToArray(), File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", resource.RelativePath)));
+            // A site closure delivers that same artifact under its closure-relative name, below the
+            // clips root its audio bundle declares: the samples come from the same archive ordinal
+            // whichever closure cuts them.
+            Assert.Equal(artifact.Bytes.ToArray(), File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "imports", "privateers-hold", resource.RelativePath)));
         }
 
-        // The published catalog is current and readable. Reading the committed artifact is checked
-        // structurally before the bytes, so a drift names the clip that differs rather than only a
-        // byte position; the byte comparison still pins formatting and the trailing newline.
-        byte[] committed = File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", DaggerfallSoundCatalogJson.RelativePath));
-        DaggerfallSoundCatalog reread = DaggerfallSoundCatalogJson.Read(committed);
-        Assert.Equal(catalog.Clips, reread.Clips);
-        Assert.Equal(catalog.Sources, reread.Sources);
-        Assert.Equal(DaggerfallSoundCatalogJson.Write(catalog), committed);
+        // The product-wide group carries neither clips nor a catalog of them: each site stages and opens
+        // its own clips, and nothing at runtime reads the catalog.
+        Assert.False(Directory.Exists(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "media", "audio")));
     }
 
     /// <summary>
-    /// A persisted catalog that could not be read back as the same record is refused rather than
-    /// accepted: the reader is the boundary a consumer crosses, and it may be handed a file this
-    /// build did not write.
+    /// A catalog that breaks its own invariants is refused by the record, not only by the builder, so a
+    /// catalog assembled any other way cannot carry an ordinal order or an admission the archive denies.
     /// </summary>
     [CorpusFact]
-    public void Refuses_a_persisted_catalog_that_could_not_be_read_back()
+    public void Refuses_a_catalog_that_breaks_its_invariants()
     {
         DaggerfallSoundCatalog catalog = DaggerfallSoundCatalogBuilder.Build(RepositoryArchive(), Admissions());
-        byte[] written = DaggerfallSoundCatalogJson.Write(catalog);
-        Assert.Equal(catalog.Clips, DaggerfallSoundCatalogJson.Read(written).Clips);
-
-        // A version whose meaning is not this one is refused rather than read as if it were.
+        catalog.Validate();
 
         // Ordinals that are not the archive's own order would silently repoint every stored reference.
-        Assert.Throws<InvalidOperationException>(() => DaggerfallSoundCatalogJson.Read(Unvalidated(catalog with { Clips = [.. catalog.Clips.Skip(1), catalog.Clips[0]] })));
+        Assert.Throws<InvalidOperationException>(() => (catalog with { Clips = [.. catalog.Clips.Skip(1), catalog.Clips[0]] }).Validate());
 
         // Two clips naming one artifact: the builder refuses to produce this closure, and the record
-        // refuses to carry it, which is what a consumer of the persisted file relies on.
+        // refuses to carry it.
         DaggerfallSoundClip[] aliased = [.. catalog.Clips];
         aliased[108] = aliased[108] with { MediaId = "audio.melee.dagger.swing" };
-        Assert.Throws<InvalidOperationException>(() => DaggerfallSoundCatalogJson.Read(Unvalidated(catalog with { Clips = aliased })));
+        Assert.Throws<InvalidOperationException>(() => (catalog with { Clips = aliased }).Validate());
 
-        // An admitted clip that states no samples, and bytes that are not a catalog at all.
+        // An admitted clip that states no samples.
         DaggerfallSoundClip[] empty = [.. catalog.Clips];
         empty[106] = empty[106] with { ByteLength = 0 };
-        Assert.Throws<InvalidOperationException>(() => DaggerfallSoundCatalogJson.Read(Unvalidated(catalog with { Clips = empty })));
-        Assert.Throws<InvalidOperationException>(() => DaggerfallSoundCatalogJson.Read(written.AsSpan(0, written.Length / 2)));
+        Assert.Throws<InvalidOperationException>(() => (catalog with { Clips = empty }).Validate());
     }
 
     /// <summary>
@@ -260,10 +250,6 @@ public sealed class SoundCatalogTests
         Read("TEXTURE.207"), Read("TEXTURE.216"), Read("TEXTURE.234"), Read("TEXTURE.245"), Read("FONT0003.FNT"), Read("WEAPON00.CIF"), Read("WEAPON03.CIF"), Read("WEAPON11.CIF"), Read("FONT0000.FNT"), Read("FONT0001.FNT"), Read("FONT0002.FNT"), Read("FONT0004.FNT"), [], Read("FMAP_PAL.COL"), Read("MAP.PAL"), [], Read("TEXTURE.205")));
 
     private static byte[] Read(string name) => File.ReadAllBytes(TestData.Corpus(name));
-
-    /// <summary>Writes a catalog the way a foreign producer might: without this repository's validation.</summary>
-    private static byte[] Unvalidated(DaggerfallSoundCatalog catalog) =>
-        JsonSerializer.SerializeToUtf8Bytes(catalog, PublishedJson.Section);
 
     private static void AssertWave(ReadOnlySpan<byte> wave)
     {

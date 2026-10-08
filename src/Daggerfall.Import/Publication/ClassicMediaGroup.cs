@@ -6,9 +6,16 @@ using Daggerfall.Import.Normalized;
 namespace Daggerfall.Import.Publication;
 
 /// <summary>
-/// The product-wide classic media group: the classic media publication's artifacts, the sound catalog that
-/// describes the archive they cut clips from, and the generated inventory that indexes both.
+/// The product-wide classic media group: the classic media publication's artifacts other than its audio
+/// clips, and the generated inventory that indexes them.
 /// </summary>
+/// <remarks>
+/// The group publishes no audio. Each site closure publishes the clips its sidecar maps from its own
+/// classic media publication, under the audio bundle its payload declares, and the session opens clips
+/// only from that bundle, so product-wide copies of the same WAV bodies would be bytes nothing opens.
+/// The sound catalog is built from the same publication as an importer-side disposition report of the
+/// numeric archive; nothing at runtime reads it, so it is reported by the command rather than published.
+/// </remarks>
 public sealed class ClassicMediaGroup
 {
     /// <summary>The generator the group's inventory names.</summary>
@@ -26,15 +33,16 @@ public sealed class ClassicMediaGroup
 
     public Arena2ClassicMediaPublication Publication { get; }
 
+    /// <summary>The disposition of every clip of the numeric archive, which the group reports and does not publish.</summary>
     public DaggerfallSoundCatalog SoundCatalog { get; }
 
-    /// <summary>Every group-relative artifact the group publishes, the sound catalog included.</summary>
+    /// <summary>Every group-relative artifact the group publishes: the publication's artifacts without its audio clips.</summary>
     public IReadOnlyList<ImportPublicationArtifact> Artifacts { get; }
 
     /// <summary>
-    /// Publishes the classic media and its sound catalog. The catalog's admitted entries are the
-    /// publication's own audio manifests, so "a published artifact carries this clip" is a reference to
-    /// emitted bytes rather than a second list the catalog keeps in agreement.
+    /// Builds the classic media and its sound catalog. The catalog's admitted entries are the
+    /// publication's own audio manifests, so "a site closure carries this clip" is a reference to bytes
+    /// the same publication emits rather than a second list the catalog keeps in agreement.
     /// </summary>
     public static ClassicMediaGroup Create(Arena2ClassicMediaInputs inputs, Arena2ClassicMediaProfile profile)
     {
@@ -44,8 +52,9 @@ public sealed class ClassicMediaGroup
         DaggerfallSoundCatalog catalog = DaggerfallSoundCatalogBuilder.Build(
             SoundArchive.Parse(inputs.DaggerSound, Arena2ClassicMediaPublication.DaggerSoundSourcePath),
             publication.SoundAdmissions);
+        HashSet<string> audio = [.. publication.Audio.Select(clip => clip.MediaId)];
         return new(publication, catalog,
-            [.. publication.Artifacts, new ImportPublicationArtifact(DaggerfallSoundCatalogJson.RelativePath, DaggerfallSoundCatalogJson.Write(catalog))]);
+            [.. publication.Artifacts.Where(artifact => artifact.MediaId is not { } mediaId || !audio.Contains(mediaId))]);
     }
 
     /// <summary>
