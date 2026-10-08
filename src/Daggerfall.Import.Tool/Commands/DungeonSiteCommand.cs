@@ -11,11 +11,10 @@ namespace Daggerfall.Import.Tool.Commands;
 /// </summary>
 internal static class DungeonSiteCommand
 {
-    private static readonly CommandOption TextureTable = CommandOption.Required("--texture-table", "classic|default");
     private static readonly CommandOption SpriteAuthoring = CommandOption.Optional("--sprite-authoring", "SOURCE_DIR");
     private static readonly CommandOption SpriteOverlay = CommandOption.Optional("--sprite-overlay", "sprites/RELATIVE.json");
 
-    private static IReadOnlyList<CommandOption> SiteOptions => [.. SiteInputs.Common, TextureTable, SpriteAuthoring, SpriteOverlay];
+    private static IReadOnlyList<CommandOption> SiteOptions => [.. SiteInputs.Common, SpriteAuthoring, SpriteOverlay];
 
     public static ToolCommand Write { get; } = new("write", SiteOptions, args =>
     {
@@ -58,16 +57,10 @@ internal static class DungeonSiteCommand
     {
         int region = SiteInputs.ParseRegion(args);
         string location = SiteInputs.ParseLocation(args);
-        DungeonTextureTableMode table = args[TextureTable.Name] switch
-        {
-            "classic" => DungeonTextureTableMode.Classic,
-            "default" => DungeonTextureTableMode.Default,
-            _ => throw args.Invalid("--texture-table must be classic or default."),
-        };
         Arena2ClassicMediaProfile classicMedia = AuthoredUi.Profile(args, required: true);
         string arena2 = Path.GetFullPath(args[Options.Arena2.Name]);
         ImportPublicationPlan Build(IReadOnlyList<AuthoredMediaOverlay> dungeonOverlays, IReadOnlyList<AuthoredMediaOverlay> classicOverlays) =>
-            Arena2SitePublication.Dungeon(Arena2SiteSources.ForSite(arena2), region, location, table,
+            Arena2SitePublication.Dungeon(Arena2SiteSources.ForSite(arena2), region, location,
                 SiteInputs.Media(args, classicMedia with { AuthoredOverlays = classicOverlays }, dungeonOverlays));
 
         if (args.Has(SpriteAuthoring.Name) != args.Has(SpriteOverlay.Name))

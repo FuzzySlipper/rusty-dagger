@@ -86,12 +86,6 @@ public sealed class DungeonLogicalSourceSet
     private static string LeafName(string label) => label[(label.LastIndexOf('/') + 1)..];
 }
 
-public enum DungeonTextureTableMode
-{
-    Classic,
-    Default,
-}
-
 /// <summary>Explicit, bounded work limits for one offline normalization call.</summary>
 public sealed record DungeonNormalizationQuotas(
     int MaximumSources,
@@ -120,7 +114,6 @@ public sealed record DungeonNormalizationRequest(
     DungeonLogicalSourceSet Sources,
     int Region,
     string LocationName,
-    DungeonTextureTableMode TextureTableMode,
     DungeonNormalizationQuotas Quotas)
 {
     /// <summary>
@@ -131,7 +124,7 @@ public sealed record DungeonNormalizationRequest(
     public NavigationDerivationConfig Navigation { get; init; } = NavigationDerivationConfig.ClassicDefault;
 
     public static DungeonNormalizationRequest Create(DungeonLogicalSourceSet sources, int region, string locationName) =>
-        new(sources, region, locationName, DungeonTextureTableMode.Classic, DungeonNormalizationQuotas.Default);
+        new(sources, region, locationName, DungeonNormalizationQuotas.Default);
 
     public void Validate()
     {
@@ -142,11 +135,6 @@ public sealed record DungeonNormalizationRequest(
         }
 
         ArgumentException.ThrowIfNullOrWhiteSpace(LocationName);
-        if (TextureTableMode is not DungeonTextureTableMode.Classic and not DungeonTextureTableMode.Default)
-        {
-            throw new ArgumentOutOfRangeException(nameof(TextureTableMode), TextureTableMode, "The dungeon texture table mode is not known.");
-        }
-
         ArgumentNullException.ThrowIfNull(Quotas);
         Quotas.Validate();
         ArgumentNullException.ThrowIfNull(Navigation);
@@ -258,9 +246,7 @@ public static class DungeonNormalizer
             throw new InvalidOperationException($"CLIMATE.PAK has no source pixel at ({climateX}, {climateY}) for '{layout.LocationName}'.");
         }
 
-        ushort[] textureTable = request.TextureTableMode == DungeonTextureTableMode.Classic
-            ? DungeonTextureTableTransform.CreateClassic(layout.LocationId, worldClimate)
-            : DungeonTextureTableTransform.CreateDefaultTable();
+        ushort[] textureTable = DungeonTextureTableTransform.CreateClassic(layout.LocationId, worldClimate);
         ushort climateBase = ClimateBase(worldClimate);
         Builder builder = new(request, layout, arch, blocks, textureTable, climateBase);
         foreach (MapsDungeonBlock blockReference in layout.Blocks

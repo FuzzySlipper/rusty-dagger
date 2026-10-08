@@ -95,7 +95,6 @@ public static class Arena2SitePublication
         Arena2SiteSources sources,
         int region,
         string location,
-        DungeonTextureTableMode textureTable,
         Arena2SiteMedia media)
     {
         ArgumentNullException.ThrowIfNull(sources);
@@ -106,7 +105,6 @@ public static class Arena2SitePublication
                 new DungeonLogicalSourceSet(sources.DungeonSources),
                 region,
                 location,
-                textureTable,
                 DungeonNormalizationQuotas.Default with { MaximumSourceBytes = Arena2SiteSources.MaximumTotalSourceBytes }));
             (GeometryPublication geometry, Arena2DungeonMediaPublication dungeonMedia, Arena2ClassicMediaPublication classicMedia) =
                 PublishMedia(sources, result.Document, result.ReferencedMeshIds, media, $"selected dungeon media '{location}'");

@@ -175,14 +175,14 @@ site_common=(--arena2 "$arena2" --ui-authored-assets "$ui_assets" --ui-original 
 site_records=import-records/sites
 mapfile -t overlay_args < <(site_overlay privateers-hold)
 tool write "${site_common[@]}" --out content/worldrpg/imports/privateers-hold \
-  --source-manifest "$site_records/privateers-hold.sources.json" --region 17 --location "Privateer's Hold" --texture-table classic "${overlay_args[@]}"
+  --source-manifest "$site_records/privateers-hold.sources.json" --region 17 --location "Privateer's Hold" "${overlay_args[@]}"
 mapfile -t overlay_args < <(site_overlay castle-necromoghan)
 tool write "${site_common[@]}" --out content/worldrpg/imports/castle-necromoghan \
-  --source-manifest "$site_records/castle-necromoghan.sources.json" --region 17 --location "Castle Necromoghan" --texture-table default "${overlay_args[@]}"
+  --source-manifest "$site_records/castle-necromoghan.sources.json" --region 17 --location "Castle Necromoghan" "${overlay_args[@]}"
 tool write "${site_common[@]}" --out content/worldrpg/imports/the-hawkston-cemetery \
-  --source-manifest "$site_records/the-hawkston-cemetery.sources.json" --region 17 --location "The Hawkston Cemetery" --texture-table default
+  --source-manifest "$site_records/the-hawkston-cemetery.sources.json" --region 17 --location "The Hawkston Cemetery"
 tool write "${site_common[@]}" --out content/worldrpg/imports/the-tombs-of-klerd \
-  --source-manifest "$site_records/the-tombs-of-klerd.sources.json" --region 0 --location "The Tombs of Klerd" --texture-table default
+  --source-manifest "$site_records/the-tombs-of-klerd.sources.json" --region 0 --location "The Tombs of Klerd"
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/the-hawkston-cemetery/exterior \
   --source-manifest "$site_records/the-hawkston-cemetery-exterior.sources.json" --region 17 --location "The Hawkston Cemetery" --profile exterior
 tool rmb-spatial "${site_common[@]}" --out content/worldrpg/imports/the-tombs-of-klerd/exterior \
