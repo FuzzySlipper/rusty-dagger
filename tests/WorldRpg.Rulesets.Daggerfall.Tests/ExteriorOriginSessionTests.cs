@@ -464,6 +464,69 @@ public sealed class ExteriorOriginSessionTests
     }
 
     [Fact]
+    public void A_transition_after_walking_past_the_local_envelope_resets_the_origin_and_keeps_a_far_actor_through_save()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        ProductContent admitted = FullContent(root);
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        DaggerfallSiteProfiles profiles = new([exterior, interior]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        PopulateContent(content, interior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        RulesetSavePayload save;
+        long far;
+        Vector3 farProfile;
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults)))
+        {
+            session.AdmitSiteProfiles(profiles);
+            // Walk 20 km east; the in-play rebase keeps the player and a nearby rat close to the origin.
+            session.State.PlayerControl.MoveTo(new Vector3(20000f, 1f, 5f));
+            far = session.SpawnActor("rat", new ActorPose(new WorldPoint(20002f, 1f, 5f), 0f));
+            Assert.True(session.Sites.RebaseExteriorIfNeeded());
+            farProfile = session.Sites.LocalToProfile(session.State.Actors.Get(far).Position.ToVector());
+
+            // Returning the origin to cell zero leaves the rat beyond the local envelope. The reset
+            // excludes it from the Engine batch instead of refusing, and still carries it into the
+            // profile frame its site capture reads.
+            Assert.True(session.TryTransitionTo(interior.ProfileKey));
+            Assert.Equal(interior.ProfileKey, session.Sites.ActiveProfile);
+            WorldOriginCommitReceipt reset = engine.OriginCommits[^1];
+            Assert.Equal((0L, 0L, 0L), (reset.OriginAfterCellX, reset.OriginAfterCellY, reset.OriginAfterCellZ));
+            Assert.True(reset.ExcludedEntityCount >= 1);
+            save = session.CaptureSave();
+        }
+
+        DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
+        var delta = Assert.Single(captured.SiteDeltas, value => value.Profile.Require() == exterior.ProfileKey);
+        var rat = Assert.Single(delta.DynamicActors, actor => actor.EntityId == far);
+        Assert.Equal(farProfile.X, rat.X, 2);
+        Assert.Equal(farProfile.Z, rat.Z, 2);
+
+        List<string> resumedReleases = [];
+        ContentFake resumedContent = new(resumedReleases);
+        PopulateContent(resumedContent, exterior);
+        PopulateContent(resumedContent, interior);
+        SpatialFake resumedSpatial = SpatialFake.Create(interior.SpatialArtifact.Sha256, resumedReleases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
+            new(definitions, exterior, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save);
+        Assert.True(restored.TryTransitionTo(exterior.ProfileKey));
+        DaggerfallSavePayload returned = DaggerfallSavePayload.Read(restored.CaptureSave());
+        // Twenty kilometres from Charing its location closure stays unloaded, so the rat waits detached in
+        // the site delta, at the profile position the reset carried it to, until the player comes back.
+        Assert.False(restored.State.Actors.TryGet(far, out _));
+        var retained = Assert.Single(returned.SiteDeltas.SelectMany(value => value.DynamicActors), actor => actor.EntityId == far);
+        Assert.Equal(farProfile.X, retained.X, 2);
+        Assert.Equal(farProfile.Z, retained.Z, 2);
+    }
+
+    [Fact]
     public void Same_profile_relocation_updates_the_exterior_window_and_rebases_before_returning()
     {
         string root = TestData.RepositoryRoot;
