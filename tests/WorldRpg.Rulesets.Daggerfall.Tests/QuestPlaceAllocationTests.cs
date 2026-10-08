@@ -180,6 +180,6 @@ public sealed class QuestPlaceAllocationTests
         root["questSources"]!["resources"]!["declarations"]!.AsArray().Add(JsonNode.Parse("""
             {"quest":"allocation","sourceFile":"allocation.txt","sourceLine":1,"kind":"place","symbol":{"sourceSpelling":"_house_","canonicalId":"house"},"sourceText":"Place _house_ local house","targetSourceSpelling":"house","targetCanonicalId":"house","placeKind":"local","parameters":[],"foe":null,"item":null,"person":null,"place":{"sites":[{"sourceSpelling":"house","canonicalId":"house"}]}}
             """));
-        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
+        return TestPayload.WithQuestSections(root.AsObject());
     }
 }

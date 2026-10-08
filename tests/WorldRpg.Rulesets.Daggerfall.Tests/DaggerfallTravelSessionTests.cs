@@ -485,7 +485,7 @@ public sealed class DaggerfallTravelSessionTests
             {"kind":"task","firstLine":3,"lines":["_deadline_ task:","log 10 step 1","end quest"],"global":null},
             {"kind":"headless","firstLine":6,"lines":["start timer _deadline_"],"global":null}],"diagnostics":[]}
             """));
-        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
+        return TestPayload.WithQuestSections(root.AsObject());
     });
     private static readonly SharedFixture<(DaggerfallSiteProfile Profile, ResolvedCompositionIdentity Identity)> Inputs = new(() =>
         (ReadInputs(TestData.RepositoryRoot), GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot),

@@ -99,7 +99,7 @@ public sealed class LycanthropySessionTests
         root["questSources"]!["quests"]!.AsArray().Add(System.Text.Json.Nodes.JsonNode.Parse("""
             {"name":"curefixture","displayName":"Cure","sourceFile":"curefixture.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"headless","firstLine":1,"lines":["cure lycanthropy"],"global":null}],"diagnostics":[]}
             """));
-        var definitions = DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
+        var definitions = TestPayload.WithQuestSections(root.AsObject());
         using var s = Restore(null, definitions);
         s.State.RacialOverrides.Select(DaggerfallRacialKind.Werewolf, "curse", 0); Cast(s);
         long before = Minute(s);

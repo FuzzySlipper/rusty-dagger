@@ -78,7 +78,7 @@ public sealed class QuestResourceSelectionTests
         root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
             {"name":"selected","displayName":"","sourceFile":"selected.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[]}
             """));
-        var definitions = DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
+        var definitions = TestPayload.WithQuestSections(root.AsObject());
         DaggerfallQuestInstances quests = new(definitions, RandomMinimum.Create());
         quests.BindResourceAllocator(Allocator(definitions));
         var first = quests.Start(new("first", "selected.txt", "selected", DaggerfallQuestLifecycle.Active, null, [], []));

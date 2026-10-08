@@ -403,6 +403,6 @@ public sealed class QuestItemLifecycleTests
             [{"kind":"headless","firstLine":2,"lines":["get item _gift_ saying 1010","have _gift_ set _seen_"],"global":null},{"kind":"variable","firstLine":4,"lines":["variable _seen_"],"global":null}]
             """);
         root["questSources"]!["quests"]!.AsArray().Add(source);
-        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
+        return TestPayload.WithQuestSections(root.AsObject());
     }
 }

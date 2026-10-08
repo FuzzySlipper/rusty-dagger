@@ -129,6 +129,6 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
              "messages":[{"id":10,"firstLine":1,"lines":["Same text."]},{"id":20,"firstLine":2,"lines":["Same text."]},{"id":30,"firstLine":3,"lines":["%pcn wrote for _giver_."]}],
              "blocks":[{"kind":"variable","firstLine":1,"lines":["variable _stop_"],"global":null},{"kind":"task","firstLine":2,"lines":["until _stop_ performed:","say 10","journal note 30"],"global":null},{"kind":"headless","firstLine":5,"lines":["log 10 9","log 20 step 2"],"global":null}],"diagnostics":[]}
             """));
-        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
+        return TestPayload.WithQuestSections(root.AsObject());
     }
 }

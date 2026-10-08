@@ -91,6 +91,6 @@ public sealed class CalendarIntervalReconciliationTests
             {"kind":"task","firstLine":3,"lines":["_deadline_ task:","start task _hit_"],"global":null},
             {"kind":"headless","firstLine":5,"lines":["start timer _deadline_","train pc LongBlade"],"global":null}],"diagnostics":[]}
             """));
-        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
+        return TestPayload.WithQuestSections(root.AsObject());
     });
 }

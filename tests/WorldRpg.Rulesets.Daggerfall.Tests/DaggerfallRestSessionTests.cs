@@ -115,7 +115,7 @@ public sealed class DaggerfallRestSessionTests
             {"kind":"task","firstLine":5,"lines":["_ask_ task:","prompt 1010 yes _yes_ no _no_"],"global":null},
             {"kind":"headless","firstLine":7,"lines":["start timer _ask_"],"global":null}],"diagnostics":[]}
             """));
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
+        DaggerfallDefinitions definitions = TestPayload.WithQuestSections(root.AsObject());
         DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content);
         List<string> releases = [];
