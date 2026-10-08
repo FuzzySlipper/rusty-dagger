@@ -118,7 +118,8 @@ internal class SpatialFake : DispatchProxy
         return null;
     }
 
-    // Like Engine: a trigger's geometry is its row from the last reconcile or restore, and an inactive
+    // Like Engine: each reconcile or restore replaces the complete trigger geometry, so a trigger's
+    // geometry is its row from the last one and a trigger that request left out has none; an inactive
     // trigger contains nothing. Overlap facts are not modelled here.
     private readonly Dictionary<ulong, SpatialEntityCollider> triggerRows = [];
     private readonly HashSet<ulong> inactiveTriggers = [];
@@ -129,6 +130,7 @@ internal class SpatialFake : DispatchProxy
     private SpatialTriggerReconcileResult ReconcileTriggerRows(SpatialTriggerReconcileRequest request)
     {
         TriggerReconcileCalls++;
+        triggerRows.Clear();
         foreach (SpatialEntityCollider row in request.Entities.Span)
             if (row.Trigger) triggerRows[row.Entity] = row;
         return default;
@@ -136,19 +138,30 @@ internal class SpatialFake : DispatchProxy
 
     private SpatialTriggerRestoreReceipt RestoreTriggerRows(SpatialTriggerRestoreRequest request)
     {
+        HashSet<ulong> known = [.. triggerRows.Keys];
+        triggerRows.Clear();
         foreach (SpatialEntityCollider row in request.Entities.Span)
             if (row.Trigger) triggerRows[row.Entity] = row;
         // A restore replaces the complete active set: every known trigger outside it becomes inactive.
         HashSet<ulong> active = [.. request.ActiveTriggers.ToArray()];
         inactiveTriggers.Clear();
-        foreach (ulong trigger in triggerRows.Keys.Concat(TriggerRegistrations.Select(registration => registration.Trigger)))
+        foreach (ulong trigger in known.Concat(triggerRows.Keys).Concat(TriggerRegistrations.Select(registration => registration.Trigger)))
             if (!active.Contains(trigger)) inactiveTriggers.Add(trigger);
         return default;
     }
 
+    /// <summary>The active triggers whose current row contains <paramref name="point"/>, as Engine answers a point query.</summary>
+    internal ulong[] TriggersAt(Vector3 point) =>
+        [.. TriggerHits([point]).Select(hit => hit.Trigger)];
+
     private SpatialTriggerPointQueryResult QueryTriggerRows(SpatialTriggerPointQueryRequest request)
     {
         Vector3[] points = request.Points.ToArray();
+        return new SpatialTriggerPointQueryResult(TriggerHits(points), checked((uint)points.Length));
+    }
+
+    private SpatialTriggerPointHit[] TriggerHits(Vector3[] points)
+    {
         List<SpatialTriggerPointHit> hits = [];
         for (int index = 0; index < points.Length; index++)
             foreach (SpatialEntityCollider row in triggerRows.Values.OrderBy(row => row.Entity))
@@ -157,7 +170,7 @@ internal class SpatialFake : DispatchProxy
                     && points[index].Y > row.Min.Y && points[index].Y < row.Max.Y
                     && points[index].Z > row.Min.Z && points[index].Z < row.Max.Z)
                     hits.Add(new SpatialTriggerPointHit(checked((uint)index), row.Entity));
-        return new SpatialTriggerPointQueryResult(hits.ToArray(), checked((uint)points.Length));
+        return [.. hits];
     }
 
     private SpatialTriggerLifecycleResult SetTriggerActive(SpatialTriggerSetActiveRequest request)

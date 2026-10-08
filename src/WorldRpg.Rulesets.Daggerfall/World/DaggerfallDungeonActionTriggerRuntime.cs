@@ -172,36 +172,36 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
     }
 
     /// <summary>
-    /// Reconciles active trigger volumes and dispatches only Engine-reported enter facts for the
-    /// player. Exit/continued facts remain Engine state and do not get mirrored into the graph.
+    /// The active profile's contact trigger volumes, for the session's one trigger reconcile. Engine
+    /// replaces its whole trigger geometry and overlap set on every reconcile, so these rows go into
+    /// the same request as the water volumes and the player rather than a request of their own.
     /// </summary>
-    internal IReadOnlyList<DaggerfallDungeonActionDispatch> Reconcile(
-        DaggerfallDungeonActionGraph graph,
-        PlayerControlState player,
-        EntityId playerEntity,
-        ulong tick)
+    internal IEnumerable<SpatialEntityCollider> ContactColliders(DaggerfallDungeonActionGraph graph, ulong tick)
     {
         ThrowIfDisposed();
         ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(player);
         ProfileRuntime profile = RequireActiveProfile();
         _latestTick = tick;
         if (!StringComparer.Ordinal.Equals(graph.ProfileId, _activeProfile.LogicalId))
             throw new InvalidOperationException($"Dungeon action graph '{graph.ProfileId}' is not active for trigger profile '{_activeProfile.LogicalId}'.");
+        return profile.Triggers.Where(trigger => trigger.ContactEvent is not null).Select(Project).ToArray();
+    }
 
-        List<SpatialEntityCollider> entities = new(profile.Triggers.Count + 1);
-        foreach (TriggerRuntime trigger in profile.Triggers.Where(trigger => trigger.ContactEvent is not null))
-            entities.Add(Project(trigger));
-        entities.Add(_movement.ProjectCharacterCollider(player, playerEntity.Value));
-
-        SpatialTriggerReconcileResult receipt = _spatial.ReconcileTriggers(new SpatialTriggerReconcileRequest(
-            _movement.Session,
-            tick,
-            SpatialTriggerCause.Movement,
-            entities.ToArray()));
-
+    /// <summary>
+    /// Dispatches only Engine-reported enter facts for the player into the action graph. Exit and
+    /// continued facts remain Engine state and do not get mirrored into the graph; facts for other
+    /// triggers in the same reconcile are not this runtime's.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallDungeonActionDispatch> Dispatch(
+        DaggerfallDungeonActionGraph graph,
+        ReadOnlySpan<SpatialTriggerFact> facts,
+        EntityId playerEntity)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(graph);
+        ProfileRuntime profile = RequireActiveProfile();
         List<DaggerfallDungeonActionDispatch> dispatches = [];
-        foreach (SpatialTriggerFact fact in receipt.Facts.Span)
+        foreach (SpatialTriggerFact fact in facts)
         {
             if (!fact.Enter || fact.Subject != playerEntity.Value)
                 continue;
@@ -287,10 +287,14 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
     private void RestoreActiveProfile(SpatialEntityCollider? restoredPlayerCollider = null)
     {
         ProfileRuntime profile = RequireActiveProfile();
+        // Engine restores the session's complete active-trigger set, so the triggers other owners
+        // registered (water volumes) keep their current state; only action triggers change here.
+        HashSet<ulong> actionTriggers = [.. _profiles.Values.SelectMany(value => value.Triggers).Select(trigger => trigger.Entity.Value)];
         ulong[] activeTriggers = profile.Triggers
             .Where(trigger => trigger.ContactEvent is not null)
             .Select(trigger => trigger.Entity.Value)
-            .OrderBy(value => value)
+            .Concat(_movement.ActiveTriggers.Where(trigger => !actionTriggers.Contains(trigger)))
+            .Order()
             .ToArray();
         SpatialEntityCollider[] baseline = profile.Triggers
             .Where(trigger => trigger.ContactEvent is not null)

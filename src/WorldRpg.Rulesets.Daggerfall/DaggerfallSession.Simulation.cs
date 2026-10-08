@@ -72,7 +72,7 @@ internal sealed partial class DaggerfallSession
         _doors.Advance(update.DeltaSeconds);
         _sites.Projection.AdvanceMotion(update.DeltaSeconds);
         CharacterStepEnvironment doorEnvironment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
-        ReconcileWaterTriggers(doorEnvironment, simulationStep);
+        ReconcileTriggers(doorEnvironment, simulationStep, actionGraph);
         CharacterWaterVolume? activeWater = State.Swimming.ActiveVolume(doorEnvironment.WaterVolumes.Span);
         bool waterWalking = State.Effects.GrantsWaterWalking(DaggerfallActorIdentity.PlayerEntityId);
         bool wallAhead = _spatial.TryProbeClimbWall(State.PlayerControl, CharacterWallProbeDirection.Forward, out SpatialHit forwardHit, doorEnvironment)
@@ -142,9 +142,8 @@ internal sealed partial class DaggerfallSession
             // interactions from observing a projection whose actors and geometry are intentionally absent.
             activeLocationLoaded = _sites.ActiveLocationLoaded;
         }
-        if (movement is not null && actionGraph is not null)
-            _ = ReportDungeonActions(_sites.ActionTriggers.Reconcile(actionGraph, State.PlayerControl,
-                State.Actors.Player.Actor.Entity, simulationStep));
+        if (movement is not null)
+            ReconcileTriggers(doorEnvironment, simulationStep, actionGraph);
         if (movement is not null && State.DungeonDiscoveries.TryGetValue(_activeProfileKey, out DaggerfallDungeonDiscovery? discovery))
             _dungeonVisibility.Observe(discovery, State.PlayerControl, _doors, doorEnvironment, simulationStep,
                 _tuning.Camera.EyeHeight, _sites.LocalCompensation);
@@ -173,7 +172,7 @@ internal sealed partial class DaggerfallSession
         // whether an actor stands in water, so after the origin moves they are reconciled again in the new
         // frame before any actor steps. The player's place relative to the water is unchanged by it.
         if (_sites.RebaseExteriorIfNeeded())
-            ReconcileWaterTriggers(_sites.CharacterEnvironment(State.PlayerControl.Motion), simulationStep);
+            ReconcileTriggers(_sites.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, actionGraph);
         _camera.Update(State.PlayerControl);
         if (!activeLocationLoaded) return;
         if (!alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
@@ -304,16 +303,25 @@ internal sealed partial class DaggerfallSession
     /// service. The player's swimming reads the overlap facts; every other actor's water is the trigger
     /// rows this leaves current.
     /// </summary>
-    private void ReconcileWaterTriggers(CharacterStepEnvironment environment, ulong simulationStep)
+    /// <summary>
+    /// The step's one trigger reconcile. Engine replaces its whole trigger geometry and overlap set on
+    /// every reconcile, so water volumes, the active dungeon action triggers and the player go into one
+    /// request: a request missing either family would drop its rows (actor navigation then finds no
+    /// water) and report false exits and re-entries. Each owner reads its own facts from the result.
+    /// </summary>
+    private void ReconcileTriggers(CharacterStepEnvironment environment, ulong simulationStep, DaggerfallDungeonActionGraph? actionGraph)
     {
-        SpatialEntityCollider[] waterTriggers =
+        EntityId player = State.Actors.Player.Actor.Entity;
+        SpatialEntityCollider[] triggers =
         [
             .. environment.WaterVolumes.Span.ToArray().Select(SpatialMovementSystem.ProjectWaterCollider),
-            _spatial.ProjectCharacterCollider(State.PlayerControl, State.Actors.Player.Actor.Entity.Value),
+            .. actionGraph is null ? [] : _sites.ActionTriggers.ContactColliders(actionGraph, simulationStep),
+            _spatial.ProjectCharacterCollider(State.PlayerControl, player.Value),
         ];
-        SpatialTriggerReconcileResult reconciliation = _spatial.ReconcileTriggers(simulationStep, waterTriggers);
-        State.Swimming.ObserveTriggers(reconciliation.Facts.Span,
-            State.Actors.Player.Actor.Entity.Value, environment.WaterVolumes.Span);
+        SpatialTriggerReconcileResult reconciliation = _spatial.ReconcileTriggers(simulationStep, triggers);
+        State.Swimming.ObserveTriggers(reconciliation.Facts.Span, player.Value, environment.WaterVolumes.Span);
+        if (actionGraph is not null)
+            _ = ReportDungeonActions(_sites.ActionTriggers.Dispatch(actionGraph, reconciliation.Facts.Span, player));
     }
 
     private void ApplyAttackImpacts()

@@ -464,6 +464,43 @@ public sealed class ExteriorOriginSessionTests
     }
 
     [Fact]
+    public void An_ordinary_step_keeps_the_water_trigger_rows_beside_the_action_triggers_for_actor_navigation()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        ProductContent admitted = FullContent(root);
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
+            new DaggerfallSessionComposition(definitions, exterior, DaggerfallTuning.Defaults));
+        Assert.True(session.State.DungeonActions.ContainsKey(exterior.ProfileKey));
+        session.State.PlayerControl.MoveTo(new Vector3(5, 1, 5));
+        int reconcilesBefore = spatial.TriggerReconcileCalls;
+
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        // A step that moves the player and leaves the origin alone still reconciles after movement, with
+        // the action graph admitted. Engine keeps only the rows of the last reconcile, so the water
+        // volumes must be in it: actor navigation asks those rows whether an actor stands in water.
+        Assert.Equal(Vector3.Zero, session.Sites.LocalCompensation);
+        Assert.True(spatial.TriggerReconcileCalls - reconcilesBefore >= 2);
+        CharacterWaterVolume[] water = session.Sites.CharacterEnvironment(session.State.PlayerControl.Motion).WaterVolumes.ToArray();
+        Assert.NotEmpty(water);
+        foreach (CharacterWaterVolume volume in water)
+        {
+            SpatialEntityCollider row = spatial.TriggerRows[volume.Trigger];
+            Assert.Equal(volume.Minimum, row.Min);
+            Assert.Equal(volume.Maximum, row.Max);
+            Assert.Contains(volume.Trigger, spatial.TriggersAt((volume.Minimum + volume.Maximum) / 2f));
+        }
+    }
+
+    [Fact]
     public void A_transition_after_walking_past_the_local_envelope_resets_the_origin_and_keeps_a_far_actor_through_save()
     {
         string root = TestData.RepositoryRoot;
