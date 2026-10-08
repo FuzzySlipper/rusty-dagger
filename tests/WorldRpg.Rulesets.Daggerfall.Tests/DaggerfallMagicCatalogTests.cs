@@ -90,11 +90,9 @@ public sealed class DaggerfallMagicCatalogTests
     {
         // No spell can resolve through a payload that carries no catalog, so the loss is named where the
         // payload is read rather than surfacing later as an empty resolution.
-        JsonObject payload = TestPayload.Sections("magic");
-        // A magic value that is not a catalog object is refused by the same check as an absent one.
-        Assert.True(payload.ContainsKey("magic"), "the published payload carries no magic section to replace");
-        payload["magic"] = null;
-        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
+        byte[] payload = TestPayload.Without("magic");
+        Assert.Null(TestSessions.TopLevelSection(payload, "magic"));
+        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(payload));
 
         Assert.True(
             failure.Diagnostics.Any(message => message.Contains("no magic catalog section", StringComparison.Ordinal)),

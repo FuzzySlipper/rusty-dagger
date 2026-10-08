@@ -105,8 +105,9 @@ public sealed class DaggerfallNamesRumorsBiographiesTests
     [Fact]
     public void Refuses_a_missing_section_and_a_reference_with_no_text()
     {
-        DaggerfallContentException missing = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => payload["names"] = null)));
+        byte[] withoutNames = TestPayload.Without("names");
+        Assert.Null(TestSessions.TopLevelSection(withoutNames, "names"));
+        DaggerfallContentException missing = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(withoutNames));
         Assert.Contains(missing.Diagnostics, diagnostic => diagnostic.Contains("publishes no names section", StringComparison.Ordinal));
 
         DaggerfallContentException dangling = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
@@ -122,8 +123,7 @@ public sealed class DaggerfallNamesRumorsBiographiesTests
         TestPayload.Definitions;
 
     /// <summary>
-    /// The joined payload with its names and biographies sections edited; only those two are parsed. A
-    /// names value that is not a section object is refused by the same check as an absent one.
+    /// The joined payload with its names and biographies sections edited; only those two are parsed.
     /// </summary>
     private static byte[] Payload(Action<JsonObject> mutate)
     {

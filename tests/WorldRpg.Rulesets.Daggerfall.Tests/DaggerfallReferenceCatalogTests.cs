@@ -266,26 +266,8 @@ public sealed class DaggerfallReferenceCatalogTests
         change(pack);
         byte[] payload = pack.ContainsKey("catalogs")
             ? TestPayload.Splice(pack)
-            : RemoveTopLevelSection(TestPayload.CombinedText, "catalogs");
+            : TestPayload.Without("catalogs");
         return Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(payload));
-    }
-
-    private static byte[] RemoveTopLevelSection(string json, string section)
-    {
-        using JsonDocument document = JsonDocument.Parse(json);
-        StringBuilder output = new(json.Length);
-        output.Append('{');
-        bool first = true;
-        foreach (JsonProperty property in document.RootElement.EnumerateObject())
-        {
-            if (property.Name == section) continue;
-            if (!first) output.Append(',');
-            first = false;
-            output.Append(JsonSerializer.Serialize(property.Name)).Append(':').Append(property.Value.GetRawText());
-        }
-
-        output.Append('}');
-        return System.Text.Encoding.UTF8.GetBytes(output.ToString());
     }
 
     private static DaggerfallDefinitions ReadPack() => TestPayload.Definitions;
