@@ -34,14 +34,17 @@ public sealed class QuestEnvironmentTests
     }
 
     [Fact]
-    public void Disabled_video_records_unavailable_without_completing_the_action()
+    public void Disabled_video_counts_as_skipped_and_the_task_continues()
     {
+        // Owner decision (#9703): turning videos off is a presentation preference, not a quest blocker.
+        // The action completes as a skipped video would, with nothing played and nothing unavailable.
         using var f = new SanguineRoseSessionTests.Fixture(definitions: Definitions("play video 1", "end quest"),
             prepareComposition: composition => composition with { VideosEnabled = false });
         Start(f.Session); Advance(f.Session);
-        var task = Assert.Single(f.Session.State.Quests.All).Tasks[0];
-        Assert.Contains("disabled", task.OperationState[0].UnavailableReason);
-        Assert.All(task.OperationCompleted, Assert.False);
+        var quest = Assert.Single(f.Session.State.Quests.All);
+        Assert.All(quest.Tasks[0].OperationCompleted, Assert.True);
+        Assert.Null(quest.Tasks[0].OperationState[0].UnavailableReason);
+        Assert.Null(f.Session.Cinematics?.ActiveSource);
     }
 
     [Fact]
