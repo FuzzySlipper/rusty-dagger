@@ -97,7 +97,7 @@ internal sealed partial class ImportToolFixture
                     RuntimeTerrainResources = Arena2SitePublication.RuntimeTerrainResources(),
                 };
                 ImportPublicationPlan plan = name == "write"
-                    ? Arena2SitePublication.Dungeon(Arena2SiteSources.ForSite(Arena2), 17, "Privateer's Hold", DungeonTextureTableMode.Classic, siteMedia)
+                    ? Arena2SitePublication.Dungeon(Arena2SiteSources.ForSite(Arena2), 17, "Privateer's Hold", siteMedia)
                     : Arena2SitePublication.Rmb(Arena2SiteSources.ForSite(Arena2), RmbRegion, RmbLocation, Interior ? new RmbBuildingSelection(1, 1, 0) : null, siteMedia).Item1;
                 plan = plan.WithInvocation(new ImportInvocation(["daggerfall-import-tool", .. Arguments(name)], []));
                 Artifacts(At("output"), plan.Artifacts);

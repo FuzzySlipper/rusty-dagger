@@ -41,7 +41,7 @@ public sealed class Arena2ConversionTests
         ushort[] table = DungeonTextureTableTransform.CreateClassic(50050, 231);
 
         Assert.Equal([23, 22, 19, 22, 20, 368], table);
-        Assert.NotEqual(DungeonTextureTableTransform.CreateDefaultTable(), table);
+        Assert.NotEqual([119, 120, 122, 123, 124, 168], table);
     }
 
     [Fact]

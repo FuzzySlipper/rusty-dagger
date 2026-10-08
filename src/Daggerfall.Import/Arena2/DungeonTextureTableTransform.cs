@@ -22,12 +22,6 @@ public static class DungeonTextureTableTransform
     private static readonly ushort[] ClimateTextureArchives = [19, 119, 319, 419, 119];
     private static readonly byte[] ClimateIndices = [0, 0, 0, 1, 2, 3, 4, 5, 5, 5];
 
-    /// <summary>Gets a copy of the classic default, non-randomized texture table.</summary>
-    public static ushort[] CreateDefaultTable()
-    {
-        return SourceTextureArchives.ToArray();
-    }
-
     /// <summary>
     /// Reproduces the classic per-location dungeon texture table from its
     /// location ID and CLIMATE.PAK climate value.

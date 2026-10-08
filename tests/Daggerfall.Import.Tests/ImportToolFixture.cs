@@ -108,7 +108,7 @@ internal sealed partial class ImportToolFixture : IDisposable
             ["--output"] = At("report.json"), ["--repository"] = TestData.RepositoryRoot, ["--publication"] = Publication,
             ["--region"] = name == "rmb-spatial" ? RmbRegion.ToString(System.Globalization.CultureInfo.InvariantCulture) : "17",
             ["--location"] = name == "rmb-spatial" ? RmbLocation : "Privateer's Hold",
-            ["--source-manifest"] = At("site.sources.json"), ["--texture-table"] = "classic", ["--profile"] = Interior ? "interior" : "exterior",
+            ["--source-manifest"] = At("site.sources.json"), ["--profile"] = Interior ? "interior" : "exterior",
             ["--ui-authored-assets"] = Repo("data/ui-authored-assets.json"), ["--ui-original"] = Repo("data/ui-original"),
             ["--authoring"] = name == "sprite-overlay-write" ? At("writer-authoring") : At("authoring"),
             ["--overlay"] = "sprites/test.json", ["--input"] = OverlayFile, ["--id"] = Sprites.Catalog.Entries.First().Id,
