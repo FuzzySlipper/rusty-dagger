@@ -89,9 +89,9 @@ public sealed class DaggerfallRaceExposureTests
     [InlineData(0, 55)]
     [InlineData(1, 85)]
     [InlineData(3, 30)]
-    [InlineData(4, 5)]
+    [InlineData(4, 0)]
     public void Race_tolerance_uses_the_donor_modifier_without_becoming_a_biography_assumption(int tolerance, int expected) =>
-        Assert.Equal(expected, DaggerfallPoisonPolicy.SavingThrowChance(50, raceTolerance: (DaggerfallDiseaseCareerTolerance)tolerance));
+        Assert.Equal(expected, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50, raceTolerance: (DaggerfallDiseaseCareerTolerance)tolerance));
 
     private static DaggerfallSession SessionWithPlayerRaceImmunity(int flag, RulesetSavePayload? save = null)
     {

@@ -309,26 +309,16 @@ internal static class DaggerfallMagicAdmissionPolicy
                 return 0;
         }
 
-        int savingThrow = 50;
-        DaggerfallMagicRaceToleranceFlags? race = profile.PlayerRaceTolerances;
-        bool raceImmune = false;
-        bool raceCriticalWeakness = false;
-        if (race is not null)
+        DaggerfallMagicToleranceFlags raceTolerances = DaggerfallMagicToleranceFlags.Normal;
+        if (profile.PlayerRaceTolerances is DaggerfallMagicRaceToleranceFlags race)
         {
-            if (RaceMatches(elementType, race.Resistance, effectFlags)) savingThrow += 30;
-            raceImmune = RaceMatches(elementType, race.Immunity, effectFlags);
-            if (RaceMatches(elementType, race.LowTolerance, effectFlags)) savingThrow -= 25;
-            raceCriticalWeakness = RaceMatches(elementType, race.CriticalWeakness, effectFlags);
+            if (RaceMatches(elementType, race.Resistance, effectFlags)) raceTolerances |= DaggerfallMagicToleranceFlags.Resistant;
+            if (RaceMatches(elementType, race.Immunity, effectFlags)) raceTolerances |= DaggerfallMagicToleranceFlags.Immune;
+            if (RaceMatches(elementType, race.LowTolerance, effectFlags)) raceTolerances |= DaggerfallMagicToleranceFlags.LowTolerance;
+            if (RaceMatches(elementType, race.CriticalWeakness, effectFlags)) raceTolerances |= DaggerfallMagicToleranceFlags.CriticalWeakness;
         }
 
-        DaggerfallMagicToleranceFlags tolerances = CareerToleranceFlags(profile.CareerTolerances, effectFlags);
-        // The donor identifies the additive mixed-tolerance handling as a deviation from
-        // classic: immunity wins; otherwise critical weakness permits full effect.
-        if (raceImmune || (tolerances & DaggerfallMagicToleranceFlags.Immune) != 0) return 0;
-        if (raceCriticalWeakness || (tolerances & DaggerfallMagicToleranceFlags.CriticalWeakness) != 0) return 100;
-        if ((tolerances & DaggerfallMagicToleranceFlags.LowTolerance) != 0) savingThrow -= 25;
-        if ((tolerances & DaggerfallMagicToleranceFlags.Resistant) != 0) savingThrow += 25;
-
+        DaggerfallMagicToleranceFlags careerTolerances = CareerToleranceFlags(profile.CareerTolerances, effectFlags);
         int biographyModifier = 0;
         if ((effectFlags & DaggerfallMagicEffectFlags.Magic) != 0)
             biographyModifier = checked(biographyModifier + profile.BiographyMagicResistance);
@@ -336,21 +326,90 @@ internal static class DaggerfallMagicAdmissionPolicy
             biographyModifier = checked(biographyModifier + profile.BiographyPoisonResistance);
         if ((effectFlags & DaggerfallMagicEffectFlags.Disease) != 0)
             biographyModifier = checked(biographyModifier + profile.BiographyDiseaseResistance);
-        savingThrow = checked(savingThrow + biographyModifier + modifier);
+
+        int chance = SavingThrowChance(raceTolerances, careerTolerances, checked(biographyModifier + modifier), profile.LiveWillpower);
+        return SavingThrowAmount(chance, rollPercentile);
+    }
+
+    /// <summary>The <see cref="SavingThrowChance"/> value of a target that resists completely without a roll.</summary>
+    internal const int CompleteResistance = 100;
+
+    /// <summary>The <see cref="SavingThrowChance"/> value of a target that takes the full effect without a roll.</summary>
+    internal const int NoResistance = 0;
+
+    /// <summary>
+    /// The one FORM-06 saving-throw rule every spell, disease and poison resolves through, as the chance
+    /// its single 1–100 roll is made against. Classic tolerance precedence decides first: an immune race or
+    /// career resists completely (<see cref="CompleteResistance"/>), otherwise a critically weak one takes the
+    /// full effect (<see cref="NoResistance"/>). The donor's additive mixing of those two tolerances is its
+    /// own stated deviation from classic and is not used. Otherwise the throw is 50, +30 for a resistant race,
+    /// −25 for a low-tolerance race or career, +25 for a resistant career, plus the caller's biography and
+    /// resistance modifier; a throw reaching 100 is complete before MagicResist (live Willpower / 10) is added
+    /// and the result kept inside the ordinary 5–95 window.
+    /// </summary>
+    internal static int SavingThrowChance(
+        DaggerfallMagicToleranceFlags raceTolerances,
+        DaggerfallMagicToleranceFlags careerTolerances,
+        int modifier,
+        int liveWillpower)
+    {
+        DaggerfallMagicToleranceFlags any = raceTolerances | careerTolerances;
+        if ((any & DaggerfallMagicToleranceFlags.Immune) != 0) return CompleteResistance;
+        if ((any & DaggerfallMagicToleranceFlags.CriticalWeakness) != 0) return NoResistance;
+        int savingThrow = 50;
+        if ((raceTolerances & DaggerfallMagicToleranceFlags.Resistant) != 0) savingThrow += 30;
+        if ((raceTolerances & DaggerfallMagicToleranceFlags.LowTolerance) != 0) savingThrow -= 25;
+        if ((careerTolerances & DaggerfallMagicToleranceFlags.LowTolerance) != 0) savingThrow -= 25;
+        if ((careerTolerances & DaggerfallMagicToleranceFlags.Resistant) != 0) savingThrow += 25;
+        savingThrow = checked(savingThrow + modifier);
 
         // The donor returns a complete resistance before adding MagicResist or consuming its save roll.
         if (savingThrow >= 100)
-            return 0;
+            return CompleteResistance;
+        return Math.Clamp(checked(savingThrow + DaggerfallFormulaPolicy.MagicResist(liveWillpower)), 5, 95);
+    }
 
-        savingThrow = Math.Clamp(checked(savingThrow + DaggerfallFormulaPolicy.MagicResist(profile.LiveWillpower)), 5, 95);
+    /// <summary>
+    /// The shared DiseaseOrPoison throw of a disease or poison exposure: the same rule as a spell, read from
+    /// the exposure's one resolved race and career tolerance, with the donor's zero resistance modifier.
+    /// </summary>
+    internal static int DiseaseOrPoisonSavingThrowChance(
+        int liveWillpower,
+        DaggerfallDiseaseCareerTolerance careerTolerance = DaggerfallDiseaseCareerTolerance.Normal,
+        int biographyModifier = 0,
+        DaggerfallDiseaseCareerTolerance raceTolerance = DaggerfallDiseaseCareerTolerance.Normal) =>
+        SavingThrowChance(GetToleranceFlag(raceTolerance), GetToleranceFlag(careerTolerance), biographyModifier, liveWillpower);
+
+    /// <summary>
+    /// The percentage of the payload a <see cref="SavingThrowChance"/> lets through. The roll is drawn only
+    /// when the chance needs one; a roll above the chance fails the save, and a success is prorated within
+    /// twenty of the chance, as described in DF Chronicles.
+    /// </summary>
+    internal static int SavingThrowAmount(int chance, Func<int> rollPercentile)
+    {
+        ArgumentNullException.ThrowIfNull(rollPercentile);
+        if (chance == CompleteResistance) return 0;
+        if (chance == NoResistance) return 100;
+        if (chance is < 5 or > 95) throw new ArgumentOutOfRangeException(nameof(chance));
         int saveRoll = RollPercentile(rollPercentile);
-        if (saveRoll > savingThrow)
+        if (saveRoll > chance)
             return 100;
-        int amountPercent = savingThrow - 20 <= saveRoll
-            ? 100 - 5 * (savingThrow - saveRoll)
+        int amountPercent = chance - 20 <= saveRoll
+            ? 100 - 5 * (chance - saveRoll)
             : 0;
         return Math.Clamp(amountPercent, 0, 100);
     }
+
+    /// <summary>Maps an exposure's one resolved race or career tolerance to its donor tolerance flag.</summary>
+    internal static DaggerfallMagicToleranceFlags GetToleranceFlag(DaggerfallDiseaseCareerTolerance tolerance) => tolerance switch
+    {
+        DaggerfallDiseaseCareerTolerance.Normal => DaggerfallMagicToleranceFlags.Normal,
+        DaggerfallDiseaseCareerTolerance.Immune => DaggerfallMagicToleranceFlags.Immune,
+        DaggerfallDiseaseCareerTolerance.Resistant => DaggerfallMagicToleranceFlags.Resistant,
+        DaggerfallDiseaseCareerTolerance.LowTolerance => DaggerfallMagicToleranceFlags.LowTolerance,
+        DaggerfallDiseaseCareerTolerance.CriticalWeakness => DaggerfallMagicToleranceFlags.CriticalWeakness,
+        _ => throw new ArgumentOutOfRangeException(nameof(tolerance)),
+    };
 
     /// <summary>FORM-06.SavingThrow source-effect overload, including unbundled-effect fallback and modifier derivation.</summary>
     internal static int SavingThrow(

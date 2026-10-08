@@ -1,4 +1,5 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -79,13 +80,19 @@ public sealed class DaggerfallPoisonPolicyTests
     public void The_poison_saving_throw_is_form_06_on_the_shared_element()
     {
         // 50 plus the career's own tolerance plus the background's poison modifier plus willpower/10,
-        // inside the donor's ordinary 5-95 window, with immunity complete before the window.
-        Assert.Equal(55, DaggerfallPoisonPolicy.SavingThrowChance(willpower: 50));
-        Assert.Equal(80, DaggerfallPoisonPolicy.SavingThrowChance(willpower: 50, DaggerfallDiseaseCareerTolerance.Resistant));
-        Assert.Equal(30, DaggerfallPoisonPolicy.SavingThrowChance(willpower: 50, DaggerfallDiseaseCareerTolerance.LowTolerance));
-        Assert.Equal(65, DaggerfallPoisonPolicy.SavingThrowChance(willpower: 50, biographyModifier: 10));
-        Assert.Equal(95, DaggerfallPoisonPolicy.SavingThrowChance(willpower: 1000));
-        Assert.Equal(100, DaggerfallPoisonPolicy.SavingThrowChance(willpower: 50, DaggerfallDiseaseCareerTolerance.Immune));
+        // inside the donor's ordinary 5-95 window. Immunity is complete and critical weakness is a full
+        // effect, both decided before any roll by the one rule spells use too.
+        Assert.Equal(55, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50));
+        Assert.Equal(80, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Resistant));
+        Assert.Equal(30, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.LowTolerance));
+        Assert.Equal(65, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50, biographyModifier: 10));
+        Assert.Equal(95, DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(1000));
+        Assert.Equal(DaggerfallMagicAdmissionPolicy.CompleteResistance,
+            DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.Immune));
+        Assert.Equal(DaggerfallMagicAdmissionPolicy.NoResistance,
+            DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(50, DaggerfallDiseaseCareerTolerance.CriticalWeakness));
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted,
+            DaggerfallPoisonPolicy.Admit(Exposure() with { Tolerance = DaggerfallDiseaseCareerTolerance.CriticalWeakness }, 1));
     }
 
     [Fact]
@@ -94,7 +101,7 @@ public sealed class DaggerfallPoisonPolicyTests
         // The donor's save is roll-under: rolling above the chance fails it and the payload is full,
         // while a success prorates the payload and only reaches zero once the roll is twenty below.
         DaggerfallPoisonExposure exposure = Exposure();
-        int chance = DaggerfallPoisonPolicy.SavingThrowChance(exposure.Willpower);
+        int chance = DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(exposure.Willpower);
 
         Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.Admit(exposure, chance + 1));
         Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.Admit(exposure, 100));
