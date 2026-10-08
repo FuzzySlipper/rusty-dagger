@@ -113,6 +113,12 @@ public static class DaggerfallCatalogBuilder
                 decoded.LowToleranceFlags,
                 decoded.CriticalWeaknessFlags,
                 decoded.AttackModifierFlags,
+                decoded.AbilityFlagsAndSpellPoints & DaggerfallCatalogs.SpecialAbilityMask,
+                (decoded.AbilityFlagsAndSpellPoints & 0x300) >> 8,
+                (decoded.AbilityFlagsAndSpellPoints & 0xc0) >> 6,
+                decoded.RapidHealing,
+                decoded.Regeneration,
+                decoded.SpellAbsorptionFlags,
                 [.. ExpertProficiencySkills(decoded.WeaponArmorShields, skills)],
                 DaggerfallCareerEquipmentRestrictions.FromClassicFlags(decoded.ForbiddenMaterials, decoded.WeaponArmorShields),
                 new DaggerfallCatalogSource(carrier.PathOrPattern)));

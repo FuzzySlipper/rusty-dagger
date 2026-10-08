@@ -48,6 +48,7 @@ internal sealed record DaggerfallCareerDefinition(
     int LowToleranceFlags,
     int CriticalWeaknessFlags,
     int AttackModifierFlags,
+    DaggerfallCareerSpecials Specials,
     IReadOnlyList<string> ExpertProficiencies,
     IReadOnlyList<string> ForbiddenEquipment,
     DaggerfallCatalogCitation Source)
@@ -66,6 +67,72 @@ internal sealed record DaggerfallCareerDefinition(
         ("immunityFlags", ImmunityFlags),
         ("lowToleranceFlags", LowToleranceFlags),
         ("criticalWeaknessFlags", CriticalWeaknessFlags),
+    ];
+}
+
+/// <summary>
+/// A career's classic special abilities: the ability bits and the single-condition values the
+/// career record carries. A preset career publishes them from its classic record, a custom career
+/// derives them from its chosen traits, and an enemy's career class carries its preset's, so every
+/// consumer reads one shape. Conditions compare for equality, as the donor does.
+/// </summary>
+internal sealed record DaggerfallCareerSpecials(
+    int AbilityFlags,
+    int DarknessPoweredMagery,
+    int LightPoweredMagery,
+    int RapidHealing,
+    int Regeneration,
+    int SpellAbsorption)
+{
+    internal const int AcuteHearingBit = 1, AthleticismBit = 2, AdrenalineRushBit = 4, NoRegenSpellPointsBit = 8,
+        SunDamageBit = 16, HolyDamageBit = 32, AbilityMask = 0x3f;
+    /// <summary>Light- and darkness-powered magery values.</summary>
+    internal const int MageryNormal = 0, MageryUnable = 1, MageryReduced = 2;
+    /// <summary>Rapid-healing and spell-absorption condition values.</summary>
+    internal const int InLight = 1, InDarkness = 2, Always = 4;
+    /// <summary>Regeneration condition values, which add water and move always to eight.</summary>
+    internal const int RegenerateInLight = 1, RegenerateInDarkness = 2, RegenerateInWater = 4, RegenerateAlways = 8;
+
+    internal static DaggerfallCareerSpecials None { get; } = new(0, 0, 0, 0, 0, 0);
+
+    internal bool AcuteHearing => (AbilityFlags & AcuteHearingBit) != 0;
+    internal bool Athleticism => (AbilityFlags & AthleticismBit) != 0;
+    internal bool AdrenalineRush => (AbilityFlags & AdrenalineRushBit) != 0;
+    internal bool NoRegenSpellPoints => (AbilityFlags & NoRegenSpellPointsBit) != 0;
+    internal bool SunDamage => (AbilityFlags & SunDamageBit) != 0;
+    internal bool HolyDamage => (AbilityFlags & HolyDamageBit) != 0;
+
+    /// <summary>The donor's light/dark rapid-healing condition; light is outdoors by day.</summary>
+    internal bool RapidHealingApplies(bool light) =>
+        RapidHealing == Always || RapidHealing == (light ? InLight : InDarkness);
+
+    /// <summary>The donor's career absorption condition; light is outdoors by day.</summary>
+    internal bool AbsorbsSpells(bool light) =>
+        SpellAbsorption == Always || SpellAbsorption == (light ? InLight : InDarkness);
+
+    /// <summary>The donor's regeneration condition; darkness here is night or a dungeon.</summary>
+    internal bool Regenerates(bool dark, bool swimming) => Regeneration switch
+    {
+        RegenerateAlways => true,
+        RegenerateInDarkness => dark,
+        RegenerateInLight => !dark,
+        RegenerateInWater => swimming,
+        _ => false,
+    };
+
+    /// <summary>The magery value that applies now: darkness-powered magery suffers in light and the reverse.</summary>
+    internal int MageryPenalty(bool dark) => dark ? LightPoweredMagery : DarknessPoweredMagery;
+
+    /// <summary>Whether every value is one the classic record and the custom creator can carry.</summary>
+    internal bool IsClassic => (AbilityFlags & ~AbilityMask) == 0
+        && DarknessPoweredMagery is >= MageryNormal and <= MageryReduced && LightPoweredMagery is >= MageryNormal and <= MageryReduced
+        && RapidHealing is 0 or InLight or InDarkness or Always && SpellAbsorption is 0 or InLight or InDarkness or Always
+        && Regeneration is 0 or RegenerateInLight or RegenerateInDarkness or RegenerateInWater or RegenerateAlways;
+
+    internal IEnumerable<(string Name, int Value)> Fields =>
+    [
+        ("specialAbilityFlags", AbilityFlags), ("darknessPoweredMagery", DarknessPoweredMagery), ("lightPoweredMagery", LightPoweredMagery),
+        ("rapidHealingFlags", RapidHealing), ("regenerationFlags", Regeneration), ("spellAbsorptionFlags", SpellAbsorption),
     ];
 }
 

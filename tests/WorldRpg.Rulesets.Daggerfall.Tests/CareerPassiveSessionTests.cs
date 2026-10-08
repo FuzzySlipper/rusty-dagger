@@ -2,6 +2,7 @@ using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -201,6 +202,104 @@ public sealed class CareerPassiveSessionTests
         Assert.Equal(before + (active ? 1 : 0) - (hour == 12 ? 12 : 0), health.Current);
         Assert.Equal(hour == 12 ? 67 : 100, magicka.Maximum.Value);
         Assert.Equal(active ? 100 : 0, session.State.Effects.MagicDefenseFor(1).AbsorptionChance);
+    }
+
+    [Fact]
+    public void Imported_preset_careers_carry_their_classic_special_abilities()
+    {
+        var catalogs = TestPayload.Definitions.Catalogs;
+        var sorcerer = catalogs.RequireCareer("class03").Specials;
+        Assert.True(sorcerer.NoRegenSpellPoints);
+        Assert.Equal(DaggerfallCareerSpecials.Always, sorcerer.SpellAbsorption);
+        Assert.Equal(DaggerfallCareerSpecials.Always, catalogs.RequireCareer("class04").Specials.RapidHealing);
+        var acrobat = catalogs.RequireCareer("class09").Specials;
+        Assert.True(acrobat.Athleticism && acrobat.AdrenalineRush);
+        Assert.Equal(DaggerfallCareerSpecials.None, catalogs.RequireCareer("class00").Specials);
+    }
+
+    [Fact]
+    public void A_preset_sorcerer_absorbs_an_incoming_spell_and_keeps_its_magicka_on_rest_across_save()
+    {
+        using var original = Restore(null); SetPresetCareer(original, "class03");
+        foreach (var session in new[] { original, Restore(original.CaptureSave()) })
+        {
+            var magicka = Track(session, "magicka"); magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(0);
+            var caster = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("magicka"));
+            caster.Maximum.BaseValue = 10000; caster.SetCurrent(10000);
+            Assert.Equal(DaggerfallCastOutcome.Ready, session.Casting.Ready(2000, "spell.009").Outcome);
+            var spell = session.Casting.Release(2000, true).Bundle!;
+            session.Casting.Deliver(spell, [1]);
+            Assert.Equal(DaggerfallCastOutcome.Absorbed, Assert.Single(spell.Results).Outcome);
+            Assert.True(magicka.Current > 0);
+
+            session.State.PlayerControl.MoveTo(new Vector3(1000, 1, 1000));
+            Track(session, "health").SetCurrent(1);
+            magicka.SetCurrent(1);
+            session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
+            Assert.Equal(3600, session.RestView.ElapsedSeconds);
+            Assert.True(Track(session, "health").Current > 1);
+            Assert.Equal(1, magicka.Current);
+            if (!ReferenceEquals(session, original)) session.Dispose();
+        }
+    }
+
+    [Fact]
+    public void A_preset_healer_rests_with_rapid_healing()
+    {
+        using var session = Restore(null); SetPresetCareer(session, "class04");
+        session.State.PlayerControl.MoveTo(new Vector3(1000, 1, 1000));
+        var health = Track(session, "health"); health.Maximum.BaseValue = 10000; health.SetCurrent(1);
+        var stats = session.State.Actors.Player.Stats;
+        int expected = DaggerfallFormulaPolicy.HealthRecoveryRate((int)stats.GetStat(StatId.Parse("endurance")).Value,
+            (int)stats.GetStat(StatId.Parse("medical")).Value, (int)health.Maximum.Value, true);
+        Assert.NotEqual(expected, DaggerfallFormulaPolicy.HealthRecoveryRate((int)stats.GetStat(StatId.Parse("endurance")).Value,
+            (int)stats.GetStat(StatId.Parse("medical")).Value, (int)health.Maximum.Value, false));
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
+        Assert.Equal(1 + expected, health.Current);
+    }
+
+    [Theory]
+    [InlineData("class09", 9)]
+    [InlineData("class00", 11)]
+    public void A_preset_acrobat_pays_the_athletic_fatigue_rate(string career, int perMinute)
+    {
+        Assert.Equal(11, DaggerfallTuning.Defaults.Locomotion.IdleFatiguePerGameMinute);
+        using var session = Restore(null); SetPresetCareer(session, career);
+        var fatigue = Track(session, DaggerfallMechanicsIds.Stamina.Value);
+        double full = fatigue.Maximum.Value; fatigue.SetCurrent(full);
+        Assert.True(full > 10 * 11);
+        session.AdvanceElapsedTime(10 * 60);
+        Assert.Equal(full - 10 * perMinute, fatigue.Current);
+    }
+
+    [Fact]
+    public void An_enemy_sorcerer_absorbs_an_incoming_spell_through_its_career_class()
+    {
+        using var session = Restore(null);
+        long sorcerer = session.SpawnActor("encounter-sorcerer", new ActorPose(new WorldPoint(10, 0, 10), 0f), level: 4);
+        Assert.Equal("class03", session.DefinitionsByActor[sorcerer].Career);
+        var magicka = session.State.Actors.Get(sorcerer).Stats.GetTrack(TrackId.Parse("magicka"));
+        magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(0);
+        Assert.Equal(100, session.State.Effects.MagicDefenseFor(sorcerer).AbsorptionChance);
+        var caster = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("magicka"));
+        caster.Maximum.BaseValue = 10000; caster.SetCurrent(10000);
+        Assert.Equal(DaggerfallCastOutcome.Ready, session.Casting.Ready(2000, "spell.009").Outcome);
+        var spell = session.Casting.Release(2000, true).Bundle!;
+        session.Casting.Deliver(spell, [sorcerer]);
+        Assert.Equal(DaggerfallCastOutcome.Absorbed, Assert.Single(spell.Results).Outcome);
+        Assert.True(magicka.Current > 0);
+        Assert.Equal(0, session.State.Effects.MagicDefenseFor(2000).AbsorptionChance);
+    }
+
+    private static void SetPresetCareer(DaggerfallSession session, string career)
+    {
+        var character = session.State.Character;
+        character.BeginChoices();
+        character.ReplacePending(new("Passive tester", "breton", DaggerfallCharacterGender.Male, 0,
+            DaggerfallCharacterReflexes.Average, career));
+        character.CommitChoices();
+        Assert.Null(character.CustomCareer);
+        Assert.Equal(career, character.Career.Id);
     }
 
     internal static void SetCareer(DaggerfallSession session, DaggerfallCustomCareerTrait[] advantages,

@@ -262,6 +262,40 @@ public sealed class DaggerfallCatalogTests
         Assert.Equal(1500, catalogs.Careers.Single(career => career.Id == "class01").SpellPointMultiplierMilli);
     }
 
+    [CorpusFact]
+    public void Publishes_every_careers_special_abilities_and_condition_bytes()
+    {
+        DaggerfallCatalogs catalogs = BuildFromRepository();
+        DaggerfallCareerRecord Career(string id) => catalogs.Careers.Single(career => career.Id == id);
+
+        // CLASS03 Sorcerer: ability bit 8 (no spell-point regeneration) and absorption byte 4 (always).
+        DaggerfallCareerRecord sorcerer = Career("class03");
+        Assert.Equal((0x08, 0, 0, 0), (sorcerer.SpecialAbilityFlags, sorcerer.RapidHealingFlags, sorcerer.RegenerationFlags, sorcerer.DarknessPoweredMagery));
+        Assert.Equal(4, sorcerer.SpellAbsorptionFlags);
+        // CLASS04 Healer: rapid healing byte 4 (always) and no ability bits.
+        DaggerfallCareerRecord healer = Career("class04");
+        Assert.Equal((0, 4, 0, 0), (healer.SpecialAbilityFlags, healer.RapidHealingFlags, healer.RegenerationFlags, healer.SpellAbsorptionFlags));
+        // CLASS09 Acrobat: athleticism (2) and adrenaline rush (4); the spell-point bits stay out.
+        DaggerfallCareerRecord acrobat = Career("class09");
+        Assert.Equal((0x06, 0, 0, 0), (acrobat.SpecialAbilityFlags, acrobat.RapidHealingFlags, acrobat.RegenerationFlags, acrobat.SpellAbsorptionFlags));
+        Assert.Equal(500, acrobat.SpellPointMultiplierMilli);
+        Assert.All(catalogs.Careers, career => Assert.Equal((0, 0), (career.DarknessPoweredMagery, career.LightPoweredMagery)));
+    }
+
+    [CorpusFact]
+    public void Refuses_a_combined_special_ability_condition_no_consumer_reads()
+    {
+        DaggerfallCatalogs catalogs = BuildFromRepository();
+        DaggerfallCatalogs bad = catalogs with
+        {
+            Careers = [catalogs.Careers[0] with { SpellAbsorptionFlags = 3 }, .. catalogs.Careers.Skip(1)],
+        };
+
+        ArgumentOutOfRangeException error = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            bad.Validate(ReadInventory().Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal)));
+        Assert.Contains("spell-absorption 3", error.Message, StringComparison.Ordinal);
+    }
+
     private static List<string> ExpectedElements(int flags)
     {
         string[] keys = ["fire", "frost", "disease-or-poison", "shock", "magic"];

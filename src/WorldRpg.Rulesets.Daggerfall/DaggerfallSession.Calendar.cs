@@ -74,7 +74,7 @@ internal sealed partial class DaggerfallSession
         // visible immediately and rest/travel cannot outrun the blessing through catch-up limits.
         _ = DaggerfallTempleBlessingEffects.ExpireDue(State.Effects, _time);
         _locomotion.SetAthletics(
-            State.Character.CustomCareer?.Advantages.Any(trait => trait.Id == "athleticism") == true,
+            PlayerSpecials.Athleticism,
             State.HeldEnchantments.Talents.Athleticism);
         RefreshPassiveMagery();
         DaggerfallCalendar after = _time.Calendar;

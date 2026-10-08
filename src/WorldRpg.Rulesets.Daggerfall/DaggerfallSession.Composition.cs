@@ -318,9 +318,11 @@ internal sealed partial class DaggerfallSession
             DaggerfallActorInventories actorInventories = assembled.ActorInventories;
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 () => character.Background?.Modifiers.AvoidHit ?? 0, actorInventories.EquipmentFor, _itemCondition, combatRules,
-                actorId => actorId == DaggerfallActorIdentity.PlayerEntityId
-                    && character.CustomCareer?.Advantages.Any(trait => trait.Id == "adrenaline-rush") == true
-                    ? new DaggerfallAdrenalineRush(Enabled: true, Improved: _heldEnchantments.Talents.AdrenalineRush) : default,
+                // The donor grants a career's adrenaline rush to attacker and target alike, so an enemy
+                // career class carries it too; only the player wears an improving talent.
+                actorId => CareerSpecialsFor(actorId).AdrenalineRush
+                    ? new DaggerfallAdrenalineRush(Enabled: true,
+                        Improved: actorId == actors.Player.DurableId && _heldEnchantments.Talents.AdrenalineRush) : default,
                 () => assembled.PlayerControl.Position, () => character, _playerSwings.TryGesture, ShotBlockedByCover,
                 () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
                 actorId => effects.ControlsFor(actorId).PhysicalAttacks, TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), DeliverMonsterHit,

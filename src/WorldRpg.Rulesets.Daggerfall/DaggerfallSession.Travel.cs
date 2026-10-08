@@ -163,7 +163,7 @@ internal sealed partial class DaggerfallSession
                     _sites.ClearReturnDestination();
                 }
                 long delay = TravelArrivalDelay(_time.Calendar,
-                    State.RacialOverrides.Current?.IsVampire == true || State.Character.CustomCareer?.Disadvantages.Any(trait => trait.Id == "damage" && trait.Target == "sunlight") == true,
+                    State.RacialOverrides.Current?.IsVampire == true || PlayerSpecials.SunDamage,
                     quote.Options.SpeedCautious);
                 // The donor suppresses new random spawns during its arrival adjustment. Effects
                 // and deadlines still run at the actual destination through the shared calendar.

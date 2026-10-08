@@ -71,6 +71,38 @@ public sealed class CustomCareerTraitTableTests
         Assert.Contains(DaggerfallCustomCareerPolicy.Validate(definitions, conflict), error => error.Contains("cannot both target"));
     }
 
+    [Theory]
+    [InlineData("acute-hearing", 1, 0, 0, 0, 0, 0)]
+    [InlineData("athleticism", 2, 0, 0, 0, 0, 0)]
+    [InlineData("adrenaline-rush", 4, 0, 0, 0, 0, 0)]
+    [InlineData("inability-to-regen", 8, 0, 0, 0, 0, 0)]
+    [InlineData("damage:sunlight", 16, 0, 0, 0, 0, 0)]
+    [InlineData("damage:holy-places", 32, 0, 0, 0, 0, 0)]
+    [InlineData("darkness-powered-magery:unable", 0, 1, 0, 0, 0, 0)]
+    [InlineData("darkness-powered-magery:reduced", 0, 2, 0, 0, 0, 0)]
+    [InlineData("light-powered-magery:unable", 0, 0, 1, 0, 0, 0)]
+    [InlineData("light-powered-magery:reduced", 0, 0, 2, 0, 0, 0)]
+    [InlineData("rapid-healing:light", 0, 0, 0, 1, 0, 0)]
+    [InlineData("rapid-healing:darkness", 0, 0, 0, 2, 0, 0)]
+    [InlineData("rapid-healing:general", 0, 0, 0, 4, 0, 0)]
+    [InlineData("regenerate-health:light", 0, 0, 0, 0, 1, 0)]
+    [InlineData("regenerate-health:darkness", 0, 0, 0, 0, 2, 0)]
+    [InlineData("regenerate-health:immersed", 0, 0, 0, 0, 4, 0)]
+    [InlineData("regenerate-health:general", 0, 0, 0, 0, 8, 0)]
+    [InlineData("spell-absorption:light", 0, 0, 0, 0, 0, 1)]
+    [InlineData("spell-absorption:darkness", 0, 0, 0, 0, 0, 2)]
+    [InlineData("spell-absorption:general", 0, 0, 0, 0, 0, 4)]
+    public void Special_traits_compile_into_the_classic_career_bytes_a_preset_career_carries(string key,
+        int abilities, int darkMagery, int lightMagery, int rapidHealing, int regeneration, int absorption)
+    {
+        var trait = Parse(key); var choices = Choices();
+        bool advantage = DaggerfallCustomCareerPolicy.SupportedAdvantages.Contains(trait.Id);
+        choices = choices with { Advantages = advantage ? [trait] : [], Disadvantages = advantage ? [] : [trait] };
+        var career = DaggerfallCustomCareerPolicy.Compile(TestPayload.Definitions, choices, TestPayload.Definitions.Catalogs.Careers.First()).Career;
+        Assert.Equal(new DaggerfallCareerSpecials(abilities, darkMagery, lightMagery, rapidHealing, regeneration, absorption), career.Specials);
+        Assert.True(career.Specials.IsClassic);
+    }
+
     private static DaggerfallCustomCareerTrait Parse(string key)
     { var split = key.Split(':'); return new(split[0], split.Length == 1 ? null : split[1]); }
     private static DaggerfallCustomCareerChoices Choices() => DaggerfallCustomCareerChoices.Default(TestPayload.Definitions,

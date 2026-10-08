@@ -7,30 +7,29 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Career passives consume the same calendar, actor tracks and environment as spells and rest.</summary>
 internal sealed partial class DaggerfallSession
 {
-    private bool CareerAdvantage(string id, string? target = null)
-    {
-        var traits = State.Character.CustomCareer?.Advantages;
-        return id is "rapid-healing" or "regenerate-health" or "spell-absorption" or "increased-magery"
-            ? traits?.LastOrDefault(trait => trait.Id == id) is { } selected && (target is null || selected.Target == target)
-            : traits?.Any(trait => trait.Id == id && (target is null || trait.Target == target)) == true;
-    }
-    private bool CareerDisadvantage(string id, string? target = null)
-    {
-        var traits = State.Character.CustomCareer?.Disadvantages;
-        return id is "darkness-powered-magery" or "light-powered-magery"
-            ? traits?.LastOrDefault(trait => trait.Id == id) is { } selected && (target is null || selected.Target == target)
-            : traits?.Any(trait => trait.Id == id && (target is null || trait.Target == target)) == true;
-    }
+    /// <summary>The committed player career's special abilities, preset or custom alike.</summary>
+    private DaggerfallCareerSpecials PlayerSpecials => State.Character.Career.Specials;
 
-    internal float EnemyAudibleRange => CareerAdvantage("acute-hearing")
+    /// <summary>
+    /// The special abilities of any actor's career: the player's committed career, or the career
+    /// class an enemy definition names. A creature without a career has none.
+    /// </summary>
+    private DaggerfallCareerSpecials CareerSpecialsFor(long actorId) =>
+        actorId == State.Actors.Player.DurableId ? PlayerSpecials
+            : _roster.Definitions.TryGetValue(actorId, out var definition) && definition.Career is string career
+                ? _definitions.Catalogs.RequireCareer(career).Specials : DaggerfallCareerSpecials.None;
+
+    internal float EnemyAudibleRange => PlayerSpecials.AcuteHearing
         ? (State.HeldEnchantments.Talents.AcuteHearing ? 24F : 20F) : 16F;
 
+    /// <summary>
+    /// Career absorption for any target, as the donor applies it to every entity: the light and
+    /// dark context is where the player is, since everything is where the player is.
+    /// </summary>
     private DaggerfallMagicDefense CareerMagicDefense(long actorId)
     {
-        bool dark = !_time.Calendar.IsDay || _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior;
-        return actorId == DaggerfallActorIdentity.PlayerEntityId && (CareerAdvantage("spell-absorption", "general")
-            || CareerAdvantage("spell-absorption", dark ? "darkness" : "light"))
-            ? new(100, 0, []) : DaggerfallMagicDefense.None;
+        bool light = _time.Calendar.IsDay && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior;
+        return CareerSpecialsFor(actorId).AbsorbsSpells(light) ? new(100, 0, []) : DaggerfallMagicDefense.None;
     }
 
     private void RefreshPassiveMagery()
@@ -40,9 +39,9 @@ internal sealed partial class DaggerfallSession
         var identity = new IntrinsicSourceIdentity(actor.Actor.Entity, SourceInstanceId.Parse("daggerfall.passive-magery"));
         Stat maximum = magicka.Maximum;
         bool dark = !_time.Calendar.IsDay || _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior;
-        string trait = dark ? "light-powered-magery" : "darkness-powered-magery";
-        bool unable = CareerDisadvantage(trait, "unable");
-        bool reduced = CareerDisadvantage(trait, "reduced");
+        int penalty = PlayerSpecials.MageryPenalty(dark);
+        bool unable = penalty == DaggerfallCareerSpecials.MageryUnable;
+        bool reduced = penalty == DaggerfallCareerSpecials.MageryReduced;
         var existing = maximum.Sources.SingleOrDefault(source => source.Identity == identity);
         if (!unable && !reduced && existing is null) return;
         double reduction = -(int)(maximum.BaseValue * .33f);
@@ -58,11 +57,12 @@ internal sealed partial class DaggerfallSession
 
     private void AdvancePassiveRounds(long roundBefore, long minutes)
     {
-        bool regeneration = CareerAdvantage("regenerate-health");
+        DaggerfallCareerSpecials specials = PlayerSpecials;
+        bool regeneration = specials.Regeneration != 0;
         // Classic travel advances atomically and adjusts vulnerable arrivals to dusk before
         // its catch-up pass. Our interruptible journey must not apply daylight exposure en route.
-        bool sunDamage = (CareerDisadvantage("damage", "sunlight") || State.RacialOverrides.Current?.IsVampire == true) && !State.Travel.IsExecuting;
-        bool holyDamage = (CareerDisadvantage("damage", "holy-places") || State.RacialOverrides.Current?.IsVampire == true) && InHolyPlace();
+        bool sunDamage = (specials.SunDamage || State.RacialOverrides.Current?.IsVampire == true) && !State.Travel.IsExecuting;
+        bool holyDamage = (specials.HolyDamage || State.RacialOverrides.Current?.IsVampire == true) && InHolyPlace();
         if (!regeneration && !sunDamage && !holyDamage) return;
         var player = State.Actors.Player;
         long first = (4 - roundBefore % 4) % 4;
@@ -71,9 +71,7 @@ internal sealed partial class DaggerfallSession
             var calendar = _time.Calendar;
             bool dark = !calendar.IsDay || _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon;
             bool sunlight = calendar.IsDay && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior;
-            if (regeneration && (CareerAdvantage("regenerate-health", "general")
-                || CareerAdvantage("regenerate-health", dark ? "darkness" : "light")
-                || CareerAdvantage("regenerate-health", "immersed") && State.Swimming.IsSwimming))
+            if (regeneration && specials.Regenerates(dark, State.Swimming.IsSwimming))
                 _vitality.RestoreSpellTrack(player.Actor, TrackId.Parse("health"), 1);
             int damage = (sunDamage && sunlight ? 12 : 0) + (holyDamage ? 12 : 0);
             if (damage > 0) AppendEffectDamage(new(_vitality.ResolvePassiveDamage(player.Actor, damage)));
