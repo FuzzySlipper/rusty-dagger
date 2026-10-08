@@ -161,28 +161,16 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
-    /// Reads the two recovery branches from the committed character: a custom career's rapid-healing
-    /// advantage (when its light/dark condition holds here and now) and its inability-to-regenerate
-    /// disadvantage. A classic career has neither.
+    /// Reads the two recovery branches from the committed career, preset or custom alike: its
+    /// rapid-healing condition (when its light/dark condition holds here and now, matching the donor)
+    /// and its no-spell-point-regeneration ability.
     /// </summary>
     private (bool RapidHealing, bool NoRegeneration) RestCharacterTraits()
     {
-        DaggerfallCustomCareerDefinition? custom = State.Character.CustomCareer;
-        if (custom is null) return (false, false);
-
-        bool rapidHealing = custom.Advantages.LastOrDefault(trait => trait.Id == "rapid-healing") is { } healing && RapidHealingApplies(healing.Target);
-        bool noRegeneration = custom.Disadvantages.Any(trait => trait.Id == "inability-to-regen");
-        return (rapidHealing, noRegeneration);
+        DaggerfallCareerSpecials specials = PlayerSpecials;
+        bool light = _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior && _time.Calendar.IsDay;
+        return (specials.RapidHealingApplies(light), specials.NoRegenSpellPoints);
     }
-
-    /// <summary>Matches the donor's light/dark rapid-healing condition at the current profile and hour.</summary>
-    private bool RapidHealingApplies(string? target) => target switch
-    {
-        "general" => true,
-        "light" => _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior && _time.Calendar.IsDay,
-        "darkness" => _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior || !_time.Calendar.IsDay,
-        _ => false,
-    };
 
     /// <summary>
     /// Advances exactly one rest tick through the session calendar and reports a selected encounter as

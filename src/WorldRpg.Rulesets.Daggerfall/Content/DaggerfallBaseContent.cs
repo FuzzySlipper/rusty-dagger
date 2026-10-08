@@ -897,7 +897,7 @@ internal static partial class DaggerfallBaseContent
         foreach (DaggerfallRaceDefinition race in definitions.Catalogs.Races.OrderBy(race => race.Id, StringComparer.Ordinal)) Add("catalog-race", race.Id, race.DonorRaceId, race.ResistanceFlags, race.ImmunityFlags, race.LowToleranceFlags, race.CriticalWeaknessFlags, race.Source.Path);
         foreach (DaggerfallCareerDefinition career in definitions.Catalogs.Careers.OrderBy(career => career.Id, StringComparer.Ordinal))
         {
-            Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), string.Join(',', career.AttributeValues), career.HitPointsPerLevel, career.SpellPointMultiplierMilli, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), string.Join(',', career.FlagBytes.Select(flag => $"{flag.Name}={flag.Value}")), string.Join(',', career.ForbiddenEquipment), career.Source.Path);
+            Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), string.Join(',', career.AttributeValues), career.HitPointsPerLevel, career.SpellPointMultiplierMilli, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), string.Join(',', career.FlagBytes.Select(flag => $"{flag.Name}={flag.Value}")), string.Join(',', career.Specials.Fields.Select(field => $"{field.Name}={field.Value}")), string.Join(',', career.ForbiddenEquipment), career.Source.Path);
         }
 
         foreach (string collision in definitions.Catalogs.CareerNameCollisions) Add("catalog-career-name-collision", collision);
@@ -3404,11 +3404,18 @@ internal static partial class DaggerfallBaseContent
             int lowToleranceFlags = FlagByte(career, "lowToleranceFlags", diagnostics);
             int criticalWeaknessFlags = FlagByte(career, "criticalWeaknessFlags", diagnostics);
             int attackModifierFlags = FlagByte(career, "attackModifierFlags", diagnostics);
+            DaggerfallCareerSpecials specials = new(
+                FlagByte(career, "specialAbilityFlags", diagnostics), FlagByte(career, "darknessPoweredMagery", diagnostics),
+                FlagByte(career, "lightPoweredMagery", diagnostics), FlagByte(career, "rapidHealingFlags", diagnostics),
+                FlagByte(career, "regenerationFlags", diagnostics), FlagByte(career, "spellAbsorptionFlags", diagnostics));
+            // A value no consumer interprets would be an ability the career claims and never grants.
+            if (!specials.IsClassic && specials.Fields.All(field => field.Value != InvalidFlagByte))
+                diagnostics.Add($"Career '{id}' carries special-ability values [{string.Join(", ", specials.Fields.Select(field => $"{field.Name}={field.Value}"))}] outside the classic bits and single conditions.");
             IReadOnlyList<string> expertProficiencies = ReadIds(career, "expertProficiencies", diagnostics);
             IReadOnlyList<string> forbiddenEquipment = ReadIds(career, "forbiddenEquipment", diagnostics);
             DaggerfallCareerDefinition definition = new(
                 id, name, primary, major, minor, careerAttributes, attributeValues, hitPoints, spellPointMultiplierMilli, multiplier, resistant, immune,
-                resistanceFlags, immunityFlags, lowToleranceFlags, criticalWeaknessFlags, attackModifierFlags, expertProficiencies, forbiddenEquipment, ReadCitation(career, sources, diagnostics));
+                resistanceFlags, immunityFlags, lowToleranceFlags, criticalWeaknessFlags, attackModifierFlags, specials, expertProficiencies, forbiddenEquipment, ReadCitation(career, sources, diagnostics));
             foreach (string skill in definition.SkillReferences)
             {
                 if (!skillKeys.Contains(skill, StringComparer.Ordinal))

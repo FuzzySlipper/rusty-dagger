@@ -93,6 +93,12 @@ public sealed record DaggerfallCareerRecord(
     int LowToleranceFlags,
     int CriticalWeaknessFlags,
     int AttackModifierFlags,
+    int SpecialAbilityFlags,
+    int DarknessPoweredMagery,
+    int LightPoweredMagery,
+    int RapidHealingFlags,
+    int RegenerationFlags,
+    int SpellAbsorptionFlags,
     IReadOnlyList<string> ExpertProficiencies,
     IReadOnlyList<string> ForbiddenEquipment,
     DaggerfallCatalogSource Source)
@@ -160,6 +166,16 @@ public sealed record DaggerfallCareerRecord(
                 throw new ArgumentOutOfRangeException(nameof(value), value, $"Career '{Id}' must carry {name} as one byte.");
             }
         }
+
+        // The special-ability bits and the condition bytes are single classic values: the
+        // donor compares each condition byte for equality, so a combined or unknown value
+        // would publish an ability no consumer grants.
+        if ((SpecialAbilityFlags & ~DaggerfallCatalogs.SpecialAbilityMask) != 0)
+            throw new ArgumentOutOfRangeException(nameof(SpecialAbilityFlags), SpecialAbilityFlags, $"Career '{Id}' carries unknown special-ability bits.");
+        if (DarknessPoweredMagery is < 0 or > 2 || LightPoweredMagery is < 0 or > 2)
+            throw new ArgumentOutOfRangeException(nameof(DarknessPoweredMagery), $"Career '{Id}' carries a light- or darkness-powered magery value outside the classic none/unable/reduced values.");
+        if (RapidHealingFlags is not (0 or 1 or 2 or 4) || SpellAbsorptionFlags is not (0 or 1 or 2 or 4) || RegenerationFlags is not (0 or 1 or 2 or 4 or 8))
+            throw new ArgumentOutOfRangeException(nameof(RapidHealingFlags), $"Career '{Id}' carries rapid-healing {RapidHealingFlags}, regeneration {RegenerationFlags} or spell-absorption {SpellAbsorptionFlags}, which is not one classic condition.");
 
         RequireReferences(ResistanceElements, elementKeys, $"career '{Id}' resists element");
         RequireReferences(ImmunityElements, elementKeys, $"career '{Id}' is immune to element");
@@ -279,6 +295,13 @@ public sealed record DaggerfallCatalogs(
 
     /// <summary>The largest value one classic effect-flag byte can carry.</summary>
     public const int MaximumFlagByte = 255;
+
+    /// <summary>
+    /// The special-ability bits of the classic ability word: acute hearing (1), athleticism (2),
+    /// adrenaline rush (4), no spell-point regeneration (8), sunlight damage (16) and holy-place
+    /// damage (32).
+    /// </summary>
+    public const int SpecialAbilityMask = 0x3f;
 
     public void Validate(IReadOnlySet<string> documentedPaths)
     {

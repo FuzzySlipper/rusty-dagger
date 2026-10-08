@@ -119,8 +119,44 @@ internal static class DaggerfallCustomCareerPolicy
         DaggerfallCareerDefinition career = new(CareerId, choices.Name.Trim(), choices.PrimarySkills, choices.MajorSkills, choices.MinorSkills,
             attributeBase.Attributes, attributeBase.AttributeValues, choices.HitPointsPerLevel, multiplier,
             0.3f + (2.7f * (difficulty + 12) / 52f), Elements(resistance), Elements(immunity), resistance, immunity, lowTolerance, criticalWeakness,
-            attackModifierFlags, expertProficiencies, forbidden, new DaggerfallCatalogCitation("custom:character-creation"));
+            attackModifierFlags, Specials(choices), expertProficiencies, forbidden, new DaggerfallCatalogCitation("custom:character-creation"));
         return new(career, choices.Advantages, choices.Disadvantages, forbidden);
+    }
+
+    /// <summary>
+    /// The classic creator writes the special advantages and disadvantages into the same ability bits
+    /// and condition bytes a preset career record carries, so the passive, rest, absorption and
+    /// athletics consumers read one career shape. A single-condition trait keeps its last selection.
+    /// </summary>
+    private static DaggerfallCareerSpecials Specials(DaggerfallCustomCareerChoices choices)
+    {
+        int abilities = choices.Advantages.Concat(choices.Disadvantages).Aggregate(0, (flags, trait) => flags | (trait.Id, trait.Target) switch
+        {
+            ("acute-hearing", _) => DaggerfallCareerSpecials.AcuteHearingBit,
+            ("athleticism", _) => DaggerfallCareerSpecials.AthleticismBit,
+            ("adrenaline-rush", _) => DaggerfallCareerSpecials.AdrenalineRushBit,
+            ("inability-to-regen", _) => DaggerfallCareerSpecials.NoRegenSpellPointsBit,
+            ("damage", "sunlight") => DaggerfallCareerSpecials.SunDamageBit,
+            ("damage", "holy-places") => DaggerfallCareerSpecials.HolyDamageBit,
+            _ => 0,
+        });
+        static string? Last(IEnumerable<DaggerfallCustomCareerTrait> traits, string id) => traits.LastOrDefault(trait => trait.Id == id)?.Target;
+        static int Condition(string? target) => target switch
+        {
+            "general" => DaggerfallCareerSpecials.Always, "light" => DaggerfallCareerSpecials.InLight,
+            "darkness" => DaggerfallCareerSpecials.InDarkness, _ => 0,
+        };
+        static int Magery(string? target) => target switch
+        {
+            "unable" => DaggerfallCareerSpecials.MageryUnable, "reduced" => DaggerfallCareerSpecials.MageryReduced, _ => DaggerfallCareerSpecials.MageryNormal,
+        };
+        int regeneration = Last(choices.Advantages, "regenerate-health") switch
+        {
+            "general" => DaggerfallCareerSpecials.RegenerateAlways, "light" => DaggerfallCareerSpecials.RegenerateInLight,
+            "darkness" => DaggerfallCareerSpecials.RegenerateInDarkness, "immersed" => DaggerfallCareerSpecials.RegenerateInWater, _ => 0,
+        };
+        return new(abilities, Magery(Last(choices.Disadvantages, "darkness-powered-magery")), Magery(Last(choices.Disadvantages, "light-powered-magery")),
+            Condition(Last(choices.Advantages, "rapid-healing")), regeneration, Condition(Last(choices.Advantages, "spell-absorption")));
     }
 
     internal static List<string> Validate(DaggerfallDefinitions definitions, DaggerfallCustomCareerChoices choices)
