@@ -89,11 +89,9 @@ public sealed class DaggerfallMobileCatalogTests
             duplicate.Diagnostics.Any(message => message.Contains("donor id 0 twice", StringComparison.Ordinal)),
             $"the duplicate donor id was not named: {string.Join(" | ", duplicate.Diagnostics)}");
 
-        JsonObject withoutMobiles = TestPayload.Sections("mobiles", "actors");
-        // A mobiles value that is not a catalog object is refused by the same check as an absent one.
-        Assert.True(withoutMobiles.ContainsKey("mobiles"), "the published payload carries no mobile section to replace");
-        withoutMobiles["mobiles"] = null;
-        DaggerfallContentException missing = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(withoutMobiles)));
+        byte[] withoutMobiles = TestPayload.Without("mobiles");
+        Assert.Null(TestSessions.TopLevelSection(withoutMobiles, "mobiles"));
+        DaggerfallContentException missing = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(withoutMobiles));
         Assert.True(
             missing.Diagnostics.Any(message => message.Contains("no mobile catalog section", StringComparison.Ordinal)),
             $"the missing catalog was not named: {string.Join(" | ", missing.Diagnostics)}");

@@ -109,6 +109,43 @@ internal static class TestPayload
         return result;
     }
 
+    /// <summary>
+    /// The joined payload with one top-level section omitted, property and separating comma included, so
+    /// a fact about a missing section reads a document that truly lacks the property. Every other byte is
+    /// kept; nothing is parsed into a tree.
+    /// </summary>
+    internal static byte[] Without(string name)
+    {
+        byte[] combined = Combined.Value;
+        System.Text.Json.Utf8JsonReader reader = new(combined);
+        if (!reader.Read() || reader.TokenType != System.Text.Json.JsonTokenType.StartObject)
+            throw new InvalidOperationException("The joined payload is not a JSON object.");
+        while (reader.Read() && reader.TokenType == System.Text.Json.JsonTokenType.PropertyName)
+        {
+            int start = checked((int)reader.TokenStartIndex);
+            bool match = reader.ValueTextEquals(name);
+            reader.Read();
+            reader.Skip();
+            int end = checked((int)reader.BytesConsumed);
+            if (!match) continue;
+            int next = end;
+            while (next < combined.Length && combined[next] is (byte)' ' or (byte)'\n' or (byte)'\r' or (byte)'\t') next++;
+            if (next < combined.Length && combined[next] == (byte)',')
+                end = next + 1;
+            else
+            {
+                int previous = start - 1;
+                while (previous > 0 && combined[previous] is (byte)' ' or (byte)'\n' or (byte)'\r' or (byte)'\t') previous--;
+                if (combined[previous] == (byte)',') start = previous;
+            }
+            byte[] result = new byte[combined.Length - (end - start)];
+            combined.AsSpan(0, start).CopyTo(result);
+            combined.AsSpan(end).CopyTo(result.AsSpan(start));
+            return result;
+        }
+        throw new ArgumentException($"The joined payload has no section '{name}'.", nameof(name));
+    }
+
     private static IEnumerable<(string Name, int Start, int End)> SectionRanges(byte[] combined)
     {
         List<(string, int, int)> ranges = [];

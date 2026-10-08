@@ -251,9 +251,9 @@ public sealed class DaggerfallTextSetTests
     [Fact]
     public void Rejects_a_payload_that_publishes_no_text_section()
     {
-        // A text value that is not a section object is refused by the same check as an absent one.
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => payload["text"] = null)));
+        byte[] payload = TestPayload.Without("text");
+        Assert.Null(TestSessions.TopLevelSection(payload, "text"));
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(payload));
 
         Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("publishes no text section", StringComparison.Ordinal));
     }
