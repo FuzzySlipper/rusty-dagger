@@ -149,6 +149,9 @@ internal sealed class DaggerfallWorldBlocks
     /// <summary>Whether the publication places a block for this key.</summary>
     internal bool Contains(DaggerfallWorldBlockKey key)
     {
+        // Once read, the index answers without opening the bundle again: residency and quest selection ask per profile.
+        lock (_gate)
+            if (_index is not null) return _index.ContainsKey(key);
         using ProductContentBundle bundle = Open();
         return RequireIndex(bundle).ContainsKey(key);
     }

@@ -89,7 +89,7 @@ can point to a source owner:
 | QST-CORE-004 | `Game/Questing/Message.cs` | Popup, journal, letter, rumor text and variants | Runtime; `DaggerfallQuestMessages` owns variants, macros and delivery to thin DOM projections; base language only (DEC-05) |
 | QST-CORE-005 | `Game/Questing/Parser.cs` | QRC/QBN source parser and resource/task construction | Offline Import (`QuestSourceReader`); every published source compiles; no runtime donor parser topology |
 | QST-CORE-006 | `Game/Questing/Person.cs` | Symbolic NPC and faction/person resolution | Runtime; `DaggerfallQuestPeople` and `DaggerfallQuestNpcOverlays` bind stable world/NPC identity |
-| QST-CORE-007 | `Game/Questing/Place.cs` | Permanent, remote, local, and random quest locations | Offline catalog plus runtime world binding; `DaggerfallQuestPlaces` allocates and `DaggerfallQuestPlacements` places against normalized quest markers. Remaining: destinations outside published site profiles (see quest destinations) |
+| QST-CORE-007 | `Game/Questing/Place.cs` | Permanent, remote, local, and random quest locations | Offline catalog plus runtime world binding; `DaggerfallQuestPlaces` allocates from the whole catalog and `DaggerfallQuestPlacements` places against the quest markers of whichever catalog profile the selection names (see quest destinations) |
 | QST-CORE-008 | `Game/Questing/Quest.cs` | Live quest instance, lifecycle, tasks, resources, save state | Runtime; `DaggerfallQuestInstances` owns the live instance, tombstone and save state, persisted through `DaggerfallSavePayload` |
 | QST-CORE-009 | `Game/Questing/QuestAction.cs` | Action interface/template, trigger flags, update/check/save contract | Runtime; compiled to typed ruleset operations in `DaggerfallQuestTasks`, no reflection registry |
 | QST-CORE-010 | `Game/Questing/QuestListsManager.cs` | Classic/DFU list loading, guild/social selection, pack discovery | Offline catalog/import plus ruleset selection policy (`DaggerfallQuestOffers`) |
@@ -151,11 +151,11 @@ normalized markers, and the existing spatial/session owner.
 | QST-ACT-017 | `CreateNpcAt.cs` | Create an NPC at a named place | R — reserves the place and places the resource through `DaggerfallQuestPlacements` |
 | QST-ACT-025 | `DroppedItemAtPlace.cs` | Trigger when an item is dropped at a place | R — `DaggerfallQuestWorldActions` checks the bound item and place and latches once |
 | QST-ACT-045 | `PcAt.cs` | Condition on the player reaching a place; donor accepts `set` and `do` forms | R — `DaggerfallQuestWorldTriggers` accepts both `set` and `do`; an unknown `any` discriminator is diagnosed |
-| QST-ACT-047 | `PlaceFoe.cs` | Place a foe at a place or marker | R — `DaggerfallQuestPlacements` queues placement until the destination is visited |
-| QST-ACT-048 | `PlaceItem.cs` | Place an item at a place, quest marker, or any marker | R — `DaggerfallQuestPlacements` queues placement until the destination is visited |
-| QST-ACT-049 | `PlaceNpc.cs` | Place an NPC at a place or marker | R — `DaggerfallQuestPlacements` queues placement until the destination is visited |
+| QST-ACT-047 | `PlaceFoe.cs` | Place a foe at a place or marker | R — `DaggerfallQuestPlacements` queues placement until the destination's profile, authored or assembled, loads |
+| QST-ACT-048 | `PlaceItem.cs` | Place an item at a place, quest marker, or any marker | R — `DaggerfallQuestPlacements` queues placement until the destination's profile, authored or assembled, loads |
+| QST-ACT-049 | `PlaceNpc.cs` | Place an NPC at a place or marker | R — `DaggerfallQuestPlacements` queues placement until the destination's profile, authored or assembled, loads |
 | QST-ACT-060 | `RevealLocation.cs` | Reveal a quest location/map target | R — `DaggerfallSession.QuestWorldActions` discovers the site and records the map note |
-| QST-ACT-071 | `TeleportPc.cs` | Transfer the player to a place/marker | U — `DaggerfallSession.QuestWorldActions` moves the player to an admitted profile's quest marker. Remaining: a destination without a published profile is diagnosed (see quest destinations) |
+| QST-ACT-071 | `TeleportPc.cs` | Transfer the player to a place/marker | R — `DaggerfallSession.QuestWorldActions` moves the player to the spawn marker of the catalog profile the Place names, indexed in the donor's marker order |
 | QST-ACT-079 | `WhenPcEntersExits.cs` | Trigger on exterior entry/exit type | R — `DaggerfallQuestWorldTriggers` enforces the exterior `p1=2` requirement |
 | QST-ACT-083 | `WorldUpdate.cs` | Mutate world/block/building variant | U — the `location` form executes. Remaining: `locationnew`, `block`, `building`, `blockAll` and `buildingAll` compile but are diagnosed and stall their task; no classic usage |
 
@@ -334,7 +334,6 @@ The open differences for task records are:
 * Sound 386 (`vengence`) in the protected `S0000977` is unpublished: an
   importer publication gap, not a disposition (QST-ACT-051). Like every
   unavailable step it leaves only its own task unfinished.
-* Quest destinations outside the published site profiles (below).
 
 Macro context values follow F091. No unsupported action may be a successful
 no-op.
@@ -344,16 +343,54 @@ no-op.
 Place allocation (`DaggerfallQuestPlaceAllocator` in `DaggerfallQuestPlaces.cs`)
 selects from the whole imported location catalog, its RMB building records and
 the RDB/RMB quest markers, and binds durable region, location and building
-identity without consulting site profiles. The site catalog resolves any
-location's exterior, building interior and dungeon by its profile id
-(`region/index/exterior`, `region/index/interior-x-y-n`, `region/index/dungeon`),
-assembling it from the per-block publication unless an authored site pack
-overrides that id. Travel arrival, building entry, portals, relocation and quest
-teleport still admit only the profiles the bundle publishes, so a quest that
-selects an unpublished town, building or dungeon binds correctly but its
-destination cannot be entered and the operation is diagnosed; most `permanent`
-places, including Daggerfall, Sentinel and Wayrest, have no published profile.
-Routing those consumers through the catalog is open work.
+identity. No selection is narrowed to the profiles a bundle publishes. The
+selection names one profile id (`region/index/exterior`,
+`region/index/interior-x-y-n`, `region/index/dungeon`), which the site catalog
+resolves: the authored site pack that overrides that id, else the profile
+assembled from the per-block publication. Travel, entry, quest teleport and
+placement all go through that id, so queued people, foes and items appear when
+the destination profile loads, wherever it is. As in `GetSiteMarker`, the first
+resource placed without an index chooses a marker of its preferred kind (spawn
+for a person or foe, item for an item, falling back to the other kind), later
+resources at the same place join that marker, and an explicit marker index
+addresses the donor's marker order: a dungeon's blocks in the location's layout
+order, then each block's flats in record order (`DaggerfallQuestPlacements.SourceOrder`).
+
+Every permanent Place in `Quests-Places.txt` resolves to its catalog profile
+(`QuestPermanentPlaceTests`). The quest sources name 21 permanent locations:
+Castle Faallem, Castle Llugwych, Castle Necromoghan, Coven of the Tide (Myrkwasa),
+Coven on the Bluff, Daggerfall, Direnni Tower, Glenmoril Coven, Kykos Coven,
+Lysandus' Tomb, Mantellan Crux, Orsinium, Privateer's Hold, Scourg Barrow,
+Sentinel, Shedungent, Skeffington Coven, The Fortress of Fhojum, Tristore
+Laboratory, Wayrest and Woodborne Hall. A permanent exterior (a city or coven)
+carries no quest markers, as in the donor; its dungeons and buildings do.
+
+Destination coverage of the shipped corpora (`QuestDestinationCoverageTests`)
+expands each corpus's Place declarations world-wide by the allocator's rules
+(building type and faction, the MAPS header filter, the house and dungeon-type
+fallbacks, required quest markers, the excluded guild halls; the run-time
+exclusions of claimed and owned buildings are left out). "Published" counts the
+profiles the bundle's site packs publish; "resolved" counts the profiles the
+catalog resolves. Every selectable destination resolves, and each of the 2,214
+interior and dungeon blocks involved publishes the quest markers the selection
+read from the block catalog.
+
+| Corpus | Quests | Places (kinds) | Locations | Profiles (interiors / dungeons / exteriors) | Published | Resolved |
+| --- | ---: | --- | ---: | --- | ---: | ---: |
+| cures | 2 | 6 (1 permanent, 5 remote) | 10,198 | 133,353 (131,644 / 1,708 / 1) | 2 | 133,353 |
+| disabled | 18 | 35 (3 local, 32 remote) | 12,340 | 161,187 (157,849 / 3,338 / 0) | 4 | 161,187 |
+| fighters | 20 | 42 (10 local, 32 remote) | 12,340 | 177,519 (174,181 / 3,338 / 0) | 8 | 177,519 |
+| mages | 18 | 28 (9 local, 19 remote) | 12,340 | 156,212 (152,874 / 3,338 / 0) | 4 | 156,212 |
+| merchants-vampires | 22 | 32 (4 local, 28 remote) | 12,340 | 167,110 (163,772 / 3,338 / 0) | 5 | 167,110 |
+| nobility | 28 | 22 (7 local, 4 permanent, 11 remote) | 12,343 | 177,522 (174,181 / 3,338 / 3) | 8 | 177,522 |
+| social | 45 | 57 (8 local, 49 remote) | 12,340 | 177,519 (174,181 / 3,338 / 0) | 8 | 177,519 |
+| story-early | 20 | 36 (1 local, 23 permanent, 1 randomPermanent, 11 remote) | 12,341 | 177,524 (174,180 / 3,341 / 3) | 8 | 177,524 |
+| story-late | 16 | 17 (7 permanent, 10 remote) | 11,277 | 133,990 (130,649 / 3,340 / 1) | 3 | 133,990 |
+| temples | 24 | 25 (3 local, 22 remote) | 12,340 | 177,287 (173,949 / 3,338 / 0) | 8 | 177,287 |
+| witches-commoners | 30 | 41 (18 local, 23 remote) | 12,340 | 177,747 (174,409 / 3,338 / 0) | 8 | 177,747 |
+| **All corpora** | **243** | **341** | **12,345** | **177,990** | **8** | **177,990** |
+
+No quest destination of the shipped corpora remains without a disposition.
 
 ## Shipped quest corpus and deterministic catalog scope
 
