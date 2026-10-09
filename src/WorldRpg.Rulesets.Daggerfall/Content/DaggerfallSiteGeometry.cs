@@ -107,7 +107,20 @@ internal sealed class DaggerfallSiteGeometry
     internal ContentArtifact ClosureMesh => _closureMesh
         ?? throw new InvalidOperationException("An assembled location draws its blocks' models, not one combined mesh.");
 
-    /// <summary>A mesh pose from a placement's position and source Euler degrees, as action models are posed.</summary>
+    /// <summary>
+    /// A model mesh's pose from its placement's position and source Euler degrees. The donor turns
+    /// importer-space points by <c>Rz * Rx * Ry</c> before the right-handed flip of Z, so in the profile's
+    /// right-handed frame the same turn is <c>Rz(z) * Rx(-x) * Ry(-y)</c>.
+    /// </summary>
     internal static Transform Pose(Vector3 position, Vector3 rotationDegrees) =>
-        DaggerfallDungeonMotionPolicy.InitialTransform(position, rotationDegrees);
+        new(position, SourceRotation(rotationDegrees), Vector3.One);
+
+    /// <summary>The right-handed rotation the donor's source Euler degrees turn a model by.</summary>
+    internal static Quaternion SourceRotation(Vector3 rotationDegrees)
+    {
+        Vector3 radians = rotationDegrees * (MathF.PI / 180F);
+        return Quaternion.Normalize(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, radians.Z)
+            * Quaternion.CreateFromAxisAngle(Vector3.UnitX, -radians.X)
+            * Quaternion.CreateFromAxisAngle(Vector3.UnitY, -radians.Y));
+    }
 }

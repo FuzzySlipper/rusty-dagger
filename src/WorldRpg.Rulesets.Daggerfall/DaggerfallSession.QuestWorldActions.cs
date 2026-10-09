@@ -28,7 +28,8 @@ internal sealed partial class DaggerfallSession
             return true;
         }
         var binding = DaggerfallQuestPlacements.Destination(instance.Resources, operation.Targets[0]);
-        var profiles = _sites.Profiles?.Keys.Select(key => _sites.Profiles.Require(key)).ToArray() ?? [_sites.Projection.Inputs];
+        // Quest teleport reaches published places; generated destinations join with quest realization (#9695).
+        var profiles = _sites.Profiles?.AuthoredKeys.Select(key => _sites.Profiles.Require(key)).ToArray() ?? [_sites.Projection.Inputs];
         var destinations = profiles.Where(profile => DaggerfallQuestPlacements.Matches(binding, profile)).ToArray();
         if (destinations.Length != 1) throw new NotSupportedException($"Quest teleport Place '{operation.Targets[0]}' has no unique admitted world profile.");
         var destination = destinations[0];

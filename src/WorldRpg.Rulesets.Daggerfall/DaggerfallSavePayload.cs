@@ -273,13 +273,12 @@ internal sealed record DaggerfallSavePayload(
             if (activeShip.Kind != DaggerfallSiteKind.HomeYourShips || activeShip.MapPixelX != anchor.MapPixelX || activeShip.MapPixelY != anchor.MapPixelY)
                 throw new ArgumentException("Saved boarding must be at the owned ship's actual world site.");
         }
-        HashSet<DaggerfallWorldProfileKey> admittedGroundProfiles = profiles is null
-            ? [inputs.ProfileKey]
-            : [.. profiles.Keys];
+        // A saved profile resolves through the catalog: a published closure or the location's assembly.
+        bool Admitted(DaggerfallWorldProfileKey profile) => profile == inputs.ProfileKey || profiles?.TryGet(profile, out _) == true;
         foreach (DaggerfallGroundContainerSave ground in GroundContainers)
         {
             DaggerfallWorldProfileKey profile = ground.Profile.Require();
-            if (!admittedGroundProfiles.Contains(profile))
+            if (!Admitted(profile))
                 throw new ArgumentException($"Saved ground container {ground.Id} names an unadmitted world profile '{profile.LogicalId}'.");
             if (ground.PropertyPlacement is { } placement)
             {
@@ -321,14 +320,9 @@ internal sealed record DaggerfallSavePayload(
             {
                 throw new ArgumentException($"Saved dungeon action state names an unadmitted world profile '{snapshot.ProfileId}'.");
             }
-            else
+            else if (!profiles.TryGetLogicalProfile(snapshot.ProfileId, out selected!))
             {
-                DaggerfallWorldProfileKey[] matches = profiles.Keys
-                    .Where(key => StringComparer.Ordinal.Equals(key.LogicalId, snapshot.ProfileId))
-                    .ToArray();
-                if (matches.Length != 1)
-                    throw new ArgumentException($"Saved dungeon action state names an unadmitted or ambiguous world profile '{snapshot.ProfileId}'.");
-                selected = profiles.Require(matches[0]);
+                throw new ArgumentException($"Saved dungeon action state names an unadmitted or ambiguous world profile '{snapshot.ProfileId}'.");
             }
             if (!StringComparer.Ordinal.Equals(selected.ProfileKey.LogicalId, snapshot.ProfileId))
                 throw new ArgumentException($"Saved dungeon action state names an unadmitted world profile '{snapshot.ProfileId}'.");
@@ -633,7 +627,7 @@ internal sealed record DaggerfallSavePayload(
         foreach (var response in Crime.LegalResponses)
         {
             var profile = response.Profile.Require();
-            if (!admittedGroundProfiles.Contains(profile) || profile.Site.Region != response.Region)
+            if (!Admitted(profile) || profile.Site.Region != response.Region)
                 throw new ArgumentException($"Saved legal response '{response.Id}' names an unadmitted or mismatched regional profile.");
             foreach (long guard in response.Guards)
                 if (guard == DaggerfallActorIdentity.PlayerEntityId ||
@@ -652,10 +646,8 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException($"Saved ready spell '{ReadySpell.SpellKey}' names missing item {readySource}.");
         RequireLiveUniqueItems(savedLedger, uniqueItems.Keys);
         Encounters.Validate();
-        HashSet<string> admittedEncounterProfiles = profiles is null
-            ? [inputs.ProfileKey.LogicalId]
-            : [.. profiles.Keys.Select(profile => profile.LogicalId)];
-        if (Encounters.Resolved.Any(encounter => !admittedEncounterProfiles.Contains(encounter.ProfileId)))
+        if (Encounters.Resolved.Any(encounter => !StringComparer.Ordinal.Equals(encounter.ProfileId, inputs.ProfileKey.LogicalId)
+                && profiles?.TryGetLogicalProfile(encounter.ProfileId, out _) != true))
             throw new ArgumentException("Saved encounter references a world profile not admitted by the current bundle.");
         foreach (DaggerfallEncounterResolution encounter in Encounters.Resolved)
         {

@@ -39,6 +39,12 @@ internal readonly record struct DaggerfallDoorActionSource(byte Axis, ushort Dur
 /// <summary>Content-backed visual that follows the same Engine transform as its door collider.</summary>
 internal sealed record DaggerfallDoorVisual(string Path, ContentSha256 Sha256, IReadOnlyList<DaggerfallMeshMaterialBinding> Materials)
 {
+    /// <summary>
+    /// The visual's pose in the door's own frame. A published door visual is written in that frame and
+    /// needs none; a product-wide model mesh is in its model frame, which this turns into the door's.
+    /// </summary>
+    internal Transform? LocalPose { get; init; }
+
     internal DaggerfallDoorVisual Validate()
     {
         if (string.IsNullOrWhiteSpace(Path)) throw new ArgumentException("A door visual needs admitted content.", nameof(Path));

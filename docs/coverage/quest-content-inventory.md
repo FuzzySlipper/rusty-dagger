@@ -344,12 +344,16 @@ no-op.
 Place allocation (`DaggerfallQuestPlaceAllocator` in `DaggerfallQuestPlaces.cs`)
 selects from the whole imported location catalog, its RMB building records and
 the RDB/RMB quest markers, and binds durable region, location and building
-identity without consulting site profiles. Travel arrival, building entry,
-portals, transitions, relocation and quest teleport admit only the site profiles
-the bundle publishes. A quest that selects an unpublished town, building or
-dungeon therefore binds correctly, but its destination cannot be entered and the
-operation is diagnosed; most `permanent` places, including Daggerfall, Sentinel
-and Wayrest, have no profile. Full-world destination publication is open work.
+identity without consulting site profiles. The site catalog resolves any
+location's exterior, building interior and dungeon by its profile id
+(`region/index/exterior`, `region/index/interior-x-y-n`, `region/index/dungeon`),
+assembling it from the per-block publication unless an authored site pack
+overrides that id. Travel arrival, building entry, portals, relocation and quest
+teleport still admit only the profiles the bundle publishes, so a quest that
+selects an unpublished town, building or dungeon binds correctly but its
+destination cannot be entered and the operation is diagnosed; most `permanent`
+places, including Daggerfall, Sentinel and Wayrest, have no published profile.
+Routing those consumers through the catalog is open work.
 
 ## Shipped quest corpus and deterministic catalog scope
 

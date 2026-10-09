@@ -47,7 +47,7 @@ internal sealed partial class DaggerfallSession
     private DaggerfallShipOffer[] CurrentShipOffers() => _site.ActiveSite is { Exterior.PortTownAndUnknown: > 0 }
         ? [.. ReadPropertyShipOffers(true)] : [];
 
-    private DaggerfallWorldProfileKey? HouseProfile(DaggerfallHouseIdentity house) => _sites.Profiles?.Keys
+    private DaggerfallWorldProfileKey? HouseProfile(DaggerfallHouseIdentity house) => _sites.Profiles?.AuthoredKeys
         .Where(key => key.Site == house.Site && key.Kind == DaggerfallWorldProfileKind.Interior)
         .Where(key => _sites.Profiles.Require(key).InteriorBuilding is { } placed && placed.Building == house.Building
             && placed.BlockX == house.BlockX && placed.BlockY == house.BlockY)
@@ -59,7 +59,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallSiteRecord[] ships = [.. _site.Records.Where(site => site.Kind == DaggerfallSiteKind.HomeYourShips
             && site.MapPixelX == arrival.MapPixelX && site.MapPixelY == arrival.MapPixelY)];
         if (ships.Length != 1) return null;
-        DaggerfallWorldProfileKey[] profiles = [.. _sites.Profiles.Keys.Where(key => key.Site == ships[0].Id
+        DaggerfallWorldProfileKey[] profiles = [.. _sites.Profiles.AuthoredKeys.Where(key => key.Site == ships[0].Id
             && key.Kind == DaggerfallWorldProfileKind.Exterior && _sites.Profiles.Require(key).Anchors.ContainsKey("start"))];
         return profiles.Length == 1 ? profiles[0] : null;
     }

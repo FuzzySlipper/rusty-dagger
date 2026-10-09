@@ -94,22 +94,38 @@ internal sealed class DaggerfallAudioBundle
     }
 }
 
-/// <summary>Profile-keyed audio ownership for all closures admitted by one product composition.</summary>
+/// <summary>
+/// Profile-keyed audio ownership for one product composition. A profile's cue mapping is built the first
+/// time a session opens a clip there or projects it, from the profile the catalog resolves.
+/// </summary>
 internal sealed class DaggerfallSiteAudioBundles
 {
-    private readonly IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallAudioBundle> _bundles;
+    private readonly ProductContent _content;
+    private readonly Func<DaggerfallWorldProfileKey, DaggerfallSiteProfile> _profiles;
+    private readonly Dictionary<DaggerfallWorldProfileKey, DaggerfallAudioBundle> _bundles = [];
 
     internal DaggerfallSiteAudioBundles(ProductContent content, DaggerfallSiteProfiles profiles)
     {
-        ArgumentNullException.ThrowIfNull(content);
+        _content = content ?? throw new ArgumentNullException(nameof(content));
         ArgumentNullException.ThrowIfNull(profiles);
-        Dictionary<DaggerfallWorldProfileKey, DaggerfallAudioBundle> bundles = [];
-        foreach (DaggerfallWorldProfileKey key in profiles.Keys)
-            bundles.Add(key, DaggerfallAudioBundle.ForProfile(content, profiles.Require(key)));
-        _bundles = bundles;
+        _profiles = profiles.Require;
     }
 
-    internal DaggerfallAudioBundle Require(DaggerfallWorldProfileKey key) => _bundles.TryGetValue(key, out DaggerfallAudioBundle? bundle)
-        ? bundle
-        : throw new InvalidOperationException($"World profile '{key.LogicalId}' has no admitted audio bundle.");
+    internal DaggerfallAudioBundle Require(DaggerfallWorldProfileKey key) => Require(key, () => _profiles(key));
+
+    internal DaggerfallAudioBundle Require(DaggerfallSiteProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        return Require(profile.ProfileKey, () => profile);
+    }
+
+    private DaggerfallAudioBundle Require(DaggerfallWorldProfileKey key, Func<DaggerfallSiteProfile> profile)
+    {
+        lock (_bundles)
+        {
+            if (!_bundles.TryGetValue(key, out DaggerfallAudioBundle? bundle))
+                _bundles.Add(key, bundle = DaggerfallAudioBundle.ForProfile(_content, profile()));
+            return bundle;
+        }
+    }
 }

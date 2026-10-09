@@ -310,6 +310,9 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal DaggerfallVocabulary Vocabulary { get; } = vocabulary;
     internal DaggerfallNewGameDefinition NewGame { get; init; } = null!;
 
+    /// <summary>The authored presentation locations assembled from their blocks share, when the payload carries it.</summary>
+    internal DaggerfallAssembledSiteDefinition? AssembledSites { get; init; }
+
     internal DaggerfallBuildingNameInputs BuildingNames { get; init; } = new([]);
     internal IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> Actors { get; } = new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors.ToDictionary());
     internal IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> Items { get; } = new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items.ToDictionary());
@@ -429,3 +432,6 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
         return DaggerfallItemFactory.StartingCondition(template, definition.Weapon?.Material ?? definition.Armor?.Material);
     }
 }
+
+/// <summary>The authored world appearance and navigation grid every location assembled from its blocks shares.</summary>
+internal sealed record DaggerfallAssembledSiteDefinition(AuthoredWorldAppearance Appearance, ulong NavigationGridId);

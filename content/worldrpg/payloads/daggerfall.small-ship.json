@@ -13,6 +13,7 @@
   "placements": [],
   "world": {
     "publicationRoot": "worldrpg/imports/small-ship/exterior",
+    "profile": "31/1/exterior",
     "appearance": {
       "tint": [
         0.72,

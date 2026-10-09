@@ -62,6 +62,8 @@ internal sealed class DaggerfallWorldBlockDocument
     internal required DaggerfallWorldBlockKey Key { get; init; }
     internal required string PublishedKey { get; init; }
     internal DaggerfallWorldBlockSpatial? Spatial { get; init; }
+    /// <summary>The bounds of every placed model in the block's frame, the moving ones included.</summary>
+    internal (Vector3 Minimum, Vector3 Maximum)? Bounds { get; init; }
     internal required IReadOnlyList<DaggerfallWorldBlockModel> Models { get; init; }
     internal required IReadOnlyList<DaggerfallWorldBlockDoor> Doors { get; init; }
     internal Vector3? StartMarker { get; init; }
@@ -291,6 +293,7 @@ internal sealed class DaggerfallWorldBlocks
                 Key = key,
                 PublishedKey = entry.Key,
                 Spatial = spatial,
+                Bounds = OptionalBounds(root, "bounds", owner, diagnostics),
                 Models = models,
                 Doors = doors,
                 StartMarker = Marker(root, "startMarker", owner, diagnostics),

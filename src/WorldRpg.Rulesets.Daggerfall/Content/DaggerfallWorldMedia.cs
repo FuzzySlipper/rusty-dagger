@@ -139,6 +139,15 @@ internal sealed class DaggerfallWorldMedia : IDisposable
         }
     }
 
+    /// <summary>Every product-wide dungeon descriptor's media id.</summary>
+    internal IEnumerable<string> ResourceIds => _resources.Keys;
+
+    /// <summary>Every product-wide billboard's sprite resource id.</summary>
+    internal IEnumerable<string> BillboardIds => _billboards.Keys;
+
+    /// <summary>Every product-wide actor's resource id.</summary>
+    internal IEnumerable<string> ActorIds => _actors.Keys;
+
     /// <summary>A product-wide dungeon descriptor by media id.</summary>
     internal bool TryGetResource(string id, out JsonElement resource) => _resources.TryGetValue(id, out resource);
 

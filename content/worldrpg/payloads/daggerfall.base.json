@@ -4473,6 +4473,17 @@
       ]
     ]
   },
+  "assembledSites": {
+    "appearance": {
+      "tint": [0.72, 0.7, 0.65, 1],
+      "position": [0, 0, 0],
+      "rotation": [0, 0, 0, 1],
+      "scale": [1, 1, 1],
+      "visible": true,
+      "layer": "scene"
+    },
+    "navigationGridId": 1
+  },
   "newGame": {
     "startSite": "daggerfall.privateers-hold",
     "quests": [

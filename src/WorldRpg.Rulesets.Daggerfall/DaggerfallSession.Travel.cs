@@ -211,7 +211,7 @@ internal sealed partial class DaggerfallSession
         if (_activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return "Leave the building or dungeon before travelling.";
         if (HasNearbyRestEnemy()) return "Nearby enemies prevent travel.";
         if (!quote.CanAfford) return "You cannot afford the route and its coin-only inn cost.";
-        DaggerfallWorldProfileKey[] profiles = [.. (_sites.Profiles?.Keys ?? [])
+        DaggerfallWorldProfileKey[] profiles = [.. (_sites.Profiles?.AuthoredKeys ?? [])
             .Where(profile => profile.Site == quote.Destination.Id && profile.Kind == DaggerfallWorldProfileKind.Exterior)];
         // A destination this bundle carries no single arrival place for cannot be travelled to; the
         // player reads that rather than the content gap behind it.

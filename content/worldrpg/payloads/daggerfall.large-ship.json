@@ -13,6 +13,7 @@
   "placements": [],
   "world": {
     "publicationRoot": "worldrpg/imports/large-ship/exterior",
+    "profile": "31/2/exterior",
     "appearance": {
       "tint": [
         0.72,

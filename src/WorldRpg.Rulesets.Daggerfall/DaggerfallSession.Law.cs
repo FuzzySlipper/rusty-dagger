@@ -159,8 +159,8 @@ internal sealed partial class DaggerfallSession
             // PlayerEntity.SpawnCityGuards brings the watch through the lowest outer door.
             // Normalized portals identify that entrance; Engine queries admit clear ground nearby.
             var profile = _sites.Projection.Inputs;
-            var entrance = profile.Portals.Where(portal => _sites.Profiles?.Keys.Any(key =>
-                    key.LogicalId == portal.DestinationLogicalProfile && key.Kind == DaggerfallWorldProfileKind.Exterior) == true)
+            var entrance = profile.Portals.Where(portal => _sites.Profiles?.TryGetLogicalProfile(portal.DestinationLogicalProfile, out DaggerfallSiteProfile? destination) == true
+                    && destination.ProfileKind == DaggerfallWorldProfileKind.Exterior)
                 .OrderBy(portal => portal.Position.Y).ThenBy(portal => portal.Id, StringComparer.Ordinal).FirstOrDefault();
             origin = entrance?.Position ?? profile.Anchors["start"].Position;
             origin = WorldPoint.From(origin.ToVector() + Vector3.UnitY * SummonSeparation);
@@ -354,7 +354,7 @@ internal sealed partial class DaggerfallSession
     private DaggerfallWorldProfileKey CourtReleaseProfile()
     {
         if (_sites.ReturnProfile is { Kind: DaggerfallWorldProfileKind.Exterior } outside) return outside;
-        return _sites.Profiles?.Keys.FirstOrDefault(key => key.Site == _activeProfileKey.Site && key.Kind == DaggerfallWorldProfileKind.Exterior)
+        return _sites.Profiles?.AuthoredKeys.FirstOrDefault(key => key.Site == _activeProfileKey.Site && key.Kind == DaggerfallWorldProfileKind.Exterior)
             is { LogicalId: not null } exterior ? exterior : _activeProfileKey;
     }
 

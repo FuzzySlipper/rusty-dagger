@@ -98,6 +98,7 @@
   "placements": [],
   "world": {
     "publicationRoot": "worldrpg/imports/charing/exterior",
+    "profile": "17/4/exterior",
     "appearance": {
       "tint": [
         0.72,
@@ -167,7 +168,7 @@
           -86.8
         ],
         "radius": 2,
-        "destinationProfile": "worldrpg/imports/charing/interior-1-1-0"
+        "destinationProfile": "17/4/interior-1-1-0"
       }
     ]
   }

@@ -80,7 +80,7 @@ internal sealed class DaggerfallSiteLifecycle
     // Exterior artifacts publish navigation cells at the source terrain's 0.8-unit grid. One
     // wilderness map pixel is 819.2 world units, so adjacent location closures are exactly 1024
     // navigation cells apart in the shared Engine artifact grid.
-    private const long NavigationCellsPerExteriorCell = 1024;
+    internal const long NavigationCellsPerExteriorCell = 1024;
     private bool _locationLoaded;
     private DaggerfallExteriorCellId? _locationCell;
     private bool _admittingInitialResidency;
@@ -282,20 +282,24 @@ internal sealed class DaggerfallSiteLifecycle
     }
 
     /// <summary>
-    /// Every admitted action profile, the active one included, in the stable order action graph
-    /// save identity uses.
+    /// The profiles a session starts with action graphs for: the active one, and on a restore every
+    /// profile the save carries action state for, in the stable order action graph save identity uses.
+    /// Any other profile gains its graph when the session first enters it.
     /// </summary>
     internal static IReadOnlyList<(DaggerfallWorldProfileKey Key, DaggerfallSiteProfile Inputs)> ActionProfiles(
         DaggerfallSiteProfile active,
-        DaggerfallSiteProfiles? profiles)
+        DaggerfallSiteProfiles? profiles,
+        IEnumerable<string>? savedProfileIds = null)
     {
         ArgumentNullException.ThrowIfNull(active);
-        if (profiles is null) return [(active.ProfileKey, active)];
-
-        Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile> admitted = [];
-        foreach (DaggerfallWorldProfileKey key in profiles.Keys)
-            admitted.Add(key, profiles.Require(key));
-        admitted.TryAdd(active.ProfileKey, active);
+        Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile> admitted = new() { [active.ProfileKey] = active };
+        foreach (string id in savedProfileIds ?? [])
+        {
+            if (StringComparer.Ordinal.Equals(id, active.ProfileKey.LogicalId)) continue;
+            DaggerfallSiteProfile saved = (profiles ?? throw new ArgumentException($"Saved action state names profile '{id}' without an admitted site catalog.", nameof(profiles)))
+                .RequireLogicalProfile(id);
+            admitted.TryAdd(saved.ProfileKey, saved);
+        }
         if (admitted.Keys.Select(key => key.LogicalId).Distinct(StringComparer.Ordinal).Count() != admitted.Count)
             throw new ArgumentException("Admitted world profiles must use distinct logical ids for action graph save identity.", nameof(profiles));
         return admitted.OrderBy(entry => entry.Key.Site.Region)
@@ -314,15 +318,14 @@ internal sealed class DaggerfallSiteLifecycle
             if (ReferenceEquals(Profiles, profiles)) return;
             throw new InvalidOperationException("Daggerfall site profiles are already admitted for this session.");
         }
-        _ = profiles.Require(ActiveProfile);
-        if (_audioBundles is not null)
-            foreach (DaggerfallWorldProfileKey key in profiles.Keys) _ = _audioBundles.Require(key);
+        // The catalog resolves profiles lazily: the active one is admitted now, and every other profile's
+        // action graph, triggers and audio are admitted when the session first enters it.
+        DaggerfallSiteProfile active = profiles.Require(ActiveProfile);
         Profiles = profiles;
-        foreach (DaggerfallWorldProfileKey key in profiles.Keys)
-            EnsureDungeonActionGraph(key, profiles.Require(key));
+        EnsureDungeonActionGraph(ActiveProfile, active);
     }
 
-    internal DaggerfallAudioBundle? AudioFor(DaggerfallSiteProfile inputs) => _audioBundles?.Require(inputs.ProfileKey);
+    internal DaggerfallAudioBundle? AudioFor(DaggerfallSiteProfile inputs) => _audioBundles?.Require(inputs);
 
     private void EnsureDungeonActionGraph(DaggerfallWorldProfileKey key, DaggerfallSiteProfile inputs)
     {
@@ -913,7 +916,8 @@ internal sealed class DaggerfallSiteLifecycle
     {
         if (Profiles is null) return;
         HashSet<DaggerfallWorldProfileKey> desired = [];
-        foreach (DaggerfallWorldProfileKey key in Profiles.Keys
+        // Only published exteriors stream as neighbours today; assembled ones join with travel and entry (#9694).
+        foreach (DaggerfallWorldProfileKey key in Profiles.AuthoredKeys
             .Where(key => key.Kind == DaggerfallWorldProfileKind.Exterior)
             .OrderBy(key => key.Site.Region).ThenBy(key => key.Site.Index).ThenBy(key => key.LogicalId, StringComparer.Ordinal))
         {
