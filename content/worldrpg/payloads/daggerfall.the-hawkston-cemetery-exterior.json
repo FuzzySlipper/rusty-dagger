@@ -98,6 +98,7 @@
   "placements": [],
   "world": {
     "publicationRoot": "worldrpg/imports/the-hawkston-cemetery/exterior",
+    "profile": "17/0/exterior",
     "appearance": {
       "tint": [
         0.72,
@@ -137,7 +138,7 @@
           -51.6
         ],
         "radius": 2,
-        "destinationProfile": "worldrpg/imports/the-hawkston-cemetery"
+        "destinationProfile": "17/0/dungeon"
       }
     ]
   }

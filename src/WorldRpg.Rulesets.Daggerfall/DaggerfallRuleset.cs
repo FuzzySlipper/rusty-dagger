@@ -92,21 +92,41 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(RequireSingle(selected, roles, BlocksRole).Payload);
             blocks.AdmitLocations(definitions.Locations);
             ContentPack[] sitePacks = [.. roles[SiteRole]];
-            // Every site closure references the one product-wide world media publication, read once for all of them.
-            DaggerfallSiteProfile[] sites;
-            using (DaggerfallWorldMedia worldMedia = DaggerfallWorldMedia.Read(selected.Content))
-                sites = [.. sitePacks.Select(pack => DaggerfallSiteContent.Read(selected.Content, pack.Payload, definitions, worldMedia))];
-            if (sites.Length == 0)
+            if (sitePacks.Length == 0)
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects no '{SiteRole.Value}' content pack, so a new game has nowhere to start.");
+            // Each site pack states the profile id it overrides; its closure is read only when that profile is
+            // first needed. Every other location profile is assembled from the per-block publication on demand.
+            DaggerfallSitePayloadHeader[] headers = [.. sitePacks.Select(pack => DaggerfallSiteContent.ReadHeader(pack.Payload, pack.Id.Value))];
+            // Every site closure and assembly references the one product-wide world media publication, read
+            // once for all of them, when the first one needs it.
+            Lazy<DaggerfallWorldMedia> worldMedia = new(() => DaggerfallWorldMedia.Read(selected.Content));
+            Lazy<DaggerfallProductMedia> productMedia = new(() => DaggerfallSiteContent.ReadProductMedia(selected.Content, worldMedia.Value, definitions));
+            Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(selected.Content, worldMedia.Value));
+            DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(selected.Content), () => productMedia.Value, () => meshes.Value);
+            // Every resolved profile names its classic images and music cues against the published manifests,
+            // and an interior names its building against the block catalog: each is joined when the profile is
+            // resolved, before a transition touches the source, so the publication it disagrees with is named.
+            HashSet<NormalizedClassicPresentation> joinedPresentations = new(ReferenceEqualityComparer.Instance);
+            HashSet<IReadOnlyList<NormalizedMusicCue>> joinedMusic = new(ReferenceEqualityComparer.Instance);
+            void Join(DaggerfallSiteProfile site)
+            {
+                if (joinedPresentations.Add(site.ClassicPresentation)) _ = DaggerfallPublishedClassicMedia.Read(selected.Content, site.ClassicPresentation);
+                if (joinedMusic.Add(site.Music)) _ = DaggerfallMusicBundle.Admit(selected.Content, site.Music);
+                site.InteriorBuilding?.ValidateAgainst(blocks);
+            }
+
+            DaggerfallSiteProfiles profiles = DaggerfallSiteProfiles.Resolve(
+                sitePacks.Zip(headers, (pack, header) => new DaggerfallAuthoredSite(header,
+                    () => DaggerfallSiteContent.Read(selected.Content, pack.Payload, definitions, worldMedia.Value))),
+                assembly, Join);
             // The authored new-game definition names the site a new game starts at; pack order in the
             // bundle carries no meaning, so adding or reordering sites cannot move the start.
             string startPack = definitions.NewGame.StartSitePack;
-            int start = Array.FindIndex(sitePacks, pack => pack.Id.Value == startPack);
-            if (start < 0)
-                throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' does not select the new-game start site '{startPack}'.");
-            DaggerfallSiteProfile inputs = sites[start];
-            if (inputs.VariantName is not null)
+            DaggerfallSitePayloadHeader startHeader = headers.FirstOrDefault(header => header.PackId == startPack)
+                ?? throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' does not select the new-game start site '{startPack}'.");
+            if (startHeader.VariantName is not null)
                 throw new InvalidOperationException($"New-game start site '{startPack}' is a world variant, not a base site.");
+            DaggerfallSiteProfile inputs = profiles.Require(startHeader.Key);
             // The start site's classic selection is the session's held-item and spell presentation at
             // every site, so a start site without one would leave the player's hands unpresented.
             if (inputs.ClassicPresentation.Viewmodel is null || inputs.ClassicPresentation.UnarmedVisual is null)
@@ -129,18 +149,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             if (missingNewGameQuests.Length != 0)
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' admits no quest source for the new-game quests {string.Join(", ", missingNewGameQuests.Select(file => $"'{file}'"))}.");
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(selected.Content, inputs.ClassicPresentation);
-            foreach (DaggerfallSiteProfile site in sites.Where(site => !ReferenceEquals(site, inputs)))
-                _ = DaggerfallPublishedClassicMedia.Read(selected.Content, site.ClassicPresentation);
-            // Every admitted site names its cues against the same published manifest, so each one is
-            // joined here: a site whose music nothing published would otherwise fail on entry rather
-            // than at composition, where the publication it disagrees with is still identifiable.
             DaggerfallMusicBundle? music = DaggerfallMusicBundle.Admit(selected.Content, inputs.Music);
-            foreach (DaggerfallSiteProfile site in sites.Where(site => !ReferenceEquals(site, inputs)))
-                _ = DaggerfallMusicBundle.Admit(selected.Content, site.Music);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
-            DaggerfallSiteProfiles profiles = new(sites);
-            foreach (DaggerfallWorldProfileKey key in profiles.Keys)
-                profiles.Require(key).InteriorBuilding?.ValidateAgainst(blocks);
             return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, questReceipts, disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(selected.Content, profiles), selected.Content, music);
         });
 

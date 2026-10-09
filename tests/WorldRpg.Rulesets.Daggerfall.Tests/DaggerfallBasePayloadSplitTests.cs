@@ -42,7 +42,7 @@ public sealed class DaggerfallBasePayloadSplitTests
         using JsonDocument imported = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(payloads, "daggerfall.imported.json")));
 
         Assert.Equal(
-            ["ruleset", "vocabulary", "armorValuesByMaterial", "actors", "items", "equipmentSlots", "actions", "lootTables", "hudResources", "lootCategoryPools", "donorErrata", "encounters", "newGame", "enemySpells", "dialogueWorldRules"],
+            ["ruleset", "vocabulary", "armorValuesByMaterial", "actors", "items", "equipmentSlots", "actions", "lootTables", "hudResources", "lootCategoryPools", "donorErrata", "encounters", "assembledSites", "newGame", "enemySpells", "dialogueWorldRules"],
             authored.RootElement.EnumerateObject().Select(section => section.Name));
         Assert.Empty(imported.RootElement.EnumerateObject().Select(section => section.Name)
             .Intersect(authored.RootElement.EnumerateObject().Select(section => section.Name)));

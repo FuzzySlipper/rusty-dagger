@@ -106,6 +106,7 @@ internal static partial class DaggerfallBaseContent
             ValidateCatalog(actors, armorValues, actions, lootTables, lootCategoryPools, diagnostics);
             foreach (string problem in DaggerfallEnchantmentSettings.Validate(magic.EnchantmentSettings.Values))
                 diagnostics.Add(problem);
+            DaggerfallAssembledSiteDefinition? assembledSites = ReadAssembledSites(root, diagnostics);
             DaggerfallNewGameDefinition newGame = ReadNewGame(root, catalogs, itemTemplatesCatalog, DaggerfallTemplateItemDefinitions.Create(itemTemplatesCatalog, items, magic), equipmentSlots, magic, diagnostics);
             diagnostics.ThrowIfAny();
             return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, questSources, cinematics, encounters)
@@ -114,6 +115,7 @@ internal static partial class DaggerfallBaseContent
                 EnemySpells = enemySpells,
                 DialogueWorldRules = dialogueWorldRules,
                 NewGame = newGame,
+                AssembledSites = assembledSites,
             };
         }
         catch (JsonException exception)
@@ -126,6 +128,22 @@ internal static partial class DaggerfallBaseContent
             diagnostics.Add($"Base payload is malformed: {exception.Message}");
             throw diagnostics.Exception();
         }
+    }
+
+    /// <summary>
+    /// The authored presentation every location assembled from its blocks shares: its world appearance and
+    /// the navigation grid its block artifacts are placed on. A payload without it admits only published
+    /// site closures, and an assembly that needs it refuses by name.
+    /// </summary>
+    private static DaggerfallAssembledSiteDefinition? ReadAssembledSites(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("assembledSites", out JsonElement section)) return null;
+        JsonElement value = Object(section, "assembledSites", diagnostics);
+        RejectDuplicateProperties(value, "assembledSites", diagnostics);
+        AuthoredWorldAppearance appearance = DaggerfallSiteContent.ReadWorldAppearance(Object(Property(value, "appearance", diagnostics), "assembledSites.appearance", diagnostics), diagnostics);
+        long grid = Long(value, "navigationGridId", diagnostics);
+        if (grid <= 0) diagnostics.Add("assembledSites.navigationGridId must be a positive navigation grid.");
+        return new DaggerfallAssembledSiteDefinition(appearance, (ulong)Math.Max(grid, 1));
     }
 
     /// <summary>

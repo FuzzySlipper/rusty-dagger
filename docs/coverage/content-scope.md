@@ -371,8 +371,9 @@ generated file Git would pick up):
 The base definitions come from two packs. `daggerfall.base` is authored and tracked: its payload
 `content/worldrpg/payloads/daggerfall.base.json` carries `ruleset`, `vocabulary`,
 `armorValuesByMaterial`, `actors`, `items`, `equipmentSlots`, `actions`, `lootTables`,
-`hudResources`, `lootCategoryPools`, `donorErrata` and `encounters` (some transcribed from the donor
-by hand, each citing its source); no command writes it. `daggerfall.imported` is generated. The
+`hudResources`, `lootCategoryPools`, `donorErrata`, `encounters` and `assembledSites` (the world
+appearance and navigation grid every location assembled from its blocks shares; some sections are
+transcribed from the donor by hand, each citing its source); no command writes it. `daggerfall.imported` is generated. The
 ruleset's base reader joins the two payloads section by section and refuses a section both carry.
 The commands that build from authored sections (`catalogs` reads the vocabulary, actors and items;
 `item-template-ledger` the items; `mobile-catalog` and `mobile-ledger` the actors) take the
@@ -385,8 +386,11 @@ the all-zero loot matrix.
 Authored and tracked: the pack, bundle and tuning descriptors (`content/worldrpg/content-packs/`,
 `content/worldrpg/bundles/`, `content/worldrpg/tuning/`), the tuning payloads
 (`content/worldrpg/tuning-payloads/`), the authored base payload, the site payloads
-(`content/worldrpg/payloads/daggerfall.{privateers-hold,castle-necromoghan,charing-exterior,charing-interior-1-1-0}.json`)
-and the importer's tracked inputs: the source inventory, `data/ui-authored-assets.json` with
+(`content/worldrpg/payloads/daggerfall.{privateers-hold,castle-necromoghan,charing-exterior,charing-interior-1-1-0}.json`
+and the other site payloads beside them) and the importer's tracked inputs. A site payload states the profile id
+it overrides (`world.profile`, for example `17/4/exterior` or `17/4/interior-3-4-0`) and the ruleset
+uses its closure for that id only; every other location profile is assembled from the per-block
+publication when first needed. The tracked importer inputs are the source inventory, `data/ui-authored-assets.json` with
 `data/ui-original/` (original art). No sprite overlay is tracked; `--sprite-authoring DIR` applies an
 operator's `sprites/SITE.json` overlays to the dungeon sites. Third-party origins are in
 `THIRD_PARTY_NOTICES.md`.

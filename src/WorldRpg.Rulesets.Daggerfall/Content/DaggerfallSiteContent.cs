@@ -74,6 +74,10 @@ internal static class DaggerfallSiteContent
     {
         JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics);
         string publicationRoot = DaggerfallBaseContent.Text(world, "publicationRoot", diagnostics);
+        // The profile's identity is the id the payload states explicitly: the generated id of its location's
+        // exterior, interior or dungeon that this authored closure overrides. A variant states its base's id.
+        string profileId = DaggerfallBaseContent.OptionalText(world, "variantOf", diagnostics)
+            ?? DaggerfallBaseContent.Text(world, "profile", diagnostics);
         DaggerfallWorldProfileKind profileKind = DaggerfallBaseContent.Text(world, "profileKind", diagnostics) switch
         {
             "exterior" => DaggerfallWorldProfileKind.Exterior,
@@ -169,7 +173,7 @@ internal static class DaggerfallSiteContent
             start.Site,
             doors,
             profileKind,
-            publicationRoot,
+            profileId,
             portals,
             anchors,
             lights,
@@ -188,10 +192,103 @@ internal static class DaggerfallSiteContent
     }
 
     /// <summary>
+    /// Reads the product-wide world media an assembled location draws from: every actor, billboard and
+    /// terrain texture the world media publication carries, its material textures by material id, and its
+    /// classic sidecar's audio, music and classic presentation. A location assembled from its blocks admits
+    /// the whole publication, as a site closure admits the entries it selects; it is read once and shared.
+    /// </summary>
+    internal static DaggerfallProductMedia ReadProductMedia(ProductContent content, DaggerfallWorldMedia product, DaggerfallDefinitions definitions)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        ArgumentNullException.ThrowIfNull(product);
+        ArgumentNullException.ThrowIfNull(definitions);
+        DaggerfallContentDiagnostics diagnostics = new();
+        if (!product.IsPublished)
+        {
+            diagnostics.Add($"Assembling a location needs the world media publication at '{DaggerfallWorldMedia.Root}', which admitted content does not carry.");
+            throw diagnostics.Exception();
+        }
+
+        AdmittedFiles files = AdmittedFiles.From(content);
+        // The publication's own entries resolve by their closure-relative paths in its own root.
+        DaggerfallClosureArtifacts artifacts = new(DaggerfallWorldMedia.Root, new Dictionary<string, ContentSha256>(), product);
+        System.Text.Json.Nodes.JsonObject selection = new()
+        {
+            ["media"] = new System.Text.Json.Nodes.JsonObject { ["resources"] = new System.Text.Json.Nodes.JsonArray() },
+            ["materials"] = new System.Text.Json.Nodes.JsonArray(),
+            ["billboards"] = new System.Text.Json.Nodes.JsonArray(),
+            ["actors"] = new System.Text.Json.Nodes.JsonArray(),
+            ["shared"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["resources"] = new System.Text.Json.Nodes.JsonArray([.. product.ResourceIds.Order(StringComparer.Ordinal).Select(id => (System.Text.Json.Nodes.JsonNode?)id)]),
+                ["billboards"] = new System.Text.Json.Nodes.JsonArray([.. product.BillboardIds.Order(StringComparer.Ordinal).Select(id => (System.Text.Json.Nodes.JsonNode?)id)]),
+                ["actors"] = new System.Text.Json.Nodes.JsonArray([.. product.ActorIds.Order(StringComparer.Ordinal).Select(id => (System.Text.Json.Nodes.JsonNode?)id)]),
+            },
+        };
+        (_, IReadOnlyDictionary<int, NormalizedActorSprite> sprites, NormalizedBillboardSprite? groundContainer,
+            IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> billboards,
+            IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> terrain) =
+            ReadDungeonMedia(System.Text.Encoding.UTF8.GetBytes(selection.ToJsonString()), artifacts, product, definitions, diagnostics);
+        foreach (int mobileId in definitions.Encounters.Tables.SelectMany(table => table).Distinct().Order())
+            if (!sprites.ContainsKey(mobileId))
+                diagnostics.Add($"The world media publication lacks media for encounter mobile '{mobileId}'.");
+        (IReadOnlyList<NormalizedAudioClip> audio, IReadOnlyList<NormalizedMusicCue> music, NormalizedClassicPresentation classic) =
+            ReadClassicPresentation(files, product.ClassicSidecar, artifacts, diagnostics);
+        Dictionary<string, ContentArtifact> textures = new(StringComparer.Ordinal);
+        foreach (string id in product.ResourceIds.Where(id => id.StartsWith("material/", StringComparison.Ordinal)))
+        {
+            if (!product.TryGetResource(id, out JsonElement resource)) continue;
+            string path = artifacts.Resolve(DaggerfallBaseContent.Text(resource, "relativePath", diagnostics));
+            if (!artifacts.TryGetValue(path, out ContentSha256 hash)) diagnostics.Add($"World media material '{id}' is not an admitted artifact.");
+            else textures.Add(id, new ContentArtifact(path, hash));
+        }
+
+        diagnostics.ThrowIfAny();
+        return new(sprites, groundContainer, billboards, terrain, audio, music, classic, textures);
+    }
+
+    /// <summary>
+    /// The identity a site payload publishes, read without its closure: the explicit profile id, the site
+    /// it starts at, its profile kind and, for a variant, its name and base id.
+    /// </summary>
+    internal static DaggerfallSitePayloadHeader ReadHeader(ReadOnlyMemory<byte> payload, string packId)
+    {
+        DaggerfallContentDiagnostics diagnostics = new();
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(payload);
+            JsonElement root = DaggerfallBaseContent.Object(document.RootElement, $"site pack '{packId}'", diagnostics);
+            JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), $"site pack '{packId}' world", diagnostics);
+            JsonElement start = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "startingState", diagnostics), $"site pack '{packId}' startingState", diagnostics);
+            DaggerfallSiteId? site = ReadStartSite(start, diagnostics);
+            DaggerfallWorldProfileKind kind = DaggerfallBaseContent.Text(world, "profileKind", diagnostics) switch
+            {
+                "exterior" => DaggerfallWorldProfileKind.Exterior,
+                "interior" => DaggerfallWorldProfileKind.Interior,
+                "dungeon" => DaggerfallWorldProfileKind.Dungeon,
+                _ => InvalidProfileKind(diagnostics),
+            };
+            string? variant = DaggerfallBaseContent.OptionalText(world, "variant", diagnostics);
+            string? variantOf = DaggerfallBaseContent.OptionalText(world, "variantOf", diagnostics);
+            string profile = variantOf ?? DaggerfallBaseContent.Text(world, "profile", diagnostics);
+            if (site is null) diagnostics.Add($"Site pack '{packId}' names no starting site, so its profile has no location.");
+            else if (!DaggerfallWorldProfileIds.TryParse(profile, out DaggerfallWorldProfileKey parsed) || parsed.Site != site || parsed.Kind != kind)
+                diagnostics.Add($"Site pack '{packId}' publishes profile '{profile}', which is not the {kind} profile id of its site {site}.");
+            diagnostics.ThrowIfAny();
+            return new(new DaggerfallWorldProfileKey(site!.Value, kind, profile).Validate(), variant, packId);
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add($"Site pack '{packId}' payload is not valid JSON: {exception.Message}");
+            throw diagnostics.Exception();
+        }
+    }
+
+    /// <summary>
     /// Reads source-backed exterior population placements. Missing or malformed records are
     /// reported and omitted; content admission never invents a civilian to fill a gap.
     /// </summary>
-    private static IReadOnlyList<DaggerfallPopulationPlacement> ReadNormalizedPopulation(
+    internal static IReadOnlyList<DaggerfallPopulationPlacement> ReadNormalizedPopulation(
         ReadOnlyMemory<byte>? bytes, DaggerfallContentDiagnostics diagnostics)
     {
         if (bytes is null) return [];
@@ -409,7 +506,7 @@ internal static class DaggerfallSiteContent
     /// Projects the importer-owned RDB light facts without reopening Arena2: position, range, intensity and
     /// the colour the importer states for every light.
     /// </summary>
-    private static IReadOnlyList<DaggerfallSiteLight> ReadNormalizedLights(ReadOnlyMemory<byte>? bytes, DaggerfallContentDiagnostics diagnostics)
+    internal static IReadOnlyList<DaggerfallSiteLight> ReadNormalizedLights(ReadOnlyMemory<byte>? bytes, DaggerfallContentDiagnostics diagnostics)
     {
         if (bytes is null)
         {
@@ -942,12 +1039,12 @@ internal static class DaggerfallSiteContent
         }
     }
 
-    private static DaggerfallLockInteractionSurface DoorSurface(DaggerfallWorldProfileKind profileKind) =>
+    internal static DaggerfallLockInteractionSurface DoorSurface(DaggerfallWorldProfileKind profileKind) =>
         profileKind == DaggerfallWorldProfileKind.Exterior
             ? DaggerfallLockInteractionSurface.Exterior
             : DaggerfallLockInteractionSurface.Interior;
 
-    private static bool TryDoorIdentity(string sourceId, out DaggerfallRdbDoorId identity)
+    internal static bool TryDoorIdentity(string sourceId, out DaggerfallRdbDoorId identity)
     {
         identity = default;
         string[] parts = sourceId.Split('/', StringSplitOptions.None);
@@ -2319,7 +2416,7 @@ internal static class DaggerfallSiteContent
         return 1;
     }
 
-    private static AuthoredWorldAppearance ReadWorldAppearance(JsonElement value, DaggerfallContentDiagnostics diagnostics)
+    internal static AuthoredWorldAppearance ReadWorldAppearance(JsonElement value, DaggerfallContentDiagnostics diagnostics)
     {
         RenderLayer layer = DaggerfallBaseContent.Text(value, "layer", diagnostics) switch { "scene" => RenderLayer.Scene, _ => InvalidLayer(diagnostics) };
         return new(ColorValue(DaggerfallBaseContent.Property(value, "tint", diagnostics), "world.appearance.tint", diagnostics), new Transform(Vector3Value(DaggerfallBaseContent.Property(value, "position", diagnostics), "world.appearance.position", diagnostics), QuaternionValue(DaggerfallBaseContent.Property(value, "rotation", diagnostics), "world.appearance.rotation", diagnostics), Vector3Value(DaggerfallBaseContent.Property(value, "scale", diagnostics), "world.appearance.scale", diagnostics)), Boolean(value, "visible", diagnostics), layer);
@@ -2438,6 +2535,20 @@ internal static class DaggerfallSiteContent
     }
     private static RenderLayer InvalidLayer(DaggerfallContentDiagnostics diagnostics) { diagnostics.Add("Appearance layer must be scene."); return RenderLayer.Scene; }
 }
+
+/// <summary>The identity a site payload publishes, read without its closure.</summary>
+internal sealed record DaggerfallSitePayloadHeader(DaggerfallWorldProfileKey Key, string? VariantName, string PackId);
+
+/// <summary>The product-wide world media every assembled location draws from.</summary>
+internal sealed record DaggerfallProductMedia(
+    IReadOnlyDictionary<int, NormalizedActorSprite> MobileSprites,
+    NormalizedBillboardSprite? GroundContainerSprite,
+    IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> BillboardSprites,
+    IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> TerrainTextures,
+    IReadOnlyList<NormalizedAudioClip> Audio,
+    IReadOnlyList<NormalizedMusicCue> Music,
+    NormalizedClassicPresentation ClassicPresentation,
+    IReadOnlyDictionary<string, ContentArtifact> Textures);
 
 internal sealed class AdmittedFiles
 {

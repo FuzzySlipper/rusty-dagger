@@ -477,6 +477,7 @@
   ],
   "world": {
     "publicationRoot": "worldrpg/imports/privateers-hold",
+    "profile": "17/179/dungeon",
     "appearance": {
       "tint": [
         0.72,

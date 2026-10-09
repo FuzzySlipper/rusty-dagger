@@ -168,6 +168,7 @@ Start new work from the current owners, not a stale filename in a task:
 | Actor construction | `DaggerActorFactory`, Kit `ActorsState` / `EntityDirectory` |
 | Spawn, retire, site unload of actors | `DaggerfallActorRoster` |
 | Site transitions, inactive-site deltas, exterior window | `DaggerfallSiteLifecycle` |
+| World profiles: an authored closure by the id it overrides, else the location assembled from its blocks | `DaggerfallSiteProfiles`, `DaggerfallLocationAssembly`, `DaggerfallWorldBlocks`, ids from `DaggerfallWorldProfileIds` |
 | Calendar consumers | `DaggerfallSession.AdvanceCalendar` with `DaggerfallCalendarAdvanceKind` |
 | Live gameplay services | `DaggerfallState.Kit`, `GameplayServices<TFact>` |
 | Named session owners | `DaggerfallState`, constructed once from `DaggerActorAssembly` and the services built over it |

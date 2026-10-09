@@ -16,7 +16,7 @@ internal sealed partial class DaggerfallSession
         // Select only real, admitted cemetery closures in the player's current region. The infection
         // region remains the clan input even if the player travelled while incubating the disease.
         int region = _site.ActiveSite?.Region ?? transition.InfectionRegion;
-        var candidates = _sites.Profiles?.Keys.Where(key => key.Kind == DaggerfallWorldProfileKind.Dungeon
+        var candidates = _sites.Profiles?.AuthoredKeys.Where(key => key.Kind == DaggerfallWorldProfileKind.Dungeon
             && key.Site.Region == region && _site.Require(key.Site).DungeonType == 18)
             .OrderBy(key => key.LogicalId, StringComparer.Ordinal).ToArray() ?? [];
         if (candidates.Length == 0) return new(false, $"No cemetery destination is published for region {region}.");

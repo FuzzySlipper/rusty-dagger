@@ -6,40 +6,30 @@ internal sealed record DaggerfallWorldVariantSave(int Region, int Location, stri
 
 internal sealed partial class DaggerfallSiteProfiles
 {
-    private readonly Dictionary<(DaggerfallWorldProfileKey Profile, string Variant), DaggerfallSiteProfile> _variants = [];
     private readonly Dictionary<DaggerfallSiteId, string> _selectedVariants = [];
 
-    private void AdmitVariants(IEnumerable<DaggerfallSiteProfile> variants)
+    /// <summary>
+    /// A scenery variant may replace how a location looks but not what the session retains about it. A
+    /// variant that changes retained actor or action topology is refused rather than silently dropping state.
+    /// </summary>
+    private static void RequireSameTopology(DaggerfallSiteProfile original, DaggerfallSiteProfile variant, string name)
     {
-        foreach (var variant in variants)
-        {
-            if (variant.VariantBaseLogicalId is null || !DaggerfallBaseContent.ValidId(variant.VariantName!) || variant.VariantName == "-")
-                throw new ArgumentException("A world variant requires a stable variant name and its base logical profile.");
-            var key = variant.ProfileKey;
-            if (!_profiles.TryGetValue(key, out var original)) throw new ArgumentException($"World variant '{variant.VariantName}' has no base profile '{key.LogicalId}'.");
-            // Current-state actors and action graphs remain valid across a scenery replacement.
-            // Reject a different gameplay topology rather than silently dropping retained state.
-            if (!original.Project.Actors.OrderBy(value => value.Key).SequenceEqual(variant.Project.Actors.OrderBy(value => value.Key))
-                || !original.QuestMarkers.SequenceEqual(variant.QuestMarkers)
-                || !original.DungeonActions.SequenceEqual(variant.DungeonActions)
-                || !original.Doors.Select(value => value with { Visual = null }).SequenceEqual(variant.Doors.Select(value => value with { Visual = null }))
-                || !original.Population.SequenceEqual(variant.Population)
-                || !SameMap(original.DungeonMap, variant.DungeonMap)
-                || original.PropertyContainers.Count != variant.PropertyContainers.Count
-                || original.PropertyContainers.Zip(variant.PropertyContainers).Any(pair => pair.First.Id != pair.Second.Id
-                    || pair.First.Position != pair.Second.Position || !pair.First.ItemGroups.SequenceEqual(pair.Second.ItemGroups)
-                    || !pair.First.InteractionPoints.SequenceEqual(pair.Second.InteractionPoints))
-                || original.StaticNpcs.Count != variant.StaticNpcs.Count
-                || original.StaticNpcs.Zip(variant.StaticNpcs).Any(pair => pair.First.Id != pair.Second.Id || pair.First.Position != pair.Second.Position
-                    || pair.First.Appearance != pair.Second.Appearance || pair.First.Role != pair.Second.Role || !pair.First.Services.SequenceEqual(pair.Second.Services)))
-                throw new NotSupportedException($"World variant '{variant.VariantName}' changes retained actor or action topology; scenery variants must preserve these owners.");
-            if (!original.Audio.SequenceEqual(variant.Audio))
-                throw new NotSupportedException($"World variant '{variant.VariantName}' changes the retained audio; location scenery variants currently preserve its audio.");
-            if (!_variants.TryAdd((key, variant.VariantName!), variant)) throw new ArgumentException($"Duplicate world variant '{variant.VariantName}' for '{key.LogicalId}'.");
-        }
-        foreach (var group in _variants.Keys.GroupBy(value => (value.Profile.Site, value.Variant)))
-            if (!_profiles.Keys.Where(key => key.Site == group.Key.Site).ToHashSet().SetEquals(group.Select(value => value.Profile)))
-                throw new ArgumentException($"Location variant '{group.Key.Variant}' must publish every admitted profile of '{group.Key.Site}'.");
+        if (!original.Project.Actors.OrderBy(value => value.Key).SequenceEqual(variant.Project.Actors.OrderBy(value => value.Key))
+            || !original.QuestMarkers.SequenceEqual(variant.QuestMarkers)
+            || !original.DungeonActions.SequenceEqual(variant.DungeonActions)
+            || !original.Doors.Select(value => value with { Visual = null }).SequenceEqual(variant.Doors.Select(value => value with { Visual = null }))
+            || !original.Population.SequenceEqual(variant.Population)
+            || !SameMap(original.DungeonMap, variant.DungeonMap)
+            || original.PropertyContainers.Count != variant.PropertyContainers.Count
+            || original.PropertyContainers.Zip(variant.PropertyContainers).Any(pair => pair.First.Id != pair.Second.Id
+                || pair.First.Position != pair.Second.Position || !pair.First.ItemGroups.SequenceEqual(pair.Second.ItemGroups)
+                || !pair.First.InteractionPoints.SequenceEqual(pair.Second.InteractionPoints))
+            || original.StaticNpcs.Count != variant.StaticNpcs.Count
+            || original.StaticNpcs.Zip(variant.StaticNpcs).Any(pair => pair.First.Id != pair.Second.Id || pair.First.Position != pair.Second.Position
+                || pair.First.Appearance != pair.Second.Appearance || pair.First.Role != pair.Second.Role || !pair.First.Services.SequenceEqual(pair.Second.Services)))
+            throw new NotSupportedException($"World variant '{name}' changes retained actor or action topology; scenery variants must preserve these owners.");
+        if (!original.Audio.SequenceEqual(variant.Audio))
+            throw new NotSupportedException($"World variant '{name}' changes the retained audio; location scenery variants currently preserve its audio.");
     }
 
     private static bool SameMap(DaggerfallDungeonMapContent? first, DaggerfallDungeonMapContent? second)
@@ -52,9 +42,10 @@ internal sealed partial class DaggerfallSiteProfiles
                 && pair.First.MeshIds.SequenceEqual(pair.Second.MeshIds) && pair.First.SamplePoints.SequenceEqual(pair.Second.SamplePoints));
     }
 
+    /// <summary>This session's view of the shared catalog: the same resolved profiles, with its own selected variants.</summary>
     internal DaggerfallSiteProfiles ForSession(DaggerfallWorldVariantSave[]? saved = null)
     {
-        var result = new DaggerfallSiteProfiles(_profiles.Values.Concat(_variants.Values));
+        var result = new DaggerfallSiteProfiles(_catalog);
         var seen = new HashSet<DaggerfallSiteId>();
         foreach (var entry in saved ?? [])
         {
@@ -67,9 +58,9 @@ internal sealed partial class DaggerfallSiteProfiles
 
     internal void SetLocationVariant(DaggerfallSiteId site, string variant)
     {
-        if (!_profiles.Keys.Any(key => key.Site == site)) throw new NotSupportedException($"WorldUpdate location '{site}' has no admitted profiles.");
+        if (!_catalog.HasProfilesAt(site)) throw new NotSupportedException($"WorldUpdate location '{site}' has no admitted profiles.");
         if (variant == "-") { _selectedVariants.Remove(site); return; }
-        if (!_variants.Keys.Any(key => key.Profile.Site == site && key.Variant == variant))
+        if (!_catalog.HasVariant(site, variant))
             throw new NotSupportedException($"WorldUpdate location '{site}' has no admitted variant '{variant}'.");
         _selectedVariants[site] = variant;
     }

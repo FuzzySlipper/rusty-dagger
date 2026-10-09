@@ -161,7 +161,9 @@ internal sealed partial class DaggerfallSession
                 tuning.EnemyBehavior.SpawnGroundProbeLift, tuning.EnemyBehavior.SpawnGroundProbeDistance);
             partiallyConstructed.Add(_spatial);
             Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions = [];
-            foreach ((DaggerfallWorldProfileKey key, DaggerfallSiteProfile admitted) in DaggerfallSiteLifecycle.ActionProfiles(inputs, profiles))
+            IReadOnlyList<(DaggerfallWorldProfileKey Key, DaggerfallSiteProfile Inputs)> actionProfiles =
+                DaggerfallSiteLifecycle.ActionProfiles(inputs, profiles, saved?.DungeonActions.Select(snapshot => snapshot.ProfileId));
+            foreach ((DaggerfallWorldProfileKey key, DaggerfallSiteProfile admitted) in actionProfiles)
             {
                 DaggerfallDungeonActionGraphSnapshot? snapshot = saved?.DungeonActions
                     .SingleOrDefault(value => StringComparer.Ordinal.Equals(value.ProfileId, key.LogicalId));
@@ -184,11 +186,11 @@ internal sealed partial class DaggerfallSession
             // The selected site's normalized RDB doors restore their Engine pose/collider projection
             // before activation can query them and before the first character step consumes them.
             DaggerfallSiteProjection projection = DaggerfallSiteProjection.Create(engine, actors.Entities, _random, tuning, _time.Calendar,
-                inputs, audioBundles?.Require(inputs.ProfileKey), _spatial, saved?.Doors, saved?.DungeonMotion,
+                inputs, audioBundles?.Require(inputs), _spatial, saved?.Doors, saved?.DungeonMotion,
                 sessionPresentation: composition.StartSite.ClassicPresentation);
             partiallyConstructed.Add(projection);
             DaggerfallDungeonActionTriggerRuntime actionTriggers = new(
-                actors.Entities, engine.Spatial, _spatial, DaggerfallSiteLifecycle.ActionProfiles(inputs, profiles), activeProfile);
+                actors.Entities, engine.Spatial, _spatial, actionProfiles, activeProfile);
             partiallyConstructed.Add(actionTriggers);
             // Dynamic actors restore before the site projection, while authored placements are
             // already in ActorSprites.  Admit their mobile media here without replaying any item

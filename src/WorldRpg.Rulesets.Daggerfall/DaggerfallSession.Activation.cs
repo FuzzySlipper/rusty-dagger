@@ -81,7 +81,8 @@ internal sealed partial class DaggerfallSession
     {
         if (_doors.ExteriorBuildingOf(door) is not { } building) return null;
         DaggerfallSiteProfiles profiles = _sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted.");
-        DaggerfallSiteProfile[] destinations = profiles.Keys
+        // Building entry admits published interiors; assembled ones join with travel and entry (#9694).
+        DaggerfallSiteProfile[] destinations = profiles.AuthoredKeys
             .Where(key => key.Site == _activeProfileKey.Site && key.Kind == DaggerfallWorldProfileKind.Interior)
             .Select(profiles.Require)
             .Where(profile => profile.InteriorBuilding is { } interior

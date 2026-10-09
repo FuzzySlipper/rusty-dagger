@@ -150,6 +150,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly Dictionary<uint, Material> materialsBySlot = [];
     private readonly Dictionary<DaggerfallRdbDoorId, Appearance> doorVisuals = [];
     private readonly Dictionary<DaggerfallRdbDoorId, ulong> doorVisualEntityIds = [];
+    private readonly Dictionary<DaggerfallRdbDoorId, Transform> doorVisualPoses = [];
     private readonly Dictionary<string, Appearance> actionModelVisuals = new(StringComparer.Ordinal);
     private DaggerfallDungeonMotionProjection? dungeonMotion;
     // Door source identities are not Engine entity IDs or durable actor IDs.  Keep their render
@@ -358,7 +359,9 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         foreach ((Appearance staticWorld, Transform pose, ulong entityId) in world)
             facts.Add(new AppearanceFact(entityId, false, 0, Compose(worldAppearance.Transform, pose), staticWorld, worldAppearance.Visible, worldAppearance.Layer));
         if (doors is not null) foreach (DaggerfallDoorView door in doors.All)
-            if (doorVisuals.TryGetValue(door.Id, out Appearance? visual)) facts.Add(new AppearanceFact(doorVisualEntityIds[door.Id], false, 0, door.Pose, visual, true, RenderLayer.Scene));
+            if (doorVisuals.TryGetValue(door.Id, out Appearance? visual))
+                facts.Add(new AppearanceFact(doorVisualEntityIds[door.Id], false, 0,
+                    doorVisualPoses.TryGetValue(door.Id, out Transform local) ? Compose(door.Pose, local) : door.Pose, visual, true, RenderLayer.Scene));
         if (dungeonMotion is not null)
         {
             foreach ((DaggerfallDungeonActionModelDefinition model, EntityId entity) in dungeonMotion.Visuals)
@@ -740,6 +743,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         foreach (Appearance visual in doorVisuals.Values.Reverse()) Dispose(visual, ref failures);
         doorVisuals.Clear();
         doorVisualEntityIds.Clear();
+        doorVisualPoses.Clear();
         foreach (Appearance visual in actionModelVisuals.Values.Reverse()) Dispose(visual, ref failures);
         actionModelVisuals.Clear();
         // Sprite atlases borrow textures that location materials may also use. Retire every
@@ -808,6 +812,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 .ToArray()));
             doorVisuals.Add(door.Id, created);
             doorVisualEntityIds.Add(door.Id, nextDoorVisualEntityId--);
+            if (visual.LocalPose is { } local) doorVisualPoses.Add(door.Id, local);
         }
         if (dungeonMotion is null) return;
         foreach ((DaggerfallDungeonActionModelDefinition model, _) in dungeonMotion.Visuals)
@@ -846,6 +851,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         retired.AddRange(doorVisuals.Values.Reverse());
         doorVisuals.Clear();
         doorVisualEntityIds.Clear();
+        doorVisualPoses.Clear();
         retired.AddRange(actionModelVisuals.Values.Reverse());
         actionModelVisuals.Clear();
         retired.AddRange(locationMaterials.AsEnumerable().Reverse());
