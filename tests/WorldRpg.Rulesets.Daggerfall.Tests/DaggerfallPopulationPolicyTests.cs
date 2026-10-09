@@ -49,6 +49,24 @@ public sealed class DaggerfallPopulationPolicyTests
         Assert.DoesNotContain("identify", services);
     }
 
+    /// <summary>
+    /// A hall's own privileges (the Mages Guild library, a knightly order's free tavern rooms) have no NPC
+    /// provider, so an unaffiliated person standing in the hall offers none of them, and none of the hall's
+    /// provided services either.
+    /// </summary>
+    [Theory]
+    [InlineData("Mages")]
+    [InlineData("KnightlyOrder")]
+    public void An_unaffiliated_person_in_a_guild_hall_provides_no_hall_service(string kind)
+    {
+        int hall = Guilds.DaggerfallConcreteGuildCatalog.All.First(guild => guild.Kind.ToString() == kind).FactionId;
+
+        (_, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
+            TestPayload.Definitions, sourceFaction: null, sourceBuildingType: 11, sourceBuildingFaction: hall, "person");
+
+        Assert.Equal(["talk"], services);
+    }
+
     private static DaggerfallSiteRecord Site(int blockCount)
     {
         DaggerfallSiteExterior exterior = new(0, 0, 1, 1, 0, 0, false, 2, 0, 1, 0, 1)
