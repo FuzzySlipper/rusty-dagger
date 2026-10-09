@@ -97,10 +97,15 @@ internal sealed class ContentFake : IContentService
     }
     internal int ResolveCalls { get; private set; }
 }
-
 /// <summary>Build-declared bundles for full-product tests; bodies stay outside the eager snapshot.</summary>
+/// <remarks>
+/// A file is either held in memory or read from the checkout when first used, as the Engine reads a staged
+/// bundle file; a disk-backed file's digest is measured once per test run. While a bundle is open its files
+/// also resolve by their content path (its root and bundle path), as the Engine resolves a retained reference.
+/// </remarks>
 internal sealed class BundleContentFake : IContentService
 {
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (ContentSha256 Digest, ulong Length)> DiskDigests = new(StringComparer.Ordinal);
 
     public void PackContainer(ContentContainerPackRequest request) =>
         throw new NotSupportedException("This fake does not pack installed content containers.");
@@ -118,22 +123,57 @@ internal sealed class BundleContentFake : IContentService
     public PortableAsset LoadPortableAsset(PortableAssetLoadRequest request) => throw new NotSupportedException();
     public PortableAssetReadoutResult ReadPortableAsset(PortableAsset asset) => throw new NotSupportedException();
     public ContentReference OpenPortableAssetMember(PortableAssetMemberRequest request) => throw new NotSupportedException();
-    private readonly Dictionary<string, Dictionary<string, byte[]>> files = new(StringComparer.Ordinal);
+
+    private sealed class BundleFile(byte[]? bytes, string? diskPath)
+    {
+        internal byte[] Read() => bytes ?? TestContentFiles.ReadUncached(diskPath!);
+
+        internal (ContentSha256 Digest, ulong Length) Identity() => bytes is not null
+            ? (Digest(bytes), checked((ulong)bytes.Length))
+            : DiskDigests.GetOrAdd(diskPath!, path =>
+            {
+                using FileStream stream = File.OpenRead(path);
+                byte[] hash = System.Security.Cryptography.SHA256.HashData(stream);
+                return (new ContentSha256(
+                    System.Buffers.Binary.BinaryPrimitives.ReadUInt64BigEndian(hash.AsSpan(0, 8)),
+                    System.Buffers.Binary.BinaryPrimitives.ReadUInt64BigEndian(hash.AsSpan(8, 8)),
+                    System.Buffers.Binary.BinaryPrimitives.ReadUInt64BigEndian(hash.AsSpan(16, 8)),
+                    System.Buffers.Binary.BinaryPrimitives.ReadUInt64BigEndian(hash.AsSpan(24, 8))), checked((ulong)stream.Length));
+            });
+    }
+
+    private readonly Dictionary<string, Dictionary<string, BundleFile>> files = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> roots = new(StringComparer.Ordinal);
     private readonly Dictionary<ulong, string> openedBundles = [];
+    private readonly Dictionary<ulong, (string Bundle, string Path)> references = [];
     private ulong nextHandle = 1;
 
     /// <summary>Every bundle file the product opened, in order, as its bundle and its path inside it.</summary>
     internal List<(string Bundle, string Path)> OpenedReferences { get; } = [];
 
-    internal void Add(string bundle, string path, byte[] bytes)
+    /// <summary>Every bundle the product opened, in order.</summary>
+    internal List<string> OpenedBundles { get; } = [];
+
+    /// <summary>Every bundle file whose body the product read, in order.</summary>
+    internal List<(string Bundle, string Path)> ReadFiles { get; } = [];
+
+    internal void Add(string bundle, string path, byte[] bytes) => Files(bundle).Add(path, new(bytes, null));
+
+    /// <summary>Declares a bundle file read from the checkout only when the product uses it.</summary>
+    internal void AddFile(string bundle, string path, string diskPath) => Files(bundle).Add(path, new(null, diskPath));
+
+    /// <summary>Names the content root a declared bundle's files resolve under while it is open.</summary>
+    internal void Root(string bundle, string root) => roots[bundle] = root;
+
+    private Dictionary<string, BundleFile> Files(string bundle)
     {
-        if (!files.TryGetValue(bundle, out Dictionary<string, byte[]>? values)) files.Add(bundle, values = new(StringComparer.Ordinal));
-        values.Add(path, bytes);
+        if (!files.TryGetValue(bundle, out Dictionary<string, BundleFile>? values)) files.Add(bundle, values = new(StringComparer.Ordinal));
+        return values;
     }
 
     public ReadOnlyMemory<ContentBundleInfo> ListBundles() => files
         .OrderBy(entry => entry.Key, StringComparer.Ordinal)
-        .Select(entry => new ContentBundleInfo(entry.Key, checked((ulong)entry.Value.Count), checked((ulong)entry.Value.Values.Sum(bytes => bytes.Length))))
+        .Select(entry => new ContentBundleInfo(entry.Key, checked((ulong)entry.Value.Count), 0))
         .ToArray();
 
     public ContentBundle OpenBundle(ContentBundleOpenRequest request)
@@ -141,6 +181,7 @@ internal sealed class BundleContentFake : IContentService
         if (!files.ContainsKey(request.Id)) throw new FileNotFoundException("Test bundle is not declared.", request.Id);
         ulong handle = nextHandle++;
         openedBundles.Add(handle, request.Id);
+        OpenedBundles.Add(request.Id);
         return new(new ContentBundleHandle(handle), () => openedBundles.Remove(handle));
     }
 
@@ -148,7 +189,11 @@ internal sealed class BundleContentFake : IContentService
     {
         if (!openedBundles.TryGetValue(bundle.Handle.Value, out string? id)) throw new InvalidOperationException("Test bundle handle is not open.");
         return files[id].OrderBy(entry => entry.Key, StringComparer.Ordinal)
-            .Select(entry => new ContentReferenceInfo(entry.Key, Digest(entry.Value), checked((ulong)entry.Value.Length)))
+            .Select(entry =>
+            {
+                (ContentSha256 digest, ulong length) = entry.Value.Identity();
+                return new ContentReferenceInfo(entry.Key, digest, length);
+            })
             .ToArray();
     }
 
@@ -157,14 +202,51 @@ internal sealed class BundleContentFake : IContentService
         if (!openedBundles.TryGetValue(request.Bundle.Handle.Value, out string? id)
             || !files[id].ContainsKey(request.Path)) throw new FileNotFoundException("Test bundle file is not declared.", request.Path);
         OpenedReferences.Add((id, request.Path));
-        return new(new ContentReferenceHandle(nextHandle++), static () => { });
+        return Reference(id, request.Path);
+    }
+
+    private ContentReference Reference(string bundle, string path)
+    {
+        ulong handle = nextHandle++;
+        references.Add(handle, (bundle, path));
+        return new(new ContentReferenceHandle(handle), () => references.Remove(handle));
     }
 
     public ContentReference AdmitReference(ContentAdmissionRequest request) =>
         throw new NotSupportedException($"This fake serves bundle files, so generated reference '{request.Path}' cannot be admitted.");
 
     public ContentReference OpenReference(ContentOpenRequest request) => throw new NotSupportedException();
-    public ContentReference ResolveReference(ContentResolveRequest request) => throw new NotSupportedException();
-    public ReadOnlyMemory<ContentReferenceInfo> ReadReferenceInfo(ContentReference reference) => throw new NotSupportedException();
-    public ReadOnlyMemory<byte> ReadBytes(ContentReadBytesRequest request) => throw new NotSupportedException();
+
+    /// <summary>Resolves a content path inside an open bundle with a known root, checking its digest as the Engine does.</summary>
+    public ContentReference ResolveReference(ContentResolveRequest request)
+    {
+        foreach (string bundle in openedBundles.Values.Distinct(StringComparer.Ordinal))
+        {
+            if (!roots.TryGetValue(bundle, out string? root) || !request.Path.StartsWith(root + "/", StringComparison.Ordinal)) continue;
+            string path = request.Path[(root.Length + 1)..];
+            if (!files[bundle].TryGetValue(path, out BundleFile? file)) break;
+            if (file.Identity().Digest != request.Sha256) throw new InvalidOperationException($"Test bundle file '{request.Path}' has another digest.");
+            OpenedReferences.Add((bundle, path));
+            return Reference(bundle, path);
+        }
+
+        throw new FileNotFoundException("No open test bundle carries the requested content path.", request.Path);
+    }
+
+    public ReadOnlyMemory<ContentReferenceInfo> ReadReferenceInfo(ContentReference reference)
+    {
+        (string bundle, string path) = references[reference.Handle.Value];
+        (ContentSha256 digest, ulong length) = files[bundle][path].Identity();
+        return new[] { new ContentReferenceInfo(path, digest, length) };
+    }
+
+    public ReadOnlyMemory<byte> ReadBytes(ContentReadBytesRequest request)
+    {
+        (string bundle, string path) = references[request.Reference.Handle.Value];
+        ReadFiles.Add((bundle, path));
+        byte[] body = files[bundle][path].Read();
+        if (request.Offset > (ulong)body.Length) throw new InvalidOperationException($"Read of '{path}' starts past its bytes.");
+        int available = checked((int)Math.Min(request.MaxBytes, (ulong)body.Length - request.Offset));
+        return body.AsMemory(checked((int)request.Offset), available);
+    }
 }

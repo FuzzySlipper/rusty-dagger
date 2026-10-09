@@ -31,6 +31,27 @@ internal sealed record DaggerfallClimateValueDefinition(int Value, string Name, 
 {
     /// <summary>The importer-published donor People race for wandering civilians.</summary>
     internal string People { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The climate texture base (<c>desert</c>, <c>mountain</c>, <c>temperate</c> or <c>swamp</c>) a location in
+    /// this climate draws its exterior and interior texture sets from, as the climate swaps name it.
+    /// </summary>
+    internal string ClimateBase { get; init; } = string.Empty;
+}
+
+/// <summary>The weather variant a climate texture swap applies in.</summary>
+internal enum DaggerfallClimateSeason { Summer, Winter, Rain }
+
+/// <summary>
+/// One published climate texture swap: a mesh texture <paramref name="Archive"/> drawn, for records
+/// <paramref name="FirstRecord"/> through <paramref name="LastRecord"/> (open when null), from
+/// <paramref name="TargetArchive"/> in a location of <paramref name="ClimateBase"/> during <paramref name="Season"/>.
+/// </summary>
+internal sealed record DaggerfallClimateSwap(int Archive, string ClimateBase, DaggerfallClimateSeason Season, int FirstRecord, int? LastRecord, int TargetArchive)
+{
+    internal bool Applies(int archive, int record, string climateBase, DaggerfallClimateSeason season) =>
+        archive == Archive && season == Season && StringComparer.Ordinal.Equals(climateBase, ClimateBase)
+        && record >= FirstRecord && (LastRecord is not int last || record <= last);
 }
 
 /// <summary>One distinct politic value with the region it names.</summary>
@@ -61,6 +82,24 @@ internal sealed record DaggerfallPoliticCell(DaggerfallPoliticDisposition Dispos
 /// <param name="Values">The distinct cell values with the climate each names.</param>
 internal sealed record DaggerfallClimateGridDefinition(int Width, int Height, byte[] Cells, IReadOnlyList<DaggerfallClimateValueDefinition> Values)
 {
+    /// <summary>The published exterior climate and season texture swaps.</summary>
+    internal IReadOnlyList<DaggerfallClimateSwap> Swaps { get; init; } = [];
+
+    /// <summary>
+    /// The archive a location of <paramref name="climateValue"/> draws a mesh texture from in
+    /// <paramref name="season"/>: the published swap that applies, or the archive itself when none does.
+    /// </summary>
+    internal int SwapArchive(int archive, int record, int climateValue, DaggerfallClimateSeason season)
+    {
+        DaggerfallClimateValueDefinition value = Values.FirstOrDefault(candidate => candidate.Value == climateValue)
+            ?? throw new InvalidOperationException($"Climate value {climateValue} is not published, so its texture swaps cannot be chosen.");
+        if (value.ClimateBase.Length == 0)
+            throw new InvalidOperationException($"Climate value {climateValue} publishes no climate base, so its texture swaps cannot be chosen.");
+        foreach (DaggerfallClimateSwap swap in Swaps)
+            if (swap.Applies(archive, record, value.ClimateBase, season)) return swap.TargetArchive;
+        return archive;
+    }
+
     /// <summary>Reads one climate cell: its value and what the grid names it, or the edge past it.</summary>
     /// <remarks>
     /// Coordinates past the grid are an explicit answer rather than a refusal: terrain, weather

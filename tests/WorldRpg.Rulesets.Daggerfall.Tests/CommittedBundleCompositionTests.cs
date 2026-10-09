@@ -108,6 +108,7 @@ public sealed class CommittedBundleCompositionTests
             [DaggerfallSkyMedia.BundleId] = DaggerfallSkyMedia.LogicalRoot,
             [DaggerfallCinematicPresentation.BundleId] = DaggerfallCinematicPresentation.Root.TrimEnd('/'),
             [DaggerfallWorldMedia.AudioBundleId] = DaggerfallWorldMedia.AudioRoot,
+            [DaggerfallWorldBlocks.BundleId] = DaggerfallWorldBlocks.Root,
         };
         ProductContent content = FullContent(root);
         ResolvedGameComposition composition = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();

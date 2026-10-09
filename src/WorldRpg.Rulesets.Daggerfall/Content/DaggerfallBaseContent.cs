@@ -511,6 +511,9 @@ internal static partial class DaggerfallBaseContent
             int latitude = Integer(location, "latitude", diagnostics);
             int dungeonType = Integer(location, "dungeonType", diagnostics);
             bool discovered = Boolean(location, "discovered", diagnostics);
+            // The CLIMATE.PAK value at the location's own map pixel, which selects its texture swaps; a
+            // world assembly refuses a location without one rather than guessing its climate.
+            int? climate = OptionalInteger(location, "climate", diagnostics);
 
             // Read against the record rather than through the shared helper: across fifteen thousand
             // locations, a diagnostic that says only "'locationType' must be an integer" leaves the
@@ -536,7 +539,7 @@ internal static partial class DaggerfallBaseContent
             {
                 DaggerfallSiteExterior? exterior = ReadSiteExterior(location, region, index, longitude, latitude, diagnostics);
                 records.Add(new DaggerfallSiteRecord(new DaggerfallSiteId(region, index), name, mapId,
-                    longitude, latitude, dungeonType, kind, discovered, exterior));
+                    longitude, latitude, dungeonType, kind, discovered, exterior) { Climate = climate });
             }
             else
             {
@@ -580,14 +583,29 @@ internal static partial class DaggerfallBaseContent
                 {
                     string sourceKey = Text(placement, "sourceKey", diagnostics);
                     int x = Integer(placement, "x", diagnostics), z = Integer(placement, "z", diagnostics);
+                    bool start = placement.TryGetProperty("start", out JsonElement startValue) && startValue.ValueKind != JsonValueKind.Null
+                        && Boolean(placement, "start", diagnostics);
                     if (sourceKey.Length == 0 || x is < sbyte.MinValue or > sbyte.MaxValue || z is < sbyte.MinValue or > sbyte.MaxValue)
                         diagnostics.Add($"Published dungeon '{name}' has an invalid source block placement.");
-                    sourceBlocks.Add(new(sourceKey, x, z));
+                    sourceBlocks.Add(new(sourceKey, x, z) { Start = start });
                 }
                 if (sourceBlocks.Count != blocks)
                     diagnostics.Add($"Published dungeon '{name}' has {sourceBlocks.Count} placements for {blocks} source blocks.");
+                if (sourceBlocks.Count(block => block.Start) > 1)
+                    diagnostics.Add($"Published dungeon '{name}' names more than one start block.");
+                Dictionary<int, int> remaps = [];
+                if (dungeon.TryGetProperty("textureTable", out JsonElement table) && table.ValueKind == JsonValueKind.Object
+                    && table.TryGetProperty("remaps", out _))
+                {
+                    foreach (JsonElement remap in Array(table, "remaps", diagnostics))
+                    {
+                        int archive = Integer(remap, "archive", diagnostics), target = Integer(remap, "targetArchive", diagnostics);
+                        if (archive < 0 || target < 0 || !remaps.TryAdd(archive, target))
+                            diagnostics.Add($"Published dungeon '{name}' has an invalid or repeated texture remap of archive {archive}.");
+                    }
+                }
                 int recordIndex = records.FindIndex(record => record.Id == new DaggerfallSiteId(region, index));
-                if (recordIndex >= 0) records[recordIndex] = records[recordIndex] with { DungeonBlocks = sourceBlocks };
+                if (recordIndex >= 0) records[recordIndex] = records[recordIndex] with { DungeonBlocks = sourceBlocks, DungeonTextureRemaps = remaps };
             }
 
             dungeons++;
@@ -1938,7 +1956,39 @@ internal static partial class DaggerfallBaseContent
             string people = OptionalText(value, "people");
             if (people.Length != 0 && people is not ("Breton" or "Nord" or "Redguard"))
                 diagnostics.Add($"Climate value {cell} names unsupported People race '{people}'.");
-            values.Add(new DaggerfallClimateValueDefinition(cell, name, disposition) { People = people });
+            string climateBase = OptionalText(value, "climateBase");
+            if (climateBase.Length != 0 && climateBase is not ("desert" or "mountain" or "temperate" or "swamp"))
+                diagnostics.Add($"Climate value {cell} names unknown climate base '{climateBase}'.");
+            values.Add(new DaggerfallClimateValueDefinition(cell, name, disposition) { People = people, ClimateBase = climateBase });
+        }
+
+        List<DaggerfallClimateSwap> swaps = [];
+        if (section.TryGetProperty("swaps", out _))
+        {
+            foreach (JsonElement swap in Array(section, "swaps", diagnostics))
+            {
+                int archive = Integer(swap, "archive", diagnostics);
+                string climateBase = Text(swap, "climate", diagnostics);
+                string seasonName = Text(swap, "season", diagnostics);
+                int first = Integer(swap, "firstRecord", diagnostics);
+                int? last = swap.TryGetProperty("lastRecord", out JsonElement lastValue) && lastValue.ValueKind != JsonValueKind.Null
+                    ? Integer(swap, "lastRecord", diagnostics) : null;
+                int target = Integer(swap, "targetArchive", diagnostics);
+                DaggerfallClimateSeason? season = seasonName switch
+                {
+                    "summer" => DaggerfallClimateSeason.Summer,
+                    "winter" => DaggerfallClimateSeason.Winter,
+                    "rain" => DaggerfallClimateSeason.Rain,
+                    _ => null,
+                };
+                if (season is null || climateBase is not ("desert" or "mountain" or "temperate" or "swamp")
+                    || archive < 0 || target < 0 || first < 0 || last < first)
+                {
+                    diagnostics.Add($"Climate swap of archive {archive} ({climateBase}, {seasonName}) is malformed.");
+                    continue;
+                }
+                swaps.Add(new DaggerfallClimateSwap(archive, climateBase, season.Value, first, last, target));
+            }
         }
 
         if (values.Count == 0)
@@ -1954,7 +2004,7 @@ internal static partial class DaggerfallBaseContent
             }
         }
 
-        return new DaggerfallClimateGridDefinition(1001, 500, cells, values);
+        return new DaggerfallClimateGridDefinition(1001, 500, cells, values) { Swaps = swaps };
     }
 
     private static DaggerfallPoliticGridDefinition ReadPoliticGrid(JsonElement root, DaggerfallContentDiagnostics diagnostics)

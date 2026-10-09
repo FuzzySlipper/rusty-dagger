@@ -192,6 +192,23 @@ public sealed class WorldBlockNormalizer
             string? doorId = model.ActionDoor ? $"door/{scope}/{model.Index}" : null;
             Arena2EulerDegrees degrees = model.RotationDegrees;
             Arch3dMesh? mesh = RdbMesh(model.Source.ModelId);
+            bool movable = model.ActionModel || model.ActionDoor;
+            // The facts a placing location needs without the mesh bytes: a static placement's extent and map
+            // samples in the block's frame, and a moving placement's model-local extent and, for an action
+            // model, its model-local collision, exactly as a dungeon site derives them.
+            List<NormalizedVector3> placed = [];
+            List<NormalizedVector3> local = [];
+            NormalizedMeshBuilder? collision = model.ActionModel ? new("material/collision", participatesInCollision: true) : null;
+            foreach (Arch3dPlane plane in mesh?.Planes.Where(plane => plane.Points.Count >= 3) ?? [])
+            {
+                List<NormalizedVector3> localPolygon = [.. plane.Points.Select(point => MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(point)))];
+                placed.AddRange(plane.Points.Select(point =>
+                    MeshGeometry.ToRightHanded(model.Place(model.Rotate(Arena2SourceTransform.ToImportPoint(point)), origin))));
+                local.AddRange(localPolygon);
+                collision?.Add(localPolygon, [.. localPolygon.Select(_ => new NormalizedVector2(0F, 0F))], MeshGeometry.Normal(localPolygon));
+            }
+
+            NormalizedMesh? collisionMesh = collision is not null && local.Count != 0 ? collision.ToMesh("mesh/collision", "artifact/collision") : null;
             models.Add(new(id, model.Source.ModelId, mesh is null ? null : MeshArtifactId(model.Source.ModelId),
                 MeshGeometry.ToRightHanded(model.Point), new(degrees.X, degrees.Y, degrees.Z))
             {
@@ -200,6 +217,10 @@ public sealed class WorldBlockNormalizer
                     ? new($"action/{scope}/model-{model.Index}", model.Source.Description, model.Source.ModelIndex, model.Source.SoundIndex)
                     : null,
                 DoorId = doorId,
+                Bounds = !movable && placed.Count != 0 ? MeshGeometry.Bounds(placed) : null,
+                SamplePoints = !movable && placed.Count != 0 ? MeshGeometry.SelectSurfaceSamples(placed) : null,
+                LocalBounds = movable && local.Count != 0 ? MeshGeometry.Bounds(local) : null,
+                Collision = collisionMesh is null ? null : new(collisionMesh.Vertices, collisionMesh.Triangles),
             });
             if (doorId is not null)
                 doors.Add(new(doorId, id, $"door/model-{PublishedIds.Slug(model.Source.ModelId)}", MeshGeometry.ToRightHanded(model.Point), new(degrees.X, degrees.Y, degrees.Z))
@@ -209,7 +230,6 @@ public sealed class WorldBlockNormalizer
                     Action = model.Source.Action is { } action ? new(action.Axis, action.Duration, action.Magnitude, action.NextObjectOffset, action.Flags) : null,
                 });
             if (mesh is null) continue;
-            bool movable = model.ActionModel || model.ActionDoor;
             foreach (Arch3dPlane plane in mesh.Planes.Where(plane => plane.Points.Count >= 3))
             {
                 List<NormalizedVector3> polygon = [.. plane.Points.Select(point =>

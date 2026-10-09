@@ -325,7 +325,8 @@ generated file Git would pick up):
   The `locations` section states each location's `climate` (the CLIMATE.PAK value at its own map pixel,
   as `MapsFile` reads a location's climate) and, for each dungeon, which block placement is the `start`
   block and its classic `textureTable` (DEC-11.dungeon-textures: the six wall/floor archives and the door
-  offset, seeded from `dungeonLocationId` and the location's climate). The `climate` section states each
+  offset, seeded from `dungeonLocationId` and the location's climate, with `remaps` stating every archive
+  the table redraws and the archive it is drawn from). The `climate` section states each
   value's `climateBase` and the exterior climate/season texture `swaps` (`ClimateSwaps.ApplyClimate`:
   every archive and record range a climate base or season draws from another archive). A per-location
   assembly reads these with the per-block facts below.
@@ -347,21 +348,25 @@ generated file Git would pick up):
   corpus scanned against the documented inventory, written by `write` and `rmb-spatial` through
   `--source-manifest`), `world-media.sources.json` (the same for the world media publication) and
   `world-blocks.sources.json` (the same for the per-block world publication).
-- `import-records/world-blocks/` — the per-block world publication (`world-blocks`): normalized facts for
-  every RMB exterior (658), every building interior those blocks declare (4,521) and every RDB block (187)
-  a location places, each in its own frame. A block document (`rmb/BLOCK/exterior.json`,
-  `rmb/BLOCK/interior-N.json`, `rdb/BLOCK.json`) places the world media publication's meshes by
-  `geometry/mesh-N` id and states the block's doors, start/enter and quest markers, people, furniture,
-  lights, billboards, fixed mobiles, treasure and random-enemy markers (an enemy marker's encounter
-  slot, spawn distance and reaction, and its action node when it is one), action graph, ground tiles,
-  clear automap cells, RDB water level and ambient area; its `.rspatial` beside it is the block's
-  collision and navigation in the Engine's binary form, ready to place beside its neighbours by whole
-  navigation cells. `blocks.json` indexes every block and names the RMB records no location places.
-  Identities are the site closures' with the grid position left out (`door/BLOCK-rmb/N` where a site says `door/BLOCK-rmb/X/Y/N`), and a
-  location supplies its position, climate, texture table, start block and dungeon type. The site
-  closures' normalizers read each block through the same block-level content. Nothing at runtime opens
-  it yet: hundreds of megabytes in thousands of files, it stays outside the runtime content root the Host stages
-  eagerly until its resolver declares it as a lazily opened content bundle.
+- `content/worldrpg/imports/world-blocks/` — the per-block world publication (`world-blocks`), which the
+  Host declares as the `daggerfall.world-blocks` content bundle: normalized facts for every RMB exterior
+  (658), every building interior those blocks declare (4,521) and every RDB block (187) a location places,
+  each in its own frame. A block document (`rmb/BLOCK/exterior.json`, `rmb/BLOCK/interior-N.json`,
+  `rdb/BLOCK.json`) places the world media publication's meshes by `geometry/mesh-N` id and states the
+  block's doors, start/enter and quest markers, people, furniture, lights, billboards, fixed mobiles,
+  treasure and random-enemy markers (an enemy marker's encounter slot, spawn distance and reaction, and
+  its action node when it is one), action graph, ground tiles, clear automap cells, RDB water level and
+  ambient area. An RDB model also states what a placing location cannot derive without the mesh bytes:
+  a static placement's block-frame bounds and map visibility samples, and a moving placement's
+  model-local bounds and, for an action model, its model-local collision triangles. Its `.rspatial`
+  beside it is the block's collision and navigation in the Engine's binary form, ready to place beside its
+  neighbours by whole navigation cells. `blocks.json` indexes every block and names the RMB records no
+  location places. Identities are the site closures' with the grid position left out (`door/BLOCK-rmb/N`
+  where a site says `door/BLOCK-rmb/X/Y/N`), and a location supplies its position, climate, texture
+  table, start block and dungeon type. The site closures' normalizers read each block through the same
+  block-level content. Hundreds of megabytes in thousands of files, the bundle is never staged into the
+  eager content snapshot: the ruleset opens it, reads the index and the documents of the blocks one
+  location places when that location is first needed, and closes it again.
 
 The base definitions come from two packs. `daggerfall.base` is authored and tracked: its payload
 `content/worldrpg/payloads/daggerfall.base.json` carries `ruleset`, `vocabulary`,
