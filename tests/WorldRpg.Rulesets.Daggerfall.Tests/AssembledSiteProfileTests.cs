@@ -263,6 +263,12 @@ public sealed class AssembledSiteProfileTests
         // Facing away from the exit: the exit lies behind the start.
         Vector3 facing = WorldRpg.Kit.Actors.ActorHeading.Forward(start.YawRadians);
         Assert.True(Vector3.Dot(facing, exit.Position.ToVector() - start.Position.ToVector()) < 0F);
+
+        // Each portal is on its door plane and names the side it is used from, so interaction sights it off the
+        // wall it is set into: the entrance from where its landing stands, the exits from inside.
+        Assert.All(interior.Portals.Append(entrance).Append(exit), portal => Assert.NotNull(portal.Normal));
+        Assert.True(Vector3.Dot(outOfCrypt.Position.ToVector() - entrance.Position.ToVector(), entrance.Normal!.Value) > 0F);
+        Assert.True(Vector3.Dot(start.Position.ToVector() - exit.Position.ToVector(), exit.Normal!.Value) > 0F);
     }
 
     /// <summary>
@@ -286,6 +292,8 @@ public sealed class AssembledSiteProfileTests
         foreach ((DaggerfallSitePortal expected, DaggerfallSitePortal actual) in assembled.Portals.Zip(published.Portals))
         {
             Near(expected.Position.ToVector(), actual.Position.ToVector());
+            // The door plane's side is stated too, so the exit is sighted from the room it leads out of.
+            Near(Assert.NotNull(expected.Normal), Assert.NotNull(actual.Normal));
             Assert.Equal(expected.DestinationLogicalProfile, actual.DestinationLogicalProfile);
         }
 

@@ -82,7 +82,7 @@ internal sealed class AssembledWorld
     {
         AssembledWorldRun run = new(this, null, destination, building);
         (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) exit = Assert.Single(run.Session.Sites.Projection.Portals.All);
-        run.Use(exit.Portal.Position.ToVector(), exit.Entity);
+        run.Use(exit.Portal, exit.Entity);
         DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(PrivateersHold);
         Assert.Equal(island, run.Session.Sites.ActiveProfile);
         DaggerfallSiteAnchor landing = Profiles.Require(island).RequireAnchor(DaggerfallLocationAssembly.DungeonEntranceAnchor);
@@ -147,6 +147,21 @@ internal sealed class AssembledWorldRun : IDisposable
     internal WorldPoint Use(Vector3 target, EntityId entity)
     {
         AimActivationAt(Session, WorldPoint.From(target));
+        return UseFromHere(entity);
+    }
+
+    /// <summary>Uses a portal from a metre in front of its door, on the side it is used from, facing it.</summary>
+    internal WorldPoint Use(DaggerfallSitePortal portal, EntityId entity)
+    {
+        Vector3 normal = Assert.NotNull(portal.Normal);
+        Session.State.PlayerControl.MoveTo(portal.Position.ToVector() + normal);
+        Session.State.PlayerControl.YawRadians = WorldRpg.Kit.Actors.ActorHeading.Yaw(-normal);
+        Session.State.PlayerControl.PitchRadians = 0F;
+        return UseFromHere(entity);
+    }
+
+    private WorldPoint UseFromHere(EntityId entity)
+    {
         WorldPoint stood = Session.Sites.ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior
             ? Session.Sites.ExteriorSitePosition(Session.State.PlayerControl.Position!.Value)
             : Session.State.PlayerControl.Position!.Value;

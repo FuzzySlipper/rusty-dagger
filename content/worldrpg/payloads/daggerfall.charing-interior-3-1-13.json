@@ -31,7 +31,7 @@
       "entryMarker": { "textureArchive": 199, "textureRecord": 8, "positionRaw": [320, 0, -192] }
     },
     "transitions": [
-      { "id": "exit/0", "position": [-6.25, 1.125, 7.375], "radius": 2, "destinationProfile": "17/4/exterior" }
+      { "id": "exit/0", "position": [-6.25, 1.125, 7.375], "radius": 2, "normal": [1, 0, 0], "destinationProfile": "17/4/exterior" }
     ]
   }
 }

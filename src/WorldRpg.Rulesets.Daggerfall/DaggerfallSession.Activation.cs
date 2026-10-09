@@ -606,7 +606,8 @@ internal sealed partial class DaggerfallSession
         {
             foreach ((DaggerfallSitePortal portal, DurableIdentityReference identity, EntityId entity) in _portals.All)
                 yield return new(DaggerfallActivationTargetKind.Portal,
-                    identity, entity, entity.Value, portal.Position, Precedence: 2, Label: "entrance", ReachDistance: portal.Radius);
+                    identity, entity, entity.Value, portal.Position, Precedence: 2, Label: "entrance", ReachDistance: portal.Radius,
+                    SurfaceNormal: portal.Normal);
         }
 
         public DaggerfallActivationOutcome ActivatePortal(DaggerfallActivationSelection selection)

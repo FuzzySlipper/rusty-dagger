@@ -1,3 +1,4 @@
+using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Interaction;
@@ -27,10 +28,11 @@ internal readonly record struct DaggerfallActivationTarget(
     WorldPoint Position,
     int Precedence,
     string? Label = null,
-    double? ReachDistance = null)
+    double? ReachDistance = null,
+    Vector3? SurfaceNormal = null)
 {
     internal InteractionTargetCandidate ToKitCandidate() => new(Entity, Identity, QueryIdentity, Position, Precedence,
-        Label ?? Kind.ToString(), ReachDistance);
+        Label ?? Kind.ToString(), ReachDistance, SurfaceNormal);
 }
 
 /// <summary>Stable mode and target selected from one Engine perception query.</summary>

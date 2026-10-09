@@ -567,7 +567,8 @@ internal static class DaggerfallSiteContent
                     Point(DaggerfallBaseContent.Property(portal, "position", diagnostics), "world transition position", diagnostics),
                     DaggerfallBaseContent.Number(portal, "radius", diagnostics),
                     DaggerfallBaseContent.Text(portal, "destinationProfile", diagnostics),
-                    DaggerfallBaseContent.OptionalText(portal, "arrivalAnchor", diagnostics)).Validate();
+                    DaggerfallBaseContent.OptionalText(portal, "arrivalAnchor", diagnostics),
+                    portal.TryGetProperty("normal", out JsonElement normal) ? Vector3Value(normal, "world transition normal", diagnostics) : null).Validate();
                 if (!portals.TryAdd(parsed.Id, parsed)) diagnostics.Add($"World transitions repeat portal '{parsed.Id}'.");
             }
             catch (Exception exception) when (exception is ArgumentException or ArgumentOutOfRangeException)

@@ -102,6 +102,52 @@ public sealed class InteractionTargetingServiceTests
         Assert.Equal(3.2f, targeting.LastEvidence!.Query.MaximumDistance);
     }
 
+    /// <summary>
+    /// A door plane set into a wall: the target point lies on the wall, which Engine line of sight hits at the
+    /// point itself (its ray runs the whole distance, endpoint included). Sighted as a surface target, the
+    /// door is visible and usable from its open side and hidden from behind the wall.
+    /// </summary>
+    [Fact]
+    public void A_surface_target_is_sighted_off_its_own_wall_from_its_open_side_only()
+    {
+        using ActorsState actors = Actors();
+        PerceptionDouble perception = PerceptionDouble.Create();
+        // A wall in the plane x = 1, as Engine occlusion sees it: any ray reaching or crossing the plane is stopped.
+        perception.Responder = request => Receipt([.. request.Targets.ToArray().Select(target =>
+        {
+            float from = request.Observers.Span[0].Origin.X - 1f, to = target.Center.X - 1f;
+            bool blocked = to == 0f || MathF.Sign(from) != MathF.Sign(to);
+            return new PerceptionPair(1, target.Entity, 1d, 1d, blocked ? PerceptionPairKind.Occluded : PerceptionPairKind.Visible, 1d);
+        })]);
+        using SpatialMovementSystem spatial = Spatial();
+        InteractionTargetingService targeting = new(perception.Service, spatial, actors.Entities);
+        InteractionTargetCandidate onWall = Candidate(actors, 2, precedence: 0);
+        InteractionTargetCandidate door = onWall with { SurfaceNormal = -Vector3.UnitX };
+
+        // A point target on the wall is hidden by the wall from every side.
+        Assert.False(targeting.Activate(actors.Player.Actor.Entity, new WorldPoint(0, 0, 0), Vector3.UnitX, 2.25d, .5d, [onWall],
+            _ => throw new Xunit.Sdk.XunitException("A target hidden by its own wall must not be activated.")).Performed);
+        Assert.Equal(InteractionVisibility.Occluded, Assert.Single(targeting.LastEvidence!.Focus.Candidates.ToArray()).Candidate.Visibility);
+
+        // From its open side the door is sighted just off the wall, and is used.
+        bool used = false;
+        InteractionUseReceipt front = targeting.Activate(actors.Player.Actor.Entity, new WorldPoint(0, 0, 0), Vector3.UnitX, 2.25d, .5d, [door],
+            _ => { used = true; return new(true, "Passed through."); });
+        Assert.True(front.Performed);
+        Assert.True(used);
+        Assert.Equal(InteractionReason.Ready, front.Reason);
+        Assert.Equal(1f - InteractionTargetingService.SurfaceSeparation, perception.Requests[^1].Targets.Span[0].Center.X, 6);
+
+        // From behind the wall it is hidden, even where the wall's back face would not stop a ray.
+        perception.Responder = request => Receipt([.. request.Targets.ToArray().Select(target =>
+            new PerceptionPair(1, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d))]);
+        InteractionUseReceipt back = targeting.Activate(actors.Player.Actor.Entity, new WorldPoint(2, 0, 0), -Vector3.UnitX, 2.25d, .5d, [door],
+            _ => throw new Xunit.Sdk.XunitException("A door must not be used through the back of its wall."));
+        Assert.False(back.Performed);
+        Assert.Equal(InteractionVisibility.Occluded, Assert.Single(targeting.LastEvidence!.Focus.Candidates.ToArray()).Candidate.Visibility);
+        Assert.Throws<ArgumentOutOfRangeException>(() => (door with { SurfaceNormal = Vector3.Zero }).Validate());
+    }
+
     private static InteractionTargetCandidate Candidate(ActorsState actors, long durableId, int precedence)
     {
         ActorState actor = actors.Get(durableId);
@@ -142,6 +188,7 @@ public sealed class InteractionTargetingServiceTests
         public IPerceptionService Service { get; private set; } = null!;
         public List<PerceptionQueryRequest> Requests { get; } = [];
         public PerceptionReadoutResult Receipt { get; set; }
+        public Func<PerceptionQueryRequest, PerceptionReadoutResult>? Responder { get; set; }
         public static PerceptionDouble Create()
         {
             IPerceptionService service = DispatchProxy.Create<IPerceptionService, PerceptionDouble>();
@@ -152,8 +199,9 @@ public sealed class InteractionTargetingServiceTests
         protected override object? Invoke(MethodInfo? method, object?[]? arguments)
         {
             if (method?.Name != nameof(IPerceptionService.QueryVisibility)) throw new NotSupportedException(method?.Name);
-            Requests.Add((PerceptionQueryRequest)arguments![0]!);
-            return Receipt;
+            PerceptionQueryRequest request = (PerceptionQueryRequest)arguments![0]!;
+            Requests.Add(request);
+            return Responder?.Invoke(request) ?? Receipt;
         }
     }
 

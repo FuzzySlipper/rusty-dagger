@@ -509,7 +509,7 @@
     "staticMeshPath": "spatial/privateer-s-hold/static-mesh.rstatmsh",
     "profileKind": "dungeon",
     "transitions": [
-      { "id": "dungeon-exit/s0000999-rdb/0/0/0", "position": [27.825, 39.575, -11.425], "radius": 2, "destinationProfile": "17/179/exterior", "arrivalAnchor": "dungeon-entrance" }
+      { "id": "dungeon-exit/s0000999-rdb/0/0/0", "position": [27.825, 39.575, -11.425], "radius": 2, "normal": [0.707106, 0, -0.70710754], "destinationProfile": "17/179/exterior", "arrivalAnchor": "dungeon-entrance" }
     ]
   }
 }

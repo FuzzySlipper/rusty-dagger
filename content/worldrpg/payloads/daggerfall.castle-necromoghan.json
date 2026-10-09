@@ -130,9 +130,9 @@
     "staticMeshPath": "spatial/castle-necromoghan/static-mesh.rstatmsh",
     "profileKind": "dungeon",
     "transitions": [
-      { "id": "dungeon-exit/n0000034-rdb/2/0/0", "position": [110.55, 13.95, -43.25], "radius": 2, "destinationProfile": "17/9/exterior", "arrivalAnchor": "dungeon-entrance" },
-      { "id": "dungeon-exit/n0000058-rdb/1/0/0", "position": [76.775, 33.125, -3.2], "radius": 2, "destinationProfile": "17/9/exterior", "arrivalAnchor": "dungeon-entrance" },
-      { "id": "dungeon-exit/w0000020-rdb/0/0/0", "position": [33.65, 13.95, -35.2], "radius": 2, "destinationProfile": "17/9/exterior", "arrivalAnchor": "dungeon-entrance" }
+      { "id": "dungeon-exit/n0000034-rdb/2/0/0", "position": [110.55, 13.95, -43.25], "radius": 2, "normal": [1, 0, 0], "destinationProfile": "17/9/exterior", "arrivalAnchor": "dungeon-entrance" },
+      { "id": "dungeon-exit/n0000058-rdb/1/0/0", "position": [76.775, 33.125, -3.2], "radius": 2, "normal": [-1, 0, 0], "destinationProfile": "17/9/exterior", "arrivalAnchor": "dungeon-entrance" },
+      { "id": "dungeon-exit/w0000020-rdb/0/0/0", "position": [33.65, 13.95, -35.2], "radius": 2, "normal": [1, 0, 0], "destinationProfile": "17/9/exterior", "arrivalAnchor": "dungeon-entrance" }
     ]
   }
 }

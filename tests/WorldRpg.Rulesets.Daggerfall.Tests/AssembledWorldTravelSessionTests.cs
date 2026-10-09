@@ -75,7 +75,7 @@ public sealed class AssembledWorldTravelSessionTests
         // Every building door plane inside leads out.
         Assert.All(resumed.Session.Sites.Projection.Portals.All, value => Assert.Equal(exterior.LogicalId, value.Portal.DestinationLogicalProfile));
         (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) exit = resumed.Session.Sites.Projection.Portals.All.First();
-        resumed.Use(exit.Portal.Position.ToVector(), exit.Entity);
+        resumed.Use(exit.Portal, exit.Entity);
         // Out through the door the player came in by, where they stood to use it.
         Assert.Equal(exterior, resumed.Session.Sites.ActiveProfile);
         Assert.True(Vector3.Distance(outside.ToVector(), resumed.Session.Sites.ExteriorSitePosition(resumed.Session.State.PlayerControl.Position!.Value).ToVector()) < 1e-2F);
@@ -107,7 +107,7 @@ public sealed class AssembledWorldTravelSessionTests
 
         DaggerfallSitePortal entrance = outside.Portals.First(portal => portal.DestinationLogicalProfile == dungeon.LogicalId);
         (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) live = run.Session.Sites.Projection.Portals.All.Single(value => value.Portal.Id == entrance.Id);
-        WorldPoint stood = run.Use(live.Portal.Position.ToVector(), live.Entity);
+        WorldPoint stood = run.Use(live.Portal, live.Entity);
         Assert.Equal(dungeon, run.Session.Sites.ActiveProfile);
         DaggerfallSiteProfile inside = world.Profiles.Require(dungeon);
         DaggerfallSiteAnchor start = inside.RequireAnchor(DaggerfallLocationAssembly.StartAnchor);
@@ -120,7 +120,7 @@ public sealed class AssembledWorldTravelSessionTests
         Assert.Equal(dungeon, resumed.Session.Sites.ActiveProfile);
         Assert.Equal(exterior, resumed.Session.Sites.ReturnProfile);
         (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) exit = resumed.Session.Sites.Projection.Portals.All.First();
-        resumed.Use(exit.Portal.Position.ToVector(), exit.Entity);
+        resumed.Use(exit.Portal, exit.Entity);
         Assert.Equal(exterior, resumed.Session.Sites.ActiveProfile);
         WorldPoint returned = resumed.Session.Sites.ExteriorSitePosition(resumed.Session.State.PlayerControl.Position!.Value);
         Assert.True(Vector3.Distance(stood.ToVector(), returned.ToVector()) < 1e-2F, $"{stood} vs {returned}");
@@ -129,7 +129,7 @@ public sealed class AssembledWorldTravelSessionTests
         Assert.True(resumed.Session.TryTransitionTo(dungeon, DaggerfallLocationAssembly.StartAnchor));
         resumed.Session.Sites.ClearReturnDestination();
         exit = resumed.Session.Sites.Projection.Portals.All.First();
-        resumed.Use(exit.Portal.Position.ToVector(), exit.Entity);
+        resumed.Use(exit.Portal, exit.Entity);
         DaggerfallSiteAnchor landing = outside.RequireAnchor(DaggerfallLocationAssembly.DungeonEntranceAnchor);
         Assert.Equal(exterior, resumed.Session.Sites.ActiveProfile);
         Assert.True(Vector3.Distance(landing.Position.ToVector(), resumed.Session.Sites.ExteriorSitePosition(resumed.Session.State.PlayerControl.Position!.Value).ToVector()) < 1e-2F);
