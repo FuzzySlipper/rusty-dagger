@@ -378,7 +378,8 @@ The base definitions come from two packs. `daggerfall.base` is authored and trac
 `content/worldrpg/payloads/daggerfall.base.json` carries `ruleset`, `vocabulary`,
 `armorValuesByMaterial`, `actors`, `items`, `equipmentSlots`, `actions`, `lootTables`,
 `hudResources`, `lootCategoryPools`, `donorErrata`, `encounters` and `assembledSites` (the world
-appearance and navigation grid every location assembled from its blocks shares; some sections are
+appearance and navigation grid every location assembled from its blocks shares, and how near its
+transition doors a player must stand and how far in front of a door they land on coming out; some sections are
 transcribed from the donor by hand, each citing its source); no command writes it. `daggerfall.imported` is generated. The
 ruleset's base reader joins the two payloads section by section and refuses a section both carry.
 The commands that build from authored sections (`catalogs` reads the vocabulary, actors and items;

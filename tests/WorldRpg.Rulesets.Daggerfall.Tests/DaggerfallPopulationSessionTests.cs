@@ -155,9 +155,9 @@ public sealed class DaggerfallPopulationSessionTests
             && Math.Abs(record.MapPixelY - sourceRecord.MapPixelY) <= DaggerfallExteriorCellResidency.StreamingRadius);
         DaggerfallSiteProfile template = ReadProfile(root, FullContent(root, "worldrpg/imports/charing"), definitions,
             "daggerfall.charing-exterior.json");
-        DaggerfallSiteProfile source = PopulationProfile(template, sourceRecord.Id, "resident-population-source",
+        DaggerfallSiteProfile source = PopulationProfile(template, sourceRecord.Id,
             includeAuthoredActors: false);
-        DaggerfallSiteProfile resident = PopulationProfile(template, residentRecord.Id, "resident-population-neighbor",
+        DaggerfallSiteProfile resident = PopulationProfile(template, residentRecord.Id,
             includeAuthoredActors: false);
         DaggerfallSiteProfile interior = SameContentAt(template, sourceRecord.Id,
             DaggerfallWorldProfileKind.Interior, "resident-population-interior");
@@ -240,8 +240,8 @@ public sealed class DaggerfallPopulationSessionTests
 
         DaggerfallSiteProfile template = ReadProfile(root, FullContent(root, "worldrpg/imports/charing"), definitions,
             "daggerfall.charing-exterior.json");
-        DaggerfallSiteProfile source = PopulationProfile(template, towns[0].Id, "population-source");
-        DaggerfallSiteProfile destination = PopulationProfile(template, towns[1].Id, "population-destination",
+        DaggerfallSiteProfile source = PopulationProfile(template, towns[0].Id);
+        DaggerfallSiteProfile destination = PopulationProfile(template, towns[1].Id,
             includeAuthoredActors: false, includePopulation: false);
         DaggerfallSessionComposition composition = new(definitions, source, DaggerfallTuning.Defaults)
         {
@@ -290,10 +290,11 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.Equal(returned.Position, restored.State.Actors.Get(id).Position);
     }
 
-    private static DaggerfallSiteProfile PopulationProfile(DaggerfallSiteProfile source, DaggerfallSiteId site, string logicalId,
+    private static DaggerfallSiteProfile PopulationProfile(DaggerfallSiteProfile source, DaggerfallSiteId site,
         bool includeAuthoredActors = true, bool includePopulation = true)
     {
-        DaggerfallSiteProfile exterior = SameContentAt(source, site, DaggerfallWorldProfileKind.Exterior, logicalId);
+        // An exterior is named by its location, as the window streams it.
+        DaggerfallSiteProfile exterior = SameContentAt(source, site, DaggerfallWorldProfileKind.Exterior, DaggerfallWorldProfileIds.Exterior(site).LogicalId);
         ProjectFacts project = includeAuthoredActors
             ? exterior.Project
             : new ProjectFacts(exterior.Project.PlayerPosition, new Dictionary<long, AuthoredActor>());
@@ -383,9 +384,9 @@ public sealed class DaggerfallPopulationSessionTests
                 && Math.Abs(record.MapPixelY - sourceRecord.MapPixelY) <= 1);
             DaggerfallSiteProfile template = ReadProfile(root, FullContent(root, "worldrpg/imports/charing"), definitions,
                 "daggerfall.charing-exterior.json");
-            DaggerfallSiteProfile source = PopulationProfile(template, sourceRecord.Id, "resident-population-source",
+            DaggerfallSiteProfile source = PopulationProfile(template, sourceRecord.Id,
                 includeAuthoredActors: false);
-            DaggerfallSiteProfile resident = PopulationProfile(template, residentRecord.Id, "resident-population-neighbor",
+            DaggerfallSiteProfile resident = PopulationProfile(template, residentRecord.Id,
                 includeAuthoredActors: false, includePopulation: false);
             DaggerfallSiteProfile interior = SameContentAt(template, sourceRecord.Id,
                 DaggerfallWorldProfileKind.Interior, "resident-population-interior");

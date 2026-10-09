@@ -143,7 +143,13 @@ internal static partial class DaggerfallBaseContent
         AuthoredWorldAppearance appearance = DaggerfallSiteContent.ReadWorldAppearance(Object(Property(value, "appearance", diagnostics), "assembledSites.appearance", diagnostics), diagnostics);
         long grid = Long(value, "navigationGridId", diagnostics);
         if (grid <= 0) diagnostics.Add("assembledSites.navigationGridId must be a positive navigation grid.");
-        return new DaggerfallAssembledSiteDefinition(appearance, (ulong)Math.Max(grid, 1));
+        float reach = Number(value, "doorReach", diagnostics);
+        float building = Number(value, "buildingExitLanding", diagnostics);
+        float dungeon = Number(value, "dungeonExitLanding", diagnostics);
+        if (!float.IsFinite(reach) || reach <= 0F) diagnostics.Add("assembledSites.doorReach must be a positive distance.");
+        if (!float.IsFinite(building) || building < 0F || !float.IsFinite(dungeon) || dungeon < 0F)
+            diagnostics.Add("assembledSites.buildingExitLanding and dungeonExitLanding must be non-negative distances.");
+        return new DaggerfallAssembledSiteDefinition(appearance, (ulong)Math.Max(grid, 1), reach, building, dungeon);
     }
 
     /// <summary>

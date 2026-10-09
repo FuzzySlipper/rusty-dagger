@@ -28,11 +28,21 @@ internal sealed partial class DaggerfallSession
             return true;
         }
         var binding = DaggerfallQuestPlacements.Destination(instance.Resources, operation.Targets[0]);
-        // Quest teleport reaches published places; generated destinations join with quest realization (#9695).
-        var profiles = _sites.Profiles?.AuthoredKeys.Select(key => _sites.Profiles.Require(key)).ToArray() ?? [_sites.Projection.Inputs];
-        var destinations = profiles.Where(profile => DaggerfallQuestPlacements.Matches(binding, profile)).ToArray();
-        if (destinations.Length != 1) throw new NotSupportedException($"Quest teleport Place '{operation.Targets[0]}' has no unique admitted world profile.");
-        var destination = destinations[0];
+        // The Place names its location, the kind of profile it selected and, inside, its building: that is the
+        // profile id, authored or assembled.
+        DaggerfallSiteId place = binding.Places[0].Require();
+        DaggerfallWorldProfileKey? key = (binding.PlaceSelection?.Kind, binding.Building) switch
+        {
+            (DaggerfallWorldProfileKind.Exterior, null) => DaggerfallWorldProfileIds.Exterior(place),
+            (DaggerfallWorldProfileKind.Dungeon, null) => DaggerfallWorldProfileIds.Dungeon(place),
+            (DaggerfallWorldProfileKind.Interior, { } building) => DaggerfallWorldProfileIds.Interior(place, new(building.BlockX, building.BlockY, building.Index)),
+            _ => null,
+        };
+        DaggerfallSiteProfile? destination = key is not { } id ? null
+            : _sites.Profiles is { } profiles ? (profiles.TryGet(id, out DaggerfallSiteProfile resolved) ? resolved : null)
+            : _sites.Projection.Inputs.ProfileKey == id ? _sites.Projection.Inputs : null;
+        if (destination is null || !DaggerfallQuestPlacements.Matches(binding, destination))
+            throw new NotSupportedException($"Quest teleport Place '{operation.Targets[0]}' has no admitted world profile.");
         var markers = destination.QuestMarkers.Where(marker => marker.Kind == DaggerfallSiteMarkerKind.QuestSpawn).ToArray();
         if (markers.Length == 0) throw new NotSupportedException($"Quest teleport Place '{operation.Targets[0]}' has no admitted spawn marker.");
         int index = operation.MarkerIndex is { } requested && requested < markers.Length ? requested : 0;

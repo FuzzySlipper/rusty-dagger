@@ -320,7 +320,6 @@ public sealed class NormalizedDaggerfallSiteContentTests
         Assert.NotEqual(exterior.ProfileKey, interior.ProfileKey);
         Assert.Same(exterior, profiles.Require(exterior.ProfileKey));
         Assert.Same(interior, profiles.Require(interior.ProfileKey));
-        Assert.Throws<InvalidOperationException>(() => profiles.RequireUniqueSite(charing));
     }
 
     [Fact]

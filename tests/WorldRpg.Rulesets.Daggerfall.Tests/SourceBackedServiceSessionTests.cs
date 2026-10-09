@@ -556,9 +556,7 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
         DaggerfallSavePayload payload = DaggerfallSavePayload.Read(saved);
         DaggerfallSiteProfile active = payload.Site.ActiveProfile is { } profile
             ? _profiles.Require(profile.Require())
-            : payload.Site.Active is { } activeSite
-                ? _profiles.RequireUniqueSite(new(activeSite.Region!.Value, activeSite.Index!.Value))
-                : throw new InvalidOperationException("A source-backed session save must name its active site.");
+            : throw new InvalidOperationException("A source-backed save must name its active world profile.");
         List<string> releases = [];
         ContentFake content = new(releases);
         foreach (DaggerfallSiteProfile site in _sites) PopulateContent(content, site);

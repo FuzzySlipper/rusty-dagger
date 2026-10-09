@@ -138,11 +138,14 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         return _sites.TryRelocate(destination);
     }
 
-    /// <summary>Attempts one real site transition; failed destination admission leaves the source projection live.</summary>
-    internal bool TryTransitionTo(DaggerfallWorldProfileKey destination)
+    /// <summary>
+    /// Attempts one real site transition, landing at the named destination anchor when there is no entrance to
+    /// return through; failed destination admission leaves the source projection live.
+    /// </summary>
+    internal bool TryTransitionTo(DaggerfallWorldProfileKey destination, string? arrivalAnchor = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        return _sites.TryTransitionTo(destination);
+        return _sites.TryTransitionTo(destination, arrivalAnchor);
     }
 
     void IDaggerfallSiteTransitionHost.RelocatePlayer(WorldPoint position, float yawRadians, float pitchRadians) =>

@@ -46,6 +46,21 @@ internal sealed record DaggerfallWorldBlockDoor(string Id, string ModelId, Vecto
     internal int? BuildingIndex { get; init; }
 }
 
+/// <summary>Where a static transition door leads: out of a building, into a dungeon, or out of one.</summary>
+internal enum DaggerfallWorldBlockTransitionKind { BuildingExit, DungeonEntrance, DungeonExit }
+
+/// <summary>One static transition door in its block's frame: the door plane's centre and the normal a player uses it from.</summary>
+internal sealed record DaggerfallWorldBlockTransitionDoor(string Id, DaggerfallWorldBlockTransitionKind Kind, Vector3 Position, Vector3 Normal,
+    (Vector3 Minimum, Vector3 Maximum) Bounds);
+
+/// <summary>One state of a city gate: its mesh and its model-local bounds and collision.</summary>
+internal sealed record DaggerfallWorldBlockGateState(string MeshArtifactId, (Vector3 Minimum, Vector3 Maximum) LocalBounds,
+    Vector3[] CollisionVertices, Triangle[] CollisionTriangles);
+
+/// <summary>One RMB city gate placement in its block's frame, with its open and closed states.</summary>
+internal sealed record DaggerfallWorldBlockGate(string Id, string ModelId, Vector3 Position, Vector3 RotationDegrees,
+    DaggerfallWorldBlockGateState Open, DaggerfallWorldBlockGateState Closed);
+
 /// <summary>One RMB building sub-record as its block states it.</summary>
 internal sealed record DaggerfallWorldBlockBuilding(int Index, int BuildingType, int FactionId, int Quality, int NameSeed, bool HasInterior);
 
@@ -66,7 +81,11 @@ internal sealed class DaggerfallWorldBlockDocument
     internal (Vector3 Minimum, Vector3 Maximum)? Bounds { get; init; }
     internal required IReadOnlyList<DaggerfallWorldBlockModel> Models { get; init; }
     internal required IReadOnlyList<DaggerfallWorldBlockDoor> Doors { get; init; }
+    internal required IReadOnlyList<DaggerfallWorldBlockTransitionDoor> TransitionDoors { get; init; }
+    internal required IReadOnlyList<DaggerfallWorldBlockGate> Gates { get; init; }
     internal Vector3? StartMarker { get; init; }
+    /// <summary>Every start marker an RMB exterior places, in source order.</summary>
+    internal required IReadOnlyList<Vector3> StartMarkers { get; init; }
     internal Vector3? EnterMarker { get; init; }
     internal required IReadOnlyList<DaggerfallWorldBlockBuilding> Buildings { get; init; }
     internal DaggerfallWorldBlockBuilding? InteriorBuilding { get; init; }
@@ -255,6 +274,38 @@ internal sealed class DaggerfallWorldBlocks
             List<DaggerfallWorldBlockDoor> doors = [];
             foreach (JsonElement value in DaggerfallBaseContent.Array(root, "doors", diagnostics))
                 doors.Add(ReadDoor(value, owner, diagnostics));
+            List<DaggerfallWorldBlockTransitionDoor> transitions = [];
+            foreach (JsonElement value in DaggerfallBaseContent.Array(root, "transitionDoors", diagnostics))
+            {
+                string id = DaggerfallBaseContent.Text(value, "id", diagnostics);
+                string name = $"{owner} transition door '{id}'";
+                DaggerfallWorldBlockTransitionKind? kind = DaggerfallBaseContent.Text(value, "kind", diagnostics) switch
+                {
+                    "buildingExit" => DaggerfallWorldBlockTransitionKind.BuildingExit,
+                    "dungeonEntrance" => DaggerfallWorldBlockTransitionKind.DungeonEntrance,
+                    "dungeonExit" => DaggerfallWorldBlockTransitionKind.DungeonExit,
+                    _ => null,
+                };
+                Vector3 normal = Vector(value, "normal", name, diagnostics);
+                if (kind is null) diagnostics.Add($"{name} has an unknown kind.");
+                else if (MathF.Abs(normal.Length() - 1F) > 1E-3F) diagnostics.Add($"{name} states a normal that is not a unit vector.");
+                else transitions.Add(new(id, kind.Value, Vector(value, "position", name, diagnostics), normal,
+                    RequiredBounds(value, "bounds", name, diagnostics)));
+            }
+
+            List<DaggerfallWorldBlockGate> gates = [];
+            foreach (JsonElement value in DaggerfallBaseContent.Array(root, "gates", diagnostics))
+            {
+                string id = DaggerfallBaseContent.Text(value, "id", diagnostics);
+                string name = $"{owner} gate '{id}'";
+                gates.Add(new(id, DaggerfallBaseContent.Text(value, "modelId", diagnostics), Vector(value, "position", name, diagnostics),
+                    Vector(value, "rotationDegrees", name, diagnostics),
+                    ReadGateState(DaggerfallBaseContent.Property(value, "open", diagnostics), $"{name} open", diagnostics),
+                    ReadGateState(DaggerfallBaseContent.Property(value, "closed", diagnostics), $"{name} closed", diagnostics)));
+            }
+
+            Vector3[] startMarkers = [.. DaggerfallBaseContent.Array(root, "startMarkers", diagnostics)
+                .Select(marker => Vector(marker, "position", $"{owner} start marker", diagnostics))];
             List<DaggerfallWorldBlockBuilding> buildings = [.. DaggerfallBaseContent.Array(root, "buildings", diagnostics).Select(value => ReadBuilding(value, diagnostics))];
             DaggerfallWorldBlockBuilding? interior = root.TryGetProperty("interiorBuilding", out JsonElement interiorValue) && interiorValue.ValueKind != JsonValueKind.Null
                 ? ReadBuilding(interiorValue, diagnostics)
@@ -296,7 +347,10 @@ internal sealed class DaggerfallWorldBlocks
                 Bounds = OptionalBounds(root, "bounds", owner, diagnostics),
                 Models = models,
                 Doors = doors,
+                TransitionDoors = transitions,
+                Gates = gates,
                 StartMarker = Marker(root, "startMarker", owner, diagnostics),
+                StartMarkers = startMarkers,
                 EnterMarker = Marker(root, "enterMarker", owner, diagnostics),
                 Buildings = buildings,
                 InteriorBuilding = interior,
@@ -312,6 +366,37 @@ internal sealed class DaggerfallWorldBlocks
             diagnostics.Add($"{owner} is malformed: {exception.Message}");
             return null;
         }
+    }
+
+    private static DaggerfallWorldBlockGateState ReadGateState(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
+    {
+        (Vector3[] vertices, Triangle[] triangles) = Collision(DaggerfallBaseContent.Property(value, "collision", diagnostics), name, diagnostics);
+        if (triangles.Length == 0) diagnostics.Add($"{name} states no collision.");
+        return new(DaggerfallBaseContent.Text(value, "meshArtifactId", diagnostics),
+            RequiredBounds(value, "localBounds", name, diagnostics), vertices, triangles);
+    }
+
+    private static (Vector3, Vector3) RequiredBounds(JsonElement value, string property, string owner, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (OptionalBounds(value, property, owner, diagnostics) is { } bounds) return bounds;
+        diagnostics.Add($"{owner} states no {property}.");
+        return default;
+    }
+
+    /// <summary>Model-local collision: its vertices and the triangles over them.</summary>
+    private static (Vector3[] Vertices, Triangle[] Triangles) Collision(JsonElement collision, string name, DaggerfallContentDiagnostics diagnostics)
+    {
+        Vector3[] vertices = [.. DaggerfallBaseContent.Array(collision, "vertices", diagnostics).Select(vertex => Vector(vertex, name, diagnostics))];
+        Triangle[] triangles = [.. DaggerfallBaseContent.Array(collision, "triangles", diagnostics).Select(triangle =>
+        {
+            int a = DaggerfallBaseContent.Integer(triangle, "firstVertex", diagnostics);
+            int b = DaggerfallBaseContent.Integer(triangle, "secondVertex", diagnostics);
+            int c = DaggerfallBaseContent.Integer(triangle, "thirdVertex", diagnostics);
+            if ((uint)a >= (uint)vertices.Length || (uint)b >= (uint)vertices.Length || (uint)c >= (uint)vertices.Length)
+                diagnostics.Add($"{name} has a collision triangle outside its vertices.");
+            return new Triangle((uint)Math.Max(a, 0), (uint)Math.Max(b, 0), (uint)Math.Max(c, 0));
+        })];
+        return (vertices, triangles);
     }
 
     private static DaggerfallWorldBlockModel ReadModel(JsonElement value, string owner, DaggerfallContentDiagnostics diagnostics)
@@ -332,18 +417,7 @@ internal sealed class DaggerfallWorldBlocks
         Vector3[] vertices = [];
         Triangle[] triangles = [];
         if (value.TryGetProperty("collision", out JsonElement collision) && collision.ValueKind != JsonValueKind.Null)
-        {
-            vertices = [.. DaggerfallBaseContent.Array(collision, "vertices", diagnostics).Select(vertex => Vector(vertex, name, diagnostics))];
-            triangles = [.. DaggerfallBaseContent.Array(collision, "triangles", diagnostics).Select(triangle =>
-            {
-                int a = DaggerfallBaseContent.Integer(triangle, "firstVertex", diagnostics);
-                int b = DaggerfallBaseContent.Integer(triangle, "secondVertex", diagnostics);
-                int c = DaggerfallBaseContent.Integer(triangle, "thirdVertex", diagnostics);
-                if ((uint)a >= (uint)vertices.Length || (uint)b >= (uint)vertices.Length || (uint)c >= (uint)vertices.Length)
-                    diagnostics.Add($"{name} has a collision triangle outside its vertices.");
-                return new Triangle((uint)Math.Max(a, 0), (uint)Math.Max(b, 0), (uint)Math.Max(c, 0));
-            })];
-        }
+            (vertices, triangles) = Collision(collision, name, diagnostics);
 
         return new DaggerfallWorldBlockModel(id, DaggerfallBaseContent.Text(value, "modelId", diagnostics),
             DaggerfallBaseContent.OptionalText(value, "meshArtifactId", diagnostics), Vector(value, "position", name, diagnostics),

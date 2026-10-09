@@ -74,6 +74,7 @@ internal sealed class DaggerfallSiteLifecycle
     private Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface>? _exteriorSurfaceFactory;
     private Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior>? _exteriorLocations;
     private Dictionary<DaggerfallSiteId, DaggerfallExteriorCellId>? _exteriorCellsBySite;
+    private Dictionary<DaggerfallExteriorCellId, DaggerfallSiteId>? _exteriorSitesByCell;
     private readonly Dictionary<DaggerfallExteriorCellId, DaggerfallTerrainSurface> _exteriorSurfaceCache = [];
     private readonly HashSet<ulong> _exteriorWaterTriggers = [];
     private readonly Dictionary<DaggerfallWorldProfileKey, ResidentExteriorLocation> _residentExteriorLocations = [];
@@ -401,8 +402,19 @@ internal sealed class DaggerfallSiteLifecycle
         ReturnProfile = profile;
     }
 
-    /// <summary>Attempts one real site transition; failed destination admission leaves the source projection live.</summary>
-    internal bool TryTransitionTo(DaggerfallWorldProfileKey destination) => TryTransitionTo(destination, null, useReturnDestination: true);
+    /// <summary>
+    /// Attempts one real site transition; failed destination admission leaves the source projection live. A
+    /// remembered entrance back into the destination wins; otherwise the player lands at the named arrival
+    /// anchor, or at the destination's start. An authored destination may publish no landing for a door an
+    /// assembled location names, and then receives the player at its start as any entrance without one does.
+    /// </summary>
+    internal bool TryTransitionTo(DaggerfallWorldProfileKey destination, string? arrivalAnchor = null)
+    {
+        DaggerfallSiteAnchor? arrival = null;
+        if (arrivalAnchor is not null && RequireProfiles().Require(destination).Anchors.TryGetValue(arrivalAnchor, out DaggerfallSiteAnchor? anchor))
+            arrival = anchor;
+        return TryTransitionTo(destination, arrival, useReturnDestination: true);
+    }
 
     private bool TryTransitionTo(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor? arrival, bool useReturnDestination)
     {
@@ -916,15 +928,14 @@ internal sealed class DaggerfallSiteLifecycle
     {
         if (Profiles is null) return;
         HashSet<DaggerfallWorldProfileKey> desired = [];
-        // Only published exteriors stream as neighbours today; assembled ones join with travel and entry (#9694).
-        foreach (DaggerfallWorldProfileKey key in Profiles.AuthoredKeys
-            .Where(key => key.Kind == DaggerfallWorldProfileKind.Exterior)
-            .OrderBy(key => key.Site.Region).ThenBy(key => key.Site.Index).ThenBy(key => key.LogicalId, StringComparer.Ordinal))
+        // Every catalog location in the window streams its exterior: an authored override, else assembled from
+        // its blocks, each resolved when its cell first enters the window.
+        Dictionary<DaggerfallExteriorCellId, DaggerfallSiteId> sites = ExteriorSitesByCell();
+        foreach (DaggerfallExteriorCellId cell in residency.ResidentCells)
         {
-            DaggerfallSiteProfile profile = Profiles.Require(key);
-            if (!TryExteriorProfileCell(profile, out DaggerfallExteriorCellId cell)) continue;
-            if (residency.ResidentCells.Contains(cell) && key != ActiveProfile)
-                desired.Add(key);
+            if (!sites.TryGetValue(cell, out DaggerfallSiteId site)) continue;
+            DaggerfallWorldProfileKey key = DaggerfallWorldProfileIds.Exterior(site);
+            if (key != ActiveProfile && Profiles.Contains(key)) desired.Add(key);
         }
 
         foreach (DaggerfallWorldProfileKey key in _residentExteriorLocations.Keys
@@ -1562,6 +1573,10 @@ internal sealed class DaggerfallSiteLifecycle
         _ = ExteriorLocations();
         return _exteriorCellsBySite!;
     }
+
+    /// <summary>The location whose exterior occupies each map pixel; a pixel holds at most one.</summary>
+    private Dictionary<DaggerfallExteriorCellId, DaggerfallSiteId> ExteriorSitesByCell() =>
+        _exteriorSitesByCell ??= ExteriorCellsBySite().ToDictionary(pair => pair.Value, pair => pair.Key);
 
     private void TrimExteriorSurfaceCache(IReadOnlyCollection<DaggerfallExteriorCellId> residentCells)
     {

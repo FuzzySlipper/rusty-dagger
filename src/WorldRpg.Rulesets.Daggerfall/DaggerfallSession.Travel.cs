@@ -1,3 +1,4 @@
+using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -122,7 +123,7 @@ internal sealed partial class DaggerfallSession
     internal DaggerfallTravelResult? ExecuteTravel(string expectedQuote, ulong expectedCost)
     {
         DaggerfallTravelQuote? quote = CurrentTravelQuote();
-        DaggerfallRelocationDestination? destination = null;
+        DaggerfallSiteProfile? destination = null;
         string? refusal = quote is null ? "Preview a current travel route before starting." : TravelRefusal(quote, out destination);
         if (quote is not null && (expectedQuote != quote.Identity || expectedCost != (ulong)quote.TotalCost))
             refusal = "The route or carried funds changed. Preview the journey again.";
@@ -150,8 +151,10 @@ internal sealed partial class DaggerfallSession
                 (_, bool noRegen) = RestCharacterTraits();
                 DaggerfallRestRecoveryModule.RecoverForCautiousTravel(State.Actors.Player.Stats, noRegen);
             }
+            DaggerfallTravelMapPixel departure = QuestTravelOrigin();
             outcome = AdvanceTravelTime(quote.TravelSeconds, origin, quote.Options);
-            if (outcome == DaggerfallTravelOutcome.Arrived && !_sites.TryRelocate(destination!))
+            if (outcome == DaggerfallTravelOutcome.Arrived && !_sites.TryRelocatePlayer(destination!.ProfileKey,
+                    ArrivalLanding(destination, departure, $"travel:{quote.Identity}:{started}")))
                 outcome = DaggerfallTravelOutcome.Unavailable;
             if (outcome == DaggerfallTravelOutcome.Arrived)
             {
@@ -202,7 +205,20 @@ internal sealed partial class DaggerfallSession
         _ => "Your journey was interrupted.",
     };
 
-    private string? TravelRefusal(DaggerfallTravelQuote quote, out DaggerfallRelocationDestination? destination)
+    /// <summary>
+    /// Where a journey or a release lands at a location's exterior: the side it arrives from (the journey's
+    /// direction, or a keyed draw without one) and, at a city, the start marker nearest that side.
+    /// </summary>
+    private DaggerfallSiteAnchor ArrivalLanding(DaggerfallSiteProfile exterior, DaggerfallTravelMapPixel? departure, string draw)
+    {
+        DaggerfallSiteRecord site = _site.Require(exterior.Site
+            ?? throw new InvalidOperationException($"Exterior '{exterior.ProfileKey.LogicalId}' names no location."));
+        DaggerfallArrivalSide side = DaggerfallLocationArrival.Side(departure, site, count => checked((int)_random.DrawKeyed(
+            new KeyedRngRequest(0, "daggerfall.location-arrival", draw, 0, count - 1)).Value));
+        return DaggerfallLocationArrival.Landing(exterior, site, side);
+    }
+
+    private string? TravelRefusal(DaggerfallTravelQuote quote, out DaggerfallSiteProfile? destination)
     {
         destination = null;
         if (State.RacialOverrides.Current?.IsVampire == true && _time.Calendar.IsDay)
@@ -211,13 +227,20 @@ internal sealed partial class DaggerfallSession
         if (_activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return "Leave the building or dungeon before travelling.";
         if (HasNearbyRestEnemy()) return "Nearby enemies prevent travel.";
         if (!quote.CanAfford) return "You cannot afford the route and its coin-only inn cost.";
-        DaggerfallWorldProfileKey[] profiles = [.. (_sites.Profiles?.AuthoredKeys ?? [])
-            .Where(profile => profile.Site == quote.Destination.Id && profile.Kind == DaggerfallWorldProfileKind.Exterior)];
-        // A destination this bundle carries no single arrival place for cannot be travelled to; the
-        // player reads that rather than the content gap behind it.
-        if (profiles.Length != 1 || !_sites.Profiles!.Require(profiles[0]).Anchors.ContainsKey("start"))
-            return $"You cannot travel to {quote.Destination.Name} from here.";
-        destination = new(profiles[0], "start"); return null;
+        // The destination's exterior is resolved before anything is paid: a location the catalog cannot place
+        // cannot be travelled to, and the player reads that rather than the content gap behind it.
+        DaggerfallSiteProfile exterior;
+        try
+        {
+            if (_sites.Profiles is not { } profiles || !profiles.TryGet(DaggerfallWorldProfileIds.Exterior(quote.Destination.Id), out exterior))
+                return $"You cannot travel to {quote.Destination.Name} from here.";
+        }
+        catch (InvalidOperationException failure)
+        {
+            // A location whose blocks do not assemble is named with what is missing rather than half-entered.
+            return $"You cannot travel to {quote.Destination.Name}: {failure.Message}";
+        }
+        destination = exterior; return null;
     }
 
     private DaggerfallTravelOutcome AdvanceTravelTime(long requestedSeconds, DaggerfallWorldProfileKey origin, DaggerfallTravelOptions options, bool selectEncounters = true)

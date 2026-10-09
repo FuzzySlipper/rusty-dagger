@@ -47,11 +47,14 @@ internal sealed partial class DaggerfallSession
     private DaggerfallShipOffer[] CurrentShipOffers() => _site.ActiveSite is { Exterior.PortTownAndUnknown: > 0 }
         ? [.. ReadPropertyShipOffers(true)] : [];
 
-    private DaggerfallWorldProfileKey? HouseProfile(DaggerfallHouseIdentity house) => _sites.Profiles?.AuthoredKeys
-        .Where(key => key.Site == house.Site && key.Kind == DaggerfallWorldProfileKind.Interior)
-        .Where(key => _sites.Profiles.Require(key).InteriorBuilding is { } placed && placed.Building == house.Building
-            && placed.BlockX == house.BlockX && placed.BlockY == house.BlockY)
-        .Select(key => (DaggerfallWorldProfileKey?)key).SingleOrDefault();
+    /// <summary>The house's interior profile, when the catalog has one: an authored override or its assembled interior.</summary>
+    private DaggerfallWorldProfileKey? HouseProfile(DaggerfallHouseIdentity house)
+    {
+        DaggerfallWorldProfileKey key = DaggerfallWorldProfileIds.Interior(house.Site, HouseBuilding(house));
+        return _sites.Profiles?.Contains(key) == true ? key : null;
+    }
+
+    private static DaggerfallSiteBuildingId HouseBuilding(DaggerfallHouseIdentity house) => new(house.BlockX, house.BlockY, house.Building.Index);
 
     private DaggerfallWorldProfileKey? ResolveOwnedShipProfile()
     {
@@ -59,9 +62,9 @@ internal sealed partial class DaggerfallSession
         DaggerfallSiteRecord[] ships = [.. _site.Records.Where(site => site.Kind == DaggerfallSiteKind.HomeYourShips
             && site.MapPixelX == arrival.MapPixelX && site.MapPixelY == arrival.MapPixelY)];
         if (ships.Length != 1) return null;
-        DaggerfallWorldProfileKey[] profiles = [.. _sites.Profiles.AuthoredKeys.Where(key => key.Site == ships[0].Id
-            && key.Kind == DaggerfallWorldProfileKind.Exterior && _sites.Profiles.Require(key).Anchors.ContainsKey("start"))];
-        return profiles.Length == 1 ? profiles[0] : null;
+        DaggerfallWorldProfileKey ship = DaggerfallWorldProfileIds.Exterior(ships[0].Id);
+        return _sites.Profiles.TryGet(ship, out DaggerfallSiteProfile deck) && deck.Anchors.ContainsKey(DaggerfallLocationAssembly.StartAnchor)
+            ? ship : null;
     }
 
     private DaggerfallPropertyStorageKey? AccessiblePropertyStorage()
@@ -111,10 +114,14 @@ internal sealed partial class DaggerfallSession
         return new(bank, [.. offers], storage);
     }
 
+    /// <summary>Whether the player stands at the house's entrance: within reach of one of its doors, or of a portal into it.</summary>
     private bool CanEnterProperty(DaggerfallHouseIdentity house) => _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
+        && house.Site == _activeProfileKey.Site
         && HouseProfile(house) is { } profile && State.PlayerControl.Position is { } position
-        && _sites.Projection.Portals.All.Any(value => value.Portal.DestinationLogicalProfile == profile.LogicalId
-            && System.Numerics.Vector3.Distance(position.ToVector(), value.Portal.Position.ToVector()) <= value.Portal.Radius);
+        && (_sites.Projection.Portals.All.Any(value => value.Portal.DestinationLogicalProfile == profile.LogicalId
+                && System.Numerics.Vector3.Distance(position.ToVector(), value.Portal.Position.ToVector()) <= value.Portal.Radius)
+            || _doors.All.Any(door => _doors.ExteriorBuildingOf(door.Id) == HouseBuilding(house)
+                && System.Numerics.Vector3.Distance(position.ToVector(), door.Pose.Translation) <= _tuning.LootInteraction.MaximumDistance));
 
     internal void ChangeProperty(DaggerfallPlayerUiAction action)
     {

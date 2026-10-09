@@ -526,7 +526,7 @@ public sealed class DaggerfallTravelSessionTests
             DaggerfallSiteProfile Profile(DaggerfallSiteId id, string name) => new(
                 new ProjectFacts(new WorldPoint(name == "travel-origin" ? 1 : 3, 1, 1), new Dictionary<long, AuthoredActor>()), source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, id,
-                profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: name,
+                profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: DaggerfallWorldProfileIds.Exterior(id).LogicalId,
                 terrainTextures: source.TerrainTextures, billboardSprites: source.BillboardSprites);
         }
         private DaggerfallSession Create(RulesetSavePayload? save)
