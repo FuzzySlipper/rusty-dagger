@@ -366,26 +366,31 @@ Laboratory, Wayrest and Woodborne Hall. A permanent exterior (a city or coven)
 carries no quest markers, as in the donor; its dungeons and buildings do.
 
 Destination coverage of the shipped corpora (`QuestDestinationCoverageTests`)
-expands each corpus's Place declarations world-wide by the allocator's rules
-(building type and faction, the MAPS header filter, the house and dungeon-type
-fallbacks, required quest markers, the excluded guild halls; the run-time
-exclusions of claimed and owned buildings are left out). "Published" counts the
-profiles the bundle's site packs publish; "resolved" counts the profiles the
-catalog resolves. Every selectable destination resolves, and each of the 2,214
-interior and dungeon blocks involved publishes the quest markers the selection
-read from the block catalog.
+expands each corpus's Place declarations world-wide over the allocator's own
+predicates (building type and faction, the MAPS header filter, required quest
+markers, the excluded guild halls). A remote town Place counts every building
+type its retried draw requests: from the 250th attempt a house type (17–22)
+becomes the P3 wildcard whether or not exact matches exist, and a region with
+a single location offers no remote building. The run-time exclusions of claimed
+and owned buildings and dungeons are not applied; because they can empty the
+exact candidates, the local house fallback and the dungeon-type fallback count
+alongside the exact matches. "Published" counts the profiles the bundle's site
+packs publish; "resolved" counts the profiles the catalog resolves. Every
+selectable destination resolves, and each of the 2,214 interior and dungeon
+blocks involved publishes the quest markers the selection read from the block
+catalog.
 
 | Corpus | Quests | Places (kinds) | Locations | Profiles (interiors / dungeons / exteriors) | Published | Resolved |
 | --- | ---: | --- | ---: | --- | ---: | ---: |
-| cures | 2 | 6 (1 permanent, 5 remote) | 10,198 | 133,353 (131,644 / 1,708 / 1) | 2 | 133,353 |
-| disabled | 18 | 35 (3 local, 32 remote) | 12,340 | 161,187 (157,849 / 3,338 / 0) | 4 | 161,187 |
+| cures | 2 | 6 (1 permanent, 5 remote) | 12,341 | 177,287 (173,948 / 3,338 / 1) | 8 | 177,287 |
+| disabled | 18 | 35 (3 local, 32 remote) | 12,340 | 177,519 (174,181 / 3,338 / 0) | 8 | 177,519 |
 | fighters | 20 | 42 (10 local, 32 remote) | 12,340 | 177,519 (174,181 / 3,338 / 0) | 8 | 177,519 |
-| mages | 18 | 28 (9 local, 19 remote) | 12,340 | 156,212 (152,874 / 3,338 / 0) | 4 | 156,212 |
-| merchants-vampires | 22 | 32 (4 local, 28 remote) | 12,340 | 167,110 (163,772 / 3,338 / 0) | 5 | 167,110 |
+| mages | 18 | 28 (9 local, 19 remote) | 12,340 | 177,519 (174,181 / 3,338 / 0) | 8 | 177,519 |
+| merchants-vampires | 22 | 32 (4 local, 28 remote) | 12,340 | 177,519 (174,181 / 3,338 / 0) | 8 | 177,519 |
 | nobility | 28 | 22 (7 local, 4 permanent, 11 remote) | 12,343 | 177,522 (174,181 / 3,338 / 3) | 8 | 177,522 |
 | social | 45 | 57 (8 local, 49 remote) | 12,340 | 177,519 (174,181 / 3,338 / 0) | 8 | 177,519 |
 | story-early | 20 | 36 (1 local, 23 permanent, 1 randomPermanent, 11 remote) | 12,341 | 177,524 (174,180 / 3,341 / 3) | 8 | 177,524 |
-| story-late | 16 | 17 (7 permanent, 10 remote) | 11,277 | 133,990 (130,649 / 3,340 / 1) | 3 | 133,990 |
+| story-late | 16 | 17 (7 permanent, 10 remote) | 12,340 | 177,289 (173,948 / 3,340 / 1) | 8 | 177,289 |
 | temples | 24 | 25 (3 local, 22 remote) | 12,340 | 177,287 (173,949 / 3,338 / 0) | 8 | 177,287 |
 | witches-commoners | 30 | 41 (18 local, 23 remote) | 12,340 | 177,747 (174,409 / 3,338 / 0) | 8 | 177,747 |
 | **All corpora** | **243** | **341** | **12,345** | **177,990** | **8** | **177,990** |
