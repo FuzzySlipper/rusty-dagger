@@ -239,13 +239,46 @@ internal sealed class RmbBlockContent
     /// Whether an exterior plane is a building door: MeshReader classifies climate door archives by their
     /// base archive. The two source archives excluded are dungeon/Scourge exceptions, not RMB building doors.
     /// </summary>
-    public static bool IsBuildingDoor(int textureArchive)
+    public static bool IsBuildingDoor(int textureArchive) => DoorArchive(textureArchive) == BuildingDoorArchive;
+
+    /// <summary>
+    /// The transition a door plane makes when it is not an exterior building door, as MeshReader classifies
+    /// it: a building door (74) leads out of an interior, a dungeon entrance door (56, or a non-zero record
+    /// of the ruin entrance archive 331) leads into a dungeon and a dungeon exit door (95) leads out of one.
+    /// The caller knows which half it reads, so a building door here is always seen from inside.
+    /// </summary>
+    public static DaggerfallWorldBlockTransitionKind? TransitionDoor(int textureArchive, int textureRecord) => DoorArchive(textureArchive) switch
     {
-        int baseArchive = textureArchive > 100 && textureArchive != 331 && textureArchive != 156
+        BuildingDoorArchive => DaggerfallWorldBlockTransitionKind.BuildingExit,
+        DungeonEnterDoorArchive => DaggerfallWorldBlockTransitionKind.DungeonEntrance,
+        DungeonRuinEnterDoorArchive when textureRecord > 0 => DaggerfallWorldBlockTransitionKind.DungeonEntrance,
+        DungeonExitDoorArchive => DaggerfallWorldBlockTransitionKind.DungeonExit,
+        _ => null,
+    };
+
+    private const int BuildingDoorArchive = 74;
+    private const int DungeonEnterDoorArchive = 56;
+    private const int DungeonRuinEnterDoorArchive = 331;
+    private const int ScourgExteriorArchive = 156;
+    private const int DungeonExitDoorArchive = 95;
+
+    /// <summary>MeshReader compares a climate door archive by its base archive, except the ruin entrance and Scourg exterior.</summary>
+    private static int DoorArchive(int textureArchive) =>
+        textureArchive > 100 && textureArchive != DungeonRuinEnterDoorArchive && textureArchive != ScourgExteriorArchive
             ? textureArchive % 100
             : textureArchive;
-        return baseArchive == 74;
-    }
+
+    /// <summary>One plane's centre and unit normal, the donor's static door centre and normal.</summary>
+    public static (NormalizedVector3 Centre, NormalizedVector3 Normal) DoorPlane(IReadOnlyList<NormalizedVector3> polygon) =>
+        (new((polygon[0].X + polygon[2].X) / 2F, (polygon[0].Y + polygon[2].Y) / 2F, (polygon[0].Z + polygon[2].Z) / 2F),
+            MeshGeometry.Normal(polygon));
+
+    /// <summary>The two ARCH3D city gate models, open and closed (DFU <c>RMBLayout.CityGateOpenModelID</c>, <c>CityGateClosedModelID</c>).</summary>
+    public const string CityGateOpenModel = "446";
+
+    public const string CityGateClosedModel = "447";
+
+    public static bool IsCityGate(string modelId) => modelId is CityGateOpenModel or CityGateClosedModel;
 
     /// <summary>
     /// One exterior building door from its placed plane: DFU <c>GameObjectHelper.GetStaticDoors</c> takes the

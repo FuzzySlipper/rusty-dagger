@@ -65,6 +65,8 @@ public sealed class WorldBlockNormalizer
         string slug = PublishedIds.Slug(content.SourceKey);
         List<DaggerfallWorldBlockModel> models = [];
         List<DaggerfallWorldBlockDoor> doors = [];
+        List<DaggerfallWorldBlockTransitionDoor> transitions = [];
+        List<DaggerfallWorldBlockGate> gates = [];
         BlockGeometry geometry = new();
         int doorOrdinal = 0;
         foreach (RmbBlockModel model in content.ExteriorModels)
@@ -73,13 +75,29 @@ public sealed class WorldBlockNormalizer
                 ? $"model/{slug}/{building}/{model.Ordinal}"
                 : $"model/{slug}/misc/{model.Ordinal}";
             Arch3dMesh mesh = RmbMesh(model);
-            models.Add(RmbModel(id, model));
+            DaggerfallWorldBlockModel placement = RmbModel(id, model);
+            models.Add(placement);
+            // A gate swaps its model by the time of day, so neither variant is static collision; its door planes
+            // stay the doors the site closure states.
+            bool gate = RmbBlockContent.IsCityGate(model.ModelId);
+            if (gate)
+                gates.Add(new($"gate/{slug}/{gates.Count}", id, placement.Position, placement.RotationDegrees,
+                    GateState(RmbBlockContent.CityGateOpenModel), GateState(RmbBlockContent.CityGateClosedModel)));
             foreach ((Arch3dPlane plane, int planeIndex) in mesh.Planes.Select((plane, index) => (plane, index)).Where(value => value.plane.Points.Count >= 3))
             {
                 List<NormalizedVector3> polygon = [.. plane.Points.Select(point => MeshGeometry.ToRightHanded(model.Frame.Place(Arena2SourceTransform.ToImportPoint(point))))];
+                if (gate && !RmbBlockContent.IsBuildingDoor(plane.TextureArchive))
+                {
+                    geometry.AddMovable(polygon);
+                    continue;
+                }
+
                 if (!RmbBlockContent.IsBuildingDoor(plane.TextureArchive))
                 {
                     geometry.AddStatic(polygon);
+                    if (RmbBlockContent.TransitionDoor(plane.TextureArchive, plane.TextureRecord) == DaggerfallWorldBlockTransitionKind.DungeonEntrance)
+                        transitions.Add(TransitionDoor($"dungeon-entrance/{slug}/{transitions.Count}", id, DaggerfallWorldBlockTransitionKind.DungeonEntrance,
+                            polygon, planeIndex, plane));
                     continue;
                 }
 
@@ -105,7 +123,12 @@ public sealed class WorldBlockNormalizer
         DaggerfallWorldBlock block = new(key, DaggerfallWorldBlockKind.RmbExterior, content.SourceKey, Ordinal(content.SourceKey), null, blockBounds, spatial, models)
         {
             Doors = doors,
+            TransitionDoors = transitions,
+            Gates = gates,
             StartMarker = FirstMarker(content.ExteriorFlats, RdbSourceClassification.StartMarkerRecord, "marker/start"),
+            StartMarkers = [.. content.ExteriorFlats
+                .Where(flat => flat.TextureArchive == RdbSourceClassification.EditorFlatArchive && flat.TextureRecord == RdbSourceClassification.StartMarkerRecord)
+                .Select((flat, ordinal) => new NormalizedMarker($"marker/start/{ordinal}", MeshGeometry.ToRightHanded(flat.Point)))],
             EnterMarker = FirstMarker(content.ExteriorFlats, RdbSourceClassification.EnterMarkerRecord, "marker/enter"),
             Buildings = [.. content.Summary.Buildings.Select(slot => new DaggerfallWorldBlockBuilding(
                 slot.Index, slot.BuildingType, slot.FactionId, slot.Quality, slot.NameSeed, content.HasInterior(slot.Index)))],
@@ -136,17 +159,22 @@ public sealed class WorldBlockNormalizer
         RmbBuildingSlot slot = content.Summary.Buildings[buildingIndex];
         List<DaggerfallWorldBlockModel> models = [];
         List<NormalizedPropertyContainer> containers = [];
+        List<DaggerfallWorldBlockTransitionDoor> exits = [];
         BlockGeometry geometry = new();
         foreach (RmbBlockModel model in interiorModels)
         {
             Arch3dMesh mesh = RmbMesh(model);
-            models.Add(RmbModel($"model/{model.Ordinal}", model));
+            string modelId = $"model/{model.Ordinal}";
+            models.Add(RmbModel(modelId, model));
             NormalizedPropertyContainer? container = RmbPropertyContainerFacts.Read(model.Frame.Model, model.Ordinal, slot.BuildingType);
             List<NormalizedVector3> interactionPoints = [];
-            foreach (Arch3dPlane plane in mesh.Planes.Where(plane => plane.Points.Count >= 3))
+            foreach ((Arch3dPlane plane, int planeIndex) in mesh.Planes.Select((plane, index) => (plane, index)).Where(value => value.plane.Points.Count >= 3))
             {
                 List<NormalizedVector3> polygon = [.. plane.Points.Select(point => MeshGeometry.ToRightHanded(model.Frame.Place(Arena2SourceTransform.ToImportPoint(point))))];
                 geometry.AddStatic(polygon);
+                // Inside a building, a building door plane leads back out (PlayerActivate's TransitionExterior).
+                if (RmbBlockContent.TransitionDoor(plane.TextureArchive, plane.TextureRecord) == DaggerfallWorldBlockTransitionKind.BuildingExit)
+                    exits.Add(TransitionDoor($"exit/{exits.Count}", modelId, DaggerfallWorldBlockTransitionKind.BuildingExit, polygon, planeIndex, plane));
                 if (container is not null && RmbBlockContent.InteractionPoint(polygon, MeshGeometry.Normal(polygon)) is { } point)
                     interactionPoints.Add(point);
             }
@@ -159,6 +187,7 @@ public sealed class WorldBlockNormalizer
         DaggerfallWorldBlock block = new(key, DaggerfallWorldBlockKind.RmbInterior, content.SourceKey, Ordinal(content.SourceKey), buildingIndex, blockBounds, spatial, models)
         {
             InteriorBuilding = new(slot.Index, slot.BuildingType, slot.FactionId, slot.Quality, slot.NameSeed, true),
+            TransitionDoors = exits,
             StartMarker = FirstMarker(flats, RdbSourceClassification.StartMarkerRecord, "marker/start"),
             EnterMarker = FirstMarker(flats, RdbSourceClassification.EnterMarkerRecord, "marker/enter"),
             QuestMarkers = [.. flats
@@ -185,6 +214,7 @@ public sealed class WorldBlockNormalizer
         Arena2ImportPoint origin = new(0F, 0F, 0F);
         List<DaggerfallWorldBlockModel> models = [];
         List<DaggerfallWorldBlockDoor> doors = [];
+        List<DaggerfallWorldBlockTransitionDoor> exits = [];
         BlockGeometry geometry = new();
         foreach (RdbBlockModel model in content.Models)
         {
@@ -230,12 +260,19 @@ public sealed class WorldBlockNormalizer
                     Action = model.Source.Action is { } action ? new(action.Axis, action.Duration, action.Magnitude, action.NextObjectOffset, action.Flags) : null,
                 });
             if (mesh is null) continue;
-            foreach (Arch3dPlane plane in mesh.Planes.Where(plane => plane.Points.Count >= 3))
+            foreach ((Arch3dPlane plane, int planeIndex) in mesh.Planes.Select((plane, index) => (plane, index)).Where(value => value.plane.Points.Count >= 3))
             {
                 List<NormalizedVector3> polygon = [.. plane.Points.Select(point =>
                     MeshGeometry.ToRightHanded(model.Place(model.Rotate(Arena2SourceTransform.ToImportPoint(point)), origin)))];
-                if (movable) geometry.AddMovable(polygon);
-                else geometry.AddStatic(polygon);
+                if (movable)
+                {
+                    geometry.AddMovable(polygon);
+                    continue;
+                }
+
+                geometry.AddStatic(polygon);
+                if (RmbBlockContent.TransitionDoor(plane.TextureArchive, plane.TextureRecord) == DaggerfallWorldBlockTransitionKind.DungeonExit)
+                    exits.Add(TransitionDoor($"dungeon-exit/{scope}/{exits.Count}", id, DaggerfallWorldBlockTransitionKind.DungeonExit, polygon, planeIndex, plane));
             }
         }
 
@@ -258,6 +295,7 @@ public sealed class WorldBlockNormalizer
         DaggerfallWorldBlock block = new(key, DaggerfallWorldBlockKind.Rdb, sourceKey, content.SourceOrdinal, null, blockBounds, spatial, models)
         {
             Doors = doors,
+            TransitionDoors = exits,
             StartMarker = start is null ? null : new("marker/start", MeshGeometry.ToRightHanded(start.Point)),
             EnterMarker = enter is null ? null : new("marker/enter", MeshGeometry.ToRightHanded(enter.Point)),
             QuestMarkers = [.. content.Flats.Where(flat => flat.Kind == RdbFlatKind.QuestMarker)
@@ -288,6 +326,30 @@ public sealed class WorldBlockNormalizer
     {
         BuildingIndex = model.BuildingIndex,
     };
+
+    private static DaggerfallWorldBlockTransitionDoor TransitionDoor(string id, string modelId, DaggerfallWorldBlockTransitionKind kind,
+        IReadOnlyList<NormalizedVector3> polygon, int planeIndex, Arch3dPlane plane)
+    {
+        (NormalizedVector3 centre, NormalizedVector3 normal) = RmbBlockContent.DoorPlane(polygon);
+        return new(id, modelId, kind, centre, normal, MeshGeometry.Bounds(polygon), planeIndex, new(plane.TextureArchive, plane.TextureRecord));
+    }
+
+    /// <summary>One city gate model's mesh, model-local bounds and model-local collision, as an action model states its own.</summary>
+    private DaggerfallWorldBlockGateState GateState(string modelId)
+    {
+        Arch3dMesh mesh = RdbMesh(modelId) ?? throw new InvalidOperationException($"City gate model cannot be read: {unresolved[modelId]}.");
+        NormalizedMeshBuilder collision = new("material/collision", participatesInCollision: true);
+        List<NormalizedVector3> local = [];
+        foreach (Arch3dPlane plane in mesh.Planes.Where(plane => plane.Points.Count >= 3))
+        {
+            List<NormalizedVector3> polygon = [.. plane.Points.Select(point => MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(point)))];
+            local.AddRange(polygon);
+            collision.Add(polygon, [.. polygon.Select(_ => new NormalizedVector2(0F, 0F))], MeshGeometry.Normal(polygon));
+        }
+
+        NormalizedMesh built = collision.ToMesh("mesh/collision", "artifact/collision");
+        return new(modelId, MeshArtifactId(modelId), MeshGeometry.Bounds(local), new(built.Vertices, built.Triangles));
+    }
 
     private static string MeshArtifactId(string modelId) =>
         GeometryPublicationBuilder.MeshArtifactId(uint.Parse(modelId, NumberStyles.None, CultureInfo.InvariantCulture));
