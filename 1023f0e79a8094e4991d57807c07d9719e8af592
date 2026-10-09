@@ -1,0 +1,3 @@
+verify.sh --play green on den-k8 (DOTNET_PROCESSOR_COUNT=8), content regenerated at this commit (9m58s)
+UI 73/73, Architecture 10, Import 784, Ruleset 3134, Canary 7, Kit 158, Host 33, SpriteWorkbench 27, play-smoke passed
+total 32m39s
