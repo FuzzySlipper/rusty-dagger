@@ -152,6 +152,10 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly Dictionary<DaggerfallRdbDoorId, ulong> doorVisualEntityIds = [];
     private readonly Dictionary<DaggerfallRdbDoorId, Transform> doorVisualPoses = [];
     private readonly Dictionary<string, Appearance> actionModelVisuals = new(StringComparer.Ordinal);
+    // Each city gate draws its open or its closed model; both are created with the location and the
+    // current state's is published under the gate's entity.
+    private readonly Dictionary<string, (Appearance Open, Appearance Closed)> gateVisuals = new(StringComparer.Ordinal);
+    private DaggerfallCityGates? cityGates;
     private DaggerfallDungeonMotionProjection? dungeonMotion;
     // Door source identities are not Engine entity IDs or durable actor IDs.  Keep their render
     // identities in this product-only visual range, below effect/viewmodel identities and above
@@ -188,7 +192,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     /// The session's classic presentation (weapon viewmodels, held-item visuals, spell effects), which the
     /// start site publishes for the whole session; null uses this site's own, as a lone-site composition does.
     /// </param>
-    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null)
+    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallCityGates? cityGates = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
@@ -196,6 +200,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         this.inputs = inputs;
         this.doors = doors;
         this.dungeonMotion = dungeonMotion;
+        this.cityGates = cityGates;
         this.appearance = appearance;
         this.content = content;
         candleSprite = inputs.BillboardSprites.GetValueOrDefault((210, 3));
@@ -362,6 +367,10 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             if (doorVisuals.TryGetValue(door.Id, out Appearance? visual))
                 facts.Add(new AppearanceFact(doorVisualEntityIds[door.Id], false, 0,
                     doorVisualPoses.TryGetValue(door.Id, out Transform local) ? Compose(door.Pose, local) : door.Pose, visual, true, RenderLayer.Scene));
+        if (cityGates is not null)
+            foreach ((DaggerfallCityGateDefinition gate, EntityId entity, DaggerfallDoorVisual _, Transform pose) in cityGates.Visuals)
+                if (gateVisuals.TryGetValue(gate.Id, out (Appearance Open, Appearance Closed) visual))
+                    facts.Add(new AppearanceFact(entity.Value, false, 0, pose, cityGates.Open ? visual.Open : visual.Closed, true, RenderLayer.Scene));
         if (dungeonMotion is not null)
         {
             foreach ((DaggerfallDungeonActionModelDefinition model, EntityId entity) in dungeonMotion.Visuals)
@@ -817,6 +826,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             doorVisualEntityIds.Add(door.Id, nextDoorVisualEntityId--);
             if (visual.LocalPose is { } local) doorVisualPoses.Add(door.Id, local);
         }
+        foreach (DaggerfallCityGateDefinition gate in inputs.CityGates)
+            gateVisuals.Add(gate.Id, (StaticVisual(gate.Open.Visual, $"City gate '{gate.Id}'"), StaticVisual(gate.Closed.Visual, $"City gate '{gate.Id}'")));
         if (dungeonMotion is null) return;
         foreach ((DaggerfallDungeonActionModelDefinition model, _) in dungeonMotion.Visuals)
         {
@@ -841,6 +852,28 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         }
     }
 
+    /// <summary>A static mesh appearance drawing a visual with the location's materials at its slots.</summary>
+    private Appearance StaticVisual(DaggerfallDoorVisual visual, string owner)
+    {
+        Appearance created = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(visual.Path, worldAppearance.Tint));
+        try
+        {
+            appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, visual.Materials
+                .Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
+                    ? new MeshMaterialBinding(binding.MeshSlot, material)
+                    : throw new InvalidOperationException($"{owner} refers to missing world material slot {binding.WorldMaterialSlot}."))
+                .ToArray()));
+            return created;
+        }
+        catch
+        {
+            List<Exception>? failures = null;
+            Dispose(created, ref failures);
+            if (failures is { Count: > 0 }) throw new AggregateException(failures);
+            throw;
+        }
+    }
+
     private void ReleaseLocationResources(ref List<Exception>? failures)
     {
         foreach (IDisposable value in TakeLocationResources()) Dispose(value, ref failures);
@@ -857,6 +890,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         doorVisualPoses.Clear();
         retired.AddRange(actionModelVisuals.Values.Reverse());
         actionModelVisuals.Clear();
+        foreach ((Appearance open, Appearance closed) in gateVisuals.Values.Reverse()) retired.AddRange([closed, open]);
+        gateVisuals.Clear();
         retired.AddRange(locationMaterials.AsEnumerable().Reverse());
         foreach (Material material in locationMaterials) materials.Remove(material);
         locationMaterials.Clear();

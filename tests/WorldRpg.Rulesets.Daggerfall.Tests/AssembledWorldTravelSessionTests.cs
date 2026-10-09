@@ -137,6 +137,53 @@ public sealed class AssembledWorldTravelSessionTests
         Assert.Equal(landing.YawRadians, resumed.Session.State.PlayerControl.YawRadians);
     }
 
+    /// <summary>
+    /// A walled city's gates are drawn and collide as their open model by day and their closed model at night,
+    /// swapping as the calendar crosses dusk and dawn (DaggerfallCityGate); the gate models are not part of the
+    /// static meshes, and the state is not saved but follows the restored calendar.
+    /// </summary>
+    [Fact]
+    public void A_walled_city_s_gates_close_at_dusk_and_open_at_dawn()
+    {
+        World world = Shared.Value;
+        DaggerfallSiteRecord city = world.Unpublished(record => record.Exterior is not null
+            && world.Profiles.Require(DaggerfallWorldProfileIds.Exterior(record.Id)).CityGates.Count != 0);
+        DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(city.Id);
+        DaggerfallSiteProfile walled = world.Profiles.Require(exterior);
+        Assert.All(walled.CityGates, gate => Assert.Equal((true, true),
+            (gate.Open.Visual.Path.EndsWith("/mesh-446.rstatmsh", StringComparison.Ordinal), gate.Closed.Visual.Path.EndsWith("/mesh-447.rstatmsh", StringComparison.Ordinal))));
+        Assert.DoesNotContain(walled.Geometry.Meshes, mesh => walled.CityGates.Any(gate => mesh.Pose == gate.Pose && mesh.Path == gate.Open.Visual.Path));
+
+        using Run run = world.Start(city.Id);
+        Assert.True(run.Session.TryTransitionTo(exterior, DaggerfallLocationAssembly.StartAnchor));
+        bool day = Calendar(run.Session).IsDay;
+        DaggerfallCityGates gates = run.Session.Sites.Projection.CityGates;
+        Assert.Equal(day, gates.Open);
+        Assert.Equal(walled.CityGates.Count, gates.Visuals.Count());
+        Dictionary<ulong, ulong> before = new(run.Spatial.ResidentCollisionInstances);
+        Assert.Equal(walled.CityGates.Count, gates.CharacterEnvironment().MeshInstances.Length);
+
+        // Cross the next dusk or dawn: every gate swaps to its other model and collision.
+        run.Session.AdvanceElapsedTime(12 * 60 * 60);
+        run.Step();
+        Assert.Equal(!day, Calendar(run.Session).IsDay);
+        Assert.Equal(!day, run.Session.Sites.Projection.CityGates.Open);
+        IReadOnlyDictionary<ulong, ulong> after = run.Spatial.ResidentCollisionInstances;
+        Assert.Equal(walled.CityGates.Count, before.Keys.Except(after.Keys).Count());
+        Assert.Equal(walled.CityGates.Count, after.Keys.Except(before.Keys).Count());
+        Assert.All(after.Keys.Except(before.Keys), instance => Assert.DoesNotContain(after[instance], before.Values));
+
+        // The state follows the restored calendar rather than a save.
+        using Run restored = world.Restore(run.Session.CaptureSave(), city.Id);
+        Assert.Equal(!day, restored.Session.Sites.Projection.CityGates.Open);
+    }
+
+    private static DaggerfallCalendar Calendar(DaggerfallSession session)
+    {
+        DaggerfallCalendarSave saved = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
+        return new DaggerfallCalendar(saved.Year, saved.Month, saved.Day, saved.Hour, saved.Minute, saved.Second);
+    }
+
     /// <summary>The composed catalog over the shipped content: the authored packs by their ids and every other place assembled.</summary>
     private sealed class World
     {
@@ -210,10 +257,10 @@ public sealed class AssembledWorldTravelSessionTests
             foreach (DaggerfallSiteId site in new[] { PrivateersHold, destination })
                 Populate(content, world, site);
             if (building is { } entered) Admit(content, world.Profiles.Require(DaggerfallWorldProfileIds.Interior(destination, entered)));
-            SpatialFake spatial = SpatialFake.Create(world.Source.SpatialArtifact.Sha256, releases);
+            Spatial = SpatialFake.Create(world.Source.SpatialArtifact.Sha256, releases);
             // The player stays where a test places them, so a door is used from where they stood.
-            spatial.KeepPosition = true;
-            EngineContextFake engine = EngineContextFake.Create(content, spatial.Service,
+            Spatial.KeepPosition = true;
+            EngineContextFake engine = EngineContextFake.Create(content, Spatial.Service,
                 new AppearanceFake(releases), _perception.Service, random: LodgingRandom.Create());
             DaggerfallSessionComposition composition = new(world.Definitions, world.Source, DaggerfallTuning.Defaults, world.Identity)
                 { Profiles = world.Profiles, Sky = world.Sky };
@@ -221,6 +268,11 @@ public sealed class AssembledWorldTravelSessionTests
         }
 
         internal DaggerfallSession Session { get; }
+
+        internal SpatialFake Spatial { get; }
+
+        /// <summary>One admitted update with no input.</summary>
+        internal void Step() => Session.Update(new ProductUpdate(OuterUpdate(++_step), []));
 
         /// <summary>Pays for and makes the journey through the travel window, arriving.</summary>
         internal void Travel(DaggerfallSiteRecord destination)

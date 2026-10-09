@@ -22,11 +22,12 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     private bool _suspended;
     private Vector3 _worldOffset;
 
-    private DaggerfallSiteProjection(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion, DaggerfallSiteAppearance appearance, DaggerfallSiteLighting lighting, DaggerfallSitePortalRuntime portals, SpatialMovementSystem spatialMovement)
+    private DaggerfallSiteProjection(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion, DaggerfallCityGates gates, DaggerfallSiteAppearance appearance, DaggerfallSiteLighting lighting, DaggerfallSitePortalRuntime portals, SpatialMovementSystem spatialMovement)
     {
         Inputs = inputs;
         Doors = doors;
         Motion = motion;
+        CityGates = gates;
         Appearance = appearance;
         Lighting = lighting;
         Portals = portals;
@@ -39,6 +40,8 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     internal DaggerfallSiteProfile Inputs { get; }
     internal DaggerfallDoorRuntime Doors { get; }
     internal DaggerfallDungeonMotionProjection Motion { get; }
+    /// <summary>The profile's city gates, opened and closed with the session calendar.</summary>
+    internal DaggerfallCityGates CityGates { get; }
     internal DaggerfallSiteAppearance Appearance { get; }
     internal DaggerfallSiteLighting Lighting { get; }
     internal DaggerfallSitePortalRuntime Portals { get; }
@@ -73,6 +76,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         ArgumentNullException.ThrowIfNull(spatialMovement);
         DaggerfallDoorRuntime doors = new(actors, random, inputs.Doors, inputs.ProfileKey.LogicalId, restoredDoors);
         DaggerfallDungeonMotionProjection? motion = null;
+        DaggerfallCityGates? gates = null;
         DaggerfallSiteAppearance? appearance = null;
         DaggerfallSiteLighting? lighting = null;
         DaggerfallSitePortalRuntime? portals = null;
@@ -80,11 +84,14 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         {
             motion = new(actors, engine.Spatial, spatialMovement.Session, doors, inputs.ProfileKey.LogicalId,
                 inputs.DungeonActions, inputs.DungeonActionModels, restoredMotion, deferMotionCollisionAdmission);
+            gates = new(actors, engine.Spatial, spatialMovement.Session, inputs.ProfileKey.LogicalId, inputs.CityGates,
+                DaggerfallCityGateDefinition.OpenAt(calendar));
+            if (!deferMotionCollisionAdmission) gates.ActivateCollisionResidency();
             appearance = new(engine.Content, engine.Graphics, inputs, engine.Audio,
-                tuning.PresentationAudio, random, audioBundle, doors, motion, sessionPresentation);
+                tuning.PresentationAudio, random, audioBundle, doors, motion, sessionPresentation, gates);
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);
-            DaggerfallSiteProjection projection = new(inputs, doors, motion, appearance, lighting, portals, spatialMovement);
+            DaggerfallSiteProjection projection = new(inputs, doors, motion, gates, appearance, lighting, portals, spatialMovement);
             projection.ActivateWaterTriggers(tick: 0);
             return projection;
         }
@@ -99,8 +106,12 @@ internal sealed class DaggerfallSiteProjection : IDisposable
                     try { appearance?.Dispose(); }
                     finally
                     {
-                        try { motion?.Dispose(); }
-                        finally { doors.Dispose(); }
+                        try { gates?.Dispose(); }
+                        finally
+                        {
+                            try { motion?.Dispose(); }
+                            finally { doors.Dispose(); }
+                        }
                     }
                 }
             }
@@ -114,7 +125,15 @@ internal sealed class DaggerfallSiteProjection : IDisposable
 
     internal DaggerfallDungeonMotionSnapshot CaptureMotion() => Motion.Capture();
 
-    internal void ActivateMotionCollisionResidency() => Motion.ActivateCollisionResidency();
+    /// <summary>Admits the movable models' and the city gates' collision once the profile's own artifact is placed.</summary>
+    internal void ActivateMotionCollisionResidency()
+    {
+        Motion.ActivateCollisionResidency();
+        CityGates.ActivateCollisionResidency();
+    }
+
+    /// <summary>Opens or closes the profile's city gates for the time of day.</summary>
+    internal void SyncCityGates(DaggerfallCalendar calendar) => CityGates.Sync(DaggerfallCityGateDefinition.OpenAt(calendar));
 
     internal void RebuildMotionCollisionResidency() => Motion.RebuildCollisionResidency();
 
@@ -164,6 +183,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         DeactivateWaterTriggers(tick: 0);
         Appearance.RetireAllActors();
         Appearance.SuspendLocationResources();
+        CityGates.Suspend();
         Motion.Suspend();
         Doors.Suspend();
         Portals.Suspend();
@@ -178,6 +198,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         if (!_suspended) return;
         Doors.Resume();
         Motion.Resume();
+        CityGates.Resume();
         Appearance.ResumeLocationResources(Doors, Motion);
         Portals.Resume();
         Lighting.Resume();
@@ -192,6 +213,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         _worldOffset += delta;
         Doors.Rebase(delta);
         Motion.Rebase(delta);
+        CityGates.Rebase(delta);
         Portals.Rebase(delta);
         Appearance.Rebase(delta);
         Lighting.Rebase(delta);
@@ -201,6 +223,10 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     {
         if (_suspended) return CharacterStepEnvironment.Empty;
         CharacterStepEnvironment motionModels = Motion.CharacterEnvironment();
+        CharacterStepEnvironment gates = CityGates.CharacterEnvironment();
+        if (gates.MeshInstances.Length != 0)
+            motionModels = new CharacterStepEnvironment(motionModels.Support, motionModels.Obstacles,
+                motionModels.MeshInstances.ToArray().Concat(gates.MeshInstances.ToArray()).ToArray(), motionModels.WaterVolumes.ToArray());
         // Motion models enter Engine Spatial as exact triangle instances bound to their current
         // entity identities. Passing those instances lets Engine resolve support and carry from
         // retained triangle geometry; projecting the same models as AABB obstacles would duplicate
@@ -244,6 +270,8 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         try { Appearance.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
         try { Portals.Dispose(); }
+        catch (Exception exception) { (failures ??= []).Add(exception); }
+        try { CityGates.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
         try { Motion.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
