@@ -116,6 +116,20 @@ public sealed record DaggerfallWorldBlockGroundTile(int X, int Y, int TextureRec
 public sealed record DaggerfallWorldBlockQuestMarker(string Id, NormalizedQuestMarkerKind Kind, NormalizedVector3 Position, int SourceOrdinal);
 
 /// <summary>
+/// One RDB random-enemy marker in the block's frame. The placing location chooses its enemy: its encounter
+/// list's entry at <see cref="EncounterSlot"/>, from the water list when the marker lies below the block's
+/// water level.
+/// </summary>
+/// <param name="EncounterSlot">The slot in the location's encounter list; zero lets the placement choose one of slots 1 to 6.</param>
+/// <param name="SpawnDistance">The classic spawn-distance type the placed enemy keeps.</param>
+/// <param name="Passive">Whether the enemy starts passive rather than hostile.</param>
+/// <param name="ActionId">The marker's node in the block's action graph, when it is one; it stays a marker.</param>
+/// <param name="SourceOrdinal">The flat's ordinal in the block's flat records.</param>
+/// <param name="ObjectOffset">The flat's source object offset, unique within the block.</param>
+public sealed record DaggerfallWorldBlockRandomEnemy(string Id, NormalizedVector3 Position, int EncounterSlot, int SpawnDistance,
+    bool Passive, string? ActionId, int SourceOrdinal, int ObjectOffset);
+
+/// <summary>
 /// One interior static person. Its classic name seed is <see cref="SourceOffset"/> XOR the building key
 /// (block X, Y and building index) plus the location index, so the placing location supplies the rest.
 /// </summary>
@@ -186,6 +200,9 @@ public sealed record DaggerfallWorldBlock(
 
     /// <summary>RDB random treasure markers; the location's dungeon type selects their loot.</summary>
     public IReadOnlyList<NormalizedMarker> Treasures { get; init; } = [];
+
+    /// <summary>RDB random-enemy markers; the location's encounter list selects their enemies.</summary>
+    public IReadOnlyList<DaggerfallWorldBlockRandomEnemy> RandomEnemies { get; init; } = [];
 
     public IReadOnlyList<NormalizedDungeonAction> Actions { get; init; } = [];
 

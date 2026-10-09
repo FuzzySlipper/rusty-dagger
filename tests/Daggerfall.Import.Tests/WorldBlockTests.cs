@@ -182,6 +182,59 @@ public sealed class WorldBlockTests
     }
 
     /// <summary>
+    /// Every RDB random-enemy editor marker (archive 199, record 15) is published on its block with its
+    /// position, encounter slot, spawn distance and reaction, whether or not it is also an action node: 2,195
+    /// markers in 171 blocks. N0000000.RDB's flat 14 carries no action record; B0000000.RDB's flat 0 is an
+    /// action node and stays a random-enemy marker.
+    /// </summary>
+    [CorpusFact("BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT", "PAL.PAL")]
+    public void Every_rdb_random_enemy_marker_is_published_on_its_block()
+    {
+        DungeonLogicalSourceSet sources = Sources();
+        BsaArchive archive = BsaArchive.Parse(sources.Require("BLOCKS.BSA").Bytes.Span, sources.Require("BLOCKS.BSA").Label);
+        WorldBlockNormalizer normalizer = new(sources);
+        int markers = 0, markedBlocks = 0, examples = 0;
+        foreach (string name in archive.Records.Select(record => record.Name).OfType<string>().Where(name => name.EndsWith(".RDB", StringComparison.Ordinal)))
+        {
+            Assert.True(archive.TryGetByName(name, out BsaRecord? record));
+            RdbBlockSource source = RdbDecoder.Decode(archive.GetPayload(record!).Span, archive.Source);
+            (RdbFlatSource Flat, int Ordinal)[] expected = [.. source.Flats.Select((flat, ordinal) => (flat, ordinal))
+                .Where(value => value.flat.TextureArchive == 199 && value.flat.TextureRecord == 15)];
+            DaggerfallWorldBlock block = normalizer.Rdb(name).Block;
+            string scope = PublishedIds.Slug(name);
+            Assert.Equal(expected.Select(value => (
+                    $"random-enemy/{scope}/{value.Ordinal}",
+                    MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(value.Flat.X, value.Flat.Y, value.Flat.Z)),
+                    (int)value.Flat.Flags, (int)value.Flat.SoundIndex, value.Flat.Action == 99, value.Ordinal, value.Flat.ObjectOffset)),
+                block.RandomEnemies.Select(enemy => (enemy.Id, enemy.Position, enemy.EncounterSlot, enemy.SpawnDistance, enemy.Passive, enemy.SourceOrdinal, enemy.ObjectOffset)));
+            HashSet<string> actions = [.. block.Actions.Select(action => action.Id)];
+            Assert.All(block.RandomEnemies, enemy => Assert.Equal(actions.Contains($"action/{scope}/flat-{enemy.SourceOrdinal}"), enemy.ActionId is not null));
+            Assert.All(block.RandomEnemies.Where(enemy => enemy.ActionId is not null), enemy => Assert.Contains(enemy.ActionId!, actions));
+            markers += block.RandomEnemies.Count;
+            markedBlocks += block.RandomEnemies.Count == 0 ? 0 : 1;
+
+            if (name == "N0000000.RDB")
+            {
+                DaggerfallWorldBlockRandomEnemy unlinked = Assert.Single(block.RandomEnemies, enemy => enemy.SourceOrdinal == 14);
+                // Source (496, -1840, 752): Y down to Y up and Z forward to the right-handed frame's -Z.
+                Near(new(12.4F, 46F, -18.8F), unlinked.Position);
+                Assert.Equal(new DaggerfallWorldBlockRandomEnemy("random-enemy/n0000000-rdb/14", unlinked.Position, 0, 2, false, null, 14, 10410), unlinked);
+                Assert.DoesNotContain(block.Actions, action => action.Id == "action/n0000000-rdb/flat-14");
+                examples++;
+            }
+            else if (name == "B0000000.RDB")
+            {
+                DaggerfallWorldBlockRandomEnemy linked = Assert.Single(block.RandomEnemies, enemy => enemy.SourceOrdinal == 0);
+                Assert.Equal(("action/b0000000-rdb/flat-0", 1, 1, 12567), (linked.ActionId, linked.EncounterSlot, linked.SpawnDistance, linked.ObjectOffset));
+                Assert.Contains(block.Actions, action => action.Id == linked.ActionId);
+                examples++;
+            }
+        }
+
+        Assert.Equal((2195, 171, 2), (markers, markedBlocks, examples));
+    }
+
+    /// <summary>
     /// The catalog states each location's climate and each dungeon's start block and classic texture table: the
     /// inputs and table the dungeon normalizer builds the dungeon with.
     /// </summary>

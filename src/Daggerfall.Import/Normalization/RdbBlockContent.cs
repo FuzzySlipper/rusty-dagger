@@ -21,6 +21,12 @@ internal enum RdbFlatKind
     /// <summary>A fixed mobile marker naming a classic mobile.</summary>
     FixedMobile,
 
+    /// <summary>
+    /// A random-enemy marker: the placing location's encounter list chooses its enemy by the marker's
+    /// encounter slot, under or out of the block's water.
+    /// </summary>
+    RandomEnemy,
+
     /// <summary>Any other editor flat, which places nothing.</summary>
     Editor,
 
@@ -33,6 +39,16 @@ internal sealed record RdbBlockFlat(int Index, RdbFlatSource Source, RdbFlatKind
 {
     /// <summary>The fixed mobile a <see cref="RdbFlatKind.FixedMobile"/> marker names.</summary>
     public Arena2MobileSource? Mobile { get; init; }
+
+    /// <summary>
+    /// Whether the flat is a node of its block's action graph. Offset zero is Arena2's absolute null-link
+    /// sentinel, so an authored node is kept even when all its other action fields are zero; only the
+    /// negative no-object sentinel proves that a flat carries no action record at all.
+    /// </summary>
+    public bool ActionNode => Source.ObjectOffset > 0 && !(Source.Action == 0 && Source.Flags == 0 && Source.NextObjectOffset < 0);
+
+    /// <summary>The flat's action identity in its block's graph under one identity scope, or null when it is no node.</summary>
+    public string? ActionId(string scope) => ActionNode ? $"action/{scope}/flat-{Index}" : null;
 }
 
 /// <summary>One RDB light record in its block's frame, with the donor's light range.</summary>
@@ -172,13 +188,9 @@ internal sealed class RdbBlockContent
 
         foreach (RdbBlockFlat flat in Flats)
         {
-            // Offset zero is Arena2's absolute null-link sentinel. Preserve that authored node
-            // even when all other action fields are zero; only the negative no-object sentinel
-            // can prove that a flat carries no action record at all.
-            if (flat.Source.ObjectOffset <= 0 || flat.Source.Action == 0 && flat.Source.Flags == 0 && flat.Source.NextObjectOffset < 0)
+            if (flat.ActionId(scope) is not { } id)
                 continue;
 
-            string id = $"action/{scope}/flat-{flat.Index}";
             if (!actionIdsByOffset.TryAdd(flat.Source.ObjectOffset, id))
                 throw new InvalidOperationException($"RDB block '{scope}' repeats action object offset {flat.Source.ObjectOffset}.");
             doorIdsByOffset[flat.Source.ObjectOffset] = null;
@@ -248,6 +260,7 @@ internal sealed class RdbBlockContent
         if (RdbSourceClassification.IsStartMarker(flat)) return new(index, flat, RdbFlatKind.StartMarker, point);
         if (RdbSourceClassification.IsEnterMarker(flat)) return new(index, flat, RdbFlatKind.EnterMarker, point);
         if (RdbSourceClassification.IsRandomTreasureMarker(flat)) return new(index, flat, RdbFlatKind.Treasure, point);
+        if (RdbSourceClassification.IsRandomEnemyMarker(flat)) return new(index, flat, RdbFlatKind.RandomEnemy, point);
         byte mobileId = unchecked((byte)flat.FactionOrMobileId);
         if (RdbSourceClassification.IsFixedMobileMarker(flat)
             && mobileId != 99
