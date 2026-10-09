@@ -214,6 +214,60 @@ public sealed class WorldBlockTests
     }
 
     /// <summary>
+    /// The doors that change worlds are published as the donor's MeshReader types them: a building door seen
+    /// from an interior leads out, facing the interior's enter marker; a dungeon entrance plane on an RMB
+    /// exterior leads in; a dungeon exit plane in an RDB block leads out beside the start block's start marker.
+    /// A city gate's open and closed models each carry their own collision, and an exterior states every
+    /// start marker it places.
+    /// </summary>
+    [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "CLIMATE.PAK", "FACTION.TXT", "PAL.PAL")]
+    public void Transition_doors_gates_and_start_markers_follow_the_donor_door_types()
+    {
+        DungeonLogicalSourceSet sources = Sources();
+        WorldBlockNormalizer normalizer = new(sources);
+
+        DaggerfallWorldBlock interior = normalizer.RmbInterior("RESIAL05.RMB", 0).Block;
+        NormalizedVector3 enter = interior.EnterMarker!.Position;
+        DaggerfallWorldBlockTransitionDoor exit = Assert.Single(interior.TransitionDoors);
+        Assert.Equal((DaggerfallWorldBlockTransitionKind.BuildingExit, 74), (exit.Kind, exit.Texture.Archive % 100));
+        Assert.True(((enter.X - exit.Position.X) * exit.Normal.X) + ((enter.Z - exit.Position.Z) * exit.Normal.Z) > 0F,
+            "A building exit faces the interior it is used from.");
+        Assert.Contains(interior.Models, model => model.Id == exit.ModelId);
+
+        DaggerfallLocations catalog = Catalog(sources);
+        DaggerfallDungeonRecord dungeon = Assert.Single(catalog.Dungeons, value => value.Region == 17
+            && value.Index == Assert.Single(catalog.Locations, location => location.Region == 17 && location.Name == "Privateer's Hold").Index);
+        DaggerfallWorldBlock startBlock = normalizer.Rdb(Assert.Single(dungeon.BlockPlacements, block => block.Start).SourceKey).Block;
+        DaggerfallWorldBlockTransitionDoor dungeonExit = Assert.Single(startBlock.TransitionDoors);
+        Assert.Equal((DaggerfallWorldBlockTransitionKind.DungeonExit, 95), (dungeonExit.Kind, dungeonExit.Texture.Archive));
+        Assert.True(Distance(dungeonExit.Position, startBlock.StartMarker!.Position) < 2F, "The start marker stands at the dungeon's exit.");
+
+        MapsExteriorLayout klerd = MapsDecoder.DecodeExteriorLayout(BsaArchive.Parse(sources.Require("MAPS.BSA").Bytes.Span, sources.Require("MAPS.BSA").Label),
+            0, "The Tombs of Klerd");
+        DaggerfallWorldBlockTransitionDoor[] entrances = [.. klerd.Blocks.SelectMany(block => normalizer.RmbExterior(block.SourceName).Block.TransitionDoors)];
+        Assert.NotEmpty(entrances);
+        Assert.All(entrances, door => Assert.True(door.Kind == DaggerfallWorldBlockTransitionKind.DungeonEntrance
+            && (door.Texture.Archive == 56 || door.Texture.Archive % 100 == 56 || door.Texture.Archive == 331 && door.Texture.Record > 0)));
+
+        DaggerfallWorldBlock wall = normalizer.RmbExterior("WALLAA08.RMB").Block;
+        DaggerfallWorldBlockGate gate = Assert.Single(wall.Gates);
+        Assert.Equal(("446", "447"), (gate.Open.ModelId, gate.Closed.ModelId));
+        Assert.Equal(("geometry/mesh-446", "geometry/mesh-447"), (gate.Open.MeshArtifactId, gate.Closed.MeshArtifactId));
+        Assert.All(new[] { gate.Open, gate.Closed }, state => Assert.NotEmpty(state.Collision.Triangles));
+        DaggerfallWorldBlockModel placed = Assert.Single(wall.Models, model => model.Id == gate.ModelId);
+        Assert.Equal((placed.Position, placed.RotationDegrees), (gate.Position, gate.RotationDegrees));
+
+        MapsExteriorLayout charing = MapsDecoder.DecodeExteriorLayout(BsaArchive.Parse(sources.Require("MAPS.BSA").Bytes.Span, sources.Require("MAPS.BSA").Label),
+            17, "Charing");
+        Assert.All(charing.Blocks.Select(block => normalizer.RmbExterior(block.SourceName).Block), block =>
+            Assert.Equal(block.StartMarker?.Position, block.StartMarkers.FirstOrDefault()?.Position));
+        Assert.Contains(charing.Blocks, block => normalizer.RmbExterior(block.SourceName).Block.StartMarkers.Count != 0);
+    }
+
+    private static float Distance(NormalizedVector3 first, NormalizedVector3 second) =>
+        MathF.Sqrt(((first.X - second.X) * (first.X - second.X)) + ((first.Y - second.Y) * (first.Y - second.Y)) + ((first.Z - second.Z) * (first.Z - second.Z)));
+
+    /// <summary>
     /// Every RDB random-enemy editor marker (archive 199, record 15) is published on its block with its
     /// position, encounter slot, spawn distance and reaction, whether or not it is also an action node: 2,195
     /// markers in 171 blocks. N0000000.RDB's flat 14 carries no action record; B0000000.RDB's flat 0 is an

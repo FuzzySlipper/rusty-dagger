@@ -358,7 +358,13 @@ generated file Git would pick up):
   its action node when it is one), action graph, ground tiles, clear automap cells, RDB water level and
   ambient area. An RDB model also states what a placing location cannot derive without the mesh bytes:
   a static placement's block-frame bounds and map visibility samples, and a moving placement's
-  model-local bounds and, for an action model, its model-local collision triangles. Its `.rspatial`
+  model-local bounds and, for an action model, its model-local collision triangles. The doors that change
+  worlds are typed as the donor's MeshReader types their planes (`transitionDoors`: a building door seen
+  from an interior leads out, a dungeon entrance plane on an RMB exterior leads in, a dungeon exit plane in
+  an RDB block leads out), each with its plane's centre, normal and extent. An RMB exterior states every
+  start marker it places (`startMarkers`) and its city gates (`gates`, ARCH3D 446 open and 447 closed): a
+  gate's planes are left out of the block's static collision and each of its states carries its mesh and
+  model-local collision. Its `.rspatial`
   beside it is the block's collision and navigation in the Engine's binary form, ready to place beside its
   neighbours by whole navigation cells. `blocks.json` indexes every block and names the RMB records no
   location places. Identities are the site closures' with the grid position left out (`door/BLOCK-rmb/N`

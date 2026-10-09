@@ -121,6 +121,68 @@ public sealed record DaggerfallWorldBlockDoor(
     public int? BuildingIndex { get; init; }
 }
 
+/// <summary>
+/// Where a static transition door leads: the donor <c>MeshReader</c> door types other than an RMB exterior's
+/// building door, which <see cref="DaggerfallWorldBlockDoor"/> carries.
+/// </summary>
+public enum DaggerfallWorldBlockTransitionKind
+{
+    /// <summary>A building door seen from inside (archive 74 in its climate set): it leads back outside.</summary>
+    BuildingExit,
+
+    /// <summary>A dungeon entrance on an RMB exterior (archive 56, or a non-zero record of archive 331): it leads into the dungeon.</summary>
+    DungeonEntrance,
+
+    /// <summary>A dungeon exit in an RDB block (archive 95): it leads out to the location's exterior.</summary>
+    DungeonExit,
+}
+
+/// <summary>
+/// One static transition door: a door plane of a placed model that changes worlds when used, as the donor's
+/// <c>GameObjectHelper.GetStaticDoors</c> reads it. The plane stays part of its model's static geometry.
+/// </summary>
+/// <param name="Id">The door's identity in the block.</param>
+/// <param name="ModelId">The placement (<see cref="DaggerfallWorldBlockModel.Id"/>) the plane belongs to.</param>
+/// <param name="Kind">Where it leads.</param>
+/// <param name="Position">The plane's centre (its opposite source corners' midpoint) in the block's frame.</param>
+/// <param name="Normal">The plane's unit normal in the block's frame, the donor's door normal.</param>
+/// <param name="Bounds">The plane's extent in the block's frame: where its threshold lies.</param>
+/// <param name="Plane">The plane's index in its mesh's source planes.</param>
+/// <param name="Texture">The source texture that classifies the plane.</param>
+public sealed record DaggerfallWorldBlockTransitionDoor(
+    string Id,
+    string ModelId,
+    DaggerfallWorldBlockTransitionKind Kind,
+    NormalizedVector3 Position,
+    NormalizedVector3 Normal,
+    NormalizedBounds Bounds,
+    int Plane,
+    DaggerfallWorldBlockTexture Texture);
+
+/// <summary>One state of a city gate: the model it draws and the model-local collision it blocks with.</summary>
+/// <param name="ModelId">The ARCH3D model number of this state.</param>
+/// <param name="MeshArtifactId">The world media publication's mesh for the model.</param>
+/// <param name="LocalBounds">The model's bounds in its own frame.</param>
+/// <param name="Collision">The model's model-local collision triangles.</param>
+public sealed record DaggerfallWorldBlockGateState(string ModelId, string MeshArtifactId, NormalizedBounds LocalBounds, DaggerfallWorldBlockCollision Collision);
+
+/// <summary>
+/// One RMB city gate (ARCH3D 446 open, 447 closed, DFU <c>RMBLayout.IsCityGate</c>): a placement whose model
+/// the donor's <c>DaggerfallCityGate</c> swaps between its open and closed variants by the time of day. Its
+/// planes are left out of the block's static collision; each state carries its own, posed by the placement.
+/// </summary>
+/// <param name="Id">The gate's identity in the block.</param>
+/// <param name="ModelId">The placement (<see cref="DaggerfallWorldBlockModel.Id"/>) the gate is.</param>
+/// <param name="Position">The placement origin in the block's frame.</param>
+/// <param name="RotationDegrees">The placement's source Euler degrees, in the model placement convention.</param>
+public sealed record DaggerfallWorldBlockGate(
+    string Id,
+    string ModelId,
+    NormalizedVector3 Position,
+    NormalizedVector3 RotationDegrees,
+    DaggerfallWorldBlockGateState Open,
+    DaggerfallWorldBlockGateState Closed);
+
 /// <summary>A source texture: archive and record.</summary>
 public sealed record DaggerfallWorldBlockTexture(int Archive, int Record);
 
@@ -178,7 +240,23 @@ public sealed record DaggerfallWorldBlock(
 {
     public IReadOnlyList<DaggerfallWorldBlockDoor> Doors { get; init; } = [];
 
+    /// <summary>
+    /// The block's static transition doors: an interior's building exits, an RMB exterior's dungeon entrances
+    /// and an RDB block's dungeon exits.
+    /// </summary>
+    public IReadOnlyList<DaggerfallWorldBlockTransitionDoor> TransitionDoors { get; init; } = [];
+
+    /// <summary>An RMB exterior's city gates.</summary>
+    public IReadOnlyList<DaggerfallWorldBlockGate> Gates { get; init; } = [];
+
+    /// <summary>The block's first start marker, the one a site closure starts from.</summary>
     public NormalizedMarker? StartMarker { get; init; }
+
+    /// <summary>
+    /// Every start marker an RMB exterior places, in source order (<c>marker/start/{n}</c>): the donor's
+    /// arrival at a town chooses whichever of a location's start markers lies nearest the side it arrives from.
+    /// </summary>
+    public IReadOnlyList<NormalizedMarker> StartMarkers { get; init; } = [];
 
     public NormalizedMarker? EnterMarker { get; init; }
 
