@@ -243,7 +243,7 @@ public sealed class DaggerfallLodgingTests
             sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content);
             Session = Create(null);
             DaggerfallSiteProfile Profile(DaggerfallSiteId site, DaggerfallSiteBuildingSource? building, string name, DaggerfallWorldProfileKind kind) => new(
-                new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()), source.SpatialArtifact, source.StaticMesh,
+                new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()), source.Geometry,
                 source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, site, profileKind: kind, logicalProfileId: name,
                 interiorBuilding: building is null ? null : new(building.Id.BlockX, building.Id.BlockY, building.Source.Id, 15, building.Source.FactionId),

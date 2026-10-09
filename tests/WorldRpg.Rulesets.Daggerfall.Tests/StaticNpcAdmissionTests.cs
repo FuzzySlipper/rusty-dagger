@@ -314,7 +314,7 @@ public sealed class StaticNpcAdmissionTests
             "spell seller", ["talk", "buy-spells"],
             new(mobile.TexturePath, mobile.TextureSha256, mobile.AtlasWidth, mobile.AtlasHeight,
                 mobile.Frames, mobile.InitialFrameId, mobile.Pivot, mobile.Size))).ToArray();
-        return new DaggerfallSiteProfile(source.Project, source.SpatialArtifact, source.StaticMesh, source.WorldAppearance,
+        return new DaggerfallSiteProfile(source.Project, source.Geometry, source.WorldAppearance,
             source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites, source.Audio,
             source.ClassicPresentation, source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId,
             source.Portals, source.Anchors.Values.ToArray(), source.Lights, source.GroundContainerSprite,

@@ -447,7 +447,7 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile exterior = new(source.Project, source.SpatialArtifact, source.StaticMesh, source.WorldAppearance,
+        DaggerfallSiteProfile exterior = new(source.Project, source.Geometry, source.WorldAppearance,
             source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites, source.Audio, source.ClassicPresentation,
             source.Site, source.Doors.Select(door => door with { LockSurface = DaggerfallLockInteractionSurface.Exterior }).ToArray(),
             DaggerfallWorldProfileKind.Exterior, "test/exterior", source.Portals, source.Anchors.Values.ToArray(), source.Lights,

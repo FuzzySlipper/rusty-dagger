@@ -106,8 +106,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
     private static DaggerfallSiteProfile ExteriorContentAt(DaggerfallSiteProfile source, DaggerfallSiteId site,
         string logicalId) => new(
         new ProjectFacts(new WorldPoint(1f, 1f, 1f), source.Project.Actors),
-        source.SpatialArtifact,
-        source.StaticMesh,
+        source.Geometry,
         source.WorldAppearance,
         source.InitialLook,
         source.Materials,

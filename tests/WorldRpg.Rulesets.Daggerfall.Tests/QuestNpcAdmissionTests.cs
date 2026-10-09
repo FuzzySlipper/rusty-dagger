@@ -147,7 +147,7 @@ public sealed class QuestNpcAdmissionTests
         // Fixture composition shares the actual published NPC sprite catalog, while retaining
         // the destination's own normalized world, geometry and source quest markers.
         var source = QuestWorldAdmissionTests.WithMarker(fixture.Castle);
-        var castle = new DaggerfallSiteProfile(source.Project, source.SpatialArtifact, source.StaticMesh, source.WorldAppearance,
+        var castle = new DaggerfallSiteProfile(source.Project, source.Geometry, source.WorldAppearance,
             source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites, source.Audio, source.ClassicPresentation,
             source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId, source.Portals, source.Anchors.Values.ToArray(),
             source.Lights, source.GroundContainerSprite, source.DungeonMap, source.DungeonActions, source.DungeonActionModels,

@@ -164,7 +164,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly List<Material> locationMaterials = [];
     private readonly List<IDisposable> priorRetired = [];
     private readonly List<IDisposable> nextRetired = [];
-    private Appearance? world;
+    // Each static mesh the profile draws, with its pose in the profile frame and its snapshot identity.
+    private readonly List<(Appearance Appearance, Transform Pose, ulong EntityId)> world = [];
     private Appearance? arrowAppearance;
     private AuthoredWorldAppearance worldAppearance;
     private Action<List<AppearanceFact>>? appendSnapshotFacts;
@@ -354,7 +355,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         List<AppearanceFact> facts = [];
         if (candleAppearance is { } candle && candlePosition is Vector3 candleAt)
             facts.Add(new(candleVisualId, false, 0, new Transform(candleAt, Quaternion.Identity, Vector3.One), candle, true, RenderLayer.Scene));
-        if (world is { } staticWorld) facts.Add(new AppearanceFact(1, false, 0, worldAppearance.Transform, staticWorld, worldAppearance.Visible, worldAppearance.Layer));
+        foreach ((Appearance staticWorld, Transform pose, ulong entityId) in world)
+            facts.Add(new AppearanceFact(entityId, false, 0, Compose(worldAppearance.Transform, pose), staticWorld, worldAppearance.Visible, worldAppearance.Layer));
         if (doors is not null) foreach (DaggerfallDoorView door in doors.All)
             if (doorVisuals.TryGetValue(door.Id, out Appearance? visual)) facts.Add(new AppearanceFact(doorVisualEntityIds[door.Id], false, 0, door.Pose, visual, true, RenderLayer.Scene));
         if (dungeonMotion is not null)
@@ -765,8 +767,6 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     {
         if (inputs.Doors.Count != 0 && doors is null)
             throw new ArgumentException("Door visuals require the selected door runtime.", nameof(doors));
-        world = appearance.CreateStaticMeshFromContent(
-            new StaticMeshContentAppearanceRequest(inputs.StaticMesh.Path, worldAppearance.Tint));
         foreach (NormalizedMaterial material in inputs.Materials)
         {
             RenderResourceInfo texture = appearance.OpenResource(
@@ -779,8 +779,22 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             materials.Add(created);
             materialsBySlot.Add(material.Slot, created);
         }
-        appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(world,
-            inputs.Materials.Select((material, index) => new MeshMaterialBinding(material.Slot, materials[index])).ToArray()));
+        for (int index = 0; index < inputs.Geometry.Meshes.Count; index++)
+        {
+            DaggerfallSiteMesh mesh = inputs.Geometry.Meshes[index];
+            Appearance created = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(mesh.Path, worldAppearance.Tint));
+            // The first mesh keeps the world's own snapshot identity; the others count down from below the
+            // door visuals' range so no actor, door, effect or other world mesh shares one.
+            world.Add((created, mesh.Pose, index == 0 ? 1UL : (1UL << 51) - checked((ulong)index)));
+            // A published closure's combined mesh is drawn with every material at its own slot; an assembled
+            // block model binds each of its slots to the profile slot its (climate-swapped) texture has.
+            MeshMaterialBinding[] bindings = mesh.Materials is null
+                ? [.. inputs.Materials.Select(material => new MeshMaterialBinding(material.Slot, materialsBySlot[material.Slot]))]
+                : [.. mesh.Materials.Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
+                    ? new MeshMaterialBinding(binding.MeshSlot, material)
+                    : throw new InvalidOperationException($"Mesh '{mesh.Path}' refers to missing world material slot {binding.WorldMaterialSlot}."))];
+            appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, bindings));
+        }
         foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
         {
             DaggerfallDoorVisual visual = door.Visual
@@ -827,7 +841,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private IDisposable[] TakeLocationResources()
     {
         List<IDisposable> retired = [];
-        if (world is { } staticWorld) { world = null; retired.Add(staticWorld); }
+        retired.AddRange(world.Select(part => part.Appearance).Reverse());
+        world.Clear();
         retired.AddRange(doorVisuals.Values.Reverse());
         doorVisuals.Clear();
         doorVisualEntityIds.Clear();
@@ -853,6 +868,12 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         atlases.Remove(visual.Atlas);
         Dispose(visual.Atlas, ref failures);
     }
+
+    /// <summary>A profile-frame pose placed by the world appearance's transform.</summary>
+    private static Transform Compose(Transform world, Transform pose) => new(
+        world.Translation + Vector3.Transform(pose.Translation * world.Scale, world.Rotation),
+        Quaternion.Normalize(world.Rotation * pose.Rotation),
+        world.Scale * pose.Scale);
 
     private void AdmitClassicTextures()
     {

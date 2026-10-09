@@ -524,8 +524,7 @@ public sealed class DaggerfallTravelSessionTests
             Session = Create(null); Session.Site.Discover(destination.Id);
             if (Session.State.Currency.Read().Gold > 0) Assert.True(Session.State.Currency.TrySpendCarried(Session.State.Currency.Read().Gold));
             DaggerfallSiteProfile Profile(DaggerfallSiteId id, string name) => new(
-                new ProjectFacts(new WorldPoint(name == "travel-origin" ? 1 : 3, 1, 1), new Dictionary<long, AuthoredActor>()), source.SpatialArtifact,
-                source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
+                new ProjectFacts(new WorldPoint(name == "travel-origin" ? 1 : 3, 1, 1), new Dictionary<long, AuthoredActor>()), source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, id,
                 profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: name,
                 terrainTextures: source.TerrainTextures, billboardSprites: source.BillboardSprites);

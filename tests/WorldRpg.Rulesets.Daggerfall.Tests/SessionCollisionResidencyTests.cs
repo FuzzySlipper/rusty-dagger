@@ -298,7 +298,7 @@ public sealed class SessionCollisionResidencyTests
         static DaggerfallSiteProfile EmptyProfileAt(DaggerfallSiteProfile template, DaggerfallSiteId site,
             DaggerfallWorldProfileKind kind, string logicalId) => new(
                 new ProjectFacts(new WorldPoint(1F, 1F, 1F), new Dictionary<long, AuthoredActor>()),
-                template.SpatialArtifact, template.StaticMesh, template.WorldAppearance, template.InitialLook,
+                template.Geometry, template.WorldAppearance, template.InitialLook,
                 template.Materials, new Dictionary<long, NormalizedActorSprite>(), template.MobileSprites,
                 template.Audio, template.ClassicPresentation, site, [], kind, logicalId, [],
                 template.Anchors.Values.ToArray(), template.Lights, template.GroundContainerSprite, null, [], [], null,

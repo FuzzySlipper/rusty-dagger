@@ -65,7 +65,7 @@ public sealed class DaggerfallWeatherSessionTests
         .Last(update => update.Replacement.Descriptor.Kind == LightKind.Ambient).Replacement.Descriptor.Intensity;
 
     private static DaggerfallSiteProfile WithZones(DaggerfallSiteProfile source, IReadOnlyList<DaggerfallAmbientZone> zones) =>
-        new(source.Project, source.SpatialArtifact, source.StaticMesh, source.WorldAppearance, source.InitialLook,
+        new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook,
             source.Materials, source.ActorSprites, source.MobileSprites, source.Audio, source.ClassicPresentation,
             source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId, source.Portals,
             source.Anchors.Values.ToArray(), source.Lights, source.GroundContainerSprite, source.DungeonMap,

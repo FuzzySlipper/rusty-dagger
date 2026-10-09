@@ -305,11 +305,11 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         DaggerfallSiteId charing = new(17, 4);
         DaggerfallSiteProfile exterior = new(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor>()),
-            new SpatialContentArtifact("spatial/charing/exterior.json", default, 1), new ContentArtifact("mesh/charing/exterior.json", default),
+            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/charing/exterior.json", default, 1), new ContentArtifact("mesh/charing/exterior.json", default)),
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
             site: charing, profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "worldrpg/imports/charing/exterior");
         DaggerfallSiteProfile interior = new(new ProjectFacts(new WorldPoint(1, 0, 0), new Dictionary<long, AuthoredActor>()),
-            new SpatialContentArtifact("spatial/charing/interior-1-1-0.json", default, 2), new ContentArtifact("mesh/charing/interior-1-1-0.json", default),
+            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/charing/interior-1-1-0.json", default, 2), new ContentArtifact("mesh/charing/interior-1-1-0.json", default)),
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
             site: charing, profileKind: DaggerfallWorldProfileKind.Interior, logicalProfileId: "worldrpg/imports/charing/interior-1-1-0");
 

@@ -229,8 +229,8 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
 
     private static DaggerfallSiteProfile Inputs(string logicalProfileId, DaggerfallDungeonActionDefinition action) => new(
         new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-        new SpatialContentArtifact("spatial/action-triggers", new ContentSha256(1, 2, 3, 4), 1),
-        new ContentArtifact("mesh/action-triggers", new ContentSha256(1, 2, 3, 4)),
+        DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/action-triggers", new ContentSha256(1, 2, 3, 4), 1),
+        new ContentArtifact("mesh/action-triggers", new ContentSha256(1, 2, 3, 4))),
         new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene),
         new PlayerInitialLook(0f, 0f),
         [],
