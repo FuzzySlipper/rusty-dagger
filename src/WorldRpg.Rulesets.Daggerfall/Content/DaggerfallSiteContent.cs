@@ -2711,6 +2711,8 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSite
         .ToDictionary(anchor => anchor.Id, StringComparer.Ordinal));
     /// <summary>Source-normalized dungeon lights, ordered by their stable RDB placement identity.</summary>
     internal IReadOnlyList<DaggerfallAmbientZone> AmbientZones { get; init; } = [];
+    /// <summary>The city gates an assembled exterior places, which open by day and close at night.</summary>
+    internal IReadOnlyList<DaggerfallCityGateDefinition> CityGates { get; init; } = [];
     internal IReadOnlyList<DaggerfallSiteLight> Lights { get; } = Array.AsReadOnly((lights ?? [])
         .Select(light => light.Validate())
         .OrderBy(light => light.Id, StringComparer.Ordinal)

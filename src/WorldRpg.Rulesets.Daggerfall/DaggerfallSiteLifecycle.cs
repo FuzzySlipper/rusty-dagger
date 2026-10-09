@@ -1178,6 +1178,13 @@ internal sealed class DaggerfallSiteLifecycle
         }
     }
 
+    /// <summary>Opens or closes the city gates of the active location and every resident neighbour for the time of day.</summary>
+    internal void SyncCityGates()
+    {
+        Projection.SyncCityGates(_time.Calendar);
+        foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values) resident.Projection.SyncCityGates(_time.Calendar);
+    }
+
     /// <summary>Retires neighboring exterior closures before a profile transition or session dispose.</summary>
     internal void RetireResidentExteriorLocations(bool capture = true)
     {

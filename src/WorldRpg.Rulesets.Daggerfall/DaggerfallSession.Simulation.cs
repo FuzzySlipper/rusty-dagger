@@ -71,6 +71,7 @@ internal sealed partial class DaggerfallSession
         bool activeLocationLoaded = _sites.ActiveLocationLoaded;
         _doors.Advance(update.DeltaSeconds);
         _sites.Projection.AdvanceMotion(update.DeltaSeconds);
+        _sites.SyncCityGates();
         CharacterStepEnvironment doorEnvironment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
         ReconcileTriggers(doorEnvironment, simulationStep, actionGraph);
         CharacterWaterVolume? activeWater = State.Swimming.ActiveVolume(doorEnvironment.WaterVolumes.Span);

@@ -202,6 +202,7 @@ internal sealed class DaggerfallLocationAssembly
         private readonly List<Vector3> _startMarkers = [];
         private readonly List<DaggerfallWorldBlockTransitionDoor> _dungeonExits = [];
         private DaggerfallWorldBlockTransitionDoor? _lowestEntrance;
+        private readonly List<DaggerfallCityGateDefinition> _gates = [];
 
         /// <summary>A location's exterior: every RMB block of its grid, in the site closure's block order.</summary>
         internal void Exterior()
@@ -221,6 +222,7 @@ internal sealed class DaggerfallLocationAssembly
                 foreach (DaggerfallWorldBlockDoor door in document.Doors) ExteriorDoor(door, block, origin);
                 foreach (DaggerfallWorldBlockTransitionDoor door in document.TransitionDoors)
                     DungeonEntrance(door, origin, id => PlaceId(id, block.X, block.Y));
+                foreach (DaggerfallWorldBlockGate gate in document.Gates) CityGate(gate, origin, id => PlaceId(id, block.X, block.Y));
                 if (document.StartMarker is { } start) _start ??= origin + start;
                 if (document.EnterMarker is { } enter) _enter ??= origin + enter;
                 _startMarkers.AddRange(document.StartMarkers.Select(marker => origin + marker));
@@ -393,6 +395,11 @@ internal sealed class DaggerfallLocationAssembly
                 : door)];
             DaggerfallDungeonActionModelDefinition[] actionModels = [.. _actionModels.Select(model =>
                 model with { Visual = model.Visual with { Materials = Bindings(Visual(model.Visual)) } })];
+            DaggerfallCityGateDefinition[] gates = [.. _gates.Select(gate => gate with
+            {
+                Open = gate.Open with { Visual = gate.Open.Visual with { Materials = Bindings(Visual(gate.Open.Visual)) } },
+                Closed = gate.Closed with { Visual = gate.Closed.Visual with { Materials = Bindings(Visual(gate.Closed.Visual)) } },
+            })];
 
             // A site closure's people and furniture are canonically ordered by identity.
             foreach (string section in new[] { "staticNpcs", "propertyContainers" })
@@ -466,6 +473,7 @@ internal sealed class DaggerfallLocationAssembly
                 population: DaggerfallSiteContent.ReadNormalizedPopulation(normalized, diagnostics))
             {
                 AmbientZones = DaggerfallAmbientZones.Read(normalized, diagnostics),
+                CityGates = gates,
                 PropertyContainers = DaggerfallPropertyContainerPlacement.Read(normalized),
             };
         }
@@ -609,6 +617,30 @@ internal sealed class DaggerfallLocationAssembly
             if (_lowestEntrance is null || entrance.Position.Y < _lowestEntrance.Position.Y) _lowestEntrance = entrance;
             // A location without dungeon blocks has nowhere for its entrance to lead.
             if (record.DungeonBlocks.Count != 0) Portal(entrance.Id, entrance.Position, DaggerfallWorldProfileIds.Dungeon(key.Site), StartAnchor);
+        }
+
+        /// <summary>
+        /// A city gate: its placement's pose, as its model is drawn, with its open and closed models, each textured
+        /// through the location's climate and carrying its own collision. Its model is not drawn as a static mesh.
+        /// </summary>
+        private void CityGate(DaggerfallWorldBlockGate gate, Vector3 origin, Func<string, string> place)
+        {
+            DaggerfallCityGateState? State(DaggerfallWorldBlockGateState state)
+            {
+                if (!_meshes.TryGetValue(state.MeshArtifactId, out DaggerfallWorldMesh? mesh))
+                {
+                    diagnostics.Add($"City gate '{gate.Id}' draws mesh '{state.MeshArtifactId}', which the world media publication does not carry.");
+                    return null;
+                }
+
+                _visualMaterials[mesh.Path] = Textures(mesh);
+                return new DaggerfallCityGateState(new DaggerfallDoorVisual(mesh.Path, mesh.Sha256, [new DaggerfallMeshMaterialBinding(0, 0)]),
+                    state.LocalBounds.Minimum, state.LocalBounds.Maximum, state.CollisionVertices, state.CollisionTriangles);
+            }
+
+            if (State(gate.Open) is not { } open || State(gate.Closed) is not { } closed) return;
+            try { _gates.Add(new DaggerfallCityGateDefinition(place(gate.Id), DaggerfallSiteGeometry.Pose(origin + gate.Position, gate.RotationDegrees), open, closed).Validate()); }
+            catch (ArgumentException exception) { diagnostics.Add($"City gate '{gate.Id}' is invalid: {exception.Message}"); }
         }
 
         private void Portal(string id, Vector3 position, DaggerfallWorldProfileKey destination, string arrival)
