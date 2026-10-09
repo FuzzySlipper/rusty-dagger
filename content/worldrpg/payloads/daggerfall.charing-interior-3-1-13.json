@@ -29,6 +29,9 @@
       "grid": { "width": 6, "height": 7 },
       "block": { "name": "TEMPAAH0.RMB", "x": 3, "y": 1, "building": 13 },
       "entryMarker": { "textureArchive": 199, "textureRecord": 8, "positionRaw": [320, 0, -192] }
-    }
+    },
+    "transitions": [
+      { "id": "exit/0", "position": [-6.25, 1.125, 7.375], "radius": 2, "destinationProfile": "17/4/exterior" }
+    ]
   }
 }

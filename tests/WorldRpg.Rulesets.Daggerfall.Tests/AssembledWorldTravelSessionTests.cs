@@ -173,11 +173,20 @@ public sealed class AssembledWorldTravelSessionTests
                 .First(record => Profiles.Contains(DaggerfallWorldProfileIds.Exterior(record.Id)) && wanted(record));
         }
 
-        /// <summary>A new game in Privateer's Hold, stepped out onto its assembled exterior.</summary>
+        /// <summary>
+        /// A new game in Privateer's Hold, walked out through its exit onto its assembled exterior: with no
+        /// entrance to return through, the player lands in front of the island's dungeon entrance.
+        /// </summary>
         internal Run Start(DaggerfallSiteId destination, DaggerfallSiteBuildingId? building = null)
         {
             Run run = new(this, null, destination, building);
-            Assert.True(run.Session.TryTransitionTo(DaggerfallWorldProfileIds.Exterior(PrivateersHold)));
+            (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) exit = Assert.Single(run.Session.Sites.Projection.Portals.All);
+            run.Use(exit.Portal.Position.ToVector(), exit.Entity);
+            DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(PrivateersHold);
+            Assert.Equal(island, run.Session.Sites.ActiveProfile);
+            DaggerfallSiteAnchor landing = Profiles.Require(island).RequireAnchor(DaggerfallLocationAssembly.DungeonEntranceAnchor);
+            Assert.True(Vector3.Distance(landing.Position.ToVector(),
+                run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value).ToVector()) < 1e-2F);
             return run;
         }
 

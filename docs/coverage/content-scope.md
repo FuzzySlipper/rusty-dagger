@@ -396,7 +396,9 @@ Authored and tracked: the pack, bundle and tuning descriptors (`content/worldrpg
 (`content/worldrpg/payloads/daggerfall.{privateers-hold,castle-necromoghan,charing-exterior,charing-interior-1-1-0}.json`
 and the other site payloads beside them) and the importer's tracked inputs. A site payload states the profile id
 it overrides (`world.profile`, for example `17/4/exterior` or `17/4/interior-3-4-0`) and the ruleset
-uses its closure for that id only; every other location profile is assembled from the per-block
+uses its closure for that id only. Its `world.transitions` are its portals; a closure states its source exits
+there (the door planes the per-block publication types), with `arrivalAnchor` naming the destination landing
+used when there is no entrance to return through. Every other location profile is assembled from the per-block
 publication when first needed. The tracked importer inputs are the source inventory, `data/ui-authored-assets.json` with
 `data/ui-original/` (original art). No sprite overlay is tracked; `--sprite-authoring DIR` applies an
 operator's `sprites/SITE.json` overlays to the dungeon sites. Third-party origins are in
