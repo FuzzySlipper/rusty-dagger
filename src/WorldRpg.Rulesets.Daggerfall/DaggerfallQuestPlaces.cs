@@ -24,6 +24,31 @@ internal sealed class DaggerfallQuestPlaceAllocator(
         (type == -1 ? (faction == 1 ? AnyHouse : faction == 2 ? AnyShop : AllValid).Contains(actualType) : actualType == type)
         && (actualType != 11 || faction == 0 || actualFaction == faction);
 
+    /// <summary>A house type (17–22) that falls back to a wildcard building when its exact type is unavailable.</summary>
+    internal static bool HasHouseFallback(int type) => type is >= 17 and <= 22;
+
+    /// <summary>The remote town draws Place.cs retries, and the attempt from which a house type becomes a wildcard.</summary>
+    internal const int RemoteTownAttempts = 499, RemoteHouseFallbackAttempt = 250;
+
+    /// <summary>The building type a remote town draw requests at this attempt.</summary>
+    internal static int RemoteBuildingType(DaggerfallQuestPlace row, int attempt) =>
+        attempt >= RemoteHouseFallbackAttempt && HasHouseFallback(row.P2) ? -1 : row.P2;
+
+    /// <summary>The MAPS header filter: a typed request needs the location to list that building type.</summary>
+    internal static bool HeaderAdmits(DaggerfallSiteRecord site, int type, int wildcard) => type == -1 && wildcard is 0 or 1
+        || site.Exterior?.BuildingReferences.Any(reference => reference.BuildingType == type) == true;
+
+    /// <summary>The dungeon-type condition of a remote dungeon request; -1 is any ordinary dungeon type.</summary>
+    internal static bool DungeonMatches(DaggerfallSiteRecord site, int type) => IsDungeon(site.Kind)
+        && (type == -1 ? site.DungeonType is >= 0 and <= 16 : site.DungeonType == type);
+
+    /// <summary>The run-time-independent part of building eligibility: type and faction, no excluded guild hall, quest markers.</summary>
+    internal bool IsQuestBuilding(DaggerfallSiteRecord site, DaggerfallSiteBuildingSource building, int type, int faction) =>
+        BuildingMatches(building.Source.BuildingType, building.Source.FactionId, type, faction)
+        && building.Source.FactionId != DaggerfallConcreteGuildCatalog.ThievesFactionId
+        && building.Source.FactionId != DaggerfallConcreteGuildCatalog.DarkBrotherhoodFactionId
+        && Markers(site, building).Count > 0;
+
     internal DaggerfallQuestResourceState Allocate(string instanceId, DaggerfallQuestResourceDefinition resource,
         IEnumerable<DaggerfallQuestResourceState> parentResources, IEnumerable<DaggerfallQuestResourceState> activeResources)
     {
@@ -69,7 +94,7 @@ internal sealed class DaggerfallQuestPlaceAllocator(
                 site = current ?? throw new NotSupportedException($"Local Place '{resource.CanonicalId}' requires an actual current site.");
                 kind = DaggerfallWorldProfileKind.Interior;
                 DaggerfallSiteBuildingSource[] local = Buildings(site, row.P2, row.P3, parent, active);
-                if (local.Length == 0 && row.P2 is >= 17 and <= 22) local = Buildings(site, -1, 1, parent, active);
+                if (local.Length == 0 && HasHouseFallback(row.P2)) local = Buildings(site, -1, 1, parent, active);
                 building = Choose(local, identity + "/local");
                 break;
             case "local": // The donor routes local dungeon declarations through the remote dungeon selector.
@@ -81,14 +106,13 @@ internal sealed class DaggerfallQuestPlaceAllocator(
                     kind = DaggerfallWorldProfileKind.Interior;
                     site = current;
                     // Preserve Place.cs's retries and its p2=-1 fallback. With p3=0 that code collects AllValid, despite setting requiredBuildingType to AnyHouse.
-                    for (int attempt = 1; attempt < 500; attempt++)
+                    for (int attempt = 1; attempt <= RemoteTownAttempts; attempt++)
                     {
                         DaggerfallSiteRecord candidate = Choose(region, identity + $"/town/{attempt}");
                         if (candidate.Id == current.Id || IsDungeon(candidate.Kind)) continue;
-                        int type = attempt >= 250 && row.P2 is >= 17 and <= 22 ? -1 : row.P2;
+                        int type = RemoteBuildingType(row, attempt);
                         int wildcard = row.P3;
-                        if (!(type == -1 && wildcard is 0 or 1)
-                            && candidate.Exterior?.BuildingReferences.Any(reference => reference.BuildingType == type) != true) continue;
+                        if (!HeaderAdmits(candidate, type, wildcard)) continue;
                         DaggerfallSiteBuildingSource[] found = Buildings(candidate, type, wildcard, parent, active);
                         if (found.Length == 0) continue;
                         site = candidate;
@@ -100,8 +124,7 @@ internal sealed class DaggerfallQuestPlaceAllocator(
                 else if (row.P1 == 1)
                 {
                     kind = DaggerfallWorldProfileKind.Dungeon;
-                    DaggerfallSiteRecord[] DungeonCandidates(int type) => [.. region.Where(value => IsDungeon(value.Kind)
-                        && (type == -1 ? value.DungeonType is >= 0 and <= 16 : value.DungeonType == type)
+                    DaggerfallSiteRecord[] DungeonCandidates(int type) => [.. region.Where(value => DungeonMatches(value, type)
                         && Markers(value, null).Count > 0
                         && !parent.Concat(active).SelectMany(LocationBindings).Any(binding => binding.PlaceSelection?.Kind == DaggerfallWorldProfileKind.Dungeon
                             && binding.Places[0].Require() == value.Id))];
@@ -195,19 +218,16 @@ internal sealed class DaggerfallQuestPlaceAllocator(
     private DaggerfallSiteBuildingSource[] Buildings(DaggerfallSiteRecord site, int type, int faction,
         DaggerfallQuestResourceState[] parent, DaggerfallQuestResourceState[] active) =>
         [.. sites.BuildingsAt(site.Id).OrderBy(value => value.Id.BlockY).ThenBy(value => value.Id.BlockX).ThenBy(value => value.Id.Index)
-            .Where(building => BuildingMatches(building.Source.BuildingType, building.Source.FactionId, type, faction)
-                && building.Source.FactionId != DaggerfallConcreteGuildCatalog.ThievesFactionId
-                && building.Source.FactionId != DaggerfallConcreteGuildCatalog.DarkBrotherhoodFactionId
+            .Where(building => IsQuestBuilding(site, building, type, faction)
                 && !isOwnedHouse(site.Id, building)
                 && !active.Any(resource => Claims(resource, site.Id, building))
-                && (building.Source.BuildingType == 11 || !parent.Any(resource => Claims(resource, site.Id, building)))
-                && Markers(site, building).Count > 0)];
+                && (building.Source.BuildingType == 11 || !parent.Any(resource => Claims(resource, site.Id, building))))];
 
     private T Choose<T>(IReadOnlyList<T> values, string key) => values.Count > 0
         ? values[checked((int)random.DrawKeyed(new(0, "daggerfall.quest.place", key, 0, values.Count - 1)).Value)]
         : throw new NotSupportedException($"Quest Place selection '{key}' has no source-backed eligible candidates.");
 
-    private static bool IsDungeon(DaggerfallSiteKind kind) => kind is DaggerfallSiteKind.DungeonKeep
+    internal static bool IsDungeon(DaggerfallSiteKind kind) => kind is DaggerfallSiteKind.DungeonKeep
         or DaggerfallSiteKind.DungeonLabyrinth or DaggerfallSiteKind.DungeonRuin or DaggerfallSiteKind.Graveyard;
     internal static IEnumerable<DaggerfallQuestResourceBinding> LocationBindings(DaggerfallQuestResourceState resource)
     {
