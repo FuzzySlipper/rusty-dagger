@@ -222,6 +222,78 @@ public sealed class AssembledSiteProfileTests
         Assert.Contains("'profile'", missing.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Every source door that changes worlds is a portal both ways: an assembled interior's building doors lead
+    /// out to its location's exterior, landing in front of that building's door; an exterior's dungeon entrance
+    /// leads in to the dungeon's start, which faces away from the exit nearest it; and the dungeon's exit leads
+    /// out in front of the lowest entrance. Each landing exists in the profile it names.
+    /// </summary>
+    [Fact]
+    public void Source_transition_doors_are_portals_both_ways_with_their_landings()
+    {
+        DaggerfallLocationAssembly assembly = Fixture.Value.Assembly;
+        DaggerfallWorldProfileKey interiorKey = DaggerfallWorldProfileIds.Interior(Charing, new(3, 4, 0));
+        DaggerfallSiteProfile interior = assembly.Assemble(interiorKey), outside = assembly.Assemble(DaggerfallWorldProfileIds.Exterior(Charing));
+        Assert.Equal(3, interior.Portals.Count);
+        Assert.All(interior.Portals, portal =>
+        {
+            Assert.Equal("17/4/exterior", portal.DestinationLogicalProfile);
+            Assert.Equal("building/3/4/0", portal.ArrivalAnchor);
+        });
+        // The landing stands on the door's threshold, in front of it and facing out.
+        DaggerfallRdbDoorDefinition door = outside.Doors.First(candidate => candidate.ExteriorBuilding == new DaggerfallSiteBuildingId(3, 4, 0));
+        DaggerfallSiteAnchor landing = outside.RequireAnchor("building/3/4/0");
+        Assert.Equal(door.Position.Y + door.BoundsMin.Y, landing.Position.Y, 3);
+        Assert.Equal(.75F, Vector2.Distance(new(door.Position.X, door.Position.Z), new(landing.Position.X, landing.Position.Z)), 3);
+        // No exterior door leads into a dungeon Charing does not have.
+        Assert.Empty(outside.Portals);
+
+        DaggerfallWorldProfileKey klerd = DaggerfallWorldProfileIds.Exterior(new(0, 11)), crypt = DaggerfallWorldProfileIds.Dungeon(new(0, 11));
+        DaggerfallSiteProfile exterior = assembly.Assemble(klerd), dungeon = assembly.Assemble(crypt);
+        DaggerfallSitePortal entrance = Assert.Single(exterior.Portals);
+        Assert.Equal((crypt.LogicalId, "start"), (entrance.DestinationLogicalProfile, entrance.ArrivalAnchor));
+        DaggerfallSitePortal exit = Assert.Single(dungeon.Portals);
+        Assert.Equal((klerd.LogicalId, "dungeon-entrance"), (exit.DestinationLogicalProfile, exit.ArrivalAnchor));
+        DaggerfallSiteAnchor outOfCrypt = exterior.RequireAnchor("dungeon-entrance");
+        Assert.Equal(.35F, Vector2.Distance(new(entrance.Position.X, entrance.Position.Z), new(outOfCrypt.Position.X, outOfCrypt.Position.Z)), 3);
+        Assert.True(outOfCrypt.Position.Y < entrance.Position.Y, "The landing stands on the entrance's threshold, below its centre.");
+        DaggerfallSiteAnchor start = dungeon.RequireAnchor("start");
+        Assert.Equal(dungeon.Project.PlayerPosition, start.Position);
+        Assert.Equal(dungeon.InitialLook.YawRadians, start.YawRadians);
+        // Facing away from the exit: the exit lies behind the start.
+        Vector3 facing = WorldRpg.Kit.Actors.ActorHeading.Forward(start.YawRadians);
+        Assert.True(Vector3.Dot(facing, exit.Position.ToVector() - start.Position.ToVector()) < 0F);
+    }
+
+    /// <summary>
+    /// An authored closure without exits of its own states its source exits as transitions: each is the portal its
+    /// assembled profile places on the same source door, leading the same way.
+    /// </summary>
+    [Theory]
+    [InlineData("daggerfall.privateers-hold.json")]
+    [InlineData("daggerfall.castle-necromoghan.json")]
+    [InlineData("daggerfall.charing-interior-1-5-17.json")]
+    [InlineData("daggerfall.charing-interior-2-1-0.json")]
+    [InlineData("daggerfall.charing-interior-3-1-13.json")]
+    [InlineData("daggerfall.charing-interior-3-2-14.json")]
+    [InlineData("daggerfall.charing-interior-3-4-0.json")]
+    [InlineData("daggerfall.charing-interior-4-2-0.json")]
+    public void An_authored_closure_states_its_source_exits(string payload)
+    {
+        DaggerfallSiteProfile published = Published(payload);
+        DaggerfallSiteProfile assembled = Fixture.Value.Assembly.Assemble(published.ProfileKey);
+        Assert.Equal(assembled.Portals.Select(portal => portal.Id), published.Portals.Select(portal => portal.Id));
+        foreach ((DaggerfallSitePortal expected, DaggerfallSitePortal actual) in assembled.Portals.Zip(published.Portals))
+        {
+            Near(expected.Position.ToVector(), actual.Position.ToVector());
+            Assert.Equal(expected.DestinationLogicalProfile, actual.DestinationLogicalProfile);
+        }
+
+        // A dungeon exit lands in front of the assembled exterior's entrance when there is no entrance to return through.
+        if (published.ProfileKind == DaggerfallWorldProfileKind.Dungeon)
+            Assert.All(published.Portals, portal => Assert.Equal("dungeon-entrance", portal.ArrivalAnchor));
+    }
+
     private static void AssertSameDoors(DaggerfallSiteProfile published, DaggerfallSiteProfile assembled)
     {
         Assert.Equal(published.Doors.Select(door => door.Id), assembled.Doors.Select(door => door.Id));

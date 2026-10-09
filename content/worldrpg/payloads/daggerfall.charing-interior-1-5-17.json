@@ -29,6 +29,9 @@
       "grid": { "width": 6, "height": 7 },
       "block": { "name": "BANKAL01.RMB", "x": 1, "y": 5, "building": 17 },
       "entryMarker": { "textureArchive": 199, "textureRecord": 8, "positionRaw": [320, 0, -192] }
-    }
+    },
+    "transitions": [
+      { "id": "exit/0", "position": [6.4, 1.125, 8], "radius": 2, "destinationProfile": "17/4/exterior" }
+    ]
   }
 }

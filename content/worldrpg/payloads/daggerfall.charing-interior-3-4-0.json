@@ -29,6 +29,11 @@
       "grid": { "width": 6, "height": 7 },
       "block": { "name": "MAGEAA14.RMB", "x": 3, "y": 4, "building": 0 },
       "entryMarker": { "textureArchive": 199, "textureRecord": 8, "positionRaw": [320, 0, -192] }
-    }
+    },
+    "transitions": [
+      { "id": "exit/0", "position": [-3.725, 4.3500004, 3.05], "radius": 2, "destinationProfile": "17/4/exterior" },
+      { "id": "exit/1", "position": [11.05, 1.125, 2.225], "radius": 2, "destinationProfile": "17/4/exterior" },
+      { "id": "exit/2", "position": [11.05, 1.125, -0.975], "radius": 2, "destinationProfile": "17/4/exterior" }
+    ]
   }
 }
