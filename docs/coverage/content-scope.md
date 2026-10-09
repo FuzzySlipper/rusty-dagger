@@ -352,11 +352,12 @@ generated file Git would pick up):
   a location places, each in its own frame. A block document (`rmb/BLOCK/exterior.json`,
   `rmb/BLOCK/interior-N.json`, `rdb/BLOCK.json`) places the world media publication's meshes by
   `geometry/mesh-N` id and states the block's doors, start/enter and quest markers, people, furniture,
-  lights, billboards, fixed mobiles, treasure markers, action graph, ground tiles, clear automap cells,
-  RDB water level and ambient area; its `.rspatial` beside it is the block's collision and navigation in
-  the Engine's binary form, ready to place beside its neighbours by whole navigation cells. `blocks.json`
-  indexes every block and names the RMB records no location places. Identities are the site closures'
-  with the grid position left out (`door/BLOCK-rmb/N` where a site says `door/BLOCK-rmb/X/Y/N`), and a
+  lights, billboards, fixed mobiles, treasure and random-enemy markers (an enemy marker's encounter
+  slot, spawn distance and reaction, and its action node when it is one), action graph, ground tiles,
+  clear automap cells, RDB water level and ambient area; its `.rspatial` beside it is the block's
+  collision and navigation in the Engine's binary form, ready to place beside its neighbours by whole
+  navigation cells. `blocks.json` indexes every block and names the RMB records no location places.
+  Identities are the site closures' with the grid position left out (`door/BLOCK-rmb/N` where a site says `door/BLOCK-rmb/X/Y/N`), and a
   location supplies its position, climate, texture table, start block and dungeon type. The site
   closures' normalizers read each block through the same block-level content. Nothing at runtime opens
   it yet: hundreds of megabytes in thousands of files, it stays outside the runtime content root the Host stages

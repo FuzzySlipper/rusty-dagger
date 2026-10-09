@@ -67,6 +67,9 @@ public static class RdbSourceClassification
     /// <summary>Classic editor-flat fixed-mobile marker record.</summary>
     public const ushort FixedMobileMarkerRecord = 16;
 
+    /// <summary>Classic editor-flat random-enemy marker record.</summary>
+    public const ushort RandomEnemyMarkerRecord = 15;
+
     /// <summary>Determines whether a flat is a classic editor start-marker source fact.</summary>
     public static bool IsStartMarker(RdbFlatSource flat)
     {
@@ -86,6 +89,23 @@ public static class RdbSourceClassification
     {
         ArgumentNullException.ThrowIfNull(flat);
         return flat.TextureArchive == EditorFlatArchive && flat.TextureRecord == RandomTreasureMarkerRecord;
+    }
+
+    /// <summary>Determines whether a flat is a classic editor random-enemy marker source fact.</summary>
+    public static bool IsRandomEnemyMarker(RdbFlatSource flat)
+    {
+        ArgumentNullException.ThrowIfNull(flat);
+        return flat.TextureArchive == EditorFlatArchive && flat.TextureRecord == RandomEnemyMarkerRecord;
+    }
+
+    /// <summary>
+    /// Determines whether an enemy marker starts its enemy passive: classic marks that reaction with the
+    /// marker's action byte 99, where any other value leaves it hostile.
+    /// </summary>
+    public static bool IsPassiveEnemyMarker(RdbFlatSource flat)
+    {
+        ArgumentNullException.ThrowIfNull(flat);
+        return flat.Action == 99;
     }
 
     /// <summary>

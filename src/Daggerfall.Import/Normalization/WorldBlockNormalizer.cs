@@ -249,6 +249,9 @@ public sealed class WorldBlockNormalizer
                 .Select(flat => new NormalizedActorPlacement($"actor/{scope}/{flat.Index}", $"actor/mobile-{flat.Mobile!.Id.Value}", MeshGeometry.ToRightHanded(flat.Point)))],
             Treasures = [.. content.Flats.Where(flat => flat.Kind == RdbFlatKind.Treasure)
                 .Select(flat => new NormalizedMarker($"treasure/{scope}/{flat.Index}", MeshGeometry.ToRightHanded(flat.Point)))],
+            RandomEnemies = [.. content.Flats.Where(flat => flat.Kind == RdbFlatKind.RandomEnemy)
+                .Select(flat => new DaggerfallWorldBlockRandomEnemy($"random-enemy/{scope}/{flat.Index}", MeshGeometry.ToRightHanded(flat.Point),
+                    flat.Source.Flags, flat.Source.SoundIndex, RdbSourceClassification.IsPassiveEnemyMarker(flat.Source), flat.ActionId(scope), flat.Index, flat.Source.ObjectOffset))],
             Actions = content.Actions(scope, MeshGeometry.ToRightHanded),
             WaterLevel = content.WaterLevel is int level ? Arena2SourceTransform.ToImportPoint(0, level, 0).YMetres : null,
             AmbientZone = content.AmbientZone,
