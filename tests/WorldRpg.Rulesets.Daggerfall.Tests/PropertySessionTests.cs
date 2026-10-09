@@ -428,19 +428,16 @@ public sealed class PropertySessionTests
                 .OrderBy(value => value.Id.BlockY).ThenBy(value => value.Id.BlockX).ThenBy(value => value.Id.Index);
             var building = ordinaryHouse ? ordered.Last() : ordered.First();
             HouseIdentity = new(site.Id, building.Source.Id, building.Id.BlockX, building.Id.BlockY);
-            House = new(new ProjectFacts(new WorldPoint(3, 1, 1), new Dictionary<long, AuthoredActor>()), source.SpatialArtifact,
-                source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
+            House = new(new ProjectFacts(new WorldPoint(3, 1, 1), new Dictionary<long, AuthoredActor>()), source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, site.Id, profileKind: DaggerfallWorldProfileKind.Interior,
                 logicalProfileId: "property-house", interiorBuilding: new(building.Id.BlockX, building.Id.BlockY, building.Source.Id, building.Source.BuildingType, building.Source.FactionId));
-            Land = new(new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()), source.SpatialArtifact,
-                source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
+            Land = new(new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()), source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, site.Id, profileKind: DaggerfallWorldProfileKind.Exterior,
                 logicalProfileId: "property-land", portals: [new("house-entrance", new(1, 1, 1), 2, House.ProfileKey.LogicalId)],
                 billboardSprites: source.BillboardSprites, terrainTextures: source.TerrainTextures);
             var destination = definitions.Locations.Records.Where(value => value.Kind == DaggerfallSiteKind.TownCity && value.Id != site.Id)
                 .OrderBy(value => Math.Abs(value.MapPixelX - site.MapPixelX) + Math.Abs(value.MapPixelY - site.MapPixelY)).First();
-            Destination = new(new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()), source.SpatialArtifact,
-                source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
+            Destination = new(new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()), source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, destination.Id,
                 profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "property-destination",
                 billboardSprites: source.BillboardSprites, terrainTextures: source.TerrainTextures);

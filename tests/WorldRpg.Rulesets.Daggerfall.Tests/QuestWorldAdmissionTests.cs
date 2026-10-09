@@ -660,8 +660,7 @@ public sealed class QuestWorldAdmissionTests
             && markers.Any(marker => marker.Kind == DaggerfallSiteMarkerKind.QuestSpawn));
         var marker = blocks.QuestMarkers[new(block.SourceKey, null)].First(value => value.Kind == DaggerfallSiteMarkerKind.QuestSpawn)
             with { BlockX = block.X, BlockZ = block.Z };
-        return new(source.Project, source.SpatialArtifact,
-        source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites,
+        return new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites,
         source.Audio, source.ClassicPresentation, source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId,
         source.Portals, source.Anchors.Values.ToArray(), source.Lights, source.GroundContainerSprite, source.DungeonMap,
         source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, source.Music, 

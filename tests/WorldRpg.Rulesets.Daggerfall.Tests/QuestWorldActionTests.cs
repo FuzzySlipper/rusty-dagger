@@ -149,8 +149,7 @@ public sealed class QuestWorldActionTests
         Assert.Throws<NotSupportedException>(() => new DaggerfallSiteProfiles([original, Variant(original, [])]));
     }
 
-    private static DaggerfallSiteProfile Variant(DaggerfallSiteProfile source, IReadOnlyList<DaggerfallSiteMarker>? markers = null) => new(source.Project, source.SpatialArtifact,
-        source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites,
+    private static DaggerfallSiteProfile Variant(DaggerfallSiteProfile source, IReadOnlyList<DaggerfallSiteMarker>? markers = null) => new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites,
         source.Audio, source.ClassicPresentation, source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId,
         source.Portals, source.Anchors.Values.ToArray(), [new("variant-light", new(1, 2, 3), 8, 17, Vector3.One)], source.GroundContainerSprite, source.DungeonMap,
         source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, source.Music, markers ?? source.QuestMarkers, source.BillboardSprites,

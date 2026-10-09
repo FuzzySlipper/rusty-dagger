@@ -197,39 +197,59 @@ internal sealed class DaggerfallSiteLifecycle
             water.Values.OrderBy(value => value.Trigger).ToArray());
     }
 
-    private static ulong LocationPlacementId(DaggerfallWorldProfileKey profile) =>
-        StableHash.NonZeroFnv1a64($"daggerfall.location-artifact.v1|{profile.LogicalId}");
+    private static ulong LocationPlacementId(DaggerfallWorldProfileKey profile, DaggerfallSiteSpatialPart part) =>
+        StableHash.NonZeroFnv1a64($"daggerfall.location-artifact.v1|{profile.LogicalId}|{part.Id}");
 
-    private SpatialContentArtifactPlacement LocationPlacement(
+    /// <summary>The Engine placement identities of every collision/navigation part a profile places.</summary>
+    private static ulong[] LocationPlacementIds(DaggerfallSiteProfile profile) =>
+        [.. profile.Geometry.Spatial.Select(part => LocationPlacementId(profile.ProfileKey, part))];
+
+    /// <summary>
+    /// A profile's collision/navigation parts, each placed by its own whole-cell offset in the profile frame
+    /// and, for an exterior, by the location's map-pixel offset from the active origin and its terrain height.
+    /// </summary>
+    private SpatialContentArtifactPlacement[] LocationPlacements(
         DaggerfallSiteProfile profile,
         DaggerfallExteriorWorldOrigin? exteriorOrigin = null)
     {
-        if (profile.ProfileKind != DaggerfallWorldProfileKind.Exterior)
-            return new(LocationPlacementId(profile.ProfileKey), profile.SpatialArtifact.Path, profile.SpatialArtifact.Sha256);
+        long columnOffset = 0, rowOffset = 0;
+        Vector3 translation = Vector3.Zero;
+        if (profile.ProfileKind == DaggerfallWorldProfileKind.Exterior)
+        {
+            if (!TryExteriorProfileCell(profile, out DaggerfallExteriorCellId cell))
+                throw new InvalidOperationException($"Exterior artifact '{profile.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
+            DaggerfallExteriorWorldOrigin origin = exteriorOrigin
+                ?? (_exteriorResidency is { IsInitialized: true } residency
+                    ? ActiveOrigin(residency)
+                    : DaggerfallExteriorWorldOrigin.At(cell));
+            columnOffset = checked((long)(cell.X - origin.MapPixelX) * NavigationCellsPerExteriorCell);
+            rowOffset = checked((long)(origin.MapPixelY - cell.Y) * NavigationCellsPerExteriorCell);
+            translation = ExteriorLocationPlacementTranslation(profile);
+        }
 
-        if (!TryExteriorProfileCell(profile, out DaggerfallExteriorCellId cell))
-            throw new InvalidOperationException($"Exterior artifact '{profile.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
-        DaggerfallExteriorWorldOrigin origin = exteriorOrigin
-            ?? (_exteriorResidency is { IsInitialized: true } residency
-                ? ActiveOrigin(residency)
-                : DaggerfallExteriorWorldOrigin.At(cell));
-        long columnOffset = checked((long)(cell.X - origin.MapPixelX) * NavigationCellsPerExteriorCell);
-        long rowOffset = checked((long)(origin.MapPixelY - cell.Y) * NavigationCellsPerExteriorCell);
-        return new(LocationPlacementId(profile.ProfileKey), profile.SpatialArtifact.Path, profile.SpatialArtifact.Sha256,
-            ColumnOffset: columnOffset,
-            RowOffset: rowOffset,
-            Translation: ExteriorLocationPlacementTranslation(profile));
+        return [.. profile.Geometry.Spatial.Select(part => new SpatialContentArtifactPlacement(
+            LocationPlacementId(profile.ProfileKey, part), part.Path, part.Sha256,
+            ColumnOffset: checked(columnOffset + part.ColumnOffset),
+            RowOffset: checked(rowOffset + part.RowOffset),
+            Translation: translation))];
     }
 
-    private void AdmitLocationArtifact(DaggerfallSiteProfile profile, DaggerfallExteriorWorldOrigin? exteriorOrigin = null)
+    /// <summary>
+    /// Places one profile's parts and removes others in one Engine admission, holding the source its parts
+    /// resolve from (the per-block publication's bundle, for an assembled location) open for the call.
+    /// </summary>
+    private void ApplyLocationResidency(DaggerfallSiteProfile? placed, DaggerfallExteriorWorldOrigin? exteriorOrigin,
+        IEnumerable<ulong> removals, ulong navigationGridId)
     {
-        _ = _spatial.ApplyContentArtifactResidency([LocationPlacement(profile, exteriorOrigin)], [], profile.SpatialArtifact.NavigationGridId);
+        using IDisposable? source = placed?.Geometry.SpatialSource?.Invoke();
+        _ = _spatial.ApplyContentArtifactResidency(placed is null ? [] : LocationPlacements(placed, exteriorOrigin), removals, navigationGridId);
     }
 
-    private void RemoveLocationArtifact(DaggerfallSiteProfile profile)
-    {
-        _ = _spatial.ApplyContentArtifactResidency([], [LocationPlacementId(profile.ProfileKey)], profile.SpatialArtifact.NavigationGridId);
-    }
+    private void AdmitLocationArtifact(DaggerfallSiteProfile profile, DaggerfallExteriorWorldOrigin? exteriorOrigin = null) =>
+        ApplyLocationResidency(profile, exteriorOrigin, [], profile.Geometry.NavigationGridId);
+
+    private void RemoveLocationArtifact(DaggerfallSiteProfile profile) =>
+        ApplyLocationResidency(null, null, LocationPlacementIds(profile), profile.Geometry.NavigationGridId);
 
     /// <summary>Inactive sites' detached actor, door, effect and motion state, by profile.</summary>
     internal IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> Deltas => _deltas;
@@ -469,9 +489,9 @@ internal sealed class DaggerfallSiteLifecycle
                 ClearExteriorResidency();
                 exteriorCleared = true;
             }
-            _spatial.ApplyContentArtifactResidency([LocationPlacement(target, destinationOrigin)],
-                sourceLocationLoaded ? [LocationPlacementId(sourceProfile)] : [],
-                target.SpatialArtifact.NavigationGridId);
+            ApplyLocationResidency(target, destinationOrigin,
+                sourceLocationLoaded ? LocationPlacementIds(source.Inputs) : [],
+                target.Geometry.NavigationGridId);
             spatialReplaced = true;
             candidate.ActivateMotionCollisionResidency();
             // Admit the destination collision models before retiring the source.  The Engine
@@ -589,11 +609,10 @@ internal sealed class DaggerfallSiteLifecycle
                 try
                 {
                     if (sourceLocationLoaded)
-                        _ = _spatial.ApplyContentArtifactResidency([LocationPlacement(source.Inputs,
-                            sourceExterior is { } saved ? saved.WorldOrigin : null)],
-                            [LocationPlacementId(destination)], source.Inputs.SpatialArtifact.NavigationGridId);
+                        ApplyLocationResidency(source.Inputs, sourceExterior is { } saved ? saved.WorldOrigin : null,
+                            LocationPlacementIds(target), source.Inputs.Geometry.NavigationGridId);
                     else
-                        _ = _spatial.ApplyContentArtifactResidency([], [LocationPlacementId(destination)], source.Inputs.SpatialArtifact.NavigationGridId);
+                        ApplyLocationResidency(null, null, LocationPlacementIds(target), source.Inputs.Geometry.NavigationGridId);
                 }
                 catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
                 // Whole-content replacement removes every incremental resident collider. Drop the

@@ -265,7 +265,7 @@ public sealed class SanguineRoseSessionTests
             _random = random;
             var inputs = ReadInputs(TestData.RepositoryRoot);
             if (prepareInputs is not null) inputs = prepareInputs(inputs);
-            Inputs = appearance ? inputs : new DaggerfallSiteProfile(inputs.Project, inputs.SpatialArtifact, inputs.StaticMesh,
+            Inputs = appearance ? inputs : new DaggerfallSiteProfile(inputs.Project, inputs.Geometry,
                 inputs.WorldAppearance, inputs.InitialLook, inputs.Materials, inputs.ActorSprites,
                 inputs.MobileSprites.Where(entry => entry.Key != 27).ToDictionary(), inputs.Audio, inputs.ClassicPresentation,
                 inputs.Site, inputs.Doors, inputs.ProfileKind, inputs.ProfileKey.LogicalId, inputs.Portals, inputs.Anchors.Values.ToArray(),

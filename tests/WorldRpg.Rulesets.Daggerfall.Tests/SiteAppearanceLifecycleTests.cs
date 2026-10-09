@@ -105,6 +105,55 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.Contains(appearance.Snapshots.Last(), value => value.ObjectId == (ulong)pile.Id);
     }
 
+    /// <summary>
+    /// An assembled location draws each of its block models as its own static mesh: posed in the profile
+    /// frame under the world transform, its mesh slots bound to the profile slots its textures have, each
+    /// with its own snapshot identity, and every one released with the location resources.
+    /// </summary>
+    [Fact]
+    public void An_assembled_location_draws_each_placed_mesh_with_its_pose_and_slot_bindings()
+    {
+        List<string> releases = [];
+        ContentFake content = new("geometry/mesh-1.rstatmsh", Hash, releases);
+        content.Add("geometry/mesh-2.rstatmsh", Hash);
+        content.Add("texture/wall.png", Hash);
+        content.Add("texture/floor.png", Hash);
+        AppearanceFake appearance = new(releases);
+        Transform first = new(new Vector3(1F, 0F, -2F), Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2F), Vector3.One);
+        Transform second = new(new Vector3(102.4F, 3F, 0F), Quaternion.Identity, Vector3.One);
+        DaggerfallSiteGeometry geometry = new(1,
+            [new DaggerfallSiteSpatialPart("block/0/0", "blocks/a.rspatial", Hash), new DaggerfallSiteSpatialPart("block/1/0", "blocks/b.rspatial", Hash, 128, 0)],
+            [
+                new DaggerfallSiteMesh("geometry/mesh-1.rstatmsh", Hash, first, [new(0, 7), new(1, 9)]),
+                new DaggerfallSiteMesh("geometry/mesh-2.rstatmsh", Hash, second, [new(0, 9)]),
+            ]);
+        Vector3 rebased = new(10F, 0F, 20F);
+        DaggerfallSiteProfile inputs = new(
+            new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
+            geometry,
+            new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(rebased, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
+            new PlayerInitialLook(0, 0),
+            [new NormalizedMaterial(7, "texture/wall.png", Hash), new NormalizedMaterial(9, "texture/floor.png", Hash)],
+            new Dictionary<long, NormalizedActorSprite>());
+        Assert.Throws<InvalidOperationException>(() => inputs.SpatialArtifact);
+
+        using ActorsState actors = EmptyActors();
+        using (DaggerfallSiteAppearance presentation = new(content, appearance, inputs))
+        {
+            Assert.Equal(["geometry/mesh-1.rstatmsh", "geometry/mesh-2.rstatmsh"], appearance.StaticMeshContentRequests.Select(request => request.Path));
+            Assert.Equal([0u, 1u, 0u], appearance.StaticMeshBindings.Select(binding => binding.MaterialSlot));
+            presentation.Publish(actors);
+            AppearanceFact[] snapshot = appearance.Snapshots.Last();
+            AppearanceFact a = Assert.Single(snapshot, fact => fact.ObjectId == 1);
+            Assert.Equal(first.Translation + rebased, a.Transform.Translation);
+            Assert.True(Quaternion.Dot(first.Rotation, a.Transform.Rotation) > 0.9999F);
+            AppearanceFact b = Assert.Single(snapshot, fact => fact.ObjectId == (1UL << 51) - 1);
+            Assert.Equal(second.Translation + rebased, b.Transform.Translation);
+        }
+
+        Assert.Equal(2, releases.Count(release => release == "appearance"));
+    }
+
     [Fact]
     public void Appearance_uses_normalized_material_slots_and_atlases_then_releases_dependents_in_order()
     {
@@ -115,8 +164,8 @@ public sealed class SiteAppearanceLifecycleTests
         AppearanceFake appearance = new(releases);
         DaggerfallSiteProfile inputs = new(
             new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-            new SpatialContentArtifact("spatial/hold.json", Hash, 1),
-            new ContentArtifact("mesh/hold.json", Hash),
+            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/hold.json", Hash, 1),
+            new ContentArtifact("mesh/hold.json", Hash)),
             new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
             new PlayerInitialLook(0, 0),
             [new NormalizedMaterial(3, "texture/wall.png", Hash)],
@@ -173,7 +222,7 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.Equal(inputs.Lights.Count + 1, appearance.DisposedLights);
 
         DaggerfallSiteProfile exterior = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-            new SpatialContentArtifact("spatial/exterior.json", Hash, 1), new ContentArtifact("mesh/exterior.json", Hash),
+            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/exterior.json", Hash, 1), new ContentArtifact("mesh/exterior.json", Hash)),
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
             site: new DaggerfallSiteId(17, 4), profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "worldrpg/test/exterior");
         using DaggerfallSiteLighting exteriorLighting = new(appearance, engine.Context.CameraView, exterior,

@@ -131,7 +131,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
         GraphicsDouble graphics = new();
         DaggerfallSiteProfile source = TestSessions.MediaInputs();
-        DaggerfallSiteProfile profile = new(source.Project, source.SpatialArtifact, source.StaticMesh,
+        DaggerfallSiteProfile profile = new(source.Project, source.Geometry,
             source.WorldAppearance, source.InitialLook, [], new Dictionary<long, NormalizedActorSprite>(),
             terrainTextures: new Dictionary<(int Archive, int Record), NormalizedTerrainTexture>
             {

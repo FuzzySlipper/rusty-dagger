@@ -73,8 +73,8 @@ public sealed class DaggerfallAudioBundleTests
         IGraphicsService graphics = GraphicsFake.Create();
         DaggerfallSiteProfile inputs = new(
             new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-            new SpatialContentArtifact("spatial/hold.json", default, 1),
-            new ContentArtifact("mesh/hold.json", default),
+            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/hold.json", default, 1),
+            new ContentArtifact("mesh/hold.json", default)),
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene),
             new PlayerInitialLook(0F, 0F),
             [],
@@ -126,7 +126,7 @@ public sealed class DaggerfallAudioBundleTests
         var bundle = new DaggerfallAudioBundle(new ProductContent(Array.Empty<ProductContentFile>(), content.Service), SiteBundle, SiteRoot, clips);
         var audio = AudioFake.Create();
         var inputs = new DaggerfallSiteProfile(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-            new SpatialContentArtifact("spatial/hold.json", default, 1), new ContentArtifact("mesh/hold.json", default),
+            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/hold.json", default, 1), new ContentArtifact("mesh/hold.json", default)),
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [],
             new Dictionary<long, NormalizedActorSprite>(), mobileSprites: null, clips);
         var appearance = new DaggerfallSiteAppearance(content.Service, GraphicsFake.Create(), inputs, audio.Service,

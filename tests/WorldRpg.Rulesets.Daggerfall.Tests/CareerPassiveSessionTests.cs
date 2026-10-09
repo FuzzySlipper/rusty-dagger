@@ -162,7 +162,7 @@ public sealed class CareerPassiveSessionTests
                 && (buildingType == 14 || value.Building.Source.FactionId == faction));
         var building = selected.Building;
         var profile = new DaggerfallSiteProfile(new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()),
-            source.SpatialArtifact, source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials,
+            source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials,
             new Dictionary<long, NormalizedActorSprite>(), source.MobileSprites, source.Audio, source.ClassicPresentation, selected.Site,
             profileKind: DaggerfallWorldProfileKind.Interior, logicalProfileId: "career-temple",
             interiorBuilding: new(building.Id.BlockX, building.Id.BlockY, building.Source.Id, building.Source.BuildingType, building.Source.FactionId));
@@ -185,7 +185,7 @@ public sealed class CareerPassiveSessionTests
     {
         var source = ReadInputs(TestData.RepositoryRoot);
         var profile = new DaggerfallSiteProfile(new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()),
-            source.SpatialArtifact, source.StaticMesh, source.WorldAppearance, source.InitialLook, source.Materials,
+            source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials,
             new Dictionary<long, NormalizedActorSprite>(), source.MobileSprites, source.Audio, source.ClassicPresentation, source.Site,
             profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "career-outdoors",
             billboardSprites: source.BillboardSprites, terrainTextures: source.TerrainTextures);

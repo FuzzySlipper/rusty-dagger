@@ -294,8 +294,8 @@ internal static class TestSessions
 
     internal static void PopulateContent(ContentFake content, DaggerfallSiteProfile inputs)
     {
-        content.Add(inputs.SpatialArtifact.Path, inputs.SpatialArtifact.Sha256);
-        content.Add(inputs.StaticMesh.Path, inputs.StaticMesh.Sha256);
+        foreach (DaggerfallSiteSpatialPart part in inputs.Geometry.Spatial) content.Add(part.Path, part.Sha256);
+        foreach (DaggerfallSiteMesh mesh in inputs.Geometry.Meshes) content.Add(mesh.Path, mesh.Sha256);
         foreach (NormalizedMaterial material in inputs.Materials) content.Add(material.TexturePath, material.TextureSha256);
         foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values)
         {
@@ -396,8 +396,7 @@ internal static class TestSessions
         };
         return new DaggerfallSiteProfile(
             new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-            new SpatialContentArtifact("spatial/hold.json", Hash, 1),
-            new ContentArtifact("mesh/hold.json", Hash),
+            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/hold.json", Hash, 1), new ContentArtifact("mesh/hold.json", Hash)),
             new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
             new PlayerInitialLook(0, 0),
             [],
@@ -568,8 +567,7 @@ internal static class TestSessions
         facts ?? (kind == DaggerfallWorldProfileKind.Exterior
             ? new ProjectFacts(new WorldPoint(1f, 1f, 1f), source.Project.Actors)
             : source.Project),
-        source.SpatialArtifact,
-        source.StaticMesh,
+        source.Geometry,
         source.WorldAppearance,
         source.InitialLook,
         source.Materials,

@@ -321,8 +321,7 @@ public sealed class DungeonSpellFlightSessionTests
 
         private static DaggerfallSiteProfile WithAction(DaggerfallSiteProfile source, DaggerfallDungeonActionDefinition action) => new(
             source.Project,
-            source.SpatialArtifact,
-            source.StaticMesh,
+            source.Geometry,
             source.WorldAppearance,
             source.InitialLook,
             source.Materials,

@@ -308,8 +308,7 @@ public sealed class DaggerfallPopulationSessionTests
         billboardSprites[(210, 4)] = billboard;
         return new DaggerfallSiteProfile(
             project,
-            exterior.SpatialArtifact,
-            exterior.StaticMesh,
+            exterior.Geometry,
             exterior.WorldAppearance,
             exterior.InitialLook,
             exterior.Materials,
