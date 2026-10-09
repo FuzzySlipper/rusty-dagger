@@ -128,7 +128,17 @@ public sealed record DaggerfallDungeonBlockPlacement(string SourceKey, int X, in
 /// order) are drawn from in this dungeon.
 /// </param>
 /// <param name="DoorArchiveOffset">What the location's climate adds to the door archive (74): 0, 100, 300 or 400.</param>
-public sealed record DaggerfallDungeonTextureTable(IReadOnlyList<int> Archives, int DoorArchiveOffset);
+public sealed record DaggerfallDungeonTextureTable(IReadOnlyList<int> Archives, int DoorArchiveOffset)
+{
+    /// <summary>
+    /// Every archive the table redraws and the archive this dungeon draws it from, the door archive included,
+    /// so an assembly applies the table without knowing which source archives it covers.
+    /// </summary>
+    public IReadOnlyList<DaggerfallTextureArchiveRemap> Remaps { get; init; } = [];
+}
+
+/// <summary>One texture archive a placing location draws from another archive.</summary>
+public sealed record DaggerfallTextureArchiveRemap(int Archive, int TargetArchive);
 
 /// <summary>
 /// The published locations of every region, for the site and world consumers that place things on
@@ -340,9 +350,13 @@ public static class DaggerfallLocationBuilder
                 if (climate is not null)
                 {
                     int dungeonClimate = climates[(dungeon.Region, dungeon.Index)];
-                    textureTable = new(
-                        [.. DungeonTextureTableTransform.CreateClassic(dungeon.DungeonLocationId, checked((byte)dungeonClimate)).Select(archive => (int)archive)],
-                        (int)ClassicClimateSwaps.BaseOf(dungeonClimate));
+                    ushort[] table = DungeonTextureTableTransform.CreateClassic(dungeon.DungeonLocationId, checked((byte)dungeonClimate));
+                    ushort doorOffset = checked((ushort)ClassicClimateSwaps.BaseOf(dungeonClimate));
+                    textureTable = new([.. table.Select(archive => (int)archive)], doorOffset)
+                    {
+                        Remaps = [.. DungeonTextureTableTransform.RemappedArchives
+                            .Select(archive => new DaggerfallTextureArchiveRemap(archive, DungeonTextureTableTransform.RemapArchive(archive, table, doorOffset)))],
+                    };
                 }
 
                 dungeons.Add(new DaggerfallDungeonRecord(

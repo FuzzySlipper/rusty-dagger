@@ -131,7 +131,8 @@ public sealed class WorldBlockTests
         Dictionary<string, DaggerfallWorldBlock> facts = dungeon.BlockPlacements.Select(block => block.SourceKey).Distinct(StringComparer.Ordinal)
             .ToDictionary(name => name, name => normalizer.Rdb(name).Block, StringComparer.Ordinal);
 
-        List<string> lights = [], billboards = [], actors = [], treasures = [], quests = [], doors = [], actions = [];
+        List<string> lights = [], billboards = [], actors = [], treasures = [], quests = [], doors = [], actions = [], moving = [];
+        Dictionary<string, (NormalizedVector3 Minimum, NormalizedVector3 Maximum, NormalizedVector3[] Samples)> placements = new(StringComparer.Ordinal);
         NormalizedMarker? start = null, enter = null;
         foreach (DaggerfallDungeonBlockPlacement placed in dungeon.BlockPlacements.OrderBy(block => block.X).ThenBy(block => block.Z).ThenBy(block => block.SourceKey, StringComparer.Ordinal))
         {
@@ -159,6 +160,21 @@ public sealed class WorldBlockTests
             doors.AddRange(block.Doors.Select(door => $"{Key(door.Id, door.Position)}={door.Kind}/{door.StartingLockValue}/{door.RotationDegrees}"));
             actions.AddRange(block.Actions.Select(action => $"{Place(action.Id)}->{(action.NextActionId is null ? "" : Place(action.NextActionId))}"
                 + $"@{(action.Position is { } position ? Add(position, origin) : null)}"));
+            // A static placement's map extent and samples, and an action model's own extent and collision.
+            foreach (DaggerfallWorldBlockModel model in block.Models.Where(model => model.Bounds is not null))
+                placements.Add(Place(model.Id), (Add(model.Bounds!.Minimum, origin), Add(model.Bounds.Maximum, origin),
+                    [.. model.SamplePoints!.Select(point => Add(point, origin))]));
+            moving.AddRange(block.Models.Where(model => model.Action is not null && model.LocalBounds is not null).Select(model =>
+                $"{Place(model.Action!.ActionId)}@{model.LocalBounds}"));
+            Assert.All(block.Models.Where(model => model.Action is not null && model.MeshArtifactId is not null), model =>
+            {
+                Assert.NotNull(model.Collision);
+                Assert.NotEmpty(model.Collision!.Triangles);
+                Assert.All(model.Collision.Triangles, triangle => Assert.True(
+                    Math.Max(triangle.FirstVertex, Math.Max(triangle.SecondVertex, triangle.ThirdVertex)) < model.Collision.Vertices.Count));
+            });
+            Assert.All(block.Models.Where(model => model.DoorId is not null && model.MeshArtifactId is not null),
+                model => Assert.NotNull(model.LocalBounds));
             if (placed.Start)
             {
                 start ??= block.StartMarker is { } marker ? marker with { Position = Add(marker.Position, origin) } : null;
@@ -178,7 +194,23 @@ public sealed class WorldBlockTests
         Assert.Equal(world.Actions.Select(action => $"{action.Id}->{action.NextActionId ?? ""}@{action.Position}").Order(StringComparer.Ordinal), actions.Order(StringComparer.Ordinal));
         Assert.Equal(world.StartMarker, start);
         Assert.Equal(world.EnterMarker, enter);
+        // A site places a model from its world-space points; the block from its own frame, so only the float
+        // rounding of the block translation differs.
+        Assert.Equal(world.GeometryPlacements.Select(placement => placement.Id).Order(StringComparer.Ordinal), placements.Keys.Order(StringComparer.Ordinal));
+        foreach (NormalizedGeometryPlacement placement in world.GeometryPlacements)
+        {
+            (NormalizedVector3 minimum, NormalizedVector3 maximum, NormalizedVector3[] samples) = placements[placement.Id];
+            Near(placement.Bounds.Minimum, minimum);
+            Near(placement.Bounds.Maximum, maximum);
+            Assert.Equal(placement.SamplePoints.Count, samples.Length);
+            foreach ((NormalizedVector3 expected, NormalizedVector3 actual) in placement.SamplePoints.Zip(samples)) Near(expected, actual);
+        }
+        Assert.Equal(world.ActionModels.Select(model => $"{model.ActionId}@{model.LocalBounds}").Order(StringComparer.Ordinal), moving.Order(StringComparer.Ordinal));
         Assert.Contains(facts.Values, block => block.WaterLevel is not null || block.AmbientZone is not null || block.Spatial is not null);
+        // The catalog's texture table states every archive it redraws, the door archive included.
+        Assert.Equal(DungeonTextureTableTransform.RemappedArchives.Select(archive => (int)archive), table.Remaps.Select(remap => remap.Archive));
+        Assert.All(table.Remaps, remap => Assert.Equal(DungeonTextureTableTransform.RemapArchive((ushort)remap.Archive,
+            [.. table.Archives.Select(value => (ushort)value)], (ushort)table.DoorArchiveOffset), remap.TargetArchive));
     }
 
     /// <summary>
@@ -295,7 +327,7 @@ public sealed class WorldBlockTests
     [CorpusAndGeneratedContentFact("BLOCKS.BSA")]
     public void The_world_block_publication_covers_the_block_archive()
     {
-        string root = Path.Combine(TestData.RepositoryRoot, "import-records", "world-blocks");
+        string root = Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "imports", "world-blocks");
         DaggerfallWorldBlockIndex index = JsonSerializer.Deserialize<DaggerfallWorldBlockIndex>(
             File.ReadAllBytes(Path.Combine(root, Arena2WorldBlocksPublication.IndexRelativePath)), PublishedJson.SectionRead)!;
         BsaArchive blocks = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("BLOCKS.BSA")), "arena2/BLOCKS.BSA");
@@ -338,7 +370,7 @@ public sealed class WorldBlockTests
     [CorpusAndGeneratedContentFact("MAPS.BSA")]
     public void The_published_charing_closure_is_assembled_from_the_published_blocks()
     {
-        string blocksRoot = Path.Combine(TestData.RepositoryRoot, "import-records", "world-blocks");
+        string blocksRoot = Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "imports", "world-blocks");
         using JsonDocument closure = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "imports", "charing", "exterior", "normalized.json")));
         MapsExteriorLayout charing = MapsDecoder.DecodeExteriorLayout(BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("MAPS.BSA")), "arena2/MAPS.BSA"), 17, "Charing");
         Dictionary<string, DaggerfallWorldBlock> blocks = new(StringComparer.Ordinal);

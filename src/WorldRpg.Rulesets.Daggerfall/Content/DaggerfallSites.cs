@@ -100,6 +100,18 @@ internal sealed record DaggerfallSiteRecord(
     DaggerfallSiteExterior? Exterior = null)
 {
     internal IReadOnlyList<DaggerfallSiteDungeonBlock> DungeonBlocks { get; init; } = [];
+
+    /// <summary>
+    /// The CLIMATE.PAK value at the location's own map pixel (DEC-11.ground-archive): its climate texture
+    /// swaps follow it. Null when the published location states none.
+    /// </summary>
+    internal int? Climate { get; init; }
+
+    /// <summary>
+    /// The archives the dungeon's classic texture table redraws (DEC-11.dungeon-textures), each with the
+    /// archive this dungeon draws it from; empty for a location without a dungeon.
+    /// </summary>
+    internal IReadOnlyDictionary<int, int> DungeonTextureRemaps { get; init; } = new Dictionary<int, int>();
     internal int Region => Id.Region;
 
     internal int Index => Id.Index;
@@ -109,7 +121,11 @@ internal sealed record DaggerfallSiteRecord(
     internal int MapPixelY => 499 - (Latitude / 128);
 }
 
-internal sealed record DaggerfallSiteDungeonBlock(string SourceKey, int X, int Z);
+internal sealed record DaggerfallSiteDungeonBlock(string SourceKey, int X, int Z)
+{
+    /// <summary>Whether this is the block the dungeon's start and enter markers are taken from.</summary>
+    internal bool Start { get; init; }
+}
 
 /// <summary>Normalized terrain footprint of one exterior location, in its map pixel's terrain tiles.</summary>
 internal sealed record DaggerfallSiteExterior(

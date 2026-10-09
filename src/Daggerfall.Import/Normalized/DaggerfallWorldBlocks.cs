@@ -63,7 +63,25 @@ public sealed record DaggerfallWorldBlockModel(
 
     /// <summary>The RDB action door the model is, if it is one.</summary>
     public string? DoorId { get; init; }
+
+    /// <summary>
+    /// A static RDB placement's bounds in the block's frame: the extent dungeon map discovery attributes a
+    /// surface to the placement by.
+    /// </summary>
+    public NormalizedBounds? Bounds { get; init; }
+
+    /// <summary>A static RDB placement's two to four map visibility samples, in the block's frame.</summary>
+    public IReadOnlyList<NormalizedVector3>? SamplePoints { get; init; }
+
+    /// <summary>A moving RDB placement's (door or action model) bounds in its own model frame.</summary>
+    public NormalizedBounds? LocalBounds { get; init; }
+
+    /// <summary>An RDB action model's model-local collision triangles, which move with its instance transform.</summary>
+    public DaggerfallWorldBlockCollision? Collision { get; init; }
 }
+
+/// <summary>Model-local collision geometry: every drawable plane of the mesh as fan triangles.</summary>
+public sealed record DaggerfallWorldBlockCollision(IReadOnlyList<NormalizedVector3> Vertices, IReadOnlyList<NormalizedTriangle> Triangles);
 
 /// <summary>The source facts an RDB action model keeps besides its action node.</summary>
 public sealed record DaggerfallWorldBlockModelAction(string ActionId, string Description, int ModelIndex, int RawIndex);

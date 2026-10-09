@@ -144,9 +144,9 @@ internal static class TestSessions
             .Select(root => root.TrimEnd('/'))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
-        // Every site's clips are staged once, as the world media publication's audio bundle; the full form
-        // also stages the score and the sky as their own bundles.
-        List<(string Root, string Bundle)> audioBundles = [SharedAudioBundle];
+        // Every site's clips are staged once, as the world media publication's audio bundle, and the per-block
+        // world publication is its own bundle; the full form also stages the score and the sky as their own bundles.
+        List<(string Root, string Bundle)> audioBundles = [SharedAudioBundle, WorldBlocksBundle];
         if (selectedRoots.Length == 0)
         {
             audioBundles.Add(("worldrpg/media/music/clips", "daggerfall.music"));
@@ -194,7 +194,9 @@ internal static class TestSessions
                 continue;
             }
 
-            bundles.Add(bundle.Bundle, relative[(bundle.Root.Length + 1)..], TestContentFiles.Read(file));
+            // A bundle file is read when the product uses it, as the Engine reads a staged bundle.
+            bundles.Root(bundle.Bundle, bundle.Root);
+            bundles.AddFile(bundle.Bundle, relative[(bundle.Root.Length + 1)..], file);
         }
 
         return new ProductContent(eager.ToArray(), bundles);
@@ -236,6 +238,7 @@ internal static class TestSessions
 
     /// <summary>The one audio bundle every site's clips are opened through: the world media publication's.</summary>
     internal static (string Root, string Bundle) SharedAudioBundle => (DaggerfallWorldMedia.AudioRoot, DaggerfallWorldMedia.AudioBundleId);
+    internal static (string Root, string Bundle) WorldBlocksBundle => (DaggerfallWorldBlocks.Root, DaggerfallWorldBlocks.BundleId);
 
     /// <summary>The content paths of the classic media group's artifacts, which the site closures reference.</summary>
     private static IReadOnlyList<string> ClassicGroupArtifacts(string root)

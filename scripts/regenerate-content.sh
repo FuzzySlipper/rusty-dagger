@@ -173,10 +173,10 @@ tool world-media --arena2 "$arena2" --ui-authored-assets "$ui_assets" --ui-origi
 
 # 5. The per-block world publication: every RMB exterior, building interior and RDB block a location places,
 #    normalized in its own frame with its collision/navigation, its static meshes placing the world media
-#    publication's meshes. It reads the catalog's locations for the blocks the world places. Nothing at runtime
-#    opens it yet, so it is written to the import records, outside the runtime content root the Host stages.
+#    publication's meshes. It reads the catalog's locations for the blocks the world places. The Host declares
+#    it as the daggerfall.world-blocks bundle, so the runtime opens each block only when a location needs it.
 tool world-blocks --arena2 "$arena2" --pack "$imported" --shared "$world_media" --inventory "$inventory" \
-  --out import-records/world-blocks --source-manifest import-records/world-blocks.sources.json
+  --out content/worldrpg/imports/world-blocks --source-manifest import-records/world-blocks.sources.json
 
 # 6. Site closures. Each names the published music cues and the actors the imported mobile catalog lets the
 #    runtime spawn, and writes only what is its own: every body and shared sidecar entry is referenced from

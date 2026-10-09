@@ -69,6 +69,10 @@
     <!-- The audio clips every site names are published once, in the product-wide world media publication
          the site closures reference; its sidecar stays eager and the clip bodies open on the first cue. -->
     <RustyEngineContentBundle Include="daggerfall.world-audio" Root="worldrpg/imports/shared/media/audio/clips" />
+    <!-- The per-block world publication: every placed RMB exterior, building interior and RDB block. Nothing
+         reads it at startup; the ruleset opens it to read the blocks a location places when that location is
+         first needed, and to place their collision and navigation. -->
+    <RustyEngineContentBundle Include="daggerfall.world-blocks" Root="worldrpg/imports/world-blocks" />
   </ItemGroup>
 
   <!-- Content derived from the operator's Arena2 files is not tracked; scripts/regenerate-content.sh

@@ -106,6 +106,29 @@ public static class MeshGeometry
             new(vertices.Max(vertex => vertex.X), vertices.Max(vertex => vertex.Y), vertices.Max(vertex => vertex.Z)));
     }
 
+    /// <summary>
+    /// Up to four distinct source vertices of one placed model, spread over its vertex order, which dungeon
+    /// map discovery samples a placement's visibility at.
+    /// </summary>
+    public static NormalizedVector3[] SelectSurfaceSamples(IReadOnlyList<NormalizedVector3> placementVertices)
+    {
+        ArgumentNullException.ThrowIfNull(placementVertices);
+        NormalizedVector3[] distinctVertices = placementVertices.Distinct().ToArray();
+        if (distinctVertices.Length < 2)
+        {
+            throw new InvalidOperationException("A dungeon model placement must contain at least two distinct source vertices for map visibility samples.");
+        }
+
+        if (distinctVertices.Length <= 4)
+        {
+            return distinctVertices;
+        }
+
+        int last = distinctVertices.Length - 1;
+        int[] indices = [0, last / 3, (last * 2) / 3, last];
+        return indices.Select(index => distinctVertices[index]).Distinct().ToArray();
+    }
+
     private static NormalizedVector3 Cross(NormalizedVector3 first, NormalizedVector3 second, NormalizedVector3 third)
     {
         float ax = second.X - first.X;

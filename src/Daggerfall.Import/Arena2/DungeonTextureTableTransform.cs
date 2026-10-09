@@ -17,6 +17,9 @@ public static class DungeonTextureTableTransform
     // The six archive IDs the classic table remaps, in source-table order.
     private static readonly ushort[] SourceTextureArchives = [119, 120, 122, 123, 124, 168];
 
+    /// <summary>Every archive <see cref="RemapArchive"/> can change: the door archive and the six table archives.</summary>
+    public static IReadOnlyList<ushort> RemappedArchives { get; } = [DoorTextureArchive, .. SourceTextureArchives];
+
     // Daggerfall Unity's classic table data and climate-index interpretation.
     private static readonly byte[] ClimateTextureArchiveIndices = [0, 0, 1, 4, 4, 0, 3, 3, 3, 0];
     private static readonly ushort[] ClimateTextureArchives = [19, 119, 319, 419, 119];
