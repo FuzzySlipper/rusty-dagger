@@ -67,7 +67,8 @@ internal sealed partial class DaggerfallSession
             new DaggerfallActivationContributions(
                 new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts),
                 new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic, EnterExteriorBuilding),
-                new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination, TryTransitionTo),
+                new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination,
+                    (destination, portal) => TryTransitionTo(destination, portal.ArrivalAnchor)),
                 new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyInteractionPoint, OpenPropertyLoot),
                 npc: new DaggerfallCrimeActivationOwner(_dialogue, State.Actors, IsPickpocketTarget, PickpocketActor, IsLawGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
                     id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id))));
@@ -81,24 +82,22 @@ internal sealed partial class DaggerfallSession
     {
         if (_doors.ExteriorBuildingOf(door) is not { } building) return null;
         DaggerfallSiteProfiles profiles = _sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted.");
-        // Building entry admits published interiors; assembled ones join with travel and entry (#9694).
-        DaggerfallSiteProfile[] destinations = profiles.AuthoredKeys
-            .Where(key => key.Site == _activeProfileKey.Site && key.Kind == DaggerfallWorldProfileKind.Interior)
-            .Select(profiles.Require)
-            .Where(profile => profile.InteriorBuilding is { } interior
-                && interior.BlockX == building.BlockX && interior.BlockY == building.BlockY && interior.Building.Index == building.Index)
-            .ToArray();
-        if (destinations.Length == 0) return new(false, "This building's interior is not available in the selected content.");
-        if (destinations.Length != 1) throw new InvalidOperationException($"Building '{building}' has multiple admitted interiors.");
-        var interior = destinations[0].InteriorBuilding!;
+        // The building's interior is the one its id names: an authored override, else assembled from its block.
+        DaggerfallWorldProfileKey destination = DaggerfallWorldProfileIds.Interior(_activeProfileKey.Site, building);
+        if (!profiles.TryGet(destination, out DaggerfallSiteProfile inside))
+            return new(false, "This building has no interior to enter.");
+        var interior = inside.InteriorBuilding
+            ?? throw new InvalidOperationException($"Interior '{destination.LogicalId}' names no placed building.");
         int region = _activeProfileKey.Site.Region;
-        long owner = checked((long)_doors.IdentityOf(door).Value);
+        // The building's door identity is a 64-bit resource hash; a crime names its owner by a positive id, so the
+        // hash keeps its low 63 bits (and is never zero).
+        long owner = Math.Max(1L, (long)(_doors.IdentityOf(door).Value & long.MaxValue));
         bool forced = forceMode is not null;
         bool owned = OwnsInteriorBuilding(interior);
         bool closed = !DaggerfallCrimePolicy.IsPublicEntryHour(interior.BuildingType, _time.Calendar.Hour);
         bool trespass = !owned && closed && interior.BuildingType is >= 0 and <= 23;
         var witnesses = !owned && (forced || trespass) ? QueryCrimeWitnesses() : DaggerfallCrimeWitnessEvidence.NotQueried;
-        if (!TryTransitionTo(ResolvePortalDestination(destinations[0].ProfileKey.LogicalId)))
+        if (!TryTransitionTo(destination))
             return new(false, "The building entrance cannot be used.");
         if (!owned && (forced || trespass))
         {
@@ -589,13 +588,13 @@ internal sealed partial class DaggerfallSession
     {
         private readonly DaggerfallSitePortalRuntime _portals;
         private readonly Func<string, DaggerfallWorldProfileKey> _resolveDestination;
-        private readonly Func<DaggerfallWorldProfileKey, bool> _transition;
+        private readonly Func<DaggerfallWorldProfileKey, DaggerfallSitePortal, bool> _transition;
         private readonly IReadOnlyDictionary<ulong, DaggerfallSitePortal> _byIdentity;
 
         internal DaggerfallPortalActivationOwner(
             DaggerfallSitePortalRuntime portals,
             Func<string, DaggerfallWorldProfileKey> resolveDestination,
-            Func<DaggerfallWorldProfileKey, bool> transition)
+            Func<DaggerfallWorldProfileKey, DaggerfallSitePortal, bool> transition)
         {
             _portals = portals ?? throw new ArgumentNullException(nameof(portals));
             _resolveDestination = resolveDestination ?? throw new ArgumentNullException(nameof(resolveDestination));
@@ -620,7 +619,7 @@ internal sealed partial class DaggerfallSession
             if (selection.Mode == DaggerfallActivationMode.Talk) return new(false, "The entrance does not answer.");
             try
             {
-                return _transition(_resolveDestination(portal.DestinationLogicalProfile))
+                return _transition(_resolveDestination(portal.DestinationLogicalProfile), portal)
                     ? new(true, "You pass through the entrance.")
                     : new(false, "The entrance cannot be used.");
             }

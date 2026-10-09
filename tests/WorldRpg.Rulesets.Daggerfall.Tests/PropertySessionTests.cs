@@ -430,16 +430,16 @@ public sealed class PropertySessionTests
             HouseIdentity = new(site.Id, building.Source.Id, building.Id.BlockX, building.Id.BlockY);
             House = new(new ProjectFacts(new WorldPoint(3, 1, 1), new Dictionary<long, AuthoredActor>()), source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, site.Id, profileKind: DaggerfallWorldProfileKind.Interior,
-                logicalProfileId: "property-house", interiorBuilding: new(building.Id.BlockX, building.Id.BlockY, building.Source.Id, building.Source.BuildingType, building.Source.FactionId));
+                logicalProfileId: DaggerfallWorldProfileIds.Interior(site.Id, new(building.Id.BlockX, building.Id.BlockY, building.Id.Index)).LogicalId, interiorBuilding: new(building.Id.BlockX, building.Id.BlockY, building.Source.Id, building.Source.BuildingType, building.Source.FactionId));
             Land = new(new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()), source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, site.Id, profileKind: DaggerfallWorldProfileKind.Exterior,
-                logicalProfileId: "property-land", portals: [new("house-entrance", new(1, 1, 1), 2, House.ProfileKey.LogicalId)],
+                logicalProfileId: DaggerfallWorldProfileIds.Exterior(site.Id).LogicalId, portals: [new("house-entrance", new(1, 1, 1), 2, House.ProfileKey.LogicalId)],
                 billboardSprites: source.BillboardSprites, terrainTextures: source.TerrainTextures);
             var destination = definitions.Locations.Records.Where(value => value.Kind == DaggerfallSiteKind.TownCity && value.Id != site.Id)
                 .OrderBy(value => Math.Abs(value.MapPixelX - site.MapPixelX) + Math.Abs(value.MapPixelY - site.MapPixelY)).First();
             Destination = new(new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()), source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
                 source.MobileSprites, source.Audio, source.ClassicPresentation, destination.Id,
-                profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "property-destination",
+                profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: DaggerfallWorldProfileIds.Exterior(destination.Id).LogicalId,
                 billboardSprites: source.BillboardSprites, terrainTextures: source.TerrainTextures);
             Small = ReadProfile(root, content, definitions, "daggerfall.small-ship.json");
             Large = ReadProfile(root, content, definitions, "daggerfall.large-ship.json");

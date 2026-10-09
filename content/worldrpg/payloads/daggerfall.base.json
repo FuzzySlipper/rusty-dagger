@@ -4482,7 +4482,10 @@
       "visible": true,
       "layer": "scene"
     },
-    "navigationGridId": 1
+    "navigationGridId": 1,
+    "doorReach": 2,
+    "buildingExitLanding": 0.75,
+    "dungeonExitLanding": 0.35
   },
   "newGame": {
     "startSite": "daggerfall.privateers-hold",

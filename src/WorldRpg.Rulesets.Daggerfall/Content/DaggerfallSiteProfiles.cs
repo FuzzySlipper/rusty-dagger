@@ -41,10 +41,16 @@ internal readonly record struct DaggerfallWorldProfileKey(DaggerfallSiteId Site,
 }
 
 /// <summary>One source-derived portal that normal interaction may select inside an admitted world profile.</summary>
-internal sealed record DaggerfallSitePortal(string Id, WorldPoint Position, float Radius, string DestinationLogicalProfile)
+/// <param name="ArrivalAnchor">
+/// The destination anchor the portal lands at when the player has no entrance to return through (a door's
+/// own landing); null lands at the destination's start. A remembered entrance always wins.
+/// </param>
+internal sealed record DaggerfallSitePortal(string Id, WorldPoint Position, float Radius, string DestinationLogicalProfile, string? ArrivalAnchor = null)
 {
     internal DaggerfallSitePortal Validate()
     {
+        if (ArrivalAnchor is not null && !DaggerfallBaseContent.ValidId(ArrivalAnchor))
+            throw new ArgumentException("A site portal's arrival must name a stable anchor.", nameof(ArrivalAnchor));
         if (!DaggerfallBaseContent.ValidId(Id)) throw new ArgumentException("A site portal must have a stable id.", nameof(Id));
         if (!float.IsFinite(Position.X) || !float.IsFinite(Position.Y) || !float.IsFinite(Position.Z))
             throw new ArgumentOutOfRangeException(nameof(Position));
@@ -130,11 +136,16 @@ internal sealed partial class DaggerfallSiteProfiles
         Action<DaggerfallSiteProfile>? admit) => new(new Catalog([.. authored], assembly, admit));
 
     /// <summary>
-    /// The profiles authored site packs publish. Consumers that today reach only published closures (travel
-    /// arrival, building entry, relocation and quest destinations) enumerate these; any other profile id
-    /// resolves through <see cref="Require"/>.
+    /// The profiles authored site packs override, which describes the catalog. No place is found by enumerating
+    /// these: every consumer names the profile id of the place it means and resolves it through <see cref="TryGet"/>.
     /// </summary>
     internal IReadOnlyCollection<DaggerfallWorldProfileKey> AuthoredKeys => _catalog.AuthoredKeys;
+
+    /// <summary>
+    /// Whether the catalog has this profile, without resolving it: an authored override, or a location profile
+    /// the catalog and the per-block index place.
+    /// </summary>
+    internal bool Contains(DaggerfallWorldProfileKey key) => _catalog.Contains(key);
 
     /// <summary>Whether this profile has been resolved yet; resolution is lazy.</summary>
     internal bool IsResolved(DaggerfallWorldProfileKey key) => _catalog.IsResolved(key);
@@ -155,8 +166,7 @@ internal sealed partial class DaggerfallSiteProfiles
         profile = null!;
         if (DaggerfallWorldProfileIds.TryParse(logicalId, out DaggerfallWorldProfileKey key)) return TryGet(key, out profile);
         // A fixture's authored profile may carry an id outside the location scheme; it resolves by that id alone.
-        DaggerfallWorldProfileKey[] authored = [.. AuthoredKeys.Where(candidate => StringComparer.Ordinal.Equals(candidate.LogicalId, logicalId))];
-        return authored.Length == 1 && TryGet(authored[0], out profile);
+        return _catalog.TryAuthoredLogicalId(logicalId, out key) && TryGet(key, out profile);
     }
 
     internal DaggerfallSiteProfile RequireLogicalProfile(string logicalId)
@@ -165,14 +175,6 @@ internal sealed partial class DaggerfallSiteProfiles
         return TryGetLogicalProfile(logicalId, out DaggerfallSiteProfile profile)
             ? profile
             : throw new InvalidOperationException($"No world profile is published or assembled for logical id '{logicalId}'.");
-    }
-
-    /// <summary>The one authored profile at a site, for a save that names its site without a profile.</summary>
-    internal DaggerfallSiteProfile RequireUniqueSite(DaggerfallSiteId site)
-    {
-        DaggerfallWorldProfileKey[] matches = [.. AuthoredKeys.Where(key => key.Site == site)];
-        return matches.Length == 1 ? Require(matches[0])
-            : throw new InvalidOperationException($"Saved site '{site}' does not identify one world profile.");
     }
 
     private sealed class Catalog
@@ -212,7 +214,14 @@ internal sealed partial class DaggerfallSiteProfiles
             }
 
             AuthoredKeys = [.. _authored.Keys];
+            foreach (IGrouping<string, DaggerfallWorldProfileKey> named in _authored.Keys.GroupBy(key => key.LogicalId, StringComparer.Ordinal))
+                if (named.Count() == 1) _authoredByLogicalId.Add(named.Key, named.Single());
         }
+
+        private readonly Dictionary<string, DaggerfallWorldProfileKey> _authoredByLogicalId = new(StringComparer.Ordinal);
+
+        /// <summary>The one authored profile a logical id names, for a fixture id outside the location scheme.</summary>
+        internal bool TryAuthoredLogicalId(string logicalId, out DaggerfallWorldProfileKey key) => _authoredByLogicalId.TryGetValue(logicalId, out key);
 
         internal IReadOnlyCollection<DaggerfallWorldProfileKey> AuthoredKeys { get; }
 
@@ -226,6 +235,11 @@ internal sealed partial class DaggerfallSiteProfiles
         {
             foreach ((DaggerfallWorldProfileKey profile, string variant) in _variants.Keys.ToArray())
                 _ = TryVariant(profile, variant, out _);
+        }
+
+        internal bool Contains(DaggerfallWorldProfileKey key)
+        {
+            lock (_gate) return _resolved.ContainsKey(key) || _authored.ContainsKey(key) || _assembly?.Places(key) == true;
         }
 
         internal bool HasVariant(DaggerfallSiteId site, string variant) => _variants.Keys.Any(key => key.Profile.Site == site && key.Variant == variant);

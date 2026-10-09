@@ -226,8 +226,8 @@ public sealed class SessionCollisionResidencyTests
             && Math.Abs(record.MapPixelX - activeRecord.MapPixelX) <= DaggerfallExteriorCellResidency.StreamingRadius
             && Math.Abs(record.MapPixelY - activeRecord.MapPixelY) <= DaggerfallExteriorCellResidency.StreamingRadius);
         DaggerfallSiteProfile template = ReadInputs(root);
-        DaggerfallSiteProfile source = EmptyExteriorAt(template, activeRecord.Id, "resident-source");
-        DaggerfallSiteProfile resident = EmptyExteriorAt(template, residentRecord.Id, "resident-neighbor");
+        DaggerfallSiteProfile source = EmptyExteriorAt(template, activeRecord.Id);
+        DaggerfallSiteProfile resident = EmptyExteriorAt(template, residentRecord.Id);
         // The helper keeps the same source closure while the profile key supplies the geographic
         // identity. The third profile is interior so the resident closure is retired before its
         // delta is saved and admitted again.
@@ -292,8 +292,10 @@ public sealed class SessionCollisionResidencyTests
         Assert.Equal(restoredExpectedPose.Y, restoredResident.Position.Y, 3);
         Assert.Equal(restoredExpectedPose.Z, restoredResident.Position.Z, 3);
 
-        static DaggerfallSiteProfile EmptyExteriorAt(DaggerfallSiteProfile template, DaggerfallSiteId site, string logicalId) =>
-            EmptyProfileAt(template, site, DaggerfallWorldProfileKind.Exterior, logicalId);
+        // Exteriors stream by the id that names their location.
+        static DaggerfallSiteProfile EmptyExteriorAt(DaggerfallSiteProfile template, DaggerfallSiteId site) =>
+            EmptyProfileAt(template, site, DaggerfallWorldProfileKind.Exterior, DaggerfallWorldProfileIds.Exterior(site).LogicalId);
+
 
         static DaggerfallSiteProfile EmptyProfileAt(DaggerfallSiteProfile template, DaggerfallSiteId site,
             DaggerfallWorldProfileKind kind, string logicalId) => new(

@@ -434,4 +434,14 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
 }
 
 /// <summary>The authored world appearance and navigation grid every location assembled from its blocks shares.</summary>
-internal sealed record DaggerfallAssembledSiteDefinition(AuthoredWorldAppearance Appearance, ulong NavigationGridId);
+/// <param name="DoorReach">How near a transition door a player must stand to use it.</param>
+/// <param name="BuildingExitLanding">
+/// How far in front of a building's door a player lands on leaving it: the donor's
+/// <c>BuildingTransitionExteriorLogic</c> places the controller three of its radii out along the door normal.
+/// </param>
+/// <param name="DungeonExitLanding">
+/// How far in front of a dungeon entrance a player lands on leaving the dungeon: the donor's
+/// <c>PositionPlayerToDungeonExit</c> places the controller its radius and a tenth of a metre out.
+/// </param>
+internal sealed record DaggerfallAssembledSiteDefinition(AuthoredWorldAppearance Appearance, ulong NavigationGridId,
+    float DoorReach, float BuildingExitLanding, float DungeonExitLanding);

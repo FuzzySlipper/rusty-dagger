@@ -13,19 +13,25 @@ internal sealed partial class DaggerfallSession
         int clan;
         try { clan = DaggerfallVampirismPolicy.GetVampireClan(_definitions.Factions, transition.InfectionRegion).Id; }
         catch (NotSupportedException error) { return new(false, "Vampire clan is unavailable: " + error.Message); }
-        // Select only real, admitted cemetery closures in the player's current region. The infection
-        // region remains the clan input even if the player travelled while incubating the disease.
+        // Every cemetery of the player's current region, as the donor's GetRandomCemetery collects them from the
+        // region's map table. The infection region remains the clan input even if the player travelled while
+        // incubating the disease.
         int region = _site.ActiveSite?.Region ?? transition.InfectionRegion;
-        var candidates = _sites.Profiles?.AuthoredKeys.Where(key => key.Kind == DaggerfallWorldProfileKind.Dungeon
-            && key.Site.Region == region && _site.Require(key.Site).DungeonType == 18)
-            .OrderBy(key => key.LogicalId, StringComparer.Ordinal).ToArray() ?? [];
+        var candidates = _sites.Profiles is { } profiles
+            ? _site.Records.Where(site => site.Region == region && site.DungeonType == 18)
+                .Select(site => DaggerfallWorldProfileIds.Dungeon(site.Id)).Where(profiles.Contains)
+                .OrderBy(key => key.Site.Index).ToArray()
+            : [];
         if (candidates.Length == 0) return new(false, $"No cemetery destination is published for region {region}.");
         int index = checked((int)_random.DrawKeyed(new KeyedRngRequest(0,
             "daggerfall.vampirism", transition.Instance + ":cemetery", 0, candidates.Length - 1)).Value);
         var destination = _sites.Profiles!.Require(candidates[index]);
-        var position = destination.Project.PlayerPosition ?? throw new InvalidOperationException("Cemetery has no source arrival.");
-        if (!_sites.TryRelocatePlayer(destination.ProfileKey, new("vampire-awakening", position,
-            destination.InitialLook.YawRadians, destination.InitialLook.PitchRadians)))
+        // The donor respawns the player inside the dungeon, preferring its enter marker to its start marker.
+        var arrival = destination.Anchors.GetValueOrDefault(DaggerfallLocationAssembly.EnterAnchor)
+            ?? (destination.Project.PlayerPosition is { } position
+                ? new DaggerfallSiteAnchor("vampire-awakening", position, destination.InitialLook.YawRadians, destination.InitialLook.PitchRadians)
+                : throw new InvalidOperationException($"Cemetery '{destination.ProfileKey.LogicalId}' has no source arrival."));
+        if (!_sites.TryRelocatePlayer(destination.ProfileKey, arrival))
             return new(false, "The cemetery destination could not be admitted.");
         _sites.ClearReturnDestination();
         foreach (long id in DefinitionsByActor.Where(pair => pair.Key != DaggerfallActorIdentity.PlayerEntityId

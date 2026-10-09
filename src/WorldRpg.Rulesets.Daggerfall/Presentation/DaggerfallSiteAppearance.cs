@@ -801,6 +801,9 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         }
         foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
         {
+            // An assembled exterior's door is a plane of its model's mesh, which draws it: the door is entered
+            // rather than swung, so it has no visual of its own.
+            if (door.Visual is null && inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior) continue;
             DaggerfallDoorVisual visual = door.Visual
                 ?? throw new InvalidOperationException($"Selected RDB door '{door.Id}' has no normalized visual.");
             Appearance created = appearance.CreateStaticMeshFromContent(

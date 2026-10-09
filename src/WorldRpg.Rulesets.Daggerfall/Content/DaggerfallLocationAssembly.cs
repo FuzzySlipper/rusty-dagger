@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Rusty.Engine;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.World;
 
@@ -43,7 +44,26 @@ internal sealed class DaggerfallLocationAssembly
     // One clear automap cell is 64 source units; its centre is 32 in.
     private const float AutomapCellMetres = RmbBlockSide / AutomapSide;
 
+    /// <summary>Where a location receives the player through its start: the start marker, else the enter marker.</summary>
+    internal const string StartAnchor = "start";
+
+    /// <summary>A dungeon's enter marker, where the player wakes when brought inside rather than walking in.</summary>
+    internal const string EnterAnchor = "enter";
+
+    /// <summary>An exterior's landing in front of its lowest dungeon entrance, where leaving the dungeon arrives.</summary>
+    internal const string DungeonEntranceAnchor = "dungeon-entrance";
+
+    /// <summary>The prefix of an exterior's start markers, in block order: travel arrival chooses among them.</summary>
+    internal const string StartMarkerAnchorPrefix = "start-marker/";
+
+    internal static string StartMarkerAnchor(int index) => string.Create(CultureInfo.InvariantCulture, $"{StartMarkerAnchorPrefix}{index}");
+
+    /// <summary>An exterior's landing in front of a building's door, where leaving that building arrives.</summary>
+    internal static string BuildingAnchor(DaggerfallSiteBuildingId building) =>
+        string.Create(CultureInfo.InvariantCulture, $"building/{building.BlockX}/{building.BlockY}/{building.Index}");
+
     private readonly DaggerfallDefinitions _definitions;
+    private readonly Lazy<Dictionary<DaggerfallSiteId, DaggerfallSiteRecord>> _records;
     private readonly DaggerfallWorldBlocks _blocks;
     private readonly Func<DaggerfallProductMedia> _media;
     private readonly Func<IReadOnlyDictionary<string, DaggerfallWorldMesh>> _meshes;
@@ -52,6 +72,8 @@ internal sealed class DaggerfallLocationAssembly
         Func<DaggerfallProductMedia> media, Func<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+        // Streaming asks whether each location in the exterior window places an exterior on every window change.
+        _records = new(() => _definitions.Locations.Records.ToDictionary(record => record.Id));
         _blocks = blocks ?? throw new ArgumentNullException(nameof(blocks));
         _media = media ?? throw new ArgumentNullException(nameof(media));
         _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
@@ -104,11 +126,7 @@ internal sealed class DaggerfallLocationAssembly
         return profile;
     }
 
-    private bool TryRecord(DaggerfallSiteId site, out DaggerfallSiteRecord? record)
-    {
-        record = _definitions.Locations.Records.FirstOrDefault(candidate => candidate.Id == site);
-        return record is not null;
-    }
+    private bool TryRecord(DaggerfallSiteId site, out DaggerfallSiteRecord? record) => _records.Value.TryGetValue(site, out record);
 
     /// <summary>
     /// Reads the world media publication's mesh index: each mesh artifact with its digest and the material
@@ -179,6 +197,11 @@ internal sealed class DaggerfallLocationAssembly
         private IReadOnlyDictionary<int, int>? _remaps;
         private Vector3? _start;
         private Vector3? _enter;
+        private readonly List<DaggerfallSitePortal> _portals = [];
+        private readonly Dictionary<string, DaggerfallSiteAnchor> _anchors = new(StringComparer.Ordinal);
+        private readonly List<Vector3> _startMarkers = [];
+        private readonly List<DaggerfallWorldBlockTransitionDoor> _dungeonExits = [];
+        private DaggerfallWorldBlockTransitionDoor? _lowestEntrance;
 
         /// <summary>A location's exterior: every RMB block of its grid, in the site closure's block order.</summary>
         internal void Exterior()
@@ -193,10 +216,14 @@ internal sealed class DaggerfallLocationAssembly
                 DaggerfallWorldBlockDocument document = blocks[new(DaggerfallWorldBlockKind.RmbExterior, block.SourceName)];
                 Vector3 origin = new(block.X * RmbBlockSide, 0F, -(block.Y * RmbBlockSide));
                 Place(document, $"block/{block.X}/{block.Y}", block.X * RmbBlockCells, -(block.Y * RmbBlockCells));
-                foreach (DaggerfallWorldBlockModel model in document.Models) Draw(model, origin);
+                HashSet<string> gates = [.. document.Gates.Select(gate => gate.ModelId)];
+                foreach (DaggerfallWorldBlockModel model in document.Models.Where(model => !gates.Contains(model.Id))) Draw(model, origin);
                 foreach (DaggerfallWorldBlockDoor door in document.Doors) ExteriorDoor(door, block, origin);
+                foreach (DaggerfallWorldBlockTransitionDoor door in document.TransitionDoors)
+                    DungeonEntrance(door, origin, id => PlaceId(id, block.X, block.Y));
                 if (document.StartMarker is { } start) _start ??= origin + start;
                 if (document.EnterMarker is { } enter) _enter ??= origin + enter;
+                _startMarkers.AddRange(document.StartMarkers.Select(marker => origin + marker));
                 foreach (JsonNode? person in document.Section("population")) Append("population", Moved(person, origin));
                 if (document.ClearGround is { } bits)
                     for (int index = 0; index < AutomapSide * AutomapSide; index++)
@@ -219,6 +246,10 @@ internal sealed class DaggerfallLocationAssembly
             foreach (DaggerfallWorldBlockModel model in document.Models) Draw(model, Vector3.Zero);
             _start = document.StartMarker;
             _enter = document.EnterMarker;
+            // A building door seen from inside leads back out; without an entrance to return through, the
+            // player comes out in front of this building's door (BuildingTransitionExteriorLogic).
+            foreach (DaggerfallWorldBlockTransitionDoor door in document.TransitionDoors.Where(door => door.Kind == DaggerfallWorldBlockTransitionKind.BuildingExit))
+                Portal(door.Id, door.Position, DaggerfallWorldProfileIds.Exterior(key.Site), BuildingAnchor(building));
             foreach (JsonNode? marker in document.Section("questMarkers"))
             {
                 JsonObject value = Clone(marker);
@@ -278,6 +309,14 @@ internal sealed class DaggerfallLocationAssembly
                 }
 
                 foreach (DaggerfallWorldBlockDoor door in document.Doors) DungeonDoor(door, document, origin, Placed);
+                // A dungeon exit leads out to the location's exterior, in front of its dungeon entrance.
+                foreach (DaggerfallWorldBlockTransitionDoor door in document.TransitionDoors.Where(door => door.Kind == DaggerfallWorldBlockTransitionKind.DungeonExit))
+                {
+                    DaggerfallWorldBlockTransitionDoor exit = Moved(door, origin, Placed);
+                    _dungeonExits.Add(exit);
+                    if (record.Exterior is { Blocks.Count: > 0 })
+                        Portal(exit.Id, exit.Position, DaggerfallWorldProfileIds.Exterior(key.Site), DungeonEntranceAnchor);
+                }
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, Placed));
                 foreach (JsonNode? action in document.Section("actions"))
                 {
@@ -370,7 +409,20 @@ internal sealed class DaggerfallLocationAssembly
                 diagnostics.Add($"Assembled action model '{model.ActionId}' has no matching world action node.");
             Vector3? start = key.Kind == DaggerfallWorldProfileKind.Interior ? _enter ?? _start : _start ?? _enter;
             PlayerInitialLook look = new(0F, 0F);
+            // Entering a dungeon faces the player away from the exit nearest its start (TransitionDungeonInterior).
+            if (key.Kind == DaggerfallWorldProfileKind.Dungeon && start is { } landing
+                && _dungeonExits.OrderBy(exit => Vector3.DistanceSquared(exit.Position, landing)).FirstOrDefault() is { } nearest)
+                look = new(ActorHeading.Yaw(nearest.Normal), 0F);
             WorldPoint? position = start is { } at ? new WorldPoint(at.X, at.Y, at.Z) : null;
+            if (position is { } startAnchor) Anchor(StartAnchor, startAnchor, look.YawRadians);
+            if (key.Kind == DaggerfallWorldProfileKind.Dungeon && _enter is { } enterMarker)
+                Anchor(EnterAnchor, new WorldPoint(enterMarker.X, enterMarker.Y, enterMarker.Z), look.YawRadians);
+            for (int index = 0; index < _startMarkers.Count; index++)
+                Anchor(StartMarkerAnchor(index), new WorldPoint(_startMarkers[index].X, _startMarkers[index].Y, _startMarkers[index].Z), 0F);
+            // Leaving the dungeon lands outside its lowest entrance, facing away from it (PositionPlayerToDungeonExit).
+            if (_lowestEntrance is { } entrance)
+                Anchor(DungeonEntranceAnchor, Landing(entrance.Position with { Y = entrance.Bounds.Minimum.Y }, entrance.Normal, presentation.DungeonExitLanding),
+                    ActorHeading.Yaw(entrance.Normal));
             DaggerfallDungeonMapContent? map = null;
             if (key.Kind == DaggerfallWorldProfileKind.Dungeon)
             {
@@ -398,8 +450,8 @@ internal sealed class DaggerfallLocationAssembly
                 doors,
                 key.Kind,
                 key.LogicalId,
-                [],
-                position is { } anchor ? [new DaggerfallSiteAnchor("start", anchor, look.YawRadians, look.PitchRadians)] : [],
+                _portals,
+                [.. _anchors.Values],
                 DaggerfallSiteContent.ReadNormalizedLights(normalized, diagnostics),
                 _media.GroundContainerSprite,
                 map,
@@ -535,7 +587,50 @@ internal sealed class DaggerfallLocationAssembly
                 }.Validate());
             }
             catch (ArgumentException exception) { diagnostics.Add($"Exterior door '{id}' is invalid: {exception.Message}"); }
+
+            // Coming out of the building without an entrance to return through lands in front of its first door,
+            // on its threshold: the door's yaw is its plane normal's, which faces out.
+            if (door.BuildingIndex is int index)
+            {
+                float yaw = door.RotationDegrees.Y * (MathF.PI / 180F);
+                Vector3 normal = new(MathF.Sin(yaw), 0F, MathF.Cos(yaw));
+                Vector3 threshold = origin + door.Position + (Vector3.UnitY * bounds.Minimum.Y);
+                string anchor = BuildingAnchor(new DaggerfallSiteBuildingId(block.X, block.Y, index));
+                if (!_anchors.ContainsKey(anchor))
+                    Anchor(anchor, Landing(threshold, normal, presentation.BuildingExitLanding), ActorHeading.Yaw(normal));
+            }
         }
+
+        /// <summary>A dungeon entrance on the exterior leads into the location's dungeon, landing at its start.</summary>
+        private void DungeonEntrance(DaggerfallWorldBlockTransitionDoor door, Vector3 origin, Func<string, string> place)
+        {
+            if (door.Kind != DaggerfallWorldBlockTransitionKind.DungeonEntrance) return;
+            DaggerfallWorldBlockTransitionDoor entrance = Moved(door, origin, place);
+            if (_lowestEntrance is null || entrance.Position.Y < _lowestEntrance.Position.Y) _lowestEntrance = entrance;
+            // A location without dungeon blocks has nowhere for its entrance to lead.
+            if (record.DungeonBlocks.Count != 0) Portal(entrance.Id, entrance.Position, DaggerfallWorldProfileIds.Dungeon(key.Site), StartAnchor);
+        }
+
+        private void Portal(string id, Vector3 position, DaggerfallWorldProfileKey destination, string arrival)
+        {
+            try { _portals.Add(new DaggerfallSitePortal(id, new WorldPoint(position.X, position.Y, position.Z), presentation.DoorReach, destination.LogicalId, arrival).Validate()); }
+            catch (ArgumentException exception) { diagnostics.Add($"Transition door '{id}' is invalid: {exception.Message}"); }
+        }
+
+        private void Anchor(string id, WorldPoint position, float yaw)
+        {
+            try { _anchors[id] = new DaggerfallSiteAnchor(id, position, yaw, 0F).Validate(); }
+            catch (ArgumentException exception) { diagnostics.Add($"Landing '{id}' of '{key.LogicalId}' is invalid: {exception.Message}"); }
+        }
+
+        private static WorldPoint Landing(Vector3 threshold, Vector3 normal, float distance)
+        {
+            Vector3 at = threshold + (Vector3.Normalize(normal with { Y = 0F }) * distance);
+            return new WorldPoint(at.X, at.Y, at.Z);
+        }
+
+        private static DaggerfallWorldBlockTransitionDoor Moved(DaggerfallWorldBlockTransitionDoor door, Vector3 origin, Func<string, string> place) =>
+            door with { Id = place(door.Id), Position = origin + door.Position, Bounds = (origin + door.Bounds.Minimum, origin + door.Bounds.Maximum) };
 
         private void DungeonDoor(DaggerfallWorldBlockDoor door, DaggerfallWorldBlockDocument document, Vector3 origin, Func<string, string> place)
         {

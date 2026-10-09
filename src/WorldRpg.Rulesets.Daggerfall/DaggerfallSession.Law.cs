@@ -351,17 +351,25 @@ internal sealed partial class DaggerfallSession
         _ => "Your case is closed. You are free to leave.",
     };
 
+    /// <summary>The exterior the court releases the player into: the one they entered from, else their location's own.</summary>
     private DaggerfallWorldProfileKey CourtReleaseProfile()
     {
         if (_sites.ReturnProfile is { Kind: DaggerfallWorldProfileKind.Exterior } outside) return outside;
-        return _sites.Profiles?.AuthoredKeys.FirstOrDefault(key => key.Site == _activeProfileKey.Site && key.Kind == DaggerfallWorldProfileKind.Exterior)
-            is { LogicalId: not null } exterior ? exterior : _activeProfileKey;
+        DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(_activeProfileKey.Site);
+        return _sites.Profiles?.Contains(exterior) == true ? exterior : _activeProfileKey;
     }
 
+    /// <summary>
+    /// Places the player at the location's entrance, as the donor's <c>PositionPlayerAtLocationEntrance</c> does:
+    /// an exterior receives them from a random side (at a city, its nearest start marker); a profile that is not
+    /// an exterior receives them at its start.
+    /// </summary>
     private void RelocateCourtPlayer(DaggerfallWorldProfileKey destination)
     {
         var profile = destination == _activeProfileKey ? _sites.Projection.Inputs : _sites.RequireProfiles().Require(destination);
-        if (profile.Project.PlayerPosition is WorldPoint entrance)
+        if (profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && profile.Site is not null)
+            _sites.TryRelocatePlayer(destination, ArrivalLanding(profile, null, $"court:{destination.LogicalId}:{MinuteIndex(_time.Calendar)}"));
+        else if (profile.Project.PlayerPosition is WorldPoint entrance)
             _sites.TryRelocatePlayer(destination, new("court-release", entrance, 0, 0));
     }
 
