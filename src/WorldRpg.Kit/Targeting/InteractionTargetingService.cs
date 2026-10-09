@@ -12,6 +12,14 @@ namespace WorldRpg.Kit.Targeting;
 /// The ruleset supplies the Engine query identity and retains the durable identity separately.
 /// The current Engine entity becomes the interaction target revision, so reuse of a query identity
 /// cannot silently authorize an action for an older loaded object.
+/// <para>
+/// <paramref name="SurfaceNormal"/> marks a target that lies on a surface rather than in open space, such as
+/// a door plane set into a wall: its position is on that surface and the normal names its open side. Engine
+/// line of sight runs all the way to the target point, so a surface coincident with the point would hide
+/// the target from every side. A surface target is therefore sighted at its position lifted off the surface
+/// by <see cref="InteractionTargetingService.SurfaceSeparation"/> along the normal, and only from its open
+/// side: from behind the surface it is occluded.
+/// </para>
 /// </remarks>
 public readonly record struct InteractionTargetCandidate(
     EntityId Entity,
@@ -20,8 +28,18 @@ public readonly record struct InteractionTargetCandidate(
     WorldPoint Position,
     int Precedence,
     string Label = "world object",
-    double? ReachDistance = null)
+    double? ReachDistance = null,
+    Vector3? SurfaceNormal = null)
 {
+    /// <summary>The point Engine focus and line of sight use: the position, lifted off its surface when it has one.</summary>
+    public Vector3 SightPoint => SurfaceNormal is Vector3 normal
+        ? Position.ToVector() + (Vector3.Normalize(normal) * InteractionTargetingService.SurfaceSeparation)
+        : Position.ToVector();
+
+    /// <summary>Whether an observer stands on the open side of a surface target; a target in open space faces everyone.</summary>
+    public bool FacesObserver(WorldPoint observer) =>
+        SurfaceNormal is not Vector3 normal || Vector3.Dot(observer.ToVector() - Position.ToVector(), normal) > 0f;
+
     public void Validate()
     {
         Identity.Validate();
@@ -31,6 +49,9 @@ public readonly record struct InteractionTargetCandidate(
         if (string.IsNullOrWhiteSpace(Label)) throw new ArgumentException("An interaction target requires a label.", nameof(Label));
         if (ReachDistance is double reach && (!double.IsFinite(reach) || reach < 0d || reach > float.MaxValue))
             throw new ArgumentOutOfRangeException(nameof(ReachDistance));
+        if (SurfaceNormal is Vector3 normal && (!float.IsFinite(normal.X) || !float.IsFinite(normal.Y) || !float.IsFinite(normal.Z)
+            || normal.LengthSquared() < 1e-12f))
+            throw new ArgumentOutOfRangeException(nameof(SurfaceNormal), "A surface target requires a finite, non-zero surface normal.");
     }
 }
 
@@ -56,6 +77,13 @@ public sealed record InteractionTargetingEvidence(
 /// </summary>
 public sealed class InteractionTargetingService(IPerceptionService perception, SpatialMovementSystem spatial, EntityDirectory entities)
 {
+    /// <summary>
+    /// How far a surface target's sight point stands off its surface: enough that a ray from the open side
+    /// stops short of the surface the target lies on, small enough not to move the target off its surface
+    /// for reach and focus.
+    /// </summary>
+    public const float SurfaceSeparation = .01f;
+
     private const uint VisibilityPageSize = 64;
     private readonly IPerceptionService _perception = perception ?? throw new ArgumentNullException(nameof(perception));
     private readonly SpatialMovementSystem _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
@@ -199,7 +227,7 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
             _request = new PerceptionQueryRequest(
                 _spatial.Session,
                 new PerceptionObserver[] { new(_observer.Value, _origin.ToVector(), _query.Direction, _query.MaximumDistance, minimumFacingCosine, 1d) },
-                loaded.Select(candidate => new PerceptionTarget(candidate.QueryIdentity, candidate.Position.ToVector())).ToArray(),
+                loaded.Select(candidate => new PerceptionTarget(candidate.QueryIdentity, candidate.SightPoint)).ToArray(),
                 ReadOnlyMemory<SpatialEntityCollider>.Empty,
                 0,
                 0,
@@ -213,12 +241,16 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
                     group => group.Any(pair => pair.Kind == PerceptionPairKind.Visible)
                         ? InteractionVisibility.Visible
                         : InteractionVisibility.Occluded);
+            // A surface target seen from behind its surface is hidden by it, whatever the surface's back face does.
+            foreach (InteractionTargetCandidate candidate in loaded)
+                if (!candidate.FacesObserver(_origin) && _visibility.ContainsKey(candidate.QueryIdentity))
+                    _visibility[candidate.QueryIdentity] = InteractionVisibility.Occluded;
         }
 
         private InteractionCandidate ToEngineCandidate(InteractionTargetCandidate candidate) => new(
             new InteractionTarget(candidate.QueryIdentity, candidate.Entity.Value),
             candidate.Label,
-            candidate.Position.ToVector(),
+            candidate.SightPoint,
             candidate.ReachDistance is double reach ? (float)reach : maximumDistance,
             _visibility!.TryGetValue(candidate.QueryIdentity, out InteractionVisibility visibility)
                 ? visibility : InteractionVisibility.Unknown,

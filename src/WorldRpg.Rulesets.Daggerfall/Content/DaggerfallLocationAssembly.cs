@@ -251,7 +251,7 @@ internal sealed class DaggerfallLocationAssembly
             // A building door seen from inside leads back out; without an entrance to return through, the
             // player comes out in front of this building's door (BuildingTransitionExteriorLogic).
             foreach (DaggerfallWorldBlockTransitionDoor door in document.TransitionDoors.Where(door => door.Kind == DaggerfallWorldBlockTransitionKind.BuildingExit))
-                Portal(door.Id, door.Position, DaggerfallWorldProfileIds.Exterior(key.Site), BuildingAnchor(building));
+                Portal(door.Id, door.Position, door.Normal, DaggerfallWorldProfileIds.Exterior(key.Site), BuildingAnchor(building));
             foreach (JsonNode? marker in document.Section("questMarkers"))
             {
                 JsonObject value = Clone(marker);
@@ -319,7 +319,7 @@ internal sealed class DaggerfallLocationAssembly
                     DaggerfallWorldBlockTransitionDoor exit = Moved(door, origin, Placed);
                     _dungeonExits.Add(exit);
                     if (record.Exterior is { Blocks.Count: > 0 })
-                        Portal(exit.Id, exit.Position, DaggerfallWorldProfileIds.Exterior(key.Site), DungeonEntranceAnchor);
+                        Portal(exit.Id, exit.Position, exit.Normal, DaggerfallWorldProfileIds.Exterior(key.Site), DungeonEntranceAnchor);
                 }
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, Placed));
                 foreach (JsonNode? action in document.Section("actions"))
@@ -618,7 +618,7 @@ internal sealed class DaggerfallLocationAssembly
             DaggerfallWorldBlockTransitionDoor entrance = Moved(door, origin, place);
             if (_lowestEntrance is null || entrance.Position.Y < _lowestEntrance.Position.Y) _lowestEntrance = entrance;
             // A location without dungeon blocks has nowhere for its entrance to lead.
-            if (record.DungeonBlocks.Count != 0) Portal(entrance.Id, entrance.Position, DaggerfallWorldProfileIds.Dungeon(key.Site), StartAnchor);
+            if (record.DungeonBlocks.Count != 0) Portal(entrance.Id, entrance.Position, entrance.Normal, DaggerfallWorldProfileIds.Dungeon(key.Site), StartAnchor);
         }
 
         /// <summary>
@@ -645,9 +645,11 @@ internal sealed class DaggerfallLocationAssembly
             catch (ArgumentException exception) { diagnostics.Add($"City gate '{gate.Id}' is invalid: {exception.Message}"); }
         }
 
-        private void Portal(string id, Vector3 position, DaggerfallWorldProfileKey destination, string arrival)
+        /// <summary>A portal on a source transition door: the plane's centre, used from the side its normal faces.</summary>
+        private void Portal(string id, Vector3 position, Vector3 normal, DaggerfallWorldProfileKey destination, string arrival)
         {
-            try { _portals.Add(new DaggerfallSitePortal(id, new WorldPoint(position.X, position.Y, position.Z), presentation.DoorReach, destination.LogicalId, arrival).Validate()); }
+            try { _portals.Add(new DaggerfallSitePortal(id, new WorldPoint(position.X, position.Y, position.Z), presentation.DoorReach, destination.LogicalId, arrival,
+                Vector3.Normalize(normal)).Validate()); }
             catch (ArgumentException exception) { diagnostics.Add($"Transition door '{id}' is invalid: {exception.Message}"); }
         }
 

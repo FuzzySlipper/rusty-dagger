@@ -70,7 +70,7 @@ public sealed class QuestDestinationSessionTests
         // In through the location's source dungeon entrance.
         DaggerfallSitePortal entrance = world.Profiles.Require(exterior).Portals.First(portal => portal.DestinationLogicalProfile == dungeon.LogicalId);
         (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) live = run.Session.Sites.Projection.Portals.All.Single(value => value.Portal.Id == entrance.Id);
-        run.Use(live.Portal.Position.ToVector(), live.Entity);
+        run.Use(live.Portal, live.Entity);
         Assert.Equal(dungeon, run.Session.Sites.ActiveProfile);
         run.Step();
         AssertRealized(run, world.Profiles.Require(dungeon));

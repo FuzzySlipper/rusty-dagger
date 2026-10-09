@@ -45,7 +45,13 @@ internal readonly record struct DaggerfallWorldProfileKey(DaggerfallSiteId Site,
 /// The destination anchor the portal lands at when the player has no entrance to return through (a door's
 /// own landing); null lands at the destination's start. A remembered entrance always wins.
 /// </param>
-internal sealed record DaggerfallSitePortal(string Id, WorldPoint Position, float Radius, string DestinationLogicalProfile, string? ArrivalAnchor = null)
+/// <param name="Normal">
+/// For a portal on a source door plane, the plane's unit normal toward the side a player uses it from. Its
+/// position is then the plane's centre, on the wall the door is set into, and interaction sights it from that
+/// side as a Kit surface target; null is a portal standing in open space.
+/// </param>
+internal sealed record DaggerfallSitePortal(string Id, WorldPoint Position, float Radius, string DestinationLogicalProfile, string? ArrivalAnchor = null,
+    Vector3? Normal = null)
 {
     internal DaggerfallSitePortal Validate()
     {
@@ -55,6 +61,9 @@ internal sealed record DaggerfallSitePortal(string Id, WorldPoint Position, floa
         if (!float.IsFinite(Position.X) || !float.IsFinite(Position.Y) || !float.IsFinite(Position.Z))
             throw new ArgumentOutOfRangeException(nameof(Position));
         if (!float.IsFinite(Radius) || Radius <= 0f) throw new ArgumentOutOfRangeException(nameof(Radius));
+        if (Normal is Vector3 normal && (!float.IsFinite(normal.X) || !float.IsFinite(normal.Y) || !float.IsFinite(normal.Z)
+            || MathF.Abs(normal.Length() - 1f) > 1e-3f))
+            throw new ArgumentOutOfRangeException(nameof(Normal), "A door-plane portal's normal must be a unit vector.");
         if (string.IsNullOrWhiteSpace(DestinationLogicalProfile) || !DaggerfallBaseContent.ValidId(DestinationLogicalProfile.Replace('/', '-')))
             throw new ArgumentException("A site portal must name a stable destination profile.", nameof(DestinationLogicalProfile));
         return this;
