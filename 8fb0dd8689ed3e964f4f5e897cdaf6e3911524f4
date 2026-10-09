@@ -1,0 +1,4 @@
+verify.sh --play green on den-k8 (DOTNET_PROCESSOR_COUNT=8), content regenerated at this commit (9m58s)
+UI 73/73, Architecture 10, Import 783, Ruleset 3134, Canary 7, Kit 158, Host 33, SpriteWorkbench 27, play-smoke passed
+import-records/world-blocks 429516330 bytes
+total 33m25s
