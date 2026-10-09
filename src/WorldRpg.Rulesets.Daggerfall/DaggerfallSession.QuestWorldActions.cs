@@ -28,22 +28,14 @@ internal sealed partial class DaggerfallSession
             return true;
         }
         var binding = DaggerfallQuestPlacements.Destination(instance.Resources, operation.Targets[0]);
-        // The Place names its location, the kind of profile it selected and, inside, its building: that is the
-        // profile id, authored or assembled.
         DaggerfallSiteId place = binding.Places[0].Require();
-        DaggerfallWorldProfileKey? key = (binding.PlaceSelection?.Kind, binding.Building) switch
-        {
-            (DaggerfallWorldProfileKind.Exterior, null) => DaggerfallWorldProfileIds.Exterior(place),
-            (DaggerfallWorldProfileKind.Dungeon, null) => DaggerfallWorldProfileIds.Dungeon(place),
-            (DaggerfallWorldProfileKind.Interior, { } building) => DaggerfallWorldProfileIds.Interior(place, new(building.BlockX, building.BlockY, building.Index)),
-            _ => null,
-        };
+        DaggerfallWorldProfileKey? key = DaggerfallQuestPlacements.ProfileKey(binding);
         DaggerfallSiteProfile? destination = key is not { } id ? null
             : _sites.Profiles is { } profiles ? (profiles.TryGet(id, out DaggerfallSiteProfile resolved) ? resolved : null)
             : _sites.Projection.Inputs.ProfileKey == id ? _sites.Projection.Inputs : null;
         if (destination is null || !DaggerfallQuestPlacements.Matches(binding, destination))
             throw new NotSupportedException($"Quest teleport Place '{operation.Targets[0]}' has no admitted world profile.");
-        var markers = destination.QuestMarkers.Where(marker => marker.Kind == DaggerfallSiteMarkerKind.QuestSpawn).ToArray();
+        var markers = DaggerfallQuestPlacements.SourceOrder(destination, _site.Require(place), DaggerfallSiteMarkerKind.QuestSpawn);
         if (markers.Length == 0) throw new NotSupportedException($"Quest teleport Place '{operation.Targets[0]}' has no admitted spawn marker.");
         int index = operation.MarkerIndex is { } requested && requested < markers.Length ? requested : 0;
         var marker = markers[index];

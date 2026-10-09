@@ -303,7 +303,9 @@ internal sealed class DaggerfallLocationAssembly
                 DaggerfallWorldBlockDocument document = blocks[new(DaggerfallWorldBlockKind.Rdb, block.SourceKey)];
                 Vector3 origin = new(block.X * RdbBlockSide, 0F, -(block.Z * RdbBlockSide));
                 string Placed(string id) => PlaceId(id, block.X, block.Z);
-                Place(document, $"block/{block.X}/{block.Z}", block.X * RdbBlockCells, -(block.Z * RdbBlockCells));
+                // Named by its source block as well as its grid position: the catalog places two blocks on one cell of
+                // Orsinium's dungeon, and the donor lays out both.
+                Place(document, $"block/{Scope(document)}/{block.X}/{block.Z}", block.X * RdbBlockCells, -(block.Z * RdbBlockCells));
                 foreach (DaggerfallWorldBlockModel model in document.Models)
                 {
                     if (model.Action is null && model.DoorId is null) Draw(model, origin, Placed);
@@ -673,12 +675,9 @@ internal sealed class DaggerfallLocationAssembly
                 return;
             }
 
-            if (door.RotationDegrees.X != 0F || door.RotationDegrees.Z != 0F)
-            {
-                diagnostics.Add($"Dungeon door '{id}' must have a yaw-only rotation.");
-                return;
-            }
-
+            // A door keeps its whole source turn: several main-quest blocks (Daggerfall, Wayrest and Woodborne Hall
+            // castles, the Mantellan Crux) place doors turned over, and the runtime swings a door about its own
+            // up axis from that closed turn, as the donor's action door rotates in its own frame.
             DaggerfallWorldBlockModel? model = document.Models.SingleOrDefault(candidate => candidate.Id == door.ModelId);
             if (model is null || Mesh(model) is not { } mesh || model.LocalBounds is not { } local)
             {

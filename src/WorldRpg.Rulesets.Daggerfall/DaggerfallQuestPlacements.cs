@@ -54,6 +54,47 @@ internal static class DaggerfallQuestPlacements
         throw new ArgumentException($"Quest placement refers to unavailable Place '{symbol}'.");
     }
 
+    /// <summary>
+    /// The profile a selected Place names: its location, the kind of profile it selected and, inside, its building.
+    /// That is the profile id, authored or assembled; a selection without a kind names none.
+    /// </summary>
+    internal static DaggerfallWorldProfileKey? ProfileKey(DaggerfallQuestResourceBinding destination)
+    {
+        DaggerfallSiteId place = destination.Places[0].Require();
+        return (destination.PlaceSelection?.Kind, destination.Building) switch
+        {
+            (DaggerfallWorldProfileKind.Exterior, null) => DaggerfallWorldProfileIds.Exterior(place),
+            (DaggerfallWorldProfileKind.Dungeon, null) => DaggerfallWorldProfileIds.Dungeon(place),
+            (DaggerfallWorldProfileKind.Interior, { } building) => DaggerfallWorldProfileIds.Interior(place, new(building.BlockX, building.BlockY, building.Index)),
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// A place's quest markers of one kind in the order a source marker index addresses: a dungeon's block by block
+    /// in the location's own layout order, each block's flats in record order (EnumerateDungeonQuestMarkers); a
+    /// building's flats in record order (EnumerateBuildingQuestMarkers). Profiles draw blocks in grid order, so
+    /// the layout order is restored here rather than assumed.
+    /// </summary>
+    internal static DaggerfallSiteMarker[] SourceOrder(DaggerfallSiteProfile profile, DaggerfallSiteRecord site, DaggerfallSiteMarkerKind kind)
+    {
+        if (profile.Site != site.Id) throw new ArgumentException($"Profile '{profile.ProfileKey.LogicalId}' does not place location {site.Id}.", nameof(site));
+        DaggerfallSiteMarker[] markers = [.. profile.QuestMarkers.Where(marker => marker.Kind == kind)];
+        if (profile.ProfileKind != DaggerfallWorldProfileKind.Dungeon) return [.. markers.OrderBy(marker => marker.SourceOrdinal)];
+        int Layout(DaggerfallSiteMarker marker)
+        {
+            for (int index = 0; index < site.DungeonBlocks.Count; index++)
+            {
+                DaggerfallSiteDungeonBlock block = site.DungeonBlocks[index];
+                if (block.X == marker.BlockX && block.Z == marker.BlockZ && string.Equals(block.SourceKey, marker.SourceKey, StringComparison.OrdinalIgnoreCase))
+                    return index;
+            }
+            throw new InvalidOperationException($"Quest marker '{marker.Id}' of '{profile.ProfileKey.LogicalId}' names block {marker.SourceKey} at "
+                + $"({marker.BlockX}, {marker.BlockZ}), which the location's dungeon layout does not place.");
+        }
+        return [.. markers.OrderBy(Layout).ThenBy(marker => marker.SourceOrdinal)];
+    }
+
     internal static bool Matches(DaggerfallQuestResourceBinding destination, DaggerfallSiteProfile profile)
     {
         if (profile.Site != destination.Places[0].Require() || destination.PlaceSelection?.Kind != profile.ProfileKind) return false;
@@ -175,8 +216,10 @@ internal sealed partial class DaggerfallQuestInstances
             ? DaggerfallSiteMarkerKind.QuestItem : DaggerfallSiteMarkerKind.QuestSpawn;
         // Source GetSiteMarker orders the combined pool spawn-first. Any ignores an index
         // for initial selection; subsequent explicit indices still address the preferred pool.
-        var spawn = profile.QuestMarkers.Where(value => value.Kind == DaggerfallSiteMarkerKind.QuestSpawn).ToArray();
-        var items = profile.QuestMarkers.Where(value => value.Kind == DaggerfallSiteMarkerKind.QuestItem).ToArray();
+        var site = _definitions.Locations.Records.FirstOrDefault(value => value.Id == profile.Site)
+            ?? throw new InvalidOperationException($"Quest place profile '{profile.ProfileKey.LogicalId}' names a location the catalog does not carry.");
+        var spawn = DaggerfallQuestPlacements.SourceOrder(profile, site, DaggerfallSiteMarkerKind.QuestSpawn);
+        var items = DaggerfallQuestPlacements.SourceOrder(profile, site, DaggerfallSiteMarkerKind.QuestItem);
         bool alreadySelected = instance.Placements.Any(value => value.PlaceSymbol == operation.PlaceSymbol && value.Applied?.Profile == profile.ProfileKey);
         var markers = preferred == DaggerfallSiteMarkerKind.QuestSpawn ? spawn : items;
         int? markerIndex = operation.MarkerIndex;
