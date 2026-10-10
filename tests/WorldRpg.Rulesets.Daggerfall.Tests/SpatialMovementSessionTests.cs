@@ -37,7 +37,8 @@ public sealed class SpatialMovementSessionTests
             Assert.Equal(source.Position.X, actual.X);
             Assert.Equal(source.Position.Z, actual.Z);
         }
-        Assert.Equal(inputs.Project.Actors.Values.Count(actor => definitions.Actors[actor.ActorId].GroundOnSpawn), spatial.FloorProbes.Count);
+        // Each grounded spawn probes once, as does the new game's player standing at its start.
+        Assert.Equal(inputs.Project.Actors.Values.Count(actor => definitions.Actors[actor.ActorId].GroundOnSpawn) + 1, spatial.FloorProbes.Count);
         Assert.All(spatial.FloorProbes, request => Assert.Equal(-Vector3.UnitY, request.Direction));
     }
 
