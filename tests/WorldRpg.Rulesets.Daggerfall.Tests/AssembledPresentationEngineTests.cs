@@ -20,6 +20,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// Engine's validation, and the player moves on the real collision. The Engine test host has no Product.Update
 /// callback, so only a sprite playback advance is answered outside the Engine (<see cref="EngineGraphicsOutsideUpdate"/>).
 /// </summary>
+// These tests measure update cost and managed memory, so they run alone: no other class allocates
+// in the process while they read it.
+[Collection(RealEnginePerformance.Name)]
 public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
 {
     private static readonly SharedFixture<AssembledWorld> Shared = new(() => new AssembledWorld());
@@ -663,4 +666,10 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Arrived at {landed}, the player is at {now} and not grounded.");
         Assert.True(MathF.Abs(now.Y - landed.Y) < .25F, $"Arrived at {landed}, the player settled at {now}.");
     }
+}
+
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class RealEnginePerformance
+{
+    public const string Name = "Real Engine performance";
 }
