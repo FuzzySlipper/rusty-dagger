@@ -170,6 +170,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // Ship return pose is detached in the land profile; active-world origin moves do not own it.
     }
 
+    void IDaggerfallSiteTransitionHost.ReconcileArrivalPopulation() => ReconcileCivilianPopulation();
+
     void IDaggerfallSiteTransitionHost.EnteredSite()
     {
         Casting.ClearTransient();

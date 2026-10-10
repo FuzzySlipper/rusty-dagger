@@ -138,6 +138,8 @@ internal sealed partial class DaggerfallSession
         if (movement is not null && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior)
         {
             _sites.UpdateExteriorResidency();
+            // A player who has dropped beneath the terrain is stood back on it rather than falling for ever.
+            _ = _sites.RecoverPlayerBelowTerrain();
             // A terrain cell can remain resident while the authored location closure is unloaded.
             // Finish the movement/origin boundary, then keep location-scoped AI, encounters and
             // interactions from observing a projection whose actors and geometry are intentionally absent.

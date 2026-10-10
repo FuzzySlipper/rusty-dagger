@@ -29,6 +29,12 @@ internal interface IDaggerfallSiteTransitionHost
     /// <summary>The destination became the active site; site-scoped session presentation moves on.</summary>
     void EnteredSite();
 
+    /// <summary>
+    /// An exterior arrival has its terrain window admitted and the player stood in it; the location's wandering population
+    /// is admitted around them now that both are placed in the world.
+    /// </summary>
+    void ReconcileArrivalPopulation();
+
     /// <summary>Admits retained source-civilian billboards into a resident projection.</summary>
     void AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection);
 
@@ -86,6 +92,10 @@ internal sealed class DaggerfallSiteLifecycle
     // wilderness map pixel is 819.2 world units, so adjacent location closures are exactly 1024
     // navigation cells apart in the shared Engine artifact grid.
     internal const long NavigationCellsPerExteriorCell = 1024;
+    private const float NavigationCellSize = DaggerfallExteriorCellResidency.CellSize / NavigationCellsPerExteriorCell;
+    // A wilderness map pixel is 128 terrain tiles of 6.4 units, eight navigation cells each; an RMB block is 16 tiles.
+    private const long NavigationCellsPerTerrainTile = NavigationCellsPerExteriorCell / 128;
+    private const int TerrainTilesPerBlock = 16;
     private bool _locationLoaded;
     private DaggerfallExteriorCellId? _locationCell;
     private bool _admittingInitialResidency;
@@ -213,7 +223,8 @@ internal sealed class DaggerfallSiteLifecycle
 
     /// <summary>
     /// A profile's collision/navigation parts, each placed by its own whole-cell offset in the profile frame
-    /// and, for an exterior, by the location's map-pixel offset from the active origin and its terrain height.
+    /// and, for an exterior, by the location's map-pixel offset from the active origin and its frame in that map pixel
+    /// (<see cref="ExteriorLocationFrame"/>): whole grid cells across, its terrain height up.
     /// </summary>
     private SpatialContentArtifactPlacement[] LocationPlacements(
         DaggerfallSiteProfile profile,
@@ -229,9 +240,10 @@ internal sealed class DaggerfallSiteLifecycle
                 ?? (_exteriorResidency is { IsInitialized: true } residency
                     ? ActiveOrigin(residency)
                     : DaggerfallExteriorWorldOrigin.At(cell));
-            columnOffset = checked((long)(cell.X - origin.MapPixelX) * NavigationCellsPerExteriorCell);
-            rowOffset = checked((long)(origin.MapPixelY - cell.Y) * NavigationCellsPerExteriorCell);
-            translation = ExteriorLocationPlacementTranslation(profile);
+            (long frameColumns, long frameRows) = ExteriorLocationFrameCells(profile);
+            columnOffset = checked(((long)(cell.X - origin.MapPixelX) * NavigationCellsPerExteriorCell) + frameColumns);
+            rowOffset = checked(((long)(origin.MapPixelY - cell.Y) * NavigationCellsPerExteriorCell) + frameRows);
+            translation = Vector3.UnitY * ExteriorLocationSampleHeight(profile);
         }
 
         return [.. profile.Geometry.Spatial.Select(part => new SpatialContentArtifactPlacement(
@@ -401,13 +413,63 @@ internal sealed class DaggerfallSiteLifecycle
     /// (<c>StreamingWorld.RepositionPlayer</c> outside, <c>PlayerEnterExit.SetStanding</c> after entering a building or a
     /// dungeon). A pose that already stands (a recalled or remembered capsule centre) keeps its height. Runs once the
     /// destination's collision, and outside its terrain window, are admitted.
+    /// Outside, the terrain under the arrival bounds it as the donor's <c>RepositionPlayer</c> does: an anchor below the
+    /// terrain (a location's edge on rising ground) is raised onto it, and one above the terrain settles onto the highest
+    /// support between them (the terrain, or a structure standing on it) rather than falling there.
     /// </summary>
     internal void StandArrivingPlayer()
     {
         PlayerControlState player = _state.PlayerControl;
         WorldPoint arrival = player.Position ?? throw new InvalidOperationException("An arrival requires a player position.");
-        WorldPoint standing = _spatial.StandingPosition(arrival, CharacterEnvironment(player.Motion));
+        WorldPoint start = arrival;
+        float settle = 0F;
+        if (TryExteriorTerrainHeight(arrival, out float terrain))
+        {
+            start = arrival with { Y = MathF.Max(arrival.Y, terrain) };
+            settle = start.Y - terrain;
+        }
+        WorldPoint standing = _spatial.StandingPosition(start, CharacterEnvironment(player.Motion), settle);
         if (standing != arrival) _host.RelocatePlayer(standing, player.YawRadians, player.PitchRadians);
+    }
+
+    /// <summary>
+    /// Returns a player who has fallen through the world outside back onto it. The terrain is a height field with nothing
+    /// beneath it, so a capsule wholly below the surface (dropped there by a placement or a collision gap) would otherwise
+    /// fall without end. The player is stood on the surface above where they fell, with their fall forgotten as the
+    /// donor's <c>RepositionPlayer</c> clears falling damage. True when the player was moved.
+    /// </summary>
+    internal bool RecoverPlayerBelowTerrain()
+    {
+        PlayerControlState player = _state.PlayerControl;
+        if (player.Position is not WorldPoint position || player.Motion.Grounded
+            || !TryExteriorTerrainHeight(position, out float terrain)) return false;
+        if (position.Y + (_spatial.CurrentController.Shape.StandingHeight * .5F) >= terrain) return false;
+        WorldPoint standing = _spatial.StandingPosition(position with { Y = terrain }, CharacterEnvironment(player.Motion));
+        _host.RelocatePlayer(standing, player.YawRadians, player.PitchRadians);
+        return true;
+    }
+
+    /// <summary>
+    /// The height of the admitted terrain surface under a local position in the active exterior, sampled as the donor's
+    /// <c>Terrain.SampleHeight</c> does; false outside an exterior or the admitted terrain window.
+    /// </summary>
+    private bool TryExteriorTerrainHeight(WorldPoint local, out float height)
+    {
+        height = 0F;
+        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
+            || _exteriorResidency is not { IsInitialized: true } residency
+            || _exteriorSurfaceFactory is not { } surfaces) return false;
+        DaggerfallExteriorWorldOrigin origin = ActiveOrigin(residency);
+        DaggerfallExteriorWorldBounds bounds = new(_definitions.Terrain.Width, _definitions.Terrain.Height);
+        DaggerfallExteriorCellId cell;
+        try { cell = DaggerfallExteriorSessionOrigin.CellForLocalPosition(local, origin, bounds); }
+        catch (Exception failure) when (failure is ArgumentOutOfRangeException or InvalidOperationException) { return false; }
+        if (!residency.ResidentCells.Contains(cell)) return false;
+        Vector3 corner = origin.LocalTranslation(cell);
+        float x = Math.Clamp((local.X - corner.X) / DaggerfallExteriorCellResidency.CellSize, 0F, 1F);
+        float z = Math.Clamp((local.Z - corner.Z) / DaggerfallExteriorCellResidency.CellSize, 0F, 1F);
+        height = corner.Y + DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surfaces(cell), x, z);
+        return true;
     }
 
     /// <summary>World relocation has no doorway back; its caller may own a different return workflow.</summary>
@@ -604,6 +666,7 @@ internal sealed class DaggerfallSiteLifecycle
             }
             // A returning player resumes the standing pose they left; an arrival lands on its anchor's floor.
             if (returnDestination is null) StandArrivingPlayer();
+            if (destination.Kind == DaggerfallWorldProfileKind.Exterior) _host.ReconcileArrivalPopulation();
             if (destination.Kind != DaggerfallWorldProfileKind.Exterior)
                 _state.Transport.ForceFootOnInteriorTransition();
             ReturnProfile = returnDestination is null ? sourceProfile : null;
@@ -770,7 +833,18 @@ internal sealed class DaggerfallSiteLifecycle
             if (savedExterior is { } exterior)
                 RestoreExteriorResidency(exterior);
             else
-                UpdateExteriorResidency();
+            {
+                // The start is a profile position; the window is centred where it stands once in the location's frame,
+                // which lies across the map pixel from the profile's origin.
+                DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(ActiveExteriorCell());
+                _ = EnsureExteriorResidency();
+                DaggerfallExteriorCellId center = _state.PlayerControl.Position is WorldPoint start
+                    ? DaggerfallExteriorSessionOrigin.CellForLocalPosition(
+                        DaggerfallExteriorSessionOrigin.Shift(start, ExteriorProfileTranslation(Projection.Inputs, origin)),
+                        origin, new DaggerfallExteriorWorldBounds(_definitions.Terrain.Width, _definitions.Terrain.Height))
+                    : ActiveExteriorCell();
+                AdmitExteriorWindow(center, origin);
+            }
         }
         finally { _admittingInitialResidency = false; }
         _locationCell ??= ActiveExteriorCell();
@@ -836,8 +910,7 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallExteriorCellId site = ActiveExteriorCell();
         DaggerfallExteriorWorldOrigin origin = _exteriorResidency is { IsInitialized: true } residency
             ? ActiveOrigin(residency) : DaggerfallExteriorWorldOrigin.At(site);
-        Vector3 translation = origin.LocalTranslation(site)
-            + (Vector3.UnitY * ExteriorLocationFrameHeight(Projection.Inputs));
+        Vector3 translation = origin.LocalTranslation(site) + ExteriorLocationFrame(Projection.Inputs);
         return new(position.X - translation.X, position.Y - translation.Y, position.Z - translation.Z);
     }
 
@@ -899,11 +972,7 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallExteriorWorldOrigin origin = residency.IsInitialized
             ? ActiveOrigin(residency)
             : DaggerfallExteriorWorldOrigin.At(ActiveExteriorCell());
-        DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin);
-        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
-        ReconcileExteriorTerrainAppearance(residency);
-        UpdateExteriorLocation(center);
-        return update;
+        return AdmitExteriorWindow(center, origin);
     }
 
     /// <summary>Admits the active exterior window with an explicit saved or rebased local origin.</summary>
@@ -917,6 +986,12 @@ internal sealed class DaggerfallSiteLifecycle
                 origin,
                 new DaggerfallExteriorWorldBounds(_definitions.Terrain.Width, _definitions.Terrain.Height))
             : ActiveExteriorCell();
+        return AdmitExteriorWindow(center, origin);
+    }
+
+    /// <summary>Admits or advances the window centred on <paramref name="center"/> in <paramref name="origin"/>'s frame.</summary>
+    private DaggerfallExteriorCellResidencyUpdate AdmitExteriorWindow(DaggerfallExteriorCellId center, DaggerfallExteriorWorldOrigin origin)
+    {
         DaggerfallExteriorCellResidency residency = EnsureExteriorResidency();
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin);
         _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
@@ -992,7 +1067,7 @@ internal sealed class DaggerfallSiteLifecycle
                 : throw new InvalidOperationException("An exterior profile requires initialized terrain residency."));
         Vector3 translation = resolvedOrigin.LocalTranslation(cell);
         if (!includeOriginCompensation) translation -= resolvedOrigin.Compensation;
-        return translation + (Vector3.UnitY * ExteriorLocationFrameHeight(profile));
+        return translation + ExteriorLocationFrame(profile);
     }
 
     /// <summary>Returns the current local frame for a resident or active exterior profile.</summary>
@@ -1006,14 +1081,26 @@ internal sealed class DaggerfallSiteLifecycle
         return ExteriorProfileTranslation(inputs);
     }
 
-    private float ExteriorLocationFrameHeight(DaggerfallSiteProfile profile)
+    /// <summary>
+    /// Where a location's profile frame sits in its map pixel's terrain cell: over the terrain tiles the donor lays its
+    /// blocks on (<c>TerrainHelper.GetLocationTerrainTileOrigin</c>, the tiles the terrain is flattened and cleared of
+    /// nature under) and at the height the donor samples for the location's parent. The profile runs its blocks from its
+    /// origin along +X and -Z, so the origin lies on the footprint's +Z edge.
+    /// </summary>
+    private Vector3 ExteriorLocationFrame(DaggerfallSiteProfile profile)
     {
-        return ExteriorLocationSampleHeight(profile);
+        (long columns, long rows) = ExteriorLocationFrameCells(profile);
+        return new Vector3(columns * NavigationCellSize, ExteriorLocationSampleHeight(profile), rows * NavigationCellSize);
     }
 
-    private Vector3 ExteriorLocationPlacementTranslation(DaggerfallSiteProfile profile)
+    /// <summary>The location frame's horizontal offset in its cell, in whole cells of the shared Engine artifact grid.</summary>
+    private (long Columns, long Rows) ExteriorLocationFrameCells(DaggerfallSiteProfile profile)
     {
-        return Vector3.UnitY * ExteriorLocationSampleHeight(profile);
+        if (!TryExteriorProfileCell(profile, out DaggerfallExteriorCellId cell))
+            throw new InvalidOperationException($"Exterior profile '{profile.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
+        DaggerfallSiteExterior footprint = ExteriorLocations()[cell];
+        return (checked((long)footprint.TileOriginX * NavigationCellsPerTerrainTile),
+            checked((long)(footprint.TileOriginY + (footprint.Height * TerrainTilesPerBlock)) * NavigationCellsPerTerrainTile));
     }
 
     private float ExteriorLocationSampleHeight(DaggerfallSiteProfile profile)
@@ -1385,7 +1472,7 @@ internal sealed class DaggerfallSiteLifecycle
     private Vector3 ActiveExteriorFrameOffset() =>
         ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior
         && _exteriorResidency is { IsInitialized: true }
-            ? Vector3.UnitY * ExteriorLocationFrameHeight(Projection.Inputs)
+            ? ExteriorLocationFrame(Projection.Inputs)
             : Vector3.Zero;
 
     internal WorldPoint ProfileToLocal(WorldPoint position) =>

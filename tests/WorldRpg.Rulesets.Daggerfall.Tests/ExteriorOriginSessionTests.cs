@@ -582,7 +582,11 @@ public sealed class ExteriorOriginSessionTests
         var after = session.Sites.CaptureExteriorResidency()!.Value;
         Assert.Equal(new DaggerfallExteriorCellId(before.Origin.X + 4, before.Origin.Y), after.Center);
         Assert.Equal(after.Center, session.Sites.CurrentExteriorCell());
-        Assert.Equal(destination.ToVector(), session.Sites.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector()));
+        // The recalled point lies below the terrain four cells east, so the arrival stands on the terrain above it.
+        Vector3 arrived = session.Sites.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector());
+        Assert.Equal(destination.X, arrived.X, 3);
+        Assert.Equal(destination.Z, arrived.Z, 3);
+        Assert.True(arrived.Y > destination.Y, $"Recalled to {destination}, the player stands at {arrived}.");
         var saved = DaggerfallSavePayload.Read(session.CaptureSave());
         _ = saved.ResolveRestore(definitions, exterior);
         var malformed = saved with { ExteriorResidency = after with { Center = before.Center } };
@@ -609,7 +613,8 @@ public sealed class ExteriorOriginSessionTests
         // elevated by Charing's sampled terrain frame, so offset the probe back into that frame
         // while keeping the asserted durable profile pose explicit.
         float frameHeight = session.Sites.ExteriorProfileFrameTranslation(exterior.ProfileKey).Y;
-        WorldPoint desiredProfilePosition = new(start.X, height - frameHeight, start.Z);
+        Vector3 startProfile = session.Sites.LocalToProfile(start.ToVector());
+        WorldPoint desiredProfilePosition = new(startProfile.X, height - frameHeight, startProfile.Z);
         WorldPoint desiredLocalPosition = session.Sites.ProfileToLocal(desiredProfilePosition);
         session.State.PlayerControl.MoveTo(desiredLocalPosition.ToVector());
         session.Sites.RebaseExteriorIfNeeded();
