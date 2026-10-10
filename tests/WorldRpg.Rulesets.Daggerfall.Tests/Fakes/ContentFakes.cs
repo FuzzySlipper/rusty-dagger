@@ -76,6 +76,12 @@ internal sealed class ContentFake : IContentService
     /// <summary>How many admitted reads this fake served for one path, which shows how it was chunked.</summary>
     internal int Reads(string path) => reads.GetValueOrDefault(path);
 
+    /// <summary>Every admitted path, so a real Engine host can be given the same files.</summary>
+    internal IEnumerable<string> Paths => values.Keys;
+
+    /// <summary>The bytes admitted with a path, or null when only its identity was.</summary>
+    internal byte[]? Body(string path) => bodies.GetValueOrDefault(path);
+
     public ReadOnlyMemory<ContentReferenceInfo> ReadReferenceInfo(ContentReference reference)
     {
         KeyValuePair<string, ContentSha256> item = references[reference.Handle.Value];

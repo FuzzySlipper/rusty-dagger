@@ -2,6 +2,7 @@ using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
@@ -107,11 +108,6 @@ internal sealed class DaggerfallExteriorEnvironment
     private const float BaseChanceOnDirt = .2F;
     private const float BaseChanceOnGrass = .9F;
     private const float BaseChanceOnStone = .05F;
-    private const ulong NatureObjectPrefix = 0xD900_0000_0000_0000UL;
-    private const int NatureCellBits = 20;
-    private const int NatureTileBits = 14;
-    private const uint NatureCellMask = (1U << NatureCellBits) - 1U;
-    private const uint NatureTileMask = (1U << NatureTileBits) - 1U;
 
     private readonly Dictionary<DaggerfallExteriorCellId, CellFacts> _cells = [];
     private DaggerfallExteriorWorldOrigin _origin;
@@ -246,19 +242,12 @@ internal sealed class DaggerfallExteriorEnvironment
         return false;
     }
 
+    /// <summary>A nature sprite's stable identity, which is also its object identity in the appearance snapshot.</summary>
     internal static ulong NatureObjectId(DaggerfallExteriorCellId cell, int tileX, int tileY)
     {
         if ((uint)tileX >= TerrainTileDimension || (uint)tileY >= TerrainTileDimension)
             throw new ArgumentOutOfRangeException(nameof(tileX));
-        if ((uint)cell.X > NatureCellMask || (uint)cell.Y > NatureCellMask)
-            throw new ArgumentOutOfRangeException(nameof(cell),
-                "Exterior nature coordinates exceed the stable ID range.");
-        uint tile = checked((uint)((tileY * TerrainTileDimension) + tileX));
-        ulong value = NatureObjectPrefix
-            | ((ulong)(uint)cell.X << (NatureCellBits + NatureTileBits))
-            | ((ulong)(uint)cell.Y << NatureTileBits)
-            | (tile & NatureTileMask);
-        return value == 0 ? 1UL : value;
+        return DaggerfallPresentationObjectIds.Nature(cell.X, cell.Y, checked((uint)((tileY * TerrainTileDimension) + tileX)));
     }
 
     internal static ulong WaterObjectId(DaggerfallExteriorCellId cell, int tileX, int tileY) =>

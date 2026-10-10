@@ -381,10 +381,25 @@ internal sealed class DaggerfallSiteLifecycle
             {
                 _ = RebaseExteriorIfNeeded();
                 UpdateExteriorResidency();
+                StandArrivingPlayer();
             }
             return true;
         }
         return TryTransitionTo(profile, pose, useReturnDestination: false);
+    }
+
+    /// <summary>
+    /// Stands a player placed at an exterior anchor on the admitted collision below it. Exterior anchors (a door's
+    /// threshold, a location's edge, a start marker) name the ground the player arrives on, while the player's position
+    /// is its capsule's centre; the donor's <c>StreamingWorld.RepositionPlayer</c> likewise lifts an arrival to at least
+    /// half a controller height above the ground. Runs once the destination's collision and terrain window are admitted.
+    /// </summary>
+    private void StandArrivingPlayer()
+    {
+        PlayerControlState player = _state.PlayerControl;
+        WorldPoint arrival = player.Position ?? throw new InvalidOperationException("An exterior arrival requires a player position.");
+        WorldPoint standing = _spatial.StandingPosition(arrival, CharacterEnvironment(player.Motion));
+        if (standing != arrival) _host.RelocatePlayer(standing, player.YawRadians, player.PitchRadians);
     }
 
     /// <summary>World relocation has no doorway back; its caller may own a different return workflow.</summary>
@@ -573,6 +588,8 @@ internal sealed class DaggerfallSiteLifecycle
                 // in the wrong map cell. Re-admit the target window in the same canonical frame.
                 UpdateExteriorResidency(destinationOrigin
                     ?? throw new InvalidOperationException("An exterior transition did not resolve its destination origin."));
+                // A returning player resumes the pose they left; an arrival lands on its anchor's ground.
+                if (returnDestination is null) StandArrivingPlayer();
             }
             else
             {

@@ -230,7 +230,7 @@ public sealed class ExteriorOriginSessionTests
             InventoryItemPresentation gold = rows.Items.First(row => row.Definition == "gold-piece");
             session.PublishInitial();
             AppearanceFact worldBeforeHorizontalRebaseFact = Assert.Single(appearance.Snapshots.Last(),
-                fact => fact.ObjectId == 1);
+                fact => fact.ObjectId == DaggerfallPresentationObjectIds.WorldMesh(0));
             Vector3 worldBeforeHorizontalRebase = new(
                 worldBeforeHorizontalRebaseFact.Transform.Translation.X,
                 worldBeforeHorizontalRebaseFact.Transform.Translation.Y,
@@ -262,7 +262,7 @@ public sealed class ExteriorOriginSessionTests
             Assert.Equal(exterior.Portals[0].Position.Y, activePortalProfile.Y, 3);
             Assert.Equal(exterior.Portals[0].Position.Z, activePortalProfile.Z, 3);
             Vector3 worldAfterHorizontalRebase = Assert.Single(appearance.Snapshots.Last(),
-                fact => fact.ObjectId == 1).Transform.Translation;
+                fact => fact.ObjectId == DaggerfallPresentationObjectIds.WorldMesh(0)).Transform.Translation;
             Assert.Equal(worldBeforeHorizontalRebase.X + delta.X, worldAfterHorizontalRebase.X, 3);
             Assert.Equal(worldBeforeHorizontalRebase.Y + delta.Y, worldAfterHorizontalRebase.Y, 3);
             Assert.Equal(worldBeforeHorizontalRebase.Z + delta.Z, worldAfterHorizontalRebase.Z, 3);
