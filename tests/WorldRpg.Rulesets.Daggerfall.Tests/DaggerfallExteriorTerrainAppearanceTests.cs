@@ -245,6 +245,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest request) => throw new NotSupportedException();
         public void UpdateStaticMeshMaterialFactors(StaticMeshMaterialFactorsRequest request) => throw new NotSupportedException();
         public Appearance CreateSprite(SpriteAppearanceRequest request) => throw new NotSupportedException();
+        public Appearance CreateSpriteBatch(SpriteBatchRequest request) => throw new NotSupportedException();
         public Appearance ReplaceSprite(SpriteAppearanceReplaceRequest request) => throw new NotSupportedException();
         public SpriteAtlas CreateSpriteAtlas(SpriteAtlasCreateRequest request) => throw new NotSupportedException();
         public Appearance CreateSpriteFromAtlas(SpriteFromAtlasRequest request) => throw new NotSupportedException();

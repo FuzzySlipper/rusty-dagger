@@ -53,6 +53,7 @@ internal sealed class EngineGraphicsOutsideUpdate(IGraphicsService engine) : IGr
     public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest arg0) => _engine.UpdateStaticMeshMaterials(arg0);
     public void UpdateStaticMeshMaterialFactors(StaticMeshMaterialFactorsRequest arg0) => _engine.UpdateStaticMeshMaterialFactors(arg0);
     public Appearance CreateSprite(SpriteAppearanceRequest arg0) => _engine.CreateSprite(arg0);
+    public Appearance CreateSpriteBatch(SpriteBatchRequest arg0) => _engine.CreateSpriteBatch(arg0);
     public Appearance ReplaceSprite(SpriteAppearanceReplaceRequest arg0) => _engine.ReplaceSprite(arg0);
     public SpriteAtlas CreateSpriteAtlas(SpriteAtlasCreateRequest arg0) => _engine.CreateSpriteAtlas(arg0);
     public Appearance CreateSpriteFromAtlas(SpriteFromAtlasRequest arg0) => _engine.CreateSpriteFromAtlas(arg0);
