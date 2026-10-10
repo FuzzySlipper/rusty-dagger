@@ -516,7 +516,9 @@ public sealed class SiteTransitionSessionTests
             Assert.Equal(source.Project.PlayerPosition, session.State.PlayerControl.Position);
             Assert.Equal(source.InitialLook.YawRadians, session.State.PlayerControl.YawRadians);
             Assert.Equal(source.InitialLook.PitchRadians, session.State.PlayerControl.PitchRadians);
-            Assert.Equal(default, session.State.PlayerControl.Motion);
+            // A relocation resets the control state; its fall starts at the new height, so it never deals fall damage.
+            float relocatedY = session.State.PlayerControl.Position!.Value.Y;
+            Assert.Equal(default(CharacterMotion) with { FallOriginY = relocatedY, PeakY = relocatedY }, session.State.PlayerControl.Motion);
             Assert.Equal(default, session.State.PlayerControl.Ground);
             session.Update(new ProductUpdate(OuterUpdate(2), []));
             Assert.Equal(Vector2.Zero, spatial.StepRequests.Last().Command.PlanarIntent);
