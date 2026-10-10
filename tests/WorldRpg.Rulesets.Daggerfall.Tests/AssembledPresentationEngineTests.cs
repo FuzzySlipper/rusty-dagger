@@ -578,6 +578,51 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     }
 
     /// <summary>
+    /// The playtested complaint: a Daggerfall shop's door said "Locked." in the morning. Over the real Engine, the shop
+    /// is shut before dawn and its door, named for the shop, admits the player once the shop's hours begin.
+    /// </summary>
+    [Fact]
+    public void A_daggerfall_shop_is_shut_before_dawn_and_entered_by_day()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallSiteRecord city = world.Definitions.Locations.Records.Single(record => record.Name == "Daggerfall" && record.Kind == DaggerfallSiteKind.TownCity);
+        DaggerfallWorldProfileKey key = DaggerfallWorldProfileIds.Exterior(city.Id);
+        DaggerfallRdbDoorDefinition shop = world.Profiles.Require(key).Doors.First(door => door.ExteriorBuilding is { } building
+            && city.Exterior!.Buildings[building].Source.BuildingType is 0 or 2 or 5 or 6 or 7 or 8 or 9 or 12 or 13
+            && world.Profiles.Contains(DaggerfallWorldProfileIds.Interior(city.Id, building)));
+        DaggerfallSiteBuildingId building = shop.ExteriorBuilding!.Value;
+        DaggerfallWorldProfileKey interior = DaggerfallWorldProfileIds.Interior(city.Id, building);
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, city.Id, building);
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        try
+        {
+            Assert.True(host.Call(_ => run.Session.TryTransitionTo(key, DaggerfallLocationAssembly.StartAnchor)));
+            host.Call(_ => run.AdvanceToHour(4));
+            Steps(host, run, 2);
+            DaggerfallDoorView door = run.Session.Sites.Projection.Doors.Read(shop.Id);
+            _ = host.Call(_ => run.Use(door.Pose.Translation, door.Entity));
+            Assert.False(run.Session.ActivationView.Applied);
+            Assert.Equal("Locked.", run.Session.ActivationView.Message);
+            Assert.Equal(key, run.Session.Sites.ActiveProfile);
+
+            host.Call(_ => run.AdvanceToHour(10));
+            Steps(host, run, 2);
+            door = run.Session.Sites.Projection.Doors.Read(shop.Id);
+            _ = host.Call(_ => run.Use(door.Pose.Translation, door.Entity));
+            Assert.True(run.Session.ActivationView.Applied, run.Session.ActivationView.Message);
+            Assert.Equal(interior, run.Session.Sites.ActiveProfile);
+            Assert.Empty(run.Session.State.Crime.Incidents);
+            Steps(host, run, 3);
+            AssertAccepted(run);
+        }
+        finally
+        {
+            host.Call(_ => run.Dispose());
+        }
+    }
+
+    /// <summary>
     /// The first building of the village beside the island, whose assembled interior is entered.
     /// </summary>
     private static (DaggerfallSiteId Site, DaggerfallSiteBuildingId Building) NeighbourBuilding(AssembledWorld world)

@@ -161,13 +161,5 @@ internal static class DaggerfallCrimePolicy
     internal static double TheftWeight(DaggerfallItemDefinition item) =>
         DaggerfallEncumbrancePolicy.ClassicWeightCost(item) == 0 ? 0 : item.Template?.BaseWeight ?? item.Weight / 4d;
 
-    // PlayerActivate's source public hours. Zero-to-zero is the always-locked House1.
-    private static readonly int[] BuildingOpenHours = [7, 8, 9, 8, 0, 9, 10, 10, 9, 6, 9, 11, 9, 9, 0, 0, 10, 0, 6, 6, 6, 6, 6, 6, 0];
-    private static readonly int[] BuildingCloseHours = [22, 16, 19, 15, 25, 21, 19, 20, 18, 23, 23, 23, 20, 20, 25, 25, 16, 0, 18, 18, 18, 18, 18, 18, 25];
-
-    internal static bool IsPublicEntryHour(int buildingType, int hour) =>
-        buildingType >= 0 && buildingType < BuildingOpenHours.Length
-        && hour >= BuildingOpenHours[buildingType] && hour < BuildingCloseHours[buildingType];
-
     private static int ClampChance(long chance) => (int)Math.Clamp(chance, 5L, 95L);
 }

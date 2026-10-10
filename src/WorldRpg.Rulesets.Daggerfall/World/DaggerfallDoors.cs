@@ -76,6 +76,10 @@ internal sealed record DaggerfallRdbDoorDefinition(
     /// caller from guessing the surface from activation mode or source name.
     /// </summary>
     internal DaggerfallLockInteractionSurface LockSurface { get; init; } = DaggerfallLockInteractionSurface.Interior;
+    /// <summary>
+    /// The placed building this exterior door enters. Such an entrance keeps the RMB model's lock only as its
+    /// source fact: activation sets its live lock from the building entry rule (<see cref="DaggerfallDoorRuntime.ApplyBuildingEntry"/>).
+    /// </summary>
     internal WorldRpg.Rulesets.Daggerfall.Content.DaggerfallSiteBuildingId? ExteriorBuilding { get; init; }
 
     internal DaggerfallRdbDoorDefinition Validate()
@@ -302,6 +306,27 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         if (skill is not null && door.LockValue == 0)
             throw new InvalidOperationException($"Door '{id}' cannot retain a failed lockpick skill after it is unlocked.");
         door.FailedLockpickingSkill = skill;
+        Apply(door);
+    }
+
+    /// <summary>
+    /// Sets a building entrance to what its building's entry rule says now. A building's entrance is
+    /// a closed doorway the player walks through, not a door left swung open, and its lock is the
+    /// building's (by type, hour and standing), never the RMB model's own lock value. A failed pick is
+    /// kept while the same lock still holds, so a retry at the same skill stays refused.
+    /// </summary>
+    internal void ApplyBuildingEntry(DaggerfallRdbDoorId id, int lockValue)
+    {
+        if (lockValue < 0) throw new ArgumentOutOfRangeException(nameof(lockValue));
+        Door door = Require(id);
+        if (door.Definition.ExteriorBuilding is null)
+            throw new InvalidOperationException($"Door '{id}' is not a building entrance.");
+        if (door.Definition.Kind == DaggerfallDoorKind.Special)
+            throw new InvalidOperationException($"Building entrance '{id}' is a special door.");
+        if (lockValue == 0 || door.LockValue != lockValue) door.FailedLockpickingSkill = null;
+        door.LockValue = lockValue;
+        door.Motion = DaggerfallDoorMotion.Closed;
+        door.Progress = 0F;
         Apply(door);
     }
 

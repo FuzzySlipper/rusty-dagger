@@ -152,6 +152,11 @@ internal sealed class DaggerfallSiteContext
         _buildingNames?.Resolve(site, building)
         ?? DaggerfallBuildingNameResult.Missing("Classic building-name content has not been admitted for this site context.");
 
+    /// <summary>Resolves a placed building's classic name from its own site placement (its location's name seed).</summary>
+    internal DaggerfallBuildingNameResult ResolveBuildingName(DaggerfallSiteId site, DaggerfallSiteBuildingSource building) =>
+        _buildingNames?.Resolve(site, building.Source)
+        ?? DaggerfallBuildingNameResult.Missing("Classic building-name content has not been admitted for this site context.");
+
     internal DaggerfallBlocksSnapshot? Blocks { get; private set; }
     // A map selection is an interface target for directions, not discovery or a durable world change.
     internal (DaggerfallSiteId Site, DaggerfallSiteBuildingId Building)? SelectedBuilding { get; private set; }

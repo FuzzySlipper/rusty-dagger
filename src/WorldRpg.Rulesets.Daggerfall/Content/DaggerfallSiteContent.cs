@@ -913,12 +913,9 @@ internal static class DaggerfallSiteContent
                 JsonElement actionValue = door.TryGetProperty("action", out JsonElement actionProperty)
                     ? actionProperty
                     : default;
+                // The door keeps its whole source turn, as an assembled block door does: its closed pose and
+                // collision frame are DaggerfallDoorPose.ClosedRotation of all three angles.
                 DaggerfallDoorActionSource? action = ReadDoorAction(actionValue, identity, diagnostics);
-                if (rotation.X != 0F || rotation.Z != 0F)
-                {
-                    diagnostics.Add($"Normalized RDB door '{identity}' must have a yaw-only rotation.");
-                    continue;
-                }
 
                 if (actionModelsByDoor.TryGetValue(sourceId, out DaggerfallDungeonActionModelDefinition? actionModel))
                 {
