@@ -2,6 +2,7 @@ using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
@@ -13,10 +14,6 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// </summary>
 internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
 {
-    private const ulong AppearanceObjectPrefix = 0xD800_0000_0000_0000UL;
-    private const int CoordinateBits = 24;
-    private const ulong CoordinateMask = 0x00FF_FFFFUL;
-
     private readonly IGraphicsService _graphics;
     private readonly Material _material;
     private readonly Dictionary<DaggerfallExteriorCellId, TerrainVisual> _visuals = [];
@@ -93,18 +90,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     internal void CompleteAcceptedSnapshot() => DisposeRetired();
 
     /// <summary>The stable object identity used by one exterior terrain cell's visual fact.</summary>
-    internal static ulong ObjectId(DaggerfallExteriorCellId cell)
-    {
-        if ((ulong)(uint)cell.X > CoordinateMask || (ulong)(uint)cell.Y > CoordinateMask)
-        {
-            throw new ArgumentOutOfRangeException(nameof(cell),
-                "Exterior terrain visual coordinates exceed the stable ID range.");
-        }
-
-        return AppearanceObjectPrefix
-            | ((ulong)(uint)cell.X << CoordinateBits)
-            | (ulong)(uint)cell.Y;
-    }
+    internal static ulong ObjectId(DaggerfallExteriorCellId cell) => DaggerfallPresentationObjectIds.TerrainCell(cell.X, cell.Y);
 
     /// <summary>
     /// Reconciles retained visual resources to the collision residency's durable cell set.

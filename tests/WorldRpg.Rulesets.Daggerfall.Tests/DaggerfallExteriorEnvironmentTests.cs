@@ -1,6 +1,7 @@
 using System.Numerics;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
@@ -173,6 +174,32 @@ public sealed class DaggerfallExteriorEnvironmentTests
         Assert.NotEqual(first, secondCell);
         Assert.NotEqual(first, secondTile);
         Assert.Equal(first, DaggerfallExteriorEnvironment.NatureObjectId(new(12, 34), 56, 78));
+    }
+
+    /// <summary>
+    /// Every nature and terrain identity the world map can produce is a distinct object identity the Engine publishes:
+    /// within its safe range, and in a band no other presentation owner draws from.
+    /// </summary>
+    [Fact]
+    public void Nature_and_terrain_object_ids_stay_in_their_bands_inside_the_engine_safe_range()
+    {
+        (int X, int Y)[] corners = [(0, 0), (999, 0), (0, 499), (999, 499), (106, 156)];
+        HashSet<ulong> ids = [];
+        foreach ((int x, int y) in corners)
+        {
+            ulong terrain = DaggerfallExteriorTerrainAppearance.ObjectId(new(x, y));
+            Assert.InRange(terrain, 1UL << 48, (1UL << 49) - 1);
+            Assert.True(ids.Add(terrain));
+            foreach ((int tileX, int tileY) in new[] { (0, 0), (127, 0), (0, 127), (127, 127) })
+            {
+                ulong nature = DaggerfallExteriorEnvironment.NatureObjectId(new(x, y), tileX, tileY);
+                Assert.InRange(nature, 1UL << 49, (1UL << 50) - 1);
+                Assert.True(ids.Add(nature));
+            }
+        }
+        Assert.All(ids, id => Assert.InRange(id, 1UL, DaggerfallPresentationObjectIds.Maximum));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallExteriorTerrainAppearance.ObjectId(new(4096, 0)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallExteriorEnvironment.NatureObjectId(new(0, -1), 0, 0));
     }
 
     [Theory]

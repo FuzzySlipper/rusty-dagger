@@ -301,6 +301,24 @@ public sealed class SpatialMovementSystem : IDisposable
         return hit.Present;
     }
 
+    /// <summary>
+    /// Where a standing character placed at <paramref name="arrival"/> rests: the character position is its capsule's
+    /// centre, so a point on (or just above) a floor is raised until the standing capsule clears the first upward-facing
+    /// support found below half a standing height above it. A point already higher keeps its height and the character
+    /// falls from there; with no support below, the point is returned unchanged.
+    /// </summary>
+    public WorldPoint StandingPosition(WorldPoint arrival, CharacterStepEnvironment? environment = null)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        arrival.Validate();
+        CharacterShapeConfig shape = _controller.Shape;
+        float halfHeight = shape.StandingHeight * .5f;
+        SpatialHit floor = CastRay(arrival.ToVector() + (Vector3.UnitY * halfHeight), -Vector3.UnitY, shape.StandingHeight * 2f, environment);
+        if (!floor.Present || floor.StartSolid || floor.Normal.Y <= 0f) return arrival;
+        float standing = floor.Point.Y + halfHeight + shape.ContactSkin + shape.ClearancePadding;
+        return arrival.Y >= standing ? arrival : arrival with { Y = standing };
+    }
+
     /// <summary>Queries this admitted scene and current call-local obstacles through the Engine.</summary>
     public SpatialHit CastRay(Vector3 origin, Vector3 direction, float maxDistance,
         CharacterStepEnvironment? environment = null) => CastRay(
