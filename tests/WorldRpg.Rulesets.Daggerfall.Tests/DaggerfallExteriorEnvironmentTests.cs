@@ -165,23 +165,23 @@ public sealed class DaggerfallExteriorEnvironmentTests
     }
 
     [Fact]
-    public void Nature_object_ids_keep_cell_and_tile_coordinates_distinct()
+    public void Nature_batch_ids_keep_cell_and_sprite_record_distinct()
     {
-        ulong first = DaggerfallExteriorEnvironment.NatureObjectId(new(12, 34), 56, 78);
-        ulong secondCell = DaggerfallExteriorEnvironment.NatureObjectId(new(12, 35), 56, 78);
-        ulong secondTile = DaggerfallExteriorEnvironment.NatureObjectId(new(12, 34), 57, 78);
+        ulong first = DaggerfallExteriorTerrainAppearance.NatureBatchObjectId(new(12, 34), 5);
+        ulong secondCell = DaggerfallExteriorTerrainAppearance.NatureBatchObjectId(new(12, 35), 5);
+        ulong secondRecord = DaggerfallExteriorTerrainAppearance.NatureBatchObjectId(new(12, 34), 6);
 
         Assert.NotEqual(first, secondCell);
-        Assert.NotEqual(first, secondTile);
-        Assert.Equal(first, DaggerfallExteriorEnvironment.NatureObjectId(new(12, 34), 56, 78));
+        Assert.NotEqual(first, secondRecord);
+        Assert.Equal(first, DaggerfallExteriorTerrainAppearance.NatureBatchObjectId(new(12, 34), 5));
     }
 
     /// <summary>
-    /// Every nature and terrain identity the world map can produce is a distinct object identity the Engine publishes:
-    /// within its safe range, and in a band no other presentation owner draws from.
+    /// Every nature batch, terrain and location identity the world map can produce is a distinct object identity the
+    /// Engine publishes: within its safe range, and in a band no other presentation owner draws from.
     /// </summary>
     [Fact]
-    public void Nature_and_terrain_object_ids_stay_in_their_bands_inside_the_engine_safe_range()
+    public void Nature_terrain_and_location_object_ids_stay_in_their_bands_inside_the_engine_safe_range()
     {
         (int X, int Y)[] corners = [(0, 0), (999, 0), (0, 499), (999, 499), (106, 156)];
         HashSet<ulong> ids = [];
@@ -190,16 +190,29 @@ public sealed class DaggerfallExteriorEnvironmentTests
             ulong terrain = DaggerfallExteriorTerrainAppearance.ObjectId(new(x, y));
             Assert.InRange(terrain, 1UL << 48, (1UL << 49) - 1);
             Assert.True(ids.Add(terrain));
-            foreach ((int tileX, int tileY) in new[] { (0, 0), (127, 0), (0, 127), (127, 127) })
+            foreach (int record in new[] { 0, 1, 31, 127 })
             {
-                ulong nature = DaggerfallExteriorEnvironment.NatureObjectId(new(x, y), tileX, tileY);
+                ulong nature = DaggerfallExteriorTerrainAppearance.NatureBatchObjectId(new(x, y), record);
                 Assert.InRange(nature, 1UL << 49, (1UL << 50) - 1);
                 Assert.True(ids.Add(nature));
             }
         }
+        // Each location slot's meshes and visuals stay inside its own range, so the active location and every
+        // resident neighbour can be drawn together.
+        foreach (int slot in new[] { 0, 1, 2, DaggerfallPresentationObjectIds.LocationSlots - 1 })
+        {
+            foreach (int index in new[] { 0, 1, int.MaxValue })
+                Assert.True(ids.Add(DaggerfallPresentationObjectIds.WorldMesh(slot, index)));
+            foreach (ulong ordinal in new[] { 0UL, 1UL, (1UL << 31) - 1 })
+                Assert.True(ids.Add(DaggerfallPresentationObjectIds.LocationVisual(slot, ordinal)));
+        }
+        Assert.All(ids.Where(id => id >= 1UL << 50), id => Assert.InRange(id, 1UL << 50, (1UL << 52) - 1));
         Assert.All(ids, id => Assert.InRange(id, 1UL, DaggerfallPresentationObjectIds.Maximum));
         Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallExteriorTerrainAppearance.ObjectId(new(4096, 0)));
-        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallExteriorEnvironment.NatureObjectId(new(0, -1), 0, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallExteriorTerrainAppearance.NatureBatchObjectId(new(0, -1), 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallExteriorTerrainAppearance.NatureBatchObjectId(new(0, 0), 128));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallPresentationObjectIds.WorldMesh(DaggerfallPresentationObjectIds.LocationSlots, 0));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallPresentationObjectIds.LocationVisual(0, 1UL << 31));
     }
 
     [Theory]

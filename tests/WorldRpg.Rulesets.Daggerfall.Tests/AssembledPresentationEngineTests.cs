@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Rusty.Engine.Testing;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
@@ -5,6 +6,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -14,39 +16,125 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// Engine's validation, and the player moves on the real collision. The Engine test host has no Product.Update
 /// callback, so only a sprite playback advance is answered outside the Engine (<see cref="EngineGraphicsOutsideUpdate"/>).
 /// </summary>
-public sealed class AssembledPresentationEngineTests
+public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
 {
     private static readonly SharedFixture<AssembledWorld> Shared = new(() => new AssembledWorld());
 
+    /// <summary>A bound on the island window's objects: its terrain cells, nature batches and the locations in it.</summary>
+    private const int IslandObjectBound = 10_000;
+
     /// <summary>
-    /// The playtested journey: a new game leaves Privateer's Hold onto its island, whose terrain, nature, entrance and
-    /// neighbouring locations the Engine accepts in one snapshot, and the player stands on the island's ground at the
-    /// entrance rather than inside it.
+    /// The playtested journey: a new game leaves Privateer's Hold onto its island, whose terrain, nature in batches,
+    /// entrance and resident neighbouring locations the Engine accepts in one snapshot, and the player stands on the
+    /// island's ground at the entrance rather than inside it. Going back down into the hold retires the whole window
+    /// in one transition, and the session then retires its presentation itself.
     /// </summary>
-    /// <remarks>
-    /// The window's nature is about two hundred thousand separate sprite appearances, whose retirement takes the Engine
-    /// minutes; the host is destroyed with them rather than retiring the session's presentation one by one.
-    /// </remarks>
     [Fact]
-    public void Leaving_the_hold_publishes_the_island_and_stands_the_player_on_its_ground()
+    public void Leaving_the_hold_draws_the_island_window_and_going_back_down_retires_it()
     {
         AssembledWorld world = Shared.Value;
         DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
         Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, AssembledWorld.PrivateersHold);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        long managedBefore = GC.GetTotalMemory(forceFullCollection: true);
+        long processBefore = Environment.WorkingSet;
+        Stopwatch admission = Stopwatch.StartNew();
         AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
-        Assert.Equal(island, run.Session.Sites.ActiveProfile);
-        AssertAccepted(run);
-        Assert.True(run.Graphics.LastSnapshotObjects > 1000, $"The island window published only {run.Graphics.LastSnapshotObjects} objects.");
+        admission.Stop();
+        try
+        {
+            long managedAfter = GC.GetTotalMemory(forceFullCollection: true);
+            Assert.Equal(island, run.Session.Sites.ActiveProfile);
+            AssertAccepted(run);
+            IReadOnlyList<ulong> ids = run.Graphics.LastSnapshotIds;
+            int nature = ids.Count(id => id >= 1UL << 49 && id < 1UL << 50);
+            int terrain = ids.Count(id => id >= 1UL << 48 && id < 1UL << 49);
+            output.WriteLine($"Island admission (new game, hold, leaving it): {admission.Elapsed.TotalSeconds:F1} s; snapshot {ids.Count} objects "
+                + $"({terrain} terrain cells, {nature} nature batches); managed +{(managedAfter - managedBefore) / (1024 * 1024)} MiB, "
+                + $"process working set +{(Environment.WorkingSet - processBefore) / (1024 * 1024)} MiB.");
+            Assert.True(ids.Count > 1000, $"The island window published only {ids.Count} objects.");
+            Assert.True(ids.Count < IslandObjectBound, $"The island window published {ids.Count} objects rather than batches.");
+            Assert.Equal(DaggerfallExteriorCellResidency.StreamingDimension * DaggerfallExteriorCellResidency.StreamingDimension, terrain);
+            Assert.InRange(nature, terrain, terrain * 32);
 
-        WorldPoint landed = run.Session.State.PlayerControl.Position!.Value;
-        // The entrance threshold stands on the ground: the standing capsule centre is about half its height above it.
-        DaggerfallSiteAnchor landing = world.Profiles.Require(island).RequireAnchor(DaggerfallLocationAssembly.DungeonEntranceAnchor);
-        float ground = landing.Position.Y + run.Session.Sites.ExteriorProfileFrameTranslation(island).Y;
-        Assert.InRange(landed.Y - ground, .7F, 1.1F);
-        Steps(host, run, 10);
-        AssertStanding(run, landed);
-        AssertAccepted(run);
+            // Every resident neighbour's meshes are drawn, each under its own location slot.
+            IReadOnlyCollection<DaggerfallWorldProfileKey> neighbours = run.Session.Sites.ResidentExteriorProfiles;
+            Assert.NotEmpty(neighbours);
+            int neighbourMeshes = neighbours.Sum(key => world.Profiles.Require(key).Geometry.Meshes.Count);
+            Assert.True(neighbourMeshes > 0);
+            Assert.Equal(neighbourMeshes, ids.Count(IsNeighbourMesh));
+            output.WriteLine($"{neighbours.Count} resident neighbours draw {neighbourMeshes} meshes.");
+
+            WorldPoint landed = run.Session.State.PlayerControl.Position!.Value;
+            // The entrance threshold stands on the ground: the standing capsule centre is about half its height above it.
+            DaggerfallSiteAnchor landing = world.Profiles.Require(island).RequireAnchor(DaggerfallLocationAssembly.DungeonEntranceAnchor);
+            float ground = landing.Position.Y + run.Session.Sites.ExteriorProfileFrameTranslation(island).Y;
+            Assert.InRange(landed.Y - ground, .7F, 1.1F);
+            Steps(host, run, 10);
+            AssertStanding(run, landed);
+            AssertAccepted(run);
+
+            Stopwatch descent = Stopwatch.StartNew();
+            Assert.True(host.Call(_ => run.Session.TryTransitionTo(hold)));
+            descent.Stop();
+            Assert.Equal(hold, run.Session.Sites.ActiveProfile);
+            Assert.Empty(run.Session.Sites.ResidentExteriorProfiles);
+            Steps(host, run, 3);
+            AssertAccepted(run);
+            Assert.DoesNotContain(run.Graphics.LastSnapshotIds, id => id >= 1UL << 48 && id < 1UL << 50);
+            output.WriteLine($"Going back down into the hold: {descent.Elapsed.TotalSeconds:F2} s; the hold snapshot holds {run.Graphics.LastSnapshotObjects} objects.");
+        }
+        finally
+        {
+            Stopwatch disposal = Stopwatch.StartNew();
+            host.Call(_ => run.Dispose());
+            output.WriteLine($"Session disposal: {disposal.Elapsed.TotalSeconds:F2} s.");
+        }
+    }
+
+    /// <summary>
+    /// From the island, a building of a resident neighbour (the island has none of its own) is entered and left
+    /// again, each site publishing through the Engine and the island window drawn again on leaving.
+    /// </summary>
+    [Fact]
+    public void A_building_of_the_island_window_is_entered_and_left()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
+        (DaggerfallSiteId site, DaggerfallSiteBuildingId building) = NeighbourBuilding(world);
+        DaggerfallWorldProfileKey interior = DaggerfallWorldProfileIds.Interior(site, building);
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, site, building);
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        try
+        {
+            Assert.Equal(island, run.Session.Sites.ActiveProfile);
+            AssertAccepted(run);
+
+            int accepted = run.Graphics.AcceptedSnapshots;
+            Stopwatch entering = Stopwatch.StartNew();
+            Assert.True(host.Call(_ => run.Session.TryTransitionTo(interior)));
+            entering.Stop();
+            Assert.Equal(interior, run.Session.Sites.ActiveProfile);
+            Steps(host, run, 3);
+            Assert.True(run.Graphics.AcceptedSnapshots > accepted);
+            AssertAccepted(run);
+
+            Stopwatch leaving = Stopwatch.StartNew();
+            Assert.True(host.Call(_ => run.Session.TryTransitionTo(island)));
+            leaving.Stop();
+            Assert.Equal(island, run.Session.Sites.ActiveProfile);
+            Steps(host, run, 3);
+            AssertAccepted(run);
+            Assert.True(run.Graphics.LastSnapshotObjects < IslandObjectBound);
+            Assert.Contains(run.Graphics.LastSnapshotIds, IsNeighbourMesh);
+            output.WriteLine($"Entering {interior.LogicalId}: {entering.Elapsed.TotalSeconds:F2} s; leaving it onto the island: {leaving.Elapsed.TotalSeconds:F2} s.");
+        }
+        finally
+        {
+            host.Call(_ => run.Dispose());
+        }
     }
 
     /// <summary>
@@ -91,6 +179,30 @@ public sealed class AssembledPresentationEngineTests
             host.Call(_ => run.Dispose());
         }
     }
+
+    /// <summary>
+    /// The first building of the village beside the island, whose assembled interior is entered. Its neighbouring
+    /// hamlet's buildings place the arriving player at an entrance marker that the Engine reports as penetrating the
+    /// interior's collision on the first step, which is a matter of interior arrival rather than of drawing the window.
+    /// </summary>
+    private static (DaggerfallSiteId Site, DaggerfallSiteBuildingId Building) NeighbourBuilding(AssembledWorld world)
+    {
+        DaggerfallSiteId village = new(AssembledWorld.PrivateersHold.Region, 198);
+        DaggerfallSiteBuildingId building = new(0, 0, 0);
+        DaggerfallSiteRecord hold = world.Definitions.Locations.Records.Single(record => record.Id == AssembledWorld.PrivateersHold);
+        DaggerfallSiteRecord record = world.Definitions.Locations.Records.Single(record => record.Id == village);
+        Assert.InRange(Math.Abs(record.MapPixelX - hold.MapPixelX), 0, DaggerfallExteriorCellResidency.StreamingRadius);
+        Assert.InRange(Math.Abs(record.MapPixelY - hold.MapPixelY), 0, DaggerfallExteriorCellResidency.StreamingRadius);
+        Assert.Contains(world.Profiles.Require(DaggerfallWorldProfileIds.Exterior(village)).Doors, door => door.ExteriorBuilding == building);
+        Assert.True(world.Profiles.Contains(DaggerfallWorldProfileIds.Interior(village, building)));
+        return (village, building);
+    }
+
+    /// <summary>A static mesh of a location drawn under a resident neighbour's slot rather than the active location's.</summary>
+    private static bool IsNeighbourMesh(ulong id) =>
+        id >= DaggerfallPresentationObjectIds.WorldMesh(DaggerfallPresentationObjectIds.ActiveLocationSlot + 1, 0)
+        && id < DaggerfallPresentationObjectIds.TransientVisualFloor
+        && (id & uint.MaxValue) < 1UL << 31;
 
     private static void Steps(EngineTestHost host, AssembledWorldRun run, int count)
     {

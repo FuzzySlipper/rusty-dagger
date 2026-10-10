@@ -21,12 +21,21 @@ internal sealed class EngineGraphicsOutsideUpdate(IGraphicsService engine) : IGr
     /// <summary>How many objects the last accepted snapshot held.</summary>
     internal int LastSnapshotObjects { get; private set; }
 
+    /// <summary>The object identities of the last accepted snapshot.</summary>
+    internal IReadOnlyList<ulong> LastSnapshotIds { get; private set; } = [];
+
     public void PublishSnapshot(ReadOnlySpan<AppearanceFact> values)
     {
         _engine.PublishSnapshot(values);
         AcceptedSnapshots++;
         LastSnapshotObjects = values.Length;
-        foreach (AppearanceFact fact in values) LargestObjectId = Math.Max(LargestObjectId, fact.ObjectId);
+        ulong[] ids = new ulong[values.Length];
+        for (int index = 0; index < values.Length; index++)
+        {
+            ids[index] = values[index].ObjectId;
+            LargestObjectId = Math.Max(LargestObjectId, ids[index]);
+        }
+        LastSnapshotIds = ids;
     }
 
     public SpritePlaybackAdvanceResult AdvanceSpritePlayback(SpritePlaybackAdvanceRequest arg0) =>

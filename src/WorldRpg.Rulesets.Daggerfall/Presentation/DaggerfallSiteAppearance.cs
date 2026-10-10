@@ -148,17 +148,17 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly List<Material> materials = [];
     private readonly Dictionary<uint, Material> materialsBySlot = [];
     private readonly Dictionary<DaggerfallRdbDoorId, Appearance> doorVisuals = [];
-    private readonly Dictionary<DaggerfallRdbDoorId, ulong> doorVisualEntityIds = [];
+    private readonly Dictionary<DaggerfallRdbDoorId, ulong> doorVisualOrdinals = [];
     private readonly Dictionary<DaggerfallRdbDoorId, Transform> doorVisualPoses = [];
-    private readonly Dictionary<string, (Appearance Visual, ulong ObjectId)> actionModelVisuals = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (Appearance Visual, ulong Ordinal)> actionModelVisuals = new(StringComparer.Ordinal);
     // Each city gate draws its open or its closed model; both are created with the location and the
-    // current state's is published under the gate's one object identity.
-    private readonly Dictionary<string, (Appearance Open, Appearance Closed, ulong ObjectId)> gateVisuals = new(StringComparer.Ordinal);
+    // current state's is published under the gate's one ordinal.
+    private readonly Dictionary<string, (Appearance Open, Appearance Closed, ulong Ordinal)> gateVisuals = new(StringComparer.Ordinal);
     private DaggerfallCityGates? cityGates;
     private DaggerfallDungeonMotionProjection? dungeonMotion;
-    // Door, gate and action model visuals are drawn under identities of the location visual band rather than
+    // Door, gate and action model visuals are drawn under ordinals of the location's identity slot rather than
     // their source or Engine entity identities, which other owners' visuals may share.
-    private ulong nextLocationVisualId = DaggerfallPresentationObjectIds.LocationVisualFirst;
+    private ulong nextLocationVisualOrdinal;
     private DaggerfallDoorRuntime? doors;
     // Engine resources are owning objects: a render resource opened here is released here, because the
     // materials, atlases and sprites that name it hold non-owning references.
@@ -167,8 +167,10 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private readonly List<Material> locationMaterials = [];
     private readonly List<IDisposable> priorRetired = [];
     private readonly List<IDisposable> nextRetired = [];
-    // Each static mesh the profile draws, with its pose in the profile frame and its snapshot identity.
-    private readonly List<(Appearance Appearance, Transform Pose, ulong EntityId)> world = [];
+    // Each static mesh the profile draws, with its pose in the profile frame and its index in the profile geometry.
+    private readonly List<(Appearance Appearance, Transform Pose, int Index)> world = [];
+    // A resident neighbour's appearance never publishes: the active site's snapshot draws its location.
+    private bool drawnByActiveSnapshot;
     private Appearance? arrowAppearance;
     private AuthoredWorldAppearance worldAppearance;
     private Action<List<AppearanceFact>>? appendSnapshotFacts;
@@ -354,30 +356,12 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         Func<long, DaggerfallPerceptionEffectState>? perception = null, IReadOnlyList<DaggerfallNpcView>? npcs = null,
         IReadOnlyList<DaggerfallDungeonSpellFlightView>? dungeonSpellFlights = null, Func<long, bool>? actorActive = null)
     {
-        if (disposed) return;
+        if (disposed || drawnByActiveSnapshot) return;
         ReconcileGroundVisuals(groundContainers);
         List<AppearanceFact> facts = [];
         if (candleAppearance is { } candle && candlePosition is Vector3 candleAt)
             facts.Add(new(candleVisualId, false, 0, new Transform(candleAt, Quaternion.Identity, Vector3.One), candle, true, RenderLayer.Scene));
-        foreach ((Appearance staticWorld, Transform pose, ulong entityId) in world)
-            facts.Add(new AppearanceFact(entityId, false, 0, Compose(worldAppearance.Transform, pose), staticWorld, worldAppearance.Visible, worldAppearance.Layer));
-        if (doors is not null) foreach (DaggerfallDoorView door in doors.All)
-            if (doorVisuals.TryGetValue(door.Id, out Appearance? visual))
-                facts.Add(new AppearanceFact(doorVisualEntityIds[door.Id], false, 0,
-                    doorVisualPoses.TryGetValue(door.Id, out Transform local) ? Compose(door.Pose, local) : door.Pose, visual, true, RenderLayer.Scene));
-        if (cityGates is not null)
-            foreach ((DaggerfallCityGateDefinition gate, EntityId _, DaggerfallDoorVisual _, Transform pose) in cityGates.Visuals)
-                if (gateVisuals.TryGetValue(gate.Id, out (Appearance Open, Appearance Closed, ulong ObjectId) visual))
-                    facts.Add(new AppearanceFact(visual.ObjectId, false, 0, pose, cityGates.Open ? visual.Open : visual.Closed, true, RenderLayer.Scene));
-        if (dungeonMotion is not null)
-        {
-            foreach ((DaggerfallDungeonActionModelDefinition model, EntityId _) in dungeonMotion.Visuals)
-            {
-                if (actionModelVisuals.TryGetValue(model.ActionId, out (Appearance Visual, ulong ObjectId) visual)
-                    && dungeonMotion.TryGetTransform(model.ActionId, out Transform transform))
-                    facts.Add(new AppearanceFact(visual.ObjectId, false, 0, transform, visual.Visual, true, RenderLayer.Scene));
-            }
-        }
+        AppendLocationFacts(facts, DaggerfallPresentationObjectIds.ActiveLocationSlot);
         foreach (ActorState actor in actors.All)
         {
             if (!this.actors.TryGetValue(actor.DurableId, out ActorVisual? visual)) continue;
@@ -443,6 +427,57 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         appendSnapshotFacts?.Invoke(facts);
         appearance.PublishSnapshot([.. facts]);
         completeSnapshot?.Invoke();
+    }
+
+    /// <summary>
+    /// Appends the location's static meshes, doors, city gates and action models at their current poses, under the
+    /// identities of location <paramref name="slot"/>. The active site draws its own under slot 0; the lifecycle
+    /// draws each resident neighbour under the slot it gave it.
+    /// </summary>
+    internal void AppendLocationFacts(List<AppearanceFact> facts, int slot)
+    {
+        ArgumentNullException.ThrowIfNull(facts);
+        if (disposed) return;
+        foreach ((Appearance staticWorld, Transform pose, int index) in world)
+            facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.WorldMesh(slot, index), false, 0,
+                Compose(worldAppearance.Transform, pose), staticWorld, worldAppearance.Visible, worldAppearance.Layer));
+        if (doors is not null) foreach (DaggerfallDoorView door in doors.All)
+            if (doorVisuals.TryGetValue(door.Id, out Appearance? visual))
+                facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, doorVisualOrdinals[door.Id]), false, 0,
+                    doorVisualPoses.TryGetValue(door.Id, out Transform local) ? Compose(door.Pose, local) : door.Pose, visual, true, RenderLayer.Scene));
+        if (cityGates is not null)
+            foreach ((DaggerfallCityGateDefinition gate, EntityId _, DaggerfallDoorVisual _, Transform pose) in cityGates.Visuals)
+                if (gateVisuals.TryGetValue(gate.Id, out (Appearance Open, Appearance Closed, ulong Ordinal) visual))
+                    facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, visual.Ordinal), false, 0, pose,
+                        cityGates.Open ? visual.Open : visual.Closed, true, RenderLayer.Scene));
+        if (dungeonMotion is not null)
+        {
+            foreach ((DaggerfallDungeonActionModelDefinition model, EntityId _) in dungeonMotion.Visuals)
+            {
+                if (actionModelVisuals.TryGetValue(model.ActionId, out (Appearance Visual, ulong Ordinal) visual)
+                    && dungeonMotion.TryGetTransform(model.ActionId, out Transform transform))
+                    facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, visual.Ordinal), false, 0,
+                        transform, visual.Visual, true, RenderLayer.Scene));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Makes this a resident neighbour's appearance, whose location the active site's snapshot draws: it never
+    /// publishes a snapshot of its own, not even the empty one an active appearance retires with.
+    /// </summary>
+    internal void DrawThroughActiveSnapshot() => drawnByActiveSnapshot = true;
+
+    /// <summary>
+    /// Takes the drawn location's meshes, door, gate and action model visuals and their material closure out of this
+    /// appearance. The caller releases them once a snapshot without them is accepted, as the Engine refuses to release
+    /// an appearance its current snapshot still draws.
+    /// </summary>
+    internal IDisposable TakeDrawnLocation()
+    {
+        if (disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteAppearance));
+        locationSuspended = true;
+        return new RetiredLocationResources(TakeLocationResources());
     }
 
     /// <summary>
@@ -725,12 +760,15 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         if (disposed) return;
         disposed = true;
         List<Exception>? failures = null;
-        try
+        if (!drawnByActiveSnapshot)
         {
-            appearance.PublishSnapshot(ReadOnlySpan<AppearanceFact>.Empty);
-            completeSnapshot?.Invoke();
+            try
+            {
+                appearance.PublishSnapshot(ReadOnlySpan<AppearanceFact>.Empty);
+                completeSnapshot?.Invoke();
+            }
+            catch (Exception exception) { failures = [exception]; }
         }
-        catch (Exception exception) { failures = [exception]; }
         foreach (ActorVisual visual in actors.Values.Reverse()) DisposeActorVisual(visual, ref failures);
         if (candleAppearance is { } candle) Dispose(candle, ref failures); candleAppearance = null;
         foreach (BillboardVisual visual in groundVisuals.Values.Reverse()) visual.Dispose(ref failures);
@@ -749,7 +787,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         dungeonSpellVisualEntityIds.Clear();
         foreach (Appearance visual in doorVisuals.Values.Reverse()) Dispose(visual, ref failures);
         doorVisuals.Clear();
-        doorVisualEntityIds.Clear();
+        doorVisualOrdinals.Clear();
         doorVisualPoses.Clear();
         foreach ((Appearance visual, ulong _) in actionModelVisuals.Values.Reverse()) Dispose(visual, ref failures);
         actionModelVisuals.Clear();
@@ -794,7 +832,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         {
             DaggerfallSiteMesh mesh = inputs.Geometry.Meshes[index];
             Appearance created = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(mesh.Path, worldAppearance.Tint));
-            world.Add((created, mesh.Pose, DaggerfallPresentationObjectIds.WorldMesh(index)));
+            world.Add((created, mesh.Pose, index));
             // A published closure's combined mesh is drawn with every material at its own slot; an assembled
             // block model binds each of its slots to the profile slot its (climate-swapped) texture has.
             MeshMaterialBinding[] bindings = mesh.Materials is null
@@ -819,12 +857,12 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                     : throw new InvalidOperationException($"Door '{door.Id}' refers to missing world material slot {binding.WorldMaterialSlot}."))
                 .ToArray()));
             doorVisuals.Add(door.Id, created);
-            doorVisualEntityIds.Add(door.Id, NextLocationVisualId());
+            doorVisualOrdinals.Add(door.Id, NextLocationVisualOrdinal());
             if (visual.LocalPose is { } local) doorVisualPoses.Add(door.Id, local);
         }
         foreach (DaggerfallCityGateDefinition gate in inputs.CityGates)
             gateVisuals.Add(gate.Id, (StaticVisual(gate.Open.Visual, $"City gate '{gate.Id}'"), StaticVisual(gate.Closed.Visual, $"City gate '{gate.Id}'"),
-                NextLocationVisualId()));
+                NextLocationVisualOrdinal()));
         if (dungeonMotion is null) return;
         foreach ((DaggerfallDungeonActionModelDefinition model, _) in dungeonMotion.Visuals)
         {
@@ -837,7 +875,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                         ? new MeshMaterialBinding(binding.MeshSlot, material)
                         : throw new InvalidOperationException($"Action model '{model.ActionId}' refers to missing world material slot {binding.WorldMaterialSlot}."))
                     .ToArray()));
-                actionModelVisuals.Add(model.ActionId, (created, NextLocationVisualId()));
+                actionModelVisuals.Add(model.ActionId, (created, NextLocationVisualOrdinal()));
             }
             catch
             {
@@ -883,7 +921,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         world.Clear();
         retired.AddRange(doorVisuals.Values.Reverse());
         doorVisuals.Clear();
-        doorVisualEntityIds.Clear();
+        doorVisualOrdinals.Clear();
         doorVisualPoses.Clear();
         retired.AddRange(actionModelVisuals.Values.Select(value => value.Visual).Reverse());
         actionModelVisuals.Clear();
@@ -1272,8 +1310,13 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private ulong NextVisualEntityId() => DaggerfallPresentationObjectIds.Take(ref nextVisualEntityId,
         DaggerfallPresentationObjectIds.TransientVisualFloor, "transient visual");
 
-    private ulong NextLocationVisualId() => DaggerfallPresentationObjectIds.Take(ref nextLocationVisualId,
-        DaggerfallPresentationObjectIds.LocationVisualFloor, "location visual");
+    // Ordinals keep counting across a suspended and resumed location, so a resumed visual never takes a retired one's identity.
+    // Resolving the identity refuses an ordinal beyond the slot's range.
+    private ulong NextLocationVisualOrdinal()
+    {
+        _ = DaggerfallPresentationObjectIds.LocationVisual(DaggerfallPresentationObjectIds.ActiveLocationSlot, nextLocationVisualOrdinal);
+        return nextLocationVisualOrdinal++;
+    }
 
     private NormalizedAttackSequence SelectAttack(IReadOnlyList<NormalizedAttackSequence> sequences, ulong generation, ulong step, long attacker, long target)
     {
