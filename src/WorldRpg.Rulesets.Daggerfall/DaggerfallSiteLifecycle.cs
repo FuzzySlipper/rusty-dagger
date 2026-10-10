@@ -93,9 +93,6 @@ internal sealed class DaggerfallSiteLifecycle
     // navigation cells apart in the shared Engine artifact grid.
     internal const long NavigationCellsPerExteriorCell = 1024;
     private const float NavigationCellSize = DaggerfallExteriorCellResidency.CellSize / NavigationCellsPerExteriorCell;
-    // A wilderness map pixel is 128 terrain tiles of 6.4 units, eight navigation cells each; an RMB block is 16 tiles.
-    private const long NavigationCellsPerTerrainTile = NavigationCellsPerExteriorCell / 128;
-    private const int TerrainTilesPerBlock = 16;
     private bool _locationLoaded;
     private DaggerfallExteriorCellId? _locationCell;
     private bool _admittingInitialResidency;
@@ -1098,9 +1095,8 @@ internal sealed class DaggerfallSiteLifecycle
     {
         if (!TryExteriorProfileCell(profile, out DaggerfallExteriorCellId cell))
             throw new InvalidOperationException($"Exterior profile '{profile.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
-        DaggerfallSiteExterior footprint = ExteriorLocations()[cell];
-        return (checked((long)footprint.TileOriginX * NavigationCellsPerTerrainTile),
-            checked((long)(footprint.TileOriginY + (footprint.Height * TerrainTilesPerBlock)) * NavigationCellsPerTerrainTile));
+        (int tileX, int tileY) = DaggerfallLocationTerrainFrame.TileOffset(ExteriorLocations()[cell]);
+        return (checked(tileX * DaggerfallLocationTerrainFrame.NavigationCellsPerTile), checked(tileY * DaggerfallLocationTerrainFrame.NavigationCellsPerTile));
     }
 
     private float ExteriorLocationSampleHeight(DaggerfallSiteProfile profile)
@@ -1675,6 +1671,10 @@ internal sealed class DaggerfallSiteLifecycle
         _exteriorSurfaceCache.Clear();
     }
 
+    /// <summary>The terrain tiles the resident environment draws over one cell, empty for a cell outside the window.</summary>
+    internal IReadOnlyList<DaggerfallExteriorTerrainTile> ExteriorTerrainTiles(DaggerfallExteriorCellId cell) =>
+        _exteriorEnvironment?.TerrainTilesFor(cell) ?? [];
+
     private DaggerfallExteriorCellResidency EnsureExteriorResidency()
     {
         ObjectDisposedException.ThrowIf(_retired, this);
@@ -1685,8 +1685,7 @@ internal sealed class DaggerfallSiteLifecycle
             if (_exteriorSurfaceCache.TryGetValue(cell, out DaggerfallTerrainSurface? cached)) return cached;
             DaggerfallTerrainSurface surface = DaggerfallTerrainSurfaceBuilder.Build(_definitions.Terrain, cell.X, cell.Y);
             if (exteriors.TryGetValue(cell, out DaggerfallSiteExterior? exterior))
-                surface = DaggerfallTerrainSurfaceBuilder.ApplyLocationFlattening(surface,
-                    new DaggerfallTerrainLocationFlattening(exterior.MinX, exterior.MaxX, exterior.MinY, exterior.MaxY));
+                surface = DaggerfallTerrainSurfaceBuilder.ApplyLocationFlattening(surface, DaggerfallLocationTerrainFrame.Flattening(exterior));
             _exteriorSurfaceCache.Add(cell, surface);
             return surface;
         };

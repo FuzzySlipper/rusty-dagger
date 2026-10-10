@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Numerics;
+using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using Rusty.Engine.Testing;
@@ -454,6 +455,120 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             Assert.True(Vector2.Distance(new(outside.X, outside.Z), new(returned.X, returned.Z)) < 1e-2F, $"Left at {outside}, returned to {returned}.");
             Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Back outside at {returned}, the player is at {after} and not grounded.");
             Assert.InRange(returned.Y - after.Y, -.25F, 1.5F);
+            AssertAccepted(run);
+        }
+        finally
+        {
+            host.Call(_ => run.Dispose());
+        }
+    }
+
+    /// <summary>
+    /// Daggerfall, a full eight-by-eight city, entered from the island: its blocks stand over their own map pixel's
+    /// terrain, which the donor flattens and paints under the location, so the player stands on drawn ground at the
+    /// terrain's height rather than over a neighbouring pixel's unflattened terrain. Standing still for hundreds of
+    /// updates costs the same each update, creates no Engine resources and holds managed memory flat, and a player
+    /// walking into a building's front and standing there stays grounded with no vertical motion.
+    /// </summary>
+    [Fact]
+    public void Daggerfall_stands_on_its_own_ground_and_holds_its_update_cost_flat()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallSiteRecord city = world.Definitions.Locations.Records.Single(record => record.Name == "Daggerfall" && record.Kind == DaggerfallSiteKind.TownCity);
+        DaggerfallSiteExterior exterior = city.Exterior!;
+        Assert.Equal((8, 8), (exterior.Width, exterior.Height));
+        DaggerfallWorldProfileKey key = DaggerfallWorldProfileIds.Exterior(city.Id);
+        DaggerfallExteriorCellId cell = new(exterior.MapPixelX, exterior.MapPixelY);
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, city.Id);
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        try
+        {
+            Assert.True(host.Call(_ => run.Session.TryTransitionTo(key)));
+            run.Engine.RecordsPublishedHistory = false;
+            Steps(host, run, 3);
+            AssertAccepted(run);
+
+            // The player and every one of the city's drawn meshes lie over the city's own terrain cell.
+            WorldPoint player = run.Session.State.PlayerControl.Position!.Value;
+            Assert.Equal(cell, run.Session.Sites.CurrentExteriorCell());
+            AppearanceFact terrain = Assert.Single(run.Graphics.LastSnapshot, fact => fact.ObjectId == DaggerfallPresentationObjectIds.TerrainCell(cell.X, cell.Y));
+            Vector3 corner = terrain.Transform.Translation;
+            AppearanceFact[] meshes = [.. run.Graphics.LastSnapshot.Where(fact => fact.ObjectId >= DaggerfallPresentationObjectIds.WorldMesh(0, 0)
+                && fact.ObjectId < DaggerfallPresentationObjectIds.WorldMesh(1, 0) && (fact.ObjectId & uint.MaxValue) < 1UL << 31)];
+            Assert.Equal(world.Profiles.Require(key).Geometry.Meshes.Count, meshes.Length);
+            Assert.All(meshes, mesh =>
+            {
+                Assert.InRange(mesh.Transform.Translation.X - corner.X, 0F, DaggerfallExteriorCellResidency.CellSize);
+                Assert.InRange(mesh.Transform.Translation.Z - corner.Z, 0F, DaggerfallExteriorCellResidency.CellSize);
+            });
+            // The drawn terrain under the player is the flattened ground they stand on.
+            DaggerfallTerrainSurface surface = DaggerfallTerrainSurfaceBuilder.ApplyLocationFlattening(
+                DaggerfallTerrainSurfaceBuilder.Build(world.Definitions.Terrain, cell.X, cell.Y), DaggerfallLocationTerrainFrame.Flattening(exterior));
+            float ground = corner.Y + DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surface,
+                (player.X - corner.X) / DaggerfallExteriorCellResidency.CellSize, (player.Z - corner.Z) / DaggerfallExteriorCellResidency.CellSize);
+            output.WriteLine($"Arrived at {player} over the city's cell at {corner}; drawn ground {ground}.");
+            Assert.InRange(player.Y - ground, .7F, 1.1F);
+
+            // Each block's ground tiles lie under that block: the donor lays a block's tile (x, y) along the block's rows,
+            // which run north (+Z in its left-handed frame) and which the right-handed content runs along -Z, so the terrain
+            // tile under each tile's place in the content is the block's own, mirrored across its rows.
+            IReadOnlyList<DaggerfallExteriorTerrainTile> tiles = run.Session.Sites.ExteriorTerrainTiles(cell);
+            Assert.Equal(128 * 128, tiles.Count);
+            Vector3 frame = run.Session.Sites.ExteriorProfileFrameTranslation(key) - corner;
+            const float tile = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
+            int laid = 0;
+            foreach (DaggerfallSiteBlock block in exterior.Blocks)
+                for (int y = 0; y < 16; y++)
+                    for (int x = 0; x < 16; x++)
+                    {
+                        int source = ((exterior.TileOriginY + (block.Y * 16) + y) * 128) + exterior.TileOriginX + (block.X * 16) + x;
+                        if (!exterior.GroundTiles.Contains(source)) continue;
+                        int column = (int)MathF.Floor((frame.X + (((block.X * 16) + x + .5F) * tile)) / tile);
+                        int row = (int)MathF.Floor((frame.Z - (((block.Y * 16) + y + .5F) * tile)) / tile);
+                        byte bits = exterior.GroundTiles.At(source);
+                        Assert.Equal(new DaggerfallExteriorTerrainTile(bits & 0x3F, (bits & 0x40) != 0, (bits & 0x80) != 0, Mirrored: true),
+                            tiles[(row * 128) + column]);
+                        laid++;
+                    }
+            output.WriteLine($"{laid} ground tiles of {exterior.Blocks.Count} blocks lie under their blocks.");
+            Assert.True(laid > 64 * 128, $"Only {laid} ground tiles were laid under Daggerfall's blocks.");
+
+            // Standing still in the city at night (no civilians walk): each update costs the same.
+            int created = run.Graphics.CreatedResources;
+            List<(double Milliseconds, long Managed)> buckets = [];
+            for (int bucket = 0; bucket < 8; bucket++)
+            {
+                Stopwatch watch = Stopwatch.StartNew();
+                Steps(host, run, 50);
+                watch.Stop();
+                buckets.Add((watch.Elapsed.TotalMilliseconds / 50, GC.GetTotalMemory(forceFullCollection: true)));
+                output.WriteLine($"Updates {bucket * 50}-{bucket * 50 + 49}: {buckets[^1].Milliseconds:F1} ms each, managed {buckets[^1].Managed / (1024 * 1024)} MiB, "
+                    + $"working set {Environment.WorkingSet / (1024 * 1024)} MiB, snapshot {run.Graphics.LastSnapshotObjects} objects.");
+            }
+            Assert.Equal(created, run.Graphics.CreatedResources);
+            double early = (buckets[0].Milliseconds + buckets[1].Milliseconds) / 2, late = (buckets[^1].Milliseconds + buckets[^2].Milliseconds) / 2;
+            Assert.True(late < (early * 2) + 2, $"Updates cost {early:F1} ms at first and {late:F1} ms after 400.");
+            Assert.True(buckets[^1].Managed - buckets[0].Managed < 32L * 1024 * 1024,
+                $"Managed memory grew from {buckets[0].Managed / (1024 * 1024)} to {buckets[^1].Managed / (1024 * 1024)} MiB standing still.");
+            AssertStanding(run, player);
+
+            // Pressed against building fronts and left standing, the player neither rises nor falls.
+            foreach (DaggerfallSiteAnchor anchor in world.Profiles.Require(key).Anchors.Values
+                .Where(anchor => anchor.Id.StartsWith("building/", StringComparison.Ordinal)).Take(6))
+            {
+                Assert.True(host.Call(_ => run.Session.Sites.TryRelocatePlayer(key, anchor with { YawRadians = anchor.YawRadians + MathF.PI })));
+                host.Call(_ => run.Walk(40));
+                Steps(host, run, 3);
+                WorldPoint stood = run.Session.State.PlayerControl.Position!.Value;
+                for (int step = 0; step < 60; step++)
+                {
+                    host.Call(_ => run.Step());
+                    WorldPoint now = run.Session.State.PlayerControl.Position!.Value;
+                    Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Against {anchor.Id} the player left the ground at {now} after {step} still updates.");
+                    Assert.True(MathF.Abs(now.Y - stood.Y) < 1e-3F, $"Against {anchor.Id} the player moved from {stood} to {now} after {step} still updates.");
+                }
+            }
             AssertAccepted(run);
         }
         finally

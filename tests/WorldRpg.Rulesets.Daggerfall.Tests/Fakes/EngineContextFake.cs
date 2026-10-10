@@ -33,6 +33,12 @@ internal class EngineContextFake : DispatchProxy
     /// <summary>Every snapshot published so far, decoded in order: one admitted update can publish more than one.</summary>
     internal IReadOnlyList<object?> PublishedHistory() => ((UiServiceFake)(object)ui).History;
 
+    /// <summary>
+    /// Whether every published projection is decoded into <see cref="PublishedHistory"/>. A run measuring the product's
+    /// own step cost and memory over hundreds of updates turns it off, keeping only the last projection.
+    /// </summary>
+    internal bool RecordsPublishedHistory { get; set; } = true;
+
     /// <summary>Read one named field of a nested object of the last published projection.</summary>
     internal string? PublishedNested(string parent, string key) => ((UiServiceFake)(object)ui).Nested(parent, key);
 
@@ -350,7 +356,7 @@ internal class EngineContextFake : DispatchProxy
         private object? Publish(object?[]? arguments)
         {
             LastProjection = arguments is [UiProjection projection, ..] ? projection : null;
-            History.Add(LastProjection is { } published ? Decode(published, published.Value.Root) : null);
+            if (owner.RecordsPublishedHistory) History.Add(LastProjection is { } published ? Decode(published, published.Value.Root) : null);
             return null;
         }
 

@@ -15,6 +15,10 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         AssertUv(new(0.2F, 0.3F), false, true, new(0.2F, 0.7F));
         AssertUv(new(0.2F, 0.3F), true, false, new(0.3F, 0.8F));
         AssertUv(new(0.2F, 0.3F), true, true, new(0.3F, 0.2F));
+        // A location ground tile under right-handed content is mirrored across its rows before its own flags apply.
+        AssertUv(new(0.2F, 0.3F), false, false, new(0.2F, 0.7F), mirrored: true);
+        AssertUv(new(0.2F, 0.3F), true, false, new(0.7F, 0.8F), mirrored: true);
+        AssertUv(new(0.2F, 0.3F), true, true, new(0.7F, 0.2F), mirrored: true);
     }
 
     [Fact]
@@ -274,9 +278,9 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         [new Triangle(0, 2, 4)],
         [0F, 0F, 0F]);
 
-    private static void AssertUv(Vector2 input, bool rotated, bool flipped, Vector2 expected)
+    private static void AssertUv(Vector2 input, bool rotated, bool flipped, Vector2 expected, bool mirrored = false)
     {
-        Vector2 actual = DaggerfallExteriorTerrainAppearance.TransformTileUv(input, rotated, flipped);
+        Vector2 actual = DaggerfallExteriorTerrainAppearance.TransformTileUv(input, rotated, flipped, mirrored);
         Assert.Equal(expected.X, actual.X, 5);
         Assert.Equal(expected.Y, actual.Y, 5);
     }
