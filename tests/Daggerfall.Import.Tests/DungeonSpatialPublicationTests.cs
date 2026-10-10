@@ -209,6 +209,25 @@ public sealed class DungeonSpatialPublicationTests
         Assert.All(spatial.Triangles, triangle => Assert.Equal(3, new[] { triangle.A, triangle.B, triangle.C }.Distinct().Count()));
     }
 
+    /// <summary>
+    /// A flat floor's supports are its height exactly. Interpolating equal corner heights with rounded barycentric
+    /// weights would otherwise publish supports a hair below the floor, outside the artifact's bounds, which the
+    /// Engine refuses when the dungeon block is admitted.
+    /// </summary>
+    [Fact]
+    public void FlatFloorSupportsStayWithinTheFloorsHeight()
+    {
+        const float height = 12.8F;
+        NormalizedMesh floor = Floor("mesh/rdb-floor", "artifact/static/rdb", "material/floor", height, true) with
+        {
+            Vertices = [new(0F, height, -51.2F), new(51.2F, height, -51.2F), new(51.2F, height, 0F), new(0F, height, 0F)],
+        };
+        NormalizedNavigationSurface navigation = OfflineNavigationDeriver.Derive("navigation/rdb-floor", "artifact/spatial/rdb",
+            [floor], NavigationDerivationConfig.ClassicDefault);
+        Assert.NotEmpty(navigation.Cells);
+        Assert.All(navigation.Cells, cell => Assert.Equal(height, cell.SupportHeight));
+    }
+
     private static NormalizedMesh Floor(string id, string artifactId, string material, float height, bool collision, float minimum = 0F, bool upward = true) => new(
         id,
         artifactId,

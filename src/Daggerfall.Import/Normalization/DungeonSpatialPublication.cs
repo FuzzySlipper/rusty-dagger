@@ -490,7 +490,13 @@ public static class OfflineNavigationDeriver
         }
 
         height = (first * triangle.A.Y) + (second * triangle.B.Y) + (third * triangle.C.Y);
-        return float.IsFinite(height);
+        if (!float.IsFinite(height)) return false;
+        // The support lies on the triangle, so within its corners' heights. Float rounding of the weights (or a centre
+        // just past an edge, inside the tolerance) can put it a hair outside them: a flat floor at 12.8 would publish a
+        // 12.799999 support below the artifact's bounds, and the Engine refuses such an artifact when it is admitted.
+        height = Math.Clamp(height, MathF.Min(triangle.A.Y, MathF.Min(triangle.B.Y, triangle.C.Y)),
+            MathF.Max(triangle.A.Y, MathF.Max(triangle.B.Y, triangle.C.Y)));
+        return true;
     }
 
     private readonly record struct CollisionTriangle(NormalizedVector3 A, NormalizedVector3 B, NormalizedVector3 C);
