@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Numerics;
 using Rusty.Engine.Entities;
+using Rusty.Engine.Mechanics;
 using Rusty.Engine.Testing;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
@@ -297,6 +298,162 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             Assert.True(host.Call(_ => run.Session.TryTransitionTo(hold)));
             Assert.Equal(hold, run.Session.Sites.ActiveProfile);
             Steps(host, run, 3);
+            AssertAccepted(run);
+        }
+        finally
+        {
+            host.Call(_ => run.Dispose());
+        }
+    }
+
+    /// <summary>
+    /// The playtested highland journey: The Crypts of Rlertim lie about 900 units up in the Dragontail Mountains. Its
+    /// blocks stand on the flattened terrain tiles the donor lays them on, the traveller lands on the terrain at the
+    /// location's edge (rather than at the location's height inside a hillside, falling for ever), the entrance is a
+    /// short walk away, and the dungeon is entered and left again.
+    /// </summary>
+    [Fact]
+    public void Travel_to_the_crypts_of_rlertim_lands_on_its_terrain_and_enters_and_leaves_its_dungeon()
+    {
+        AssembledWorld world = Shared.Value;
+        HighlandJourney(world, world.Definitions.Locations.Records.Single(record => record.Name == "THe Crypts of Rlertim"));
+    }
+
+    /// <summary>The same journey to the highest other dungeon of the Dragontail Mountains whose entrance leads inside.</summary>
+    [Fact]
+    public void Travel_to_another_highland_dungeon_lands_on_its_terrain_and_enters_and_leaves_it()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallSiteRecord crypts = world.Definitions.Locations.Records.Single(record => record.Name == "THe Crypts of Rlertim");
+        DaggerfallSiteRecord site = world.Definitions.Locations.Records
+            .Where(record => record.Region == crypts.Region && record.Id != crypts.Id && record.Exterior is not null
+                && world.Profiles.TryGet(DaggerfallWorldProfileIds.Exterior(record.Id), out DaggerfallSiteProfile exterior)
+                && exterior.Portals.Any(portal => portal.DestinationLogicalProfile == DaggerfallWorldProfileIds.Dungeon(record.Id).LogicalId)
+                && world.Profiles.Contains(DaggerfallWorldProfileIds.Dungeon(record.Id)))
+            .OrderByDescending(record => world.Definitions.Terrain.GetHeight(record.MapPixelX, record.MapPixelY))
+            .ThenBy(record => record.Id.Index)
+            .First();
+        HighlandJourney(world, site);
+    }
+
+    /// <summary>
+    /// A player dropped beneath the terrain (the height field has nothing below it) is stood back on its surface above
+    /// where they fell, rather than falling without end, and takes no fall damage for it.
+    /// </summary>
+    [Fact]
+    public void A_player_beneath_the_terrain_is_stood_back_on_it()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallSiteRecord crypts = world.Definitions.Locations.Records.Single(record => record.Name == "THe Crypts of Rlertim");
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, crypts.Id);
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        try
+        {
+            host.Call(_ => run.Travel(crypts));
+            Steps(host, run, 5);
+            Assert.True(run.Session.State.PlayerControl.Motion.Grounded);
+            WorldPoint stood = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            double health = run.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
+
+            WorldPoint local = run.Session.State.PlayerControl.Position!.Value;
+            run.Session.State.PlayerControl.MoveTo(local.ToVector() - (Vector3.UnitY * 40F));
+            Steps(host, run, 5);
+            WorldPoint recovered = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            output.WriteLine($"Stood at {stood}; dropped 40 units beneath the terrain, recovered to {recovered}.");
+            Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Dropped beneath the terrain, the player is at {recovered} and not grounded.");
+            Assert.True(MathF.Abs(recovered.Y - stood.Y) < .25F, $"Stood at {stood}, recovered to {recovered}.");
+            Assert.True(Vector2.Distance(new(stood.X, stood.Z), new(recovered.X, recovered.Z)) < .25F, $"Stood at {stood}, recovered to {recovered}.");
+            Assert.Equal(health, run.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
+            AssertAccepted(run);
+        }
+        finally
+        {
+            host.Call(_ => run.Dispose());
+        }
+    }
+
+    /// <summary>
+    /// Travels from the island to <paramref name="site"/>, checks the location and the arrival against its terrain, walks
+    /// in at its dungeon entrance and comes back out.
+    /// </summary>
+    private void HighlandJourney(AssembledWorld world, DaggerfallSiteRecord site)
+    {
+        DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(site.Id), dungeon = DaggerfallWorldProfileIds.Dungeon(site.Id);
+        DaggerfallSiteExterior footprint = site.Exterior ?? throw new InvalidOperationException($"{site.Name} has no exterior.");
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, site.Id);
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        try
+        {
+            host.Call(_ => run.Travel(site));
+            Assert.Equal(exterior, run.Session.Sites.ActiveProfile);
+
+            // The location's frame lies over the tiles its blocks occupy in its map pixel, at the flattened terrain's height.
+            DaggerfallTerrainSurface surface = DaggerfallTerrainSurfaceBuilder.Build(world.Definitions.Terrain, footprint.MapPixelX, footprint.MapPixelY,
+                new DaggerfallTerrainLocationFlattening(footprint.MinX, footprint.MaxX, footprint.MinY, footprint.MaxY));
+            Vector3 frame = run.Session.Sites.ExteriorProfileFrameTranslation(exterior) - run.Session.Sites.LocalCompensation;
+            const float tile = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
+            Assert.Equal(footprint.TileOriginX * tile, frame.X, 1e-2F);
+            Assert.Equal((footprint.TileOriginY + (footprint.Height * 16)) * tile, frame.Z, 1e-2F);
+            float centreX = (footprint.TileOriginX + (footprint.Width * 8)) / 128F, centreZ = (footprint.TileOriginY + (footprint.Height * 8)) / 128F;
+            float flattened = DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surface, centreX, centreZ);
+            output.WriteLine($"{site.Name} ({site.Id}): frame {frame}, flattened terrain at the footprint's centre {flattened}.");
+            Assert.True(frame.Y > 500F, $"{site.Name} is no highland location: its frame stands at {frame.Y}.");
+            Assert.Equal(flattened, frame.Y, .05F);
+
+            // The traveller stands on the terrain at the location's edge.
+            WorldPoint local = run.Session.State.PlayerControl.Position!.Value;
+            WorldPoint landed = run.Session.Sites.ExteriorSitePosition(local);
+            Vector3 cellLocal = local.ToVector() - run.Session.Sites.LocalCompensation;
+            float ground = DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surface, cellLocal.X / DaggerfallExteriorCellResidency.CellSize,
+                cellLocal.Z / DaggerfallExteriorCellResidency.CellSize);
+            output.WriteLine($"Landed at {landed} in the location frame; the terrain there is {ground - frame.Y} above the frame.");
+            Assert.InRange(cellLocal.Y - ground, .7F, 1.3F);
+            Steps(host, run, 10);
+            WorldPoint settled = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Landed at {landed}, the player is at {settled} and not grounded.");
+            Assert.True(MathF.Abs(settled.Y - landed.Y) < .25F, $"Landed at {landed}, the player settled at {settled}.");
+            AssertAccepted(run);
+
+            // The entrance is in the location the traveller landed at the edge of.
+            DaggerfallSitePortal entrance = world.Profiles.Require(exterior).Portals
+                .First(portal => portal.DestinationLogicalProfile == dungeon.LogicalId);
+            float reach = MathF.Max(footprint.Width, footprint.Height) * 102.4F * 1.5F;
+            float distance = Vector2.Distance(new(entrance.Position.X, entrance.Position.Z), new(settled.X, settled.Z));
+            output.WriteLine($"The entrance at {entrance.Position} is {distance} units from the landing.");
+            Assert.True(distance < reach, $"The entrance at {entrance.Position} is {distance} units from the landing at {settled}.");
+            // And the traveller walks towards it over the ground, not through or under it.
+            Vector2 heading = Vector2.Normalize(new(entrance.Position.X - settled.X, entrance.Position.Z - settled.Z));
+            run.Session.State.PlayerControl.YawRadians = WorldRpg.Kit.Actors.ActorHeading.Yaw(new Vector3(heading.X, 0F, heading.Y));
+            host.Call(_ => run.Walk(90));
+            Steps(host, run, 5);
+            WorldPoint walked = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            float closer = distance - Vector2.Distance(new(entrance.Position.X, entrance.Position.Z), new(walked.X, walked.Z));
+            output.WriteLine($"Walked towards the entrance to {walked}, {closer} units closer.");
+            Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Walking towards the entrance, the player is at {walked} and not grounded.");
+            Assert.True(closer > 2F, $"Walking towards the entrance from {settled}, the player only reached {walked}.");
+
+            (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) door = run.Session.Sites.Projection.Portals.All
+                .Single(value => value.Portal.Id == entrance.Id);
+            WorldPoint outside = host.Call(_ => run.Use(door.Portal, door.Entity));
+            Assert.Equal(dungeon, run.Session.Sites.ActiveProfile);
+            WorldPoint inside = run.Session.State.PlayerControl.Position!.Value;
+            Steps(host, run, 3);
+            AssertStanding(run, inside);
+            AssertAccepted(run);
+
+            (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) exit = run.Session.Sites.Projection.Portals.All.First();
+            _ = host.Call(_ => run.Use(exit.Portal, exit.Entity));
+            Assert.Equal(exterior, run.Session.Sites.ActiveProfile);
+            WorldPoint returned = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            // The pose left outside was a metre in front of the door at its centre height, where the test stood the player to use it.
+            Steps(host, run, 20);
+            WorldPoint after = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            output.WriteLine($"Left the location at {outside}, came back out at {returned} and stood at {after}.");
+            Assert.True(Vector2.Distance(new(outside.X, outside.Z), new(returned.X, returned.Z)) < 1e-2F, $"Left at {outside}, returned to {returned}.");
+            Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Back outside at {returned}, the player is at {after} and not grounded.");
+            Assert.InRange(returned.Y - after.Y, -.25F, 1.5F);
             AssertAccepted(run);
         }
         finally

@@ -50,9 +50,10 @@ public sealed class AssembledWorldTravelSessionTests
         Assert.Equal(exterior, run.Session.Sites.ActiveProfile);
         DaggerfallSiteProfile town = world.Profiles.Require(exterior);
         WorldPoint landed = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
-        // A city receives the traveller at one of its own start markers.
+        // A city receives the traveller at one of its own start markers, stood on the terrain there.
         Assert.Contains(town.Anchors.Values, anchor => anchor.Id.StartsWith(DaggerfallLocationAssembly.StartMarkerAnchorPrefix, StringComparison.Ordinal)
-            && Vector3.Distance(anchor.Position.ToVector(), landed.ToVector()) < 1e-3F);
+            && Vector2.Distance(new(anchor.Position.X, anchor.Position.Z), new(landed.X, landed.Z)) < 1e-3F
+            && landed.Y >= anchor.Position.Y - 1e-3F);
         // Its neighbours in the exterior window stream from their blocks too.
         Assert.All(run.Session.Sites.ResidentExteriorProfiles, key => Assert.Equal(DaggerfallWorldProfileIds.Exterior(key.Site), key));
 

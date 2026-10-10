@@ -249,6 +249,10 @@ internal sealed class AssembledWorldRun : IDisposable
         Assert.Null(Session.ReadTravelPresentation().Message);
         Submit(new { action = "travel-accept", key = quote.Identity, amount = quote.TotalCost });
         Assert.Equal(DaggerfallTravelOutcome.Arrived, Session.State.Travel.LastResult!.Outcome);
+        // The purse's leftover coins weigh far more than the traveller can carry; taken back, they walk on arrival.
+        ulong left = Session.State.Inventory.Read().Stacks.Single(value => value.Id == stack).Quantity;
+        Session.State.Inventory.Consume(new(stack, left));
+        Session.State.ItemInstances.RemoveStack(DaggerfallItemOwner.Player, stack);
     }
 
     /// <summary>Uses the target at a live position, returning where the player stood (in the active frame's profile coordinates when outside).</summary>
