@@ -3,6 +3,7 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Crime;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -32,7 +33,7 @@ internal sealed partial class DaggerfallSession
             {
                 int building = _sites.Projection.Inputs.InteriorBuilding?.BuildingType ?? -1;
                 if (!(building == 15 || building is >= 17 and <= 20
-                    || DaggerfallNpcServiceFacts.IsShop(building) && DaggerfallCrimePolicy.IsPublicEntryHour(building, _time.Calendar.Hour)))
+                    || DaggerfallNpcServiceFacts.IsShop(building) && DaggerfallBuildingEntryPolicy.IsOpenHour(building, _time.Calendar.Hour)))
                     throw new NotSupportedException("This building is not an open shop, tavern, or residence for city guard arrival.");
                 state = Result(DaggerfallQuestGuardSpawnOutcome.Pending, count);
             }

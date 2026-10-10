@@ -232,6 +232,19 @@ internal sealed class AssembledWorldRun : IDisposable
     /// <summary>One admitted update with no input.</summary>
     internal void Step() => Session.Update(new ProductUpdate(OuterUpdate(++_step), []));
 
+    /// <summary>Changes the activation mode as the mode buttons do.</summary>
+    internal void SetMode(string mode) => Submit(new { action = "activation-mode", mode });
+
+    /// <summary>Advances the session's calendar to the next whole <paramref name="hour"/>.</summary>
+    internal void AdvanceToHour(int hour)
+    {
+        DaggerfallCalendarSave now = DaggerfallSavePayload.Read(Session.CaptureSave()).Calendar;
+        long seconds = ((((hour - now.Hour) % 24) + 24) % 24 * 3600L) - (now.Minute * 60L) - now.Second;
+        if (seconds <= 0) seconds += 24 * 3600L;
+        Session.AdvanceElapsedTime(seconds);
+        Assert.Equal(hour, DaggerfallSavePayload.Read(Session.CaptureSave()).Calendar.Hour);
+    }
+
     /// <summary>Walks forward for <paramref name="steps"/> admitted updates, holding the forward key and releasing it after.</summary>
     internal void Walk(int steps)
     {

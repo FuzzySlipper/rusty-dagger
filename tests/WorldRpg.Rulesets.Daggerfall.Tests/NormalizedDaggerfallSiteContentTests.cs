@@ -433,11 +433,49 @@ public sealed class NormalizedDaggerfallSiteContentTests
             GeneratedContent(root), Encoding.UTF8.GetBytes(payload.Replace("weapon.unarmed", "weapon.missing", StringComparison.Ordinal)), definitions));
     }
 
-    private static ProductContent GeneratedContent(string root)
+    /// <summary>
+    /// A published building door whose source turn is not a yaw alone is admitted with its whole turn, as an
+    /// assembled block door is: its closed pose and collision frame come from all three angles.
+    /// </summary>
+    [Fact]
+    public void Admits_a_published_door_whose_source_turn_is_not_yaw_only()
+    {
+        string root = TestData.RepositoryRoot;
+        const string normalized = "worldrpg/imports/charing/exterior/normalized.json";
+        string? turned = null;
+        ProductContent content = GeneratedContent(root, (relative, bytes) =>
+        {
+            if (!StringComparer.Ordinal.Equals(relative, normalized)) return bytes;
+            JsonObject world = JsonNode.Parse(bytes)!.AsObject();
+            JsonObject door = world["world"]!["doors"]!.AsArray().Select(value => value!.AsObject())
+                .First(value => value["exteriorBuildingIndex"] is not null);
+            turned = door["id"]!.GetValue<string>();
+            door["rotationDegrees"]!["x"] = 10;
+            door["rotationDegrees"]!["z"] = -5;
+            return Encoding.UTF8.GetBytes(world.ToJsonString());
+        });
+
+        DaggerfallSiteProfile exterior = DaggerfallSiteContent.Read(content,
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.charing-exterior.json")), TestPayload.Definitions);
+
+        Assert.True(DaggerfallSiteContent.TryDoorIdentity(Assert.IsType<string>(turned), out DaggerfallRdbDoorId id));
+        DaggerfallRdbDoorDefinition admitted = Assert.Single(exterior.Doors, door => door.Id == id);
+        Assert.Equal(10F, admitted.RotationDegrees.X);
+        Assert.Equal(-5F, admitted.RotationDegrees.Z);
+        Assert.NotNull(admitted.ExteriorBuilding);
+        Assert.True(admitted.BoundsMin.X < admitted.BoundsMax.X && admitted.BoundsMin.Y < admitted.BoundsMax.Y && admitted.BoundsMin.Z < admitted.BoundsMax.Z);
+    }
+
+    private static ProductContent GeneratedContent(string root, Func<string, byte[], byte[]>? mutate = null)
     {
         string contentRoot = Path.Combine(root, "content");
         ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports"), "*", SearchOption.AllDirectories)
-            .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), File.ReadAllBytes(path)))
+            .Select(path =>
+            {
+                string relative = Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/');
+                byte[] bytes = File.ReadAllBytes(path);
+                return new ProductContentFile(Encoding.UTF8.GetBytes(relative), mutate is null ? bytes : mutate(relative, bytes));
+            })
             .Concat(ClassicGroupFiles(root))
             .ToArray();
         return new ProductContent(files);

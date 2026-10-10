@@ -37,9 +37,10 @@ public sealed class AssembledWorldTravelSessionTests
         DaggerfallSiteRecord city = world.Unpublished(record => record.Kind == DaggerfallSiteKind.TownCity && record.Exterior is not null);
         DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(city.Id);
 
-        // The building entered: one whose door starts unlocked and whose interior the catalog places.
-        DaggerfallRdbDoorDefinition door = world.Profiles.Require(exterior).Doors.First(candidate => candidate.StartingLockValue == 0
-            && candidate.ExteriorBuilding is { } building && world.Profiles.Contains(DaggerfallWorldProfileIds.Interior(city.Id, building)));
+        // The building entered: a tavern, which keeps no hours, whose interior the catalog places.
+        DaggerfallRdbDoorDefinition door = world.Profiles.Require(exterior).Doors.First(candidate =>
+            candidate.ExteriorBuilding is { } building && BuildingType(city, building) == 15
+            && world.Profiles.Contains(DaggerfallWorldProfileIds.Interior(city.Id, building)));
         DaggerfallSiteBuildingId entered = door.ExteriorBuilding!.Value;
         DaggerfallWorldProfileKey interior = DaggerfallWorldProfileIds.Interior(city.Id, entered);
 
@@ -65,8 +66,8 @@ public sealed class AssembledWorldTravelSessionTests
 
         // Enter the building through its door.
         DaggerfallDoorView live = arrived.Session.Sites.Projection.Doors.Read(door.Id);
-        Assert.False(live.IsLocked);
         WorldPoint outside = arrived.Use(live.Pose.Translation, live.Entity);
+        Assert.True(arrived.Session.ActivationView.Applied, arrived.Session.ActivationView.Message);
         Assert.Equal(interior, arrived.Session.Sites.ActiveProfile);
         Assert.Equal(exterior, arrived.Session.Sites.ReturnProfile);
         RulesetSavePayload inside = arrived.Session.CaptureSave();
@@ -177,6 +178,81 @@ public sealed class AssembledWorldTravelSessionTests
         using AssembledWorldRun restored = world.Restore(run.Session.CaptureSave(), city.Id);
         Assert.Equal(!day, restored.Session.Sites.Projection.CityGates.Open);
     }
+
+    /// <summary>
+    /// Daggerfall's assembled buildings follow the donor's entry rule (PlayerActivate.BuildingIsUnlocked): before dawn a
+    /// shop is shut ("Locked.", and Information mode gives its name and storeClosed hours) and opens with its hours, a
+    /// tavern is open at any hour, and a residence is locked and is entered only by picking its lock, which is breaking in.
+    /// </summary>
+    [Fact]
+    public void Daggerfall_s_shops_keep_their_hours_its_taverns_stay_open_and_its_houses_are_locked()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallSiteRecord city = world.Definitions.Locations.Records.Single(record => record.Name == "Daggerfall" && record.Kind == DaggerfallSiteKind.TownCity);
+        DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(city.Id);
+        DaggerfallSiteProfile town = world.Profiles.Require(exterior);
+        DaggerfallRdbDoorDefinition Door(Func<int, bool> type) => town.Doors.First(candidate =>
+            candidate.ExteriorBuilding is { } building && type(BuildingType(city, building))
+            && world.Profiles.Contains(DaggerfallWorldProfileIds.Interior(city.Id, building)));
+        DaggerfallRdbDoorDefinition shop = Door(type => type is 0 or 2 or 5 or 6 or 7 or 8 or 9 or 12 or 13);
+        DaggerfallRdbDoorDefinition tavern = Door(type => type == 15);
+        DaggerfallRdbDoorDefinition house = Door(type => type is 18 or 19 or 20);
+        DaggerfallWorldProfileKey Inside(DaggerfallRdbDoorDefinition door) => DaggerfallWorldProfileIds.Interior(city.Id, door.ExteriorBuilding!.Value);
+
+        using AssembledWorldRun run = world.Start(city.Id, shop.ExteriorBuilding);
+        Assert.True(run.Session.TryTransitionTo(exterior, DaggerfallLocationAssembly.StartAnchor));
+        run.AdvanceToHour(4);
+        RulesetSavePayload night = run.Session.CaptureSave();
+
+        DaggerfallDoorView live = run.Session.Sites.Projection.Doors.Read(shop.Id);
+        run.Use(live.Pose.Translation, live.Entity);
+        Assert.False(run.Session.ActivationView.Applied);
+        Assert.Equal("Locked.", run.Session.ActivationView.Message);
+        Assert.Equal(exterior, run.Session.Sites.ActiveProfile);
+        run.SetMode("info");
+        run.Use(live.Pose.Translation, live.Entity);
+        string name = run.Session.Site.RequireBuilding(city.Id, shop.ExteriorBuilding!.Value).Name;
+        Assert.False(string.IsNullOrWhiteSpace(name));
+        Assert.StartsWith($"{name}. Store is closed. Open from ", run.Session.ActivationView.Message);
+        run.AdvanceToHour(10);
+        run.SetMode("grab");
+        live = run.Session.Sites.Projection.Doors.Read(shop.Id);
+        run.Use(live.Pose.Translation, live.Entity);
+        Assert.True(run.Session.ActivationView.Applied, run.Session.ActivationView.Message);
+        Assert.Equal(Inside(shop), run.Session.Sites.ActiveProfile);
+        Assert.Empty(run.Session.State.Crime.Incidents);
+
+        using AssembledWorldRun drinking = world.Restore(night, city.Id, tavern.ExteriorBuilding);
+        live = drinking.Session.Sites.Projection.Doors.Read(tavern.Id);
+        drinking.Use(live.Pose.Translation, live.Entity);
+        Assert.True(drinking.Session.ActivationView.Applied, drinking.Session.ActivationView.Message);
+        Assert.Equal(Inside(tavern), drinking.Session.Sites.ActiveProfile);
+        Assert.Empty(drinking.Session.State.Crime.Incidents);
+
+        using AssembledWorldRun burgling = world.Restore(night, city.Id, house.ExteriorBuilding);
+        live = burgling.Session.Sites.Projection.Doors.Read(house.Id);
+        burgling.Use(live.Pose.Translation, live.Entity);
+        Assert.False(burgling.Session.ActivationView.Applied);
+        Assert.Equal("Locked.", burgling.Session.ActivationView.Message);
+        // The lock is the house's: a pick that fails is refused again at the same skill (this run's draws are the maximum).
+        burgling.Session.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).BaseValue = 100;
+        burgling.SetMode("steal");
+        burgling.Use(live.Pose.Translation, live.Entity);
+        Assert.False(burgling.Session.ActivationView.Applied);
+        Assert.Equal("The lock resists your pick.", burgling.Session.ActivationView.Message);
+        burgling.Use(live.Pose.Translation, live.Entity);
+        Assert.Equal("You have already tried that skill against this lock.", burgling.Session.ActivationView.Message);
+        Assert.Equal(exterior, burgling.Session.Sites.ActiveProfile);
+        // From six to six the house stands open to callers.
+        burgling.AdvanceToHour(12);
+        burgling.SetMode("grab");
+        burgling.Use(live.Pose.Translation, live.Entity);
+        Assert.True(burgling.Session.ActivationView.Applied, burgling.Session.ActivationView.Message);
+        Assert.Equal(Inside(house), burgling.Session.Sites.ActiveProfile);
+    }
+
+    private static int BuildingType(DaggerfallSiteRecord site, DaggerfallSiteBuildingId building) =>
+        site.Exterior!.Buildings[building].Source.BuildingType;
 
     private static DaggerfallCalendar Calendar(DaggerfallSession session)
     {
