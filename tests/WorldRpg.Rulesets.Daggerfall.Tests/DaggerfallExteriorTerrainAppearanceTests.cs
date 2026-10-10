@@ -170,6 +170,96 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         Assert.Equal(2, graphics.MeshRequests.Count);
     }
 
+    /// <summary>
+    /// A cell's nature is drawn as one sprite batch per sprite record, each holding every placement of that record at
+    /// its cell-local position, placed by the cell's translation. Reconciling unchanged facts keeps the batches; a
+    /// season's archive replaces them, and the replaced batches are released once a snapshot without them is accepted.
+    /// </summary>
+    [Fact]
+    public void Nature_is_drawn_in_one_batch_per_cell_and_sprite_record_and_replaced_by_season()
+    {
+        DaggerfallExteriorCellId cell = new(1, 0);
+        DaggerfallExteriorWorldOrigin origin = new(0, 0, new Vector3(2F, 3F, 4F));
+        GraphicsDouble graphics = new();
+        DaggerfallSiteProfile source = TestSessions.MediaInputs();
+        Dictionary<(int Archive, int Record), NormalizedTerrainTexture> textures = [];
+        foreach (int archive in new[] { 302, 303 })
+            for (int record = 0; record < 64; record++)
+                textures[(archive, record)] = new($"texture/terrain-{archive}-{record}.png", TestSessions.Hash);
+        Dictionary<(int Archive, int Record), NormalizedBillboardSprite> billboards = [];
+        foreach (int archive in new[] { 504, 505 })
+            for (int record = 1; record <= 31; record++)
+                billboards[(archive, record)] = new($"sprite/texture-{archive}-{record}.png", TestSessions.Hash, 16, 32,
+                    [new NormalizedAtlasFrame(7, 0, 0, 16, 32)], 7, new Vector2(.5F, 0F), new Vector2(record, 2F * record));
+        DaggerfallSiteProfile profile = new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, [],
+            new Dictionary<long, NormalizedActorSprite>(), billboardSprites: billboards, terrainTextures: textures);
+        using DaggerfallExteriorTerrainAppearance appearance = new(graphics, profile);
+        int dimension = DaggerfallTerrainSurfaceBuilder.SampleDimension;
+        DaggerfallTerrainSurface surface = new(cell.X, cell.Y,
+            Enumerable.Range(0, dimension * dimension).Select(index => new Vector3(index % dimension, 100F, index / dimension)).ToArray(),
+            [new Triangle(0, (uint)dimension + 1, 1)],
+            Enumerable.Repeat(100F / DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize, dimension * dimension).ToArray())
+        {
+            SourceWorldHeight = 128,
+        };
+        DaggerfallWorldGridsSet grids = new(new DaggerfallClimateGridDefinition(3, 1, [0, 0, 231],
+            [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]), new(3, 1, [64, 64, 64], []));
+        DaggerfallSiteExterior location = new(1, 0, 1, 1, 0, 0, false, 2, 0, 1, 0, 1)
+        {
+            GroundTiles = DaggerfallGroundTileGrid.FromBytes(Enumerable.Repeat((byte)2, 128 * 128).ToArray(), "test"),
+        };
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
+        void Reconcile() => environment.Reconcile([cell], origin, _ => surface,
+            new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location }, grids);
+        Reconcile();
+        appearance.Reconcile([cell], origin, _ => surface, environment);
+
+        IReadOnlyList<DaggerfallExteriorNaturePlacement> placements = environment.NaturePlacements;
+        Assert.True(placements.Count > 1000);
+        int[] records = [.. placements.Select(placement => placement.SpriteRecord).Distinct().Order()];
+        Assert.Equal(records.Length, graphics.BatchRequests.Count);
+        Assert.Equal(records.Length, appearance.ActiveNatureBatchCount);
+        Assert.Equal(placements.Count, appearance.ActiveNatureCount);
+        for (int index = 0; index < records.Length; index++)
+        {
+            SpriteBatchRequest request = graphics.BatchRequests[index];
+            DaggerfallExteriorNaturePlacement[] drawn = [.. placements.Where(placement => placement.SpriteRecord == records[index])];
+            Assert.Equal(drawn.Select(placement => placement.LocalPosition), request.Instances.ToArray().Select(instance => instance.Position));
+            Assert.All(request.Instances.ToArray(), instance => Assert.Equal((1F, 7U), (instance.Scale, instance.FrameId)));
+            Assert.Equal(new Vector2(records[index], 2F * records[index]), request.Size);
+            Assert.Equal(new Vector2(.5F, 0F), request.Pivot);
+            Assert.Equal(BillboardMode.Cylindrical, request.Billboard);
+            Assert.Equal(SpriteDepthPolicy.Default, request.Depth);
+        }
+        Assert.All(graphics.AtlasTextures, path => Assert.StartsWith("sprite/texture-504-", path));
+        AppearanceFact[] nature = [.. appearance.BuildFacts().Where(fact => fact.ObjectId != DaggerfallExteriorTerrainAppearance.ObjectId(cell))];
+        Assert.Equal(records.Select(record => DaggerfallExteriorTerrainAppearance.NatureBatchObjectId(cell, record)), nature.Select(fact => fact.ObjectId));
+        Assert.All(nature, fact => Assert.Equal(origin.LocalTranslation(cell), fact.Transform.Translation));
+
+        // Unchanged facts keep every batch; an origin rebase only moves them.
+        DaggerfallExteriorWorldOrigin rebased = new(1, 0, Vector3.Zero);
+        appearance.Reconcile([cell], rebased, _ => surface, environment);
+        Assert.Equal(records.Length, graphics.BatchRequests.Count);
+        Assert.Equal(nature.Select(fact => fact.Appearance), appearance.BuildFacts().Skip(1).Select(fact => fact.Appearance));
+        Assert.All(appearance.BuildFacts().Skip(1), fact => Assert.Equal(rebased.LocalTranslation(cell), fact.Transform.Translation));
+
+        // Winter selects the woodland archive's snow set; the summer batches retire with the next accepted snapshot.
+        environment.SetSeason(DaggerfallExteriorSeason.Winter);
+        Reconcile();
+        int released = graphics.ReleasedAppearances;
+        appearance.Reconcile([cell], rebased, _ => surface, environment);
+        Assert.Equal(2 * records.Length, graphics.BatchRequests.Count);
+        Assert.Equal(records.Length, appearance.RetiredNatureBatchCount);
+        Assert.Contains(graphics.AtlasTextures, path => path.StartsWith("sprite/texture-505-", StringComparison.Ordinal));
+        List<AppearanceFact> snapshot = [];
+        appearance.AppendFacts(snapshot);
+        Assert.DoesNotContain(snapshot, fact => nature.Any(summer => ReferenceEquals(summer.Appearance, fact.Appearance)));
+        graphics.PublishSnapshot(snapshot.ToArray());
+        appearance.CompleteAcceptedSnapshot();
+        Assert.Equal(0, appearance.RetiredNatureBatchCount);
+        Assert.True(graphics.ReleasedAppearances - released >= records.Length);
+    }
+
     private static DaggerfallTerrainSurface Surface(DaggerfallExteriorCellId cell) => new(
         cell.X,
         cell.Y,
@@ -202,8 +292,16 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         internal int ReleasedMeshes { get; private set; }
         internal int ReleasedAppearances { get; private set; }
 
-        public RenderResourceInfo OpenResource(RenderResourceRequest request) =>
-            new(new RenderResource(new RenderResourceHandle(_nextHandle++), () => Releases.Add("resource")), default, 0);
+        internal List<SpriteBatchRequest> BatchRequests { get; } = [];
+        internal List<string> AtlasTextures { get; } = [];
+        private readonly Dictionary<ulong, string> _resources = [];
+
+        public RenderResourceInfo OpenResource(RenderResourceRequest request)
+        {
+            ulong handle = _nextHandle++;
+            _resources[handle] = request.Path;
+            return new(new RenderResource(new RenderResourceHandle(handle), () => Releases.Add("resource")), default, 0);
+        }
         public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
         public void PublishChanges(AppearanceChangesRequest request) => throw new NotSupportedException();
         public RenderResourceInfo OpenResourceFromContent(RenderResourceContentRequest request) => throw new NotSupportedException();
@@ -245,9 +343,17 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest request) => throw new NotSupportedException();
         public void UpdateStaticMeshMaterialFactors(StaticMeshMaterialFactorsRequest request) => throw new NotSupportedException();
         public Appearance CreateSprite(SpriteAppearanceRequest request) => throw new NotSupportedException();
-        public Appearance CreateSpriteBatch(SpriteBatchRequest request) => throw new NotSupportedException();
+        public Appearance CreateSpriteBatch(SpriteBatchRequest request)
+        {
+            BatchRequests.Add(request);
+            return CreateAppearance();
+        }
         public Appearance ReplaceSprite(SpriteAppearanceReplaceRequest request) => throw new NotSupportedException();
-        public SpriteAtlas CreateSpriteAtlas(SpriteAtlasCreateRequest request) => throw new NotSupportedException();
+        public SpriteAtlas CreateSpriteAtlas(SpriteAtlasCreateRequest request)
+        {
+            AtlasTextures.Add(_resources[request.Texture.Handle.Value]);
+            return new SpriteAtlas(new SpriteAtlasHandle(_nextHandle++), () => Releases.Add("atlas"));
+        }
         public Appearance CreateSpriteFromAtlas(SpriteFromAtlasRequest request) => throw new NotSupportedException();
         public Appearance ReplaceSpriteFromAtlas(SpriteFromAtlasReplaceRequest request) => throw new NotSupportedException();
         public void SetSpriteFrame(SpriteFrameUpdateRequest request) => throw new NotSupportedException();

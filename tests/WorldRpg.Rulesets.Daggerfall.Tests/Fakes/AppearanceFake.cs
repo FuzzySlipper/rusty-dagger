@@ -100,7 +100,8 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest request) => StaticMeshBindings.AddRange(request.Bindings.ToArray());
     public void UpdateStaticMeshMaterialFactors(StaticMeshMaterialFactorsRequest request) => StaticMeshFactorUpdates.Add(request);
     public Appearance CreateSprite(SpriteAppearanceRequest request) => CreateAppearance();
-    public Appearance CreateSpriteBatch(SpriteBatchRequest request) => CreateAppearance();
+    public Appearance CreateSpriteBatch(SpriteBatchRequest request) { BatchRequests.Add(request); return CreateAppearance(); }
+    internal List<SpriteBatchRequest> BatchRequests { get; } = [];
     public Appearance ReplaceSprite(SpriteAppearanceReplaceRequest request) => CreateAppearance();
     public SpriteAtlas CreateSpriteAtlas(SpriteAtlasCreateRequest request)
     {

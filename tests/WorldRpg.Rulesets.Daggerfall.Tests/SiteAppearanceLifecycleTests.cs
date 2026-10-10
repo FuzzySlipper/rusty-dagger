@@ -144,10 +144,10 @@ public sealed class SiteAppearanceLifecycleTests
             Assert.Equal([0u, 1u, 0u], appearance.StaticMeshBindings.Select(binding => binding.MaterialSlot));
             presentation.Publish(actors);
             AppearanceFact[] snapshot = appearance.Snapshots.Last();
-            AppearanceFact a = Assert.Single(snapshot, fact => fact.ObjectId == DaggerfallPresentationObjectIds.WorldMesh(0));
+            AppearanceFact a = Assert.Single(snapshot, fact => fact.ObjectId == DaggerfallPresentationObjectIds.WorldMesh(DaggerfallPresentationObjectIds.ActiveLocationSlot, 0));
             Assert.Equal(first.Translation + rebased, a.Transform.Translation);
             Assert.True(Quaternion.Dot(first.Rotation, a.Transform.Rotation) > 0.9999F);
-            AppearanceFact b = Assert.Single(snapshot, fact => fact.ObjectId == DaggerfallPresentationObjectIds.WorldMesh(1));
+            AppearanceFact b = Assert.Single(snapshot, fact => fact.ObjectId == DaggerfallPresentationObjectIds.WorldMesh(DaggerfallPresentationObjectIds.ActiveLocationSlot, 1));
             Assert.Equal(second.Translation + rebased, b.Transform.Translation);
         }
 

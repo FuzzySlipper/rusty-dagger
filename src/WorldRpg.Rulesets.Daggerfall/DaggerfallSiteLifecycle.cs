@@ -7,6 +7,7 @@ using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -78,6 +79,9 @@ internal sealed class DaggerfallSiteLifecycle
     private readonly Dictionary<DaggerfallExteriorCellId, DaggerfallTerrainSurface> _exteriorSurfaceCache = [];
     private readonly HashSet<ulong> _exteriorWaterTriggers = [];
     private readonly Dictionary<DaggerfallWorldProfileKey, ResidentExteriorLocation> _residentExteriorLocations = [];
+    // A retired neighbour's drawn location stays in the last accepted snapshot until the next one is accepted
+    // without it; only then can the Engine release it.
+    private readonly List<IDisposable> _retiredResidentLocations = [];
     // Exterior artifacts publish navigation cells at the source terrain's 0.8-unit grid. One
     // wilderness map pixel is 819.2 world units, so adjacent location closures are exactly 1024
     // navigation cells apart in the shared Engine artifact grid.
@@ -93,11 +97,13 @@ internal sealed class DaggerfallSiteLifecycle
     /// prevents adjacent doors, actors and appearance resources from being mistaken for the active
     /// interaction projection or silently sharing its durable identity.
     /// </summary>
-    private sealed class ResidentExteriorLocation(DaggerfallSiteProfile profile, DaggerfallSiteProjection projection, IReadOnlySet<long> actorIds)
+    private sealed class ResidentExteriorLocation(DaggerfallSiteProfile profile, DaggerfallSiteProjection projection, IReadOnlySet<long> actorIds, int slot)
     {
         internal DaggerfallSiteProfile Profile { get; } = profile;
         internal DaggerfallSiteProjection Projection { get; } = projection;
         internal IReadOnlySet<long> ActorIds { get; } = actorIds;
+        /// <summary>The presentation identity slot the active snapshot draws this location under.</summary>
+        internal int Slot { get; } = slot;
     }
 
     /// <summary>The session-wide classic presentation every site projection draws held items and effects from.</summary>
@@ -1121,6 +1127,7 @@ internal sealed class DaggerfallSiteLifecycle
             projection = DaggerfallSiteProjection.Create(_engine, _state.Actors.Entities, _random, _tuning, _time.Calendar,
                 profile, AudioFor(profile), _spatial, delta?.Doors, delta?.Motion, deferMotionCollisionAdmission: true,
                 sessionPresentation: _sessionPresentation);
+            projection.Appearance.DrawThroughActiveSnapshot();
             // The profile's authored geometry and actors use its own source frame. Rebase every
             // projection owner before admitting collision so doors, motion, portals, appearance
             // and lighting all share the same active exterior origin as the terrain cell.
@@ -1142,7 +1149,7 @@ internal sealed class DaggerfallSiteLifecycle
                 _deltas.Remove(key);
             }
             RebaseActors(actorIds, translation);
-            _residentExteriorLocations.Add(key, new ResidentExteriorLocation(profile, projection, actorIds));
+            _residentExteriorLocations.Add(key, new ResidentExteriorLocation(profile, projection, actorIds, FreeResidentLocationSlot()));
         }
         catch
         {
@@ -1178,6 +1185,7 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallSiteRuntimeDelta? delta = null;
         try
         {
+            _retiredResidentLocations.Add(resident.Projection.Appearance.TakeDrawnLocation());
             if (capture)
             {
                 Vector3 profileFrameOffset = ExteriorProfileTranslation(resident.Profile);
@@ -1193,6 +1201,46 @@ internal sealed class DaggerfallSiteLifecycle
         {
             resident.Projection.Dispose();
         }
+    }
+
+    /// <summary>The lowest presentation identity slot no resident neighbour holds; the active location holds slot 0.</summary>
+    private int FreeResidentLocationSlot()
+    {
+        HashSet<int> held = [.. _residentExteriorLocations.Values.Select(resident => resident.Slot)];
+        for (int slot = DaggerfallPresentationObjectIds.ActiveLocationSlot + 1; slot < DaggerfallPresentationObjectIds.LocationSlots; slot++)
+            if (!held.Contains(slot)) return slot;
+        throw new InvalidOperationException("Every presentation location slot is held by a resident neighbour.");
+    }
+
+    /// <summary>
+    /// Completes the active appearance's snapshot with the exterior window: every resident neighbour's meshes,
+    /// doors, gates and action models under its own location slot, then the terrain and its nature batches.
+    /// </summary>
+    private void AppendExteriorFacts(List<AppearanceFact> facts)
+    {
+        foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values.OrderBy(value => value.Slot))
+            resident.Projection.Appearance.AppendLocationFacts(facts, resident.Slot);
+        _exteriorTerrainAppearance?.AppendFacts(facts);
+    }
+
+    /// <summary>A snapshot was accepted: what the window and the retired neighbours no longer draw is released.</summary>
+    private void CompleteExteriorSnapshot()
+    {
+        List<Exception>? failures = null;
+        try { _exteriorTerrainAppearance?.CompleteAcceptedSnapshot(); }
+        catch (Exception exception) { (failures ??= []).Add(exception); }
+        ReleaseRetiredResidentLocations(ref failures);
+        if (failures is { Count: > 0 }) throw new AggregateException(failures);
+    }
+
+    private void ReleaseRetiredResidentLocations(ref List<Exception>? failures)
+    {
+        foreach (IDisposable retired in _retiredResidentLocations)
+        {
+            try { retired.Dispose(); }
+            catch (Exception exception) { (failures ??= []).Add(exception); }
+        }
+        _retiredResidentLocations.Clear();
     }
 
     /// <summary>Opens or closes the city gates of the active location and every resident neighbour for the time of day.</summary>
@@ -1528,6 +1576,10 @@ internal sealed class DaggerfallSiteLifecycle
         ReleaseExteriorWaterTriggers();
         _retired = true;
         Projection.Appearance.SetSnapshotSupplement(null, null);
+        // The session's final snapshot is empty by now, so nothing a retired neighbour drew is still in use.
+        List<Exception>? failures = null;
+        ReleaseRetiredResidentLocations(ref failures);
+        if (failures is { Count: > 0 }) throw new AggregateException(failures);
         _exteriorTerrainAppearance?.Dispose();
         _exteriorTerrainAppearance = null;
         _exteriorEnvironment = null;
@@ -1568,7 +1620,7 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallExteriorTerrainAppearance appearance =
             _exteriorTerrainAppearance ??= new DaggerfallExteriorTerrainAppearance(_engine.Graphics, Projection.Inputs);
         appearance.ConfigureProfile(Projection.Inputs);
-        Projection.Appearance.SetSnapshotSupplement(appearance.AppendFacts, appearance.CompleteAcceptedSnapshot);
+        Projection.Appearance.SetSnapshotSupplement(AppendExteriorFacts, CompleteExteriorSnapshot);
         appearance.Reconcile(residency.ResidentCells, ActiveOrigin(residency), surfaceFactory, environment);
         ReconcileExteriorWaterTriggers(environment.CharacterWaterVolumes(ActiveOrigin(residency)));
         TrimExteriorSurfaceCache(residency.ResidentCells);

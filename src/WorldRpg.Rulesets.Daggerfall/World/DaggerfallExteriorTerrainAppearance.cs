@@ -20,8 +20,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     private readonly List<TerrainVisual> _retired = [];
     private readonly Dictionary<TerrainTextureKey, TerrainMaterial> _terrainMaterials = [];
     private readonly Dictionary<NatureSpriteKey, NatureSprite> _natureSprites = [];
-    private readonly Dictionary<ulong, NatureVisual> _natureVisuals = [];
-    private readonly List<NatureVisual> _retiredNature = [];
+    private readonly Dictionary<DaggerfallExteriorCellId, NatureCell> _natureCells = [];
+    private readonly List<NatureBatch> _retiredNature = [];
     private DaggerfallSiteProfile? _profile;
     private DaggerfallExteriorWorldOrigin _origin;
     private bool _hasOrigin;
@@ -49,9 +49,13 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
 
     internal int RetiredCellCount => _retired.Count;
 
-    internal int ActiveNatureCount => _natureVisuals.Count;
+    /// <summary>The nature sprite batches the next snapshot draws, one per resident cell and sprite record.</summary>
+    internal int ActiveNatureBatchCount => _natureCells.Values.Sum(cell => cell.Batches.Length);
 
-    internal int RetiredNatureCount => _retiredNature.Count;
+    /// <summary>The nature sprites those batches draw.</summary>
+    internal int ActiveNatureCount => _natureCells.Values.Sum(cell => cell.Source.Count);
+
+    internal int RetiredNatureBatchCount => _retiredNature.Count;
 
     /// <summary>Updates the normalized media closure used by newly admitted terrain sprites.</summary>
     internal void ConfigureProfile(DaggerfallSiteProfile profile)
@@ -92,6 +96,10 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     /// <summary>The stable object identity used by one exterior terrain cell's visual fact.</summary>
     internal static ulong ObjectId(DaggerfallExteriorCellId cell) => DaggerfallPresentationObjectIds.TerrainCell(cell.X, cell.Y);
 
+    /// <summary>The stable object identity of one cell's batch of nature sprites drawing one sprite record.</summary>
+    internal static ulong NatureBatchObjectId(DaggerfallExteriorCellId cell, int spriteRecord) =>
+        DaggerfallPresentationObjectIds.NatureBatch(cell.X, cell.Y, spriteRecord);
+
     /// <summary>
     /// Reconciles retained visual resources to the collision residency's durable cell set.
     /// Newly created resources are staged before active state changes; a failed admission leaves
@@ -131,31 +139,47 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         Dictionary<DaggerfallExteriorCellId, DaggerfallExteriorTerrainVariant> variants = environment?.TerrainVariants
             .ToDictionary(variant => variant.Cell)
             ?? [];
-        DaggerfallExteriorNaturePlacement[] naturePlacements = environment?.NaturePlacements.ToArray() ?? [];
         List<(DaggerfallExteriorCellId Cell, TerrainVisual Visual)> additions = [];
-        List<NatureVisual> natureAdditions = [];
+        List<(DaggerfallExteriorCellId Cell, NatureCell Nature)> natureAdditions = [];
         try
         {
             foreach (DaggerfallExteriorCellId cell in desired)
             {
                 IReadOnlyList<DaggerfallExteriorTerrainTile> terrainTiles = environment?.TerrainTilesFor(cell) ?? [];
-                IReadOnlyList<TerrainTextureKey> textureKeys = variants.TryGetValue(cell, out DaggerfallExteriorTerrainVariant variant)
+                bool hasVariant = variants.TryGetValue(cell, out DaggerfallExteriorTerrainVariant variant);
+                // The environment hands back the same tile list while a cell's facts are unchanged, so a retained
+                // cell is recognised without resolving its 16,384 tiles again on every movement step.
+                if (_visuals.TryGetValue(cell, out TerrainVisual? current)
+                    && ReferenceEquals(current.SourceTiles, terrainTiles)
+                    && ReferenceEquals(current.Profile, _profile)
+                    && current.Variant == (hasVariant ? variant : null)) continue;
+                IReadOnlyList<TerrainTextureKey> textureKeys = hasVariant
                     ? ResolveTerrainTextures(variant, terrainTiles)
                     : [];
-                if (_visuals.TryGetValue(cell, out TerrainVisual? current)
+                if (current is not null
                     && TextureKeysEqual(current.TextureKeys, textureKeys)
-                    && current.TerrainTiles.SequenceEqual(terrainTiles)) continue;
-                additions.Add((cell, CreateVisual(cell, surfaceFactory(cell), terrainTiles, textureKeys)));
+                    && current.TerrainTiles.SequenceEqual(terrainTiles))
+                {
+                    _visuals[cell] = current with { SourceTiles = terrainTiles, Profile = _profile, Variant = hasVariant ? variant : null };
+                    continue;
+                }
+                additions.Add((cell, CreateVisual(cell, surfaceFactory(cell), terrainTiles, textureKeys) with
+                {
+                    SourceTiles = terrainTiles,
+                    Profile = _profile,
+                    Variant = hasVariant ? variant : null,
+                }));
             }
 
             if (environment is not null)
             {
-                foreach (DaggerfallExteriorNaturePlacement placement in naturePlacements)
+                foreach (DaggerfallExteriorCellId cell in desired)
                 {
-                    (NatureSpriteKey spriteKey, NormalizedBillboardSprite sprite) = ResolveNatureSprite(placement);
-                    if (_natureVisuals.TryGetValue(placement.StableId, out NatureVisual? current)
-                        && current.Key == spriteKey) continue;
-                    natureAdditions.Add(CreateNatureVisual(placement, spriteKey, sprite));
+                    IReadOnlyList<DaggerfallExteriorNaturePlacement> placements = environment.NatureFor(cell);
+                    if (_natureCells.TryGetValue(cell, out NatureCell? current)
+                        && ReferenceEquals(current.Source, placements)
+                        && ReferenceEquals(current.Profile, _profile)) continue;
+                    natureAdditions.Add((cell, CreateNatureCell(cell, placements)));
                 }
             }
         }
@@ -163,8 +187,9 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         {
             foreach ((DaggerfallExteriorCellId _, TerrainVisual visual) in additions)
                 DisposeVisual(visual);
-            foreach (NatureVisual visual in natureAdditions)
-                DisposeNatureVisual(visual);
+            foreach ((DaggerfallExteriorCellId _, NatureCell nature) in natureAdditions)
+                foreach (NatureBatch batch in nature.Batches)
+                    DisposeNatureBatch(batch);
             throw;
         }
 
@@ -180,19 +205,19 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         foreach ((DaggerfallExteriorCellId cell, TerrainVisual visual) in additions)
             _visuals.Add(cell, visual);
 
-        HashSet<ulong> desiredNature = environment is null
-            ? _natureVisuals.Keys.ToHashSet()
-            : naturePlacements.Select(placement => placement.StableId).ToHashSet();
-        HashSet<ulong> replacedNature = natureAdditions.Select(visual => visual.ObjectId).ToHashSet();
-        foreach (ulong objectId in _natureVisuals.Keys
-            .Where(objectId => !desiredNature.Contains(objectId) || replacedNature.Contains(objectId))
-            .ToArray())
+        if (environment is not null)
         {
-            _retiredNature.Add(_natureVisuals[objectId]);
-            _natureVisuals.Remove(objectId);
+            HashSet<DaggerfallExteriorCellId> replacedNature = natureAdditions.Select(addition => addition.Cell).ToHashSet();
+            foreach (DaggerfallExteriorCellId cell in _natureCells.Keys
+                .Where(cell => !desiredSet.Contains(cell) || replacedNature.Contains(cell))
+                .ToArray())
+            {
+                _retiredNature.AddRange(_natureCells[cell].Batches);
+                _natureCells.Remove(cell);
+            }
+            foreach ((DaggerfallExteriorCellId cell, NatureCell nature) in natureAdditions)
+                _natureCells.Add(cell, nature);
         }
-        foreach (NatureVisual visual in natureAdditions)
-            _natureVisuals.Add(visual.ObjectId, visual);
 
         _origin = origin;
         _hasOrigin = true;
@@ -205,9 +230,9 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         foreach (TerrainVisual visual in _visuals.Values)
             _retired.Add(visual);
         _visuals.Clear();
-        foreach (NatureVisual visual in _natureVisuals.Values)
-            _retiredNature.Add(visual);
-        _natureVisuals.Clear();
+        foreach (NatureCell nature in _natureCells.Values)
+            _retiredNature.AddRange(nature.Batches);
+        _natureCells.Clear();
         _hasOrigin = false;
     }
 
@@ -231,19 +256,13 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                 true,
                 RenderLayer.Scene))
             .ToList();
-        foreach (NatureVisual visual in _natureVisuals.Values.OrderBy(value => value.ObjectId))
+        // A batch's sprites sit in its cell's frame, so the cell's translation places them all, and an origin
+        // rebase moves the batch rather than rewriting its instances.
+        foreach ((DaggerfallExteriorCellId cell, NatureCell nature) in _natureCells.OrderBy(pair => pair.Key.Y).ThenBy(pair => pair.Key.X))
         {
-            facts.Add(new AppearanceFact(
-                visual.ObjectId,
-                false,
-                0,
-                new Transform(
-                    _origin.LocalTranslation(visual.Placement.Cell) + visual.Placement.LocalPosition,
-                    Quaternion.Identity,
-                    Vector3.One),
-                visual.Appearance,
-                true,
-                RenderLayer.Scene));
+            Transform transform = new(_origin.LocalTranslation(cell), Quaternion.Identity, Vector3.One);
+            foreach (NatureBatch batch in nature.Batches)
+                facts.Add(new AppearanceFact(batch.ObjectId, false, 0, transform, batch.Appearance, true, RenderLayer.Scene));
         }
         return facts.ToArray();
     }
@@ -262,13 +281,14 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
             DisposeVisual(visual, ref failures);
         foreach (TerrainVisual visual in _retired.AsEnumerable().Reverse())
             DisposeVisual(visual, ref failures);
-        foreach (NatureVisual visual in _natureVisuals.Values.Reverse())
-            DisposeNatureVisual(visual, ref failures);
-        foreach (NatureVisual visual in _retiredNature.AsEnumerable().Reverse())
-            DisposeNatureVisual(visual, ref failures);
+        foreach (NatureCell nature in _natureCells.Values.Reverse())
+            foreach (NatureBatch batch in nature.Batches.Reverse())
+                DisposeNatureBatch(batch, ref failures);
+        foreach (NatureBatch batch in _retiredNature.AsEnumerable().Reverse())
+            DisposeNatureBatch(batch, ref failures);
         _visuals.Clear();
         _retired.Clear();
-        _natureVisuals.Clear();
+        _natureCells.Clear();
         _retiredNature.Clear();
         foreach (NatureSprite sprite in _natureSprites.Values.Reverse())
             DisposeNatureSprite(sprite, ref failures);
@@ -495,23 +515,44 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         return (key, sprite);
     }
 
-    private NatureVisual CreateNatureVisual(
-        DaggerfallExteriorNaturePlacement placement,
-        NatureSpriteKey key,
-        NormalizedBillboardSprite sprite)
+    /// <summary>
+    /// Draws one cell's nature as one batch per sprite record, as the donor's DaggerfallBillboardBatch draws a
+    /// terrain's nature in one batch per atlas. Each normalized record is its own atlas with its own pivot and world
+    /// size, which a batch shares, so the record is the batch: every sprite of it keeps its cell-local placement,
+    /// its record's initial frame and size, the cylindrical facing and the default depth and sprite material it
+    /// had as a sprite of its own.
+    /// </summary>
+    private NatureCell CreateNatureCell(DaggerfallExteriorCellId cell, IReadOnlyList<DaggerfallExteriorNaturePlacement> placements)
     {
-        NatureSprite admitted = GetNatureSprite(key, sprite);
-        Appearance appearance = _graphics.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(
-            admitted.Atlas,
-            sprite.InitialFrameId,
-            sprite.Pivot,
-            sprite.Size,
-            BillboardMode.Cylindrical,
-            SpriteSizeMode.World,
-            0,
-            SpriteDepthPolicy.Default,
-            new Color(1F, 1F, 1F, 1F)));
-        return new(placement.StableId, placement, key, appearance);
+        List<NatureBatch> batches = [];
+        try
+        {
+            foreach (IGrouping<(int Archive, int Record), DaggerfallExteriorNaturePlacement> group in placements
+                .GroupBy(placement => (Archive: placement.SpriteArchive, Record: placement.SpriteRecord))
+                .OrderBy(group => group.Key.Record).ThenBy(group => group.Key.Archive))
+            {
+                (NatureSpriteKey key, NormalizedBillboardSprite sprite) = ResolveNatureSprite(group.First());
+                NatureSprite admitted = GetNatureSprite(key, sprite);
+                SpriteBatchInstance[] instances = [.. group.Select(placement =>
+                    new SpriteBatchInstance(placement.LocalPosition, 1F, sprite.InitialFrameId))];
+                ulong objectId = NatureBatchObjectId(cell, key.Record);
+                if (batches.Any(batch => batch.ObjectId == objectId))
+                    throw new InvalidOperationException($"Exterior cell ({cell.X},{cell.Y}) draws nature record {key.Record} from more than one archive.");
+                Appearance appearance = _graphics.CreateSpriteBatch(new SpriteBatchRequest(
+                    admitted.Atlas,
+                    instances,
+                    sprite.Pivot,
+                    sprite.Size,
+                    BillboardMode.Cylindrical));
+                batches.Add(new(objectId, key, appearance, instances.Length));
+            }
+        }
+        catch
+        {
+            foreach (NatureBatch batch in batches) DisposeNatureBatch(batch);
+            throw;
+        }
+        return new(placements, _profile, [.. batches]);
     }
 
     private NatureSprite GetNatureSprite(NatureSpriteKey key, NormalizedBillboardSprite sprite)
@@ -605,8 +646,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         List<Exception>? failures = null;
         foreach (TerrainVisual visual in _retired.AsEnumerable().Reverse())
             DisposeVisual(visual, ref failures);
-        foreach (NatureVisual visual in _retiredNature.AsEnumerable().Reverse())
-            DisposeNatureVisual(visual, ref failures);
+        foreach (NatureBatch batch in _retiredNature.AsEnumerable().Reverse())
+            DisposeNatureBatch(batch, ref failures);
         _retired.Clear();
         _retiredNature.Clear();
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
@@ -627,16 +668,16 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         catch (Exception exception) { (failures ??= []).Add(exception); }
     }
 
-    private static void DisposeNatureVisual(NatureVisual visual)
+    private static void DisposeNatureBatch(NatureBatch batch)
     {
         List<Exception>? failures = null;
-        DisposeNatureVisual(visual, ref failures);
+        DisposeNatureBatch(batch, ref failures);
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
-    private static void DisposeNatureVisual(NatureVisual visual, ref List<Exception>? failures)
+    private static void DisposeNatureBatch(NatureBatch batch, ref List<Exception>? failures)
     {
-        try { visual.Appearance.Dispose(); }
+        try { batch.Appearance.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
     }
 
@@ -660,6 +701,14 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     private readonly record struct NatureSpriteKey(int Archive, int Record, string Path);
     private sealed record TerrainMaterial(TerrainTextureKey Key, RenderResource Resource, Material Material);
     private sealed record NatureSprite(NatureSpriteKey Key, RenderResource Resource, SpriteAtlas Atlas);
-    private sealed record NatureVisual(ulong ObjectId, DaggerfallExteriorNaturePlacement Placement, NatureSpriteKey Key, Appearance Appearance);
-    private sealed record TerrainVisual(MeshResource Mesh, Appearance Appearance, IReadOnlyList<TerrainTextureKey> TextureKeys, IReadOnlyList<DaggerfallExteriorTerrainTile> TerrainTiles);
+    private sealed record NatureBatch(ulong ObjectId, NatureSpriteKey Key, Appearance Appearance, int Instances);
+    /// <summary>One cell's nature batches and the environment placements and media profile they were made from.</summary>
+    private sealed record NatureCell(IReadOnlyList<DaggerfallExteriorNaturePlacement> Source, DaggerfallSiteProfile? Profile, NatureBatch[] Batches);
+    private sealed record TerrainVisual(MeshResource Mesh, Appearance Appearance, IReadOnlyList<TerrainTextureKey> TextureKeys, IReadOnlyList<DaggerfallExteriorTerrainTile> TerrainTiles)
+    {
+        /// <summary>The environment's tile list, media profile and variant the visual was last reconciled against.</summary>
+        internal IReadOnlyList<DaggerfallExteriorTerrainTile>? SourceTiles { get; init; }
+        internal DaggerfallSiteProfile? Profile { get; init; }
+        internal DaggerfallExteriorTerrainVariant? Variant { get; init; }
+    }
 }

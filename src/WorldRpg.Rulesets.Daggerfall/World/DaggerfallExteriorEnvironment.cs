@@ -48,8 +48,6 @@ internal readonly record struct DaggerfallExteriorNaturePlacement(
 {
     /// <summary>The climate-selected donor nature archive used for this sprite record.</summary>
     internal int SpriteArchive { get; init; }
-
-    internal ulong StableId => DaggerfallExteriorEnvironment.NatureObjectId(Cell, TileX, TileY);
 }
 
 /// <summary>
@@ -159,6 +157,13 @@ internal sealed class DaggerfallExteriorEnvironment
     internal IReadOnlyList<DaggerfallExteriorTerrainTile> TerrainTilesFor(DaggerfallExteriorCellId cell) =>
         _cells.TryGetValue(cell, out CellFacts? facts) ? facts.Terrain : [];
 
+    /// <summary>
+    /// One resident cell's nature placements. A cell whose facts a reconciliation retained answers the same list
+    /// instance, which lets the appearance keep that cell's batches without comparing its placements.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallExteriorNaturePlacement> NatureFor(DaggerfallExteriorCellId cell) =>
+        _cells.TryGetValue(cell, out CellFacts? facts) ? facts.Nature : [];
+
     internal DaggerfallExteriorWorldOrigin Origin => _initialized
         ? _origin
         : throw new InvalidOperationException("Exterior environment has not been initialized.");
@@ -240,14 +245,6 @@ internal sealed class DaggerfallExteriorEnvironment
         }
         volume = default;
         return false;
-    }
-
-    /// <summary>A nature sprite's stable identity, which is also its object identity in the appearance snapshot.</summary>
-    internal static ulong NatureObjectId(DaggerfallExteriorCellId cell, int tileX, int tileY)
-    {
-        if ((uint)tileX >= TerrainTileDimension || (uint)tileY >= TerrainTileDimension)
-            throw new ArgumentOutOfRangeException(nameof(tileX));
-        return DaggerfallPresentationObjectIds.Nature(cell.X, cell.Y, checked((uint)((tileY * TerrainTileDimension) + tileX)));
     }
 
     internal static ulong WaterObjectId(DaggerfallExteriorCellId cell, int tileX, int tileY) =>
