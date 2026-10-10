@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Numerics;
+using Rusty.Engine.Entities;
 using Rusty.Engine.Testing;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
@@ -138,6 +140,129 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     }
 
     /// <summary>
+    /// Interiors of the island window's neighbouring locations whose entrance markers lie on their floors: each is entered
+    /// from the island as a building door enters it, and the arriving player stands on the floor, walks on the real collision
+    /// without the Engine reporting the capsule inside it, and leaves again onto the island to walk there.
+    /// </summary>
+    [Fact]
+    public void Entering_a_neighbouring_interior_stands_the_player_on_its_floor()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
+        DaggerfallSiteId hamlet = new(AssembledWorld.PrivateersHold.Region, 197);
+        DaggerfallSiteId village = new(AssembledWorld.PrivateersHold.Region, 198);
+        (DaggerfallSiteId Site, DaggerfallSiteBuildingId Building)[] buildings =
+            [(hamlet, new(0, 0, 0)), (hamlet, new(0, 1, 0)), (hamlet, new(2, 0, 0)), (village, new(0, 0, 3))];
+        Dictionary<string, ReadOnlyMemory<byte>> files = new(StringComparer.Ordinal);
+        foreach ((DaggerfallSiteId site, DaggerfallSiteBuildingId building) in buildings)
+            foreach ((string path, ReadOnlyMemory<byte> bytes) in AssembledWorldRun.EngineContent(world, site, building)) files[path] = bytes;
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        try
+        {
+            foreach ((DaggerfallSiteId site, DaggerfallSiteBuildingId building) in buildings)
+            {
+                DaggerfallWorldProfileKey interior = DaggerfallWorldProfileIds.Interior(site, building);
+                WorldPoint marker = Assert.NotNull(world.Profiles.Require(interior).Project.PlayerPosition);
+                WorldPoint entered = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+                Assert.True(host.Call(_ => run.Session.TryTransitionTo(interior)));
+                Assert.Equal(interior, run.Session.Sites.ActiveProfile);
+                WorldPoint landed = run.Session.State.PlayerControl.Position!.Value;
+                output.WriteLine($"{interior.LogicalId}: marker {marker}, landed {landed}.");
+                Assert.InRange(landed.Y - marker.Y, .7F, 1.1F);
+                Steps(host, run, 3);
+                AssertStanding(run, landed);
+                host.Call(_ => run.Walk(30));
+                WorldPoint walked = run.Session.State.PlayerControl.Position!.Value;
+                output.WriteLine($"{interior.LogicalId}: walked to {walked}.");
+                Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Walking from {landed}, the player is at {walked} and not grounded.");
+                Assert.InRange(walked.Y - marker.Y, .5F, 1.6F);
+                AssertAccepted(run);
+
+                Assert.True(host.Call(_ => run.Session.TryTransitionTo(island)));
+                Assert.Equal(island, run.Session.Sites.ActiveProfile);
+                // Leaving returns to the standing pose the player entered from, not raised again.
+                WorldPoint outside = run.Session.State.PlayerControl.Position!.Value;
+                WorldPoint returned = run.Session.Sites.ExteriorSitePosition(outside);
+                Assert.True(Vector3.Distance(entered.ToVector(), returned.ToVector()) < 1e-2F, $"Entered from {entered}, returned to {returned}.");
+                Steps(host, run, 3);
+                AssertStanding(run, outside);
+                host.Call(_ => run.Walk(10));
+                Assert.True(run.Session.State.PlayerControl.Motion.Grounded);
+                AssertAccepted(run);
+            }
+        }
+        finally
+        {
+            host.Call(_ => run.Dispose());
+        }
+    }
+
+    /// <summary>
+    /// The hold's start marker lies above its floor but lower than a standing capsule's centre. A new game stands on the
+    /// floor there; no other location of the island window has a dungeon, so the island's own is then entered from the
+    /// island with no entrance to return through (as after a recall, or a game that remembers none), and the player lands
+    /// standing at the same start, walks without the Engine reporting the capsule inside the collision, and returns to
+    /// the island at the standing pose they left rather than raised again.
+    /// </summary>
+    [Fact]
+    public void A_dungeon_arrival_stands_on_its_floor_and_a_remembered_entrance_is_not_raised_again()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, AssembledWorld.PrivateersHold);
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        AssembledWorldRun run = host.Call(engine => world.StartInHold(engine, files));
+        try
+        {
+            WorldPoint start = Assert.NotNull(world.Profiles.Require(hold).Project.PlayerPosition);
+            WorldPoint newGame = run.Session.State.PlayerControl.Position!.Value;
+            output.WriteLine($"{hold.LogicalId}: start {start}, a new game stands at {newGame}.");
+            Assert.Equal(start.X, newGame.X);
+            Assert.Equal(start.Z, newGame.Z);
+            Assert.True(newGame.Y > start.Y, $"A new game at {start} was not raised onto the hold's floor.");
+            Steps(host, run, 3);
+            AssertStanding(run, newGame);
+
+            (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) exit = Assert.Single(run.Session.Sites.Projection.Portals.All);
+            _ = host.Call(_ => run.Use(exit.Portal, exit.Entity));
+            Assert.Equal(island, run.Session.Sites.ActiveProfile);
+            Steps(host, run, 3);
+            WorldPoint leftIsland = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            host.Call(_ => run.Session.Sites.ClearReturnDestination());
+            Assert.True(host.Call(_ => run.Session.TryTransitionTo(hold)));
+            Assert.Equal(hold, run.Session.Sites.ActiveProfile);
+            WorldPoint landed = run.Session.State.PlayerControl.Position!.Value;
+            output.WriteLine($"{hold.LogicalId}: entered from the island at {landed}.");
+            Assert.Equal(newGame, landed);
+            Steps(host, run, 3);
+            AssertStanding(run, landed);
+            host.Call(_ => run.Walk(30));
+            WorldPoint walked = run.Session.State.PlayerControl.Position!.Value;
+            output.WriteLine($"{hold.LogicalId}: walked to {walked}.");
+            Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Walking from {landed}, the player is at {walked} and not grounded.");
+            Assert.True(MathF.Abs(walked.Y - landed.Y) < .5F, $"Walking from {landed}, the player is at {walked}.");
+            AssertAccepted(run);
+
+            // Leaving returns through the remembered entrance: the pose left on the island is already a standing centre.
+            Assert.True(host.Call(_ => run.Session.TryTransitionTo(island)));
+            Assert.Equal(island, run.Session.Sites.ActiveProfile);
+            WorldPoint returned = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            output.WriteLine($"Left the island at {leftIsland}, returned to {returned}.");
+            Assert.True(Vector3.Distance(leftIsland.ToVector(), returned.ToVector()) < 1e-2F, $"Left the island at {leftIsland}, returned to {returned}.");
+            WorldPoint outside = run.Session.State.PlayerControl.Position!.Value;
+            Steps(host, run, 3);
+            AssertStanding(run, outside);
+            AssertAccepted(run);
+        }
+        finally
+        {
+            host.Call(_ => run.Dispose());
+        }
+    }
+
+    /// <summary>
     /// A new game's hold (actors, doors and moving action models) and an assembled building interior entered from it
     /// publish through the Engine, as does the hold again on returning.
     /// </summary>
@@ -181,9 +306,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     }
 
     /// <summary>
-    /// The first building of the village beside the island, whose assembled interior is entered. Its neighbouring
-    /// hamlet's buildings place the arriving player at an entrance marker that the Engine reports as penetrating the
-    /// interior's collision on the first step, which is a matter of interior arrival rather than of drawing the window.
+    /// The first building of the village beside the island, whose assembled interior is entered.
     /// </summary>
     private static (DaggerfallSiteId Site, DaggerfallSiteBuildingId Building) NeighbourBuilding(AssembledWorld world)
     {

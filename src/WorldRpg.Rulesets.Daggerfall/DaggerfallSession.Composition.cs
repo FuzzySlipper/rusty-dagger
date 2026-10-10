@@ -646,6 +646,8 @@ internal sealed partial class DaggerfallSession
             ExpireConjuredItems();
             _roster.MaterializeStaticNpcs(inputs);
             _sites.AdmitInitialResidency(saved?.ExteriorResidency, saved?.ExteriorLocationResidency);
+            // A new game arrives at its start site's start like any other arrival; a restore resumes its saved pose.
+            if (restore is null) _sites.StandArrivingPlayer();
             // Registry positions are profile coordinates; project NPCs and the civilian population
             // only once the save is restored and the saved origin admitted, so dialogue and the
             // first snapshot share its frame and no restored presence is decided from the start pose.

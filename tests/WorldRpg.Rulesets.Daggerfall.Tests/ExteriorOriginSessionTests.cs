@@ -53,7 +53,8 @@ public sealed class ExteriorOriginSessionTests
             WorldPoint livePlayer = session.State.PlayerControl.Position
                 ?? throw new InvalidOperationException("Native Charing session has no live player position.");
             Assert.Equal(sourcePlayer.X + exteriorFrame.X, livePlayer.X, 3);
-            Assert.Equal(sourcePlayer.Y + exteriorFrame.Y, livePlayer.Y, 3);
+            // The authored start names the ground, and a new game stands the player's capsule centre on it.
+            Assert.InRange(livePlayer.Y - (sourcePlayer.Y + exteriorFrame.Y), .85F, 1F);
             Assert.Equal(sourcePlayer.Z + exteriorFrame.Z, livePlayer.Z, 3);
 
             Assert.NotEmpty(exterior.Doors);

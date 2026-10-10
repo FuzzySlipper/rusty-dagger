@@ -228,6 +228,14 @@ internal sealed class AssembledWorldRun : IDisposable
     /// <summary>One admitted update with no input.</summary>
     internal void Step() => Session.Update(new ProductUpdate(OuterUpdate(++_step), []));
 
+    /// <summary>Walks forward for <paramref name="steps"/> admitted updates, holding the forward key and releasing it after.</summary>
+    internal void Walk(int steps)
+    {
+        Session.Update(new ProductUpdate(OuterUpdate(++_step), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        for (int step = 1; step < steps; step++) Step();
+        Session.Update(new ProductUpdate(OuterUpdate(++_step), [Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.KeyW)]));
+    }
+
     /// <summary>Pays for and makes the journey through the travel window, arriving.</summary>
     internal void Travel(DaggerfallSiteRecord destination)
     {
