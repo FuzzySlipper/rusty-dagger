@@ -760,6 +760,7 @@ public sealed class SpriteWorkbenchProductTests
         public void SetSpriteViewport(SpriteViewportUpdateRequest request) => ViewportRequests.Add(request);
         internal List<SpriteViewportUpdateRequest> ViewportRequests { get; } = [];
         public Appearance CreateSprite(SpriteAppearanceRequest request) => CreateAppearance(request.Tint);
+        public Appearance CreateSpriteBatch(SpriteBatchRequest request) => CreateAppearance(request.Tint);
         public Appearance ReplaceSprite(SpriteAppearanceReplaceRequest request) => CreateAppearance(request.Replacement.Tint);
 
         public SpriteAtlas CreateSpriteAtlas(SpriteAtlasCreateRequest request)
