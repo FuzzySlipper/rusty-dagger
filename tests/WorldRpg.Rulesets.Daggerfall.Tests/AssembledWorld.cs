@@ -147,7 +147,11 @@ internal sealed class AssembledWorldRun : IDisposable
         DaggerfallSessionComposition composition = new(world.Definitions, world.Source, DaggerfallTuning.Defaults, world.Identity)
             { Profiles = world.Profiles, Sky = DaggerfallSkyMedia.Read(sky), Blocks = world.Blocks };
         Session = DaggerfallSession.StartNew(engine.Context, composition);
+        Engine = engine;
     }
+
+    /// <summary>The scripted remainder of the Engine context a run over a real Engine draws through.</summary>
+    internal EngineContextFake Engine { get; } = null!;
 
     /// <summary>
     /// The content files a run reaching <paramref name="destination"/> (and <paramref name="building"/>) opens, with the

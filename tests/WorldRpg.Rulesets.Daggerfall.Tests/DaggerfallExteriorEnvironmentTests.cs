@@ -93,8 +93,10 @@ public sealed class DaggerfallExteriorEnvironmentTests
 
         IReadOnlyList<DaggerfallExteriorTerrainTile> tiles = environment.TerrainTilesFor(cell);
         Assert.Equal(128 * 128, tiles.Count);
-        Assert.Equal(new DaggerfallExteriorTerrainTile(7, true, false), tiles[0]);
-        Assert.Equal(new DaggerfallExteriorTerrainTile(8, false, true), tiles[1]);
+        // The one-block location's source row 0 lies under its right-handed content's last row (15), mirrored.
+        Assert.Equal(new DaggerfallExteriorTerrainTile(7, true, false, Mirrored: true), tiles[15 * 128]);
+        Assert.Equal(new DaggerfallExteriorTerrainTile(8, false, true, Mirrored: true), tiles[(15 * 128) + 1]);
+        Assert.False(tiles[0].Mirrored);
         Assert.All(tiles, tile => Assert.InRange(tile.TextureRecord, 0, 55));
     }
 
@@ -112,8 +114,8 @@ public sealed class DaggerfallExteriorEnvironmentTests
             Grids(231, "Woodlands"));
 
         IReadOnlyList<DaggerfallExteriorTerrainTile> tiles = environment.TerrainTilesFor(cell);
-        Assert.Equal(new DaggerfallExteriorTerrainTile(0, false, false), tiles[0]);
-        Assert.Equal(new DaggerfallExteriorTerrainTile(7, false, false), tiles[1]);
+        Assert.Equal(new DaggerfallExteriorTerrainTile(0, false, false, Mirrored: true), tiles[15 * 128]);
+        Assert.Equal(new DaggerfallExteriorTerrainTile(7, false, false, Mirrored: true), tiles[(15 * 128) + 1]);
     }
 
     [Fact]
@@ -136,7 +138,7 @@ public sealed class DaggerfallExteriorEnvironmentTests
     public void Nature_is_deterministic_and_excludes_the_expanded_location_footprint()
     {
         DaggerfallExteriorCellId cell = new(1, 0);
-        DaggerfallSiteExterior location = new(1, 0, 1, 1, 0, 0, false, 2, 60, 68, 60, 68);
+        DaggerfallSiteExterior location = new(1, 0, 1, 1, 56, 56, false, 2, 54, 73, 54, 73);
         Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> locations = new() { [cell] = location };
         DaggerfallExteriorEnvironment first = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
         DaggerfallExteriorEnvironment second = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));

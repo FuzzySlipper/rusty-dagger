@@ -426,7 +426,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                 {
                     positions.Add(surface.Vertices[source[corner]]);
                     normals.Add(sourceNormals[source[corner]]);
-                    uvs.Add(TransformTileUv(tileUvs[corner], tile.Rotated, tile.Flipped));
+                    uvs.Add(TransformTileUv(tileUvs[corner], tile.Rotated, tile.Flipped, tile.Mirrored));
                 }
                 tileIndices.AddRange([(uint)vertex, (uint)(vertex + 3), (uint)(vertex + 1),
                     (uint)vertex, (uint)(vertex + 2), (uint)(vertex + 3)]);
@@ -450,8 +450,9 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         return (positions.ToArray(), normals.ToArray(), uvs.ToArray(), indices.ToArray(), groups.ToArray(), bindings.ToArray());
     }
 
-    internal static Vector2 TransformTileUv(Vector2 uv, bool rotated, bool flipped)
+    internal static Vector2 TransformTileUv(Vector2 uv, bool rotated, bool flipped, bool mirrored = false)
     {
+        if (mirrored) uv.Y = 1F - uv.Y;
         if (rotated) uv = new(uv.Y, 1F - uv.X);
         if (flipped) uv.Y = 1F - uv.Y;
         return uv;

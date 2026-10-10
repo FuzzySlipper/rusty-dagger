@@ -86,8 +86,11 @@ internal readonly record struct DaggerfallExteriorWaterVolume(
 /// <summary>
 /// One source terrain tile in the donor's encoded tilemap. The lower six bits select the terrain
 /// archive record; the two flags preserve the donor marching-square rotation and flip bits.
+/// <paramref name="Mirrored"/> marks a location's ground tile drawn under its right-handed content, whose
+/// rows run opposite to the terrain's (<see cref="DaggerfallLocationTerrainFrame"/>): the tile's
+/// texture is mirrored across its rows before its rotation and flip apply.
 /// </summary>
-internal readonly record struct DaggerfallExteriorTerrainTile(int TextureRecord, bool Rotated, bool Flipped)
+internal readonly record struct DaggerfallExteriorTerrainTile(int TextureRecord, bool Rotated, bool Flipped, bool Mirrored = false)
 {
     internal byte Bitfield => checked((byte)(TextureRecord | (Rotated ? 0x40 : 0) | (Flipped ? 0x80 : 0)));
 }
@@ -421,13 +424,15 @@ internal sealed class DaggerfallExteriorEnvironment
         List<DaggerfallExteriorTerrainTile> result = new(tileDimension * tileDimension);
         for (int y = 0; y < tileDimension; y++)
         {
+            // The location's source rows lie mirrored under its normalized content.
+            int sourceRow = location is null ? -1 : DaggerfallLocationTerrainFrame.MirrorRow(location, y);
             for (int x = 0; x < tileDimension; x++)
             {
-                int sourceIndex = (y * tileDimension) + x;
-                byte authoredBitfield = source.At(sourceIndex);
-                if (source.Contains(sourceIndex))
+                int sourceIndex = (sourceRow * tileDimension) + x;
+                if ((uint)sourceRow < tileDimension && source.Contains(sourceIndex))
                 {
-                    result.Add(new(authoredBitfield & 0x3F, (authoredBitfield & 0x40) != 0, (authoredBitfield & 0x80) != 0));
+                    byte authoredBitfield = source.At(sourceIndex);
+                    result.Add(new(authoredBitfield & 0x3F, (authoredBitfield & 0x40) != 0, (authoredBitfield & 0x80) != 0, Mirrored: true));
                     continue;
                 }
 
@@ -463,11 +468,13 @@ internal sealed class DaggerfallExteriorEnvironment
         // TerrainHelper.SetLocationTiles publishes an inclusive source footprint and the donor
         // stores its expanded Rect with an exclusive max edge. The extra nature clearance is
         // applied only for positive location origins, matching DefaultTerrainNature exactly.
-        bool hasLocationRect = location is not null && location.MinX > 0 && location.MinY > 0;
-        int locationMinX = hasLocationRect ? location!.MinX - (int)NatureClearance : 0;
-        int locationMaxX = hasLocationRect ? location!.MaxX + (int)NatureClearance : 0;
-        int locationMinY = hasLocationRect ? location!.MinY - (int)NatureClearance : 0;
-        int locationMaxY = hasLocationRect ? location!.MaxY + (int)NatureClearance : 0;
+        // The rectangle lies mirrored under the location's normalized content, as its ground tiles do.
+        DaggerfallTerrainLocationFlattening? rect = location is null ? null : DaggerfallLocationTerrainFrame.Flattening(location);
+        bool hasLocationRect = rect is not null && rect.MinX > 0 && rect.MinY > 0;
+        int locationMinX = hasLocationRect ? rect!.MinX - (int)NatureClearance : 0;
+        int locationMaxX = hasLocationRect ? rect!.MaxX + (int)NatureClearance : 0;
+        int locationMinY = hasLocationRect ? rect!.MinY - (int)NatureClearance : 0;
+        int locationMaxY = hasLocationRect ? rect!.MaxY + (int)NatureClearance : 0;
         for (int tileY = 0; tileY < TerrainTileDimension; tileY++)
         {
             for (int tileX = 0; tileX < TerrainTileDimension; tileX++)
