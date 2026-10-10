@@ -192,7 +192,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         PresentationState presentation = new(string.Empty, DaggerfallOutcomePresentation.MessageLifetimeSeconds);
         DaggerfallOutcomePresentation outcome = new(presentation,
             new Dictionary<long, DaggerfallActorDefinition> { [Enemy] = Definitions.RequireActor(new DaggerfallActorId("rat")) },
-            text: Definitions.Text);
+            Definitions.Mobiles, Definitions.Text);
         outcome.React(new AttackHitFact(Enemy, DaggerfallActorIdentity.PlayerEntityId, 5, 5, 3, EnemyAttack: true, 1, 1));
         outcome.React(broken);
         Assert.EndsWith("template-104-iron have broken.", presentation.LastOutcome);
@@ -282,12 +282,12 @@ public sealed partial class DaggerfallEquipmentWearTests
         PresentationState presentation = new(string.Empty, DaggerfallOutcomePresentation.MessageLifetimeSeconds);
         DaggerfallOutcomePresentation outcome = new(presentation,
             new Dictionary<long, DaggerfallActorDefinition> { [Enemy] = Definitions.RequireActor(new DaggerfallActorId("rat")) },
-            text: Definitions.Text);
+            Definitions.Mobiles, Definitions.Text);
         outcome.React(new AttackHitFact(Enemy, DaggerfallActorIdentity.PlayerEntityId, 5, 5, 3, EnemyAttack: true, 1, 1));
 
         // The line is the donor's own published message with the item substituted for its placeholder.
         outcome.React(new EquipmentWornFact(DaggerfallActorIdentity.PlayerEntityId, 1001, "iron-longsword", false, 2, 0, Broken: true, 1, 1));
-        Assert.Equal("rat hit you for 5 damage; iron-longsword has broken.", presentation.LastOutcome);
+        Assert.Equal("Rat hit you for 5 damage; iron-longsword has broken.", presentation.LastOutcome);
 
         // The plural set is the donor's authored template rule, carried by the fact: greaves break in
         // the plural whatever the identifier they are materialized under looks like.

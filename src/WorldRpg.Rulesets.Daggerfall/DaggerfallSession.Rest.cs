@@ -101,7 +101,9 @@ internal sealed partial class DaggerfallSession
         DaggerfallRestRequest request = new(mode, mode == DaggerfallRestMode.UntilHealed ? 0 : action.Hours ?? 0);
         DaggerfallRestEligibility eligibility = CurrentRestEligibility();
         (bool rapidHealing, bool noRegeneration) = RestCharacterTraits();
-        _ = ApplyRest(request, eligibility, AdvanceRestInterval, rapidHealing, noRegeneration);
+        DaggerfallRestResult result = ApplyRest(request, eligibility, AdvanceRestInterval, rapidHealing, noRegeneration);
+        // An encounter ends the donor's rest window: the player faces it rather than a menu.
+        if (result.Interruption == DaggerfallRestInterruption.Encounter) RequestPanel(DaggerfallPanel.Resume);
         _input.Neutralize();
         _locomotion.Neutralize();
     }
@@ -174,7 +176,7 @@ internal sealed partial class DaggerfallSession
 
     /// <summary>
     /// Advances exactly one rest tick through the session calendar and reports a selected encounter as
-    /// the rest interruption. Pending encounter actors materialize on the next ordinary admitted step.
+    /// the rest interruption. Pending encounter actors are placed on the next ordinary admitted step.
     /// </summary>
     private DaggerfallRestTimeAdvance AdvanceRestInterval(long requestedSeconds)
     {
@@ -247,6 +249,9 @@ internal sealed partial class DaggerfallSession
     private bool HasNearbyRestEnemy()
     {
         if (State.PlayerControl.Position is not { } player) return false;
+        // As the donor's pending foe spawner sits on the player, a selected encounter still waiting for its
+        // placement is already an enemy nearby.
+        if (_encounters.HasPending(_activeProfileKey.LogicalId)) return true;
         foreach (var actor in State.Actors.All)
         {
             if (actor.IsDefeated || _enemyBehavior.IsPacified(actor.DurableId)

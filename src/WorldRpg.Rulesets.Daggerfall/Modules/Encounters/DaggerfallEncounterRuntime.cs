@@ -46,7 +46,12 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
         return result;
     }
 
-    internal IReadOnlyList<long> MaterializePending(string activeProfileId, Func<string, ActorPose, int, long> spawn)
+    /// <summary>
+    /// Offers each pending selection of the active profile to <paramref name="spawn"/>, which places and
+    /// creates its actor or returns null when no placement was found this step. Like the donor's foe
+    /// spawner, a pending selection is offered again on every later step until it is placed.
+    /// </summary>
+    internal IReadOnlyList<long> MaterializePending(string activeProfileId, Func<DaggerfallEncounterResolution, long?> spawn)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(activeProfileId);
         ArgumentNullException.ThrowIfNull(spawn);
@@ -54,14 +59,18 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
         for (int index = 0; index < _resolved.Count; index++)
         {
             DaggerfallEncounterResolution current = _resolved[index];
-            if (current.ActorDefinition is not string definition || current.SpawnedActorId is not null
+            if (current.ActorDefinition is null || current.SpawnedActorId is not null
                 || !StringComparer.Ordinal.Equals(current.ProfileId, activeProfileId)) continue;
-            long actorId = spawn(definition, current.Pose, current.Request.PlayerLevel);
+            if (spawn(current) is not long actorId) continue;
             _resolved[index] = current with { SpawnedActorId = actorId };
             created.Add(actorId);
         }
         return created;
     }
+
+    /// <summary>Whether a selected encounter of the active profile is still waiting for a placement.</summary>
+    internal bool HasPending(string activeProfileId) => _resolved.Any(current => current.ActorDefinition is not null
+        && current.SpawnedActorId is null && StringComparer.Ordinal.Equals(current.ProfileId, activeProfileId));
 
     /// <summary>Pending spawns share the active profile's local frame with current actors.</summary>
     internal void RebasePending(string activeProfileId, Vector3 delta)
@@ -169,7 +178,10 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
     }
 }
 
-/// <summary>One selected result, either pending actor materialization or bound to the actor it created.</summary>
+/// <summary>
+/// One selected result, either pending actor materialization or bound to the actor it created. Its pose is
+/// the player's where the encounter was selected; the actor itself is placed around the player when it appears.
+/// </summary>
 internal sealed record DaggerfallEncounterResolution(
     ulong Generation,
     ulong Sequence,

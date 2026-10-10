@@ -111,16 +111,16 @@ public sealed class DaggerfallEncounterPolicyTests
 
         DaggerfallEncounterRuntime restored = new(definitions, recording.Service);
         restored.Restore(first.Capture(), new Dictionary<long, string>());
-        long[] spawned = restored.MaterializePending("privateers-hold", (definition, actualPose, level) =>
+        long[] spawned = restored.MaterializePending("privateers-hold", pending =>
         {
-            Assert.Equal("encounter-warrior", definition);
-            Assert.Equal(pose, actualPose);
-            Assert.Equal(1, level);
+            Assert.Equal("encounter-warrior", pending.ActorDefinition);
+            Assert.Equal(pose, pending.Pose);
+            Assert.Equal(1, pending.Request.PlayerLevel);
             return 7_000;
         }).ToArray();
         Assert.Equal([7_000L], spawned);
         Assert.Equal(3, recording.Requests.Count);
-        Assert.Empty(restored.MaterializePending("privateers-hold", (_, _, _) => throw new Xunit.Sdk.XunitException("already spawned")));
+        Assert.Empty(restored.MaterializePending("privateers-hold", _ => throw new Xunit.Sdk.XunitException("already spawned")));
         Assert.Equal(7_000, Assert.Single(restored.Resolved).SpawnedActorId);
     }
 
@@ -138,13 +138,13 @@ public sealed class DaggerfallEncounterPolicyTests
         runtime.RebasePending("active", new System.Numerics.Vector3(-1000, 0, -1000));
         DaggerfallEncounterRuntime restored = new(definitions, recording.Service);
         restored.Restore(runtime.Capture(), new Dictionary<long, string>());
-        Assert.Single(restored.MaterializePending("active", (_, actual, _) =>
+        Assert.Single(restored.MaterializePending("active", pending =>
         {
-            Assert.Equal(new ActorPose(new WorldPoint(3, 4, 5), .5f), actual);
+            Assert.Equal(new ActorPose(new WorldPoint(3, 4, 5), .5f), pending.Pose);
             return 7000;
         }));
         restored.RebasePending("active", new System.Numerics.Vector3(1000, 0, 1000));
-        Assert.Empty(restored.MaterializePending("active", (_, _, _) => throw new Exception("duplicate spawn")));
+        Assert.Empty(restored.MaterializePending("active", _ => throw new Exception("duplicate spawn")));
         Assert.Equal(3, recording.Requests.Count);
     }
 
@@ -183,8 +183,33 @@ public sealed class DaggerfallEncounterPolicyTests
     {
         DaggerfallEncounterRuntime runtime = new(Definitions(), RecordingRandom.Create().Service);
         runtime.Select(new DaggerfallEncounterRequest(DaggerfallEncounterContext.Dungeon, 1, DungeonType: 2, EnemyAlert: true), 1, "privateers-hold", new(new WorldPoint(0, 0, 0), 0));
-        Assert.Empty(runtime.MaterializePending("castle-necromoghan", (_, _, _) => throw new Xunit.Sdk.XunitException("wrong profile")));
-        Assert.Single(runtime.MaterializePending("privateers-hold", (_, _, _) => 8_000));
+        Assert.Empty(runtime.MaterializePending("castle-necromoghan", _ => throw new Xunit.Sdk.XunitException("wrong profile")));
+        Assert.Single(runtime.MaterializePending("privateers-hold", _ => 8_000));
+    }
+
+    [Fact]
+    public void Unplaced_encounter_stays_pending_until_a_later_step_places_it()
+    {
+        DaggerfallEncounterRuntime runtime = new(Definitions(), RecordingRandom.Create().Service);
+        runtime.Select(new DaggerfallEncounterRequest(DaggerfallEncounterContext.Dungeon, 1, DungeonType: 2, EnemyAlert: true), 1, "privateers-hold", new(new WorldPoint(0, 0, 0), 0));
+        Assert.True(runtime.HasPending("privateers-hold"));
+        Assert.False(runtime.HasPending("castle-necromoghan"));
+        Assert.Empty(runtime.MaterializePending("privateers-hold", _ => null));
+        Assert.True(runtime.HasPending("privateers-hold"));
+        Assert.Equal([8_000L], runtime.MaterializePending("privateers-hold", _ => 8_000));
+        Assert.False(runtime.HasPending("privateers-hold"));
+    }
+
+    [Theory]
+    [InlineData(DaggerfallEncounterContext.Dungeon, 8f, false)]
+    [InlineData(DaggerfallEncounterContext.LocationNight, 10f, true)]
+    [InlineData(DaggerfallEncounterContext.WildernessDay, 10f, true)]
+    [InlineData(DaggerfallEncounterContext.WildernessNight, 10f, true)]
+    public void Encounter_placement_follows_the_donor_spawn_distances(DaggerfallEncounterContext context, float minimum, bool outsideView)
+    {
+        Assert.Equal(minimum, DaggerfallEncounterPolicy.MinimumSpawnDistance(context));
+        Assert.Equal(20f, DaggerfallEncounterPolicy.MaximumSpawnDistance);
+        Assert.Equal(outsideView, DaggerfallEncounterPolicy.PlacesOutsideView(context));
     }
 
     private static int Minimum(string id, int minimum, int maximum) => minimum;

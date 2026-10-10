@@ -83,4 +83,16 @@ internal sealed record DaggerfallMobileCatalogSet(
 
     /// <summary>The mobile record for one published actor, or null when the catalog does not name it.</summary>
     internal DaggerfallMobileDefinition? ForActor(string actorId) => ByActor.GetValueOrDefault(actorId);
+
+    /// <summary>
+    /// The name a player reads for an actor: its mobile's donor name, by the actor's own mobile or the
+    /// mobile that names it. An actor no mobile describes is read by its identity.
+    /// </summary>
+    internal string DisplayName(DaggerfallActorDefinition actor)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        DaggerfallMobileDefinition? mobile = actor.MobileId is int id && Mobiles.TryGetValue(id, out DaggerfallMobileDefinition? byId)
+            ? byId : ForActor(actor.Id.Value);
+        return mobile?.DonorName ?? actor.Id.Value;
+    }
 }

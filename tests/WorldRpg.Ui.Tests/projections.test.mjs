@@ -974,11 +974,13 @@ test('travel accepts only the current quote and shows actual paid arrival or int
     assert.equal(actions.length, 1);
     const message = 'Arrived at Charing. Paid 5 gold; 2 hours passed.';
     view.update({ ...value, quote: null, executionAvailable: false,
-      lastResult: { paidGold: 5, elapsedSeconds: 7200, message }, message });
+      lastResult: { paidGold: 5, elapsedSeconds: 7200, message }, message: null });
     assert.equal(root.querySelector('.dagger-travel-last-result').textContent, message);
+    // The ruleset publishes a finished journey once, as its result, so the status line does not repeat it.
+    assert.doesNotMatch(root.querySelector('[role="status"]').textContent, /Arrived/);
     assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
     const interrupted = 'Your journey was interrupted by an encounter. Paid 5 gold; 1 minute passed.';
-    view.update({ ...value, executionAvailable: false, message: interrupted, lastResult: { message: interrupted } });
+    view.update({ ...value, quote: null, executionAvailable: false, message: null, lastResult: { message: interrupted } });
     assert.match(root.querySelector('.dagger-travel-last-result').textContent, /1 minute passed/);
     assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
     view.dispose();

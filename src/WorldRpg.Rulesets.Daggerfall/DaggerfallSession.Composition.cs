@@ -447,7 +447,6 @@ internal sealed partial class DaggerfallSession
                 dungeonDiscoveries: dungeonDiscoveries,
                 dungeonActions: dungeonActions,
                 dialogueWorld: new DaggerfallDialogueWorldState(saved?.DialogueWorld));
-            _travelMessage = State.Travel.LastResult?.Message;
             State.Quests.BindTextContext(QuestTextContext);
             DaggerfallNames questNames = new(definitions, engine.Random);
             var questPlaces = new DaggerfallQuestPlaceAllocator(definitions, _site, engine.Random,
@@ -474,7 +473,7 @@ internal sealed partial class DaggerfallSession
                 _actorIdentities);
             _groundContainers = new DaggerfallGroundContainers(containers, State.ItemInstances, playerEntity, _actorIdentities, activeProfile);
             State.ItemInstances.AttachContainment(ResidentItemOwner);
-            _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, definitions.Text);
+            _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, definitions.Mobiles, definitions.Text);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, composition.StartSite.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
             State.Quests.BindResourceAllocator(new(definitions, engine.Random, new DaggerfallItemFactory(definitions, engine.Random), questNames,

@@ -420,15 +420,21 @@ public sealed class ExteriorOriginSessionTests
         EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, restoredSpatial.Service,
             new AppearanceFake(restoredReleases));
         using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, composition, saved);
+        float floorY = restored.State.PlayerControl.Position!.Value.Y;
+        restoredSpatial.FloorHit = request => request.Direction.Y < -.99f
+            ? new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh, Normal = Vector3.UnitY, Point = request.Origin with { Y = floorY } }
+            : default;
         restored.Update(new ProductUpdate(OuterUpdate(1), []));
         var materialized = Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).Encounters.Resolved);
         Assert.NotNull(materialized.SpawnedActorId);
-        // Actor materialization grounds the selected mobile through Spatial. Its horizontal
-        // position must still use the saved local frame exactly once.
-        WorldPoint live = restored.State.Actors.Get(materialized.SpawnedActorId!.Value).Position;
-        Assert.Equal(materialized.Pose.Position.X, live.X);
-        Assert.Equal(materialized.Pose.Position.Z, live.Z);
         Assert.Equal(encounter.Pose.Position.ToVector() + delta, materialized.Pose.Position.ToVector());
+        // The foe is placed around the restored player in the same local frame, at the donor's distances,
+        // rather than in a frame the rebase left behind.
+        WorldPoint live = restored.State.Actors.Get(materialized.SpawnedActorId!.Value).Position;
+        WorldPoint player = restored.State.PlayerControl.Position!.Value;
+        float horizontal = Vector2.Distance(new(live.X, live.Z), new(player.X, player.Z));
+        Assert.InRange(horizontal, DaggerfallEncounterPolicy.MinimumSpawnDistance(DaggerfallEncounterContext.WildernessDay) - .01f,
+            DaggerfallEncounterPolicy.MaximumSpawnDistance);
     }
 
     [Fact]

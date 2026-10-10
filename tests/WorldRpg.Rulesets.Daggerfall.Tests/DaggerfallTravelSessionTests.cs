@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text.Json;
 using System.Reflection;
 using System.Text.Json.Nodes;
@@ -8,6 +9,8 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -88,7 +91,7 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal(savedProfileDestination, WorldPoint.From(restored.Sites.LocalToProfile(
             restoredDestination.ToVector())));
         Assert.Null(restored.ReadTravelPresentation().Quote);
-        Assert.Contains("Arrived", restored.ReadTravelPresentation().Message);
+        Assert.Contains("Arrived", restored.ReadTravelPresentation().LastResult!.Message);
         // Elapsed time reads as game time, not raw seconds.
         Assert.Contains(" passed.", result.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("seconds", result.Message, StringComparison.Ordinal);
@@ -366,6 +369,36 @@ public sealed class DaggerfallTravelSessionTests
     }
 
     [Fact]
+    public void Interrupted_journey_returns_control_once_and_places_the_encounter_at_the_donor_distance()
+    {
+        using Fixture fixture = new(encounter: true);
+        fixture.Accept(fixture.Preview(inn: false));
+        DaggerfallTravelResult result = fixture.Session.State.Travel.LastResult!;
+        Assert.Equal(DaggerfallTravelOutcome.Encounter, result.Outcome);
+        // The journey closes the travel windows and its line is published once: as the result, never
+        // again as the panel's own message.
+        Assert.Equal(DaggerfallPanel.Resume, fixture.Session.LatestPanelRequest?.Panel);
+        DaggerfallTravelPresentation panel = fixture.Session.ReadTravelPresentation();
+        Assert.Null(panel.Message);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(panel.LastResult!.Message, "interrupted by an encounter"));
+        Assert.Equal(result.Message, fixture.Session.Presentation.LastOutcome);
+
+        // The pending foe stands in for an enemy nearby, so the journey cannot be retaken under it.
+        WorldPoint player = fixture.Session.State.PlayerControl.Position!.Value;
+        fixture.Spatial.FloorHit = request => request.Direction.Y < -.99f
+            ? new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh, Normal = Vector3.UnitY, Distance = 0,
+                Point = request.Origin with { Y = player.Y } }
+            : default;
+        fixture.Step();
+        DaggerfallEncounterResolution placed = Assert.Single(DaggerfallSavePayload.Read(fixture.Session.CaptureSave()).Encounters.Resolved);
+        long spawned = Assert.IsType<long>(placed.SpawnedActorId);
+        float distance = Vector3.Distance(fixture.Session.State.Actors.All.Single(actor => actor.DurableId == spawned).Position.ToVector(),
+            fixture.Session.State.PlayerControl.Position!.Value.ToVector());
+        Assert.InRange(distance, DaggerfallEncounterPolicy.MinimumSpawnDistance(placed.Request.Context) - .01f,
+            DaggerfallEncounterPolicy.MaximumSpawnDistance);
+    }
+
+    [Fact]
     public void Arrival_adjustment_effect_observes_destination_and_interruption_keeps_arrived_location()
     {
         Fixture? current = null;
@@ -411,7 +444,7 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal(savedResult.EndedSeconds, Absolute(restored.CaptureSave()));
         Assert.Equal(fixture.Origin.Site!.Value, restored.Site.Active);
         Assert.Null(restored.ReadTravelPresentation().Quote);
-        Assert.Contains("stopped", restored.ReadTravelPresentation().Message);
+        Assert.Contains("stopped", restored.ReadTravelPresentation().LastResult!.Message);
     }
 
     [Fact]
@@ -495,6 +528,7 @@ public sealed class DaggerfallTravelSessionTests
         private readonly bool encounter;
         private ulong step = 1;
         internal DaggerfallSession Session { get; }
+        internal SpatialFake Spatial { get; private set; } = null!;
         internal DaggerfallSiteProfile Origin { get; }
         internal DaggerfallSiteProfile Destination { get; }
         internal long Now => Absolute(Session.CaptureSave());
@@ -534,7 +568,8 @@ public sealed class DaggerfallTravelSessionTests
             ContentFake content = new(releases);
             PopulateContent(content, Origin); PopulateContent(content, Destination);
             PopulateTerrainContent(content, Origin); PopulateTerrainContent(content, Destination);
-            var engine = EngineContextFake.Create(content, SpatialFake.Create(Origin.SpatialArtifact.Sha256, releases).Service,
+            Spatial = SpatialFake.Create(Origin.SpatialArtifact.Sha256, releases);
+            var engine = EngineContextFake.Create(content, Spatial.Service,
                 new AppearanceFake(releases), random: encounter ? TravelEncounterRandom.CreateEncounter() : LodgingRandom.Create());
             DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(FullContent(TestData.RepositoryRoot));
             DaggerfallSessionComposition composition = new(definitions, Origin, DaggerfallTuning.Defaults, Inputs.Value.Identity)
@@ -550,6 +585,7 @@ public sealed class DaggerfallTravelSessionTests
         }
         internal void PreviewSite(DaggerfallSiteId site) => Submit(new { action = "travel-preview", region = site.Region,
             destination = site.Index, cautious = false, inn = false, ship = false });
+        internal void Step() => Session.Update(new ProductUpdate(OuterUpdate(step++), []));
         internal void Submit(object action) => Session.Update(new ProductUpdate(OuterUpdate(step++), [Ui(JsonSerializer.Serialize(action))]));
         internal void Accept(DaggerfallTravelQuote quote, bool duplicate = false)
         {

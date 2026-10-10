@@ -136,7 +136,7 @@ internal sealed partial class DaggerfallSession
             _travelMessage = "The carried payment is no longer available."; Presentation.SetOutcome(_travelMessage); return null;
         }
         // Retiring the selection prevents a second action from repeating the same accepted payment.
-        _travelSelectedDestination = null;
+        _travelSelectedDestination = null; _travelMessage = null;
         // As the donor's travel windows close on departure, the journey ends the map view.
         CloseTravelMap();
         _input.Neutralize(); _locomotion.Neutralize();
@@ -185,13 +185,18 @@ internal sealed partial class DaggerfallSession
         string message = $"{status} Paid {quote.TotalCost} gold; {DaggerfallCalendar.DescribeDuration(ended - started)} passed."
             + (_travelMessage is null ? "" : " " + _travelMessage);
         DaggerfallTravelResult result = State.Travel.Complete(ended, _activeProfileKey.Site, actualPixel, outcome, message);
-        _travelMessage = message; Presentation.SetOutcome(message);
+        // The completed journey is published once, as the travel result; the panel's own line is left for
+        // the next preview.
+        _travelMessage = null; Presentation.SetOutcome(message);
         if (ended > started && !State.Actors.Player.IsDefeated)
         {
             State.SkillUses.RaiseSkills(ended); State.LevelUps.BeginIfEligible();
         }
         // Like rest, a journey is one synthetic time increase: held items reroll once, on arrival.
         if (ended > started) _itemCastTriggers.CompleteTimeIncrease();
+        // The donor's travel windows are gone once the journey ends, arrived or interrupted, so the
+        // player is back in control where it ended rather than under a menu.
+        RequestPanel(DaggerfallPanel.Resume);
         return result;
     }
 
