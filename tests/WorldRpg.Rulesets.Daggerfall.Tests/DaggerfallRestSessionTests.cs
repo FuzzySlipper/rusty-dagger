@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.Json;
@@ -85,6 +86,28 @@ public sealed class DaggerfallRestSessionTests
             DaggerfallEncounterResolution selected = Assert.Single(saved.Encounters.Resolved);
             Assert.NotNull(selected.Choice.MobileId);
             Assert.Null(selected.SpawnedActorId);
+            // The rest window closes on the encounter and its line is published once.
+            Assert.Equal(DaggerfallPanel.Resume, session.LatestPanelRequest?.Panel);
+            Assert.Equal("Your rest was interrupted by an encounter.", session.RestView.Message);
+
+            // Without a floor the foe waits, and while it waits it is the enemy that refuses a new rest.
+            session.Update(new ProductUpdate(OuterUpdate(2), []));
+            Assert.Null(Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Resolved).SpawnedActorId);
+            session.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
+            Assert.Equal("Enemies are too close to rest.", session.RestView.Message);
+
+            WorldPoint player = session.State.PlayerControl.Position!.Value;
+            spatial.FloorHit = request => request.Direction.Y < -.99f
+                ? new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh, Normal = Vector3.UnitY, Distance = 0,
+                    Point = request.Origin with { Y = player.Y } }
+                : default;
+            session.Update(new ProductUpdate(OuterUpdate(4), []));
+            DaggerfallEncounterResolution placed = Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Resolved);
+            long spawned = Assert.IsType<long>(placed.SpawnedActorId);
+            float distance = Vector3.Distance(session.State.Actors.All.Single(actor => actor.DurableId == spawned).Position.ToVector(),
+                session.State.PlayerControl.Position!.Value.ToVector());
+            Assert.InRange(distance, DaggerfallEncounterPolicy.MinimumSpawnDistance(placed.Request.Context) - .01f,
+                DaggerfallEncounterPolicy.MaximumSpawnDistance);
         }
 
         ContentFake resumedContent = new(releases);

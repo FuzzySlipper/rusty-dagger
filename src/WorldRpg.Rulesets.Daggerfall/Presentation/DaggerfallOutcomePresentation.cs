@@ -13,6 +13,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed class DaggerfallOutcomePresentation(
     PresentationState presentation,
     IReadOnlyDictionary<long, DaggerfallActorDefinition> actors,
+    DaggerfallMobileCatalogSet mobiles,
     DaggerfallTextSet? text = null)
 {
     /// <summary>Admitted seconds one published outcome line stays on screen.</summary>
@@ -158,14 +159,14 @@ internal sealed class DaggerfallOutcomePresentation(
                 presentation.SetOutcome(missed.EnemyAttack && missed.TargetId != DaggerfallActorIdentity.PlayerEntityId
                     ? $"{Name(missed.AttackerId)} missed {Name(missed.TargetId)}"
                     : missed.EnemyAttack
-                    ? $"{definition.Id.Value} missed you"
-                    : $"Missed {definition.Id.Value}");
+                    ? $"{DisplayName(definition)} missed you"
+                    : $"Missed {DisplayName(definition)}");
                 break;
             case AttackHitFact hit when Actor(hit.EnemyAttack ? hit.AttackerId : hit.TargetId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;
                 presentation.SetOutcome(hit.EnemyAttack && hit.TargetId != DaggerfallActorIdentity.PlayerEntityId
                     ? $"{Name(hit.AttackerId)} hit {Name(hit.TargetId)} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage"
-                    : hit.EnemyAttack ? $"{definition.Id.Value} hit you for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage" : $"Hit {definition.Id.Value} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage");
+                    : hit.EnemyAttack ? $"{DisplayName(definition)} hit you for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage" : $"Hit {DisplayName(definition)} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage");
                 if (_soulTrap is { AllowsDeath: false } tethered && tethered.TargetId == hit.TargetId)
                 { presentation.AppendOutcome(tethered.Message); _soulTrap = null; }
                 break;
@@ -193,7 +194,9 @@ internal sealed class DaggerfallOutcomePresentation(
         }
     }
 
-    private string Name(long entityId) => Actor(entityId, out DaggerfallActorDefinition definition) ? definition.Id.Value : $"actor {entityId}";
+    private string Name(long entityId) => Actor(entityId, out DaggerfallActorDefinition definition) ? DisplayName(definition) : $"actor {entityId}";
+
+    private string DisplayName(DaggerfallActorDefinition definition) => mobiles.DisplayName(definition);
 
     /// <summary>
     /// The donor's break line: its published message for a singular or plural break, with the item

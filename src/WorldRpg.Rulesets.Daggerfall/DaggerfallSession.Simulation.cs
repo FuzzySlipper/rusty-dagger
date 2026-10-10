@@ -179,8 +179,7 @@ internal sealed partial class DaggerfallSession
         _camera.Update(State.PlayerControl);
         if (!activeLocationLoaded) return;
         if (!alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
-        _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, (definition, pose, level) =>
-            SpawnActor(definition, pose, level));
+        _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, pending => PlaceEncounter(pending, simulationStep));
         UpdateLaw(update.DeltaSeconds);
         if (LegalModalOpen) return;
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);

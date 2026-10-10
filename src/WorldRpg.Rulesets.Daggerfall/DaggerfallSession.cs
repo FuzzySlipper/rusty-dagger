@@ -553,8 +553,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>
     /// Resolves one rest/travel/time encounter at the player pose. The result remains durable but
-    /// unmaterialized until the next admitted simulation step, which makes a save between the two
-    /// operations restore the selected source result rather than draw again.
+    /// unmaterialized until an admitted simulation step places it around the player, which makes a save
+    /// between the two operations restore the selected source result rather than draw again.
     /// </summary>
     internal DaggerfallEncounterResolution QueueEncounter(DaggerfallEncounterRequest request)
     {
@@ -563,6 +563,21 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             ?? throw new InvalidOperationException("Daggerfall cannot select an encounter without a player position.");
         ulong generation = _latestUpdateGeneration is > 0 ? _latestUpdateGeneration.Value : 1UL;
         return _encounters.Select(request, generation, _activeProfileKey.LogicalId, new ActorPose(pose, State.PlayerControl.YawRadians));
+    }
+
+    /// <summary>
+    /// Places one selected encounter around the player at the donor's distances, or leaves it pending
+    /// for the next step when no floor and clearance were found, as the donor's spawner retries each frame.
+    /// </summary>
+    private long? PlaceEncounter(DaggerfallEncounterResolution pending, ulong simulationStep)
+    {
+        if (State.PlayerControl.Position is not WorldPoint player) return null;
+        DaggerfallEncounterContext context = pending.Request.Context;
+        if (!TrySpawnPose($"generation:{pending.Generation}:sequence:{pending.Sequence}:step:{simulationStep}",
+                "daggerfall.encounter.placement", player, DaggerfallEncounterPolicy.MinimumSpawnDistance(context),
+                DaggerfallEncounterPolicy.MaximumSpawnDistance, out ActorPose pose, DaggerfallEncounterPolicy.PlacesOutsideView(context)))
+            return null;
+        return SpawnActor(pending.ActorDefinition!, pose, pending.Request.PlayerLevel);
     }
 
     /// <summary>

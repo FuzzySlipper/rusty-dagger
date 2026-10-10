@@ -90,7 +90,8 @@ internal sealed partial class DaggerfallSession
             SummonMinimumDistance, SummonMaximumDistance, out pose);
     }
 
-    private bool TrySpawnPose(string operation, string randomScope, WorldPoint player, float minimumDistance, float maximumDistance, out ActorPose pose)
+    private bool TrySpawnPose(string operation, string randomScope, WorldPoint player, float minimumDistance, float maximumDistance, out ActorPose pose,
+        bool outsideView = true)
     {
         CharacterStepEnvironment environment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
         // These are call-local spawn-clearance envelopes, not another retained collision world.
@@ -104,8 +105,10 @@ internal sealed partial class DaggerfallSession
         for (int attempt = 0; attempt < SummonPlacementAttempts; attempt++)
         {
             string key = $"{operation}:attempt:{attempt}";
-            // Like FoeSpawner, start outside the forward view. A refused placement does not consume the source.
-            float angle = State.PlayerControl.YawRadians + (float)_random.DrawKeyed(new(0, randomScope, key + ":angle", 90, 270)).Value * MathF.PI / 180f;
+            // Like FoeSpawner, start outside the forward view unless the caller places in any direction.
+            // A refused placement does not consume the source.
+            float angle = State.PlayerControl.YawRadians + (float)_random.DrawKeyed(new(0, randomScope, key + ":angle",
+                outsideView ? 90 : 0, outsideView ? 270 : 359)).Value * MathF.PI / 180f;
             Vector3 direction = ActorHeading.Forward(angle);
             float distance = (float)_random.DrawKeyed(new(0, randomScope, key + ":distance", (int)minimumDistance, (int)maximumDistance)).Value;
             SpatialHit wall = _spatial.CastRay(player.ToVector(), direction, maximumDistance, rayActors, environment);

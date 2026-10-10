@@ -14,6 +14,22 @@ internal static class DaggerfallEncounterPolicy
     internal const int WildernessNightDenominator = 24;
     internal const int DungeonDenominator = 36;
 
+    /// <summary>The donor's <c>FoeSpawner</c> default farthest placement, in metres from the player.</summary>
+    internal const float MaximumSpawnDistance = 20f;
+
+    /// <summary>
+    /// The nearest a selected encounter is placed to the player: the donor's <c>IntermittentEnemySpawn</c>
+    /// passes 8 m inside a dungeon and 10 m at a location or in the wilderness.
+    /// </summary>
+    internal static float MinimumSpawnDistance(DaggerfallEncounterContext context) =>
+        context == DaggerfallEncounterContext.Dungeon ? 8f : 10f;
+
+    /// <summary>
+    /// Whether placement starts outside the player's view. The donor checks line of sight outdoors and
+    /// places a resting dungeon encounter in any direction.
+    /// </summary>
+    internal static bool PlacesOutsideView(DaggerfallEncounterContext context) => context != DaggerfallEncounterContext.Dungeon;
+
     internal static DaggerfallEncounterChoice Choose(
         DaggerfallEncounterSet encounters,
         DaggerfallEncounterRequest request,

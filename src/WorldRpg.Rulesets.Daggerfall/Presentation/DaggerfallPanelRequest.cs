@@ -19,4 +19,7 @@ internal static class DaggerfallPanel
 
     /// <summary>The menu toggle the DOM's own Escape key performs.</summary>
     internal const string Menu = "menu";
+
+    /// <summary>Closes the menu and returns control to the world, as the menu's own Resume does.</summary>
+    internal const string Resume = "resume";
 }

@@ -276,25 +276,25 @@ public sealed class PlayerAttackSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallActorDefinition rat = definitions.RequireActor(new DaggerfallActorId("rat"));
         PresentationState presentation = new("Ready", DaggerfallOutcomePresentation.MessageLifetimeSeconds);
-        DaggerfallOutcomePresentation outcomes = new(presentation, new Dictionary<long, DaggerfallActorDefinition> { [2008] = rat });
+        DaggerfallOutcomePresentation outcomes = new(presentation, new Dictionary<long, DaggerfallActorDefinition> { [2008] = rat }, definitions.Mobiles);
 
         // A hit lands, and then the attack button stays held: the cooldown rejection repeats every
         // update, and the player still has to be able to read what happened.
         outcomes.React(new AttackHitFact(1, 2008, 7, 7d, 3, false, 1, 100));
-        Assert.Equal("Hit rat for 7 damage", presentation.LastOutcome);
+        Assert.Equal("Hit Rat for 7 damage", presentation.LastOutcome);
         for (int repeat = 0; repeat < 40; repeat++)
         {
             outcomes.React(new AttackRejectedFact(AttackRejection.Cooldown));
         }
 
-        Assert.Equal("Hit rat for 7 damage", presentation.LastOutcome);
+        Assert.Equal("Hit Rat for 7 damage", presentation.LastOutcome);
 
         // A miss is a result too, and once the result has aged out the rejection shows. As in the
         // donor, the player's line names no roll or chance.
         outcomes.React(new AttackMissedFact(1, 2008, 41, 8, false, 1, 200));
-        Assert.Equal("Missed rat", presentation.LastOutcome);
+        Assert.Equal("Missed Rat", presentation.LastOutcome);
         outcomes.React(new AttackMissedFact(2008, DaggerfallActorIdentity.PlayerEntityId, 0, 0, true, 1, 201));
-        Assert.Equal("rat missed you", presentation.LastOutcome);
+        Assert.Equal("Rat missed you", presentation.LastOutcome);
         presentation.Advance(presentation.LifetimeSeconds);
         outcomes.React(new AttackRejectedFact(AttackRejection.Cooldown));
         Assert.Equal("Cooldown", presentation.LastOutcome);
