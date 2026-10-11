@@ -61,20 +61,27 @@ internal sealed partial class DaggerfallSiteProfiles
     private readonly Dictionary<BlockSelectionKey, string> _blockVariants = [];
     private readonly Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile> _assembledVariants = [];
 
+    /// <summary>
+    /// Records a block or building selection. Like the donor, a selection whose content is not published still
+    /// holds (and is saved): affected blocks assemble from their base documents, reported by one warning.
+    /// </summary>
     internal void SetBlockVariant(DaggerfallSiteId? site, string block, int? building, string variant)
     {
-        if (_catalog.Assembly is not { } assembly) throw new NotSupportedException("WorldUpdate block/building requires the normalized world assembly.");
-        block = block.ToUpperInvariant();
-        var key = new BlockSelectionKey(site, block, building);
         if (building < 0 || !DaggerfallBaseContent.ValidId(variant)) throw new ArgumentException("Invalid world block variant selection.");
-        var candidate = new Dictionary<BlockSelectionKey, string>(_blockVariants);
-        if (variant == "-") candidate.Remove(key); else candidate[key] = variant;
-        foreach (var location in _selectedVariants.Keys) RequireSeparateLocationVariant(location, candidate);
-        // Validate the actual composite requested, including any surviving global selection on reset.
-        assembly.RequireBlockVariants(site, block, building, (location, part) => SelectBlock(candidate, location, part));
-        _blockVariants.Clear();
-        foreach (var entry in candidate) _blockVariants.Add(entry.Key, entry.Value);
+        var key = new BlockSelectionKey(site, block.ToUpperInvariant(), building);
+        if (variant == "-") _blockVariants.Remove(key); else _blockVariants[key] = variant;
         _assembledVariants.Clear();
+        if (variant != "-") WarnMissingBlockVariants(key);
+    }
+
+    private void WarnMissingBlockVariants(BlockSelectionKey key)
+    {
+        IReadOnlyList<string> missing = _catalog.Assembly is { } assembly
+            ? assembly.MissingBlockVariants(key.Site, key.Block, key.Building, (location, part) => SelectBlock(_blockVariants, location, part))
+            : ["no normalized world assembly is admitted"];
+        if (missing.Count != 0)
+            System.Diagnostics.Trace.TraceWarning($"World variant for block '{key.Block}'{(key.Building is { } index ? $" building {index}" : "")} "
+                + $"at {(key.Site?.ToString() ?? "any location")} falls back to base content: {string.Join("; ", missing)}.");
     }
 
     private static DaggerfallBlockVariantSelection SelectBlock(IReadOnlyDictionary<BlockSelectionKey, string> selected,
@@ -88,14 +95,6 @@ internal sealed partial class DaggerfallSiteProfiles
             if (block.Kind == DaggerfallWorldBlockKind.RmbExterior || block.Kind == DaggerfallWorldBlockKind.RmbInterior && block.BuildingIndex == building)
                 if (Find(building) is { } variant) buildings.Add(building, variant);
         return new(Find(null), buildings);
-    }
-
-    private void RequireSeparateLocationVariant(DaggerfallSiteId site, IReadOnlyDictionary<BlockSelectionKey, string> selected)
-    {
-        if (_catalog.Assembly is not { } assembly) return;
-        if (assembly.HasBlockVariants(DaggerfallWorldProfileIds.Exterior(site), part => SelectBlock(selected, site, part))
-            || assembly.HasBlockVariants(DaggerfallWorldProfileIds.Dungeon(site), part => SelectBlock(selected, site, part)))
-            throw new NotSupportedException($"Location '{site}' has both a complete authored location variant and block/building replacements. Publish that combination as a location variant instead of discarding either selection.");
     }
 
     private bool TryAssembledVariant(DaggerfallWorldProfileKey key, out DaggerfallSiteProfile profile)

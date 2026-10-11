@@ -59,36 +59,34 @@ internal sealed partial class DaggerfallSiteProfiles
                 && pair.First.MeshIds.SequenceEqual(pair.Second.MeshIds) && pair.First.SamplePoints.SequenceEqual(pair.Second.SamplePoints));
     }
 
-    /// <summary>This session's view of the shared catalog: the same resolved profiles, with its own selected variants.</summary>
+    /// <summary>
+    /// This session's view of the shared catalog: the same resolved profiles, with its own selected variants. A
+    /// saved selection whose content is absent loads, falls back to base content and is reported by a warning.
+    /// </summary>
     internal DaggerfallSiteProfiles ForSession(DaggerfallWorldVariantSave[]? saved = null)
     {
         var result = new DaggerfallSiteProfiles(_catalog);
-        var seen = new HashSet<(string, int, int, string?, int?)>();
         foreach (var entry in saved ?? [])
         {
-            entry.Validate();
-            if (!seen.Add((entry.Kind, entry.Region, entry.Location, entry.Block, entry.Building)))
-                throw new ArgumentException("Saved world variants repeat one selection.");
             var site = new DaggerfallSiteId(entry.Region, entry.Location);
             if (entry.Kind == "location") result.SetLocationVariant(site, entry.Variant);
-            else result._blockVariants.Add(new(entry.Region == -1 ? null : site, entry.Block!, entry.Building), entry.Variant);
+            else result._blockVariants[new(entry.Region == -1 ? null : site, entry.Block!, entry.Building)] = entry.Variant;
         }
-        // Admit the complete saved combination, rather than requiring nonexistent intermediate variants.
-        foreach (var entry in result._blockVariants)
-            (_catalog.Assembly ?? throw new NotSupportedException("Saved block variants require world assembly."))
-                .RequireBlockVariants(entry.Key.Site, entry.Key.Block, entry.Key.Building,
-                    (site, part) => SelectBlock(result._blockVariants, site, part));
-        foreach (var site in result._selectedVariants.Keys) result.RequireSeparateLocationVariant(site, result._blockVariants);
+        // Check the complete saved combination, rather than the intermediate selections.
+        foreach (var key in result._blockVariants.Keys) result.WarnMissingBlockVariants(key);
         return result;
     }
 
+    /// <summary>
+    /// Selects a location variant. It combines with block and building selections: an admitted location variant
+    /// supplies the profiles it publishes, and block selections apply to every profile assembled from blocks.
+    /// As in the donor, a variant without published content still holds and the base location shows.
+    /// </summary>
     internal void SetLocationVariant(DaggerfallSiteId site, string variant)
     {
-        if (!_catalog.HasProfilesAt(site)) throw new NotSupportedException($"WorldUpdate location '{site}' has no admitted profiles.");
         if (variant == "-") { _selectedVariants.Remove(site); return; }
         if (!_catalog.HasVariant(site, variant))
-            throw new NotSupportedException($"WorldUpdate location '{site}' has no admitted variant '{variant}'.");
-        RequireSeparateLocationVariant(site, _blockVariants);
+            System.Diagnostics.Trace.TraceWarning($"World location '{site}' has no admitted variant '{variant}'; its base content remains.");
         _selectedVariants[site] = variant;
     }
 

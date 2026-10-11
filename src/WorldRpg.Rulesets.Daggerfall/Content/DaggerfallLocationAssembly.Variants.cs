@@ -23,13 +23,16 @@ internal sealed partial class DaggerfallLocationAssembly
         }
     }
 
+    /// <summary>Whether any block this profile places has published content for its selection.</summary>
     internal bool HasBlockVariants(DaggerfallWorldProfileKey profile, Func<DaggerfallWorldBlockKey, DaggerfallBlockVariantSelection> select) =>
-        ProfileBlocks(profile).Any(key => !select(key).Empty);
+        ProfileBlocks(profile).Any(key => select(key) is { Empty: false } selection && _blocks.HasVariant(key, selection));
 
-    internal void RequireBlockVariants(DaggerfallSiteId? site, string source, int? building,
+    /// <summary>The placements of a selection that have no published content and so assemble from base blocks.</summary>
+    internal IReadOnlyList<string> MissingBlockVariants(DaggerfallSiteId? site, string source, int? building,
         Func<DaggerfallSiteId, DaggerfallWorldBlockKey, DaggerfallBlockVariantSelection> select)
     {
         bool found = false;
+        List<string> missing = [];
         HashSet<(DaggerfallWorldBlockKey, string)> checkedSelections = [];
         foreach (var location in _records.Value.Values.Where(value => site is null || value.Id == site))
         {
@@ -53,9 +56,10 @@ internal sealed partial class DaggerfallLocationAssembly
                 found = true;
                 var selection = select(location.Id, key);
                 if (checkedSelections.Add((key, selection.Key)) && !_blocks.HasVariant(key, selection))
-                    throw new NotSupportedException($"WorldUpdate '{source}' at '{location.Id}' requires published {key.Kind} variant composition '{selection.Key}'.");
+                    missing.Add($"{key.Kind} composition '{selection.Key}' at {location.Id}");
             }
         }
-        if (!found) throw new NotSupportedException($"WorldUpdate block '{source}' building '{building}' is not placed at {(site is null ? "any location" : site.ToString())}.");
+        if (!found) missing.Add($"the block is not placed at {(site is null ? "any location" : site.ToString())}");
+        return missing;
     }
 }

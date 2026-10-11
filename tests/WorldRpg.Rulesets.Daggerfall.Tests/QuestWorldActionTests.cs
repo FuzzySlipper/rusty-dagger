@@ -117,19 +117,22 @@ public sealed class QuestWorldActionTests
     [Theory]
     [InlineData("worldupdate blockAll S0000000.RMB variant altered")]
     [InlineData("worldupdate location at 1 in region 17 variant absent")]
-    public void Unavailable_world_updates_report_owning_action_and_do_not_complete_following_actions(string action)
+    public void World_updates_without_published_content_complete_and_keep_base_content(string action)
     {
-        var definitions = QuestWorldAdmissionTests.Definitions(actions: [action, "say 100"], messages: ["Must not run."]);
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: [action, "say 100"], messages: ["Runs after fallback."]);
         using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
+        var profiles = new DaggerfallSiteProfiles([f.Inputs, f.Castle]); f.Session.AdmitSiteProfiles(profiles.ForSession());
         Start(f); Advance(f.Session);
         var task = Quest(f.Session).Tasks.First();
-        Assert.False(task.OperationCompleted[0]); Assert.NotNull(task.OperationState[0].UnavailableReason);
-        Assert.Empty(f.Session.State.Quests.Messages.Deliveries);
-        using var restored = f.Restore(); Assert.NotNull(Quest(restored).Tasks.First().OperationState[0].UnavailableReason);
+        Assert.True(task.OperationCompleted[0], task.OperationState[0].UnavailableReason);
+        Assert.NotEmpty(f.Session.State.Quests.Messages.Deliveries);
+        Assert.Single(DaggerfallSavePayload.Read(f.Session.CaptureSave()).WorldVariants);
+        using var restored = f.Restore(profiles);
+        Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).WorldVariants);
     }
 
     [Fact]
-    public void Authored_site_variant_fields_use_normal_content_admission_and_reject_missing_catalog_entries()
+    public void Authored_site_variant_fields_use_normal_content_admission_and_missing_entries_fall_back()
     {
         string root = TestData.RepositoryRoot;
         var payload = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!;
@@ -141,7 +144,7 @@ public sealed class QuestWorldActionTests
         var session = catalog.ForSession([new(original.Site!.Value.Region, original.Site.Value.Index, "authored")]);
         Assert.Equal("authored", session.Require(original.ProfileKey).VariantName);
         Assert.Null(catalog.Require(original.ProfileKey).VariantName);
-        Assert.Throws<NotSupportedException>(() => catalog.ForSession([new(original.Site.Value.Region, original.Site.Value.Index, "missing")]));
+        Assert.Null(catalog.ForSession([new(original.Site.Value.Region, original.Site.Value.Index, "missing")]).Require(original.ProfileKey).VariantName);
         Assert.Throws<ArgumentException>(() => new DaggerfallSiteProfiles([variant]));
     }
 
@@ -153,7 +156,7 @@ public sealed class QuestWorldActionTests
         Assert.Throws<NotSupportedException>(() => new DaggerfallSiteProfiles([original, Variant(original, [])]));
     }
 
-    private static DaggerfallSiteProfile Variant(DaggerfallSiteProfile source, IReadOnlyList<DaggerfallSiteMarker>? markers = null) => new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites,
+    internal static DaggerfallSiteProfile Variant(DaggerfallSiteProfile source, IReadOnlyList<DaggerfallSiteMarker>? markers = null) => new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites,
         source.Audio, source.ClassicPresentation, source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId,
         source.Portals, source.Anchors.Values.ToArray(), [new("variant-light", new(1, 2, 3), 8, 17, Vector3.One)], source.GroundContainerSprite, source.DungeonMap,
         source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, source.Music, markers ?? source.QuestMarkers, source.BillboardSprites,

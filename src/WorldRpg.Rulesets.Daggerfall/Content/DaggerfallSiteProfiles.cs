@@ -257,13 +257,14 @@ internal sealed partial class DaggerfallSiteProfiles
         {
             // The normalized assembly is the base of a block replacement. Authored site closures may
             // additionally carry portals or different mesh partitioning, so compare like-for-like.
+            // Retained door, container, marker and actor state is keyed by the base profile's ids, so a
+            // replacement that changes them would silently orphan saved state; it is refused as for location variants.
             RequireSameTopology(_assembly!.Assemble(key), profile, "block/building");
             _ = Admit(key, profile, null);
         }
 
         internal bool HasVariant(DaggerfallSiteId site, string variant) => _variants.Keys.Any(key => key.Profile.Site == site && key.Variant == variant);
 
-        internal bool HasProfilesAt(DaggerfallSiteId site) => _authored.Keys.Any(key => key.Site == site) || _variants.Keys.Any(key => key.Profile.Site == site);
 
         internal bool TryResolve(DaggerfallWorldProfileKey key, out DaggerfallSiteProfile? profile)
         {

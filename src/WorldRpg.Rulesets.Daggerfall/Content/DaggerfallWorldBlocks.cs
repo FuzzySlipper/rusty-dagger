@@ -176,11 +176,9 @@ internal sealed partial class DaggerfallWorldBlocks
                 continue;
             }
 
-            if (select?.Invoke(key) is { Empty: false } selection)
-            {
-                if (!_variants.TryGetValue((key, selection.Key), out entry))
-                    throw new NotSupportedException($"Block '{key}' has no published variant composition '{selection.Key}'.");
-            }
+            // A selection without published content keeps the base block; its owner warned when it was selected.
+            if (select?.Invoke(key) is { Empty: false } selection && _variants.TryGetValue((key, selection.Key), out IndexEntry? variant))
+                entry = variant;
             ReadOnlyMemory<byte> bytes;
             try { bytes = bundle.ReadBytes(entry.Document); }
             catch (Exception exception) when (exception is FileNotFoundException or EngineCallException)
