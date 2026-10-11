@@ -74,6 +74,26 @@ public sealed class DaggerfallTravelPolicyTests
         Assert.Equal(5, owned.TotalCost);
     }
 
+    /// <summary>
+    /// Privateer's Hold sits on the mainland coast in CLIMATE.PAK (map pixel 109,158, woodland), so the donor walk to
+    /// Daggerfall crosses no ocean pixel and a ship adds nothing; a route across the bay to Sentinel does use the sea.
+    /// </summary>
+    [Fact]
+    public void Shipped_climate_routes_privateers_hold_to_daggerfall_over_land_and_daggerfall_to_sentinel_over_sea()
+    {
+        DaggerfallTravelPolicy policy = new(new DaggerfallSiteContext(TestPayload.Definitions.Locations),
+            TestPayload.Definitions.Grids, DaggerfallTuning.Defaults.Transport);
+        DaggerfallTravelOptions ship = new(SpeedCautious: true, SleepModeInn: false, TravelShip: true,
+            HasHorse: false, HasCart: false, HasShip: false);
+
+        DaggerfallTravelQuote overland = policy.Quote(new(109, 158), new(17, 1231), ship, requireDiscovered: false);
+        Assert.Equal((98, 0, 0), (overland.DistanceMapPixels, overland.OceanPixels, overland.ShipCost));
+
+        DaggerfallTravelQuote bay = policy.Quote(new(207, 213), new(20, 6), ship, requireDiscovered: false);
+        Assert.Equal((190, 174), (bay.DistanceMapPixels, bay.OceanPixels));
+        Assert.True(bay.ShipCost > 0);
+    }
+
     [Fact]
     public void Quest_clock_legs_use_cautious_cart_facts_and_one_day_minimum()
     {

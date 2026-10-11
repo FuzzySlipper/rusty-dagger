@@ -101,6 +101,13 @@ public sealed class ExteriorBuildingDoorSessionTests
         fixture.ContinueGreeting();
         Assert.Equal(fixture.InteriorOf(Residence), session.Sites.ActiveProfile);
         Assert.Empty(session.State.Crime.Incidents);
+
+        // Turning inside the building publishes the current facing the HUD compass reads.
+        float before = session.State.PlayerControl.YawRadians;
+        fixture.Turn(100);
+        Assert.NotEqual(before, session.State.PlayerControl.YawRadians);
+        var view = Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(fixture.EngineFake.Published())["view"]);
+        Assert.Equal(session.State.PlayerControl.YawRadians, Convert.ToSingle(view["yawRadians"]));
     }
 
     /// <summary>
@@ -268,6 +275,7 @@ public sealed class ExteriorBuildingDoorSessionTests
         private readonly DaggerfallSessionComposition _composition;
         private SpatialFake _spatial = null!;
         private PerceptionFake _perception = null!;
+        internal EngineContextFake EngineFake { get; private set; } = null!;
         private ulong _step;
         private readonly IRandomService _random;
 
@@ -305,7 +313,7 @@ public sealed class ExteriorBuildingDoorSessionTests
             _perception = PerceptionFake.Create();
             _perception.Responder = request => Receipt(request.Targets.Span.ToArray()
                 .Select(target => new PerceptionPair(1, target.Entity, 1, 1, PerceptionPairKind.Visible, 1)).ToArray());
-            return EngineContextFake.Create(content, _spatial.Service, new AppearanceFake(releases), _perception.Service, random: _random);
+            return EngineFake = EngineContextFake.Create(content, _spatial.Service, new AppearanceFake(releases), _perception.Service, random: _random);
         }
 
         internal DaggerfallSession Restore(RulesetSavePayload save) => DaggerfallSession.Restore(Engine().Context, _composition, save);
@@ -321,6 +329,8 @@ public sealed class ExteriorBuildingDoorSessionTests
             Session.AdvanceElapsedTime(seconds);
             Assert.Equal(hour, DaggerfallSavePayload.Read(Session.CaptureSave()).Calendar.Hour);
         }
+
+        internal void Turn(float pixels) => Session.Update(new ProductUpdate(OuterUpdate(++_step), [Input(InputEventKind.PointerDelta, x: pixels, y: 0)]));
 
         internal void ContinueGreeting()
         {
