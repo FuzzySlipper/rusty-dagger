@@ -1226,7 +1226,7 @@ internal sealed class DaggerfallSiteLifecycle
             projection.ActivateMotionCollisionResidency();
             _roster.MaterializeSite(profile, delta, restoreAuthoredAppearance: true, projection: projection);
             _host.AdmitResidentCivilianAppearances(projection);
-            _roster.MaterializeStaticNpcs(profile, projection);
+            _roster.MaterializeStaticNpcs(profile, projection, translation);
             HashSet<long> actorIds = profile.Project.Actors.Keys.ToHashSet();
             foreach (DaggerfallNpc npc in _state.Npcs.All.Where(npc => npc.Profile == key))
                 actorIds.Add(npc.DurableId);

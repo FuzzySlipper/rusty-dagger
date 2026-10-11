@@ -87,7 +87,7 @@ public sealed class NewGameBowSessionTests
         uint releaseFrame = DaggerfallFormulaPolicy.BowWeaponHitFrame;
         f.Appearance.AdvanceReceiptForAll = WeaponHitReading(
             f.Appearance.PlaybackRequests.Last().Frames.Span[(int)releaseFrame].FrameId, releaseFrame);
-        f.Game.Update(new ProductUpdate(OuterUpdate(3), []));
+        f.Advance();
         Assert.Null(f.Game.State.Actors.Player.Attack.Pending);
         var arrow = Assert.Single(f.Inputs.ClassicPresentation.WorldVisuals, visual => visual.MediaId == "visual.missile.arrow");
         Assert.Contains(f.Appearance.Snapshots.Last(), fact => ReferenceEquals(fact.Appearance, f.Appearance.StaticMeshByPath[arrow.Path]));
@@ -114,6 +114,7 @@ public sealed class NewGameBowSessionTests
     {
         internal const long Target = 2008;
         internal DaggerfallSession Game { get; }
+        private ulong step;
         internal DaggerfallSiteProfile Inputs { get; }
         internal AppearanceFake Appearance { get; }
         private readonly DaggerfallSession title;
@@ -151,20 +152,22 @@ public sealed class NewGameBowSessionTests
             var move = Game.EquipmentMoves.MoveToSlot(new UniqueInventoryItem(bow.Entity.Value, new InventoryItemId(bow.Definition.Value)),
                 new EquipmentSlotId("right-hand"));
             Assert.Equal(EquipmentMoveOutcome.Applied, move.Outcome);
+            // Equipment must settle through admitted gameplay before this fixture tests bow release.
+            for (int tick = 0; tick <= (int)Math.Ceiling(move.Change!.Timing.RightHandMilliseconds * .06); tick++) Advance();
             var origin = Game.State.PlayerControl.Position!.Value.ToVector();
             float bodyHeight = inputs.ActorSprites[Target].Size.Y * .5f;
             Game.State.Actors.Get(Target).ApplyPose(new ActorPose(
                 WorldPoint.From(origin - Vector3.UnitZ * (float)distance - Vector3.UnitY * bodyHeight), 0));
             Game.State.PlayerControl.YawRadians = 0;
             Game.State.PlayerControl.PitchRadians = 0;
-            // The ordinary equipment action has its own admitted update before attack input.
-            Game.Update(new ProductUpdate(OuterUpdate(1), []));
+            Advance();
         }
 
         internal InventoryStack Arrows() => Assert.Single(Game.State.Inventory.Read().Stacks,
             item => item.Definition.Value == "template-131");
 
-        internal void Attack() => Game.Update(new ProductUpdate(OuterUpdate(2),
+        internal void Advance() => Game.Update(new ProductUpdate(OuterUpdate(++step), []));
+        internal void Attack() => Game.Update(new ProductUpdate(OuterUpdate(++step),
             [Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack")]));
 
         public void Dispose() { Game.Dispose(); title.Dispose(); }

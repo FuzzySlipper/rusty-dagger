@@ -417,6 +417,11 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     }
     internal DaggerfallActorDefinition RequireActor(DaggerfallActorId id) => Actors.TryGetValue(id, out DaggerfallActorDefinition? actor) ? actor : throw new InvalidOperationException($"Daggerfall definitions do not contain actor '{id.Value}'.");
 
+    /// <summary>The native template behind an authored or template-backed item.</summary>
+    internal DaggerfallItemTemplateDefinition? NativeTemplateFor(DaggerfallItemDefinition item) => item.Template
+        ?? (DaggerfallTemplateItemDefinitions.TemplateIndexForAuthoredItem(item.Id) is int index
+            ? ItemTemplateCatalog.Templates.GetValueOrDefault(index) : null);
+
     /// <summary>
     /// The condition units an authored item instance starts with, asked of the one owner of that rule so
     /// an authored loadout and a created instance cannot disagree. An item with no native weapon, armor

@@ -230,6 +230,7 @@ internal sealed class DaggerfallLocationAssembly
                 if (document.StartMarker is { } start) _start ??= origin + start;
                 if (document.EnterMarker is { } enter) _enter ??= origin + enter;
                 _startMarkers.AddRange(document.StartMarkers.Select(marker => origin + marker));
+                PlaceStaticNpcs(document, origin, id => PlaceId(id, block.X, block.Y));
                 foreach (JsonNode? person in document.Section("population")) Append("population", Moved(person, origin));
                 if (document.ClearGround is { } bits)
                     for (int index = 0; index < AutomapSide * AutomapSide; index++)
@@ -238,6 +239,18 @@ internal sealed class DaggerfallLocationAssembly
             }
 
             DynamicPopulation(placed, clear);
+        }
+
+        private void PlaceStaticNpcs(DaggerfallWorldBlockDocument document, Vector3 origin, Func<string, string> placed)
+        {
+            foreach (JsonNode? person in document.Section("staticNpcs"))
+            {
+                JsonObject value = Moved(person, origin, id => placed($"person/{Scope(document)}/{id["person/".Length..]}"));
+                int offset = value["sourceOffset"]?.GetValue<int>() ?? Missing("staticNpcs sourceOffset");
+                value.Remove("sourceOffset");
+                value["nameSeed"] = offset ^ key.Site.Index;
+                Append("staticNpcs", value);
+            }
         }
 
         /// <summary>One building's inside half, in the frame its block builds it in.</summary>
@@ -349,6 +362,7 @@ internal sealed class DaggerfallLocationAssembly
                     Append("actions", value);
                 }
 
+                PlaceStaticNpcs(document, origin, Placed);
                 foreach (JsonNode? marker in document.Section("questMarkers"))
                 {
                     JsonObject value = Moved(marker, origin, Placed);

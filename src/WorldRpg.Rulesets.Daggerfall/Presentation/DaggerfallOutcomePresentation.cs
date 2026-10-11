@@ -130,6 +130,7 @@ internal sealed class DaggerfallOutcomePresentation(
                     // What the perception query compared is diagnostics (the playtest targets readout
                     // carries the last melee query's counts); the player reads only the result.
                     AttackRejection.NoTargetInReach => "Nothing in reach.",
+                    AttackRejection.Equipping => "Equipping",
                     AttackRejection.Cooldown => "Cooldown",
                     AttackRejection.AttackInProgress => "Attack in progress",
                     AttackRejection.InsufficientWeaponMaterial => "Weapon material cannot harm this target",

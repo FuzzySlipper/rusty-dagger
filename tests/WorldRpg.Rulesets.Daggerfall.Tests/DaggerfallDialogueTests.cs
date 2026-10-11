@@ -19,7 +19,7 @@ public sealed class DaggerfallDialogueTests
 
         Assert.True(opened.Applied);
         DaggerfallDialogueView opening = Assert.IsType<DaggerfallDialogueView>(talk.View);
-        Assert.Equal("guard", opening.TargetLabel);
+        Assert.Equal(session.State.Npcs.Require((long)talk.Target.Identity.Value).DisplayName, opening.TargetLabel);
         Assert.NotEmpty(opening.Greeting);
 
         Assert.True(talk.Service.ApplyAction(new("dialogue-tone", Revision: opening.Revision, Tone: "polite")).Applied);

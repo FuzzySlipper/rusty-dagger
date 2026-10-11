@@ -304,7 +304,7 @@ internal sealed class DaggerfallPropertyStorage
 
     private static DaggerfallItemOwner DaggerfallItemOwnerFor(long id) => DaggerfallItemOwner.Property(id);
 
-    private DaggerfallItemOwner DaggerfallItemOwnerFor(DaggerfallPropertyStorageKey key) =>
+    internal DaggerfallItemOwner DaggerfallItemOwnerFor(DaggerfallPropertyStorageKey key) =>
         DaggerfallItemOwnerFor(RequirePropertyContainerId(Ensure(key)));
 
     private sealed record Binding(long Id, EntityId Owner);

@@ -29,6 +29,16 @@ internal sealed record EquipmentMoveResult(
     internal IReadOnlyList<UniqueItem> RemovedItems { get; } = Removed ?? [];
 }
 
+/// <summary>Remaining admitted gameplay time before each hand can attack.</summary>
+internal sealed record DaggerfallHandEquipCountdown(double RightSeconds, double LeftSeconds)
+{
+    internal void Validate()
+    {
+        if (!double.IsFinite(RightSeconds) || RightSeconds < 0 || !double.IsFinite(LeftSeconds) || LeftSeconds < 0)
+            throw new ArgumentException("Equipment countdowns must be finite and nonnegative.");
+    }
+}
+
 /// <summary>Typed meaning of one accepted equipment mutation for UI, held effects, and attack readiness.</summary>
 internal sealed record DaggerfallEquipmentChange(
     UniqueItem? Equipped,
@@ -36,7 +46,7 @@ internal sealed record DaggerfallEquipmentChange(
     DaggerfallHandEquipTiming Timing,
     DaggerfallEquipmentCue Cue);
 
-/// <summary>Delays accumulated when the inventory closes, matching the donor's per-hand timing rule.</summary>
+/// <summary>Per-hand delays from removing and equipping items, using the donor's timing table.</summary>
 internal sealed record DaggerfallHandEquipTiming(int RightHandMilliseconds, int LeftHandMilliseconds)
 {
     internal static DaggerfallHandEquipTiming None { get; } = new(0, 0);
@@ -336,7 +346,7 @@ internal sealed class DaggerfallEquipmentMoves(
     {
         if (item is not UniqueItem value
             || !definitions.TryResolveItem(new DaggerfallItemId(value.Definition.Value), out DaggerfallItemDefinition definition)
-            || definition.Template is not { } template) return 0;
+            || definitions.NativeTemplateFor(definition) is not { } template) return 0;
         int index = template.Groups.Contains("Weapons", StringComparer.Ordinal) ? template.Index - 113
             : template.Groups.Contains("Armor", StringComparer.Ordinal) ? template.Index - 102
             : -1;

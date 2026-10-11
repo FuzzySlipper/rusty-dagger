@@ -114,6 +114,7 @@ internal sealed record DaggerfallSavePayload(
     public DaggerfallClimbingSave Climbing { get; init; } = new(false, false, 0f, 0f);
     /// <summary>Accepted water mode and breath continuation, including an admitted submersion timer.</summary>
     [JsonRequired]
+    public DaggerfallHandEquipCountdown EquipCountdown { get; init; } = new(0, 0);
     public DaggerfallSwimmingSave Swimming { get; init; } = DaggerfallSwimmingSave.Empty;
     /// <summary>Profile-scoped dungeon exploration, independent of active geometry or door motion.</summary>
     [JsonRequired]
@@ -922,6 +923,8 @@ internal sealed record DaggerfallSavePayload(
         Climbing.Validate();
         ArgumentNullException.ThrowIfNull(Swimming);
         Swimming.Validate();
+        ArgumentNullException.ThrowIfNull(EquipCountdown);
+        EquipCountdown.Validate();
         ArgumentNullException.ThrowIfNull(DungeonDiscovery);
         foreach (DaggerfallDungeonDiscoverySnapshot snapshot in DungeonDiscovery) ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(DungeonActions);

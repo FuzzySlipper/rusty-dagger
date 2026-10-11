@@ -300,6 +300,7 @@ public static class DungeonNormalizer
         private readonly List<NormalizedVector3> worldBoundsVertices = [];
         private readonly List<NormalizedLightPlacement> lights = [];
         private readonly List<NormalizedBillboardPlacement> billboards = [];
+        private readonly List<NormalizedStaticNpcPlacement> staticNpcs = [];
         private readonly List<NormalizedActorPlacement> actors = [];
         private readonly List<DaggerfallWorldBlockRandomEnemy> randomEnemies = [];
         private readonly List<NormalizedTreasurePlacement> treasures = [];
@@ -391,6 +392,17 @@ public static class DungeonNormalizer
                         AddProvenance(actorPlacementId, "rdb-mobile-placement", blocks.Source, index);
                         break;
                     case RdbFlatKind.Billboard:
+                        if (StaticNpcNormalization.IsDungeonNpc(flat.Source.TextureArchive))
+                        {
+                            var factions = FactionReader.Read(Encoding.UTF8.GetString(request.Sources.Require("FACTION.TXT").Bytes.Span), "FACTION.TXT")
+                                .ToDictionary(value => value.Id);
+                            var npc = StaticNpcNormalization.Dungeon(flat, factions);
+                            ResolveTexture(flat.Source.TextureArchive, flat.Source.TextureRecord);
+                            staticNpcs.Add(new($"person/{blockPlacementId}/{index}", position, npc.BillboardArchive, npc.BillboardRecord,
+                                npc.FactionId, npc.Race, npc.Gender, npc.SourceOffset ^ layout.LocationIndex));
+                            AddPlacement();
+                            break;
+                        }
                         (ushort archiveId, ushort recordId) = RemapTexture(flat.Source.TextureArchive, flat.Source.TextureRecord);
                         TextureInfo texture = ResolveTexture(archiveId, recordId);
                         string lightId = $"light-flat/{blockPlacementId}/{index}";
@@ -634,6 +646,7 @@ public static class DungeonNormalizer
                 treasures,
                 doors)
             {
+                StaticNpcs = staticNpcs,
                 Actions = actions,
                 QuestMarkers = questMarkers,
                 GeometryPlacements = normalizedGeometryPlacements,

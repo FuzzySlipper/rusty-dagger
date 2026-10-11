@@ -48,9 +48,9 @@ internal static class DaggerfallTransportProjection
 {
     internal static DaggerfallTransportPresentation Read(DaggerfallTransportPolicy policy, InventoryView player,
         DaggerfallTransportAccessContext context, bool ownsShip, DaggerfallWagonStorage? wagon = null,
-        Func<string, string>? itemLabel = null)
+        Func<string, string, ulong, string>? itemLabel = null)
     {
-        itemLabel ??= DaggerfallInventoryPresentation.Label;
+        itemLabel ??= (_, definition, _) => DaggerfallInventoryPresentation.Label(definition);
         ArgumentNullException.ThrowIfNull(policy);
         ArgumentNullException.ThrowIfNull(player);
         context.Validate();
@@ -102,7 +102,7 @@ internal static class DaggerfallTransportProjection
             : $"Overland journeys take {share}% of the time they take on foot. ") + running;
     }
 
-    private static DaggerfallWagonItemPresentation[] WagonItems(InventoryView? contents, Func<string, string> itemLabel)
+    private static DaggerfallWagonItemPresentation[] WagonItems(InventoryView? contents, Func<string, string, ulong, string> itemLabel)
     {
         if (contents is null) return [];
         DaggerfallWagonItemPresentation[] unique = contents.UniqueItems
@@ -110,14 +110,14 @@ internal static class DaggerfallTransportProjection
             .Select(item => new DaggerfallWagonItemPresentation(
                 $"unique:{item.Entity.Value.ToString(CultureInfo.InvariantCulture)}",
                 item.Definition.Value,
-                "1", itemLabel(item.Definition.Value)))
+                "1", itemLabel($"unique:{item.Entity.Value}", item.Definition.Value, 1)))
             .ToArray();
         DaggerfallWagonItemPresentation[] stacks = contents.Stacks
             .OrderBy(stack => stack.Id.Value, StringComparer.Ordinal)
             .Select(stack => new DaggerfallWagonItemPresentation(
                 $"stack:{stack.Id.Value}",
                 stack.Definition.Value,
-                stack.Quantity.ToString(CultureInfo.InvariantCulture), itemLabel(stack.Definition.Value)))
+                stack.Quantity.ToString(CultureInfo.InvariantCulture), itemLabel($"stack:{stack.Id.Value}", stack.Definition.Value, stack.Quantity)))
             .ToArray();
         return [.. unique, .. stacks];
     }

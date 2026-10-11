@@ -623,8 +623,7 @@ internal sealed class DaggerfallMerchantService
     }
 
     private string ItemLabel(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata) =>
-        metadata.PotionRecipeKey is int recipe ? $"{(definition.Template?.Index == 278 ? "Recipe" : "Potion of")} {_definitions.Magic.PotionRecipes[recipe].Name}"
-            : definition.Template?.Name ?? definition.Id.Value;
+        Presentation.DaggerfallItemNames.Label(_definitions, definition, metadata);
 
     private DaggerfallTradeQuote? Quote(Binding binding, DaggerfallTradeSide side, DaggerfallTradeLine line)
     {

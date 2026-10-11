@@ -330,6 +330,7 @@ internal sealed partial class DaggerfallSession
                 () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
                 actorId => effects.ControlsFor(actorId).PhysicalAttacks, TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), DeliverMonsterHit,
                 npcs.IsGameplayActive, EffectiveFoeTeam);
+            _equipmentMoves.Changed += _combat.EquipmentChanged;
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
@@ -451,6 +452,7 @@ internal sealed partial class DaggerfallSession
                 dialogueWorld: new DaggerfallDialogueWorldState(saved?.DialogueWorld));
             State.Quests.BindTextContext(QuestTextContext);
             DaggerfallNames questNames = new(definitions, engine.Random);
+            npcs.BindNames(questNames.NpcName);
             var questPlaces = new DaggerfallQuestPlaceAllocator(definitions, _site, engine.Random,
                 (site, building) => State.Property.OwnsHouse(new(site, building.Source.Id, building.Id.BlockX, building.Id.BlockY)),
                 region => region >= 0 && region < definitions.BuildingNames.RegionNames.Count ? definitions.BuildingNames.RegionNames[region] : null,
@@ -578,6 +580,8 @@ internal sealed partial class DaggerfallSession
             _itemCondition.Enchanted += _itemCastTriggers.Enchanted;
             effects.Completed += _itemCastTriggers.EffectCompleted;
             _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
+            _persistence.EquipCountdown = () => _combat.EquipCountdown;
+            if (saved is not null) _combat.EquipCountdown = saved.EquipCountdown;
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
             _roster.ActorRetired += State.Quests.ObserveFoeRemoval;

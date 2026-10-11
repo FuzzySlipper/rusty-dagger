@@ -14,6 +14,44 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class WorldBlockTests
 {
+    [CorpusFact("BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT", "PAL.PAL")]
+    public void Source_exterior_faction_flats_and_dungeon_people_become_static_placements()
+    {
+        var sources = Sources();
+        var normalizer = new WorldBlockNormalizer(sources);
+        var archive = BsaArchive.Parse(sources.Require("BLOCKS.BSA").Bytes.Span, "BLOCKS.BSA");
+        int exteriorCount = 0, dungeonCount = 0;
+        foreach (var record in archive.Records.Where(record => record.Name is not null))
+        {
+            if (record.Name!.EndsWith(".RMB", StringComparison.Ordinal))
+            {
+                byte[] bytes = archive.GetPayload(record).ToArray();
+                Assert.True(RmbBlockSummaryReader.TryRead(bytes, archive.Source, 0, bytes.Length, out RmbBlockSummary? summary, out _));
+                var source = RmbPlacementReader.Read(bytes, 0, summary!, archive.Source);
+                var expected = source.Buildings.SelectMany(building => building.Exterior.Flats).Concat(source.MiscFlats)
+                    .Where(flat => flat.FactionId != 0 && flat.TextureArchive != 199).ToArray();
+                if (expected.Length == 0) continue;
+                var people = normalizer.RmbExterior(record.Name).Block.StaticNpcs;
+                Assert.Equal(expected.Length, people.Count);
+                for (int i = 0; i < expected.Length; i++)
+                    Assert.Equal(((int)expected[i].FactionId, expected[i].SourceOffset), (people[i].FactionId, people[i].SourceOffset));
+                exteriorCount += people.Count;
+            }
+            else if (record.Name.EndsWith(".RDB", StringComparison.Ordinal))
+            {
+                var source = RdbDecoder.Decode(archive.GetPayload(record).Span, "BLOCKS.BSA");
+                var expected = source.Flats.Where(flat => flat.TextureArchive is 334 or 346 or 357 or >= 175 and <= 184).ToArray();
+                if (expected.Length == 0) continue;
+                var block = normalizer.Rdb(record.Name).Block;
+                Assert.Equal(expected.Length, block.StaticNpcs.Count);
+                Assert.DoesNotContain(block.Billboards, billboard => block.StaticNpcs.Any(person => billboard.SpriteResourceId == $"sprite/texture-{person.BillboardArchive}-{person.BillboardRecord}"));
+                dungeonCount += block.StaticNpcs.Count;
+            }
+        }
+        Assert.True(exteriorCount > 0);
+        Assert.True(dungeonCount > 0);
+    }
+
     [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "CLIMATE.PAK", "FACTION.TXT", "PAL.PAL")]
     public void Castle_necromoghans_flooded_block_publishes_the_source_water_surface()
     {
@@ -536,7 +574,7 @@ public sealed class WorldBlockTests
         PakDecoder.Decode(sources.Require("CLIMATE.PAK").Bytes.Span, sources.Require("CLIMATE.PAK").Label));
 
     private static DungeonLogicalSourceSet Sources(bool textures = true) => new(Directory.EnumerateFiles(TestData.CorpusRoot)
-        .Where(path => Path.GetFileName(path) is "MAPS.BSA" or "BLOCKS.BSA" or "ARCH3D.BSA" or "CLIMATE.PAK" or "FACTION.TXT" or "PAL.PAL"
+        .Where(path => Path.GetFileName(path) is "MAPS.BSA" or "BLOCKS.BSA" or "ARCH3D.BSA" or "CLIMATE.PAK" or "FACTION.TXT" or "FLATS.CFG" or "PAL.PAL"
             || textures && Path.GetFileName(path).StartsWith("TEXTURE.", StringComparison.Ordinal))
         .Select(path => new DungeonLogicalSource($"arena2/{Path.GetFileName(path)}", File.ReadAllBytes(path))));
 }

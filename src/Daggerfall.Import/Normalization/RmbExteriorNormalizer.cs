@@ -135,6 +135,7 @@ public static class RmbExteriorNormalizer
         private NormalizedMarker? enterMarker;
         private NormalizedInteriorBuilding? interiorBuilding;
         private readonly List<NormalizedStaticNpcPlacement> staticNpcs = [];
+        private readonly IReadOnlyDictionary<(int, int), string> flatGenders = StaticNpcNormalization.ReadGenders(request.Sources);
         private readonly List<NormalizedPropertyContainer> propertyContainers = [];
 
         /// <summary>
@@ -147,6 +148,13 @@ public static class RmbExteriorNormalizer
             Arena2ImportPoint origin = Arena2SourceTransform.ToExteriorBlockOrigin(reference);
             foreach (RmbBlockFlat flat in content.ExteriorFlats)
                 AddSourceMarker(flat.TextureArchive, flat.TextureRecord, RmbBlockContent.Add(origin, flat.Point));
+            foreach (RmbBlockFlat flat in content.ExteriorFlats.Where(flat => flat.Source.FactionId != 0 && flat.TextureArchive != RdbSourceClassification.EditorFlatArchive))
+            {
+                var npc = StaticNpcNormalization.Exterior(flat, sourceFactions, flatGenders);
+                staticNpcs.Add(new($"person/{reference.X}/{reference.Y}/flat-{flat.Source.SourceOffset}",
+                    MeshGeometry.ToRightHanded(RmbBlockContent.Add(origin, flat.Point)), npc.BillboardArchive, npc.BillboardRecord,
+                    npc.FactionId, npc.Race, npc.Gender, npc.SourceOffset ^ layout.LocationIndex));
+            }
             foreach (RmbBlockModel model in content.ExteriorModels)
                 AddMesh(model, point => RmbBlockContent.Add(origin, point), reference, model.BuildingIndex, model.StartingLockValue);
             foreach (RmbBlockPerson person in content.ExteriorPeople)

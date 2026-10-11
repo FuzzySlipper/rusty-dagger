@@ -25,6 +25,33 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class PlayerAttackSessionTests
 {
     [Fact]
+    public void Equipment_delay_blocks_attacks_ages_only_in_play_and_survives_save()
+    {
+        using var fixture = new ConditionSessionFixture();
+        var session = fixture.Session;
+        var sword = session.State.Equipment.Read().Assignments.Single(value => value.Slot.Value == "right-hand").Item;
+        Assert.Equal(EquipmentMoveOutcome.Applied, session.EquipmentMoves.MoveToGrid(sword, 49).Outcome);
+        var saved = DaggerfallSavePayload.Read(session.CaptureSave());
+        Assert.True(saved.EquipCountdown.RightSeconds > 0);
+        FactBuffer<IProductFact> facts = new();
+        Assert.False(session.State.Kit.AttackExecution.Start(new(1, 2000, 1, 1, 1d / 60, false), facts));
+        List<IProductFact> rejected = []; facts.Deliver(rejected.Add);
+        Assert.Contains(rejected, fact => fact is AttackRejectedFact { Reason: AttackRejection.Equipping });
+        session.ApplyProductMode(ProductMode.Paused);
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        Assert.Equal(saved.EquipCountdown, DaggerfallSavePayload.Read(session.CaptureSave()).EquipCountdown);
+        using var restored = fixture.Restore(session.CaptureSave());
+        Assert.Equal(saved.EquipCountdown, DaggerfallSavePayload.Read(restored.CaptureSave()).EquipCountdown);
+        restored.ApplyProductMode(ProductMode.Playing);
+        ulong steps = (ulong)Math.Ceiling(saved.EquipCountdown.RightSeconds * 60) + 1;
+        for (ulong step = 1; step <= steps; step++) restored.Update(new ProductUpdate(OuterUpdate(step), []));
+        Assert.Equal(0, DaggerfallSavePayload.Read(restored.CaptureSave()).EquipCountdown.RightSeconds);
+        _ = restored.State.Kit.AttackExecution.Start(new(1, 2000, 1, steps + 1, 1d / 60, false), facts);
+        rejected.Clear(); facts.Deliver(rejected.Add);
+        Assert.DoesNotContain(rejected, fact => fact is AttackRejectedFact { Reason: AttackRejection.Equipping });
+    }
+
+    [Fact]
     public void Admitted_player_hits_record_skill_uses_once_per_operation_and_preserve_them_through_save()
     {
         string root = TestData.RepositoryRoot;
@@ -212,8 +239,9 @@ public sealed class PlayerAttackSessionTests
             definitions.ArmorValuesByMaterial, definitions.Actions, definitions.LootTables, definitions.HudResources,
             definitions.DonorErrata, definitions.ItemTemplates,
             definitions.CharacterPresentation, definitions.Locations, definitions.Text, definitions.Magic, definitions.Mobiles,
-            definitions.Names, definitions.Rumors, definitions.Biographies, definitions.Grids, definitions.Books, definitions.Factions, definitions.Terrain, definitions.ItemTemplateCatalog, definitions.QuestSources, definitions.Cinematics)
-        { NewGame = definitions.NewGame };
+            definitions.Names, definitions.Rumors, definitions.Biographies, definitions.Grids, definitions.Books, definitions.Factions, definitions.Terrain, definitions.ItemTemplateCatalog, definitions.QuestSources, definitions.Cinematics, definitions.Encounters)
+        { NewGame = definitions.NewGame, EnemyRanged = definitions.EnemyRanged, EnemySpells = definitions.EnemySpells,
+            BuildingNames = definitions.BuildingNames, DialogueWorldRules = definitions.DialogueWorldRules };
 
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -232,8 +260,8 @@ public sealed class PlayerAttackSessionTests
 
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
-        Assert.All(session.LastEnemyBehavior.Values, evidence =>
-            Assert.Equal(EnemyBehaviorState.Idle, evidence.State));
+        // The rat has no independent ranged or spell action to replace its missing melee reach.
+        Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 

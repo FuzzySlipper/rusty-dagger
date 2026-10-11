@@ -6,6 +6,15 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Donor name-bank composition over normalized fragments and the admitted random service.</summary>
 internal sealed class DaggerfallNames(DaggerfallDefinitions definitions, IRandomService random, Func<string, int, int>? draw = null)
 {
+    internal string NpcName(DaggerfallNpc npc)
+    {
+        if (definitions.Factions.Factions.GetValueOrDefault(npc.Appearance.FactionId) is { Type: 0 } individual)
+            return individual.Name;
+        if (!definitions.BuildingNames.TryGetNameBank(npc.Site.Region, out int bank))
+            throw new NotSupportedException($"NPC region {npc.Site.Region} has no published name bank.");
+        return FullName(bank, npc.Appearance.Gender == "Female", $"npc/name/{npc.Appearance.NameSeed}");
+    }
+
     internal string FirstName(int bank, bool female, string identity)
     {
         if (bank is < 0 or > 7) throw new ArgumentOutOfRangeException(nameof(bank));

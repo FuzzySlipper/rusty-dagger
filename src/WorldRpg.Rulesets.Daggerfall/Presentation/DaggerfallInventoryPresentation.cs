@@ -317,7 +317,7 @@ internal sealed class DaggerfallInventoryPresentation
                 : metadata.CapturedSoulMobileId is not null || definition.Template?.Index == 275 ? 1004
                 : metadata.CreditValue is not null ? 1007 : 1003;
             var context = DaggerfallTextContext.Empty with { Item = DaggerfallTextContexts.Item(definitions,
-                definition, metadata, display.Label, quantity, CurrentValue(definition, metadata)) };
+                definition, metadata, DaggerfallItemNames.BaseName(definitions, definition), quantity, CurrentValue(definition, metadata)) };
             details = definitions.TextPresentation.Resolve(new(DaggerfallTextKind.Resource,
                 record.ToString(CultureInfo.InvariantCulture)), context).Text.Trim();
         }
@@ -348,32 +348,12 @@ internal sealed class DaggerfallInventoryPresentation
 
     internal string DescribeCreatedItem(DaggerfallCreatedItem item) => DescribeCreatedItem(definitions, item);
 
-    internal static string DescribeCreatedItem(DaggerfallDefinitions definitions, DaggerfallCreatedItem item)
-    {
-        var definition = definitions.RequireItem(new DaggerfallItemId(item.Item.Value));
-        var metadata = item.Metadata;
-        string label = definition.Template?.Name ?? Label(definition.Id.Value);
-        if (!metadata.Identified) return label;
-        if (metadata.Enchantment is { } magicId && definitions.Magic.MagicItems.TryGetValue(magicId, out var magic))
-        {
-            if (magic.Type != 0) return magic.Name;
-            label = definitions.TextPresentation.ResolveRaw(magic.Name, new(DaggerfallTextKind.Internal, "item-name"),
-                DaggerfallTextContext.Empty with { Item = DaggerfallTextContexts.Item(definitions, definition, metadata, label) }).Text;
-        }
-        if (metadata.BookId is int book)
-            return definitions.Books.Books[book] is { Disposition: DaggerfallBookDisposition.Read, Title.Length: > 0 } readable ? readable.Title : label;
-        bool weapon = definition.Template?.Groups.Contains("Weapons") == true && item.TemplateIndex != 131;
-        bool armor = definition.Template?.Groups.Contains("Armor") == true && item.TemplateIndex != 107 && definition.Shield is null;
-        if (!weapon && !armor) return label;
-        string material = string.Concat(definitions.Text.Require(new(DaggerfallTextKind.Internal, metadata.Material)).TextRuns);
-        string format = string.Concat(definitions.Text.Require(new(DaggerfallTextKind.Internal,
-            weapon ? "longWeaponNameFormatString" : "longArmorNameFormatString")).TextRuns);
-        return string.Format(CultureInfo.InvariantCulture, format, material, label);
-    }
+    internal static string DescribeCreatedItem(DaggerfallDefinitions definitions, DaggerfallCreatedItem item) =>
+        DaggerfallItemNames.Label(definitions, definitions.RequireItem(new(item.Item.Value)), item.Metadata);
 
     private ItemDisplay Display(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata)
     {
-        string baseLabel = definition.Template?.Name ?? Label(definition.Id.Value);
+        string baseLabel = DaggerfallItemNames.Label(definitions, definition, metadata);
         if (metadata is null || itemCondition is null) return new(baseLabel, Details(definition), null, true);
         if (!string.Equals(metadata.ItemId, definition.Id.Value, StringComparison.Ordinal))
             throw new InvalidOperationException($"Live inventory definition '{definition.Id.Value}' does not match durable metadata '{metadata.ItemId}'.");
@@ -390,7 +370,7 @@ internal sealed class DaggerfallInventoryPresentation
             return new(sheet ? $"Recipe: {recipe.Name}" : $"Potion of {recipe.Name}", sheet ? ingredients : "Drink to apply its effects to yourself.", presentedCondition, true);
         }
         if (metadata.MadeEnchantment is { } made)
-            return new(metadata.Identified ? made.Name : baseLabel,
+            return new(baseLabel,
                 conditionDetail + (metadata.Identified ? string.Join(", ", made.Settings.Select(value => definitions.Magic.EnchantmentSettings[value.Key].DisplayName)) : "Unidentified magical item"),
                 presentedCondition, metadata.Identified);
         if (metadata.Enchantment is null) return new(baseLabel, conditionDetail + Details(definition), presentedCondition, true);
@@ -398,8 +378,7 @@ internal sealed class DaggerfallInventoryPresentation
             throw new InvalidOperationException($"Item '{metadata.ItemId}' names unpublished magic metadata '{metadata.Enchantment}'.");
         if (!metadata.Identified)
             return new(baseLabel, conditionDetail + "Unidentified magical item", presentedCondition, false);
-        string namedMagic = definitions.TextPresentation.ResolveRaw(magic.Name, new(DaggerfallTextKind.Internal, "item-name"),
-            DaggerfallTextContext.Empty with { Item = DaggerfallTextContexts.Item(definitions, definition, metadata, baseLabel) }).Text;
+        string namedMagic = baseLabel;
         // The donor names each identified enchantment by its setting ("Cast When Used: Fireball",
         // "Enhances Skill: Long Blade"); an artifact power or an unpublished setting keeps its meaning.
         string effects = string.Join(", ", magic.Enchantments.Select(enchantment =>
