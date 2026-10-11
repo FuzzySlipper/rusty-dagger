@@ -140,7 +140,7 @@ public static class SourceCoverageInputReader
                 foreach (JsonProperty property in value.EnumerateObject())
                 {
                     if (property.Name == "sourceFile") ReadSourceFile(property.Value, section);
-                    if (property.Name is "source" or "sources" or "sourcePath" or "vidSource" or "flcSource")
+                    if (property.Name is "source" or "sources" or "sourcePath" or "paletteSourcePath" or "vidSource" or "flcSource")
                         ReadReference(property.Value, section);
                     Walk(property.Value, section == "root" ? property.Name : section);
                 }
