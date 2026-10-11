@@ -23,6 +23,10 @@ internal static class SourceCoverageCommand
             [.. inventory.Where(row => row.Disposition == "excluded").Select(row => row.PathOrPattern.StartsWith("arena2/", StringComparison.Ordinal) ? row.PathOrPattern["arena2/".Length..] : row.PathOrPattern)]);
         var manifest = SourceManifestBuilder.Scan(request, csv);
         var report = SourceCoverageReconciler.Build(manifest, inputs.Consumers, inputs.Quests, inputs.Unsupported, inventory);
+        var reconciliation = SourceInventoryReconciler.Reconcile(args["--inventory"],
+            report.Records.Select(record => record.Source with { Disposition = record.Disposition }).ToArray(), update: false);
+        foreach (string line in reconciliation.Drift) Console.Error.WriteLine($"inventory drift: {line}");
+        foreach (string line in reconciliation.Unreconciled) Console.Error.WriteLine($"inventory unresolved: {line}");
         PayloadFiles.WriteFile(args["--output"], SourceCoverageReconciler.Serialize(report));
         Console.WriteLine($"source coverage: {report.Records.Count} records, {report.Families.Count} families, {report.QuestHandoffs.Count} original quest handoffs, {report.Unsupported.Count} unsupported media families");
         foreach (var family in report.Families) Console.WriteLine($"  {family.FamilyId}: {family.Imported} imported, {family.RequiredPending} pending, {family.Unused} unused, {family.Duplicate} duplicate, {family.Excluded} excluded, {family.Malformed} malformed, {family.SourceGap} source-gap, {family.Unresolved} unresolved");

@@ -74,6 +74,17 @@ public sealed class WorldBlockTests
         Assert.Empty(new WorldBlockNormalizer(sources).Rdb("N0000065.RDB").Block.WaterVolumes);
     }
 
+    [CorpusFact("BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT", "PAL.PAL")]
+    public void Invalid_spawn_distance_preserves_the_fixed_actor_and_reports_raw_source()
+    {
+        var block = new WorldBlockNormalizer(Sources()).Rdb("S0000003.RDB").Block;
+        var actor = Assert.Single(block.Actors, actor => actor.Id == "actor/s0000003-rdb/0");
+        Assert.Equal("actor/mobile-0", actor.ActorResourceId);
+        Assert.Equal(0, actor.SpawnDistance);
+        Assert.Contains(block.SourceWarnings, warning => warning.Contains("S0000003.RDB") && warning.Contains("spawnDistance 35") && warning.Contains("default 0"));
+        Assert.All(block.Actors, value => Assert.InRange(value.SpawnDistance, 0, 6));
+    }
+
     private const float RmbBlockSide = 4096F * Arena2SourceTransform.SourceUnitMetres;
     private const float RdbBlockSide = 2048F * Arena2SourceTransform.SourceUnitMetres;
 
@@ -105,7 +116,7 @@ public sealed class WorldBlockTests
                 var flat = expected[i]; var actor = actors[i];
                 string gender = (flat.FactionOrMobileId & 255) <= 43 ? "unspecified"
                     : (flat.Flags & 2) != 0 ? "male" : (flat.Flags & 1) != 0 ? "female" : "unspecified";
-                Assert.Equal(((int)flat.SoundIndex, flat.Action == 99, gender), (actor.SpawnDistance, actor.Passive, actor.Gender));
+                Assert.Equal((flat.SoundIndex <= 6 ? (int)flat.SoundIndex : 0, flat.Action == 99, gender), (actor.SpawnDistance, actor.Passive, actor.Gender));
                 count++; if (actor.Passive) passive++;
                 if ((flat.FactionOrMobileId & 255) > 43 && flat.Flags != 0) genderFlags++;
             }

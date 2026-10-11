@@ -81,6 +81,14 @@ public static class SourceCoverageReconciler
                 }
                 detail = $"Producer ledger: {decisions[0]}. {source.Note}";
             }
+            // A normalized record supersedes an offline inventory's old use-site classification.
+            // Aggregate archive citations still cannot promote any of its children.
+            if (direct.Any(value => !value.OfflineOnly && !value.ContextOnly && value.LedgerDisposition is null)
+                && disposition is not (SourceRecordDisposition.Malformed or SourceRecordDisposition.SourceGap or SourceRecordDisposition.Excluded))
+            {
+                disposition = SourceRecordDisposition.Imported;
+                detail = "Published normalized content cites this source record. " + detail;
+            }
             if (source.FamilyId == "CNT-028" && (disposition != SourceRecordDisposition.Excluded || direct.Length != 0 || context.Length != 0))
                 errors.Add($"{source.Id}: MIDI must remain excluded and have no consuming artifact.");
             if (disposition is SourceRecordDisposition.None or SourceRecordDisposition.Unresolved)

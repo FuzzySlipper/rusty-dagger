@@ -43,13 +43,17 @@ internal sealed record RdbBlockFlat(int Index, RdbFlatSource Source, RdbFlatKind
     /// <summary>DFU attaches a flat action only when its action byte is positive; flags also encode enemy gender/selection.</summary>
     public bool ActionNode => Source.ObjectOffset > 0 && Source.Action > 0;
 
+    // Malformed marker data must not discard an otherwise usable actor. Zero is the normal
+    // default (widest horizontal activation range), not a new donor-defined distance category.
+    internal int SpawnDistance => Source.SoundIndex <= 6 ? Source.SoundIndex : 0;
+
     internal NormalizedActorPlacement ActorPlacement(string id, NormalizedVector3 position) => new(
-        id, $"actor/mobile-{Mobile!.Id.Value}", position, Source.SoundIndex,
+        id, $"actor/mobile-{Mobile!.Id.Value}", position, SpawnDistance,
         RdbSourceClassification.IsPassiveEnemyMarker(Source),
         Mobile.Id.Value <= 43 ? "unspecified" : (Source.Flags & 2) != 0 ? "male" : (Source.Flags & 1) != 0 ? "female" : "unspecified");
 
     internal DaggerfallWorldBlockRandomEnemy RandomEnemyPlacement(string scope, NormalizedVector3 position, int? waterLevel) => new(
-        $"random-enemy/{scope}/{Index}", position, Source.Flags, Source.SoundIndex,
+        $"random-enemy/{scope}/{Index}", position, Source.Flags, SpawnDistance,
         RdbSourceClassification.IsPassiveEnemyMarker(Source), ActionId(scope), Index, Source.ObjectOffset)
         { Underwater = waterLevel is int water && water < Source.Y,
             AquaticSpawnAllowed = waterLevel is int surface && surface - 20 <= Source.Y };
@@ -122,6 +126,9 @@ internal sealed class RdbBlockContent
         }
 
         Flats = flats;
+        Warnings = [.. flats.Where(flat => flat.Kind is RdbFlatKind.FixedMobile or RdbFlatKind.RandomEnemy && flat.Source.SoundIndex > 6)
+            .Select(flat => $"BLOCKS.BSA/{sourceKey} record {sourceOrdinal}, flat {flat.Index} offset {flat.Source.ObjectOffset}: spawnDistance {flat.Source.SoundIndex} is outside 0..6; using default 0 and preserving the actor marker.")];
+        foreach (string warning in Warnings) Console.Error.WriteLine($"source warning: {warning}");
         Models = [.. block.Models.Select((model, index) => new RdbBlockModel(index, model,
             RdbSourceClassification.HasActionDoorTag(model), RdbSourceClassification.HasSpecialDoorAction(model),
             RdbSourceClassification.HasActionDoorTag(model) ? StartingLockValue(model.TriggerFlagStartingLock, block.Source, index) : 0))];
@@ -134,6 +141,8 @@ internal sealed class RdbBlockContent
             ? NormalizedAmbientZoneKind.SpecialArea
             : Castle ? NormalizedAmbientZoneKind.Castle : null;
     }
+
+    public IReadOnlyList<string> Warnings { get; }
 
     public string SourceKey { get; }
 
