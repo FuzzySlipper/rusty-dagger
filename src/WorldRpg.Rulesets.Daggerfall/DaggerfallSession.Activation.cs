@@ -25,6 +25,14 @@ internal sealed partial class DaggerfallSession
     private readonly DaggerfallActivationPresentation _activationPresentation = new();
     private DaggerfallDialogueService? _dialogue;
 
+    /// <summary>Binds live session policy once whenever a site appearance is created.</summary>
+    private void ConfigureSiteAppearance(DaggerfallSiteAppearance appearance)
+    {
+        appearance.UseEnemyAudibleRange(() => EnemyAudibleRange);
+        appearance.UsePlayerVampireGender(() => State.RacialOverrides.Current?.IsVampire == true ? State.Character.Identity.Gender == DaggerfallCharacterGender.Female : null);
+        appearance.UsePlayerBeastForm(() => State.RacialOverrides.Current is { State.BeastForm: true } form ? form.State.Kind : null);
+    }
+
     /// <summary>
     /// Wires activation after spatial, actor, and corpse owners exist. The normal session
     /// constructor calls this once; keeping it named makes the dependency order explicit.
@@ -32,9 +40,6 @@ internal sealed partial class DaggerfallSession
     private void InitializeActivation(IEngineContext engine, DaggerfallLootInteractionTuning reach)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        _appearance.UseEnemyAudibleRange(() => EnemyAudibleRange);
-        _appearance.UsePlayerVampireGender(() => State.RacialOverrides.Current?.IsVampire == true ? State.Character.Identity.Gender == DaggerfallCharacterGender.Female : null);
-        _appearance.UsePlayerBeastForm(() => State.RacialOverrides.Current is { State.BeastForm: true } form ? form.State.Kind : null);
         _dialogue = new DaggerfallDialogueService(
             State.Npcs,
             State.Actors,

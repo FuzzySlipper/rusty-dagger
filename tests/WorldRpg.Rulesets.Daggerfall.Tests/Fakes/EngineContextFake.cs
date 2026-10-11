@@ -65,7 +65,7 @@ internal class EngineContextFake : DispatchProxy
 
     internal static EngineContextFake Create(IContentService content, ISpatialService spatial, IGraphicsService appearance,
         IPerceptionService? perception = null, IPersistenceService? persistence = null, IRandomService? random = null,
-        IVideoService? video = null, IWorldOriginService? worldOrigin = null)
+        IVideoService? video = null, IWorldOriginService? worldOrigin = null, IAudioService? audioService = null)
     {
         IEngineContext context = DispatchProxy.Create<IEngineContext, EngineContextFake>();
         EngineContextFake fake = (EngineContextFake)(object)context;
@@ -75,7 +75,7 @@ internal class EngineContextFake : DispatchProxy
         fake.appearance = appearance;
         fake.perception = perception ?? PerceptionFake.Create().Service;
         fake.camera = ServiceProxy<ICameraViewService, CameraServiceFake>.Create();
-        fake.audio = ServiceProxy<IAudioService, AudioServiceFake>.Create();
+        fake.audio = audioService ?? ServiceProxy<IAudioService, AudioServiceFake>.Create();
         fake.diagnostics = ServiceProxy<IDiagnosticsService, DiagnosticsServiceFake>.Create();
         fake.video = video ?? ServiceProxy<IVideoService, VideoServiceFake>.Create();
         // Minimum rolls keep gameplay deterministic, but a source quest Place retries random towns

@@ -24,6 +24,9 @@ internal interface IDaggerfallSiteTransitionHost
     /// <summary>Rebuilds contextual activation over the lifecycle's current projection.</summary>
     void RebuildActivation();
 
+    /// <summary>Binds live session presentation policy to every newly created projection.</summary>
+    void ConfigureSiteAppearance(DaggerfallSiteAppearance appearance);
+
     void RebaseTransientWorld(Vector3 delta);
 
     /// <summary>The destination became the active site; site-scoped session presentation moves on.</summary>
@@ -575,7 +578,7 @@ internal sealed class DaggerfallSiteLifecycle
         try
         {
             candidate = DaggerfallSiteProjection.Create(_engine, _state.Actors.Entities, _random, _tuning, _time.Calendar,
-                target, AudioFor(target), _spatial, destinationDelta?.Doors, destinationDelta?.Motion,
+                target, AudioFor(target), _spatial, _host.ConfigureSiteAppearance, destinationDelta?.Doors, destinationDelta?.Motion,
                 deferMotionCollisionAdmission: true, sessionPresentation: _sessionPresentation);
             if (target.ProfileKind == DaggerfallWorldProfileKind.Exterior)
                 candidate.Rebase(destinationFrameOffset);
@@ -1210,7 +1213,7 @@ internal sealed class DaggerfallSiteLifecycle
                 throw new InvalidOperationException($"Exterior profile '{key.LogicalId}' has no normalized map-pixel identity.");
             Vector3 translation = ExteriorProfileTranslation(profile, origin);
             projection = DaggerfallSiteProjection.Create(_engine, _state.Actors.Entities, _random, _tuning, _time.Calendar,
-                profile, AudioFor(profile), _spatial, delta?.Doors, delta?.Motion, deferMotionCollisionAdmission: true,
+                profile, AudioFor(profile), _spatial, _host.ConfigureSiteAppearance, delta?.Doors, delta?.Motion, deferMotionCollisionAdmission: true,
                 sessionPresentation: _sessionPresentation);
             projection.Appearance.DrawThroughActiveSnapshot();
             // The profile's authored geometry and actors use its own source frame. Rebase every
