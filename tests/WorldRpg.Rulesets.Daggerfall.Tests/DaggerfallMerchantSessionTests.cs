@@ -212,6 +212,9 @@ public sealed class DaggerfallMerchantSessionTests
         Assert.Equal("Identified", identified.Outcome);
         Assert.Equal(beforeGold - identified.PaidGold, session.State.Currency.Read().Gold);
         Assert.True(session.State.ItemInstances.RequireUnique(itemId.Value).Identified);
+        string identifiedLabel = session.State.Merchants.Read(context).PlayerItems.Single(item => item.Key == itemKey).Label;
+        Assert.NotEqual(initial.PlayerItems.Single(item => item.Key == itemKey).Label, identifiedLabel);
+        Assert.DoesNotContain("%it", identifiedLabel);
         DaggerfallMerchantResult repeated = session.State.Merchants.Identify(context,
             session.State.Merchants.Read(context).Revision, itemKey);
         Assert.False(repeated.Accepted);

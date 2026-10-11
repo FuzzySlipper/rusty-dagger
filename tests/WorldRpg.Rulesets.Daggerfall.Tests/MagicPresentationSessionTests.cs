@@ -44,10 +44,10 @@ public sealed class MagicPresentationSessionTests
         s.Casting.Ready(1,"spell.023",id); s.ReleaseReadySpell(1,Vector3.UnitZ); f.Update();
         // The effect row names the source item and the remaining game time, not ids or magic rounds.
         var row = Assert.Single(s.ReadActiveEffects());
-        Assert.Contains($"From {s.ItemDefinitionName(item.Definition.Value)}.", row.Detail, StringComparison.Ordinal);
+        Assert.Contains($"From {s.EffectItemName(id)}.", row.Detail, StringComparison.Ordinal);
         Assert.DoesNotContain(id.ToString(System.Globalization.CultureInfo.InvariantCulture), row.Detail, StringComparison.Ordinal);
         Assert.DoesNotContain("magic rounds", row.Detail, StringComparison.Ordinal);
-        Assert.Equal(s.ItemDefinitionName(item.Definition.Value), row.Source);
+        Assert.Equal(s.EffectItemName(id), row.Source);
         Assert.NotNull(row.RemainingSeconds);
         Assert.Equal(1, EffectCount(Visual(s)));
         s.State.Effects.CancelItemReferences(id); f.Update(); Assert.Equal(0, EffectCount(Visual(s)));

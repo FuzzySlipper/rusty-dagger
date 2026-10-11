@@ -51,6 +51,7 @@ internal sealed partial class DaggerfallSession
         if (State.DungeonActions.TryGetValue(_activeProfileKey, out DaggerfallDungeonActionGraph? actionGraph))
             actionGraph.Advance(update.DeltaSeconds);
         DaggerfallMolagBalEffects.Reconcile(State.Effects, MolagBalEquipped);
+        _combat.AdvanceEquipment(update.DeltaSeconds);
         State.Kit.AttackExecution.ObserveTimeline(generation, simulationStep);
         var restrictions = State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId);
         _input.Apply(State.PlayerControl, update, restrictions);

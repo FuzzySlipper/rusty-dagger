@@ -23,6 +23,7 @@ public sealed class WorldBlockNormalizer
     private readonly BsaArchive blocks;
     private readonly BsaArchive arch;
     private readonly IReadOnlyDictionary<int, ClassicFaction> factions;
+    private readonly IReadOnlyDictionary<(int, int), string> flatGenders;
     private readonly NavigationDerivationConfig navigation;
     private readonly Dictionary<string, Arch3dMesh?> meshes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Arch3dMesh> rmbMeshes = new(StringComparer.Ordinal);
@@ -35,6 +36,7 @@ public sealed class WorldBlockNormalizer
     {
         ArgumentNullException.ThrowIfNull(sources);
         this.sources = sources;
+        flatGenders = StaticNpcNormalization.ReadGenders(sources);
         blocks = BsaArchive.Parse(sources.Require("BLOCKS.BSA").Bytes.Span, sources.Require("BLOCKS.BSA").Label);
         arch = BsaArchive.Parse(sources.Require("ARCH3D.BSA").Bytes.Span, sources.Require("ARCH3D.BSA").Label);
         factions = FactionReader.Read(Encoding.UTF8.GetString(sources.Require("FACTION.TXT").Bytes.Span), sources.Require("FACTION.TXT").Label)
@@ -130,6 +132,8 @@ public sealed class WorldBlockNormalizer
                 .Where(flat => flat.TextureArchive == RdbSourceClassification.EditorFlatArchive && flat.TextureRecord == RdbSourceClassification.StartMarkerRecord)
                 .Select((flat, ordinal) => new NormalizedMarker($"marker/start/{ordinal}", MeshGeometry.ToRightHanded(flat.Point)))],
             EnterMarker = FirstMarker(content.ExteriorFlats, RdbSourceClassification.EnterMarkerRecord, "marker/enter"),
+            StaticNpcs = [.. content.ExteriorFlats.Where(flat => flat.Source.FactionId != 0 && flat.TextureArchive != RdbSourceClassification.EditorFlatArchive)
+                .Select(flat => StaticNpcNormalization.Exterior(flat, factions, flatGenders))],
             Buildings = [.. content.Summary.Buildings.Select(slot => new DaggerfallWorldBlockBuilding(
                 slot.Index, slot.BuildingType, slot.FactionId, slot.Quality, slot.NameSeed, content.HasInterior(slot.Index)))],
             Ground = [.. content.Ground.Select(tile => new DaggerfallWorldBlockGroundTile(tile.Source.X, tile.Source.Y, tile.TextureRecord, tile.Source.Rotated, tile.Source.Flipped))],
@@ -279,7 +283,7 @@ public sealed class WorldBlockNormalizer
         List<NormalizedLightPlacement> lights = [.. content.Lights.Select(light =>
             new NormalizedLightPlacement($"light/{scope}/{light.Index}", MeshGeometry.ToRightHanded(light.Point), light.Range, 1F, new(1F, 1F, 1F)))];
         List<NormalizedBillboardPlacement> billboards = [];
-        foreach (RdbBlockFlat flat in content.Flats.Where(flat => flat.Kind == RdbFlatKind.Billboard))
+        foreach (RdbBlockFlat flat in content.Flats.Where(flat => flat.Kind == RdbFlatKind.Billboard && !StaticNpcNormalization.IsDungeonNpc(flat.Source.TextureArchive)))
         {
             NormalizedVector3 position = MeshGeometry.ToRightHanded(flat.Point);
             (int width, int height) = TextureExtent(flat.Source.TextureArchive, flat.Source.TextureRecord);
@@ -303,6 +307,8 @@ public sealed class WorldBlockNormalizer
                     QuestMarkerNormalization.KindOf(flat.Source.TextureArchive, flat.Source.TextureRecord)!.Value, MeshGeometry.ToRightHanded(flat.Point), flat.Index))],
             Lights = lights,
             Billboards = billboards,
+            StaticNpcs = [.. content.Flats.Where(flat => flat.Kind == RdbFlatKind.Billboard && StaticNpcNormalization.IsDungeonNpc(flat.Source.TextureArchive))
+                .Select(flat => StaticNpcNormalization.Dungeon(flat, factions))],
             Actors = [.. content.Flats.Where(flat => flat.Kind == RdbFlatKind.FixedMobile)
                 .Select(flat => flat.ActorPlacement($"actor/{scope}/{flat.Index}", MeshGeometry.ToRightHanded(flat.Point)))],
             Treasures = [.. content.Flats.Where(flat => flat.Kind == RdbFlatKind.Treasure)

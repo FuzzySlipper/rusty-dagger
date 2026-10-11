@@ -47,6 +47,15 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     private readonly Func<int> _armorValueModifier;
     private readonly Func<int> _attackChanceModifier;
     private readonly Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult> _transformActor;
+    internal DaggerfallHandEquipCountdown EquipCountdown { get; set; } = new(0, 0);
+    internal void EquipmentChanged(DaggerfallEquipmentChange change) => EquipCountdown = new(
+        EquipCountdown.RightSeconds + change.Timing.RightHandMilliseconds / 1000d,
+        EquipCountdown.LeftSeconds + change.Timing.LeftHandMilliseconds / 1000d);
+    internal void AdvanceEquipment(double seconds) => EquipCountdown = new(
+        Math.Max(0, EquipCountdown.RightSeconds - seconds), Math.Max(0, EquipCountdown.LeftSeconds - seconds));
+    internal bool PlayerWeaponReady => (ReadWeapon(_equipment.Read(), "right-hand") is not null
+        || ReadWeapon(_equipment.Read(), "left-hand") is null ? EquipCountdown.RightSeconds : EquipCountdown.LeftSeconds) <= 0;
+
     internal AttackCapabilities<IProductFact> Attacks { get; }
     internal TargetingService Targeting { get; }
     internal AttackExecution<IProductFact> Execution { get; }
@@ -514,6 +523,12 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     {
         ulong generation = request.Generation, simulationStep = request.SimulationStep;
         gesture = DaggerfallSwingDirection.None;
+        if (!PlayerWeaponReady)
+        {
+            attack = default!;
+            facts.Append(new AttackRejectedFact(AttackRejection.Equipping));
+            return false;
+        }
         if (!TryReadPlayerAttackPolicy(player, request.Action, out DaggerfallEquippedWeapon? equippedWeapon,
             out DaggerfallActionDefinition playerAction))
         {

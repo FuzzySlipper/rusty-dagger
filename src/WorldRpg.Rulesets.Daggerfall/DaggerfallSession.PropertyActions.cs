@@ -109,7 +109,7 @@ internal sealed partial class DaggerfallSession
         if (AccessiblePropertyStorage() is { } key)
         {
             InventoryView contents = PropertyStorage.Read(key);
-            storage = new(key.Value, contents.StoreRevision.ToString(CultureInfo.InvariantCulture), PropertyItems(contents));
+            storage = new(key.Value, contents.StoreRevision.ToString(CultureInfo.InvariantCulture), PropertyItems(contents, PropertyStorage.DaggerfallItemOwnerFor(key)));
         }
         return new(bank, [.. offers], storage);
     }
@@ -170,9 +170,9 @@ internal sealed partial class DaggerfallSession
         { Presentation.SetOutcome(put ? "That item cannot be stored here." : "That item cannot be taken from storage."); }
     }
 
-    private DaggerfallWagonItemPresentation[] PropertyItems(InventoryView contents) =>
-        [.. contents.UniqueItems.Select(item => new DaggerfallWagonItemPresentation($"unique:{item.Entity.Value}", item.Definition.Value, "1", ItemDefinitionName(item.Definition.Value))),
-            .. contents.Stacks.Select(item => new DaggerfallWagonItemPresentation($"stack:{item.Id.Value}", item.Definition.Value, item.Quantity.ToString(CultureInfo.InvariantCulture), ItemDefinitionName(item.Definition.Value)))];
+    private DaggerfallWagonItemPresentation[] PropertyItems(InventoryView contents, DaggerfallItemOwner owner) =>
+        [.. contents.UniqueItems.Select(item => new DaggerfallWagonItemPresentation($"unique:{item.Entity.Value}", item.Definition.Value, "1", _inventoryUi.DescribeItem($"unique:{item.Entity.Value}", item.Definition.Value, 1, owner: owner).Label)),
+            .. contents.Stacks.Select(item => new DaggerfallWagonItemPresentation($"stack:{item.Id.Value}", item.Definition.Value, item.Quantity.ToString(CultureInfo.InvariantCulture), _inventoryUi.DescribeItem($"stack:{item.Id.Value}", item.Definition.Value, item.Quantity, owner: owner).Label))];
 
     private DaggerfallTransportActionResult BoardPropertyShip()
     {

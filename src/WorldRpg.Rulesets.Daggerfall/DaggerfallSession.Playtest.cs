@@ -70,8 +70,8 @@ internal sealed partial class DaggerfallSession
             if (available && !State.WeaponDrawn) { available = false; reason = "weapon-sheathed; toggle-weapon"; }
             else if (available && !_appearance.CanStartPlayerAttack)
             { available = false; reason = "attack-animation-active; advance then inspect"; }
-            else if (available && !State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId,
-                _latestUpdateGeneration ?? 1, _latestSimulationStep ?? 0))
+            else if (available && (!_combat.PlayerWeaponReady || !State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId,
+                _latestUpdateGeneration ?? 1, _latestSimulationStep ?? 0)))
             { available = false; reason = "attack-cooldown; advance then inspect"; }
             else if (available && _combat.InspectPlayerAttackRefusal() is { } refusal)
             { available = false; reason = refusal.ToString(); }

@@ -31,10 +31,9 @@ internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Positi
                 diagnostics.Add($"Normalized static person '{id}' lacks admitted billboard '{resource}'.");
                 continue;
             }
-            if (site is null || !world.TryGetProperty("interiorBuilding", out JsonElement building)
-                || building.ValueKind != JsonValueKind.Object)
+            if (site is null)
             {
-                diagnostics.Add($"Normalized static person '{id}' lacks its source interior/site.");
+                diagnostics.Add($"Normalized static person '{id}' lacks its source site.");
                 continue;
             }
             string? race = person.GetProperty("race").GetString();
@@ -43,14 +42,15 @@ internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Positi
             string gender = person.GetProperty("gender").GetString()!;
             int faction = person.GetProperty("factionId").GetInt32();
             if ((race is null || !definitions.Catalogs.TryGetRace(race, out _)) || gender is not ("Male" or "Female")
-                || faction < 0 || faction != 0 && !definitions.Factions.Factions.ContainsKey(faction))
+                || faction < 0)
                 diagnostics.Add($"Normalized static person '{id}' names an unavailable race, gender or faction.");
             JsonElement point = person.GetProperty("position");
             WorldPoint position = new(point.GetProperty("x").GetSingle(), point.GetProperty("y").GetSingle(), point.GetProperty("z").GetSingle());
             if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
                 diagnostics.Add($"Normalized static person '{id}' has a non-finite pose.");
-            int type = building.GetProperty("buildingType").GetInt32();
-            int buildingFaction = building.GetProperty("factionId").GetInt32();
+            bool interior = world.TryGetProperty("interiorBuilding", out JsonElement building) && building.ValueKind == JsonValueKind.Object;
+            int type = interior ? building.GetProperty("buildingType").GetInt32() : -1;
+            int buildingFaction = interior ? building.GetProperty("factionId").GetInt32() : 0;
             DaggerfallFactionDefinition? sourceFaction = definitions.Factions.Factions.GetValueOrDefault(faction);
             (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
                 definitions, sourceFaction, type, buildingFaction, "person");

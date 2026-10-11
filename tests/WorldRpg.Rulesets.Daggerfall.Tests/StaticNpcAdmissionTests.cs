@@ -13,6 +13,33 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class StaticNpcAdmissionTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Static_person_materializes_outside_buildings_and_keeps_seeded_name(bool exterior)
+    {
+        string root = TestData.RepositoryRoot;
+        var inputs = StaticProviderSite(exterior
+            ? ReadProfile(root, FullContent(root), TestPayload.Definitions, "daggerfall.charing-exterior.json")
+            : ReadInputs(root), factionId: 5911);
+        List<string> releases = [];
+        ContentFake content = new(releases); PopulateContent(content, inputs);
+        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using var session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+        var npc = Assert.Single(session.State.Npcs.All, npc => npc.Kind == DaggerfallNpcKind.Static);
+        Assert.Equal(string.Empty, npc.Site.Building);
+        Assert.Equal(5911, npc.Appearance.FactionId);
+        Assert.Equal(0, session.State.Social.ReactionForNpc(npc).Value);
+        Assert.True(session.State.Actors.TryGet(npc.DurableId, out var actor));
+        Assert.Equal(session.Sites.ProfileToLocal(inputs.StaticNpcs[0].Position), actor.Position);
+        Assert.Equal(npc.DisplayName, Assert.Single(session.Dialogue.NpcTargets(), target => target.Identity.Value == (ulong)npc.DurableId).Label);
+        long civilian = session.State.Npcs.RegisterCivilian(npc.Site, npc.Appearance, "civilian", ["talk"]);
+        Assert.Equal(npc.DisplayName, session.State.Npcs.Require(civilian).DisplayName);
+        using var restored = DaggerfallSession.Restore(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults), session.CaptureSave());
+        Assert.Equal(npc.DisplayName, restored.State.Npcs.Require(npc.DurableId).DisplayName);
+    }
+
     [Fact]
     public void Static_provider_is_a_real_actor_with_a_site_bound_service_and_save_identity()
     {
@@ -39,11 +66,14 @@ public sealed class StaticNpcAdmissionTests
         Assert.Equal(DaggerfallActorKinds.StaticNpc, session.DefinitionsByActor[npc.DurableId].Kind);
         Assert.True(session.State.Actors.TryGet(npc.DurableId, out _));
         Assert.Equal(providerSite.ProfileKey, npc.Profile);
+        Assert.False(string.IsNullOrWhiteSpace(npc.DisplayName));
+        Assert.NotEqual(npc.Role, npc.DisplayName);
         Assert.Contains("buy-spells", npc.Services);
         Assert.Equal(DaggerfallServiceDenial.None,
             session.State.Services.ProviderAvailable(new(npc.DurableId, npc.Site, "buy-spells")));
         DaggerfallActivationTarget dialogueTarget = Assert.Single(session.Dialogue.NpcTargets());
         Assert.Equal(npc.DurableId, checked((long)dialogueTarget.Identity.Value));
+        Assert.Equal(npc.DisplayName, dialogueTarget.Label);
         Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, dialogueTarget)).Applied);
 
         // Static providers are social actors, not combat/magic targets. An area spell centered on
@@ -75,6 +105,7 @@ public sealed class StaticNpcAdmissionTests
         using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, composition, session.CaptureSave());
         DaggerfallNpc restoredNpc = Assert.Single(restored.State.Npcs.All, value => value.Kind == DaggerfallNpcKind.Static);
         Assert.Equal(npc.DurableId, restoredNpc.DurableId);
+        Assert.Equal(npc.DisplayName, restoredNpc.DisplayName);
         Assert.True(restored.State.Actors.TryGet(restoredNpc.DurableId, out _));
         Assert.Equal(DaggerfallServiceDenial.None,
             restored.State.Services.ProviderAvailable(new(restoredNpc.DurableId, restoredNpc.Site, "buy-spells")));
@@ -303,7 +334,7 @@ public sealed class StaticNpcAdmissionTests
             mobile.AtlasHeight, mobile.Frames, mobile.InitialFrameId, mobile.Pivot, mobile.Size);
         Dictionary<(int Archive, int Record), NormalizedBillboardSprite> billboards = source.BillboardSprites.ToDictionary();
         billboards[(archive, record)] = billboard;
-        DaggerfallInteriorBuilding building = source.InteriorBuilding! with
+        DaggerfallInteriorBuilding? building = source.InteriorBuilding is null ? null : source.InteriorBuilding with
         {
             BuildingType = 11,
             FactionId = DaggerfallConcreteGuildCatalog.MagesFactionId,
@@ -319,6 +350,6 @@ public sealed class StaticNpcAdmissionTests
             source.ClassicPresentation, source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId,
             source.Portals, source.Anchors.Values.ToArray(), source.Lights, source.GroundContainerSprite,
             source.DungeonMap, source.DungeonActions, source.DungeonActionModels, building, source.Music,
-            source.QuestMarkers, billboards, placements);
+            source.QuestMarkers, billboards, placements, source.WaterVolumes, source.TerrainTextures, source.Population);
     }
 }

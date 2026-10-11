@@ -34,6 +34,29 @@ public sealed class AssembledSiteProfileTests
     private static JsonElement Normalized(string closure) =>
         JsonDocument.Parse(TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports", closure, "normalized.json"))).RootElement.GetProperty("world");
 
+    [Theory]
+    [InlineData("SHRIAA00.RMB", true)]
+    [InlineData("S0000070.RDB", false)]
+    public void Real_source_static_flats_are_admitted_by_location_assembly(string block, bool exterior)
+    {
+        var location = TestPayload.Definitions.Locations.Records.First(site => exterior
+            ? site.Exterior?.Blocks.Any(value => value.SourceName == block) == true
+            : site.DungeonBlocks.Any(value => value.SourceKey == block));
+        var key = exterior ? DaggerfallWorldProfileIds.Exterior(location.Id) : DaggerfallWorldProfileIds.Dungeon(location.Id);
+        var profile = Fixture.Value.Assembly.Assemble(key);
+        Assert.Null(profile.InteriorBuilding);
+        Assert.NotEmpty(profile.StaticNpcs);
+        Assert.Equal(profile.StaticNpcs.Count, profile.StaticNpcs.Select(person => person.Id).Distinct().Count());
+        Assert.All(profile.StaticNpcs, person =>
+        {
+            Assert.Contains("/", person.Id);
+            Assert.Contains("talk", person.Services);
+            Assert.NotEmpty(person.Sprite.Frames);
+        });
+        Assert.Equal(profile.StaticNpcs.Select(person => person.Appearance.NameSeed),
+            Fixture.Value.Assembly.Assemble(key).StaticNpcs.Select(person => person.Appearance.NameSeed));
+    }
+
     [Fact]
     public void Published_and_assembled_castle_admit_the_same_flooded_block_surface()
     {

@@ -793,7 +793,7 @@ public sealed record NormalizedStaticNpcPlacement(string Id, NormalizedVector3 P
         Position.Validate(nameof(Position));
         if (BillboardArchive is < 0 or > 511 || BillboardRecord is < 0 or > 127 || FactionId < 0
             || Race is not null && string.IsNullOrWhiteSpace(Race) || Gender is not ("Male" or "Female"))
-            throw new InvalidOperationException("A static person must retain a valid source appearance and faction.");
+            throw new InvalidOperationException($"Static person {Id} has invalid appearance/faction: archive={BillboardArchive}, record={BillboardRecord}, faction={FactionId}, race={Race}, gender={Gender}.");
     }
 }
 
@@ -985,8 +985,6 @@ public sealed record NormalizedWorld(
         foreach (NormalizedQuestMarker marker in QuestMarkers) marker.Validate();
         NormalizedImportDocument.ValidateUnique(StaticNpcs, npc => npc.Id, "static person");
         foreach (NormalizedStaticNpcPlacement npc in StaticNpcs) npc.Validate();
-        if (StaticNpcs.Count != 0 && InteriorBuilding is null)
-            throw new InvalidOperationException("Interior people require their selected source building.");
         ArgumentNullException.ThrowIfNull(Population);
         NormalizedImportDocument.ValidateUnique(Population, person => person.Id, "population placement");
         foreach (NormalizedPopulationPlacement person in Population) person.Validate();

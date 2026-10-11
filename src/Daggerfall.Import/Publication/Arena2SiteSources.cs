@@ -26,6 +26,7 @@ public sealed class Arena2SiteSources
         "CLIMATE.PAK",
         "PAL.PAL",
         "FACTION.TXT",
+        "FLATS.CFG",
     ];
 
     /// <summary>

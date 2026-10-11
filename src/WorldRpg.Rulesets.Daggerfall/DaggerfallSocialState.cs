@@ -141,9 +141,10 @@ internal sealed class DaggerfallSocialState
     internal DaggerfallFactionReaction ReactionForNpc(DaggerfallNpc npc)
     {
         ArgumentNullException.ThrowIfNull(npc);
-        // NPC identity deliberately permits faction zero for an unaffiliated civilian; those people
-        // have no faction standing to contribute and answer a neutral social baseline.
-        return npc.Appearance.FactionId == 0 ? new(0, 0, 0) : ReactionForFaction(npc.Appearance.FactionId);
+        // Classic flats also carry faction ids absent from FACTION.TXT. Preserve that source
+        // identity, but give people without a catalog faction a neutral social baseline.
+        return !_catalog.Factions.ContainsKey(npc.Appearance.FactionId)
+            ? new(npc.Appearance.FactionId, 0, 0) : ReactionForFaction(npc.Appearance.FactionId);
     }
 
     /// <summary>Changes player standing with a social group and clamps it to the current social contract.</summary>

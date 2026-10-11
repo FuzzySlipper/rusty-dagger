@@ -81,6 +81,18 @@ public sealed record DaggerfallNpc(
 /// </summary>
 public sealed class DaggerfallNpcRegistry
 {
+    private Func<DaggerfallNpc, string>? _name;
+    internal void BindNames(Func<DaggerfallNpc, string> name)
+    {
+        _name = name;
+        foreach (long id in _npcs.Keys.ToArray()) Name(id);
+    }
+    private void Name(long id)
+    {
+        DaggerfallNpc npc = _npcs[id];
+        if (npc.DisplayName is null && _name is not null) _npcs[id] = npc with { DisplayName = _name(npc) };
+    }
+
     private Func<long, bool> _questUnavailable = _ => false;
     internal void BindQuestPresence(Func<long, bool> unavailable) => _questUnavailable = unavailable;
 
@@ -116,6 +128,7 @@ public sealed class DaggerfallNpcRegistry
         long durableId = checked((long)allocator.Allocate(DurableIdentityKind.Actor).Value);
         _npcs.Add(durableId, new DaggerfallNpc(durableId, kind, stableKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null));
         _stable.Add(key, durableId);
+        Name(durableId);
         return durableId;
     }
 
@@ -129,6 +142,7 @@ public sealed class DaggerfallNpcRegistry
         DurableIdentityAllocator allocator = Identities ?? throw new InvalidOperationException("The NPC registry mints no identity before the session wires its allocator.");
         long durableId = checked((long)allocator.Allocate(DurableIdentityKind.Actor).Value);
         _npcs.Add(durableId, new DaggerfallNpc(durableId, DaggerfallNpcKind.Civilian, string.Empty, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null));
+        Name(durableId);
         return durableId;
     }
 
@@ -151,6 +165,7 @@ public sealed class DaggerfallNpcRegistry
         long durableId = checked((long)allocator.Allocate(DurableIdentityKind.Actor).Value);
         _npcs.Add(durableId, new DaggerfallNpc(durableId, DaggerfallNpcKind.Civilian, sourceKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null));
         _stable.Add(key, durableId);
+        Name(durableId);
         return durableId;
     }
 

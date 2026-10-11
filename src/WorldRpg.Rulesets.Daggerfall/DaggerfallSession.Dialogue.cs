@@ -192,7 +192,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
                 checked((ulong)npc.DurableId),
                 actor.Position,
                 Precedence: 1,
-                Label: npc.Role);
+                Label: npc.DisplayName ?? npc.Role);
         }
     }
 
@@ -201,7 +201,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         foreach (var npc in _npcs.All)
             if (bound(npc.DurableId) && TryReadLiveNpc(npc.DurableId, out _, out var actor, allowMuted: true))
                 yield return new(DaggerfallActivationTargetKind.Npc, ActorsState.Identity(npc.DurableId), actor!.Entity,
-                    checked((ulong)npc.DurableId), actor.Position, 1, Label: npc.Role);
+                    checked((ulong)npc.DurableId), actor.Position, 1, Label: npc.DisplayName ?? npc.Role);
     }
 
     internal bool IsCurrentNpcSelection(DaggerfallActivationSelection selection) =>
@@ -227,7 +227,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             return new(false, "That person refuses to respond.");
 
         Open(npc!, actor!);
-        return new(true, $"You speak with {npc!.Role}.");
+        return new(true, $"You speak with {npc!.DisplayName ?? npc.Role}.");
     }
 
     internal DaggerfallActivationOutcome ApplyAction(DaggerfallPlayerUiAction action)
@@ -786,7 +786,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         }
         _publish(new DaggerfallDialogueView(
             session.Revision,
-            npc.Role,
+            npc.DisplayName ?? npc.Role,
             session.Greeting,
             session.Tone.ToString().ToLowerInvariant(),
             session.Question,

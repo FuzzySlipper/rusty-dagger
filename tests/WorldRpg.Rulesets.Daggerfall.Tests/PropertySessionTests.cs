@@ -247,6 +247,27 @@ public sealed class PropertySessionTests
     }
 
     [Fact]
+    public void Property_storage_keeps_the_carried_material_name_after_reload()
+    {
+        using Fixture f = new(); f.OpenBank(); var s = f.Session;
+        var offer = s.ReadPropertyPresentation().Offers.Single(value => value.Key == DaggerfallPropertyStorageKey.ForHouse(f.HouseIdentity).Value);
+        Assert.True(s.State.Bank.TryCreditAccount(f.Land.Site!.Value.Region, ulong.Parse(offer.Price)));
+        f.Submit(new { action = "property-buy", key = offer.Key });
+        f.Submit(new { action = "property-enter", key = offer.Key });
+        var item = s.State.Inventory.Read().UniqueItems.Single(value => value.Definition.Value == "iron-dagger");
+        ulong identity = s.State.Inventory.GetDurableItemId(item.Entity).Value;
+        var metadata = s.State.ItemInstances.RequireUnique(identity);
+        s.State.ItemInstances.ReplaceUnique(identity, metadata with { Material = "dwarven" });
+        string label = s.ReadInventoryPresentation().Items.Single(value => value.Definition == "iron-dagger").Label;
+        Assert.Contains("Dwarven", label);
+        var storage = s.ReadPropertyPresentation().Storage!;
+        f.Submit(new { action = "property-put", key = offer.Key, item = $"unique:{item.Entity.Value}", amount = 1, revision = storage.Revision });
+        Assert.Equal(label, Assert.Single(s.ReadPropertyPresentation().Storage!.Items).Label);
+        using var restored = f.Restore(s.CaptureSave());
+        Assert.Equal(label, Assert.Single(restored.ReadPropertyPresentation().Storage!.Items).Label);
+    }
+
+    [Fact]
     public void Purchased_house_gates_real_entrance_rest_storage_and_sale_retains_contents()
     {
         using Fixture f = new(); f.OpenBank();

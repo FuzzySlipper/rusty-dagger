@@ -15,6 +15,25 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallInventoryPresentationTests
 {
     [Fact]
+    public void Inventory_labels_material_once_and_uses_identified_magic_name()
+    {
+        using Fixture f = new(resolveItemValues: true);
+        var original = f.ItemInstances!.RequireUnique(1001);
+        f.ItemInstances.ReplaceUnique(1001, original with { Material = "dwarven" });
+        var row = Item(f.Ui.Read(), f.Key(1001));
+        Assert.Equal("Dwarven Longsword", row.Label);
+        Assert.DoesNotContain("Dwarven Dwarven", row.Details);
+        var magic = f.Definitions.Magic.MagicItems.Values.First(value => value.Type == 0 && value.Name.Contains("%it", StringComparison.Ordinal));
+        f.ItemInstances.ReplaceUnique(1001, original with { Material = "dwarven", Enchantment = magic.Key, Identified = true });
+        string named = Item(f.Ui.Read(), f.Key(1001)).Label;
+        Assert.Contains("Dwarven", named);
+        Assert.DoesNotContain("%it", named);
+        Assert.NotEqual(row.Label, named);
+        f.ItemInstances.ReplaceUnique(1001, original with { Material = "dwarven", Enchantment = magic.Key, Identified = false });
+        Assert.Equal("Longsword", Item(f.Ui.Read(), f.Key(1001)).Label);
+    }
+
+    [Fact]
     public void Carried_rows_publish_use_and_equip_eligibility_from_the_ruleset_owners()
     {
         using DaggerfallSession session = TestSessions.FreshSession();
@@ -278,7 +297,7 @@ public sealed class DaggerfallInventoryPresentationTests
         Assert.Null(change.Equipped);
         Assert.Equal([sword], change.Removed);
         Assert.Equal(DaggerfallEquipmentCue.Unequip, change.Cue);
-        Assert.Equal(DaggerfallHandEquipTiming.None, change.Timing);
+        Assert.Equal(new DaggerfallHandEquipTiming(1700, 0), change.Timing);
         Assert.DoesNotContain(f.Equipment.Read().Assignments, assignment => assignment.Item == sword);
     }
 

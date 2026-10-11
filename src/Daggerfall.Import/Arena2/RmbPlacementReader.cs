@@ -17,7 +17,10 @@ public sealed record RmbModelPlacement(string ModelId, byte ObjectType, int X, i
 /// <param name="TextureRecord">The texture record.</param>
 /// <param name="FactionId">The NPC faction.</param>
 /// <param name="Flags">The flags.</param>
-public sealed record RmbFlatPlacement(int X, int Y, int Z, int TextureArchive, int TextureRecord, short FactionId, byte Flags);
+public sealed record RmbFlatPlacement(int X, int Y, int Z, int TextureArchive, int TextureRecord, short FactionId, byte Flags)
+{
+    public int SourceOffset { get; init; }
+}
 
 /// <summary>One section-3 waypoint: its position.</summary>
 /// <param name="X">The X position.</param>
@@ -186,7 +189,7 @@ public static class RmbPlacementReader
         return new RmbFlatPlacement(
             ReadInt(bytes, at), ReadInt(bytes, at + 4), ReadInt(bytes, at + 8),
             ReadUShort(bytes, at + 12) >> 7, ReadUShort(bytes, at + 12) & 0x7f,
-            ReadShort(bytes, at + 14), bytes[at + 16]);
+            ReadShort(bytes, at + 14), bytes[at + 16]) { SourceOffset = at };
     }
 
     private static void Require(byte[] bytes, int at, int length, string what, string source)

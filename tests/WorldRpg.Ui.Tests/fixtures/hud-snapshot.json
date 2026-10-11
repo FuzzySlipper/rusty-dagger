@@ -213,7 +213,7 @@
     "applied": false,
     "dialogue": {
       "revision": "1",
-      "targetLabel": "guard",
+      "targetLabel": "Morganna Hawkwing",
       "questContacts": [],
       "bankAvailable": false,
       "merchant": null,
@@ -235,7 +235,7 @@
         },
         {
           "id": "direction:npc:1000000000017",
-          "label": "Where is guard?",
+          "label": "Where is Morganna Hawkwing?",
           "key": null
         },
         {
@@ -767,7 +767,7 @@
         "quantity": "1",
         "weight": 18,
         "value": 15,
-        "details": "Iron Iron Longsword 1 - 15 points of damageCondition: NewWeight: 4.50 kilograms",
+        "details": "Iron Longsword 1 - 15 points of damageCondition: NewWeight: 4.50 kilograms",
         "icon": "inventory.icon.iron-longsword",
         "condition": {
           "current": 800,
@@ -795,7 +795,7 @@
         "quantity": "1",
         "weight": 2,
         "value": 1,
-        "details": "Iron Iron Dagger 0 - 5 points of damageCondition: NewWeight: 0.50 kilograms",
+        "details": "Iron Dagger 0 - 5 points of damageCondition: NewWeight: 0.50 kilograms",
         "icon": "inventory.icon.iron-dagger",
         "condition": {
           "current": 50,
@@ -821,7 +821,7 @@
         "quantity": "1",
         "weight": 50,
         "value": 100,
-        "details": "Iron Iron Cuirass \u002B7 to armor ratingCondition: NewWeight: 12.50 kilograms",
+        "details": "Iron Cuirass \u002B7 to armor ratingCondition: NewWeight: 12.50 kilograms",
         "icon": "inventory.icon.iron-cuirass",
         "condition": {
           "current": 4096,
@@ -1274,7 +1274,7 @@
         "slots": [
           "Chest Armor"
         ],
-        "details": "Iron Iron Cuirass \u002B7 to armor ratingCondition: NewWeight: 12.50 kilograms",
+        "details": "Iron Cuirass \u002B7 to armor ratingCondition: NewWeight: 12.50 kilograms",
         "condition": {
           "current": 4096,
           "maximum": 4096,
@@ -1288,7 +1288,7 @@
         "slots": [
           "Right Hand"
         ],
-        "details": "Iron Iron Longsword 1 - 15 points of damageCondition: NewWeight: 4.50 kilograms",
+        "details": "Iron Longsword 1 - 15 points of damageCondition: NewWeight: 4.50 kilograms",
         "condition": {
           "current": 800,
           "maximum": 800,

@@ -273,15 +273,15 @@ internal sealed class DaggerfallActorRoster
     }
 
     /// <summary>Admits published source people into the same registry, actors, site delta and renderer.</summary>
-    internal void MaterializeStaticNpcs(DaggerfallSiteProfile profile, DaggerfallSiteProjection? projection = null)
+    internal void MaterializeStaticNpcs(DaggerfallSiteProfile profile, DaggerfallSiteProjection? projection = null, Vector3 translation = default)
     {
         if (profile.StaticNpcs.Count == 0) return;
         DaggerfallSiteAppearance appearance = (projection ?? _projection()).Appearance;
         DaggerfallSiteId site = profile.Site!.Value;
         DaggerfallSiteRecord location = _definitions.Locations.Records.Single(location => location.Id == site);
-        DaggerfallInteriorBuilding building = profile.InteriorBuilding!;
         DaggerfallNpcSite binding = new(site.Region, location.Name,
-            $"{building.BlockX}/{building.BlockY}/{building.Building.Index}", profile.ProfileKey.LogicalId);
+            profile.InteriorBuilding is { } building ? $"{building.BlockX}/{building.BlockY}/{building.Building.Index}" : string.Empty,
+            profile.ProfileKey.LogicalId);
         List<long> batch = [];
         try
         {
@@ -296,7 +296,7 @@ internal sealed class DaggerfallActorRoster
                 {
                     if (!_state.Actors.TryGet(id, out _))
                     {
-                        MaterializeCivilian(npc, new ActorPose(placement.Position, 0F));
+                        MaterializeCivilian(npc, new ActorPose(DaggerfallExteriorSessionOrigin.Shift(placement.Position, translation), 0F));
                         created = true;
                     }
                     // Keep the registry's current-profile placement out of a failed candidate. The
