@@ -1143,6 +1143,8 @@ internal static class DaggerfallQuestTaskRunner
             state.OperationCompleted[index] = false;
             state.OperationState[index] = new(null, null)
             {
+                // Retrying an unavailable action is not a new diagnostic, even on persistent tasks.
+                UnavailableReason = state.OperationState[index].UnavailableReason,
                 // Rearm execution without losing the accepted queue or its actual recipients.
                 ItemTransfer = state.OperationState[index].ItemTransfer,
                 FoeSpawn = task.Operations[index].Kind == DaggerfallQuestTaskOperationKind.CreateFoe
