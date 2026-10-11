@@ -78,6 +78,9 @@ internal sealed class DaggerfallSwimmingPolicy
     internal bool IsSwimming => _swimming;
     internal bool HeadSubmerged => _headSubmerged;
     internal int CurrentBreath => _currentBreath;
+    internal DaggerfallBreathRead? ReadBreath(int endurance, bool waterBreathing) =>
+        !_headSubmerged || waterBreathing ? null : new(_currentBreath,
+            Math.Max(1, DaggerfallFormulaPolicy.MaxBreath(endurance)), _currentBreath < (endurance >> 3) + 4);
     internal ulong? ActiveWaterTrigger => _activeWaterTrigger;
 
     /// <summary>Applies Engine enter/exit facts to the current water identity without retaining geometry.</summary>
@@ -197,3 +200,5 @@ internal sealed class DaggerfallSwimmingPolicy
         _activeWaterTrigger = saved.ActiveWaterTrigger;
     }
 }
+
+internal sealed record DaggerfallBreathRead(int Current, int Maximum, bool Low);

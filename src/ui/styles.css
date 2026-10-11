@@ -196,3 +196,11 @@
 .dagger-travel-map-dot[data-category="temple"] { background: #b0cdff; }
 .dagger-travel-map-dot[aria-pressed="true"], .dagger-travel-map-layer > button:focus-visible { outline: 2px solid #fff0a7; outline-offset: 1px; }
 .dagger-travel-map-player { width: 9px; height: 9px; border: 2px solid #a3270f; border-radius: 50%; pointer-events: none; cursor: default; }
+
+.dagger-outcome { list-style: none; padding: 0; max-width: min(700px, calc(100vw - 48px)); }
+.dagger-outcome li { margin-top: 4px; text-shadow: 0 1px 3px #000; }
+.dagger-breath { position: absolute; right: 24px; bottom: 100px; display: grid; gap: 4px; color: #b9e5f7; }
+.dagger-breath[hidden] { display: none; }
+.dagger-breath meter { width: 120px; accent-color: #66b8e3; }
+.dagger-breath.low { color: #ff8d77; }
+.dagger-activation-indicator { position: absolute; left: 50%; top: calc(48% + 28px); transform: translateX(-50%); color: #eadc9e; font-size: .8rem; text-shadow: 0 1px 3px #000; }

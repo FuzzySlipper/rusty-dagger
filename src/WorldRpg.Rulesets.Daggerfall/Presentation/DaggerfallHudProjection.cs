@@ -39,7 +39,7 @@ internal sealed record DaggerfallHudFrame(
     string? SiteName = null,
     DaggerfallLodgingView? Lodging = null,
     DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, DaggerfallIdentifyView? Identify=null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null, DaggerfallSpellbookView? Spells=null, bool CharacterCreationAvailable = true, DaggerfallPropertyView? Property = null, DaggerfallTeleportView? Teleport = null, DaggerfallCreateItemView? CreateItem = null, DaggerfallLegalView? Legal = null,
-    DaggerfallCalendar? Calendar = null, IReadOnlyList<DaggerfallActiveEffectView>? Effects = null, string? CinematicSource = null);
+    DaggerfallCalendar? Calendar = null, IReadOnlyList<DaggerfallActiveEffectView>? Effects = null, string? CinematicSource = null, DaggerfallBreathRead? Breath = null);
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
 internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
@@ -60,7 +60,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ArgumentNullException.ThrowIfNull(frame);
         var (player, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
-            dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _, _, calendar, effects, cinematicSource) = frame;
+            dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _, _, calendar, effects, cinematicSource, _) = frame;
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
@@ -112,6 +112,10 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("details", builder.Array(information.Details.Select(builder.String).ToArray())))))),
             ("resources", builder.Array(rows)),
             ("lastOutcome", builder.String(presentation.LastOutcome)),
+            ("messages", builder.Array(presentation.Messages.Select(builder.String).ToArray())),
+            ("breath", frame.Breath is not { } breath ? builder.Null() : builder.Object(
+                ("current", builder.Number(breath.Current)), ("maximum", builder.Number(breath.Maximum)),
+                ("low", builder.Boolean(breath.Low)))),
             // The mode is the product's, and the session is the one place that is told it, so the
             // projection that the thin UI renders carries it rather than the UI keeping one.
             ("mode", builder.String(Mode(mode))),

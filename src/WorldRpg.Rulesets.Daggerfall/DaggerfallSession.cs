@@ -758,6 +758,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             ControlSettings: _controlSettings,
             ControlDiagnostic: _controlDiagnostic,
             Activation: ActivationView,
+            Breath: State.Swimming.ReadBreath(State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
+                State.Effects.GrantsWaterBreathing(DaggerfallActorIdentity.PlayerEntityId)),
             Quests: State.Quests.ReadPresentation(QuestTextContext, _time.Calendar),
             Notebook: _notebook.Read(),
             Transport: DaggerfallTransportProjection.Read(State.Transport, State.Inventory.Read(), TransportAccess(),

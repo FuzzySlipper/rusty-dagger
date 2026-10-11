@@ -29,6 +29,8 @@ interface DaggerHud {
   readonly dispel?: { readonly revision: string; readonly options: readonly { readonly id: string; readonly label: string }[] } | null;
   readonly resources: readonly { readonly id: string; readonly label: string; readonly current: number; readonly maximum: number }[];
   readonly lastOutcome: string;
+  readonly messages: readonly string[];
+  readonly breath?: { readonly current: number; readonly maximum: number; readonly low: boolean } | null;
   readonly mode?: string;
   /** The site the session projects the player at; null before any site owns them. */
   readonly site?: { readonly name: string } | null;
@@ -335,7 +337,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     <div class="dagger-reticle" aria-hidden="true">+</div>
     <section class="dagger-vitals" aria-live="polite">
     </section>
-    <p class="dagger-outcome" role="status">Awaiting projection…</p>
+    <ol class="dagger-outcome" role="status" aria-label="Recent messages"><li>Awaiting projection…</li></ol>
+    <label class="dagger-breath" hidden>Breath <meter min="0" max="1" value="1"></meter><span></span></label>
+    <span class="dagger-activation-indicator" aria-live="polite"></span>
     <section class="dagger-quests" aria-live="polite"></section>
     <p class="dagger-view" aria-live="polite"></p><section class="dagger-detectors" aria-label="Detected nearby objects"></section><section class="dagger-status"></section><section class="dagger-effects" aria-label="Active effects" hidden><h2>Active effects</h2><ul></ul></section><button class="dagger-cinematic-skip" type="button" hidden>Skip</button>
     <div class="dagger-death" role="alertdialog" aria-labelledby="dagger-death-title" hidden>
@@ -449,7 +453,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   }));
   const title = shell.querySelector<HTMLElement>('.dagger-title strong')!;
   const siteName = shell.querySelector<HTMLElement>('.dagger-title .dagger-site')!;
-  const outcome = shell.querySelector<HTMLParagraphElement>('.dagger-outcome')!;
+  const outcome = shell.querySelector<HTMLOListElement>('.dagger-outcome')!;
+  const breath = shell.querySelector<HTMLLabelElement>('.dagger-breath')!;
+  const activationIndicator = shell.querySelector<HTMLElement>('.dagger-activation-indicator')!;
   const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
   const legal = document.createElement('section');
   legal.className = 'dagger-legal'; legal.hidden = true; legal.setAttribute('role', 'dialog');
@@ -1368,7 +1374,20 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'
       : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
     siteName.textContent = value.site?.name ?? '';
-    outcome.textContent = value.lastOutcome;
+    outcome.replaceChildren(...value.messages.map(message => {
+      const line = document.createElement('li'); line.textContent = message; return line;
+    }));
+    breath.hidden = !value.breath;
+    if (value.breath) {
+      const meter = breath.querySelector('meter')!;
+      meter.max = value.breath.maximum; meter.value = value.breath.current;
+      meter.setAttribute('aria-label', 'Breath');
+      breath.querySelector('span')!.textContent = `${value.breath.current} / ${value.breath.maximum}`;
+      breath.classList.toggle('low', value.breath.low);
+    }
+    const modeLabels: Record<string, string> = { grab: 'Grab', info: 'Information', talk: 'Talk', steal: 'Steal / Lockpick', bash: 'Bash' };
+    activationIndicator.textContent = value.activation ? modeLabels[value.activation.mode] ?? value.activation.mode : '';
+    activationIndicator.hidden = value.mode !== 'playing' || !value.activation;
     entryOutcome.textContent = value.lastOutcome;
     renderQuestMessages(quests, value.quests, (action) => context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
@@ -1745,6 +1764,7 @@ export function isHud(value: unknown): value is DaggerHud {
   return typeof value === 'object' && value !== null
     && 'resources' in value && Array.isArray(value.resources) && value.resources.every(isResourceRow)
     && 'lastOutcome' in value && typeof value.lastOutcome === 'string'
+    && 'messages' in value && Array.isArray(value.messages) && value.messages.every(line => typeof line === 'string')
     && 'composition' in value && isCompositionIdentity(value.composition);
 }
 

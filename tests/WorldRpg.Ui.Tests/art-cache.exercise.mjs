@@ -29,7 +29,7 @@ export async function exercise({ page, url }) {
       intents: { claim(_intent, value) { requests.push(value.data); } },
     });
     const snapshot = (revision, block) => ({ contract: 'dagger.ui.snapshot.v1', value: {
-      resources: [], lastOutcome: '', mode: 'title',
+      resources: [], lastOutcome: '', messages: [], mode: 'title',
       composition: { bundle: 'test', ruleset: 'test', contentPacks: [], tuning: 'test' },
       uiArtRevision: revision, ...(block ? { uiArt: block } : {}),
     } });
