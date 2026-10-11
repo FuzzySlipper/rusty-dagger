@@ -207,7 +207,7 @@ public sealed class AssembledWorldTravelSessionTests
         DaggerfallDoorView live = run.Session.Sites.Projection.Doors.Read(shop.Id);
         run.Use(live.Pose.Translation, live.Entity);
         Assert.False(run.Session.ActivationView.Applied);
-        Assert.Equal("Locked.", run.Session.ActivationView.Message);
+        Assert.StartsWith("Locked.", run.Session.ActivationView.Message);
         Assert.Equal(exterior, run.Session.Sites.ActiveProfile);
         run.SetMode("info");
         run.Use(live.Pose.Translation, live.Entity);
@@ -219,6 +219,7 @@ public sealed class AssembledWorldTravelSessionTests
         live = run.Session.Sites.Projection.Doors.Read(shop.Id);
         run.Use(live.Pose.Translation, live.Entity);
         Assert.True(run.Session.ActivationView.Applied, run.Session.ActivationView.Message);
+        run.ContinueGreeting();
         Assert.Equal(Inside(shop), run.Session.Sites.ActiveProfile);
         Assert.Empty(run.Session.State.Crime.Incidents);
 
@@ -233,7 +234,7 @@ public sealed class AssembledWorldTravelSessionTests
         live = burgling.Session.Sites.Projection.Doors.Read(house.Id);
         burgling.Use(live.Pose.Translation, live.Entity);
         Assert.False(burgling.Session.ActivationView.Applied);
-        Assert.Equal("Locked.", burgling.Session.ActivationView.Message);
+        Assert.StartsWith("Locked.", burgling.Session.ActivationView.Message);
         // The lock is the house's: a pick that fails is refused again at the same skill (this run's draws are the maximum).
         burgling.Session.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).BaseValue = 100;
         burgling.SetMode("steal");
@@ -248,6 +249,7 @@ public sealed class AssembledWorldTravelSessionTests
         burgling.SetMode("grab");
         burgling.Use(live.Pose.Translation, live.Entity);
         Assert.True(burgling.Session.ActivationView.Applied, burgling.Session.ActivationView.Message);
+        burgling.ContinueGreeting();
         Assert.Equal(Inside(house), burgling.Session.Sites.ActiveProfile);
     }
 

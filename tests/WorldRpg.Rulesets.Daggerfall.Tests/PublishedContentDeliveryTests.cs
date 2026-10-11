@@ -98,7 +98,8 @@ public sealed class PublishedContentDeliveryTests
             .Where(path => path.StartsWith("worldrpg/media/music/", StringComparison.Ordinal)
                 && !path.EndsWith("music-inventory.json", StringComparison.Ordinal))];
         // The group carries the cue clips and the manifest that names them, and nothing else.
-        Assert.Equal(8, musicListed.Count);
+        using JsonDocument musicManifest = JsonDocument.Parse(content.ReadBytes("worldrpg/media/music/manifest.json").ToArray());
+        Assert.Equal(musicManifest.RootElement.GetProperty("cues").GetArrayLength() + 1, musicListed.Count);
         Assert.Contains("worldrpg/media/music/manifest.json", musicListed);
         Assert.Equal(
             [.. musicPublished.Except(musicListed).Order(StringComparer.Ordinal)],
@@ -542,7 +543,7 @@ public sealed class PublishedContentDeliveryTests
         Dictionary<string, JsonElement> resources = manifest.GetProperty("media").GetProperty("resources").EnumerateArray()
             .ToDictionary(resource => resource.GetProperty("id").GetString()!, StringComparer.Ordinal);
         JsonElement[] admitted = [.. manifest.GetProperty("audio").EnumerateArray()];
-        Assert.Equal(170, admitted.Length);
+        Assert.Equal(458, admitted.Length);
         Assert.All(admitted, clip =>
         {
             JsonElement resource = resources[clip.GetProperty("mediaId").GetString()!];
@@ -571,9 +572,9 @@ public sealed class PublishedContentDeliveryTests
             (348, "audio.ambient.thunder-short"), (349, "audio.ambient.thunder"), (350, "audio.ambient.lightning-roll"),
             (389, "audio.ambient.rain"), (437, "audio.ambient.bird1"), (438, "audio.ambient.bird2"),
         ];
-        // Mobile movement, bark and attack cues, weapon pitches, the arrow and nine parries retain
-        // their archive identities. Pin the complete set so replacing one clip with another fails.
-        int[] sourceOrdinals = [3, 105, .. Enumerable.Range(115, 116), .. Enumerable.Range(237, 9), 347, .. Enumerable.Range(428, 9)];
+        // Every archive clip is published for numeric quest sounds; named gameplay cues retain
+        // their semantic identity instead of receiving a second copy. Source record 5 has no PCM.
+        int[] sourceOrdinals = [.. Enumerable.Range(0, 459).Where(ordinal => ordinal != 5).Except(semanticCues.Select(cue => cue.Item1))];
         Assert.Equal(
             semanticCues.Concat(sourceOrdinals.Select(ordinal => (ordinal, $"audio.source.{ordinal}"))).OrderBy(cue => cue.Item1),
             admitted.Select(clip => (clip.GetProperty("sourceRecordOrdinal").GetInt32(), clip.GetProperty("mediaId").GetString()!)).OrderBy(cue => cue.Item1));

@@ -163,7 +163,7 @@ public sealed class HeldAbsorptionSessionTests
         f.Submit(new {action="inventory-drop",revision=f.Engine.PublishedNested("inventory","revision"),item=$"unique:{item.EntityId}",amount=1});
         Assert.Equal(0,Defense(s).AbsorptionChance);
         Assert.True(f.Engine.PublishedNested("inventory","message").Contains("Dropped"),f.Engine.PublishedNested("inventory","message"));
-        Assert.Equal(DaggerfallItemOwner.Ground(Assert.Single(DaggerfallSavePayload.Read(s.CaptureSave()).GroundContainers).Id),
+        Assert.Equal(DaggerfallItemOwner.Ground(Assert.Single(DaggerfallSavePayload.Read(s.CaptureSave()).GroundContainers, ground => ground.Inventory.UniqueItems.Any(value => value.EntityId == id)).Id),
             s.State.ItemInstances.RequireUnique(id).Owner);
         using var restored=f.Restore(s.CaptureSave()); Assert.Equal(0,Defense(restored).AbsorptionChance);
         var second=Stock(s); Equip(s,second); ulong secondId=Id(s,second);

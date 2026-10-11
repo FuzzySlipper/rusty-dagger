@@ -45,6 +45,10 @@ public sealed class QuestNpcOverlayTests
         Assert.True(dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);
         Start(f, "first", id); Start(f, "second", id);
         f.Update();
+        // Ordinary dialogue pauses quest time; release the modal before the quest tasks run.
+        Assert.NotNull(dialogue.CurrentNpc());
+        dialogue.Close();
+        f.Update();
         var quests = f.Session.State.Quests;
         Assert.Null(dialogue.CurrentNpc());
         Assert.Null(f.Session.ActivationView.Dialogue);

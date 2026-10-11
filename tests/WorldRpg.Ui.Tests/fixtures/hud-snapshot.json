@@ -68,6 +68,8 @@
   },
   "controls": {
     "diagnostic": "",
+    "lookSensitivity": 1,
+    "invertVertical": true,
     "bindings": [
       {
         "id": "move.forward",
@@ -177,7 +179,7 @@
         "id": "spell",
         "category": "magic",
         "keys": [
-          "KeyV"
+          "KeyP"
         ],
         "fixed": false
       },
@@ -202,6 +204,102 @@
         "category": "transport",
         "keys": [
           "KeyT"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "activation.steal",
+        "category": "activation",
+        "keys": [
+          "Digit1"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "activation.grab",
+        "category": "activation",
+        "keys": [
+          "Digit2"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "activation.info",
+        "category": "activation",
+        "keys": [
+          "Digit3"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "activation.talk",
+        "category": "activation",
+        "keys": [
+          "Digit4"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "quick-save",
+        "category": "saves",
+        "keys": [
+          "Digit9"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "quick-load",
+        "category": "saves",
+        "keys": [
+          "Digit0"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "logbook",
+        "category": "interface",
+        "keys": [
+          "KeyL"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "notebook",
+        "category": "interface",
+        "keys": [
+          "KeyN"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "travel-map",
+        "category": "maps",
+        "keys": [
+          "KeyV"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "use-magic-item",
+        "category": "magic",
+        "keys": [
+          "KeyU"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "recast",
+        "category": "magic",
+        "keys": [
+          "KeyQ"
+        ],
+        "fixed": false
+      },
+      {
+        "id": "abort-spell",
+        "category": "magic",
+        "keys": [
+          "KeyE"
         ],
         "fixed": false
       }
@@ -244,6 +342,7 @@
           "key": null
         }
       ],
+      "tavern": null,
       "training": null,
       "diagnostics": []
     }
@@ -757,6 +856,7 @@
         "equippedSlots": [],
         "compatibleSlots": [],
         "canUse": false,
+        "canUseMagic": false,
         "canEquip": false,
         "equipRefusal": "This item cannot be equipped."
       },
@@ -785,6 +885,7 @@
           "left-hand"
         ],
         "canUse": false,
+        "canUseMagic": false,
         "canEquip": false,
         "equipRefusal": "Your class cannot use long blade weapons."
       },
@@ -811,6 +912,7 @@
           "left-hand"
         ],
         "canUse": false,
+        "canUseMagic": false,
         "canEquip": true,
         "equipRefusal": null
       },
@@ -838,6 +940,7 @@
           "chest-armor"
         ],
         "canUse": false,
+        "canUseMagic": false,
         "canEquip": false,
         "equipRefusal": "Your class cannot use plate armor."
       }

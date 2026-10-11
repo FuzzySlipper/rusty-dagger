@@ -34,7 +34,7 @@ public sealed class DaggerfallTravelPolicyTests
         Assert.Equal(5, first.TotalCost);
         Assert.True(first.CanAfford);
         Assert.Equal(first.Identity, second.Identity);
-        Assert.Equal("daggerfall.travel.v1/1,1/0,1/cautious=1;inn=1;ship=0;horse=0;cart=1;owned-ship=0;gold=100;pieces=100", first.Identity);
+        Assert.Equal("daggerfall.travel.v1/1,1/0,1/cautious=1;inn=1;ship=0;horse=0;cart=1;owned-ship=0;free-ship=0;gold=100;pieces=100", first.Identity);
 
         DaggerfallTravelQuote changed = policy.Quote(origin, destination, options with { SpeedCautious = false }, requireDiscovered: false);
         Assert.NotEqual(first.Identity, changed.Identity);

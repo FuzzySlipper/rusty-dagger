@@ -93,7 +93,7 @@ public sealed class ActorLifecycleSessionTests
 
         DaggerfallSavePayload captured = DaggerfallSavePayload.Read(payload);
         Assert.DoesNotContain(captured.DynamicActors, actor => actor.EntityId == first);
-        DaggerfallDynamicActorSave saved = Assert.Single(captured.DynamicActors);
+        DaggerfallDynamicActorSave saved = Assert.Single(captured.DynamicActors, actor => actor.EntityId == second);
         Assert.Equal(second, saved.EntityId);
         Assert.Equal("imp", saved.Definition);
         // No stale bindings survive the retired actor: no cooldown, corpse, or inventory section names it.

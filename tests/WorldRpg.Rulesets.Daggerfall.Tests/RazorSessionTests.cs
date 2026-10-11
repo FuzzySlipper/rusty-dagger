@@ -45,6 +45,7 @@ public sealed class RazorSessionTests
         Assert.Equal(100, Assert.Single(session.MagicProfile(enemy).ActiveResistances).Chance);
         using var restored = DaggerfallSession.Restore(Engine().Context, composition, session.CaptureSave());
         Assert.Equal(100, Assert.Single(restored.MagicProfile(enemy).ActiveResistances).Chance);
+        FinishEquipmentDelay(restored);
         restored.State.Kit.Rules.RegisterAction(definitions.RequireActor(new DaggerfallActorId("player")).ActionId!, new CertainStrike());
         restored.ResolveExplicitMelee(new(1, enemy, 1, 1, .125));
         Assert.False(restored.State.Actors.Get(enemy).IsDefeated);
@@ -99,6 +100,7 @@ public sealed class RazorSessionTests
             save = session.CaptureSave();
         }
         using var restored = DaggerfallSession.Restore(Engine().Context, composition, save);
+        FinishEquipmentDelay(restored);
         restored.State.Kit.Rules.RegisterAction(definitions.RequireActor(new DaggerfallActorId("player")).ActionId!, new CertainStrike());
         var before = restored.State.Progression.Experience;
         restored.ResolveExplicitMelee(new ExplicitMeleeRequest(1, enemy, 1, 1, .125));

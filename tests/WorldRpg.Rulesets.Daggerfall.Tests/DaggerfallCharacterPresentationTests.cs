@@ -180,7 +180,7 @@ public sealed class DaggerfallCharacterPresentationTests
         _ = condition.Damage(item, 1);
         CharacterEquipmentPresentation identified = Assert.Single(f.Presentation.Read(f.Player, f.Progression).Equipment);
         Assert.True(identified.Identified);
-        Assert.Equal(magic.Name.Replace("%it", f.Definitions.RequireItem(new DaggerfallItemId(itemId)).Template!.Name, StringComparison.Ordinal), identified.Label);
+        Assert.Equal("Iron " + magic.Name.Replace("%it", f.Definitions.RequireItem(new DaggerfallItemId(itemId)).Template!.Name, StringComparison.Ordinal), identified.Label);
         Assert.Equal((1, 2, 50), (identified.Condition!.Current, identified.Condition.Maximum, identified.Condition.Percentage));
         Assert.Contains("Condition: 1/2 (50%)", identified.Details, StringComparison.Ordinal);
     }

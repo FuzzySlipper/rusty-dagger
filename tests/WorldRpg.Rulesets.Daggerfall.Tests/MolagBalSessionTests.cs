@@ -112,6 +112,7 @@ public sealed class MolagBalSessionTests
     {
         using Fixture f = new(); var s = f.Session; f.Magicka(s, f.Enemy).SetCurrent(8);
         if (equipAfter) f.EquipPlain();
+        FinishEquipmentDelay(s);
         FactBuffer<IProductFact> facts = new();
         s.State.Kit.AttackExecution.ObserveTimeline(1, 1);
         Assert.True(s.State.Kit.AttackExecution.Start(new(1, f.Enemy, 1, 1, .125, true), facts));
@@ -204,6 +205,7 @@ public sealed class MolagBalSessionTests
             Weapon = Session.State.Equipment.Materialize(identity, created.Item);
             Session.State.ItemInstances.RegisterUnique(Item, created.Metadata with { CurrentCondition = condition });
             Assert.Equal(EquipmentMoveOutcome.Applied, Session.EquipmentMoves.MoveToSlot(Weapon, new EquipmentSlotId("right-hand")).Outcome);
+            FinishEquipmentDelay(Session);
             Magicka(Session, Enemy).Maximum.BaseValue = 100;
             var health = Session.State.Actors.Get(Enemy).Stats.GetTrack(TrackId.Parse("health")); health.Maximum.BaseValue = 1000; health.SetCurrent(1000);
             Session.State.Kit.Rules.RegisterAction(definitions.RequireActor(new DaggerfallActorId("player")).ActionId!, Attack);

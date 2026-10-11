@@ -200,7 +200,8 @@ public sealed class DaggerfallHitConsequencesTests
         var s = f.Session;
         s.State.Actors.Player.Progression.AdvanceTo(0, level);
         string definition = f.Definitions.Actors.Values.Single(value => value.MobileId == mobile).Id.Value;
-        long actor = s.SpawnActor(definition, new(new(10, 0, 10), 0));
+        var playerPosition = s.State.PlayerControl.Position!.Value;
+        long actor = s.SpawnActor(definition, new(new(playerPosition.X + 1, playerPosition.Y, playerPosition.Z), 0));
         var equipment = s.State.ActorInventories.EquipmentFor(actor);
         Assert.True(equipment.Read().TryGet(new("right-hand"), out var weapon));
         ulong id = equipment.GetDurableItemId(new EntityId(weapon.EntityId)).Value;

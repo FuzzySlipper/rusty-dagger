@@ -81,9 +81,9 @@ public sealed class PlaytestInspectionTests
         double before = stamina.Current;
         Assert.Equal("Primary", session.InspectPlaytestAction("attack").Key);
         DaggerfallControlSettings controls = new();
-        controls.Rebind("attack", ["KeyQ"]);
+        controls.Rebind("attack", ["KeyB"]);
         session.ApplyPlayerPreferences(controls.Serialize());
-        Assert.Equal("KeyQ", session.InspectPlaytestAction("attack").Key);
+        Assert.Equal("KeyB", session.InspectPlaytestAction("attack").Key);
         var speed = session.State.Actors.Player.Stats.GetStat(StatId.Parse("speed"));
         speed.BaseValue = 20;
         double slow = session.InspectPlaytestAction("attack").DurationMs;

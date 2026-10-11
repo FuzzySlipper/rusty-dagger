@@ -31,6 +31,8 @@ public sealed class DungeonWaterSessionTests
         var perception = PerceptionFake.Create();
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using var session = DaggerfallSession.StartNew(engine.Context, new(world.Definitions, profile, DaggerfallTuning.Defaults));
+        Assert.All(spatial.TriggerRegistrations.Where(request => request.Tag == "water"),
+            request => Assert.Matches("^[A-Za-z0-9_.-]+$", request.Scope));
         session.State.PlayerControl.MoveTo(center);
         long fish = session.SpawnActor("slaughterfish", new(new(center.X, center.Y, center.Z + 5), 0));
         var actor = session.State.Actors.Get(fish);

@@ -220,6 +220,7 @@ public sealed class SanguineRoseSessionTests
         f.Session.State.ItemInstances.RegisterUnique(identity.Value, created.Metadata);
         Assert.Equal(EquipmentMoveOutcome.Applied,
             f.Session.EquipmentMoves.MoveToSlot(weapon, new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")).Outcome);
+        FinishEquipmentDelay(f.Session);
         f.Session.State.Kit.Rules.RegisterAction(f.Session.DefinitionsByActor[1].ActionId!, new ContactMiss());
         f.Session.ResolveExplicitMelee(new(1, ally, 1, 10000, .125));
         Assert.NotNull(DaggerfallWabbajack.DefinitionOf(f.Session.State.Actors.Get(ally).Actor));
