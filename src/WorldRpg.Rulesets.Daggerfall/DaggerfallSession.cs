@@ -701,7 +701,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         ObservePlaytestCombatFact(fact);
         if (fact is ActorDamagedFact { ActorId: DaggerfallActorIdentity.PlayerEntityId, ActualHealthLost: > 0 } hurt)
         {
-            _appearance.PlayPlayerPain(State.Character.Race.Id, State.Character.Identity.Gender.ToString() == "Female",
+            _appearance.PlayPlayerPain(State.Character.Race.Id, State.Character.Identity.Gender == DaggerfallCharacterGender.Female,
                 hurt.ActualHealthLost, State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Maximum.Value);
             if (hurt.Cause == DaggerfallDamageCause.Fall) _appearance.PlayGameplaySound(91, "fall-damage");
         }

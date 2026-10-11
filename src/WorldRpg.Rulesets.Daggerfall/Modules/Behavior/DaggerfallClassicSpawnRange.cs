@@ -15,7 +15,6 @@ internal static class DaggerfallClassicSpawnRange
         ReadOnlySpan<int> despawnXZ = [1024, 1024, 1024, 1024, 768, 768, 768];
         ReadOnlySpan<int> despawnY = [384, 384, 384, 384, 768, 768, 768];
         int type = memory.SpawnDistance;
-        if (type is < 0 or > 6) throw new InvalidOperationException($"Unknown classic spawn distance {type}.");
         double x = (enemy.X - player.X) / DaggerfallPerceptionQueryDefaults.ClassicGlobalScale;
         double y = (enemy.Y - player.Y) / DaggerfallPerceptionQueryDefaults.ClassicGlobalScale;
         double z = (enemy.Z - player.Z) / DaggerfallPerceptionQueryDefaults.ClassicGlobalScale;

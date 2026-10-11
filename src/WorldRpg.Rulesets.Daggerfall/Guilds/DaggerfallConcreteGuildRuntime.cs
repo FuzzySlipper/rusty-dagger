@@ -35,19 +35,6 @@ internal sealed class DaggerfallConcreteGuildMembershipRuntime
         return new(definition, admission, _membership.Admit(factionId, currentDay));
     }
 
-    internal DaggerfallConcreteGuildMembershipOperation Rejoin(
-        int factionId,
-        int currentDay,
-        DaggerfallGuildAdmissionContext context)
-    {
-        DaggerfallConcreteGuildDefinition definition = DaggerfallConcreteGuildCatalog.ForFaction(factionId);
-        DaggerfallGuildAdmissionDecision admission = DaggerfallConcreteGuildPolicy.AssessAdmission(definition, context);
-        if (!admission.Eligible)
-            return new(definition, admission, Membership: null);
-
-        return new(definition, admission, _membership.Rejoin(factionId, currentDay));
-    }
-
     internal DaggerfallGuildMembershipView Read(int factionId, int currentDay)
     {
         _ = DaggerfallConcreteGuildCatalog.ForFaction(factionId);
