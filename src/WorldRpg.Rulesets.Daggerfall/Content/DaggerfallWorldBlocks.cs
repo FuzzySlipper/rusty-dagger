@@ -241,7 +241,7 @@ internal sealed class DaggerfallWorldBlocks
 
     /// <summary>The sections a placing location re-identifies and moves without interpreting them here.</summary>
     private static readonly string[] SectionNames =
-        ["questMarkers", "population", "staticNpcs", "propertyContainers", "lights", "billboards", "actors", "randomEnemies", "treasures", "actions"];
+        ["questMarkers", "population", "staticNpcs", "propertyContainers", "lights", "billboards", "actors", "randomEnemies", "treasures", "actions", "waterVolumes"];
 
     private static DaggerfallWorldBlockDocument? ReadDocument(DaggerfallWorldBlockKey key, IndexEntry entry, ReadOnlyMemory<byte> bytes, DaggerfallContentDiagnostics diagnostics)
     {

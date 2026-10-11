@@ -809,6 +809,7 @@
       "mobileId": 11,
       "level": 7,
       "xpReward": 350,
+      "action": "monster-strike",
       "weight": 400,
       "team": "aquatic",
       "attacks": [

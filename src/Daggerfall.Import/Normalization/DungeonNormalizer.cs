@@ -308,6 +308,7 @@ public static class DungeonNormalizer
         private readonly List<DungeonRecordProvenance> provenance = [];
         private readonly List<NormalizedQuestMarker> questMarkers = [];
         private readonly List<AmbientZoneDraft> ambientZoneDrafts = [];
+        private readonly List<(string Id, int? Level, int X, int Z)> waterDrafts = [];
         private NormalizedMarker? startMarker;
         private NormalizedMarker? enterMarker;
         private int models;
@@ -341,6 +342,7 @@ public static class DungeonNormalizer
             string blockId = $"block/{blockPlacementId}";
             AddProvenance(blockId, "rdb-block", blocks.Source, block.SourceOrdinal);
             Arena2ImportPoint origin = Arena2SourceTransform.ToBlockOrigin(reference);
+            waterDrafts.Add(($"water/{blockPlacementId}/volume", block.WaterLevel, reference.X, reference.Z));
             foreach (RdbBlockLight light in block.Lights)
             {
                 AddPlacement();
@@ -652,6 +654,7 @@ public static class DungeonNormalizer
                     .ToArray(),
                 AmbientZones = ambientZones,
                 RandomEnemies = randomEnemies,
+                WaterVolumes = waterDrafts.SelectMany(draft => DungeonWaterNormalization.Read(draft.Id, draft.Level, bounds.Minimum.Y, draft.X, draft.Z)).ToArray(),
             };
             DungeonSpatialPublication spatialPublication = DungeonSpatialPublication.Create(
                 staticMeshArtifactId,

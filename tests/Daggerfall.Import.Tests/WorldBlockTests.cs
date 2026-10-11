@@ -14,6 +14,28 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class WorldBlockTests
 {
+    [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "CLIMATE.PAK", "FACTION.TXT", "PAL.PAL")]
+    public void Castle_necromoghans_flooded_block_publishes_the_source_water_surface()
+    {
+        var sources = Sources();
+        var block = new WorldBlockNormalizer(sources).Rdb("W0000020.RDB").Block;
+        var water = Assert.Single(block.WaterVolumes);
+        Assert.Equal(10F, water.Bounds.Maximum.Y);
+        Assert.Equal((0F, -51.2F, 51.2F, 0F),
+            (water.Bounds.Minimum.X, water.Bounds.Minimum.Z, water.Bounds.Maximum.X, water.Bounds.Maximum.Z));
+        Assert.True(water.Bounds.Minimum.Y < water.Bounds.Maximum.Y);
+        var site = DungeonNormalizer.Normalize(DungeonNormalizationRequest.Create(sources, 17, "Castle Necromoghan") with
+        {
+            Quotas = DungeonNormalizationQuotas.Default with { MaximumSourceBytes = 1024L * 1024L * 1024L },
+            Navigation = NavigationDerivationConfig.ClassicDefault with { CellSize = 10F },
+        });
+        var placed = Assert.Single(site.Document.World.WaterVolumes);
+        Assert.Contains("w0000020", placed.Id);
+        Assert.Equal(10F, placed.Bounds.Maximum.Y);
+        Assert.Equal(placed, Assert.Single(NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(site.Document)).World.WaterVolumes));
+        Assert.Empty(new WorldBlockNormalizer(sources).Rdb("N0000065.RDB").Block.WaterVolumes);
+    }
+
     private const float RmbBlockSide = 4096F * Arena2SourceTransform.SourceUnitMetres;
     private const float RdbBlockSide = 2048F * Arena2SourceTransform.SourceUnitMetres;
 

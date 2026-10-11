@@ -189,7 +189,7 @@ internal static partial class DaggerfallSiteContent
             ReadInteriorBuilding(normalizedWorld, profileKind, diagnostics),
             music,
             DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics), billboardSprites,
-            DaggerfallStaticNpcPlacement.Read(normalizedWorld, billboardSprites, definitions, start.Site, diagnostics), terrainTextures: terrainTextures, population: population)
+            DaggerfallStaticNpcPlacement.Read(normalizedWorld, billboardSprites, definitions, start.Site, diagnostics), waterVolumes: DaggerfallDungeonWater.Read(normalizedWorld, profileId, diagnostics), terrainTextures: terrainTextures, population: population)
         { VariantName = DaggerfallBaseContent.OptionalText(world, "variant", diagnostics),
             DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalizedWorld.Value, diagnostics),
             VariantBaseLogicalId = DaggerfallBaseContent.OptionalText(world, "variantOf", diagnostics),

@@ -310,6 +310,7 @@ public sealed class WorldBlockNormalizer
             RandomEnemies = [.. content.Flats.Where(flat => flat.Kind == RdbFlatKind.RandomEnemy)
                 .Select(flat => flat.RandomEnemyPlacement(scope, MeshGeometry.ToRightHanded(flat.Point), content.WaterLevel))],
             Actions = content.Actions(scope, MeshGeometry.ToRightHanded),
+            WaterVolumes = blockBounds is { } waterBounds ? DungeonWaterNormalization.Read($"water/{scope}/volume", content.WaterLevel, waterBounds.Minimum.Y) : [],
             WaterLevel = content.WaterLevel is int level ? Arena2SourceTransform.ToImportPoint(0, level, 0).YMetres : null,
             AmbientZone = content.AmbientZone,
         };

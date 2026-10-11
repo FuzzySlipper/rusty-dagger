@@ -880,6 +880,8 @@ public sealed record NormalizedPropertyContainer(string Id, NormalizedVector3 Po
     }
 }
 
+public sealed record NormalizedWaterVolume(string Id, NormalizedBounds Bounds);
+
 public sealed record NormalizedWorld(
     string VisualMeshAssetId,
     IReadOnlyList<string> MeshIds,
@@ -892,6 +894,7 @@ public sealed record NormalizedWorld(
     IReadOnlyList<NormalizedTreasurePlacement> Treasures,
     IReadOnlyList<NormalizedDoorPlacement> Doors)
 {
+    public IReadOnlyList<NormalizedWaterVolume> WaterVolumes { get; init; } = [];
     public IReadOnlyList<DaggerfallWorldBlockRandomEnemy> RandomEnemies { get; init; } = [];
 
     /// <summary>Source-selected building instance; absent for worlds without a building selection.</summary>
@@ -927,6 +930,7 @@ public sealed record NormalizedWorld(
         Lights = Lights.OrderBy(light => light.Id, StringComparer.Ordinal).ToArray(),
         Billboards = Billboards.OrderBy(billboard => billboard.Id, StringComparer.Ordinal).ToArray(),
         Actors = Actors.OrderBy(actor => actor.Id, StringComparer.Ordinal).ToArray(),
+        WaterVolumes = WaterVolumes.OrderBy(volume => volume.Id, StringComparer.Ordinal).ToArray(),
         RandomEnemies = RandomEnemies.OrderBy(enemy => enemy.Id, StringComparer.Ordinal).ToArray(),
         PropertyContainers = PropertyContainers.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray(),
         StaticNpcs = StaticNpcs.OrderBy(npc => npc.Id, StringComparer.Ordinal).ToArray(),
@@ -965,6 +969,12 @@ public sealed record NormalizedWorld(
             NormalizedImportDocument.RequireLogicalId(NavigationId, nameof(NavigationId));
         }
 
+        NormalizedImportDocument.ValidateUnique(WaterVolumes, volume => volume.Id, "water volume");
+        foreach (var volume in WaterVolumes)
+        {
+            NormalizedImportDocument.RequireLogicalId(volume.Id, nameof(WaterVolumes));
+            volume.Bounds.Validate();
+        }
         StartMarker?.Validate();
         EnterMarker?.Validate();
         InteriorBuilding?.Validate();
