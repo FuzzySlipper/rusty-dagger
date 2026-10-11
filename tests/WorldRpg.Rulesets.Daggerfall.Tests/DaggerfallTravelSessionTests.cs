@@ -372,7 +372,10 @@ public sealed class DaggerfallTravelSessionTests
     public void Interrupted_journey_returns_control_once_and_places_the_encounter_at_the_donor_distance()
     {
         using Fixture fixture = new(encounter: true);
-        fixture.Accept(fixture.Preview(inn: false));
+        DaggerfallTravelQuote quote = fixture.Preview(inn: false);
+        // The journey is taken from the open menu, which the product reports as a modal mode.
+        fixture.Session.ApplyProductMode(ProductMode.Modal);
+        fixture.Accept(quote);
         DaggerfallTravelResult result = fixture.Session.State.Travel.LastResult!;
         Assert.Equal(DaggerfallTravelOutcome.Encounter, result.Outcome);
         // The journey closes the travel windows and its line is published once: as the result, never
@@ -381,6 +384,9 @@ public sealed class DaggerfallTravelSessionTests
         DaggerfallTravelPresentation panel = fixture.Session.ReadTravelPresentation();
         Assert.Null(panel.Message);
         Assert.Single(System.Text.RegularExpressions.Regex.Matches(panel.LastResult!.Message, "interrupted by an encounter"));
+        Assert.Equal(result.Message, fixture.Session.Presentation.LastOutcome);
+        // Closing the menu returns to play without wiping the line the journey left there.
+        fixture.Session.ApplyProductMode(ProductMode.Playing);
         Assert.Equal(result.Message, fixture.Session.Presentation.LastOutcome);
 
         // The pending foe stands in for an enemy nearby, so the journey cannot be retaken under it.
@@ -396,6 +402,14 @@ public sealed class DaggerfallTravelSessionTests
             fixture.Session.State.PlayerControl.Position!.Value.ToVector());
         Assert.InRange(distance, DaggerfallEncounterPolicy.MinimumSpawnDistance(placed.Request.Context) - .01f,
             DaggerfallEncounterPolicy.MaximumSpawnDistance);
+        // As the donor's line-of-sight spawn, the foe starts just past the edge of the view, not behind
+        // the player where a wall at their back would refuse every placement.
+        Vector3 offset = fixture.Session.State.Actors.All.Single(actor => actor.DurableId == spawned).Position.ToVector()
+            - fixture.Session.State.PlayerControl.Position!.Value.ToVector();
+        Vector3 facing = WorldRpg.Kit.Actors.ActorHeading.Forward(fixture.Session.State.PlayerControl.YawRadians);
+        double degrees = Math.Acos(Vector3.Dot(Vector3.Normalize(offset with { Y = 0 }), Vector3.Normalize(facing with { Y = 0 }))) * 180d / Math.PI;
+        double fieldOfView = DaggerfallTuning.Defaults.Camera.FieldOfViewYDegrees;
+        Assert.InRange(degrees, fieldOfView - .1d, fieldOfView + 4.1d);
     }
 
     [Fact]
