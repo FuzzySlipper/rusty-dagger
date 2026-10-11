@@ -186,7 +186,7 @@ internal sealed partial class DaggerfallSession
             // The selected site's normalized RDB doors restore their Engine pose/collider projection
             // before activation can query them and before the first character step consumes them.
             DaggerfallSiteProjection projection = DaggerfallSiteProjection.Create(engine, actors.Entities, _random, tuning, _time.Calendar,
-                inputs, audioBundles?.Require(inputs), _spatial, saved?.Doors, saved?.DungeonMotion,
+                inputs, audioBundles?.Require(inputs), _spatial, ConfigureSiteAppearance, saved?.Doors, saved?.DungeonMotion,
                 sessionPresentation: composition.StartSite.ClassicPresentation);
             partiallyConstructed.Add(projection);
             DaggerfallDungeonActionTriggerRuntime actionTriggers = new(

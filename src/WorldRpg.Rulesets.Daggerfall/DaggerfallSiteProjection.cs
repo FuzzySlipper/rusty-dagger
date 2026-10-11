@@ -63,6 +63,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         DaggerfallSiteProfile inputs,
         DaggerfallAudioBundle? audioBundle,
         SpatialMovementSystem spatialMovement,
+        Action<DaggerfallSiteAppearance> configureAppearance,
         IEnumerable<DaggerfallDoorSave>? restoredDoors = null,
         DaggerfallDungeonMotionSnapshot? restoredMotion = null,
         bool deferMotionCollisionAdmission = false,
@@ -74,6 +75,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         ArgumentNullException.ThrowIfNull(tuning);
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(spatialMovement);
+        ArgumentNullException.ThrowIfNull(configureAppearance);
         DaggerfallDoorRuntime doors = new(actors, random, inputs.Doors, inputs.ProfileKey.LogicalId, restoredDoors);
         DaggerfallDungeonMotionProjection? motion = null;
         DaggerfallCityGates? gates = null;
@@ -89,6 +91,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
             if (!deferMotionCollisionAdmission) gates.ActivateCollisionResidency();
             appearance = new(engine.Content, engine.Graphics, inputs, engine.Audio,
                 tuning.PresentationAudio, random, audioBundle, doors, motion, sessionPresentation, gates);
+            configureAppearance(appearance);
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);
             DaggerfallSiteProjection projection = new(inputs, doors, motion, gates, appearance, lighting, portals, spatialMovement);

@@ -153,6 +153,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     void IDaggerfallSiteTransitionHost.RelocatePlayer(WorldPoint position, float yawRadians, float pitchRadians) =>
         ApplyRelocation(position, yawRadians, pitchRadians);
 
+    void IDaggerfallSiteTransitionHost.ConfigureSiteAppearance(DaggerfallSiteAppearance appearance) =>
+        ConfigureSiteAppearance(appearance);
+
     void IDaggerfallSiteTransitionHost.RebuildActivation()
     {
         ReconcileNpcProjection();
