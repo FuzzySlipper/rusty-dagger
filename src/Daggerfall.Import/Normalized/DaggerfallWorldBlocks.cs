@@ -242,6 +242,9 @@ public sealed record DaggerfallWorldBlock(
     DaggerfallWorldBlockSpatial? Spatial,
     IReadOnlyList<DaggerfallWorldBlockModel> Models)
 {
+    /// <summary>Recoverable source defects with their observed values and normalization decisions.</summary>
+    public IReadOnlyList<string> SourceWarnings { get; init; } = [];
+
     public IReadOnlyList<DaggerfallWorldBlockDoor> Doors { get; init; } = [];
 
     /// <summary>

@@ -103,9 +103,8 @@ internal static class SiteInputs
         string inventoryFile = args[Options.Inventory.Name];
         SourceManifest manifest = SourceManifestPublication.ForPublication(
             plan.Manifest.Sources.Select(source => source.Path), args[Options.Arena2.Name], Path.GetFileName(inventoryFile), File.ReadAllBytes(inventoryFile));
-        SourceInventoryReconciliation reconciliation = SourceInventoryReconciler.Reconcile(inventoryFile, manifest.Records, update: false);
-        foreach (string line in reconciliation.Drift) Console.Error.WriteLine($"inventory drift: {line}");
-        foreach (string line in reconciliation.Unreconciled) Console.Error.WriteLine($"inventory unresolved: {line}");
+        // A site's subset cannot reconcile the product-wide inventory. The final source-coverage
+        // command compares that inventory with all published content and offline records together.
         PayloadFiles.WriteFile(args[SourceManifest.Name], SourceManifestSerializer.Serialize(manifest));
         Console.WriteLine($"source manifest: {manifest.Records.Count} records written to {args[SourceManifest.Name]}");
     }

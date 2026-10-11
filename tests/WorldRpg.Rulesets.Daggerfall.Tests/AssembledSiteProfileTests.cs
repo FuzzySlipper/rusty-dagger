@@ -34,6 +34,23 @@ public sealed class AssembledSiteProfileTests
     private static JsonElement Normalized(string closure) =>
         JsonDocument.Parse(TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports", closure, "normalized.json"))).RootElement.GetProperty("world");
 
+    [Theory]
+    [InlineData("S0000001.RDB")]
+    [InlineData("S0000003.RDB")]
+    public void Source_dungeons_with_malformed_spawn_markers_assemble_with_usable_ranges(string block)
+    {
+        var location = TestPayload.Definitions.Locations.Records.First(value => value.DungeonBlocks.Any(value => value.SourceKey == block));
+        var profile = Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Dungeon(location.Id));
+        Assert.NotEmpty(profile.Project.Actors.Values);
+        Assert.All(profile.Project.Actors.Values, actor =>
+        {
+            Assert.InRange(actor.SpawnDistance, 0, 6);
+            var memory = new WorldRpg.Rulesets.Daggerfall.Modules.Behavior.DaggerfallEnemyPerceptionMemory { SpawnDistance = actor.SpawnDistance };
+            Assert.True(WorldRpg.Rulesets.Daggerfall.Modules.Behavior.DaggerfallClassicSpawnRange.Update(memory, new(0, 0, 0), new(0, 0, 0), true));
+            Assert.False(WorldRpg.Rulesets.Daggerfall.Modules.Behavior.DaggerfallClassicSpawnRange.Update(memory, new(0, 0, 0), new(100, 0, 0), true));
+        });
+    }
+
     [Fact]
     public void Published_and_assembled_town_materials_carry_real_winter_textures()
     {

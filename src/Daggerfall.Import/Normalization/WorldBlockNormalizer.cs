@@ -301,6 +301,7 @@ public sealed class WorldBlockNormalizer
         (NormalizedBounds? blockBounds, DaggerfallWorldBlockSpatial? spatial, GeneratedSpatialArtifact? artifact) = Spatial(key, geometry, null);
         DaggerfallWorldBlock block = new(key, DaggerfallWorldBlockKind.Rdb, sourceKey, content.SourceOrdinal, null, blockBounds, spatial, models)
         {
+            SourceWarnings = content.Warnings,
             Doors = doors,
             TransitionDoors = exits,
             StartMarker = start is null ? null : new("marker/start", MeshGeometry.ToRightHanded(start.Point)),

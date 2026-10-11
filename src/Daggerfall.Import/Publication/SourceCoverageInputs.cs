@@ -24,6 +24,25 @@ public static class SourceCoverageInputReader
             if (root.ValueKind != JsonValueKind.Object) continue;
             if (root.TryGetProperty("families", out _) && root.TryGetProperty("records", out _)) continue;
             Walk(root, "root");
+            // These are normalized publication shapes, not the importer inventory snapshots.
+            if (!offline && root.TryGetProperty("locations", out var locations)
+                && locations.ValueKind == JsonValueKind.Object && locations.TryGetProperty("regions", out var regions))
+                foreach (var region in regions.EnumerateArray())
+                    foreach (var table in region.GetProperty("tables").EnumerateArray())
+                        consumers.Add(new(artifact, "locations", "arena2/MAPS.BSA", table.GetProperty("ordinal").GetInt32(),
+                            Text(table, "state") == "Empty" ? "unused" : null));
+            if (!offline && root.TryGetProperty("sourceKey", out _) && root.TryGetProperty("sourceOrdinal", out var blockOrdinal)
+                && root.TryGetProperty("models", out _) && root.TryGetProperty("kind", out _))
+                consumers.Add(new(artifact, "world-block", "arena2/BLOCKS.BSA", blockOrdinal.GetInt32()));
+            if (!offline && Text(root, "inventorySource") is { } meshSource && root.TryGetProperty("meshes", out var meshes))
+                foreach (var mesh in meshes.EnumerateArray())
+                    if (Text(mesh, "relativePath") is not null && mesh.TryGetProperty("sourceOrdinal", out var meshOrdinal))
+                        consumers.Add(new(artifact, "meshes", meshSource, meshOrdinal.GetInt32()));
+            if (!offline && root.TryGetProperty("cinematics", out var cinematics) && cinematics.ValueKind == JsonValueKind.Object
+                && cinematics.TryGetProperty("cinematics", out var movies))
+                foreach (var movie in movies.EnumerateArray())
+                    if (movie.TryGetProperty("artifact", out var media) && media.ValueKind == JsonValueKind.Object)
+                        AddReference("arena2/" + movie.GetProperty("fileName").GetString(), "cinematics");
             if (root.TryGetProperty("questOriginalSources", out var original))
                 foreach (JsonElement quest in original.GetProperty("quests").EnumerateArray())
                 {
@@ -70,21 +89,21 @@ public static class SourceCoverageInputReader
                     consumers.Add(new(artifact, section, source, record.GetProperty("ordinal").GetInt32(), disposition, OfflineOnly: true));
                 }
             }
-            void AddReference(string source, string section)
+            void AddReference(string source, string section, int? ordinal = null)
             {
                 if (!source.StartsWith("arena2/", StringComparison.Ordinal))
                 {
                     if (inventory.Any(row => row.RowType == "family" && row.PathOrPattern == source))
-                        consumers.Add(new(artifact, section, source, OfflineOnly: offline));
+                        consumers.Add(new(artifact, section, source, ordinal, OfflineOnly: offline));
                     return;
                 }
                 SourceInventoryRow[] files = [.. inventory.Where(row => row.RowType == "file" && row.PathOrPattern == source)];
-                if (files.Length != 0) { consumers.Add(new(artifact, section, source, OfflineOnly: offline)); return; }
+                if (files.Length != 0) { consumers.Add(new(artifact, section, source, ordinal, OfflineOnly: offline)); return; }
                 // A family's aggregate citation (or a directory such as books/) is only context.
                 string[] families = [.. inventory.Where(row => row.RowType == "family" && row.PathOrPattern == source).Select(row => row.FamilyId)];
                 SourceInventoryRow[] members = [.. inventory.Where(row => row.RowType == "file"
                     && (families.Contains(row.FamilyId, StringComparer.Ordinal) || row.PathOrPattern.StartsWith(source.TrimEnd('/') + "/", StringComparison.Ordinal)))];
-                if (members.Length == 0) consumers.Add(new(artifact, section, source, OfflineOnly: offline));
+                if (members.Length == 0) consumers.Add(new(artifact, section, source, ordinal, OfflineOnly: offline));
                 foreach (var member in members) consumers.Add(new(artifact, section, member.PathOrPattern, OfflineOnly: offline, ContextOnly: true));
             }
             void ReadReference(JsonElement value, string section)
@@ -94,8 +113,9 @@ public static class SourceCoverageInputReader
                     foreach (JsonElement child in value.EnumerateArray()) ReadReference(child, section);
                 else if (value.ValueKind == JsonValueKind.Object)
                 {
-                    if (Text(value, "path") is { } path) AddReference(path, section);
-                    else if (Text(value, "sourcePath") is { } sourcePath) AddReference(sourcePath, section);
+                    int? ordinal = value.TryGetProperty("archiveOrdinal", out var number) && number.ValueKind == JsonValueKind.Number ? number.GetInt32() : null;
+                    if (Text(value, "path") is { } path) AddReference(path, section, ordinal);
+                    else if (Text(value, "sourcePath") is { } sourcePath) AddReference(sourcePath, section, ordinal);
                 }
             }
             void ReadSourceFile(JsonElement value, string section)

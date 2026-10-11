@@ -90,6 +90,27 @@ public sealed class SourceCoverageInputTests : IDisposable
             [Row("file", "CNT-021", "arena2/A.IMG"), Row("file", "CNT-021", "arena2/nested/A.IMG")]));
     }
 
+    [Fact]
+    public void Published_maps_blocks_and_cinematics_retain_individual_source_evidence()
+    {
+        string pack = Write("content/pack.json", """
+            {"locations":{"regions":[{"tables":[{"ordinal":2,"state":"Read"},{"ordinal":3,"state":"Empty"}]}]},
+             "cinematics":{"cinematics":[{"fileName":"A.VID","artifact":{"path":"a.webm"}},
+                 {"fileName":"B.VID","artifact":null}]}}
+            """);
+        string block = Write("content/block.json", """
+            {"kind":"rdb","sourceKey":"S0000003.RDB","sourceOrdinal":42,"models":[]}
+            """);
+        var inputs = SourceCoverageInputReader.Read(root, [pack, block],
+            [Row("file", "CNT-001", "arena2/MAPS.BSA"), Row("file", "CNT-005", "arena2/BLOCKS.BSA"),
+             Row("file", "CNT-025", "arena2/A.VID"), Row("file", "CNT-025", "arena2/B.VID")]);
+        Assert.Contains(inputs.Consumers, value => value.SourcePath == "arena2/MAPS.BSA" && value.ArchiveOrdinal == 2 && value.LedgerDisposition is null);
+        Assert.Contains(inputs.Consumers, value => value.ArchiveOrdinal == 3 && value.LedgerDisposition == "unused");
+        Assert.Contains(inputs.Consumers, value => value.SourcePath == "arena2/BLOCKS.BSA" && value.ArchiveOrdinal == 42 && !value.OfflineOnly);
+        Assert.Contains(inputs.Consumers, value => value.SourcePath == "arena2/A.VID" && !value.ContextOnly);
+        Assert.DoesNotContain(inputs.Consumers, value => value.SourcePath == "arena2/B.VID");
+    }
+
     private string Write(string path, string content)
     {
         string file = Path.Combine(root, path); Directory.CreateDirectory(Path.GetDirectoryName(file)!); File.WriteAllText(file, content); return file;

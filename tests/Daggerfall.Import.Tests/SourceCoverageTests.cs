@@ -102,6 +102,20 @@ public sealed class SourceCoverageTests
         Assert.Single(Assert.Single(report.FamilyEvidence).Consumers);
     }
 
+    [Theory]
+    [InlineData("unused")]
+    [InlineData("referenced")]
+    [InlineData("summarized")]
+    public void Exact_published_record_supersedes_offline_use_site_inventory(string oldDecision)
+    {
+        var report = SourceCoverageReconciler.Build(Manifest(File(), Child()),
+            [Consumer(), Consumer() with { ArchiveOrdinal = 0 },
+             Consumer() with { ArchiveOrdinal = 0, LedgerDisposition = oldDecision, OfflineOnly = true }]);
+        Assert.True(report.IsReconciled);
+        Assert.Equal(SourceRecordDisposition.Imported, report.Records[1].Disposition);
+        Assert.True(report.Records[1].HasRecordEvidence);
+    }
+
     private static SourceCoverageConsumer Consumer() => new("content/a.json", "world", "arena2/A.BSA");
     private static SourceManifestRecord File() => new("CNT-001.file.A", "CNT-001", "arena2/A.BSA", "arena2/A.BSA", 1, ContentDigest.Compute("a"u8), null, null, SourceRecordDisposition.Imported, "published source");
     private static SourceManifestRecord Child() => File() with { Id = "CNT-001.file.A.record.0000", ArchiveOrdinal = 0, ArchiveKey = "child", Disposition = SourceRecordDisposition.RequiredPending };
