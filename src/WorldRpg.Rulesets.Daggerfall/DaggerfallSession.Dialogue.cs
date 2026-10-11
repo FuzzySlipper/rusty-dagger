@@ -41,6 +41,7 @@ internal sealed record DaggerfallDialogueView(
     internal int ComprehendLanguagesBonus { get; init; }
     internal bool BankAvailable { get; init; }
     internal IReadOnlyList<DaggerfallQuestContact> QuestContacts { get; init; } = [];
+    internal DaggerfallTavernView? Tavern { get; init; }
     internal DaggerfallSkillTrainingProviderView? Training { get; init; }
     internal DaggerfallMerchantView? Merchant { get; init; }
 }

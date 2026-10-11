@@ -24,6 +24,48 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// </summary>
 public sealed class SourceBackedServiceSessionTests
 {
+    [Theory]
+    [InlineData(0, 3UL, 6)]
+    [InlineData(1, 0UL, 6)]
+    [InlineData(37, 1UL, 2)]
+    public void Tavern_holiday_prices_preserve_the_donor_healing_amount(int holiday, ulong price, int healed)
+    {
+        var start = new DaggerfallCalendar(405, 0, 0, 0, 0, 0);
+        var date = Enumerable.Range(0, 360).Select(day => start.Advance(day * 86400L, out _)).First(date => date.GetHolidayId(0) == holiday);
+        var tavern = new DaggerfallTavernService(null!, null!, () => date);
+        var wine = tavern.Read().Menu.Single(item => item.Id == "wine");
+        Assert.Equal(price, wine.Price); Assert.Equal(healed, wine.Health);
+        Assert.All(tavern.Read().Menu, item => Assert.InRange(item.Health, 2, 6));
+    }
+
+    [Fact]
+    public void Tavern_menu_uses_service_payment_heals_and_remembers_the_four_hour_interval()
+    {
+        using var fixture = SourceBackedServiceSessionFixture.Create();
+        var provider = fixture.TavernProvider();
+        using var session = fixture.Start(provider.Profile);
+        var npc = SourceNpc(session, provider.Placement.Id);
+        OpenSourceNpc(session, npc);
+        var dialogue = session.ActivationView.Dialogue!;
+        var menu = dialogue.Tavern!;
+        Assert.True(menu.Hungry); Assert.Equal(11, menu.Menu.Count);
+        AddGold(session, 100);
+        var health = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health"));
+        health.SetCurrent(1);
+        var item = menu.Menu.Single(value => value.Id == "wine");
+        ulong gold = session.State.Currency.Read().Gold;
+        SubmitUi(session, 1, System.Text.Json.JsonSerializer.Serialize(new { action = "tavern-buy", revision = dialogue.Revision, key = item.Id, amount = item.Price }));
+        Assert.Equal(gold - item.Price, session.State.Currency.Read().Gold);
+        Assert.Equal(1 + item.Health, health.Current);
+        Assert.False(session.ActivationView.Dialogue!.Tavern!.Hungry);
+        SubmitUi(session, 2, System.Text.Json.JsonSerializer.Serialize(new { action = "tavern-buy", revision = dialogue.Revision, key = item.Id, amount = item.Price }));
+        Assert.Equal(gold - item.Price, session.State.Currency.Read().Gold);
+        using var restored = fixture.Restore(session.CaptureSave());
+        Assert.False(restored.State.Tavern.Read().Hungry);
+        restored.AdvanceElapsedTime(4 * 3600, idleFatigue: false);
+        Assert.True(restored.State.Tavern.Read().Hungry);
+    }
+
     [Fact]
     public void Normalized_population_is_talkable_and_answers_a_source_directory_direction()
     {
@@ -583,6 +625,23 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
         throw new InvalidOperationException("No source guild provider matches the requested service.");
     }
 
+    internal SourceProvider TavernProvider()
+    {
+        var published = _sites.SelectMany(profile => profile.StaticNpcs.Select(placement => new SourceProvider(profile, placement)))
+            .FirstOrDefault(value => value.Placement.Services.Contains(DaggerfallTavernService.ServiceName));
+        if (published is not null) return published;
+        _guildWorld ??= new AssembledWorld();
+        var site = _definitions.Locations.Records.Single(value => value.Id == CityProfile.ProfileKey.Site);
+        foreach (var building in site.Exterior!.Buildings.Values.Where(value => value.Source.BuildingType == 15))
+        {
+            if (!_guildWorld.Profiles.TryGet(DaggerfallWorldProfileIds.Interior(site.Id, building.Id), out var profile)) continue;
+            var placement = profile.StaticNpcs.FirstOrDefault(value => value.Services.Contains(DaggerfallTavernService.ServiceName));
+            if (placement is null) continue;
+            _guildInteriors.Add(profile); return new(profile, placement);
+        }
+        throw new InvalidOperationException("No source tavern keeper found.");
+    }
+
     internal DaggerfallSession Start(DaggerfallSiteProfile profile)
     {
         List<string> releases = [];
@@ -598,14 +657,14 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
     {
         DaggerfallSavePayload payload = DaggerfallSavePayload.Read(saved);
         DaggerfallSiteProfile active = payload.Site.ActiveProfile is { } profile
-            ? _profiles.Require(profile.Require())
+            ? (_guildWorld?.Profiles ?? _profiles).Require(profile.Require())
             : throw new InvalidOperationException("A source-backed save must name its active world profile.");
         List<string> releases = [];
         ContentFake content = new(releases);
         foreach (DaggerfallSiteProfile site in _sites.Concat(_guildInteriors)) PopulateContent(content, site);
-        SpatialFake spatial = SpatialFake.Create(active.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create((_guildInteriors.Contains(active) ? _guildWorld!.Source : active).SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        return DaggerfallSession.Restore(engine.Context, _composition with { StartSite = active }, saved);
+        return DaggerfallSession.Restore(engine.Context, _composition with { StartSite = active, Profiles = _guildWorld?.Profiles ?? _profiles }, saved);
     }
 
     internal DaggerfallSiteBuildingSource SourceBuilding(DaggerfallSiteProfile profile)

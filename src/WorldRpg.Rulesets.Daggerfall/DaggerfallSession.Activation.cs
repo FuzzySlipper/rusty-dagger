@@ -208,6 +208,7 @@ internal sealed partial class DaggerfallSession
             BankAvailable = CurrentBankServiceAvailable(),
             ComprehendLanguagesBonus = State.Effects.PerceptionFor(DaggerfallActorIdentity.PlayerEntityId).ComprehendLanguagesBonus,
             Training = CurrentTrainingProvider(dialogue.Revision),
+            Tavern = CurrentTavern(dialogue.Revision),
             Merchant = ReadCurrentMerchant(),
         } : null,
     };

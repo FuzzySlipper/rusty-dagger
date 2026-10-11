@@ -99,6 +99,8 @@ internal sealed record DaggerfallSavePayload(
     [JsonRequired]
     public DaggerfallPropertySave Property { get; init; } = DaggerfallPropertySave.Empty;
     [JsonRequired]
+    public long? LastTavernMealMinute { get; init; }
+    [JsonRequired]
     public DaggerfallLodgingSave Lodging { get; init; } = DaggerfallLodgingSave.Empty;
     [JsonRequired]
     public DaggerfallTravelSave Travel { get; init; } = DaggerfallTravelSave.Empty;
@@ -225,6 +227,7 @@ internal sealed record DaggerfallSavePayload(
         definitions = definitions.ForSession(CustomSpells);
         TeleportAnchor?.Resolve(definitions, inputs, profiles, tuning ?? DaggerfallTuning.Defaults);
         Notebook.Validate(definitions, definitions.TextPresentation);
+        if (LastTavernMealMinute < 0) throw new ArgumentOutOfRangeException(nameof(LastTavernMealMinute));
         Lodging.Validate(definitions.Locations);
         Travel.Validate(definitions.Locations);
         if (Transport.OnShip || Transport.Mode is DaggerfallTransportMode.Horse or DaggerfallTransportMode.Cart)

@@ -45,6 +45,7 @@ internal sealed class DaggerfallState(
     DaggerfallServiceTransactions services,
     DaggerfallTempleServiceRuntime templeServices,
     DaggerfallSkillTrainingService skillTraining,
+    DaggerfallTavernService tavern,
     DaggerfallRegionalPriceState regionalPrices,
     DaggerfallTradeQuoteService tradeQuotes,
     DaggerfallMerchantService merchants,
@@ -121,6 +122,7 @@ internal sealed class DaggerfallState(
     /// <summary>Typed Daggerfall service admission, quotes, outcomes, and pending concrete work.</summary>
     internal DaggerfallServiceTransactions Services { get; } = services;
     /// <summary>Permanent skill training through the current service and progression owners.</summary>
+    internal DaggerfallTavernService Tavern { get; } = tavern;
     internal DaggerfallSkillTrainingService SkillTraining { get; } = skillTraining;
     /// <summary>Calendar-driven regional market factors and item quote policy.</summary>
     internal DaggerfallRegionalPriceState RegionalPrices { get; } = regionalPrices;
