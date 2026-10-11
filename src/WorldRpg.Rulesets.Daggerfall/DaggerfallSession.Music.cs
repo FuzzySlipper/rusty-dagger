@@ -106,7 +106,8 @@ internal sealed partial class DaggerfallSession
     /// <summary>The donor context the admitted world answers.</summary>
     internal DaggerfallMusicContext MusicContext()
     {
-        if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon) return DaggerfallMusicContext.Dungeon;
+        if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon)
+            return InsideCastleZone() ? DaggerfallMusicContext.Castle : DaggerfallMusicContext.Dungeon;
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior)
         {
             DaggerfallInteriorBuilding? building = CurrentInteriorBuilding();

@@ -34,12 +34,22 @@ internal sealed partial class DaggerfallSession
         }
     }
 
+    /// <summary>Whether the player stands in a dungeon's castle block, the donor's IsPlayerInsideDungeonCastle.</summary>
+    /// <remarks>Music asks every update, so the scan stays a plain loop with no captured closure.</remarks>
+    private bool InsideCastleZone()
+    {
+        if (_sites.Projection.Inputs.ProfileKind != DaggerfallWorldProfileKind.Dungeon || State.PlayerControl.Position is not { } position) return false;
+        var point = position.ToVector();
+        foreach (DaggerfallAmbientZone zone in _sites.Projection.Inputs.AmbientZones)
+            if (zone.Kind == DaggerfallAmbientZoneKind.Castle && zone.Contains(point)) return true;
+        return false;
+    }
+
     private (DaggerfallNpc Provider, int Faction, bool Member, int Reputation, int Rank)? QuestProvider(long id)
     {
         DaggerfallNpc npc;
         try { npc = State.Npcs.Require(id); } catch (InvalidOperationException) { return null; }
-        bool castle = _sites.Projection.Inputs.ProfileKind == DaggerfallWorldProfileKind.Dungeon
-            && State.PlayerControl.Position is { } position && _sites.Projection.Inputs.AmbientZones.Any(zone => zone.Kind == DaggerfallAmbientZoneKind.Castle && zone.Contains(position.ToVector()));
+        bool castle = InsideCastleZone();
         if (DaggerfallNpcServiceFacts.IsChild(npc.Appearance)) return null;
         string? service = npc.Services.Contains("quests", StringComparer.Ordinal) ? "quests"
             : npc.Services.Contains("quest", StringComparer.Ordinal) ? "quest"

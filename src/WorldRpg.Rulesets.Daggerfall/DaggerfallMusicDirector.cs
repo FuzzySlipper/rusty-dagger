@@ -23,6 +23,7 @@ public enum DaggerfallMusicContext
     Overcast,
     TempleNeutral,
     TempleBad,
+    Castle,
 }
 
 /// <summary>
@@ -170,6 +171,14 @@ public sealed class DaggerfallMusicDirector : IDisposable
     /// <summary>Donor PalaceFM playlist in source order.</summary>
     public static readonly IReadOnlyList<string> PalaceSongsFM =
         ["song_06fm"];
+
+    /// <summary>Donor Castle playlist: a dungeon's castle block.</summary>
+    public static readonly IReadOnlyList<string> CastleSongs =
+        ["song_gpalac"];
+
+    /// <summary>Donor CastleFM playlist.</summary>
+    public static readonly IReadOnlyList<string> CastleSongsFM =
+        ["song_fpalac"];
 
     private readonly bool _alternatePlaylists;
     private readonly IAudioService? _audio;
@@ -351,6 +360,7 @@ public sealed class DaggerfallMusicDirector : IDisposable
             DaggerfallMusicContext.Snow => alternatePlaylists ? SnowSongsFM : SnowSongs,
             DaggerfallMusicContext.Interior => alternatePlaylists ? InteriorSongsFM : InteriorSongs,
             DaggerfallMusicContext.Palace => alternatePlaylists ? PalaceSongsFM : PalaceSongs,
+            DaggerfallMusicContext.Castle => alternatePlaylists ? CastleSongsFM : CastleSongs,
             DaggerfallMusicContext.Overcast => alternatePlaylists ? OvercastSongsFM : OvercastSongs,
             DaggerfallMusicContext.TempleNeutral => alternatePlaylists ? TempleNeutralSongsFM : TempleNeutralSongs,
             DaggerfallMusicContext.TempleBad => alternatePlaylists ? TempleBadSongsFM : TempleBadSongs,

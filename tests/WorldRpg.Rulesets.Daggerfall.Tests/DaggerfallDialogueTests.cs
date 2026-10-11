@@ -280,13 +280,34 @@ public sealed class DaggerfallDialogueTests
         Assert.False(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
     }
 
+    [Fact]
+    public void A_consulted_spymaster_answers_a_quest_rumor_with_its_true_hint()
+    {
+        using ConditionSessionFixture fixture = new();
+        TalkTarget talk = new(fixture.Session, fixture.Definitions, services: ["talk", "spymaster"],
+            questTopics: [new("quest-info:q:person", "Ask about Person", "q", "person", 100, false),
+                new("quest-rumor:q:person", "Ask for rumors about Person", "q", "person", 101, true)],
+            guildService: (_, _, _) => new(true, DaggerfallGuildProviderDenial.None, "The spymaster listens."));
+        Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
+        string revision = talk.View!.Revision;
+
+        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "quest-rumor:q:person")).Applied);
+        Assert.Equal("quest-rumor:q:person", talk.View!.Reply);
+        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "spymaster")).Applied);
+        // Donor GetDialogHint2: once consulted, the spymaster gives the anyInfo answer, never the rumor.
+        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "quest-rumor:q:person")).Applied);
+        Assert.Equal("quest-info:q:person", talk.View!.Reply);
+    }
+
     private sealed class TalkTarget
     {
         private DaggerfallDialogueView? _view;
 
         internal TalkTarget(DaggerfallSession session, DaggerfallDefinitions definitions, bool attachVariables = false,
             IRandomService? random = null, DaggerfallDialogueDestination? destination = null,
-            Func<DaggerfallDialogueDestination>? destinationFactory = null, Func<string, bool>? disclose = null)
+            Func<DaggerfallDialogueDestination>? destinationFactory = null, Func<string, bool>? disclose = null,
+            string[]? services = null, IReadOnlyList<DaggerfallQuestDialogueTopic>? questTopics = null,
+            Func<DaggerfallNpc, DaggerfallDialogueTopic, string?, DaggerfallGuildProviderResult>? guildService = null)
         {
             DaggerfallSiteRecord site = session.Site.ActiveSite
                 ?? throw new InvalidOperationException("The focused talk test needs the admitted fixture site.");
@@ -294,7 +315,7 @@ public sealed class DaggerfallDialogueTests
                 .OrderBy(key => key.Item1).ThenBy(key => key.Item2).First();
             long id = session.State.Npcs.RegisterCivilian(
                 new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
-                new DaggerfallNpcAppearance("Breton", "Female", archive, record, 0, 0), "guard", ["talk"]);
+                new DaggerfallNpcAppearance("Breton", "Female", archive, record, 0, 0), "guard", services ?? ["talk"]);
             session.MaterializeNpcActor(id, session.State.Actors.Get(2000).Pose);
             session.State.Npcs.Bind(id, session.Sites.ActiveProfile);
             Npc = session.State.Npcs.Require(id);
@@ -315,7 +336,10 @@ public sealed class DaggerfallDialogueTests
                 variables: attachVariables ? () => session.State.Variables : null,
                 activeProfile: () => session.Sites.ActiveProfile,
                 discloseDirection: disclose,
-                dialogueWorld: session.State.DialogueWorld);
+                dialogueWorld: session.State.DialogueWorld,
+                questTopics: questTopics is null ? null : _ => questTopics,
+                resolveQuestTopic: questTopics is null ? null : (_, topic) => (topic, []),
+                guildService: guildService);
             Target = Assert.Single(Service.NpcTargets());
         }
 
