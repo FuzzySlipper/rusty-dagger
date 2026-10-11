@@ -207,7 +207,8 @@ internal sealed partial class DaggerfallSession
             Interact: update.IsRequested(DaggerfallInput.Interact),
             Inventory: update.IsRequested(DaggerfallInput.Inventory),
             Character: update.IsRequested(DaggerfallInput.Character),
-            Menu: update.IsRequested(DaggerfallInput.Menu));
+            Menu: update.IsRequested(DaggerfallInput.Menu),
+            Map: update.IsRequested(DaggerfallInput.Map));
         // An enemy hit on the player that is already in flight lands at its damage frame, which the
         // outer admitted update reaches after these steps. The player's own acts wait for that same
         // boundary rather than being dropped, so a lethal frame reached there still resolves first and
@@ -240,14 +241,14 @@ internal sealed partial class DaggerfallSession
     /// measured from there.
     /// </summary>
     private sealed record DaggerfallPlayerActs(bool ToggleWeapon, DaggerfallPlayerSwingRequest? Attack, bool Interact,
-        bool Inventory, bool Character, bool Menu)
+        bool Inventory, bool Character, bool Menu, bool Map)
     {
-        internal bool Any => ToggleWeapon || Attack is not null || Interact || Inventory || Character || Menu;
+        internal bool Any => ToggleWeapon || Attack is not null || Interact || Inventory || Character || Menu || Map;
 
         /// <summary>Folds a later step's requests into acts still waiting; the earliest swing request stands.</summary>
         internal DaggerfallPlayerActs Then(DaggerfallPlayerActs later) => new(
             ToggleWeapon || later.ToggleWeapon, Attack ?? later.Attack, Interact || later.Interact,
-            Inventory || later.Inventory, Character || later.Character, Menu || later.Menu);
+            Inventory || later.Inventory, Character || later.Character, Menu || later.Menu, Map || later.Map);
     }
 
     private readonly record struct DaggerfallPlayerSwingRequest(ulong Generation, ulong SimulationStep, double DeltaSeconds);
@@ -281,6 +282,7 @@ internal sealed partial class DaggerfallSession
         // the earlier press must not swallow the later one.
         if (acts.Inventory) RequestPanel(DaggerfallPanel.Inventory);
         if (acts.Character) RequestPanel(DaggerfallPanel.Character);
+        if (acts.Map) RequestPanel(DaggerfallPanel.Map);
         if (acts.Menu) RequestPanel(DaggerfallPanel.Menu);
     }
 

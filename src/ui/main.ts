@@ -1933,7 +1933,7 @@ function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undef
     }
     keep("escorts", [value.escortFaces, heldRevision()], escorts);
   }
-  const add = (message: QuestMessageProjection, heading: string): void => {
+  const add = (message: QuestMessageProjection, heading: string, deliveries: readonly QuestMessageProjection[]): void => {
     const article = document.createElement('article');
     article.className = `dagger-quest-message dagger-quest-${message.delivery}`;
     const title = document.createElement('strong');
@@ -1941,21 +1941,32 @@ function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undef
     const text = document.createElement('p');
     text.textContent = message.text;
     article.append(title, text);
-    if (message.entryId && (message.delivery === 'popup' || message.delivery === 'letter')) {
-      const dismiss = document.createElement('button');
-      dismiss.type = 'button'; dismiss.textContent = 'Dismiss';
-      dismiss.addEventListener('click', () => claim({ action: 'quest-dismiss', questInstance: message.instance,
-        questDelivery: message.entryId ?? undefined }));
-      article.append(dismiss);
-    }
     if (message.signoff) {
       const signoff = document.createElement('p');
       signoff.textContent = message.signoff;
       article.append(signoff);
     }
-    keep(`delivery:${message.instance}:${message.entryId ?? `${message.delivery}:${message.message}`}`, message, article);
+    if (message.entryId && (message.delivery === 'popup' || message.delivery === 'letter')) {
+      const dismiss = document.createElement('button');
+      dismiss.type = 'button'; dismiss.textContent = 'Dismiss';
+      dismiss.addEventListener('click', () => {
+        for (const delivery of deliveries) claim({ action: 'quest-dismiss', questInstance: delivery.instance,
+          questDelivery: delivery.entryId ?? undefined });
+      });
+      article.append(dismiss);
+    }
+    keep(`delivery:${deliveries.map(delivery => `${delivery.instance}:${delivery.entryId ?? `${delivery.delivery}:${delivery.message}`}`).join('|')}`, deliveries, article);
   };
-  value.deliveries.filter(message => message.delivery !== 'prompt').forEach(message => add(message, message.heading));
+  // Several quests can deliver the same courier notification together. Show its text once while
+  // dismissing each source delivery through the ordinary action; distinct letters keep their text.
+  const groups = new Map<string, QuestMessageProjection[]>();
+  for (const message of value.deliveries.filter(message => message.delivery !== 'prompt')) {
+    const key = message.entryId && message.delivery === 'letter'
+      ? JSON.stringify([message.delivery, message.heading, message.text, message.signoff, message.diagnostics])
+      : `${message.instance}:${message.entryId ?? `${message.delivery}:${message.message}`}`;
+    const group = groups.get(key) ?? []; group.push(message); groups.set(key, group);
+  }
+  for (const group of groups.values()) add(group[0]!, group[0]!.heading, group);
   if (value.pending) {
     const message = value.pending;
     const prompt = document.createElement('article');
