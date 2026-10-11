@@ -37,6 +37,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     private readonly Func<long, PursuitTarget?>? _selectAllyTarget;
     private readonly Func<long, ActorControlRestrictions> _controlRestrictions;
     private Func<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float, bool>? _enemyMagic;
+    private Func<ActorState, PursuitTarget, double, bool>? _rangedSpellReady;
     private readonly Dictionary<long, double> _lastTargetDistances = [];
     // One Engine outer update can contain several admitted fixed steps.  Keep the action door
     // closed for an actor after either spell or physical admission so catch-up cannot turn one
@@ -98,9 +99,11 @@ internal sealed class DaggerfallEnemyBehaviorModule
     internal IReadOnlyDictionary<long, DaggerfallEnemyPerceptionDecision> LastPerception { get; private set; } = new Dictionary<long, DaggerfallEnemyPerceptionDecision>();
 
     /// <summary>Attaches the compiled spell decision to this module's existing actor update.</summary>
-    internal void BindEnemyMagic(Func<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float, bool> decide)
+    internal void BindEnemyMagic(Func<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float, bool> decide,
+        Func<ActorState, PursuitTarget, double, bool> rangedSpellReady)
     {
         _enemyMagic = decide ?? throw new ArgumentNullException(nameof(decide));
+        _rangedSpellReady = rangedSpellReady ?? throw new ArgumentNullException(nameof(rangedSpellReady));
     }
 
     internal void ClearEnemyMagic()
@@ -343,9 +346,11 @@ internal sealed class DaggerfallEnemyBehaviorModule
         bool known = observation.Visible && (inSight || perception?.InEarshot == true);
         var attack = _attackAtDistance?.Invoke(actor.DurableId, target.DurableId, observation.Distance);
         observation = observation with { Reach = attack?.Reach ?? observation.Reach };
+        // EnemyMotor.DoRangedAttack holds the band for a selected bow shot or a ready ranged spell.
+        bool rangedAttack = attack?.Ranged == true || _rangedSpellReady?.Invoke(actor, target, observation.Distance) == true;
         var memory = Senses(actor).Motor;
         return DaggerfallEnemyMotorPolicy.Select(memory, _movementPolicy(actor.DurableId), _maneuvers,
-            _motorContext(actor.DurableId, target.DurableId), observation, attack?.Ranged == true, inSight, known,
+            _motorContext(actor.DurableId, target.DurableId), observation, rangedAttack, inSight, known,
             maySearch: !IsPacified(actor.DurableId), deltaSeconds,
             (key, min, max) => checked((int)_random.DrawKeyed(new KeyedRngRequest(0, "daggerfall.enemy-motor",
                 $"actor:{actor.DurableId}:target:{target.DurableId}:generation:{generation}:step:{step}:decision:{memory.Decision}:{key}", min, max)).Value)) with { AttackReach = observation.Reach };

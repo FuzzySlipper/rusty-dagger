@@ -48,6 +48,18 @@ internal sealed record DaggerActorAssembly(
     DaggerfallActorDefinition PlayerDefinition,
     DaggerfallMechanicsState Mechanics);
 
+/// <summary>
+/// The atlas gender a spawned enemy took when it entered the world. DaggerfallMobileUnit.GetTextureArchive
+/// gives a human mobile with no gender flag a random gender once; a mobile without a female atlas keeps its own.
+/// </summary>
+internal sealed record DaggerfallActorGender(string Value)
+{
+    internal static string Resolve(IRandomService random, long durableId, string authored, NormalizedActorSprite sprite) =>
+        authored != "unspecified" || sprite.Female is null ? authored
+            : random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, CombatRandomKey.EnemyScope, $"enemy-gender:{durableId}", 0, 1)).Value == 0
+                ? "male" : "female";
+}
+
 /// <summary>Explicit entity/component construction from admitted Dagger definitions or current saves.</summary>
 internal static class DaggerActorFactory
 {
@@ -338,6 +350,7 @@ internal static class DaggerActorFactory
         RestoreStats(actor.Actor, saved.Stats);
         DaggerfallWabbajack.Restore(actor.Actor, saved.WabbajackActive ? saved.Definition : null);
         if (saved.CorruptionOrigin is { } origin) actor.Actor.Add(origin);
+        if (saved.Gender is { } gender) actor.Actor.Add(new DaggerfallActorGender(gender));
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(saved.ForcedHostile);
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified = saved.LanguagePacified;
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = saved.MagicallyPacified;
@@ -371,24 +384,7 @@ internal static class DaggerActorFactory
         ArgumentNullException.ThrowIfNull(definitionsByActor);
         ArgumentNullException.ThrowIfNull(inventoryStore);
         foreach (DaggerfallDynamicActorSave spawned in saved.DynamicActors.OrderBy(value => value.EntityId))
-        {
-            DaggerfallActorDefinition definition = ResolveDynamicDefinition(definitions, spawned);
-            // Keyed draws are deterministic per identity, so this construction roll cannot skew
-            // any other roll; the saved boundary replaces the whole component immediately after.
-            ActorState actor = CreateNonPlayerActor(actors, spawned.EntityId, definition,
-                mechanics.CreateStats(definition, InitialVitals(random, definition, spawned.EntityId)),
-                new ActorPose(new WorldPoint(spawned.X, spawned.Y, spawned.Z), spawned.HeadingRadians));
-            RestoreStats(actor.Actor, spawned.Stats);
-            DaggerfallWabbajack.Restore(actor.Actor, spawned.WabbajackActive ? spawned.Definition : null);
-            if (spawned.CorruptionOrigin is { } origin) actor.Actor.Add(origin);
-            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(spawned.ForcedHostile);
-            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified = spawned.LanguagePacified;
-            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = spawned.MagicallyPacified;
-            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = spawned.SpawnDistance;
-            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = spawned.Passive;
-            definitionsByActor.Add(spawned.EntityId, definition);
-            RegisterActorInventory(actor, inventoryStore);
-        }
+            CreateDynamicActor(random, mechanics, definitions, actors, inventoryStore, definitionsByActor, spawned);
     }
 
     /// <summary>

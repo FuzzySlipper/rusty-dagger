@@ -2,6 +2,7 @@ using Rusty.Engine;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using Xunit;
@@ -78,6 +79,46 @@ public sealed class FixedDungeonEnemySessionTests
         Assert.Equal(male.Corpse, female.Corpse);
         foreach (var actor in profile.Project.Actors.Values.Where(actor => actor.Gender == "female"))
             Assert.Contains("-female.png", profile.ActorSprites[actor.EntityId].TexturePath, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Unflagged_human_spawns_take_both_genders_and_keep_them_across_save()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture(random: GenderRandom.Create());
+        // Random human enemies draw from every human class mobile; each publishes its female atlas.
+        var humans = f.Inputs.MobileSprites.Where(entry => entry.Key is >= 128 and <= 145).ToArray();
+        Assert.Equal(18, humans.Length);
+        Assert.All(humans, entry => Assert.NotNull(entry.Value.Female));
+        long[] ids = Enumerable.Range(0, 16).Select(i => f.Session.SpawnActor("archer", new(new(i, 0, -80), 0), level: 5)).ToArray();
+        var genders = ids.ToDictionary(id => id, id => Gender(f.Session, id));
+        Assert.Equal(["female", "male"], genders.Values.Distinct().Order());
+        AssertAtlases(f.Session, genders);
+        using var restored = f.Restore();
+        Assert.All(ids, id => Assert.Equal(genders[id], Gender(restored, id)));
+        AssertAtlases(restored, genders);
+
+        static string Gender(DaggerfallSession session, long id) => session.State.Actors.Get(id).Actor.Get<DaggerfallActorGender>().Value;
+        static void AssertAtlases(DaggerfallSession session, Dictionary<long, string> genders)
+        {
+            var field = typeof(DaggerfallSiteAppearance).GetField("actors", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            var visuals = (Dictionary<long, DaggerfallSiteAppearance.ActorVisual>)field.GetValue(session.Sites.Projection.Appearance)!;
+            foreach ((long id, string gender) in genders)
+                Assert.Equal(gender == "female", visuals[id].Sprite.TexturePath.Contains("-female.png", StringComparison.Ordinal));
+        }
+    }
+
+    /// <summary>Minimum gameplay rolls, with each spawn's gender draw hashed from its key like a varying seed.</summary>
+    private class GenderRandom : RandomMinimum
+    {
+        internal new static IRandomService Create() => System.Reflection.DispatchProxy.Create<IRandomService, GenderRandom>();
+        protected override object? Invoke(System.Reflection.MethodInfo? method, object?[]? arguments)
+        {
+            if (arguments is not [KeyedRngRequest { Key: var key } request] || !key.StartsWith("enemy-gender:", StringComparison.Ordinal))
+                return base.Invoke(method, arguments);
+            uint hash = 2166136261;
+            foreach (char ch in key) hash = unchecked((hash ^ ch) * 16777619);
+            return new KeyedRngReceipt(request.Minimum + hash % 2);
+        }
     }
 
     [Fact]
