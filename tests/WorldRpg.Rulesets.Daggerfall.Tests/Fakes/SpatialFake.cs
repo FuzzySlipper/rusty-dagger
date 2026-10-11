@@ -126,6 +126,7 @@ internal class SpatialFake : DispatchProxy
     private readonly Dictionary<ulong, SpatialEntityCollider> triggerRows = [];
     private readonly HashSet<ulong> inactiveTriggers = [];
     internal int TriggerReconcileCalls { get; private set; }
+    internal Func<SpatialTriggerReconcileRequest, SpatialTriggerReconcileResult>? TriggerResult { get; set; }
     /// <summary>Each trigger's row from the last reconcile or restore, as the Engine holds it.</summary>
     internal IReadOnlyDictionary<ulong, SpatialEntityCollider> TriggerRows => triggerRows;
 
@@ -135,7 +136,7 @@ internal class SpatialFake : DispatchProxy
         triggerRows.Clear();
         foreach (SpatialEntityCollider row in request.Entities.Span)
             if (row.Trigger) triggerRows[row.Entity] = row;
-        return default;
+        return TriggerResult?.Invoke(request) ?? default;
     }
 
     private SpatialTriggerRestoreReceipt RestoreTriggerRows(SpatialTriggerRestoreRequest request)

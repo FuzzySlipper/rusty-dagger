@@ -196,6 +196,7 @@ internal sealed class DaggerfallLocationAssembly
             ["propertyContainers"] = new JsonArray(),
             ["actions"] = new JsonArray(),
             ["ambientZones"] = new JsonArray(),
+            ["waterVolumes"] = new JsonArray(),
         };
         private IReadOnlyDictionary<int, int>? _remaps;
         private Vector3? _start;
@@ -326,6 +327,17 @@ internal sealed class DaggerfallLocationAssembly
                 }
                 foreach (string section in new[] { "actors", "randomEnemies", "treasures" })
                     foreach (JsonNode? marker in document.Section(section)) Append(section, Moved(marker, origin, Placed));
+                foreach (JsonNode? water in document.Section("waterVolumes"))
+                {
+                    JsonObject volume = Moved(water, origin, Placed);
+                    JsonObject bounds = (JsonObject)volume["bounds"]!;
+                    foreach (string edge in new[] { "minimum", "maximum" })
+                    {
+                        JsonObject point = (JsonObject)bounds[edge]!;
+                        bounds[edge] = Vector(new Vector3(point["x"]!.GetValue<float>(), point["y"]!.GetValue<float>(), point["z"]!.GetValue<float>()) + origin);
+                    }
+                    Append("waterVolumes", volume);
+                }
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, Placed));
                 foreach (JsonNode? action in document.Section("actions"))
                 {
@@ -479,6 +491,7 @@ internal sealed class DaggerfallLocationAssembly
                 DaggerfallQuestMarkerContent.ReadWorld(normalized, diagnostics),
                 _media.BillboardSprites,
                 DaggerfallStaticNpcPlacement.Read(normalized, _media.BillboardSprites, owner._definitions, key.Site, diagnostics),
+                waterVolumes: DaggerfallDungeonWater.Read(normalized, key.LogicalId, diagnostics),
                 terrainTextures: _media.TerrainTextures,
                 population: DaggerfallSiteContent.ReadNormalizedPopulation(normalized, diagnostics))
             {

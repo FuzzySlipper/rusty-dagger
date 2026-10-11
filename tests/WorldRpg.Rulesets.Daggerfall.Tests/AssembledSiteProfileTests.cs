@@ -35,6 +35,20 @@ public sealed class AssembledSiteProfileTests
         JsonDocument.Parse(TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports", closure, "normalized.json"))).RootElement.GetProperty("world");
 
     [Fact]
+    public void Published_and_assembled_castle_admit_the_same_flooded_block_surface()
+    {
+        var assembled = Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Dungeon(new(17, 9)));
+        var published = Published("daggerfall.castle-necromoghan.json");
+        var water = Assert.Single(assembled.WaterVolumes);
+        var other = Assert.Single(published.WaterVolumes);
+        Assert.Equal(10F, water.Maximum.Y);
+        Assert.Equal(other.Maximum, water.Maximum);
+        Assert.Equal((other.Minimum.X, other.Minimum.Z), (water.Minimum.X, water.Minimum.Z));
+        Assert.NotEqual(0UL, water.Trigger);
+        Assert.Equal(water, Assert.Single(Fixture.Value.Assembly.Assemble(assembled.ProfileKey).WaterVolumes));
+    }
+
+    [Fact]
     public void An_assembled_charing_exterior_names_the_published_doors_markers_and_people()
     {
         DaggerfallWorldProfileKey key = DaggerfallWorldProfileIds.Exterior(Charing);

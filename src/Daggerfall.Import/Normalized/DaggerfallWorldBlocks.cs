@@ -308,6 +308,7 @@ public sealed record DaggerfallWorldBlock(
 
     /// <summary>The RDB block's water surface height in its frame (metres, Y up), or null when it has no water.</summary>
     public float? WaterLevel { get; init; }
+    public IReadOnlyList<NormalizedWaterVolume> WaterVolumes { get; init; } = [];
 
     /// <summary>The ambient area an RDB block selects, if any.</summary>
     public NormalizedAmbientZoneKind? AmbientZone { get; init; }
