@@ -157,7 +157,7 @@ normalized markers, and the existing spatial/session owner.
 | QST-ACT-060 | `RevealLocation.cs` | Reveal a quest location/map target | R — `DaggerfallSession.QuestWorldActions` discovers the site and records the map note |
 | QST-ACT-071 | `TeleportPc.cs` | Transfer the player to a place/marker | R — `DaggerfallSession.QuestWorldActions` moves the player to the spawn marker of the catalog profile the Place names, indexed in the donor's marker order |
 | QST-ACT-079 | `WhenPcEntersExits.cs` | Trigger on exterior entry/exit type | R — `DaggerfallQuestWorldTriggers` enforces the exterior `p1=2` requirement |
-| QST-ACT-083 | `WorldUpdate.cs` | Mutate world/block/building variant | U — the `location` form executes. Remaining: `locationnew`, `block`, `building`, `blockAll` and `buildingAll` compile but are diagnosed and stall their task; no classic usage |
+| QST-ACT-083 | `WorldUpdate.cs` | Mutate world/block/building variant | R — all six forms execute through admitted location and normalized block/building variants, with global/local scope, dash reset and save support; missing variant content remains diagnosed; no classic usage |
 
 ### Actors, questors, foes, and presentation identity
 
@@ -328,9 +328,8 @@ has been read.
   Preserve token meaning and deterministic references while making text a thin
   DOM projection. Do not port `MacroHelper` as a global Unity singleton.
 
-The open differences for task records are:
-
-* `WorldUpdate` block, building and new-location forms (QST-ACT-083).
+`WorldUpdate` (QST-ACT-083) resolves admitted normalized variants; extension
+authors supply the replacement content described in [quest tables](../quest-tables.md).
 
 Macro context values follow F091. No unsupported action may be a successful
 no-op.

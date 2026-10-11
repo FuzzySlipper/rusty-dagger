@@ -162,6 +162,7 @@ internal sealed partial class DaggerfallSiteProfiles
     internal bool TryGet(DaggerfallWorldProfileKey key, out DaggerfallSiteProfile profile)
     {
         if (_selectedVariants.TryGetValue(key.Site, out string? variant) && _catalog.TryVariant(key, variant, out profile!)) return true;
+        if (TryAssembledVariant(key, out profile!)) return true;
         return _catalog.TryResolve(key, out profile!);
     }
 
@@ -249,6 +250,15 @@ internal sealed partial class DaggerfallSiteProfiles
         internal bool Contains(DaggerfallWorldProfileKey key)
         {
             lock (_gate) return _resolved.ContainsKey(key) || _authored.ContainsKey(key) || _assembly?.Places(key) == true;
+        }
+
+        internal DaggerfallLocationAssembly? Assembly => _assembly;
+        internal void AdmitAssembledVariant(DaggerfallWorldProfileKey key, DaggerfallSiteProfile profile)
+        {
+            // The normalized assembly is the base of a block replacement. Authored site closures may
+            // additionally carry portals or different mesh partitioning, so compare like-for-like.
+            RequireSameTopology(_assembly!.Assemble(key), profile, "block/building");
+            _ = Admit(key, profile, null);
         }
 
         internal bool HasVariant(DaggerfallSiteId site, string variant) => _variants.Keys.Any(key => key.Profile.Site == site && key.Variant == variant);

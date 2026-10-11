@@ -895,13 +895,13 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException("Saved exterior location residency requires an active exterior profile.", nameof(ExteriorLocationResidency));
         }
         ArgumentNullException.ThrowIfNull(WorldVariants);
-        var variantSites = new HashSet<DaggerfallSiteId>();
+        var variantSites = new HashSet<(string, int, int, string?, int?)>();
         foreach (var variant in WorldVariants)
         {
             ArgumentNullException.ThrowIfNull(variant);
-            var site = new DaggerfallSiteId(variant.Region, variant.Location);
-            if (variant.Region < 0 || variant.Location < 0 || !DaggerfallBaseContent.ValidId(variant.Variant) || variant.Variant == "-" || !variantSites.Add(site))
-                throw new ArgumentException("Saved world variants require one valid named variant per location.");
+            variant.Validate();
+            if (!variantSites.Add((variant.Kind, variant.Region, variant.Location, variant.Block, variant.Building)))
+                throw new ArgumentException("Saved world variants repeat a location, block or building selection.");
         }
         ArgumentNullException.ThrowIfNull(SiteDeltas);
         foreach (DaggerfallSiteDeltaSave delta in SiteDeltas) delta.Validate();

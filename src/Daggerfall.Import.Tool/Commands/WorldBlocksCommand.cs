@@ -18,7 +18,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class WorldBlocksCommand
 {
     public static ToolCommand Command { get; } = new("world-blocks",
-        [Options.Arena2, Options.Pack, SiteInputs.Shared, SiteInputs.Output, Options.Inventory, SiteInputs.SourceManifest], Run);
+        [Options.Arena2, Options.Pack, SiteInputs.Shared, SiteInputs.Output, Options.Inventory, SiteInputs.SourceManifest, CommandOption.Optional("--variants", "FILE")], Run);
 
     private static int Run(CommandArguments args)
     {
@@ -31,8 +31,9 @@ internal static class WorldBlocksCommand
         DaggerfallLocations locations = PayloadFiles.ReadSection<DaggerfallLocations>(args[Options.Pack.Name], "locations");
         WorldBlocksPublication publication = Arena2WorldBlocksPublication.Create(sources, locations, Arena2SitePublication.WorldMediaImporterId,
             line => Console.WriteLine($"world blocks: {line} ({clock.Elapsed.TotalSeconds:F0}s)"));
+        if (args.Optional("--variants") is { } variants) publication = WorldBlockVariantPublication.Append(publication, variants);
         RequireSharedMeshes(publication, args[SiteInputs.Shared.Name]);
-        ImportPublicationPlan plan = publication.Plan.WithInvocation(SiteInputs.Invocation(args));
+        ImportPublicationPlan plan = publication.Plan.WithInvocation(SiteInputs.Invocation(args, publication.Plan.Manifest.AuthoredOverlays));
         SiteInputs.PrintComparison(ImportPublicationWriter.Write(plan, Path.GetFullPath(args[SiteInputs.Output.Name])));
         SiteInputs.WriteSourceManifest(args, plan);
         DaggerfallWorldBlockCounts counts = publication.Index.Counts;

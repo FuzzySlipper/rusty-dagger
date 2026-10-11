@@ -2,7 +2,24 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
-internal sealed record DaggerfallWorldVariantSave(int Region, int Location, string Variant);
+internal sealed record DaggerfallWorldVariantSave(int Region, int Location, string Variant)
+{
+    [System.Text.Json.Serialization.JsonRequired] public string Kind { get; init; } = "location";
+    public string? Block { get; init; }
+    public int? Building { get; init; }
+
+    internal void Validate()
+    {
+        bool global = Region == -1 && Location == -1;
+        if (!DaggerfallBaseContent.ValidId(Variant) || Variant == "-"
+            || (!global && (Region < 0 || Location < 0))
+            || Kind is not ("location" or "block" or "building")
+            || Kind == "location" && (global || Block is not null || Building is not null)
+            || Kind != "location" && (string.IsNullOrWhiteSpace(Block) || Block != Block.ToUpperInvariant())
+            || Kind == "block" && Building is not null || Kind == "building" && (Building is null || Building < 0))
+            throw new ArgumentException("Saved world variants require a valid location, block or building selection.");
+    }
+}
 
 internal sealed partial class DaggerfallSiteProfiles
 {
@@ -46,13 +63,22 @@ internal sealed partial class DaggerfallSiteProfiles
     internal DaggerfallSiteProfiles ForSession(DaggerfallWorldVariantSave[]? saved = null)
     {
         var result = new DaggerfallSiteProfiles(_catalog);
-        var seen = new HashSet<DaggerfallSiteId>();
+        var seen = new HashSet<(string, int, int, string?, int?)>();
         foreach (var entry in saved ?? [])
         {
+            entry.Validate();
+            if (!seen.Add((entry.Kind, entry.Region, entry.Location, entry.Block, entry.Building)))
+                throw new ArgumentException("Saved world variants repeat one selection.");
             var site = new DaggerfallSiteId(entry.Region, entry.Location);
-            if (!seen.Add(site) || entry.Variant == "-") throw new ArgumentException("Saved world variants must name one current variant per location.");
-            result.SetLocationVariant(site, entry.Variant);
+            if (entry.Kind == "location") result.SetLocationVariant(site, entry.Variant);
+            else result._blockVariants.Add(new(entry.Region == -1 ? null : site, entry.Block!, entry.Building), entry.Variant);
         }
+        // Admit the complete saved combination, rather than requiring nonexistent intermediate variants.
+        foreach (var entry in result._blockVariants)
+            (_catalog.Assembly ?? throw new NotSupportedException("Saved block variants require world assembly."))
+                .RequireBlockVariants(entry.Key.Site, entry.Key.Block, entry.Key.Building,
+                    (site, part) => SelectBlock(result._blockVariants, site, part));
+        foreach (var site in result._selectedVariants.Keys) result.RequireSeparateLocationVariant(site, result._blockVariants);
         return result;
     }
 
@@ -62,9 +88,14 @@ internal sealed partial class DaggerfallSiteProfiles
         if (variant == "-") { _selectedVariants.Remove(site); return; }
         if (!_catalog.HasVariant(site, variant))
             throw new NotSupportedException($"WorldUpdate location '{site}' has no admitted variant '{variant}'.");
+        RequireSeparateLocationVariant(site, _blockVariants);
         _selectedVariants[site] = variant;
     }
 
     internal DaggerfallWorldVariantSave[] CaptureVariants() => _selectedVariants.OrderBy(value => value.Key.Region).ThenBy(value => value.Key.Index)
-        .Select(value => new DaggerfallWorldVariantSave(value.Key.Region, value.Key.Index, value.Value)).ToArray();
+        .Select(value => new DaggerfallWorldVariantSave(value.Key.Region, value.Key.Index, value.Value))
+        .Concat(_blockVariants.OrderBy(value => value.Key.Site?.Region ?? -1).ThenBy(value => value.Key.Site?.Index ?? -1)
+            .ThenBy(value => value.Key.Block, StringComparer.Ordinal).ThenBy(value => value.Key.Building)
+            .Select(value => new DaggerfallWorldVariantSave(value.Key.Site?.Region ?? -1, value.Key.Site?.Index ?? -1, value.Value)
+            { Kind = value.Key.Building is null ? "block" : "building", Block = value.Key.Block, Building = value.Key.Building })).ToArray();
 }
