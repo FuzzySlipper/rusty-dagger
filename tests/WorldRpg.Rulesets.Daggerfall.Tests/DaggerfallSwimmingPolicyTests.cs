@@ -97,6 +97,23 @@ public sealed class DaggerfallSwimmingPolicyTests
         Assert.True(definition.Spell.SupportsDuration);
     }
 
+    [Fact]
+    public void Breath_projection_uses_current_swimming_state_and_hides_when_not_required()
+    {
+        DaggerfallSwimmingPolicy policy = new(DaggerfallSwimmingTuning.Classic);
+        Assert.Null(policy.ReadBreath(20, false));
+        _ = policy.Complete(Receipt(true, true), false, 20, .1, .1, 1, _ => { });
+        DaggerfallBreathRead breath = Assert.IsType<DaggerfallBreathRead>(policy.ReadBreath(20, false));
+        Assert.Equal(policy.CurrentBreath, breath.Current);
+        Assert.Equal(DaggerfallFormulaPolicy.MaxBreath(20), breath.Maximum);
+        Assert.False(breath.Low);
+        Assert.Null(policy.ReadBreath(20, true));
+        _ = policy.Complete(Receipt(true, true), false, 20, 10, 10, 2, _ => { });
+        Assert.True(policy.ReadBreath(20, false)!.Low);
+        _ = policy.Complete(Receipt(true, false), false, 20, .1, .1, 3, _ => { });
+        Assert.Null(policy.ReadBreath(20, false));
+    }
+
     private static CharacterStepReceipt Receipt(bool swimming, bool headSubmerged) => default(CharacterStepReceipt) with
     {
         Movement = new CharacterMovementFact(

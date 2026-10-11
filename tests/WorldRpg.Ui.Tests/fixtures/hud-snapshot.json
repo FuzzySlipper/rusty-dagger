@@ -35,6 +35,10 @@
     }
   ],
   "lastOutcome": "Ready",
+  "messages": [
+    "Ready"
+  ],
+  "breath": null,
   "mode": "playing",
   "site": {
     "name": "Privateer\u0027s Hold"
@@ -230,7 +234,7 @@
           "key": null
         },
         {
-          "id": "direction:npc:1000000000000",
+          "id": "direction:npc:1000000000017",
           "label": "Where is guard?",
           "key": null
         },
@@ -718,7 +722,7 @@
     "quote": null
   },
   "inventory": {
-    "revision": "175:1:45:0:",
+    "revision": "866:1:558:0:",
     "message": "Drag items between the grid and compatible equipment slots.",
     "encumbrance": {
       "currentClassicUnits": 7025,
@@ -740,7 +744,7 @@
         "quantity": "25",
         "weight": 0,
         "value": 1,
-        "details": "Condition: 1/1 (100%); Stackable item",
+        "details": "Gold PieceCondition: NewWorth: 25 goldWeight: 0 kilograms",
         "icon": "inventory.icon.gold-piece",
         "condition": {
           "current": 1,
@@ -763,7 +767,7 @@
         "quantity": "1",
         "weight": 18,
         "value": 15,
-        "details": "Condition: 800/800 (100%); Damage 2\u201316; Iron; Long Blade",
+        "details": "Iron Iron Longsword 1 - 15 points of damageCondition: NewWeight: 4.50 kilograms",
         "icon": "inventory.icon.iron-longsword",
         "condition": {
           "current": 800,
@@ -791,7 +795,7 @@
         "quantity": "1",
         "weight": 2,
         "value": 1,
-        "details": "Condition: 50/50 (100%); Damage 1\u20136; Iron; Short Blade",
+        "details": "Iron Iron Dagger 0 - 5 points of damageCondition: NewWeight: 0.50 kilograms",
         "icon": "inventory.icon.iron-dagger",
         "condition": {
           "current": 50,
@@ -817,7 +821,7 @@
         "quantity": "1",
         "weight": 50,
         "value": 100,
-        "details": "Condition: 4096/4096 (100%); Armor: Iron",
+        "details": "Iron Iron Cuirass \u002B7 to armor ratingCondition: NewWeight: 12.50 kilograms",
         "icon": "inventory.icon.iron-cuirass",
         "condition": {
           "current": 4096,
@@ -1270,7 +1274,7 @@
         "slots": [
           "Chest Armor"
         ],
-        "details": "Condition: 4096/4096 (100%); Armor: Iron",
+        "details": "Iron Iron Cuirass \u002B7 to armor ratingCondition: NewWeight: 12.50 kilograms",
         "condition": {
           "current": 4096,
           "maximum": 4096,
@@ -1284,7 +1288,7 @@
         "slots": [
           "Right Hand"
         ],
-        "details": "Condition: 800/800 (100%); Damage 2\u201316; Iron; Long Blade",
+        "details": "Iron Iron Longsword 1 - 15 points of damageCondition: NewWeight: 4.50 kilograms",
         "condition": {
           "current": 800,
           "maximum": 800,

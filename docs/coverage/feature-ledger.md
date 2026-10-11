@@ -130,10 +130,10 @@ contract and decision register; Den owns tasks, their ID mapping and dependencie
 | F094 | Localized books | A | 9 / I,P,D,U | F094 | Book records/pages and reader actions; preserve selected base-language content without Unity localized wrappers. |
 | F095 | UI root + messages + factory | A | 12 / D,K,U,H | F095 | Existing projection/action transport; game modes, modal choices and input consequences via explicit composition. |
 | F096 | Base window + widget kit | A | 12 / U,D | F096 | Adapt required controls/workflows to DOM; exclude Unity widget/window hierarchy and factory replication. |
-| F097 | HUD | E | 12 / D,U | F097 | Resource rows, compass, crosshair, status effects and relevant followers/escorts. Remaining (D,U): breath bar and an on-HUD activation-mode indicator. |
+| F097 | HUD | E | 12 / D,U | F097 | Resource rows, compass, crosshair, status effects, relevant followers/escorts, a swimming-owner breath bar and an activation-owner mode indicator. |
 | F098 | Inventory window | A | 5 / D,U | F044 | Same inventory workflows as F044; do not create a second window implementation. |
 | F099 | Character sheet window | E | 5 / D,U | F099 | Character sheet with career, live/permanent values, advancement and level-up, affiliations and reputation, legal standing and history. |
-| F100 | Outcome / message popups | A | 12 / D,U | F100 | Messages, modal choice/confirmation, quest offers and journal notifications from typed product state/actions. Remaining (K,D,U): stacked HUD messages; the single outcome line keeps only the last write in an update. |
+| F100 | Outcome / message popups | A | 12 / D,U | F100 | A bounded seven-line HUD message stack expires oldest first using admitted time; modal choice/confirmation, quest offers and journal notifications come from typed product state/actions. |
 | F101 | Spellbook + magic crafting | A | 10 / D,U | F036 | Spellbook/maker/use-magic-item workflows belong to the F036 family. |
 | F102 | Rest window | A | 8 / D,U | F102 | Rest/loiter choices, duration and interruption/outcome projections over shared rest operations. |
 | F103 | Travel system windows | A | 8 / D,U | F103 | Travel destination/options/cost/duration, transport and teleport confirmation over shared world operations. Mages Guild teleport selects a map destination with no fare or elapsed time, matching the donor. |

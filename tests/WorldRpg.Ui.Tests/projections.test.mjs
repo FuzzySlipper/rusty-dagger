@@ -43,7 +43,7 @@ function fixture() {
     root, actions, modes,
     publish(value = {}) {
       receive({ contract: 'dagger.ui.snapshot.v1', value: {
-        resources: [], lastOutcome: '', mode: 'playing',
+        resources: [], lastOutcome: '', messages: [], mode: 'playing',
         composition: { bundle: 'test', ruleset: 'test', contentPacks: [], tuning: 'test' },
         ...value,
       } });
@@ -1867,5 +1867,26 @@ test('arrival projection immediately replaces the departure place and calendar',
     f.publish({ site: { name: 'Daggerfall' }, calendar: { date: '9 Morning Star', time: '05:00' }, panelRequest: { revision: 1, panel: 'resume' } });
     assert.equal(f.root.querySelector('.dagger-site').textContent, 'Daggerfall');
     assert.equal(f.root.querySelector('.dagger-calendar').textContent, '9 Morning Star · 05:00');
+  } finally { f.dispose(); }
+});
+
+test('HUD projects the timed message stack, breath and activation mode without local timers', () => {
+  const f = fixture();
+  try {
+    f.publish({ messages: ['Door unlocked.', 'Your skill improved.'], lastOutcome: 'Your skill improved.',
+      breath: { current: 8, maximum: 30, low: true }, activation: { mode: 'steal', message: '', applied: true } });
+    assert.deepEqual([...f.root.querySelectorAll('.dagger-outcome li')].map(line => line.textContent), ['Door unlocked.', 'Your skill improved.']);
+    assert.equal(f.root.querySelector('.dagger-breath').hidden, false);
+    assert.equal(f.root.querySelector('.dagger-breath meter').value, 8);
+    assert.equal(f.root.querySelector('.dagger-breath meter').max, 30);
+    assert.equal(f.root.querySelector('.dagger-breath').classList.contains('low'), true);
+    assert.equal(f.root.querySelector('.dagger-activation-indicator').textContent, 'Steal / Lockpick');
+    f.publish({ messages: ['Your skill improved.'], lastOutcome: 'Your skill improved.', breath: null,
+      activation: { mode: 'talk', message: '', applied: true } });
+    assert.deepEqual([...f.root.querySelectorAll('.dagger-outcome li')].map(line => line.textContent), ['Your skill improved.']);
+    assert.equal(f.root.querySelector('.dagger-breath').hidden, true);
+    assert.equal(f.root.querySelector('.dagger-activation-indicator').textContent, 'Talk');
+    f.publish({ messages: [] });
+    assert.equal(f.root.querySelectorAll('.dagger-outcome li').length, 0);
   } finally { f.dispose(); }
 });

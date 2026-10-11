@@ -18,6 +18,8 @@ internal sealed class DaggerfallOutcomePresentation(
 {
     /// <summary>Admitted seconds one published outcome line stays on screen.</summary>
     internal const double MessageLifetimeSeconds = 6d;
+    internal const int MaximumMessages = 7;
+    internal const double SubsequentMessageLifetimeSeconds = 1d;
 
     // Whether the published line reports something that happened rather than something that did not.
     private bool _lineIsResult;

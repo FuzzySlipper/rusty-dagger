@@ -63,4 +63,32 @@ public sealed class PresentationStateTests
         presentation.AppendOutcome("Corpse is empty");
         Assert.Equal("Corpse is empty", presentation.LastOutcome);
     }
+    [Fact]
+    public void Same_update_messages_remain_visible_and_expire_oldest_first()
+    {
+        PresentationState presentation = new("", 6, 7, 1);
+        presentation.SetOutcome("A door opens");
+        presentation.SetOutcome("You hear footsteps");
+        Assert.Equal(new[] { "A door opens", "You hear footsteps" }, presentation.Messages);
+        presentation.Advance(5.9);
+        Assert.Equal(2, presentation.Messages.Count);
+        presentation.Advance(.2);
+        Assert.Equal("You hear footsteps", Assert.Single(presentation.Messages));
+        presentation.Advance(1);
+        Assert.Empty(presentation.Messages);
+    }
+
+    [Fact]
+    public void Stack_drops_oldest_over_capacity_and_appends_to_latest_without_duplication()
+    {
+        PresentationState presentation = new("", 6, 7, 1);
+        for (int i = 1; i <= 9; i++) presentation.SetOutcome($"Message {i}");
+        Assert.Equal(7, presentation.Messages.Count);
+        Assert.Equal("Message 3", presentation.Messages[0]);
+        presentation.AppendOutcome("with detail");
+        Assert.Equal(7, presentation.Messages.Count);
+        Assert.Equal("Message 9; with detail", presentation.LastOutcome);
+        presentation.Advance(12);
+        Assert.Empty(presentation.Messages);
+    }
 }
