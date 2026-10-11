@@ -101,3 +101,40 @@ complete once per source action, including across task rearming and saves.
 `say` accepts numeric messages and the published static-message names. Popup and
 letter deliveries have durable IDs for dismissal; dismissed messages remain
 dismissed after reload, while prompts continue through their answer action.
+
+World updates select admitted content variants through the session's world-profile
+owner. `locationnew named NAME in region REGION` resolves the named location from
+the loaded catalog; it does not generate a location during the action. Duplicate
+names within a region are diagnosed. The `block` and `building` forms select a
+source block and, for a building, its source record index at a particular location.
+`blockAll` and `buildingAll` supply global defaults. A location-specific selection
+wins over its global default; `variant -` removes that selection and exposes the
+default again. Selections are saved with their scopes and are private to a session.
+As with location variants, a loaded scene changes when it is next resolved after
+leaving it; variant actions do not start a second scene update loop.
+
+Block variants are normalized content, including their matching collision and
+navigation artifacts. Pass an authored descriptor to `world-blocks --variants FILE`
+or `scripts/regenerate-content.sh --block-variants FILE`. Its `variants` array
+contains entries with a `document` path, an optional block `variant` name, and
+optional `buildingVariants` entries (`building` index and `variant` name). Paths
+are relative to the descriptor. Each document is a complete normalized block of
+the same source identity as its base; its spatial path, digest and length describe
+its actual artifact. The publisher checks collisions between artifact paths,
+records authored provenance, checks shared mesh references and writes the variants
+into the ordinary world-block bundle. Author the descriptor and its inputs outside
+generated output; regeneration owns the publication.
+
+An RMB block selection supplies its exterior and each admitted building interior.
+A building selection supplies the containing exterior and that building's interior.
+When several selections affect one exterior, publish the complete combination in
+one entry; the engine must receive collision matching the entire visible block.
+A missing combination is reported by its block and selection rather than silently
+choosing one building's collision for the others. Scenery variants retain the
+existing actor, action, door, inventory and save identities; topology changes are
+reported through the same admission checks as location scenery variants.
+
+A complete authored location variant and block replacements at that same location
+would each replace the same world geometry. That concrete collision is diagnosed;
+author their intended combination as one location variant instead. Neither saved
+selection silently takes precedence over the other.

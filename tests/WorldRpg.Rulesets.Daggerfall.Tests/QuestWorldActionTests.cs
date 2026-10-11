@@ -76,12 +76,16 @@ public sealed class QuestWorldActionTests
         Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).Notebook.Notes);
     }
 
-    [Fact]
-    public void Location_variant_changes_admitted_lights_after_unload_and_restore_then_dash_removes_it()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Location_variant_changes_admitted_lights_after_unload_and_restore_then_dash_removes_it(bool named)
     {
         var site = ReadInputs(TestData.RepositoryRoot).Site!.Value;
-        var definitions = QuestWorldAdmissionTests.Definitions(actions: [$"worldupdate location at {site.Index} in region {site.Region} variant lit"],
-            taskBlocks: [["_reset_ task:", $"worldupdate location at {site.Index} in region {site.Region} variant -"]]);
+        string selector = named ? $"locationnew named {TestPayload.Definitions.Locations.Records.Single(value => value.Id == site).Name} in region {site.Region}"
+            : $"location at {site.Index} in region {site.Region}";
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: [$"worldupdate {selector} variant lit"],
+            taskBlocks: [["_reset_ task:", $"worldupdate {selector} variant -"]]);
         using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: QuestWorldAdmissionTests.WithMarker);
         var variant = Variant(f.Inputs);
         var profiles = new DaggerfallSiteProfiles([f.Inputs, f.Castle, variant]); f.Session.AdmitSiteProfiles(profiles.ForSession());

@@ -10,10 +10,21 @@ internal sealed partial class DaggerfallSession
         if (operation.Kind == DaggerfallQuestTaskOperationKind.WorldUpdate)
         {
             var update = operation.WorldUpdate!;
-            if (update.Kind != "location") throw new NotSupportedException($"WorldUpdate '{update.Kind}' requires a normalized variant owner that is not admitted; supported form is location.");
-            var site = new DaggerfallSiteId(update.Region!.Value, update.Location!.Value);
-            _ = Site.Records.SingleOrDefault(value => value.Id == site) ?? throw new NotSupportedException($"WorldUpdate location '{site}' is absent from the canonical catalog.");
-            (_sites.Profiles ?? throw new NotSupportedException("WorldUpdate requires an admitted site catalog.")).SetLocationVariant(site, update.Variant);
+            var worldProfiles = _sites.Profiles ?? throw new NotSupportedException("WorldUpdate requires an admitted site catalog.");
+            DaggerfallSiteId? site = null;
+            if (update.Kind == "locationnew")
+            {
+                var named = Site.Records.Where(value => value.Region == update.Region && value.Name == update.LocationName).ToArray();
+                if (named.Length != 1) throw new NotSupportedException($"WorldUpdate location '{update.LocationName}' in region {update.Region} resolves to {named.Length} admitted locations.");
+                site = named[0].Id;
+            }
+            else if (update.Region is int region && update.Location is int location)
+            {
+                site = new(region, location);
+                _ = Site.Records.SingleOrDefault(value => value.Id == site) ?? throw new NotSupportedException($"WorldUpdate location '{site}' is absent from the canonical catalog.");
+            }
+            if (update.Kind is "location" or "locationnew") worldProfiles.SetLocationVariant(site!.Value, update.Variant);
+            else worldProfiles.SetBlockVariant(site, update.Block!, update.Building, update.Variant);
             return true;
         }
         if (operation.Kind == DaggerfallQuestTaskOperationKind.RevealPlace)

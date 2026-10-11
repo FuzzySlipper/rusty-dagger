@@ -25,7 +25,7 @@ internal sealed record DaggerfallWorldMesh(string Path, ContentSha256 Sha256, IR
 /// The exterior ground is the terrain's, drawn with the archive of the climate one pixel east. A swap is
 /// published for both summer and winter, so the calendar can rebind the retained materials.
 /// </remarks>
-internal sealed class DaggerfallLocationAssembly
+internal sealed partial class DaggerfallLocationAssembly
 {
     // Every block artifact is derived on the sites' 0.8-unit navigation grid: a map pixel (one terrain cell)
     // is eight RMB blocks or sixteen RDB blocks wide, so blocks sit whole cells apart.
@@ -101,7 +101,7 @@ internal sealed class DaggerfallLocationAssembly
     }
 
     /// <summary>Assembles one profile, reading only the blocks it places. Anything the publication lacks is named.</summary>
-    internal DaggerfallSiteProfile Assemble(DaggerfallWorldProfileKey key)
+    internal DaggerfallSiteProfile Assemble(DaggerfallWorldProfileKey key, Func<DaggerfallWorldBlockKey, DaggerfallBlockVariantSelection>? select = null)
     {
         if (_definitions.AssembledSites is not { } presentation)
             throw new InvalidOperationException($"Profile '{key.LogicalId}' cannot be assembled: the base payload publishes no assembledSites presentation.");
@@ -112,7 +112,7 @@ internal sealed class DaggerfallLocationAssembly
         if (record!.Climate is not int climate)
             throw new InvalidOperationException($"Location {key.Site} ('{record.Name}') publishes no climate, so its textures cannot be chosen.");
         DaggerfallContentDiagnostics diagnostics = new();
-        Builder builder = new(this, key, record, climate, presentation, diagnostics);
+        Builder builder = new(this, key, record, climate, presentation, diagnostics, select);
         switch (key.Kind)
         {
             case DaggerfallWorldProfileKind.Exterior: builder.Exterior(); break;
@@ -174,7 +174,7 @@ internal sealed class DaggerfallLocationAssembly
 
     /// <summary>One profile's assembly: its geometry, material table and normalized world sections.</summary>
     private sealed class Builder(DaggerfallLocationAssembly owner, DaggerfallWorldProfileKey key, DaggerfallSiteRecord record, int climate,
-        DaggerfallAssembledSiteDefinition presentation, DaggerfallContentDiagnostics diagnostics)
+        DaggerfallAssembledSiteDefinition presentation, DaggerfallContentDiagnostics diagnostics, Func<DaggerfallWorldBlockKey, DaggerfallBlockVariantSelection>? select)
     {
         private readonly DaggerfallProductMedia _media = owner._media();
         private readonly IReadOnlyDictionary<string, DaggerfallWorldMesh> _meshes = owner._meshes();
@@ -215,7 +215,7 @@ internal sealed class DaggerfallLocationAssembly
             DaggerfallSiteExterior exterior = record.Exterior!;
             DaggerfallSiteBlock[] placed = [.. exterior.Blocks.OrderBy(block => block.X).ThenBy(block => block.Y).ThenBy(block => block.SourceName, StringComparer.Ordinal)];
             IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> blocks = owner._blocks.Read(
-                placed.Select(block => new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.RmbExterior, block.SourceName)));
+                placed.Select(block => new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.RmbExterior, block.SourceName)), select);
             HashSet<(int X, int Z)> clear = [];
             foreach (DaggerfallSiteBlock block in placed)
             {
@@ -232,6 +232,7 @@ internal sealed class DaggerfallLocationAssembly
                 if (document.EnterMarker is { } enter) _enter ??= origin + enter;
                 _startMarkers.AddRange(document.StartMarkers.Select(marker => origin + marker));
                 PlaceStaticNpcs(document, origin, id => PlaceId(id, block.X, block.Y));
+                foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, id => PlaceId(id, block.X, block.Y)));
                 foreach (JsonNode? person in document.Section("population")) Append("population", Moved(person, origin));
                 if (document.ClearGround is { } bits)
                     for (int index = 0; index < AutomapSide * AutomapSide; index++)
@@ -261,7 +262,7 @@ internal sealed class DaggerfallLocationAssembly
             DaggerfallSiteBlock placed = exterior.Blocks.SingleOrDefault(block => block.X == building.BlockX && block.Y == building.BlockY)
                 ?? throw new InvalidOperationException($"Location {key.Site} places no block at ({building.BlockX}, {building.BlockY}).");
             DaggerfallWorldBlockKey blockKey = new(DaggerfallWorldBlockKind.RmbInterior, placed.SourceName, building.Index);
-            DaggerfallWorldBlockDocument document = owner._blocks.Read([blockKey])[blockKey];
+            DaggerfallWorldBlockDocument document = owner._blocks.Read([blockKey], select)[blockKey];
             Place(document, "block", 0, 0);
             foreach (DaggerfallWorldBlockModel model in document.Models) Draw(model, Vector3.Zero);
             _start = document.StartMarker;
@@ -292,6 +293,7 @@ internal sealed class DaggerfallLocationAssembly
                 Append("staticNpcs", value);
             }
 
+            foreach (JsonNode? light in document.Section("lights")) Append("lights", Clone(light));
             foreach (JsonNode? container in document.Section("propertyContainers")) Append("propertyContainers", Clone(container));
             DaggerfallWorldBlockBuilding slot = document.InteriorBuilding!;
             _world["interiorBuilding"] = new JsonObject
@@ -313,7 +315,7 @@ internal sealed class DaggerfallLocationAssembly
             _remaps = record.DungeonTextureRemaps;
             DaggerfallSiteDungeonBlock[] placed = [.. record.DungeonBlocks.OrderBy(block => block.X).ThenBy(block => block.Z).ThenBy(block => block.SourceKey, StringComparer.Ordinal)];
             IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> blocks = owner._blocks.Read(
-                placed.Select(block => new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.Rdb, block.SourceKey)));
+                placed.Select(block => new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.Rdb, block.SourceKey)), select);
             float minimumY = float.PositiveInfinity, maximumY = float.NegativeInfinity;
             List<(string Id, string Kind, int X, int Z)> zones = [];
             foreach (DaggerfallSiteDungeonBlock block in placed)

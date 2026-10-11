@@ -107,7 +107,7 @@ internal sealed class DaggerfallWorldBlockDocument
 /// each block document only when a location that places it is assembled. The bundle is opened for each
 /// read and closed again, so the Engine keeps no block bodies once the documents are interpreted.
 /// </summary>
-internal sealed class DaggerfallWorldBlocks
+internal sealed partial class DaggerfallWorldBlocks
 {
     /// <summary>The bundle the Host stages the per-block publication as.</summary>
     internal const string BundleId = "daggerfall.world-blocks";
@@ -160,7 +160,7 @@ internal sealed class DaggerfallWorldBlocks
     /// Reads the documents of the given blocks in one bundle opening. A block the publication does not
     /// carry, or a document that does not read, is reported by name; nothing is skipped.
     /// </summary>
-    internal IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> Read(IEnumerable<DaggerfallWorldBlockKey> keys)
+    internal IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> Read(IEnumerable<DaggerfallWorldBlockKey> keys, Func<DaggerfallWorldBlockKey, DaggerfallBlockVariantSelection>? select = null)
     {
         ArgumentNullException.ThrowIfNull(keys);
         DaggerfallWorldBlockKey[] requested = [.. keys.Distinct()];
@@ -176,6 +176,11 @@ internal sealed class DaggerfallWorldBlocks
                 continue;
             }
 
+            if (select?.Invoke(key) is { Empty: false } selection)
+            {
+                if (!_variants.TryGetValue((key, selection.Key), out entry))
+                    throw new NotSupportedException($"Block '{key}' has no published variant composition '{selection.Key}'.");
+            }
             ReadOnlyMemory<byte> bytes;
             try { bytes = bundle.ReadBytes(entry.Document); }
             catch (Exception exception) when (exception is FileNotFoundException or EngineCallException)
@@ -202,6 +207,7 @@ internal sealed class DaggerfallWorldBlocks
             {
                 using JsonDocument document = JsonDocument.Parse(bundle.ReadBytes(IndexPath));
                 JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "world block index", diagnostics);
+                ReadVariants(root, diagnostics);
                 foreach (JsonElement value in DaggerfallBaseContent.Array(root, "blocks", diagnostics))
                 {
                     JsonElement block = DaggerfallBaseContent.Object(value, "world block index entry", diagnostics);

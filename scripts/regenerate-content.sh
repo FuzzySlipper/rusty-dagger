@@ -19,19 +19,22 @@ set -euo pipefail
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
 
-usage="usage: scripts/regenerate-content.sh [--arena2 DIR] [--donor DIR] [--sound DIR] [--sprite-authoring DIR]
+usage="usage: scripts/regenerate-content.sh [--arena2 DIR] [--donor DIR] [--sound DIR] [--sprite-authoring DIR] [--block-variants FILE]
   --sprite-authoring DIR  an operator sprite-overlay root; a site whose overlay (sprites/SITE.json)
-                          exists there is written with it. No overlay is tracked, so the default is none."
+                          exists there is written with it. No overlay is tracked, so the default is none.
+  --block-variants FILE   authored normalized block/building variant descriptor."
 arena2=${DAGGER_ARENA2:-local/arena2}
 donor=${DAGGER_DONOR_ROOT:-/home/research/daggerfall-unity}
 sound=local/Sound
 sprite_authoring=
+block_variants=
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --arena2) arena2=${2:?"$usage"}; shift 2 ;;
     --donor) donor=${2:?"$usage"}; shift 2 ;;
     --sound) sound=${2:?"$usage"}; shift 2 ;;
     --sprite-authoring) sprite_authoring=${2:?"$usage"}; shift 2 ;;
+    --block-variants) block_variants=${2:?"$usage"}; shift 2 ;;
     -h|--help) echo "$usage"; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; echo "$usage" >&2; exit 2 ;;
   esac
@@ -44,6 +47,7 @@ missing() {
 
 # Every input is checked before anything is written, so an absent input stops the run with its
 # name instead of leaving a half-regenerated tree.
+[[ -z "$block_variants" || -f "$block_variants" ]] || missing "block variant descriptor '$block_variants'"
 [[ -d "$arena2" ]] || missing "Arena2 directory '$arena2' (link local/arena2 to the game's ARENA2 folder or pass --arena2)"
 for file in MAPS.BSA BLOCKS.BSA ARCH3D.BSA MONSTER.BSA DAGGER.SND TEXT.RSC CLASSES.DAT CLIMATE.PAK POLITIC.PAK WOODS.WLD FACTION.TXT SPELLS.STD MAGIC.DEF ANIM0000.VID AZURA.FLC; do
   [[ -f "$arena2/$file" ]] || missing "Arena2 file '$arena2/$file'"
@@ -165,6 +169,8 @@ tool classic-quest-corpora --pack "$imported" --records "$records" --out content
 #    and actor atlas, terrain texture, the classic sidecar and its audio clips, published once. It reads the
 #    imported mobile and faction catalogs for the actors and flats the runtime may spawn anywhere, the music
 #    manifest for the cues every site names, and the classic media group so its images are not copied.
+block_variant_args=()
+if [[ -n "$block_variants" ]]; then block_variant_args=(--variants "$block_variants"); fi
 world_media=content/worldrpg/imports/shared
 classic_group=content/worldrpg
 tool world-media --arena2 "$arena2" --ui-authored-assets "$ui_assets" --ui-original "$ui_original" --inventory "$inventory" \
@@ -176,7 +182,7 @@ tool world-media --arena2 "$arena2" --ui-authored-assets "$ui_assets" --ui-origi
 #    publication's meshes. It reads the catalog's locations for the blocks the world places. The Host declares
 #    it as the daggerfall.world-blocks bundle, so the runtime opens each block only when a location needs it.
 tool world-blocks --arena2 "$arena2" --pack "$imported" --shared "$world_media" --inventory "$inventory" \
-  --out content/worldrpg/imports/world-blocks --source-manifest import-records/world-blocks.sources.json
+  --out content/worldrpg/imports/world-blocks --source-manifest import-records/world-blocks.sources.json "${block_variant_args[@]}"
 
 # 6. Site closures. Each names the published music cues and the actors the imported mobile catalog lets the
 #    runtime spawn, and writes only what is its own: every body and shared sidecar entry is referenced from
