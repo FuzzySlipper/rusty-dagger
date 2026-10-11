@@ -62,8 +62,7 @@ internal static class MusicMediaCommand
 
         ClassicMusicPublicationResult publication = ClassicMusicPublication.Create(ClassicMusicCatalogue.All, sources);
         long bytes = publication.Manifest.Cues.Sum(cue => cue.ByteLength);
-        long budget = ClassicMusicCatalogue.MaximumTotalBytes - ClassicMusicCatalogue.EffectHeadroomBytes;
-        Console.WriteLine($"music: {publication.Manifest.Cues.Count} of {ClassicMusicCatalogue.All.Count} cues published, {bytes} of {budget} bytes shared with the effect clips");
+        Console.WriteLine($"music: {publication.Manifest.Cues.Count} of {ClassicMusicCatalogue.All.Count} cues published, {bytes} storage bytes; one playing music clip is retained at a time");
         foreach (string warning in publication.Warnings) Console.WriteLine($"  {warning}");
         foreach (ClassicMusicRecord cue in publication.Manifest.Cues)
         {

@@ -6,19 +6,6 @@ namespace Daggerfall.Import.Tests;
 public sealed class ClassicMusicCatalogueTests
 {
     [Fact]
-    public void The_published_cue_set_fits_the_engines_budget_and_leaves_the_effects_their_share()
-    {
-        // The Engine admits 64 clips and 32 MiB in total, and the imported effect clips share that budget
-        // with the score, so the music may not consume all of it. A cue added without regard to either
-        // limit fails here rather than at load.
-        Assert.NotEmpty(ClassicMusicCatalogue.All);
-        Assert.True(ClassicMusicCatalogue.All.Count <= ClassicMusicCatalogue.MaximumCueCount);
-        int total = ClassicMusicCatalogue.TotalBytes(ClassicMusicCatalogue.All);
-        Assert.True(total <= ClassicMusicCatalogue.MaximumTotalBytes - ClassicMusicCatalogue.EffectHeadroomBytes,
-            $"The declared cues need {total} bytes, leaving the effect clips less than {ClassicMusicCatalogue.EffectHeadroomBytes}.");
-    }
-
-    [Fact]
     public void Every_cue_is_a_donor_file_that_the_engine_admits_without_conversion()
     {
         // Compressed admission is what lets a cue be the donor's own file: the import carries the source
@@ -36,8 +23,8 @@ public sealed class ClassicMusicCatalogueTests
     [Fact]
     public void The_cue_set_covers_the_contexts_the_donor_plays_in()
     {
-        // The set is deliberately small, so what it covers is worth stating: the dungeon context and both
-        // versions of the sunny playlists, which are the ones the donor's song manager names first.
+        foreach (string context in new[]{"night", "tavern", "shop", "magesguild", "temple", "templeneutral", "templebad", "knight", "rain", "snow", "interior", "palace", "overcast"})
+            Assert.Contains(ClassicMusicCatalogue.All, cue => cue.Context == context);
         Assert.Contains(ClassicMusicCatalogue.All, cue => cue.Context == "dungeon");
         Assert.Contains(ClassicMusicCatalogue.All, cue => cue.Context == "sunny");
         Assert.Contains(ClassicMusicCatalogue.All, cue => cue.Context == "sunny-fm");

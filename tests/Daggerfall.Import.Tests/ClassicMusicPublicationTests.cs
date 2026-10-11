@@ -111,21 +111,17 @@ public sealed class ClassicMusicPublicationTests
     }
 
     [Fact]
-    public void Create_refuses_a_publication_that_exceeds_the_engines_clip_count_or_byte_budget()
+    public void Publication_storage_is_independent_of_live_clip_count_and_bytes()
     {
-        ClassicMusicCue[] tooMany = [.. Enumerable.Range(0, ClassicMusicCatalogue.MaximumCueCount + 1)
+        ClassicMusicCue[] tooMany = [.. Enumerable.Range(0, 70)
             .Select(index => new ClassicMusicCue($"music.synthetic.{index}", $"synthetic-{index}.ogg", "dungeon", 1))];
         ClassicMusicSource[] sources = [.. tooMany.Select(cue => new ClassicMusicSource(cue, [7]))];
 
-        InvalidOperationException count = Assert.Throws<InvalidOperationException>(() => ClassicMusicPublication.Create(tooMany, sources));
+        Assert.Equal(70, ClassicMusicPublication.Create(tooMany, sources).Manifest.Cues.Count);
 
-        Assert.Contains($"{tooMany.Length} cues, which is more than the Engine admits ({ClassicMusicCatalogue.MaximumCueCount})", count.Message, StringComparison.Ordinal);
-
-        int admitted = ClassicMusicCatalogue.MaximumTotalBytes - ClassicMusicCatalogue.EffectHeadroomBytes;
-        ClassicMusicCue oversized = new("music.synthetic.oversized", "synthetic-oversized.ogg", "dungeon", admitted + 1);
-        InvalidOperationException bytes = Assert.Throws<InvalidOperationException>(() => ClassicMusicPublication.Create([oversized], [new ClassicMusicSource(oversized, new byte[admitted + 1])]));
-
-        Assert.Contains($"{admitted + 1L} bytes, which leaves the imported effect clips less than {ClassicMusicCatalogue.EffectHeadroomBytes}", bytes.Message, StringComparison.Ordinal);
+        int large = 33 * 1024 * 1024;
+        ClassicMusicCue cue = new("music.large", "large.ogg", "dungeon", large);
+        Assert.Single(ClassicMusicPublication.Create([cue], [new ClassicMusicSource(cue, new byte[large])]).Manifest.Cues);
     }
 
     [Fact]

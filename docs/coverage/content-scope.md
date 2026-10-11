@@ -456,3 +456,16 @@ and `authoredOverlays` (each applied sprite overlay with
 its digest). `normalized.json` carries the same revision. Each cinematic artifact in the imported
 payload records the FFmpeg build that encoded it, because another build writes different VP9/Opus
 bytes for the same source.
+
+### Contextual music publication
+
+The music catalogue publishes operator-supplied Ogg tracks for retained standard and alternate
+dungeon, outdoor day/night/weather, tavern, shop, guild, temple-alignment, palace and ordinary
+interior playlists. A tavern follows the shared calendar day's song. Combat does not interrupt
+the environmental score, matching the donor song manager; there is no invented battle track
+or MIDI playback. Only the currently playing music clip remains open, and its voice retires
+before the clip is released. Publication size is not an Engine live-resource budget.
+
+The source folder's malformed `song_dungeon5).ogg` is deliberately omitted: it does not name
+the donor track `song_dungeon5`. Other dungeon tracks remain available. Unused donor playlists
+and tracks outside the retained contexts are not added solely because files exist.

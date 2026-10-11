@@ -84,8 +84,7 @@ public sealed record ClassicMusicPublicationResult(
 /// Publishes the classic music catalogue into one product-wide music bundle.
 /// </summary>
 /// <remarks>
-/// The score is the same seven donor songs wherever the player stands, so it is published once, above the
-/// sites, rather than copied into every site publication the way the effect clips are. A site names the
+/// Donor tracks are published once above the sites, alongside the shared world audio. A site names the
 /// cues it admits in its classic sidecar; this publication owns the bytes and the digests both sides read.
 /// A cue whose donor file the caller did not supply is reported and skipped rather than substituted: the
 /// catalogue says which donor track a context plays, and a different file would play a different song.
@@ -145,7 +144,6 @@ public static class ClassicMusicPublication
         List<ImportPublicationArtifact> artifacts = [];
         List<ClassicMusicRecord> records = [];
         List<string> warnings = [];
-        long publishedBytes = 0;
         foreach (ClassicMusicCue cue in cues.OrderBy(cue => cue.MediaId, StringComparer.Ordinal))
         {
             if (!byFile.TryGetValue(cue.SourceFile, out byte[]? bytes))
@@ -156,7 +154,7 @@ public static class ClassicMusicPublication
 
             if (bytes.Length != cue.SourceBytes)
             {
-                // The catalogue records the donor file's length, and the budget decision was made with it.
+                // The catalogue records the operator source file's measured length.
                 // A folder carrying a different encode of the same song is published as it is, with both
                 // values reported, because refusing would stop every later cue over a container difference.
                 warnings.Add($"music cue '{cue.MediaId}' source '{cue.SourceFile}' carries {bytes.Length} bytes where the catalogue records {cue.SourceBytes}.");
@@ -173,21 +171,6 @@ public static class ClassicMusicPublication
                 ClassicMusicRecord.OggMimeType,
                 bytes.LongLength,
                 digest.Value));
-            publishedBytes += bytes.Length;
-        }
-
-        // The Engine admits a bounded number of clips and a bounded byte total, and the imported effect
-        // clips share that total. Publishing past either bound produces a bundle the product cannot open,
-        // so the publication refuses here, where the numbers are still visible, instead of at admission.
-        if (records.Count > ClassicMusicCatalogue.MaximumCueCount)
-        {
-            throw new InvalidOperationException($"The music publication carries {records.Count} cues, which is more than the Engine admits ({ClassicMusicCatalogue.MaximumCueCount}).");
-        }
-
-        long admittedTotal = ClassicMusicCatalogue.MaximumTotalBytes - ClassicMusicCatalogue.EffectHeadroomBytes;
-        if (publishedBytes > admittedTotal)
-        {
-            throw new InvalidOperationException($"The music publication carries {publishedBytes} bytes, which leaves the imported effect clips less than {ClassicMusicCatalogue.EffectHeadroomBytes} of the Engine's {ClassicMusicCatalogue.MaximumTotalBytes}.");
         }
 
         ClassicMusicManifest manifest = new(Generator, records);
