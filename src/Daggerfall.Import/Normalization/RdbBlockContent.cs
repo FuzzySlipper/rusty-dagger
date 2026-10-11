@@ -252,7 +252,20 @@ internal sealed class RdbBlockContent
                 Poison: flat.Source.Action == 0x1A ? new(SourceKey, "source-unresolved") : null));
         }
 
-        return actions;
+        // Teleport targets are object transforms even when the target has no executable action.
+        return actions.Select(action =>
+        {
+            if (action.ActionFlag != 0x0E || action.NextObjectOffset <= 0) return action;
+            var model = Models.FirstOrDefault(value => value.Source.ObjectOffset == action.NextObjectOffset);
+            if (model is not null)
+            {
+                var rotation = model.RotationDegrees;
+                return action with { NextObjectPosition = place(model.Point),
+                    NextObjectRotationDegrees = new(rotation.X, rotation.Y, rotation.Z) };
+            }
+            var flat = Flats.FirstOrDefault(value => value.Source.ObjectOffset == action.NextObjectOffset);
+            return flat is null ? action : action with { NextObjectPosition = place(flat.Point), NextObjectRotationDegrees = new(0, 0, 0) };
+        }).ToArray();
     }
 
     /// <summary>

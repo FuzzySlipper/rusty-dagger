@@ -342,6 +342,8 @@ internal sealed class DaggerfallLocationAssembly
                 foreach (JsonNode? action in document.Section("actions"))
                 {
                     JsonObject value = Moved(action, origin, Placed);
+                    if (value["nextObjectPosition"] is JsonObject landing)
+                        value["nextObjectPosition"] = Vector(new Vector3(landing["x"]!.GetValue<float>(), landing["y"]!.GetValue<float>(), landing["z"]!.GetValue<float>()) + origin);
                     foreach (string reference in new[] { "nextActionId", "doorId" })
                         if (value[reference] is JsonValue target && target.TryGetValue(out string? id)) value[reference] = Placed(id);
                     Append("actions", value);
