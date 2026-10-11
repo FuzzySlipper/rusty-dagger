@@ -863,16 +863,16 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     activePanel = null;
     loadRequested = false;
     menu.close();
-    reportMenu(false);
     syncInteraction(true);
+    reportMenu(false);
   };
   const openMenu = (): void => {
     controllerDirection = 0;
     loadRequested = false;
     menu.showModal();
     syncInteraction();
-    reportMenu(true);
     showHome();
+    reportMenu(true);
   };
   const dismiss = (): void => {
     if (deadMode) return;

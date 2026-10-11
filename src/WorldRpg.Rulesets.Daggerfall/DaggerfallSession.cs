@@ -328,7 +328,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // Sprite playback consumes the Engine-bound outer update identity.  It
         // must not run for each private catch-up simulation step above, and it
         // must not run while the world is holding still.
-        if (_mode == ProductMode.Playing
+        if (_mode == ProductMode.Playing && !_interactions.HoldsWorldOpen
             && update.Facts.LifecycleState == ProductLifecycleState.Running
             && update.Facts.AdmittedStepCount > 0)
         {
@@ -348,7 +348,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             // is real once the step applied it, and the director is told once per admitted update.
             AdvanceMusic();
         }
-        bool ambientPlaying = _mode == ProductMode.Playing && Cinematics?.ActiveSource is null
+        bool ambientPlaying = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen && Cinematics?.ActiveSource is null
             && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null
             && update.Facts.LifecycleState == ProductLifecycleState.Running
             && update.Facts.AdmittedStepCount > 0
@@ -418,7 +418,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             return;
         }
 
-        if (!playing)
+        if (!playing || _interactions.HoldsWorldOpen)
         {
             // The mode's own line was set when the mode was entered; an outcome an action set during
             // this update stays on the line rather than being overwritten by it.
