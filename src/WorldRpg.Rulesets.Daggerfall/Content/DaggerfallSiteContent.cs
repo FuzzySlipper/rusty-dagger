@@ -465,7 +465,9 @@ internal static partial class DaggerfallSiteContent
                     SoundIndex: soundIndex,
                     SourcePosition: sourcePosition,
                     RawIndex: rawIndex,
-                    Poison: poison);
+                    Poison: poison,
+                    NextObjectPosition: OptionalObjectVector3(action, "nextObjectPosition", $"dungeon teleport {id} destination", diagnostics),
+                    NextObjectRotationDegrees: OptionalObjectVector3(action, "nextObjectRotationDegrees", $"dungeon teleport {id} rotation", diagnostics));
                 try
                 {
                     if (actionFlag == (byte)DaggerfallDungeonActionFlag.Poison && poison is null)

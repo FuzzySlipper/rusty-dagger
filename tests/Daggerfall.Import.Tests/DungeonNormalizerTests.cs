@@ -10,6 +10,19 @@ namespace Daggerfall.Import.Tests;
 public sealed class DungeonNormalizerTests
 {
     [Fact]
+    public void Teleport_retains_the_linked_object_pose_even_without_a_target_action()
+    {
+        var sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(actionFlags: 0x0E, actionNextObjectOffset: 6049))));
+        var result = DungeonNormalizer.Normalize(Request(sources));
+        var action = Assert.Single(result.Document.World.Actions);
+        Assert.Null(action.NextActionId);
+        Assert.Equal(result.Document.World.StartMarker!.Position, action.NextObjectPosition);
+        Assert.Equal(new NormalizedVector3(0, 0, 0), action.NextObjectRotationDegrees);
+        Assert.Equal(action, Assert.Single(NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(result.Document)).World.Actions));
+    }
+
+    [Fact]
     public void NormalizesOneSyntheticLocationAcrossMapsBlocksArchPalettePakAndTextureSources()
     {
         DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(CreateSources()));

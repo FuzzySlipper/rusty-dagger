@@ -100,7 +100,9 @@ internal sealed record DaggerfallDungeonActionDefinition(
     byte SoundIndex = 0,
     Vector3? SourcePosition = null,
     byte RawIndex = 0,
-    DaggerfallDungeonPoisonAction? Poison = null)
+    DaggerfallDungeonPoisonAction? Poison = null,
+    Vector3? NextObjectPosition = null,
+    Vector3? NextObjectRotationDegrees = null)
 {
     internal DaggerfallDungeonActionDefinition Validate(IReadOnlySet<string> actionIds)
     {
@@ -111,6 +113,9 @@ internal sealed record DaggerfallDungeonActionDefinition(
         Poison?.Validate(this);
         if (SourcePosition is Vector3 position && (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z)))
             throw new ArgumentOutOfRangeException(nameof(SourcePosition));
+        foreach (var point in new[] { NextObjectPosition, NextObjectRotationDegrees })
+            if (point is Vector3 v && (!float.IsFinite(v.X) || !float.IsFinite(v.Y) || !float.IsFinite(v.Z)))
+                throw new ArgumentOutOfRangeException(nameof(NextObjectPosition));
         if (NextActionId is not null)
         {
             if (string.IsNullOrWhiteSpace(NextActionId)) throw new ArgumentException("An action link cannot have an empty target id.", nameof(NextActionId));
@@ -392,7 +397,7 @@ internal sealed class DaggerfallDungeonActionGraph
             bool missingTarget = false;
             if (definition.NextObjectOffset > 0)
             {
-                if (definition.NextActionId is null)
+                if (definition.NextActionId is null && !(definition.ActionFlag == (byte)DaggerfallDungeonActionFlag.Teleport && definition.NextObjectPosition is not null))
                 {
                     missingTarget = true;
                     executions.Add(new(actionId, DaggerfallDungeonActionOutcome.MissingTarget,
@@ -400,7 +405,7 @@ internal sealed class DaggerfallDungeonActionGraph
                 }
                 else
                 {
-                    Dispatch(definition.NextActionId, DaggerfallDungeonActionEvent.ActionObject, executions);
+                    if (definition.NextActionId is not null) Dispatch(definition.NextActionId, DaggerfallDungeonActionEvent.ActionObject, executions);
                 }
             }
 

@@ -471,6 +471,8 @@ internal sealed partial class DaggerfallSession
     {
         if (action.ActionFlag == (byte)DaggerfallDungeonActionFlag.CastSpell)
             return ExecuteDungeonSpellAction(action);
+        if (action.ActionFlag == (byte)DaggerfallDungeonActionFlag.Teleport)
+            return ExecuteDungeonTeleport(action);
         if (DaggerfallDungeonDoorActions.Execute(action, _doors) is { } door) return door;
         if (ActivateDungeonMotion(action) is { } motion) return motion;
         ulong count = State.DungeonActions[_activeProfileKey].State[action.Id].ActivationCount;
@@ -486,6 +488,34 @@ internal sealed partial class DaggerfallSession
             return hazard.Execution;
         }
         return ExecuteDungeonTextAction(action);
+    }
+
+    private DaggerfallDungeonActionExecution ExecuteDungeonTeleport(DaggerfallDungeonActionDefinition action)
+    {
+        Vector3? position = action.NextObjectPosition;
+        Vector3 degrees = action.NextObjectRotationDegrees ?? Vector3.Zero;
+        Quaternion rotation = DaggerfallDungeonMotionPolicy.InitialTransform(Vector3.Zero, degrees).Rotation;
+        if (action.NextActionId is string target)
+        {
+            // Linked actions run first; a moving target therefore uses its current admitted pose.
+            if (_sites.Projection.Motion.TryGetTransform(target, out Transform pose))
+            { position = pose.Translation; rotation = pose.Rotation; }
+            else if (_sites.Projection.Inputs.DungeonActions.FirstOrDefault(value => value.Id == target) is { } next)
+            {
+                position ??= next.SourcePosition;
+                if (next.DoorId is string doorId)
+                    foreach (var door in _doors.All.Where(door => DaggerfallDungeonActionGraph.DoorSourceId(door.Id) == doorId))
+                    { position = door.Pose.Translation; rotation = door.Pose.Rotation; break; }
+            }
+        }
+        if (position is not Vector3 destination)
+            return new(action.Id, DaggerfallDungeonActionOutcome.MissingTarget,
+                Diagnostic: $"Dungeon teleport '{action.Id}' has no admitted next-object position.");
+        Vector3 forward = Vector3.Transform(-Vector3.UnitZ, rotation);
+        var anchor = new DaggerfallSiteAnchor($"teleport:{action.Id}", new(destination.X, destination.Y, destination.Z),
+            ActorHeading.Yaw(forward), MathF.Asin(Math.Clamp(forward.Y, -1f, 1f)));
+        return new(action.Id, _sites.TryRelocatePlayer(_activeProfileKey, anchor)
+            ? DaggerfallDungeonActionOutcome.Applied : DaggerfallDungeonActionOutcome.RejectedOperation);
     }
 
     private DaggerfallDungeonActionExecution ExecuteDungeonSpellAction(DaggerfallDungeonActionDefinition action)

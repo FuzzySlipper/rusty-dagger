@@ -68,7 +68,9 @@ public sealed record NormalizedDungeonAction(
     byte SoundIndex = 0,
     NormalizedVector3? Position = null,
     byte RawIndex = 0,
-    NormalizedDungeonPoisonAction? Poison = null)
+    NormalizedDungeonPoisonAction? Poison = null,
+    NormalizedVector3? NextObjectPosition = null,
+    NormalizedVector3? NextObjectRotationDegrees = null)
 {
     public NormalizedDungeonAction Canonicalize() => this;
 
@@ -77,6 +79,10 @@ public sealed record NormalizedDungeonAction(
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         if (SourceOffset <= 0) throw new ArgumentOutOfRangeException(nameof(SourceOffset));
         Position?.Validate(nameof(Position));
+        NextObjectPosition?.Validate(nameof(NextObjectPosition));
+        NextObjectRotationDegrees?.Validate(nameof(NextObjectRotationDegrees));
+        if (NextObjectPosition is not null && NextObjectOffset <= 0)
+            throw new InvalidOperationException($"Dungeon action '{Id}' carries a destination without a positive source link.");
         if (ActionFlag == 0x1A && Poison is null)
             throw new InvalidOperationException($"Normalized dungeon Poison action '{Id}' requires explicit source authority or exclusion.");
         Poison?.Validate(this);
