@@ -1796,3 +1796,19 @@ test('guild teleport hides travel options and confirms a zero-cost destination o
     view.dispose();
   } finally { f.dispose(); }
 });
+
+for (const path of ['Escape', 'toggle', 'panel request']) test(`menu open via ${path} reports the world hold once`, () => {
+  const f = fixture();
+  try {
+    f.publish();
+    if (path === 'Escape') document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    else if (path === 'toggle') f.root.querySelector('.dagger-menu-toggle').click();
+    else f.publish({ panelRequest: { panel: 'transport', revision: '5' } });
+    assert.equal(f.root.querySelector('.dagger-menu').open, true);
+    assert.deepEqual(f.actions.filter(action => action.action === 'menu'), [{ action: 'menu', open: true }]);
+    f.publish({ mode: 'modal', panelRequest: path === 'panel request' ? { panel: 'transport', revision: '5' } : null });
+    assert.deepEqual(f.actions.filter(action => action.action === 'menu'), [{ action: 'menu', open: true }]);
+    f.root.querySelector('[data-action="resume"]').click();
+    assert.deepEqual(f.actions.filter(action => action.action === 'menu').at(-1), { action: 'menu', open: false });
+  } finally { f.dispose(); }
+});
