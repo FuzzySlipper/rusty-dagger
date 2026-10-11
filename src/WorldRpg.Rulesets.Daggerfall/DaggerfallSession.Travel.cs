@@ -314,7 +314,7 @@ internal sealed partial class DaggerfallSession
                 && _time.Calendar.ToAbsoluteSeconds() % DaggerfallCalendar.SecondsPerMinute == 0)
             {
                 long minute = _time.Calendar.ToAbsoluteSeconds() / DaggerfallCalendar.SecondsPerMinute;
-                DaggerfallEncounterRequest? encounter = RestEncounterRequest(minute);
+                DaggerfallEncounterRequest? encounter = WorldEncounterRequest(minute, resting: false);
                 if (encounter is not null && QueueEncounter(encounter).Choice.MobileId is not null)
                     return DaggerfallTravelOutcome.Encounter;
             }

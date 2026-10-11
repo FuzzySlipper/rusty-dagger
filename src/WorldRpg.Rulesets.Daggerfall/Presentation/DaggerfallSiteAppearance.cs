@@ -305,10 +305,10 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
-    internal void RetireAllActors()
+    internal void RetireAllActors(IReadOnlySet<long>? retainedActors = null)
     {
         foreach (long durableId in actors.Keys.Concat(enemyVoices.Values.Select(entry => entry.ActorId)).Distinct().ToArray())
-            RetireActor(durableId);
+            if (retainedActors?.Contains(durableId) != true) RetireActor(durableId);
     }
 
     /// <summary>

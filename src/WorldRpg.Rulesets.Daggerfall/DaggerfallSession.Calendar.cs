@@ -116,6 +116,7 @@ internal sealed partial class DaggerfallSession
                 includeIdleFatigue: !resting && idleFatigue, swimmingFatigueApplies: SwimmingFatigueApplies);
             return;
         }
+        AdvanceWorldEncounters(minuteBefore, minuteAfter);
         CheckStandingLaw(minuteBefore, minuteAfter);
         simulate!();
         // Locomotion charges the update's minutes once its steps have recorded how they were spent.

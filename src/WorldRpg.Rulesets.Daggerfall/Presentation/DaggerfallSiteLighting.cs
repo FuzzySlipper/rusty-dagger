@@ -126,7 +126,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     internal void UpdateMobileLights(IEnumerable<WorldRpg.Kit.Actors.ActorState> actors,
         IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions, DaggerfallMobileCatalogSet mobiles)
     {
-        if (_disposed || _suspended) return;
+        if (_disposed) return;
         HashSet<long> live = [];
         foreach (var actor in actors)
         {
