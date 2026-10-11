@@ -922,7 +922,18 @@ internal sealed class DaggerfallSiteLifecycle
     {
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior)
             return new(Projection.Inputs, _site.ActiveSite, _site.ActiveSite?.DungeonType);
-        if (_state.PlayerControl.Position is not WorldPoint position) return new(Projection.Inputs, null, null);
+        return new(Projection.Inputs, LocationAtPlayer(), null);
+    }
+
+    /// <summary>
+    /// The exterior location whose classic location rect (footprint plus one RMB block) holds the
+    /// accepted player position, or null in the wilderness. This is the donor's
+    /// <c>PlayerGPS.IsPlayerInLocationRect</c> over the actually admitted location profiles.
+    /// </summary>
+    internal DaggerfallSiteRecord? LocationAtPlayer()
+    {
+        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
+            || _state.PlayerControl.Position is not WorldPoint position) return null;
         // Location artifacts use their normalized RMB frame, not the source terrain-tile origin.
         // Check the actual admitted profiles, including neighbors in the shared exterior window.
         var profiles = (_locationLoaded ? new[] { Projection.Inputs } : [])
@@ -932,9 +943,9 @@ internal sealed class DaggerfallSiteLifecycle
             if (profile.Site is not { } id || !_site.TryFind(id, out var location) || location.Exterior is not { } footprint) continue;
             var translation = ExteriorProfileTranslation(profile);
             if (InsideLocationFootprint(footprint, position.X - translation.X, position.Z - translation.Z))
-                return new(Projection.Inputs, location, null);
+                return location;
         }
-        return new(Projection.Inputs, null, null);
+        return null;
     }
 
     internal static bool InsideLocationFootprint(DaggerfallSiteExterior location, float x, float z)
