@@ -316,7 +316,7 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
     internal string DescribeTime() => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{Hour:00}:{Minute:00}");
 
     /// <summary>The donor's English ordinal suffix for a one-based day of the month.</summary>
-    private static string OrdinalSuffix(int day) => day switch
+    internal static string OrdinalSuffix(int day) => day switch
     {
         1 or 21 => "st",
         2 or 22 => "nd",

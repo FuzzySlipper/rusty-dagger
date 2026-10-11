@@ -16,7 +16,10 @@ internal sealed record DaggerfallTextPlayerContext(
     string? Speed = null, string? Luck = null, string? AttributeRating = null,
     string? PlayerPronoun = null, string? PlayerObjectPronoun = null,
     string? PlayerReflexivePronoun = null, string? PlayerPossessiveAdjective = null,
-    string? PlayerPossessivePronoun = null);
+    string? PlayerPossessivePronoun = null)
+{
+    internal IReadOnlyDictionary<string, string> AttributeRatings { get; init; } = new Dictionary<string, string>();
+}
 
 /// <summary>Calendar values formatted by the Daggerfall calendar owner for text presentation.</summary>
 internal sealed record DaggerfallTextCalendarContext(
@@ -126,6 +129,7 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
             return new(string.Empty, [new(DaggerfallTextDiagnosticKind.MalformedText, key, value.Reason)]);
         StringBuilder output = new();
         int current = 0;
+        string? attributeRating = context.Player.AttributeRating;
         foreach (DaggerfallTextElement token in value.Tokens)
         {
             if (subrecord is int selected)
@@ -133,7 +137,7 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
                 if (token.Code == DaggerfallTextCode.SubrecordSeparator) { current++; continue; }
                 if (current != selected) continue;
             }
-            if (token.Code == DaggerfallTextCode.Text) Expand(output, token.Text!, key, context, diagnostics);
+            if (token.Code == DaggerfallTextCode.Text) Expand(output, token.Text!, key, context, diagnostics, ref attributeRating);
             else if (token.Code is DaggerfallTextCode.NewLineOffset or DaggerfallTextCode.EndOfPage or DaggerfallTextCode.SubrecordSeparator) output.Append('\n');
             else if (token.Code is not (DaggerfallTextCode.SameLineOffset or DaggerfallTextCode.PullPreceeding or DaggerfallTextCode.InputCursorPositioner or DaggerfallTextCode.FontPrefix or DaggerfallTextCode.PositionPrefix or DaggerfallTextCode.JustifyLeft or DaggerfallTextCode.JustifyCenter))
                 diagnostics.Add(new(DaggerfallTextDiagnosticKind.UnknownLayoutToken, key, $"The normalized text value carries unsupported layout token '{token.Code}'."));
@@ -150,11 +154,12 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
         ArgumentNullException.ThrowIfNull(context);
         List<DaggerfallTextDiagnostic> diagnostics = [];
         StringBuilder output = new();
-        Expand(output, source, diagnosticKey, context, diagnostics);
+        string? attributeRating = context.Player.AttributeRating;
+        Expand(output, source, diagnosticKey, context, diagnostics, ref attributeRating);
         return new(output.ToString(), diagnostics);
     }
 
-    private static void Expand(StringBuilder output, string source, DaggerfallTextKey key, DaggerfallTextContext context, List<DaggerfallTextDiagnostic> diagnostics)
+    private static void Expand(StringBuilder output, string source, DaggerfallTextKey key, DaggerfallTextContext context, List<DaggerfallTextDiagnostic> diagnostics, ref string? attributeRating)
     {
         Dictionary<string, string> cache = new(StringComparer.Ordinal);
         for (int position = 0; position < source.Length;)
@@ -174,6 +179,13 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
             int end = marker + 1;
             while (end < source.Length && !MacroTerminators.Contains(source[end])) end++;
             string symbol = source[marker..end];
+            if (context.Player.AttributeRatings.TryGetValue(symbol, out var rating)) attributeRating = rating;
+            if (symbol == "%ark" && attributeRating is not null)
+            {
+                output.Append(attributeRating);
+                position = end < source.Length && source[end] == '|' ? end + 1 : end;
+                continue;
+            }
             if (!cache.TryGetValue(symbol, out string? value)) { value = ResolveMacro(symbol, key, context, diagnostics); cache.Add(symbol, value); }
             output.Append(value);
             position = end < source.Length && source[end] == '|' ? end + 1 : end;

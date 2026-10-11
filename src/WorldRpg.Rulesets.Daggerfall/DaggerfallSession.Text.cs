@@ -13,14 +13,18 @@ internal sealed partial class DaggerfallSession
 
     internal DaggerfallDungeonTextProjection? DungeonTextProjection => _dungeonTextProjection;
 
-    private DaggerfallTextContext DungeonTextContext() => DaggerfallTextContext.Empty with
+    internal DaggerfallTextContext CurrentTextContext() => DaggerfallTextContext.Empty with
     {
-        Player = new DaggerfallTextPlayerContext(
-            Name: State.Character.Identity.Name,
-            Race: State.Character.Identity.RaceId,
-            GoldCarried: State.Currency.Read().Gold.ToString(CultureInfo.InvariantCulture)),
-        Location = new DaggerfallTextLocationContext(City: _site.ActiveSite?.Name),
+        Player = DaggerfallTextContexts.Player(_definitions, State.Character.Identity, State.Actors.Player.Stats,
+            State.Currency.Read().Gold, State.Character.Career),
+        Calendar = DaggerfallTextContexts.Calendar(_definitions, _time.Calendar),
+        Location = new(City: _site.ActiveSite?.Name,
+            Region: _site.Region is int region ? _definitions.BuildingNames.RegionName(region) : null),
+        Faction = new(VampireClan: State.RacialOverrides.Current?.State.Vampire is { } vampire
+            ? Policies.DaggerfallVampirismPolicy.ClanName(_definitions, vampire.Clan) : null),
     };
+
+    private DaggerfallTextContext DungeonTextContext() => CurrentTextContext();
 
     internal DaggerfallDungeonActionExecution? ExecuteDungeonTextAction(DaggerfallDungeonActionDefinition action)
     {
@@ -123,8 +127,6 @@ internal sealed partial class DaggerfallSession
 
     private DaggerfallQuestMessageContext QuestTextContext(DaggerfallQuestRuntimeInstance instance)
     {
-        World.DaggerfallCalendar calendar = _time.Calendar;
-        DaggerfallCharacterIdentity player = State.Character.Identity;
         Dictionary<string, DaggerfallQuestResourceTextContext> resources = [];
         foreach (DaggerfallQuestResourceState resource in instance.Resources)
         {
@@ -143,7 +145,13 @@ internal sealed partial class DaggerfallSession
                 .FirstOrDefault(value => value is not null);
             // A quest can consume its item before ending. Its source meaning outlives the live item.
             string? item = resource.Binding.UniqueItemIds.Where(State.ItemInstances.ContainsUnique)
-                .Select(id => State.ItemInstances.RequireUnique(id).ItemId).FirstOrDefault(value => value is not null);
+                .Select(id =>
+                {
+                    var metadata = State.ItemInstances.RequireUnique(id);
+                    var definition = _definitions.RequireItem(new(metadata.ItemId));
+                    return DaggerfallInventoryPresentation.DescribeCreatedItem(_definitions,
+                        new(definition.Template?.Index ?? 0, new(metadata.ItemId), definition.IsFungible, 1, metadata));
+                }).FirstOrDefault(value => value is not null);
             if (item is null && declared.Kind == "item")
                 item = declared.Item?.Template is int template && _definitions.ItemTemplateCatalog.Templates.TryGetValue(template, out var itemTemplate)
                     ? itemTemplate.Name : declared.TargetSourceSpelling?.Replace('_', ' ');
@@ -160,20 +168,6 @@ internal sealed partial class DaggerfallSession
                 Binding: actorRole ?? place,
                 Faction: faction);
         }
-        return new(new(
-            new DaggerfallTextPlayerContext(Name: player.Name, Race: player.RaceId),
-            new DaggerfallTextCalendarContext(
-                Date: $"{calendar.Month + 1}/{calendar.Day + 1}/{calendar.Year}",
-                Time: $"{calendar.Hour:D2}:{calendar.Minute:D2}",
-                DayNumber: (calendar.Day + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
-                MonthNumber: (calendar.Month + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
-                Year: calendar.Year.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                Minute: calendar.Minute.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                Hour: calendar.Hour.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                Season: calendar.Season.ToString()),
-            new DaggerfallTextLocationContext(City: _site.ActiveSite?.Name,
-                Region: _site.Region?.ToString(System.Globalization.CultureInfo.InvariantCulture)),
-            new DaggerfallTextFactionContext(VampireClan: State.RacialOverrides.Current?.State.Vampire is { } vampire
-                ? Policies.DaggerfallVampirismPolicy.ClanName(_definitions, vampire.Clan) : null), new(), new()), resources);
+        return new(CurrentTextContext(), resources);
     }
 }

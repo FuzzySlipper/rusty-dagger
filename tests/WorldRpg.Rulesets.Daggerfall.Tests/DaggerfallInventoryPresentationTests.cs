@@ -221,6 +221,18 @@ public sealed class DaggerfallInventoryPresentationTests
     }
 
     [Fact]
+    public void Item_details_resolve_source_text_with_the_live_item_context()
+    {
+        using Fixture f = new(enforceItemCondition: true, resolveItemValues: true);
+        f.Ui.UseItemCondition(new(f.Definitions, f.ItemInstances!, f.Moves));
+        var row = f.Ui.Read().Items.Single(item => item.Key == f.Key(1001));
+        Assert.Contains("points of damage", row.Details);
+        Assert.Contains("Condition:", row.Details);
+        Assert.Contains("kilograms", row.Details);
+        Assert.DoesNotContain("%", row.Details);
+    }
+
+    [Fact]
     public void Broken_item_is_rejected_before_an_equipment_mutation()
     {
         using Fixture f = new(enforceItemCondition: true);

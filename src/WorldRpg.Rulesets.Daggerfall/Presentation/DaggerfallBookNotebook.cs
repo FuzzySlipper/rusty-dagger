@@ -56,7 +56,7 @@ internal sealed record DaggerfallNotebookSave(DaggerfallReadableBook[] Books, Da
                 || !string.Equals(saved.Author, definition.Author, StringComparison.Ordinal))
                 throw new ArgumentException($"Retained book {saved.BookId} metadata does not match the selected catalog.");
             string[] pages = definition.PageKeys
-                .Select(key => text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Book, key), DaggerfallTextContext.Empty).Text)
+                .Select(key => text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Book, key), DaggerfallTextContexts.Book(definition)).Text)
                 .ToArray();
             if (!saved.Pages.SequenceEqual(pages, StringComparer.Ordinal))
                 throw new ArgumentException($"Retained book {saved.BookId} text does not match the selected catalog.");
@@ -88,7 +88,7 @@ internal sealed class DaggerfallBookNotebook(DaggerfallDefinitions definitions, 
         }
         DaggerfallBookDefinition book = definition;
         if (book.Disposition != DaggerfallBookDisposition.Read) throw new InvalidOperationException("This book's text is not supplied.");
-        string[] pages = book.PageKeys.Select(key => text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Book, key), DaggerfallTextContext.Empty).Text).ToArray();
+        string[] pages = book.PageKeys.Select(key => text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Book, key), DaggerfallTextContexts.Book(definition)).Text).ToArray();
         retained = new(book.BookId, book.Title, book.Author, pages);
         _books.Add(book.BookId, retained);
         Select(retained.BookId);

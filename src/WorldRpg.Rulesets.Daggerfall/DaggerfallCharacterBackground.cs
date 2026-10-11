@@ -209,8 +209,8 @@ internal static class DaggerfallCharacterBackgroundPolicy
     {
         string?[] primary = new string?[12], secondary = new string?[12], tertiary = new string?[12];
         DaggerfallTextPlayerContext player = identity.Gender == DaggerfallCharacterGender.Female
-            ? new(Name: identity.Name, Race: identity.RaceId, PlayerPronoun: "she", PlayerObjectPronoun: "her", PlayerReflexivePronoun: "herself", PlayerPossessiveAdjective: "her", PlayerPossessivePronoun: "hers")
-            : new(Name: identity.Name, Race: identity.RaceId, PlayerPronoun: "he", PlayerObjectPronoun: "him", PlayerReflexivePronoun: "himself", PlayerPossessiveAdjective: "his", PlayerPossessivePronoun: "his");
+            ? new(Name: identity.Name, Race: DaggerfallTextContexts.Race(definitions, identity.RaceId), PlayerPronoun: "she", PlayerObjectPronoun: "her", PlayerReflexivePronoun: "herself", PlayerPossessiveAdjective: "her", PlayerPossessivePronoun: "hers")
+            : new(Name: identity.Name, Race: DaggerfallTextContexts.Race(definitions, identity.RaceId), PlayerPronoun: "he", PlayerObjectPronoun: "him", PlayerReflexivePronoun: "himself", PlayerPossessiveAdjective: "his", PlayerPossessivePronoun: "his");
         var home = DaggerfallBiographyPeople.Home(definitions, identity.RaceId);
         DaggerfallTextContext fragmentContext = DaggerfallTextContext.Empty with { Player = player,
             Location = new(HomeProvince: home.Province, HomeGeographicalFeature: home.Feature),

@@ -303,11 +303,29 @@ internal sealed class DaggerfallInventoryPresentation
         DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId(itemId));
         DaggerfallItemInstanceMetadata? metadata = Metadata(key, owner ?? itemOwner);
         ItemDisplay display = Display(definition, metadata);
+        string details = display.Details;
+        if (metadata is not null && itemCondition is not null && metadata.Enchantment is null
+            && metadata.MadeEnchantment is null && metadata.Conjuration is null
+            && definition.Template?.Groups.Contains("Paintings") != true && definition.Template?.Index != 278)
+        {
+            int record = definition.Id.Value == "arrow" || definition.Template?.Index == 131 ? 1011
+                : definition.Weapon is not null ? 1001
+                : definition.Shield is not null || definition.Template?.Index == 107 ? 1014
+                : definition.Armor is not null ? 1000
+                : metadata.BookId is not null ? 1009
+                : metadata.PotionRecipeKey is not null ? 1008
+                : metadata.CapturedSoulMobileId is not null || definition.Template?.Index == 275 ? 1004
+                : metadata.CreditValue is not null ? 1007 : 1003;
+            var context = DaggerfallTextContext.Empty with { Item = DaggerfallTextContexts.Item(definitions,
+                definition, metadata, display.Label, quantity, CurrentValue(definition, metadata)) };
+            details = definitions.TextPresentation.Resolve(new(DaggerfallTextKind.Resource,
+                record.ToString(CultureInfo.InvariantCulture)), context).Text.Trim();
+        }
         // Eligibility belongs to the carried rows only: a loot or container row is taken before it is used.
         bool carried = owner is null;
         string? equipRefusal = carried ? moves.EquipRefusal(definition, key.StartsWith("unique:", StringComparison.Ordinal), metadata?.CurrentCondition) : null;
         return new InventoryItemPresentation(key, itemId, display.Label, quantity.ToString(CultureInfo.InvariantCulture),
-            metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), display.Details, icons.GetValueOrDefault(definition.Template?.Index == 83 && metadata?.PotionRecipeKey is int recipe ? $"potion.{recipe}" : itemId), gridSlot, equippedSlots ?? [],
+            metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), details, icons.GetValueOrDefault(definition.Template?.Index == 83 && metadata?.PotionRecipeKey is int recipe ? $"potion.{recipe}" : itemId), gridSlot, equippedSlots ?? [],
             definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray(),
             display.Condition, display.Identified,
             CanUse: carried && metadata is not null && itemUse?.CanUse(itemId, metadata) == true,
@@ -339,7 +357,8 @@ internal sealed class DaggerfallInventoryPresentation
         if (metadata.Enchantment is { } magicId && definitions.Magic.MagicItems.TryGetValue(magicId, out var magic))
         {
             if (magic.Type != 0) return magic.Name;
-            label = magic.Name.Replace("%it", label, StringComparison.Ordinal);
+            label = definitions.TextPresentation.ResolveRaw(magic.Name, new(DaggerfallTextKind.Internal, "item-name"),
+                DaggerfallTextContext.Empty with { Item = DaggerfallTextContexts.Item(definitions, definition, metadata, label) }).Text;
         }
         if (metadata.BookId is int book)
             return definitions.Books.Books[book] is { Disposition: DaggerfallBookDisposition.Read, Title.Length: > 0 } readable ? readable.Title : label;
@@ -379,7 +398,8 @@ internal sealed class DaggerfallInventoryPresentation
             throw new InvalidOperationException($"Item '{metadata.ItemId}' names unpublished magic metadata '{metadata.Enchantment}'.");
         if (!metadata.Identified)
             return new(baseLabel, conditionDetail + "Unidentified magical item", presentedCondition, false);
-        string namedMagic = magic.Name.Replace("%it", baseLabel, StringComparison.Ordinal);
+        string namedMagic = definitions.TextPresentation.ResolveRaw(magic.Name, new(DaggerfallTextKind.Internal, "item-name"),
+            DaggerfallTextContext.Empty with { Item = DaggerfallTextContexts.Item(definitions, definition, metadata, baseLabel) }).Text;
         // The donor names each identified enchantment by its setting ("Cast When Used: Fireball",
         // "Enhances Skill: Long Blade"); an artifact power or an unpublished setting keeps its meaning.
         string effects = string.Join(", ", magic.Enchantments.Select(enchantment =>
