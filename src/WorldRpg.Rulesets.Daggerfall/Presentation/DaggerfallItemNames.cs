@@ -7,7 +7,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal static class DaggerfallItemNames
 {
     internal static string BaseName(DaggerfallDefinitions definitions, DaggerfallItemDefinition item) =>
-        definitions.NativeTemplateFor(item) is { } template
+        definitions.SourceTemplateFor(item) is { } template
             ? template.Name : item.Template?.Name ?? DaggerfallInventoryPresentation.Label(item.Id.Value);
 
     internal static string Label(DaggerfallDefinitions definitions, DaggerfallItemDefinition item, DaggerfallItemInstanceMetadata? metadata)
@@ -26,7 +26,7 @@ internal static class DaggerfallItemNames
             name = definitions.TextPresentation.ResolveRaw(magic.Name, new(DaggerfallTextKind.Internal, "item-name"),
                 DaggerfallTextContext.Empty with { Item = DaggerfallTextContexts.Item(definitions, item, metadata, name) }).Text;
         }
-        var native = definitions.NativeTemplateFor(item);
+        var native = definitions.SourceTemplateFor(item);
         bool weapon = native?.Groups.Contains("Weapons") == true && native.Index != 131;
         bool armor = native?.Groups.Contains("Armor") == true && native.Index != 107 && item.Shield is null;
         if (!weapon && !armor) return name;

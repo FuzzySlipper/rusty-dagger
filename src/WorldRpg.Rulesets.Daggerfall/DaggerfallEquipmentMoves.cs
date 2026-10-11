@@ -346,7 +346,7 @@ internal sealed class DaggerfallEquipmentMoves(
     {
         if (item is not UniqueItem value
             || !definitions.TryResolveItem(new DaggerfallItemId(value.Definition.Value), out DaggerfallItemDefinition definition)
-            || definitions.NativeTemplateFor(definition) is not { } template) return 0;
+            || definitions.SourceTemplateFor(definition) is not { } template) return 0;
         int index = template.Groups.Contains("Weapons", StringComparer.Ordinal) ? template.Index - 113
             : template.Groups.Contains("Armor", StringComparer.Ordinal) ? template.Index - 102
             : -1;
