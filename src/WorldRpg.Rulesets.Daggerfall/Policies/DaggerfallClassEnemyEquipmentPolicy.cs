@@ -100,7 +100,13 @@ internal static class DaggerfallClassEnemyEquipmentPolicy
         DurableIdentityReference identity = identities.AllocateReference();
         KitUniqueInventoryItem unique = equipment.Materialize(identity, created.Item);
         instances.RegisterUnique(identity.Value, created.Metadata);
-        equipment.Equip(unique, slots.Select(value => new KitEquipmentSlotId(value)).ToArray());
+        KitEquipmentSlotId[] targetSlots = slots.Select(value => new KitEquipmentSlotId(value)).ToArray();
+        // ItemEquipTable.EquipItem(alwaysEquip: true) removes conflicting equipment, retaining
+        // it in inventory. In particular, the secondary draw can be a two-handed staff.
+        KitUniqueInventoryItem[] replaced = equipment.Read().Assignments
+            .Where(assignment => targetSlots.Contains(assignment.Slot))
+            .Select(assignment => assignment.Item).Distinct().ToArray();
+        equipment.Reassign(unique, targetSlots, replaced);
     }
 
     private static bool Success(IRandomService random, long actorId, string key, int chance) => Draw(random, actorId, key, 1, 100) <= chance;
