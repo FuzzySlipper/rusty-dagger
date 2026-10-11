@@ -235,6 +235,34 @@ public sealed class SoundCatalogTests
         new(405, "audio.player.death"),
     ];
 
+    [GeneratedContentFact]
+    public void Every_quest_sound_resolves_its_numeric_id_in_the_shared_publication()
+    {
+        using var payload = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot,
+            "content/worldrpg/payloads/daggerfall.imported.json")));
+        var root = payload.RootElement;
+        var sounds = root.GetProperty("questTables").GetProperty("sounds").GetProperty("rows").EnumerateArray()
+            .ToDictionary(row => row.GetProperty("name").GetString()!, row => row.GetProperty("id").GetUInt32(), StringComparer.OrdinalIgnoreCase);
+        var publication = PublishFromCorpus();
+        var requested = new HashSet<uint>();
+        foreach (var quest in root.GetProperty("questSources").GetProperty("quests").EnumerateArray())
+        foreach (var block in quest.GetProperty("blocks").EnumerateArray())
+        foreach (var source in block.GetProperty("lines").EnumerateArray())
+        {
+            string[] words = source.GetString()!.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length < 3 || !words[0].Equals("play", StringComparison.OrdinalIgnoreCase)
+                || !words[1].Equals("sound", StringComparison.OrdinalIgnoreCase)) continue;
+            Assert.True(sounds.TryGetValue(words[2], out uint numericId), $"Unknown quest sound {words[2]}");
+            requested.Add(numericId);
+            Assert.Single(publication.Audio, clip => clip.SourceNumericId == numericId);
+        }
+        Assert.Contains(386U, requested);
+        Assert.Equal(455, Assert.Single(publication.Audio, clip => clip.SourceNumericId == 386).SourceRecordOrdinal);
+        var archive = RepositoryArchive();
+        Assert.Equal(Enumerable.Range(0, archive.Count).Where(index => !archive.GetClip(index).PcmUnsigned8.IsEmpty),
+            publication.Audio.Select(clip => clip.SourceRecordOrdinal).Order());
+    }
+
     private static SoundArchive RepositoryArchive() => SoundArchive.Parse(File.ReadAllBytes(TestData.Corpus("DAGGER.SND")), Arena2ClassicMediaPublication.DaggerSoundSourcePath);
 
     private static Arena2ClassicMediaPublication PublishFromCorpus() => Arena2ClassicMediaPublication.Create(new(

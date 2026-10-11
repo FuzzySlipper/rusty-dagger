@@ -1548,18 +1548,12 @@ public sealed record Arena2ClassicMediaPublication(
                 : char.ToLowerInvariant(source.Clip[0]) + source.Clip[1..];
             return (Id: id, source.MediaId, source.SourceRecordOrdinal, source.ExpectedNumericId);
         }).ToList();
-        // Every retained mobile's named sounds, the weapon pitches and the parry family come
-        // from the existing offline sound-name authority. Keep their numeric archive identities.
-        var names = MobileSourceMetadata.All.SelectMany(mobile => new[] { mobile.Links.MoveSoundCue, mobile.Links.BarkSoundCue, mobile.Links.AttackSoundCue })
-            .Concat(new[] { "ArrowShoot", "SwingLowPitch", "SwingMediumPitch", "SwingHighPitch" })
-            .Concat(Enumerable.Range(1, 9).Select(index => $"Parry{index}"))
-            .Where(name => !string.IsNullOrWhiteSpace(name)).ToHashSet(StringComparer.Ordinal);
-        foreach (int ordinal in names.Select(DaggerfallSoundNames.ForName).Distinct().Order())
-        {
-            if (ordinal >= sounds.Count) throw new InvalidOperationException($"Required mobile/weapon sound {ordinal} is absent from the source archive.");
-            if (selected.All(source => source.SourceRecordOrdinal != ordinal))
+        // Quests select numeric archive ids, while ordinary effects select directory ordinals.
+        // Publish every nonempty source clip once in the shared world audio package so either
+        // caller can resolve its source identity in every location. Keep the named semantic cues.
+        for (int ordinal = 0; ordinal < sounds.Count; ordinal++)
+            if (!sounds.GetClip(ordinal).PcmUnsigned8.IsEmpty && selected.All(source => source.SourceRecordOrdinal != ordinal))
                 selected.Add(($"sound.{ordinal}", $"audio.source.{ordinal}", ordinal, null));
-        }
         foreach (var source in selected)
         {
             Arena2PcmClip clip = sounds.GetClip(source.SourceRecordOrdinal);
