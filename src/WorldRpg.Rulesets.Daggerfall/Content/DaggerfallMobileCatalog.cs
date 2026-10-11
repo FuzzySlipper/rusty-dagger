@@ -53,6 +53,7 @@ internal sealed record DaggerfallMobileDefinition(
 
     /// <summary>The donor's EnemyBasics caster flag: whether this mobile casts spells when enemy spell behavior runs.</summary>
     internal bool RequiresEnemySpellBehavior => CastsMagic;
+    internal bool HasBowAttack => HasRangedAttack1 && (!CastsMagic || HasRangedAttack2);
 
     /// <summary>The damage range the donor states, or null when the mobile carries none.</summary>
     internal (int Minimum, int Maximum)? DamageRange =>

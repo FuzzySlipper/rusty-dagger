@@ -31,9 +31,11 @@ public sealed class DaggerfallCatalogContentTests
         // archer gaining a ranged policy and the actions carrying their own reach are exactly that.
         string observedFingerprint = DaggerfallBaseContent.Fingerprint(definitions);
         Assert.True(expectedFingerprint == observedFingerprint, $"Observed semantic fingerprint: {observedFingerprint}");
-        // The archer's authored quiver: twelve arrows, the ammunition a fixed-ranged shot draws.
+        // One authored quiver policy supplies every bow-capable class, including placed archers.
         DaggerfallActorDefinition archerDefinition = definitions.RequireActor(new DaggerfallActorId("archer"));
-        Assert.Equal(new[] { (Item: new DaggerfallItemId("arrow"), Quantity: 12UL) }, archerDefinition.Loadout.Select(entry => (entry.ItemId, entry.Quantity)).ToArray());
+        Assert.Empty(archerDefinition.Loadout);
+        Assert.Equal(new DaggerfallItemId("arrow"), definitions.EnemyRanged.ArrowItem);
+        Assert.Equal(12, definitions.EnemyRanged.StartingArrows);
         Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40, 41, 42 }, definitions.Actors.Values.Where(actor => actor.Kind == "monster").Select(actor => actor.MobileId!.Value).Order());
         Assert.Equal(new[] { "mobile-39-horse-is-explicitly-absent", "chain2-material-alias-is-not-authored", "bows-retain-donor-both-hands-policy", "loot-matrix-uses-fall-exe-errata", "ranged-shots-preroll-and-omit-intervening-actor-collision" }.Order(), definitions.DonorErrata.Select(erratum => erratum.Id).Order());
         Assert.Equal("both", definitions.Items[new DaggerfallItemId("iron-short-bow")].Weapon!.Handedness);
@@ -189,7 +191,7 @@ public sealed class DaggerfallCatalogContentTests
     /// </remarks>
     [Theory]
     [InlineData("\"attackRangeIndex\": 0,\n      \"reach\": 2.0", "\"attackRangeIndex\": 0,\n      \"reach\": 50.0", "beyond any melee distance")]
-    [InlineData("\"reach\": 10.0,", "\"reach\": 100.0,", "beyond the range an attacker perceives")]
+    [InlineData("\"reach\": 10.0,", "\"reach\": 100.0,", "beyond the admitted classic ranged maximum")]
     // An action with no reach at all is the case the combat module's own refusal guards, and the one an
     // author is most likely to produce by omission. Validation owns it: the swing a missing reach would
     // admit is refused here rather than at the first attack.

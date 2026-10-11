@@ -15,7 +15,7 @@ internal sealed class DaggerfallEnemyMotorMemory
 }
 
 internal readonly record struct DaggerfallEnemyMotorContext(int Level, int TargetLevel, bool TargetParalyzed,
-    bool TargetBackTurned, bool TargetBowOrSheathed, bool PrefersRanged = false);
+    bool TargetBackTurned, bool TargetBowOrSheathed, bool PrefersRanged = false, double MinimumRangedDistance = 0);
 
 /// <summary>EnemyMotor's admitted-time advance, retreat and strafe choices; Kit executes movement.</summary>
 internal static class DaggerfallEnemyMotorPolicy
@@ -32,7 +32,7 @@ internal static class DaggerfallEnemyMotorPolicy
         // A melee fallback has melee reach and follows the normal advance policy instead.
         if (context.PrefersRanged && inSight && observation.Reach is > 2.25 and var rangedReach)
         {
-            if (observation.Distance < rangedReach * tuning.TooCloseMultiplier)
+            if (observation.Distance < context.MinimumRangedDistance)
                 return Choose(PursuitState.Retreat);
             return Choose(observation.Distance <= rangedReach ? PursuitState.Idle : PursuitState.Chase);
         }

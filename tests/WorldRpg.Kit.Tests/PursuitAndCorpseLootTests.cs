@@ -17,6 +17,30 @@ namespace WorldRpg.Kit.Tests;
 
 public sealed class PursuitAndCorpseLootTests
 {
+    [Theory]
+    [InlineData(20, true)]
+    [InlineData(2, false)]
+    public void Current_weapon_reach_controls_attack_eligibility(double selectedReach, bool attacks)
+    {
+        using ActorsState actors = new();
+        actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health");
+        var actor = actors.CreateActor(42, new EntityTypeId("enemy"), Stats(), new ActorPose(new WorldPoint(0, 0, 0), 0), "health");
+        var perception = PerceptionDouble.Create();
+        perception.Pairs = new[] { new PerceptionPair(42, 1, 8, 1, PerceptionPairKind.Visible, 1) };
+        var spatial = SpatialDouble.Create();
+        using SpatialMovementSystem movement = new(spatial.Service, ContentDouble.Create().Service,
+            new SpatialContentArtifact("spatial/test", new ContentSha256(1, 2, 3, 4), 1), new SpatialTuning(.5, 8, 8, 1));
+        var action = new RecordingAttacks(1.5);
+        var pursuit = new PursuitCoordinator<TestFact>(perception.Service, movement,
+            new ActorNavigationCoordinator(spatial.Service, movement.Session), action);
+        var evidence = pursuit.Update(actor, new PursuitMemoryComponent(), new(1, new(0, 0, 8)),
+            new(64, 0, 2, 8), new(0, 0, 8), 1, 1, .1f, new FactBuffer<TestFact>(),
+            new PursuitPolicy(ActorNavigationMode.Ground), selectPolicy: _ => new PursuitPolicy(ActorNavigationMode.Ground) { AttackReach = selectedReach });
+        Assert.Equal(attacks, evidence.AttackEligible);
+        Assert.Equal(attacks ? PursuitState.Attack : PursuitState.Chase, evidence.Current);
+        Assert.Equal(attacks ? 1 : 0, action.Attacks.Count);
+    }
+
     [Fact]
     public void Pursuit_memory_keeps_the_previous_state_for_a_ruleset_transition_fact()
     {

@@ -69,7 +69,7 @@ internal static class CombatCollaborators
             session.State.ItemInstances, definitions, authored, targeting,
             skillUses: skillUses ?? (_ => { }), playerBiographyAvoidHit: () => 0, actorEquipment: session.State.ActorInventories.EquipmentFor,
             itemCondition: session.ItemCondition, rules: new CombatResolution(), adrenalineRush: _ => default,
-            playerPosition: playerPosition ?? (() => null), character: () => null, playerSwing: () => DaggerfallSwingDirection.None,
+            playerPosition: playerPosition ?? (() => session.State.PlayerControl.Position), character: () => null, playerSwing: () => DaggerfallSwingDirection.None,
             coverBlocksShot: (_, _) => false, armorValueModifier: () => 0,
             deliverWeaponPoison: (_, _) => throw new InvalidOperationException("This fact coats no weapon."),
             attackChanceModifier: () => 0,

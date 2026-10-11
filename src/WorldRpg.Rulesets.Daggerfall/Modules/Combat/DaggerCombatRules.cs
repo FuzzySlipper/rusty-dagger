@@ -140,6 +140,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         // player swing and every enemy swing wait for their animation's impact frame.
         bool enemyAttack = request.AttackerId != PlayerId;
         DaggerfallAttackDefinition attack;
+        bool rangedAttack = !enemyAttack && PlayerHoldsBow();
+        string? selectedAction = request.Action;
+        WorldRpg.Kit.Inventory.UniqueInventoryItem? rangedWeapon = null;
         DaggerfallSwingDirection gesture = DaggerfallSwingDirection.None;
         if (!enemyAttack)
         {
@@ -147,24 +150,28 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         }
         else
         {
-            if (attacker.Definition.ActionId is not string actionId || !_actions.TryGetValue(actionId, out var action)
-                || action.CooldownSeconds is not double cooldown || action.Reach is not > 0d)
+            var selection = EnemyAction(attacker, EnemyTargetDistance(request.AttackerId, request.TargetId));
+            if (selection.Action is not { CooldownSeconds: double cooldown, Reach: > 0d } action)
             { facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy, request.AttackerId)); return false; }
-            attack = action.Interpretation == "enemy-equipped-melee"
-                ? ResolveEquippedEnemyAttack(attacker, cooldown, action.Reach.Value)
-                : ResolveFixedAttack(attacker.Definition, action, cooldown);
-            if (action.Interpretation == "fixed-ranged" && !TrySpendArrow(request.AttackerId, facts)) return false;
+            selectedAction = action.Id;
+            rangedWeapon = selection.Bow;
+            rangedAttack = action.Interpretation is "fixed-ranged" or "enemy-equipped-ranged";
+            attack = rangedWeapon is { } bow ? CarriedBowAttack(bow, action)
+                : action.Interpretation == "enemy-equipped-melee"
+                    ? ResolveEquippedEnemyAttack(attacker, cooldown, action.Reach.Value)
+                    : ResolveFixedAttack(attacker.Definition, action, cooldown);
+            if (rangedAttack && !TrySpendArrow(request.AttackerId, facts)) return false;
         }
-        DaggerfallStrikeFeedback feedback = StrikeFeedback(request.AttackerId);
-        ulong? wabbajackSource = CaptureWabbajackSource(request.AttackerId);
-        var molagBalSource = CaptureMolagBalSource(request.AttackerId);
-        var poisonSource = CaptureWeaponPoison(request.AttackerId);
-        var strikeSource = DaggerfallItemCastTriggers.CaptureStrike(_catalog.Magic, _itemInstances, _actors.Entities, EquippedWeapon(request.AttackerId));
+        DaggerfallStrikeFeedback feedback = rangedAttack ? new(true, "sound.3") : StrikeFeedback(request.AttackerId, false);
+        ulong? wabbajackSource = rangedAttack ? null : CaptureWabbajackSource(request.AttackerId);
+        var molagBalSource = rangedAttack ? null : CaptureMolagBalSource(request.AttackerId);
+        var poisonSource = CaptureWeaponPoison(request.AttackerId, rangedWeapon);
+        var strikeSource = DaggerfallItemCastTriggers.CaptureStrike(_catalog.Magic, _itemInstances, _actors.Entities, rangedWeapon ?? EquippedWeapon(request.AttackerId));
         if (request.TargetId is not long targetId)
-        { prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, default, feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource); return true; }
+        { prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, default, feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource, IsRanged: rangedAttack, RangedWeapon: rangedWeapon, Action: selectedAction); return true; }
         if (!TryResolve(targetId, out Combatant target)) { Refused(request.AttackerId, AttackRefusal.UnknownActor, facts); return false; }
         ExplicitMeleeRequest explicitRequest = new(request.AttackerId, targetId, request.Generation, request.SimulationStep, request.FixedDeltaSeconds);
-        CombatParticipants participants = Participants(attacker.Id, targetId, request.Action ?? attacker.Definition.ActionId ?? "attack");
+        CombatParticipants participants = Participants(attacker.Id, targetId, selectedAction ?? attacker.Definition.ActionId ?? "attack");
         bool backstabOpportunity = BackstabOpportunity(attacker, target);
         if (backstabOpportunity)
             _skillUses(new DaggerfallSkillUse("backstabbing", DaggerfallSkillUseReason.BackstabbingOpportunity, DaggerfallSkillUseOutcome.Accepted));
@@ -178,12 +185,12 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         if (attacker.Definition.Kind == DaggerfallActorKinds.Monster && attack.Skill == DaggerfallMechanicsIds.HandToHand.Value)
         {
             var (outcome, detail) = MonsterAttackSet(participants, explicitRequest, attacker, target, attack, body, enemyAttack, out var slots);
-            prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, outcome, feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource, MonsterHits: slots, Detail: detail);
+            prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, outcome, feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource, IsRanged: rangedAttack, RangedWeapon: rangedWeapon, Action: selectedAction, MonsterHits: slots, Detail: detail);
             return true;
         }
         TryHitEvent hit = ResolveHit(participants, explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.ToHit, backstabChance);
         DamageEvent? damage = hit.Hit ? ResolveDamage(participants, explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.Damage, backstabChance) : null;
-        prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, damage?.Damage ?? 0), feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource, WeaponPoison: poisonSource,
+        prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, new(hit.Hit, damage?.Allowed ?? true, damage?.Damage ?? 0), feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource, IsRanged: rangedAttack, RangedWeapon: rangedWeapon, Action: selectedAction, WeaponPoison: poisonSource,
             Detail: new(body, hit.Roll, hit.Chance));
         return true;
     }
@@ -191,7 +198,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     {
         // A player swing announces itself at admission, where its guard and stamina cost live; an
         // enemy swing announces the decision its authored damage frame will carry out.
-        if (request.AttackerId != PlayerId) facts.Append(new EnemyAttackStartedFact(request.AttackerId, request.TargetId!.Value, attack.Outcome.Hit, request.Generation, request.SimulationStep) { Feedback = PreparedFeedback(attack) });
+        if (request.AttackerId != PlayerId) facts.Append(new EnemyAttackStartedFact(request.AttackerId, request.TargetId!.Value, attack.Outcome.Hit, request.Generation, request.SimulationStep) { Feedback = PreparedFeedback(attack), Ranged = ((DaggerfallPreparedAttack)attack).IsRanged });
     }
     public void Apply(AttackRequest request, PreparedAttack attack, FactBuffer<IProductFact> facts)
     {
@@ -253,13 +260,13 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
                 ApplyDamage(Participants(request.AttackerId, target, request.Action ?? "attack"), request.AttackerId, target,
                     strikeDamage, detail.Body, enemyAttack, request.Generation, request.SimulationStep, feedback, facts, null, emitHitFact: false, admittedBaseDamage: 0);
             return; }
-        string action = request.Action ?? _definitions[request.AttackerId].ActionId ?? "attack";
+        string action = ((DaggerfallPreparedAttack)attack).Action ?? request.Action ?? _definitions[request.AttackerId].ActionId ?? "attack";
         // Capture the weapon skill at the admitted operation boundary. Applying the hit may break
         // the weapon through physical wear and unequip it before the skill-use reaction runs.
         string? playerWeaponSkill = request.AttackerId == PlayerId ? PlayerWeaponSkill() : null;
         ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, strikeDamage, detail.Body,
             enemyAttack, request.Generation, request.SimulationStep, feedback, facts, (attack as DaggerfallPreparedAttack)?.MolagBalSource,
-            admittedBaseDamage: strikeDamage != outcome.Damage ? outcome.Damage : null);
+            admittedBaseDamage: strikeDamage != outcome.Damage ? outcome.Damage : null, rangedWeapon: ((DaggerfallPreparedAttack)attack).RangedWeapon);
         if (request.AttackerId == PlayerId)
         {
             RecordPlayerWeaponHit(playerWeaponSkill!);
@@ -282,7 +289,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     /// </summary>
     private bool DeferRangedImpact(DeferredAttackImpact impact, FactBuffer<IProductFact> facts)
     {
-        if (!impact.Request.Delayed || !IsRangedAction(impact.Request.AttackerId)) return false;
+        if (!impact.Request.Delayed || impact.Attack is not DaggerfallPreparedAttack { IsRanged: true }) return false;
         if (_physicalAttacksBlocked(impact.Request.AttackerId))
         { facts.Append(new AttackRejectedFact(AttackRejection.Incapacitated, impact.Request.AttackerId)); return true; }
         var released = (DaggerfallPreparedAttack)impact.Attack;
@@ -682,9 +689,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 
     private readonly Action<long, DaggerfallWeaponPoisonSource> _deliverWeaponPoison;
 
-    private DaggerfallWeaponPoisonSource? CaptureWeaponPoison(long attacker)
+    private DaggerfallWeaponPoisonSource? CaptureWeaponPoison(long attacker, WorldRpg.Kit.Inventory.UniqueInventoryItem? selectedWeapon = null)
     {
-        if (EquippedWeapon(attacker) is not { } weapon) return null;
+        if ((selectedWeapon ?? EquippedWeapon(attacker)) is not { } weapon) return null;
         ulong id = (attacker == PlayerId ? _equipment : _actorEquipment(attacker))
             .GetDurableItemId(new EntityId(weapon.EntityId)).Value;
         return _itemInstances.ContainsUnique(id) && _itemInstances.RequireUnique(id).PoisonVariant is int variant
@@ -693,11 +700,14 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
 
     private void ApplyDamage(CombatParticipants participants, long attacker, long target, int damage, int body, bool enemy,
         ulong generation, ulong step, DaggerfallStrikeFeedback feedback, FactBuffer<IProductFact> facts,
-        (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? mace, bool emitHitFact = true, int? admittedBaseDamage = null)
+        (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? mace, bool emitHitFact = true, int? admittedBaseDamage = null, WorldRpg.Kit.Inventory.UniqueInventoryItem? rangedWeapon = null)
     {
         Track health = participants.TargetStats.GetTrack(TrackId.Parse(HealthTrack));
         int physicalDamage = damage;
-        damage = ApplyRazor(attacker, target, damage, health, enemy, generation, step, facts, out var razorWeapon, out int razorWear);
+        WorldRpg.Kit.Inventory.UniqueInventoryItem? razorWeapon = null;
+        int razorWear = 0;
+        if (rangedWeapon is null)
+            damage = ApplyRazor(attacker, target, damage, health, enemy, generation, step, facts, out razorWeapon, out razorWear);
         ApplyHitEvent applied = Rules.ApplyToHealth(participants, damage, health);
         if (emitHitFact) facts.Append(new AttackHitFact(attacker, target, applied.CalculatedDamage, applied.ActualHealthLost, body, enemy, generation, step) { Feedback = feedback });
         facts.Append(new DamageAppliedFact(attacker, target, DaggerfallDamageCause.PhysicalAttack,
@@ -712,7 +722,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         bool acceptedMace = mace is { } admittedMace
             && CaptureMolagBalSource(attacker) is { } impactMace && impactMace.Identity == admittedMace.Identity;
         int physicalWearDamage = admittedBaseDamage ?? (razorWear > 0 ? physicalDamage : applied.Damage);
-        if (physicalWearDamage > 0) ApplyPhysicalWear(attacker, target, body, physicalWearDamage, enemy, generation, step, facts);
+        if (physicalWearDamage > 0) ApplyPhysicalWear(attacker, target, body, physicalWearDamage, enemy, generation, step, facts, rangedWeapon);
         if (acceptedMace && mace is { } maceSource && applied.Damage > 0)
             ApplyMolagBal(attacker, target, maceSource, applied.Damage, enemy, generation, step, facts);
         if (razorWeapon is { } charged) DamageCondition(charged, attacker, razorWear, generation, step, facts);
@@ -744,9 +754,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     /// covers it. Separate keyed draws preserve the donor's independent minimum-wear rolls without
     /// adding a second hit path.
     /// </summary>
-    private void ApplyPhysicalWear(long attacker, long target, int body, int damage, bool enemy, ulong generation, ulong step, FactBuffer<IProductFact> facts)
+    private void ApplyPhysicalWear(long attacker, long target, int body, int damage, bool enemy, ulong generation, ulong step, FactBuffer<IProductFact> facts, WorldRpg.Kit.Inventory.UniqueInventoryItem? rangedWeapon = null)
     {
-        if (EquippedWeapon(attacker) is not WorldRpg.Kit.Inventory.UniqueInventoryItem weapon) return;
+        if ((rangedWeapon ?? EquippedWeapon(attacker)) is not WorldRpg.Kit.Inventory.UniqueInventoryItem weapon) return;
         WorldRpg.Kit.Inventory.UniqueInventoryItem? shield = EquippedShield(target, body);
         WorldRpg.Kit.Inventory.UniqueInventoryItem? armour = shield is null ? EquippedArmour(target, body) : null;
         DaggerfallStruckEquipment struck = DaggerfallFormulaPolicy.DamageEquipment(
@@ -795,7 +805,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     internal sealed record DaggerfallPreparedAttack(double CooldownSeconds, AttackOutcome Outcome,
         DaggerfallStrikeFeedback Feedback, ulong? WabbajackSource = null, bool ReleasedProjectile = false,
         (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? MolagBalSource = null, DaggerfallItemStrikeSource? ItemStrikeSource = null, DaggerfallWeaponPoisonSource? WeaponPoison = null,
-        DaggerfallMonsterHit[]? MonsterHits = null, DaggerfallAttackDetail Detail = default) : PreparedAttack(CooldownSeconds, Outcome);
+        DaggerfallMonsterHit[]? MonsterHits = null, DaggerfallAttackDetail Detail = default, bool IsRanged = false, WorldRpg.Kit.Inventory.UniqueInventoryItem? RangedWeapon = null, string? Action = null) : PreparedAttack(CooldownSeconds, Outcome);
 
     /// <summary>The struck body part and the d100 hit roll against its chance, kept for hit facts and miss reports.</summary>
     internal readonly record struct DaggerfallAttackDetail(int Body, int Roll, int Chance);
@@ -804,9 +814,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         ? accepted.Feedback : throw new InvalidOperationException("A Daggerfall strike requires its accepted source feedback; re-reading changed equipment would misidentify the strike.");
 
     // DaggerfallUnityItem.GetSwingSound: native weapon template semantics, not media filenames.
-    private DaggerfallStrikeFeedback StrikeFeedback(long owner)
+    private DaggerfallStrikeFeedback StrikeFeedback(long owner, bool? ranged = null)
     {
-        if (IsRangedAction(owner)) return new(true, "sound.3");
+        if (ranged ?? IsRangedAction(owner)) return new(true, "sound.3");
         if (EquippedWeapon(owner) is not { } weapon) return DaggerfallStrikeFeedback.Unarmed;
         DaggerfallItemDefinition definition = _catalog.RequireItem(new DaggerfallItemId(weapon.Definition.Value));
         int? template = DaggerfallTemplateItemDefinitions.TemplateIndexForAuthoredItem(definition.Id) ?? definition.Template?.Index;

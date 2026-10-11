@@ -70,6 +70,26 @@ internal static class DaggerfallClassEnemyEquipmentPolicy
                 CreateAndEquip(factory, definitions, instances, identities, inventory, equipment, actorId, key, template, itemLevel, race, gender, [slot]);
     }
 
+    /// <summary>Materializes the mobile's bow capability as carried equipment and a real quiver.</summary>
+    internal static void GrantRangedLoadout(DaggerfallDefinitions definitions, IRandomService random,
+        DaggerfallItemInstances instances, DaggerfallUniqueItemAllocator identities,
+        MechanicsInventoryCoordinator inventory, MechanicsEquipmentCoordinator equipment,
+        long actorId, int mobileId, int level, string race, string gender)
+    {
+        if (!definitions.Mobiles.Mobiles.TryGetValue(mobileId, out var mobile) || !mobile.HasBowAttack) return;
+        var setup = definitions.EnemyRanged;
+        DaggerfallItemFactory factory = new(definitions, random);
+        CreateAndEquip(factory, definitions, instances, identities, inventory, equipment, actorId, "bow",
+            setup.BowTemplate, level, race, gender, []);
+        // Preserve any explicit source loadout; otherwise every class uses the shared authored supply.
+        if (inventory.Read().Stacks.Any(stack => stack.Definition.Value == setup.ArrowItem.Value && stack.Quantity > 0)) return;
+        var stackId = DaggerfallInventoryStackIds.ForEnemyQuiver(actorId);
+        inventory.Grant(new(new(setup.ArrowItem.Value), stackId, checked((ulong)setup.StartingArrows)));
+        instances.RegisterDefaultStack(DaggerfallItemOwner.Actor(actorId),
+            new Rusty.Engine.Mechanics.InventoryStack(stackId, Rusty.Engine.Mechanics.ItemDefinitionId.Parse(setup.ArrowItem.Value), checked((ulong)setup.StartingArrows)),
+            definitions.RequireItem(setup.ArrowItem));
+    }
+
     /// <summary>One coating on the actual generated right-hand weapon; no independent charge state.</summary>
     internal static void CoatStartingWeapon(IRandomService random, DaggerfallItemInstances instances,
         MechanicsEquipmentCoordinator equipment, long actorId, int mobileId, int playerLevel)
@@ -100,6 +120,7 @@ internal static class DaggerfallClassEnemyEquipmentPolicy
         DurableIdentityReference identity = identities.AllocateReference();
         KitUniqueInventoryItem unique = equipment.Materialize(identity, created.Item);
         instances.RegisterUnique(identity.Value, created.Metadata);
+        if (slots.Length == 0) return;
         KitEquipmentSlotId[] targetSlots = slots.Select(value => new KitEquipmentSlotId(value)).ToArray();
         // ItemEquipTable.EquipItem(alwaysEquip: true) removes conflicting equipment, retaining
         // it in inventory. In particular, the secondary draw can be a two-handed staff.

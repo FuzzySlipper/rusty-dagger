@@ -33,6 +33,8 @@ public readonly record struct PursuitPolicy(
     /// <summary>The owning ruleset's current maneuver decision; capability alone never requests retreat.</summary>
     public PursuitState Maneuver { get; init; } = PursuitState.Chase;
     public bool AllowAttack { get; init; } = true;
+    /// <summary>An observation-specific attack reach, for weapons selected by distance or available ammunition.</summary>
+    public double? AttackReach { get; init; }
     public float SpeedMultiplier { get; init; } = 1f;
     public int StrafeDirection { get; init; } = 1;
     /// <summary>Whether this observation updates the remembered position; null uses visibility.</summary>
@@ -46,6 +48,7 @@ public readonly record struct PursuitPolicy(
 
     public PursuitPolicy Validate()
     {
+        if (AttackReach is double reach && (!double.IsFinite(reach) || reach <= 0)) throw new ArgumentOutOfRangeException(nameof(AttackReach));
         if (Maneuver is not (PursuitState.Chase or PursuitState.Idle or PursuitState.Retreat or PursuitState.Strafe)) throw new ArgumentOutOfRangeException(nameof(Maneuver));
         if (!float.IsFinite(SpeedMultiplier) || SpeedMultiplier <= 0) throw new ArgumentOutOfRangeException(nameof(SpeedMultiplier));
         if (StrafeDirection is not (-1 or 1)) throw new ArgumentOutOfRangeException(nameof(StrafeDirection));
@@ -255,6 +258,7 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
             bool visible = pairs.Length == 1 && pair.Kind == PerceptionPairKind.Visible;
             double? reach = _attacks.ReachOf(actor.DurableId);
             if (selectPolicy is not null) policy = selectPolicy(new(visible, pair.Distance, reach)).Validate();
+            reach = policy.AttackReach ?? reach;
             bool observed = policy.TargetObserved ?? visible;
             if (observed) memory.Observe(target.DurableId, target.Position);
             WorldPoint? search = !observed && policy.SearchLastKnownPosition && reach is not null

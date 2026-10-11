@@ -199,6 +199,8 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// <summary>The normalized reference catalogs a consumer resolves keys through.</summary>
     internal DaggerfallCatalogSet Catalogs { get; } = catalogs;
 
+    internal DaggerfallEnemyRangedDefinition EnemyRanged { get; init; } = null!;
+
     internal DaggerfallEnemySpells EnemySpells { get; init; } = DaggerfallEnemySpells.Empty;
 
     /// <summary>
@@ -443,3 +445,5 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
 /// </param>
 internal sealed record DaggerfallAssembledSiteDefinition(AuthoredWorldAppearance Appearance, ulong NavigationGridId,
     float DoorReach, float BuildingExitLanding, float DungeonExitLanding);
+
+internal sealed record DaggerfallEnemyRangedDefinition(int BowTemplate, DaggerfallItemId ArrowItem, int StartingArrows, double MinimumDistance);
