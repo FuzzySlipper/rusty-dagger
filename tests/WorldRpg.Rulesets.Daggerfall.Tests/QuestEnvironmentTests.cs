@@ -105,6 +105,29 @@ public sealed class QuestEnvironmentTests
     }
 
     [Fact]
+    public void Curse_of_Daggerfall_source_sound_repeats_and_advances_its_saved_task_state()
+    {
+        string action = TestPayload.Definitions.QuestSources.Resolve("S0000977.txt").Blocks
+            .SelectMany(block => block.Lines).Single(line => line.Trim().StartsWith("play sound ", StringComparison.Ordinal)).Trim();
+        Assert.Equal("play sound vengence 5 0", action);
+        using var f = new SanguineRoseSessionTests.Fixture(definitions: Definitions(action));
+        var clip = Assert.Single(f.Inputs.Audio, value => value.SourceNumericId == 386);
+        Start(f.Session); Advance(f.Session);
+        f.Session.AdvanceElapsedTime(300);
+        var task = Assert.Single(f.Session.State.Quests.All).Tasks[0];
+        Assert.Equal(1, task.OperationState[0].Sound!.Played);
+        Assert.Null(task.OperationState[0].UnavailableReason);
+        Assert.Single(f.Engine.EmittedAudio, request => request.SignalId.Contains(clip.Id, StringComparison.Ordinal));
+        using var restored = f.Restore();
+        restored.AdvanceElapsedTime(300);
+        var resumed = Assert.Single(restored.State.Quests.All).Tasks[0];
+        Assert.Equal(2, resumed.OperationState[0].Sound!.Played);
+        Assert.Null(resumed.OperationState[0].UnavailableReason);
+        // The original count zero is an indefinitely repeating sound, not a one-shot completion.
+        Assert.False(resumed.OperationCompleted[0]);
+    }
+
+    [Fact]
     public void Periodic_sound_retains_count_and_last_play_time_through_save_load()
     {
         var inputs = TestSessions.ReadInputs(TestData.RepositoryRoot);
