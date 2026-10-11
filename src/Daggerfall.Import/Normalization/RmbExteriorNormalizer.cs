@@ -137,6 +137,7 @@ public static class RmbExteriorNormalizer
         private readonly List<NormalizedStaticNpcPlacement> staticNpcs = [];
         private readonly IReadOnlyDictionary<(int, int), string> flatGenders = StaticNpcNormalization.ReadGenders(request.Sources);
         private readonly List<NormalizedPropertyContainer> propertyContainers = [];
+        private readonly List<(string Id, List<NormalizedVector3> Vertices, HashSet<(ushort Archive, ushort Record, string? DoorId)> MeshKeys)> interiorGeometry = [];
 
         /// <summary>
         /// Places one block's exterior: the block-level content in the block's frame, moved by its grid origin
@@ -303,6 +304,8 @@ public static class RmbExteriorNormalizer
         {
             referencedMeshes.Add(model.ModelId);
             Arch3dMesh mesh = RmbBlockContent.Mesh(arch, model);
+            List<NormalizedVector3> mapVertices = [];
+            HashSet<(ushort Archive, ushort Record, string? DoorId)> mapMeshes = [];
             foreach (Arch3dPlane plane in mesh.Planes.Where(plane => plane.Points.Count >= 3))
             {
                 TextureInfo texture = Texture(plane.TextureArchive, plane.TextureRecord);
@@ -323,6 +326,8 @@ public static class RmbExteriorNormalizer
                 }
                 NormalizedVector3 surfaceNormal = MeshGeometry.Normal(polygon);
                 group.Add(polygon, uvs, surfaceNormal);
+                if (request.ProfileKind == RmbWorldProfileKind.Interior)
+                { mapVertices.AddRange(polygon); mapMeshes.Add((plane.TextureArchive, plane.TextureRecord, doorId)); }
                 // Engine still decides whether a furniture surface point is visible.
                 if (interactionPoints is not null && RmbBlockContent.InteractionPoint(polygon, surfaceNormal) is { } interaction)
                     interactionPoints.Add(interaction);
@@ -333,6 +338,7 @@ public static class RmbExteriorNormalizer
                         buildingIndex is not null ? startingLockValue : 0, bounds, buildingIndex));
                 }
             }
+            if (mapVertices.Count != 0) interiorGeometry.Add(($"model/{model.Ordinal}", mapVertices, mapMeshes));
         }
 
         private TextureInfo Texture(ushort archiveId, ushort recordId)
@@ -421,6 +427,10 @@ public static class RmbExteriorNormalizer
             NormalizedWorld world = new($"mesh/{root}", meshes.Select(mesh => mesh.Id).ToArray(), navigation.Id, startMarker, enterMarker, [], [], [], [], doors)
             {
                 InteriorBuilding = interiorBuilding,
+                GeometryPlacements = interiorGeometry.Select(placement => new NormalizedGeometryPlacement(
+                    placement.Id, MeshGeometry.Bounds(placement.Vertices),
+                    placement.MeshKeys.Select(key => MeshId(root, key)).Order(StringComparer.Ordinal).ToArray(), null)
+                    { SamplePoints = MeshGeometry.SelectSurfaceSamples(placement.Vertices) }).ToArray(),
                 PropertyContainers = propertyContainers,
                 QuestMarkers = questMarkers,
                 StaticNpcs = staticNpcs,

@@ -1,6 +1,6 @@
 /** A top-down diagram of admitted map data. Controls own presentation only. */
 export interface MapProjection {
-  readonly id: string; readonly name: string; readonly kind: 'city' | 'dungeon';
+  readonly id: string; readonly name: string; readonly kind: 'city' | 'dungeon' | 'interior';
   readonly region: number | null; readonly location: number | null;
   readonly player: { readonly x: number; readonly y: number; readonly z: number; readonly yaw: number };
   readonly areas: readonly { readonly id: string; readonly minX: number; readonly minZ: number; readonly maxX: number; readonly maxZ: number; readonly minY: number; readonly maxY: number; readonly kind: number; readonly category: string }[];
@@ -16,7 +16,7 @@ export type MapAction =
 export function isMapProjection(value: unknown): value is MapProjection {
   if (!value || typeof value !== 'object') return false;
   const map = value as Partial<MapProjection>;
-  return typeof map.id === 'string' && typeof map.name === 'string' && (map.kind === 'city' || map.kind === 'dungeon')
+  return typeof map.id === 'string' && typeof map.name === 'string' && (map.kind === 'city' || map.kind === 'dungeon' || map.kind === 'interior')
     && !!map.player && [map.player.x, map.player.y, map.player.z, map.player.yaw].every(Number.isFinite)
     && Array.isArray(map.areas) && map.areas.every(area => typeof area.id === 'string' && [area.minX, area.minZ, area.maxX, area.maxZ, area.minY, area.maxY, area.kind].every(Number.isFinite) && typeof area.category === 'string')
     && Array.isArray(map.labels) && map.labels.every(label => typeof label.id === 'string' && typeof label.name === 'string' && [label.x, label.y, label.z].every(Number.isFinite))
@@ -108,7 +108,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
     }
     const player = svgElement('path', { d: 'M 0 -6 L 4 5 L 0 2 L -4 5 Z', fill: '#73ff98', transform: `translate(${value.player.x} ${value.player.z}) rotate(${value.player.yaw * 180 / Math.PI}) scale(${1 / zoom})`, 'data-player': 'true' });
     viewport.append(player);
-    status.textContent = `${value.kind === 'dungeon' ? 'Explored dungeon' : 'City'} · ${showAll ? 'all levels' : `height ${slice} m`} · player ${value.player.x.toFixed(1)}, ${value.player.y.toFixed(1)}, ${value.player.z.toFixed(1)} m`;
+    status.textContent = `${value.kind === 'city' ? 'City' : value.kind === 'interior' ? 'Explored interior' : 'Explored dungeon'} · ${showAll ? 'all levels' : `height ${slice} m`} · player ${value.player.x.toFixed(1)}, ${value.player.y.toFixed(1)}, ${value.player.z.toFixed(1)} m`;
     drawn = JSON.stringify([value.id, value.kind, value.areas, value.labels, value.region, value.location]);
     target.textContent = value.labels.find(label => label.selected)?.name ? `Directions target: ${value.labels.find(label => label.selected)!.name}` : '';
   }
@@ -136,14 +136,14 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
         zoom = Math.max(.01, 140 / extent);
       }
       noteForm.hidden = value?.canAddNote !== true;
-      levelLabel.hidden = value?.kind !== 'dungeon'; allLabel.hidden = value?.kind !== 'dungeon';
+      levelLabel.hidden = value?.kind === 'city' || !value; allLabel.hidden = value?.kind === 'city' || !value;
       const signature = value ? JSON.stringify([value.id, value.kind, value.areas, value.labels, value.region, value.location]) : '';
       if (value && drawn === signature) {
         const angle = playerUp ? -value.player.yaw * 180 / Math.PI : rotation;
         viewport.setAttribute('transform', `scale(${zoom}) rotate(${angle}) translate(${-centerX} ${-centerZ})`);
         viewport.querySelector('[data-player]')?.setAttribute('transform', `translate(${value.player.x} ${value.player.z}) rotate(${value.player.yaw * 180 / Math.PI}) scale(${1 / zoom})`);
         const showAll = value.kind === 'city' || all.checked;
-        status.textContent = `${value.kind === 'dungeon' ? 'Explored dungeon' : 'City'} · ${showAll ? 'all levels' : `height ${level.value} m`} · player ${value.player.x.toFixed(1)}, ${value.player.y.toFixed(1)}, ${value.player.z.toFixed(1)} m`;
+        status.textContent = `${value.kind === 'city' ? 'City' : value.kind === 'interior' ? 'Explored interior' : 'Explored dungeon'} · ${showAll ? 'all levels' : `height ${level.value} m`} · player ${value.player.x.toFixed(1)}, ${value.player.y.toFixed(1)}, ${value.player.z.toFixed(1)} m`;
       } else draw();
     },
     dispose(): void { shell.remove(); },

@@ -1182,10 +1182,10 @@ test('changing travel options disables acceptance until a fresh quote arrives, i
   } finally { f.dispose(); }
 });
 
-test('map controls change only presentation and retain live player position without discovering geometry', () => {
+for (const kind of ['dungeon', 'interior']) test(`${kind} map controls change only presentation and retain live player position without discovering geometry`, () => {
   const f = fixture();
   try {
-    const map = { id: 'privateers', name: "Privateer's Hold", kind: 'dungeon', region: null, location: null,
+    const map = { id: 'privateers', name: "Privateer's Hold", kind, region: null, location: null,
       player: { x: 1, y: 2, z: 3, yaw: .5 }, labels: [],
       areas: [{ id: 'known-room', minX: 0, minZ: 0, maxX: 10, maxZ: 10, minY: 1, maxY: 3, kind: 1, category: 'room' },
         { id: 'known-upper', minX: 0, minZ: 0, maxX: 10, maxZ: 10, minY: 4, maxY: 6, kind: 1, category: 'room' }] };

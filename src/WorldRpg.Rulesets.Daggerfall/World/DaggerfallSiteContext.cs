@@ -29,6 +29,7 @@ internal sealed class DaggerfallSiteContext
     private readonly IReadOnlyDictionary<DaggerfallSiteId, DaggerfallSiteRecord> _records;
     private readonly IReadOnlyList<DaggerfallSiteRecord> _ordered;
     private readonly HashSet<DaggerfallSiteId> _discovered = [];
+    private readonly HashSet<DaggerfallBuildingDiscovery> _buildingsDiscovered = [];
     private DaggerfallBuildingNameService? _buildingNames;
     private DaggerfallFactionsSet? _buildingFactions;
     private DaggerfallSiteReturnPose? _returnPose;
@@ -52,7 +53,8 @@ internal sealed class DaggerfallSiteContext
         DaggerfallSiteId? active,
         DaggerfallSiteId? returnAnchor,
         DaggerfallSiteReturnPose? returnPose,
-        IEnumerable<DaggerfallSiteId> discovered)
+        IEnumerable<DaggerfallSiteId> discovered,
+        IEnumerable<DaggerfallBuildingDiscovery>? buildings = null)
     {
         ArgumentNullException.ThrowIfNull(locations);
         ArgumentNullException.ThrowIfNull(discovered);
@@ -94,6 +96,16 @@ internal sealed class DaggerfallSiteContext
             // delta this context captures stays what play added and nothing else.
             Reveal(Require(id));
         }
+        foreach (var building in buildings ?? []) DiscoverBuilding(building.Site, building.Building);
+    }
+
+    internal bool IsBuildingDiscovered(DaggerfallSiteId site, DaggerfallSiteBuildingId building) =>
+        _buildingsDiscovered.Contains(new(site, building));
+
+    internal void DiscoverBuilding(DaggerfallSiteId site, DaggerfallSiteBuildingId building)
+    {
+        _ = RequireBuildingSource(site, building);
+        _buildingsDiscovered.Add(new(site, building));
     }
 
     /// <summary>The site the player is at, or null before any site owns them.</summary>
@@ -325,7 +337,7 @@ internal sealed class DaggerfallSiteContext
     internal void Discover(DaggerfallSiteId id) => Reveal(Require(id));
 
     /// <summary>Captures live context for a transition that has admitted resources but has not committed its site change.</summary>
-    internal DaggerfallSiteContextCheckpoint CaptureCheckpoint() => new(Active, ReturnAnchor, _returnPose, [.. _discovered]);
+    internal DaggerfallSiteContextCheckpoint CaptureCheckpoint() => new(Active, ReturnAnchor, _returnPose, [.. _discovered], [.. _buildingsDiscovered]);
 
     /// <summary>Restores a checkpoint from the same admitted location set after a transition commit fails.</summary>
     internal void RestoreCheckpoint(DaggerfallSiteContextCheckpoint checkpoint)
@@ -348,6 +360,8 @@ internal sealed class DaggerfallSiteContext
         _returnPose = checkpoint.ReturnPose;
         _discovered.Clear();
         _discovered.UnionWith(checkpoint.Discovered);
+        _buildingsDiscovered.Clear();
+        foreach (var building in checkpoint.Buildings) DiscoverBuilding(building.Site, building.Building);
     }
 
     /// <summary>
@@ -371,7 +385,9 @@ internal sealed class DaggerfallSiteContext
         Active is { } active ? new DaggerfallSiteIdSave(active.Region, active.Index) : null,
         ReturnAnchor is { } anchor ? new DaggerfallSiteIdSave(anchor.Region, anchor.Index) : null,
         [.. _discovered.OrderBy(id => id.Region).ThenBy(id => id.Index).Select(id => new DaggerfallSiteIdSave(id.Region, id.Index))],
-        _returnPose is { } pose ? new DaggerfallSiteReturnPoseSave(pose.Position.X, pose.Position.Y, pose.Position.Z, pose.YawRadians, pose.PitchRadians) : null);
+        _returnPose is { } pose ? new DaggerfallSiteReturnPoseSave(pose.Position.X, pose.Position.Y, pose.Position.Z, pose.YawRadians, pose.PitchRadians) : null)
+        { Buildings = _buildingsDiscovered.OrderBy(value => value.Site.Region).ThenBy(value => value.Site.Index)
+            .ThenBy(value => value.Building.BlockX).ThenBy(value => value.Building.BlockY).ThenBy(value => value.Building.Index).ToArray() };
 }
 
 /// <summary>Return placement retained by a site context; it is product state, never a runtime entity handle.</summary>
@@ -393,7 +409,10 @@ internal sealed record DaggerfallSiteContextCheckpoint(
     DaggerfallSiteId? Active,
     DaggerfallSiteId? ReturnAnchor,
     DaggerfallSiteReturnPose? ReturnPose,
-    DaggerfallSiteId[] Discovered);
+    DaggerfallSiteId[] Discovered,
+    DaggerfallBuildingDiscovery[] Buildings);
+
+internal sealed record DaggerfallBuildingDiscovery(DaggerfallSiteId Site, DaggerfallSiteBuildingId Building);
 
 /// <summary>One resolved immutable building, shared by location consumers without loading its appearance.</summary>
 internal sealed record DaggerfallSiteBuildingRecord(DaggerfallSiteId Site, DaggerfallSiteBuildingSource Source,

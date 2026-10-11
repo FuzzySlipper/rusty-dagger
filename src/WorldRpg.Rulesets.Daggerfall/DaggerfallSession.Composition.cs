@@ -146,10 +146,12 @@ internal sealed partial class DaggerfallSession
                     ToSiteId(restoredSite.Active),
                     ToSiteId(restoredSite.ReturnAnchor),
                     ToSiteReturnPose(restoredSite.ReturnPose),
-                    restoredSite.Discovered.Select(id => id.Require()))
+                    restoredSite.Discovered.Select(id => id.Require()), restoredSite.Buildings)
                 : new World.DaggerfallSiteContext(definitions.Locations, inputs.Site, null, []);
             _travelPolicy = new DaggerfallTravelPolicy(_site, definitions.Grids, tuning.Transport);
             DaggerfallWorldProfileKey activeProfile = saved?.Site.ActiveProfile?.Require() ?? inputs.ProfileKey;
+            if (DaggerfallWorldProfileIds.TryParse(activeProfile.LogicalId, out _, out var arrivedBuilding) && arrivedBuilding is { } building)
+                _site.DiscoverBuilding(activeProfile.Site, building);
             _controlEngine = engine;
             _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings, tuning.ControllerInput);
             _locomotion = new DaggerfallLocomotionPolicy(tuning.Locomotion, _controlSettings);

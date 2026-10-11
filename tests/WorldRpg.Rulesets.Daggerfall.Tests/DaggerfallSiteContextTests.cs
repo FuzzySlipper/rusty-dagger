@@ -366,7 +366,7 @@ public sealed class DaggerfallSiteContextTests
     {
         // Absent members on the section itself are named for what they are, rather than surfacing as a
         // bare null-argument failure that says nothing about which section or which save.
-        foreach (string shape in new[] { "{}", """{"Active":null,"ReturnAnchor":null}""" })
+        foreach (string shape in new[] { """{"Buildings":[]}""", """{"Active":null,"ReturnAnchor":null,"Buildings":[]}""" })
         {
             JsonObject payload = RoundTrippable();
             payload["Site"] = JsonNode.Parse(shape);

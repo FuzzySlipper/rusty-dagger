@@ -199,6 +199,13 @@ public sealed class WorldBlockTests
                 .OrderBy(npc => npc.Id, StringComparer.Ordinal));
             Assert.Equal(world.PropertyContainers.Select(Container), block.PropertyContainers.OrderBy(container => container.Id, StringComparer.Ordinal).Select(Container));
             Assert.NotNull(block.Spatial);
+            Assert.NotEmpty(world.GeometryPlacements);
+            foreach (var placement in world.GeometryPlacements)
+            {
+                var model = Assert.Single(block.Models, model => model.Id == placement.Id);
+                Assert.Equal(placement.Bounds, model.Bounds);
+                Assert.Equal(placement.SamplePoints, model.SamplePoints);
+            }
         }
     }
 

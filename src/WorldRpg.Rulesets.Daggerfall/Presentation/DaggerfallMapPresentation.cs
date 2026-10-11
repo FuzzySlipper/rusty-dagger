@@ -44,7 +44,7 @@ internal static class DaggerfallMapProjection
             labels.Add(new(id, MarkerLabel(marker.Kind), marker.Position.X, marker.Position.Y, marker.Position.Z));
         }
         labels.AddRange(known.NoteMarkers.Select(note => new DaggerfallMapLabel(note.Id, note.Text, note.Position.X, note.Position.Y, note.Position.Z, Note: true)));
-        return new(profile.ProfileKey.LogicalId, name ?? "Dungeon", "dungeon", player, yaw, areas, labels, CanAddNote: true);
+        return new(profile.ProfileKey.LogicalId, name ?? "Interior", profile.ProfileKind == DaggerfallWorldProfileKind.Interior ? "interior" : "dungeon", player, yaw, areas, labels, CanAddNote: true);
     }
 
     /// <summary>The player label of a discovered dungeon marker.</summary>
@@ -88,7 +88,7 @@ internal static class DaggerfallMapProjection
         foreach (DaggerfallSiteBuildingSource source in site.BuildingsAt(current.Id))
         {
             DaggerfallSiteBuildingRecord building = site.RequireBuilding(current.Id, source.Id);
-            if (string.IsNullOrWhiteSpace(building.Name)) continue;
+            if (!site.IsBuildingDiscovered(current.Id, source.Id) || string.IsNullOrWhiteSpace(building.Name)) continue;
             WorldPoint point = BuildingPosition(site, current.Id, source.Id);
             labels.Add(new(source.Id.ToString(), building.Name, point.X, point.Y, point.Z, site.SelectedBuilding == (current.Id, source.Id)));
         }

@@ -28,7 +28,7 @@ public sealed class SourceBackedServiceSessionTests
     public void Normalized_population_is_talkable_and_answers_a_source_directory_direction()
     {
         using SourceBackedServiceSessionFixture fixture = SourceBackedServiceSessionFixture.Create();
-        using DaggerfallSession session = fixture.Start(fixture.PopulationProfile);
+        using DaggerfallSession session = fixture.Start(fixture.CityProfile);
 
         // Exterior civilians follow the donor's day gate. The normal admitted update reconciles the
         // source pool after this elapsed interval; no test-side RegisterCivilian or Place is used.
@@ -55,6 +55,16 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallDialogueView answered = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
         Assert.False(string.IsNullOrWhiteSpace(answered.Question));
         Assert.False(string.IsNullOrWhiteSpace(answered.Reply));
+        string buildingTopic = answered.Topics.First(value => value.Id.StartsWith("direction:building:", StringComparison.Ordinal)).Id;
+        string[] parts = buildingTopic[19..].Split(':');
+        DaggerfallSiteBuildingId building = new(int.Parse(parts[0]), int.Parse(parts[1]), int.Parse(parts[2]));
+        Assert.False(session.Site.IsBuildingDiscovered(session.Site.Active!.Value, building));
+        SubmitUi(session, 3, $"{{\"action\":\"dialogue-topic\",\"revision\":\"{Escape(answered.Revision)}\",\"topic\":\"{buildingTopic}\"}}");
+        Assert.True(session.Site.IsBuildingDiscovered(session.Site.Active.Value, building));
+        Assert.Contains(session.ReadMapPresentation()!.Labels, label => label.Id == building.ToString());
+        using var restored = fixture.Restore(session.CaptureSave());
+        Assert.True(restored.Site.IsBuildingDiscovered(session.Site.Active.Value, building));
+        Assert.Contains(restored.ReadMapPresentation()!.Labels, label => label.Id == building.ToString());
     }
 
     [Fact]
@@ -452,6 +462,7 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
     private readonly DaggerfallSiteProfile[] _sites;
 
     internal DaggerfallSiteProfile PopulationProfile { get; }
+    internal DaggerfallSiteProfile CityProfile => _profiles.Require(DaggerfallWorldProfileIds.Exterior(new(17, 4)));
     internal SourceProvider TrainingProvider { get; }
     internal SourceProvider MerchantProvider { get; }
     internal SourceProvider GenericRepairProvider { get; }

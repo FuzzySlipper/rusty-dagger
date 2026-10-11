@@ -694,6 +694,12 @@ internal sealed record DaggerfallSavePayload(
         RequireSite(Site.ReturnAnchor, locations, "return anchor");
         foreach (DaggerfallSiteIdSave discovered in Site.Discovered)
             RequireSite(discovered, locations, "discovered site");
+        foreach (var building in Site.Buildings)
+        {
+            var location = definitions.Locations.Records.SingleOrDefault(value => value.Id == building.Site);
+            if (location?.Exterior?.Buildings.ContainsKey(building.Building) != true)
+                throw new ArgumentException($"Saved building discovery names an unavailable building '{building.Building}' at '{building.Site}'.");
+        }
         HashSet<long> combatants = [DaggerfallActorIdentity.PlayerEntityId, .. allActors, .. inactiveAuthoredActorIds, .. inactiveDynamicActorIds];
         foreach (DaggerfallCombatCooldownSave cooldown in CombatCooldowns)
             if (!combatants.Contains(cooldown.AttackerId))
@@ -1429,9 +1435,14 @@ internal sealed record DaggerfallSiteSave(
     DaggerfallWorldProfileKeySave? ActiveProfile = null,
     DaggerfallWorldProfileKeySave? ReturnProfile = null)
 {
+    [JsonRequired] public DaggerfallBuildingDiscovery[] Buildings { get; init; } = [];
+
     internal void Validate()
     {
         ArgumentNullException.ThrowIfNull(Discovered);
+        ArgumentNullException.ThrowIfNull(Buildings);
+        if (Buildings.Any(value => value is null) || Buildings.Distinct().Count() != Buildings.Length)
+            throw new ArgumentException("Saved building discovery contains null or repeated buildings.");
         Active?.Validate("active site");
         ReturnAnchor?.Validate("return anchor");
         if (ReturnAnchor is not null && Active is null)
