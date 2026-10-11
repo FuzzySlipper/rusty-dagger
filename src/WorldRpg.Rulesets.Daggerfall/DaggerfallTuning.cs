@@ -200,11 +200,14 @@ internal sealed record DaggerfallTuning(
                 enemyBehavior.GetProperty("spawnGroundProbeDistance").GetDouble())
             {
                 Maneuvers = new(
+                    enemyBehavior.GetProperty("maneuvers").GetProperty("enhancedCombatAi").GetBoolean(),
                     enemyBehavior.GetProperty("maneuvers").GetProperty("retreatDistance").GetSingle(),
                     enemyBehavior.GetProperty("maneuvers").GetProperty("strafeDistance").GetSingle(),
-                    enemyBehavior.GetProperty("maneuvers").GetProperty("strafeWindowMultiplier").GetSingle(),
-                    enemyBehavior.GetProperty("maneuvers").GetProperty("strafePhaseSteps").GetUInt64(),
-                    enemyBehavior.GetProperty("maneuvers").GetProperty("strafeChancePeriod").GetUInt64()),
+                    enemyBehavior.GetProperty("maneuvers").GetProperty("retreatMultiplier").GetSingle(),
+                    enemyBehavior.GetProperty("maneuvers").GetProperty("tooCloseMultiplier").GetSingle(),
+                    enemyBehavior.GetProperty("maneuvers").GetProperty("advanceDistanceMultiplier").GetSingle(),
+                    enemyBehavior.GetProperty("maneuvers").GetProperty("searchDistance").GetSingle(),
+                    enemyBehavior.GetProperty("maneuvers").GetProperty("searchStep").GetSingle()),
             },
             new DaggerfallLootInteractionTuning(
                 lootInteraction.GetProperty("maximumDistance").GetDouble(),
@@ -468,7 +471,7 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
     double SpawnGroundProbeDistance = 3d)
 {
     /// <summary>EnemyMotor's close-range retreat and strafe decisions, which the Kit pursuit policy applies.</summary>
-    internal DaggerfallPursuitManeuverTuning Maneuvers { get; init; } = DaggerfallPursuitManeuverTuning.Classic;
+    internal DaggerfallPursuitManeuverTuning Maneuvers { get; init; } = DaggerfallPursuitManeuverTuning.Default;
 
     internal DaggerfallEnemyBehaviorTuning Validate()
     {
@@ -482,24 +485,16 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
     }
 }
 
-/// <summary>
-/// The enemy's close-range maneuvers: retreat inside reach plus <paramref name="RetreatDistance"/>,
-/// and a strafe offered within reach plus <paramref name="StrafeDistance"/> times
-/// <paramref name="StrafeWindowMultiplier"/>, chosen on one phase in <paramref name="StrafeChancePeriod"/>
-/// of <paramref name="StrafePhaseSteps"/> simulation steps (EnemyMotor's one-in-four strafe decision).
-/// </summary>
-internal sealed record DaggerfallPursuitManeuverTuning(float RetreatDistance, float StrafeDistance,
-    float StrafeWindowMultiplier, ulong StrafePhaseSteps, ulong StrafeChancePeriod)
+/// <summary>EnemyMotor's default enhanced combat decisions and bounded last-position search.</summary>
+internal sealed record DaggerfallPursuitManeuverTuning(bool EnhancedCombatAi, float RetreatDistance, float StrafeDistance,
+    float RetreatMultiplier, float TooCloseMultiplier, float AdvanceDistanceMultiplier, float SearchDistance, float SearchStep)
 {
-    internal static DaggerfallPursuitManeuverTuning Classic { get; } = new(2.5f, 1.5f, 4f, 15, 4);
+    internal static DaggerfallPursuitManeuverTuning Default { get; } = new(true, 2.5f, 1.5f, 2.25f, .8f, 2.75f, 10f, 1f);
 
     internal DaggerfallPursuitManeuverTuning Validate()
     {
-        if (!float.IsFinite(RetreatDistance) || RetreatDistance <= 0f) throw new ArgumentOutOfRangeException(nameof(RetreatDistance));
-        if (!float.IsFinite(StrafeDistance) || StrafeDistance <= 0f) throw new ArgumentOutOfRangeException(nameof(StrafeDistance));
-        if (!float.IsFinite(StrafeWindowMultiplier) || StrafeWindowMultiplier <= 0f) throw new ArgumentOutOfRangeException(nameof(StrafeWindowMultiplier));
-        if (StrafePhaseSteps == 0) throw new ArgumentOutOfRangeException(nameof(StrafePhaseSteps));
-        if (StrafeChancePeriod == 0) throw new ArgumentOutOfRangeException(nameof(StrafeChancePeriod));
+        foreach (float value in new[] { RetreatDistance, StrafeDistance, RetreatMultiplier, TooCloseMultiplier, AdvanceDistanceMultiplier, SearchDistance, SearchStep })
+            if (!float.IsFinite(value) || value <= 0) throw new ArgumentOutOfRangeException(nameof(value));
         return this;
     }
 }

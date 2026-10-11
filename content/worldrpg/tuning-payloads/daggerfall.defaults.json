@@ -174,9 +174,12 @@
     "maneuvers": {
       "retreatDistance": 2.5,
       "strafeDistance": 1.5,
-      "strafeWindowMultiplier": 4.0,
-      "strafePhaseSteps": 15,
-      "strafeChancePeriod": 4
+      "enhancedCombatAi": true,
+      "retreatMultiplier": 2.25,
+      "tooCloseMultiplier": 0.8,
+      "advanceDistanceMultiplier": 2.75,
+      "searchDistance": 10,
+      "searchStep": 1
     }
   },
   "civilianWander": {

@@ -19,6 +19,21 @@ internal sealed partial class DaggerfallSession
         definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass
         && EffectiveFoeTeam(actorId) != "player-ally" && !_enemyBehavior.IsPacified(actorId);
 
+    private DaggerfallEnemyMotorContext BuildEnemyMotorContext(long actorId, long targetId)
+    {
+        var actor = State.Actors.Get(actorId);
+        var target = State.Actors.Get(targetId);
+        var targetPosition = targetId == DaggerfallActorIdentity.PlayerEntityId
+            ? State.PlayerControl.Position!.Value : target.Position;
+        Vector3 towardActor = actor.Position.ToVector() - targetPosition.ToVector();
+        float yaw = targetId == DaggerfallActorIdentity.PlayerEntityId ? State.PlayerControl.YawRadians : target.HeadingYawRadians;
+        bool backTurned = Vector3.Dot(WorldRpg.Kit.Actors.ActorHeading.Forward(yaw), towardActor) < 0;
+        int Level(long id) => id == DaggerfallActorIdentity.PlayerEntityId ? State.Progression.Level : _roster.Definitions[id].Level ?? 1;
+        bool paralyzed = State.Effects.Active.Any(effect => effect.Definition.Key == "paralyze" && effect.Context.Target.Value == checked((ulong)targetId));
+        return new(Level(actorId), Level(targetId), paralyzed, backTurned,
+            targetId == DaggerfallActorIdentity.PlayerEntityId && (!State.WeaponDrawn || _combat.PlayerHoldsBow()));
+    }
+
     /// <summary>
     /// Reads one enemy's perception context from the current session state.
     /// This method is used as the behavior module's admitted context provider,

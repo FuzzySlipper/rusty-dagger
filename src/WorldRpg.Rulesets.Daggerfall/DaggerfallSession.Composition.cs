@@ -345,6 +345,7 @@ internal sealed partial class DaggerfallSession
                 tuning.EnemyBehavior,
                 contextProvider: BuildEnemyPerceptionContext,
                 recordSkillUse: use => skillUses.Record(use),
+                random: _random, motorContext: BuildEnemyMotorContext,
                 isPlayerAllied: id => EffectiveFoeTeam(id) == "player-ally",
                 selectAllyTarget: SelectAllyTarget, controlRestrictions: effects.ControlsFor,
                 movementPolicy: id => DaggerfallEnemyBehaviorModule.PolicyFor(

@@ -84,6 +84,7 @@ internal sealed record DaggerfallEnemyPerceptionSource(
 /// <summary>One enemy's senses and durable disposition. Site changes clear only transient perception.</summary>
 internal sealed class DaggerfallEnemyPerceptionMemory
 {
+    internal DaggerfallEnemyMotorMemory Motor { get; } = new();
     internal bool Detected { get; set; }
     internal bool HasEncounteredPlayer { get; set; }
     private bool _languagePacified;

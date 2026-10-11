@@ -46,13 +46,68 @@ public sealed class PursuitAndCorpseLootTests
         PursuitEvidence evidence = pursuit.Update(
             actors.Get(42), memory, new PursuitTarget(1, new WorldPoint(200, 50, 200), IsLoaded: false),
             new(64, 0, 2, 8), new(0, 0, 8), 1, 2, .1f, new FactBuffer<TestFact>(),
-            new PursuitPolicy(ActorNavigationMode.Swimming, CanRetreat: true, CanStrafe: true, 1f, 1f, EmitTargetLost: true)
-            { StrafeWindowMultiplier = 2f, StrafePhaseSteps = 10, StrafeChancePeriod = 3 });
+            new PursuitPolicy(ActorNavigationMode.Swimming, CanRetreat: true, CanStrafe: true, 1f, 1f, EmitTargetLost: true));
 
         Assert.Equal(PursuitState.Unloaded, evidence.Current);
         Assert.Empty(perception.Requests);
         Assert.Empty(spatial.NavigationRequests);
         Assert.Empty(attacks.Attacks);
+    }
+
+    [Fact]
+    public void Approaching_melee_actor_does_not_retreat_merely_because_it_is_outside_reach()
+    {
+        using ActorsState actors = new();
+        actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health");
+        var actor = actors.CreateActor(42, new EntityTypeId("enemy"), Stats(), new ActorPose(new WorldPoint(0, 0, 0), 0), "health");
+        var perception = PerceptionDouble.Create();
+        perception.Pairs = new[] { new PerceptionPair(42, 1, 2d, 1d, PerceptionPairKind.Visible, 2d) };
+        var spatial = SpatialDouble.Create();
+        using SpatialMovementSystem movement = new(spatial.Service, ContentDouble.Create().Service,
+            new SpatialContentArtifact("spatial/test", new ContentSha256(1, 2, 3, 4), 1), new SpatialTuning(.5, 8, 8, 1));
+        var pursuit = new PursuitCoordinator<TestFact>(perception.Service, movement,
+            new ActorNavigationCoordinator(spatial.Service, movement.Session), new RecordingAttacks(1.5d));
+        var evidence = pursuit.Update(actor, new PursuitMemoryComponent(), new(1, new(0, 0, 2)),
+            new(64, 0, 2, 8), new(0, 0, 8), 1, 1, .1f, new FactBuffer<TestFact>(),
+            new PursuitPolicy(CanRetreat: true, RetreatDistance: 2.5f));
+        Assert.Equal(PursuitState.Chase, evidence.Current);
+    }
+
+    [Fact]
+    public void Search_uses_the_last_observed_position_then_direction_without_reading_a_hidden_target_pose()
+    {
+        using ActorsState actors = new();
+        actors.CreatePlayer(1, new("player"), Stats(), "health");
+        var actor = actors.CreateActor(42, new("enemy"), Stats(), new(new(0, 0, 0), 0), "health");
+        var perception = PerceptionDouble.Create();
+        var spatial = SpatialDouble.Create();
+        using SpatialMovementSystem movement = new(spatial.Service, ContentDouble.Create().Service,
+            new SpatialContentArtifact("spatial/test", new ContentSha256(1, 2, 3, 4), 1), new SpatialTuning(.5, 8, 8, 1));
+        var pursuit = new PursuitCoordinator<TestFact>(perception.Service, movement,
+            new ActorNavigationCoordinator(spatial.Service, movement.Session), new RecordingAttacks(1.5));
+        var memory = new PursuitMemoryComponent();
+        var policy = new PursuitPolicy(EmitTargetLost: true) { SearchLastKnownPosition = true, SearchDistance = 10, SearchStep = 1, BlockedFailures = 100 };
+        PursuitEvidence Update(WorldPoint position, bool visible, ulong step)
+        {
+            perception.Pairs = new PerceptionPair[] { new(42, 1, 10, 1, visible ? PerceptionPairKind.Visible : PerceptionPairKind.Occluded, visible ? 1 : 0) };
+            return pursuit.Update(actor, memory, new(1, position), new(64, -1, 2, 8), new(0, 0, 8), 1, step, .1f, new(), policy);
+        }
+        Update(new(5, 0, 0), true, 1);
+        Update(new(6, 0, 0), true, 2);
+        Assert.Equal(PursuitState.Search, Update(new(100, 0, 100), false, 3).Current);
+        Assert.Equal(new Vector3(6, 0, 0), spatial.NavigationRequests.Last().Target);
+        actor.ApplyPose(new(new(6, 0, 0), 0));
+        Update(new(100, 0, 100), false, 4);
+        Assert.Equal(new Vector3(7, 0, 0), spatial.NavigationRequests.Last().Target);
+        Assert.Equal(new WorldPoint(6, 0, 0), memory.LastKnownPosition);
+        for (ulong step = 5; step < 14; step++)
+        {
+            actor.ApplyPose(new(WorldPoint.From(spatial.NavigationRequests.Last().Target), 0));
+            Update(new(100, 0, 100), false, step);
+        }
+        actor.ApplyPose(new(new(16, 0, 0), 0));
+        Assert.Equal(PursuitState.TargetLost, Update(new(100, 0, 100), false, 14).Current);
+        Assert.Null(memory.LastKnownPosition);
     }
 
     private static StatsComponent Stats()
@@ -145,6 +200,7 @@ public sealed class PursuitAndCorpseLootTests
     {
         internal IPerceptionService Service { get; private set; } = null!;
         internal List<PerceptionQueryRequest> Requests { get; } = [];
+        internal ReadOnlyMemory<PerceptionPair> Pairs { get; set; } = ReadOnlyMemory<PerceptionPair>.Empty;
         internal static PerceptionDouble Create()
         {
             IPerceptionService service = DispatchProxy.Create<IPerceptionService, PerceptionDouble>();
@@ -156,7 +212,7 @@ public sealed class PursuitAndCorpseLootTests
         {
             if (method?.Name != nameof(IPerceptionService.QueryVisibility)) throw new NotSupportedException(method?.Name);
             Requests.Add((PerceptionQueryRequest)arguments![0]!);
-            return new PerceptionReadoutResult(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 1, 0, 0, 0, 0, 0, 0);
+            return new PerceptionReadoutResult(Pairs, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 1, 0, 0, 0, 0, 0, 0);
         }
     }
 
