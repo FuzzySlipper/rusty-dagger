@@ -197,6 +197,7 @@ public sealed class WabbajackSessionTests
             Item = Session.State.Equipment.Materialize(id, created.Item);
             Session.State.ItemInstances.RegisterUnique(Source, created.Metadata);
             Assert.Equal(EquipmentMoveOutcome.Applied, Session.EquipmentMoves.MoveToSlot(Item, new EquipmentSlotId("right-hand")).Outcome);
+            FinishEquipmentDelay(Session);
             Session.State.Kit.Rules.RegisterAction(definitions.RequireActor(new("player")).ActionId!, new Strike(hit, allowed));
         }
         internal EngineContextFake Engine(DaggerfallSiteProfile? additional = null)

@@ -235,6 +235,13 @@ internal sealed class AssembledWorldRun : IDisposable
     /// <summary>Changes the activation mode as the mode buttons do.</summary>
     internal void SetMode(string mode) => Submit(new { action = "activation-mode", mode });
 
+    internal void ContinueGreeting()
+    {
+        var prompt = Session.DungeonTextProjection;
+        Assert.NotNull(prompt);
+        Submit(new { action = "dungeon-text-close", item = prompt.ActionId, revision = prompt.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture) });
+    }
+
     /// <summary>Advances the session's calendar to the next whole <paramref name="hour"/>.</summary>
     internal void AdvanceToHour(int hour)
     {

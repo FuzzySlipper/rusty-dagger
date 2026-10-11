@@ -327,7 +327,7 @@ public sealed class HostSaveSlotTests
             product.Begin();
             // A control rebind is a player preference and a named save is a slot: the ordinary actions
             // that write each of the two Host stores.
-            product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"controls-rebind","item":"move.forward","key":"KeyQ"}""")]));
+            product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"controls-rebind","item":"move.forward","key":"KeyB"}""")]));
             product.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"save-slot","label":"Scoped"}""")]));
             product.Update(new ProductUpdate(OuterUpdate(3), []));
             Assert.Contains("Saved 'Scoped' (revision 1).", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
@@ -349,7 +349,7 @@ public sealed class HostSaveSlotTests
         EngineContextFake resumed = EngineContextFake.Create(resumedContent, SpatialFake.Create(inputs.SpatialArtifact.Sha256, resumedReleases).Service,
             new AppearanceFake(resumedReleases), persistence: persistence);
         using WorldRpgProduct reopened = new(new ProductCreateContext(resumed.Context, FullContent(root), input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.classic"));
-        Assert.Equal(KeyboardControl.KeyQ, Assert.Single(resumed.PhysicalInput.Mappings, mapping => Encoding.UTF8.GetString(mapping.Intent.Span) == "move.forward").Keyboard);
+        Assert.Equal(KeyboardControl.KeyB, Assert.Single(resumed.PhysicalInput.Mappings, mapping => Encoding.UTF8.GetString(mapping.Intent.Span) == "move.forward").Keyboard);
         using WorldRpgSaveSlots slots = new(resumed.Context, "worldrpg.saves");
         Assert.Equal("Scoped", Assert.Single(slots.List()).Label);
     }

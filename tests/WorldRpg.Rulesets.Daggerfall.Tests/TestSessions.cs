@@ -296,8 +296,12 @@ internal static class TestSessions
     {
         foreach (DaggerfallSiteSpatialPart part in inputs.Geometry.Spatial) content.Add(part.Path, part.Sha256);
         foreach (DaggerfallSiteMesh mesh in inputs.Geometry.Meshes) content.Add(mesh.Path, mesh.Sha256);
-        foreach (NormalizedMaterial material in inputs.Materials) content.Add(material.TexturePath, material.TextureSha256);
-        foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values)
+        foreach (NormalizedMaterial material in inputs.Materials)
+        {
+            content.Add(material.TexturePath, material.TextureSha256);
+            if (material.WinterTexture is { } winter) content.Add(winter.Path, winter.Sha256);
+        }
+        foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values.Concat(inputs.MobileSprites.Values))
         {
             content.Add(sprite.TexturePath, sprite.TextureSha256);
             if (sprite.Corpse is { } corpse) content.Add(corpse.TexturePath, corpse.TextureSha256);
@@ -493,6 +497,19 @@ internal static class TestSessions
     }
 
     internal static long PlayerHealth(DaggerfallSession session) => session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).ValueInt64;
+
+    /// <summary>Let a fixture's ordinary equipment change finish before testing a subsequent attack.</summary>
+    internal static void FinishEquipmentDelay(DaggerfallSession session)
+    {
+        var delay = DaggerfallSavePayload.Read(session.CaptureSave()).EquipCountdown;
+        double seconds = Math.Max(delay.RightSeconds, delay.LeftSeconds);
+        while (seconds > 0)
+        {
+            double step = Math.Min(1, Math.Max(0.001, seconds + 1e-6));
+            session.Update(new ProductUpdateState((float)step));
+            seconds -= step;
+        }
+    }
 
     internal static ProductUpdateFacts OuterUpdate(ulong simulationStep) => new(ProductLifecycleState.Running, 1, 1, simulationStep, simulationStep, 60, 1, 0, 1d / 60d);
 

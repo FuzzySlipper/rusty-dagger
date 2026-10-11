@@ -83,7 +83,7 @@ public sealed class DaggerfallDetectionEffectsTests
         s.State.PlayerControl.MoveTo(new Vector3(10, 0, 10));
         Assert.Equal(contact.Id, Assert.Single(Assert.Single(s.ReadDetectors()).Contacts).Id);
         // Emptying the canonical inventory removes treasure eligibility immediately.
-        var save = DaggerfallSavePayload.Read(s.CaptureSave()); var ground = Assert.Single(save.GroundContainers);
+        var save = DaggerfallSavePayload.Read(s.CaptureSave()); var ground = Assert.Single(save.GroundContainers, value => value.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) == contact.Id);
         var owner = s.State.Containers.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)ground.Id)));
         var contents = s.State.Containers.Read(owner);
         s.State.Containers.Transfer(owner, s.State.Actors.Player.Actor.Entity, new(new WorldRpg.Kit.Inventory.InventoryItemId(stack.Definition.Value), 1, contents.Stacks.Single().Id));

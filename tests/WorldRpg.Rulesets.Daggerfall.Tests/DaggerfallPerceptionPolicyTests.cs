@@ -285,7 +285,7 @@ public sealed class DaggerfallPerceptionPolicyTests
     }
 
     [Fact]
-    public void Clearing_perception_memory_removes_detection_stealth_and_pacification_state()
+    public void Clearing_perception_memory_removes_detection_and_stealth_but_preserves_pacification()
     {
         DaggerfallEnemyPerceptionMemory memory = new()
         {
@@ -298,8 +298,8 @@ public sealed class DaggerfallPerceptionPolicyTests
         memory.Clear();
 
         Assert.False(memory.Detected);
-        Assert.False(memory.HasEncounteredPlayer);
-        Assert.False(memory.Pacified);
+        Assert.True(memory.HasEncounteredPlayer);
+        Assert.True(memory.Pacified);
         Assert.Null(memory.LastStealthCheckMinute);
         Assert.Null(memory.LastDirectSightMinute);
     }

@@ -186,7 +186,11 @@ public sealed class StrikeEnchantmentSessionTests
         var origin = f.Session.State.PlayerControl.Position!.Value;
         return f.Session.SpawnActor(definition.Id.Value, new(origin with { Z = origin.Z - 1 }, 0), level: 50);
     }
-    private static void Equip(DaggerfallSession s, Item item) => Assert.Equal(EquipmentMoveOutcome.Applied, s.EquipmentMoves.MoveToSlot(item, new("right-hand")).Outcome);
+    private static void Equip(DaggerfallSession s, Item item)
+    {
+        Assert.Equal(EquipmentMoveOutcome.Applied, s.EquipmentMoves.MoveToSlot(item, new("right-hand")).Outcome);
+        TestSessions.FinishEquipmentDelay(s);
+    }
     private static Track Health(DaggerfallSession s, long id) => (id == 1 ? s.State.Actors.Player.Stats : s.State.Actors.Get(id).Stats).GetTrack(TrackId.Parse("health"));
     private static long Minute(DaggerfallSession s) { var v = DaggerfallSavePayload.Read(s.CaptureSave()).Calendar; return new World.DaggerfallCalendar(v.Year, v.Month, v.Day, v.Hour, v.Minute, v.Second).ToAbsoluteSeconds() / 60; }
     private sealed class Strike(bool hit, int damage) : ICombatContribution

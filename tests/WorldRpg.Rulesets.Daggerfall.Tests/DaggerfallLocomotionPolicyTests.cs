@@ -40,9 +40,9 @@ public sealed class DaggerfallLocomotionPolicyTests
         Assert.Equal((50f + 50f) / 39.5f, crouch.Controls.ForwardSpeed);
         Assert.Equal(4.5f * (1f + ((50f * .5f) / 100f)) * .8f, crouch.Controls.JumpSpeed);
 
-        controls.Rebind("run", ["KeyQ"]);
+        controls.Rebind("run", ["KeyB"]);
         policy.Rebind(controls);
-        DaggerfallLocomotionStep rebound = policy.BeginStep([Key(KeyboardControl.KeyQ, InputEdge.Pressed)], 1f / 60f, stats, canMove: true);
+        DaggerfallLocomotionStep rebound = policy.BeginStep([Key(KeyboardControl.KeyB, InputEdge.Pressed)], 1f / 60f, stats, canMove: true);
         Assert.True(rebound.Running);
         policy.Neutralize();
         Assert.False(policy.BeginStep([], 1f / 60f, stats, canMove: true).Running);

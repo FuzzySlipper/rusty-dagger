@@ -158,7 +158,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         {
             foreach (CharacterWaterVolume volume in Inputs.WaterVolumes)
             {
-                _ = _spatialMovement.RegisterTrigger(volume.Trigger, Inputs.ProfileKey.LogicalId, "water");
+                _ = _spatialMovement.RegisterTrigger(volume.Trigger, "daggerfall.profile-water", "water");
                 registered.Add(volume.Trigger);
                 _spatialMovement.ActivateTrigger(volume.Trigger, tick);
             }

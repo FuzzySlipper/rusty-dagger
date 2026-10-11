@@ -363,6 +363,7 @@ public sealed class ItemCastTriggerSessionTests
             : TestPayload.Definitions.EquipmentSlots.Values.First(value => value.AllowedClassifications.Intersect(definition.Equipment!.Classifications).Any());
         var result = s.EquipmentMoves.MoveToSlot(item, new SlotId(slot.Id.Value));
         Assert.True(result.Outcome == EquipmentMoveOutcome.Applied, result.Detail);
+        if (weapon) TestSessions.FinishEquipmentDelay(s);
     }
     private sealed class Attack(bool hit, int damage) : ICombatContribution
     {

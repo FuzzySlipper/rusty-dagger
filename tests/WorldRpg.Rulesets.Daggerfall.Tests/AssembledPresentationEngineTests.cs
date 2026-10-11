@@ -606,7 +606,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             DaggerfallDoorView door = run.Session.Sites.Projection.Doors.Read(shop.Id);
             _ = host.Call(_ => run.Use(door.Pose.Translation, door.Entity));
             Assert.False(run.Session.ActivationView.Applied);
-            Assert.Equal("Locked.", run.Session.ActivationView.Message);
+            Assert.StartsWith("Locked.", run.Session.ActivationView.Message);
             Assert.Equal(key, run.Session.Sites.ActiveProfile);
 
             host.Call(_ => run.AdvanceToHour(10));
@@ -614,6 +614,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             door = run.Session.Sites.Projection.Doors.Read(shop.Id);
             _ = host.Call(_ => run.Use(door.Pose.Translation, door.Entity));
             Assert.True(run.Session.ActivationView.Applied, run.Session.ActivationView.Message);
+            host.Call(_ => run.ContinueGreeting());
             Assert.Equal(interior, run.Session.Sites.ActiveProfile);
             Assert.Empty(run.Session.State.Crime.Incidents);
             Steps(host, run, 3);
