@@ -9,7 +9,7 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 
 /// <summary>One materialized dropped-item container in the shared Engine inventory store.</summary>
-internal sealed record DaggerfallGroundContainer(DaggerfallWorldProfileKey Profile, long Id, EntityId Owner, WorldPoint Position, string? PropertyPlacement = null, long StockedDay = 0);
+internal sealed record DaggerfallGroundContainer(DaggerfallWorldProfileKey Profile, long Id, EntityId Owner, WorldPoint Position, string? PropertyPlacement = null, long StockedDay = 0, string? TreasurePlacement = null);
 
 /// <summary>
 /// Daggerfall policy for ground piles. Kit's container coordinator owns every transfer; this owner
@@ -67,7 +67,7 @@ internal sealed class DaggerfallGroundContainers
                 UniqueItems = value.Inventory.UniqueItems.Where(item => !uniqueItems.Contains(item.EntityId)).ToArray(),
                 Stacks = value.Inventory.Stacks.Where(item => !stacks.Contains((DaggerfallItemOwner.Ground(value.Id), item.StackId))).ToArray(),
             };
-            if (value.PropertyPlacement is null && inventory.Stacks.Length == 0 && inventory.UniqueItems.Length == 0)
+            if (value.PropertyPlacement is null && value.TreasurePlacement is null && inventory.Stacks.Length == 0 && inventory.UniqueItems.Length == 0)
             {
                 _unloaded.Remove(value.Id);
                 _identities.Remove(new(DurableIdentityKind.Container, checked((ulong)value.Id)));
@@ -122,7 +122,7 @@ internal sealed class DaggerfallGroundContainers
         var (stacks, uniques) = DaggerfallInventorySaveBoundary.CaptureContents(_containers.Read(container.Owner),
             DaggerfallItemOwner.Ground(container.Id), _instances, _containers.Entities);
         return new(DaggerfallWorldProfileKeySave.Capture(container.Profile), container.Id,
-            container.Position.X, container.Position.Y, container.Position.Z, new(stacks, uniques, []), container.PropertyPlacement, container.StockedDay);
+            container.Position.X, container.Position.Y, container.Position.Z, new(stacks, uniques, []), container.PropertyPlacement, container.StockedDay, container.TreasurePlacement);
     }
 
     private void Unload(DaggerfallGroundContainer container)
@@ -190,6 +190,37 @@ internal sealed class DaggerfallGroundContainers
 
     internal InventoryView? Read(long id) => TryGet(id, out DaggerfallGroundContainer? container)
         ? _containers.Read(container.Owner) : null;
+
+    /// <summary>Populates a source treasure pile once; an emptied pile remains as the current durable source state.</summary>
+    internal DaggerfallGroundContainer EnsureTreasure(DaggerfallDungeonTreasurePlacement placement, int dungeonType,
+        int level, string race, string gender, DaggerfallLootPopulation population)
+    {
+        var prior = _ground.Values.SingleOrDefault(value => value.Profile == _activeProfile && value.TreasurePlacement == placement.Id);
+        if (prior is not null) return prior;
+        var identity = _identities.Allocate(DurableIdentityKind.Container);
+        long id = checked((long)identity.Value);
+        var owner = _containers.Entities.Create(identity, GroundContainerType);
+        _containers.RegisterOwner(owner);
+        // The classic marker is 40 source units high, centered half a metre above its base.
+        var container = new DaggerfallGroundContainer(_activeProfile, id, owner,
+            placement.Position with { Y = placement.Position.Y - .5f }, TreasurePlacement: placement.Id);
+        try
+        {
+            var generated = population.Generate(new(new("world-treasure", identity.Value), DaggerfallItemOwner.Ground(id),
+                Policies.DaggerfallLootPolicy.DungeonTableKey(dungeonType), level, 1, 1, race, gender,
+                gender == "male" ? "MensClothing" : "WomensClothing", DungeonType: dungeonType));
+            if (generated.Seeds.Count > 0) _containers.Seed(owner, generated.Seeds);
+            population.RegisterGeneratedMetadata(generated, _instances);
+            _ground.Add(id, container);
+            return container;
+        }
+        catch
+        {
+            _containers.Entities.Destroy(identity);
+            _identities.Remove(identity);
+            throw;
+        }
+    }
 
     /// <summary>Materializes source furniture through the same durable container and item owners as ground loot.</summary>
     internal DaggerfallGroundContainer EnsureProperty(DaggerfallPropertyContainerPlacement placement,
@@ -411,7 +442,7 @@ internal sealed class DaggerfallGroundContainers
     {
         if (!_ground.TryGetValue(id, out var container)) return;
         InventoryView remaining = _containers.Read(container.Owner);
-        if (container.PropertyPlacement is null && remaining.Stacks.Count == 0 && remaining.UniqueItems.Count == 0)
+        if (container.PropertyPlacement is null && container.TreasurePlacement is null && remaining.Stacks.Count == 0 && remaining.UniqueItems.Count == 0)
         {
             using var edit = _containers.Entities.Store.Get<InventoryComponent>(container.Owner).Store.Prepare();
             edit.RetireOwner(container.Owner);
@@ -455,7 +486,7 @@ internal sealed class DaggerfallGroundContainers
                 seeded = true;
                 RegisterMetadata(value);
             }
-            _ground.Add(value.Id, new DaggerfallGroundContainer(value.Profile.Require(), value.Id, owner, new WorldPoint(value.X, value.Y, value.Z), value.PropertyPlacement, value.StockedDay));
+            _ground.Add(value.Id, new DaggerfallGroundContainer(value.Profile.Require(), value.Id, owner, new WorldPoint(value.X, value.Y, value.Z), value.PropertyPlacement, value.StockedDay, value.TreasurePlacement));
         }
         catch
         {

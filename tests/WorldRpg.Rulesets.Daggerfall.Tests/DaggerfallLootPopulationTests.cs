@@ -135,7 +135,7 @@ public sealed class DaggerfallLootPopulationTests
         1, 1, 1, "breton", "male", "MensClothing", EnemyMapChance: mapChance);
 
     private static DaggerfallLootPopulationRequest Request(string table) => new(
-        new DaggerfallLootPopulationId("world-treasure", 4000), DaggerfallItemOwner.WorldTreasure(4000), table,
+        new DaggerfallLootPopulationId("world-treasure", 4000), DaggerfallItemOwner.Ground(4000), table,
         1, 1, 1, "breton", "male", "MensClothing");
 
     /// <summary>Answers each keyed draw by the roll name it ends with, and the minimum otherwise.</summary>

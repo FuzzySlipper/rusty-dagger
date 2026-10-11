@@ -170,7 +170,6 @@ internal sealed record DaggerfallLootTableDefinition(string Key, int MinimumGold
 /// <summary>The complete ordered classic encounter table corpus and its normalized source citation.</summary>
 internal sealed record DaggerfallEncounterSet(DaggerfallCatalogCitation Source, IReadOnlyList<IReadOnlyList<int>> Tables);
 /// <summary>Catalog metadata deliberately retained as data until a later ruleset-owned loot slice interprets it.</summary>
-internal sealed record DaggerfallDeferredLootCategoryPool(string Id, string Status, string Reason);
 /// <summary>Named, reviewed deviations from the donor corpus; these are documentation data, not behavior switches.</summary>
 internal sealed record DaggerfallDonorErratum(string Id);
 internal sealed record DaggerfallVocabulary(IReadOnlyList<DaggerfallStatId> Attributes, IReadOnlyList<DaggerfallStatId> Skills, IReadOnlyList<DaggerfallTrackId> Tracks, IReadOnlyList<string> ArmorParts, IReadOnlyList<DaggerfallStatId> Progression)
@@ -179,7 +178,7 @@ internal sealed record DaggerfallVocabulary(IReadOnlyList<DaggerfallStatId> Attr
 }
 
 /// <summary>Immutable typed definitions loaded from the ordered daggerfall.base payload.</summary>
-internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, DaggerfallVocabulary vocabulary, IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> equipmentSlots, IReadOnlyDictionary<string, int> armorValuesByMaterial, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> lootTables, IReadOnlyList<DaggerfallHudResourceDefinition> hudResources, IReadOnlyList<DaggerfallDeferredLootCategoryPool> lootCategoryPools, IReadOnlyList<DaggerfallDonorErratum> donorErrata, DaggerfallItemTemplateLedger itemTemplates,
+internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, DaggerfallVocabulary vocabulary, IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> equipmentSlots, IReadOnlyDictionary<string, int> armorValuesByMaterial, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> lootTables, IReadOnlyList<DaggerfallHudResourceDefinition> hudResources, IReadOnlyList<DaggerfallDonorErratum> donorErrata, DaggerfallItemTemplateLedger itemTemplates,
     DaggerfallCharacterPresentationSet characterPresentation,
     DaggerfallLocationSet locations,
     DaggerfallTextSet text,
@@ -366,7 +365,6 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal IReadOnlyDictionary<string, DaggerfallActionDefinition> Actions { get; } = new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions.ToDictionary());
     internal IReadOnlyDictionary<string, DaggerfallLootTableDefinition> LootTables { get; } = new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables.ToDictionary());
     internal IReadOnlyList<DaggerfallHudResourceDefinition> HudResources { get; } = Array.AsReadOnly(hudResources.ToArray());
-    internal IReadOnlyList<DaggerfallDeferredLootCategoryPool> LootCategoryPools { get; } = Array.AsReadOnly(lootCategoryPools.ToArray());
     internal IReadOnlyList<DaggerfallDonorErratum> DonorErrata { get; } = Array.AsReadOnly(donorErrata.ToArray());
 
     /// <summary>

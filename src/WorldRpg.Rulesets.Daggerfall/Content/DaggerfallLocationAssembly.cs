@@ -188,6 +188,8 @@ internal sealed class DaggerfallLocationAssembly
         {
             ["lights"] = new JsonArray(),
             ["actors"] = new JsonArray(),
+            ["randomEnemies"] = new JsonArray(),
+            ["treasures"] = new JsonArray(),
             ["population"] = new JsonArray(),
             ["questMarkers"] = new JsonArray(),
             ["staticNpcs"] = new JsonArray(),
@@ -322,7 +324,8 @@ internal sealed class DaggerfallLocationAssembly
                     if (record.Exterior is { Blocks.Count: > 0 })
                         Portal(exit.Id, exit.Position, exit.Normal, DaggerfallWorldProfileIds.Exterior(key.Site), DungeonEntranceAnchor);
                 }
-                foreach (JsonNode? actor in document.Section("actors")) Append("actors", Moved(actor, origin, Placed));
+                foreach (string section in new[] { "actors", "randomEnemies", "treasures" })
+                    foreach (JsonNode? marker in document.Section(section)) Append(section, Moved(marker, origin, Placed));
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, Placed));
                 foreach (JsonNode? action in document.Section("actions"))
                 {
@@ -480,6 +483,7 @@ internal sealed class DaggerfallLocationAssembly
                 population: DaggerfallSiteContent.ReadNormalizedPopulation(normalized, diagnostics))
             {
                 AmbientZones = DaggerfallAmbientZones.Read(normalized, diagnostics),
+                DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalized, diagnostics),
                 CityGates = gates,
                 PropertyContainers = DaggerfallPropertyContainerPlacement.Read(normalized),
             };

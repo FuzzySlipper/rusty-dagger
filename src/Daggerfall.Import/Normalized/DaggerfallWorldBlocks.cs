@@ -207,7 +207,11 @@ public sealed record DaggerfallWorldBlockQuestMarker(string Id, NormalizedQuestM
 /// <param name="SourceOrdinal">The flat's ordinal in the block's flat records.</param>
 /// <param name="ObjectOffset">The flat's source object offset, unique within the block.</param>
 public sealed record DaggerfallWorldBlockRandomEnemy(string Id, NormalizedVector3 Position, int EncounterSlot, int SpawnDistance,
-    bool Passive, string? ActionId, int SourceOrdinal, int ObjectOffset);
+    bool Passive, string? ActionId, int SourceOrdinal, int ObjectOffset)
+{
+    public bool Underwater { get; init; }
+    public bool AquaticSpawnAllowed { get; init; }
+}
 
 /// <summary>
 /// One interior static person. Its classic name seed is <see cref="SourceOffset"/> XOR the building key

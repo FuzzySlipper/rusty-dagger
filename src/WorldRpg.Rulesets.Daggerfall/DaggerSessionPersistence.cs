@@ -252,6 +252,8 @@ internal sealed class DaggerSessionPersistence
             DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity))
         {
             Level = _actorDefinitions[id].Level ?? 1,
+            SpawnDistance = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance,
+            Passive = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive,
             CorruptionOrigin = actor.Actor.TryGet<DaggerfallCorruptionOrigin>(out var origin) ? origin : null,
             WabbajackActive = DaggerfallWabbajack.DefinitionOf(actor.Actor) is not null,
             PlayerAllied = _actorDefinitions[id].Team == "player-ally",

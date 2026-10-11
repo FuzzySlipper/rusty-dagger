@@ -81,7 +81,6 @@ internal static partial class DaggerfallBaseContent
             Dictionary<string, DaggerfallLootTableDefinition> lootTables = ReadLootTables(root, diagnostics);
             Dictionary<DaggerfallActorId, DaggerfallActorDefinition> actors = ReadActors(root, vocabulary, actions, items, diagnostics);
             List<DaggerfallHudResourceDefinition> hud = ReadHud(root, diagnostics);
-            IReadOnlyList<DaggerfallDeferredLootCategoryPool> lootCategoryPools = ReadLootCategoryPools(root, diagnostics);
             IReadOnlyList<DaggerfallDonorErratum> donorErrata = ReadDonorErrata(root, diagnostics);
             DaggerfallCatalogSet catalogs = ReadCatalogs(root, vocabulary, actors, items, diagnostics);
             DaggerfallMobileCatalogSet mobiles = ReadMobileCatalog(root, actors, diagnostics);
@@ -103,13 +102,13 @@ internal static partial class DaggerfallBaseContent
             DaggerfallQuestSourceSet questSources = ReadQuestSources(root, diagnostics);
             DaggerfallCinematicSet cinematics = ReadCinematics(root, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, catalogs, mobiles, hud, diagnostics);
-            ValidateCatalog(actors, armorValues, actions, lootTables, lootCategoryPools, diagnostics);
+            ValidateCatalog(actors, armorValues, actions, lootTables, diagnostics);
             foreach (string problem in DaggerfallEnchantmentSettings.Validate(magic.EnchantmentSettings.Values))
                 diagnostics.Add(problem);
             DaggerfallAssembledSiteDefinition? assembledSites = ReadAssembledSites(root, diagnostics);
             DaggerfallNewGameDefinition newGame = ReadNewGame(root, catalogs, itemTemplatesCatalog, DaggerfallTemplateItemDefinitions.Create(itemTemplatesCatalog, items, magic), equipmentSlots, magic, diagnostics);
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, questSources, cinematics, encounters)
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, questSources, cinematics, encounters)
             {
                 BuildingNames = buildingNames,
                 EnemySpells = enemySpells,
@@ -923,7 +922,6 @@ internal static partial class DaggerfallBaseContent
         foreach (DaggerfallActionDefinition action in definitions.Actions.Values.OrderBy(action => action.Id)) Add("action", action.Id, action.Interpretation, action.Skill, action.AttackRangeIndex, action.MinimumDamage, action.MaximumDamage, action.StaminaCost, action.Reach, action.CooldownSeconds, action.DamageBonus, string.Join(',', action.Tags));
         foreach (DaggerfallLootTableDefinition loot in definitions.LootTables.Values.OrderBy(loot => loot.Key)) Add("loot", loot.Key, loot.MinimumGold, loot.MaximumGold, string.Join(',', loot.Categories.OrderBy(pair => pair.Key).Select(pair => $"{pair.Key}={FingerprintField(pair.Value)}")));
         foreach (DaggerfallHudResourceDefinition hud in definitions.HudResources.OrderBy(resource => resource.Id)) Add("hud", hud.Id, hud.Label, hud.Track.Value);
-        foreach (DaggerfallDeferredLootCategoryPool pool in definitions.LootCategoryPools.OrderBy(pool => pool.Id)) Add("pool", pool.Id, pool.Status, pool.Reason);
         foreach (DaggerfallDonorErratum erratum in definitions.DonorErrata.OrderBy(erratum => erratum.Id)) Add("errata", erratum.Id);
         Add("encounters-source", definitions.Encounters.Source.Path, definitions.Encounters.Source.Path);
         foreach ((IReadOnlyList<int> table, int index) in definitions.Encounters.Tables.Select((table, index) => (table, index)))
@@ -3234,22 +3232,6 @@ internal static partial class DaggerfallBaseContent
         return resources;
     }
 
-    private static IReadOnlyList<DaggerfallDeferredLootCategoryPool> ReadLootCategoryPools(JsonElement root, DaggerfallContentDiagnostics diagnostics)
-    {
-        List<DaggerfallDeferredLootCategoryPool> pools = [];
-        foreach (JsonElement entry in Array(root, "lootCategoryPools", diagnostics))
-        {
-            JsonElement pool = Object(entry, "loot category pool", diagnostics);
-            string id = Text(pool, "id", diagnostics);
-            string status = Text(pool, "status", diagnostics);
-            string reason = Text(pool, "reason", diagnostics);
-            if (!ValidId(id) || status != "deferred") diagnostics.Add($"Loot category pool '{id}' must be a deferred stable category.");
-            pools.Add(new(id, status, reason));
-        }
-        if (pools.Select(pool => pool.Id).Distinct(StringComparer.Ordinal).Count() != pools.Count) diagnostics.Add("Loot category pools must not repeat an id.");
-        return System.Array.AsReadOnly(pools.ToArray());
-    }
-
     private static IReadOnlyList<DaggerfallDonorErratum> ReadDonorErrata(JsonElement root, DaggerfallContentDiagnostics diagnostics)
     {
         List<DaggerfallDonorErratum> errata = [];
@@ -3881,7 +3863,7 @@ internal static partial class DaggerfallBaseContent
         return result;
     }
 
-    /// <summary>The donor's loot categories: the keys a loot table's category chances and the deferred pools may name.</summary>
+    /// <summary>The donor's loot categories: the keys a loot table's category chances may name.</summary>
     private static readonly string[] LootCategories = ["plant1", "plant2", "creature1", "creature2", "creature3", "misc1", "misc2", "armor", "weapons", "magic", "clothing", "books", "religious"];
 
     /// <summary>
@@ -3889,7 +3871,7 @@ internal static partial class DaggerfallBaseContent
     /// carries, and which ids it authors, are content; what is checked here is only what the compiled
     /// ruleset reaches for by identity, so a pack that lacks it would fail at the first use instead.
     /// </summary>
-    private static void ValidateCatalog(IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<string, int> armorValues, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> loot, IReadOnlyList<DaggerfallDeferredLootCategoryPool> pools, DaggerfallContentDiagnostics diagnostics)
+    private static void ValidateCatalog(IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<string, int> armorValues, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> loot, DaggerfallContentDiagnostics diagnostics)
     {
         if (armorValues.Values.Any(value => value > MaximumAuthoredArmor)) diagnostics.Add("Armor values by material exceed the Daggerfall policy bound.");
         // The session composes the player from this actor, so a pack without it has no one to play.
@@ -3900,7 +3882,6 @@ internal static partial class DaggerfallBaseContent
         // Dungeon treasure resolves through the ruleset's dungeon-type map, which names these tables.
         foreach (string key in DaggerfallLootPolicy.DungeonTableKeysInUse.Where(key => !loot.ContainsKey(key)))
             diagnostics.Add($"Base payload is missing loot table '{key}', which dungeon treasure selects.");
-        if (pools.Any(pool => !LootCategories.Contains(pool.Id) || string.IsNullOrWhiteSpace(pool.Reason))) diagnostics.Add("Deferred loot category pools must each name a known loot category with a reason.");
     }
 
     internal static JsonElement Property(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)

@@ -110,7 +110,7 @@ public sealed class DaggerfallBuildingNameServiceTests
         DaggerfallDefinitions altered = new(
             definitions.Catalogs, definitions.Vocabulary, definitions.Actors, definitions.Items, definitions.EquipmentSlots,
             definitions.ArmorValuesByMaterial, definitions.Actions, definitions.LootTables, definitions.HudResources,
-            definitions.LootCategoryPools, definitions.DonorErrata, definitions.ItemTemplates, definitions.CharacterPresentation,
+            definitions.DonorErrata, definitions.ItemTemplates, definitions.CharacterPresentation,
             definitions.Locations, withoutStores, definitions.Magic, definitions.Mobiles, definitions.Names, definitions.Rumors,
             definitions.Biographies, definitions.Grids, definitions.Books, definitions.Factions, definitions.Terrain,
             definitions.ItemTemplateCatalog, definitions.QuestSources, definitions.Cinematics)

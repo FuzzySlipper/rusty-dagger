@@ -9,6 +9,7 @@ using WorldRpg.Kit.Loot;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -124,13 +125,14 @@ internal sealed class DaggerfallActorRoster
     /// memory, managed inventory and equipment, definition loadout, and floor grounding.
     /// Returns the allocated durable identity, which the save persists and restore reuses.
     /// </summary>
-    internal long Spawn(string definitionId, ActorPose pose, int? level = null, bool playerAllied = false)
+    internal long Spawn(string definitionId, ActorPose pose, int? level = null, bool playerAllied = false, int spawnDistance = 0, bool passive = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(definitionId);
         DaggerfallActorDefinition definition = _definitions.RequireActor(new DaggerfallActorId(definitionId));
         if (definition.Kind == DaggerfallActorKinds.Player)
             throw new InvalidOperationException("The player actor is authored once; it cannot be spawned.");
         if (level is < 1) throw new ArgumentOutOfRangeException(nameof(level));
+        if (spawnDistance is < 0 or > 6) throw new ArgumentOutOfRangeException(nameof(spawnDistance));
         // Class enemies level to the player the way the donor levels them; monsters carry their
         // own level. Pack skills stay as authored: the donor overwrites every skill from the
         // spawn level, but authored pack values own that meaning here.
@@ -148,6 +150,8 @@ internal sealed class DaggerfallActorRoster
             ActorState actor = DaggerActorFactory.CreateNonPlayerActor(_state.Actors, durableId, spawnedDefinition,
                 _mechanics.CreateStats(spawnedDefinition, SpawnVitals(spawnedDefinition, spawnLevel, durableId)),
                 pose);
+            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = spawnDistance;
+            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = passive;
             DaggerActorFactory.RegisterActorInventory(actor, _state.InventoryStore);
             GrantSpawnLoadout(actor, spawnedDefinition);
             GrantStartingEquipment(actor, spawnedDefinition);

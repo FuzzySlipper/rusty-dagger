@@ -325,6 +325,9 @@ public sealed class WorldBlockTests
                     MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(value.Flat.X, value.Flat.Y, value.Flat.Z)),
                     (int)value.Flat.Flags, (int)value.Flat.SoundIndex, value.Flat.Action == 99, value.Ordinal, value.Flat.ObjectOffset)),
                 block.RandomEnemies.Select(enemy => (enemy.Id, enemy.Position, enemy.EncounterSlot, enemy.SpawnDistance, enemy.Passive, enemy.SourceOrdinal, enemy.ObjectOffset)));
+            var start = source.Flats.FirstOrDefault(flat => flat.TextureArchive == 199 && flat.TextureRecord == 10);
+            int? water = start is { SoundIndex: not 0 } ? -8 * start.SoundIndex : null;
+            Assert.Equal(expected.Select(value => water is int level && level < value.Flat.Y), block.RandomEnemies.Select(enemy => enemy.Underwater));
             HashSet<string> actions = [.. block.Actions.Select(action => action.Id)];
             Assert.All(expected, value => Assert.Equal(value.Flat.Action > 0,
                 actions.Contains($"action/{scope}/flat-{value.Ordinal}")));

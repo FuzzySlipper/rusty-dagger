@@ -146,7 +146,7 @@ public sealed class SocialMagicSessionTests
             if(constructed is not null)definitions=new(
                 definitions.Catalogs, definitions.Vocabulary, definitions.Actors, definitions.Items, definitions.EquipmentSlots,
                 definitions.ArmorValuesByMaterial, definitions.Actions, definitions.LootTables, definitions.HudResources,
-                definitions.LootCategoryPools, definitions.DonorErrata, definitions.ItemTemplates, definitions.CharacterPresentation,
+                definitions.DonorErrata, definitions.ItemTemplates, definitions.CharacterPresentation,
                 definitions.Locations, definitions.Text, definitions.Magic with {Spells=new Dictionary<string,DaggerfallSpellDefinition>(definitions.Magic.Spells){{constructed.Key,constructed}}},
                 definitions.Mobiles, definitions.Names, definitions.Rumors, definitions.Biographies, definitions.Grids, definitions.Books,
                 definitions.Factions, definitions.Terrain, definitions.ItemTemplateCatalog, definitions.QuestSources, definitions.Cinematics, definitions.Encounters)
