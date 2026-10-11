@@ -96,7 +96,7 @@ internal sealed partial class DaggerfallSiteAppearance
 
     internal void PlayEquip(DaggerfallItemDefinition item, DaggerfallItemInstanceMetadata metadata)
     {
-        var template = mobileDefinitions?.NativeTemplateFor(item);
+        var template = mobileDefinitions?.SourceTemplateFor(item);
         if (template is null) return;
         int ordinal = template.Groups.Any(group => group is "MensClothing" or "WomensClothing") ? 381
             : template.Groups.Any(group => group is "Jewellery" or "Gems") ? 383
