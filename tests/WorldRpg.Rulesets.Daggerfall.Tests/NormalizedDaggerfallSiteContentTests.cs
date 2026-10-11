@@ -13,6 +13,41 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class NormalizedDaggerfallSiteContentTests
 {
+    [Theory]
+    [InlineData("import-manifest.json")]
+    [InlineData("normalized.json")]
+    [InlineData("media/dungeon/manifest.json")]
+    [InlineData("spatial/privateer-s-hold/collision-navigation.rspatial")]
+    [InlineData("spatial/privateer-s-hold/static-mesh.rstatmsh")]
+    public void Missing_required_site_file_reports_its_path_before_parsing(string relative)
+    {
+        string root = TestData.RepositoryRoot;
+        string path = "worldrpg/imports/privateers-hold/" + relative;
+        ProductContent content = ImportContent(root);
+        ProductContentFile[] remaining = content.Files.ToArray()
+            .Where(file => Encoding.UTF8.GetString(file.Path.Span) != path).ToArray();
+        Assert.Equal(content.Files.Length - 1, remaining.Length);
+
+        var error = Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(
+            new ProductContent(remaining),
+            TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
+            TestPayload.Definitions));
+
+        Assert.Contains("missing", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(path, error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("JSON", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Required_file_accessor_distinguishes_a_missing_file_from_an_empty_file()
+    {
+        var files = AdmittedFiles.From(new ProductContent(new ProductContentFile[] {
+            new(Encoding.UTF8.GetBytes("empty.json"), ReadOnlyMemory<byte>.Empty) }));
+        Assert.True(files.GetExactlyOne("empty.json").IsEmpty);
+        var error = Assert.Throws<DaggerfallContentException>(() => files.GetExactlyOne("missing.json"));
+        Assert.Contains("missing.json", error.Message);
+    }
+
     [Fact]
     public void Admits_selected_interior_building_from_the_checked_normalized_publication()
     {

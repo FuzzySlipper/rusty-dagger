@@ -161,7 +161,7 @@ internal sealed class DaggerfallWorldMedia : IDisposable
 
     /// <summary>An admitted file's bytes, or null when content does not carry it.</summary>
     private static ReadOnlyMemory<byte>? Optional(AdmittedFiles files, string path) =>
-        files.ContainsExactlyOne(path) ? files.GetExactlyOne(path) : null;
+        files.ContainsExactlyOne(path) ? files.GetExactlyOne(path) : (ReadOnlyMemory<byte>?)null;
 
     private static Dictionary<string, ContentSha256> ReadClassicGroup(AdmittedFiles files, DaggerfallContentDiagnostics diagnostics)
     {
