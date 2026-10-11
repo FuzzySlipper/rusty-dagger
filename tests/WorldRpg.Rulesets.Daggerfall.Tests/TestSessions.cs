@@ -303,6 +303,11 @@ internal static class TestSessions
         }
         foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values.Concat(inputs.MobileSprites.Values))
         {
+            AddSprite(sprite);
+            if (sprite.Female is { } female) AddSprite(female);
+        }
+        void AddSprite(NormalizedActorSprite sprite)
+        {
             content.Add(sprite.TexturePath, sprite.TextureSha256);
             if (sprite.Corpse is { } corpse) content.Add(corpse.TexturePath, corpse.TextureSha256);
         }
