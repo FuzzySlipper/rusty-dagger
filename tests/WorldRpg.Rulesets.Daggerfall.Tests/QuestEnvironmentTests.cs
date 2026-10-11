@@ -36,24 +36,27 @@ public sealed class QuestEnvironmentTests
         Assert.Equal(quest.Tasks[0].OperationState[0].UnavailableReason, Assert.Single(restored.State.Quests.All).Tasks[0].OperationState[0].UnavailableReason);
     }
 
-    [Fact]
-    public void Unavailable_media_leaves_only_its_own_task_unfinished_and_is_diagnosed_once()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Unavailable_media_leaves_only_its_own_task_unfinished_and_is_diagnosed_once(bool persistent)
     {
         // The donor ticks each task on its own, so one task's missing sound never holds back its siblings:
         // the noisy task stays unfinished with its later action unrun, while the later task keeps running.
         using var f = new SanguineRoseSessionTests.Fixture(definitions: TaskDefinitions(
-            ["start task _noisy_", "start task _later_"],
-            ["_noisy_ task:", "play sound unpublished_9702 0 0", "start task _after_"],
+            persistent ? ["start task _later_"] : ["start task _noisy_", "start task _later_"],
+            [persistent ? "until _stop_ performed:" : "_noisy_ task:", "play sound unpublished_9702 0 0", "start task _after_"],
             ["_later_ task:", "start task _done_"],
             ["_done_ task:"],
-            ["_after_ task:"]));
+            ["_after_ task:"],
+            ["_stop_ task:"]));
         using var warnings = new WarningCapture("unpublished_9702");
         Start(f.Session);
         for (int tick = 0; tick < 4; tick++) Advance(f.Session);
 
         var quest = Assert.Single(f.Session.State.Quests.All);
         Assert.Equal(DaggerfallQuestLifecycle.Active, quest.Lifecycle);
-        var noisy = quest.Tasks.Single(task => task.Symbol == "noisy");
+        var noisy = quest.Tasks[1];
         Assert.All(noisy.OperationCompleted, done => Assert.False(done));
         Assert.Contains("Unknown quest sound 'unpublished_9702'", noisy.OperationState[0].UnavailableReason);
         Assert.False(quest.Tasks.Single(task => task.Symbol == "after").IsSet);
