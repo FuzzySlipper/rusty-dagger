@@ -206,7 +206,7 @@ public sealed class RangedCombatSessionTests
         // The line names the attacker, so the player can tell which of the enemies in front of them is
         // doing it: a hit the player took reads as the actor that landed it.
         string shotOutcome = engine.PublishedField("lastOutcome") ?? string.Empty;
-        Assert.Contains("archer", shotOutcome, StringComparison.Ordinal);
+        Assert.Contains("Archer", shotOutcome, StringComparison.Ordinal);
 
         // The facing limit is the Engine's and the behaviour honours it: an attacker turned away does not
         // shoot, which is the same evidence kind the melee behaviour test uses for the other actor.

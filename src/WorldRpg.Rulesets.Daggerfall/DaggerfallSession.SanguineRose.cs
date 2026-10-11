@@ -90,8 +90,22 @@ internal sealed partial class DaggerfallSession
             SummonMinimumDistance, SummonMaximumDistance, out pose);
     }
 
+    /// <summary>Where a placement ray starts relative to the player's facing.</summary>
+    private enum SpawnDirection
+    {
+        /// <summary>Anywhere in the half behind the player.</summary>
+        Behind,
+        /// <summary>
+        /// The donor's line-of-sight spawn: just past the edge of the view, at the camera's field of view
+        /// plus up to four degrees, to the left or right.
+        /// </summary>
+        BesideView,
+        /// <summary>Any direction, as the donor places a foe that need not stay out of sight.</summary>
+        Any,
+    }
+
     private bool TrySpawnPose(string operation, string randomScope, WorldPoint player, float minimumDistance, float maximumDistance, out ActorPose pose,
-        bool outsideView = true)
+        SpawnDirection direction = SpawnDirection.Behind)
     {
         CharacterStepEnvironment environment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
         // These are call-local spawn-clearance envelopes, not another retained collision world.
@@ -107,20 +121,26 @@ internal sealed partial class DaggerfallSession
             string key = $"{operation}:attempt:{attempt}";
             // Like FoeSpawner, start outside the forward view unless the caller places in any direction.
             // A refused placement does not consume the source.
-            float angle = State.PlayerControl.YawRadians + (float)_random.DrawKeyed(new(0, randomScope, key + ":angle",
-                outsideView ? 90 : 0, outsideView ? 270 : 359)).Value * MathF.PI / 180f;
-            Vector3 direction = ActorHeading.Forward(angle);
+            float offsetDegrees = direction switch
+            {
+                SpawnDirection.BesideView => ((float)_tuning.Camera.FieldOfViewYDegrees
+                    + (float)_random.DrawKeyed(new(0, randomScope, key + ":angle", 0, 4)).Value)
+                    * (_random.DrawKeyed(new(0, randomScope, key + ":side", 0, 1)).Value == 0 ? -1f : 1f),
+                SpawnDirection.Any => _random.DrawKeyed(new(0, randomScope, key + ":angle", 0, 359)).Value,
+                _ => _random.DrawKeyed(new(0, randomScope, key + ":angle", 90, 270)).Value,
+            };
+            Vector3 rayDirection = ActorHeading.Forward(State.PlayerControl.YawRadians + offsetDegrees * MathF.PI / 180f);
             float distance = (float)_random.DrawKeyed(new(0, randomScope, key + ":distance", (int)minimumDistance, (int)maximumDistance)).Value;
-            SpatialHit wall = _spatial.CastRay(player.ToVector(), direction, maximumDistance, rayActors, environment);
+            SpatialHit wall = _spatial.CastRay(player.ToVector(), rayDirection, maximumDistance, rayActors, environment);
             if (wall.StartSolid) continue;
             if (wall.Present)
             {
-                float cosine = Vector3.Dot(-direction, wall.Normal);
+                float cosine = Vector3.Dot(-rayDirection, wall.Normal);
                 if (cosine <= 0f) continue;
                 distance = MathF.Min(distance, (float)wall.Distance - SummonSeparation / cosine);
                 if (distance < minimumDistance) continue;
             }
-            Vector3 candidate = player.ToVector() + direction * distance;
+            Vector3 candidate = player.ToVector() + rayDirection * distance;
             SpatialHit floor = _spatial.CastRay(candidate, -Vector3.UnitY, SummonFloorDistance, actors, environment);
             if (!floor.Present || floor.StartSolid || floor.Normal.Y <= 0f) continue;
             SpatialHit clearance = _spatial.OverlapCapsule(floor.Point + Vector3.UnitY * SummonSeparation,

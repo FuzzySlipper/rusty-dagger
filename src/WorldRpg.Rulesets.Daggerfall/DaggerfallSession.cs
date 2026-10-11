@@ -43,6 +43,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private readonly DaggerfallTuning _tuning;
     private PlayerInputSystem _input;
     private ProductMode _mode = ProductMode.Playing;
+    // The line the last mode change set for its mode, so returning to play can tell it from a result.
+    private string _modeLine = string.Empty;
     private readonly SpatialMovementSystem _spatial;
     private readonly FirstPersonCameraSystem _camera;
     private readonly DaggerCombatRules _combat;
@@ -533,8 +535,12 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _locomotion.Neutralize();
         ApplyDeathPresentationMode(mode);
         // A death from exhaustion keeps the donor's collapse text rather than the generic death line.
-        Presentation.SetOutcome(mode == ProductMode.Dead && _exhaustionDeathLine is { } exhausted
-            ? exhausted : _interactions.ModeMessage(_mode));
+        // Returning to play clears the line a mode set for itself, but not a result reported while that
+        // mode was up: a journey or rest that ends by closing the menu keeps its line for the player.
+        if (mode != ProductMode.Playing || Presentation.LastOutcome == _modeLine)
+            Presentation.SetOutcome(mode == ProductMode.Dead && _exhaustionDeathLine is { } exhausted
+                ? exhausted : _interactions.ModeMessage(_mode));
+        _modeLine = Presentation.LastOutcome;
         if (mode is ProductMode.Playing or ProductMode.Title) _exhaustionDeathLine = null;
         PublishPresentation();
     }
@@ -575,7 +581,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         DaggerfallEncounterContext context = pending.Request.Context;
         if (!TrySpawnPose($"generation:{pending.Generation}:sequence:{pending.Sequence}:step:{simulationStep}",
                 "daggerfall.encounter.placement", player, DaggerfallEncounterPolicy.MinimumSpawnDistance(context),
-                DaggerfallEncounterPolicy.MaximumSpawnDistance, out ActorPose pose, DaggerfallEncounterPolicy.PlacesOutsideView(context)))
+                DaggerfallEncounterPolicy.MaximumSpawnDistance, out ActorPose pose,
+                DaggerfallEncounterPolicy.PlacesOutsideView(context) ? SpawnDirection.BesideView : SpawnDirection.Any))
             return null;
         return SpawnActor(pending.ActorDefinition!, pose, pending.Request.PlayerLevel);
     }
