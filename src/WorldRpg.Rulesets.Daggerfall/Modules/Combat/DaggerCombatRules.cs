@@ -532,11 +532,10 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
                 playerCooldown,
                 DamageBonus: playerAction.DamageBonus);
         SpendPlayerStamina(player, staminaCost);
-        // The swing reads the player's gesture once, so the direction it plays and the modifiers its
-        // rolls carry describe the same swing. A bow looses on its fixed draw-and-release strike
-        // (WeaponManager forces the bow's attack direction); every other attack swings the way the
-        // player drew it, or, with no gesture, leaves the presentation the donor's click-attack choice.
-        gesture = _playerSwing();
+        // Melee consumes its gesture once. Bows play their fixed release strike, but use neutral
+        // swing modifiers: these rules prepare damage before flight and do not read presentation
+        // state at landing (the provisional DEC-11 bow rule).
+        gesture = ranged ? DaggerfallSwingDirection.None : _playerSwing();
         // A targeted swing hands its timing to the strike animation: the tick time the classic
         // animation plays at, and the target whose impact frame will deliver it.
         bool deferred = request.Delayed && request.TargetId is not null;
