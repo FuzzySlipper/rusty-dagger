@@ -457,6 +457,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         }
         else if (questTopic)
         {
+            // Donor GetDialogHint2: a spymaster answers a resource's rumor question with its true anyInfo
+            // answer; with no anyInfo answer the rumor stands, as the donor falls back the other way.
+            if (session.Spymaster && topicTarget!.StartsWith("quest-rumor:", StringComparison.Ordinal)
+                && "quest-info:" + topicTarget["quest-rumor:".Length..] is var trueTopic
+                && _questTopics(npc.DurableId).Any(value => value.Id == trueTopic))
+                topicTarget = trueTopic;
             if (topicTarget is null || _resolveQuestTopic?.Invoke(npc.DurableId, topicTarget) is not { } questAnswer)
                 return Reject("That quest topic is no longer available.");
             session.Reply = questAnswer.Text;

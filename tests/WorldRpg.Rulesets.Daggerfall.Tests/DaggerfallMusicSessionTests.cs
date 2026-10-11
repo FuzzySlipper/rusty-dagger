@@ -61,6 +61,28 @@ public sealed class DaggerfallMusicSessionTests
     }
 
     [Fact]
+    public void A_dungeon_castle_zone_plays_the_castle_song_and_leaving_it_returns_to_the_dungeon()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile original = ReadInputs(root);
+        System.Numerics.Vector3 start = original.Project.PlayerPosition!.Value.ToVector();
+        DaggerfallSiteProfile inputs = DaggerfallWeatherSessionTests.WithZones(original,
+            [new DaggerfallAmbientZone("fixture-castle", DaggerfallAmbientZoneKind.Castle, start - System.Numerics.Vector3.One * 4, start + System.Numerics.Vector3.One * 4)]);
+        var fixture = MusicEngine(inputs);
+        using var session = DaggerfallSession.StartNew(fixture.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) {
+            Music = DaggerfallMusicBundle.Admit(FullContent(root), inputs.Music) });
+
+        session.Update(Update());
+        // Donor SongManager: IsPlayerInsideDungeonCastle selects CastleSongs over the dungeon list.
+        Assert.Equal(DaggerfallMusicContext.Castle, session.MusicContext());
+        Assert.Equal("song_gpalac", session.MusicTrack);
+        session.State.PlayerControl.MoveTo(start + System.Numerics.Vector3.UnitX * 30);
+        session.Update(Update());
+        Assert.Equal(DaggerfallMusicContext.Dungeon, session.MusicContext());
+        Assert.Equal("song_dungeon", session.MusicTrack);
+    }
+
+    [Fact]
     public void A_site_change_ends_the_previous_worlds_loop_before_the_new_one_starts()
     {
         string root = TestData.RepositoryRoot;
