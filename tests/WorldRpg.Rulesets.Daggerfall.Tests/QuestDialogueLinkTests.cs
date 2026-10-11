@@ -134,6 +134,23 @@ public sealed class QuestDialogueLinkTests
         Assert.NotNull(Quest(restored, "first").Tasks.First().OperationState[0].UnavailableReason);
     }
 
+    [Fact]
+    public void Quest_dialogue_uses_current_calendar_race_and_region_display_names()
+    {
+        var definitions = QuestWorldAdmissionTests.Definitions(person: true, personQuestor: true, personInfo: "100",
+            actions: ["add dialog for person _person_"],
+            messages: ["A %ra in %crn on %dat, %dayn in %monn."]);
+        using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
+        long npc = QuestNpcOverlayTests.Giver(f, definitions);
+        Start(f, "names", npc); Advance(f.Session);
+        Open(f.Session, npc);
+        Assert.True(f.Session.Dialogue.ApplyAction(new("dialogue-topic", Revision: f.Session.ActivationView.Dialogue!.Revision,
+            Topic: "quest-info:names:person")).Applied);
+        Assert.Equal("A Breton in Daggerfall on Sundas the 1st of Midyear, Sundas in Midyear.", f.Session.ActivationView.Dialogue!.Reply);
+        Assert.DoesNotContain(f.Session.ActivationView.Dialogue.Diagnostics, diagnostic =>
+            diagnostic.Contains("MissingContext", StringComparison.Ordinal));
+    }
+
     private static DaggerfallQuestInstanceSave Quest(DaggerfallSession session, string id) => session.State.Quests.Capture().Instances.Single(value => value.InstanceId == id);
     private static void Advance(DaggerfallSession session) => session.State.Quests.Advance(session.State.Variables, DaggerfallCalendar.Start);
     private static void SetTask(DaggerfallSession session, string id, string task)

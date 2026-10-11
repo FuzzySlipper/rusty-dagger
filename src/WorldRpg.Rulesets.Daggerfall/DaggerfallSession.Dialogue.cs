@@ -95,6 +95,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<long, IReadOnlyList<DaggerfallQuestDialogueTopic>> _questTopics;
     private readonly Func<long, string, (string Text, IReadOnlyList<string> Diagnostics)?>? _resolveQuestTopic;
     private readonly Func<DaggerfallCalendar> _calendar;
+    private readonly Func<DaggerfallTextContext>? _currentText;
     private readonly Func<long, bool> _muted;
     private readonly Func<long, IReadOnlyList<DaggerfallQuestContact>> _questContacts;
     private readonly Func<long, bool> _workAvailable;
@@ -139,7 +140,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         DaggerfallDialogueWorldState? dialogueWorld = null, Func<bool>? suppressTalk = null,
         Func<IReadOnlyList<DaggerfallQuestMessageDeliverySave>>? questRumors = null,
         Func<DaggerfallQuestMessageDeliverySave, (string Text, IReadOnlyList<string> Diagnostics)>? resolveQuestRumor = null,
-        Func<DaggerfallNpc, DaggerfallGuildProviderResult?>? guildWelcome = null)
+        Func<DaggerfallNpc, DaggerfallGuildProviderResult?>? guildWelcome = null,
+        Func<DaggerfallTextContext>? currentText = null)
     {
         _suppressTalk = suppressTalk ?? (() => false);
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
@@ -172,6 +174,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _templeService = templeService;
         _guildService = guildService;
         _guildWelcome = guildWelcome;
+        _currentText = currentText;
         _setOutcome = setOutcome ?? throw new ArgumentNullException(nameof(setOutcome));
     }
 
@@ -654,11 +657,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             .FirstOrDefault();
         string? oath = ResolveOath(faction?.Race ?? province?.Race);
         return new(
-            new DaggerfallTextPlayerContext(Name: player.Name, FirstName: FirstName(player.Name), Race: player.RaceId),
+            _currentText?.Invoke().Player ?? DaggerfallTextContexts.Player(_definitions, player, _playerStats),
             CalendarContext(),
             new DaggerfallTextLocationContext(
                 City: site?.Name,
-                Region: province?.Name,
+                Region: site is null ? null : _definitions.BuildingNames.RegionName(site.Id.Region),
                 DialogSubject: subject ?? site?.Name,
                 DialogHint: hint,
                 AlternateDialogHint: hint),
@@ -671,19 +674,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             new DaggerfallTextStoryContext(GreetingOrFollowUp: opening));
     }
 
-    private DaggerfallTextCalendarContext CalendarContext()
-    {
-        DaggerfallCalendar calendar = _calendar();
-        return new(
-            Date: $"{calendar.Month + 1}/{calendar.Day + 1}/{calendar.Year}",
-            Time: $"{calendar.Hour:D2}:{calendar.Minute:D2}",
-            DayNumber: (calendar.Day + 1).ToString(CultureInfo.InvariantCulture),
-            MonthNumber: (calendar.Month + 1).ToString(CultureInfo.InvariantCulture),
-            Year: calendar.Year.ToString(CultureInfo.InvariantCulture),
-            Minute: calendar.Minute.ToString(CultureInfo.InvariantCulture),
-            Hour: calendar.Hour.ToString(CultureInfo.InvariantCulture),
-            Season: calendar.Season.ToString());
-    }
+    private DaggerfallTextCalendarContext CalendarContext() => DaggerfallTextContexts.Calendar(_definitions, _calendar());
 
     private string? ResolveOath(int? race)
     {
