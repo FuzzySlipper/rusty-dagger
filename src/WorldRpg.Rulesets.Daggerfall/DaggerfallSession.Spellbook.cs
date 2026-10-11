@@ -42,6 +42,11 @@ internal sealed partial class DaggerfallSession
     {
         switch (action.Kind)
         {
+            case DaggerfallUiActionKind.SpellSort:
+                State.Character.SortSpells(); _spellResult = "Spellbook sorted."; break;
+            case DaggerfallUiActionKind.SpellSwap:
+                _spellResult = State.Character.SwapSpells(action.Key!, action.Item!) ? "Spell order changed." : "Those spells cannot be swapped.";
+                break;
             case DaggerfallUiActionKind.SpellInfo:
                 if (State.Character.KnownSpells.Contains(action.Key!) || ReadSpellSale()?.Offers.Any(offer => offer.Key == action.Key) == true)
                     _spellInfo = action.Key;

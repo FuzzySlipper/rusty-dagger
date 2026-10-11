@@ -264,8 +264,8 @@ internal sealed partial class DaggerfallSession
                     () => _time.Calendar.DayNumber,
                     () => character.Career,
                     combatRules,
-                    AppendEffectDamage, (effect,track,amount)=>_vitality.AdjustConditionTrack(effect.Source,effect.Target,track,amount)),
-                .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => character.Career),
+                    AppendEffectDamage, (effect,track,amount)=>_vitality.AdjustConditionTrack(effect.Source,effect.Target,track,amount), AfflictionSymptomsActed),
+                .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => character.Career, AfflictionSymptomsActed),
                 DaggerfallTempleBlessingEffects.Definition(social, () => character.Career, actors.Player.DurableId),
             ]));
             character.AttachRacialOverrides(new(effects, character, definitions, RacialOverrideRemoved));

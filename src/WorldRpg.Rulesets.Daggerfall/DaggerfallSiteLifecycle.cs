@@ -1802,6 +1802,8 @@ internal sealed class DaggerfallSiteLifecycle
     internal void SetExteriorSeason(DaggerfallExteriorSeason season)
     {
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior) return;
+        Projection.Appearance.SetExteriorSeason(season);
+        foreach (var resident in _residentExteriorLocations.Values) resident.Projection.Appearance.SetExteriorSeason(season);
         if (_exteriorEnvironment is null)
         {
             _exteriorEnvironment = new(_random, season);

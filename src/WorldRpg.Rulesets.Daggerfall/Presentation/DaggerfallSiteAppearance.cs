@@ -147,6 +147,17 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private SpriteAtlas? groundContainerAtlas;
     private readonly NormalizedBillboardSprite? groundContainerSprite;
     private readonly List<Material> materials = [];
+    private readonly List<(Material Material, MaterialRequest Summer, MaterialRequest Winter)> seasonalMaterials = [];
+    private bool winterMaterials;
+
+    internal void SetExteriorSeason(DaggerfallExteriorSeason season)
+    {
+        bool winter = season == DaggerfallExteriorSeason.Winter;
+        if (winterMaterials == winter) return;
+        foreach (var material in seasonalMaterials)
+            appearance.UpdateMaterial(new MaterialUpdateRequest(material.Material, winter ? material.Winter : material.Summer));
+        winterMaterials = winter;
+    }
     private readonly Dictionary<uint, Material> materialsBySlot = [];
     private readonly Dictionary<DaggerfallRdbDoorId, Appearance> doorVisuals = [];
     private readonly Dictionary<DaggerfallRdbDoorId, ulong> doorVisualOrdinals = [];
@@ -619,7 +630,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                     hit.TargetId == DaggerfallActorIdentity.PlayerEntityId ? hit.AttackerId : hit.TargetId,
                     actorState, pitch: audioTuning.ContactPitch);
                 StartState(hit.TargetId, "hurt", null);
-                if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && actorState is not null) SpawnBlood(hit, hitEvent, actorState);
+                if (hit.TargetId != DaggerfallActorIdentity.PlayerEntityId && actorState is not null) SpawnBlood(hit, hitEvent, actorState);
                 break;
             case AttackMissedFact miss:
                 PresentationEventIdentity missEvent = Event(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, "miss");
@@ -808,6 +819,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         ReleaseLocationResources(ref failures);
         foreach (Material material in materials.AsEnumerable().Reverse()) Dispose(material, ref failures);
         materials.Clear();
+        seasonalMaterials.Clear(); winterMaterials = false;
         foreach (RenderResource resource in ownedResources.AsEnumerable().Reverse()) Dispose(resource, ref failures);
         ownedResources.Clear();
         foreach (AudioSignalHandle signal in oneShotSignals)
@@ -835,6 +847,14 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             locationMaterials.Add(created);
             materials.Add(created);
             materialsBySlot.Add(material.Slot, created);
+            if (material.WinterTexture is { } winter)
+            {
+                var winterResource = appearance.OpenResource(new RenderResourceRequest(winter.Path, TextureFilter.Nearest, TextureWrap.Repeat));
+                locationResources.Add(winterResource.Handle);
+                MaterialRequest Descriptor(RenderResource resource) => new(new Color(1F, 1F, 1F, 1F), resource, 1F,
+                    new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false);
+                seasonalMaterials.Add((created, Descriptor(texture.Handle), Descriptor(winterResource.Handle)));
+            }
         }
         for (int index = 0; index < inputs.Geometry.Meshes.Count; index++)
         {

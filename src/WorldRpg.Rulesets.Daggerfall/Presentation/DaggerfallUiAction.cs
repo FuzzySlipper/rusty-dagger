@@ -20,7 +20,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
 /// <summary>Every player action the <c>dagger.ui.action.v1</c> contract carries, by meaning.</summary>
 internal enum DaggerfallUiActionKind
 {
-    Begin, CinematicSkip, MapNoteAdd, MapNoteEdit, MapNoteRemove, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellMakerDraft, SpellMakerBuy, PotionMix, ItemMakerDraft, ItemMakerBuy, DaedraSummon, DaedraAnswer,
+    Begin, CinematicSkip, MapNoteAdd, MapNoteEdit, MapNoteRemove, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellSwap, SpellSort, SpellMakerDraft, SpellMakerBuy, PotionMix, ItemMakerDraft, ItemMakerBuy, DaedraSummon, DaedraAnswer,
     ControlsRebind, ControlsReset, ControlsLook,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
@@ -170,6 +170,8 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.SpellMakerBuy,"spellmaker-buy",DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.SpellBuy,"spell-buy",DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.SpellDelete,"spell-delete",DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.SpellSwap,"spell-swap",DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.SpellSort,"spell-sort",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SpellInfo,"spell-info",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.Attack, "attack", DaggerfallUiPhases.Playing),
         new(DaggerfallUiActionKind.Loot, "loot", DaggerfallUiPhases.Playing),
@@ -431,6 +433,10 @@ internal static class DaggerfallUiAction
             if (action == "spell-delete")
                 return fields.SetEquals(["action", "key", "confirm"]) && !string.IsNullOrWhiteSpace(key)
                     ? new(action, Key: key, Confirm: confirm) : null;
+            if (action == "spell-sort") return fields.SetEquals(["action"]) ? new(action) : null;
+            if (action == "spell-swap")
+                return fields.SetEquals(["action", "key", "item"]) && !string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(item)
+                    ? new(action, Key: key, Item: item) : null;
             if (action == "spell-info")
                 return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key) ? new(action, Key: key) : null;
             if (action=="spell-ready")

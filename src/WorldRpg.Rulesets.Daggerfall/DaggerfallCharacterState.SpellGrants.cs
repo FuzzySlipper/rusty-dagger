@@ -21,7 +21,7 @@ internal sealed partial class DaggerfallCharacterState
             return;
         }
         bool learned = _knownSpells.Contains(key);
-        _knownSpells.Add(key);
+        AddKnownSpell(key);
         _spellGrants.Add(key, new(key, source, kind, learned));
     }
 

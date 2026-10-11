@@ -128,7 +128,7 @@ internal static class DaggerfallDiseasePolicy
         Func<long> currentDay,
         Func<DaggerfallCareerDefinition> playerCareer,
         CombatResolution? combat = null,
-        Action<DaggerfallEffectDamage>? damageApplied = null, Action<DaggerfallActiveEffect,TrackId,int>? conditionTrack = null)
+        Action<DaggerfallEffectDamage>? damageApplied = null, Action<DaggerfallActiveEffect,TrackId,int>? conditionTrack = null, Action<long>? symptomsActed = null)
     {
         ArgumentNullException.ThrowIfNull(random);
         ArgumentNullException.ThrowIfNull(currentDay);
@@ -141,7 +141,7 @@ internal static class DaggerfallDiseasePolicy
             ushort.MaxValue,
             1,
             Apply: effect => [Removal(effect, playerCareer)],
-            MagicRound: effect => AdvanceDisease(effect, data, random, currentDay, playerCareer, selectedCombat, damageApplied, conditionTrack),
+            MagicRound: effect => AdvanceDisease(effect, data, random, currentDay, playerCareer, selectedCombat, damageApplied, conditionTrack, symptomsActed),
             Resume: effect =>
             {
                 VerifyRestoredAttributeContributions(effect, ReadState(effect.State));
@@ -298,7 +298,7 @@ internal static class DaggerfallDiseasePolicy
     }
 
     private static void AdvanceDisease(DaggerfallActiveEffect effect, DiseaseData data, IRandomService random, Func<long> currentDay,
-        Func<DaggerfallCareerDefinition> playerCareer, CombatResolution combat, Action<DaggerfallEffectDamage>? damageApplied, Action<DaggerfallActiveEffect,TrackId,int>? conditionTrack)
+        Func<DaggerfallCareerDefinition> playerCareer, CombatResolution combat, Action<DaggerfallEffectDamage>? damageApplied, Action<DaggerfallActiveEffect,TrackId,int>? conditionTrack, Action<long>? symptomsActed)
     {
         DiseaseState state = ReadState(effect.State);
         long today = currentDay();
@@ -312,6 +312,7 @@ internal static class DaggerfallDiseasePolicy
                 playerCareer, combat, damageApplied, conditionTrack,
                 Draw(random, $"daily:{effect.Context.Instance.Value}:{day}", data.MinimumDamage, data.MaximumDamage));
 
+        symptomsActed?.Invoke(checked((long)effect.Context.Target.Value));
         int? symptoms = state.DaysOfSymptomsLeft is int remaining
             ? daysPast >= remaining ? 0 : checked(remaining - (int)daysPast)
             : null;

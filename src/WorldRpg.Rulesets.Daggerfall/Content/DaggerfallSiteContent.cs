@@ -123,6 +123,30 @@ internal static partial class DaggerfallSiteContent
             product,
             definitions,
             diagnostics);
+        if (profileKind == DaggerfallWorldProfileKind.Exterior && start.Site is { } placedSite
+            && definitions.Locations.Records.Single(value => value.Id == placedSite).Climate is int climate)
+        {
+            materials = materials.Select(material =>
+            {
+                const string prefix = "material/texture-";
+                if (!material.MaterialResourceId.StartsWith(prefix, StringComparison.Ordinal)) return material;
+                var parts = material.MaterialResourceId[prefix.Length..].Split('-');
+                if (parts.Length != 2 || !int.TryParse(parts[0], out int archive) || !int.TryParse(parts[1], out int record)) return material;
+                ContentArtifact? Texture(DaggerfallClimateSeason season)
+                {
+                    int mapped = definitions.Grids.Climate.SwapArchive(archive, record, climate, season);
+                    string id = $"{prefix}{mapped}-{record}";
+                    if (!product.TryGetResource(id, out var resource))
+                    { diagnostics.Add($"Exterior texture '{id}' for {season} is not published."); return null; }
+                    string path = artifacts.Resolve(DaggerfallBaseContent.Text(resource, "relativePath", diagnostics));
+                    return new(path, RequireArtifact(artifacts, path, diagnostics));
+                }
+                var summer = Texture(DaggerfallClimateSeason.Summer);
+                var winter = Texture(DaggerfallClimateSeason.Winter);
+                return summer is null ? material : material with
+                    { TexturePath = summer.Path, TextureSha256 = summer.Sha256, WinterTexture = winter?.Path != summer.Path ? winter : null };
+            }).ToArray();
+        }
         // Every normal encounter table can select any entry at a valid player level. Refuse a
         // profile whose generated media closure cannot present one before gameplay rolls it.
         foreach (int mobileId in definitions.Encounters.Tables.SelectMany(table => table).Distinct().Order())
@@ -2587,7 +2611,10 @@ internal sealed class AdmittedFiles
 internal sealed record ScenarioStart(WorldPoint Position, PlayerInitialLook Look, DaggerfallSiteId? Site);
 internal sealed record AuthoredWorldAppearance(Color Tint, Transform Transform, bool Visible, RenderLayer Layer);
 internal sealed record ContentArtifact(string Path, ContentSha256 Sha256);
-internal sealed record NormalizedMaterial(uint Slot, string TexturePath, ContentSha256 TextureSha256, string MaterialResourceId = "");
+internal sealed record NormalizedMaterial(uint Slot, string TexturePath, ContentSha256 TextureSha256, string MaterialResourceId = "")
+{
+    internal ContentArtifact? WinterTexture { get; init; }
+}
 internal sealed record NormalizedAtlasFrame(uint Id, int X, int Y, int Width, int Height, Vector2? DisplaySize = null);
 internal sealed record NormalizedSpriteState(string Name, IReadOnlyList<uint> Frames, float FramesPerSecond, bool Loops)
 {

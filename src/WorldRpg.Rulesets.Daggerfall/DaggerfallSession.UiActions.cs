@@ -132,6 +132,8 @@ internal sealed partial class DaggerfallSession
                 if (!opensInteraction) ChangeSpell(action); break;
             case DaggerfallUiActionKind.SpellBuy:
             case DaggerfallUiActionKind.SpellDelete:
+            case DaggerfallUiActionKind.SpellSwap:
+            case DaggerfallUiActionKind.SpellSort:
             case DaggerfallUiActionKind.SpellInfo: ChangeSpellbook(action); break;
             case DaggerfallUiActionKind.ItemMakerDraft:
             case DaggerfallUiActionKind.ItemMakerBuy: ChangeItemMaker(action); break;

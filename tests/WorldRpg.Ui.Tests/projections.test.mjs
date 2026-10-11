@@ -1955,3 +1955,16 @@ test('training confirms price in a second step and cancels without paying; taver
     dialogue.tavern.hungry = false; publish(); assert.equal(f.root.querySelector('[data-tavern-item]').disabled, true);
   } finally { f.dispose(); }
 });
+
+test('spellbook move and sort request canonical order without changing the projection locally', () => {
+  const f = fixture();
+  try {
+    f.publish({ spells: { available: [{ key: 'b', name: 'Beta', cost: 5 }, { key: 'a', name: 'Alpha', cost: 8 }], ready: null, result: '' } });
+    const move = f.root.querySelector('[data-action="spell-swap"][data-spell="b"][data-swap-with="a"]');
+    move.click(); assert.deepEqual(f.actions.pop(), { action: 'spell-swap', key: 'b', item: 'a' });
+    assert.equal(f.root.querySelector('[data-action="spell-ready"]').dataset.spell, 'b');
+    f.root.querySelector('[data-action="spell-sort"]').click(); assert.deepEqual(f.actions.pop(), { action: 'spell-sort' });
+    f.publish({ spells: { available: [{ key: 'a', name: 'Alpha', cost: 8 }, { key: 'b', name: 'Beta', cost: 5 }], ready: null, result: 'Sorted' } });
+    assert.equal(f.root.querySelector('[data-action="spell-ready"]').dataset.spell, 'a');
+  } finally { f.dispose(); }
+});

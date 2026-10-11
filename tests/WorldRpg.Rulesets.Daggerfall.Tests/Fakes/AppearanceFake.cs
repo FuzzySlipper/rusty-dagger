@@ -75,7 +75,8 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
         return new(new MaterialHandle(nextHandle++), () => releases.Add("material"));
     }
     public Material CreateAuthoredMaterial(AuthoredMaterialAppearanceRequest request) => CreateMaterial(default);
-    public void UpdateMaterial(MaterialUpdateRequest request) { }
+    internal List<MaterialUpdateRequest> MaterialUpdates { get; } = [];
+    public void UpdateMaterial(MaterialUpdateRequest request) { MaterialUpdates.Add(request); }
     public Material ReplaceMaterial(MaterialUpdateRequest request) => CreateMaterial(request.Replacement);
     public Appearance CreatePrimitive(PrimitiveAppearanceRequest request) => CreateAppearance();
     public Appearance ReplacePrimitive(PrimitiveAppearanceReplaceRequest request) => CreateAppearance();

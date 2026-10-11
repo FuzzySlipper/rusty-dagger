@@ -1013,6 +1013,11 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         : action==='spell-delete' ? {action,key:button.dataset.spell,confirm:true} : {action,key:button.dataset.spell};
       context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data});return;
     }
+    if (action === 'spell-sort' || action === 'spell-swap') {
+      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,
+        data: action === 'spell-sort' ? { action } : { action, key: button!.dataset.spell, item: button!.dataset.swapWith } });
+      return;
+    }
     if (action==='spell-ready' && button?.dataset.spell) {
       context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:{action,key:button.dataset.spell}});
       return;
@@ -1854,11 +1859,19 @@ function renderSpells(root:HTMLElement,view:SpellbookProjection|null):void {
   const status=document.createElement('p');status.setAttribute('role','status');
   status.textContent=view?.result ?? '';root.append(status);
   if(!view) return;
-  for(const spell of view.available) {
+  const sort = document.createElement('button'); sort.type = 'button'; sort.dataset.action = 'spell-sort';
+  sort.textContent = 'Sort spells (name, then cost)'; root.append(sort);
+  for(const [index, spell] of view.available.entries()) {
     const button=document.createElement('button');button.type='button';button.dataset.action='spell-ready';button.dataset.spell=spell.key;
     button.textContent=`${spell.name} · ${spell.canCast===false ? 'Unavailable' : `${spell.cost} magicka`}${view.ready===spell.key ? ' · Ready' : ''}`;
     button.disabled=spell.canCast===false;
     button.setAttribute('aria-pressed',String(view.ready===spell.key));root.append(button);
+    for (const [offset, label] of [[-1, 'Move up'], [1, 'Move down']] as const) {
+      const other = view.available[index + offset];
+      const move = document.createElement('button'); move.type = 'button'; move.dataset.action = 'spell-swap';
+      move.dataset.spell = spell.key; move.dataset.swapWith = other?.key; move.textContent = `${label} ${spell.name}`;
+      move.disabled = !other; root.append(move);
+    }
     for(const [action,label] of [['spell-info','Info'],['spell-delete','Forget']]) {
       const control=document.createElement('button');control.type='button';control.dataset.action=action;control.dataset.spell=spell.key;
       control.textContent=`${label} ${spell.name}`;root.append(control);

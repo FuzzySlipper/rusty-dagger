@@ -46,7 +46,7 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallActiveEffectSave[] ActiveEffects,
     DaggerfallSkillProgressionSave SkillUses,
     DaggerfallSocialSave Social,
-    DaggerfallCharacterSave? Character = null,
+    [property: JsonRequired] DaggerfallCharacterSave? Character = null,
     DaggerfallLevelUpSave? LevelUp = null)
 {
     [JsonRequired]
@@ -187,7 +187,7 @@ internal sealed record DaggerfallSavePayload(
         }
         catch (JsonException exception)
         {
-            throw new ArgumentException("The Daggerfall save payload is malformed.", nameof(payload), exception);
+            throw new ArgumentException($"The Daggerfall save payload is malformed: {exception.Message}", nameof(payload), exception);
         }
     }
 
@@ -821,7 +821,7 @@ internal sealed record DaggerfallSavePayload(
         PendingCreateItem?.Validate();
         ArgumentNullException.ThrowIfNull(Actors);
         ArgumentNullException.ThrowIfNull(DynamicActors);
-        if(Actors.Any(actor=>actor.ForcedHostile && actor.MagicallyPacified) || DynamicActors.Any(actor=>actor.ForcedHostile && actor.MagicallyPacified))
+        if(Actors.Any(actor=>actor.ForcedHostile && (actor.MagicallyPacified || actor.LanguagePacified)) || DynamicActors.Any(actor=>actor.ForcedHostile && (actor.MagicallyPacified || actor.LanguagePacified)))
             throw new ArgumentException("An actor cannot be forced hostile and magically pacified together.");
         ArgumentNullException.ThrowIfNull(Inventory);
         ArgumentNullException.ThrowIfNull(Corpses);
@@ -1674,6 +1674,7 @@ internal sealed record DaggerfallActorSave(long EntityId, float X, float Y, floa
 {
     public string? WabbajackDefinition { get; init; }
     public bool ForcedHostile { get; init; }
+    [JsonRequired] public bool LanguagePacified { get; init; }
     [JsonRequired] public bool MagicallyPacified { get; init; }
     internal void Validate()
     {
@@ -1704,7 +1705,7 @@ internal sealed record DaggerfallSiteDeltaSave(
         ArgumentNullException.ThrowIfNull(Profile); Profile.Validate();
         ArgumentNullException.ThrowIfNull(Actors);
         ArgumentNullException.ThrowIfNull(DynamicActors);
-        if(Actors.Any(actor=>actor.ForcedHostile && actor.MagicallyPacified) || DynamicActors.Any(actor=>actor.ForcedHostile && actor.MagicallyPacified))
+        if(Actors.Any(actor=>actor.ForcedHostile && (actor.MagicallyPacified || actor.LanguagePacified)) || DynamicActors.Any(actor=>actor.ForcedHostile && (actor.MagicallyPacified || actor.LanguagePacified)))
             throw new ArgumentException("An actor cannot be forced hostile and magically pacified together.");
         ArgumentNullException.ThrowIfNull(ActorInventories);
         ArgumentNullException.ThrowIfNull(Corpses);
@@ -1733,6 +1734,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
     [JsonRequired] public bool Passive { get; init; }
     public bool WabbajackActive { get; init; }
     public bool ForcedHostile { get; init; }
+    [JsonRequired] public bool LanguagePacified { get; init; }
     [JsonRequired] public bool MagicallyPacified { get; init; }
     public bool PlayerAllied { get; init; }
     public DaggerfallCorruptionOrigin? CorruptionOrigin { get; init; }
