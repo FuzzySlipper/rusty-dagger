@@ -186,6 +186,7 @@ internal sealed partial class DaggerfallSession
         State.Crime.SetResponse(response with { Phase = DaggerfallLegalPhase.Arrest });
         _input.ClearHeldInput();
         _interactions.SetMenuOpen(false);
+        _appearance.PlayGameplaySound(456, "guard-halt");
         Presentation.SetOutcome("Halt! The city watch demands your surrender.");
     }
 

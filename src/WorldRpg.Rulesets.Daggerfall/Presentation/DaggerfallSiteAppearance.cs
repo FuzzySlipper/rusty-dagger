@@ -17,7 +17,7 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>Publishes one admitted site profile's normalized visual closure through Engine-owned resources and sprite atlases.</summary>
-internal sealed class DaggerfallSiteAppearance : IDisposable
+internal sealed partial class DaggerfallSiteAppearance : IDisposable
 {
     private readonly IGraphicsService appearance;
     private readonly IContentService content;
@@ -200,7 +200,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         ArgumentNullException.ThrowIfNull(inputs);
         this.inputs = inputs;
         this.mobileDefinitions = definitions;
-        this.doors = doors;
+        BindDoorAudio(doors);
         this.dungeonMotion = dungeonMotion;
         this.cityGates = cityGates;
         this.appearance = appearance;
@@ -332,7 +332,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         ArgumentNullException.ThrowIfNull(doors);
         ArgumentNullException.ThrowIfNull(motion);
         if (!locationSuspended) return;
-        this.doors = doors;
+        BindDoorAudio(doors);
         dungeonMotion = motion;
         try
         {
@@ -766,6 +766,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        BindDoorAudio(null);
         List<Exception>? failures = null;
         if (!drawnByActiveSnapshot)
         {

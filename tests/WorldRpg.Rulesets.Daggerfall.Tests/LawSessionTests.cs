@@ -26,6 +26,7 @@ public sealed class LawSessionTests
         Assert.NotEmpty(f.Spatial.OverlapRequests);
         Assert.All(f.Spatial.FloorProbes.Where(probe => probe.Direction.Y == 0), probe => Assert.InRange(probe.MaxDistance, 0, 3));
         Assert.Equal("arrest", s.LegalView!.Phase);
+        Assert.Single(f.InitialEngine.EmittedAudio, request => request.SignalId.Contains("guard-halt"));
         f.Choose("resist");
         foreach (long id in response.Guards) s.State.Actors.Get(id).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0);
         f.Step();
@@ -320,7 +321,8 @@ public sealed class LawSessionTests
             var definitions = TestPayload.Definitions.ForSession([new DaggerfallSpellDefinition("custom-spell.1", -1, false, "Legal touch", 4, 1, 0, 0, multipleEffects ? [settings, settings with {Key = "second"}] : [settings]) {IsPlayerCreated = true, IsCustom = true, SpellsForSale = false}]);
             var tuning = DaggerfallTuning.Defaults with {Law = new(0, 0, 2, 5, 12.8f, 51.2f, 3.2)};
             composition = new(definitions, Inputs, tuning) {Profiles = new(Outside is null ? [Inputs, Other] : [Inputs, Other, Outside])};
-            Session = DaggerfallSession.StartNew(Engine().Context, composition);
+            InitialEngine = Engine();
+            Session = DaggerfallSession.StartNew(InitialEngine.Context, composition);
             Session.ApplyProductMode(ProductMode.Playing);
         }
         internal void Step() => Session.Update(new ProductUpdate(OuterUpdate(++step), []));
@@ -344,6 +346,7 @@ public sealed class LawSessionTests
                 Session.Site.Region!.Value, 0, DaggerfallCrimeTargetKind.Other,
                 witnessed ? new(DaggerfallCrimeWitnessQuery.CompletedWithWitnesses, [guard]) : new(DaggerfallCrimeWitnessQuery.CompletedWithoutWitnesses, []), DaggerfallCrimeGuildCredit.None));
         }
+        internal EngineContextFake InitialEngine { get; }
         private EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, Inputs); PopulateContent(content, Other);

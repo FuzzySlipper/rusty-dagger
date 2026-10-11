@@ -160,6 +160,27 @@ silently omitted. This manifest contains metadata only, not game payloads.
 | CNT-027 | Remaining classic media and tables | Root has 70 CIF, 263 IMG, 2 GFX, 3 CEL, 3 BSS, 6 RCI, 4 COL, 3 LGT, 3 RAW and other DAT/DEF/TDE/RSC/TBL files; exact per-family list is in the manifest | Only selected inputs are admitted | `uninspected`: enumerate each remaining family with an existing decoder or documented unsupported-source disposition. This row must not become a generic “all media” ticket; retain path-level IDs in the manifest. |
 | CNT-028 | MIDI source: `MIDI.BSA` | 131 named records (`0x0100` header), 1,232,240 bytes | No runtime use | `excluded`: no MIDI decoder, synthesizer or `MIDI.BSA` playback. Ordinary audio and long-duration music looping remain in scope under CNT-023 and the coverage plan. |
 
+### Ordinary source sound consumers
+
+The shared audio manifest retains source directory ordinals and numeric IDs; gameplay
+uses the former and quest `play sound` uses the latter. Door open/close/bash,
+accepted-distance footsteps (dungeon, wood, outdoors and winter snow), swimming
+strokes and water entry, player pain, damaging and hard landings, ranged spell
+impacts, newly available levels, guard arrest and item equipment changes use their
+existing gameplay owners. Clips are opened and retired by the Engine audio service.
+Footstep distance/volume and player pain probability are typed presentation tuning.
+Restored state and ordinary projection reads do not replay these event cues.
+
+Publication alone does not assign a gameplay trigger. Arena-prefixed remnants,
+unnamed records and alternate cries without a retained donor call remain available
+for explicit quest numeric references but have no invented ambient/gameplay trigger.
+In particular `PlayerSwimming` (312) is not a replacement for the donor's splash
+stroke (346); `HaltWeak` (302) and `Halt2` (457) do not replace the watch's `Halt`
+(456). Book, crafting and gold UI cues remain unbound as recorded by F116. Empty
+ordinal 5 is the only clip omitted from publication because it contains no samples.
+The generated classic-media sound catalog lists every record's identity and whether
+its bytes are published; it is not a claim that every record has an automatic trigger.
+
 ## Regions and map records
 
 `MAPS.BSA` contains four named tables per region. The donor `MapsFile` source provides the

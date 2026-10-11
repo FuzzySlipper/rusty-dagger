@@ -151,6 +151,7 @@ internal sealed partial class DaggerfallSession
         CharacterMotion landingBefore = (releasedVerticalDrive || slowfallDescending) && positionBefore is WorldPoint releasePosition
             ? motionBefore with { PeakY = releasePosition.Y, FallOriginY = releasePosition.Y }
             : motionBefore;
+        bool wasSwimming = State.Swimming.IsSwimming;
         DaggerfallSwimmingStep swimming = movement is not null
             ? State.Swimming.Complete(
                 movement,
@@ -165,6 +166,13 @@ internal sealed partial class DaggerfallSession
             update.DeltaSeconds * _tuning.Time.GameSecondsPerRealSecond, State.Actors.Player.Stats,
             use => State.SkillUses.Record(use), swimming.Swimming);
         _climbing.CompleteStep(climb, movement, use => State.SkillUses.Record(use));
+        if (movement is { } acceptedMovement && positionBefore is { } previousPosition)
+            _appearance.AdvanceFootsteps(previousPosition, acceptedMovement.Transform.Translation,
+                motionBefore.Grounded, State.PlayerControl.Motion.Grounded, wasSwimming, swimming.Swimming,
+                activeWater is not null && !swimming.Swimming, State.Transport.IsOnFoot && !climb.Climbing && !levitation.IsLevitating,
+                _time.Calendar.Season == DaggerfallSeason.Winter && CurrentClimate is not (224 or 225 or 227 or 229));
+        if (landing is { } landed && DaggerfallFormulaPolicy.IsHardLanding(landed.Distance) && !swimming.Swimming && !slowfallDescending)
+            _appearance.PlayGameplaySound(92, "hard-landing");
         if (swimming.Drowning)
             AppendDamage(_vitality.ResolveDrowning(State.Actors.Player.Actor), DaggerfallDamageCause.Drowning, 0);
         if (_vitality.ResolveLanding(State.Actors.Player.Actor, landing, State.Effects.PreventsFallDamage(DaggerfallActorIdentity.PlayerEntityId)) is { } fall)

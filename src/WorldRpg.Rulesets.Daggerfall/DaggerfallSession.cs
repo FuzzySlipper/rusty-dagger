@@ -261,6 +261,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         if (!float.IsFinite(pitchRadians)) throw new ArgumentOutOfRangeException(nameof(pitchRadians));
         _input.Neutralize();
         _locomotion.Neutralize();
+        _appearance.ResetFootsteps();
         _climbing.Detach();
         _lootUi.CloseAll();
         State.PlayerControl.YawRadians = yawRadians;
@@ -536,6 +537,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         if (mode is ProductMode.Title or ProductMode.Dead) CloseTravelMap();
         _input.Neutralize();
         _locomotion.Neutralize();
+        _appearance.ResetFootsteps();
         ApplyDeathPresentationMode(mode);
         // A death from exhaustion keeps the donor's collapse text rather than the generic death line.
         // Returning to play clears the line a mode set for itself, but not a result reported while that
@@ -697,6 +699,12 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     {
         State.Quests.ObserveFoeFact(fact);
         ObservePlaytestCombatFact(fact);
+        if (fact is ActorDamagedFact { ActorId: DaggerfallActorIdentity.PlayerEntityId, ActualHealthLost: > 0 } hurt)
+        {
+            _appearance.PlayPlayerPain(State.Character.Race.Id, State.Character.Identity.Gender.ToString() == "Female",
+                hurt.ActualHealthLost, State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Maximum.Value);
+            if (hurt.Cause == DaggerfallDamageCause.Fall) _appearance.PlayGameplaySound(91, "fall-damage");
+        }
         if (fact is AttackHitFact hit)
         {
             ObserveCrimeHit(hit);
