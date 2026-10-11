@@ -23,7 +23,11 @@ public sealed class GeneratedRangedEnemySessionTests
         ulong before = Arrows(f, id);
         f.Update();
         Assert.Equal(before - (shoots ? 1UL : 0UL), Arrows(f, id));
-        Assert.Equal(distance <= 2 || shoots ? EnemyBehaviorState.Attack : EnemyBehaviorState.Chase, f.Session.LastEnemyBehavior[id].State);
+        // With the player's weapon drawn the enhanced motor runs. Inside the band the shot holds the
+        // archer in place (the fixture's minimum draws choose the quarter-speed strafe) instead of the
+        // melee band's retreat its bow reach would otherwise select.
+        Assert.Equal(shoots ? EnemyBehaviorState.Strafe : distance <= 2 ? EnemyBehaviorState.Attack : EnemyBehaviorState.Chase,
+            f.Session.LastEnemyBehavior[id].State);
         using var restored = f.Restore();
         Assert.Equal(Arrows(f, id), restored.State.ActorInventories.InventoryFor(id)!.Read().Stacks.Where(stack => stack.Definition.Value == "arrow").Aggregate(0UL, (n, row) => n + row.Quantity));
     }
@@ -74,7 +78,7 @@ public sealed class GeneratedRangedEnemySessionTests
     {
         long id = f.Session.SpawnActor("archer", new(new(0, 0, -distance), 0), level: 5);
         f.Session.State.Actors.Get(id).Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(true);
-        f.Session.State.WeaponDrawn = false;
+        f.Session.State.WeaponDrawn = true;
         Place(f, id, distance);
         return id;
     }

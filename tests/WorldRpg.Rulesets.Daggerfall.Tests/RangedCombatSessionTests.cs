@@ -173,7 +173,9 @@ public sealed class RangedCombatSessionTests
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        // The archer declines its enhanced-AI strafe so the shot is observed from a standing position.
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service,
+            random: MotorRandom.Create(strafe: false));
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         PlaceArcherInRangedBand(session);

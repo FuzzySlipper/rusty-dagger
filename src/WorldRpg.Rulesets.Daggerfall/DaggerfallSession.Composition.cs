@@ -360,7 +360,7 @@ internal sealed partial class DaggerfallSession
                     effects.GrantsWaterWalking(id),
                     effects.GrantsLevitation(id)),
                 canOpenDoors: id => DaggerfallEnemyBehaviorModule.CanOpenDoors(id, authored, definitions),
-                openBlockedDoor: TryOpenDoorForEnemy, selectTarget: SelectQuestAwareEnemyTarget, questRestrained: QuestFoeRestrained, attackReach: _combat.EnemyReachAtDistance);
+                openBlockedDoor: TryOpenDoorForEnemy, selectTarget: SelectQuestAwareEnemyTarget, questRestrained: QuestFoeRestrained, attackAtDistance: _combat.EnemyAttackAtDistance);
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {

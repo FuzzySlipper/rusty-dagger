@@ -7,15 +7,19 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class EnemyMotorPolicyTests
 {
     [Theory]
-    [InlineData(4, PursuitState.Retreat)]
-    [InlineData(9, PursuitState.Idle)]
-    [InlineData(12, PursuitState.Chase)]
-    public void Published_ranged_preference_keeps_usable_distance(double distance, PursuitState expected)
+    [InlineData(true, false, PursuitState.Idle)]
+    [InlineData(true, true, PursuitState.Strafe)]
+    [InlineData(false, true, PursuitState.Idle)]
+    public void Selected_ranged_attack_stands_or_strafes_instead_of_the_melee_band(bool enhanced, bool strafe, PursuitState expected)
     {
-        var policy = DaggerfallEnemyMotorPolicy.Select(new(), new(CanRetreat: true),
-            DaggerfallPursuitManeuverTuning.Default, new(1, 1, false, false, false, PrefersRanged: true, MinimumRangedDistance: 6),
-            new(true, distance, 10), true, true, true, .1f, (_, _, _) => throw new Exception("No random maneuver needed."));
+        // At 20 m a 51.2 m bow reach would put the melee branch deep inside its retreat band.
+        var policy = DaggerfallEnemyMotorPolicy.Select(new(), new(CanRetreat: true, CanStrafe: true),
+            DaggerfallPursuitManeuverTuning.Default with { EnhancedCombatAi = enhanced }, new(1, 1, false, false, false),
+            new(true, 20, 51.2), true, true, true, true, .1f,
+            (key, min, max) => key == "strafe" ? (strafe ? 0 : 1) : key.StartsWith("advance", StringComparison.Ordinal)
+                ? throw new Exception("The ranged band takes no advance decision.") : min);
         Assert.Equal(expected, policy.Maneuver);
+        if (expected == PursuitState.Strafe) Assert.Equal(.25f, policy.SpeedMultiplier);
     }
 
     [Theory]
@@ -64,5 +68,5 @@ public sealed class EnemyMotorPolicyTests
     private static PursuitPolicy Select(DaggerfallEnemyMotorMemory memory, DaggerfallEnemyMotorContext context,
         double distance, DaggerfallPursuitManeuverTuning tuning, Func<string, int, int, int> draw) =>
         DaggerfallEnemyMotorPolicy.Select(memory, new(CanRetreat: true, CanStrafe: true, RetreatDistance: 2.5f, StrafeDistance: 1.5f),
-            tuning, context, new(true, distance, 1.5), true, true, true, .1f, draw);
+            tuning, context, new(true, distance, 1.5), false, true, true, true, .1f, draw);
 }
