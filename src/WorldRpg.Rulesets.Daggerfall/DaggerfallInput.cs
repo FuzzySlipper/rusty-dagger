@@ -11,6 +11,7 @@ internal static class DaggerfallInput
     internal static readonly InputActionId Interact = new("daggerfall.interact");
     internal static readonly InputActionId Inventory = new("daggerfall.inventory");
     internal static readonly InputActionId Character = new("daggerfall.character");
+    internal static readonly InputActionId Map = new("daggerfall.map");
     internal static readonly InputActionId Menu = new("daggerfall.menu");
     internal static readonly PlayerControlBindings Controls = new(
         ["move"u8.ToArray(), "movement"u8.ToArray()],
@@ -26,6 +27,7 @@ internal static class DaggerfallInput
         new(Inventory, "inventory"u8.ToArray()),
         new(Character, "character"u8.ToArray()),
         new(Menu, "menu"u8.ToArray()),
+        new(Map, "map"u8.ToArray()),
     ];
 
     /// <summary>

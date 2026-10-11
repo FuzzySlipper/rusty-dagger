@@ -82,10 +82,12 @@ internal sealed partial class DaggerfallSession
         {
             string term = action.Text?.Trim() ?? string.Empty;
             _travelSearchResults = [.. _travelPolicy.SupportedDestinations()
-                .Where(destination => destination.Name.Contains(term, StringComparison.OrdinalIgnoreCase))
+                .Where(destination => destination.Name.Contains(term, StringComparison.OrdinalIgnoreCase)
+                    || DaggerfallRegionNames.Name(_definitions.BuildingNames.RegionNames, destination.Id.Region)
+                        .Contains(term, StringComparison.OrdinalIgnoreCase))
                 .Take(40)];
             _travelSearchInitialized = true;
-            _travelMessage = _travelSearchResults.Length == 0 ? "No discovered destination matches that name." : null;
+            _travelMessage = _travelSearchResults.Length == 0 ? "No discovered destination matches that place or region." : null;
             return;
         }
         if (action.Region is not int region || action.Destination is not int index)

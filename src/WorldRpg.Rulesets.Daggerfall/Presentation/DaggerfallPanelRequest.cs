@@ -13,6 +13,7 @@ internal sealed record DaggerfallPanelRequest(string Panel, ulong Revision);
 /// </remarks>
 internal static class DaggerfallPanel
 {
+    internal const string Map = "map";
     internal const string Inventory = "inventory";
     internal const string Character = "character";
     internal const string Travel = "transport";

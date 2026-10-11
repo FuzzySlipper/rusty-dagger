@@ -280,7 +280,7 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
   const search = document.createElement('input');
   search.type = 'search';
   search.maxLength = 80;
-  search.placeholder = 'Search discovered locations';
+  search.placeholder = 'Search places or regions';
   search.setAttribute('aria-label', 'Search destinations');
   const searchButton = document.createElement('button');
   searchButton.type = 'button';
@@ -324,7 +324,11 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
       || inn.input.checked !== quote.options.inn || ship.input.checked !== quote.options.ship;
     accept.disabled = selectionChanged || !current?.executionAvailable || !quote || quote.identity === submittedIdentity;
   };
-  for (const input of [destination, cautious.input, inn.input, ship.input]) input.addEventListener('change', selectionMoved);
+  for (const input of [destination, cautious.input, inn.input, ship.input]) input.addEventListener('change', () => {
+    selectionMoved();
+    const [region, index] = selectedKey.split(':').map(Number);
+    if (Number.isInteger(region) && Number.isInteger(index)) requestPreview(region, index);
+  });
   const map = mountTravelMap(claim, (region, index) => {
     selectedKey = `${region}:${index}`;
     selectedOnMap = true;
@@ -374,6 +378,7 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
         }
         result.textContent = `${quote.destination}: about ${quote.duration}, `
           + `${quote.totalCost} gold (${quote.innCost} inn, ${quote.shipCost} ship). `
+          + (quote.options.ship && quote.oceanPixels === 0 ? 'This route is entirely over land; ship travel adds no sea passage or fare. ' : '')
           + (quote.canAfford ? 'Affordable.' : 'Insufficient funds.')
           + (value?.message ? ` ${value.message}` : '');
       } else {

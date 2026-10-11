@@ -1812,3 +1812,60 @@ for (const path of ['Escape', 'toggle', 'panel request']) test(`menu open via ${
     assert.deepEqual(f.actions.filter(action => action.action === 'menu').at(-1), { action: 'menu', open: false });
   } finally { f.dispose(); }
 });
+
+
+test('identical courier letters share one footer and dismiss all source deliveries', () => {
+  const f = fixture();
+  try {
+    const letter = { instance: 'quest:1', message: 1026, delivery: 'letter', heading: 'Letter', text: 'Meet me in Daggerfall.',
+      signoff: 'Brisienna', diagnostics: [], entryId: 'letter:1' };
+    const second = { ...letter, instance: 'quest:2', entryId: 'letter:2' };
+    const other = { ...letter, instance: 'quest:3', entryId: 'letter:3', text: 'Another message.' };
+    const quests = { deliveries: [letter, second, other], journal: { active: [], finished: [] }, pending: null };
+    f.publish({ quests });
+    const letters = f.root.querySelectorAll('.dagger-quest-letter');
+    assert.equal(letters.length, 2);
+    assert.equal(letters[0].lastElementChild.tagName, 'BUTTON');
+    assert.equal(letters[0].lastElementChild.previousElementSibling.textContent, 'Brisienna');
+    const button = letters[0].lastElementChild;
+    f.publish({ quests });
+    assert.equal(f.root.querySelector('.dagger-quest-letter button'), button);
+    button.click();
+    assert.deepEqual(f.actions.slice(-2), [
+      { action: 'quest-dismiss', questInstance: 'quest:1', questDelivery: 'letter:1' },
+      { action: 'quest-dismiss', questInstance: 'quest:2', questDelivery: 'letter:2' },
+    ]);
+  } finally { f.dispose(); }
+});
+
+test('ship option refreshes the quote and explains routes without sea passage', async () => {
+  const { mountTravel } = await import(pathToFileURL(join(output, 'travel.js')));
+  const f = fixture();
+  try {
+    const root = document.createElement('div'); f.root.append(root);
+    const actions = []; const view = mountTravel(root, action => actions.push(action));
+    const quote = { identity: 'land', destination: 'Charing', duration: '2 hours', oceanPixels: 0,
+      innCost: 0, shipCost: 0, totalCost: 0, canAfford: true, options: { cautious: true, inn: false, ship: false } };
+    const value = { destinations: [{ region: 17, index: 3, name: 'Charing', kind: 'Town', regionName: 'Daggerfall' }],
+      quote, executionAvailable: true, message: null, lastResult: null };
+    view.update(value);
+    const ship = root.querySelectorAll('input[type=checkbox]')[2];
+    ship.click();
+    assert.deepEqual(actions.at(-1), { action: 'travel-preview', region: 17, destination: 3, cautious: true, inn: false, ship: true });
+    assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
+    view.update({ ...value, quote: { ...quote, identity: 'land-ship', options: { ...quote.options, ship: true } } });
+    assert.match(root.querySelector('[role=status]').textContent, /entirely over land/);
+    assert.equal(root.querySelector('.dagger-travel-accept').disabled, false);
+    view.dispose();
+  } finally { f.dispose(); }
+});
+
+test('arrival projection immediately replaces the departure place and calendar', () => {
+  const f = fixture();
+  try {
+    f.publish({ site: { name: "Privateer's Hold" }, calendar: { date: '1 Morning Star', time: '00:00' } });
+    f.publish({ site: { name: 'Daggerfall' }, calendar: { date: '9 Morning Star', time: '05:00' }, panelRequest: { revision: 1, panel: 'resume' } });
+    assert.equal(f.root.querySelector('.dagger-site').textContent, 'Daggerfall');
+    assert.equal(f.root.querySelector('.dagger-calendar').textContent, '9 Morning Star · 05:00');
+  } finally { f.dispose(); }
+});

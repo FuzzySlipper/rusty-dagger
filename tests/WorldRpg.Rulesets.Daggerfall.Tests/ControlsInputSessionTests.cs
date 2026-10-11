@@ -21,6 +21,26 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class ControlsInputSessionTests
 {
     [Fact]
+    public void Mapped_map_press_requests_the_map_panel_and_turning_publishes_the_current_facing()
+    {
+        var inputs = ReadInputs(TestData.RepositoryRoot);
+        List<string> releases = [];
+        var content = new ContentFake(releases); PopulateContent(content, inputs);
+        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using var session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+        float before = session.State.PlayerControl.YawRadians;
+        session.Update(new ProductUpdate(OuterUpdate(1), [
+            Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "map"),
+            Input(InputEventKind.PointerDelta, x: 100, y: 0)]));
+        Assert.Equal("map", engine.PublishedNested("panelRequest", "panel"));
+        Assert.NotEqual(before, session.State.PlayerControl.YawRadians);
+        var snapshot = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        var view = Assert.IsType<Dictionary<string, object?>>(snapshot["view"]);
+        Assert.Equal(session.State.PlayerControl.YawRadians, Convert.ToSingle(view["yawRadians"]));
+    }
+
+    [Fact]
     public void Mapped_attack_press_reaches_combat_once_without_held_or_catchup_replay()
     {
         string root = TestData.RepositoryRoot;

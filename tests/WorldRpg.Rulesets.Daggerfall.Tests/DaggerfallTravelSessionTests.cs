@@ -21,6 +21,25 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallTravelSessionTests
 {
+    [Fact]
+    public void Search_matches_region_names_and_arrival_snapshot_publishes_new_place_and_time_immediately()
+    {
+        using Fixture fixture = new();
+        var session = fixture.Session;
+        var region = TestPayload.Definitions.BuildingNames.RegionNames[fixture.Destination.Site!.Value.Region];
+        fixture.Submit(new { action = "travel-search", text = region });
+        Assert.NotEmpty(session.ReadTravelPresentation().Destinations);
+        Assert.All(session.ReadTravelPresentation().Destinations, value => Assert.Equal(fixture.Destination.Site.Value.Region, value.Id.Region));
+        var quote = fixture.Preview(inn: false);
+        fixture.Accept(quote);
+        Assert.Equal(DaggerfallTravelOutcome.Arrived, session.State.Travel.LastResult!.Outcome);
+        Assert.Equal(session.Site.ActiveSite!.Name, fixture.Engine.PublishedNested("site", "name"));
+        var calendar = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
+        Assert.Equal(new DaggerfallCalendar(calendar.Year, calendar.Month, calendar.Day, calendar.Hour, calendar.Minute, calendar.Second).DescribeTime(),
+            fixture.Engine.PublishedNested("calendar", "time"));
+        Assert.Equal("resume", fixture.Engine.PublishedNested("panelRequest", "panel"));
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]
@@ -560,6 +579,7 @@ public sealed class DaggerfallTravelSessionTests
         private ulong step = 1;
         internal DaggerfallSession Session { get; }
         internal SpatialFake Spatial { get; private set; } = null!;
+        internal EngineContextFake Engine { get; private set; } = null!;
         internal DaggerfallSiteProfile Origin { get; }
         internal DaggerfallSiteProfile Destination { get; }
         internal long Now => Absolute(Session.CaptureSave());
@@ -600,7 +620,7 @@ public sealed class DaggerfallTravelSessionTests
             PopulateContent(content, Origin); PopulateContent(content, Destination);
             PopulateTerrainContent(content, Origin); PopulateTerrainContent(content, Destination);
             Spatial = SpatialFake.Create(Origin.SpatialArtifact.Sha256, releases);
-            var engine = EngineContextFake.Create(content, Spatial.Service,
+            var engine = Engine = EngineContextFake.Create(content, Spatial.Service,
                 new AppearanceFake(releases), random: encounter ? TravelEncounterRandom.CreateEncounter() : LodgingRandom.Create());
             DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(FullContent(TestData.RepositoryRoot));
             DaggerfallSessionComposition composition = new(definitions, Origin, DaggerfallTuning.Defaults, Inputs.Value.Identity)
