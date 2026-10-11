@@ -242,7 +242,11 @@ internal sealed record DaggerfallTuning(
                 siteLighting.GetProperty("interiorNight").GetSingle(),
                 siteLighting.GetProperty("dungeon").GetSingle(),
                 siteLighting.GetProperty("exteriorNoon").GetSingle(),
-                siteLighting.GetProperty("exteriorNight").GetSingle()),
+                siteLighting.GetProperty("exteriorNight").GetSingle())
+            {
+                MobileGlowRange = siteLighting.GetProperty("mobileGlowRange").GetSingle(),
+                MobileGlowIntensity = siteLighting.GetProperty("mobileGlowIntensity").GetSingle(),
+            },
             new DaggerfallClimbingTuning(
                 climbing.GetProperty("startCheckSeconds").GetSingle(),
                 climbing.GetProperty("continueCheckSeconds").GetSingle(),
@@ -574,11 +578,15 @@ internal sealed record DaggerfallSiteLightingTuning(
     float ExteriorNoon,
     float ExteriorNight)
 {
+    internal float MobileGlowRange { get; init; } = 4f;
+    internal float MobileGlowIntensity { get; init; } = .1f;
     internal static DaggerfallSiteLightingTuning Classic { get; } = new(
         160F / 255F, 100F / 255F, 75F / 255F, 150F / 255F, 50F / 255F);
 
     internal DaggerfallSiteLightingTuning Validate()
     {
+        if (!float.IsFinite(MobileGlowRange) || MobileGlowRange <= 0 || !float.IsFinite(MobileGlowIntensity) || MobileGlowIntensity < 0)
+            throw new ArgumentOutOfRangeException(nameof(DaggerfallSiteLightingTuning), "Mobile glow requires a positive finite range and nonnegative finite intensity.");
         foreach (float value in new[] { InteriorDay, InteriorNight, Dungeon, ExteriorNoon, ExteriorNight })
             if (!float.IsFinite(value) || value is < 0F or > 1F)
                 throw new ArgumentOutOfRangeException(nameof(DaggerfallSiteLightingTuning), "Site ambient values must be finite normalized RGB levels.");

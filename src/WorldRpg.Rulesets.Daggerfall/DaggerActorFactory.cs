@@ -63,7 +63,7 @@ internal static class DaggerActorFactory
         ActorsState actors = new();
         try
         {
-            DaggerfallMechanicsState mechanics = new(definitions.EnemySpells);
+            DaggerfallMechanicsState mechanics = new(definitions.EnemySpells, definitions.Vocabulary);
             DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
             DaggerfallCareerDefinition initialCareer = definitions.Catalogs.RequireCareer(playerDefinition.Career
                 ?? throw new InvalidOperationException("The Daggerfall player definition must name its initial career."));

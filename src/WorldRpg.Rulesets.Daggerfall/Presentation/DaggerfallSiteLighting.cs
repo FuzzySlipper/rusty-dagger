@@ -16,6 +16,9 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     // before the session it replaces is disposed, so each lighting instance names its lights apart.
     private static long s_lastInstance;
     private readonly List<Light> _lights = [];
+    private readonly Dictionary<long, Light> _mobileLights = [];
+    private readonly long _instance;
+    private readonly string _profileId;
     private readonly List<(Light Light, LightRequest Request)> _points = [];
     private readonly List<LightRequest> _suspendedPoints = [];
     private readonly IGraphicsService _graphics;
@@ -47,7 +50,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _camera = camera;
         _profileKind = inputs.ProfileKind;
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
-        long instance = Interlocked.Increment(ref s_lastInstance);
+        long instance = _instance = Interlocked.Increment(ref s_lastInstance);
+        _profileId = inputs.ProfileKey.LogicalId;
         _ambientId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "ambient");
         _magicCandleId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "magic-candle");
         _sunId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "sun");
@@ -119,6 +123,32 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     }
 
 
+    internal void UpdateMobileLights(IEnumerable<WorldRpg.Kit.Actors.ActorState> actors,
+        IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions, DaggerfallMobileCatalogSet mobiles)
+    {
+        if (_disposed || _suspended) return;
+        HashSet<long> live = [];
+        foreach (var actor in actors)
+        {
+            if (actor.IsDefeated || !definitions.TryGetValue(actor.DurableId, out var definition)
+                || definition.MobileId is not int id || !mobiles.Mobiles.TryGetValue(id, out var mobile)
+                || mobile.GlowColor is not Vector3 color) continue;
+            live.Add(actor.DurableId);
+            // SetupDemoEnemy's LightAura: local offset (0,.3,.2), intensity .1 and radius 4.
+            Vector3 forward = WorldRpg.Kit.Actors.ActorHeading.Forward(actor.HeadingYawRadians);
+            Vector3 position = actor.Position.ToVector() + Vector3.UnitY * .3f + forward * .2f;
+            var request = new LightRequest(LogicalLightId(_profileId, _instance, $"mobile:{actor.DurableId}"), false, 0,
+                new LightDescriptor(LightKind.Point, color, _tuning.MobileGlowIntensity, true, position, Vector3.Zero, true, _tuning.MobileGlowRange, 2f, 0f, 0f, LightShadowIntent.Disabled));
+            if (_mobileLights.TryGetValue(actor.DurableId, out var light)) _graphics.UpdateLight(new(light, request));
+            else { light = _graphics.CreateLight(request); _mobileLights.Add(actor.DurableId, light); _lights.Add(light); }
+        }
+        foreach (long retired in _mobileLights.Keys.Where(id => !live.Contains(id)).ToArray())
+        {
+            Light light = _mobileLights[retired];
+            _mobileLights.Remove(retired); _lights.Remove(light); light.Dispose();
+        }
+    }
+
     internal void Rebase(Vector3 delta)
     {
         if (_suspended)
@@ -171,6 +201,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _suspendedPoints.Clear();
         _suspendedPoints.AddRange(_points.Select(value => value.Request));
         foreach (Light light in _lights.AsEnumerable().Reverse()) light.Dispose();
+        _mobileLights.Clear();
         _points.Clear();
         _lights.Clear();
         _ambient = null;
@@ -209,7 +240,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         catch
         {
             foreach (Light light in created.AsEnumerable().Reverse()) light.Dispose();
-            _points.Clear();
+            _mobileLights.Clear();
+        _points.Clear();
             _lights.Clear();
             _ambient = null;
         _sun = null;
@@ -263,6 +295,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             try { light.Dispose(); }
             catch (Exception exception) { (failures ??= []).Add(exception); }
         }
+        _mobileLights.Clear();
         _points.Clear();
         _lights.Clear();
         _suspendedPoints.Clear();

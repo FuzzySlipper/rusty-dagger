@@ -7,6 +7,18 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class EnemyMotorPolicyTests
 {
     [Theory]
+    [InlineData(4, PursuitState.Retreat)]
+    [InlineData(9, PursuitState.Idle)]
+    [InlineData(12, PursuitState.Chase)]
+    public void Published_ranged_preference_keeps_usable_distance(double distance, PursuitState expected)
+    {
+        var policy = DaggerfallEnemyMotorPolicy.Select(new(), new(CanRetreat: true),
+            DaggerfallPursuitManeuverTuning.Default, new(1, 1, false, false, false, PrefersRanged: true),
+            new(true, distance, 10), true, true, true, .1f, (_, _, _) => throw new Exception("No random maneuver needed."));
+        Assert.Equal(expected, policy.Maneuver);
+    }
+
+    [Theory]
     [InlineData(true, false, false, false)]
     [InlineData(false, true, false, false)]
     [InlineData(false, false, true, false)]

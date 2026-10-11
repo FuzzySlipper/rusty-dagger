@@ -9,8 +9,6 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </summary>
 internal sealed class DaggerfallItemValuation(DaggerfallDefinitions definitions)
 {
-    // EnemyBasics soul values, consumed by ItemBuilder.CreateRandomlyFilledSoulTrap.
-    private static readonly int[] SoulValues = [0, 1000, 1000, 0, 0, 0, 0, 1000, 3000, 1000, 10000, 0, 1000, 3000, 1000, 0, 3000, 0, 30000, 10000, 0, 3000, 3000, 30000, 1000, 50000, 50000, 10000, 70000, 150000, 100000, 800000, 100000, 250000, 0, 30000, 30000, 30000, 30000, 0, 500000, 10000, 10000];
     private readonly DaggerfallDefinitions _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
 
     internal int CurrentValue(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata)
@@ -21,7 +19,9 @@ internal sealed class DaggerfallItemValuation(DaggerfallDefinitions definitions)
             throw new InvalidOperationException($"Item metadata '{metadata.ItemId}' does not belong to definition '{definition.Id.Value}'.");
 
         if (metadata.ItemId == "template-274")
-            return 5000 + (metadata.CapturedSoulMobileId is int soul ? SoulValues[soul] : 0);
+            return checked(5000 + (metadata.CapturedSoulMobileId is int soul
+                ? _definitions.Mobiles.Mobiles.TryGetValue(soul, out var mobile) ? mobile.SoulPoints
+                    : throw new InvalidOperationException($"Soul gem names unpublished mobile {soul}.") : 0));
         if (metadata.PotionRecipeKey is int recipe) return _definitions.Magic.PotionRecipes[recipe].Price;
         if (metadata.MadeEnchantment is { } made) return made.Value;
         if (metadata.Enchantment is { } enchantment)

@@ -39,6 +39,10 @@ internal sealed record DaggerfallMobileDefinition(
     string Team,
     int AttackModifierFlags)
 {
+    internal int SoulPoints { get; init; }
+    internal bool NoShadow { get; init; }
+    internal bool PrefersRanged { get; init; }
+    internal System.Numerics.Vector3? GlowColor { get; init; }
     internal int ResistanceFlags { get; init; }
     internal int ImmunityFlags { get; init; }
     internal int LowToleranceFlags { get; init; }

@@ -4,7 +4,7 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>Product-owned Daggerfall mechanics definitions and actor construction.</summary>
-internal sealed class DaggerfallMechanicsState(DaggerfallEnemySpells? enemySpells = null)
+internal sealed class DaggerfallMechanicsState(DaggerfallEnemySpells? enemySpells = null, DaggerfallVocabulary? vocabulary = null)
 {
     private const long MinimumStatValue = 0;
     private const long MaximumStatValue = 10_000;
@@ -22,6 +22,10 @@ internal sealed class DaggerfallMechanicsState(DaggerfallEnemySpells? enemySpell
         DaggerfallVitalValues vitals)
     {
         ArgumentNullException.ThrowIfNull(definition);
+        // All factory paths (authored, spawned, transformed and restored) share this skill setup.
+        // Casters subsequently replace their six magic schools with the donor's fixed 80.
+        if (vocabulary is not null && definition.Kind == DaggerfallActorKinds.Monster)
+            definition = DaggerfallEncounterActors.AtLevel(definition, vocabulary, definition.Level ?? 1);
         bool caster = enemySpells?.IsCaster(definition.MobileId) == true;
         if (caster) vitals = vitals with { MagickaMaximum = DaggerfallEnemySpells.MagickaMaximum(definition.Level ?? 1) };
         ValidateVitals(vitals);

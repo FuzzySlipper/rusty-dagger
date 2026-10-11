@@ -779,6 +779,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             ? playerPosition.ToVector() + new Vector3(facing.X * _tuning.NormalLight.Distance,
                 _spatial.CurrentController.Shape.StandingHeight * _tuning.NormalLight.HeightFraction,
                 facing.Z * _tuning.NormalLight.Distance) : null;
+        _sites.Projection.Lighting.UpdateMobileLights(State.Actors.All, _roster.Definitions, _definitions.Mobiles);
         _sites.Projection.Lighting.UpdateMagicCandle(candlePosition, _tuning.NormalLight);
         _appearance.UpdateMagicCandle(candlePosition);
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);

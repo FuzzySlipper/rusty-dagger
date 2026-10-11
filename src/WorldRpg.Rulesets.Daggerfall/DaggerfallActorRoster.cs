@@ -115,7 +115,7 @@ internal sealed class DaggerfallActorRoster
         GrantSpawnLoadout(replacement, definition);
         _definitionsByActor[durableId] = definition;
         if (_dynamicActors.ContainsKey(durableId)) _dynamicActors[durableId] = definition.Id;
-        Appearance.AddActor(durableId, sprite);
+        Appearance.AddActor(durableId, sprite, definition.MobileId);
         return new(DaggerfallWabbajackOutcome.Transformed, durableId, definition.Id.Value);
     }
 
@@ -134,8 +134,7 @@ internal sealed class DaggerfallActorRoster
         if (level is < 1) throw new ArgumentOutOfRangeException(nameof(level));
         if (spawnDistance is < 0 or > 6) throw new ArgumentOutOfRangeException(nameof(spawnDistance));
         // Class enemies level to the player the way the donor levels them; monsters carry their
-        // own level. Pack skills stay as authored: the donor overwrites every skill from the
-        // spawn level, but authored pack values own that meaning here.
+        // own level. Every enemy skill starts from that level before caster school overrides.
         int spawnLevel = level ?? definition.Level ?? (definition.Kind == DaggerfallActorKinds.EnemyClass ? _state.Progression.Level : 1);
         DurableIdentityReference identity = _identities.Allocate(DurableIdentityKind.Actor);
         long durableId = checked((long)identity.Value);
@@ -159,7 +158,7 @@ internal sealed class DaggerfallActorRoster
             {
                 if (!_projection().Inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Spawned actor '{spawnedDefinition.Id.Value}' has no admitted mobile {mobileId} presentation.");
-                Appearance.AddActor(durableId, sprite);
+                Appearance.AddActor(durableId, sprite, definition.MobileId);
             }
             _definitionsByActor.Add(durableId, spawnedDefinition);
             _dynamicActors.Add(durableId, spawnedDefinition.Id);
@@ -394,13 +393,13 @@ internal sealed class DaggerfallActorRoster
             {
                 if (!destination.MobileSprites.TryGetValue(authoredMobile, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored authored actor '{placement.EntityId}' has no admitted mobile {authoredMobile} presentation.");
-                appearance.AddActor(actor.DurableId, sprite.ForGender(placement.Gender));
+                appearance.AddActor(actor.DurableId, sprite.ForGender(placement.Gender), definition.MobileId);
             }
             if (prior is null) GrantStartingEquipment(actor, definition);
             if (prior?.WabbajackDefinition is not null && definition.MobileId is int changedMobile)
             {
                 appearance.RetireActor(actor.DurableId);
-                appearance.AddActor(actor.DurableId, destination.MobileSprites[changedMobile]);
+                appearance.AddActor(actor.DurableId, destination.MobileSprites[changedMobile], changedMobile);
             }
         }
         if (delta is null) return;
@@ -422,7 +421,7 @@ internal sealed class DaggerfallActorRoster
                 DaggerfallSiteProfile presentation = projection?.Inputs ?? _projection().Inputs;
                 if (!presentation.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored dynamic actor '{saved.Definition}' has no admitted mobile {mobileId} presentation.");
-                (projection?.Appearance ?? Appearance).AddActor(saved.EntityId, sprite);
+                (projection?.Appearance ?? Appearance).AddActor(saved.EntityId, sprite, mobileId);
             }
             // A retained NPC actor owns its pose again; the registry keeps identity and binding only.
             _state.Npcs.ReleasePose(saved.EntityId);
@@ -506,7 +505,7 @@ internal sealed class DaggerfallActorRoster
 
     private void GrantStartingEquipment(ActorState actor, DaggerfallActorDefinition definition)
     {
-        if (definition.Kind != DaggerfallActorKinds.EnemyClass && definition.MobileId is not (7 or 8 or 12)) return;
+        if (definition.Kind != DaggerfallActorKinds.EnemyClass && definition.MobileId is not (7 or 8 or 12 or 21 or 24)) return;
         if (definition.MobileId is not int mobileId) throw new InvalidOperationException($"Class actor '{definition.Id.Value}' has no equipment mobile id.");
         MechanicsInventoryCoordinator inventory = _state.ActorInventories.InventoryFor(actor.DurableId)
             ?? throw new InvalidOperationException($"Spawned actor {actor.DurableId} has no registered inventory.");
@@ -514,7 +513,7 @@ internal sealed class DaggerfallActorRoster
             actor.DurableId, mobileId, _state.Progression.Level,
             _state.Character.Identity.RaceId,
             _state.Character.Identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male",
-            fixedVariant: mobileId switch { 7 => 0, 8 or 12 => 1, _ => null });
+            fixedVariant: mobileId switch { 7 or 21 => 0, 8 or 12 => 1, 24 => 2, _ => null });
         DaggerfallClassEnemyEquipmentPolicy.CoatStartingWeapon(_random, _state.ItemInstances,
             _state.ActorInventories.EquipmentFor(actor.DurableId), actor.DurableId, mobileId, _state.Progression.Level);
     }

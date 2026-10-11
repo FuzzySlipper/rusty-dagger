@@ -24,6 +24,22 @@ public sealed class Arena2MobileCatalogDocumentTests
         }
     }
 
+    [DonorFact("Assets/Scripts/Utility/EnemyBasics.cs")]
+    public void Publishes_soul_glow_shadow_and_ranged_preference_from_source()
+    {
+        var publication = Arena2MobileCatalogDocument.Build(File.ReadAllText(TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs")), Pack(), "donor/EnemyBasics.cs");
+        var rows = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
+        JsonNode Row(int id) => rows.Single(row => row!["donorId"]!.GetValue<int>() == id)!;
+        Assert.Equal(3000, Row(21)["soulPoints"]!.GetValue<int>());
+        Assert.True(Row(18)["noShadow"]!.GetValue<bool>());
+        Assert.Equal(1.8f, Row(25)["glowColor"]!["red"]!.GetValue<float>(), 5);
+        Assert.Equal(6.8f, Row(25)["glowColor"]!["green"]!.GetValue<float>(), 5);
+        Assert.Equal(8.8f, Row(25)["glowColor"]!["blue"]!.GetValue<float>(), 5);
+        Assert.True(Row(141)["prefersRanged"]!.GetValue<bool>());
+        Assert.Null(Row(0)["glowColor"]);
+        Assert.False(Row(0)["noShadow"]!.GetValue<bool>());
+    }
+
     [Fact]
     public void PublishesEveryDonorParameterAndNamesEachMobileDisposition()
     {

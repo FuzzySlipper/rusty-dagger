@@ -187,7 +187,7 @@ internal sealed partial class DaggerfallSession
             // before activation can query them and before the first character step consumes them.
             DaggerfallSiteProjection projection = DaggerfallSiteProjection.Create(engine, actors.Entities, _random, tuning, _time.Calendar,
                 inputs, audioBundles?.Require(inputs), _spatial, ConfigureSiteAppearance, saved?.Doors, saved?.DungeonMotion,
-                sessionPresentation: composition.StartSite.ClassicPresentation);
+                sessionPresentation: composition.StartSite.ClassicPresentation, definitions: _definitions);
             partiallyConstructed.Add(projection);
             DaggerfallDungeonActionTriggerRuntime actionTriggers = new(
                 actors.Entities, engine.Spatial, _spatial, actionProfiles, activeProfile);
@@ -202,7 +202,7 @@ internal sealed partial class DaggerfallSession
                 if (!inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored dynamic actor '{definition.Id.Value}' has no admitted mobile {mobileId} presentation.");
                 projection.Appearance.RetireActor(actor.DurableId);
-                projection.Appearance.AddActor(actor.DurableId, sprite);
+                projection.Appearance.AddActor(actor.DurableId, sprite, mobileId);
             }
             if (saved is null)
             {
