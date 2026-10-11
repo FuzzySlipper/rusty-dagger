@@ -209,41 +209,13 @@ internal sealed partial class DaggerfallSession
             if (_time.Calendar.ToAbsoluteSeconds() % DaggerfallCalendar.SecondsPerMinute != 0) continue;
 
             long minute = _time.Calendar.ToAbsoluteSeconds() / DaggerfallCalendar.SecondsPerMinute;
-            DaggerfallEncounterRequest? encounter = RestEncounterRequest(minute);
+            DaggerfallEncounterRequest? encounter = WorldEncounterRequest(minute, resting: true);
             if (encounter is null) continue;
             DaggerfallEncounterResolution selected = QueueEncounter(encounter);
             if (selected.Choice.MobileId is not null)
                 return new(requestedSeconds, applied, DaggerfallRestInterruption.Encounter);
         }
         return new(requestedSeconds, applied);
-    }
-
-    /// <summary>
-    /// Builds the source encounter context for each elapsed eligible game minute. The donor checks
-    /// intermittent spawns at minutes where (minute / 12) % 12 is zero and retries after failed draws.
-    /// </summary>
-    private DaggerfallEncounterRequest? RestEncounterRequest(long minute)
-    {
-        if ((minute / 12) % 12 != 0 || !_site.TryFind(_activeProfileKey.Site, out DaggerfallSiteRecord site)) return null;
-
-        if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon)
-            return new(DaggerfallEncounterContext.Dungeon, State.Progression.Level,
-                DungeonType: site.DungeonType, EnemyAlert: true);
-        if (_activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return null;
-
-        DaggerfallExteriorCellId cell = _sites.CurrentExteriorCell();
-        DaggerfallClimateCell climate = _definitions.Grids.ClimateAtWorldPixel(cell.X, cell.Y);
-        if (climate.Value is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232))
-            throw new InvalidOperationException($"Exterior rest at {cell.X}/{cell.Y} has no encounter climate.");
-        long timeOfDay = minute % (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour);
-        bool day = timeOfDay is >= 360 and <= 1080;
-        bool atLocation = site.Exterior is { } exterior
-            && cell == new DaggerfallExteriorCellId(exterior.MapPixelX, exterior.MapPixelY);
-        if (atLocation && day) return null;
-        DaggerfallEncounterContext context = atLocation
-            ? DaggerfallEncounterContext.LocationNight
-            : day ? DaggerfallEncounterContext.WildernessDay : DaggerfallEncounterContext.WildernessNight;
-        return new(context, State.Progression.Level, Climate: climate.Value);
     }
 
     private bool HasNearbyRestEnemy()

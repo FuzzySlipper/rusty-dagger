@@ -68,7 +68,6 @@ internal sealed partial class DaggerfallSession
             State.Effects.EnhancesJumping(DaggerfallActorIdentity.PlayerEntityId), slowfall);
         CharacterMotion motionBefore = State.PlayerControl.Motion;
         WorldPoint? positionBefore = State.PlayerControl.Position;
-        bool activeLocationLoaded = _sites.ActiveLocationLoaded;
         _doors.Advance(update.DeltaSeconds);
         _sites.Projection.AdvanceMotion(update.DeltaSeconds);
         _sites.SyncCityGates();
@@ -141,9 +140,7 @@ internal sealed partial class DaggerfallSession
             // A player who has dropped beneath the terrain is stood back on it rather than falling for ever.
             _ = _sites.RecoverPlayerBelowTerrain();
             // A terrain cell can remain resident while the authored location closure is unloaded.
-            // Finish the movement/origin boundary, then keep location-scoped AI, encounters and
-            // interactions from observing a projection whose actors and geometry are intentionally absent.
-            activeLocationLoaded = _sites.ActiveLocationLoaded;
+            // Its live wilderness actors still use the admitted terrain and actor owners.
         }
         if (movement is not null)
             ReconcileTriggers(doorEnvironment, simulationStep, actionGraph);
@@ -177,7 +174,6 @@ internal sealed partial class DaggerfallSession
         if (_sites.RebaseExteriorIfNeeded())
             ReconcileTriggers(_sites.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, actionGraph);
         _camera.Update(State.PlayerControl);
-        if (!activeLocationLoaded) return;
         if (!alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
         _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, pending => PlaceEncounter(pending, simulationStep));
         UpdateLaw(update.DeltaSeconds);
@@ -228,7 +224,7 @@ internal sealed partial class DaggerfallSession
         // quest clock state; elapsed duration is still consumed by the calendar owner above.
         State.Quests.Advance(State.Variables, _time.Calendar, update.DeltaSeconds);
         _dialogue?.SynchronizeWorldState();
-        State.Quests.AdmitPlacements(_sites.Projection.Inputs, this);
+        if (_sites.ActiveLocationLoaded) State.Quests.AdmitPlacements(_sites.Projection.Inputs, this);
         State.Quests.ReconcileFoeCommands();
         ReconcileNpcProjection();
         UpdateCivilianPopulation(simulationStep, update.DeltaSeconds);
@@ -288,14 +284,14 @@ internal sealed partial class DaggerfallSession
 
     /// <summary>
     /// Runs the acts a step deferred behind an enemy hit on the player, once this update's impacts have
-    /// landed. A lethal impact, a legal modal or an unloaded location leaves them unperformed, as it
+    /// landed. A lethal impact or a legal modal leaves them unperformed, as it
     /// would have in the step itself.
     /// </summary>
     private void ApplyDeferredPlayerActs()
     {
         if (_deferredPlayerActs is not { } acts) return;
         _deferredPlayerActs = null;
-        if (LegalModalOpen || !_sites.ActiveLocationLoaded || State.Actors.Player.IsDefeated
+        if (LegalModalOpen || State.Actors.Player.IsDefeated
             || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d)
             return;
         ApplyPlayerActs(acts);

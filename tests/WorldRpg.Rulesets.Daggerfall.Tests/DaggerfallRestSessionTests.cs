@@ -261,6 +261,97 @@ public sealed class DaggerfallRestSessionTests
         Assert.Equal(JsonSerializer.Serialize(townBefore.Actors), JsonSerializer.Serialize(townAfter.Actors));
     }
 
+    [Theory]
+    [InlineData(true, 0, true)]
+    [InlineData(false, 0, true)]
+    [InlineData(true, 864, true)]
+    [InlineData(false, 864, false)]
+    [InlineData(true, 12, false)]
+    public void Ordinary_world_minutes_follow_source_window_and_location_eligibility(bool wilderness, int minute, bool expected)
+    {
+        using WorldEncounterFixture f = new(wilderness);
+        f.Session.AdvanceElapsedTime(minute * 60);
+        Assert.Empty(DaggerfallSavePayload.Read(f.Session.CaptureSave()).Encounters.Resolved);
+        f.Session.Update(new ProductUpdate(OuterUpdate(1) with { FixedDeltaSeconds = 5 }, []));
+        DaggerfallEncounterResolution[] selected = DaggerfallSavePayload.Read(f.Session.CaptureSave()).Encounters.Resolved;
+        if (!expected) { Assert.Empty(selected); return; }
+        DaggerfallEncounterResolution pending = Assert.Single(selected);
+        Assert.Null(pending.SpawnedActorId); // No valid ground yet: selection survives placement failure.
+        Assert.Equal(!wilderness ? DaggerfallEncounterContext.LocationNight
+            : minute == 0 ? DaggerfallEncounterContext.WildernessNight : DaggerfallEncounterContext.WildernessDay,
+            pending.Request.Context);
+    }
+
+    [Fact]
+    public void Ordinary_wilderness_encounter_restores_pending_then_places_on_ground_at_source_distance_once()
+    {
+        using WorldEncounterFixture f = new(wilderness: true);
+        f.Session.Update(new ProductUpdate(OuterUpdate(1) with { FixedDeltaSeconds = 5 }, []));
+        DaggerfallSavePayload pending = DaggerfallSavePayload.Read(f.Session.CaptureSave());
+        Assert.Null(Assert.Single(pending.Encounters.Resolved).SpawnedActorId);
+        using DaggerfallSession restored = f.Restore(pending);
+        Assert.Equal(JsonSerializer.Serialize(pending.Encounters),
+            JsonSerializer.Serialize(DaggerfallSavePayload.Read(restored.CaptureSave()).Encounters));
+        WorldPoint player = restored.State.PlayerControl.Position!.Value;
+        f.Spatial.FloorHit = request => request.Direction.Y < -.99f
+            ? new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh, Normal = Vector3.UnitY,
+                Point = request.Origin with { Y = player.Y } }
+            : default;
+        restored.Update(new ProductUpdate(OuterUpdate(2), []));
+        DaggerfallSavePayload placed = DaggerfallSavePayload.Read(restored.CaptureSave());
+        long actorId = Assert.IsType<long>(Assert.Single(placed.Encounters.Resolved).SpawnedActorId);
+        Assert.True(restored.Sites.Projection.Appearance.HasActor(actorId));
+        Assert.Contains(actorId, restored.LastEnemyBehavior.Keys);
+        Assert.False(restored.Sites.ActiveLocationLoaded);
+        Assert.InRange(Vector3.Distance(restored.State.PlayerControl.Position!.Value.ToVector(), restored.State.Actors.Get(actorId).Position.ToVector()), 10f, 20f);
+        Assert.NotEmpty(f.Spatial.FloorProbes);
+        Assert.NotEmpty(f.Spatial.OverlapRequests);
+        using DaggerfallSession again = f.Restore(placed);
+        Assert.True(again.Sites.Projection.Appearance.HasActor(actorId));
+        again.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.Equal(actorId, Assert.Single(DaggerfallSavePayload.Read(again.CaptureSave()).Encounters.Resolved).SpawnedActorId);
+        Assert.Single(again.State.Actors.All.Where(actor => actor.DurableId == actorId));
+    }
+
+    [Fact]
+    public void Ordinary_dungeon_walk_does_not_admit_the_rest_only_dungeon_spawn()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture();
+        f.Update(fixedDelta: 5);
+        Assert.Empty(DaggerfallSavePayload.Read(f.Session.CaptureSave()).Encounters.Resolved);
+    }
+
+    private sealed class WorldEncounterFixture : IDisposable
+    {
+        internal readonly DaggerfallSession Session;
+        internal readonly SpatialFake Spatial;
+        private readonly EngineContextFake _engine;
+        private readonly DaggerfallSessionComposition _inputs;
+
+        internal WorldEncounterFixture(bool wilderness)
+        {
+            DaggerfallSiteProfile source = ReadInputs(TestData.RepositoryRoot);
+            DaggerfallSiteProfile exterior = ExteriorContentAt(source, source.ProfileKey.Site, "ordinary-encounter");
+            List<string> releases = [];
+            ContentFake content = new(releases);
+            PopulateContent(content, exterior);
+            PopulateTerrainContent(content, exterior);
+            Spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+            Spatial.KeepPosition = true;
+            _engine = EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
+            ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot),
+                new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+            _inputs = new(TestPayload.Definitions, exterior, DaggerfallTuning.Defaults, identity)
+                { Sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content) };
+            Session = DaggerfallSession.StartNew(_engine.Context, _inputs);
+            if (wilderness)
+                Session.State.PlayerControl.MoveTo(new WorldPoint(DaggerfallExteriorCellResidency.CellSize * (DaggerfallExteriorCellResidency.StreamingRadius + 1) + 1, Session.State.PlayerControl.Position!.Value.Y, 1).ToVector());
+        }
+        internal DaggerfallSession Restore(DaggerfallSavePayload save) =>
+            DaggerfallSession.Restore(_engine.Context, _inputs, DaggerfallSavePayload.Encode(save));
+        public void Dispose() => Session.Dispose();
+    }
+
     private static DaggerfallSiteProfile ExteriorContentAt(DaggerfallSiteProfile source, DaggerfallSiteId site,
         string logicalId) => new(
         new ProjectFacts(new WorldPoint(1f, 1f, 1f), source.Project.Actors),

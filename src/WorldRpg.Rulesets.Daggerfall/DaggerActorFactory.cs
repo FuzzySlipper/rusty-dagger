@@ -201,7 +201,7 @@ internal static class DaggerActorFactory
             DaggerfallCharacterState character = new(definitions, player.Stats, playerDefinition, saved?.Character);
             DaggerfallQuestInstances quests = new(definitions, random, questAdmission, disabledQuestSelection);
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
-            if (saved is not null && materializeActiveSite) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
+            if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
             return new(
                 new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians),
                 actors, inventoryStore, inventory, equipmentCoordinator, containers,

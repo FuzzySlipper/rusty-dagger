@@ -179,12 +179,12 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     /// profile projection and its product state. Durable resource identities are recreated by
     /// <see cref="Resume"/> under the same profile key.
     /// </summary>
-    internal void Suspend()
+    internal void Suspend(IReadOnlySet<long>? retainedActors = null)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteProjection));
         if (_suspended) return;
         DeactivateWaterTriggers(tick: 0);
-        Appearance.RetireAllActors();
+        Appearance.RetireAllActors(retainedActors);
         Appearance.SuspendLocationResources();
         CityGates.Suspend();
         Motion.Suspend();

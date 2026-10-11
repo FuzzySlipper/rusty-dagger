@@ -870,7 +870,8 @@ internal sealed class DaggerfallSiteLifecycle
         if (savedLocation?.Loaded == false)
         {
             _locationLoaded = false;
-            Projection.Suspend();
+            // Restored wilderness actors are live independently of the detached location.
+            Projection.Suspend(_roster.Dynamic.Keys.ToHashSet());
             RemoveLocationArtifact(Projection.Inputs);
             _host.RebuildActivation();
         }
