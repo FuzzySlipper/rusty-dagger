@@ -100,6 +100,8 @@ internal static class DaggerfallSiteContent
         string mediaPath = Prefix(DaggerfallWorldMedia.DungeonSidecarRelativePath);
         ContentSha256 spatialHash = RequireArtifact(artifacts, spatialPath, diagnostics);
         ContentSha256 meshHash = RequireArtifact(artifacts, meshPath, diagnostics);
+        _ = files.GetExactlyOne(spatialPath);
+        _ = files.GetExactlyOne(meshPath);
         _ = RequireArtifact(artifacts, normalizedPath, diagnostics);
         _ = RequireArtifact(artifacts, mediaPath, diagnostics);
         // A site presents the product-wide classic sidecar unless it carries its own (an authored overlay).
@@ -771,8 +773,7 @@ internal static class DaggerfallSiteContent
 
                 try
                 {
-                    if (files.GetExactlyOne(visualArtifact.Path) is null)
-                        throw new InvalidOperationException($"Normalized action-model visual '{visualArtifact.Path}' is not admitted.");
+                    _ = files.GetExactlyOne(visualArtifact.Path);
                     IReadOnlyList<DaggerfallMeshMaterialBinding> materialBindings = ActionModelMaterials(
                         visualMaterialIds, actionId, worldMaterialSlots, diagnostics);
                     DaggerfallDoorVisual visual = new DaggerfallDoorVisual(visualArtifact.Path, visualArtifact.Sha256, materialBindings).Validate();
@@ -1423,12 +1424,11 @@ internal static class DaggerfallSiteContent
 
     private static Dictionary<string, ContentSha256> ReadImportArtifacts(AdmittedFiles files, string manifestPath, string publicationRoot, DaggerfallContentDiagnostics diagnostics)
     {
-        ReadOnlyMemory<byte>? bytes = files.GetExactlyOne(manifestPath);
-        if (bytes is null) { diagnostics.Add($"Generated import manifest '{manifestPath}' must occur exactly once in admitted content."); return []; }
+        ReadOnlyMemory<byte> bytes = files.GetExactlyOne(manifestPath);
         Dictionary<string, ContentSha256> artifacts = new(StringComparer.Ordinal);
         try
         {
-            using JsonDocument document = JsonDocument.Parse(bytes.Value);
+            using JsonDocument document = JsonDocument.Parse(bytes);
             foreach (JsonElement artifact in DaggerfallBaseContent.Array(DaggerfallBaseContent.Object(document.RootElement, "import manifest", diagnostics), "artifacts", diagnostics))
             {
                 JsonElement value = DaggerfallBaseContent.Object(artifact, "import artifact", diagnostics);
@@ -1840,7 +1840,7 @@ internal static class DaggerfallSiteContent
                 // their bodies are opened from the world media audio bundle on the first cue.
                 // Everything else is part of the eagerly admitted content.
                 bool hasExpectedBody = kind == "audio"
-                    || files.GetExactlyOne(path) is ReadOnlyMemory<byte> artifactBytes && artifactBytes.Length == byteLength;
+                    || files.GetExactlyOne(path).Length == byteLength;
                 if (!ValidLogicalId(id) || !ValidLogicalPath(relativePath) || !KnownClassicMediaKind(kind) || byteLength <= 0 || string.IsNullOrWhiteSpace(mimeType) || sourceWidth < 0 || sourceHeight < 0
                     || atlasWidth < 0 || atlasHeight < 0 || !hasExpectedBody)
                     diagnostics.Add($"Classic media descriptor '{id}' does not match the canonical importer contract.");
@@ -2044,11 +2044,7 @@ internal static class DaggerfallSiteContent
                 continue;
             }
 
-            if (files.GetExactlyOne(path) is null)
-            {
-                diagnostics.Add($"Classic world visual '{mediaId}' has no published mesh body at '{relativePath}'.");
-                continue;
-            }
+            _ = files.GetExactlyOne(path);
 
             // The descriptor states the texture each of the mesh's own material slots draws with. The
             // importer publishes each slot from the assembly that wrote the mesh and checks that every
@@ -2067,7 +2063,7 @@ internal static class DaggerfallSiteContent
                 long byteLength = Long(texture, "byteLength", diagnostics);
                 if (!ValidLogicalPath(textureRelativePath)
                     || !artifacts.TryGetValue(texturePath, out ContentSha256 admitted) || admitted != textureDigest
-                    || files.GetExactlyOne(texturePath) is not ReadOnlyMemory<byte> textureBytes || textureBytes.Length != byteLength)
+                    || files.GetExactlyOne(texturePath).Length != byteLength)
                 {
                     diagnostics.Add($"Classic world visual '{mediaId}' names texture '{textureRelativePath}', which the import manifest does not admit at '{textureDigest}'.");
                     usable = false;
@@ -2355,9 +2351,8 @@ internal static class DaggerfallSiteContent
         JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics);
         if (!world.TryGetProperty("arrivalFromSourceMarker", out JsonElement enabled) || enabled.ValueKind != JsonValueKind.True) return null;
         string path = DaggerfallBaseContent.Text(world, "publicationRoot", diagnostics) + "/normalized.json";
-        ReadOnlyMemory<byte>? bytes = files.GetExactlyOne(path);
-        if (bytes is null) throw new InvalidOperationException($"The source arrival world has no admitted normalized document '{path}'.");
-        using JsonDocument normalized = JsonDocument.Parse(bytes.Value);
+        ReadOnlyMemory<byte> bytes = files.GetExactlyOne(path);
+        using JsonDocument normalized = JsonDocument.Parse(bytes);
         JsonElement marker = normalized.RootElement.GetProperty("world").GetProperty("startMarker");
         if (marker.ValueKind != JsonValueKind.Object) throw new InvalidOperationException("The selected world has no normalized source start marker for arrival.");
         JsonElement point = marker.GetProperty("position");
@@ -2555,7 +2550,9 @@ internal sealed class AdmittedFiles
     private AdmittedFiles(ProductContent content) => _content = content;
     internal static AdmittedFiles From(ProductContent content) => new(content ?? throw new ArgumentNullException(nameof(content)));
     internal bool ContainsExactlyOne(string path) => _content.TryReadFile(path, out _);
-    internal ReadOnlyMemory<byte>? GetExactlyOne(string path) => _content.TryReadFile(path, out ProductContentFile file) ? file.Bytes : null;
+    internal ReadOnlyMemory<byte> GetExactlyOne(string path) => _content.TryReadFile(path, out ProductContentFile file)
+        ? file.Bytes
+        : throw new DaggerfallContentException([$"Required admitted file '{path}' is missing; the site cannot be loaded without it."]);
 }
 
 internal sealed record ScenarioStart(WorldPoint Position, PlayerInitialLook Look, DaggerfallSiteId? Site);
