@@ -101,16 +101,9 @@ internal sealed class DaggerfallEnemyMagicModule
         if (observed is not { } pair || pair.Kind != PerceptionPairKind.Visible
             || !double.IsFinite(pair.Distance) || pair.Distance < 0d) return false;
 
-        DaggerfallMobileDefinition? mobile = definition.MobileId is int mobileId
-            ? _definitionMobile(mobileId) : null;
-        bool hasBow = mobile?.HasRangedAttack1 == true
-            && (mobile.CastsMagic == false || mobile.HasRangedAttack2);
-
-        List<string> ranged = SpellKeys(definition)
-            .Where(key => TargetOf(key) is DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange)
-            .ToList();
+        List<string> ranged = RangedSpellKeys(definition);
         if (pair.Distance > MinimumRangedDistance && pair.Distance < MaximumRangedDistance
-            && pair.FacingCosine >= RangedFacingCosine && ranged.Count > 0 && !hasBow)
+            && pair.FacingCosine >= RangedFacingCosine && ranged.Count > 0 && !HasBow(definition))
         {
             string selected = Select(ranged, actor.DurableId, generation, simulationStep, "ranged");
             if (!_casting.EffectsAlreadyOnTarget(selected, target.DurableId)
@@ -137,15 +130,32 @@ internal sealed class DaggerfallEnemyMagicModule
             && TryExecute(touchAttempt, generation, simulationStep);
     }
 
+    /// <summary>
+    /// EnemyMotor.CanCastRangedSpell: inside the ranged band a caster without a bow attack has a
+    /// ranged spell ready while it has magicka, a ranged spell whose effects are not already on the
+    /// target, and a clear missile path. The motor holds or strafes while this is true.
+    /// </summary>
+    internal bool HasRangedSpellReady(ActorState actor, PursuitTarget target, double distance)
+    {
+        if (actor.IsDefeated || distance <= MinimumRangedDistance || distance >= MaximumRangedDistance) return false;
+        DaggerfallActorDefinition? definition = _definition(actor.DurableId);
+        if (definition is null || !_spells.IsCaster(definition.MobileId) || HasBow(definition)) return false;
+        if (!actor.Stats.TryGetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), out Track? magicka) || magicka.Current <= 0) return false;
+        string? ready = RangedSpellKeys(definition).FirstOrDefault(key => !_casting.EffectsAlreadyOnTarget(key, target.DurableId));
+        return ready is not null && TryBuildAttempt(actor, ready, target, out DaggerfallEnemySpellAttempt attempt) && _rangedPathClear(attempt);
+    }
+
+    private List<string> RangedSpellKeys(DaggerfallActorDefinition definition) => SpellKeys(definition)
+        .Where(key => TargetOf(key) is DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange)
+        .ToList();
+
+    /// <summary>EnemyMotor.hasBowAttack: ranged attack 1 is a bow unless the mobile casts magic without ranged attack 2.</summary>
+    private bool HasBow(DaggerfallActorDefinition definition) =>
+        definition.MobileId is int mobileId && _mobileCatalog(mobileId) is { HasRangedAttack1: true } mobile
+        && (mobile.CastsMagic == false || mobile.HasRangedAttack2);
+
     private IReadOnlyList<string> SpellKeys(DaggerfallActorDefinition definition) =>
         _spells.For(definition).Where(key => _catalog.Spells.ContainsKey(key)).ToArray();
-
-    private DaggerfallMobileDefinition? _definitionMobile(int mobileId)
-    {
-        // The mobile catalog is exposed through the actor definition callback's owner.  A null
-        // result is a conservative no-bow decision; the authored spell list remains authoritative.
-        return _mobileCatalog(mobileId);
-    }
 
     private readonly Func<int, DaggerfallMobileDefinition?> _mobileCatalog;
 

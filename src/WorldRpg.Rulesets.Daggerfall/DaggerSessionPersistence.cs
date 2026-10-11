@@ -258,6 +258,7 @@ internal sealed class DaggerSessionPersistence
             SpawnDistance = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance,
             Passive = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive,
             CorruptionOrigin = actor.Actor.TryGet<DaggerfallCorruptionOrigin>(out var origin) ? origin : null,
+            Gender = actor.Actor.TryGet<DaggerfallActorGender>(out var gender) ? gender.Value : null,
             WabbajackActive = DaggerfallWabbajack.DefinitionOf(actor.Actor) is not null,
             PlayerAllied = _actorDefinitions[id].Team == "player-ally",
             ForcedHostile = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile,

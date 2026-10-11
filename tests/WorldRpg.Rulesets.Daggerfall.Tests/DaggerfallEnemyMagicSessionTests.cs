@@ -90,6 +90,39 @@ public sealed class DaggerfallEnemyMagicSessionTests
         Assert.NotEmpty(fixture.Spatial.CapsuleCastRequests);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Caster_with_a_ready_ranged_spell_holds_the_ranged_band(bool pathClear)
+    {
+        using Fixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        WorldPoint playerPosition = session.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The fixture player has no position.");
+        long imp = session.SpawnActor("imp", new ActorPose(playerPosition with { Z = playerPosition.Z - 10f }, 0f), level: 1);
+        session.State.Actors.Get(imp).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value)).SetCurrent(1, clamp: true);
+        fixture.Perception.Receipt = Receipt(new PerceptionPair(
+            checked((ulong)imp), checked((ulong)DaggerfallActorIdentity.PlayerEntityId), 10d, 1d,
+            PerceptionPairKind.Visible, 1d));
+        if (!pathClear)
+        {
+            fixture.Spatial.OverlapHit = _ => default;
+            fixture.Spatial.CapsuleCastHit = _ => new SpatialHit
+            {
+                Present = true,
+                Kind = SpatialHitKind.StaticMesh,
+                Point = playerPosition.ToVector() - Vector3.UnitZ * 5f,
+            };
+        }
+
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        // EnemyMotor.DoRangedAttack: a ready ranged spell stands or strafes; a blocked path runs the melee band.
+        EnemyBehaviorState state = session.LastEnemyBehavior[imp].State;
+        if (pathClear) Assert.Contains(state, new[] { EnemyBehaviorState.Idle, EnemyBehaviorState.Strafe });
+        else Assert.Equal(EnemyBehaviorState.Chase, state);
+    }
+
     [Fact]
     public void Ordinary_enemy_missile_consumes_all_admitted_catch_up_steps()
     {
@@ -110,8 +143,8 @@ public sealed class DaggerfallEnemyMagicSessionTests
         DaggerfallLiveSpell flight = Assert.Single(session.Casting.PendingRangedFlights);
         Assert.Equal(3d / 60d, flight.DungeonFlightElapsedSeconds, 8);
         DaggerfallDungeonSpellFlightView view = Assert.Single(session.ReadDungeonSpellFlights());
-        Vector3 launch = Assert.Single(fixture.Spatial.CapsuleCastRequests).Center;
-        Assert.Equal(1.25f, Vector3.Distance(launch, view.Position.ToVector()), 4);
+        // The motor's ready-spell path checks share the capsule sweep; one of them is the launch.
+        Assert.Contains(fixture.Spatial.CapsuleCastRequests, request => MathF.Abs(Vector3.Distance(request.Center, view.Position.ToVector()) - 1.25f) < 1e-4f);
     }
 
     [Fact]
@@ -143,9 +176,8 @@ public sealed class DaggerfallEnemyMagicSessionTests
         // step-4 and step-5 slices, while the step-3 slice must never be charged retroactively.
         Assert.Equal(4UL, flight.ReleaseSimulationStep);
         Assert.Equal(2d / 60d, flight.DungeonFlightElapsedSeconds, 8);
-        Vector3 launch = Assert.Single(fixture.Spatial.CapsuleCastRequests).Center;
         DaggerfallDungeonSpellFlightView view = Assert.Single(session.ReadDungeonSpellFlights());
-        Assert.Equal(25f * (2f / 60f), Vector3.Distance(launch, view.Position.ToVector()), 4);
+        Assert.Contains(fixture.Spatial.CapsuleCastRequests, request => MathF.Abs(Vector3.Distance(request.Center, view.Position.ToVector()) - 25f * (2f / 60f)) < 1e-4f);
         Assert.True(fixture.Perception.Requests.Count >= 3);
     }
 

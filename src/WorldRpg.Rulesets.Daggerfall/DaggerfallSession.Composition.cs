@@ -205,7 +205,7 @@ internal sealed partial class DaggerfallSession
                 if (!inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored dynamic actor '{definition.Id.Value}' has no admitted mobile {mobileId} presentation.");
                 projection.Appearance.RetireActor(actor.DurableId);
-                projection.Appearance.AddActor(actor.DurableId, sprite, mobileId);
+                projection.Appearance.AddActor(actor.DurableId, sprite.ForGender(actor.Actor.TryGet<DaggerfallActorGender>(out var gender) ? gender.Value : "unspecified"), mobileId);
             }
             if (saved is null)
             {
@@ -565,7 +565,7 @@ internal sealed partial class DaggerfallSession
             _enemyMagic = new(definitions.EnemySpells, definitions.Magic, Casting, _random,
                 id => authored.GetValueOrDefault(id),
                 id => definitions.Mobiles.Mobiles.GetValueOrDefault(id), EnemyRangedSpellPathClear, ExecuteEnemySpell);
-            _enemyBehavior.BindEnemyMagic(_enemyMagic.Decide);
+            _enemyBehavior.BindEnemyMagic(_enemyMagic.Decide, _enemyMagic.HasRangedSpellReady);
             _itemCastTriggers = new(definitions.Magic, itemInstances, Casting, effects, actors.Entities,
                 id => id == actors.Player.DurableId ? equipmentCoordinator : actors.TryGet(id, out var actor) && !actor.IsDefeated ? actorInventories.EquipmentFor(id) : null,
                 _itemCondition, () => MinuteIndex(_time.Calendar), (owner, result) =>

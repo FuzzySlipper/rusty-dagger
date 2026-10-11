@@ -158,7 +158,9 @@ internal sealed class DaggerfallActorRoster
             {
                 if (!_projection().Inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Spawned actor '{spawnedDefinition.Id.Value}' has no admitted mobile {mobileId} presentation.");
-                Appearance.AddActor(durableId, sprite, definition.MobileId);
+                string gender = DaggerfallActorGender.Resolve(_random, durableId, "unspecified", sprite);
+                actor.Actor.Add(new DaggerfallActorGender(gender));
+                Appearance.AddActor(durableId, sprite.ForGender(gender), definition.MobileId);
             }
             _definitionsByActor.Add(durableId, spawnedDefinition);
             _dynamicActors.Add(durableId, spawnedDefinition.Id);
@@ -393,7 +395,7 @@ internal sealed class DaggerfallActorRoster
             {
                 if (!destination.MobileSprites.TryGetValue(authoredMobile, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored authored actor '{placement.EntityId}' has no admitted mobile {authoredMobile} presentation.");
-                appearance.AddActor(actor.DurableId, sprite.ForGender(placement.Gender), definition.MobileId);
+                appearance.AddActor(actor.DurableId, sprite.ForGender(DaggerfallActorGender.Resolve(_random, placement.EntityId, placement.Gender, sprite)), definition.MobileId);
             }
             if (prior is null) GrantStartingEquipment(actor, definition);
             if (prior?.WabbajackDefinition is not null && definition.MobileId is int changedMobile)
@@ -421,7 +423,7 @@ internal sealed class DaggerfallActorRoster
                 DaggerfallSiteProfile presentation = projection?.Inputs ?? _projection().Inputs;
                 if (!presentation.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored dynamic actor '{saved.Definition}' has no admitted mobile {mobileId} presentation.");
-                (projection?.Appearance ?? Appearance).AddActor(saved.EntityId, sprite, mobileId);
+                (projection?.Appearance ?? Appearance).AddActor(saved.EntityId, sprite.ForGender(saved.Gender ?? "unspecified"), mobileId);
             }
             // A retained NPC actor owns its pose again; the registry keeps identity and binding only.
             _state.Npcs.ReleasePose(saved.EntityId);

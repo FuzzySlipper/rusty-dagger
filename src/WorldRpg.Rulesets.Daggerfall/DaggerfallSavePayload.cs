@@ -1740,6 +1740,8 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
     [JsonRequired] public bool MagicallyPacified { get; init; }
     public bool PlayerAllied { get; init; }
     public DaggerfallCorruptionOrigin? CorruptionOrigin { get; init; }
+    /// <summary>The atlas gender chosen at spawn; absent for an actor without mobile presentation.</summary>
+    public string? Gender { get; init; }
     internal void Validate()
     {
         if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z) || !float.IsFinite(HeadingRadians))

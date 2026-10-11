@@ -251,7 +251,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (inputs.Doors.Count != 0 && doors is null) throw new ArgumentException("Door visuals require the selected door runtime.", nameof(doors));
             foreach ((long entityId, NormalizedActorSprite sprite) in inputs.ActorSprites.OrderBy(pair => pair.Key))
             {
-                ActorVisual visual = CreateActorVisual(content, entityId, sprite);
+                // A fixed human enemy with no gender flag takes its random gender keyed by its placement identity.
+                NormalizedActorSprite placed = random is not null && inputs.Project.Actors.TryGetValue(entityId, out AuthoredActor? actor)
+                    ? sprite.ForGender(DaggerfallActorGender.Resolve(random, entityId, actor.Gender, sprite)) : sprite;
+                ActorVisual visual = CreateActorVisual(content, entityId, placed);
                 actors.Add(entityId, visual);
             }
             groundContainerSprite = inputs.GroundContainerSprite;
