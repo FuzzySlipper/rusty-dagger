@@ -26,6 +26,14 @@ hostility, while source metadata is rebuilt from the current content. Human
 female atlases are published beside the default mobile atlas and selected by the
 placement, including site re-entry and save restoration.
 
+Enemy movement uses Kit pursuit memory and Engine navigation. Daggerfall supplies
+advance, retreat and strafe decisions from the current target, level difference,
+visibility and admitted update time. Retreat and strafe keep facing the target;
+strafe follows its radius. When a target is lost, Kit follows the last observed
+position and a bounded continuation along its last direction. A blocked enemy
+with the source door capability asks the existing dungeon-door owner to open or
+bash a nearby door.
+
 ## Identity
 
 - `actor.DurableId` is the product actor instance key used by authored placements,

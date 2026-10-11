@@ -7,6 +7,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 internal class SpatialFake : DispatchProxy
 {
+    internal List<NavigationStepRequest> NavigationRequests { get; } = [];
+    private NavigationStepResult Navigate(NavigationStepRequest request) { NavigationRequests.Add(request); return NoNavigationPath(request); }
     internal Func<CharacterStepRequest, CharacterStepReceipt, CharacterStepReceipt>? StepResult { get; set; }
     internal bool KeepPosition { get; set; }
     internal Func<CharacterStepRequest, CharacterMovementFact> MovementFact { get; set; } = _ => default;
@@ -103,7 +105,7 @@ internal class SpatialFake : DispatchProxy
         nameof(ISpatialService.QueryTriggersAtPoints) => QueryTriggerRows((SpatialTriggerPointQueryRequest)arguments![0]!),
         // Navigation is not under test here: an honest no-path receipt leaves the
         // actor's pose intact instead of reporting a bogus waypoint.
-        nameof(ISpatialService.EvaluateNavigationStep) => NoNavigationPath((NavigationStepRequest)arguments![0]!),
+        nameof(ISpatialService.EvaluateNavigationStep) => Navigate((NavigationStepRequest)arguments![0]!),
         nameof(ISpatialService.CaptureCharacterContinuation) => Capture((CharacterContinuationCaptureRequest)arguments![0]!),
         nameof(ISpatialService.RestoreCharacterContinuation) => Restore((CharacterContinuationRestoreRequest)arguments![0]!),
         _ => throw new NotSupportedException(method?.Name),

@@ -402,7 +402,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         return (cooldown, DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(speed), selected?.Weapon.Skill ?? DaggerfallMechanicsIds.HandToHand.Value);
     }
 
-    private bool PlayerHoldsBow()
+    internal bool PlayerHoldsBow()
     {
         EquipmentRead equipment = _equipment.Read();
         return (ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand"))

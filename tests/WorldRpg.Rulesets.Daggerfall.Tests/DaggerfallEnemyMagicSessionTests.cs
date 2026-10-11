@@ -129,9 +129,10 @@ public sealed class DaggerfallEnemyMagicSessionTests
         PerceptionReadoutResult occluded = Receipt(new PerceptionPair(
             checked((ulong)imp), checked((ulong)DaggerfallActorIdentity.PlayerEntityId), 10d, 0d,
             PerceptionPairKind.Occluded, 0d));
-        // The behavior owner queries every live actor once per admitted step. Keep the entire
-        // first step occluded and expose the imp during the second step of this three-step batch.
-        fixture.Perception.Responder = _ => fixture.Perception.Requests.Count >= 50 ? visible : occluded;
+        // Count this imp's admitted observations, independently of the site's actor population.
+        int impObservations = 0;
+        fixture.Perception.Responder = request => request.Observers.Span[0].Entity == (ulong)imp
+            && ++impObservations >= 2 ? visible : occluded;
         fixture.Spatial.FloorHit = _ => default;
 
         ProductUpdateFacts facts = OuterUpdate(1) with { SimulationStep = 3, AdmittedStepCount = 3 };
