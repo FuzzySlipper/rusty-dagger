@@ -688,9 +688,15 @@ public sealed class DaggerCombatDamagePolicyTests
                 [new SlotId("right-hand"), new SlotId("left-hand")]);
         }
 
-        internal void GivePlayerArrows(ulong quantity) =>
+        internal void GivePlayerArrows(ulong quantity)
+        {
+            InventoryStackId stack = InventoryStackId.Parse("test.quiver");
             _actorInventories[DaggerfallActorIdentity.PlayerEntityId].Grant(
-                new InventoryGrant(new InventoryItemId("arrow"), InventoryStackId.Parse("test.quiver"), quantity));
+                new InventoryGrant(new InventoryItemId("arrow"), stack, quantity));
+            _itemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player,
+                new InventoryStack(stack, ItemDefinitionId.Parse("arrow"), quantity),
+                Definitions.RequireItem(new DaggerfallItemId("arrow")));
+        }
 
         internal ulong PlayerArrows() => _actorInventories[DaggerfallActorIdentity.PlayerEntityId].Read().Stacks
             .Where(stack => stack.Definition.Value == "arrow").Aggregate(0UL, (total, stack) => total + stack.Quantity);
