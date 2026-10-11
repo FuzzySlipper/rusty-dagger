@@ -825,6 +825,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const itemMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-itemmaker')!;
   const potionMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-potionmaker')!;
   const spellMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spellmaker')!;
+  let projectionNeedsInterface = false;
+  let interactionMode: 'interface' | 'gameplay' | null = null;
+  const syncInteraction = (focus = false): void => {
+    const next = projectionNeedsInterface || menu.open || dialogueWindow.open || summoningOffer.open ? 'interface' : 'gameplay';
+    if (next !== interactionMode) { interactionMode = next; context.ui.setInteractionMode(next); }
+    if (focus && next === 'gameplay') context.ui.focusGameplay();
+  };
   let inventorySuppressed = false;
   let activePanel: 'spells' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
@@ -857,14 +864,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     loadRequested = false;
     menu.close();
     reportMenu(false);
-    context.ui.setInteractionMode(titleMode || deadMode ? 'interface' : 'gameplay');
-    if (!titleMode && !deadMode) context.ui.focusGameplay();
+    syncInteraction(true);
   };
   const openMenu = (): void => {
     controllerDirection = 0;
-    context.ui.setInteractionMode('interface');
     loadRequested = false;
     menu.showModal();
+    syncInteraction();
     reportMenu(true);
     showHome();
   };
@@ -1104,18 +1110,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // the screen does is ask the product to begin. The product decides, so the answer is the mode changing
   // rather than this hiding itself.
   const redrawEntry = (): void => {
-    const wasVisible = !entryRoot.hidden;
     entryRoot.hidden = !titleMode;
-    if (wasVisible !== titleMode && !menu.open) {
-      controllerDirection = 0;
-      context.ui.setInteractionMode(titleMode ? 'interface' : 'gameplay');
-      if (!titleMode) context.ui.focusGameplay();
-    }
-    if (!titleMode) {
-      if (!deadMode && !menu.open) context.ui.setInteractionMode('gameplay');
-      return;
-    }
-    context.ui.setInteractionMode('interface');
+    if (!titleMode) return;
     entryRoot.dataset.mode = creationMode ?? TITLE_MODE;
     const creating = creationMode !== null;
     if (creating && menu.open) menu.close();
@@ -1143,11 +1139,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const redrawDeath = (death: DeathProjection | null): void => {
     deathRoot.hidden = !deadMode;
     menuToggle.hidden = deadMode;
-    if (!deadMode) {
-      if (!titleMode && !menu.open) context.ui.setInteractionMode('gameplay');
-      return;
-    }
-    context.ui.setInteractionMode('interface');
+    if (!deadMode) return;
     deathMessage.textContent = death?.message ?? 'You have died.';
     deathRoot.dataset.cameraEffect = death?.cameraEffect ?? 'fall';
     deathRoot.dataset.fadeEffect = death?.fadeEffect ?? 'to-black';
@@ -1372,7 +1364,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       ? value.character.creation.mode ?? null : value.character.creation.summary ? 'character-pick' : null : null;
     pickScreens = value.pickScreens ?? [];
     redrawEntry();
-    if(summoningOffer.open)context.ui.setInteractionMode('interface');
 
     title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'
       : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
@@ -1476,6 +1467,12 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       redrawSaveSlots();
       if (deadMode) redrawDeath(currentDeath);
     }
+    // The Engine owns pointer lock; the product tells it whether any current surface needs a cursor.
+    projectionNeedsInterface = value.mode === 'title' || value.mode === 'dead' || value.mode === 'paused' || value.mode === 'modal'
+      || cinematicPlaying || Boolean(value.quests?.offer || value.quests?.pending
+        || value.quests?.deliveries.some(message => message.delivery === 'popup' || message.delivery === 'letter')
+        || value.dungeonText || value.legal || value.createItem || value.identify || value.teleport || value.dispel);
+    syncInteraction();
     composition.replaceChildren(...diagnosticRows(value.composition));
   }) ?? (() => {});
   return { dispose: () => {
@@ -1897,9 +1894,20 @@ export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null
     claim({action:'spellmaker-buy',revision:view.revision,key:view.quote.key,amount:view.quote.gold,confirm:true});});
 }
 
+const questMessageNodes = new WeakMap<HTMLElement, Map<string, { signature: string; node: HTMLElement }>>();
+
 function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undefined, claim: (action: UiAction) => void): void {
-  root.replaceChildren();
-  if (!value) return;
+  const cache = questMessageNodes.get(root) ?? new Map<string, { signature: string; node: HTMLElement }>();
+  questMessageNodes.set(root, cache);
+  if (!value) { root.replaceChildren(); cache.clear(); return; }
+  const ordered: HTMLElement[] = [];
+  const used = new Set<string>();
+  const keep = (key: string, projection: unknown, candidate: HTMLElement): void => {
+    const signature = JSON.stringify(projection);
+    const prior = cache.get(key);
+    const node = prior?.signature === signature ? prior.node : candidate;
+    cache.set(key, { signature, node }); used.add(key); ordered.push(node);
+  };
   if (value.offer) {
     const offer = value.offer;
     const article = document.createElement('article'); article.className = 'dagger-quest-message';
@@ -1910,7 +1918,7 @@ function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undef
       button.addEventListener('click', () => claim({ action: 'quest-offer-answer', questInstance: offer.instance, confirm }));
       article.append(button);
     }
-    root.append(article);
+    keep(`offer:${offer.instance}`, offer, article);
   }
   if (value.escortFaces?.length) {
     const escorts = document.createElement('aside'); escorts.className = 'dagger-escort-faces';
@@ -1923,7 +1931,7 @@ function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undef
       else portrait.dataset.artMissing = face.mediaId;
       escorts.append(portrait);
     }
-    root.append(escorts);
+    keep("escorts", [value.escortFaces, heldRevision()], escorts);
   }
   const add = (message: QuestMessageProjection, heading: string): void => {
     const article = document.createElement('article');
@@ -1945,7 +1953,7 @@ function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undef
       signoff.textContent = message.signoff;
       article.append(signoff);
     }
-    root.append(article);
+    keep(`delivery:${message.instance}:${message.entryId ?? `${message.delivery}:${message.message}`}`, message, article);
   };
   value.deliveries.filter(message => message.delivery !== 'prompt').forEach(message => add(message, message.heading));
   if (value.pending) {
@@ -1962,8 +1970,18 @@ function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undef
         questMessage: message.message, questPrompt: message.promptId ?? undefined, questChoice: option.id }));
       prompt.append(button);
     }
-    root.append(prompt);
+    keep(`prompt:${message.instance}:${message.promptId ?? message.message}`, message, prompt);
   }
+  // Do not detach unchanged nodes: a projection can arrive between pointerdown and pointerup.
+  const retained = new Set(ordered);
+  for (const child of [...root.children]) if (!retained.has(child as HTMLElement)) child.remove();
+  for (let index = 0; index < ordered.length; index++) {
+    const node = ordered[index]!;
+    if (root.children[index] !== node) root.insertBefore(node, root.children[index] ?? null);
+  }
+  while (root.children.length > ordered.length) root.lastElementChild!.remove();
+  for (const key of cache.keys()) if (!used.has(key)) cache.delete(key);
+
 }
 
 function isSaveSlots(value: unknown): value is SaveSlotProjection {

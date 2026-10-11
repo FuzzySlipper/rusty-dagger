@@ -792,6 +792,54 @@ test('multi-choice prompt uses supplied stable identities and refreshes occurren
   } finally { f.dispose(); }
 });
 
+test('quest popup and prompt retain pressed buttons across snapshots and keep interface input', () => {
+  const f = fixture();
+  try {
+    const popup = { instance: 'quest:2', entryId: 'opening:1', message: 1, delivery: 'popup', heading: 'Welcome',
+      text: 'You awaken in the hold.', signoff: null, diagnostics: [] };
+    const prompt = { instance: 'quest:2', message: 2, delivery: 'prompt', text: 'Continue?', signoff: null,
+      diagnostics: [], promptId: 'opening:2', options: [{ id: 1, label: 'Yes' }, { id: 0, label: 'No' }] };
+    const quests = { deliveries: [popup], journal: { active: [], finished: [] }, pending: prompt };
+    f.publish({ quests });
+    assert.equal(f.modes.at(-1), 'interface');
+    const dismiss = f.root.querySelector('.dagger-quest-message button');
+    const no = [...f.root.querySelectorAll('.dagger-quest-prompt button')].find(button => button.textContent === 'No');
+    no.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }));
+    f.publish({ quests: structuredClone(quests), lastOutcome: 'Another admitted update' });
+    assert.equal(f.root.querySelector('.dagger-quest-message button'), dismiss);
+    assert.equal([...f.root.querySelectorAll('.dagger-quest-prompt button')].find(button => button.textContent === 'No'), no);
+    assert.equal(no.isConnected, true);
+    no.dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true }));
+    no.click();
+    assert.equal(f.actions.at(-1).questChoice, 0);
+    assert.equal(f.modes.at(-1), 'interface');
+    // Removing a sibling popup must not detach the surviving prompt either.
+    f.publish({ quests: { ...quests, deliveries: [] } });
+    assert.equal(f.root.querySelector('.dagger-quest-prompt button').parentElement, no.parentElement);
+    assert.equal(no.isConnected, true);
+    f.publish({ quests: { ...quests, deliveries: [], pending: null } });
+    assert.equal(f.modes.at(-1), 'gameplay');
+  } finally { f.dispose(); }
+});
+
+test('cinematic and menu retain interface input until the last cursor surface closes', () => {
+  const f = fixture();
+  try {
+    f.publish({ cinematic: { source: 'ANIM0000.VID', skipLabel: 'Skip' } });
+    assert.equal(f.modes.at(-1), 'interface');
+    f.publish({ cinematic: { source: 'ANIM0000.VID', skipLabel: 'Skip' } });
+    assert.deepEqual(f.modes, ['interface']);
+    f.publish({ cinematic: null });
+    assert.equal(f.modes.at(-1), 'gameplay');
+    f.root.querySelector('.dagger-menu-toggle').click();
+    assert.equal(f.modes.at(-1), 'interface');
+    f.publish();
+    assert.equal(f.modes.at(-1), 'interface');
+    f.root.querySelector('.dagger-menu-toggle').click();
+    assert.equal(f.modes.at(-1), 'gameplay');
+  } finally { f.dispose(); }
+});
+
 test('the snapshot the C# projection publishes is a HUD the UI renders, dialogue included', async () => {
   // Written by the ruleset suite from a real session (HudSnapshotContractTests); both sides read this file.
   const snapshot = JSON.parse(await readFile(new URL('./fixtures/hud-snapshot.json', import.meta.url), 'utf8'));
