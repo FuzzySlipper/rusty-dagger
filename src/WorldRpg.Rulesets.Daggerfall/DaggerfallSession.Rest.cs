@@ -81,6 +81,8 @@ internal sealed partial class DaggerfallSession
                 return (player.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
                     player.GetStat(StatId.Parse("medical")).ValueInt, rapid, noRegen);
             });
+        if (result.Interruption == DaggerfallRestInterruption.Stopped && State.Quests.Messages.Pending is not null)
+            result = result with { Message = "Rest paused. Read and dismiss the pending quest message before resting again." };
         if (result.Accepted && result.ElapsedSeconds > 0) _itemCastTriggers.CompleteTimeIncrease();
         _restPresentation.Publish(result);
         Presentation.SetOutcome(result.Message ?? (result.Accepted ? "Rest complete." : "Rest refused."));

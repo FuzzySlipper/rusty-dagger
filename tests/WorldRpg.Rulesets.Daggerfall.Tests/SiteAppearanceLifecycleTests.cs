@@ -17,6 +17,37 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>Site appearance lifecycle: world visuals, ground containers, lights, texture admission and release on failure.</summary>
 public sealed class SiteAppearanceLifecycleTests
 {
+    [Theory]
+    [InlineData(.9f)]
+    [InlineData(1.2f)]
+    public void Close_enemy_and_its_corpse_are_visible_in_the_canonical_engine_snapshot(float distance)
+    {
+        string root = TestData.RepositoryRoot;
+        var definitions = TestPayload.Definitions;
+        var inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases); PopulateContent(content, inputs);
+        AppearanceFake graphics = new(releases);
+        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var engine = EngineContextFake.Create(content, spatial.Service, graphics);
+        using var session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
+        var enemy = session.State.Actors.Get(inputs.Project.Actors.Values.First().EntityId);
+        var position = new WorldRpg.Kit.Controls.WorldPoint(0, 0, distance);
+        session.State.PlayerControl.MoveTo(Vector3.Zero);
+        enemy.ApplyPose(new ActorPose(position, 0));
+        session.PublishInitial();
+        var live = Assert.Single(graphics.Snapshots.Last(), fact => fact.ObjectId == (ulong)enemy.DurableId);
+        Assert.True(live.Visible); Assert.Equal(RenderLayer.Scene, live.Layer);
+        Assert.Equal(position.ToVector(), live.Transform.Translation);
+        enemy.Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).SetCurrent(0);
+        session.PublishInitial();
+        var corpse = Assert.Single(graphics.Snapshots.Last(), fact => fact.ObjectId == (ulong)enemy.DurableId);
+        Assert.True(corpse.Visible); Assert.Equal(RenderLayer.Scene, corpse.Layer);
+        Assert.Equal(position.ToVector(), corpse.Transform.Translation);
+        Assert.NotSame(live.Appearance, corpse.Appearance);
+        Assert.True(DaggerfallTuning.Defaults.Camera.NearPlane < distance);
+    }
+
     [Fact]
     public void Selected_RDB_door_visuals_share_their_runtime_pose_and_keep_the_appearance_snapshot_unique()
     {
