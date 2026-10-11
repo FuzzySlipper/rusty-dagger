@@ -260,6 +260,75 @@ internal sealed class AssembledWorldRun : IDisposable
         Session.Update(new ProductUpdate(OuterUpdate(++_step), [Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.KeyW)]));
     }
 
+    /// <summary>
+    /// Walks to within <paramref name="within"/> of <paramref name="target"/> (live coordinates) with the forward key held,
+    /// turning towards it on every update as a player steers with the mouse. Collision, ground and slopes are the Engine's.
+    /// Returns whether the player got there within <paramref name="maximumSteps"/> admitted updates.
+    /// </summary>
+    internal bool WalkTo(Vector3 target, float within, int maximumSteps)
+    {
+        bool arrived = false;
+        for (int step = 0; step < maximumSteps; step++)
+        {
+            Vector3 here = Session.State.PlayerControl.Position!.Value.ToVector();
+            Vector2 offset = new(target.X - here.X, target.Z - here.Z);
+            if (offset.Length() <= within)
+            {
+                arrived = true;
+                break;
+            }
+            Session.State.PlayerControl.YawRadians = WorldRpg.Kit.Actors.ActorHeading.Yaw(new Vector3(offset.X, 0F, offset.Y));
+            Session.Update(new ProductUpdate(OuterUpdate(++_step), step == 0
+                ? [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)] : []));
+        }
+        Session.Update(new ProductUpdate(OuterUpdate(++_step), [Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.KeyW)]));
+        return arrived;
+    }
+
+    /// <summary>
+    /// Walks to <paramref name="target"/> as <see cref="WalkTo"/> does, and when a wall stops the player short, looks along
+    /// it with the Engine's rays for the nearest opening at least two metres wide, walks through it and carries on, as a
+    /// player finding the gate in a wall would. Returns whether the player got there within <paramref name="detours"/> openings.
+    /// </summary>
+    internal bool WalkAround(Vector3 target, float within, int detours = 4)
+    {
+        for (int detour = 0; ; detour++)
+        {
+            if (WalkTo(target, within, 60 * 120)) return true;
+            if (detour == detours) return false;
+            Vector3 here = Session.State.PlayerControl.Position!.Value.ToVector();
+            Vector3 ahead = Vector3.Normalize(new Vector3(target.X - here.X, 0F, target.Z - here.Z));
+            Vector3 along = new(-ahead.Z, 0F, ahead.X);
+            float? opening = null;
+            for (int offset = 1; offset <= 80 && opening is null; offset++)
+                foreach (int side in new[] { 1, -1 })
+                    if (Clear(here + (along * (side * offset)), ahead) && Clear(here + (along * (side * (offset + 1))), ahead)
+                        && Clear(here + (along * (side * (offset + 2))), ahead))
+                    {
+                        opening = side * (offset + 1);
+                        break;
+                    }
+            if (opening is not float sideways) return false;
+            Vector3 gate = here + (along * sideways);
+            if (!WalkTo(gate, .3F, 60 * 60) || !WalkTo(gate + (ahead * 4F), .3F, 60 * 30)) return false;
+        }
+
+        bool Clear(Vector3 from, Vector3 direction) => !Session.Spatial.CastRay(from, direction, 3F).Present;
+    }
+
+    /// <summary>
+    /// Uses a portal from wherever the player stands, turning to face its door but not moving: a use from out of reach
+    /// is refused as it is in play. Returns where the player stood (in the active frame's profile coordinates when outside).
+    /// </summary>
+    internal WorldPoint UseFromWhereStanding(DaggerfallSitePortal portal, EntityId entity)
+    {
+        Vector3 eye = Session.State.PlayerControl.Position!.Value.ToVector();
+        Vector3 toDoor = portal.Position.ToVector() - eye;
+        Session.State.PlayerControl.YawRadians = WorldRpg.Kit.Actors.ActorHeading.Yaw(toDoor with { Y = 0F });
+        Session.State.PlayerControl.PitchRadians = 0F;
+        return UseFromHere(entity);
+    }
+
     /// <summary>Pays for and makes the journey through the travel window, arriving.</summary>
     internal void Travel(DaggerfallSiteRecord destination)
     {

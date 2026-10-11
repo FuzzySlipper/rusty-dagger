@@ -427,20 +427,22 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             float distance = Vector2.Distance(new(entrance.Position.X, entrance.Position.Z), new(settled.X, settled.Z));
             output.WriteLine($"The entrance at {entrance.Position} is {distance} units from the landing.");
             Assert.True(distance < reach, $"The entrance at {entrance.Position} is {distance} units from the landing at {settled}.");
-            // And the traveller walks towards it over the ground, not through or under it.
-            Vector2 heading = Vector2.Normalize(new(entrance.Position.X - settled.X, entrance.Position.Z - settled.Z));
-            run.Session.State.PlayerControl.YawRadians = WorldRpg.Kit.Actors.ActorHeading.Yaw(new Vector3(heading.X, 0F, heading.Y));
-            host.Call(_ => run.Walk(90));
-            Steps(host, run, 5);
-            WorldPoint walked = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
-            float closer = distance - Vector2.Distance(new(entrance.Position.X, entrance.Position.Z), new(walked.X, walked.Z));
-            output.WriteLine($"Walked towards the entrance to {walked}, {closer} units closer.");
-            Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Walking towards the entrance, the player is at {walked} and not grounded.");
-            Assert.True(closer > 2F, $"Walking towards the entrance from {settled}, the player only reached {walked}.");
-
+            // And the traveller walks there over the ground, through the Engine's collision and around the walls in the way,
+            // to a metre in front of the door, and uses it from where they stopped: no step of the way is placed by the test.
             (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) door = run.Session.Sites.Projection.Portals.All
                 .Single(value => value.Portal.Id == entrance.Id);
-            WorldPoint outside = host.Call(_ => run.Use(door.Portal, door.Entity));
+            Vector3 approach = door.Portal.Position.ToVector() + Assert.NotNull(door.Portal.Normal);
+            bool reached = host.Call(_ => run.WalkAround(approach, .5F));
+            Steps(host, run, 5);
+            WorldPoint walked = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            float remaining = Vector2.Distance(new(door.Portal.Position.X, door.Portal.Position.Z),
+                new(run.Session.State.PlayerControl.Position!.Value.X, run.Session.State.PlayerControl.Position!.Value.Z));
+            output.WriteLine($"Walked from the landing at {settled} to {walked}, {remaining} units from the door.");
+            Assert.True(reached, $"Walking from the landing at {settled}, the player stopped at {walked}, {remaining} units from the door.");
+            Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"At the entrance, the player is at {walked} and not grounded.");
+            AssertAccepted(run);
+
+            WorldPoint outside = host.Call(_ => run.UseFromWhereStanding(door.Portal, door.Entity));
             Assert.Equal(dungeon, run.Session.Sites.ActiveProfile);
             WorldPoint inside = run.Session.State.PlayerControl.Position!.Value;
             Steps(host, run, 3);
@@ -451,7 +453,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             _ = host.Call(_ => run.Use(exit.Portal, exit.Entity));
             Assert.Equal(exterior, run.Session.Sites.ActiveProfile);
             WorldPoint returned = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
-            // The pose left outside was a metre in front of the door at its centre height, where the test stood the player to use it.
+            // The pose left outside is where the player walked to and used the door from.
             Steps(host, run, 20);
             WorldPoint after = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
             output.WriteLine($"Left the location at {outside}, came back out at {returned} and stood at {after}.");

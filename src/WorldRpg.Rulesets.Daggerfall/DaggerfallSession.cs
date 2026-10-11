@@ -133,6 +133,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The session's site lifecycle: projection, catalog, deltas and exterior window.</summary>
     internal DaggerfallSiteLifecycle Sites => _sites;
 
+    /// <summary>The admitted spatial scene, for Engine queries made outside an update such as a test looking along a wall.</summary>
+    internal SpatialMovementSystem Spatial => _spatial;
+
     /// <summary>Relocates the existing player (or a live actor) to an admitted named anchor.</summary>
     internal bool TryRelocate(DaggerfallRelocationDestination destination)
     {
