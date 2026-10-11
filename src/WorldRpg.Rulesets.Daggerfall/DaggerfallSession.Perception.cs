@@ -81,6 +81,9 @@ internal sealed partial class DaggerfallSession
             ComprehendLanguagesBonus: perceptionEffects.ComprehendLanguagesBonus,
             Noise: horizontalSpeed,
             RollPercent: rollPercent,
-            IsWithinClassicSpawnRange: true).Validate();
+            IsWithinClassicSpawnRange: State.PlayerControl.Position is { } playerPosition && DaggerfallClassicSpawnRange.Update(
+                State.Actors.Get(actorId).Actor.Get<DaggerfallEnemyPerceptionMemory>(),
+                State.Actors.Get(actorId).Position, playerPosition,
+                _activeProfileKey.Kind is not DaggerfallWorldProfileKind.Exterior)).Validate();
     }
 }

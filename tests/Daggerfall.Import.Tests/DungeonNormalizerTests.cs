@@ -386,7 +386,7 @@ public sealed class DungeonNormalizerTests
         DungeonNormalizationResult rat = DungeonNormalizer.Normalize(Request(CreateSourcesForFlat(
             RdbSourceClassification.EditorFlatArchive,
             RdbSourceClassification.FixedMobileMarkerRecord,
-            0xAB00)));
+            0x0600)));
         DungeonNormalizationResult invalidMarker = DungeonNormalizer.Normalize(Request(CreateSourcesForFlat(
             RdbSourceClassification.EditorFlatArchive,
             RdbSourceClassification.FixedMobileMarkerRecord,

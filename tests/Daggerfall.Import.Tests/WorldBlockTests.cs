@@ -23,6 +23,38 @@ public sealed class WorldBlockTests
     /// their buildings and locks, its fixed people and its start marker; each provider interior's facts are
     /// the interior closure's quest markers, people, furniture and building.
     /// </summary>
+    [CorpusFact("BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT", "PAL.PAL")]
+    public void Fixed_enemy_metadata_matches_every_source_marker()
+    {
+        var sources = Sources();
+        var archive = BsaArchive.Parse(sources.Require("BLOCKS.BSA").Bytes.Span, sources.Require("BLOCKS.BSA").Label);
+        var normalizer = new WorldBlockNormalizer(sources);
+        int count = 0, passive = 0, genderFlags = 0, rawCount = 0, rawPassive = 0, rawFlags = 0;
+        foreach (var record in archive.Records.Where(record => record.Name?.EndsWith(".RDB", StringComparison.Ordinal) == true))
+        {
+            var source = RdbDecoder.Decode(archive.GetPayload(record).Span, archive.Source);
+            var markers = source.Flats.Where(flat => flat.TextureArchive == 199 && flat.TextureRecord == 16).ToArray();
+            rawCount += markers.Length;
+            rawPassive += markers.Count(flat => flat.Action == 99);
+            rawFlags += markers.Count(flat => flat.Flags != 0);
+            var expected = markers.Where(flat => (flat.FactionOrMobileId & 255) != 99).ToArray();
+            var actors = normalizer.Rdb(record.Name!).Block.Actors;
+            Assert.Equal(expected.Length, actors.Count);
+            for (int i = 0; i < expected.Length; i++)
+            {
+                var flat = expected[i]; var actor = actors[i];
+                string gender = (flat.FactionOrMobileId & 255) <= 43 ? "unspecified"
+                    : (flat.Flags & 2) != 0 ? "male" : (flat.Flags & 1) != 0 ? "female" : "unspecified";
+                Assert.Equal(((int)flat.SoundIndex, flat.Action == 99, gender), (actor.SpawnDistance, actor.Passive, actor.Gender));
+                count++; if (actor.Passive) passive++;
+                if ((flat.FactionOrMobileId & 255) > 43 && flat.Flags != 0) genderFlags++;
+            }
+        }
+        Assert.Equal((369, 70, 35), (rawCount, rawPassive, rawFlags));
+        // The donor ignores mobile 99 and interprets gender flags only on class mobiles.
+        Assert.Equal((368, 69, 26), (count, passive, genderFlags));
+    }
+
     [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "CLIMATE.PAK", "FACTION.TXT")]
     public void Charing_assembled_from_its_block_facts_carries_the_site_closures_doors_markers_and_buildings()
     {
@@ -154,7 +186,7 @@ public sealed class WorldBlockTests
                 ushort archive = DungeonTextureTableTransform.RemapArchive(ushort.Parse(parts[0]), [.. table.Archives.Select(value => (ushort)value)], (ushort)table.DoorArchiveOffset);
                 return $"{Key(billboard.Id, billboard.Position)}={archive}-{parts[1]}";
             }));
-            actors.AddRange(block.Actors.Select(actor => $"{Key(actor.Id, actor.Position)}={actor.ActorResourceId}"));
+            actors.AddRange(block.Actors.Select(actor => $"{Key(actor.Id, actor.Position)}={actor.ActorResourceId}:{actor.SpawnDistance}:{actor.Passive}:{actor.Gender}"));
             treasures.AddRange(block.Treasures.Select(treasure => Key(treasure.Id, treasure.Position)));
             quests.AddRange(block.QuestMarkers.Select(marker => $"{Key(marker.Id, marker.Position)}={marker.Kind}/{marker.SourceOrdinal}"));
             doors.AddRange(block.Doors.Select(door => $"{Key(door.Id, door.Position)}={door.Kind}/{door.StartingLockValue}/{door.RotationDegrees}"));
@@ -186,7 +218,7 @@ public sealed class WorldBlockTests
         Assert.Equal(world.Lights.Select(light => $"{light.Id}@{light.Position}").Order(StringComparer.Ordinal), lights.Order(StringComparer.Ordinal));
         Assert.Equal(world.Billboards.Select(billboard => $"{billboard.Id}@{billboard.Position}={billboard.SpriteResourceId["sprite/texture-".Length..]}").Order(StringComparer.Ordinal),
             billboards.Order(StringComparer.Ordinal));
-        Assert.Equal(world.Actors.Select(actor => $"{actor.Id}@{actor.Position}={actor.ActorResourceId}").Order(StringComparer.Ordinal), actors.Order(StringComparer.Ordinal));
+        Assert.Equal(world.Actors.Select(actor => $"{actor.Id}@{actor.Position}={actor.ActorResourceId}:{actor.SpawnDistance}:{actor.Passive}:{actor.Gender}").Order(StringComparer.Ordinal), actors.Order(StringComparer.Ordinal));
         Assert.Equal(world.Treasures.Select(treasure => $"{treasure.Id}@{treasure.Position}").Order(StringComparer.Ordinal), treasures.Order(StringComparer.Ordinal));
         Assert.All(world.Treasures, treasure => Assert.Equal($"treasure/dungeon-type-{location.DungeonType}", treasure.TreasureResourceId));
         Assert.Equal(world.QuestMarkers.Select(marker => $"{marker.Id}@{marker.Position}={marker.Kind}/{marker.SourceOrdinal}").Order(StringComparer.Ordinal), quests.Order(StringComparer.Ordinal));
@@ -270,8 +302,8 @@ public sealed class WorldBlockTests
     /// <summary>
     /// Every RDB random-enemy editor marker (archive 199, record 15) is published on its block with its
     /// position, encounter slot, spawn distance and reaction, whether or not it is also an action node: 2,195
-    /// markers in 171 blocks. N0000000.RDB's flat 14 carries no action record; B0000000.RDB's flat 0 is an
-    /// action node and stays a random-enemy marker.
+    /// markers in 171 blocks. N0000000.RDB's flat 14 carries no action record; B0000000.RDB's flat 0 has flags only
+    /// and is not an action node.
     /// </summary>
     [CorpusFact("BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT", "PAL.PAL")]
     public void Every_rdb_random_enemy_marker_is_published_on_its_block()
@@ -294,6 +326,8 @@ public sealed class WorldBlockTests
                     (int)value.Flat.Flags, (int)value.Flat.SoundIndex, value.Flat.Action == 99, value.Ordinal, value.Flat.ObjectOffset)),
                 block.RandomEnemies.Select(enemy => (enemy.Id, enemy.Position, enemy.EncounterSlot, enemy.SpawnDistance, enemy.Passive, enemy.SourceOrdinal, enemy.ObjectOffset)));
             HashSet<string> actions = [.. block.Actions.Select(action => action.Id)];
+            Assert.All(expected, value => Assert.Equal(value.Flat.Action > 0,
+                actions.Contains($"action/{scope}/flat-{value.Ordinal}")));
             Assert.All(block.RandomEnemies, enemy => Assert.Equal(actions.Contains($"action/{scope}/flat-{enemy.SourceOrdinal}"), enemy.ActionId is not null));
             Assert.All(block.RandomEnemies.Where(enemy => enemy.ActionId is not null), enemy => Assert.Contains(enemy.ActionId!, actions));
             markers += block.RandomEnemies.Count;
@@ -311,8 +345,8 @@ public sealed class WorldBlockTests
             else if (name == "B0000000.RDB")
             {
                 DaggerfallWorldBlockRandomEnemy linked = Assert.Single(block.RandomEnemies, enemy => enemy.SourceOrdinal == 0);
-                Assert.Equal(("action/b0000000-rdb/flat-0", 1, 1, 12567), (linked.ActionId, linked.EncounterSlot, linked.SpawnDistance, linked.ObjectOffset));
-                Assert.Contains(block.Actions, action => action.Id == linked.ActionId);
+                Assert.Equal(((string?)null, 1, 1, 12567), (linked.ActionId, linked.EncounterSlot, linked.SpawnDistance, linked.ObjectOffset));
+                Assert.DoesNotContain(block.Actions, action => action.Id == "action/b0000000-rdb/flat-0");
                 examples++;
             }
         }

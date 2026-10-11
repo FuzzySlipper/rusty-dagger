@@ -85,6 +85,7 @@ public sealed record DungeonActorMediaManifest(
     string MediaId)
 {
     public DungeonActorFeedback? Feedback { get; init; }
+    public DungeonActorMediaManifest? Female { get; init; }
 }
 
 public sealed record DungeonActorFeedback(int MobileId, string MoveCue, string BarkCue, string AttackCue, bool ParrySounds, int BloodIndex);
@@ -431,7 +432,7 @@ public sealed record Arena2MediaBundlePublication(
         }
 
         HashSet<string> projectedMediaIds = [.. directProjectedMediaIds];
-        foreach (DungeonActorMediaManifest actor in sidecar.Actors)
+        foreach (DungeonActorMediaManifest actor in sidecar.Actors.SelectMany(actor => actor.Female is null ? new[] { actor } : new[] { actor, actor.Female }))
         {
             NormalizedImportDocument.RequireLogicalId(actor.ActorResourceId, nameof(actor.ActorResourceId));
             NormalizedImportDocument.RequireLogicalId(actor.SpriteResourceId, nameof(actor.SpriteResourceId));
@@ -763,7 +764,11 @@ public sealed record Arena2MediaBundlePublication(
             .ToArray(),
         publication.Actors
             .OrderBy(media => media.ActorResourceId, StringComparer.Ordinal)
-            .Select(media => new DungeonActorMediaManifest(
+            .Select(ActorSidecar)
+            .ToArray());
+    }
+
+    private static DungeonActorMediaManifest ActorSidecar(DungeonActorSpriteMedia media) => new DungeonActorMediaManifest(
                 media.ActorResourceId,
                 media.MobileId.Value,
                 media.SourceName,
@@ -784,9 +789,7 @@ public sealed record Arena2MediaBundlePublication(
                         media.Corpse.SourceWorldSize,
                         media.Corpse.Frame,
                         media.Corpse.Descriptor.Id),
-                media.Descriptor.Id) { Feedback = FeedbackFor(media.MobileId) })
-            .ToArray());
-    }
+                media.Descriptor.Id) { Feedback = FeedbackFor(media.MobileId), Female = media.Female is null ? null : ActorSidecar(media.Female) };
 
     private static ClassicMediaManifestSidecar CreateClassicSidecar(Arena2ClassicMediaPublication publication) => new(
         CanonicalizeMedia(publication.MediaManifest),
@@ -891,7 +894,7 @@ public sealed record Arena2MediaBundlePublication(
             billboard.SourcePlayback?.Validate();
         }
 
-        foreach (DungeonActorSpriteMedia actor in publication.Actors)
+        foreach (DungeonActorSpriteMedia actor in publication.Actors.SelectMany(actor => actor.Female is null ? new[] { actor } : new[] { actor, actor.Female }))
         {
             ArgumentNullException.ThrowIfNull(actor);
             NormalizedImportDocument.RequireLogicalId(actor.ActorResourceId, nameof(actor.ActorResourceId));

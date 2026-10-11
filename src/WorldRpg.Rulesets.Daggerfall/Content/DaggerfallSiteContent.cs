@@ -14,7 +14,7 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>Reads one authored site pack's scenario facts and normalized world closure; no project entity names participate in runtime selection.</summary>
-internal static class DaggerfallSiteContent
+internal static partial class DaggerfallSiteContent
 {
     internal static DaggerfallSiteProfile Read(ProductContent content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
     {
@@ -112,7 +112,11 @@ internal static class DaggerfallSiteContent
         AuthoredWorldAppearance worldAppearance = ReadWorldAppearance(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(world, "appearance", diagnostics), "world.appearance", diagnostics), diagnostics);
         IReadOnlyList<DaggerfallSitePortal> portals = ReadSitePortals(world, diagnostics);
         IReadOnlyList<DaggerfallSiteAnchor> anchors = ReadSiteAnchors(world, start, diagnostics);
-        Dictionary<long, AuthoredActor> actors = ReadNormalizedPlacements(root, definitions, diagnostics);
+        ReadOnlyMemory<byte>? normalizedWorld = files.GetExactlyOne(normalizedPath);
+        Dictionary<long, AuthoredActor> fixedActors = ReadFixedActors(normalizedWorld.Value, profileId, definitions, diagnostics);
+        Dictionary<long, AuthoredActor> actors = ReadNormalizedPlacements(root, definitions, diagnostics, fixedActors, profileId);
+        foreach (var actor in fixedActors)
+            if (!actors.TryAdd(actor.Key, actor.Value)) diagnostics.Add($"Fixed actor identity {actor.Key} collides in '{profileId}'.");
         (IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<int, NormalizedActorSprite> sprites, NormalizedBillboardSprite? groundContainerSprite, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> billboardSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> terrainTextures) = ReadDungeonMedia(
             files.GetExactlyOne(mediaPath),
             artifacts,
@@ -126,7 +130,6 @@ internal static class DaggerfallSiteContent
             if (!sprites.ContainsKey(mobileId))
                 diagnostics.Add($"World profile '{publicationRoot}' lacks generated media for encounter mobile '{mobileId}'.");
         }
-        ReadOnlyMemory<byte>? normalizedWorld = files.GetExactlyOne(normalizedPath);
         IReadOnlyList<DaggerfallSiteLight> lights = ReadNormalizedLights(normalizedWorld, diagnostics);
         IReadOnlyList<DaggerfallPopulationPlacement> population = ReadNormalizedPopulation(normalizedWorld, diagnostics);
         IReadOnlyList<DaggerfallDungeonActionModelDefinition> actionModels = ReadNormalizedActionModels(
@@ -1405,7 +1408,7 @@ internal static class DaggerfallSiteContent
         return new((byte)axis, (ushort)duration, (ushort)magnitude, next, (byte)flags);
     }
 
-    private static Dictionary<long, AuthoredActor> ReadNormalizedPlacements(JsonElement root, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
+    private static Dictionary<long, AuthoredActor> ReadNormalizedPlacements(JsonElement root, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics, Dictionary<long, AuthoredActor> fixedActors, string profileId)
     {
         Dictionary<long, AuthoredActor> actors = [];
         foreach (JsonElement value in DaggerfallBaseContent.Array(root, "placements", diagnostics))
@@ -1413,7 +1416,21 @@ internal static class DaggerfallSiteContent
             JsonElement placement = DaggerfallBaseContent.Object(value, "placement", diagnostics);
             long entityId = Long(placement, "entityId", diagnostics);
             DaggerfallActorId actorId = new(DaggerfallBaseContent.Text(placement, "actor", diagnostics));
-            if (entityId < 1 || !actors.TryAdd(entityId, new AuthoredActor(entityId, actorId, Point(DaggerfallBaseContent.Property(placement, "position", diagnostics), "placement.position", diagnostics))))
+            AuthoredActor actor;
+            if (DaggerfallBaseContent.OptionalText(placement, "sourcePlacement", diagnostics) is { } source)
+            {
+                if (!fixedActors.Remove(FixedActorIdentity(profileId, source), out var fixedActor))
+                {
+                    diagnostics.Add($"Placement '{entityId}' names missing or repeated fixed marker '{source}'.");
+                    continue;
+                }
+                if (definitions.Actors.TryGetValue(actorId, out var definition)
+                    && definition.MobileId != definitions.RequireActor(fixedActor.ActorId).MobileId)
+                    diagnostics.Add($"Placement '{entityId}' disagrees with fixed marker '{source}' mobile.");
+                actor = fixedActor with { EntityId = entityId, ActorId = actorId };
+            }
+            else actor = new AuthoredActor(entityId, actorId, Point(DaggerfallBaseContent.Property(placement, "position", diagnostics), "placement.position", diagnostics));
+            if (entityId < 1 || !actors.TryAdd(entityId, actor))
             {
                 diagnostics.Add($"Placement entity id '{entityId}' is invalid or duplicated.");
             }
@@ -1532,9 +1549,15 @@ internal static class DaggerfallSiteContent
             {
                 JsonElement actor = DaggerfallBaseContent.Object(value, "dungeon actor media", diagnostics);
                 int mobileId = DaggerfallBaseContent.Integer(actor, "mobileId", diagnostics);
+                if (ReadSprite(actor) is { } sprite && !sprites.TryAdd(mobileId, sprite))
+                    diagnostics.Add($"Generated actor media repeats mobile '{mobileId}'.");
+            }
+            NormalizedActorSprite? ReadSprite(JsonElement actor)
+            {
+                int mobileId = DaggerfallBaseContent.Integer(actor, "mobileId", diagnostics);
                 string spriteId = DaggerfallBaseContent.Text(actor, "spriteResourceId", diagnostics);
-                if (!resources.TryGetValue(spriteId, out MediaResource? texture)) { diagnostics.Add($"Generated actor mobile '{mobileId}' refers to missing sprite media '{spriteId}'."); continue; }
-                if (texture.Frames.Count == 0) { diagnostics.Add($"Generated actor mobile '{mobileId}' has no atlas frames."); continue; }
+                if (!resources.TryGetValue(spriteId, out MediaResource? texture)) { diagnostics.Add($"Generated actor mobile '{mobileId}' refers to missing sprite media '{spriteId}'."); return null; }
+                if (texture.Frames.Count == 0) { diagnostics.Add($"Generated actor mobile '{mobileId}' has no atlas frames."); return null; }
                 Vector2 pivot = GeneratedVector2(DaggerfallBaseContent.Property(actor, "pivot", diagnostics), "actor.pivot", diagnostics);
                 Vector2 size = GeneratedVector2(DaggerfallBaseContent.Property(actor, "worldSize", diagnostics), "actor.worldSize", diagnostics);
                 Vector2 sourceSize = GeneratedVector2(DaggerfallBaseContent.Property(actor, "sourceWorldSize", diagnostics), "actor.sourceWorldSize", diagnostics);
@@ -1545,7 +1568,7 @@ internal static class DaggerfallSiteContent
                 IReadOnlyList<NormalizedAttackSequence> attacks = ReadAttackSequences(actor, states, mobileId, diagnostics);
                 NormalizedAttackSequence? rangedAttack = ReadRangedAttackSequence(actor, states, mobileId, diagnostics);
                 NormalizedActorSprite? corpse = ReadCorpse(actor, resources, mobileId, diagnostics);
-                if (!sprites.TryAdd(mobileId, new NormalizedActorSprite(texture.Path, texture.Hash, texture.AtlasWidth, texture.AtlasHeight, frames, texture.Frames[0].Id, pivot, size)
+                return new NormalizedActorSprite(texture.Path, texture.Hash, texture.AtlasWidth, texture.AtlasHeight, frames, texture.Frames[0].Id, pivot, size)
                 {
                     States = states,
                     PreferredRestState = preferredRestState,
@@ -1553,7 +1576,8 @@ internal static class DaggerfallSiteContent
                     RangedAttackSequence = rangedAttack,
                     Corpse = corpse,
                     Feedback = ReadActorFeedback(actor, mobileId, diagnostics),
-                })) diagnostics.Add($"Generated actor media repeats mobile '{mobileId}'.");
+                    Female = actor.TryGetProperty("female", out var female) && female.ValueKind == JsonValueKind.Object ? ReadSprite(female) : null,
+                };
             }
             var billboards = ReadBillboardSprites([.. DaggerfallBaseContent.Array(root, "billboards", diagnostics), .. sharedBillboards], resources, diagnostics);
             Dictionary<(int Archive, int Record), NormalizedTerrainTexture> terrainTextures = [];
@@ -1651,6 +1675,7 @@ internal static class DaggerfallSiteContent
 
     private static NormalizedActorSprite ResolveActorPresentation(AuthoredActor actor, DaggerfallActorDefinition definition, NormalizedActorSprite sprite, DaggerfallContentDiagnostics diagnostics)
     {
+        sprite = sprite.ForGender(actor.Gender);
         DaggerfallActorPresentationDefinition presentation = definition.Presentation;
         if (presentation.PreferredRestState is not null && !sprite.States.ContainsKey(presentation.PreferredRestState))
         {
@@ -2665,6 +2690,10 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     /// </summary>
     internal NormalizedAttackSequence? RangedAttackSequence { get; init; }
     internal NormalizedActorSprite? Corpse { get; init; }
+    internal NormalizedActorSprite? Female { get; init; }
+
+    internal NormalizedActorSprite ForGender(string gender) => gender == "female" && Female is { } female
+        ? female with { Corpse = female.Corpse ?? Corpse } : this;
 }
 internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSiteGeometry geometry, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedBillboardSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<NormalizedMusicCue>? music = null, IReadOnlyList<DaggerfallSiteMarker>? questMarkers = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite>? billboardSprites = null, IReadOnlyList<DaggerfallStaticNpcPlacement>? staticNpcs = null, IReadOnlyList<CharacterWaterVolume>? waterVolumes = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture>? terrainTextures = null, IReadOnlyList<DaggerfallPopulationPlacement>? population = null)
 {
@@ -2779,5 +2808,6 @@ internal sealed class ProjectFacts(WorldPoint? playerPosition, IReadOnlyDictiona
     internal WorldPoint? PlayerPosition { get; } = playerPosition;
     internal IReadOnlyDictionary<long, AuthoredActor> Actors { get; } = new ReadOnlyDictionary<long, AuthoredActor>(actors.ToDictionary());
 }
-internal sealed record AuthoredActor(long EntityId, DaggerfallActorId ActorId, WorldPoint Position);
+internal sealed record AuthoredActor(long EntityId, DaggerfallActorId ActorId, WorldPoint Position,
+    int SpawnDistance = 0, bool Passive = false, string Gender = "unspecified");
 internal sealed record ClassicMediaResource(string Id, string Kind, string RelativePath, string Path, ContentSha256 Hash, long ByteLength, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, float? FramesPerSecond, bool? Loop, IReadOnlyList<int> Sequence);

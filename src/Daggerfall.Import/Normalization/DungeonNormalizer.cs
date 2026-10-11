@@ -378,7 +378,7 @@ public static class DungeonNormalizer
                     case RdbFlatKind.FixedMobile:
                         AddPlacement();
                         string actorPlacementId = $"actor/{blockPlacementId}/{index}";
-                        actors.Add(new(actorPlacementId, $"actor/mobile-{flat.Mobile!.Id.Value}", position));
+                        actors.Add(flat.ActorPlacement(actorPlacementId, position));
                         AddProvenance(actorPlacementId, "rdb-mobile-placement", blocks.Source, index);
                         break;
                     case RdbFlatKind.Billboard:

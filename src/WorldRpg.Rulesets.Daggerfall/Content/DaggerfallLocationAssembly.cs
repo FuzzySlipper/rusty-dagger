@@ -187,6 +187,7 @@ internal sealed class DaggerfallLocationAssembly
         private readonly JsonObject _world = new()
         {
             ["lights"] = new JsonArray(),
+            ["actors"] = new JsonArray(),
             ["population"] = new JsonArray(),
             ["questMarkers"] = new JsonArray(),
             ["staticNpcs"] = new JsonArray(),
@@ -321,6 +322,7 @@ internal sealed class DaggerfallLocationAssembly
                     if (record.Exterior is { Blocks.Count: > 0 })
                         Portal(exit.Id, exit.Position, exit.Normal, DaggerfallWorldProfileIds.Exterior(key.Site), DungeonEntranceAnchor);
                 }
+                foreach (JsonNode? actor in document.Section("actors")) Append("actors", Moved(actor, origin, Placed));
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, Placed));
                 foreach (JsonNode? action in document.Section("actions"))
                 {
@@ -445,13 +447,16 @@ internal sealed class DaggerfallLocationAssembly
             }
 
             DaggerfallSiteGeometry geometry = new(presentation.NavigationGridId, _spatial, meshes, owner._blocks.Open);
+            var actors = DaggerfallSiteContent.ReadFixedActors(normalized, key.LogicalId, owner._definitions, diagnostics);
+            var actorSprites = actors.Values.ToDictionary(actor => actor.EntityId,
+                actor => _media.MobileSprites[owner._definitions.RequireActor(actor.ActorId).MobileId!.Value].ForGender(actor.Gender));
             return new DaggerfallSiteProfile(
-                new ProjectFacts(position, new Dictionary<long, AuthoredActor>()),
+                new ProjectFacts(position, actors),
                 geometry,
                 presentation.Appearance,
                 look,
                 materials,
-                new Dictionary<long, NormalizedActorSprite>(),
+                actorSprites,
                 _media.MobileSprites,
                 _media.Audio,
                 _media.ClassicPresentation,
