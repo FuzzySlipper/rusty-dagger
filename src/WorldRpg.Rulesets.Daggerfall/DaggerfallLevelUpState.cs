@@ -91,6 +91,7 @@ internal sealed class DaggerfallLevelUpState
     }
 
     internal DaggerfallLevelUpSave? Pending => _pending;
+    internal event Action? Began;
 
     /// <summary>Resolves the donor's pool and health roll once after an ordinary rest skill check.</summary>
     internal bool BeginIfEligible()
@@ -100,6 +101,7 @@ internal sealed class DaggerfallLevelUpState
         int pool = Draw(level, "attribute-pool", MinimumBonusPool, MaximumBonusPool);
         int health = DaggerfallLevelUpHealthSource.RollGain(_random, _career(), Permanent(DaggerfallMechanicsIds.Endurance), level);
         _pending = new DaggerfallLevelUpSave(level, pool, health, []).Validate();
+        Began?.Invoke();
         return true;
     }
 

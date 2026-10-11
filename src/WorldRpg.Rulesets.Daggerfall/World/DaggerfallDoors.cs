@@ -174,6 +174,8 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     private bool _disposed;
     private bool _suspended;
 
+    internal event Action<DaggerfallRdbDoorDefinition, DaggerfallDoorOperationKind>? SoundRequested;
+
     internal DaggerfallDoorRuntime(EntityDirectory entities, IRandomService random, IEnumerable<DaggerfallRdbDoorDefinition> definitions,
         string profileId,
         IEnumerable<DaggerfallDoorSave>? restored = null)
@@ -352,6 +354,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         }
         door.Motion = DaggerfallDoorMotion.Opening;
         Apply(door);
+        SoundRequested?.Invoke(door.Definition, DaggerfallDoorOperationKind.Open);
         return DaggerfallDoorOperationResult.Started;
     }
 
@@ -372,6 +375,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
             door.FailedLockpickingSkill = null;
         }
         Apply(door);
+        SoundRequested?.Invoke(door.Definition, DaggerfallDoorOperationKind.Close);
         return DaggerfallDoorOperationResult.Started;
     }
 
@@ -466,14 +470,16 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
                 return DaggerfallDoorOperationResult.AlreadyOpen;
             door.LockValue = 0;
             door.FailedLockpickingSkill = null;
-            if (decision.OpensAfterUnlock)
-                door.Motion = DaggerfallDoorMotion.Opening;
+            if (decision.OpensAfterUnlock) door.Motion = DaggerfallDoorMotion.Opening;
             Apply(door);
+            if (decision.OpensAfterUnlock) SoundRequested?.Invoke(door.Definition, DaggerfallDoorOperationKind.Open);
             return DaggerfallDoorOperationResult.Started;
         }
 
         if (decision.Kind != DaggerfallLockInteractionKind.Bash)
             throw new ArgumentOutOfRangeException(nameof(decision), "Unknown lock interaction kind.");
+        if (decision.Status is DaggerfallLockInteractionStatus.Failed or DaggerfallLockInteractionStatus.Applied)
+            SoundRequested?.Invoke(door.Definition, DaggerfallDoorOperationKind.Bash);
         if (decision.Status == DaggerfallLockInteractionStatus.Failed)
             return DaggerfallDoorOperationResult.BashFailed;
         if (decision.Status != DaggerfallLockInteractionStatus.Applied)
@@ -492,6 +498,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         door.FailedLockpickingSkill = null;
         door.Motion = DaggerfallDoorMotion.Opening;
         Apply(door);
+        SoundRequested?.Invoke(door.Definition, DaggerfallDoorOperationKind.Open);
         return DaggerfallDoorOperationResult.Started;
     }
 

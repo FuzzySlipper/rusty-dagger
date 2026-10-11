@@ -613,6 +613,13 @@ internal sealed partial class DaggerfallSession
                 _roster, _persistence, _groundContainers, _enemyBehavior, ExecuteDungeonFamilyAction, this,
                 projection, actionTriggers, profiles, activeProfile, saved?.Site.ReturnProfile?.Require(),
                 composition.StartSite.ClassicPresentation);
+            State.LevelUps.Began += () => _appearance.PlayGameplaySound(96, "level-up");
+            _equipmentMoves.Changed += change =>
+            {
+                if (change.Equipped is { } equipped)
+                    _appearance.PlayEquip(definitions.RequireItem(new(equipped.Definition.Value)),
+                        State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(new(equipped.EntityId)).Value));
+            };
             _weatherPresentation = new DaggerfallWeatherPresentation(engine, composition.Sky, tuning.Weather, tuning.Ambient, tuning.PresentationAudio,
                 (profile, clip) => audioBundles?.Require(profile).OpenClip(engine.Audio, clip));
             partiallyConstructed.Add(_weatherPresentation);

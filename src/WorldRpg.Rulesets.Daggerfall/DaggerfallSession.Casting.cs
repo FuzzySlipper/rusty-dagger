@@ -161,6 +161,7 @@ internal sealed partial class DaggerfallSession
         if (!ValidDirection(delta)) return bundle.ActionSource is not null ? Casting.Deliver(bundle, []) : new(DaggerfallCastOutcome.InvalidTarget, bundle);
         SpatialHit hit = CastSpellRay(bundle.CasterId, from, delta, delta.Length());
         if (!hit.Present) return new(DaggerfallCastOutcome.Released, bundle); // Still in flight.
+        _appearance.PlaySpellImpact(bundle.Sequence, bundle.Spell.Element, hit.Point);
         if (bundle.Target == DaggerfallSpellTarget.AreaAtRange)
             return Casting.Deliver(bundle, AreaSpellTargets(bundle.CasterId, hit.Point, false));
         long? target = ActorForSpellHit(hit);

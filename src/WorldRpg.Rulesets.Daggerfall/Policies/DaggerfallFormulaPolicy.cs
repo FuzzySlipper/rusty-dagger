@@ -53,14 +53,17 @@ internal static class DaggerfallFormulaPolicy
 
     internal static long DisplayFatigue(long storedFatigue) => storedFatigue / FatigueUnitsPerAttributePoint;
 
+    internal const float FallGraceDistanceMetres = 5F;
+
+    internal static bool IsHardLanding(float distance) => distance > FallGraceDistanceMetres / 2 && distance <= FallGraceDistanceMetres;
+
     /// <summary>Donor PlayerHealth fall policy: five health points for every metre after the five-metre grace distance.</summary>
     internal static int FallDamage(float distance)
     {
         if (!float.IsFinite(distance) || distance < 0f) throw new ArgumentOutOfRangeException(nameof(distance));
-        const float GraceDistanceMetres = 5f;
         const float HealthPerMetre = 5f;
-        return distance > GraceDistanceMetres
-            ? checked((int)((distance - GraceDistanceMetres) * HealthPerMetre))
+        return distance > FallGraceDistanceMetres
+            ? checked((int)((distance - FallGraceDistanceMetres) * HealthPerMetre))
             : 0;
     }
 

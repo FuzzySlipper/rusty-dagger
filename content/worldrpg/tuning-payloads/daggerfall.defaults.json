@@ -221,7 +221,10 @@
     "beastBarkChancePercent": 20,
     "vampireAttackChancePercent": 20,
     "vampireBarkChancePercent": 20,
-    "contactPitch": 1.1
+    "contactPitch": 1.1,
+    "footstepDistance": 2.5,
+    "footstepVolumeScale": 0.7,
+    "playerPainChancePercent": 40
   },
   "progression": {
     "enableExperimentalKillExperience": false,

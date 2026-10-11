@@ -157,12 +157,14 @@ public sealed class CastingSessionTests
         Assert.Equal(DaggerfallCastOutcome.Released, release.Outcome);
         Assert.Empty(s.State.Effects.Active);
         Assert.Equal(DaggerfallCastOutcome.Released, s.DeliverSpellImpact(release.Bundle!, Vector3.Zero, Vector3.UnitZ).Outcome);
+        Assert.DoesNotContain(f.InitialEngine.EmittedAudio, request => request.SignalId.Contains("spell-impact"));
         long target = s.State.Actors.All.First(actor => !actor.IsDefeated).DurableId;
         f.Spatial.FloorHit = _ => default(SpatialHit) with { Present = true, Kind = SpatialHitKind.Entity, Entity = s.State.Actors.Get(target).Actor.Entity.Value };
         var applied = s.DeliverSpellImpact(release.Bundle!, Vector3.Zero, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, applied.Outcome);
         Assert.Single(applied.Bundle!.Results);
         Assert.Equal(DaggerfallCastOutcome.AlreadyDelivered, s.DeliverSpellImpact(release.Bundle!, Vector3.Zero, Vector3.UnitZ).Outcome);
+        Assert.Single(f.InitialEngine.EmittedAudio, request => request.SignalId.Contains("spell-impact"));
     }
 
     private sealed class Fixture : IDisposable
@@ -198,8 +200,10 @@ public sealed class CastingSessionTests
                     DaggerfallEffectStacking.Stack, 20, 1, Apply, _ => Rounds++, Resume, Feedback:DaggerfallEffectFeedback.MagicSparkle,
                     Spell:new(effect.Type,effect.SubType,SupportsDuration:true,SupportsMagnitude:!paralysis,IsParalysis:paralysis))).ToArray();
             Composition = new(TestPayload.Definitions, ReadInputs(TestData.RepositoryRoot), DaggerfallTuning.Defaults) { Effects = new(definitions) };
-            Session = DaggerfallSession.StartNew(Engine().Context, Composition);
+            InitialEngine = Engine();
+            Session = DaggerfallSession.StartNew(InitialEngine.Context, Composition);
         }
+        internal EngineContextFake InitialEngine { get; }
         private EngineContextFake Engine()
         {
             List<string> releases = [];
