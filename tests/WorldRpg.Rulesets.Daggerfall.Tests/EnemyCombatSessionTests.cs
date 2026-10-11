@@ -35,15 +35,11 @@ public sealed class EnemyCombatSessionTests
         Assert.Equal("archer-shot", archer.ActionId);
         Assert.Empty(archer.Attacks);
         DaggerfallActionDefinition shot = definitions.Actions["archer-shot"];
-        Assert.Equal("fixed-ranged", shot.Interpretation);
-        // The authored values and where they come from, stated so a later reader does not re-derive a
-        // claim the corpus does not support. The damage is the iron long bow's range exactly - 4 to 18 -
-        // which is an authored choice anchored on the long bow rather than a range both bows cover: the
-        // iron short bow is 4 to 16, so 18 sits above it. Archery is chosen because the corpus's bows use
-        // that skill and the archer's donor record declares a ranged attack; the record itself carries no
-        // skills at all, and the archer's own twelve skills are the corpus's uniform filler.
-        Assert.Equal("archery", shot.Skill);
-        Assert.Equal((4, 18), (shot.MinimumDamage, shot.MaximumDamage));
+        Assert.Equal("enemy-equipped-ranged", shot.Interpretation);
+        // The actual carried bow supplies skill and damage, while the action owns cadence/range.
+        Assert.Equal("equipped", shot.Skill);
+        Assert.Null(shot.MinimumDamage);
+        Assert.Null(shot.MaximumDamage);
         Assert.Equal(4, definitions.Items[new DaggerfallItemId("iron-short-bow")].Weapon!.MinimumDamage);
         Assert.Equal(18, definitions.Items[new DaggerfallItemId("iron-long-bow")].Weapon!.MaximumDamage);
         // A shot carries further than a swing, and the erratum that named the gap is gone: the capability
@@ -72,8 +68,8 @@ public sealed class EnemyCombatSessionTests
             // rather than a disposition.
             Assert.NotNull(definition.ActionId);
             DaggerfallActionDefinition action = definitions.Actions[definition.ActionId!];
-            Assert.Contains(action.Interpretation, new[] { "fixed-melee", "fixed-ranged", "enemy-equipped-melee" });
-            if (action.Interpretation == "enemy-equipped-melee")
+            Assert.Contains(action.Interpretation, new[] { "fixed-melee", "fixed-ranged", "enemy-equipped-melee", "enemy-equipped-ranged" });
+            if (action.Interpretation is "enemy-equipped-melee" or "enemy-equipped-ranged")
             {
                 // A class enemy swings what it has equipped: the weapon supplies the skill and damage.
                 Assert.Equal("equipped", action.Skill);

@@ -132,6 +132,7 @@ public sealed class HudSnapshotContractTests
             source.Encounters)
         {
             EnemySpells = source.EnemySpells,
+            EnemyRanged = source.EnemyRanged,
             NewGame = source.NewGame,
             BuildingNames = source.BuildingNames,
             DialogueWorldRules = source.DialogueWorldRules,

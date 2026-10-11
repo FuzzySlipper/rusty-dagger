@@ -16,6 +16,9 @@ internal static class DaggerfallInventoryStackIds
     internal static InventoryStackId ForSpawnLoadout(long ownerId, int ordinal) =>
         InventoryStackId.Parse($"daggerfall.spawn.{ownerId}.{ordinal}");
 
+    internal static InventoryStackId ForEnemyQuiver(long ownerId) =>
+        InventoryStackId.Parse($"daggerfall.quiver.{ownerId}");
+
     internal static InventoryStackId ForLoot(long actorId, ulong sequence, int ordinal) =>
         InventoryStackId.Parse($"daggerfall.loot.{actorId}.{sequence}.{ordinal}");
 

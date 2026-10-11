@@ -514,6 +514,10 @@ internal sealed class DaggerfallActorRoster
             _state.Character.Identity.RaceId,
             _state.Character.Identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male",
             fixedVariant: mobileId switch { 7 or 21 => 0, 8 or 12 => 1, 24 => 2, _ => null });
+        if (definition.Kind == DaggerfallActorKinds.EnemyClass)
+            DaggerfallClassEnemyEquipmentPolicy.GrantRangedLoadout(_definitions, _random, _state.ItemInstances, _uniqueItems,
+                inventory, _state.ActorInventories.EquipmentFor(actor.DurableId), actor.DurableId, mobileId, _state.Progression.Level,
+                _state.Character.Identity.RaceId, _state.Character.Identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male");
         DaggerfallClassEnemyEquipmentPolicy.CoatStartingWeapon(_random, _state.ItemInstances,
             _state.ActorInventories.EquipmentFor(actor.DurableId), actor.DurableId, mobileId, _state.Progression.Level);
     }

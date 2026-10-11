@@ -1,5 +1,11 @@
 {
   "ruleset": "daggerfall",
+  "enemyRanged": {
+    "bowTemplate": 130,
+    "arrowItem": "arrow",
+    "startingArrows": 12,
+    "minimumDistance": 6
+  },
   "vocabulary": {
     "attributes": [
       "strength",
@@ -216,12 +222,6 @@
       "team": "knights-and-mages",
       "lootTableKey": "C",
       "action": "archer-shot",
-      "loadout": [
-        {
-          "item": "arrow",
-          "quantity": 12
-        }
-      ],
       "attacks": []
     },
     {
@@ -3009,12 +3009,10 @@
         "attack",
         "ranged"
       ],
-      "interpretation": "fixed-ranged",
-      "skill": "archery",
+      "interpretation": "enemy-equipped-ranged",
+      "skill": "equipped",
       "cooldownSeconds": 2.0,
-      "reach": 10.0,
-      "minimumDamage": 4,
-      "maximumDamage": 18
+      "reach": 51.2
     },
     {
       "id": "enemy-class-equipped-melee",

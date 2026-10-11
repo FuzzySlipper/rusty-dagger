@@ -107,11 +107,23 @@ internal static partial class DaggerfallBaseContent
                 diagnostics.Add(problem);
             DaggerfallAssembledSiteDefinition? assembledSites = ReadAssembledSites(root, diagnostics);
             DaggerfallNewGameDefinition newGame = ReadNewGame(root, catalogs, itemTemplatesCatalog, DaggerfallTemplateItemDefinitions.Create(itemTemplatesCatalog, items, magic), equipmentSlots, magic, diagnostics);
+            JsonElement rangedSetup = Property(root, "enemyRanged", diagnostics);
+            DaggerfallEnemyRangedDefinition enemyRanged = new(Integer(rangedSetup, "bowTemplate", diagnostics),
+                new(Text(rangedSetup, "arrowItem", diagnostics)), Integer(rangedSetup, "startingArrows", diagnostics),
+                Number(rangedSetup, "minimumDistance", diagnostics));
+            var templateItems = DaggerfallTemplateItemDefinitions.Create(itemTemplatesCatalog, items, magic);
+            if (!templateItems.TryGetValue(new($"template-{enemyRanged.BowTemplate}-iron"), out var rangedBow) || rangedBow.Weapon?.IsBow != true
+                || !items.TryGetValue(enemyRanged.ArrowItem, out var arrows) || !arrows.IsFungible
+                || enemyRanged.StartingArrows <= 0 || enemyRanged.MinimumDistance <= 0
+                || !actions.TryGetValue("archer-shot", out var rangedAction) || rangedAction.Interpretation != "enemy-equipped-ranged"
+                || enemyRanged.MinimumDistance >= rangedAction.Reach)
+                diagnostics.Add("Enemy ranged setup requires an admitted bow, fungible arrows, positive quiver count and valid range band.");
             diagnostics.ThrowIfAny();
             return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, questSources, cinematics, encounters)
             {
                 BuildingNames = buildingNames,
                 EnemySpells = enemySpells,
+                EnemyRanged = enemyRanged,
                 DialogueWorldRules = dialogueWorldRules,
                 NewGame = newGame,
                 AssembledSites = assembledSites,
@@ -905,6 +917,7 @@ internal static partial class DaggerfallBaseContent
     {
         StringBuilder value = new();
         void Add(params object?[] fields) => value.AppendJoin('|', fields.Select(FingerprintField)).Append('\n');
+        Add("enemy-ranged", definitions.EnemyRanged.BowTemplate, definitions.EnemyRanged.ArrowItem.Value, definitions.EnemyRanged.StartingArrows, FingerprintField(definitions.EnemyRanged.MinimumDistance));
         Add("vocabulary", string.Join(',', definitions.Vocabulary.Attributes.Select(id => id.Value)), string.Join(',', definitions.Vocabulary.Skills.Select(id => id.Value)), string.Join(',', definitions.Vocabulary.Tracks.Select(id => id.Value)), string.Join(',', definitions.Vocabulary.ArmorParts), string.Join(',', definitions.Vocabulary.Progression.Select(id => id.Value)));
         foreach (var list in definitions.EnemySpells.MobileLists.OrderBy(pair => pair.Key)) Add("enemy-spells", list.Key, string.Join(',', list.Value));
         foreach (var tier in definitions.EnemySpells.ClassTiers.Select((spells, index) => (spells, index))) Add("enemy-spell-tier", tier.index, string.Join(',', tier.spells));
@@ -3296,9 +3309,9 @@ internal static partial class DaggerfallBaseContent
             if (actor.ActionId is { } associatedActionId && actions.TryGetValue(associatedActionId, out DaggerfallActionDefinition? action))
             {
                 if (actor.Kind == "player" && action.Interpretation != "player-equipped-melee") diagnostics.Add("Player action association must use player-equipped melee.");
-                if (actor.Kind != "player" && action.Interpretation is not ("fixed-melee" or "fixed-ranged" or "enemy-equipped-melee")) diagnostics.Add($"Actor '{actor.Id.Value}' action association is incompatible with its authored attacks.");
+                if (actor.Kind != "player" && action.Interpretation is not ("fixed-melee" or "fixed-ranged" or "enemy-equipped-melee" or "enemy-equipped-ranged")) diagnostics.Add($"Actor '{actor.Id.Value}' action association is incompatible with its authored attacks.");
                 if (action.AttackRangeIndex is int index && (index < 0 || index >= actor.Attacks.Count)) diagnostics.Add($"Action '{action.Id}' references missing attack range {index} on actor '{actor.Id.Value}'.");
-                if (action.AttackRangeIndex is null && action.MinimumDamage is null && actor.Kind != "player" && action.Interpretation != "enemy-equipped-melee") diagnostics.Add($"Fixed action '{action.Id}' needs either an actor attack range reference or direct damage.");
+                if (action.AttackRangeIndex is null && action.MinimumDamage is null && actor.Kind != "player" && action.Interpretation is not ("enemy-equipped-melee" or "enemy-equipped-ranged")) diagnostics.Add($"Fixed action '{action.Id}' needs either an actor attack range reference or direct damage.");
             }
             ValidateLoadout(actor, items, equipmentSlots, diagnostics);
         }
@@ -3333,7 +3346,7 @@ internal static partial class DaggerfallBaseContent
             bool fixedReach = action.Interpretation is "fixed-melee" or "fixed-ranged";
             if (fixedReach && (action.AttackRangeIndex is not null) == directRange) diagnostics.Add($"Fixed action '{action.Id}' must use exactly one direct damage range or actor attackRangeIndex.");
             if (action.Interpretation is "player-equipped-melee" or "player-equipped-ranged" && (action.AttackRangeIndex is not null || directRange || action.StaminaCost is not > 0)) diagnostics.Add($"Player-equipped action '{action.Id}' must own a positive stamina cost and use equipped weapon damage.");
-            if ((fixedReach || action.Interpretation == "enemy-equipped-melee") && action.StaminaCost is not null) diagnostics.Add($"Fixed action '{action.Id}' must not declare player stamina cost.");
+            if ((fixedReach || action.Interpretation is "enemy-equipped-melee" or "enemy-equipped-ranged") && action.StaminaCost is not null) diagnostics.Add($"Fixed action '{action.Id}' must not declare player stamina cost.");
             // How far an attack carries is the attack's own property. A fixed action without a reach would
             // have to borrow one from somewhere else, which is how a bow and a dagger ended up reaching the
             // same distance.
@@ -3346,7 +3359,7 @@ internal static partial class DaggerfallBaseContent
             // at impact time, so the behaviour gate is the admission, and a reach past what an attacker
             // perceives would mean a shot that only ever fires if something else already put the player
             // there.
-            if (action.Interpretation is "fixed-ranged" or "player-equipped-ranged" && reach > MaximumRangedReach) diagnostics.Add($"Ranged action '{action.Id}' reaches {reach} beyond the range an attacker perceives '{MaximumRangedReach}'.");
+            if (action.Interpretation is "fixed-ranged" or "player-equipped-ranged" or "enemy-equipped-ranged" && reach > MaximumRangedReach) diagnostics.Add($"Ranged action '{action.Id}' reaches {reach} beyond the admitted classic ranged maximum '{MaximumRangedReach}'.");
         }
     }
 
@@ -3841,11 +3854,11 @@ internal static partial class DaggerfallBaseContent
             int? minimum = hasMinimum && minimumValue.TryGetInt32(out int parsedMinimum) ? parsedMinimum : null;
             int? maximum = hasMaximum && maximumValue.TryGetInt32(out int parsedMaximum) ? parsedMaximum : null;
             bool directRange = hasMinimum || hasMaximum;
-            bool validDamageShape = interpretation is "player-equipped-melee" or "enemy-equipped-melee" or "player-equipped-ranged"
+            bool validDamageShape = interpretation is "player-equipped-melee" or "enemy-equipped-melee" or "enemy-equipped-ranged" or "player-equipped-ranged"
                 ? attackRangeIndex is null && !directRange
                 : (attackRangeIndex is not null) != directRange;
             bool valid = ValidId(id)
-                && interpretation is "player-equipped-melee" or "player-equipped-ranged" or "fixed-melee" or "fixed-ranged" or "enemy-equipped-melee"
+                && interpretation is "player-equipped-melee" or "player-equipped-ranged" or "fixed-melee" or "fixed-ranged" or "enemy-equipped-melee" or "enemy-equipped-ranged"
                 && tags.Length > 0 && tags.All(ValidId)
                 && (skill == "equipped" || ValidId(skill))
                 && reach is null or >= 0 and <= 100
@@ -3909,10 +3922,9 @@ internal static partial class DaggerfallBaseContent
     private const double MaximumMeleeReach = 2.25d;
 
     /// <summary>
-    /// The furthest a ranged action may reach, which is the detection distance an attacker sees the player
-    /// within. The two have to agree or the reach is a number the perception query never resolves.
+    /// EnemyAttack's maximum ranged distance (2048 classic units). Enemy sight extends beyond it.
     /// </summary>
-    private const double MaximumRangedReach = 12d;
+    private const double MaximumRangedReach = 51.2d;
 
     internal static JsonElement Object(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
     {

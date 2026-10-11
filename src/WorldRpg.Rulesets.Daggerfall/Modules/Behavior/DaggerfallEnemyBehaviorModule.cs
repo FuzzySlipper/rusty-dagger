@@ -48,6 +48,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     private readonly ActorWanderCoordinator _wander;
     private readonly IRandomService _random;
     private readonly Func<long, long, DaggerfallEnemyMotorContext> _motorContext;
+    private readonly Func<long, long, double, double?>? _attackReach;
     private readonly DaggerfallPursuitManeuverTuning _maneuvers;
 
     internal DaggerfallEnemyBehaviorModule(
@@ -64,10 +65,11 @@ internal sealed class DaggerfallEnemyBehaviorModule
         Func<long, ActorControlRestrictions>? controlRestrictions = null,
         Func<long, PursuitPolicy>? movementPolicy = null,
         Func<long, bool>? canOpenDoors = null,
-        Func<ActorState, bool>? openBlockedDoor = null, Func<long, PursuitTarget?>? selectTarget = null, Func<long, bool>? questRestrained = null)
+        Func<ActorState, bool>? openBlockedDoor = null, Func<long, PursuitTarget?>? selectTarget = null, Func<long, bool>? questRestrained = null, Func<long, long, double, double?>? attackReach = null)
     {
         _random = random;
         _motorContext = motorContext;
+        _attackReach = attackReach;
         _maneuvers = tuning.Maneuvers;
         _selectTarget = selectTarget;
         _questRestrained = questRestrained ?? (_ => false);
@@ -339,12 +341,13 @@ internal sealed class DaggerfallEnemyBehaviorModule
         var perception = target.DurableId == DaggerfallActorIdentity.PlayerEntityId ? _lastDecisions.GetValueOrDefault(actor.DurableId) : null;
         bool inSight = perception?.InSight ?? observation.Visible;
         bool known = observation.Visible && (inSight || perception?.InEarshot == true);
+        observation = observation with { Reach = _attackReach?.Invoke(actor.DurableId, target.DurableId, observation.Distance) ?? observation.Reach };
         var memory = Senses(actor).Motor;
         return DaggerfallEnemyMotorPolicy.Select(memory, _movementPolicy(actor.DurableId), _maneuvers,
             _motorContext(actor.DurableId, target.DurableId), observation, inSight, known,
             maySearch: !IsPacified(actor.DurableId), deltaSeconds,
             (key, min, max) => checked((int)_random.DrawKeyed(new KeyedRngRequest(0, "daggerfall.enemy-motor",
-                $"actor:{actor.DurableId}:target:{target.DurableId}:generation:{generation}:step:{step}:decision:{memory.Decision}:{key}", min, max)).Value));
+                $"actor:{actor.DurableId}:target:{target.DurableId}:generation:{generation}:step:{step}:decision:{memory.Decision}:{key}", min, max)).Value)) with { AttackReach = observation.Reach };
     }
 
     /// <summary>Runs one source-backed civilian activity step through Engine navigation.</summary>

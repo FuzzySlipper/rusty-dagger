@@ -66,7 +66,8 @@ internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulon
 /// the damage lands when the authored damage frame is reached.
 /// </summary>
 internal sealed record EnemyAttackStartedFact(long AttackerId, long TargetId, bool WillHit, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact
-{ internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
+{ internal bool Ranged { get; init; }
+  internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
 /// <summary>
 /// A released shot met admitted static geometry before its aim. The missile died on the cover, so
 /// nothing about the target's dodge or the shooter's roll decided anything.

@@ -597,7 +597,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                     && CanVoice(attackingVisual.Sprite.Feedback)
                     && DrawCue(startEvent, "attack", 1, 100) <= audioTuning.AttackCueChancePercent)
                     EmitAtActor(attackingVisual.Sprite.Feedback!.AttackCue, startEvent, started.AttackerId, actorState);
-                if (!StartAttack(started.AttackerId, started.TargetId, started.OriginatingGeneration, started.OriginatingSimulationStep, startEvent))
+                if (!StartAttack(started.AttackerId, started.TargetId, started.OriginatingGeneration, started.OriginatingSimulationStep, startEvent, started.Ranged))
                     attackImpacts.Add(new AttackImpactNotice(started.AttackerId, started.TargetId, started.OriginatingGeneration, started.OriginatingSimulationStep, Expired: false));
                 break;
             case AttackHitFact hit:
@@ -632,6 +632,11 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
                 TransitionToCorpse(died.ActorId);
                 break;
             case EnemyBehaviorTransitionFact transition:
+                // A changed range/quiver can select movement while the accepted shot is still
+                // awaiting its release frame. Kit's pending attack, not the next AI choice,
+                // decides whether that animation is still live.
+                if (actorState?.TryGet(transition.ActorId, out var acting) == true
+                    && acting.Actor.TryGet<AttackState>(out var attackState) && attackState.Pending is not null) break;
                 if (transition.Current == EnemyBehaviorState.Idle && actors.TryGetValue(transition.ActorId, out ActorVisual? visual)) EnsureRestState(transition.ActorId, PreferredRestState(visual.Sprite));
                 else if (transition.Current == EnemyBehaviorState.Chase) EnsureRestState(transition.ActorId, "move");
                 break;
@@ -1066,21 +1071,20 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     /// frame. Without one there is no strike beat to wait for, so the caller resolves
     /// the swing immediately; the same fallback already covers its hit cue.
     /// </summary>
-    private bool StartAttack(long entityId, long targetId, ulong generation, ulong simulationStep, PresentationEventIdentity presentationEvent)
+    private bool StartAttack(long entityId, long targetId, ulong generation, ulong simulationStep, PresentationEventIdentity presentationEvent, bool rangedAttack = false)
     {
         if (!actors.TryGetValue(entityId, out ActorVisual? visual) || visual.Live is null || (visual.Sprite.AttackSequences.Count == 0 && visual.Sprite.RangedAttackSequence is null)) return false;
         NormalizedAttackSequence selected;
         string stateName;
-        if (visual.Sprite.RangedAttackSequence is { } ranged && visual.Sprite.States.ContainsKey(ranged.State))
+        if (rangedAttack && visual.Sprite.RangedAttackSequence is { } ranged && visual.Sprite.States.ContainsKey(ranged.State))
         {
-            // The donor plays a ranged mobile's ranged animation for every attack it makes, with
-            // no distance check; a published rangedAttack1 state is the HasRangedAttack1 fact, and
-            // the donor's RangedAttack2 variant names no adopted mobile.
+            // The accepted attack selects its own animation; a close melee fallback stays melee.
             selected = ranged;
             stateName = ranged.State;
         }
         else
         {
+            if (visual.Sprite.AttackSequences.Count == 0) return false;
             selected = SelectAttack(visual.Sprite.AttackSequences, generation, simulationStep, entityId, targetId);
             stateName = "primaryAttack";
         }
@@ -1456,8 +1460,8 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     private void EnsureRestState(long entityId, string requested)
     {
         if (!actors.TryGetValue(entityId, out ActorVisual? visual) || visual.Defeated || visual.State == requested) return;
-        // A behavior transition out of Attack cancels the presentation-owned swing along with
-        // the Kit pending attack. Without clearing this marker, a later idle playback receipt
+        // Once Kit has no pending attack, a behavior transition may clear its old swing.
+        // Without clearing this marker, a later idle playback receipt
         // could be mistaken for the canceled strike and keep the session gated indefinitely.
         visual.ActiveAttack = null;
         StartState(entityId, requested, visual);

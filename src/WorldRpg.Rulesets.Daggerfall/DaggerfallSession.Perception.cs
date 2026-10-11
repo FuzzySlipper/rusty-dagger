@@ -32,7 +32,7 @@ internal sealed partial class DaggerfallSession
         bool paralyzed = State.Effects.Active.Any(effect => effect.Definition.Key == "paralyze" && effect.Context.Target.Value == checked((ulong)targetId));
         return new(Level(actorId), Level(targetId), paralyzed, backTurned,
             targetId == DaggerfallActorIdentity.PlayerEntityId && (!State.WeaponDrawn || _combat.PlayerHoldsBow()),
-            _roster.Definitions[actorId].MobileId is int mobileId && _definitions.Mobiles.Mobiles[mobileId].PrefersRanged);
+            _roster.Definitions[actorId].MobileId is int mobileId && _definitions.Mobiles.Mobiles[mobileId].PrefersRanged, _definitions.EnemyRanged.MinimumDistance);
     }
 
     /// <summary>
