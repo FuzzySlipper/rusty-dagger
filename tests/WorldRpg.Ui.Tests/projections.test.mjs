@@ -744,7 +744,7 @@ test('control settings capture, explicit swap, cancel and reset use semantic act
     rebind.click();
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyQ', bubbles: true, cancelable: true }));
     assert.deepEqual(f.actions.at(-1), { action: 'controls-rebind', item: 'move.forward', key: 'KeyQ', confirm: false });
-    settings.querySelector('input').checked = true;
+    settings.querySelector('[aria-label="Swap conflicting binding"]').checked = true;
     rebind.click();
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS', bubbles: true, cancelable: true }));
     assert.equal(f.actions.at(-1).confirm, true);
@@ -753,7 +753,7 @@ test('control settings capture, explicit swap, cancel and reset use semantic act
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
     assert.equal(f.actions.length, count);
     assert.equal(settings.hidden, false);
-    [...settings.querySelectorAll('button')].find(button => button.textContent === 'Reset bindings').click();
+    [...settings.querySelectorAll('button')].find(button => button.textContent === 'Reset controls').click();
     assert.deepEqual(f.actions.at(-1), { action: 'controls-reset' });
   } finally { f.dispose(); }
 });
@@ -1888,5 +1888,43 @@ test('HUD projects the timed message stack, breath and activation mode without l
     assert.equal(f.root.querySelector('.dagger-activation-indicator').textContent, 'Talk');
     f.publish({ messages: [] });
     assert.equal(f.root.querySelectorAll('.dagger-outcome li').length, 0);
+  } finally { f.dispose(); }
+});
+
+
+test('look settings claim complete preferences and refresh after reload', () => {
+  const f = fixture();
+  try {
+    f.publish({ controls: { diagnostic: '', bindings: [], lookSensitivity: 1.5, invertVertical: false } });
+    f.root.querySelector('[data-action="settings"]').click();
+    const sensitivity = f.root.querySelector('[aria-label="Mouse sensitivity multiplier"]');
+    const invert = f.root.querySelector('[aria-label="Invert vertical look"]');
+    assert.equal(sensitivity.value, '1.5'); assert.equal(invert.checked, false);
+    sensitivity.value = '2'; invert.checked = true;
+    [...f.root.querySelectorAll('button')].find(b => b.textContent === 'Apply look settings').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-look', sensitivity: 2, invert: true });
+    f.publish({ controls: { diagnostic: 'Saved', bindings: [], lookSensitivity: 2, invertVertical: true } });
+    assert.equal(sensitivity.value, '2'); assert.equal(invert.checked, true);
+  } finally { f.dispose(); }
+});
+
+test('magic-item shortcut lists only eligible carried items and uses the current inventory owner', () => {
+  const f = fixture();
+  try {
+    const row = (key, canUseMagic) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
+      condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], canUseMagic });
+    const state = { panelRequest: { panel: 'magic-items', revision: '1' }, inventory: {
+      revision: '6:1', message: '', equipmentChange: null, slots: [], items: [row('potion', true), row('book', false)] } };
+    f.publish(state);
+    const root = f.root.querySelector('.dagger-magic-items');
+    assert.equal(root.hidden, false);
+    const button = root.querySelector('button');
+    assert.equal(button.textContent, 'potion');
+    assert.equal(root.querySelectorAll('button').length, 1);
+    f.publish(state);
+    assert.equal(root.querySelector('button'), button);
+    button.click();
+    assert.deepEqual(f.actions.findLast(action => action.action === 'inventory-use'), { action: 'inventory-use', revision: '6:1', item: 'potion' });
+    assert.equal(f.root.querySelector('.dagger-menu').open, false);
   } finally { f.dispose(); }
 });

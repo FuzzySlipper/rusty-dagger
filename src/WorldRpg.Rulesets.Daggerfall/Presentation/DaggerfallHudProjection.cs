@@ -168,6 +168,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ];
         if (controlSettings is not null) fields = [.. fields, ("controls", builder.Object(
             ("diagnostic", builder.String(controlDiagnostic ?? "")),
+            ("lookSensitivity", builder.Number(controlSettings.LookSensitivity)),
+            ("invertVertical", builder.Boolean(controlSettings.InvertVertical)),
             ("bindings", builder.Array(DaggerfallControlSettings.Catalog.Select(action => builder.Object(
                 ("id", builder.String(action.Id)), ("category", builder.String(action.Category)),
                 ("keys", builder.Array(controlSettings.KeysFor(action.Id).Select(builder.String).ToArray())),
@@ -595,7 +597,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("gridSlot", item.GridSlot is int slot ? builder.Number(slot) : builder.Null()),
         ("equippedSlots", builder.Array(item.EquippedSlots.Select(builder.String).ToArray())),
         ("compatibleSlots", builder.Array(item.CompatibleSlots.Select(builder.String).ToArray())),
-        ("canUse", builder.Boolean(item.CanUse)), ("canEquip", builder.Boolean(item.CanEquip)),
+        ("canUse", builder.Boolean(item.CanUse)), ("canUseMagic", builder.Boolean(item.CanUseMagic)), ("canEquip", builder.Boolean(item.CanEquip)),
         ("equipRefusal", item.EquipRefusal is null ? builder.Null() : builder.String(item.EquipRefusal)));
 
     private static uint Loot(UiValueBuilder builder, LootPresentation value) => builder.Object(

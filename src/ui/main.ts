@@ -579,6 +579,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'rest', mode, hours },
     });
   };
+  const magicItemsRoot = document.createElement('section'); magicItemsRoot.className = 'dagger-magic-items'; magicItemsRoot.hidden = true;
+  let magicItemsIdentity = '';
+  shell.querySelector('.dagger-controls-root')!.before(magicItemsRoot);
   const controlsRoot = shell.querySelector<HTMLElement>('.dagger-controls-root')!;
   const controlsView = mountControls(controlsRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
@@ -839,7 +842,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (focus && next === 'gameplay') context.ui.focusGameplay();
   };
   let inventorySuppressed = false;
-  let activePanel: 'spells' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
+  let activePanel: 'spells' | 'magic-items' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
     reportMap(false);
     controlsView.cancel();
@@ -886,7 +889,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     else if (menu.open) closeMenu();
     else openMenu();
   };
-  const showPanel = (action: 'spells' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
+  const showPanel = (action: 'spells' | 'magic-items' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings'): void => {
     if (action === 'inventory' && inventorySuppressed) return;
     if (!menu.open) openMenu();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
@@ -898,6 +901,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     panel.hidden = false;
     diagnostics.hidden = action !== 'diagnostics';
     inventoryRoot.hidden = action !== 'inventory';
+    magicItemsRoot.hidden = action !== 'magic-items';
     characterRoot.hidden = action !== 'character';
     spellsRoot.hidden=action!=='spells';
     mapRoot.hidden = action !== 'map';
@@ -917,7 +921,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     menu.classList.toggle('has-journal', action === 'journal');
     menu.classList.toggle('has-loot', action === 'loot');
     menu.classList.toggle('has-debug', action === 'debug');
-    menuTitle.textContent = action === 'spells' ? 'Known spells' : action === 'settings' ? 'Control settings' : action === 'diagnostics' ? 'Composition diagnostics'
+    menuTitle.textContent = action === 'magic-items' ? 'Use magic item' : action === 'spells' ? 'Known spells' : action === 'settings' ? 'Control settings' : action === 'diagnostics' ? 'Composition diagnostics'
       : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character' : action === 'map' ? 'Map' : action === 'transport' ? 'Travel & transport' : action === 'rest' ? 'Rest & loiter' : action === 'journal' ? 'Journal & notes'
       : action === 'loot' ? 'Loot' : action === 'debug' ? 'Engine debug console'
       : saveSlotMode === 'save' ? 'Save game' : 'Load game';
@@ -968,7 +972,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     else if (action === 'quick-save') claim('save-game');
     else if (action === 'quick-load') { claim('load-game'); loadRequested = true; }
     else if (action === 'load-game') showSaveSlots('load');
-    else if (action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
+    else if (action === 'magic-items' || action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
   };
   const onMenuClick = (event: MouseEvent): void => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button');
@@ -1399,6 +1403,22 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       ...questMessages.flatMap(message => message?.diagnostics ?? []),
       ...(value.spells?.summoning?.diagnostics ?? []),
     ].map(detail => { const item = document.createElement('li'); item.textContent = detail; return item; }));
+    const magicIdentity = JSON.stringify([value.inventory?.revision, value.inventory?.items.filter(item => item.canUseMagic)]);
+    if (magicIdentity !== magicItemsIdentity) {
+      magicItemsIdentity = magicIdentity;
+      magicItemsRoot.replaceChildren();
+      for (const item of value.inventory?.items ?? []) {
+        if (!item.canUseMagic) continue;
+        const button = document.createElement('button'); button.type = 'button'; button.textContent = item.label;
+        button.addEventListener('click', () => {
+          context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,
+            data: { action: 'inventory-use', revision: value.inventory!.revision, item: item.key } });
+          closeMenu();
+        });
+        magicItemsRoot.append(button);
+      }
+      if (!magicItemsRoot.childElementCount) magicItemsRoot.textContent = 'No usable magic items or potions.';
+    }
     if (value.controls) controlsView.update(value.controls);
     if (value.activation) activationMode.value = value.activation.mode;
     activationMode.disabled = value.mode !== 'playing';

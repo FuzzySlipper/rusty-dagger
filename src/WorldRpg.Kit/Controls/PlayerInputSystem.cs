@@ -65,7 +65,7 @@ internal sealed class HeldPlayerInput
 public sealed class PlayerInputSystem
 {
     private readonly HeldPlayerInput _held = new();
-    private readonly PlayerControlTuning _tuning;
+    private PlayerControlTuning _tuning;
     private PlayerControlBindings _controls;
     private readonly ControllerInputTuning? _controller;
     private InputActionBinding[] _bindings;
@@ -89,6 +89,10 @@ public sealed class PlayerInputSystem
         _bindings = bindings.ToArray();
         _held.Keys.RemoveWhere(key => key != controls.Forward && key != controls.Backward && key != controls.Left && key != controls.Right);
     }
+
+    /// <summary>Applies player look preferences through the existing Engine look configuration.</summary>
+    public void ConfigureLook(float sensitivity, bool invertVertical) =>
+        _tuning = (_tuning with { LookSensitivity = sensitivity, InvertVertical = invertVertical }).Validate();
 
     /// <summary>Releases locally interpreted held input when physical mappings or focus change.</summary>
     public void ClearHeldInput() => _held.Clear();
