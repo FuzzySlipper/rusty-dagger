@@ -21,6 +21,7 @@ internal class EngineContextFake : DispatchProxy
     internal int ReleasedAudioVoices => ((AudioServiceFake)(object)audio).ReleasedVoices;
     internal IReadOnlyList<AudioSignalHandle> RetiredAudioSignals => ((AudioServiceFake)(object)audio).RetiredSignals;
     /// <summary>How many clips the product opened from content, which is how a cue really resolved.</summary>
+    internal int ReleasedContentClips => ((AudioServiceFake)(object)audio).ReleasedContentClips;
     internal int OpenedContentClips => ((AudioServiceFake)(object)audio).OpenedContentClips;
     internal IReadOnlyList<Color> BackgroundColors => ((CameraServiceFake)(object)camera).BackgroundColors;
 
@@ -263,6 +264,7 @@ internal class EngineContextFake : DispatchProxy
         internal int ReleasedVoices { get; private set; }
         /// <summary>How many clips the product opened from content, which is how a cue really resolves.</summary>
         internal int OpenedContentClips { get; private set; }
+        internal int ReleasedContentClips { get; private set; }
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
         {
@@ -290,7 +292,7 @@ internal class EngineContextFake : DispatchProxy
         private AudioClip OpenClipFromContent()
         {
             OpenedContentClips++;
-            return new AudioClip(new AudioClipHandle(1), static () => { });
+            return new AudioClip(new AudioClipHandle(1), () => ReleasedContentClips++);
         }
 
         private AudioVoice CreateVoice()

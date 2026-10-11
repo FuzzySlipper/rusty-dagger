@@ -1,4 +1,6 @@
 using Rusty.Engine;
+using WorldRpg.Rulesets.Daggerfall.Guilds;
+using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -6,14 +8,6 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>
 /// The session's ordinary music: what plays where the player stands, and when it retires.
 /// </summary>
-/// <remarks>
-/// The director owns cue selection and loop lifetime; the session owns the decision the director cannot
-/// make, which is what the admitted world is. A dungeon plays its own songs, an outdoor or interior site
-/// plays the day's or the night's, and changing site retires the loop so the next one starts the song the
-/// new place plays rather than continuing the previous world's. A context whose published cues are absent
-/// stays silent: the catalogue is deliberately smaller than the donor's playlists, and the alternative
-/// would be playing a track the original game played somewhere else.
-/// </remarks>
 internal sealed partial class DaggerfallSession
 {
     private readonly DaggerfallMusicBundle? _musicBundle;
@@ -25,7 +19,7 @@ internal sealed partial class DaggerfallSession
     /// <summary>The donor track playing now, or nothing when no admitted track plays.</summary>
     internal string? MusicTrack => _music?.Playing;
 
-    /// <summary>Opens the clip for one donor track, keeping the Engine resource for the session's life.</summary>
+    /// <summary>Opens the clip for one donor track, retaining its Engine resource until the voice retires.</summary>
     private AudioClip? ResolveMusicClip(string track)
     {
         if (_musicClips.TryGetValue(track, out AudioClip? cached)) return cached;
@@ -48,7 +42,8 @@ internal sealed partial class DaggerfallSession
         {
             // The rotation is per site change, so a place with more than one published song starts a
             // different one than the place before it, exactly as the donor's own lists rotate.
-            int pick = (_musicRotation + offset) % playlist.Count;
+            int rotation = context == DaggerfallMusicContext.Tavern ? (int)(_time.Calendar.DayNumber % playlist.Count) : _musicRotation;
+            int pick = (rotation + offset) % playlist.Count;
             if (!_musicBundle.CanPlay(playlist[pick])) continue;
             // A cue that cannot open throws out of the update and stays terminal for it. The loop it
             // replaced was already reported by the director, so nothing ends here unreported.
@@ -87,7 +82,12 @@ internal sealed partial class DaggerfallSession
     /// ordinary update must stay allocation- and work-free, and a silent run is still evidence that the
     /// loop never restarted.
     /// </remarks>
-    private void ReportMusicRetired(string track) => Report("cue.retired", $"Music cue '{track}' retired.");
+    private void ReportMusicRetired(string track)
+    {
+        // The director has already disposed the voice; the clip can now leave the live audio budget.
+        if (_musicClips.Remove(track, out AudioClip? clip)) clip.Dispose();
+        Report("cue.retired", $"Music cue '{track}' retired.");
+    }
 
     /// <summary>
     /// Publishes one music change. A score is the one part of the product with no visible projection —
@@ -104,11 +104,42 @@ internal sealed partial class DaggerfallSession
             string.Empty));
 
     /// <summary>The donor context the admitted world answers.</summary>
-    private DaggerfallMusicContext MusicContext() => _activeProfileKey.Kind switch
+    internal DaggerfallMusicContext MusicContext()
     {
-        DaggerfallWorldProfileKind.Dungeon => DaggerfallMusicContext.Dungeon,
-        _ => _time.Calendar.IsDay ? DaggerfallMusicContext.Sunny : DaggerfallMusicContext.Night,
-    };
+        if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon) return DaggerfallMusicContext.Dungeon;
+        if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior)
+        {
+            DaggerfallInteriorBuilding? building = CurrentInteriorBuilding();
+            return building?.BuildingType switch
+            {
+                0 or 2 or 3 or 5 or 6 or 7 or 8 or 9 or 10 or 12 or 13 => DaggerfallMusicContext.Shop,
+                15 => DaggerfallMusicContext.Tavern,
+                11 when building.FactionId == DaggerfallConcreteGuildCatalog.MagesFactionId => DaggerfallMusicContext.MagesGuild,
+                16 => DaggerfallMusicContext.Palace,
+                14 when building.FactionId == DaggerfallConcreteGuildCatalog.FightersTrainerFactionId => DaggerfallMusicContext.Knight,
+                14 => building.FactionId switch
+                {
+                    0x54 or 0x16 or 0x5e or 0x1b or 0x6a or 0x21 => DaggerfallMusicContext.TempleBad,
+                    0x5c or 0x1a or 0x24 or 0x23 => DaggerfallMusicContext.TempleNeutral,
+                    _ => DaggerfallMusicContext.Temple,
+                },
+                _ => DaggerfallMusicContext.Interior,
+            };
+        }
+        // Battle does not interrupt the donor's environmental score: no combat track is invented.
+        if (_site.ActiveSite?.Kind is DaggerfallSiteKind.DungeonKeep or DaggerfallSiteKind.DungeonLabyrinth
+            or DaggerfallSiteKind.DungeonRuin or DaggerfallSiteKind.Coven or DaggerfallSiteKind.HomePoor
+            or DaggerfallSiteKind.Graveyard) return DaggerfallMusicContext.Night;
+        if (!_time.Calendar.IsDay) return DaggerfallMusicContext.Night;
+        return CurrentWeather switch
+        {
+            DaggerfallWeatherKind.Cloudy => DaggerfallMusicContext.Cloudy,
+            DaggerfallWeatherKind.Overcast or DaggerfallWeatherKind.Fog => DaggerfallMusicContext.Overcast,
+            DaggerfallWeatherKind.Rain or DaggerfallWeatherKind.Thunder => DaggerfallMusicContext.Rain,
+            DaggerfallWeatherKind.Snow => DaggerfallMusicContext.Snow,
+            _ => DaggerfallMusicContext.Sunny,
+        };
+    }
 
     /// <summary>Retires the loop for a site change and moves the rotation on to the new site's song.</summary>
     private void ChangeMusicSite()
