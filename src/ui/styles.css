@@ -18,7 +18,7 @@
 .dagger-effects { position: absolute; right: 24px; top: 72px; max-width: 320px; margin: 0; padding: 8px 12px; background: rgba(12, 10, 8, .7); font-size: .8rem; }
 .dagger-effects h2 { margin: 0 0 4px; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: #b9ae8c; }
 .dagger-effects ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
-.dagger-cinematic-skip { position: fixed; right: 24px; bottom: 24px; z-index: 50; }
+.dagger-cinematic-skip { pointer-events: auto; position: fixed; right: 24px; bottom: 24px; z-index: 50; }
 .dagger-reticle { left: 50%; position: absolute; top: 48%; transform: translate(-50%, -50%); color: #eadc9e; font: 2rem ui-monospace, monospace; }
 
 .dagger-vitals {
