@@ -280,6 +280,14 @@ internal sealed record DaggerfallSavePayload(
             DaggerfallWorldProfileKey profile = ground.Profile.Require();
             if (!Admitted(profile))
                 throw new ArgumentException($"Saved ground container {ground.Id} names an unadmitted world profile '{profile.LogicalId}'.");
+            if (ground.TreasurePlacement is { } treasure)
+            {
+                var source = profile == inputs.ProfileKey ? inputs : profiles!.Require(profile);
+                if (profile.Kind != DaggerfallWorldProfileKind.Dungeon
+                    || !source.DungeonPopulation.Treasures.Any(marker => marker.Id == treasure)
+                    || GroundContainers.Count(value => value.Profile.Require() == profile && value.TreasurePlacement == treasure) != 1)
+                    throw new ArgumentException($"Saved dungeon treasure '{treasure}' is absent or repeated in its profile.");
+            }
             if (ground.PropertyPlacement is { } placement)
             {
                 var source = profile == inputs.ProfileKey ? inputs : profiles!.Require(profile);
@@ -649,6 +657,13 @@ internal sealed record DaggerfallSavePayload(
         if (Encounters.Resolved.Any(encounter => !StringComparer.Ordinal.Equals(encounter.ProfileId, inputs.ProfileKey.LogicalId)
                 && profiles?.TryGetLogicalProfile(encounter.ProfileId, out _) != true))
             throw new ArgumentException("Saved encounter references a world profile not admitted by the current bundle.");
+        foreach (string populated in Encounters.PopulatedDungeons)
+        {
+            var source = populated == inputs.ProfileKey.LogicalId ? inputs
+                : profiles?.TryGetLogicalProfile(populated, out var found) == true ? found : null;
+            if (source is null || source.ProfileKind != DaggerfallWorldProfileKind.Dungeon)
+                throw new ArgumentException($"Saved dungeon population '{populated}' is not an admitted dungeon.");
+        }
         foreach (DaggerfallEncounterResolution encounter in Encounters.Resolved)
         {
             if (encounter.ActorDefinition is { } definition && !definitions.Actors.ContainsKey(new DaggerfallActorId(definition)))
@@ -1357,7 +1372,7 @@ internal sealed record DaggerfallCorpseSave(long ActorId, ulong ContainerId, ulo
 }
 
 /// <summary>One persistent dropped-item container at a world position.</summary>
-internal sealed record DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySave Profile, long Id, float X, float Y, float Z, DaggerfallInventorySave Inventory, string? PropertyPlacement = null, long StockedDay = 0)
+internal sealed record DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySave Profile, long Id, float X, float Y, float Z, DaggerfallInventorySave Inventory, string? PropertyPlacement = null, long StockedDay = 0, string? TreasurePlacement = null)
 {
     internal void Validate()
     {
@@ -1365,6 +1380,8 @@ internal sealed record DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySa
         Profile.Validate();
         if (Id <= 0 || !float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z))
             throw new ArgumentException("Ground containers require a positive identity and finite position.");
+        if (TreasurePlacement is not null && (string.IsNullOrWhiteSpace(TreasurePlacement) || PropertyPlacement is not null))
+            throw new ArgumentException("Dungeon treasure must name one source marker, separate from property furniture.");
         if (StockedDay < -1 || PropertyPlacement is not null && string.IsNullOrWhiteSpace(PropertyPlacement))
             throw new ArgumentException("Property containers require a valid placement and stock date.");
         ArgumentNullException.ThrowIfNull(Inventory);
@@ -1690,6 +1707,8 @@ internal sealed record DaggerfallSiteDeltaSave(
 internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definition, float X, float Y, float Z, float HeadingRadians, DaggerfallStatsSave Stats)
 {
     [JsonRequired] public int Level { get; init; }
+    [JsonRequired] public int SpawnDistance { get; init; }
+    [JsonRequired] public bool Passive { get; init; }
     public bool WabbajackActive { get; init; }
     public bool ForcedHostile { get; init; }
     [JsonRequired] public bool MagicallyPacified { get; init; }
@@ -1703,6 +1722,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
             throw new ArgumentException("A saved dynamic actor must name its definition.", nameof(Definition));
         ArgumentNullException.ThrowIfNull(Stats);
         if (Level < 1) throw new ArgumentOutOfRangeException(nameof(Level), "Saved actor level must be positive.");
+        if (SpawnDistance is < 0 or > 6) throw new ArgumentOutOfRangeException(nameof(SpawnDistance));
         CorruptionOrigin?.Validate();
     }
 }

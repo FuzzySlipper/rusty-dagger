@@ -14,6 +14,7 @@ internal sealed partial class DaggerfallSession
     private void ReconcilePropertyContainers()
     {
         var inputs = _sites.Projection.Inputs;
+        PopulateDungeon(inputs);
         foreach (var placement in inputs.PropertyContainers)
             _groundContainers.EnsureProperty(placement, -1, true, new(_definitions, _random), _uniqueItems,
                 (key, min, max) => CrimeRoll(key, "property-stock", min, max), State.Progression.Level, State.Character.Identity.RaceId,

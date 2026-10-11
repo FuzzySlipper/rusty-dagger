@@ -301,6 +301,7 @@ public static class DungeonNormalizer
         private readonly List<NormalizedLightPlacement> lights = [];
         private readonly List<NormalizedBillboardPlacement> billboards = [];
         private readonly List<NormalizedActorPlacement> actors = [];
+        private readonly List<DaggerfallWorldBlockRandomEnemy> randomEnemies = [];
         private readonly List<NormalizedTreasurePlacement> treasures = [];
         private readonly List<NormalizedDungeonAction> actions = [];
         private readonly List<DoorDraft> doorDrafts = [];
@@ -374,6 +375,12 @@ public static class DungeonNormalizer
                         string treasurePlacementId = $"treasure/{blockPlacementId}/{index}";
                         treasures.Add(new(treasurePlacementId, $"treasure/dungeon-type-{layout.DungeonType}", position));
                         AddProvenance(treasurePlacementId, "rdb-treasure-marker", blocks.Source, index);
+                        break;
+                    case RdbFlatKind.RandomEnemy:
+                        AddPlacement();
+                        var randomEnemy = flat.RandomEnemyPlacement(blockPlacementId, position, block.WaterLevel);
+                        randomEnemies.Add(randomEnemy);
+                        AddProvenance(randomEnemy.Id, "rdb-random-enemy-marker", blocks.Source, index);
                         break;
                     case RdbFlatKind.FixedMobile:
                         AddPlacement();
@@ -644,6 +651,7 @@ public static class DungeonNormalizer
                         ActionModelArtifactId(staticMeshArtifactId, draft.ActionId)))
                     .ToArray(),
                 AmbientZones = ambientZones,
+                RandomEnemies = randomEnemies,
             };
             DungeonSpatialPublication spatialPublication = DungeonSpatialPublication.Create(
                 staticMeshArtifactId,

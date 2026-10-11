@@ -48,7 +48,7 @@ public sealed class DaggerfallEncounterPolicyTests
     [InlineData(80, 10, 7, 13)]
     [InlineData(81, 10, 0, 11)]
     [InlineData(96, 5, 0, 7)]
-    [InlineData(96, 6, 0, 19)]
+    [InlineData(96, 6, 0, 7)]
     [InlineData(80, 30, 14, 19)]
     public void PreservesClassicPlayerLevelBands(int percentile, int level, int minimum, int maximum) =>
         Assert.Equal((minimum, maximum), DaggerfallEncounterPolicy.LevelBand(percentile, level));

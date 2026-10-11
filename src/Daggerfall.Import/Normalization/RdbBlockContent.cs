@@ -48,6 +48,12 @@ internal sealed record RdbBlockFlat(int Index, RdbFlatSource Source, RdbFlatKind
         RdbSourceClassification.IsPassiveEnemyMarker(Source),
         Mobile.Id.Value <= 43 ? "unspecified" : (Source.Flags & 2) != 0 ? "male" : (Source.Flags & 1) != 0 ? "female" : "unspecified");
 
+    internal DaggerfallWorldBlockRandomEnemy RandomEnemyPlacement(string scope, NormalizedVector3 position, int? waterLevel) => new(
+        $"random-enemy/{scope}/{Index}", position, Source.Flags, Source.SoundIndex,
+        RdbSourceClassification.IsPassiveEnemyMarker(Source), ActionId(scope), Index, Source.ObjectOffset)
+        { Underwater = waterLevel is int water && water < Source.Y,
+            AquaticSpawnAllowed = waterLevel is int surface && surface - 20 <= Source.Y };
+
     /// <summary>The flat's action identity in its block's graph under one identity scope, or null when it is no node.</summary>
     public string? ActionId(string scope) => ActionNode ? $"action/{scope}/flat-{Index}" : null;
 }

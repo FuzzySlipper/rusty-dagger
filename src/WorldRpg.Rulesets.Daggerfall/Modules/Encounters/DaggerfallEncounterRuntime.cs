@@ -20,6 +20,10 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
     private readonly DaggerfallDefinitions _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
     private readonly IRandomService _random = random ?? throw new ArgumentNullException(nameof(random));
     private readonly List<DaggerfallEncounterResolution> _resolved = [];
+    private readonly HashSet<string> _populatedDungeons = new(StringComparer.Ordinal);
+
+    internal bool DungeonPopulated(string profile) => _populatedDungeons.Contains(profile);
+    internal void MarkDungeonPopulated(string profile) => _populatedDungeons.Add(profile);
 
     internal IReadOnlyList<DaggerfallEncounterResolution> Resolved => _resolved;
 
@@ -68,6 +72,27 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
         return created;
     }
 
+    internal DaggerfallActorId? SelectDungeonEnemy(DaggerfallSiteRecord site, DaggerfallDungeonEnemyPlacement marker, int playerLevel)
+    {
+        int table = marker.Underwater ? 19 : site.DungeonType;
+        if (table is < 0 or > 19) throw new ArgumentException($"Dungeon '{site.Name}' has no encounter table {table}.");
+        int Draw(string key, int min, int max) => checked((int)_random.DrawKeyed(new KeyedRngRequest(
+            checked((ulong)site.MapId), "daggerfall.dungeon.population", key, min, max)).Value);
+        int slot = marker.EncounterSlot == 0 ? Draw($"marker:{marker.Id}:slot", 1, 6) : marker.EncounterSlot;
+        string selection = $"table:{table}:slot:{slot}";
+        // Every marker with the same non-zero slot shares a selection throughout this location.
+        int percentile = Draw(selection + ":level-band", 1, 100);
+        var (min, max) = DaggerfallEncounterPolicy.LevelBand(percentile, playerLevel);
+        int entry = Draw(selection + ":table-entry", min, max);
+        int mobileId = _definitions.Encounters.Tables[table][entry];
+        var mobile = _definitions.Mobiles.Mobiles.TryGetValue(mobileId, out var found)
+            ? found : throw new InvalidOperationException($"Dungeon encounter selected unpublished mobile {mobileId}.");
+        if (mobileId is 11 or 41 or 42 && !marker.AquaticSpawnAllowed) return null;
+        var actor = DaggerfallEncounterActors.ActorFor(mobile);
+        _ = _definitions.RequireActor(actor);
+        return actor;
+    }
+
     /// <summary>Whether a selected encounter of the active profile is still waiting for a placement.</summary>
     internal bool HasPending(string activeProfileId) => _resolved.Any(current => current.ActorDefinition is not null
         && current.SpawnedActorId is null && StringComparer.Ordinal.Equals(current.ProfileId, activeProfileId));
@@ -85,7 +110,7 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
         }
     }
 
-    internal DaggerfallEncounterRuntimeSave Capture() => new([.. _resolved]);
+    internal DaggerfallEncounterRuntimeSave Capture() => new([.. _resolved]) { PopulatedDungeons = [.. _populatedDungeons.Order(StringComparer.Ordinal)] };
 
     internal void Restore(DaggerfallEncounterRuntimeSave saved, IReadOnlyDictionary<long, string> liveActors) =>
         Restore(saved, liveActors, new HashSet<long>());
@@ -102,6 +127,7 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
         ArgumentNullException.ThrowIfNull(liveActors);
         ArgumentNullException.ThrowIfNull(tombstonedActors);
         saved.Validate();
+        _populatedDungeons.UnionWith(saved.PopulatedDungeons);
         if (_resolved.Count != 0) throw new InvalidOperationException("Encounter runtime restores only into a fresh session.");
         ulong expectedSequence = 1;
         foreach (DaggerfallEncounterResolution value in saved.Resolved.OrderBy(value => value.Sequence))
@@ -208,9 +234,13 @@ internal sealed record DaggerfallEncounterResolution(
 
 internal sealed record DaggerfallEncounterRuntimeSave(DaggerfallEncounterResolution[] Resolved)
 {
+    [System.Text.Json.Serialization.JsonRequired] public string[] PopulatedDungeons { get; init; } = [];
     internal void Validate()
     {
         ArgumentNullException.ThrowIfNull(Resolved);
+        ArgumentNullException.ThrowIfNull(PopulatedDungeons);
+        if (PopulatedDungeons.Any(string.IsNullOrWhiteSpace) || PopulatedDungeons.Distinct(StringComparer.Ordinal).Count() != PopulatedDungeons.Length)
+            throw new ArgumentException("Populated dungeon identities must be distinct and non-blank.");
         HashSet<(ulong Generation, ulong Sequence)> identities = [];
         foreach (DaggerfallEncounterResolution resolution in Resolved)
         {

@@ -892,6 +892,8 @@ public sealed record NormalizedWorld(
     IReadOnlyList<NormalizedTreasurePlacement> Treasures,
     IReadOnlyList<NormalizedDoorPlacement> Doors)
 {
+    public IReadOnlyList<DaggerfallWorldBlockRandomEnemy> RandomEnemies { get; init; } = [];
+
     /// <summary>Source-selected building instance; absent for worlds without a building selection.</summary>
     public NormalizedInteriorBuilding? InteriorBuilding { get; init; }
     public IReadOnlyList<NormalizedPropertyContainer> PropertyContainers { get; init; } = [];
@@ -925,6 +927,7 @@ public sealed record NormalizedWorld(
         Lights = Lights.OrderBy(light => light.Id, StringComparer.Ordinal).ToArray(),
         Billboards = Billboards.OrderBy(billboard => billboard.Id, StringComparer.Ordinal).ToArray(),
         Actors = Actors.OrderBy(actor => actor.Id, StringComparer.Ordinal).ToArray(),
+        RandomEnemies = RandomEnemies.OrderBy(enemy => enemy.Id, StringComparer.Ordinal).ToArray(),
         PropertyContainers = PropertyContainers.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray(),
         StaticNpcs = StaticNpcs.OrderBy(npc => npc.Id, StringComparer.Ordinal).ToArray(),
         Population = Population.OrderBy(person => person.Id, StringComparer.Ordinal).ToArray(),
@@ -989,6 +992,14 @@ public sealed record NormalizedWorld(
         NormalizedImportDocument.ValidateUnique(Lights, light => light.Id, "light placement");
         NormalizedImportDocument.ValidateUnique(Billboards, billboard => billboard.Id, "billboard placement");
         NormalizedImportDocument.ValidateUnique(Actors, actor => actor.Id, "actor placement");
+        NormalizedImportDocument.ValidateUnique(RandomEnemies, enemy => enemy.Id, "random enemy placement");
+        foreach (var enemy in RandomEnemies)
+        {
+            NormalizedImportDocument.RequireLogicalId(enemy.Id, nameof(enemy.Id));
+            enemy.Position.Validate(nameof(enemy.Position));
+            if (enemy.EncounterSlot is < 0 or > 255 || enemy.SpawnDistance is < 0 or > 6)
+                throw new ArgumentException($"Random enemy '{enemy.Id}' has invalid selection metadata.");
+        }
         NormalizedImportDocument.ValidateUnique(Treasures, treasure => treasure.Id, "treasure placement");
         NormalizedImportDocument.ValidateUnique(Doors, door => door.Id, "door placement");
         foreach (NormalizedLightPlacement light in Lights) light.Validate();

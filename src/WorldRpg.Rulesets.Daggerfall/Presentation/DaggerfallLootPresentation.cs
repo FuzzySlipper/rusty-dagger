@@ -36,7 +36,7 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
             }
             owner = DaggerfallItemOwner.Ground(groundId);
             title = ground!.TryGet(groundId, out var container) && container.PropertyPlacement is not null
-                ? "Furniture" : "Dropped items — loot";
+                ? "Furniture" : container?.TreasurePlacement is not null ? "Treasure — loot" : "Dropped items — loot";
         }
         else if (_actor is long actor)
         {

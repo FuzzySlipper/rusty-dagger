@@ -338,6 +338,8 @@ internal static class DaggerActorFactory
         if (saved.CorruptionOrigin is { } origin) actor.Actor.Add(origin);
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(saved.ForcedHostile);
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = saved.MagicallyPacified;
+            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = saved.SpawnDistance;
+            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = saved.Passive;
         definitionsByActor.Add(saved.EntityId, definition);
         RegisterActorInventory(actor, inventoryStore);
         return actor;
@@ -378,6 +380,8 @@ internal static class DaggerActorFactory
             if (spawned.CorruptionOrigin is { } origin) actor.Actor.Add(origin);
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(spawned.ForcedHostile);
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = spawned.MagicallyPacified;
+            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = spawned.SpawnDistance;
+            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = spawned.Passive;
             definitionsByActor.Add(spawned.EntityId, definition);
             RegisterActorInventory(actor, inventoryStore);
         }

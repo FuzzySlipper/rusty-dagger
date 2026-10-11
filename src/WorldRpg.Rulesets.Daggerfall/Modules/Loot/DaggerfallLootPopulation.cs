@@ -163,7 +163,7 @@ internal sealed record DaggerfallLootPopulationRequest(
         if (EnemyMapChance is not null && (Id.Scope != "corpse" || DungeonType is not null || EnemyMapChance is < 0 or > 100))
             throw new ArgumentException("Enemy map chance is a percentage applied only to a corpse population.", nameof(EnemyMapChance));
         ArgumentException.ThrowIfNullOrWhiteSpace(Race);
-        if (Owner.Scope != Id.Scope || Owner.Id != checked((long)Id.Value)
+        if (Owner.Scope != (Id.Scope == "world-treasure" ? "ground" : Id.Scope) || Owner.Id != checked((long)Id.Value)
             || PlayerLevel < 1 || Generation == 0 || Sequence == 0 || DungeonType is < 0 or > 18
             || Gender is not ("male" or "female") || ClothingGroup is not ("MensClothing" or "WomensClothing"))
             throw new ArgumentException("Loot population request carries invalid source, level, or player appearance data.");

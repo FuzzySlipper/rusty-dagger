@@ -191,6 +191,7 @@ internal static partial class DaggerfallSiteContent
             DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics), billboardSprites,
             DaggerfallStaticNpcPlacement.Read(normalizedWorld, billboardSprites, definitions, start.Site, diagnostics), terrainTextures: terrainTextures, population: population)
         { VariantName = DaggerfallBaseContent.OptionalText(world, "variant", diagnostics),
+            DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalizedWorld.Value, diagnostics),
             VariantBaseLogicalId = DaggerfallBaseContent.OptionalText(world, "variantOf", diagnostics),
             AmbientZones = DaggerfallAmbientZones.Read(normalizedWorld, diagnostics),
             PropertyContainers = DaggerfallPropertyContainerPlacement.Read(normalizedWorld) };
@@ -2711,6 +2712,7 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSite
     internal AuthoredWorldAppearance WorldAppearance { get; } = worldAppearance;
     internal PlayerInitialLook InitialLook { get; } = initialLook;
     internal IReadOnlyList<NormalizedMaterial> Materials { get; } = Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray());
+    internal DaggerfallDungeonPopulationContent DungeonPopulation { get; init; } = DaggerfallDungeonPopulationContent.Empty;
     internal IReadOnlyDictionary<long, NormalizedActorSprite> ActorSprites { get; } = new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites.ToDictionary());
     /// <summary>Published mobile media, resolved independently of the authored site placements for dynamic encounter actors.</summary>
     internal IReadOnlyDictionary<int, NormalizedActorSprite> MobileSprites { get; } = new ReadOnlyDictionary<int, NormalizedActorSprite>((mobileSprites ?? new Dictionary<int, NormalizedActorSprite>()).ToDictionary());

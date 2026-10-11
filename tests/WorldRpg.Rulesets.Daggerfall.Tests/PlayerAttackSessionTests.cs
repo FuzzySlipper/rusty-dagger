@@ -210,7 +210,7 @@ public sealed class PlayerAttackSessionTests
         DaggerfallDefinitions withoutPolicies = new(
             definitions.Catalogs, definitions.Vocabulary, unreached, definitions.Items, definitions.EquipmentSlots,
             definitions.ArmorValuesByMaterial, definitions.Actions, definitions.LootTables, definitions.HudResources,
-            definitions.LootCategoryPools, definitions.DonorErrata, definitions.ItemTemplates,
+            definitions.DonorErrata, definitions.ItemTemplates,
             definitions.CharacterPresentation, definitions.Locations, definitions.Text, definitions.Magic, definitions.Mobiles,
             definitions.Names, definitions.Rumors, definitions.Biographies, definitions.Grids, definitions.Books, definitions.Factions, definitions.Terrain, definitions.ItemTemplateCatalog, definitions.QuestSources, definitions.Cinematics)
         { NewGame = definitions.NewGame };

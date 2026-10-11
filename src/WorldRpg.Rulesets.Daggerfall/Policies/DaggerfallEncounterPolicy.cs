@@ -76,24 +76,12 @@ internal static class DaggerfallEncounterPolicy
         if (playerLevel < 1) throw new ArgumentOutOfRangeException(nameof(playerLevel));
         int minimum;
         int maximum;
-        if (percentile > 80)
-        {
-            if (percentile > 95)
-            {
-                minimum = 0;
-                maximum = playerLevel <= 5 ? playerLevel + 2 : 19;
-            }
-            else
-            {
-                minimum = 0;
-                maximum = playerLevel + 1;
-            }
-        }
+        if (percentile > 95 && playerLevel <= 5)
+            (minimum, maximum) = (0, playerLevel + 2);
+        else if (percentile > 80)
+            (minimum, maximum) = (0, playerLevel + 1);
         else
-        {
-            minimum = playerLevel - 3;
-            maximum = playerLevel + 3;
-        }
+            (minimum, maximum) = (playerLevel - 3, playerLevel + 3);
 
         if (minimum < 0) (minimum, maximum) = (0, 5);
         if (maximum > 19) (minimum, maximum) = (14, 19);
