@@ -390,7 +390,7 @@ internal sealed class DaggerfallActorRoster
             {
                 if (!destination.MobileSprites.TryGetValue(authoredMobile, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored authored actor '{placement.EntityId}' has no admitted mobile {authoredMobile} presentation.");
-                appearance.AddActor(actor.DurableId, sprite);
+                appearance.AddActor(actor.DurableId, sprite.ForGender(placement.Gender));
             }
             if (prior is null) GrantStartingEquipment(actor, definition);
             if (prior?.WabbajackDefinition is not null && definition.MobileId is int changedMobile)

@@ -40,12 +40,13 @@ internal sealed record RdbBlockFlat(int Index, RdbFlatSource Source, RdbFlatKind
     /// <summary>The fixed mobile a <see cref="RdbFlatKind.FixedMobile"/> marker names.</summary>
     public Arena2MobileSource? Mobile { get; init; }
 
-    /// <summary>
-    /// Whether the flat is a node of its block's action graph. Offset zero is Arena2's absolute null-link
-    /// sentinel, so an authored node is kept even when all its other action fields are zero; only the
-    /// negative no-object sentinel proves that a flat carries no action record at all.
-    /// </summary>
-    public bool ActionNode => Source.ObjectOffset > 0 && !(Source.Action == 0 && Source.Flags == 0 && Source.NextObjectOffset < 0);
+    /// <summary>DFU attaches a flat action only when its action byte is positive; flags also encode enemy gender/selection.</summary>
+    public bool ActionNode => Source.ObjectOffset > 0 && Source.Action > 0;
+
+    internal NormalizedActorPlacement ActorPlacement(string id, NormalizedVector3 position) => new(
+        id, $"actor/mobile-{Mobile!.Id.Value}", position, Source.SoundIndex,
+        RdbSourceClassification.IsPassiveEnemyMarker(Source),
+        Mobile.Id.Value <= 43 ? "unspecified" : (Source.Flags & 2) != 0 ? "male" : (Source.Flags & 1) != 0 ? "female" : "unspecified");
 
     /// <summary>The flat's action identity in its block's graph under one identity scope, or null when it is no node.</summary>
     public string? ActionId(string scope) => ActionNode ? $"action/{scope}/flat-{Index}" : null;

@@ -304,7 +304,7 @@ public sealed class WorldBlockNormalizer
             Lights = lights,
             Billboards = billboards,
             Actors = [.. content.Flats.Where(flat => flat.Kind == RdbFlatKind.FixedMobile)
-                .Select(flat => new NormalizedActorPlacement($"actor/{scope}/{flat.Index}", $"actor/mobile-{flat.Mobile!.Id.Value}", MeshGeometry.ToRightHanded(flat.Point)))],
+                .Select(flat => flat.ActorPlacement($"actor/{scope}/{flat.Index}", MeshGeometry.ToRightHanded(flat.Point)))],
             Treasures = [.. content.Flats.Where(flat => flat.Kind == RdbFlatKind.Treasure)
                 .Select(flat => new NormalizedMarker($"treasure/{scope}/{flat.Index}", MeshGeometry.ToRightHanded(flat.Point)))],
             RandomEnemies = [.. content.Flats.Where(flat => flat.Kind == RdbFlatKind.RandomEnemy)

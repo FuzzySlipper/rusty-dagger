@@ -12,6 +12,18 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class Arena2MobileCatalogDocumentTests
 {
+    [DonorFact("Assets/Scripts/Utility/EnemyBasics.cs")]
+    public void Published_human_sprite_archives_match_both_donor_genders()
+    {
+        var donor = Arena2MobileTable.Read(File.ReadAllText(TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs")));
+        foreach (var source in MobileSourceMetadata.All.Where(source => source.Id.Value >= 128))
+        {
+            var row = Assert.Single(donor, value => value.Id == source.Id.Value);
+            Assert.Equal(row.MaleTexture, source.TextureArchive.Value);
+            Assert.Equal(row.FemaleTexture, source.FemaleTextureArchive?.Value ?? source.TextureArchive.Value);
+        }
+    }
+
     [Fact]
     public void PublishesEveryDonorParameterAndNamesEachMobileDisposition()
     {

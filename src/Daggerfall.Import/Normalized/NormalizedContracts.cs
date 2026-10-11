@@ -620,12 +620,15 @@ public sealed record NormalizedBillboardPlacement(string Id, string SpriteResour
     }
 }
 
-public sealed record NormalizedActorPlacement(string Id, string ActorResourceId, NormalizedVector3 Position)
+public sealed record NormalizedActorPlacement(string Id, string ActorResourceId, NormalizedVector3 Position,
+    int SpawnDistance = 0, bool Passive = false, string Gender = "unspecified")
 {
     public void Validate(IReadOnlySet<string> resourceIds)
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         NormalizedImportDocument.RequireReference(ActorResourceId, resourceIds, nameof(ActorResourceId));
+        if (SpawnDistance is < 0 or > 6) throw new ArgumentOutOfRangeException(nameof(SpawnDistance));
+        if (Gender is not ("unspecified" or "female" or "male")) throw new ArgumentException("Unknown actor gender.", nameof(Gender));
         Position.Validate(nameof(Position));
     }
 }

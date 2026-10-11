@@ -116,8 +116,7 @@ public static class MobileSourceMetadata
                 // The archer carries the same donor RangedAttack1Anims sequence as the thief.
                 links: new("C", "EnemyHumanMove", "EnemyHumanBark", "EnemyHumanAttack", ParrySounds: true, BloodIndex: 0, MapChance: 0),
                 rangedAttackFrames: RangedAttack([3, 2, 0, 0, 0, DamageBeatMarker, 1, 1, 2, 3])),
-            // EnemyBasics human mobiles 128-146 use their male texture as the source portrait
-            // for this non-gendered mobile publication. The individual archive, attack frames,
+            // EnemyBasics human mobiles publish their male and female atlases. The individual archive, attack frames,
             // loot link, parry flag, and map chance remain donor facts.
             Human(128, "Mage", 486, MageAttack(), false, 3),
             Human(129, "Spellsword", 476, SpellswordAttack(), true, 1),
@@ -403,6 +402,12 @@ public sealed class Arena2MobileSource
 
     /// <summary>Classic live-mobile texture archive.</summary>
     public Arena2TextureArchiveId TextureArchive { get; }
+
+    /// <summary>EnemyBasics human female archives; City Watch uses the same archive for both genders.</summary>
+    public Arena2TextureArchiveId? FemaleTextureArchive => Id.Value is >= 128 and <= 145 ? new((ushort)(TextureArchive.Value - 1)) : null;
+
+    internal Arena2MobileSource FemaleSource() => new(Id, SourceName, FemaleTextureArchive!.Value,
+        null, AttackSequence, RangedAttackFrames, Animation, Links);
 
     /// <summary>Optional separate classic corpse-marker texture source.</summary>
     public Arena2MobileCorpseSource? Corpse { get; }

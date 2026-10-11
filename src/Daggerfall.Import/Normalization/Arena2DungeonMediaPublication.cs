@@ -525,7 +525,10 @@ public sealed record DungeonActorSpriteMedia(
     IReadOnlyList<DungeonActorSpriteStateLayout> States,
     DungeonActorCorpseSpriteMedia? Corpse,
     ImportPublicationArtifact Artifact,
-    NormalizedMediaDescriptor Descriptor);
+    NormalizedMediaDescriptor Descriptor)
+{
+    public DungeonActorSpriteMedia? Female { get; init; }
+}
 
 /// <summary>
 /// Pure media closure for a normalized dungeon. Artifacts are ready for an
@@ -815,11 +818,12 @@ public sealed record Arena2DungeonMediaPublication(
                 // frame's subject origin and recenter it during playback.
                 SpriteAtlasOptions.Grid(quotas.MaximumAtlasDimension, cropTransparentPixels: false, bottomAlign: true));
             RequireArtifactSize(atlas.PngBytes, quotas, $"actor '{selection.ActorResourceId}'");
-            string spriteResourceId = $"sprite/mobile-{selection.Source.Id.Value}";
+            string suffix = selection.Female ? "-female" : "";
+            string spriteResourceId = $"sprite/mobile-{selection.Source.Id.Value}{suffix}";
             GeneratedMediaArtifact artifact = GeneratedMediaArtifact.FromAtlas(
                 spriteResourceId,
                 NormalizedMediaKind.EnemySprite,
-                $"media/dungeon/actors/mobile-{selection.Source.Id.Value}.png",
+                $"media/dungeon/actors/mobile-{selection.Source.Id.Value}{suffix}.png",
                 atlas);
             generated.Add(artifact);
             DungeonMediaFrameLayout[] layouts = sourceFrames.Select((frame, index) => new DungeonMediaFrameLayout(
@@ -849,7 +853,12 @@ public sealed record Arena2DungeonMediaPublication(
                 MedianSourceWorldSize(layouts),
                 stateLayouts,
                 corpse,
-                ToPublicationArtifact(artifact)));
+                ToPublicationArtifact(artifact))
+            {
+                Female = !selection.Female && selection.Source.FemaleTextureArchive is not null
+                    ? BuildActors([new ActorSelection(selection.ActorResourceId, selection.Source.FemaleSource(), true)], archives, palette, quotas, generated).Single()
+                    : null,
+            });
         }
 
         return drafts;
@@ -1132,6 +1141,7 @@ public sealed record Arena2DungeonMediaPublication(
             .Concat(billboards.Select(billboard => billboard.Archive))
             .Concat(terrainTextures.Select(texture => texture.Archive))
             .Concat(actors.Select(actor => actor.Source.TextureArchive.Value))
+            .Concat(actors.Where(actor => actor.Source.FemaleTextureArchive is not null).Select(actor => actor.Source.FemaleTextureArchive!.Value.Value))
             .Concat(actors.Where(actor => actor.Source.Corpse is not null).Select(actor => actor.Source.Corpse!.Value.TextureArchive.Value))
             .ToHashSet();
         if (requiredArchives.Count == 0)
@@ -1178,7 +1188,7 @@ public sealed record Arena2DungeonMediaPublication(
 
     private sealed record TerrainTextureSelection(string TextureResourceId, ushort Archive, ushort Record);
 
-    private sealed record ActorSelection(string ActorResourceId, Arena2MobileSource Source);
+    private sealed record ActorSelection(string ActorResourceId, Arena2MobileSource Source, bool Female = false);
 
     private sealed record Selection(
         IReadOnlyList<MaterialSelection> Materials,
@@ -1259,6 +1269,8 @@ public sealed record Arena2DungeonMediaPublication(
         CorpseDraft? Corpse,
         ImportPublicationArtifact Artifact)
     {
+        public ActorDraft? Female { get; init; }
+
         public DungeonActorSpriteMedia Finish(IReadOnlyDictionary<string, NormalizedMediaDescriptor> descriptors, DungeonMediaDisplayProfile profile, AuthoredMediaOverlay? overlay)
         {
             NormalizedMediaDescriptor descriptor = descriptors[SpriteResourceId];
@@ -1305,7 +1317,7 @@ public sealed record Arena2DungeonMediaPublication(
                 states,
                 corpse,
                 Artifact,
-                descriptor);
+                descriptor) { Female = Female?.Finish(descriptors, profile, null) };
         }
     }
 

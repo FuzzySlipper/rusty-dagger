@@ -17,6 +17,15 @@ attaches inventory/equipment for the player and every placed actor. A facade
 property requires that its component has been attached; use Engine `TryGet<T>`
 for an optional capability on a differently assembled entity.
 
+Fixed dungeon markers are normalized with their spawn-distance category, passive
+reaction and gender. Published site closures and assembled blocks feed the same
+actor reader and factory; an authored `sourcePlacement` binds a scenario identity
+to a marker without copying its position. Passive disposition and classic
+spawn/despawn range feed the existing senses owner. Provocation remains saved
+hostility, while source metadata is rebuilt from the current content. Human
+female atlases are published beside the default mobile atlas and selected by the
+placement, including site re-entry and save restoration.
+
 ## Identity
 
 - `actor.DurableId` is the product actor instance key used by authored placements,

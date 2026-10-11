@@ -99,227 +99,127 @@
     {
       "entityId": 2000,
       "actor": "skeletal-warrior",
-      "position": [
-        13.5,
-        45.825,
-        -17.5
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/1"
     },
     {
       "entityId": 2001,
       "actor": "thief",
-      "position": [
-        11.075,
-        33.025,
-        -6.875
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/2"
     },
     {
       "entityId": 2002,
       "actor": "giant-bat",
-      "position": [
-        3.2250001,
-        33.825,
-        -19.025
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/3"
     },
     {
       "entityId": 2003,
       "actor": "orc",
-      "position": [
-        20.425001,
-        26.725,
-        -5.0750003
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/4"
     },
     {
       "entityId": 2004,
       "actor": "archer",
-      "position": [
-        19.225,
-        13.825,
-        -5.675
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/5"
     },
     {
       "entityId": 2005,
       "actor": "giant-bat",
-      "position": [
-        3.525,
-        8.225,
-        -19.275
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/6"
     },
     {
       "entityId": 2006,
       "actor": "giant-bat",
-      "position": [
-        31.675001,
-        39.425,
-        -25.475
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/35"
     },
     {
       "entityId": 2007,
       "actor": "rat",
-      "position": [
-        47.75,
-        42.625,
-        -11.25
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/39"
     },
     {
       "entityId": 2008,
       "actor": "rat",
-      "position": [
-        37.825,
-        39.425,
-        -15.3
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/40"
     },
     {
       "entityId": 2009,
       "actor": "imp",
-      "position": [
-        41.725002,
-        39.575,
-        -12.85
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/41"
     },
     {
       "entityId": 2010,
       "actor": "rat",
-      "position": [
-        33.850002,
-        39.425,
-        -3.175
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/42"
     },
     {
       "entityId": 2011,
       "actor": "giant-bat",
-      "position": [
-        41.525,
-        13.825,
-        -16.825
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/43"
     },
     {
       "entityId": 2012,
       "actor": "skeletal-warrior",
-      "position": [
-        40.225002,
-        26.175001,
-        -19.075
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/44"
     },
     {
       "entityId": 2013,
       "actor": "rat",
-      "position": [
-        32.675,
-        13.825,
-        -3.775
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/45"
     },
     {
       "entityId": 2014,
       "actor": "rat",
-      "position": [
-        35.875,
-        13.825,
-        -10.175
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/46"
     },
     {
       "entityId": 2015,
       "actor": "imp",
-      "position": [
-        41.225002,
-        7.425,
-        -21.6
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/47"
     },
     {
       "entityId": 2016,
       "actor": "giant-bat",
-      "position": [
-        48.425,
-        7.875,
-        -12.725
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/48"
     },
     {
       "entityId": 2017,
       "actor": "rat",
-      "position": [
-        26,
-        0.6,
-        -12.775001
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/49"
     },
     {
       "entityId": 2018,
       "actor": "imp",
-      "position": [
-        18.775,
-        33.025,
-        -47.325
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/71"
     },
     {
       "entityId": 2019,
       "actor": "rat",
-      "position": [
-        15.275001,
-        20.225,
-        -43.075
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/72"
     },
     {
       "entityId": 2020,
       "actor": "skeletal-warrior",
-      "position": [
-        33.075,
-        45.825,
-        -45.25
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/103"
     },
     {
       "entityId": 2021,
       "actor": "thief",
-      "position": [
-        31.725,
-        45.825,
-        -33.4
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/104"
     },
     {
       "entityId": 2022,
       "actor": "giant-bat",
-      "position": [
-        28.375,
-        14.625,
-        -34.975002
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/105"
     },
     {
       "entityId": 2023,
       "actor": "thief",
-      "position": [
-        34.725002,
-        1.025,
-        -38.475002
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/106"
     },
     {
       "entityId": 2024,
       "actor": "rat",
-      "position": [
-        37.125,
-        7.425,
-        -33.675
-      ]
+      "sourcePlacement": "actor/s0000999-rdb/0/0/107"
     },
     {
       "entityId": 2026,

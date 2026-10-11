@@ -141,6 +141,8 @@ internal static class DaggerActorFactory
                     new ActorPose(source.Position, 0f));
                 if (prior is not null) RestoreStats(actor.Actor, prior.Stats);
                 DaggerfallWabbajack.Restore(actor.Actor, prior?.WabbajackDefinition);
+                actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = source.Passive;
+                actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = source.SpawnDistance;
                 actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(prior?.ForcedHostile ?? false);
                 actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = prior?.MagicallyPacified ?? false;
                 RegisterActorInventory(actor, inventoryStore);
@@ -225,6 +227,8 @@ internal static class DaggerActorFactory
             new ActorPose(source.Position, 0F));
         if (restored is not null) RestoreStats(actor.Actor, restored.Stats);
         DaggerfallWabbajack.Restore(actor.Actor, restored?.WabbajackDefinition);
+        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = source.Passive;
+        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = source.SpawnDistance;
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(restored?.ForcedHostile ?? false);
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = restored?.MagicallyPacified ?? false;
         RegisterActorInventory(actor, inventoryStore);

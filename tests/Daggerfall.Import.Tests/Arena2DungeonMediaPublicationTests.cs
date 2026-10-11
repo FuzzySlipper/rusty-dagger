@@ -9,6 +9,18 @@ namespace Daggerfall.Import.Tests;
 public sealed class Arena2DungeonMediaPublicationTests
 {
     [Fact]
+    public void Human_media_publishes_a_complete_female_atlas_with_the_same_animation_contract()
+    {
+        var publication = Arena2DungeonMediaPublication.Create(CreateActorRequest(141, 482, 25));
+        var actor = Assert.Single(publication.Actors);
+        var female = Assert.IsType<DungeonActorSpriteMedia>(actor.Female);
+        Assert.Equal("sprite/mobile-141-female", female.SpriteResourceId);
+        Assert.Equal(actor.States.Select(state => state.State), female.States.Select(state => state.State));
+        Assert.Contains(publication.Artifacts, artifact => artifact.RelativePath == female.Artifact.RelativePath);
+        Assert.Contains(publication.MediaManifest.Resources, media => media.Id == female.SpriteResourceId);
+    }
+
+    [Fact]
     public void Selected_publication_refuses_absent_or_refused_texture_leaves_with_its_consumer()
     {
         Arena2DungeonMediaSource palette = new("arena2/PAL.PAL", [1]);
@@ -118,7 +130,8 @@ public sealed class Arena2DungeonMediaPublicationTests
     {
         List<Arena2DungeonMediaSource> sources = [.. CreateSources(),
             new("arena2/TEXTURE.380", CreateTextureArchive(20)),
-            new("arena2/TEXTURE.482", CreateTextureArchive(25))];
+            new("arena2/TEXTURE.482", CreateTextureArchive(25)),
+            new("arena2/TEXTURE.481", CreateTextureArchive(25))];
         Arena2DungeonMediaPublication publication = Arena2DungeonMediaPublication.Create(CreateRequest() with
         {
             Sources = new Arena2DungeonMediaSourceSet(sources),
@@ -402,6 +415,8 @@ public sealed class Arena2DungeonMediaPublicationTests
             sources.Add(new Arena2DungeonMediaSource($"arena2/TEXTURE.{corpse.TextureArchive.Value:000}", CreateTextureArchive(20)));
         }
 
+        if (mobile?.FemaleTextureArchive is { } female)
+            sources.Add(new Arena2DungeonMediaSource($"arena2/TEXTURE.{female.Value:000}", CreateTextureArchive(actorRecordCount)));
         return Arena2DungeonMediaRequest.Create(document, new Arena2DungeonMediaSourceSet(sources));
     }
 
