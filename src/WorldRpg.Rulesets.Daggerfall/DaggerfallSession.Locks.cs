@@ -46,12 +46,24 @@ internal sealed partial class DaggerfallSession
         _ => throw new ArgumentOutOfRangeException(nameof(mode)),
     };
 
+    private string DescribeLockDifficulty(DaggerfallDoorView door)
+    {
+        if (door.IsMagicallyHeld) return InternalText("magicLock");
+        int skill = State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).ValueInt;
+        int chance = Policies.DaggerfallFormulaPolicy.CalculateInteriorLockpickingChance(Math.Max(1, State.Progression.Level), door.LockValue, skill);
+        if (chance < 30) return InternalText("lockpickChance1");
+        if (chance < 35) return InternalText("lockpickChance2");
+        if (chance < 45) return InternalText("lockpickChance3");
+        return _definitions.Text.RequireInternalEntry("lockpickChance", chance >= 95 ? 9 : (chance - 45) / 5);
+    }
+
     private DaggerfallActivationOutcome TryLockpickDoor(DaggerfallRdbDoorId id)
     {
         DaggerfallDoorView door = _doors.Read(id);
         // Donor lockpicking reads the current modified skill for both chance and its retry gate.
         int skill = State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).ValueInt;
-        int? previousFailedSkill = _doors.FailedLockpickingSkill(id);
+        var building = _doors.ExteriorBuildingOf(id);
+        int? previousFailedSkill = building is { } placed ? _site.FailedBuildingPick(_activeProfileKey.Site, placed) : _doors.FailedLockpickingSkill(id);
         DaggerfallLockInteractionSurface surface = _doors.InteractionSurface(id);
         DaggerfallLockInteractionDecision decision = DaggerfallLockInteractionPolicy.EvaluateLockpickDeferred(
             door,
@@ -67,6 +79,8 @@ internal sealed partial class DaggerfallSession
                 DaggerfallSkillUseReason.LockpickingAttempt,
                 DaggerfallSkillUseOutcome.Attempted));
 
+        if (building is { } failedBuilding && decision.Status == DaggerfallLockInteractionStatus.Failed)
+            _site.RememberBuildingPick(_activeProfileKey.Site, failedBuilding, skill);
         DaggerfallDoorOperationResult operation = _doors.ApplyLockInteraction(id, decision);
         PublishLockIncident(id, decision, operation);
         bool applied = decision.Applied && operation == DaggerfallDoorOperationResult.Started;

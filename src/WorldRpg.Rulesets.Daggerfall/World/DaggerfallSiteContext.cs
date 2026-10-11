@@ -30,6 +30,8 @@ internal sealed class DaggerfallSiteContext
     private readonly IReadOnlyList<DaggerfallSiteRecord> _ordered;
     private readonly HashSet<DaggerfallSiteId> _discovered = [];
     private readonly HashSet<DaggerfallBuildingDiscovery> _buildingsDiscovered = [];
+    private readonly Dictionary<DaggerfallBuildingDiscovery, int> _failedBuildingPicks = [];
+    private Func<DaggerfallSiteId, DaggerfallSiteBuildingSource, string?>? _learnedBuildingName;
     private DaggerfallBuildingNameService? _buildingNames;
     private DaggerfallFactionsSet? _buildingFactions;
     private DaggerfallSiteReturnPose? _returnPose;
@@ -54,7 +56,8 @@ internal sealed class DaggerfallSiteContext
         DaggerfallSiteId? returnAnchor,
         DaggerfallSiteReturnPose? returnPose,
         IEnumerable<DaggerfallSiteId> discovered,
-        IEnumerable<DaggerfallBuildingDiscovery>? buildings = null)
+        IEnumerable<DaggerfallBuildingDiscovery>? buildings = null,
+        IEnumerable<DaggerfallBuildingLockpickSave>? failedPicks = null)
     {
         ArgumentNullException.ThrowIfNull(locations);
         ArgumentNullException.ThrowIfNull(discovered);
@@ -97,6 +100,7 @@ internal sealed class DaggerfallSiteContext
             Reveal(Require(id));
         }
         foreach (var building in buildings ?? []) DiscoverBuilding(building.Site, building.Building);
+        foreach (var failed in failedPicks ?? []) RememberBuildingPick(failed.Site, failed.Building, failed.Skill);
     }
 
     internal bool IsBuildingDiscovered(DaggerfallSiteId site, DaggerfallSiteBuildingId building) =>
@@ -107,6 +111,23 @@ internal sealed class DaggerfallSiteContext
         _ = RequireBuildingSource(site, building);
         _buildingsDiscovered.Add(new(site, building));
     }
+
+    internal int? FailedBuildingPick(DaggerfallSiteId site, DaggerfallSiteBuildingId building) =>
+        _failedBuildingPicks.TryGetValue(new(site, building), out int skill) ? skill : null;
+
+    internal void RememberBuildingPick(DaggerfallSiteId site, DaggerfallSiteBuildingId building, int skill)
+    {
+        _ = RequireBuildingSource(site, building);
+        if (skill is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(skill));
+        _failedBuildingPicks[new(site, building)] = skill;
+    }
+
+    private DaggerfallBuildingLockpickSave[] FailedPicks() => _failedBuildingPicks
+        .OrderBy(value => value.Key.Site.Region).ThenBy(value => value.Key.Site.Index)
+        .ThenBy(value => value.Key.Building.BlockX).ThenBy(value => value.Key.Building.BlockY).ThenBy(value => value.Key.Building.Index)
+        .Select(value => new DaggerfallBuildingLockpickSave(value.Key.Site, value.Key.Building, value.Value)).ToArray();
+
+    internal string? LearnedBuildingName(DaggerfallSiteId site, DaggerfallSiteBuildingSource building) => _learnedBuildingName?.Invoke(site, building);
 
     /// <summary>The site the player is at, or null before any site owns them.</summary>
     internal DaggerfallSiteId? Active { get; private set; }
@@ -143,7 +164,8 @@ internal sealed class DaggerfallSiteContext
         _records.TryGetValue(id, out record!);
 
     /// <summary>Admits the ruleset's block naming policy once the selected content pack is valid.</summary>
-    internal void AdmitBuildingNames(IRandomService random, DaggerfallDefinitions definitions, DaggerfallBlocksSnapshot blocks)
+    internal void AdmitBuildingNames(IRandomService random, DaggerfallDefinitions definitions, DaggerfallBlocksSnapshot blocks,
+        Func<DaggerfallSiteId, DaggerfallSiteBuildingSource, string?>? learnedBuildingName = null)
     {
         if (_buildingNames is not null)
         {
@@ -151,6 +173,7 @@ internal sealed class DaggerfallSiteContext
         }
 
         Blocks = blocks;
+        _learnedBuildingName = learnedBuildingName;
         _buildingFactions = definitions.Factions;
         _buildingNames = new DaggerfallBuildingNameService(random, definitions, blocks, this);
     }
@@ -228,7 +251,7 @@ internal sealed class DaggerfallSiteContext
         DaggerfallFactionDefinition? faction = null;
         if (source.Source.FactionId != 0 && (_buildingFactions is null || !_buildingFactions.Factions.TryGetValue(source.Source.FactionId, out faction)))
             throw new InvalidOperationException($"Building '{building}' at site '{site}' names unpublished faction {source.Source.FactionId}.");
-        return new(site, source, name.Name, faction);
+        return new(site, source, LearnedBuildingName(site, source) ?? name.Name, faction);
     }
 
     /// <summary>Resolves a site's record, naming the identity the bundle does not carry.</summary>
@@ -337,7 +360,7 @@ internal sealed class DaggerfallSiteContext
     internal void Discover(DaggerfallSiteId id) => Reveal(Require(id));
 
     /// <summary>Captures live context for a transition that has admitted resources but has not committed its site change.</summary>
-    internal DaggerfallSiteContextCheckpoint CaptureCheckpoint() => new(Active, ReturnAnchor, _returnPose, [.. _discovered], [.. _buildingsDiscovered]);
+    internal DaggerfallSiteContextCheckpoint CaptureCheckpoint() => new(Active, ReturnAnchor, _returnPose, [.. _discovered], [.. _buildingsDiscovered], FailedPicks());
 
     /// <summary>Restores a checkpoint from the same admitted location set after a transition commit fails.</summary>
     internal void RestoreCheckpoint(DaggerfallSiteContextCheckpoint checkpoint)
@@ -362,6 +385,8 @@ internal sealed class DaggerfallSiteContext
         _discovered.UnionWith(checkpoint.Discovered);
         _buildingsDiscovered.Clear();
         foreach (var building in checkpoint.Buildings) DiscoverBuilding(building.Site, building.Building);
+        _failedBuildingPicks.Clear();
+        foreach (var failed in checkpoint.FailedPicks) RememberBuildingPick(failed.Site, failed.Building, failed.Skill);
     }
 
     /// <summary>
@@ -387,7 +412,7 @@ internal sealed class DaggerfallSiteContext
         [.. _discovered.OrderBy(id => id.Region).ThenBy(id => id.Index).Select(id => new DaggerfallSiteIdSave(id.Region, id.Index))],
         _returnPose is { } pose ? new DaggerfallSiteReturnPoseSave(pose.Position.X, pose.Position.Y, pose.Position.Z, pose.YawRadians, pose.PitchRadians) : null)
         { Buildings = _buildingsDiscovered.OrderBy(value => value.Site.Region).ThenBy(value => value.Site.Index)
-            .ThenBy(value => value.Building.BlockX).ThenBy(value => value.Building.BlockY).ThenBy(value => value.Building.Index).ToArray() };
+            .ThenBy(value => value.Building.BlockX).ThenBy(value => value.Building.BlockY).ThenBy(value => value.Building.Index).ToArray(), FailedBuildingPicks = FailedPicks() };
 }
 
 /// <summary>Return placement retained by a site context; it is product state, never a runtime entity handle.</summary>
@@ -410,7 +435,9 @@ internal sealed record DaggerfallSiteContextCheckpoint(
     DaggerfallSiteId? ReturnAnchor,
     DaggerfallSiteReturnPose? ReturnPose,
     DaggerfallSiteId[] Discovered,
-    DaggerfallBuildingDiscovery[] Buildings);
+    DaggerfallBuildingDiscovery[] Buildings, DaggerfallBuildingLockpickSave[] FailedPicks);
+
+internal sealed record DaggerfallBuildingLockpickSave(DaggerfallSiteId Site, DaggerfallSiteBuildingId Building, int Skill);
 
 internal sealed record DaggerfallBuildingDiscovery(DaggerfallSiteId Site, DaggerfallSiteBuildingId Building);
 

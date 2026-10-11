@@ -118,6 +118,7 @@ internal sealed record DaggerfallDoorSave(
     ulong BashAttempts,
     int? FailedLockpickingSkill = null)
 {
+    [System.Text.Json.Serialization.JsonRequired] public bool IsLocked { get; init; } = LockValue > 0;
     internal DaggerfallRdbDoorId Id => new(SourceKey, BlockX, BlockZ, ModelIndex);
 
     internal DaggerfallDoorSave Validate()
@@ -129,7 +130,7 @@ internal sealed record DaggerfallDoorSave(
         if (FailedLockpickingSkill is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(FailedLockpickingSkill));
         if (Motion == DaggerfallDoorMotion.Closed && Progress != 0F || Motion == DaggerfallDoorMotion.Open && Progress != 1F)
             throw new ArgumentException("A terminal door motion must carry its terminal progress.");
-        if (FailedLockpickingSkill is not null && LockValue == 0)
+        if (FailedLockpickingSkill is not null && !IsLocked)
             throw new ArgumentException("A failed lockpick skill can only be retained while the door remains locked.", nameof(FailedLockpickingSkill));
         return this;
     }
@@ -146,8 +147,8 @@ internal readonly record struct DaggerfallDoorView(
     bool CollisionEnabled,
     DaggerfallDoorKind Kind)
 {
-    internal bool IsLocked => LockValue > 0;
-    internal bool IsMagicallyHeld => LockValue >= 20;
+    internal bool IsLocked { get; init; } = LockValue > 0;
+    internal bool IsMagicallyHeld => IsLocked && LockValue >= 20;
 }
 
 /// <summary>
@@ -305,7 +306,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     {
         if (skill is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(skill));
         Door door = Require(id);
-        if (skill is not null && door.LockValue == 0)
+        if (skill is not null && !door.IsLocked)
             throw new InvalidOperationException($"Door '{id}' cannot retain a failed lockpick skill after it is unlocked.");
         door.FailedLockpickingSkill = skill;
         Apply(door);
@@ -314,10 +315,10 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     /// <summary>
     /// Sets a building entrance to what its building's entry rule says now. A building's entrance is
     /// a closed doorway the player walks through, not a door left swung open, and its lock is the
-    /// building's (by type, hour and standing), never the RMB model's own lock value. A failed pick is
-    /// kept while the same lock still holds, so a retry at the same skill stays refused.
+    /// building's (by type, hour and standing), never the RMB model's own lock value. Building pick
+    /// memory is owned by the site context and is shared by every entrance to that building.
     /// </summary>
-    internal void ApplyBuildingEntry(DaggerfallRdbDoorId id, int lockValue)
+    internal void ApplyBuildingEntry(DaggerfallRdbDoorId id, int lockValue, bool locked)
     {
         if (lockValue < 0) throw new ArgumentOutOfRangeException(nameof(lockValue));
         Door door = Require(id);
@@ -325,7 +326,8 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
             throw new InvalidOperationException($"Door '{id}' is not a building entrance.");
         if (door.Definition.Kind == DaggerfallDoorKind.Special)
             throw new InvalidOperationException($"Building entrance '{id}' is a special door.");
-        if (lockValue == 0 || door.LockValue != lockValue) door.FailedLockpickingSkill = null;
+        door.FailedLockpickingSkill = null; // Building attempts belong to the site, shared by all its doors.
+        door.IsLocked = locked;
         door.LockValue = lockValue;
         door.Motion = DaggerfallDoorMotion.Closed;
         door.Progress = 0F;
@@ -343,13 +345,13 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
             return DaggerfallDoorOperationResult.SpecialDoor;
         if (source != DaggerfallDoorOperationSource.DungeonAction && door.LockValue >= 20)
             return DaggerfallDoorOperationResult.MagicallyHeld;
-        if (source != DaggerfallDoorOperationSource.DungeonAction && door.LockValue > 0)
+        if (source != DaggerfallDoorOperationSource.DungeonAction && door.IsLocked)
             return DaggerfallDoorOperationResult.Locked;
         if (door.Motion == DaggerfallDoorMotion.Open || door.Motion == DaggerfallDoorMotion.Opening)
             return DaggerfallDoorOperationResult.AlreadyOpen;
         if (source == DaggerfallDoorOperationSource.DungeonAction)
         {
-            door.LockValue = 0;
+            door.LockValue = 0; door.IsLocked = false;
             door.FailedLockpickingSkill = null;
         }
         door.Motion = DaggerfallDoorMotion.Opening;
@@ -372,6 +374,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         if (source == DaggerfallDoorOperationSource.DungeonAction)
         {
             door.LockValue = door.Definition.StartingLockValue;
+            door.IsLocked = door.LockValue > 0;
             door.FailedLockpickingSkill = null;
         }
         Apply(door);
@@ -385,8 +388,9 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         if (!Enum.IsDefined(source)) throw new ArgumentOutOfRangeException(nameof(source));
         if (lockValue <= 0) throw new ArgumentOutOfRangeException(nameof(lockValue));
         if (door.Definition.Kind == DaggerfallDoorKind.Special) return DaggerfallDoorOperationResult.SpecialDoor;
-        if (door.LockValue > 0) return DaggerfallDoorOperationResult.AlreadyLocked;
+        if (door.IsLocked) return DaggerfallDoorOperationResult.AlreadyLocked;
         door.LockValue = lockValue;
+        door.IsLocked = true;
         door.FailedLockpickingSkill = null;
         Apply(door);
         return DaggerfallDoorOperationResult.Started;
@@ -397,7 +401,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         Door door = Require(id);
         if (!Enum.IsDefined(source)) throw new ArgumentOutOfRangeException(nameof(source));
         if (door.Definition.Kind == DaggerfallDoorKind.Special) return DaggerfallDoorOperationResult.SpecialDoor;
-        if (door.LockValue == 0) return DaggerfallDoorOperationResult.AlreadyUnlocked;
+        if (!door.IsLocked) return DaggerfallDoorOperationResult.AlreadyUnlocked;
         if (source != DaggerfallDoorOperationSource.DungeonAction && door.LockValue >= 20)
             return DaggerfallDoorOperationResult.MagicallyHeld;
         ClearLock(door);
@@ -417,7 +421,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         if ((door.Definition.LockSurface == DaggerfallLockInteractionSurface.Exterior || !skeletonKey)
             && door.LockValue > actorLevel)
             return door.LockValue >= 20 ? DaggerfallDoorOperationResult.MagicallyHeld : DaggerfallDoorOperationResult.Locked;
-        bool unlocked = door.LockValue > 0;
+        bool unlocked = door.IsLocked;
         ClearLock(door);
         Apply(door);
         DaggerfallDoorOperationResult result = door.Motion == DaggerfallDoorMotion.Closed
@@ -427,7 +431,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
 
     private static void ClearLock(Door door)
     {
-        door.LockValue = 0;
+        door.LockValue = 0; door.IsLocked = false;
         door.FailedLockpickingSkill = null;
     }
 
@@ -450,9 +454,9 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
             {
                 if (decision.FailedSkillLevel is not int failed)
                     throw new InvalidOperationException("A failed lockpick decision must carry its attempted skill.");
-                if (door.LockValue == 0)
+                if (!door.IsLocked)
                     return DaggerfallDoorOperationResult.AlreadyUnlocked;
-                door.FailedLockpickingSkill = failed;
+                if (door.Definition.ExteriorBuilding is null) door.FailedLockpickingSkill = failed;
                 Apply(door);
                 return DaggerfallDoorOperationResult.LockpickFailed;
             }
@@ -462,13 +466,13 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
                 throw new InvalidOperationException("An applied lockpick decision must unlock its door.");
             if (door.Definition.Kind == DaggerfallDoorKind.Special)
                 return DaggerfallDoorOperationResult.SpecialDoor;
-            if (door.LockValue == 0)
+            if (!door.IsLocked)
                 return DaggerfallDoorOperationResult.AlreadyUnlocked;
             if (door.LockValue >= 20)
                 return DaggerfallDoorOperationResult.MagicallyHeld;
             if (door.Motion != DaggerfallDoorMotion.Closed)
                 return DaggerfallDoorOperationResult.AlreadyOpen;
-            door.LockValue = 0;
+            door.LockValue = 0; door.IsLocked = false;
             door.FailedLockpickingSkill = null;
             if (decision.OpensAfterUnlock) door.Motion = DaggerfallDoorMotion.Opening;
             Apply(door);
@@ -494,7 +498,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
             return DaggerfallDoorOperationResult.AlreadyOpen;
         if (door.LockValue >= 20)
             return DaggerfallDoorOperationResult.MagicallyHeld;
-        door.LockValue = 0;
+        door.LockValue = 0; door.IsLocked = false;
         door.FailedLockpickingSkill = null;
         door.Motion = DaggerfallDoorMotion.Opening;
         Apply(door);
@@ -569,7 +573,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
 
     internal DaggerfallDoorSave[] Capture() => _doors.Values
         .OrderBy(door => door.Definition.Id.SourceKey, StringComparer.Ordinal).ThenBy(door => door.Definition.Id.BlockX).ThenBy(door => door.Definition.Id.BlockZ).ThenBy(door => door.Definition.Id.ModelIndex)
-        .Select(door => new DaggerfallDoorSave(door.Definition.Id.SourceKey, door.Definition.Id.BlockX, door.Definition.Id.BlockZ, door.Definition.Id.ModelIndex, door.Motion, door.Progress, door.LockValue, door.BashAttempts, door.FailedLockpickingSkill))
+        .Select(door => new DaggerfallDoorSave(door.Definition.Id.SourceKey, door.Definition.Id.BlockX, door.Definition.Id.BlockZ, door.Definition.Id.ModelIndex, door.Motion, door.Progress, door.LockValue, door.BashAttempts, door.FailedLockpickingSkill) { IsLocked = door.IsLocked })
         .ToArray();
 
     public void Dispose()
@@ -588,11 +592,11 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         DaggerfallDoorMotion motion = saved?.Motion ?? DaggerfallDoorMotion.Closed;
         float progress = saved?.Progress ?? 0F;
         int lockValue = saved?.LockValue ?? definition.StartingLockValue;
-        if (definition.Kind == DaggerfallDoorKind.Special && lockValue != 0)
+        if (definition.Kind == DaggerfallDoorKind.Special && (lockValue != 0 || saved?.IsLocked == true))
             throw new ArgumentException($"Special door '{definition.Id}' cannot restore a lock.", nameof(saved));
         DurableIdentityReference identity = ReferenceFor(definition.Id);
         EntityId entity = _entities.Create(identity, new EntityTypeId("daggerfall.rdb-door"));
-        Door door = new(definition, entity, motion, progress, lockValue, saved?.BashAttempts ?? 0UL, saved?.FailedLockpickingSkill);
+        Door door = new(definition, entity, motion, progress, lockValue, saved?.BashAttempts ?? 0UL, saved?.FailedLockpickingSkill) { IsLocked = saved?.IsLocked ?? lockValue > 0 };
         try
         {
             _doors.Add(definition.Id, door);
@@ -619,7 +623,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     {
         Transform pose = _store.Get(door.Entity, EngineComponentTypes.Transform);
         SpatialCollider collider = _store.Get(door.Entity, EngineComponentTypes.SpatialCollider);
-        return new(door.Definition.Id, door.Entity, pose, door.Motion, door.Progress, door.LockValue, collider.Enabled, door.Definition.Kind);
+        return new(door.Definition.Id, door.Entity, pose, door.Motion, door.Progress, door.LockValue, collider.Enabled, door.Definition.Kind) { IsLocked = door.IsLocked };
     }
 
     private int DrawBashRoll(Door door)
@@ -672,6 +676,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         internal DaggerfallDoorMotion Motion { get; set; } = motion;
         internal float Progress { get; set; } = progress;
         internal int LockValue { get; set; } = lockValue;
+        internal bool IsLocked { get; set; } = lockValue > 0;
         internal ulong BashAttempts { get; set; } = bashAttempts;
         internal int? FailedLockpickingSkill { get; set; } = failedLockpickingSkill;
     }

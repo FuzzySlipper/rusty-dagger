@@ -10,7 +10,8 @@ internal sealed partial class DaggerfallSession
     private DaggerfallActivationOutcome? ActivateDoorMagic(DaggerfallRdbDoorId id)
     {
         var ready = State.Effects.Active.Where(effect => effect.Context.Target.Value == DaggerfallActorIdentity.PlayerEntityId
-                && effect.Definition.DoorMagic != DaggerfallDoorMagic.None)
+                && effect.Definition.DoorMagic != DaggerfallDoorMagic.None
+                && !(_doors.ExteriorBuildingOf(id) is not null && effect.Definition.DoorMagic == DaggerfallDoorMagic.Lock))
             .OrderBy(effect => effect.Definition.DoorMagic).FirstOrDefault(); // Lock precedes Open, regardless of cast order.
         if (ready is null) return null;
         DaggerfallDoorView before = _doors.Read(id);

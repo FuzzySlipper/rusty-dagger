@@ -694,7 +694,7 @@ internal sealed record DaggerfallSavePayload(
         RequireSite(Site.ReturnAnchor, locations, "return anchor");
         foreach (DaggerfallSiteIdSave discovered in Site.Discovered)
             RequireSite(discovered, locations, "discovered site");
-        foreach (var building in Site.Buildings)
+        foreach (var building in Site.Buildings.Concat(Site.FailedBuildingPicks.Select(value => new DaggerfallBuildingDiscovery(value.Site, value.Building))))
         {
             var location = definitions.Locations.Records.SingleOrDefault(value => value.Id == building.Site);
             if (location?.Exterior?.Buildings.ContainsKey(building.Building) != true)
@@ -1436,11 +1436,16 @@ internal sealed record DaggerfallSiteSave(
     DaggerfallWorldProfileKeySave? ReturnProfile = null)
 {
     [JsonRequired] public DaggerfallBuildingDiscovery[] Buildings { get; init; } = [];
+    [JsonRequired] public DaggerfallBuildingLockpickSave[] FailedBuildingPicks { get; init; } = [];
 
     internal void Validate()
     {
         ArgumentNullException.ThrowIfNull(Discovered);
         ArgumentNullException.ThrowIfNull(Buildings);
+        ArgumentNullException.ThrowIfNull(FailedBuildingPicks);
+        if (FailedBuildingPicks.Any(value => value is null || value.Skill is < 0 or > 100)
+            || FailedBuildingPicks.Select(value => (value.Site, value.Building)).Distinct().Count() != FailedBuildingPicks.Length)
+            throw new ArgumentException("Saved building lockpick memory is malformed or duplicated.");
         if (Buildings.Any(value => value is null) || Buildings.Distinct().Count() != Buildings.Length)
             throw new ArgumentException("Saved building discovery contains null or repeated buildings.");
         Active?.Validate("active site");

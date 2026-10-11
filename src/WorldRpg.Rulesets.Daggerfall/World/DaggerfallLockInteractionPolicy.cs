@@ -144,7 +144,7 @@ internal static class DaggerfallLockInteractionPolicy
             return RejectDoorState(door, DaggerfallLockInteractionKind.Lockpick, surface, DaggerfallLockInteractionStatus.SpecialDoor, null);
         if (door.Motion is DaggerfallDoorMotion.Open or DaggerfallDoorMotion.Opening or DaggerfallDoorMotion.Closing)
             return RejectDoorState(door, DaggerfallLockInteractionKind.Lockpick, surface, DaggerfallLockInteractionStatus.DoorMoving, null);
-        if (door.LockValue <= 0)
+        if (!door.IsLocked)
             return RejectDoorState(door, DaggerfallLockInteractionKind.Lockpick, surface, DaggerfallLockInteractionStatus.AlreadyUnlocked, null);
 
         bool duplicate = previousFailedSkill.HasValue && (surface == DaggerfallLockInteractionSurface.Interior
@@ -290,7 +290,7 @@ internal static class DaggerfallLockInteractionPolicy
                 ? DaggerfallLockInteractionStatus.MagicallyHeld
                 : door.Motion is DaggerfallDoorMotion.Opening or DaggerfallDoorMotion.Closing
                     ? DaggerfallLockInteractionStatus.DoorMoving
-                    : door.LockValue <= 0
+                    : !door.IsLocked
                         ? alreadyUnlockedStatus
                         : DaggerfallLockInteractionStatus.Applied;
         return new(kind, surface, status, null, 0, roll, null, false, false, 0, false);

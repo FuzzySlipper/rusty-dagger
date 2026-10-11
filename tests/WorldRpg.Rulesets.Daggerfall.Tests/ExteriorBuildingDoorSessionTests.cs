@@ -83,19 +83,22 @@ public sealed class ExteriorBuildingDoorSessionTests
         DaggerfallSession session = fixture.Session;
         fixture.Interact(Residence);
         Assert.False(session.ActivationView.Applied);
-        Assert.Equal("Locked.", session.ActivationView.Message);
+        Assert.StartsWith("Locked. ", session.ActivationView.Message);
         Assert.Equal(fixture.Exterior.ProfileKey, session.Sites.ActiveProfile);
         Assert.Equal(DaggerfallBuildingEntryPolicy.LockValue(8), session.Doors.Read(fixture.DoorOf(Residence)).LockValue);
 
         fixture.SetMode("info");
         fixture.Interact(Residence);
-        Assert.Equal("Residence", session.ActivationView.Message);
+        Assert.StartsWith("Residence ", session.ActivationView.Message);
         Assert.Equal("Residence", fixture.InspectLabel(Residence));
 
         fixture.AdvanceToHour(6);
         fixture.SetMode("grab");
         fixture.Interact(Residence);
         Assert.True(session.ActivationView.Applied, session.ActivationView.Message);
+        Assert.Equal(fixture.Exterior.ProfileKey, session.Sites.ActiveProfile);
+        Assert.Equal(256, session.DungeonTextProjection!.TextId);
+        fixture.ContinueGreeting();
         Assert.Equal(fixture.InteriorOf(Residence), session.Sites.ActiveProfile);
         Assert.Empty(session.State.Crime.Incidents);
     }
@@ -115,7 +118,7 @@ public sealed class ExteriorBuildingDoorSessionTests
 
         fixture.SetMode("info");
         fixture.Interact(GeneralStore);
-        Assert.Equal($"{name}. Store is closed. Open from 6:00 to 23:00.", session.ActivationView.Message);
+        Assert.StartsWith($"{name}. Store is closed. Open from 6:00 to 23:00. ", session.ActivationView.Message);
 
         // An earlier visit leaves the door open in its saved state; the entry rule still holds it shut.
         session.Doors.Unlock(fixture.DoorOf(GeneralStore), DaggerfallDoorOperationSource.Player);
@@ -123,16 +126,17 @@ public sealed class ExteriorBuildingDoorSessionTests
         fixture.SetMode("grab");
         fixture.Interact(GeneralStore);
         Assert.False(session.ActivationView.Applied);
-        Assert.Equal("Locked.", session.ActivationView.Message);
+        Assert.StartsWith("Locked. ", session.ActivationView.Message);
         Assert.Equal(DaggerfallBuildingEntryPolicy.LockValue(14), session.Doors.Read(fixture.DoorOf(GeneralStore)).LockValue);
 
         fixture.AdvanceToHour(9);
         fixture.SetMode("info");
         fixture.Interact(GeneralStore);
         Assert.Equal(name, session.ActivationView.Message);
-        fixture.SetMode("grab");
-        fixture.Interact(GeneralStore);
-        Assert.True(session.ActivationView.Applied, session.ActivationView.Message);
+        Assert.Equal(267, session.DungeonTextProjection!.TextId);
+        Assert.False(string.IsNullOrWhiteSpace(session.DungeonTextProjection.Text));
+        Assert.Equal(fixture.Exterior.ProfileKey, session.Sites.ActiveProfile);
+        fixture.ContinueGreeting();
         Assert.Equal(fixture.InteriorOf(GeneralStore), session.Sites.ActiveProfile);
         Assert.Empty(session.State.Crime.Incidents);
     }
@@ -148,13 +152,13 @@ public sealed class ExteriorBuildingDoorSessionTests
         DaggerfallSession session = fixture.Session;
         fixture.SetMode("info");
         fixture.Interact(MagesGuild);
-        Assert.EndsWith(". Guild is closed. Open from 11:00 to 23:00.", session.ActivationView.Message);
+        Assert.Contains(". Guild is closed. Open from 11:00 to 23:00.", session.ActivationView.Message);
 
         session.State.Social.JoinGuild(40, 0);
         fixture.SetMode("grab");
         fixture.Interact(MagesGuild);
         Assert.False(session.ActivationView.Applied);
-        Assert.Equal("Locked.", session.ActivationView.Message);
+        Assert.StartsWith("Locked. ", session.ActivationView.Message);
 
         for (int rank = 0; rank < 6; rank++) session.State.Social.PromoteGuild(40, 0);
         fixture.Interact(MagesGuild);
@@ -183,6 +187,80 @@ public sealed class ExteriorBuildingDoorSessionTests
         Assert.Empty(session.State.Effects.Active);
     }
 
+    [Fact]
+    public void Quality_one_building_is_locked_at_zero_and_that_state_restores()
+    {
+        using Fixture f = new();
+        var id = f.DoorOf(Residence);
+        // Charing's fixture houses have higher qualities; admit the same policy's quality-one result.
+        f.Session.Doors.ApplyBuildingEntry(id, DaggerfallBuildingEntryPolicy.LockValue(1), locked: true);
+        var door = f.Session.Doors.Read(id);
+        Assert.True(door.IsLocked); Assert.Equal(0, door.LockValue);
+        Assert.Equal(DaggerfallDoorOperationResult.Locked, f.Session.Doors.Open(door.Id, DaggerfallDoorOperationSource.Player));
+        using var restored = f.Restore(f.Session.CaptureSave());
+        Assert.True(restored.Doors.Read(door.Id).IsLocked);
+        Assert.Equal(0, restored.Doors.Read(door.Id).LockValue);
+    }
+
+    [Fact]
+    public void Lock_spell_does_not_change_a_building_and_remains_ready_for_an_action_door()
+    {
+        using Fixture f = new(); f.AdvanceToHour(6); f.CastOpen(lockDoor: true); f.Interact(Residence);
+        Assert.Equal(DaggerfallDungeonTextActionKind.BuildingGreeting, f.Session.DungeonTextProjection!.Kind);
+        Assert.False(f.Session.Doors.Read(f.DoorOf(Residence)).IsLocked);
+        Assert.Equal(DaggerfallDoorMagic.Lock, Assert.Single(f.Session.State.Effects.Active).Definition.DoorMagic);
+        f.ContinueGreeting();
+        Assert.Equal(f.InteriorOf(Residence), f.Session.Sites.ActiveProfile);
+    }
+
+    [Fact]
+    public void Failed_pick_is_remembered_per_building_after_daytime_entry_exit_and_save()
+    {
+        using Fixture f = new(random: System.Reflection.DispatchProxy.Create<IRandomService, FailedPickRandom>());
+        var session = f.Session; var site = session.Site.Active!.Value;
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).BaseValue = 20;
+        f.SetMode("steal"); f.Interact(Residence);
+        Assert.False(session.ActivationView.Applied);
+        Assert.Equal(20, session.Site.FailedBuildingPick(site, Residence));
+        f.AdvanceToHour(6); f.SetMode("grab"); f.Interact(Residence); f.ContinueGreeting();
+        Assert.Equal(f.InteriorOf(Residence), session.Sites.ActiveProfile);
+        Assert.True(session.TryTransitionTo(f.Exterior.ProfileKey));
+        f.AdvanceToHour(0);
+        f.SetMode("steal"); f.Interact(Residence);
+        Assert.Contains("already tried", session.ActivationView.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(20, session.Site.FailedBuildingPick(site, Residence));
+        using var restored = f.Restore(session.CaptureSave());
+        Assert.Equal(20, restored.Site.FailedBuildingPick(site, Residence));
+        Assert.DoesNotContain(restored.Doors.Capture(), value => value.FailedLockpickingSkill is not null);
+    }
+
+    [Fact]
+    public void Quest_residence_name_uses_persisted_dialogue_visibility_and_updates_live_labels()
+    {
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: []);
+        using Fixture f = new(definitions);
+        var session = f.Session; var site = session.Site.ActiveSite!;
+        var binding = DaggerfallQuestResourceBinding.PlaceBuilding(session.Site, site.MapId, DaggerfallQuestPlaceAllocator.BuildingKey(Residence));
+        session.State.Quests.Start(new("residence-name", "world-test.txt", "world-test", DaggerfallQuestLifecycle.Active, null,
+            [new("location", binding) { Text = new(Name: "The Moorcroft Residence"), DialogueVisible = false }], []));
+        Assert.Equal("Residence", f.InspectLabel(Residence));
+        Assert.True(session.State.Quests.TryGet("residence-name", out var quest));
+        var resource = quest!.Resources.Single(value => value.Symbol == "location");
+        session.State.Quests.SetResource(quest.InstanceId, resource with { DialogueVisible = true });
+        Assert.Equal("The Moorcroft Residence", f.InspectLabel(Residence));
+        session.Site.DiscoverBuilding(site.Id, Residence);
+        Assert.Contains(session.ReadMapPresentation()!.Labels, label => label.Name == "The Moorcroft Residence");
+        using var restored = f.Restore(session.CaptureSave());
+        Assert.Equal("The Moorcroft Residence", restored.Site.RequireBuilding(site.Id, Residence).Name);
+    }
+
+    internal class FailedPickRandom : RandomMinimum
+    {
+        protected override object? Invoke(System.Reflection.MethodInfo? method, object?[]? arguments) =>
+            method?.Name == nameof(IRandomService.DrawKeyed) && arguments![0] is KeyedRngRequest request && request.Scope == "daggerfall.lockpick.v1"
+                ? new KeyedRngReceipt(request.Maximum) : base.Invoke(method, arguments);
+    }
+
     private sealed class Fixture : IDisposable
     {
         internal DaggerfallSiteProfile Exterior { get; } = Profiles.Value.Exterior;
@@ -191,15 +269,17 @@ public sealed class ExteriorBuildingDoorSessionTests
         private SpatialFake _spatial = null!;
         private PerceptionFake _perception = null!;
         private ulong _step;
+        private readonly IRandomService _random;
 
-        internal Fixture()
+        internal Fixture(DaggerfallDefinitions? definitions = null, IRandomService? random = null)
         {
             foreach (DaggerfallSiteBuildingId building in new[] { Residence, GeneralStore, MagesGuild })
             {
                 DaggerfallRdbDoorDefinition door = Exterior.Doors.First(value => value.ExteriorBuilding == building);
                 Assert.True(door.BoundsMin.X < door.BoundsMax.X && door.BoundsMin.Y < door.BoundsMax.Y && door.BoundsMin.Z < door.BoundsMax.Z);
             }
-            _composition = new(TestPayload.Definitions, Exterior, DaggerfallTuning.Defaults)
+            _random = random ?? RandomMinimum.Create();
+            _composition = new(definitions ?? TestPayload.Definitions, Exterior, DaggerfallTuning.Defaults)
             {
                 Profiles = new DaggerfallSiteProfiles([Exterior, .. Profiles.Value.Interiors]),
                 // The block catalog admits the classic building names Information mode and door labels show.
@@ -225,7 +305,7 @@ public sealed class ExteriorBuildingDoorSessionTests
             _perception = PerceptionFake.Create();
             _perception.Responder = request => Receipt(request.Targets.Span.ToArray()
                 .Select(target => new PerceptionPair(1, target.Entity, 1, 1, PerceptionPairKind.Visible, 1)).ToArray());
-            return EngineContextFake.Create(content, _spatial.Service, new AppearanceFake(releases), _perception.Service, random: RandomMinimum.Create());
+            return EngineContextFake.Create(content, _spatial.Service, new AppearanceFake(releases), _perception.Service, random: _random);
         }
 
         internal DaggerfallSession Restore(RulesetSavePayload save) => DaggerfallSession.Restore(Engine().Context, _composition, save);
@@ -242,13 +322,21 @@ public sealed class ExteriorBuildingDoorSessionTests
             Assert.Equal(hour, DaggerfallSavePayload.Read(Session.CaptureSave()).Calendar.Hour);
         }
 
-        internal void CastOpen()
+        internal void ContinueGreeting()
         {
-            Session.State.Character.LearnSpell("spell.018");
+            var prompt = Session.DungeonTextProjection!;
+            Session.Update(new ProductUpdate(OuterUpdate(++_step), [Ui(System.Text.Json.JsonSerializer.Serialize(new
+                { action = "dungeon-text-close", item = prompt.ActionId, revision = prompt.Revision.ToString() }))]));
+        }
+
+        internal void CastOpen(bool lockDoor = false)
+        {
+            string spell = lockDoor ? "spell.019" : "spell.018";
+            Session.State.Character.LearnSpell(spell);
             Track magicka = Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
             magicka.Maximum.BaseValue = 10000;
             magicka.SetCurrent(10000);
-            Assert.Equal(DaggerfallCastOutcome.Ready, Session.Casting.Ready(1, "spell.018").Outcome);
+            Assert.Equal(DaggerfallCastOutcome.Ready, Session.Casting.Ready(1, spell).Outcome);
             Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(Session.ReleaseReadySpell(1, Vector3.UnitZ).Bundle!.Results).Outcome);
         }
 

@@ -4,12 +4,13 @@ using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
-/// <summary>The three text action families retained by the Arena2 RDB action resource.</summary>
+/// <summary>Text prompt families shown by the shared modal projection.</summary>
 internal enum DaggerfallDungeonTextActionKind : byte
 {
     ShowText,
     ShowTextWithInput,
     DoorText,
+    BuildingGreeting,
 }
 
 /// <summary>Outcome of one text action or one semantic input submission.</summary>

@@ -74,7 +74,7 @@ internal sealed partial class DaggerfallSession
             reach,
             new DaggerfallActivationContributions(
                 new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts),
-                new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic, EnterExteriorBuilding, ExteriorBuildingDoor, ExteriorBuildingName),
+                new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic, EnterExteriorBuilding, ExteriorBuildingDoor, ExteriorBuildingName, DescribeLockDifficulty, DiscoverExteriorBuilding),
                 new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination,
                     (destination, portal) => TryTransitionTo(destination, portal.ArrivalAnchor)),
                 new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyInteractionPoint, OpenPropertyLoot),
@@ -86,7 +86,10 @@ internal sealed partial class DaggerfallSession
         (_sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted."))
             .RequireLogicalProfile(logicalProfile).ProfileKey;
 
-    private DaggerfallActivationOutcome? EnterExteriorBuilding(DaggerfallRdbDoorId door, DaggerfallActivationMode? forceMode)
+    private DaggerfallActivationOutcome? EnterExteriorBuilding(DaggerfallRdbDoorId door, DaggerfallActivationMode? forceMode) =>
+        EnterExteriorBuilding(door, forceMode, skipGreeting: false);
+
+    private DaggerfallActivationOutcome? EnterExteriorBuilding(DaggerfallRdbDoorId door, DaggerfallActivationMode? forceMode, bool skipGreeting)
     {
         if (_doors.ExteriorBuildingOf(door) is not { } building) return null;
         DaggerfallSiteProfiles profiles = _sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted.");
@@ -106,6 +109,8 @@ internal sealed partial class DaggerfallSession
         // opens (its hours, a guild's standing, a quest) is not.
         bool closed = !(ExteriorBuildingDoor(door)?.Entry.Unlocked
             ?? DaggerfallBuildingEntryPolicy.IsOpenHour(interior.BuildingType, _time.Calendar.Hour));
+        if (!skipGreeting && PresentBuildingGreeting(door, forceMode, closed, owned))
+            return new(true, "Read the greeting before entering.");
         bool trespass = !owned && closed && interior.BuildingType is >= 0 and <= 23;
         var witnesses = !owned && (forced || trespass) ? QueryCrimeWitnesses() : DaggerfallCrimeWitnessEvidence.NotQueried;
         if (!TryTransitionTo(destination))
@@ -136,6 +141,11 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>The name an exterior door's building is labelled with, or null when it has none.</summary>
+    private void DiscoverExteriorBuilding(DaggerfallRdbDoorId door)
+    {
+        if (TryExteriorBuilding(door, out var site, out var building)) _site.DiscoverBuilding(site, building.Id);
+    }
+
     private string? ExteriorBuildingName(DaggerfallRdbDoorId door) =>
         TryExteriorBuilding(door, out DaggerfallSiteId site, out DaggerfallSiteBuildingSource building)
             && BuildingDisplayName(site, building) is { Length: > 0 } name ? name : null;
@@ -180,6 +190,7 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     private string BuildingDisplayName(DaggerfallSiteId site, DaggerfallSiteBuildingSource building)
     {
+        if (_site.LearnedBuildingName(site, building) is { Length: > 0 } learned) return learned;
         if (DaggerfallBuildingEntryPolicy.IsResidence(building.Source.BuildingType)) return InternalText("residence");
         DaggerfallBuildingNameResult name = _site.ResolveBuildingName(site, building);
         return name.IsResolved ? name.Name : string.Empty;
@@ -771,8 +782,8 @@ internal sealed partial class DaggerfallSession
         private readonly IReadOnlyDictionary<DaggerfallRdbDoorId, DurableIdentityReference> _identities;
         private readonly Func<DaggerfallRdbDoorId, DaggerfallBuildingDoor?> _buildingDoor;
         private readonly Func<DaggerfallRdbDoorId, string?> _buildingName;
-        // A building's name does not change while its site is resident; it is read once per door for the label.
-        private readonly Dictionary<DaggerfallRdbDoorId, string?> _labels = [];
+        private readonly Func<DaggerfallDoorView, string> _lockDifficulty;
+        private readonly Action<DaggerfallRdbDoorId> _discoverBuilding;
 
         internal DaggerfallDoorActivationOwner(
             DaggerfallDoorRuntime doors,
@@ -781,8 +792,12 @@ internal sealed partial class DaggerfallSession
             Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> activateMagic,
             Func<DaggerfallRdbDoorId, DaggerfallActivationMode?, DaggerfallActivationOutcome?> enterExteriorBuilding,
             Func<DaggerfallRdbDoorId, DaggerfallBuildingDoor?> buildingDoor,
-            Func<DaggerfallRdbDoorId, string?> buildingName)
+            Func<DaggerfallRdbDoorId, string?> buildingName,
+            Func<DaggerfallDoorView, string> lockDifficulty,
+            Action<DaggerfallRdbDoorId> discoverBuilding)
         {
+            _lockDifficulty = lockDifficulty;
+            _discoverBuilding = discoverBuilding;
             _buildingDoor = buildingDoor ?? throw new ArgumentNullException(nameof(buildingDoor));
             _buildingName = buildingName ?? throw new ArgumentNullException(nameof(buildingName));
             _doors = doors ?? throw new ArgumentNullException(nameof(doors));
@@ -828,10 +843,19 @@ internal sealed partial class DaggerfallSession
             // A building's entrance is as its building's entry rule says at this moment (PlayerActivate
             // judges BuildingIsUnlocked on every click), not as an earlier visit left it.
             DaggerfallBuildingDoor? building = _buildingDoor(id);
-            if (building is not null) _doors.ApplyBuildingEntry(id, building.Entry.LockValue);
+            if (building is not null)
+            {
+                _discoverBuilding(id);
+                _doors.ApplyBuildingEntry(id, building.Entry.LockValue, !building.Entry.Unlocked);
+            }
             DaggerfallDoorView door = _doors.Read(id);
             if (selection.Mode == DaggerfallActivationMode.Info)
-                return new(true, building is { Name.Length: > 0 } named ? DescribeBuilding(named) : Describe(door));
+            {
+                string description = building is { Name.Length: > 0 } named ? DescribeBuilding(named) : Describe(door);
+                if (door.IsLocked) description += " " + _lockDifficulty(door);
+                if (building?.Entry.Unlocked == true) _ = _enterExteriorBuilding(id, null);
+                return new(true, description);
+            }
             if (selection.Mode == DaggerfallActivationMode.Talk)
                 return new(false, "The door does not answer.");
             if (_activateMagic(id) is { } magic)
@@ -859,7 +883,7 @@ internal sealed partial class DaggerfallSession
                 if (opened == DaggerfallDoorOperationResult.Started) _triggerDungeonActions(id);
                 if (CanEnter(id) && _enterExteriorBuilding(id, null) is { } entered) return entered;
                 return new(false, opened == DaggerfallDoorOperationResult.Locked && building is not null
-                    ? building.LockedMessage : Message(opened, door.Motion));
+                    ? building.LockedMessage + " " + _lockDifficulty(door) : Message(opened, door.Motion));
             }
 
             DaggerfallDoorOperationResult result = door.Motion is DaggerfallDoorMotion.Open or DaggerfallDoorMotion.Opening
@@ -879,12 +903,7 @@ internal sealed partial class DaggerfallSession
         private string? Label(DaggerfallRdbDoorId id)
         {
             if (_doors.ExteriorBuildingOf(id) is null) return null;
-            if (!_labels.TryGetValue(id, out string? label))
-            {
-                label = _buildingName(id);
-                _labels.Add(id, label);
-            }
-            return label;
+            return _buildingName(id);
         }
 
         // ActivateBuilding's Information mode: the building's name, and its hours when a store or guild is shut.
