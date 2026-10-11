@@ -579,7 +579,7 @@ internal sealed class DaggerfallSiteLifecycle
         {
             candidate = DaggerfallSiteProjection.Create(_engine, _state.Actors.Entities, _random, _tuning, _time.Calendar,
                 target, AudioFor(target), _spatial, _host.ConfigureSiteAppearance, destinationDelta?.Doors, destinationDelta?.Motion,
-                deferMotionCollisionAdmission: true, sessionPresentation: _sessionPresentation);
+                deferMotionCollisionAdmission: true, sessionPresentation: _sessionPresentation, definitions: _definitions);
             if (target.ProfileKind == DaggerfallWorldProfileKind.Exterior)
                 candidate.Rebase(destinationFrameOffset);
             if (sourceExterior is not null)
@@ -1214,7 +1214,7 @@ internal sealed class DaggerfallSiteLifecycle
             Vector3 translation = ExteriorProfileTranslation(profile, origin);
             projection = DaggerfallSiteProjection.Create(_engine, _state.Actors.Entities, _random, _tuning, _time.Calendar,
                 profile, AudioFor(profile), _spatial, _host.ConfigureSiteAppearance, delta?.Doors, delta?.Motion, deferMotionCollisionAdmission: true,
-                sessionPresentation: _sessionPresentation);
+                sessionPresentation: _sessionPresentation, definitions: _definitions);
             projection.Appearance.DrawThroughActiveSnapshot();
             // The profile's authored geometry and actors use its own source frame. Rebase every
             // projection owner before admitting collision so doors, motion, portals, appearance

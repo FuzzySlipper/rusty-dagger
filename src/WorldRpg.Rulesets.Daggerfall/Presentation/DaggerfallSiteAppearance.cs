@@ -82,6 +82,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     // Classic effects and the optional weapon remain lazy visual instances, but
     // their normalized texture handles must be admitted with the initial closure.
     private readonly Dictionary<string, RenderResourceInfo> classicTextures = new(StringComparer.Ordinal);
+    private readonly DaggerfallDefinitions? mobileDefinitions;
     private readonly Dictionary<long, ActorVisual> actors = [];
     private readonly Dictionary<long, BillboardVisual> groundVisuals = [];
     private readonly Dictionary<long, BillboardVisual> npcVisuals = [];
@@ -192,12 +193,13 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     /// The session's classic presentation (weapon viewmodels, held-item visuals, spell effects), which the
     /// start site publishes for the whole session; null uses this site's own, as a lone-site composition does.
     /// </param>
-    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallCityGates? cityGates = null)
+    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallCityGates? cityGates = null, DaggerfallDefinitions? definitions = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
         ArgumentNullException.ThrowIfNull(inputs);
         this.inputs = inputs;
+        this.mobileDefinitions = definitions;
         this.doors = doors;
         this.dungeonMotion = dungeonMotion;
         this.cityGates = cityGates;
@@ -269,13 +271,13 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
     /// never had an entry, so retiring one is a no-op rather than an error.
     /// </summary>
     /// <summary>Admits media for one dynamic actor after its canonical mechanics actor has been created.</summary>
-    internal void AddActor(long durableId, NormalizedActorSprite sprite)
+    internal void AddActor(long durableId, NormalizedActorSprite sprite, int? mobileId = null)
     {
         if (disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteAppearance));
         ArgumentNullException.ThrowIfNull(sprite);
         if (durableId <= 0) throw new ArgumentOutOfRangeException(nameof(durableId));
         if (actors.ContainsKey(durableId)) throw new InvalidOperationException($"Actor {durableId} already has an appearance.");
-        ActorVisual visual = CreateActorVisual(content, durableId, sprite);
+        ActorVisual visual = CreateActorVisual(content, durableId, sprite, mobileId);
         try { actors.Add(durableId, visual); }
         catch { List<Exception>? failures = null; visual.Dispose(ref failures); if (failures is { Count: > 0 }) throw new AggregateException(failures); throw; }
     }
@@ -1011,13 +1013,16 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         }
     }
 
-    private ActorVisual CreateActorVisual(IContentService content, long entityId, NormalizedActorSprite sprite)
+    private ActorVisual CreateActorVisual(IContentService content, long entityId, NormalizedActorSprite sprite, int? mobileId = null)
     {
         Appearance? live = null;
         Appearance? corpse = null;
         try
         {
-        (SpriteAtlas atlas, Appearance createdLive) = CreateSprite(content, sprite);
+        if (mobileId is null && inputs.Project.Actors.TryGetValue(entityId, out var placement))
+            mobileId = mobileDefinitions?.RequireActor(placement.ActorId).MobileId;
+        var mobile = mobileId is int id ? mobileDefinitions?.Mobiles.Mobiles.GetValueOrDefault(id) : null;
+        (SpriteAtlas atlas, Appearance createdLive) = CreateSprite(content, sprite, mobile);
         live = createdLive;
         SpriteAtlas? corpseAtlas = null;
         if (sprite.Corpse is { } authoredCorpse)
@@ -1036,7 +1041,7 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
         }
     }
 
-    private (SpriteAtlas Atlas, Appearance Appearance) CreateSprite(IContentService content, NormalizedActorSprite sprite)
+    private (SpriteAtlas Atlas, Appearance Appearance) CreateSprite(IContentService content, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null)
     {
         RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(sprite.TexturePath));
         ownedResources.Add(texture.Handle);
@@ -1044,7 +1049,15 @@ internal sealed class DaggerfallSiteAppearance : IDisposable
             sprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height, frame.DisplaySize)).ToArray());
         SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
         atlases.Add(atlas);
-        Appearance value = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, sprite.Pivot, sprite.Size, BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
+        var request = new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, sprite.Pivot, sprite.Size,
+            BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
+        if (mobile is not null)
+            request = request with { Material = new SpriteMaterialDescriptor(
+                mobile.GlowColor is null ? SpriteLightingMode.Synthetic : SpriteLightingMode.Unlit,
+                default, default, 1f, 0f, SpriteAlphaMode.Blend, .5f,
+                mobile.GlowColor is not null ? SpriteShadowPolicy.None
+                    : mobile.NoShadow ? SpriteShadowPolicy.Receive : SpriteShadowPolicy.CastAndReceive) };
+        Appearance value = appearance.CreateSpriteFromAtlas(request);
         return (atlas, value);
     }
 

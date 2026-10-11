@@ -15,7 +15,7 @@ internal sealed class DaggerfallEnemyMotorMemory
 }
 
 internal readonly record struct DaggerfallEnemyMotorContext(int Level, int TargetLevel, bool TargetParalyzed,
-    bool TargetBackTurned, bool TargetBowOrSheathed);
+    bool TargetBackTurned, bool TargetBowOrSheathed, bool PrefersRanged = false);
 
 /// <summary>EnemyMotor's admitted-time advance, retreat and strafe choices; Kit executes movement.</summary>
 internal static class DaggerfallEnemyMotorPolicy
@@ -28,6 +28,14 @@ internal static class DaggerfallEnemyMotorPolicy
         memory.StrafeTimer -= deltaSeconds;
         movement = movement with { AllowAttack = inSight, TargetObserved = positionKnown, SearchLastKnownPosition = maySearch,
             SearchDistance = tuning.SearchDistance, SearchStep = tuning.SearchStep };
+        // The published preference keeps an equipped ranged actor at its usable reach.
+        // A melee fallback has melee reach and follows the normal advance policy instead.
+        if (context.PrefersRanged && inSight && observation.Reach is > 2.25 and var rangedReach)
+        {
+            if (observation.Distance < rangedReach * tuning.TooCloseMultiplier)
+                return Choose(PursuitState.Retreat);
+            return Choose(observation.Distance <= rangedReach ? PursuitState.Idle : PursuitState.Chase);
+        }
         if (!tuning.EnhancedCombatAi || !inSight || context.TargetParalyzed || context.TargetBackTurned || context.TargetBowOrSheathed)
         {
             memory.Advance = true;

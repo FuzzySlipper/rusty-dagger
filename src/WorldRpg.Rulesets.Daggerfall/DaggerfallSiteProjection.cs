@@ -67,7 +67,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         IEnumerable<DaggerfallDoorSave>? restoredDoors = null,
         DaggerfallDungeonMotionSnapshot? restoredMotion = null,
         bool deferMotionCollisionAdmission = false,
-        NormalizedClassicPresentation? sessionPresentation = null)
+        NormalizedClassicPresentation? sessionPresentation = null, DaggerfallDefinitions? definitions = null)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(actors);
@@ -90,7 +90,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
                 DaggerfallCityGateDefinition.OpenAt(calendar));
             if (!deferMotionCollisionAdmission) gates.ActivateCollisionResidency();
             appearance = new(engine.Content, engine.Graphics, inputs, engine.Audio,
-                tuning.PresentationAudio, random, audioBundle, doors, motion, sessionPresentation, gates);
+                tuning.PresentationAudio, random, audioBundle, doors, motion, sessionPresentation, gates, definitions);
             configureAppearance(appearance);
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);

@@ -927,7 +927,7 @@ internal static partial class DaggerfallBaseContent
         foreach ((IReadOnlyList<int> table, int index) in definitions.Encounters.Tables.Select((table, index) => (table, index)))
             Add("encounter-table", index, string.Join(',', table));
         foreach (DaggerfallMobileDefinition mobile in definitions.Mobiles.Mobiles.Values.OrderBy(mobile => mobile.DonorId))
-            Add("mobile", mobile.DonorId, mobile.Identity, mobile.Actor, mobile.CastsMagic, mobile.LootTableKey, mobile.Disposition, mobile.Team, mobile.ResistanceFlags, mobile.ImmunityFlags, mobile.LowToleranceFlags, mobile.CriticalWeaknessFlags);
+            Add("mobile", mobile.DonorId, mobile.Identity, mobile.Actor, mobile.CastsMagic, mobile.LootTableKey, mobile.Disposition, mobile.Team, mobile.ResistanceFlags, mobile.ImmunityFlags, mobile.LowToleranceFlags, mobile.CriticalWeaknessFlags, mobile.SoulPoints, mobile.NoShadow, mobile.PrefersRanged, mobile.GlowColor is { } glow ? $"{FingerprintField(glow.X)},{FingerprintField(glow.Y)},{FingerprintField(glow.Z)}" : null);
         // The published catalogs are content a consumer resolves keys through, so the
         // fingerprint covers them: a key, an index, a decoded career field or a
         // provenance citation that changes is a semantic change to the pack.
@@ -1428,12 +1428,19 @@ internal static partial class DaggerfallBaseContent
                 OptionalText(mobile, "team"),
                 FlagByte(mobile, "attackModifierFlags", diagnostics))
             {
+                SoulPoints = Integer(mobile, "soulPoints", diagnostics),
+                NoShadow = Boolean(mobile, "noShadow", diagnostics),
+                PrefersRanged = Boolean(mobile, "prefersRanged", diagnostics),
+                GlowColor = mobile.TryGetProperty("glowColor", out JsonElement glow) && glow.ValueKind != JsonValueKind.Null
+                    ? new System.Numerics.Vector3(Number(glow, "red", diagnostics), Number(glow, "green", diagnostics), Number(glow, "blue", diagnostics)) : null,
                 ResistanceFlags = FlagByte(mobile, "resistanceFlags", diagnostics),
                 ImmunityFlags = FlagByte(mobile, "immunityFlags", diagnostics),
                 LowToleranceFlags = FlagByte(mobile, "lowToleranceFlags", diagnostics),
                 CriticalWeaknessFlags = FlagByte(mobile, "criticalWeaknessFlags", diagnostics),
             };
 
+            if (definition.SoulPoints < 0 || definition.GlowColor is { } tint && (tint.X < 0 || tint.Y < 0 || tint.Z < 0))
+                diagnostics.Add($"Published mobile {donorId} requires nonnegative soul points and glow channels.");
             // A donor id identifies one mobile; two records claiming it would make a lookup ambiguous.
             if (!mobiles.TryAdd(donorId, definition))
             {

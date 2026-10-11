@@ -37,7 +37,15 @@ public sealed record Arena2MobileTableEntry(
     string Team,
     bool SeesThroughInvisibility,
     bool CastsMagic,
-    bool CanOpenDoors);
+    bool CanOpenDoors)
+{
+    public int SoulPoints { get; init; }
+    public bool NoShadow { get; init; }
+    public bool PrefersRanged { get; init; }
+    public Arena2MobileGlow? GlowColor { get; init; }
+}
+
+public sealed record Arena2MobileGlow(float Red, float Green, float Blue);
 
 /// <summary>
 /// Reads the donor's static mobile table. The table is the authority for what a classic mobile is: its
@@ -112,7 +120,13 @@ public static class Arena2MobileTable
                 Last(fields, "Team"),
                 Flag(fields, "SeesThroughInvisibility"),
                 Flag(fields, "CastsMagic"),
-                Flag(fields, "CanOpenDoors")));
+                Flag(fields, "CanOpenDoors"))
+            {
+                SoulPoints = Number(fields, "SoulPts"),
+                NoShadow = Flag(fields, "NoShadow"),
+                PrefersRanged = Flag(fields, "PrefersRanged"),
+                GlowColor = Glow(match.Groups["body"].Value),
+            });
         }
 
         if (entries.Count == 0)
@@ -121,6 +135,16 @@ public static class Arena2MobileTable
         }
 
         return entries;
+    }
+
+    private static Arena2MobileGlow? Glow(string body)
+    {
+        if (!body.Contains("GlowColor", StringComparison.Ordinal)) return null;
+        Match color = Regex.Match(body, @"GlowColor\s*=\s*new Color\(\s*(?<r>[0-9.]+)f?\s*,\s*(?<g>[0-9.]+)f?\s*,\s*(?<b>[0-9.]+)f?\s*\)\s*\*\s*(?<scale>[0-9.]+)f?", RegexOptions.CultureInvariant);
+        if (!color.Success) throw new InvalidOperationException("The mobile glow color cannot be read from the donor table.");
+        float Read(string name) => float.Parse(color.Groups[name].Value, CultureInfo.InvariantCulture);
+        float scale = Read("scale");
+        return new(Read("r") * scale, Read("g") * scale, Read("b") * scale);
     }
 
     /// <summary>Reads an entry's field as an integer, or zero when the entry does not state it.</summary>
@@ -220,6 +244,11 @@ public static class Arena2MobileCatalogDocument
                 ["seesThroughInvisibility"] = entry.SeesThroughInvisibility,
                 ["castsMagic"] = entry.CastsMagic,
                 ["canOpenDoors"] = entry.CanOpenDoors,
+                ["soulPoints"] = entry.SoulPoints,
+                ["noShadow"] = entry.NoShadow,
+                ["prefersRanged"] = entry.PrefersRanged,
+                ["glowColor"] = entry.GlowColor is { } glow ? new JsonObject
+                { ["red"] = glow.Red, ["green"] = glow.Green, ["blue"] = glow.Blue } : null,
                 ["actor"] = actor,
                 ["disposition"] = disposition,
                 ["behaviour"] = entry.Behaviour,
