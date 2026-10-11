@@ -48,13 +48,7 @@ public static class WorldBlockVariantPublication
             entry["buildingIndex"] = block.BuildingIndex;
             entry["spatial"] = block.Spatial?.RelativePath;
             Add(path, bytes, block.Spatial is { } spatial ? [spatial.RelativePath] : []);
-            if (block.Spatial is { } collision)
-            {
-                byte[] body = Read(collision.RelativePath);
-                if (ContentDigest.Compute(body) != collision.ContentDigest || body.LongLength != collision.ByteLength)
-                    throw new InvalidOperationException($"Variant '{path}' spatial bytes do not match its normalized digest and length.");
-                Add(collision.RelativePath, body, []);
-            }
+            if (block.Spatial is { } collision) Add(collision.RelativePath, Read(collision.RelativePath), []);
             foreach (var model in block.Models) if (model.MeshArtifactId is { } id) meshes.Add(id);
         }
         JsonObject index = JsonSerializer.SerializeToNode(publication.Index, PublishedJson.Section)!.AsObject();

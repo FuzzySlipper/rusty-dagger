@@ -68,8 +68,27 @@ public sealed class QuestBlockVariantTests
         owner = catalog.ForSession(owner.CaptureVariants());
         owner.SetBlockVariant(site, "W0000020.RDB", null, "-");
         Assert.Contains(owner.Require(key).Lights, value => value.Id.Contains("variant-light") && value.Intensity == 17f);
-        Assert.Throws<NotSupportedException>(() => owner.SetBlockVariant(site, "W0000020.RDB", null, "absent"));
-        Assert.Equal("lit", Assert.Single(owner.CaptureVariants()).Variant);
+        // Content the publication lacks keeps the selection and falls back to the base block, also on load.
+        owner.SetBlockVariant(site, "W0000020.RDB", null, "absent");
+        Assert.DoesNotContain(owner.Require(key).Lights, value => value.Id.Contains("variant-light"));
+        owner = catalog.ForSession(owner.CaptureVariants());
+        Assert.Equal(2, owner.CaptureVariants().Length);
+        Assert.DoesNotContain(owner.Require(key).Lights, value => value.Id.Contains("variant-light"));
+    }
+
+    [Fact]
+    public void Location_variant_and_block_variant_at_one_location_combine()
+    {
+        var site = new DaggerfallSiteId(17, 9);
+        var inputs = ReadInputs(TestData.RepositoryRoot);
+        var exterior = Catalog(TestPayload.Definitions, "W0000020.RDB", null, inputs).Require(DaggerfallWorldProfileIds.Exterior(site));
+        var catalog = Catalog(TestPayload.Definitions, "W0000020.RDB", null, inputs, QuestWorldActionTests.Variant(exterior));
+        var owner = catalog.ForSession();
+        owner.SetLocationVariant(site, "lit");
+        owner.SetBlockVariant(site, "W0000020.RDB", null, "dim");
+        Assert.Equal("lit", owner.Require(DaggerfallWorldProfileIds.Exterior(site)).VariantName);
+        Assert.Contains(owner.Require(DaggerfallWorldProfileIds.Dungeon(site)).Lights, value => value.Id.Contains("variant-light") && value.Intensity == 2f);
+        Assert.Equal(2, catalog.ForSession(owner.CaptureVariants()).CaptureVariants().Length);
     }
 
     private static DaggerfallSiteProfiles Catalog(DaggerfallDefinitions definitions, string source, int? building, params DaggerfallSiteProfile[] authored)

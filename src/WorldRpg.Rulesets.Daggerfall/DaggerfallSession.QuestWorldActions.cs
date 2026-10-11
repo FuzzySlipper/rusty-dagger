@@ -15,7 +15,12 @@ internal sealed partial class DaggerfallSession
             if (update.Kind == "locationnew")
             {
                 var named = Site.Records.Where(value => value.Region == update.Region && value.Name == update.LocationName).ToArray();
-                if (named.Length != 1) throw new NotSupportedException($"WorldUpdate location '{update.LocationName}' in region {update.Region} resolves to {named.Length} admitted locations.");
+                // The donor logs an unresolved new location and continues; nothing is selected.
+                if (named.Length != 1)
+                {
+                    System.Diagnostics.Trace.TraceWarning($"WorldUpdate location '{update.LocationName}' in region {update.Region} resolves to {named.Length} admitted locations; no variant is set.");
+                    return true;
+                }
                 site = named[0].Id;
             }
             else if (update.Region is int region && update.Location is int location)

@@ -119,8 +119,7 @@ or `scripts/regenerate-content.sh --block-variants FILE`. Its `variants` array
 contains entries with a `document` path, an optional block `variant` name, and
 optional `buildingVariants` entries (`building` index and `variant` name). Paths
 are relative to the descriptor. Each document is a complete normalized block of
-the same source identity as its base; its spatial path, digest and length describe
-its actual artifact. The publisher checks collisions between artifact paths,
+the same source identity as its base. The publisher refuses artifact path collisions,
 records authored provenance, checks shared mesh references and writes the variants
 into the ordinary world-block bundle. Author the descriptor and its inputs outside
 generated output; regeneration owns the publication.
@@ -129,12 +128,13 @@ An RMB block selection supplies its exterior and each admitted building interior
 A building selection supplies the containing exterior and that building's interior.
 When several selections affect one exterior, publish the complete combination in
 one entry; the engine must receive collision matching the entire visible block.
-A missing combination is reported by its block and selection rather than silently
-choosing one building's collision for the others. Scenery variants retain the
-existing actor, action, door, inventory and save identities; topology changes are
-reported through the same admission checks as location scenery variants.
+Scenery variants retain the existing actor, action, door, inventory and save
+identities; topology changes are reported through the same admission checks as
+location scenery variants.
 
-A complete authored location variant and block replacements at that same location
-would each replace the same world geometry. That concrete collision is diagnosed;
-author their intended combination as one location variant instead. Neither saved
-selection silently takes precedence over the other.
+As in the donor, a selection whose content is not published still holds and is
+saved: the base location or block shows, and one warning names the missing
+content. The quest action completes, and a save naming absent content loads the
+same way. Location and block selections combine: a location variant supplies the
+profiles it publishes, and block and building selections apply to every profile
+assembled from blocks.
