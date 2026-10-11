@@ -10,7 +10,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 internal sealed record InventoryItemPresentation(string Key, string Definition, string Label, string Quantity, int Weight, int Value,
     string Details, string? Icon, int? GridSlot, string[] EquippedSlots, string[] CompatibleSlots,
-    ItemConditionPresentation? Condition = null, bool Identified = true, bool CanUse = false, bool CanEquip = false, string? EquipRefusal = null);
+    ItemConditionPresentation? Condition = null, bool Identified = true, bool CanUse = false, bool CanEquip = false, string? EquipRefusal = null, bool CanUseMagic = false);
 internal sealed record ItemConditionPresentation(int Current, int Maximum, int Percentage, bool Broken);
 internal sealed record EquipmentSlotPresentation(string Id, string Label, string? ItemKey);
 internal sealed record EquipmentChangePresentation(string Cue, int RightHandDelayMilliseconds, int LeftHandDelayMilliseconds);
@@ -329,7 +329,9 @@ internal sealed class DaggerfallInventoryPresentation
             definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray(),
             display.Condition, display.Identified,
             CanUse: carried && metadata is not null && itemUse?.CanUse(itemId, metadata) == true,
-            CanEquip: carried && equipRefusal is null, EquipRefusal: equipRefusal);
+            CanEquip: carried && equipRefusal is null, EquipRefusal: equipRefusal,
+            CanUseMagic: carried && metadata is not null && (metadata.HasEnchantment || metadata.PotionRecipeKey is not null)
+                && itemUse?.CanUse(itemId, metadata) == true);
     }
 
     private DaggerfallItemInstanceMetadata? Metadata(string key, DaggerfallItemOwner? owner)

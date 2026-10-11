@@ -41,10 +41,22 @@ public sealed class DaggerfallControlSettings
         new("inventory", ["KeyI"], "interface"),
         new("character", ["KeyC"], "interface"),
         new("menu", [ReservedKey], "interface"),
-        new("spell", ["KeyV"], "magic"),
+        new("spell", ["KeyP"], "magic"),
         new("rest", ["KeyR"], "rest"),
         new("map", ["KeyM"], "maps"),
         new("transport", ["KeyT"], "transport"),
+        new("activation.steal", ["Digit1"], "activation"),
+        new("activation.grab", ["Digit2"], "activation"),
+        new("activation.info", ["Digit3"], "activation"),
+        new("activation.talk", ["Digit4"], "activation"),
+        new("quick-save", ["Digit9"], "saves"),
+        new("quick-load", ["Digit0"], "saves"),
+        new("logbook", ["KeyL"], "interface"),
+        new("notebook", ["KeyN"], "interface"),
+        new("travel-map", ["KeyV"], "maps"),
+        new("use-magic-item", ["KeyU"], "magic"),
+        new("recast", ["KeyQ"], "magic"),
+        new("abort-spell", ["KeyE"], "magic"),
     ];
 
     private const string MenuAction = "menu";
@@ -53,7 +65,23 @@ public sealed class DaggerfallControlSettings
     /// <summary>Creates default settings.</summary>
     public DaggerfallControlSettings() => _bindings = CreateDefaultBindings();
 
-    private DaggerfallControlSettings(Dictionary<string, List<string>> bindings) => _bindings = bindings;
+    /// <summary>Mouse sensitivity relative to the ruleset default.</summary>
+    public float LookSensitivity { get; private set; } = 1f;
+    /// <summary>Whether the vertical look device axis is inverted.</summary>
+    public bool InvertVertical { get; private set; } = DaggerfallTuning.Defaults.PlayerControl.InvertVertical;
+
+    /// <summary>Changes the player look preferences without changing authored tuning.</summary>
+    public void SetLook(float sensitivity, bool invertVertical)
+    {
+        if (!float.IsFinite(sensitivity) || sensitivity <= 0) throw new ArgumentOutOfRangeException(nameof(sensitivity));
+        LookSensitivity = sensitivity; InvertVertical = invertVertical;
+    }
+
+    private DaggerfallControlSettings(DaggerfallControlPreferences preferences)
+    {
+        _bindings = CopyBindings(preferences.Bindings);
+        SetLook(preferences.LookSensitivity, preferences.InvertVertical);
+    }
 
     /// <summary>The controls one action answers to.</summary>
     public IReadOnlyList<string> KeysFor(string action) =>
@@ -115,32 +143,32 @@ public sealed class DaggerfallControlSettings
     }
 
     /// <summary>Restores every default.</summary>
-    public void Reset() => ReplaceBindings(CreateDefaultBindings());
+    public void Reset() { ReplaceBindings(CreateDefaultBindings()); SetLook(1, DaggerfallTuning.Defaults.PlayerControl.InvertVertical); }
 
     /// <summary>Serializes the bindings for the settings holder.</summary>
-    public string Serialize() => JsonSerializer.Serialize(_bindings, DaggerfallControlSettingsJsonContext.Default.DictionaryStringListString);
+    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
 
     /// <summary>Parses a complete persisted binding set after validating every action and control.</summary>
     public static DaggerfallControlSettings Parse(string json)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
-        Dictionary<string, List<string>>? parsed;
+        DaggerfallControlPreferences? parsed;
         try
         {
-            parsed = JsonSerializer.Deserialize(json, DaggerfallControlSettingsJsonContext.Default.DictionaryStringListString);
+            parsed = JsonSerializer.Deserialize(json, DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
         }
         catch (JsonException exception)
         {
             throw new ArgumentException("Persisted controls parse to no bindings.", nameof(json), exception);
         }
 
-        if (parsed is null)
+        if (parsed is null || parsed.Bindings is null)
         {
             throw new ArgumentException("Persisted controls parse to no bindings.", nameof(json));
         }
 
-        ValidateBindings(parsed, nameof(json));
-        return new DaggerfallControlSettings(CopyBindings(parsed));
+        ValidateBindings(parsed.Bindings, nameof(json));
+        return new DaggerfallControlSettings(parsed);
     }
 
     /// <summary>Complete Engine-owned physical mapping set for the declared semantic catalog.</summary>
@@ -260,5 +288,11 @@ public sealed class DaggerfallControlSettings
         && string.Equals(key, pointer.ToString(), StringComparison.Ordinal);
 }
 
-[JsonSerializable(typeof(Dictionary<string, List<string>>))]
+internal sealed record DaggerfallControlPreferences(
+    [property: JsonRequired] Dictionary<string, List<string>> Bindings,
+    [property: JsonRequired] float LookSensitivity,
+    [property: JsonRequired] bool InvertVertical);
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(DaggerfallControlPreferences))]
 internal partial class DaggerfallControlSettingsJsonContext : JsonSerializerContext;

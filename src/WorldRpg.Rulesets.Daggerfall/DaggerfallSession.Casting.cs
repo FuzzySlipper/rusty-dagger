@@ -23,6 +23,7 @@ internal sealed partial class DaggerfallSession
     }
 
     private string _spellResult="";
+    private string? _lastPlayerSpell;
     internal DaggerfallSpellbookView ReadSpells() => new(
         State.Character.KnownSpells.Order(StringComparer.Ordinal).Select(key =>
         {
@@ -83,6 +84,7 @@ internal sealed partial class DaggerfallSession
             origin += attempt.Direction * DaggerfallDungeonSpellPolicy.MissileArmLengthMetres;
         DaggerfallCastResult release = Casting.Release(attempt.ActorId, true, origin, attempt.Direction);
         if (release.Bundle is not { } bundle) return release;
+
         return bundle.Target switch
         {
             DaggerfallSpellTarget.CasterOnly => Casting.Deliver(bundle, [attempt.ActorId]),
@@ -142,6 +144,8 @@ internal sealed partial class DaggerfallSession
         DaggerfallCastResult release = Casting.Release(casterId, target != DaggerfallSpellTarget.ByTouch || touch.HasValue,
             origin.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight, ValidDirection(direction) ? Vector3.Normalize(direction) : null);
         if (release.Bundle is not { } bundle) return release;
+        if (casterId == State.Actors.Player.DurableId && ready.Source == DaggerfallCastSource.Spell)
+            _lastPlayerSpell = ready.SpellKey;
         switch (target)
         {
             case DaggerfallSpellTarget.CasterOnly: return Casting.Deliver(bundle, [casterId]);

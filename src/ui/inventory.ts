@@ -62,6 +62,7 @@ export interface InventoryItem {
   readonly compatibleSlots: readonly string[];
   /** Whether the ruleset has a use for this carried item. */
   readonly canUse?: boolean;
+  readonly canUseMagic?: boolean;
   /** Whether some equipment slot would take this carried item now. */
   readonly canEquip?: boolean;
   /** The ruleset's reason this item cannot be equipped, when it cannot. */

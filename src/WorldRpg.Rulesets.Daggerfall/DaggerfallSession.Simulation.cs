@@ -213,7 +213,8 @@ internal sealed partial class DaggerfallSession
             Inventory: update.IsRequested(DaggerfallInput.Inventory),
             Character: update.IsRequested(DaggerfallInput.Character),
             Menu: update.IsRequested(DaggerfallInput.Menu),
-            Map: update.IsRequested(DaggerfallInput.Map));
+            Map: update.IsRequested(DaggerfallInput.Map),
+            Shortcuts: DaggerfallInput.Shortcuts.Where(id => update.IsRequested(DaggerfallInput.Shortcut(id))).ToArray());
         // An enemy hit on the player that is already in flight lands at its damage frame, which the
         // outer admitted update reaches after these steps. The player's own acts wait for that same
         // boundary rather than being dropped, so a lethal frame reached there still resolves first and
@@ -246,14 +247,14 @@ internal sealed partial class DaggerfallSession
     /// measured from there.
     /// </summary>
     private sealed record DaggerfallPlayerActs(bool ToggleWeapon, DaggerfallPlayerSwingRequest? Attack, bool Interact,
-        bool Inventory, bool Character, bool Menu, bool Map)
+        bool Inventory, bool Character, bool Menu, bool Map, string[] Shortcuts)
     {
-        internal bool Any => ToggleWeapon || Attack is not null || Interact || Inventory || Character || Menu || Map;
+        internal bool Any => ToggleWeapon || Attack is not null || Interact || Inventory || Character || Menu || Map || Shortcuts.Length != 0;
 
         /// <summary>Folds a later step's requests into acts still waiting; the earliest swing request stands.</summary>
         internal DaggerfallPlayerActs Then(DaggerfallPlayerActs later) => new(
             ToggleWeapon || later.ToggleWeapon, Attack ?? later.Attack, Interact || later.Interact,
-            Inventory || later.Inventory, Character || later.Character, Menu || later.Menu, Map || later.Map);
+            Inventory || later.Inventory, Character || later.Character, Menu || later.Menu, Map || later.Map, Shortcuts.Concat(later.Shortcuts).Distinct(StringComparer.Ordinal).ToArray());
     }
 
     private readonly record struct DaggerfallPlayerSwingRequest(ulong Generation, ulong SimulationStep, double DeltaSeconds);
@@ -263,6 +264,9 @@ internal sealed partial class DaggerfallSession
 
     private void ApplyPlayerActs(DaggerfallPlayerActs acts)
     {
+        foreach (string shortcut in acts.Shortcuts) ApplyShortcut(shortcut);
+        // A menu/mode shortcut consumes this slice's attack and activation, just like a UI request.
+        if (acts.Shortcuts.Length != 0) acts = acts with { Attack = null, Interact = false };
         if (acts.ToggleWeapon) State.WeaponDrawn = !State.WeaponDrawn;
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);

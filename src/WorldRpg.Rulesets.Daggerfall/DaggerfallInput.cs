@@ -20,7 +20,11 @@ internal static class DaggerfallInput
         KeyboardControl.KeyA,
         KeyboardControl.KeyD,
         new DirectionalMovementBindings("move.forward"u8.ToArray(), "move.backward"u8.ToArray(), "move.left"u8.ToArray(), "move.right"u8.ToArray()));
+    internal static readonly string[] Shortcuts = ["spell", "rest", "transport", "activation.steal", "activation.grab",
+        "activation.info", "activation.talk", "quick-save", "quick-load", "logbook", "notebook", "travel-map", "use-magic-item", "recast", "abort-spell"];
+    internal static InputActionId Shortcut(string id) => new("daggerfall." + id);
     internal static readonly IReadOnlyList<InputActionBinding> Bindings = [
+        .. Shortcuts.Select(id => new InputActionBinding(Shortcut(id), System.Text.Encoding.UTF8.GetBytes(id))),
         new(Attack, "attack"u8.ToArray()),
         new(ToggleWeapon, "toggle-weapon"u8.ToArray()),
         new(Interact, "interact"u8.ToArray()),

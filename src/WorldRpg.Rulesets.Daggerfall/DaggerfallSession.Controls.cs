@@ -36,6 +36,7 @@ internal sealed partial class DaggerfallSession
         if (outcome != InputMappingReplacementOutcome.Staged)
             throw new InvalidOperationException($"Control bindings were not applied: {outcome}.");
         _controlSettings = settings;
+        _input.ConfigureLook(_tuning.PlayerControl.LookSensitivity * settings.LookSensitivity, settings.InvertVertical);
         // Direct key observations and Engine-mapped directions share the chosen bindings.
         _input.Rebind(DaggerfallInput.Controls with
         {
@@ -56,14 +57,43 @@ internal sealed partial class DaggerfallSession
         {
             DaggerfallControlSettings candidate = action.Kind == DaggerfallUiActionKind.ControlsReset
                 ? new() : DaggerfallControlSettings.Parse(_controlSettings.Serialize());
-            if (action.Kind != DaggerfallUiActionKind.ControlsReset) candidate.Rebind(action.Item!, [action.Key!], action.Confirm);
+            if (action.Kind == DaggerfallUiActionKind.ControlsLook) candidate.SetLook(action.Sensitivity!.Value, action.Invert!.Value);
+            else if (action.Kind == DaggerfallUiActionKind.ControlsRebind) candidate.Rebind(action.Item!, [action.Key!], action.Confirm);
             ApplyControlSettings(candidate);
             _preferencesToSave = candidate.Serialize();
-            _controlDiagnostic = "Bindings applied.";
+            _controlDiagnostic = "Control settings applied.";
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException)
         {
             _controlDiagnostic = error.Message;
         }
     }
+    private void ApplyShortcut(string id)
+    {
+        if (id.StartsWith("activation.", StringComparison.Ordinal))
+        {
+            ApplyActivationMode(new("activation-mode", Mode: id["activation.".Length..]));
+            return;
+        }
+        switch (id)
+        {
+            case "quick-save": _saveSlotRequest = new(WorldRpg.Kit.SaveSlotOperation.QuickSave); break;
+            case "quick-load": _saveSlotRequest = new(WorldRpg.Kit.SaveSlotOperation.QuickLoad); break;
+            case "spell": RequestPanel("spells"); break;
+            case "rest": RequestPanel("rest"); break;
+            case "transport": RequestPanel(DaggerfallPanel.Travel); break;
+            case "logbook":
+            case "notebook": RequestPanel(DaggerfallPanel.Journal); break;
+            case "travel-map": ChangeTravelMap(new("travel-map", Open: true)); RequestPanel(DaggerfallPanel.Travel); break;
+            case "use-magic-item": RequestPanel("magic-items"); break;
+            case "abort-spell": ChangeSpell(new("spell-unready")); break;
+            case "recast":
+                if (_lastPlayerSpell is null) Presentation.SetOutcome("You have not cast a spell yet.");
+                else if (!State.Inventory.Read().UniqueItems.Any(item => _definitions.NativeTemplateFor(_definitions.RequireItem(new(item.Definition.Value)))?.Index == 132))
+                    Presentation.SetOutcome("You need a spellbook to recast a spell.");
+                else ChangeSpell(new("spell-ready", Key: _lastPlayerSpell));
+                break;
+        }
+    }
+
 }

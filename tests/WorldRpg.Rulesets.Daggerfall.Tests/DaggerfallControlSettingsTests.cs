@@ -13,11 +13,11 @@ public sealed class DaggerfallControlSettingsTests
     public void Physical_attack_mapping_uses_the_active_engine_gameplay_context()
     {
         DaggerfallControlSettings settings = new();
-        settings.Rebind("attack", ["KeyQ"]);
+        settings.Rebind("attack", ["KeyB"]);
 
         ProductInputMapping attack = Assert.Single(settings.PhysicalMappings(), mapping =>
             mapping.Intent.Span.SequenceEqual("attack"u8));
-        Assert.Equal(KeyboardControl.KeyQ, attack.Keyboard);
+        Assert.Equal(KeyboardControl.KeyB, attack.Keyboard);
         Assert.Equal("gameplay.default", Encoding.UTF8.GetString(attack.Context.Value.Span));
     }
 
@@ -48,7 +48,7 @@ public sealed class DaggerfallControlSettingsTests
         Assert.Contains("reserved", reservedAfterConflict.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(before, settings.Serialize());
 
-        ArgumentException menu = Assert.Throws<ArgumentException>(() => settings.Rebind("menu", ["KeyQ"]));
+        ArgumentException menu = Assert.Throws<ArgumentException>(() => settings.Rebind("menu", ["KeyB"]));
         Assert.Contains("cannot be rebound", menu.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(before, settings.Serialize());
     }
@@ -84,7 +84,7 @@ public sealed class DaggerfallControlSettingsTests
     public void Persisted_controls_refuse_unknown_actions_and_invalid_controls()
     {
         Assert.Throws<ArgumentException>(() => DaggerfallControlSettings.Parse("not json"));
-        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallControlSettings.Parse("""{"no-such-action":["KeyX"]}"""));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallControlSettings.Parse(PersistedBindings(new("no-such-action", "KeyX"))));
 
         ArgumentException nullControl = Assert.Throws<ArgumentException>(() => DaggerfallControlSettings.Parse(PersistedBindings(new("attack", null))));
         Assert.Contains("null", nullControl.Message, StringComparison.OrdinalIgnoreCase);
@@ -104,6 +104,6 @@ public sealed class DaggerfallControlSettingsTests
             bindings.Add(action.Id, action.DefaultKeys.ToList());
         }
         bindings[replacement.Key] = replacement.Value is null ? null : [replacement.Value];
-        return JsonSerializer.Serialize(bindings);
+        return JsonSerializer.Serialize(new { bindings, lookSensitivity = 1f, invertVertical = true });
     }
 }
