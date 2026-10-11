@@ -158,6 +158,11 @@ public sealed class DaggerfallRestSessionTests
 
         Assert.NotNull(session.State.Quests.Messages.Pending);
         Assert.Equal(DaggerfallRestInterruption.Stopped, session.RestView.Interruption);
+        Assert.Contains("pending quest message", session.RestView.Message);
+        long pausedAt = CalendarSeconds(DaggerfallSavePayload.Read(session.CaptureSave()).Calendar);
+        session.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":8}")]));
+        Assert.Equal(pausedAt, CalendarSeconds(DaggerfallSavePayload.Read(session.CaptureSave()).Calendar));
+        Assert.Contains("pending quest message", session.RestView.Message);
         long elapsed = CalendarSeconds(DaggerfallSavePayload.Read(session.CaptureSave()).Calendar) - before;
         Assert.InRange(elapsed, 29 * DaggerfallCalendar.SecondsPerMinute, 31 * DaggerfallCalendar.SecondsPerMinute);
     }
