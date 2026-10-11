@@ -74,6 +74,7 @@ export interface TravelMapProjection {
 }
 
 export interface TravelProjection {
+  readonly guildTeleport?: boolean;
   readonly destinations: readonly TravelDestinationProjection[];
   readonly map: TravelMapProjection | null;
   readonly quote: TravelQuoteProjection | null;
@@ -343,6 +344,9 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
   return {
     update(value): void {
       current = value;
+      heading.textContent = value?.guildTeleport ? 'Guild teleportation' : 'Destination and route';
+      accept.textContent = value?.guildTeleport ? 'Teleport' : 'Begin journey';
+      for (const option of [cautious, inn, ship]) option.label.hidden = value?.guildTeleport === true;
       destination.replaceChildren();
       for (const site of value?.destinations ?? []) {
         const option = document.createElement('option');

@@ -52,6 +52,23 @@ public sealed class DaggerfallTravelSessionTests
     }
 
     [Fact]
+    public void Knightly_rank_six_grants_free_ship_passage_without_ship_ownership()
+    {
+        using Fixture fixture = new(ocean: true);
+        var session = fixture.Session;
+        Assert.True(fixture.Preview(inn: false, ship: true).ShipCost > 0);
+        session.State.Social.JoinGuild(368, 0);
+        for (int day = 1; day <= 5; day++) session.State.Social.PromoteGuild(368, day);
+        Assert.True(fixture.Preview(inn: false, ship: true).ShipCost > 0);
+        session.State.Social.PromoteGuild(368, 6);
+        var quote = fixture.Preview(inn: false, ship: true);
+        Assert.Equal(0, quote.ShipCost);
+        Assert.True(quote.Options.FreeShipPassage);
+        Assert.False(quote.Options.HasShip);
+        Assert.True(quote.CanAfford);
+    }
+
+    [Fact]
     public void Accepted_ui_journey_pays_once_reaches_real_anchor_and_restores_result()
     {
         using Fixture fixture = new();

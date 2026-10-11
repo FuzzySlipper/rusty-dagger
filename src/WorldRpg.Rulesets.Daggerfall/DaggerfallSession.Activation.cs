@@ -63,6 +63,7 @@ internal sealed partial class DaggerfallSession
             variables: () => State.Variables,
             templeService: ResolveTempleService,
             guildService: ResolveGuildProvider,
+            guildWelcome: ReceiveGuildBenefits,
             activeProfile: () => _sites.ActiveProfile,
             discloseDirection: DiscloseDialogueDirection,
             dialogueWorld: State.DialogueWorld, suppressTalk: () => State.RacialOverrides.Current?.SuppressTalk == true);

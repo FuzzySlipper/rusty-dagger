@@ -15,7 +15,7 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 internal enum DaggerfallDialogueTone { Polite, Normal, Blunt }
-internal enum DaggerfallDialogueTopic { Directions, News, Work, QuestInfo, Donate, Cure, RankReview, Armor, House }
+internal enum DaggerfallDialogueTopic { Directions, News, Work, QuestInfo, Donate, Cure, RankReview, Armor, House, Join, Teleport, Spymaster, RestoreAttributes }
 
 internal sealed record DaggerfallDialogueTopicOption(string Id, string Label, string? Key = null);
 /// <param name="Known">Whether the map already discloses this destination; subject knowledge is resolved separately.</param>
@@ -106,6 +106,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<DaggerfallNpc, DaggerfallDialogueTopic, ulong?, DaggerfallTempleServiceResult>? _templeService;
     private readonly Func<DaggerfallNpc, DaggerfallDialogueTopic, string?, DaggerfallGuildProviderResult>? _guildService;
     private readonly Func<bool> _suppressTalk;
+    private readonly Func<DaggerfallNpc, DaggerfallGuildProviderResult?>? _guildWelcome;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -137,7 +138,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<string, bool>? discloseDirection = null,
         DaggerfallDialogueWorldState? dialogueWorld = null, Func<bool>? suppressTalk = null,
         Func<IReadOnlyList<DaggerfallQuestMessageDeliverySave>>? questRumors = null,
-        Func<DaggerfallQuestMessageDeliverySave, (string Text, IReadOnlyList<string> Diagnostics)>? resolveQuestRumor = null)
+        Func<DaggerfallQuestMessageDeliverySave, (string Text, IReadOnlyList<string> Diagnostics)>? resolveQuestRumor = null,
+        Func<DaggerfallNpc, DaggerfallGuildProviderResult?>? guildWelcome = null)
     {
         _suppressTalk = suppressTalk ?? (() => false);
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
@@ -169,6 +171,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _dialogueWorld = dialogueWorld ?? new();
         _templeService = templeService;
         _guildService = guildService;
+        _guildWelcome = guildWelcome;
         _setOutcome = setOutcome ?? throw new ArgumentNullException(nameof(setOutcome));
     }
 
@@ -320,11 +323,15 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             $"open:{npc.DurableId}:{_nextRevision}:greeting",
             run => !run.Contains("%oth", StringComparison.Ordinal) || greetingContext.Faction.Oath is not null);
 
+        var benefit = _guildWelcome?.Invoke(npc);
+        if (!string.IsNullOrEmpty(benefit?.Message)) greeting += "\n" + benefit.Message;
         string revision = checked(++_nextRevision).ToString(CultureInfo.InvariantCulture);
         _current = new TalkSession(npc.DurableId, actor.Entity, actor.Position, npc.Site, revision, greeting)
         {
             Tone = DaggerfallDialogueTone.Normal,
         };
+        if (benefit?.Options is { } options)
+            _current.ProviderTopics.AddRange(options.Select(option => new DaggerfallDialogueTopicOption(option.Topic!, option.Label, option.Key)));
         _current.Diagnostics.AddRange(diagnostics);
         if (TryReadOpeningLine(_current, npc, _activeSite(), out string? opening, out IReadOnlyList<string> openingDiagnostics))
             _current.OpeningLine = opening;
@@ -350,24 +357,40 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             Publish(npc, site);
             return Report(new(result.Accepted, result.Message));
         }
-        if (topic is DaggerfallDialogueTopic.RankReview or DaggerfallDialogueTopic.Armor or DaggerfallDialogueTopic.House)
+        if (topic is DaggerfallDialogueTopic.RankReview or DaggerfallDialogueTopic.Armor or DaggerfallDialogueTopic.House
+            or DaggerfallDialogueTopic.Join or DaggerfallDialogueTopic.Teleport or DaggerfallDialogueTopic.Spymaster or DaggerfallDialogueTopic.RestoreAttributes)
         {
             if (_guildService is null || !OffersGuildTopic(npc, topic))
                 return Reject("That guild service is not available here.");
             DaggerfallGuildProviderResult result = _guildService(npc, topic, key);
             session.ProviderTopics.Clear();
             if (result.Options is { } options)
-                session.ProviderTopics.AddRange(options.Select(option => new DaggerfallDialogueTopicOption("armor", option.Label, option.Key)));
-            session.Question = topic == DaggerfallDialogueTopic.RankReview
+                session.ProviderTopics.AddRange(options.Select(option => new DaggerfallDialogueTopicOption(option.Topic ?? topic.ToString().ToLowerInvariant(), option.Label, option.Key)));
+            session.Question = topic == DaggerfallDialogueTopic.RestoreAttributes ? "Can the temple restore my attributes?"
+                : topic == DaggerfallDialogueTopic.Join ? "May I join the guild?"
+                : topic == DaggerfallDialogueTopic.Teleport ? "Can you teleport me?"
+                : topic == DaggerfallDialogueTopic.Spymaster ? "What can you tell me?"
+                : topic == DaggerfallDialogueTopic.RankReview
                 ? "How does the guild judge my standing?"
                 : topic == DaggerfallDialogueTopic.Armor
                     ? key is null ? "Which armor will you claim?" : "What did the guild grant?"
                     : "Can the guild grant its house entitlement?";
             session.Reply = result.Message;
             session.Diagnostics.Clear();
+            if (result.TextResource is int resource)
+            {
+                DaggerfallTextContext guildContext = Context(npc, site, string.Empty);
+                guildContext = guildContext with { Faction = guildContext.Faction with {
+                    NpcFaction = result.GuildName, FactionName = result.GuildName,
+                    PlayerFaction = result.GuildName, FactionOrder = result.GuildName, God = result.GodName } };
+                (session.Reply, var diagnostics) = RenderSelectedRun(Resource(resource), guildContext,
+                    $"guild:{npc.DurableId}:{session.QuestionCount}:{resource}");
+                session.Diagnostics.AddRange(diagnostics);
+            }
+            if (topic == DaggerfallDialogueTopic.Spymaster && result.Accepted) session.Spymaster = true;
             session.QuestionCount++;
             Publish(npc, site);
-            return Report(new(result.Accepted, result.Message));
+            return Report(new(result.Accepted, session.Reply));
         }
         int socialGroup = ResolveSocialGroup(npc);
         bool directions = topic == DaggerfallDialogueTopic.Directions;
@@ -587,6 +610,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     {
         int questionIndex = destination.Id.StartsWith("direction:npc:", StringComparison.Ordinal) ? 1 : 0;
         bool placeSubject = questionIndex == 0;
+        if (_current?.Spymaster == true) return true;
         if (destination.SameBuilding || destination.QuestLocality || (placeSubject && destination.SameOrganization))
             return true;
 
@@ -756,6 +780,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             topics.AddRange(session.ProviderTopics);
         else
         {
+            if (_guildService is not null && OffersGuildTopic(npc, DaggerfallDialogueTopic.Join))
+                topics.Add(new("join", "Join or rejoin guild"));
+            if (_guildService is not null && OffersGuildTopic(npc, DaggerfallDialogueTopic.Teleport))
+                topics.Add(new("teleport", "Guild teleportation"));
+            if (_guildService is not null && OffersGuildTopic(npc, DaggerfallDialogueTopic.Spymaster))
+                topics.Add(new("spymaster", "Consult spymaster"));
             if (_guildService is not null && OffersGuildTopic(npc, DaggerfallDialogueTopic.RankReview))
                 topics.Add(new("rank-review", "Review guild standing"));
             if (_guildService is not null && OffersGuildTopic(npc, DaggerfallDialogueTopic.Armor))
@@ -779,10 +809,13 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
     private static bool OffersGuildTopic(DaggerfallNpc npc, DaggerfallDialogueTopic topic) => topic switch
     {
-        DaggerfallDialogueTopic.RankReview => npc.Services.Any(service => service is "training" or "quests" or "repair"
+        DaggerfallDialogueTopic.Join or DaggerfallDialogueTopic.RankReview => npc.Services.Any(service => service is "training" or "quests" or "repair"
             or "identify" or "armor" or "house" or "donate" or "cure-disease" or "buy-spells" or "make-spells"
             or "buy-magic-items" or "make-magic-items" or "buy-potions" or "make-potions" or "buy-soulgems"
-            or "daedra-summoning" or "spymaster"),
+            or "daedra-summoning" or "spymaster" or "teleport" or "sell-magic-items"),
+        DaggerfallDialogueTopic.RestoreAttributes => npc.Services.Any(service => service is "donate" or "cure-disease" or "training" or "quests" or "buy-potions" or "make-potions" or "buy-magic-items" or "make-magic-items" or "buy-spells" or "make-spells" or "buy-soulgems" or "daedra-summoning"),
+        DaggerfallDialogueTopic.Teleport => npc.Services.Contains("teleport", StringComparer.Ordinal),
+        DaggerfallDialogueTopic.Spymaster => npc.Services.Contains("spymaster", StringComparer.Ordinal),
         DaggerfallDialogueTopic.Armor => npc.Services.Contains("armor", StringComparer.Ordinal),
         DaggerfallDialogueTopic.House => npc.Services.Contains("house", StringComparer.Ordinal),
         _ => false,
@@ -820,9 +853,13 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             "rank-review" => DaggerfallDialogueTopic.RankReview,
             "armor" => DaggerfallDialogueTopic.Armor,
             "house" => DaggerfallDialogueTopic.House,
+            "restore-attributes" => DaggerfallDialogueTopic.RestoreAttributes,
+            "join" => DaggerfallDialogueTopic.Join,
+            "teleport" => DaggerfallDialogueTopic.Teleport,
+            "spymaster" => DaggerfallDialogueTopic.Spymaster,
             _ => default,
         };
-        if (value is "directions" or "news" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house") return true;
+        if (value is "directions" or "news" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes") return true;
         if (value is { Length: > 10 } dynamicDirection && dynamicDirection.StartsWith("direction:", StringComparison.Ordinal))
         {
             topic = DaggerfallDialogueTopic.Directions;
@@ -869,6 +906,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         internal DaggerfallNpcSite Site { get; } = site;
         internal string Revision { get; } = revision;
         internal string Greeting { get; } = greeting;
+        internal bool Spymaster { get; set; }
         internal DaggerfallDialogueTone Tone { get; set; }
         internal string? OpeningLine { get; set; }
         internal string? Question { get; set; }

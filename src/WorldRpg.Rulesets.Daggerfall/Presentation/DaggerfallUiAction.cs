@@ -583,12 +583,12 @@ internal static class DaggerfallUiAction
                     return fields.SetEquals(["action", "revision", "topic", "amount"])
                         && !string.IsNullOrWhiteSpace(revision) && amount is > 0
                         ? new(action, Revision: revision, Topic: topic, Amount: amount) : null;
-                if (topic == "armor" && fields.SetEquals(["action", "revision", "topic", "key"]))
-                    return !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key)
+                if (topic is "armor" or "join" or "restore-attributes" && fields.SetEquals(["action", "revision", "topic", "key"]))
+                    return !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) && (topic == "armor" || key is "yes" or "no")
                         ? new(action, Revision: revision, Topic: topic, Key: key) : null;
                 return fields.SetEquals(["action", "revision", "topic"])
                     && !string.IsNullOrWhiteSpace(revision)
-                    && (ValidDialogueTopic(topic) || topic is "cure" or "rank-review" or "armor" or "house")
+                    && (ValidDialogueTopic(topic) || topic is "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster")
                     ? new(action, Revision: revision, Topic: topic) : null;
             }
             if (action == "dialogue-close")

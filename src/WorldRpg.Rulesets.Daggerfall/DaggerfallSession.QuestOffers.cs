@@ -49,7 +49,7 @@ internal sealed partial class DaggerfallSession
             || State.Services.ProviderAvailable(new(id, npc.Site, service)) != DaggerfallServiceDenial.None || State.Quests.IsNpcMuted(id)) return null;
         int faction = npc.Appearance.FactionId;
         DaggerfallConcreteGuildDefinition? guild = null;
-        if (service == "quests" && CurrentInteriorBuilding() is { BuildingType: 11 or 14 } building)
+        if (service == "quests" && CurrentInteriorBuilding() is { BuildingType: 11 or 14 or 18 } building)
         {
             if (!TryResolveGuildProvider(npc, building, DaggerfallConcreteGuildService.Quests, out guild, out _, out _)) return null;
             faction = guild!.Kind is DaggerfallConcreteGuildKind.Temple or DaggerfallConcreteGuildKind.KnightlyOrder ? building.FactionId : guild.FactionId;

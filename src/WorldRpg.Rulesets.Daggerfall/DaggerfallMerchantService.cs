@@ -280,20 +280,24 @@ internal sealed class DaggerfallMerchantService
 
     internal DaggerfallMerchantResult Buy(DaggerfallMerchantProviderContext context, string revision, string itemKey, ulong quantity)
     {
-        var potionGuild = context.Provider.Service == "buy-potions" ? ConcreteGuildProvider(context, DaggerfallConcreteGuildService.BuyPotions) : null;
-        if (context.Provider.Service == "buy-potions" && potionGuild is not { CanUse: true }) return Refused("ProviderUnavailable");
+        var guildService = BuyGuildService(context.Provider.Service);
+        var potionGuild = guildService is { } serviceId ? ConcreteGuildProvider(context, serviceId) : null;
+        if (guildService is not null && potionGuild is not { CanUse: true }) return Refused("ProviderUnavailable");
         Binding binding = Ensure(context);
         if (!RevisionMatches(binding, revision)) return Refused("Stale");
         DaggerfallItemOwner merchantOwner = DaggerfallItemOwner.Merchant(binding.MerchantContainerId);
         if (!TrySelection(merchantOwner, itemKey, quantity, out InventoryContainerSelection selection, out DaggerfallTradeLine line))
             return Refused("ItemUnavailable");
+        if (line.Definition.Id.Value == "template-274" && guildService is not null
+            && ConcreteGuildProvider(context with { Provider = context.Provider with { Service = "buy-soulgems" } }, DaggerfallConcreteGuildService.BuySoulgems) is not { CanUse: true })
+            return Refused("InsufficientRank");
         DaggerfallTradeQuote? trade = Quote(binding, DaggerfallTradeSide.BuyFromMerchant, line);
         if (trade is null) return Refused("QuoteUnavailable");
         DaggerfallServiceRequest request = new(RequestId(binding, "buy", itemKey, revision), binding.Context.Provider);
         DaggerfallServiceEligibility eligibility = OpenEligibility;
         if (potionGuild is not null)
         {
-            potionGuild.Definition.TryGetService(DaggerfallConcreteGuildService.BuyPotions, out var service);
+            potionGuild.Definition.TryGetService(guildService!.Value, out var service);
             eligibility = new(service.RequiresMembership, service.MinimumRank ?? 0, potionGuild.Definition.FactionId);
         }
         DaggerfallServiceQuoteResult quote = _services.Quote(request, eligibility, new(checked((ulong)Math.Max(0, trade.Total))));
@@ -314,14 +318,21 @@ internal sealed class DaggerfallMerchantService
         if (!RevisionMatches(binding, revision)) return Refused("Stale");
         if (!TrySelection(DaggerfallItemOwner.Player, itemKey, quantity, out InventoryContainerSelection selection, out DaggerfallTradeLine line))
             return Refused("ItemUnavailable");
-        if (!CanSellToBuilding(binding.Context.BuildingType, line.Metadata)) return Refused("ItemNotAccepted");
+        if (!CanSellToProvider(binding.Context, line.Metadata)) return Refused("ItemNotAccepted");
         DaggerfallTradeQuote? trade = Quote(binding, DaggerfallTradeSide.SellToMerchant, line);
         if (trade is null) return Refused("QuoteUnavailable");
         DaggerfallServiceItemReference item = line.Metadata.Owner == DaggerfallItemOwner.Player && selection.UniqueEntityId is ulong uniqueEntity
             ? new(_containers.GetDurableItemId(new EntityId(uniqueEntity)).Value, line.Definition.Id.Value, line.Metadata.CurrentCondition)
             : new(0, line.Definition.Id.Value, line.Metadata.CurrentCondition, selection.Stack!.Value, quantity);
         DaggerfallServiceRequest request = new(RequestId(binding, "sell", itemKey, revision), binding.Context.Provider, item);
-        DaggerfallServiceQuoteResult quote = _services.Quote(request, OpenEligibility, new(checked((ulong)Math.Max(0, trade.Total))));
+        DaggerfallServiceEligibility eligibility = OpenEligibility;
+        if (context.Provider.Service == "sell-magic-items")
+        {
+            var guild = ConcreteGuildProvider(context, DaggerfallConcreteGuildService.SellMagicItems)!;
+            guild.Definition.TryGetService(DaggerfallConcreteGuildService.SellMagicItems, out var service);
+            eligibility = new(service.RequiresMembership, service.MinimumRank ?? 0, guild.Definition.FactionId);
+        }
+        DaggerfallServiceQuoteResult quote = _services.Quote(request, eligibility, new(checked((ulong)Math.Max(0, trade.Total))), playerPays: false);
         if (quote.Quote is null) return Refused(quote.Outcome.Denial.ToString());
         InventoryContainerSelection prepared = PrepareSaleDestination(selection, binding);
         DaggerfallServiceOutcome payment = _services.CommitTransfer(quote.Quote, _inventory.Component.Owner, binding.MerchantOwner,
@@ -416,7 +427,7 @@ internal sealed class DaggerfallMerchantService
 
     internal DaggerfallMerchantResult Shoplift(DaggerfallMerchantProviderContext context, string revision, string itemKey, ulong quantity)
     {
-        if (context.Provider.Service == "buy-potions") return Refused("ServiceUnavailable");
+        if (BuyGuildService(context.Provider.Service) is not null) return Refused("ServiceUnavailable");
         Binding binding = Ensure(context);
         if (!RevisionMatches(binding, revision)) return Refused("Stale");
         DaggerfallItemOwner merchantOwner = DaggerfallItemOwner.Merchant(binding.MerchantContainerId);
@@ -535,6 +546,9 @@ internal sealed class DaggerfallMerchantService
         InventoryView player = _inventory.Read();
         DaggerfallNpc npc = _npcs.Require(binding.Context.Provider.NpcId);
         DaggerfallMerchantItemView[] stockRows = Rows(stock, DaggerfallItemOwner.Merchant(binding.MerchantContainerId), binding, buying: true);
+        if (binding.Context.Provider.Service == "buy-magic-items"
+            && ConcreteGuildProvider(binding.Context with { Provider = binding.Context.Provider with { Service = "buy-soulgems" } }, DaggerfallConcreteGuildService.BuySoulgems) is not { CanUse: true })
+            stockRows = stockRows.Where(row => row.Definition != "template-274").ToArray();
         bool repairService = npc.Services.Contains("repair", StringComparer.Ordinal);
         bool identifyService = npc.Services.Contains("identify", StringComparer.Ordinal);
         DaggerfallConcreteGuildServiceRuntimeDecision? repairGuild = repairService ? ConcreteGuildProvider(binding.Context, DaggerfallConcreteGuildService.Repair) : null;
@@ -552,12 +566,13 @@ internal sealed class DaggerfallMerchantService
         string merchantRevision = MakeRevision(binding);
         string revision = string.IsNullOrWhiteSpace(dialogueRevision) ? merchantRevision : $"{dialogueRevision}|{merchantRevision}";
         bool canBuy = npc.Services.Any(value => value is "shop" or "merchant" or "buy-items")
-            || binding.Context.Provider.Service == "buy-potions" && ConcreteGuildProvider(binding.Context, DaggerfallConcreteGuildService.BuyPotions) is { CanUse: true };
-        bool canSell = npc.Services.Any(value => value is "shop" or "merchant" or "sell-items");
+            || BuyGuildService(binding.Context.Provider.Service) is { } buyService && ConcreteGuildProvider(binding.Context, buyService) is { CanUse: true };
+        bool canSell = npc.Services.Any(value => value is "shop" or "merchant" or "sell-items")
+            || binding.Context.Provider.Service == "sell-magic-items" && ConcreteGuildProvider(binding.Context, DaggerfallConcreteGuildService.SellMagicItems) is { CanUse: true };
         bool canRepair = repairService;
         bool canIdentify = identifyService;
         return new(revision, npc.DisplayName ?? npc.Role, binding.Context.Quality, _currency.Read().Gold,
-            canBuy, canSell, canRepair, canIdentify, stockRows, playerRows, repairs, result, binding.Context.Provider.Service != "buy-potions");
+            canBuy, canSell, canRepair, canIdentify, stockRows, playerRows, repairs, result, BuyGuildService(binding.Context.Provider.Service) is null && binding.Context.Provider.Service != "sell-magic-items");
     }
 
     /// <summary>The name a repair order shows: the item in custody, as the merchant rows name items.</summary>
@@ -590,7 +605,7 @@ internal sealed class DaggerfallMerchantService
                 new(definition, metadata, 1));
             rows.Add(new("stack:" + stack.Id.Value, definition.Id.Value, ItemLabel(definition, metadata), stack.Quantity, price,
                 metadata.CurrentCondition, metadata.MaximumCondition, metadata.Identified, metadata.Stolen,
-                buying, !buying && CanSellToBuilding(binding.Context.BuildingType, metadata)));
+                buying, !buying && CanSellToProvider(binding.Context, metadata)));
         }
         foreach (EngineUniqueInventoryItem item in inventory.UniqueItems.OrderBy(value => value.Entity.Value))
         {
@@ -601,7 +616,7 @@ internal sealed class DaggerfallMerchantService
                 new(definition, metadata, 1));
             rows.Add(new("unique:" + id, definition.Id.Value, ItemLabel(definition, metadata), 1, price,
                 metadata.CurrentCondition, metadata.MaximumCondition, metadata.Identified, metadata.Stolen,
-                buying, !buying && CanSellToBuilding(binding.Context.BuildingType, metadata),
+                buying, !buying && CanSellToProvider(binding.Context, metadata),
                 Repair(definition, metadata), Identify(definition, metadata)));
         }
         return [.. rows];
@@ -625,8 +640,19 @@ internal sealed class DaggerfallMerchantService
     private ulong Price(Binding binding, DaggerfallTradeSide side, DaggerfallTradeLine line) =>
         Quote(binding, side, line) is { Total: >= 0 } quote ? checked((ulong)quote.Total) : 0;
 
-    private bool CanSellToBuilding(int buildingType, DaggerfallItemInstanceMetadata metadata)
+    private static DaggerfallConcreteGuildService? BuyGuildService(string service) => service switch
     {
+        "buy-potions" => DaggerfallConcreteGuildService.BuyPotions,
+        "buy-magic-items" => DaggerfallConcreteGuildService.BuyMagicItems,
+        "buy-soulgems" => DaggerfallConcreteGuildService.BuySoulgems,
+        _ => null,
+    };
+
+    private bool CanSellToProvider(DaggerfallMerchantProviderContext context, DaggerfallItemInstanceMetadata metadata)
+    {
+        if (context.Provider.Service == "sell-magic-items")
+            return metadata.HasEnchantment && ConcreteGuildProvider(context, DaggerfallConcreteGuildService.SellMagicItems) is { CanUse: true };
+        int buildingType = context.BuildingType;
         // Pawn shops are the admitted fence for stolen goods; weapon smiths retain their
         // ordinary armor/weapon buying policy and do not launder stolen provenance.
         if (metadata.Stolen && buildingType != 12) return false;
@@ -827,6 +853,32 @@ internal sealed class DaggerfallMerchantService
                 ulong quantity = checked((ulong)_random.DrawKeyed(new KeyedRngRequest(RandomSeed, RandomScope, key + ":quantity", 1, 4)).Value);
                 var item = CreateItem(binding, "UselessItems1", 83, key, recipe) with { Quantity = quantity };
                 AddGenerated(binding, item, seeds, generated, $"potion:{index}");
+            }
+        }
+        else if (binding.Context.Provider.Service is "buy-magic-items" or "buy-soulgems")
+        {
+            int count = binding.Context.Quality / 2 + 2;
+            if (binding.Context.Provider.Service == "buy-magic-items")
+            {
+                for (int index = 0; index < count; index++)
+                {
+                    var item = CreateItem(binding, "Magic", null, $"{stockKey}:magic:{index}");
+                    AddGenerated(binding, item with { Metadata = item.Metadata with { Identified = true } }, seeds, generated, $"magic:{index}");
+                }
+                AddGenerated(binding, CreateItem(binding, "MiscItems", 132, stockKey + ":spellbook"), seeds, generated, "spellbook");
+            }
+            if (binding.Context.Provider.Service == "buy-soulgems"
+                || DaggerfallConcreteGuildCatalog.All.Any(guild => guild.TryGetService(DaggerfallConcreteGuildService.BuySoulgems, out var service)
+                    && service.ProviderFactionId == _npcs.Require(binding.Context.Provider.NpcId).Appearance.FactionId))
+            {
+                int[] souls = Enumerable.Range(0, 43).Where(value => value is not (39 or 34)).ToArray();
+                for (int index = 0; index < count; index++)
+                {
+                    string key = $"{stockKey}:soul:{index}";
+                    var item = CreateItem(binding, "MiscItems", 274, key);
+                    int? soul = Roll(key + ":filled", 25) ? souls[checked((int)_random.DrawKeyed(new KeyedRngRequest(RandomSeed, RandomScope, key + ":mobile", 0, souls.Length - 1)).Value)] : null;
+                    AddGenerated(binding, item with { Metadata = item.Metadata with { CapturedSoulMobileId = soul } }, seeds, generated, $"soul:{index}");
+                }
             }
         }
         else if (StockPools.TryGetValue(binding.Context.BuildingType, out (string Category, int Chance)[]? pools))

@@ -7,6 +7,7 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -541,14 +542,45 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
         return new(definitions, sites, profiles, composition, population, training, merchant, genericRepair, bookseller, magesIdentifier);
     }
 
+    private AssembledWorld? _guildWorld;
+    private readonly List<DaggerfallSiteProfile> _guildInteriors = [];
+    internal SourceProvider GuildProvider(string service) => GuildProvider(
+        _ => true, placement => placement.Services.Contains(service, StringComparer.Ordinal));
+    internal SourceProvider GuildProvider(DaggerfallConcreteGuildKind kind) => GuildProvider(
+        guild => guild.Kind == kind, placement => DaggerfallConcreteGuildCatalog.All
+            .Any(guild => guild.Kind == kind && guild.Services.Any(service => service.ProviderFactionId == placement.Appearance.FactionId)));
+
+    private SourceProvider GuildProvider(Func<DaggerfallConcreteGuildDefinition, bool> guildWanted,
+        Func<DaggerfallStaticNpcPlacement, bool> providerWanted)
+    {
+        bool MatchesGuild(int faction) => DaggerfallConcreteGuildCatalog.All.Any(guild => guildWanted(guild)
+            && (guild.FactionId == faction || (guild.ParentFactionId > 0 && guild.ParentFactionId == faction)));
+        var published = _sites.Where(profile => profile.InteriorBuilding is { } building && MatchesGuild(building.FactionId))
+            .SelectMany(profile => profile.StaticNpcs.Select(placement => new SourceProvider(profile, placement)))
+            .FirstOrDefault(value => providerWanted(value.Placement));
+        if (published is not null) return published;
+        _guildWorld ??= new AssembledWorld();
+        foreach (var site in _definitions.Locations.Records.Where(site => site.Region == 17 && site.Exterior is not null))
+        foreach (var building in site.Exterior!.Buildings.Values.Where(building => MatchesGuild(building.Source.FactionId)))
+        {
+            if (!_guildWorld.Profiles.TryGet(DaggerfallWorldProfileIds.Interior(site.Id, building.Id), out var profile)) continue;
+            var placement = profile.StaticNpcs.FirstOrDefault(providerWanted);
+            if (placement is null) continue;
+            _guildInteriors.Add(profile);
+            return new(profile, placement);
+        }
+        throw new InvalidOperationException("No source guild provider matches the requested service.");
+    }
+
     internal DaggerfallSession Start(DaggerfallSiteProfile profile)
     {
         List<string> releases = [];
         ContentFake content = new(releases);
-        foreach (DaggerfallSiteProfile site in _sites) PopulateContent(content, site);
-        SpatialFake spatial = SpatialFake.Create(profile.SpatialArtifact.Sha256, releases);
+        foreach (DaggerfallSiteProfile site in _sites.Concat(_guildInteriors)) PopulateContent(content, site);
+        SpatialFake spatial = SpatialFake.Create((_guildInteriors.Contains(profile) ? _guildWorld!.Source : profile).SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        return DaggerfallSession.StartNew(engine.Context, _composition with { StartSite = profile });
+        return DaggerfallSession.StartNew(engine.Context, _composition with { StartSite = profile,
+            Profiles = _guildInteriors.Contains(profile) ? _guildWorld!.Profiles : _profiles });
     }
 
     internal DaggerfallSession Restore(RulesetSavePayload saved)
@@ -559,7 +591,7 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
             : throw new InvalidOperationException("A source-backed save must name its active world profile.");
         List<string> releases = [];
         ContentFake content = new(releases);
-        foreach (DaggerfallSiteProfile site in _sites) PopulateContent(content, site);
+        foreach (DaggerfallSiteProfile site in _sites.Concat(_guildInteriors)) PopulateContent(content, site);
         SpatialFake spatial = SpatialFake.Create(active.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         return DaggerfallSession.Restore(engine.Context, _composition with { StartSite = active }, saved);

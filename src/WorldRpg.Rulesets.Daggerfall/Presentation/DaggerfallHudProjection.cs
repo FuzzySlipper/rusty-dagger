@@ -255,6 +255,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     }
 
     private static uint Travel(UiValueBuilder builder, DaggerfallTravelPresentation travel) => builder.Object(
+        ("guildTeleport", builder.Boolean(travel.GuildTeleport)),
         ("destinations", builder.Array(travel.Destinations.Select(destination => builder.Object(
             ("region", builder.Number(destination.Id.Region)),
             ("index", builder.Number(destination.Id.Index)),

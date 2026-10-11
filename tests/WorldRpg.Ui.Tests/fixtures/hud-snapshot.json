@@ -369,6 +369,7 @@
   "lodging": null,
   "map": null,
   "travel": {
+    "guildTeleport": false,
     "destinations": [],
     "map": {
       "world": {
