@@ -312,6 +312,34 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Theory]
+    [InlineData("StrikeUp")]
+    [InlineData("StrikeDown")]
+    [InlineData("StrikeDownLeft")]
+    [InlineData("StrikeDownRight")]
+    [InlineData("StrikeLeft")]
+    [InlineData("StrikeRight")]
+    public void Bow_modifiers_are_neutral_and_do_not_consume_the_melee_gesture(string direction)
+    {
+        DaggerfallSwingDirection gesture = Enum.Parse<DaggerfallSwingDirection>(direction);
+        PreparedResolution Shot(DaggerfallSwingDirection drawn)
+        {
+            using DamagePolicyFixture fixture = new(armed: false);
+            fixture.EquipPlayerBow("iron-short-bow", 3001);
+            fixture.GivePlayerArrows(1);
+            fixture.Gesture = drawn;
+            fixture.Script(body: 9, critical: 50, hit: 1, damage: 10);
+            var result = fixture.Run(new AttackRequest(1, 2, 1, 1, .125d, Delayed: true), out var facts);
+            Assert.Equal(drawn, fixture.Gesture);
+            Assert.Equal(DaggerfallSwingDirection.StrikeDown, Assert.Single(facts.OfType<PlayerAttackStartedFact>()).Swing);
+            return result;
+        }
+        PreparedResolution neutral = Shot(DaggerfallSwingDirection.None);
+        PreparedResolution swung = Shot(gesture);
+        Assert.Equal(neutral.Detail.Chance, swung.Detail.Chance);
+        Assert.Equal(neutral.Outcome.Damage, swung.Outcome.Damage);
+    }
+
+    [Theory]
     [InlineData("StrikeUp", 10, -4)]
     [InlineData("StrikeDown", -10, 4)]
     [InlineData("StrikeLeft", 0, 0)]
