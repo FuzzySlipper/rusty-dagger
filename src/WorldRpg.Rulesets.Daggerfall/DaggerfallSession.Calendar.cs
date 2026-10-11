@@ -20,7 +20,7 @@ internal enum DaggerfallCalendarAdvanceKind
 
     /// <summary>
     /// A rest, travel, prison or service interval: quest tasks run against the admitted calendar,
-    /// skills raise, and a requested encounter is selected when any time was applied.
+    /// and skills raise. Rest and travel select their own per-minute encounters between slices.
     /// </summary>
     Elapsed,
 
@@ -58,17 +58,14 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     /// <param name="before">The calendar before the interval was applied.</param>
     /// <param name="kind">What admitted the interval; see <see cref="DaggerfallCalendarAdvanceKind"/>.</param>
-    /// <param name="encounter">An elapsed interval's encounter request, selected after effects advance.</param>
     /// <param name="simulate">Ordinary play's admitted simulation steps, which run between the fan-out and locomotion.</param>
     private void AdvanceCalendar(DaggerfallCalendar before, DaggerfallCalendarAdvanceKind kind,
-        DaggerfallEncounterRequest? encounter = null, Action? simulate = null, bool resting = false,
+        Action? simulate = null, bool resting = false,
         bool idleFatigue = true)
     {
         bool ordinaryPlay = kind == DaggerfallCalendarAdvanceKind.OrdinaryPlay;
         if (ordinaryPlay != simulate is not null)
             throw new ArgumentException("Only ordinary play runs simulation steps inside its calendar interval.", nameof(simulate));
-        if (encounter is not null && kind is not (DaggerfallCalendarAdvanceKind.Elapsed or DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills))
-            throw new ArgumentException("Only an elapsed interval selects an encounter.", nameof(encounter));
         // Paid temple blessings own an absolute calendar deadline rather than a generic magic-round
         // lifetime. Observe it before every other consumer so a boundary reached inside a minute is
         // visible immediately and rest/travel cannot outrun the blessing through catch-up limits.
@@ -104,7 +101,6 @@ internal sealed partial class DaggerfallSession
         StartDueCriminalInvitations();
         ExpireConjuredItems();
         AdvanceEffectsForCalendar(before, after, ordinaryPlay, resting);
-        if (encounter is not null) QueueEncounter(encounter);
         AnnounceHoliday();
         if (!ordinaryPlay)
         {
@@ -132,7 +128,6 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     internal DaggerfallCalendarAdvance AdvanceElapsedTime(long gameSeconds,
         IReadOnlyList<(int Identity, long SecondsFromNow)>? consequences = null,
-        DaggerfallEncounterRequest? encounter = null,
         bool deferSkillAdvancement = false, bool resting = false, bool idleFatigue = true,
         bool completeTimeIncrease = true)
     {
@@ -140,7 +135,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallCalendarAdvance advance = _time.AdvanceInterval(gameSeconds, consequences ?? []);
         AdvanceCalendar(calendarBefore,
             deferSkillAdvancement ? DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills : DaggerfallCalendarAdvanceKind.Elapsed,
-            advance.AppliedSeconds > 0 ? encounter : null, resting: resting, idleFatigue: idleFatigue);
+            resting: resting, idleFatigue: idleFatigue);
         // Elapsed rest/travel/service time can cross the donor outdoor population's dawn or dusk
         // boundary without an Engine admitted frame. Reconcile through the existing NPC/lifetime
         // owner so source civilians hide, retire, restore and preserve their durable identities.

@@ -34,12 +34,11 @@ internal sealed partial class DaggerfallSession
 
         DaggerfallExteriorCellId cell = _sites.CurrentExteriorCell();
         DaggerfallClimateCell climate = _definitions.Grids.ClimateAtWorldPixel(cell.X, cell.Y);
-        if (climate.Value is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232))
-            throw new InvalidOperationException($"Exterior cell {cell.X}/{cell.Y} has no encounter climate.");
+        // RandomEncounters.ChooseRandomEnemy has no table for other climates (ocean) and spawns nothing.
+        if (climate.Value is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232)) return null;
         long timeOfDay = minute % (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour);
         bool day = timeOfDay is >= 360 and <= 1080;
-        bool atLocation = site.Exterior is { } exterior
-            && cell == new DaggerfallExteriorCellId(exterior.MapPixelX, exterior.MapPixelY);
+        bool atLocation = _sites.LocationAtPlayer() is not null;
         if (atLocation && day) return null;
         DaggerfallEncounterContext context = atLocation
             ? DaggerfallEncounterContext.LocationNight

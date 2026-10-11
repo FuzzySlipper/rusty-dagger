@@ -183,6 +183,10 @@ internal sealed partial class DaggerfallSession
         if (_sites.RebaseExteriorIfNeeded())
             ReconcileTriggers(_sites.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, actionGraph);
         _camera.Update(State.PlayerControl);
+        // An unloaded location has already destroyed its own actors (roster UnloadSite), so the
+        // steps below see only live actors: wilderness spawns and resident neighbouring locations.
+        // Location-scoped consumers (law, civilians, NPC projection, quest placements) keep their
+        // own loaded-location guards.
         if (!alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
         _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, pending => PlaceEncounter(pending, simulationStep));
         UpdateLaw(update.DeltaSeconds);
