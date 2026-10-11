@@ -83,6 +83,20 @@ public sealed class SourceCoverageInputTests : IDisposable
     }
 
     [Fact]
+    public void Published_night_sky_keeps_its_separate_palette_source()
+    {
+        string sky = Write("content/sky.json", """
+            {"nightResources":[{"sourcePath":"arena2/NITE00I0.IMG","paletteSourcePath":"arena2/NIGHTSKY.COL"}]}
+            """);
+        var inputs = SourceCoverageInputReader.Read(root, [sky],
+            [Row("file", "CNT-021", "arena2/NITE00I0.IMG"), Row("file", "CNT-027", "arena2/NIGHTSKY.COL")]);
+        var palette = Assert.Single(inputs.Consumers, value => value.SourcePath == "arena2/NIGHTSKY.COL");
+        Assert.False(palette.ContextOnly);
+        Assert.False(palette.OfflineOnly);
+        Assert.Equal("nightResources", palette.Section);
+    }
+
+    [Fact]
     public void Bare_sourceFile_cannot_guess_between_colliding_admitted_paths()
     {
         string file = Write("content/a.json", """{"sourceFile":"A.IMG"}""");
