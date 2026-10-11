@@ -15,26 +15,27 @@ internal sealed class DaggerfallEnemyMotorMemory
 }
 
 internal readonly record struct DaggerfallEnemyMotorContext(int Level, int TargetLevel, bool TargetParalyzed,
-    bool TargetBackTurned, bool TargetBowOrSheathed, bool PrefersRanged = false, double MinimumRangedDistance = 0);
+    bool TargetBackTurned, bool TargetBowOrSheathed);
 
 /// <summary>EnemyMotor's admitted-time advance, retreat and strafe choices; Kit executes movement.</summary>
 internal static class DaggerfallEnemyMotorPolicy
 {
     internal static PursuitPolicy Select(DaggerfallEnemyMotorMemory memory, PursuitPolicy movement,
         DaggerfallPursuitManeuverTuning tuning, DaggerfallEnemyMotorContext context, PursuitObservation observation,
-        bool inSight, bool positionKnown, bool maySearch, float deltaSeconds, Func<string, int, int, int> draw)
+        bool rangedAttack, bool inSight, bool positionKnown, bool maySearch, float deltaSeconds, Func<string, int, int, int> draw)
     {
         memory.AdvanceTimer -= deltaSeconds;
         memory.StrafeTimer -= deltaSeconds;
         movement = movement with { AllowAttack = inSight, TargetObserved = positionKnown, SearchLastKnownPosition = maySearch,
             SearchDistance = tuning.SearchDistance, SearchStep = tuning.SearchStep };
-        // The published preference keeps an equipped ranged actor at its usable reach.
-        // A melee fallback has melee reach and follows the normal advance policy instead.
-        if (context.PrefersRanged && inSight && observation.Reach is > 2.25 and var rangedReach)
+        // EnemyMotor.DoRangedAttack: while the attack owner has a ranged shot for this distance and the
+        // target is seen, the enemy stands and shoots, strafing at quarter speed when enhanced AI decides to.
+        if (rangedAttack && inSight && positionKnown)
         {
-            if (observation.Distance < context.MinimumRangedDistance)
-                return Choose(PursuitState.Retreat);
-            return Choose(observation.Distance <= rangedReach ? PursuitState.Idle : PursuitState.Chase);
+            if (tuning.EnhancedCombatAi && memory.StrafeTimer <= 0) StrafeDecision();
+            return memory.Strafe && memory.StrafeTimer > 0
+                ? movement with { Maneuver = PursuitState.Strafe, SpeedMultiplier = .25f, StrafeDirection = memory.StrafeDirection }
+                : movement with { Maneuver = PursuitState.Idle };
         }
         if (!tuning.EnhancedCombatAi || !inSight || context.TargetParalyzed || context.TargetBackTurned || context.TargetBowOrSheathed)
         {
@@ -56,18 +57,20 @@ internal static class DaggerfallEnemyMotorPolicy
         double distance = observation.Distance;
         if (!memory.Retreating && distance >= reach * tuning.AdvanceDistanceMultiplier || memory.Advance && distance > reach)
             return Choose(PursuitState.Chase);
-        if (memory.StrafeTimer <= 0)
+        if (memory.StrafeTimer <= 0) StrafeDecision();
+        if (memory.Strafe && distance >= reach * tuning.TooCloseMultiplier)
+            return Choose(PursuitState.Strafe) with { SpeedMultiplier = .25f, StrafeDirection = memory.StrafeDirection };
+        if (distance < reach * tuning.TooCloseMultiplier || !memory.Advance && distance < reach * memory.RetreatMultiplier)
+            return Choose(PursuitState.Retreat) with { SpeedMultiplier = .5f };
+        return Choose(PursuitState.Idle);
+
+        void StrafeDecision()
         {
             memory.Decision++;
             memory.Strafe = draw("strafe", 0, 3) == 0;
             memory.StrafeTimer = draw("strafe-duration-ms", 1000, 2000) / 1000f;
             memory.StrafeDirection = draw("strafe-direction", 0, 1) == 0 ? -1 : 1;
         }
-        if (memory.Strafe && distance >= reach * tuning.TooCloseMultiplier)
-            return Choose(PursuitState.Strafe) with { SpeedMultiplier = .25f, StrafeDirection = memory.StrafeDirection };
-        if (distance < reach * tuning.TooCloseMultiplier || !memory.Advance && distance < reach * memory.RetreatMultiplier)
-            return Choose(PursuitState.Retreat) with { SpeedMultiplier = .5f };
-        return Choose(PursuitState.Idle);
 
         PursuitPolicy Choose(PursuitState intent)
         {

@@ -7,14 +7,17 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 internal sealed partial class DaggerCombatRules
 {
-    internal double? EnemyReachAtDistance(long actorId, long targetId, double distance)
+    /// <summary>The attack this enemy would use at <paramref name="distance"/>: its reach and whether it is a ranged shot.</summary>
+    internal (double Reach, bool Ranged)? EnemyAttackAtDistance(long actorId, long targetId, double distance)
     {
         // Spending the last arrow does not cancel the already accepted draw/release. The
         // canonical pending attack supplies its reach until its release frame consumes it.
         var pending = _actors.Get(actorId).Actor.Get<WorldRpg.Kit.Combat.AttackState>().Pending;
         if (pending is { Request.TargetId: var target, Attack: DaggerfallPreparedAttack { IsRanged: true, Action: { } action } }
-            && target == targetId) return _actions[action].Reach;
-        return TryResolve(actorId, out var actor) ? EnemyAction(actor, distance).Action?.Reach : null;
+            && target == targetId) return _actions[action].Reach is { } pendingReach ? (pendingReach, true) : null;
+        if (!TryResolve(actorId, out var actor)) return null;
+        var (selected, bow) = EnemyAction(actor, distance);
+        return selected?.Reach is { } reach ? (reach, bow is not null) : null;
     }
 
     private (DaggerfallActionDefinition? Action, KitItem? Bow) EnemyAction(Combatant actor, double distance)
