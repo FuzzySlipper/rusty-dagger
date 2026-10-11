@@ -50,8 +50,7 @@ public sealed class DaggerfallConcreteGuildRuntimeTests
 
         Assert.Equal(DaggerfallGuildMembershipChange.Expelled, runtime.Expel(42, currentDay: 29).Change);
         Assert.False(social.GuildEligibility(42).IsMember);
-        Assert.Equal(DaggerfallGuildMembershipChange.Rejoined,
-            runtime.Rejoin(42, currentDay: 30, new(10, skills, new(true, false))).Membership!.Change);
+        Assert.True(runtime.Admit(42, currentDay: 30, new(10, skills, new(true, false))).Applied);
         Assert.True(social.GuildEligibility(42).IsMember);
     }
 

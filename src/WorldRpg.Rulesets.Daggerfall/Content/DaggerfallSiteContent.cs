@@ -112,8 +112,8 @@ internal static partial class DaggerfallSiteContent
         AuthoredWorldAppearance worldAppearance = ReadWorldAppearance(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(world, "appearance", diagnostics), "world.appearance", diagnostics), diagnostics);
         IReadOnlyList<DaggerfallSitePortal> portals = ReadSitePortals(world, diagnostics);
         IReadOnlyList<DaggerfallSiteAnchor> anchors = ReadSiteAnchors(world, start, diagnostics);
-        ReadOnlyMemory<byte>? normalizedWorld = files.GetExactlyOne(normalizedPath);
-        Dictionary<long, AuthoredActor> fixedActors = ReadFixedActors(normalizedWorld.Value, profileId, definitions, diagnostics);
+        ReadOnlyMemory<byte> normalizedWorld = files.GetExactlyOne(normalizedPath);
+        Dictionary<long, AuthoredActor> fixedActors = ReadFixedActors(normalizedWorld, profileId, definitions, diagnostics);
         Dictionary<long, AuthoredActor> actors = ReadNormalizedPlacements(root, definitions, diagnostics, fixedActors, profileId);
         foreach (var actor in fixedActors)
             if (!actors.TryAdd(actor.Key, actor.Value)) diagnostics.Add($"Fixed actor identity {actor.Key} collides in '{profileId}'.");
@@ -215,7 +215,7 @@ internal static partial class DaggerfallSiteContent
             DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics), billboardSprites,
             DaggerfallStaticNpcPlacement.Read(normalizedWorld, billboardSprites, definitions, start.Site, diagnostics), waterVolumes: DaggerfallDungeonWater.Read(normalizedWorld, profileId, diagnostics), terrainTextures: terrainTextures, population: population)
         { VariantName = DaggerfallBaseContent.OptionalText(world, "variant", diagnostics),
-            DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalizedWorld.Value, diagnostics),
+            DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalizedWorld, diagnostics),
             VariantBaseLogicalId = DaggerfallBaseContent.OptionalText(world, "variantOf", diagnostics),
             AmbientZones = DaggerfallAmbientZones.Read(normalizedWorld, diagnostics),
             PropertyContainers = DaggerfallPropertyContainerPlacement.Read(normalizedWorld) };

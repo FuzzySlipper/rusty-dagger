@@ -114,9 +114,11 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Current wall attachment and the donor check timers, independent of transient physical keys.</summary>
     [JsonRequired]
     public DaggerfallClimbingSave Climbing { get; init; } = new(false, false, 0f, 0f);
-    /// <summary>Accepted water mode and breath continuation, including an admitted submersion timer.</summary>
+    /// <summary>Remaining equip delay for each hand after an ordinary equipment change.</summary>
     [JsonRequired]
     public DaggerfallHandEquipCountdown EquipCountdown { get; init; } = new(0, 0);
+    /// <summary>Accepted water mode and breath continuation, including an admitted submersion timer.</summary>
+    [JsonRequired]
     public DaggerfallSwimmingSave Swimming { get; init; } = DaggerfallSwimmingSave.Empty;
     /// <summary>Profile-scoped dungeon exploration, independent of active geometry or door motion.</summary>
     [JsonRequired]

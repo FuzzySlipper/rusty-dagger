@@ -90,9 +90,9 @@ public sealed class DaggerfallGuildMembershipPolicyTests
         Assert.Empty(social.Capture().Memberships);
 
         social.ChangeFactionReputation(41, 1);
-        DaggerfallGuildMembershipResult rejoined = policy.Rejoin(41, currentDay: 33);
+        DaggerfallGuildMembershipResult rejoined = policy.Admit(41, currentDay: 33);
         Assert.True(rejoined.Applied);
-        Assert.Equal(DaggerfallGuildMembershipChange.Rejoined, rejoined.Change);
+        Assert.Equal(DaggerfallGuildMembershipChange.Admitted, rejoined.Change);
         Assert.Equal(0, rejoined.View.Rank);
         Assert.Equal(33, rejoined.View.LastRankChangeDay);
         Assert.True(policy.HasPrivilege(41, "repair"));
@@ -114,8 +114,7 @@ public sealed class DaggerfallGuildMembershipPolicyTests
         Assert.Equal(2, saved.GuildGroup);
 
         Assert.True(policy.Expel(41, currentDay: 1).Applied);
-        DaggerfallGuildMembershipResult rejoinedVariant = policy.Rejoin(17, currentDay: 2);
-        Assert.Equal(DaggerfallGuildMembershipChange.Rejoined, rejoinedVariant.Change);
+        Assert.True(policy.Admit(17, currentDay: 2).Applied);
         saved = Assert.Single(social.Capture().Memberships);
         Assert.Equal(17, saved.FactionId);
         Assert.Equal(2, saved.GuildGroup);

@@ -64,7 +64,7 @@ internal sealed partial class DaggerfallCharacterState
         {
             if (!definitions.Magic.Spells.ContainsKey(known))
                 throw new ArgumentException($"Saved character knows '{known}', which no published spell answers.", nameof(restored));
-            if (!AddKnownSpell(known)) throw new ArgumentException("Saved character repeats a known spell.");
+            _ = AddKnownSpell(known);
         }
 
         ArgumentNullException.ThrowIfNull(definitions);

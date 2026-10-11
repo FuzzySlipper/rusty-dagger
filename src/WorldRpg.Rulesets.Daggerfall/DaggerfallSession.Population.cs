@@ -261,9 +261,9 @@ internal sealed partial class DaggerfallSession
             .ThenBy(door => door.Id.ModelIndex)];
         foreach (DaggerfallDoorView door in nearby)
         {
-            DaggerfallDoorOperationResult result = door.LockValue == 0
+            DaggerfallDoorOperationResult result = !door.IsLocked
                 ? _doors.Open(door.Id, DaggerfallDoorOperationSource.Player)
-                : door.LockValue < 20 ? _doors.Bash(door.Id) : DaggerfallDoorOperationResult.MagicallyHeld;
+                : door.IsMagicallyHeld ? DaggerfallDoorOperationResult.MagicallyHeld : _doors.Bash(door.Id);
             if (result is DaggerfallDoorOperationResult.Started or DaggerfallDoorOperationResult.AlreadyOpen)
                 return true;
         }

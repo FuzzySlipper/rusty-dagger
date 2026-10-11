@@ -18,7 +18,6 @@ internal enum DaggerfallGuildMembershipChange
 {
     None,
     Admitted,
-    Rejoined,
     Promoted,
     Demoted,
     Expelled,
@@ -270,10 +269,6 @@ internal sealed class DaggerfallGuildMembershipPolicy
     /// <summary>Applies donor admission requirements and creates rank-zero membership.</summary>
     internal DaggerfallGuildMembershipResult Admit(int factionId, int currentDay) =>
         AdmitCore(factionId, currentDay, DaggerfallGuildMembershipChange.Admitted);
-
-    /// <summary>Re-admits an explicitly expelled member through the same donor gates.</summary>
-    internal DaggerfallGuildMembershipResult Rejoin(int factionId, int currentDay) =>
-        AdmitCore(factionId, currentDay, DaggerfallGuildMembershipChange.Rejoined);
 
     /// <summary>
     /// Reviews promotion, demotion, or donor expulsion after the elapsed rank interval. Thieves and
