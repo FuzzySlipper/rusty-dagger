@@ -61,10 +61,9 @@ internal static class DaggerfallBuildingEntryPolicy
     internal static bool IsResidence(int buildingType) => buildingType is >= House1 and <= House4;
 
     /// <summary>
-    /// The donor's quality-over-two building lock. The door owner treats a zero lock as no lock, so a
-    /// locked building of quality one still offers the least real lock.
+    /// The donor's quality-over-two building lock strength. Locked admission is separate, so quality one is locked at strength zero.
     /// </summary>
-    internal static int LockValue(int quality) => Math.Max(1, Math.Max(0, quality) / 2);
+    internal static int LockValue(int quality) => Math.Max(0, quality) / 2;
 
     internal static DaggerfallBuildingEntry Evaluate(DaggerfallBuildingEntryFacts facts)
     {

@@ -49,8 +49,9 @@ public sealed class DaggerfallBuildingEntryPolicyTests
     {
         Assert.Equal(10, At(House1, 12, quality: 20).LockValue);
         Assert.Equal(3, At(House1, 12, quality: 7).LockValue);
-        // A quality-one building is still locked: the least lock the door owner can hold.
-        Assert.Equal(1, At(House1, 12, quality: 1).LockValue);
+        // Lock state is independent of strength, including quality-one strength zero.
+        Assert.Equal(0, At(House1, 12, quality: 1).LockValue);
+        Assert.False(At(House1, 12, quality: 1).Unlocked);
     }
 
     [Fact]

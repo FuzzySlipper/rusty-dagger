@@ -762,6 +762,13 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     internal bool ClaimsBuilding(DaggerfallSiteId site, DaggerfallSiteBuildingSource building) =>
         _instances.Values.Any(instance => instance.Lifecycle == DaggerfallQuestLifecycle.Active
             && instance.Resources.Any(resource => DaggerfallQuestPlaceAllocator.Claims(resource, site, building)));
+    // DialogueVisible is the persisted donor availableForDialog fact: a hidden quest resource
+    // must not disclose its residence name through a door or map before the player learns of it.
+    internal string? LearnedBuildingName(DaggerfallSiteId site, DaggerfallSiteBuildingSource building) =>
+        DialogueResources().Where(value => value.Resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Place
+            && DaggerfallQuestPlaceAllocator.Claims(value.Resource, site, building))
+            .Select(value => value.Resource.Text?.Name).FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
+
     internal DaggerfallQuestMessages Messages { get; }
 
     /// <summary>Binds the one session's live player and elapsed-time owners after composition completes.</summary>

@@ -69,6 +69,8 @@ internal sealed partial class DaggerfallSession
 
         if (action.Kind == DaggerfallUiActionKind.DungeonTextClose)
         {
+            if (projection.Kind == DaggerfallDungeonTextActionKind.BuildingGreeting)
+            { ContinueBuildingEntry(); return; }
             if (_dungeonText.Pending is { } pending && pending.ActionId == actionId && pending.Revision == revision)
             {
                 DaggerfallDungeonTextActionResult cancelled = _dungeonText.Cancel(actionId, revision);
@@ -120,6 +122,7 @@ internal sealed partial class DaggerfallSession
 
     private void CancelDungeonTextOnUnload()
     {
+        _pendingBuildingEntry = null;
         _dungeonText.CancelPendingOnUnload();
         _dungeonTextProjection = null;
         _coveredDungeonText.Clear();

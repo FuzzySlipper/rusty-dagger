@@ -70,7 +70,7 @@ internal sealed partial class DaggerfallSession
     private DaggerfallSession AdmitComposition(IEngineContext engine, DaggerfallSessionComposition composition)
     {
         if (composition.Profiles is { } profiles) AdmitSiteProfiles(profiles);
-        if (composition.Blocks is { } blocks) Site.AdmitBuildingNames(engine.Random, composition.Definitions, blocks);
+        if (composition.Blocks is { } blocks) Site.AdmitBuildingNames(engine.Random, composition.Definitions, blocks, State.Quests.LearnedBuildingName);
         return this;
     }
 
@@ -146,7 +146,7 @@ internal sealed partial class DaggerfallSession
                     ToSiteId(restoredSite.Active),
                     ToSiteId(restoredSite.ReturnAnchor),
                     ToSiteReturnPose(restoredSite.ReturnPose),
-                    restoredSite.Discovered.Select(id => id.Require()), restoredSite.Buildings)
+                    restoredSite.Discovered.Select(id => id.Require()), restoredSite.Buildings, restoredSite.FailedBuildingPicks)
                 : new World.DaggerfallSiteContext(definitions.Locations, inputs.Site, null, []);
             _travelPolicy = new DaggerfallTravelPolicy(_site, definitions.Grids, tuning.Transport);
             DaggerfallWorldProfileKey activeProfile = saved?.Site.ActiveProfile?.Require() ?? inputs.ProfileKey;
