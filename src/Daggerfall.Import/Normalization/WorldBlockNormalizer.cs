@@ -169,7 +169,10 @@ public sealed class WorldBlockNormalizer
         {
             Arch3dMesh mesh = RmbMesh(model);
             string modelId = $"model/{model.Ordinal}";
-            models.Add(RmbModel(modelId, model));
+            var mapVertices = mesh.Planes.Where(plane => plane.Points.Count >= 3)
+                .SelectMany(plane => plane.Points).Select(point => MeshGeometry.ToRightHanded(model.Frame.Place(Arena2SourceTransform.ToImportPoint(point)))).ToArray();
+            models.Add(RmbModel(modelId, model) with
+            { Bounds = MeshGeometry.Bounds(mapVertices), SamplePoints = MeshGeometry.SelectSurfaceSamples(mapVertices) });
             NormalizedPropertyContainer? container = RmbPropertyContainerFacts.Read(model.Frame.Model, model.Ordinal, slot.BuildingType);
             List<NormalizedVector3> interactionPoints = [];
             foreach ((Arch3dPlane plane, int planeIndex) in mesh.Planes.Select((plane, index) => (plane, index)).Where(value => value.plane.Points.Count >= 3))

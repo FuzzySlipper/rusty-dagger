@@ -141,7 +141,7 @@ internal static partial class DaggerfallSiteContent
         foreach (DaggerfallDungeonActionModelDefinition model in actionModels)
             if (!actionIds.Contains(model.ActionId))
                 diagnostics.Add($"Normalized action model '{model.ActionId}' has no matching world action node.");
-        DaggerfallDungeonMapContent? dungeonMap = profileKind == DaggerfallWorldProfileKind.Dungeon
+        DaggerfallDungeonMapContent? dungeonMap = profileKind is DaggerfallWorldProfileKind.Dungeon or DaggerfallWorldProfileKind.Interior
             ? ReadNormalizedDungeonMap(normalizedWorld, doors, portals, diagnostics)
             : null;
         (IReadOnlyList<NormalizedAudioClip> audio, IReadOnlyList<NormalizedMusicCue> music, NormalizedClassicPresentation classicPresentation) = ReadClassicPresentation(

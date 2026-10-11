@@ -12,7 +12,7 @@ internal sealed partial class DaggerfallSession
     {
         if (State.PlayerControl.Position is not WorldPoint player) return null;
         DaggerfallSiteProfile profile = _sites.Projection.Inputs;
-        if (profile.ProfileKind == DaggerfallWorldProfileKind.Dungeon && State.DungeonDiscoveries.TryGetValue(_activeProfileKey, out var discovery))
+        if (profile.ProfileKind is (DaggerfallWorldProfileKind.Dungeon or DaggerfallWorldProfileKind.Interior) && State.DungeonDiscoveries.TryGetValue(_activeProfileKey, out var discovery))
             return DaggerfallMapProjection.Dungeon(profile, discovery, player, State.PlayerControl.YawRadians, Site.ActiveSite?.Name);
         if (profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && Site.ActiveSite?.Exterior is not null && Site.Blocks is not null)
             return DaggerfallMapProjection.City(Site, _sites.ExteriorSitePosition(player), State.PlayerControl.YawRadians);
@@ -27,6 +27,8 @@ internal sealed partial class DaggerfallSession
         { Presentation.SetOutcome("That map building selection is unavailable."); return; }
         try
         {
+            if (!Site.IsBuildingDiscovered(new(region, index), new(blockX, blockY, buildingIndex)))
+            { Presentation.SetOutcome("That building has not been discovered."); return; }
             DaggerfallSiteBuildingRecord building = Site.SelectBuilding(new(region, index), new(blockX, blockY, buildingIndex));
             Presentation.SetOutcome($"Selected {building.Name}. Ask someone here for directions.");
         }
@@ -39,10 +41,10 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     private void ChangeMapNote(DaggerfallPlayerUiAction action)
     {
-        if (_sites.Projection.Inputs.ProfileKind != DaggerfallWorldProfileKind.Dungeon
+        if (_sites.Projection.Inputs.ProfileKind is not (DaggerfallWorldProfileKind.Dungeon or DaggerfallWorldProfileKind.Interior)
             || !State.DungeonDiscoveries.TryGetValue(_activeProfileKey, out DaggerfallDungeonDiscovery? discovery))
         {
-            Presentation.SetOutcome("Notes can only be added to a dungeon map.");
+            Presentation.SetOutcome("Notes can only be added to an interior or dungeon map.");
             return;
         }
         switch (action.Kind)
@@ -142,10 +144,10 @@ internal sealed partial class DaggerfallSession
             if (_activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return null;
             try
             {
-                DaggerfallSiteBuildingRecord building = Site.SelectBuilding(active.Id, id);
+                DaggerfallSiteBuildingRecord building = Site.RequireBuilding(active.Id, id);
                 bool sameBuilding = _dialogue?.CurrentNpc() is { } speaker
                     && string.Equals(speaker.Site.Building, $"{blockX}/{blockY}/{index}", StringComparison.Ordinal);
-                return new(target, building.Name, BuildingHint(active.Id, id), Known: true)
+                return new(target, building.Name, BuildingHint(active.Id, id), Known: Site.IsBuildingDiscovered(active.Id, id))
                 {
                     SameBuilding = sameBuilding,
                     QuestLocality = State.Quests.ClaimsBuilding(active.Id, building.Source),
@@ -251,6 +253,19 @@ internal sealed partial class DaggerfallSession
     /// <summary>Applies a site disclosure only after the dialogue owner has admitted the answer.</summary>
     private bool DiscloseDialogueDirection(string target)
     {
+        if (target.StartsWith("direction:quest:", StringComparison.Ordinal))
+            return QuestDirectionTarget(target) is { } quest && DiscloseDialogueDirection(quest.Target);
+        if (target.StartsWith("direction:building:", StringComparison.Ordinal))
+        {
+            if (Site.Active is not { } site || target[19..].Split(':') is not [var x, var y, var ordinal]
+                || !int.TryParse(x, out int blockX) || !int.TryParse(y, out int blockY) || !int.TryParse(ordinal, out int buildingIndex)) return false;
+            try
+            {
+                DaggerfallSiteBuildingId building = new(blockX, blockY, buildingIndex);
+                Site.DiscoverBuilding(site, building); Site.SelectBuilding(site, building); return true;
+            }
+            catch (InvalidOperationException) { return false; }
+        }
         if (!target.StartsWith("direction:site:", StringComparison.Ordinal)) return false;
         string[] parts = target[15..].Split(':');
         if (parts.Length != 2 || !int.TryParse(parts[0], out int region) || !int.TryParse(parts[1], out int index)) return false;

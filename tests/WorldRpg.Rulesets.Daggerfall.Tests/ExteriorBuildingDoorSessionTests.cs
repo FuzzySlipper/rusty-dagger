@@ -53,7 +53,19 @@ public sealed class ExteriorBuildingDoorSessionTests
         var incident = Assert.Single(session.State.Crime.Incidents);
         Assert.Equal(DaggerfallCrimeKind.BreakingAndEntering, incident.Crime);
         Assert.Equal(mode == "bash", incident.Reported); // Minimum random notices bashing, never lockpicking.
+        Assert.True(session.Site.IsBuildingDiscovered(fixture.Exterior.Site!.Value, Residence));
+        var map = session.ReadMapPresentation();
+        Assert.NotNull(map);
+        Assert.Equal("interior", map.Kind);
+        Assert.Empty(map.Areas);
+        var discovery = session.State.DungeonDiscoveries[session.Sites.ActiveProfile];
+        var placement = discovery.Content.GeometryPlacements.First();
+        discovery.ObservePlacement(placement.PlacementId);
+        map = session.ReadMapPresentation()!;
+        Assert.Equal(placement.BoundsMin.X, Assert.Single(map.Areas).MinX);
         using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        Assert.Equal(map.Areas, restored.ReadMapPresentation()!.Areas);
+        Assert.True(restored.Site.IsBuildingDiscovered(fixture.Exterior.Site!.Value, Residence));
         Assert.Single(restored.State.Crime.Incidents);
         Assert.True(restored.TryTransitionTo(fixture.Exterior.ProfileKey));
         Assert.Equal(0, restored.Doors.Read(fixture.DoorOf(Residence)).LockValue);

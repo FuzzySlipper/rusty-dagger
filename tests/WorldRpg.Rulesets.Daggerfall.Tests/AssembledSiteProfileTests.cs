@@ -146,6 +146,9 @@ public sealed class AssembledSiteProfileTests
 
         Assert.Equal(published.ProfileKey, assembled.ProfileKey);
         Assert.Equal(published.InteriorBuilding, assembled.InteriorBuilding);
+        Assert.NotEmpty(assembled.DungeonMap!.GeometryPlacements);
+        Assert.Equal(published.DungeonMap!.GeometryPlacements.Select(value => (value.PlacementId, value.BoundsMin, value.BoundsMax)),
+            assembled.DungeonMap.GeometryPlacements.Select(value => (value.PlacementId, value.BoundsMin, value.BoundsMax)));
         Assert.Equal(published.QuestMarkers, assembled.QuestMarkers);
         Assert.Equal(published.StaticNpcs.Select(npc => (npc.Id, npc.Position, npc.Appearance, npc.Role, string.Join(',', npc.Services))),
             assembled.StaticNpcs.Select(npc => (npc.Id, npc.Position, npc.Appearance, npc.Role, string.Join(',', npc.Services))));

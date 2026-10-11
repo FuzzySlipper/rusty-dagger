@@ -85,12 +85,13 @@ public sealed class DaggerfallMapPresentationTests
         sites.Enter(city.Id);
         var map = DaggerfallMapProjection.City(sites, new(7, 8, 9), 1);
         Assert.Equal(new WorldPoint(7, 8, 9), map.Player);
-        Assert.Equal(city.Exterior!.Buildings.Values.Count(building => !string.IsNullOrWhiteSpace(sites.RequireBuilding(city.Id, building.Id).Name)), map.Labels.Count);
+        Assert.Empty(map.Labels);
         Assert.DoesNotContain(map.Labels, label => string.IsNullOrWhiteSpace(label.Name));
         var residence = sites.BuildingsAt(city.Id).First(building => building.Source.BuildingType == 18);
         Assert.Throws<InvalidOperationException>(() => sites.SelectBuilding(city.Id, residence.Id));
         Assert.Equal(city.Exterior.Blocks.Sum(block => blocks.Maps[block.SourceName].Footprints.Count), map.Areas.Count);
         var source = sites.BuildingsAt(city.Id).First(building => building.Source.BuildingType == 23);
+        sites.DiscoverBuilding(city.Id, source.Id);
         var selected = sites.SelectBuilding(city.Id, source.Id);
         var after = DaggerfallMapProjection.City(sites, map.Player, map.Yaw);
         var label = Assert.Single(after.Labels, label => label.Selected);
@@ -126,7 +127,10 @@ public sealed class DaggerfallMapPresentationTests
         Assert.Equal(requestedProfilePose.X, before.Player.X, 4);
         Assert.Equal(requestedProfilePose.Y, before.Player.Y, 4);
         Assert.Equal(requestedProfilePose.Z, before.Player.Z, 4);
-        var label = before.Labels.First();
+        Assert.Empty(before.Labels);
+        var known = session.Site.BuildingsAt(session.Site.Active!.Value).First(building => building.Source.BuildingType == 23);
+        session.Site.DiscoverBuilding(session.Site.Active.Value, known.Id);
+        var label = Assert.Single(session.ReadMapPresentation()!.Labels);
         session.Update(new ProductUpdate(OuterUpdate(1), [Ui(JsonSerializer.Serialize(new {
             action = "map-building", region = before.Region, destination = before.Location, item = label.Id }))]));
         var after = session.ReadMapPresentation()!;

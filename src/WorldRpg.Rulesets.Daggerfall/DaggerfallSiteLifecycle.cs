@@ -679,6 +679,8 @@ internal sealed class DaggerfallSiteLifecycle
             }
             EnsureDungeonActionGraph(destination, target);
             ActionTriggers.ActivateProfile(destination);
+            if (DaggerfallWorldProfileIds.TryParse(destination.LogicalId, out _, out var visitedBuilding) && visitedBuilding is { } building)
+                _site.DiscoverBuilding(destination.Site, building);
         }
         catch (Exception failure)
         {

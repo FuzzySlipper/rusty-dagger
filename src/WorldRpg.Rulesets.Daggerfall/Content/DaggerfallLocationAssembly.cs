@@ -466,7 +466,7 @@ internal sealed class DaggerfallLocationAssembly
                 Anchor(DungeonEntranceAnchor, Landing(entrance.Position with { Y = entrance.Bounds.Minimum.Y }, entrance.Normal, presentation.DungeonExitLanding),
                     ActorHeading.Yaw(entrance.Normal));
             DaggerfallDungeonMapContent? map = null;
-            if (key.Kind == DaggerfallWorldProfileKind.Dungeon)
+            if (key.Kind is DaggerfallWorldProfileKind.Dungeon or DaggerfallWorldProfileKind.Interior)
             {
                 try
                 {
@@ -550,7 +550,7 @@ internal sealed class DaggerfallLocationAssembly
             if (Mesh(model) is not { } mesh) return;
             Vector3 position = origin + model.Position;
             _placedMeshes.Add((mesh.Path, mesh.Sha256, DaggerfallSiteGeometry.Pose(position, model.RotationDegrees), Textures(mesh)));
-            if (key.Kind != DaggerfallWorldProfileKind.Dungeon) return;
+            if (key.Kind == DaggerfallWorldProfileKind.Exterior) return;
             if (model.Bounds is not { } bounds)
             {
                 diagnostics.Add($"Static block model '{model.Id}' states no map bounds.");
@@ -559,7 +559,7 @@ internal sealed class DaggerfallLocationAssembly
 
             try
             {
-                _mapGeometry.Add(new DaggerfallDungeonMapGeometry(place!(model.Id), bounds.Minimum + origin, bounds.Maximum + origin,
+                _mapGeometry.Add(new DaggerfallDungeonMapGeometry(place?.Invoke(model.Id) ?? model.Id, bounds.Minimum + origin, bounds.Maximum + origin,
                     [model.MeshArtifactId!], [.. model.SamplePoints.Select(point => point + origin)], null).Validate());
             }
             catch (ArgumentException exception) { diagnostics.Add($"Block model '{model.Id}' has invalid map facts: {exception.Message}"); }

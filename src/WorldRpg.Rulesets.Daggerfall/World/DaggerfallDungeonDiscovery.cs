@@ -187,8 +187,8 @@ internal sealed class DaggerfallDungeonDiscovery
         DaggerfallDungeonDiscoverySnapshot? restored = null)
     {
         Profile = profile.Validate();
-        if (Profile.Kind != DaggerfallWorldProfileKind.Dungeon)
-            throw new ArgumentException("Dungeon discovery requires a dungeon world profile.", nameof(profile));
+        if (Profile.Kind is not (DaggerfallWorldProfileKind.Dungeon or DaggerfallWorldProfileKind.Interior))
+            throw new ArgumentException("Exploration requires a dungeon or building interior profile.", nameof(profile));
         _content = content ?? throw new ArgumentNullException(nameof(content));
         if (restored is not null) Restore(restored);
     }
