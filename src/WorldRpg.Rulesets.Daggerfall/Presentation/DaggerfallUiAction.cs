@@ -26,7 +26,7 @@ internal enum DaggerfallUiActionKind
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
     CharacterLevelAllocate, CharacterLevelCommit,
     ActivationMode, Attack, Loot, Menu,
-    DialogueTone, DialogueTopic, DialogueClose, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift,
+    DialogueTone, DialogueTopic, DialogueClose, TavernBuy, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift,
     LegalChoice, CreateItemSelect, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
     TransportSelect, TransportToggle, TransportLeaveShip, TransportBoardShip,
     PropertyBuy, PropertySell, PropertyEnter, PropertyPut, PropertyTake,
@@ -186,6 +186,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.DialogueTone, "dialogue-tone", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DialogueTopic, "dialogue-topic", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DialogueClose, "dialogue-close", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.TavernBuy, "tavern-buy", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TrainingCommit, "training-commit", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.MerchantBuy, "merchant-buy", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.MerchantSell, "merchant-sell", DaggerfallUiPhases.Interaction),
@@ -608,6 +609,10 @@ internal static class DaggerfallUiAction
             if (action == "dialogue-close")
                 return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision)
                     ? new(action, Revision: revision) : null;
+            if (action == "tavern-buy")
+                return fields.SetEquals(["action", "revision", "key", "amount"])
+                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) && amount is not null
+                    ? new(action, Revision: revision, Key: key, Amount: amount) : null;
             if (action == "training-commit")
                 return fields.SetEquals(["action", "revision", "key", "amount", "confirm"])
                     && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) && amount is > 0

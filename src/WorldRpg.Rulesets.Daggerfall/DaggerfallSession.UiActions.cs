@@ -47,7 +47,7 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     private static bool OpensInteraction(DaggerfallUiInput input) => input.ContainsAny(
         DaggerfallUiActionKind.Loot, DaggerfallUiActionKind.ActivationMode, DaggerfallUiActionKind.DialogueTopic,
-        DaggerfallUiActionKind.TrainingCommit, DaggerfallUiActionKind.Rest, DaggerfallUiActionKind.LodgingBook, DaggerfallUiActionKind.TravelAccept);
+        DaggerfallUiActionKind.TavernBuy, DaggerfallUiActionKind.TrainingCommit, DaggerfallUiActionKind.Rest, DaggerfallUiActionKind.LodgingBook, DaggerfallUiActionKind.TravelAccept);
 
     /// <summary>
     /// Admits one UI payload in the current phase. An unrecognized payload is reported in a live phase;
@@ -145,6 +145,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.DialogueTone:
             case DaggerfallUiActionKind.DialogueTopic:
             case DaggerfallUiActionKind.DialogueClose: _ = ApplyDialogueAction(action); break;
+            case DaggerfallUiActionKind.TavernBuy: BuyTavernMeal(action); break;
             case DaggerfallUiActionKind.TrainingCommit: ApplyTrainingAction(action); break;
             case DaggerfallUiActionKind.MerchantBuy:
             case DaggerfallUiActionKind.MerchantSell:

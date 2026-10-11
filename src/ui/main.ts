@@ -160,6 +160,7 @@ interface DialogueProjection {
   readonly question: string | null;
   readonly reply: string | null;
   readonly topics: readonly { readonly id: string; readonly label: string; readonly key?: string | null }[];
+  readonly tavern?: { readonly hungry: boolean; readonly menu: readonly { readonly id: string; readonly label: string; readonly price: number }[] } | null;
   readonly training?: {
     readonly providerFaction: number;
     readonly membershipFaction: number;
@@ -436,7 +437,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         <h3>Skill training</h3>
         <p class="dagger-dialogue-training-summary"></p>
         <div class="dagger-dialogue-training-skills"></div>
+        <div class="dagger-training-confirm" hidden><p></p><button type="button" data-training-yes>Yes</button><button type="button" data-training-no>No</button></div>
       </section>
+      <section class="dagger-dialogue-tavern" aria-label="Tavern food and drink"></section>
       <section class="dagger-dialogue-merchant" aria-label="Merchant services"></section>
       <section class="dagger-dialogue-spells" aria-label="Spells for sale"></section>
       <section class="dagger-dialogue-summoning" aria-label="Daedric summoning"></section>
@@ -658,6 +661,31 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // diagnostics panel, never in the conversation, quest message or summoning text the player reads.
   const textDiagnostics = shell.querySelector<HTMLElement>('.dagger-text-diagnostics')!;
   let currentDialogue: DialogueProjection | null = null;
+  let pendingTraining: { revision: string; key: string; price: number; label: string } | null = null;
+  const trainingConfirm = shell.querySelector<HTMLElement>('.dagger-training-confirm')!;
+  function renderTrainingConfirmation() {
+    trainingConfirm.hidden = pendingTraining === null;
+    trainingConfirm.querySelector('p')!.textContent = pendingTraining ? `Train ${pendingTraining.label} for ${pendingTraining.price} gold?` : '';
+  }
+  trainingConfirm.querySelector('[data-training-no]')!.addEventListener('click', () => { pendingTraining = null; renderTrainingConfirmation(); });
+  trainingConfirm.querySelector('[data-training-yes]')!.addEventListener('click', () => {
+    const selected = pendingTraining;
+    pendingTraining = null; renderTrainingConfirmation();
+    if (!deadMode && selected && currentDialogue?.revision === selected.revision
+      && currentDialogue.training?.price === selected.price) context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
+      data: { action: 'training-commit', revision: selected.revision, key: selected.key, amount: selected.price, confirm: true },
+    });
+  });
+  const tavernRoot = shell.querySelector<HTMLElement>('.dagger-dialogue-tavern')!;
+  tavernRoot.addEventListener('click', event => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-tavern-item]');
+    const option = currentDialogue?.tavern?.menu.find(item => item.id === button?.dataset.tavernItem);
+    if (!deadMode && option && currentDialogue?.tavern?.hungry) context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
+      data: { action: 'tavern-buy', revision: currentDialogue.revision, key: option.id, amount: option.price },
+    });
+  });
   const merchantAmount = (item: MerchantItemProjection): number | undefined => {
     if (!item.key.startsWith('stack:')) return undefined;
     const amount = typeof item.quantity === 'number' ? item.quantity : Number(item.quantity);
@@ -787,11 +815,11 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   dialogueTrainingSkills.addEventListener('click', event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-training-skill]');
     const training = currentDialogue?.training;
-    if (!deadMode && button?.dataset.trainingSkill && training && currentDialogue) context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-      data: { action: 'training-commit', revision: currentDialogue.revision, key: button.dataset.trainingSkill,
-        amount: training.price, confirm: true },
-    });
+    const skill = training?.skills.find(value => value.id === button?.dataset.trainingSkill);
+    if (!deadMode && skill && training && currentDialogue && skill.permanentValue < skill.maximumValue) {
+      pendingTraining = { revision: currentDialogue.revision, key: skill.id, price: training.price, label: skill.label };
+      renderTrainingConfirmation();
+    }
   });
   shell.querySelector<HTMLButtonElement>('.dagger-dialogue-close')!.addEventListener('click', () => {
     if (!deadMode && currentDialogue) context.intents?.claim('dagger.ui', {
@@ -1427,6 +1455,19 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     // choices or leave a close action aimed at a session that has already stopped ordinary input.
     const dialogue = deadMode ? null : value.activation?.dialogue ?? null;
     currentDialogue = dialogue;
+    if (pendingTraining && (dialogue?.revision !== pendingTraining.revision || dialogue.training?.price !== pendingTraining.price
+      || !dialogue.training.skills.some(skill => skill.id === pendingTraining!.key && skill.permanentValue < skill.maximumValue))) pendingTraining = null;
+    renderTrainingConfirmation();
+    const tavern = dialogue?.tavern;
+    tavernRoot.replaceChildren();
+    if (tavern) {
+      const title = document.createElement('h3'); title.textContent = 'Food and drink'; tavernRoot.append(title);
+      if (!tavern.hungry) { const note = document.createElement('p'); note.textContent = 'You are not hungry.'; tavernRoot.append(note); }
+      for (const item of tavern.menu) {
+        const button = document.createElement('button'); button.type = 'button'; button.dataset.tavernItem = item.id;
+        button.textContent = `${item.label} — ${item.price} gold`; button.disabled = !tavern.hungry; tavernRoot.append(button);
+      }
+    }
     renderMerchant(dialogue?.merchant ?? null);
     if (dialogue === null) {
       if (dialogueWindow.open) dialogueWindow.close();

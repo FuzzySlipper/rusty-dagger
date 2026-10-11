@@ -443,6 +443,7 @@ internal sealed partial class DaggerfallSession
                 services: services,
                 templeServices: templeServices,
                 skillTraining: skillTraining,
+                tavern: new DaggerfallTavernService(services, playerStats, () => _time.Calendar, saved?.LastTavernMealMinute),
                 regionalPrices: regionalPrices,
                 tradeQuotes: tradeQuotes,
                 merchants: merchants,

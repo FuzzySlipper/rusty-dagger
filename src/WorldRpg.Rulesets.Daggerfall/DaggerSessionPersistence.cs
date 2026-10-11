@@ -184,6 +184,7 @@ internal sealed class DaggerSessionPersistence
             Crime = State.Crime.Capture(),
             KnightlyClaims = State.KnightlyClaims.Capture(),
             Services = State.Services.Capture(),
+            LastTavernMealMinute = State.Tavern.LastMealMinute,
             Merchants = [.. State.Merchants.Capture()],
             QuestTraining = State.QuestTraining.Capture(),
             RegionalPrices = State.RegionalPrices.Capture(),

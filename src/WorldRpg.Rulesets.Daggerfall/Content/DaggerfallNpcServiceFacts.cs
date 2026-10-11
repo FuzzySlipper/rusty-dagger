@@ -53,6 +53,9 @@ internal static class DaggerfallNpcServiceFacts
             && sourceBuildingType is 0 or 2 or 3 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14 or 15 or 16)
             services.Add("quest-candidate");
 
+        if (sourceBuildingType == 15 && sourceFaction?.SocialGroup == MerchantSocialGroup)
+        { services.Add(DaggerfallTavernService.ServiceName); role = "tavern keeper"; }
+
         // Witches offer their source service even outdoors at a coven; no guild membership is required.
         if (sourceFaction?.Type == 8) { services.Add("daedra-summoning"); services.Add("quest"); role = "witch"; }
         if (sourceBuildingType is 11 or 14 or 18)

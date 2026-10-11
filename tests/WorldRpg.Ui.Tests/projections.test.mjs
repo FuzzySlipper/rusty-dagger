@@ -1928,3 +1928,30 @@ test('magic-item shortcut lists only eligible carried items and uses the current
     assert.equal(f.root.querySelector('.dagger-menu').open, false);
   } finally { f.dispose(); }
 });
+
+test('training confirms price in a second step and cancels without paying; tavern sends its quoted item', () => {
+  const f = fixture();
+  try {
+    const dialogue = { revision: 'trainer-1', targetLabel: 'Trainer', greeting: 'Welcome', tone: 'normal',
+      question: null, reply: null, topics: [], diagnostics: [],
+      training: { providerFaction: 1, membershipFaction: 1, member: true, rank: 0, price: 100, durationSeconds: 10800,
+        cooldownReadySecond: 0, skills: [{ id: 'medical', label: 'Medical', permanentValue: 10, maximumValue: 50 }] },
+      tavern: { hungry: true, menu: [{ id: 'wine', label: 'Wine', price: 3 }] } };
+    const publish = () => f.publish({ mode: 'playing', activation: { mode: 'talk', message: '', applied: true, dialogue } });
+    publish();
+    f.root.querySelector('[data-training-skill]').click();
+    assert.equal(f.actions.length, 0);
+    assert.match(f.root.querySelector('.dagger-training-confirm').textContent, /100 gold/);
+    publish(); // A repeated projection must not dismiss the pending choice.
+    f.root.querySelector('[data-training-no]').click();
+    assert.equal(f.actions.length, 0);
+    f.root.querySelector('[data-training-skill]').click();
+    f.root.querySelector('[data-training-yes]').click();
+    assert.deepEqual(f.actions.pop(), { action: 'training-commit', revision: 'trainer-1', key: 'medical', amount: 100, confirm: true });
+    f.root.querySelector('[data-training-skill]').click(); dialogue.revision = 'trainer-2'; publish();
+    f.root.querySelector('[data-training-yes]').click(); assert.equal(f.actions.length, 0);
+    f.root.querySelector('[data-tavern-item]').click();
+    assert.deepEqual(f.actions.pop(), { action: 'tavern-buy', revision: 'trainer-2', key: 'wine', amount: 3 });
+    dialogue.tavern.hungry = false; publish(); assert.equal(f.root.querySelector('[data-tavern-item]').disabled, true);
+  } finally { f.dispose(); }
+});
