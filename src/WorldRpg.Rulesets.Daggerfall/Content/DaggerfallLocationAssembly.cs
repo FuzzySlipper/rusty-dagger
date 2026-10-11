@@ -23,7 +23,7 @@ internal sealed record DaggerfallWorldMesh(string Path, ContentSha256 Sha256, IR
 /// Texture choice follows DEC-11: an exterior or interior draws each mesh texture through the published
 /// climate swaps for the location's own-pixel climate, and a dungeon through its classic texture table.
 /// The exterior ground is the terrain's, drawn with the archive of the climate one pixel east. A swap is
-/// chosen for the summer variant: the season does not yet rebind an assembled location's materials.
+/// published for both summer and winter, so the calendar can rebind the retained materials.
 /// </remarks>
 internal sealed class DaggerfallLocationAssembly
 {
@@ -181,6 +181,7 @@ internal sealed class DaggerfallLocationAssembly
         private readonly List<DaggerfallSiteSpatialPart> _spatial = [];
         private readonly List<(string Path, ContentSha256 Sha256, Transform Pose, IReadOnlyDictionary<uint, string> Materials)> _placedMeshes = [];
         private readonly SortedSet<string> _materials = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, string> _winterTextures = new(StringComparer.Ordinal);
         private readonly List<DaggerfallRdbDoorDefinition> _doors = [];
         private readonly List<DaggerfallDungeonActionModelDefinition> _actionModels = [];
         private readonly List<DaggerfallDungeonMapGeometry> _mapGeometry = [];
@@ -418,7 +419,13 @@ internal sealed class DaggerfallLocationAssembly
 
                 uint slot = checked((uint)materials.Count);
                 slots.Add(material, slot);
-                materials.Add(new NormalizedMaterial(slot, texture.Path, texture.Sha256, material));
+                ContentArtifact? winter = null;
+                if (_winterTextures.TryGetValue(material, out var winterId) && winterId != material)
+                {
+                    if (!_media.Textures.TryGetValue(winterId, out winter))
+                        diagnostics.Add($"Profile '{key.LogicalId}' winter texture '{winterId}' is not published.");
+                }
+                materials.Add(new NormalizedMaterial(slot, texture.Path, texture.Sha256, material) { WinterTexture = winter });
             }
 
             DaggerfallMeshMaterialBinding[] Bindings(IReadOnlyDictionary<uint, string> mesh) =>
@@ -606,7 +613,16 @@ internal sealed class DaggerfallLocationAssembly
             int drawn = _remaps is { } table
                 ? table.GetValueOrDefault(archive, archive)
                 : owner._definitions.Grids.Climate.SwapArchive(archive, recordIndex, climate, DaggerfallClimateSeason.Summer);
-            return string.Create(CultureInfo.InvariantCulture, $"{prefix}{drawn}-{recordIndex}");
+            string summer = string.Create(CultureInfo.InvariantCulture, $"{prefix}{drawn}-{recordIndex}");
+            if (key.Kind == DaggerfallWorldProfileKind.Exterior)
+            {
+                int winter = owner._definitions.Grids.Climate.SwapArchive(archive, recordIndex, climate, DaggerfallClimateSeason.Winter);
+                string winterId = string.Create(CultureInfo.InvariantCulture, $"{prefix}{winter}-{recordIndex}");
+                if (_winterTextures.TryGetValue(summer, out var existing) && existing != winterId)
+                    diagnostics.Add($"Summer texture '{summer}' collapses distinct winter textures '{existing}' and '{winterId}'.");
+                else _winterTextures[summer] = winterId;
+            }
+            return summer;
         }
 
         private void ExteriorDoor(DaggerfallWorldBlockDoor door, DaggerfallSiteBlock block, Vector3 origin)

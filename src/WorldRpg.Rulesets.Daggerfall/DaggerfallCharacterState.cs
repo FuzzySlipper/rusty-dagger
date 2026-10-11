@@ -53,7 +53,7 @@ internal sealed partial class DaggerfallCharacterState
     private Action? _careerCommitted;
     private DaggerfallCustomCareerDefinition? _customCareer;
     private DaggerfallCharacterBackgroundSave? _background;
-    private readonly HashSet<string> _knownSpells = new(StringComparer.Ordinal);
+    private readonly List<string> _knownSpells = [];
     private int _backgroundRollSequence;
     private readonly DaggerfallCharacterIdentity _initialIdentity;
 
@@ -64,7 +64,7 @@ internal sealed partial class DaggerfallCharacterState
         {
             if (!definitions.Magic.Spells.ContainsKey(known))
                 throw new ArgumentException($"Saved character knows '{known}', which no published spell answers.", nameof(restored));
-            _ = _knownSpells.Add(known);
+            if (!AddKnownSpell(known)) throw new ArgumentException("Saved character repeats a known spell.");
         }
 
         ArgumentNullException.ThrowIfNull(definitions);
@@ -118,13 +118,43 @@ internal sealed partial class DaggerfallCharacterState
     internal DaggerfallSpellDefinition[] CaptureConstructedSpells() =>
         [.. _definitions.Magic.Spells.Values.Where(spell => spell.IsPlayerCreated).OrderBy(spell => spell.Key, StringComparer.Ordinal)];
 
+    private bool AddKnownSpell(string key)
+    {
+        if (_knownSpells.Contains(key, StringComparer.Ordinal)) return false;
+        _knownSpells.Add(key); return true;
+    }
+
+    internal bool SwapSpells(string first, string second)
+    {
+        int a = _knownSpells.IndexOf(first), b = _knownSpells.IndexOf(second);
+        if (a < 0 || b < 0 || a == b) return false;
+        (_knownSpells[a], _knownSpells[b]) = (_knownSpells[b], _knownSpells[a]); return true;
+    }
+
+    internal void SortSpells()
+    {
+        var ordered = _knownSpells.OrderBy(key => _definitions.Magic.Spells[key].Name, StringComparer.OrdinalIgnoreCase).ToArray();
+        if (ordered.SequenceEqual(_knownSpells))
+        {
+            var schools = new[] { "destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism" }
+                .ToDictionary(key => key, key => Math.Clamp(_stats.GetStat(StatId.Parse(key)).ValueInt, 0, 100));
+            ordered = _knownSpells.OrderBy(key =>
+            {
+                var spell = _definitions.Magic.Spells[key];
+                return Policies.DaggerfallMagicCostPolicy.CalculateTotalEffectCosts(_definitions.Magic, spell.Effects,
+                    Policies.DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType), schools, IsGrantedSpell(key)).SpellPoints;
+            }).ToArray();
+        }
+        _knownSpells.Clear(); _knownSpells.AddRange(ordered);
+    }
+
     internal bool LearnSpell(string key)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         if (!_definitions.Magic.Spells.ContainsKey(key))
             throw new ArgumentException($"No published spell carries the key '{key}'.", nameof(key));
         if (_spellGrants.TryGetValue(key, out var grant)) _spellGrants[key] = grant with { Learned = true };
-        return _knownSpells.Add(key);
+        return AddKnownSpell(key);
     }
 
     /// <summary>
@@ -328,7 +358,7 @@ internal sealed partial class DaggerfallCharacterState
 
     internal DaggerfallCharacterSave Capture() => new(
         Identity.Name, Identity.RaceId, Identity.Gender, Identity.FaceIndex, Identity.Reflexes, Identity.CareerId, _customCareer is null ? null : ToChoices(_customCareer), _background,
-        [.. _knownSpells.Order(StringComparer.Ordinal)], [.. _spellGrants.Values.OrderBy(grant => grant.Spell, StringComparer.Ordinal)]);
+        [.. _knownSpells], [.. _spellGrants.Values.OrderBy(grant => grant.Spell, StringComparer.Ordinal)]);
 
     private void Validate(DaggerfallCharacterIdentity identity)
     {

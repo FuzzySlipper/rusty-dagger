@@ -25,7 +25,7 @@ internal sealed partial class DaggerfallSession
     private string _spellResult="";
     private string? _lastPlayerSpell;
     internal DaggerfallSpellbookView ReadSpells() => new(
-        State.Character.KnownSpells.Order(StringComparer.Ordinal).Select(key =>
+        State.Character.KnownSpells.Select(key =>
         {
             int? cost = Casting.AvailableSpellCost(State.Actors.Player.DurableId, key);
             return new DaggerfallKnownSpellView(key, State.Character.IsGrantedSpell(key) ? _definitions.Magic.Spells[key].Name.TrimStart('!') : _definitions.Magic.Spells[key].Name, cost ?? 0, cost is not null);

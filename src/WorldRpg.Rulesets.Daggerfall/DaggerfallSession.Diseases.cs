@@ -1,7 +1,14 @@
+using WorldRpg.Rulesets.Daggerfall.Content;
+
 namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed partial class DaggerfallSession
 {
+    private void AfflictionSymptomsActed(long target)
+    {
+        if (target == DaggerfallActorIdentity.PlayerEntityId) Presentation.SetOutcome(InternalText("youFeelSomewhatBad"));
+    }
+
     /// <summary>
     /// The named FORM-06 entry point for accepted monster-hit and quest exposure callers.
     /// Both callers supply their own stable source/instance identity; this session supplies the

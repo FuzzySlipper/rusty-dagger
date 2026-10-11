@@ -87,12 +87,12 @@ internal sealed class DaggerfallEnemyPerceptionMemory
     internal DaggerfallEnemyMotorMemory Motor { get; } = new();
     internal bool Detected { get; set; }
     internal bool HasEncounteredPlayer { get; set; }
-    private bool _languagePacified;
+    internal bool LanguagePacified { get; set; }
     internal bool MagicallyPacified { get; set; }
     internal bool Passive { get; set; }
     internal int SpawnDistance { get; set; }
     internal bool WithinClassicSpawnRange { get; set; }
-    internal bool Pacified { get=>_languagePacified || MagicallyPacified || (Passive && !ForcedHostile); set=>_languagePacified=value; }
+    internal bool Pacified { get=>LanguagePacified || MagicallyPacified || (Passive && !ForcedHostile); set=>LanguagePacified=value; }
     internal bool ForcedHostile { get; set; }
     internal long? LastStealthCheckMinute { get; set; }
     internal long? LastDirectSightMinute { get; set; }
@@ -113,8 +113,7 @@ internal sealed class DaggerfallEnemyPerceptionMemory
     {
         Detected = false;
         WithinClassicSpawnRange = false;
-        HasEncounteredPlayer = false;
-        Pacified = false;
+        HasEncounteredPlayer = LanguagePacified || ForcedHostile;
         // Hostility is durable gameplay state; site resets clear only transient perception.
         SetForcedHostile(ForcedHostile);
         LastStealthCheckMinute = null;

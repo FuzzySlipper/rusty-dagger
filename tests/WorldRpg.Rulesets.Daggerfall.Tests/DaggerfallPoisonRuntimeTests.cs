@@ -106,6 +106,7 @@ public sealed class DaggerfallPoisonRuntimeTests
 
         Assert.True(Track(player, DaggerfallMechanicsIds.Health) < before);
         Assert.False(session.State.Poisons.IsAfflicted(player));
+        Assert.Contains("You feel somewhat bad.", session.Presentation.Messages);
     }
 
     [Fact]

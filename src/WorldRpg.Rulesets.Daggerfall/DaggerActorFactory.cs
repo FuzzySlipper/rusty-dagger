@@ -144,6 +144,7 @@ internal static class DaggerActorFactory
                 actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = source.Passive;
                 actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = source.SpawnDistance;
                 actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(prior?.ForcedHostile ?? false);
+                actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified = prior?.LanguagePacified ?? false;
                 actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = prior?.MagicallyPacified ?? false;
                 RegisterActorInventory(actor, inventoryStore);
                 // A placed actor whose definition declares a loadout carries it in a managed
@@ -230,6 +231,7 @@ internal static class DaggerActorFactory
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = source.Passive;
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = source.SpawnDistance;
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(restored?.ForcedHostile ?? false);
+        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified = restored?.LanguagePacified ?? false;
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = restored?.MagicallyPacified ?? false;
         RegisterActorInventory(actor, inventoryStore);
         if (restored is null)
@@ -337,6 +339,7 @@ internal static class DaggerActorFactory
         DaggerfallWabbajack.Restore(actor.Actor, saved.WabbajackActive ? saved.Definition : null);
         if (saved.CorruptionOrigin is { } origin) actor.Actor.Add(origin);
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(saved.ForcedHostile);
+        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified = saved.LanguagePacified;
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = saved.MagicallyPacified;
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = saved.SpawnDistance;
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = saved.Passive;
@@ -379,6 +382,7 @@ internal static class DaggerActorFactory
             DaggerfallWabbajack.Restore(actor.Actor, spawned.WabbajackActive ? spawned.Definition : null);
             if (spawned.CorruptionOrigin is { } origin) actor.Actor.Add(origin);
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(spawned.ForcedHostile);
+            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified = spawned.LanguagePacified;
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = spawned.MagicallyPacified;
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = spawned.SpawnDistance;
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = spawned.Passive;

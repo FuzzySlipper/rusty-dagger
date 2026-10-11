@@ -18,6 +18,23 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class ActorSpritePresentationTests
 {
     [Fact]
+    public void Calendar_season_rebinds_the_existing_engine_material_and_returns_to_summer()
+    {
+        List<string> releases = []; var graphics = new AppearanceFake(releases); var source = MediaInputs();
+        var profile = new DaggerfallSiteProfile(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook,
+            [new NormalizedMaterial(0, "summer.png", Hash) { WinterTexture = new("winter.png", Hash) }], source.ActorSprites);
+        using var presentation = new DaggerfallSiteAppearance(MediaContent(releases), graphics, profile);
+        presentation.SetExteriorSeason(World.DaggerfallExteriorSeason.Winter);
+        var winter = Assert.Single(graphics.MaterialUpdates);
+        presentation.SetExteriorSeason(World.DaggerfallExteriorSeason.Winter);
+        Assert.Single(graphics.MaterialUpdates);
+        presentation.SetExteriorSeason(World.DaggerfallExteriorSeason.Summer);
+        Assert.Equal(2, graphics.MaterialUpdates.Count);
+        Assert.NotEqual(winter.Replacement, graphics.MaterialUpdates[1].Replacement);
+        Assert.Contains(graphics.OpenResourceRequests, resource => resource.Path == "winter.png");
+    }
+
+    [Fact]
     public void Normalized_actor_states_preserve_all_directional_sectors_and_select_an_explicit_sector()
     {
         DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
@@ -55,15 +72,15 @@ public sealed class ActorSpritePresentationTests
         NormalizedActorSprite rat = SpriteFor(ratInputs, "rat");
         Assert.Equal("ratIdle", rat.PreferredRestState);
 
-        DaggerfallSiteProfile impInputs = DaggerfallSiteContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario.Replace("\"actor\": \"rat\"", "\"actor\": \"imp\"", StringComparison.Ordinal)), definitions);
-        Assert.Equal("move", SpriteFor(impInputs, "imp").PreferredRestState);
-        Assert.Equal(10F, SpriteFor(impInputs, "imp").States["move"].EffectiveFramesPerSecond);
-        Assert.DoesNotContain("idle", SpriteFor(impInputs, "imp").States.Keys);
+        NormalizedActorSprite imp = ratInputs.MobileSprites[definitions.Actors[new("imp")].MobileId!.Value];
+        Assert.Equal("move", imp.PreferredRestState);
+        Assert.Equal(10F, imp.States["move"].EffectiveFramesPerSecond);
+        Assert.DoesNotContain("idle", imp.States.Keys);
 
-        DaggerfallSiteProfile batInputs = DaggerfallSiteContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario.Replace("\"actor\": \"rat\"", "\"actor\": \"giant-bat\"", StringComparison.Ordinal)), definitions);
-        Assert.Equal("move", SpriteFor(batInputs, "giant-bat").PreferredRestState);
-        Assert.Equal(10F, SpriteFor(batInputs, "giant-bat").States["move"].EffectiveFramesPerSecond);
-        Assert.DoesNotContain("idle", SpriteFor(batInputs, "giant-bat").States.Keys);
+        NormalizedActorSprite bat = ratInputs.MobileSprites[definitions.Actors[new("giant-bat")].MobileId!.Value];
+        Assert.Equal("move", bat.PreferredRestState);
+        Assert.Equal(10F, bat.States["move"].EffectiveFramesPerSecond);
+        Assert.DoesNotContain("idle", bat.States.Keys);
 
         NormalizedActorSprite ordinary = SpriteFor(ratInputs, "skeletal-warrior");
         Assert.Equal("idle", ordinary.PreferredRestState);
@@ -179,7 +196,7 @@ public sealed class ActorSpritePresentationTests
     }
 
     [Fact]
-    public void A_ranged_mobile_plays_its_published_ranged_state_for_every_attack_without_the_melee_roll()
+    public void A_ranged_attack_plays_its_published_ranged_state_without_the_melee_roll()
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -187,10 +204,9 @@ public sealed class ActorSpritePresentationTests
         KeyedRandomFake random = KeyedRandomFake.Create(40);
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(rangedFrames: [3, 2, 0, 0, 0, -1, 1, 1, 2, 3]), random: random.Service);
 
-        presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9) { Ranged = true });
 
-        // The donor plays a ranged mobile's ranged animation for every attack, so the published
-        // ranged sequence replaces the melee alternate pool instead of joining it: its authored
+        // An admitted ranged attack selects the published ranged sequence; its authored
         // frame order plays verbatim, and the marker step becomes the playback marker the donor
         // launches its missile on, with no alternate roll drawn.
         Assert.Equal("rangedAttack1", Visual(presentation).State);
@@ -208,7 +224,7 @@ public sealed class ActorSpritePresentationTests
         AppearanceFake appearance = new(releases);
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1], includeAlternate: false));
 
-        presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9) { Ranged = true });
 
         Assert.Equal("primaryAttack", Visual(presentation).State);
         SpritePlaybackCreateRequest request = appearance.PlaybackRequests.Last();
@@ -293,7 +309,7 @@ public sealed class ActorSpritePresentationTests
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs());
-        presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9) { Ranged = true });
         int beforeCompletion = appearance.PlaybackRequests.Count;
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(
             ReadOnlyMemory<SpritePlaybackMarkerCrossing>.Empty,
@@ -440,8 +456,10 @@ public sealed class ActorSpritePresentationTests
         Assert.Equal((ulong)3, Assert.Single(audio.Emits).Descriptor.Clip.Handle.Value);
     }
 
-    [Fact]
-    public void Classic_blood_effect_is_keyed_to_the_player_hit_and_retires_after_its_final_frame()
+    [Theory]
+    [InlineData(DaggerfallActorIdentity.PlayerEntityId)]
+    [InlineData(99L)]
+    public void Classic_blood_effect_is_keyed_to_any_attacker_hit_and_retires_after_its_final_frame(long attacker)
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -451,7 +469,7 @@ public sealed class ActorSpritePresentationTests
         using ActorsState actors = ActorsAt(new WorldPoint(1F, 1F, 1F));
         presentation.Publish(actors);
         actors.Get(12).ApplyPose(new ActorPose(targetPosition, 0F));
-        AttackHitFact hit = new(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1d, 0, false, 5, 8);
+        AttackHitFact hit = new(attacker, 12, 1, 1d, 0, false, 5, 8);
 
         presentation.React(hit, actors);
         presentation.React(hit, actors);

@@ -300,7 +300,7 @@ internal static class DaggerfallPoisonArms
         DaggerfallPoisonArchetype archetype,
         IRandomService random,
         DaggerfallVitalityConsequences vitality,
-        Func<DaggerfallCareerDefinition> playerCareer)
+        Func<DaggerfallCareerDefinition> playerCareer, Action<long>? symptomsActed = null)
     {
         DaggerfallPoisonState state = DaggerfallPoisonState.Read(effect.State, archetype);
         if (!state.Admitted)
@@ -324,6 +324,7 @@ internal static class DaggerfallPoisonArms
             if (amount != 0) Apply(effect, arm, amount, totals, vitality, playerCareer);
         }
 
+        if (arms.Count > 0) symptomsActed?.Invoke(checked((long)effect.Context.Target.Value));
         DaggerfallPoisonState advanced = new(state.Affliction, Admitted: true, draw, totals);
         Write(effect, advanced);
         if (state.Affliction.Phase == DaggerfallPoisonPhase.Complete) CompleteCourse(effect, advanced, playerCareer);

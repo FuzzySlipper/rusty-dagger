@@ -40,7 +40,7 @@ internal static class DaggerfallPoisonEffects
     internal static IEnumerable<DaggerfallEffectDefinition> Definitions(
         IRandomService random,
         DaggerfallVitalityConsequences vitality,
-        Func<DaggerfallCareerDefinition> playerCareer)
+        Func<DaggerfallCareerDefinition> playerCareer, Action<long>? symptomsActed = null)
     {
         ArgumentNullException.ThrowIfNull(random);
         ArgumentNullException.ThrowIfNull(vitality);
@@ -54,7 +54,7 @@ internal static class DaggerfallPoisonEffects
             // The arms are stat sources the effect owns, so ending the poison is one cleanup action whether
             // it ended by completing, by a superseding dose, or by a cure.
             Apply: effect => [new DelegateActiveEffectContribution(() => DaggerfallPoisonArms.RemoveArms(effect, playerCareer))],
-            MagicRound: effect => DaggerfallPoisonArms.AdvanceMinute(effect, archetype, random, vitality, playerCareer),
+            MagicRound: effect => DaggerfallPoisonArms.AdvanceMinute(effect, archetype, random, vitality, playerCareer, symptomsActed),
             Resume: effect =>
             {
                 DaggerfallPoisonArms.Resume(effect, DaggerfallPoisonArms.State(effect));

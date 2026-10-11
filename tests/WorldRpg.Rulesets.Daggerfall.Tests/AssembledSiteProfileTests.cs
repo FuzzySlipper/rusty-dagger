@@ -34,6 +34,17 @@ public sealed class AssembledSiteProfileTests
     private static JsonElement Normalized(string closure) =>
         JsonDocument.Parse(TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports", closure, "normalized.json"))).RootElement.GetProperty("world");
 
+    [Fact]
+    public void Published_and_assembled_town_materials_carry_real_winter_textures()
+    {
+        foreach (var profile in new[] { Published("daggerfall.charing-exterior.json"), Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Exterior(Charing)) })
+        {
+            var seasonal = profile.Materials.Where(material => material.WinterTexture is not null).ToArray();
+            Assert.NotEmpty(seasonal);
+            Assert.All(seasonal, material => Assert.NotEqual(material.TexturePath, material.WinterTexture!.Path));
+        }
+    }
+
     [Theory]
     [InlineData("SHRIAA00.RMB", true)]
     [InlineData("S0000070.RDB", false)]
