@@ -55,10 +55,10 @@ internal static class DaggerfallNpcServiceFacts
 
         // Witches offer their source service even outdoors at a coven; no guild membership is required.
         if (sourceFaction?.Type == 8) { services.Add("daedra-summoning"); services.Add("quest"); role = "witch"; }
-        if (sourceBuildingType is 11 or 14)
+        if (sourceBuildingType is 11 or 14 or 18)
         {
             foreach (DaggerfallConcreteGuildDefinition guild in DaggerfallConcreteGuildCatalog.All
-                .Where(guild => guild.FactionId == sourceBuildingFaction || guild.ParentFactionId == sourceBuildingFaction))
+                .Where(guild => guild.FactionId == sourceBuildingFaction || (guild.ParentFactionId > 0 && guild.ParentFactionId == sourceBuildingFaction)))
             // A hall privilege no NPC provides (the library, free rooms) is not offered by an unaffiliated person.
             foreach (DaggerfallConcreteGuildServiceDefinition service in guild.Services
                 .Where(service => service.ProviderFactionId is int provider && provider == sourceFaction?.Id && service.SourceImplemented))

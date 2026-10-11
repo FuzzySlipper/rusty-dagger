@@ -303,6 +303,7 @@ internal static class DaggerfallConcreteGuildCatalog
                 Service(DaggerfallConcreteGuildService.BuySpells, null, 60, requiresMembership: false),
                 Service(DaggerfallConcreteGuildService.MakeSpells, 0, 64),
                 Service(DaggerfallConcreteGuildService.BuyMagicItems, 3, 65),
+                Service(DaggerfallConcreteGuildService.BuySoulgems, 4, 65),
                 Service(DaggerfallConcreteGuildService.MakeMagicItems, 5, 802),
                 Service(DaggerfallConcreteGuildService.Teleport, 8, 62),
                 Service(DaggerfallConcreteGuildService.DaedraSummoning, 6, 66),

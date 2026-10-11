@@ -35,7 +35,8 @@ internal readonly record struct DaggerfallTravelOptions(
     bool HasCart,
     bool HasShip,
     ulong AvailableGold = ulong.MaxValue,
-    ulong AvailableGoldPieces = ulong.MaxValue)
+    ulong AvailableGoldPieces = ulong.MaxValue,
+    bool FreeShipPassage = false)
 {
     /// <summary>The cautious camp-out/cart facts used by quest travel clocks.</summary>
     internal static DaggerfallTravelOptions QuestClock { get; } =
@@ -308,7 +309,7 @@ internal sealed class DaggerfallTravelPolicy
             innCost += 5;
         }
 
-        long shipCost = oceanPixels > 0 && !options.HasShip && options.TravelShip
+        long shipCost = oceanPixels > 0 && !options.HasShip && !options.FreeShipPassage && options.TravelShip
             ? 25L * ((oceanPixels / DaggerfallCalendar.HoursPerDay) + 1)
             : 0;
         long totalCost = checked(innCost + shipCost);
@@ -319,7 +320,7 @@ internal sealed class DaggerfallTravelPolicy
 
     private static string Identity(DaggerfallTravelMapPixel origin, DaggerfallSiteId destination,
         DaggerfallTravelOptions options) => FormattableString.Invariant(
-            $"daggerfall.travel.v1/{origin.X},{origin.Y}/{destination.Region},{destination.Index}/cautious={(options.SpeedCautious ? 1 : 0)};inn={(options.SleepModeInn ? 1 : 0)};ship={(options.TravelShip ? 1 : 0)};horse={(options.HasHorse ? 1 : 0)};cart={(options.HasCart ? 1 : 0)};owned-ship={(options.HasShip ? 1 : 0)};gold={options.AvailableGold};pieces={options.AvailableGoldPieces}");
+            $"daggerfall.travel.v1/{origin.X},{origin.Y}/{destination.Region},{destination.Index}/cautious={(options.SpeedCautious ? 1 : 0)};inn={(options.SleepModeInn ? 1 : 0)};ship={(options.TravelShip ? 1 : 0)};horse={(options.HasHorse ? 1 : 0)};cart={(options.HasCart ? 1 : 0)};owned-ship={(options.HasShip ? 1 : 0)};free-ship={(options.FreeShipPassage ? 1 : 0)};gold={options.AvailableGold};pieces={options.AvailableGoldPieces}");
 
     private readonly record struct RouteResult(int DistanceMapPixels, int OceanPixels, int TravelMinutes);
 }

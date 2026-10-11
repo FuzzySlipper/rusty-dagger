@@ -30,7 +30,7 @@ internal enum DaggerfallGuildProviderDenial
 }
 
 /// <summary>One source-backed choice returned to the ordinary dialogue projection.</summary>
-internal sealed record DaggerfallGuildProviderOption(string Key, string Label);
+internal sealed record DaggerfallGuildProviderOption(string Key, string Label, string? Topic = null);
 
 /// <summary>
 /// Result of a live guild provider action. The optional options are rendered by the same dialogue
@@ -43,14 +43,15 @@ internal sealed record DaggerfallGuildProviderResult(
     string Message,
     DaggerfallGuildMembershipResult? Membership = null,
     DaggerfallKnightlyClaimTransactionResult? Claim = null,
-    IReadOnlyList<DaggerfallGuildProviderOption>? Options = null)
+    IReadOnlyList<DaggerfallGuildProviderOption>? Options = null,
+    int? TextResource = null, string? GuildName = null, string? GodName = null)
 {
     internal static DaggerfallGuildProviderResult Refused(
         DaggerfallGuildProviderDenial denial, string message) => new(false, denial, message);
 }
 
 /// <summary>
-/// Session-side source provider entry for guild reviews and knightly claims. It resolves the guild
+/// Session-side source provider entry for membership, guild services and knightly claims. It resolves the guild
 /// from the admitted interior/building and the NPC's authored provider faction, then delegates rank,
 /// claim, inventory, and property mutations to their existing owners.
 /// </summary>
@@ -64,7 +65,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallNpc npc, DaggerfallDialogueTopic topic, string? key)
     {
         DaggerfallInteriorBuilding? building = CurrentInteriorBuilding();
-        if (building is null || building.BuildingType is not (11 or 14))
+        if (building is null || building.BuildingType is not (11 or 14 or 18))
             return DaggerfallGuildProviderResult.Refused(DaggerfallGuildProviderDenial.InvalidBuilding,
                 "This guild service interior is no longer available.");
 
@@ -72,7 +73,9 @@ internal sealed partial class DaggerfallSession
         {
             DaggerfallDialogueTopic.Armor => DaggerfallConcreteGuildService.ReceiveArmor,
             DaggerfallDialogueTopic.House => DaggerfallConcreteGuildService.ReceiveHouse,
-            DaggerfallDialogueTopic.RankReview => null,
+            DaggerfallDialogueTopic.RankReview or DaggerfallDialogueTopic.Join or DaggerfallDialogueTopic.RestoreAttributes => null,
+            DaggerfallDialogueTopic.Teleport => DaggerfallConcreteGuildService.Teleport,
+            DaggerfallDialogueTopic.Spymaster => DaggerfallConcreteGuildService.Spymaster,
             _ => throw new ArgumentOutOfRangeException(nameof(topic), topic,
                 "This dialogue topic is not a guild provider service."),
         };
@@ -88,6 +91,24 @@ internal sealed partial class DaggerfallSession
                 });
 
         int currentDay = checked((int)_time.Calendar.DayNumber);
+        if (topic == DaggerfallDialogueTopic.RestoreAttributes)
+        {
+            if (!State.ConcreteGuildServices.Evaluate(guild!.FactionId, DaggerfallConcreteGuildService.FreeHealing, currentDay).CanUse)
+                return DaggerfallGuildProviderResult.Refused(DaggerfallGuildProviderDenial.NotEligible, "Your temple rank does not grant free restoration.");
+            if (key != "yes") return new(true, DaggerfallGuildProviderDenial.None, "You decline attribute restoration.");
+            foreach (var attribute in DaggerfallAttributeDrainEffects.Attributes)
+                DaggerfallAttributeDrainEffects.Heal(State.Effects, State.Actors.Player.DurableId, attribute, int.MaxValue, () => State.Character.Career);
+            return new(true, DaggerfallGuildProviderDenial.None, "The temple restores your damaged attributes.");
+        }
+        if (topic == DaggerfallDialogueTopic.Join) return JoinGuild(guild!, npc, currentDay, key);
+        if (topic is DaggerfallDialogueTopic.Teleport or DaggerfallDialogueTopic.Spymaster)
+        {
+            var decision = State.ConcreteGuildServices.Evaluate(guild!.FactionId, requested!.Value, currentDay, new(provider, provider.Site.Region));
+            if (!decision.CanUse) return DaggerfallGuildProviderResult.Refused(DaggerfallGuildProviderDenial.NotEligible,
+                decision.Membership.IsMember ? "Your guild rank does not grant this service." : "You must join this guild to use that service.");
+            if (topic == DaggerfallDialogueTopic.Teleport) return OpenGuildTeleport(provider);
+            return new(true, DaggerfallGuildProviderDenial.None, "Ask me what you wish to know.", TextResource: 402);
+        }
         if (topic == DaggerfallDialogueTopic.RankReview)
             return ReviewGuildRank(guild!, currentDay);
 
@@ -246,7 +267,7 @@ internal sealed partial class DaggerfallSession
         provider = null!;
         denial = DaggerfallGuildProviderDenial.UnknownProvider;
         foreach (DaggerfallConcreteGuildDefinition candidate in DaggerfallConcreteGuildCatalog.All.Where(candidate =>
-            candidate.FactionId == building.FactionId || candidate.ParentFactionId == building.FactionId))
+            candidate.FactionId == building.FactionId || (candidate.ParentFactionId > 0 && candidate.ParentFactionId == building.FactionId)))
         {
             foreach (DaggerfallConcreteGuildServiceDefinition service in candidate.Services.Where(service =>
                 service.ProviderFactionId == npc.Appearance.FactionId && service.SourceImplemented

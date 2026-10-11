@@ -230,7 +230,8 @@ internal sealed class DaggerfallServiceTransactions
     internal IReadOnlyList<DaggerfallServiceQueuedWork> Pending => [.. _pending.Values.OrderBy(work => work.CompletesAtMinute).ThenBy(work => work.Id, StringComparer.Ordinal)];
 
     internal DaggerfallServiceQuoteResult Quote(DaggerfallServiceRequest request, DaggerfallServiceEligibility eligibility,
-        DaggerfallServicePrice price, IEnumerable<DaggerfallServiceGrant>? grants = null, DaggerfallServiceQueuedWork? queuedWork = null)
+        DaggerfallServicePrice price, IEnumerable<DaggerfallServiceGrant>? grants = null, DaggerfallServiceQueuedWork? queuedWork = null,
+        bool playerPays = true)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(eligibility);
@@ -245,7 +246,7 @@ internal sealed class DaggerfallServiceTransactions
 
         DaggerfallServiceDenial denial = Admit(request, eligibility);
         if (denial != DaggerfallServiceDenial.None) return new(null, DaggerfallServiceOutcome.Refused(denial));
-        if (_currency.Read().Gold < price.Gold) return new(null, DaggerfallServiceOutcome.Refused(DaggerfallServiceDenial.InsufficientFunds));
+        if (playerPays && _currency.Read().Gold < price.Gold) return new(null, DaggerfallServiceOutcome.Refused(DaggerfallServiceDenial.InsufficientFunds));
         if (!GrantsAvailable(awarded)) return new(null, DaggerfallServiceOutcome.Refused(DaggerfallServiceDenial.GrantUnavailable));
         return new(new(request, eligibility, price, Array.AsReadOnly(awarded), queuedWork, _calendar()), DaggerfallServiceOutcome.Quoted());
     }

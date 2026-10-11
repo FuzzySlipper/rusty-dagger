@@ -1,4 +1,5 @@
 using Rusty.Engine;
+using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -18,6 +19,22 @@ internal sealed partial class DaggerfallSession
     private string? _travelMessage;
     private DaggerfallTravelMap? _travelMap;
     private bool _travelMapOpen;
+    private DaggerfallServiceProvider? _guildTeleportProvider;
+
+    private DaggerfallGuildProviderResult OpenGuildTeleport(DaggerfallServiceProvider provider)
+    {
+        _guildTeleportProvider = provider;
+        _travelSelectedDestination = null;
+        _travelMapOpen = true;
+        _travelMapRegion = null;
+        _travelMessage = "Select a destination for free guild teleportation.";
+        RequestPanel(DaggerfallPanel.Travel);
+        return new(true, DaggerfallGuildProviderDenial.None, _travelMessage);
+    }
+
+    private bool GuildTeleportAvailable() => _guildTeleportProvider is { } provider
+        && State.ConcreteGuildServices.Evaluate(DaggerfallConcreteGuildCatalog.MagesFactionId,
+            DaggerfallConcreteGuildService.Teleport, checked((int)_time.Calendar.DayNumber), new(provider)).CanUse;
     private int? _travelMapRegion;
     private int _travelMapPage;
 
@@ -46,6 +63,7 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     private void CloseTravelMap()
     {
+        _guildTeleportProvider = null;
         _travelMapOpen = false; _travelMapRegion = null; _travelMapPage = 0;
     }
 
@@ -93,7 +111,15 @@ internal sealed partial class DaggerfallSession
                 State.Transport.HasCart(State.Inventory.Read()),
                 State.Property?.OwnsShip ?? false,
                 AvailableGold: checked(funds.Gold + funds.LettersOfCredit),
-                AvailableGoldPieces: funds.Gold);
+                AvailableGoldPieces: funds.Gold,
+                FreeShipPassage: HasFreeGuildShipTravel());
+            if (_guildTeleportProvider is not null)
+            {
+                var target = _travelPolicy.SupportedDestinations().FirstOrDefault(value => value.Id == destination);
+                if (target == default) return null;
+                return new(QuestTravelOrigin(), target, options, 0, 0, 0, 0, 0, 0,
+                    $"guild-teleport:{_guildTeleportProvider.NpcId}:{_activeProfileKey}:{destination}");
+            }
             DaggerfallTravelQuote quote = _travelPolicy.Quote(QuestTravelOrigin(), destination, options);
             return quote;
         }
@@ -116,7 +142,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallTravelQuote? quote = CurrentTravelQuote();
         string? unavailable = quote is null ? null : TravelRefusal(quote, out _);
         return new(_travelSearchResults, quote, _travelMessage ?? unavailable, unavailable is null && quote is { CanAfford: true }, State.Travel.LastResult)
-        { RegionNames = _definitions.BuildingNames.RegionNames, Map = _travelMapOpen ? ReadTravelMap() : null };
+        { GuildTeleport = _guildTeleportProvider is not null, RegionNames = _definitions.BuildingNames.RegionNames, Map = _travelMapOpen ? ReadTravelMap() : null };
     }
 
     /// <summary>Accepts the live quote once; all elapsed consequences use the session's single calendar.</summary>
@@ -130,6 +156,22 @@ internal sealed partial class DaggerfallSession
         if (refusal is not null || quote is null)
         {
             _travelMessage = refusal; Presentation.SetOutcome(refusal!); return null;
+        }
+        if (_guildTeleportProvider is not null)
+        {
+            bool arrived = _sites.TryRelocatePlayer(destination!.ProfileKey,
+                ArrivalLanding(destination, null, quote.Identity));
+            if (arrived)
+            {
+                _travelSelectedDestination = null;
+                CloseTravelMap();
+                _dialogue?.Close();
+                _input.Neutralize(); _locomotion.Neutralize();
+                RequestPanel(DaggerfallPanel.Resume);
+            }
+            _travelMessage = arrived ? $"The guild teleports you to {quote.Destination.Name}." : "The destination could not be reached.";
+            Presentation.SetOutcome(_travelMessage);
+            return null;
         }
         if (quote.TotalCost > 0 && !State.Currency.TrySpendCarried((ulong)quote.TotalCost, (ulong)quote.InnCost))
         {
@@ -226,10 +268,12 @@ internal sealed partial class DaggerfallSession
     private string? TravelRefusal(DaggerfallTravelQuote quote, out DaggerfallSiteProfile? destination)
     {
         destination = null;
-        if (State.RacialOverrides.Current?.IsVampire == true && _time.Calendar.IsDay)
+        if (_guildTeleportProvider is not null && !GuildTeleportAvailable()) return "The guild teleportation service is no longer available.";
+        bool teleport = _guildTeleportProvider is not null;
+        if (!teleport && State.RacialOverrides.Current?.IsVampire == true && _time.Calendar.IsDay)
             return "Vampires cannot start fast travel during daylight.";
         if (State.Actors.Player.IsDefeated) return "You cannot travel while defeated.";
-        if (_activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return "Leave the building or dungeon before travelling.";
+        if (!teleport && _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return "Leave the building or dungeon before travelling.";
         if (HasNearbyRestEnemy()) return "Nearby enemies prevent travel.";
         if (!quote.CanAfford) return "You cannot afford the route and its coin-only inn cost.";
         // The destination's exterior is resolved before anything is paid: a location the catalog cannot place
@@ -317,6 +361,7 @@ internal sealed record DaggerfallTravelPresentation(
     DaggerfallTravelResult? LastResult)
 {
     /// <summary>The published region names a destination is labelled with.</summary>
+    internal bool GuildTeleport { get; init; }
     internal IReadOnlyList<string> RegionNames { get; init; } = [];
 
     /// <summary>The open travel map, or null while the player has not opened it.</summary>

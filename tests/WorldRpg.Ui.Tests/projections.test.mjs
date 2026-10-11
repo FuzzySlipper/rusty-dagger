@@ -1710,3 +1710,41 @@ test('quest offer preserves its identity in accept and decline actions', () => {
     assert.deepEqual(f.actions.at(-1), { action: 'quest-offer-answer', questInstance: 'work:7', confirm: false });
   } finally { f.dispose(); }
 });
+
+
+test('guild topics keep their semantic action and confirmation key', () => {
+  const f = fixture();
+  try {
+    for (const [id, key, label] of [['join', null, 'Join guild'], ['join', 'yes', 'Yes, join'], ['join', 'no', 'No'], ['teleport', null, 'Guild teleportation'], ['spymaster', null, 'Consult spymaster']]) {
+      f.publish({ activation: { mode: 'talk', modes: [], target: null, message: '', dialogue: {
+        revision: 'guild-1', targetLabel: 'Guild provider', greeting: 'Welcome', tone: 'normal', question: '', reply: '', diagnostics: [],
+        topics: [{ id, key, label }], questContacts: [] } } });
+      f.root.querySelector('.dagger-dialogue-topics button').click();
+      assert.equal(f.actions.at(-1).action, 'dialogue-topic');
+      assert.equal(f.actions.at(-1).topic, id);
+      assert.equal(f.actions.at(-1).key ?? null, key);
+      assert.equal(f.actions.at(-1).revision, 'guild-1');
+    }
+  } finally { f.dispose(); }
+});
+
+test('guild teleport hides travel options and confirms a zero-cost destination once', async () => {
+  const { mountTravel } = await import(pathToFileURL(join(output, 'travel.js')));
+  const f = fixture();
+  try {
+    const root = document.createElement('div'); f.root.append(root);
+    const actions = []; const view = mountTravel(root, action => actions.push(action));
+    view.update({ guildTeleport: true, destinations: [{ region: 17, index: 3, name: 'Charing', kind: 'Town', regionName: 'Daggerfall' }],
+      map: null, quote: { identity: 'guild-destination', destination: 'Charing', minutes: 0, duration: '0 minutes', distance: 0, oceanPixels: 0,
+        innCost: 0, shipCost: 0, totalCost: 0, canAfford: true,
+        options: { cautious: true, inn: false, ship: false, hasHorse: false, hasCart: false, hasShip: false, availableGold: '0', availableGoldPieces: '0' } },
+      executionAvailable: true, message: null, lastResult: null });
+    assert.equal(root.querySelector('h3').textContent, 'Guild teleportation');
+    assert.equal(root.querySelector('.dagger-travel-accept').textContent, 'Teleport');
+    assert.ok([...root.querySelectorAll('label')].filter(label => label.querySelector('input[type="checkbox"]')).every(label => label.hidden));
+    root.querySelector('.dagger-travel-accept').click();
+    root.querySelector('.dagger-travel-accept').click();
+    assert.deepEqual(actions, [{ action: 'travel-accept', key: 'guild-destination', amount: 0 }]);
+    view.dispose();
+  } finally { f.dispose(); }
+});
