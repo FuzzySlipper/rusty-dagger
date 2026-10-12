@@ -242,7 +242,7 @@ internal sealed class DaggerfallSiteLifecycle
                     : DaggerfallExteriorWorldOrigin.At(cell));
             (long frameColumns, long frameRows) = ExteriorLocationFrameCells(profile);
             columnOffset = checked(((long)(cell.X - origin.MapPixelX) * NavigationCellsPerExteriorCell) + frameColumns);
-            rowOffset = checked(((long)(origin.MapPixelY - cell.Y) * NavigationCellsPerExteriorCell) + frameRows);
+            rowOffset = checked(((long)(cell.Y - origin.MapPixelY) * NavigationCellsPerExteriorCell) + frameRows);
             translation = Vector3.UnitY * ExteriorLocationSampleHeight(profile);
         }
 
@@ -467,7 +467,7 @@ internal sealed class DaggerfallSiteLifecycle
         if (!residency.ResidentCells.Contains(cell)) return false;
         Vector3 corner = origin.LocalTranslation(cell);
         float x = Math.Clamp((local.X - corner.X) / DaggerfallExteriorCellResidency.CellSize, 0F, 1F);
-        float z = Math.Clamp((local.Z - corner.Z) / DaggerfallExteriorCellResidency.CellSize, 0F, 1F);
+        float z = Math.Clamp((corner.Z - local.Z) / DaggerfallExteriorCellResidency.CellSize, 0F, 1F);
         height = corner.Y + DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surfaces(cell), x, z);
         return true;
     }
@@ -1099,7 +1099,7 @@ internal sealed class DaggerfallSiteLifecycle
     /// Where a location's profile frame sits in its map pixel's terrain cell: over the terrain tiles the donor lays its
     /// blocks on (<c>TerrainHelper.GetLocationTerrainTileOrigin</c>, the tiles the terrain is flattened and cleared of
     /// nature under) and at the height the donor samples for the location's parent. The profile runs its blocks from its
-    /// origin along +X and -Z, so the origin lies on the footprint's +Z edge.
+    /// origin along +X and -Z, at the donor's terrain-tile origin.
     /// </summary>
     private Vector3 ExteriorLocationFrame(DaggerfallSiteProfile profile)
     {
@@ -1113,7 +1113,7 @@ internal sealed class DaggerfallSiteLifecycle
         if (!TryExteriorProfileCell(profile, out DaggerfallExteriorCellId cell))
             throw new InvalidOperationException($"Exterior profile '{profile.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
         (int tileX, int tileY) = DaggerfallLocationTerrainFrame.TileOffset(ExteriorLocations()[cell]);
-        return (checked(tileX * DaggerfallLocationTerrainFrame.NavigationCellsPerTile), checked(tileY * DaggerfallLocationTerrainFrame.NavigationCellsPerTile));
+        return (checked(tileX * DaggerfallLocationTerrainFrame.NavigationCellsPerTile), checked(-tileY * DaggerfallLocationTerrainFrame.NavigationCellsPerTile));
     }
 
     private float ExteriorLocationSampleHeight(DaggerfallSiteProfile profile)

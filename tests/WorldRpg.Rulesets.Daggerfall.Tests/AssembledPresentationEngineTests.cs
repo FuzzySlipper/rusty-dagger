@@ -399,7 +399,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             Vector3 frame = run.Session.Sites.ExteriorProfileFrameTranslation(exterior) - run.Session.Sites.LocalCompensation;
             const float tile = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
             Assert.Equal(footprint.TileOriginX * tile, frame.X, 1e-2F);
-            Assert.Equal((footprint.TileOriginY + (footprint.Height * 16)) * tile, frame.Z, 1e-2F);
+            Assert.Equal(-footprint.TileOriginY * tile, frame.Z, 1e-2F);
             float centreX = (footprint.TileOriginX + (footprint.Width * 8)) / 128F, centreZ = (footprint.TileOriginY + (footprint.Height * 8)) / 128F;
             float flattened = DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surface, centreX, centreZ);
             output.WriteLine($"{site.Name} ({site.Id}): frame {frame}, flattened terrain at the footprint's centre {flattened}.");
@@ -411,7 +411,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             WorldPoint landed = run.Session.Sites.ExteriorSitePosition(local);
             Vector3 cellLocal = local.ToVector() - run.Session.Sites.LocalCompensation;
             float ground = DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surface, cellLocal.X / DaggerfallExteriorCellResidency.CellSize,
-                cellLocal.Z / DaggerfallExteriorCellResidency.CellSize);
+                -cellLocal.Z / DaggerfallExteriorCellResidency.CellSize);
             output.WriteLine($"Landed at {landed} in the location frame; the terrain there is {ground - frame.Y} above the frame.");
             Assert.InRange(cellLocal.Y - ground, .7F, 1.3F);
             Steps(host, run, 10);
@@ -505,19 +505,19 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             Assert.All(meshes, mesh =>
             {
                 Assert.InRange(mesh.Transform.Translation.X - corner.X, 0F, DaggerfallExteriorCellResidency.CellSize);
-                Assert.InRange(mesh.Transform.Translation.Z - corner.Z, 0F, DaggerfallExteriorCellResidency.CellSize);
+                Assert.InRange(corner.Z - mesh.Transform.Translation.Z, 0F, DaggerfallExteriorCellResidency.CellSize);
             });
             // The drawn terrain under the player is the flattened ground they stand on.
             DaggerfallTerrainSurface surface = DaggerfallTerrainSurfaceBuilder.ApplyLocationFlattening(
                 DaggerfallTerrainSurfaceBuilder.Build(world.Definitions.Terrain, cell.X, cell.Y), DaggerfallLocationTerrainFrame.Flattening(exterior));
             float ground = corner.Y + DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surface,
-                (player.X - corner.X) / DaggerfallExteriorCellResidency.CellSize, (player.Z - corner.Z) / DaggerfallExteriorCellResidency.CellSize);
+                (player.X - corner.X) / DaggerfallExteriorCellResidency.CellSize, (corner.Z - player.Z) / DaggerfallExteriorCellResidency.CellSize);
             output.WriteLine($"Arrived at {player} over the city's cell at {corner}; drawn ground {ground}.");
             Assert.InRange(player.Y - ground, .7F, 1.1F);
 
             // Each block's ground tiles lie under that block: the donor lays a block's tile (x, y) along the block's rows,
             // which run north (+Z in its left-handed frame) and which the right-handed content runs along -Z, so the terrain
-            // tile under each tile's place in the content is the block's own, mirrored across its rows.
+            // tile under each tile's place in the content is the block's own source row.
             IReadOnlyList<DaggerfallExteriorTerrainTile> tiles = run.Session.Sites.ExteriorTerrainTiles(cell);
             Assert.Equal(128 * 128, tiles.Count);
             Vector3 frame = run.Session.Sites.ExteriorProfileFrameTranslation(key) - corner;
@@ -530,9 +530,9 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
                         int source = ((exterior.TileOriginY + (block.Y * 16) + y) * 128) + exterior.TileOriginX + (block.X * 16) + x;
                         if (!exterior.GroundTiles.Contains(source)) continue;
                         int column = (int)MathF.Floor((frame.X + (((block.X * 16) + x + .5F) * tile)) / tile);
-                        int row = (int)MathF.Floor((frame.Z - (((block.Y * 16) + y + .5F) * tile)) / tile);
+                        int row = (int)MathF.Floor((-frame.Z + (((block.Y * 16) + y + .5F) * tile)) / tile);
                         byte bits = exterior.GroundTiles.At(source);
-                        Assert.Equal(new DaggerfallExteriorTerrainTile(bits & 0x3F, (bits & 0x40) != 0, (bits & 0x80) != 0, Mirrored: true),
+                        Assert.Equal(new DaggerfallExteriorTerrainTile(bits & 0x3F, (bits & 0x40) != 0, (bits & 0x80) != 0),
                             tiles[(row * 128) + column]);
                         laid++;
                     }
