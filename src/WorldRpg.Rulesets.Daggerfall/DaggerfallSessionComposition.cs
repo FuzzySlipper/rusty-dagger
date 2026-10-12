@@ -20,6 +20,9 @@ internal sealed record DaggerfallSessionComposition(
     DaggerfallTuning Tuning,
     ResolvedCompositionIdentity? Identity = null)
 {
+    /// <summary>The product's UI projection sequence; a session started from this composition publishes under it.</summary>
+    internal UiProjectionSequence UiSequence { get; init; } = new();
+
     /// <summary>The admitted site catalog; null composes a session over the start site alone.</summary>
     internal DaggerfallSiteProfiles? Profiles { get; init; }
 

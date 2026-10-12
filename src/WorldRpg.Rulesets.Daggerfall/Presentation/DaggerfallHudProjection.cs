@@ -42,10 +42,9 @@ internal sealed record DaggerfallHudFrame(
     DaggerfallCalendar? Calendar = null, IReadOnlyList<DaggerfallActiveEffectView>? Effects = null, string? CinematicSource = null, DaggerfallBreathRead? Breath = null);
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
-internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
+internal sealed class DaggerfallHudProjection(IUiService ui, UiProjectionSequence sequence, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
 {
     private readonly UiStream _hud = ui.OpenStream(new UiStreamRequest("dagger.hud", "dagger.ui.snapshot.v1"));
-    private ulong _sequence;
 
     // The art a snapshot carries is worth a few hundred kilobytes, so it travels when it is new or
     // asked for rather than on every admitted update. The UI keeps the block and asks again with the
@@ -222,7 +221,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         }
 
         uint root = builder.Object(fields);
-        ui.PublishProjection(new UiProjection(_hud, ++_sequence, builder.Build(root)));
+        ui.PublishProjection(new UiProjection(_hud, sequence.Next(), builder.Build(root)));
     }
 
     /// <summary>

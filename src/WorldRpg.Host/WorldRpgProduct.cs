@@ -29,6 +29,8 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
     private readonly ProductCreateContext _context;
     private readonly ResolvedGameComposition _composition;
+    // Every session publishes under this one sequence, so a replacement never publishes below the session it replaced.
+    private readonly UiProjectionSequence _uiSequence = new();
     private readonly IGameRuleset _ruleset;
     private readonly List<ProductModeChange> _modeHistory = [];
     private WorldRpgSaveSlots? _saveSlots;
@@ -63,7 +65,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         _composition = composition;
         _ruleset = selected;
         _compositionIdentity = composition.Identity;
-        _session = selected.CreateSession(new GameSessionContext(context.Engine, composition));
+        _session = selected.CreateSession(new GameSessionContext(context.Engine, composition, _uiSequence));
         try
         {
             ApplyPlayerPreferences(_session);
@@ -226,7 +228,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        IGameSession replacement = _ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition));
+        IGameSession replacement = _ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition, _uiSequence));
         ReplaceSession(replacement, replacement is ICharacterCreationSession ? ProductMode.Title : ProductMode.Playing,
             "the product replaced its session");
         _started = true;
@@ -250,7 +252,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        ReplaceSession(_ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition)),
+        ReplaceSession(_ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition, _uiSequence)),
             ProductMode.Title, "the product quit to the title");
     }
 
@@ -657,7 +659,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         IGameSession replacement;
         try
         {
-            replacement = saveable.CreateSession(new GameSessionContext(_context.Engine, _composition), envelope.Payload);
+            replacement = saveable.CreateSession(new GameSessionContext(_context.Engine, _composition, _uiSequence), envelope.Payload);
         }
         catch (Exception error)
         {
