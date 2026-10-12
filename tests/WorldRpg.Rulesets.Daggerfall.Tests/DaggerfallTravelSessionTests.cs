@@ -40,6 +40,21 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal("resume", fixture.Engine.PublishedNested("panelRequest", "panel"));
     }
 
+    [Fact]
+    public void A_place_named_by_the_search_comes_before_the_places_of_a_region_it_names()
+    {
+        using Fixture fixture = new();
+        DaggerfallSiteRecord city = TestPayload.Definitions.Locations.Records
+            .Single(record => record.Name == "Daggerfall" && record.Kind == DaggerfallSiteKind.TownCity);
+        // Every place of the city's region is discovered, so the region alone would fill the list many times over.
+        foreach (DaggerfallSiteRecord record in TestPayload.Definitions.Locations.Records.Where(record => record.Region == city.Region))
+            fixture.Session.Site.Discover(record.Id);
+        fixture.Submit(new { action = "travel-search", text = "daggerfall" });
+        IReadOnlyList<DaggerfallTravelDestination> found = fixture.Session.ReadTravelPresentation().Destinations;
+        Assert.Equal(40, found.Count);
+        Assert.Equal(city.Id, found[0].Id);
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]
