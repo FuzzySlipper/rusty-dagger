@@ -32,6 +32,9 @@ internal class EngineContextFake : DispatchProxy
     internal object? Published() => ((UiServiceFake)(object)ui).Decoded();
 
     /// <summary>Every snapshot published so far, decoded in order: one admitted update can publish more than one.</summary>
+    /// <summary>The sequence of the last UI projection published through this engine, by any session.</summary>
+    internal ulong? LastPublishedSequence => ((UiServiceFake)(object)ui).LastProjection?.Sequence;
+
     internal IReadOnlyList<object?> PublishedHistory() => ((UiServiceFake)(object)ui).History;
 
     /// <summary>

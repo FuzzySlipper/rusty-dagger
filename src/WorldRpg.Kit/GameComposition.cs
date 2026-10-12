@@ -255,11 +255,28 @@ public static class GameCompositionResolver
     private sealed record GameBundleDescriptor(GameBundleId Id, RulesetId Ruleset, IReadOnlyList<ContentPackReference> ContentPacks, TuningProfileReference Tuning);
 }
 
-public sealed class GameSessionContext(IEngineContext engine, ResolvedGameComposition composition)
+/// <summary>
+/// The sequence a session's UI projections are published under. The Engine's browser host requires a stream's
+/// sequence to rise strictly within one runtime epoch, and the epoch outlives a session: a replacement that
+/// counted again from one would publish below the session it replaced and be refused. The Host therefore keeps
+/// one for the product's lifetime and hands it to every session it creates.
+/// </summary>
+public sealed class UiProjectionSequence
+{
+    private ulong _last;
+
+    /// <summary>The next sequence, above every one this counter has given.</summary>
+    public ulong Next() => checked(++_last);
+}
+
+public sealed class GameSessionContext(IEngineContext engine, ResolvedGameComposition composition, UiProjectionSequence? uiSequence = null)
 {
     public IEngineContext Engine { get; } = engine ?? throw new ArgumentNullException(nameof(engine));
     public ResolvedGameComposition Composition { get; } = composition ?? throw new ArgumentNullException(nameof(composition));
     public ResolvedCompositionIdentity CompositionIdentity => Composition.Identity;
+
+    /// <summary>The product's UI projection sequence, shared with every other session the Host creates.</summary>
+    public UiProjectionSequence UiSequence { get; } = uiSequence ?? new();
 }
 public interface IGameRuleset { RulesetId Id { get; } IGameSession CreateSession(GameSessionContext context); }
 public interface IGameSession : IDisposable { void PublishInitial(); ProductUpdateResult Update(ProductUpdate update); }
