@@ -949,8 +949,8 @@ internal static partial class DaggerfallSiteContent
                 JsonElement actionValue = door.TryGetProperty("action", out JsonElement actionProperty)
                     ? actionProperty
                     : default;
-                // The door keeps its whole source turn, as an assembled block door does: its closed pose and
-                // collision frame are DaggerfallDoorPose.ClosedRotation of all three angles.
+                // Action-door geometry retains its source model frame. Ordinary baked door visuals
+                // are projected into DaggerfallDoorPose's door-local frame below.
                 DaggerfallDoorActionSource? action = ReadDoorAction(actionValue, identity, diagnostics);
 
                 if (actionModelsByDoor.TryGetValue(sourceId, out DaggerfallDungeonActionModelDefinition? actionModel))
@@ -973,6 +973,7 @@ internal static partial class DaggerfallSiteContent
                             Visual: modelVisual,
                             Action: action)
                         {
+                            UsesModelCoordinates = true,
                             LockSurface = DoorSurface(profileKind),
                         }.Validate());
                     }

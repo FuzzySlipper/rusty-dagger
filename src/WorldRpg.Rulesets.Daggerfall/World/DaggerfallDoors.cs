@@ -82,6 +82,9 @@ internal sealed record DaggerfallRdbDoorDefinition(
     /// </summary>
     internal WorldRpg.Rulesets.Daggerfall.Content.DaggerfallSiteBuildingId? ExteriorBuilding { get; init; }
 
+    /// <summary>Action-door geometry and bounds retain the source model's local frame.</summary>
+    internal bool UsesModelCoordinates { get; init; }
+
     internal DaggerfallRdbDoorDefinition Validate()
     {
         DaggerfallDoorIdentity.Validate(Id);
@@ -662,7 +665,9 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
 
     private static Transform Pose(Door door)
     {
-        Quaternion closed = DaggerfallDoorPose.ClosedRotation(door.Definition.RotationDegrees);
+        Quaternion closed = door.Definition.UsesModelCoordinates
+            ? WorldRpg.Rulesets.Daggerfall.Content.DaggerfallSiteGeometry.SourceRotation(door.Definition.RotationDegrees)
+            : DaggerfallDoorPose.ClosedRotation(door.Definition.RotationDegrees);
         Quaternion swing = Quaternion.CreateFromAxisAngle(Vector3.UnitY, door.Definition.OpenAngleDegrees * (MathF.PI / 180F) * door.Progress);
         return new Transform(door.Definition.Position, Quaternion.Normalize(closed * swing), Vector3.One);
     }
@@ -682,7 +687,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     }
 }
 
-/// <summary>One normalized RDB rotation convention shared by offline-content projection and runtime pose.</summary>
+/// <summary>The ordinary door-local frame shared by baked-door projection and runtime pose.</summary>
 internal static class DaggerfallDoorPose
 {
     internal static Quaternion ClosedRotation(Vector3 rotationDegrees)

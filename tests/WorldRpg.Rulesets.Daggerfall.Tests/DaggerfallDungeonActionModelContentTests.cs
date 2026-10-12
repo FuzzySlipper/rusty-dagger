@@ -75,6 +75,8 @@ public sealed class DaggerfallDungeonActionModelContentTests
         Assert.Equal((byte)188, model.RawIndex);
         Assert.Equal(new Vector3(3, 4, 5), model.InitialTransform.Translation);
         Assert.Equal(Vector3.One, model.InitialTransform.Scale);
+        // Reflecting the donor's +90-degree source yaw into Engine -Z turns local +X toward +Z.
+        Assert.True(Vector3.Distance(Vector3.UnitZ, Vector3.Transform(Vector3.UnitX, model.InitialTransform.Rotation)) < .00001f);
         Assert.Equal([new DaggerfallMeshMaterialBinding(7, 7)], model.Visual.Materials);
         Assert.Equal(expectedTriangleCount, model.CollisionTriangles.Length);
         Assert.Equal(expectedTriangleCount == 0 ? 0 : 3, model.CollisionVertices.Length);

@@ -763,6 +763,7 @@ internal sealed partial class DaggerfallLocationAssembly
                 _doors.Add(new DaggerfallRdbDoorDefinition(identity, origin + door.Position, door.RotationDegrees, bounds.Minimum, bounds.Maximum,
                     door.Kind, door.StartingLockValue, Visual: visual, Action: door.Action)
                 {
+                    UsesModelCoordinates = model.Action is not null,
                     LockSurface = DaggerfallSiteContent.DoorSurface(DaggerfallWorldProfileKind.Dungeon),
                 }.Validate());
             }
