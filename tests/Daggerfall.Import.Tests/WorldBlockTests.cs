@@ -177,7 +177,7 @@ public sealed class WorldBlockTests
             Near(expected.CollisionBounds.Maximum, door.Bounds.Maximum);
         }
 
-        NormalizedPopulationPlacement[] sitePeople = [.. site.Document.World.Population.Where(person => !person.Id.Contains("/dynamic/", StringComparison.Ordinal))];
+        NormalizedPopulationPlacement[] sitePeople = [.. site.Document.World.Population];
         Assert.Equal(sitePeople.OrderBy(person => person.Id, StringComparer.Ordinal), people.OrderBy(person => person.Id, StringComparer.Ordinal));
         Assert.Equal(site.Document.World.StartMarker, start);
 

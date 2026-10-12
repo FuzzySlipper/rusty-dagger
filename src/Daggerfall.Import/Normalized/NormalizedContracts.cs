@@ -920,6 +920,12 @@ public sealed record NormalizedWorld(
     /// <summary>Exterior source population, published from selected RMB people records.</summary>
     public IReadOnlyList<NormalizedPopulationPlacement> Population { get; init; } = [];
 
+    /// <summary>Source automap clear cells in the exterior block grid, before gameplay population sizing.</summary>
+    public IReadOnlyList<NormalizedOutdoorCell> ClearOutdoorCells { get; init; } = [];
+
+    /// <summary>Movable city gates excluded from the static closure.</summary>
+    public IReadOnlyList<DaggerfallWorldBlockGate> Gates { get; init; } = [];
+
     /// <summary>Source action nodes and their normalized forward links.</summary>
     public IReadOnlyList<NormalizedDungeonAction> Actions { get; init; } = [];
 
@@ -1191,3 +1197,6 @@ public static class NormalizedImportSerializer
         return document.Canonicalize();
     }
 }
+
+/// <summary>One clear exterior automap cell in the placed RMB block grid.</summary>
+public sealed record NormalizedOutdoorCell(int X, int Z);

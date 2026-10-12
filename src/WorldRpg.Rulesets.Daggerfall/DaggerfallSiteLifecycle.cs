@@ -504,7 +504,16 @@ internal sealed class DaggerfallSiteLifecycle
     internal bool TryEnterBuilding(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor arrival) =>
         TryTransitionTo(destination, arrival, useReturnDestination: false);
 
-    private bool TryTransitionTo(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor? arrival, bool useReturnDestination)
+    /// <summary>Walking into a streamed town changes its gameplay owner without relocating the player.</summary>
+    internal bool ActivateLocationAtPlayer()
+    {
+        if (LocationAtPlayer() is not { } location || location.Id == ActiveProfile.Site) return false;
+        return TryTransitionTo(DaggerfallWorldProfileIds.Exterior(location.Id), null,
+            useReturnDestination: false, walking: true);
+    }
+
+    private bool TryTransitionTo(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor? arrival, bool useReturnDestination,
+        bool walking = false)
     {
         DaggerfallSiteProfile target = RequireProfiles().Require(destination);
         PlayerControlState player = _state.PlayerControl;
@@ -551,11 +560,13 @@ internal sealed class DaggerfallSiteLifecycle
         {
             if (!TryExteriorProfileCell(target, out DaggerfallExteriorCellId destinationCell))
                 throw new InvalidOperationException($"Exterior profile '{target.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
-            // Each exterior transition establishes the destination cell as the local origin. Keeping
+            // Travel establishes the destination cell as the local origin. Keeping
             // the source map origin here would add a far-away map translation to the authored arrival
             // pose in a float Vector3, irreversibly dropping sub-cell precision before the destination
-            // profile can read it back through ExteriorSitePosition.
-            destinationOrigin = DaggerfallExteriorWorldOrigin.At(destinationCell);
+            // profile can read it back through ExteriorSitePosition. Walking preserves the admitted
+            // window's frame and the player's accepted movement instead of landing at an anchor.
+            destinationOrigin = walking && sourceExterior is { } walkingExterior
+                ? walkingExterior.WorldOrigin : DaggerfallExteriorWorldOrigin.At(destinationCell);
             destinationFrameOffset = ExteriorProfileTranslation(target, destinationOrigin.Value);
         }
         _deltas.TryGetValue(destination, out DaggerfallSiteRuntimeDelta? destinationDelta);
@@ -632,15 +643,24 @@ internal sealed class DaggerfallSiteLifecycle
             // mutating player or site state so an Engine service rejection has nothing semantic
             // to roll back.
             _host.RebuildActivation();
-            if (returnDestination is { } returned)
+            if (walking)
+            {
+                _site.Enter(destination.Site);
+                _site.ClearReturnDestination();
+            }
+            else if (returnDestination is { } returned)
             {
                 _site.Leave();
                 playerRelocated = true;
-                _host.RelocatePlayer(returned.Pose.Position, returned.Pose.YawRadians, returned.Pose.PitchRadians);
+                _host.RelocatePlayer(DaggerfallExteriorSessionOrigin.Shift(returned.Pose.Position, destinationFrameOffset),
+                    returned.Pose.YawRadians, returned.Pose.PitchRadians);
             }
             else
             {
-                _site.Enter(destination.Site, sourcePosition, player.YawRadians, player.PitchRadians);
+                // A return belongs to the departed profile, independent of which town anchored
+                // the terrain window before the player walked here.
+                _site.Enter(destination.Site, DaggerfallExteriorSessionOrigin.Shift(sourcePosition, -sourceFrameOffset),
+                    player.YawRadians, player.PitchRadians);
                 playerRelocated = true;
                 if (arrival is { } selected)
                     _host.RelocatePlayer(destination.Kind == DaggerfallWorldProfileKind.Exterior
@@ -675,11 +695,11 @@ internal sealed class DaggerfallSiteLifecycle
                 _locationCell = null;
             }
             // A returning player resumes the standing pose they left; an arrival lands on its anchor's floor.
-            if (returnDestination is null) StandArrivingPlayer();
+            if (returnDestination is null && !walking) StandArrivingPlayer();
             if (destination.Kind == DaggerfallWorldProfileKind.Exterior) _host.ReconcileArrivalPopulation();
             if (destination.Kind != DaggerfallWorldProfileKind.Exterior)
                 _state.Transport.ForceFootOnInteriorTransition();
-            ReturnProfile = returnDestination is null ? sourceProfile : null;
+            ReturnProfile = !walking && returnDestination is null ? sourceProfile : null;
             _enemyBehavior.ClearPerceptionMemory();
             if (target.DungeonMap is { } destinationMap)
             {
