@@ -30,7 +30,7 @@ public sealed class DaggerfallExteriorCellResidencyTests
         Assert.Equal(DaggerfallExteriorCellResidency.AssetId(new(7, 7)), firstAsset.Id);
         Assert.Equal(DaggerfallExteriorCellResidency.InstanceId(new(7, 7)), firstInstance.Id);
         Assert.Equal(firstAsset.Id, firstInstance.Asset);
-        Assert.Equal(new Vector3(-2457.6F, 0F, 2457.6F), firstInstance.Transform.Translation);
+        Assert.Equal(new Vector3(-2457.6F, 0F, -2457.6F), firstInstance.Transform.Translation);
         StaticMeshAsset secondAsset = request.Assets.Span[1];
         Assert.Equal(
             new Triangle(0, 2, 1),

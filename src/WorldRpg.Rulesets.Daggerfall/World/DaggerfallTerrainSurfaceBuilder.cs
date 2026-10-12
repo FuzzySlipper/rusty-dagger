@@ -5,9 +5,9 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
 /// <summary>
-/// The generated collision surface for one wilderness map pixel. Vertices use the donor's local
-/// terrain frame: x grows with the source map-pixel x direction and z grows toward decreasing source
-/// map-pixel y. The containing map pixel is placed in the world separately.
+/// The generated collision surface for one wilderness map pixel. Vertices use the content's right-handed
+/// frame: east is +X and north is -Z. Height samples retain the donor's row order.
+/// The containing map pixel is placed in the world separately.
 /// </summary>
 internal sealed class DaggerfallTerrainSurface
 {
@@ -93,7 +93,7 @@ internal static class DaggerfallTerrainSurfaceBuilder
     private const int MaxMapPixelY = 500;
 
     /// <summary>
-    /// Builds one surface in the donor orientation. Source map-pixel edges are clamped by the
+    /// Builds one right-handed surface from donor-oriented samples. Source map-pixel edges are clamped by the
     /// normalized terrain set, matching WoodsFile's edge behavior for neighboring source windows.
     /// </summary>
     internal static DaggerfallTerrainSurface Build(DaggerfallTerrainSet terrain, int mapPixelX, int mapPixelY)
@@ -141,7 +141,7 @@ internal static class DaggerfallTerrainSurfaceBuilder
                 vertices[index] = new(
                     x * SampleSpacing,
                     normalizedHeight * TerrainVerticalSize,
-                    y * SampleSpacing);
+                    -y * SampleSpacing);
             }
         }
 
@@ -424,8 +424,8 @@ internal static class DaggerfallTerrainSurfaceBuilder
                 uint upperLeft = checked((uint)Index(x, y + 1, SampleDimension));
                 uint upperRight = checked((uint)Index(x + 1, y + 1, SampleDimension));
                 // Match the Engine fixture's upward-facing right-handed winding.
-                triangles[index++] = new(lowerLeft, upperRight, lowerRight);
-                triangles[index++] = new(lowerLeft, upperLeft, upperRight);
+                triangles[index++] = new(lowerLeft, lowerRight, upperRight);
+                triangles[index++] = new(lowerLeft, upperRight, upperLeft);
             }
         }
 

@@ -18,7 +18,7 @@ public sealed class DaggerfallExteriorEnvironmentTests
             _ => Surface(0F), Locations(), Grids(224, "temperate"));
 
         Assert.Single(environment.WaterVolumes);
-        Assert.True(environment.TryReadWater(new Vector3(25F, 10F, 25F), out DaggerfallExteriorWaterVolume volume));
+        Assert.True(environment.TryReadWater(new Vector3(25F, 10F, -25F), out DaggerfallExteriorWaterVolume volume));
         Assert.Equal(cell, volume.Cell);
         Assert.Equal(40.8F, volume.Maximum.Y, 3);
         Assert.Equal(128, volume.TileWidth);
@@ -38,11 +38,11 @@ public sealed class DaggerfallExteriorEnvironmentTests
         Assert.Single(projected);
         Assert.Single(projected.Select(volume => volume.Trigger).Distinct());
         Assert.Contains(projected, volume => volume.Trigger == DaggerfallExteriorEnvironment.WaterObjectId(cell, 0, 0, 128, 128)
-            && volume.Minimum == new Vector3(4F, 5F, 6F));
+            && volume.Minimum == new Vector3(4F, 5F, 6F - DaggerfallExteriorCellResidency.CellSize));
         CharacterWaterVolume last = Assert.Single(projected);
         Assert.Equal(823.2F, last.Maximum.X, 3);
         Assert.Equal(45.8F, last.Maximum.Y, 3);
-        Assert.Equal(825.2F, last.Maximum.Z, 3);
+        Assert.Equal(6F, last.Maximum.Z, 3);
         Assert.All(projected, volume => volume.Validate());
     }
 
@@ -93,10 +93,9 @@ public sealed class DaggerfallExteriorEnvironmentTests
 
         IReadOnlyList<DaggerfallExteriorTerrainTile> tiles = environment.TerrainTilesFor(cell);
         Assert.Equal(128 * 128, tiles.Count);
-        // The one-block location's source row 0 lies under its right-handed content's last row (15), mirrored.
-        Assert.Equal(new DaggerfallExteriorTerrainTile(7, true, false, Mirrored: true), tiles[15 * 128]);
-        Assert.Equal(new DaggerfallExteriorTerrainTile(8, false, true, Mirrored: true), tiles[(15 * 128) + 1]);
-        Assert.False(tiles[0].Mirrored);
+        // Location and terrain rows share the same right-handed frame.
+        Assert.Equal(new DaggerfallExteriorTerrainTile(7, true, false), tiles[0]);
+        Assert.Equal(new DaggerfallExteriorTerrainTile(8, false, true), tiles[1]);
         Assert.All(tiles, tile => Assert.InRange(tile.TextureRecord, 0, 55));
     }
 
@@ -114,8 +113,8 @@ public sealed class DaggerfallExteriorEnvironmentTests
             Grids(231, "Woodlands"));
 
         IReadOnlyList<DaggerfallExteriorTerrainTile> tiles = environment.TerrainTilesFor(cell);
-        Assert.Equal(new DaggerfallExteriorTerrainTile(0, false, false, Mirrored: true), tiles[15 * 128]);
-        Assert.Equal(new DaggerfallExteriorTerrainTile(7, false, false, Mirrored: true), tiles[(15 * 128) + 1]);
+        Assert.Equal(new DaggerfallExteriorTerrainTile(0, false, false), tiles[0]);
+        Assert.Equal(new DaggerfallExteriorTerrainTile(7, false, false), tiles[1]);
     }
 
     [Fact]

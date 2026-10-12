@@ -35,7 +35,7 @@ internal static class DaggerfallLocationArrival
         ArgumentNullException.ThrowIfNull(destination);
         ArgumentNullException.ThrowIfNull(draw);
         if (origin is not { } from) return (DaggerfallArrivalSide)draw(4);
-        // World X runs east with the map pixel; world Z runs north, against it.
+        // World X runs east with the map pixel; north is decreasing map-pixel Y (negative world Z).
         int east = destination.MapPixelX - from.X;
         int north = from.Y - destination.MapPixelY;
         if (east == 0 && north == 0) return (DaggerfallArrivalSide)draw(4);

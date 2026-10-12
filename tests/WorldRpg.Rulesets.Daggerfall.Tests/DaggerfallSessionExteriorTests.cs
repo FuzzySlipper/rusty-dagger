@@ -77,11 +77,11 @@ public sealed class DaggerfallSessionExteriorTests
         Assert.Equal(
             new DaggerfallExteriorCellId(41, 29),
             DaggerfallExteriorSessionOrigin.CellForLocalPosition(
-                new WorldPoint(2F + DaggerfallExteriorCellResidency.CellSize, 7F, -3F + DaggerfallExteriorCellResidency.CellSize),
+                new WorldPoint(2F + DaggerfallExteriorCellResidency.CellSize, 7F, -3F - DaggerfallExteriorCellResidency.CellSize),
                 origin, bounds));
         Assert.Equal(
             new DaggerfallExteriorCellId(39, 31),
             DaggerfallExteriorSessionOrigin.CellForLocalPosition(
-                new WorldPoint(2F - .01F, 7F, -3F - .01F), origin, bounds));
+                new WorldPoint(2F - .01F, 7F, -3F + .01F), origin, bounds));
     }
 }

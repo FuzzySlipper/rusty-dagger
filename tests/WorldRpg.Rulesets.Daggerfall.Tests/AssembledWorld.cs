@@ -298,6 +298,11 @@ internal sealed class AssembledWorldRun : IDisposable
             if (detour == detours) return false;
             Vector3 here = Session.State.PlayerControl.Position!.Value.ToVector();
             Vector3 ahead = Vector3.Normalize(new Vector3(target.X - here.X, 0F, target.Z - here.Z));
+            // Scan along the wall, not perpendicular to an oblique destination bearing: the latter
+            // can put a probe behind the wall and mistake that clear ray for an opening.
+            SpatialHit wall = Session.Spatial.CastRay(here, ahead, 3F);
+            Vector3 normal = new(wall.Normal.X, 0F, wall.Normal.Z);
+            if (wall.Present && normal.LengthSquared() > .5F) ahead = -Vector3.Normalize(normal);
             Vector3 along = new(-ahead.Z, 0F, ahead.X);
             float? opening = null;
             for (int offset = 1; offset <= 80 && opening is null; offset++)

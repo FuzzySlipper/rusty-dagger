@@ -32,7 +32,7 @@ internal readonly record struct DaggerfallExteriorWorldOrigin(
     internal Vector3 LocalTranslation(DaggerfallExteriorCellId cell)
     {
         float x = checked((cell.X - MapPixelX) * DaggerfallExteriorCellResidency.CellSize);
-        float z = checked((MapPixelY - cell.Y) * DaggerfallExteriorCellResidency.CellSize);
+        float z = checked((cell.Y - MapPixelY) * DaggerfallExteriorCellResidency.CellSize);
         return new Vector3(x, 0F, z) + Compensation;
     }
 }

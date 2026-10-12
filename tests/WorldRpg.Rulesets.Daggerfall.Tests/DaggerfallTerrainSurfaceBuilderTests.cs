@@ -26,14 +26,14 @@ public sealed class DaggerfallTerrainSurfaceBuilderTests
         Assert.InRange(MathF.Abs(surface.Vertices[0].X), 0F, .000001F);
         Assert.InRange(MathF.Abs(surface.Vertices[0].Z), 0F, .000001F);
         Assert.InRange(MathF.Abs(surface.Vertices[128].X - DaggerfallTerrainSurfaceBuilder.HorizontalSize), 0F, .00001F);
-        Assert.InRange(MathF.Abs(surface.Vertices[129].Z - DaggerfallTerrainSurfaceBuilder.SampleSpacing), 0F, .00001F);
+        Assert.InRange(MathF.Abs(surface.Vertices[129].Z + DaggerfallTerrainSurfaceBuilder.SampleSpacing), 0F, .00001F);
 
-        Assert.Equal(new Triangle(0, 130, 1), surface.Triangles[0]);
-        Assert.Equal(new Triangle(0, 129, 130), surface.Triangles[1]);
+        Assert.Equal(new Triangle(0, 1, 130), surface.Triangles[0]);
+        Assert.Equal(new Triangle(0, 130, 129), surface.Triangles[1]);
         Vector3 firstNormal = Vector3.Cross(
-            surface.Vertices[130] - surface.Vertices[0],
-            surface.Vertices[1] - surface.Vertices[0]);
-        Assert.True(firstNormal.Y > 0F, "The donor-oriented surface triangles must face upward.");
+            surface.Vertices[1] - surface.Vertices[0],
+            surface.Vertices[130] - surface.Vertices[0]);
+        Assert.True(firstNormal.Y > 0F, "The right-handed surface triangles must face upward.");
     }
 
     [Fact]

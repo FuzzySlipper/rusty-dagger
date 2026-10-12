@@ -41,7 +41,7 @@ internal static class DaggerfallExteriorSessionOrigin
 
     /// <summary>
     /// Converts a product local pose back to the durable map-pixel cell that contains it. Daggerfall
-    /// terrain's positive local Z points toward decreasing map-pixel Y, matching the surface builder's
+    /// terrain's negative local Z points toward decreasing map-pixel Y, matching the surface builder's
     /// local translation and keeping boundary traversal deterministic on either side of zero.
     /// </summary>
     internal static DaggerfallExteriorCellId CellForLocalPosition(
@@ -61,7 +61,7 @@ internal static class DaggerfallExteriorSessionOrigin
         }
 
         double offsetX = Math.Floor(((double)position.X - origin.Compensation.X) / DaggerfallExteriorCellResidency.CellSize);
-        double offsetY = Math.Floor(((double)position.Z - origin.Compensation.Z) / DaggerfallExteriorCellResidency.CellSize);
+        double offsetY = Math.Floor((origin.Compensation.Z - (double)position.Z) / DaggerfallExteriorCellResidency.CellSize);
         double mapPixelX = origin.MapPixelX + offsetX;
         double mapPixelY = origin.MapPixelY - offsetY;
         if (!double.IsFinite(mapPixelX) || !double.IsFinite(mapPixelY)
