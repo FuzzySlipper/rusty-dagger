@@ -378,7 +378,7 @@ internal sealed partial class DaggerfallWorldBlocks
         }
     }
 
-    private static DaggerfallWorldBlockGateState ReadGateState(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
+    internal static DaggerfallWorldBlockGateState ReadGateState(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
     {
         (Vector3[] vertices, Triangle[] triangles) = Collision(DaggerfallBaseContent.Property(value, "collision", diagnostics), name, diagnostics);
         if (triangles.Length == 0) diagnostics.Add($"{name} states no collision.");

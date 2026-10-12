@@ -378,6 +378,27 @@ internal sealed class RmbBlockContent
         return Arch3dDecoder.Decode(arch.GetPayload(record).Span, arch.Source, id);
     }
 
+    /// <summary>The shared model-local collision and visual identity of a city gate variant.</summary>
+    internal static DaggerfallWorldBlockGateState GateState(BsaArchive arch, string modelId)
+    {
+        uint id = uint.Parse(modelId, CultureInfo.InvariantCulture);
+        // Missing gate geometry would silently leave the closed gate passable.
+        if (!arch.TryGetByNumericId(id, out BsaRecord? record) || record is null)
+            throw new InvalidOperationException($"ARCH3D.BSA has no city gate model {modelId}.");
+        Arch3dMesh mesh = Arch3dDecoder.Decode(arch.GetPayload(record).Span, arch.Source, id);
+        NormalizedMeshBuilder collision = new("material/collision", participatesInCollision: true);
+        List<NormalizedVector3> local = [];
+        foreach (Arch3dPlane plane in mesh.Planes.Where(plane => plane.Points.Count >= 3))
+        {
+            List<NormalizedVector3> polygon = [.. plane.Points.Select(point => MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(point)))];
+            local.AddRange(polygon);
+            collision.Add(polygon, [.. polygon.Select(_ => new NormalizedVector2(0F, 0F))], MeshGeometry.Normal(polygon));
+        }
+
+        NormalizedMesh built = collision.ToMesh("mesh/collision", "artifact/collision");
+        return new(modelId, GeometryPublicationBuilder.MeshArtifactId(id), MeshGeometry.Bounds(local), new(built.Vertices, built.Triangles));
+    }
+
     internal static Arena2ImportPoint Add(Arena2ImportPoint left, Arena2ImportPoint right) =>
         new(left.XMetres + right.XMetres, left.YMetres + right.YMetres, left.ZMetres + right.ZMetres);
 }

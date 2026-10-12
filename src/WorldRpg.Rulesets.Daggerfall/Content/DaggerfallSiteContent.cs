@@ -49,7 +49,7 @@ internal static partial class DaggerfallSiteContent
                 diagnostics.Add($"Site startingState.site names location {startSite}, which the published locations do not carry.");
             }
             DaggerfallSiteProfile inputs = ReadNormalizedClosure(
-                files,
+                content, files,
                 root,
                 start,
                 definitions,
@@ -70,7 +70,7 @@ internal static partial class DaggerfallSiteContent
         }
     }
 
-    private static DaggerfallSiteProfile ReadNormalizedClosure(AdmittedFiles files, JsonElement root, ScenarioStart start, DaggerfallDefinitions definitions, DaggerfallWorldMedia product, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallSiteProfile ReadNormalizedClosure(ProductContent content, AdmittedFiles files, JsonElement root, ScenarioStart start, DaggerfallDefinitions definitions, DaggerfallWorldMedia product, DaggerfallContentDiagnostics diagnostics)
     {
         JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics);
         string publicationRoot = DaggerfallBaseContent.Text(world, "publicationRoot", diagnostics);
@@ -132,6 +132,7 @@ internal static partial class DaggerfallSiteContent
             product,
             definitions,
             diagnostics);
+        var gates = ReadCityGates(content, normalizedWorld, product, artifacts, ref materials, diagnostics);
         if (profileKind == DaggerfallWorldProfileKind.Exterior && start.Site is { } placedSite
             && definitions.Locations.Records.Single(value => value.Id == placedSite).Climate is int climate)
         {
@@ -165,6 +166,10 @@ internal static partial class DaggerfallSiteContent
         }
         IReadOnlyList<DaggerfallSiteLight> lights = ReadNormalizedLights(normalizedWorld, diagnostics);
         IReadOnlyList<DaggerfallPopulationPlacement> population = ReadNormalizedPopulation(normalizedWorld, diagnostics);
+        if (profileKind == DaggerfallWorldProfileKind.Exterior && start.Site is { } populationSite)
+            population = [.. population, .. DaggerfallExteriorPopulation.Create(definitions,
+                definitions.Locations.Records.Single(location => location.Id == populationSite),
+                DaggerfallExteriorPopulation.ReadClearCells(normalizedWorld))];
         IReadOnlyList<DaggerfallDungeonActionModelDefinition> actionModels = ReadNormalizedActionModels(
             normalizedWorld, artifacts, files, materials, diagnostics);
         IReadOnlyList<DaggerfallRdbDoorDefinition> doors = ReadNormalizedDoors(
@@ -223,7 +228,8 @@ internal static partial class DaggerfallSiteContent
             music,
             DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics), billboardSprites,
             DaggerfallStaticNpcPlacement.Read(normalizedWorld, billboardSprites, definitions, start.Site, diagnostics), waterVolumes: DaggerfallDungeonWater.Read(normalizedWorld, profileId, diagnostics), terrainTextures: terrainTextures, population: population)
-        { VariantName = DaggerfallBaseContent.OptionalText(world, "variant", diagnostics),
+        { CityGates = gates,
+            VariantName = DaggerfallBaseContent.OptionalText(world, "variant", diagnostics),
             DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalizedWorld, diagnostics),
             VariantBaseLogicalId = DaggerfallBaseContent.OptionalText(world, "variantOf", diagnostics),
             AmbientZones = DaggerfallAmbientZones.Read(normalizedWorld, diagnostics),
@@ -360,7 +366,7 @@ internal static partial class DaggerfallSiteContent
                     ? DaggerfallBaseContent.Integer(person, "sourceBuildingFactionId", diagnostics) : 0;
                 int nameSeed = person.TryGetProperty("nameSeed", out _)
                     ? DaggerfallBaseContent.Integer(person, "nameSeed", diagnostics)
-                    : StablePopulationSeed(id);
+                    : DaggerfallExteriorPopulation.StableSeed(id);
                 try
                 {
                     if (nameSeed < 0 || nameSeed > ushort.MaxValue || archive < 0 || record < 0 || faction < 0
@@ -387,16 +393,6 @@ internal static partial class DaggerfallSiteContent
         {
             diagnostics.Add($"Normalized world closure is not valid JSON: {exception.Message}");
             return [];
-        }
-    }
-
-    private static ushort StablePopulationSeed(string id)
-    {
-        unchecked
-        {
-            uint hash = 2166136261;
-            foreach (char value in id) hash = (hash ^ value) * 16777619;
-            return (ushort)(hash & ushort.MaxValue);
         }
     }
 

@@ -34,15 +34,7 @@ internal sealed partial class DaggerfallLocationAssembly
     private const long RmbBlockCells = DaggerfallSiteLifecycle.NavigationCellsPerExteriorCell / 8;
     private const long RdbBlockCells = DaggerfallSiteLifecycle.NavigationCellsPerExteriorCell / 16;
 
-    // The donor PopulationManager's bounded mobile pool, as the RMB exterior site normalizer sizes it.
-    private const int PopulationBlocksPerBand = 16;
-    private const int PopulationBandSize = 24;
-    private const int PopulationMinimumBands = 1;
-    private const int PopulationMaximumBands = 4;
-    private const int PeopleFactionType = 15;
     private const int AutomapSide = 64;
-    // One clear automap cell is 64 source units; its centre is 32 in.
-    private const float AutomapCellMetres = RmbBlockSide / AutomapSide;
 
     /// <summary>Where a location receives the player through its start: the start marker, else the enter marker.</summary>
     internal const string StartAnchor = "start";
@@ -208,6 +200,7 @@ internal sealed partial class DaggerfallLocationAssembly
         private readonly List<DaggerfallWorldBlockTransitionDoor> _dungeonExits = [];
         private DaggerfallWorldBlockTransitionDoor? _lowestEntrance;
         private readonly List<DaggerfallCityGateDefinition> _gates = [];
+        private IReadOnlyList<DaggerfallPopulationPlacement> _dynamicPopulation = [];
 
         /// <summary>A location's exterior: every RMB block of its grid, in the site closure's block order.</summary>
         internal void Exterior()
@@ -240,7 +233,7 @@ internal sealed partial class DaggerfallLocationAssembly
                             clear.Add(((block.X * AutomapSide) + (index % AutomapSide), (block.Y * AutomapSide) + (index / AutomapSide)));
             }
 
-            DynamicPopulation(placed, clear);
+            _dynamicPopulation = DaggerfallExteriorPopulation.Create(owner._definitions, record, clear);
         }
 
         private void PlaceStaticNpcs(DaggerfallWorldBlockDocument document, Vector3 origin, Func<string, string> placed)
@@ -526,7 +519,7 @@ internal sealed partial class DaggerfallLocationAssembly
                 DaggerfallStaticNpcPlacement.Read(normalized, _media.BillboardSprites, owner._definitions, key.Site, diagnostics),
                 waterVolumes: DaggerfallDungeonWater.Read(normalized, key.LogicalId, diagnostics),
                 terrainTextures: _media.TerrainTextures,
-                population: DaggerfallSiteContent.ReadNormalizedPopulation(normalized, diagnostics))
+                population: [.. DaggerfallSiteContent.ReadNormalizedPopulation(normalized, diagnostics), .. _dynamicPopulation])
             {
                 AmbientZones = DaggerfallAmbientZones.Read(normalized, diagnostics),
                 DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalized, diagnostics),
@@ -821,49 +814,6 @@ internal sealed partial class DaggerfallLocationAssembly
             catch (ArgumentException exception) { diagnostics.Add($"Action model '{model.Id}' is invalid: {exception.Message}"); }
         }
 
-        /// <summary>
-        /// The donor PopulationManager's bounded mobile pool over the location's clear outdoor cells, as the RMB
-        /// exterior site normalizer places it: evenly sampled from the sorted pool, dressed from the region's
-        /// People faction.
-        /// </summary>
-        private void DynamicPopulation(IReadOnlyList<DaggerfallSiteBlock> placed, IReadOnlySet<(int X, int Z)> clear)
-        {
-            IReadOnlyCollection<DaggerfallFactionDefinition> factions = owner._definitions.Factions.Factions.Values.ToArray();
-            DaggerfallFactionDefinition? people = factions
-                .Where(faction => faction.Type == PeopleFactionType && faction.Region == key.Site.Region && faction.Flats.Count != 0)
-                .OrderBy(faction => faction.Id).FirstOrDefault()
-                ?? factions.Where(faction => faction.Type == PeopleFactionType && faction.Flats.Count != 0).OrderBy(faction => faction.Id).FirstOrDefault();
-            if (people is null) return;
-            Dictionary<(int X, int Y), DaggerfallSiteBlock> blocks = placed.ToDictionary(block => (block.X, block.Y));
-            int bands = Math.Clamp(placed.Count / PopulationBlocksPerBand, PopulationMinimumBands, PopulationMaximumBands);
-            (int X, int Z)[] cells = [.. clear.Where(cell => blocks.ContainsKey((cell.X / AutomapSide, cell.Z / AutomapSide)))
-                .OrderBy(cell => cell.X).ThenBy(cell => cell.Z)];
-            int count = Math.Min(bands * PopulationBandSize, cells.Length);
-            string location = $"{Slug(record.Name)}-{key.Site.Region}-{key.Site.Index}";
-            for (int index = 0; index < count; index++)
-            {
-                (int X, int Z) cell = cells[(int)((long)index * cells.Length / count)];
-                DaggerfallSiteBlock block = blocks[(cell.X / AutomapSide, cell.Z / AutomapSide)];
-                int sourceX = cell.X - (block.X * AutomapSide);
-                int sourceY = AutomapSide - 1 - (cell.Z - (block.Y * AutomapSide));
-                // The block origin and the cell centre in source units, as the site places them, then flipped.
-                float x = (block.X * RmbBlockSide) + (((sourceX * AutomapSide) + (AutomapSide / 2)) * (AutomapCellMetres / AutomapSide));
-                float z = (block.Y * RmbBlockSide) + (((sourceY * AutomapSide) + (AutomapSide / 2)) * (AutomapCellMetres / AutomapSide));
-                string id = string.Create(CultureInfo.InvariantCulture, $"population/{location}/dynamic/{index:D3}");
-                int flat = people.Flats[index % people.Flats.Count];
-                Append("population", new JsonObject
-                {
-                    ["id"] = id,
-                    ["position"] = Vector(new Vector3(x, 0F, -z)),
-                    ["billboardArchive"] = flat >> 7,
-                    ["billboardRecord"] = flat & 0x7f,
-                    ["factionId"] = people.Id,
-                    ["flags"] = index % people.Flats.Count == 1 ? 0x20 : 0,
-                    ["nameSeed"] = (int)StablePopulationSeed(id),
-                });
-            }
-        }
-
         private void Append(string section, JsonNode node) => ((JsonArray)_world[section]!).Add(node);
 
         private int Missing(string field)
@@ -901,23 +851,4 @@ internal sealed partial class DaggerfallLocationAssembly
     private static string Scope(DaggerfallWorldBlockDocument document) => document.PublishedKey.Split('/')[1];
 
     private static JsonObject Vector(Vector3 value) => new() { ["x"] = value.X, ["y"] = value.Y, ["z"] = value.Z };
-
-    /// <summary>A lowercase identity segment, as the published site and block identities name a source name.</summary>
-    private static string Slug(string value)
-    {
-        System.Text.StringBuilder result = new(value.Length);
-        foreach (char character in value) result.Append(char.IsAsciiLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-');
-        string slug = result.ToString().Trim('-');
-        return slug.Length == 0 ? "source" : slug;
-    }
-
-    private static ushort StablePopulationSeed(string id)
-    {
-        unchecked
-        {
-            uint hash = 2166136261;
-            foreach (char value in id) hash = (hash ^ value) * 16777619;
-            return (ushort)(hash & ushort.MaxValue);
-        }
-    }
 }

@@ -84,7 +84,7 @@ public sealed class WorldBlockNormalizer
             bool gate = RmbBlockContent.IsCityGate(model.ModelId);
             if (gate)
                 gates.Add(new($"gate/{slug}/{gates.Count}", id, placement.Position, placement.RotationDegrees,
-                    GateState(RmbBlockContent.CityGateOpenModel), GateState(RmbBlockContent.CityGateClosedModel)));
+                    RmbBlockContent.GateState(arch, RmbBlockContent.CityGateOpenModel), RmbBlockContent.GateState(arch, RmbBlockContent.CityGateClosedModel)));
             foreach ((Arch3dPlane plane, int planeIndex) in mesh.Planes.Select((plane, index) => (plane, index)).Where(value => value.plane.Points.Count >= 3))
             {
                 List<NormalizedVector3> polygon = [.. plane.Points.Select(point => MeshGeometry.ToRightHanded(model.Frame.Place(Arena2SourceTransform.ToImportPoint(point))))];
@@ -343,23 +343,6 @@ public sealed class WorldBlockNormalizer
     {
         (NormalizedVector3 centre, NormalizedVector3 normal) = RmbBlockContent.DoorPlane(polygon);
         return new(id, modelId, kind, centre, normal, MeshGeometry.Bounds(polygon), planeIndex, new(plane.TextureArchive, plane.TextureRecord));
-    }
-
-    /// <summary>One city gate model's mesh, model-local bounds and model-local collision, as an action model states its own.</summary>
-    private DaggerfallWorldBlockGateState GateState(string modelId)
-    {
-        Arch3dMesh mesh = RdbMesh(modelId) ?? throw new InvalidOperationException($"City gate model cannot be read: {unresolved[modelId]}.");
-        NormalizedMeshBuilder collision = new("material/collision", participatesInCollision: true);
-        List<NormalizedVector3> local = [];
-        foreach (Arch3dPlane plane in mesh.Planes.Where(plane => plane.Points.Count >= 3))
-        {
-            List<NormalizedVector3> polygon = [.. plane.Points.Select(point => MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(point)))];
-            local.AddRange(polygon);
-            collision.Add(polygon, [.. polygon.Select(_ => new NormalizedVector2(0F, 0F))], MeshGeometry.Normal(polygon));
-        }
-
-        NormalizedMesh built = collision.ToMesh("mesh/collision", "artifact/collision");
-        return new(modelId, MeshArtifactId(modelId), MeshGeometry.Bounds(local), new(built.Vertices, built.Triangles));
     }
 
     private static string MeshArtifactId(string modelId) =>

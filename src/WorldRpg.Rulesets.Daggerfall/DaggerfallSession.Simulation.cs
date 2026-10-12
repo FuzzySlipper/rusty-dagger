@@ -182,6 +182,8 @@ internal sealed partial class DaggerfallSession
         // frame before any actor steps. The player's place relative to the water is unchanged by it.
         if (_sites.RebaseExteriorIfNeeded())
             ReconcileTriggers(_sites.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, actionGraph);
+        if (movement is not null && alive && _sites.ActivateLocationAtPlayer())
+            ReconcileTriggers(_sites.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, null);
         _camera.Update(State.PlayerControl);
         // An unloaded location has already destroyed its own actors (roster UnloadSite), so the
         // steps below see only live actors: wilderness spawns and resident neighbouring locations.

@@ -114,23 +114,18 @@ public static class RmbExteriorNormalizer
 
     private sealed class Builder(RmbExteriorNormalizationRequest request, MapsExteriorLayout layout, BsaArchive blocks, BsaArchive arch, ushort groundTextureArchive)
     {
-        private const int PopulationBlocksPerBand = 16;
-        private const int PopulationBandSize = 24;
-        private const int PopulationMinimumBands = 1;
-        private const int PopulationMaximumBands = 4;
         private readonly Dictionary<(ushort Archive, ushort Record, string? DoorId), NormalizedMeshBuilder> geometry = [];
         private readonly Dictionary<(ushort Archive, ushort Record), TextureInfo> textures = [];
         private readonly SortedSet<string> referencedMeshes = new(StringComparer.Ordinal);
         private readonly Dictionary<(int X, int Y), int> doorOrdinals = [];
         private readonly List<DoorDraft> doorDrafts = [];
+        private readonly List<DaggerfallWorldBlockGate> gates = [];
         private readonly HashSet<(int X, int Z)> outdoorNavigationCells = [];
         private readonly List<NormalizedQuestMarker> questMarkers = [];
         private readonly List<NormalizedPopulationPlacement> population = [];
         private readonly IReadOnlyDictionary<int, ClassicFaction> sourceFactions =
             FactionReader.Read(Encoding.UTF8.GetString(request.Sources.Require("FACTION.TXT").Bytes.Span),
                 request.Sources.Require("FACTION.TXT").Label).ToDictionary(faction => faction.Id);
-        private readonly IReadOnlyDictionary<(int X, int Y), MapsExteriorBlock> sourceBlocks =
-            layout.Blocks.ToDictionary(block => ((int)block.X, (int)block.Y));
         private NormalizedMarker? startMarker;
         private NormalizedMarker? enterMarker;
         private NormalizedInteriorBuilding? interiorBuilding;
@@ -176,62 +171,6 @@ public static class RmbExteriorNormalizer
                 });
             }
             AddGround(content, origin, reference);
-        }
-
-        /// <summary>
-        /// The donor's PopulationManager fills an exterior's bounded mobile pool alongside any
-        /// fixed RMB people records. Positions come from the source CityNavigation clear cells
-        /// and appearance comes from the regional People faction in FACTION.TXT. Runtime admission
-        /// can therefore keep one durable key, day/night lifetime and Engine-owned wandering
-        /// without inventing authored NPC records.
-        /// </summary>
-        private void AddDynamicPopulation()
-        {
-            ClassicFaction? people = sourceFactions.Values
-                .Where(faction => faction.Type == 15 && faction.Region == request.Region && faction.Flats.Count != 0)
-                .OrderBy(faction => faction.Id)
-                .FirstOrDefault()
-                ?? sourceFactions.Values.Where(faction => faction.Type == 15 && faction.Flats.Count != 0)
-                    .OrderBy(faction => faction.Id).FirstOrDefault();
-            if (people is null) return;
-
-            int bands = Math.Clamp(layout.Blocks.Count / PopulationBlocksPerBand,
-                PopulationMinimumBands, PopulationMaximumBands);
-            int maximum = checked(bands * PopulationBandSize);
-            (int X, int Z)[] cells = [.. outdoorNavigationCells
-                .Where(cell => sourceBlocks.ContainsKey((cell.X / 64, cell.Z / 64)))
-                .OrderBy(cell => cell.X).ThenBy(cell => cell.Z)];
-            int count = Math.Min(maximum, cells.Length);
-            if (count == 0) return;
-
-            string location = $"{Slug(layout.LocationName)}-{layout.Region}-{layout.LocationIndex}";
-            for (int index = 0; index < count; index++)
-            {
-                // PopulationManager draws from the whole admitted exterior navigation pool. The
-                // source cells are sorted for deterministic output, but taking the first N would
-                // put every civilian in one corner of a large city. Evenly sample the canonical
-                // pool so the persisted placements cover the real city while remaining stable
-                // across importer runs.
-                int cellIndex = (int)((long)index * cells.Length / count);
-                (int X, int Z) cell = cells[cellIndex];
-                MapsExteriorBlock block = sourceBlocks[(cell.X / 64, cell.Z / 64)];
-                int sourceX = cell.X - (block.X * 64);
-                int sourceY = 63 - (cell.Z - (block.Y * 64));
-                Arena2ImportPoint placed = RmbBlockContent.Add(Arena2SourceTransform.ToExteriorBlockOrigin(block),
-                    Arena2SourceTransform.ToRmbImportPoint((sourceX * 64) + 32, 0, (sourceY * 64) + 32));
-                string id = $"population/{location}/dynamic/{index:D3}";
-                int flat = people.Flats[index % people.Flats.Count];
-                population.Add(new NormalizedPopulationPlacement(
-                    id,
-                    MeshGeometry.ToRightHanded(placed),
-                    flat >> 7,
-                    flat & 0x7f,
-                    people.Id,
-                    (byte)(index % people.Flats.Count == 1 ? 0x20 : 0))
-                {
-                    NameSeed = RmbBlockContent.StablePopulationSeed(id),
-                });
-            }
         }
 
         /// <summary>
@@ -306,10 +245,22 @@ public static class RmbExteriorNormalizer
         {
             referencedMeshes.Add(model.ModelId);
             Arch3dMesh mesh = RmbBlockContent.Mesh(arch, model);
+            bool gate = request.ProfileKind == RmbWorldProfileKind.Exterior && RmbBlockContent.IsCityGate(model.ModelId);
+            if (gate)
+            {
+                string id = $"gate/{Slug(block.SourceName)}/{block.X}/{block.Y}/{gates.Count}";
+                gates.Add(new(id, model.Identity, MeshGeometry.ToRightHanded(parent(model.Frame.Place(new(0, 0, 0)))),
+                    new(0, model.Frame.ParentYawDegrees + model.Frame.ModelYawDegrees, 0),
+                    RmbBlockContent.GateState(arch, RmbBlockContent.CityGateOpenModel),
+                    RmbBlockContent.GateState(arch, RmbBlockContent.CityGateClosedModel)));
+                referencedMeshes.Add(RmbBlockContent.CityGateOpenModel);
+                referencedMeshes.Add(RmbBlockContent.CityGateClosedModel);
+            }
             List<NormalizedVector3> mapVertices = [];
             HashSet<(ushort Archive, ushort Record, string? DoorId)> mapMeshes = [];
             foreach (Arch3dPlane plane in mesh.Planes.Where(plane => plane.Points.Count >= 3))
             {
+                if (gate && !RmbBlockContent.IsBuildingDoor(plane.TextureArchive)) continue;
                 TextureInfo texture = Texture(plane.TextureArchive, plane.TextureRecord);
                 string? doorId = null;
                 if (request.ProfileKind == RmbWorldProfileKind.Exterior && RmbBlockContent.IsBuildingDoor(plane.TextureArchive))
@@ -383,8 +334,6 @@ public static class RmbExteriorNormalizer
         public RmbExteriorNormalizationResult Build()
         {
             if (geometry.Count == 0) throw new InvalidOperationException("RMB normalization produced no ARCH3D static geometry.");
-            if (request.ProfileKind == RmbWorldProfileKind.Exterior)
-                AddDynamicPopulation();
             string slug = Slug(layout.LocationName) + (request.LocationIndex is int index ? $"-{layout.Region}-{index}" : "");
             string profile = request.ProfileKind == RmbWorldProfileKind.Exterior ? "exterior" : $"interior-{request.Building!.BlockX}-{request.Building.BlockY}-{request.Building.BuildingIndex}";
             string root = $"rmb/{slug}/{profile}";
@@ -445,6 +394,9 @@ public static class RmbExteriorNormalizer
                 StaticNpcs = staticNpcs,
                 StaticMeshIds = staticMeshes.Select(mesh => mesh.Id).ToArray(),
                 Population = population,
+                Gates = gates,
+                ClearOutdoorCells = outdoorNavigationCells.OrderBy(cell => cell.X).ThenBy(cell => cell.Z)
+                    .Select(cell => new NormalizedOutdoorCell(cell.X, cell.Z)).ToArray(),
             };
             DungeonSpatialPublication spatial = DungeonSpatialPublication.Create(staticId, $"spatial/{slug}/{profile}/static-mesh{StaticMeshBinary.Extension}", collisionId,
                 $"spatial/{slug}/{profile}/collision-navigation{SpatialArtifactBinary.Extension}", resourcesId, $"resources/{slug}/{profile}/catalog.json", world.VisualMeshAssetId, bounds, meshes, world, navigation, resources);
