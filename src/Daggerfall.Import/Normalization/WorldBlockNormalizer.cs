@@ -193,7 +193,8 @@ public sealed class WorldBlockNormalizer
         (NormalizedBounds? blockBounds, DaggerfallWorldBlockSpatial? spatial, GeneratedSpatialArtifact? artifact) = Spatial(key, geometry, null);
         DaggerfallWorldBlock block = new(key, DaggerfallWorldBlockKind.RmbInterior, content.SourceKey, Ordinal(content.SourceKey), buildingIndex, blockBounds, spatial, models)
         {
-            InteriorBuilding = new(slot.Index, slot.BuildingType, slot.FactionId, slot.Quality, slot.NameSeed, true),
+            InteriorBuilding = new(slot.Index, slot.BuildingType, slot.FactionId, slot.Quality, slot.NameSeed, true)
+            { EntryFrame = content.InteriorEntryFrame(buildingIndex) with { Doors = [.. exits.Select(door => new NormalizedBuildingEntryDoor(door.Position, door.Normal))] } },
             TransitionDoors = exits,
             StartMarker = FirstMarker(flats, RdbSourceClassification.StartMarkerRecord, "marker/start"),
             EnterMarker = FirstMarker(flats, RdbSourceClassification.EnterMarkerRecord, "marker/enter"),

@@ -304,6 +304,14 @@ internal sealed partial class DaggerfallLocationAssembly
                 ["buildingIndex"] = building.Index,
                 ["buildingType"] = slot.BuildingType,
                 ["factionId"] = slot.FactionId,
+                ["entryFrame"] = slot.EntryFrame is { } frame ? new JsonObject
+                {
+                    ["exteriorOrigin"] = Vector(frame.ExteriorOrigin),
+                    ["exteriorYawDegrees"] = frame.ExteriorYawDegrees,
+                    ["markers"] = new JsonArray(frame.Markers.Select(marker => (JsonNode)Vector(marker.ToVector())).ToArray()),
+                    ["doors"] = new JsonArray(frame.Doors.Select(door => (JsonNode)new JsonObject
+                    { ["position"] = Vector(door.Position.ToVector()), ["normal"] = Vector(door.Normal) }).ToArray()),
+                } : null,
             };
         }
 

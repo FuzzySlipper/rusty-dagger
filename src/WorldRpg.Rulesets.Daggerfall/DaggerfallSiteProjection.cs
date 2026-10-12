@@ -18,6 +18,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
 {
     private readonly SpatialMovementSystem _spatialMovement;
     private bool _disposed;
+    private bool _ownsAppearance = true;
     private bool _waterTriggersActive;
     private bool _suspended;
     private Vector3 _worldOffset;
@@ -261,6 +262,13 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         return new CharacterStepEnvironment(doors.Support, obstacles, meshInstances, water);
     }
 
+    /// <summary>The active snapshot must drop a resident's sprites before their owning appearance is disposed.</summary>
+    internal DaggerfallSiteAppearance DetachAppearance()
+    {
+        _ownsAppearance = false;
+        return Appearance;
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
@@ -270,7 +278,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         catch (Exception exception) { failures = [exception]; }
         try { Lighting.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
-        try { Appearance.Dispose(); }
+        try { if (_ownsAppearance) Appearance.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
         try { Portals.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }

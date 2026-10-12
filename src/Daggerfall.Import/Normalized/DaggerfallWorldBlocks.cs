@@ -187,7 +187,10 @@ public sealed record DaggerfallWorldBlockGate(
 public sealed record DaggerfallWorldBlockTexture(int Archive, int Record);
 
 /// <summary>One RMB building sub-record as the block states it.</summary>
-public sealed record DaggerfallWorldBlockBuilding(int Index, int BuildingType, int FactionId, int Quality, int NameSeed, bool HasInterior);
+public sealed record DaggerfallWorldBlockBuilding(int Index, int BuildingType, int FactionId, int Quality, int NameSeed, bool HasInterior)
+{
+    public NormalizedBuildingEntryFrame? EntryFrame { get; init; }
+}
 
 /// <summary>One FLD ground tile: its four-frame texture record and orientation, read in the location's climate ground set.</summary>
 public sealed record DaggerfallWorldBlockGroundTile(int X, int Y, int TextureRecord, bool Rotated, bool Flipped);

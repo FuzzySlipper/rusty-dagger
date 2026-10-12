@@ -113,6 +113,15 @@ internal static partial class DaggerfallSiteContent
         IReadOnlyList<DaggerfallSitePortal> portals = ReadSitePortals(world, diagnostics);
         IReadOnlyList<DaggerfallSiteAnchor> anchors = ReadSiteAnchors(world, start, diagnostics);
         ReadOnlyMemory<byte> normalizedWorld = files.GetExactlyOne(normalizedPath);
+        DaggerfallInteriorBuilding? interiorBuilding = ReadInteriorBuilding(normalizedWorld, profileKind, diagnostics);
+        if (interiorBuilding?.EntryFrame is { Doors.Count: > 0 } entry && start.Site is { } interiorSite)
+        {
+            string exterior = DaggerfallWorldProfileIds.Exterior(interiorSite).LogicalId;
+            if (portals.FirstOrDefault(portal => portal.DestinationLogicalProfile == exterior) is { } exit)
+                portals = portals.Where(portal => portal.DestinationLogicalProfile != exterior)
+                    .Concat(entry.Doors.Select((door, index) => new DaggerfallSitePortal($"exit/{index}", door.Position,
+                        exit.Radius, exterior, exit.ArrivalAnchor, door.Normal))).ToArray();
+        }
         Dictionary<long, AuthoredActor> fixedActors = ReadFixedActors(normalizedWorld, profileId, definitions, diagnostics);
         Dictionary<long, AuthoredActor> actors = ReadNormalizedPlacements(root, definitions, diagnostics, fixedActors, profileId);
         foreach (var actor in fixedActors)
@@ -210,7 +219,7 @@ internal static partial class DaggerfallSiteContent
             dungeonMap,
             dungeonActions,
             actionModels,
-            ReadInteriorBuilding(normalizedWorld, profileKind, diagnostics),
+            interiorBuilding,
             music,
             DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics), billboardSprites,
             DaggerfallStaticNpcPlacement.Read(normalizedWorld, billboardSprites, definitions, start.Site, diagnostics), waterVolumes: DaggerfallDungeonWater.Read(normalizedWorld, profileId, diagnostics), terrainTextures: terrainTextures, population: population)

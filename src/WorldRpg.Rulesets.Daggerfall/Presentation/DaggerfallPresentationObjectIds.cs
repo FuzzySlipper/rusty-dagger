@@ -8,8 +8,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <item><term>[1, 2^48)</term><description>gameplay identities published as their own visuals: actors, NPCs and ground containers.</description></item>
 /// <item><term>[2^48, 2^49)</term><description>exterior terrain cells, by map pixel.</description></item>
 /// <item><term>[2^49, 2^50)</term><description>exterior nature sprite batches, by map pixel and sprite record.</description></item>
-/// <item><term>[2^50, 2^52)</term><description>drawn locations' static visuals. Each location slot (the active location is slot 0, each
-/// resident neighbour its own) owns a 2^32 range: its static meshes by index, then its door, city gate and action model visuals by ordinal.</description></item>
+/// <item><term>[2^50, 2^52)</term><description>drawn locations' visuals. Each location slot (the active location is slot 0, each
+/// resident neighbour its own) owns a 2^32 range: its static meshes by index, then its door, city gate, action model and resident actor visuals by ordinal.</description></item>
 /// <item><term>[2^52, 2^53)</term><description>transient visuals (effects, viewmodel, missiles, the magic candle), counted down.</description></item>
 /// </list>
 /// A band that runs out refuses rather than spilling into its neighbour.
@@ -31,7 +31,7 @@ internal static class DaggerfallPresentationObjectIds
     /// <summary>A nature sprite record within its climate archive; normalized billboards address records 0 to 127.</summary>
     private const int SpriteRecordBits = 7;
 
-    /// <summary>Each location slot's range: its meshes in the lower half, its door, gate and action model visuals in the upper.</summary>
+    /// <summary>Each location slot's range: meshes in the lower half; door, gate, action model and resident actor visuals in the upper.</summary>
     private const int LocationSlotBits = 32;
     private const ulong LocationPartLimit = 1UL << (LocationSlotBits - 1);
 
@@ -73,7 +73,7 @@ internal static class DaggerfallPresentationObjectIds
         return LocationSlotBase(slot) + (ulong)index;
     }
 
-    /// <summary>A drawn location's door, city gate or action model visual, by the ordinal its appearance gave it.</summary>
+    /// <summary>A drawn location's door, city gate, action model or resident actor visual, by its appearance ordinal.</summary>
     internal static ulong LocationVisual(int slot, ulong ordinal)
     {
         if (ordinal >= LocationPartLimit)

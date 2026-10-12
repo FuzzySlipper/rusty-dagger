@@ -501,6 +501,9 @@ internal sealed class DaggerfallSiteLifecycle
         return TryTransitionTo(destination, arrival, useReturnDestination: true);
     }
 
+    internal bool TryEnterBuilding(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor arrival) =>
+        TryTransitionTo(destination, arrival, useReturnDestination: false);
+
     private bool TryTransitionTo(DaggerfallWorldProfileKey destination, DaggerfallSiteAnchor? arrival, bool useReturnDestination)
     {
         DaggerfallSiteProfile target = RequireProfiles().Require(destination);
@@ -556,7 +559,7 @@ internal sealed class DaggerfallSiteLifecycle
             destinationFrameOffset = ExteriorProfileTranslation(target, destinationOrigin.Value);
         }
         _deltas.TryGetValue(destination, out DaggerfallSiteRuntimeDelta? destinationDelta);
-        if (destinationDelta is null && _residentExteriorLocations.TryGetValue(destination, out ResidentExteriorLocation? residentDestination))
+        if (_residentExteriorLocations.TryGetValue(destination, out ResidentExteriorLocation? residentDestination))
         {
             Vector3 residentFrameOffset = ExteriorProfileTranslation(residentDestination.Profile);
             destinationDelta = _persistence.CaptureSiteDelta(residentDestination.Profile, residentDestination.Projection.Doors,
@@ -577,6 +580,13 @@ internal sealed class DaggerfallSiteLifecycle
         bool adjacentLocationsRetired = false;
         try
         {
+            // A resident destination already owns these door/entity identities. Its state was
+            // captured above; retire that owner before constructing the active projection.
+            if (_residentExteriorLocations.ContainsKey(destination))
+            {
+                RetireResidentExteriorLocation(destination, capture: false);
+                adjacentLocationsRetired = true;
+            }
             candidate = DaggerfallSiteProjection.Create(_engine, _state.Actors.Entities, _random, _tuning, _time.Calendar,
                 target, AudioFor(target), _spatial, _host.ConfigureSiteAppearance, destinationDelta?.Doors, destinationDelta?.Motion,
                 deferMotionCollisionAdmission: true, sessionPresentation: _sessionPresentation, definitions: _definitions);
@@ -742,15 +752,18 @@ internal sealed class DaggerfallSiteLifecycle
             _locationCell = sourceLocationCell;
             ReturnProfile = sourceReturnProfile;
             BankProvider = sourceBankProvider;
-            if (sourceExterior is { } priorExterior && exteriorCleared)
+            if (sourceExterior is { } priorExterior)
             {
                 try
                 {
                     _admittingInitialResidency = !sourceLocationLoaded;
-                    RestoreExteriorResidency(priorExterior);
-                    if (sourceLocationLoaded && sourceProfile.Kind == DaggerfallWorldProfileKind.Exterior)
-                        RebaseActors(ProfileActorIds(source.Inputs, sourceDelta),
-                            ExteriorProfileTranslation(source.Inputs, priorExterior.WorldOrigin));
+                    if (exteriorCleared)
+                    {
+                        RestoreExteriorResidency(priorExterior);
+                        if (sourceLocationLoaded && sourceProfile.Kind == DaggerfallWorldProfileKind.Exterior)
+                            RebaseActors(ProfileActorIds(source.Inputs, sourceDelta),
+                                ExteriorProfileTranslation(source.Inputs, priorExterior.WorldOrigin));
+                    }
                     if (adjacentLocationsRetired && _exteriorResidency is { IsInitialized: true } restoredResidency)
                         ReconcileResidentExteriorLocations(restoredResidency);
                 }
@@ -1239,7 +1252,7 @@ internal sealed class DaggerfallSiteLifecycle
             projection.ActivateMotionCollisionResidency();
             _roster.MaterializeSite(profile, delta, restoreAuthoredAppearance: true, projection: projection);
             _host.AdmitResidentCivilianAppearances(projection);
-            _roster.MaterializeStaticNpcs(profile, projection, translation);
+            _roster.MaterializeStaticNpcs(profile, projection);
             HashSet<long> actorIds = profile.Project.Actors.Keys.ToHashSet();
             foreach (DaggerfallNpc npc in _state.Npcs.All.Where(npc => npc.Profile == key))
                 actorIds.Add(npc.DurableId);
@@ -1287,7 +1300,7 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallSiteRuntimeDelta? delta = null;
         try
         {
-            _retiredResidentLocations.Add(resident.Projection.Appearance.TakeDrawnLocation());
+            _retiredResidentLocations.Add(resident.Projection.DetachAppearance());
             if (capture)
             {
                 Vector3 profileFrameOffset = ExteriorProfileTranslation(resident.Profile);
@@ -1314,14 +1327,29 @@ internal sealed class DaggerfallSiteLifecycle
         throw new InvalidOperationException("Every presentation location slot is held by a resident neighbour.");
     }
 
+    /// <summary>All live appearance owners share the session's admitted animation and retirement boundaries.</summary>
+    internal IEnumerable<DaggerfallSiteAppearance> Appearances
+    {
+        get
+        {
+            yield return Projection.Appearance;
+            foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values)
+                yield return resident.Projection.Appearance;
+        }
+    }
+
     /// <summary>
     /// Completes the active appearance's snapshot with the exterior window: every resident neighbour's meshes,
-    /// doors, gates and action models under its own location slot, then the terrain and its nature batches.
+    /// doors, gates, action models and actors under its own location slot, then the terrain and its nature batches.
     /// </summary>
     private void AppendExteriorFacts(List<AppearanceFact> facts)
     {
         foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values.OrderBy(value => value.Slot))
+        {
             resident.Projection.Appearance.AppendLocationFacts(facts, resident.Slot);
+            resident.Projection.Appearance.AppendActorFacts(facts, _state.Actors, resident.Slot,
+                _state.Effects.PerceptionFor, _state.Npcs.IsGameplayActive);
+        }
         _exteriorTerrainAppearance?.AppendFacts(facts);
     }
 

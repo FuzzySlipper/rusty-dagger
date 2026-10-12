@@ -316,7 +316,11 @@ public sealed class SiteTransitionSessionTests
 
         Assert.Equal(interior.Site, restored.Site.Active);
         var interiorPortal = Assert.Single(restored.Sites.Projection.Portals.All);
-        AimActivationAt(restored, interiorPortal.Portal.Position);
+        resumedSpatial.KeepPosition = true;
+        Vector3 inward = interiorPortal.Portal.Normal ?? Vector3.UnitZ;
+        restored.State.PlayerControl.MoveTo(interiorPortal.Portal.Position.ToVector() + inward);
+        restored.State.PlayerControl.YawRadians = ActorHeading.Yaw(-inward);
+        restored.State.PlayerControl.PitchRadians = 0f;
         resumedPerception.Responder = request => PortalReceipt(request, interiorPortal.Entity);
         restored.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"loot\"}")]));
 

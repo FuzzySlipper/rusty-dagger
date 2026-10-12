@@ -91,7 +91,8 @@ public sealed class RmbExteriorNormalizerTests
             Assert.Equal(new NormalizedVector3(raw.flat.X * .025f, -raw.flat.Y * .025f, -raw.flat.Z * .025f), published.Position);
             Assert.Equal(raw.flat.TextureRecord == 11 ? NormalizedQuestMarkerKind.Spawn : NormalizedQuestMarkerKind.Item, published.Kind);
         }
-        Assert.Equal(building, NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(interior.Document)).World.InteriorBuilding);
+        Assert.Equal(System.Text.Json.JsonSerializer.Serialize(building), System.Text.Json.JsonSerializer.Serialize(
+            NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(interior.Document)).World.InteriorBuilding));
         IReadOnlyList<RmbPeoplePlacement> people = RmbPlacementReader.Read(sourceBytes, 0, summary, blockArchive.Source).Buildings[0].Interior.People;
         Assert.Equal(people.Count, interior.Document.World.StaticNpcs.Count);
         foreach ((RmbPeoplePlacement person, int ordinal) in people.Select((person, ordinal) => (person, ordinal)))

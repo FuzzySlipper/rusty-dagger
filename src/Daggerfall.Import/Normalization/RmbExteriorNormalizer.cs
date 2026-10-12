@@ -134,6 +134,7 @@ public static class RmbExteriorNormalizer
         private NormalizedMarker? startMarker;
         private NormalizedMarker? enterMarker;
         private NormalizedInteriorBuilding? interiorBuilding;
+        private readonly List<NormalizedBuildingEntryDoor> interiorEntryDoors = [];
         private readonly List<NormalizedStaticNpcPlacement> staticNpcs = [];
         private readonly IReadOnlyDictionary<(int, int), string> flatGenders = StaticNpcNormalization.ReadGenders(request.Sources);
         private readonly List<NormalizedPropertyContainer> propertyContainers = [];
@@ -259,7 +260,8 @@ public static class RmbExteriorNormalizer
             RmbBlockContent content = RmbBlockContent.Read(blocks, reference.SourceName);
             IReadOnlyList<RmbBlockModel> models = content.InteriorModels(buildingIndex);
             RmbBuildingSlot selected = content.Summary.Buildings[buildingIndex];
-            interiorBuilding = new(reference.X, reference.Y, reference.SourceName, buildingIndex, selected.BuildingType, selected.FactionId);
+            interiorBuilding = new(reference.X, reference.Y, reference.SourceName, buildingIndex, selected.BuildingType, selected.FactionId)
+            { EntryFrame = content.InteriorEntryFrame(buildingIndex) };
             // The donor's DaggerfallInterior creates this half in its own local frame; it does not carry the
             // exterior block or building-subrecord transform into the interior scene.
             foreach (RmbBlockModel model in models)
@@ -325,6 +327,12 @@ public static class RmbExteriorNormalizer
                     uvs.Add(new(uv.U, uv.V));
                 }
                 NormalizedVector3 surfaceNormal = MeshGeometry.Normal(polygon);
+                if (request.ProfileKind == RmbWorldProfileKind.Interior
+                    && RmbBlockContent.TransitionDoor(plane.TextureArchive, plane.TextureRecord) == DaggerfallWorldBlockTransitionKind.BuildingExit)
+                {
+                    var (centre, normal) = RmbBlockContent.DoorPlane(polygon);
+                    interiorEntryDoors.Add(new(centre, normal));
+                }
                 group.Add(polygon, uvs, surfaceNormal);
                 if (request.ProfileKind == RmbWorldProfileKind.Interior)
                 { mapVertices.AddRange(polygon); mapMeshes.Add((plane.TextureArchive, plane.TextureRecord, doorId)); }
@@ -426,7 +434,8 @@ public static class RmbExteriorNormalizer
                 resources.Add(new("door/rmb-exterior", NormalizedResourceKind.DoorDefinition, resourcesId, [], []));
             NormalizedWorld world = new($"mesh/{root}", meshes.Select(mesh => mesh.Id).ToArray(), navigation.Id, startMarker, enterMarker, [], [], [], [], doors)
             {
-                InteriorBuilding = interiorBuilding,
+                InteriorBuilding = interiorBuilding is { EntryFrame: { } frame } building
+                    ? building with { EntryFrame = frame with { Doors = interiorEntryDoors.ToArray() } } : interiorBuilding,
                 GeometryPlacements = interiorGeometry.Select(placement => new NormalizedGeometryPlacement(
                     placement.Id, MeshGeometry.Bounds(placement.Vertices),
                     placement.MeshKeys.Select(key => MeshId(root, key)).Order(StringComparer.Ordinal).ToArray(), null)
