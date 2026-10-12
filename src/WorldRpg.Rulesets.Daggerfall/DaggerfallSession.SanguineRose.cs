@@ -146,6 +146,13 @@ internal sealed partial class DaggerfallSession
             SpatialHit clearance = _spatial.OverlapCapsule(floor.Point + Vector3.UnitY * SummonSeparation,
                 0d, SummonClearanceRadius, actors, environment);
             if (clearance.Present) continue;
+            // Actor poses are feet. Admit the entire controller capsule at its projected center,
+            // not only the donor's small separation sphere, before handing this pose to the roster.
+            CharacterShapeConfig shape = _spatial.CurrentController.Shape;
+            Vector3 center = floor.Point + Vector3.UnitY * (shape.StandingHeight * .5f + shape.ContactSkin + shape.ClearancePadding);
+            SpatialHit body = _spatial.OverlapCapsule(center, shape.StandingHeight * .5f - shape.Radius,
+                shape.Radius + shape.ClearancePadding, actors, environment);
+            if (body.Present) continue;
             pose = new(WorldPoint.From(floor.Point), MathF.Atan2(player.X - floor.Point.X, -(player.Z - floor.Point.Z)));
             return true;
         }

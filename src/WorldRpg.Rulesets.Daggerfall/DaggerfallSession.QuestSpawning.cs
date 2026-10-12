@@ -8,6 +8,9 @@ internal sealed partial class DaggerfallSession
 {
     private long? SpawnQuestFoe(string operation, DaggerfallQuestFoeSelection foe, bool send)
     {
+        // DFU advances travel's clock before the next quest update. Calendar slices here still
+        // process deadlines, but must not populate either end of a journey at intermediate hours.
+        if (State.Travel.IsExecuting) return null;
         if (State.Actors.Player.IsDefeated || State.PlayerControl.Position is not WorldPoint player) return null;
         var location = _sites.ReadQuestLocation();
         if (send && location.ExteriorLocation is null) return null;
