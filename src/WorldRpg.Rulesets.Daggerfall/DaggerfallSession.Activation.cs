@@ -113,7 +113,9 @@ internal sealed partial class DaggerfallSession
             return new(true, "Read the greeting before entering.");
         bool trespass = !owned && closed && interior.BuildingType is >= 0 and <= 23;
         var witnesses = !owned && (forced || trespass) ? QueryCrimeWitnesses() : DaggerfallCrimeWitnessEvidence.NotQueried;
-        if (!TryTransitionTo(destination))
+        DaggerfallSiteAnchor landing = DaggerfallBuildingArrival.Landing(inside,
+            _sites.LocalToProfile(_doors.Read(door).Pose.Translation), _spatial.CurrentController.Shape);
+        if (!_sites.TryEnterBuilding(destination, landing))
             return new(false, "The building entrance cannot be used.");
         if (!owned && (forced || trespass))
         {

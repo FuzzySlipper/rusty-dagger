@@ -203,6 +203,18 @@ internal sealed class RmbBlockContent
                 Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z), flat))];
     }
 
+    /// <summary>The donor interior's transform within its exterior block and all enter/rest markers.</summary>
+    internal NormalizedBuildingEntryFrame InteriorEntryFrame(int buildingIndex)
+    {
+        RequireBuilding(buildingIndex);
+        RmbBuildingSlot slot = Summary.Buildings[buildingIndex];
+        return new(MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbBuildingOrigin(slot)),
+            -Arena2SourceTransform.ToRmbYawDegrees(slot.YRotation),
+            [.. InteriorFlats(buildingIndex).Where(flat => flat.TextureArchive == RdbSourceClassification.EditorFlatArchive
+                && flat.TextureRecord is RdbSourceClassification.EnterMarkerRecord or 4) // DFU also accepts rest marker 199.4.
+                .Select(flat => MeshGeometry.ToRightHanded(flat.Point))]);
+    }
+
     /// <summary>Whether a building's inside half places any model, which is what makes it an interior.</summary>
     public bool HasInterior(int buildingIndex)
     {

@@ -62,7 +62,10 @@ internal sealed record DaggerfallWorldBlockGate(string Id, string ModelId, Vecto
     DaggerfallWorldBlockGateState Open, DaggerfallWorldBlockGateState Closed);
 
 /// <summary>One RMB building sub-record as its block states it.</summary>
-internal sealed record DaggerfallWorldBlockBuilding(int Index, int BuildingType, int FactionId, int Quality, int NameSeed, bool HasInterior);
+internal sealed record DaggerfallWorldBlockBuilding(int Index, int BuildingType, int FactionId, int Quality, int NameSeed, bool HasInterior)
+{
+    internal DaggerfallBuildingEntryFrame? EntryFrame { get; init; }
+}
 
 /// <summary>One RDB random-enemy marker in its block's frame.</summary>
 internal sealed record DaggerfallWorldBlockRandomEnemy(string Id, Vector3 Position, int EncounterSlot, int SpawnDistance, bool Passive, string? ActionId);
@@ -489,7 +492,8 @@ internal sealed partial class DaggerfallWorldBlocks
         DaggerfallBaseContent.Integer(value, "factionId", diagnostics),
         DaggerfallBaseContent.Integer(value, "quality", diagnostics),
         DaggerfallBaseContent.Integer(value, "nameSeed", diagnostics),
-        DaggerfallBaseContent.Boolean(value, "hasInterior", diagnostics));
+        DaggerfallBaseContent.Boolean(value, "hasInterior", diagnostics))
+        { EntryFrame = DaggerfallBuildingEntryFrame.Read(value) };
 
     private static Vector3? Marker(JsonElement root, string property, string owner, DaggerfallContentDiagnostics diagnostics) =>
         root.TryGetProperty(property, out JsonElement marker) && marker.ValueKind != JsonValueKind.Null

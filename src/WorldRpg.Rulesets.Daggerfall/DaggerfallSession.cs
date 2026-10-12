@@ -326,7 +326,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // An exception that escapes here faults the lifecycle; the Engine reports it with its full
         // text and stack, and a resume continues this same session, so nothing is torn down on the way
         // out. Session resources are released by Dispose.
-        _appearance.BeginAdmittedUpdate();
+        foreach (var appearance in _sites.Appearances) appearance.BeginAdmittedUpdate();
         _enemyBehavior.BeginAdmittedUpdate();
         Update(update.Facts, update.Input);
         // Sprite playback consumes the Engine-bound outer update identity.  It
@@ -336,7 +336,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             && update.Facts.LifecycleState == ProductLifecycleState.Running
             && update.Facts.AdmittedStepCount > 0)
         {
-            _appearance.Advance(update.Facts);
+            foreach (var appearance in _sites.Appearances) appearance.Advance(update.Facts);
             _appearance.AdvanceMobileFeedback(update.Facts, State.Actors, State.PlayerControl.Position, ShotBlockedByCover);
             // A held value is recomputed before anything this update can read it: impacts resolve, the
             // flight advances and presentation publishes against what the player is wearing now.
@@ -360,7 +360,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         SyncWeatherContext(ambientPlaying ? update.Facts.FixedDeltaSeconds * update.Facts.AdmittedStepCount : 0, ambientPlaying);
         // A paused or held update reached no impact boundary, so acts it deferred are not performed.
         _deferredPlayerActs = null;
-        _appearance.CompleteAdmittedUpdate();
+        foreach (var appearance in _sites.Appearances) appearance.CompleteAdmittedUpdate();
         return ProductUpdateResult.None;
     }
 
@@ -735,7 +735,14 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         if (fact is SpellCastFact cast)
             _appearance.ReactSpellCast(cast, State.Actors, State.PlayerControl.Position);
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
-        _appearance.React(fact, State.Actors);
+        if (fact is EnemyAttackStartedFact enemy)
+            (_sites.Appearances.FirstOrDefault(appearance => appearance.HasActor(enemy.AttackerId)) ?? _appearance).React(fact, State.Actors);
+        else
+        {
+            _appearance.React(fact, State.Actors);
+            foreach (var appearance in _sites.Appearances)
+                if (appearance != _appearance) appearance.ReactResidentActor(fact, State.Actors);
+        }
         _outcomes.React(fact);
     }
 
@@ -796,7 +803,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _sites.Projection.Lighting.UpdateMobileLights(State.Actors.All, _roster.Definitions, _definitions.Mobiles);
         _sites.Projection.Lighting.UpdateMagicCandle(candlePosition, _tuning.NormalLight);
         _appearance.UpdateMagicCandle(candlePosition);
-        _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
+        foreach (var appearance in _sites.Appearances) appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],

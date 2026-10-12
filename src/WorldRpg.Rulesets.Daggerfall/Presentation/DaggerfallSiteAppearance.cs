@@ -378,13 +378,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (candleAppearance is { } candle && candlePosition is Vector3 candleAt)
             facts.Add(new(candleVisualId, false, 0, new Transform(candleAt, Quaternion.Identity, Vector3.One), candle, true, RenderLayer.Scene));
         AppendLocationFacts(facts, DaggerfallPresentationObjectIds.ActiveLocationSlot);
-        foreach (ActorState actor in actors.All)
-        {
-            if (!this.actors.TryGetValue(actor.DurableId, out ActorVisual? visual)) continue;
-            Appearance? chosen = actor.IsDefeated ? visual.Corpse : visual.Live;
-            if (chosen is not null) facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.Gameplay(actor.DurableId, "Actor"), false, 0, new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), chosen,
-                actorActive?.Invoke(actor.DurableId) != false && (actor.IsDefeated || perception?.Invoke(actor.DurableId).Invisible != true), RenderLayer.Scene));
-        }
+        AppendActorFacts(facts, actors, DaggerfallPresentationObjectIds.ActiveLocationSlot, perception, actorActive);
         foreach (DaggerfallGroundContainer container in groundContainers.Values.OrderBy(container => container.Id))
         {
             if (groundVisuals.TryGetValue(container.Id, out BillboardVisual? visual))
@@ -445,6 +439,34 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         completeSnapshot?.Invoke();
     }
 
+    /// <summary>Appends this projection's actors; resident identities share its location slot.</summary>
+    internal void AppendActorFacts(List<AppearanceFact> facts, ActorsState state, int slot,
+        Func<long, DaggerfallPerceptionEffectState>? perception = null, Func<long, bool>? actorActive = null)
+    {
+        if (disposed) return;
+        foreach (ActorVisual visual in actors.Values)
+        {
+            if (!state.TryGet(visual.EntityId, out ActorState? actor)) continue;
+            Appearance? chosen = actor.IsDefeated ? visual.Corpse : visual.Live;
+            if (chosen is null) continue;
+            ulong id = slot == DaggerfallPresentationObjectIds.ActiveLocationSlot
+                ? DaggerfallPresentationObjectIds.Gameplay(actor.DurableId, "Actor")
+                : DaggerfallPresentationObjectIds.LocationVisual(slot, visual.LocationOrdinal);
+            facts.Add(new AppearanceFact(id, false, 0, new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), chosen,
+                actorActive?.Invoke(actor.DurableId) != false && (actor.IsDefeated || perception?.Invoke(actor.DurableId).Invisible != true), RenderLayer.Scene));
+        }
+    }
+
+    /// <summary>Resident actor reactions without duplicating the active projection's global audio and effects.</summary>
+    internal void ReactResidentActor(IProductFact fact, ActorsState state)
+    {
+        switch (fact)
+        {
+            case AttackHitFact hit: StartState(hit.TargetId, "hurt", null); break;
+            case ActorDiedFact or EnemyBehaviorTransitionFact: React(fact, state); break;
+        }
+    }
+
     /// <summary>
     /// Appends the location's static meshes, doors, city gates and action models at their current poses, under the
     /// identities of location <paramref name="slot"/>. The active site draws its own under slot 0; the lifecycle
@@ -485,18 +507,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     internal void DrawThroughActiveSnapshot() => drawnByActiveSnapshot = true;
 
     /// <summary>
-    /// Takes the drawn location's meshes, door, gate and action model visuals and their material closure out of this
-    /// appearance. The caller releases them once a snapshot without them is accepted, as the Engine refuses to release
-    /// an appearance its current snapshot still draws.
-    /// </summary>
-    internal IDisposable TakeDrawnLocation()
-    {
-        if (disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteAppearance));
-        locationSuspended = true;
-        return new RetiredLocationResources(TakeLocationResources());
-    }
-
-    /// <summary>
     /// Reconciles restored actor defeat state with the presentation-owned live/corpse visual state.
     /// This performs no death reaction, audio, loot, or reward work; those owners already restored
     /// their canonical state before this projection sync.
@@ -517,9 +527,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     internal void UpdateDirections(ActorsState actorState, WorldPoint viewpoint)
     {
         if (disposed) return;
-        foreach (ActorState actor in actorState.All)
+        foreach (ActorVisual visual in actors.Values)
         {
-            if (!actors.TryGetValue(actor.DurableId, out ActorVisual? visual)
+            if (!actorState.TryGet(visual.EntityId, out ActorState? actor)
                 || visual.Live is null
                 || visual.ActiveState is null
                 || visual.SourceFrameIndices.Count == 0) continue;
@@ -1058,7 +1068,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         {
             (corpseAtlas, corpse) = CreateSprite(content, authoredCorpse);
         }
-        ActorVisual visual = new(entityId, sprite, atlas, live, corpseAtlas, corpse);
+        ActorVisual visual = new(entityId, sprite, atlas, live, corpseAtlas, corpse) { LocationOrdinal = NextLocationVisualOrdinal() };
         StartState(entityId, PreferredRestState(sprite), visual);
         return visual;
         }
@@ -1581,6 +1591,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     internal sealed class ActorVisual(long entityId, NormalizedActorSprite sprite, SpriteAtlas atlas, Appearance live, SpriteAtlas? corpseAtlas, Appearance? corpse)
     {
         internal long EntityId { get; } = entityId;
+        internal ulong LocationOrdinal { get; init; }
         internal NormalizedActorSprite Sprite { get; } = sprite;
         internal SpriteAtlas Atlas { get; } = atlas;
         internal Appearance? Live { get; set; } = live;

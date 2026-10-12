@@ -770,9 +770,20 @@ public sealed record NormalizedGeometryPlacement(
     }
 }
 
+/// <summary>An interior door plane in its own right-handed building frame.</summary>
+public sealed record NormalizedBuildingEntryDoor(NormalizedVector3 Position, NormalizedVector3 Normal);
+
+/// <summary>The exterior sub-record frame and the interior entry candidates it places.</summary>
+public sealed record NormalizedBuildingEntryFrame(NormalizedVector3 ExteriorOrigin, float ExteriorYawDegrees,
+    IReadOnlyList<NormalizedVector3> Markers)
+{
+    public IReadOnlyList<NormalizedBuildingEntryDoor> Doors { get; init; } = [];
+}
+
 /// <summary>A selected building instance in the containing site's exterior block grid.</summary>
 public sealed record NormalizedInteriorBuilding(int BlockX, int BlockY, string SourceKey, int BuildingIndex, int BuildingType, int FactionId)
 {
+    public NormalizedBuildingEntryFrame? EntryFrame { get; init; }
     public void Validate()
     {
         if (BlockX is < 0 or > 255 || BlockY is < 0 or > 255 || BuildingIndex < 0)

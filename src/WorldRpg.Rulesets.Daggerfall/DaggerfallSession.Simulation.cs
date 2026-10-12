@@ -225,7 +225,7 @@ internal sealed partial class DaggerfallSession
         // a frame that is not reached yet lets the player act in this update, as the donor's
         // independent attack timing does. Once one step defers, the rest of the update defers behind it
         // so the acts keep their order.
-        if (_deferredPlayerActs is not null || acts.Any && _appearance.HasPendingEnemyHitTarget(DaggerfallActorIdentity.PlayerEntityId))
+        if (_deferredPlayerActs is not null || acts.Any && _sites.Appearances.Any(appearance => appearance.HasPendingEnemyHitTarget(DaggerfallActorIdentity.PlayerEntityId)))
         {
             _deferredPlayerActs = _deferredPlayerActs?.Then(acts) ?? acts;
             _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
@@ -343,7 +343,7 @@ internal sealed partial class DaggerfallSession
 
     private void ApplyAttackImpacts()
     {
-        IReadOnlyList<AttackImpactNotice> impacts = _appearance.TakeAttackImpacts();
+        IReadOnlyList<AttackImpactNotice> impacts = _sites.Appearances.SelectMany(appearance => appearance.TakeAttackImpacts()).ToArray();
         if (impacts.Count == 0) return;
         if (_latestUpdateGeneration is not ulong generation) return;
         State.Kit.AttackExecution.ApplyImpacts(impacts, generation, _facts);
