@@ -1015,7 +1015,7 @@ test('travel accepts only the current quote and shows actual paid arrival or int
       executionAvailable: true, message: null, lastResult: null };
     view.update(value);
     assert.equal(root.querySelector('option').textContent, 'Charing · Town · Daggerfall');
-    assert.match(root.querySelector('[role="status"]').textContent, /^Charing: about 2 hours, 5 gold/);
+    assert.match(root.querySelector('[role="status"]').textContent, /^Charing: about 2 hours before any arrival-time adjustment, 5 gold/);
     root.querySelector('.dagger-travel-accept').click();
     assert.deepEqual(actions.at(-1), { action: 'travel-accept', key: 'live-quote', amount: 5 });
     root.querySelector('.dagger-travel-accept').click();

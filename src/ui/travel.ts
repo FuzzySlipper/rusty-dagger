@@ -376,7 +376,7 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
           ship.input.checked = quote.options.ship;
           lastIdentity = quote.identity;
         }
-        result.textContent = `${quote.destination}: about ${quote.duration}, `
+        result.textContent = `${quote.destination}: about ${quote.duration} before any arrival-time adjustment, `
           + `${quote.totalCost} gold (${quote.innCost} inn, ${quote.shipCost} ship). `
           + (quote.options.ship && quote.oceanPixels === 0 ? 'This route is entirely over land; ship travel adds no sea passage or fare. ' : '')
           + (quote.canAfford ? 'Affordable.' : 'Insufficient funds.')
