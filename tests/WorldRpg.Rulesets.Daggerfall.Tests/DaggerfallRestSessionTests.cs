@@ -90,11 +90,11 @@ public sealed class DaggerfallRestSessionTests
             Assert.Equal(DaggerfallPanel.Resume, session.LatestPanelRequest?.Panel);
             Assert.Equal("Your rest was interrupted by an encounter.", session.RestView.Message);
 
-            // Without a floor the foe waits, and while it waits it is the enemy that refuses a new rest.
+            // Without a floor the foe waits; the refusal explains the unseen approaching encounter.
             session.Update(new ProductUpdate(OuterUpdate(2), []));
             Assert.Null(Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Resolved).SpawnedActorId);
             session.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
-            Assert.Equal("Enemies are too close to rest.", session.RestView.Message);
+            Assert.Equal("Something approaches. Move or turn to let the encounter arrive before resting.", session.RestView.Message);
 
             WorldPoint player = session.State.PlayerControl.Position!.Value;
             spatial.FloorHit = request => request.Direction.Y < -.99f

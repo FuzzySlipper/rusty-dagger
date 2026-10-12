@@ -292,6 +292,8 @@ internal sealed partial class DaggerfallSession
             return "Vampires cannot start fast travel during daylight.";
         if (State.Actors.Player.IsDefeated) return "You cannot travel while defeated.";
         if (!teleport && _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return "Leave the building or dungeon before travelling.";
+        if (_encounters.HasPending(_activeProfileKey.LogicalId))
+            return "Something approaches. Move or turn to let the encounter arrive before travelling.";
         if (HasNearbyRestEnemy()) return "Nearby enemies prevent travel.";
         if (!quote.CanAfford) return "You cannot afford the route and its coin-only inn cost.";
         // The destination's exterior is resolved before anything is paid: a location the catalog cannot place
