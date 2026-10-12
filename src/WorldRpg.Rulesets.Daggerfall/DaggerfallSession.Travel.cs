@@ -81,10 +81,13 @@ internal sealed partial class DaggerfallSession
         if (action.Kind == DaggerfallUiActionKind.TravelSearch)
         {
             string term = action.Text?.Trim() ?? string.Empty;
+            // A place named by the term comes before the places of a region it names, so a capital that
+            // shares its region's name ("Daggerfall") is not crowded out of the list by its region.
             _travelSearchResults = [.. _travelPolicy.SupportedDestinations()
-                .Where(destination => destination.Name.Contains(term, StringComparison.OrdinalIgnoreCase)
-                    || DaggerfallRegionNames.Name(_definitions.BuildingNames.RegionNames, destination.Id.Region)
-                        .Contains(term, StringComparison.OrdinalIgnoreCase))
+                .Select(destination => (Destination: destination, Rank: SearchRank(destination, term)))
+                .Where(match => match.Rank is not null)
+                .OrderBy(match => match.Rank)
+                .Select(match => match.Destination)
                 .Take(40)];
             _travelSearchInitialized = true;
             _travelMessage = _travelSearchResults.Length == 0 ? "No discovered destination matches that place or region." : null;
@@ -97,6 +100,19 @@ internal sealed partial class DaggerfallSession
         _travelMessage = null;
         DaggerfallTravelQuote? quote = CurrentTravelQuote();
         if (quote is { CanAfford: false }) _travelMessage = "You cannot afford the selected route and lodging options.";
+    }
+
+    /// <summary>
+    /// How well a destination answers a search: its exact name, then a name starting with the term, then a name
+    /// containing it, then a region that names it; null when nothing does. The order within a rank is the catalog's.
+    /// </summary>
+    private int? SearchRank(DaggerfallTravelDestination destination, string term)
+    {
+        if (destination.Name.Equals(term, StringComparison.OrdinalIgnoreCase)) return 0;
+        if (destination.Name.StartsWith(term, StringComparison.OrdinalIgnoreCase)) return 1;
+        if (destination.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) return 2;
+        return DaggerfallRegionNames.Name(_definitions.BuildingNames.RegionNames, destination.Id.Region)
+            .Contains(term, StringComparison.OrdinalIgnoreCase) ? 3 : null;
     }
 
     private DaggerfallTravelQuote? CurrentTravelQuote()
