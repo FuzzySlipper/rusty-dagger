@@ -62,7 +62,8 @@ public sealed class ActorNavigationCoordinator
 {
     private readonly ISpatialService _spatial;
     private readonly SpatialSession _session;
-    private readonly EntityCharacterController? _characterController;
+    private readonly bool _useCharacterController;
+    private readonly HashSet<EntityId> _reportedPenetrations = [];
     private readonly CharacterControllerConfig _characterControllerConfig;
     private readonly Func<ActorState, CharacterStepEnvironment>? _environmentProvider;
 
@@ -73,7 +74,7 @@ public sealed class ActorNavigationCoordinator
     {
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
         _session = session ?? throw new ArgumentNullException(nameof(session));
-        _characterController = actors is null ? null : new EntityCharacterController(actors, _spatial);
+        _useCharacterController = actors is not null;
         _characterControllerConfig = characterControllerConfig ?? default;
         _environmentProvider = environmentProvider;
     }
@@ -87,7 +88,7 @@ public sealed class ActorNavigationCoordinator
         ArgumentNullException.ThrowIfNull(actor);
         request.Validate();
 
-        if (request.Mode is not ActorNavigationMode.Ground && _characterController is not null)
+        if (request.Mode is not ActorNavigationMode.Ground && _useCharacterController)
             return EvaluateCharacterStep(actor, request);
 
         ActorPose before = actor.Pose;
@@ -180,19 +181,28 @@ public sealed class ActorNavigationCoordinator
             ExternalImpulse: Vector3.Zero,
             request.StepSeconds,
             checked(motion.LastCommandSequence + 1));
-        EntityCharacterController controller = _characterController
-            ?? throw new InvalidOperationException("Character actor navigation has no Engine controller.");
-        EntityCharacterControllerReceipt accepted = controller.Step(
-            actor.Actor.Entity,
-            _session,
-            environment.Support,
-            _characterControllerConfig,
-            command,
-            environment.Obstacles,
-            environment.MeshInstances);
+        // Navigation/actor poses are feet; the Engine character proposal takes a capsule center.
+        // Keep that projection local so switching movement medium never changes the actor's origin.
+        CharacterShapeConfig shape = _characterControllerConfig.Shape;
+        float height = motion.Stance == CharacterStance.Crouched ? shape.CrouchedHeight : shape.StandingHeight;
+        Vector3 centerOffset = Vector3.UnitY * (height * .5f + shape.ContactSkin + shape.ClearancePadding);
+        CharacterStepReceipt accepted;
+        try
+        {
+            accepted = _spatial.ProposeCharacterStep(new CharacterStepRequest(
+                _session, before.Position.ToVector() + centerOffset, motion, environment.Support,
+                environment.Obstacles, environment.MeshInstances, _characterControllerConfig, command));
+        }
+        catch (EngineCallException failure) when (IsUnresolvedPenetration(failure))
+        {
+            if (_reportedPenetrations.Add(actor.Actor.Entity))
+                Console.Error.WriteLine($"Actor {actor.DurableId} stays at {before.Position}: {failure.Message}");
+            return CharacterReceipt(NavigationPathOutcome.StartBlocked, before.Position.ToVector(), 0);
+        }
 
-        Vector3 position = accepted.Native.Transform.Translation;
-        bool moved = (accepted.Native.Displacement.LengthSquared() > .0000001f)
+        actor.Actor.Store.Set(actor.Actor.Entity, EngineComponentTypes.CharacterMotion, accepted.Motion);
+        Vector3 position = accepted.Transform.Translation - centerOffset;
+        bool moved = (accepted.Displacement.LengthSquared() > .0000001f)
             || Vector3.DistanceSquared(position, request.Target.ToVector()) <= .04f;
         if (moved)
         {
@@ -201,10 +211,18 @@ public sealed class ActorNavigationCoordinator
             return CharacterReceipt(NavigationPathOutcome.Reached, position, 1);
         }
 
-        NavigationPathOutcome outcome = accepted.Native.BlockFlags != CharacterBlockFlags.None
+        NavigationPathOutcome outcome = accepted.BlockFlags != CharacterBlockFlags.None
             ? NavigationPathOutcome.StartBlocked
             : NavigationPathOutcome.NoPath;
         return CharacterReceipt(outcome, position, 0);
+    }
+
+    private static bool IsUnresolvedPenetration(EngineCallException failure)
+    {
+        if (failure.Service != "Spatial" || failure.Operation != "ProposeCharacterStep") return false;
+        foreach (EngineDiagnostic diagnostic in failure.Diagnostics.Span)
+            if (diagnostic.Code == "unresolved-character-controller-penetration") return true;
+        return false;
     }
 
     /// <summary>
