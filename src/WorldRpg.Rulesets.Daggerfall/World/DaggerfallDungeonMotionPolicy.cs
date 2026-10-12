@@ -1,5 +1,6 @@
 using System.Numerics;
 using Rusty.Engine;
+using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
@@ -46,11 +47,7 @@ internal static class DaggerfallDungeonMotionPolicy
     {
         if (!IsFinite(position) || !IsFinite(rotationDegrees))
             throw new ArgumentOutOfRangeException(nameof(position), "Action model pose must be finite.");
-        Vector3 radians = rotationDegrees * (MathF.PI / 180F);
-        Quaternion rotation = Quaternion.CreateFromAxisAngle(-Vector3.UnitZ, radians.Z)
-            * Quaternion.CreateFromAxisAngle(-Vector3.UnitX, radians.X)
-            * Quaternion.CreateFromAxisAngle(Vector3.UnitY, radians.Y);
-        return new Transform(position, Quaternion.Normalize(rotation), Vector3.One);
+        return DaggerfallSiteGeometry.Pose(position, rotationDegrees);
     }
 
     /// <summary>
