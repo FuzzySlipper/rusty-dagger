@@ -11,6 +11,7 @@ internal enum DaggerfallExteriorSeason
 {
     Summer,
     Winter,
+    Rain,
 }
 
 /// <summary>
@@ -110,6 +111,7 @@ internal sealed class DaggerfallExteriorEnvironment
     private readonly Dictionary<DaggerfallExteriorCellId, CellFacts> _cells = [];
     private DaggerfallExteriorWorldOrigin _origin;
     private DaggerfallExteriorSeason _season;
+    private readonly HashSet<int> _rainingClimates = [];
     private bool _initialized;
     private readonly IRandomService _random;
 
@@ -168,10 +170,18 @@ internal sealed class DaggerfallExteriorEnvironment
         ? _origin
         : throw new InvalidOperationException("Exterior environment has not been initialized.");
 
-    internal void SetSeason(DaggerfallExteriorSeason season)
+    internal bool UpdateRain(IEnumerable<DaggerfallClimateValueDefinition> climates, Func<int, bool> raining)
+    {
+        bool changed = false;
+        foreach (var climate in climates)
+            changed |= raining(climate.Value) ? _rainingClimates.Add(climate.Value) : _rainingClimates.Remove(climate.Value);
+        return changed;
+    }
+
+    internal void SetSeason(DaggerfallExteriorSeason season, bool weatherChanged = false)
     {
         if (!Enum.IsDefined(season)) throw new ArgumentOutOfRangeException(nameof(season));
-        if (_season == season) return;
+        if (_season == season && !weatherChanged) return;
         _season = season;
         if (_initialized)
         {
@@ -204,12 +214,14 @@ internal sealed class DaggerfallExteriorEnvironment
         {
             locations.TryGetValue(cell, out DaggerfallSiteExterior? location);
             DaggerfallClimateCell climate = grids.ClimateAtWorldPixel(cell.X, cell.Y);
+            DaggerfallExteriorSeason variantSeason = _season == DaggerfallExteriorSeason.Winter ? _season
+                : _rainingClimates.Contains(climate.Value) ? DaggerfallExteriorSeason.Rain : _season;
             DaggerfallExteriorTerrainVariant variant = new(
                 cell,
                 climate.Value,
                 climate.Name,
-                GroundTextureArchive(climate.Value, _season),
-                _season);
+                GroundTextureArchive(climate.Value, variantSeason),
+                variantSeason);
             if (_cells.TryGetValue(cell, out CellFacts? retained) && retained.Variant == variant)
             {
                 staged.Add(cell, retained);
@@ -285,14 +297,18 @@ internal sealed class DaggerfallExteriorEnvironment
         }
     }
 
-    internal static int GroundTextureArchive(int climateValue, DaggerfallExteriorSeason season) => climateValue switch
+    internal static int GroundTextureArchive(int climateValue, DaggerfallExteriorSeason season)
     {
-        223 or 227 or 228 => season == DaggerfallExteriorSeason.Winter ? 403 : 402,
-        224 or 225 or 229 => 2,
-        226 or 230 => season == DaggerfallExteriorSeason.Winter ? 103 : 102,
-        231 or 232 => season == DaggerfallExteriorSeason.Winter ? 303 : 302,
-        _ => season == DaggerfallExteriorSeason.Winter ? 303 : 302,
-    };
+        int archive = climateValue switch
+        {
+            223 or 227 or 228 => 402,
+            224 or 225 or 229 => 2,
+            226 or 230 => 102,
+            _ => 302,
+        };
+        return season == DaggerfallExteriorSeason.Rain ? archive + 2
+            : season == DaggerfallExteriorSeason.Winter && GroundSupportsWinter(climateValue) ? archive + 1 : archive;
+    }
 
     /// <summary>Maps MapsFile.GetWorldClimateSettings to its nature set and winter variant.</summary>
     internal static int NatureTextureArchive(int climateValue, DaggerfallExteriorSeason season)

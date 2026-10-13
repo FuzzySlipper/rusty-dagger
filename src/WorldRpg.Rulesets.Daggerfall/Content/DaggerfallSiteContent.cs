@@ -136,6 +136,8 @@ internal static partial class DaggerfallSiteContent
         if (profileKind == DaggerfallWorldProfileKind.Exterior && start.Site is { } placedSite
             && definitions.Locations.Records.Single(value => value.Id == placedSite).Climate is int climate)
         {
+            var location = definitions.Locations.Records.Single(value => value.Id == placedSite);
+            int groundClimate = definitions.Grids.ClimateAtWorldPixel(location.MapPixelX, location.MapPixelY).Value;
             materials = materials.Select(material =>
             {
                 const string prefix = "material/texture-";
@@ -144,7 +146,7 @@ internal static partial class DaggerfallSiteContent
                 if (parts.Length != 2 || !int.TryParse(parts[0], out int archive) || !int.TryParse(parts[1], out int record)) return material;
                 ContentArtifact? Texture(DaggerfallClimateSeason season)
                 {
-                    int mapped = definitions.Grids.Climate.SwapArchive(archive, record, climate, season);
+                    int mapped = ExteriorTextureArchive(definitions.Grids.Climate, archive, record, climate, groundClimate, season);
                     string id = $"{prefix}{mapped}-{record}";
                     if (!product.TryGetResource(id, out var resource))
                     { diagnostics.Add($"Exterior texture '{id}' for {season} is not published."); return null; }
@@ -153,8 +155,10 @@ internal static partial class DaggerfallSiteContent
                 }
                 var summer = Texture(DaggerfallClimateSeason.Summer);
                 var winter = Texture(DaggerfallClimateSeason.Winter);
+                var rain = Texture(DaggerfallClimateSeason.Rain);
                 return summer is null ? material : material with
-                    { TexturePath = summer.Path, TextureSha256 = summer.Sha256, WinterTexture = winter?.Path != summer.Path ? winter : null };
+                    { TexturePath = summer.Path, TextureSha256 = summer.Sha256, WinterTexture = winter?.Path != summer.Path ? winter : null,
+                        RainTexture = rain?.Path != summer.Path ? rain : null };
             }).ToArray();
         }
         // Every normal encounter table can select any entry at a valid player level. Refuse a
@@ -237,6 +241,17 @@ internal static partial class DaggerfallSiteContent
             AmbientZones = DaggerfallAmbientZones.Read(normalizedWorld, diagnostics),
             PropertyContainers = DaggerfallPropertyContainerPlacement.Read(normalizedWorld) };
     }
+
+    /// <summary>Ground tiles use the terrain climate's archive; models use the published climate swap table.</summary>
+    internal static int ExteriorTextureArchive(DaggerfallClimateGridDefinition swaps, int archive, int record,
+        int climate, int groundClimate, DaggerfallClimateSeason season) => archive < 500 && archive % 100 == 2
+        ? DaggerfallExteriorEnvironment.GroundTextureArchive(groundClimate, season switch
+        {
+            DaggerfallClimateSeason.Winter => DaggerfallExteriorSeason.Winter,
+            DaggerfallClimateSeason.Rain => DaggerfallExteriorSeason.Rain,
+            _ => DaggerfallExteriorSeason.Summer,
+        })
+        : swaps.SwapArchive(archive, record, climate, season);
 
     /// <summary>
     /// Reads the product-wide world media an assembled location draws from: every actor, billboard and
@@ -2625,6 +2640,7 @@ internal sealed record ContentArtifact(string Path, ContentSha256 Sha256);
 internal sealed record NormalizedMaterial(uint Slot, string TexturePath, ContentSha256 TextureSha256, string MaterialResourceId = "")
 {
     internal ContentArtifact? WinterTexture { get; init; }
+    internal ContentArtifact? RainTexture { get; init; }
 }
 internal sealed record NormalizedAtlasFrame(uint Id, int X, int Y, int Width, int Height, Vector2? DisplaySize = null);
 internal sealed record NormalizedSpriteState(string Name, IReadOnlyList<uint> Frames, float FramesPerSecond, bool Loops)

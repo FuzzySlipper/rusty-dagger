@@ -1864,22 +1864,28 @@ internal sealed class DaggerfallSiteLifecycle
             resident.Projection.Lighting.UpdateCityLights(_time.Calendar);
     }
 
-    internal void SetExteriorSeason(DaggerfallExteriorSeason season)
+    internal void SetExteriorSeason(DaggerfallExteriorSeason season, Func<int, bool>? raining = null)
     {
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior) return;
-        Projection.Appearance.SetExteriorSeason(season);
-        foreach (var resident in _residentExteriorLocations.Values) resident.Projection.Appearance.SetExteriorSeason(season);
-        if (_exteriorEnvironment is null)
+        DaggerfallExteriorSeason ForProfile(DaggerfallSiteProfile profile)
         {
-            _exteriorEnvironment = new(_random, season);
-            return;
+            var location = _site.Require(profile.ProfileKey.Site);
+            // Match the weather owner's geography query; texture climate selection stays in the profile.
+            int climate = _definitions.Grids.ClimateAtWorldPixel(location.MapPixelX, location.MapPixelY).Value;
+            return season == DaggerfallExteriorSeason.Winter || raining?.Invoke(climate) != true
+                ? season : DaggerfallExteriorSeason.Rain;
         }
-        if (_exteriorEnvironment.Season == season) return;
+        Projection.Appearance.SetExteriorSeason(ForProfile(Projection.Inputs));
+        foreach (var resident in _residentExteriorLocations.Values)
+            resident.Projection.Appearance.SetExteriorSeason(ForProfile(resident.Profile));
+        _exteriorEnvironment ??= new(_random, season);
+        bool weatherChanged = _exteriorEnvironment.UpdateRain(_definitions.Grids.Climate.Values, raining ?? (_ => false));
+        if (_exteriorEnvironment.Season == season && !weatherChanged) return;
         // SetSeason invalidates the retained source facts before the next appearance admission.
         // Retire their trigger references first so a failed rebuild cannot leave water from the
         // previous season active against an uninitialized environment.
         ReleaseExteriorWaterTriggers();
-        _exteriorEnvironment.SetSeason(season);
+        _exteriorEnvironment.SetSeason(season, weatherChanged);
         if (_exteriorResidency is { IsInitialized: true } residency)
             ReconcileExteriorTerrainAppearance(residency);
     }

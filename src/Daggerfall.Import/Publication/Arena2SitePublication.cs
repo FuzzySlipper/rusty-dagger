@@ -87,7 +87,7 @@ public static class Arena2SitePublication
 
     /// <summary>The four donor ground sets, summer/winter variants, and all 56 source tile records.</summary>
     public static IReadOnlyList<string> RuntimeTerrainResources() =>
-        [.. new[] { 2, 3, 102, 103, 302, 303, 402, 403 }
+        [.. new[] { 2, 3, 4, 102, 103, 104, 302, 303, 304, 402, 403, 404 }
             .SelectMany(archive => Enumerable.Range(0, 56).Select(record => $"terrain/texture-{archive}-{record}"))];
 
     /// <summary>Publishes one RDB dungeon site, loading the texture leaves its closure names on demand.</summary>
