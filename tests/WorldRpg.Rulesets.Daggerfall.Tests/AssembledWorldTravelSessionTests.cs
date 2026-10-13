@@ -89,6 +89,26 @@ public sealed class AssembledWorldTravelSessionTests
     /// return through, leaving lands in front of the lowest entrance, facing away from it. A save inside the
     /// dungeon restores there.
     /// </summary>
+    /// <summary>
+    /// A save taken on arriving at a far location restores there. Gaerhart Court lies five map pixels from the
+    /// world's north edge, where a playtest's quick save failed to load.
+    /// </summary>
+    [Fact]
+    public void A_save_on_arrival_at_a_far_northern_location_restores_where_it_was_taken()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallSiteRecord court = world.Definitions.Locations.Records.Single(record => record.Name == "Gaerhart Court");
+        using AssembledWorldRun run = world.Start(court.Id);
+        run.Travel(court);
+        Assert.Equal(DaggerfallWorldProfileIds.Exterior(court.Id), run.Session.Sites.ActiveProfile);
+        RulesetSavePayload arrival = run.Session.CaptureSave();
+        using AssembledWorldRun restored = world.Restore(arrival, court.Id);
+        Assert.Equal(DaggerfallWorldProfileIds.Exterior(court.Id), restored.Session.Sites.ActiveProfile);
+        DaggerfallPlayerSave saved = DaggerfallSavePayload.Read(arrival).Player,
+            again = DaggerfallSavePayload.Read(restored.Session.CaptureSave()).Player;
+        Assert.Equal((saved.X, saved.Y, saved.Z, saved.YawRadians), (again.X, again.Y, again.Z, again.YawRadians));
+    }
+
     [Fact]
     public void Travel_to_an_unpublished_dungeon_enters_it_and_leaves_through_its_exit()
     {

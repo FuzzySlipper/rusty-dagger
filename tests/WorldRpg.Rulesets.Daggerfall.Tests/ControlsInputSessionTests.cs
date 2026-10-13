@@ -515,8 +515,25 @@ public sealed class ControlsInputSessionTests
         Assert.NotNull(control.LastMeleeTargeting);
     }
 
+    [Fact]
+    public void A_corpse_is_sighted_above_its_floor_contact_so_the_ground_it_lies_on_cannot_hide_it()
+    {
+        using DaggerfallSession session = LootableSession(out _, out PerceptionFake perception);
+        WorldPoint feet = session.State.Actors.Get(2000).Position;
+        session.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"loot\"}")]));
+        Vector3 sighted = perception.Requests.SelectMany(request => request.Targets.ToArray())
+            .Select(target => { var (id, point) = target; return (Id: id, Point: point); })
+            .Last(target => target.Id == 2000UL).Point;
+        Assert.Equal(feet.X, sighted.X);
+        Assert.Equal(feet.Z, sighted.Z);
+        Assert.True(sighted.Y > feet.Y + .05F, $"The corpse at {feet} is sighted at {sighted}.");
+        Assert.Equal(ProductMode.Modal, session.PendingModeRequest);
+    }
+
     /// <summary>A session with one lootable corpse within reach, and the appearance it drives.</summary>
-    private static DaggerfallSession LootableSession(out AppearanceFake appearance)
+    private static DaggerfallSession LootableSession(out AppearanceFake appearance) => LootableSession(out appearance, out _);
+
+    private static DaggerfallSession LootableSession(out AppearanceFake appearance, out PerceptionFake perception)
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -526,7 +543,7 @@ public sealed class ControlsInputSessionTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         spatial.KeepPosition = true;
-        PerceptionFake perception = PerceptionFake.Create();
+        perception = PerceptionFake.Create();
         appearance = new AppearanceFake(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
