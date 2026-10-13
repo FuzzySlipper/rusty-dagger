@@ -479,8 +479,9 @@ internal sealed partial class DaggerfallLocationAssembly
                 look = new(ActorHeading.Yaw(nearest.Normal), 0F);
             WorldPoint? position = start is { } at ? new WorldPoint(at.X, at.Y, at.Z) : null;
             if (position is { } startAnchor) Anchor(StartAnchor, startAnchor, look.YawRadians);
+            // A new game or a teleport starts on the Enter marker facing north (StartDungeonInterior).
             if (key.Kind == DaggerfallWorldProfileKind.Dungeon && _enter is { } enterMarker)
-                Anchor(EnterAnchor, new WorldPoint(enterMarker.X, enterMarker.Y, enterMarker.Z), look.YawRadians);
+                Anchor(EnterAnchor, new WorldPoint(enterMarker.X, enterMarker.Y, enterMarker.Z), 0F);
             for (int index = 0; index < _startMarkers.Count; index++)
                 Anchor(StartMarkerAnchor(index), new WorldPoint(_startMarkers[index].X, _startMarkers[index].Y, _startMarkers[index].Z), 0F);
             // Leaving the dungeon lands outside its lowest entrance, facing away from it (PositionPlayerToDungeonExit).
