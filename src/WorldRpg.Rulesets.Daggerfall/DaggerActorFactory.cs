@@ -215,8 +215,13 @@ internal static class DaggerActorFactory
             DaggerfallQuestInstances quests = new(definitions, random, questAdmission, disabledQuestSelection);
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
             if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
+            // A restored player stands where the save left them from construction on: the active profile may
+            // have no authored start (a location without start markers), and the camera is built from this pose.
+            PlayerControlState control = saved?.Player is { } pose
+                ? new(new WorldPoint(pose.X, pose.Y, pose.Z), pose.YawRadians, pose.PitchRadians)
+                : new(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians);
             return new(
-                new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians),
+                control,
                 actors, inventoryStore, inventory, equipmentCoordinator, containers,
                 new DaggerfallActorInventories(actors, itemDefinitions, equipmentSlots),
                 itemInstances, variables, npcs, social, character,

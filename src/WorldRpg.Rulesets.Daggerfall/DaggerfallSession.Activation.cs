@@ -73,7 +73,7 @@ internal sealed partial class DaggerfallSession
             new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),
             reach,
             new DaggerfallActivationContributions(
-                new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts),
+                new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts, CorpseSightPoint),
                 new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic, EnterExteriorBuilding, ExteriorBuildingDoor, ExteriorBuildingName, DescribeLockDifficulty, DiscoverExteriorBuilding),
                 new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination,
                     (destination, portal) => TryTransitionTo(destination, portal.ArrivalAnchor)),
@@ -664,12 +664,32 @@ internal sealed partial class DaggerfallSession
         return new(cosYaw * sign, 0f, sinYaw * sign);
     }
 
+    /// <summary>
+    /// Where a corpse is sighted and reached: the middle of its lying sprite above the floor contact. A
+    /// visibility ray to the contact itself can end on, or under, the terrain it lies on and read as
+    /// occluded from every side, as DaggerTargetingPolicy.AimPoint notes for grounded actors.
+    /// </summary>
+    private WorldPoint CorpseSightPoint(ActorState actor)
+    {
+        DaggerfallSiteProfile inputs = _sites.Projection.Inputs;
+        NormalizedActorSprite? sprite = inputs.ActorSprites.TryGetValue(actor.DurableId, out NormalizedActorSprite? placed)
+            ? placed
+            : DefinitionsByActor.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)
+                && definition.MobileId is int mobileId && inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? mobile)
+                    ? mobile.ForGender(actor.Actor.TryGet<DaggerfallActorGender>(out var gender) ? gender.Value : "unspecified")
+                    : null;
+        if (sprite is null) return actor.Position;
+        float height = (sprite.Corpse ?? sprite).Size.Y;
+        return WorldPoint.From(actor.Position.ToVector() + (Vector3.UnitY * (height * .5F)));
+    }
+
     /// <summary>The current corpse owner composed into the activation seam.</summary>
     private sealed class DaggerfallCorpseActivationOwner(
         DaggerfallCorpseLootModule loot,
         DaggerfallLootPresentation lootUi,
         ActorsState actors,
-        FactBuffer<IProductFact> facts) : IDaggerfallCorpseActivationOwner
+        FactBuffer<IProductFact> facts,
+        Func<ActorState, WorldPoint> sightPoint) : IDaggerfallCorpseActivationOwner
     {
         public IEnumerable<DaggerfallActivationTarget> CorpseTargets()
         {
@@ -681,7 +701,7 @@ internal sealed partial class DaggerfallSession
                 ActorsState.Identity(actorId),
                 actor.Actor.Entity,
                 checked((ulong)actorId),
-                actor.Position,
+                sightPoint(actor),
                 Precedence: 4);
             }
         }
