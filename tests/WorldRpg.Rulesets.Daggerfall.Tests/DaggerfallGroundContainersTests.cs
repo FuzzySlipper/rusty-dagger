@@ -153,7 +153,7 @@ public sealed class DaggerfallGroundContainersTests
         ]));
         var profile = Profile(DaggerfallWorldProfileKind.Exterior, "charing-exterior");
         DaggerfallGroundContainers ground = new(containers, instances, player, ledger, profile);
-        var saved = new DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySave.Capture(profile), 99, 819.3f, 2, 4,
+        var saved = new DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySave.Capture(profile), 99, 819.3f, 2, -4,
             new([new("apples", "apple", 3, Metadata(DaggerfallItemOwner.Ground(99)).Capture())],
                 [new("ring", 200, Metadata(DaggerfallItemOwner.Ground(99)).Capture())], []));
         ground.Restore([saved]);

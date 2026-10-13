@@ -37,13 +37,15 @@ public sealed class DungeonTeleportSessionTests
         var result = session.State.DungeonActions[profile.ProfileKey].Trigger(teleport.Id, DaggerfallDungeonActionEvent.Direct);
         Assert.Contains(result.Executions, value => value.ActionId == teleport.Id && value.Outcome == DaggerfallDungeonActionOutcome.Applied);
         Assert.Equal(destination, session.State.PlayerControl.Position!.Value.ToVector());
-        Assert.Equal(-MathF.PI / 2, session.State.PlayerControl.YawRadians, 5);
+        // The player takes the destination's source pose like any posed model (#9793): a +90-degree source
+        // yaw faces the player along +X.
+        Assert.Equal(MathF.PI / 2, session.State.PlayerControl.YawRadians, 5);
         Assert.Equal(player, session.State.Actors.Player.Actor.Entity);
         var saved = session.CaptureSave();
         session.Dispose();
         using var restored = DaggerfallSession.Restore(engine.Context, composition, saved);
         Assert.Equal(destination, restored.State.PlayerControl.Position!.Value.ToVector());
-        Assert.Equal(-MathF.PI / 2, restored.State.PlayerControl.YawRadians, 5);
+        Assert.Equal(MathF.PI / 2, restored.State.PlayerControl.YawRadians, 5);
         Assert.Equal(1UL, restored.State.DungeonActions[profile.ProfileKey].State[teleport.Id].ActivationCount);
     }
 }

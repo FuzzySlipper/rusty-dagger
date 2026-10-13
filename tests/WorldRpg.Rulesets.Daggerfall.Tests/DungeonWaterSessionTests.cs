@@ -48,8 +48,10 @@ public sealed class DungeonWaterSessionTests
         Assert.Equal(water.Minimum, spatial.TriggerRows[water.Trigger].Min);
         Assert.Equal(water.Maximum, spatial.TriggerRows[water.Trigger].Max);
         Assert.Contains(water.Trigger, spatial.TriggersAt(actor.Position.ToVector()));
-        Assert.True(spatial.StepRequests.Any(request => request.Position == actor.Position.ToVector()
-            && request.Command.Movement.Mode == CharacterMovementMode.Swimming),
+        // The Engine character step takes the capsule centre, directly above the fish's feet.
+        Assert.True(spatial.StepRequests.Any(request => request.Command.Movement.Mode == CharacterMovementMode.Swimming
+            && request.Position.X == actor.Position.X && request.Position.Z == actor.Position.Z
+            && request.Position.Y > actor.Position.Y),
             $"Fish behavior: {session.LastEnemyBehavior[fish]}; position {actor.Position}; request count {spatial.StepRequests.Count}; pairs {string.Join(";", session.LastEnemyBehavior[fish].Visibility!.Value.Pairs.ToArray())}");
         // Continue the ordinary admitted swimming consequence until the breath pool is exhausted.
         for (ulong step = 2; step < 302 && !session.State.Actors.Player.IsDefeated; step++)

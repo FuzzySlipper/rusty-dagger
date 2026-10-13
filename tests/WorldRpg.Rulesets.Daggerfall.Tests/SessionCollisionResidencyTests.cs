@@ -128,10 +128,12 @@ public sealed class SessionCollisionResidencyTests
         Assert.True(admission.RemovedInstances.IsEmpty);
         Assert.Equal(cells.Select(DaggerfallExteriorCellResidency.AssetId).ToHashSet(), ExteriorAssets(spatial));
 
-        // A step that leaves the player where it stands leaves the window where it is.
-        int admissions = spatial.CollisionResidencyRequests.Count;
+        // A step that leaves the player where it stands leaves the window where it is. The town's city
+        // gates keep their own collision requests (opening for the day, following a rebase), so the
+        // window's requests are counted apart from them.
+        int admissions = WindowRequests(spatial).Length;
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Equal(admissions, spatial.CollisionResidencyRequests.Count);
+        Assert.Equal(admissions, WindowRequests(spatial).Length);
         DaggerfallExteriorCellResidencySave window = session.Sites.CaptureExteriorResidency()!.Value;
         Assert.Equal(center, window.Center);
 
@@ -142,13 +144,13 @@ public sealed class SessionCollisionResidencyTests
         WorldPoint crossed = new(start.X + DaggerfallExteriorCellResidency.CellSize, start.Y, start.Z);
         float yaw = session.State.PlayerControl.YawRadians;
         double health = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
-        int before = spatial.CollisionResidencyRequests.Count;
+        int before = WindowRequests(spatial).Length;
         int originCommitsBeforeCrossing = engine.OriginCommits.Count;
         session.State.PlayerControl.MoveTo(crossed.ToVector());
         session.Update(new ProductUpdate(OuterUpdate(2), []));
 
         DaggerfallExteriorCellId east = new(center.X + 1, center.Y);
-        CollisionResidencyRequest crossing = Assert.Single(spatial.CollisionResidencyRequests.Skip(before));
+        CollisionResidencyRequest crossing = Assert.Single(WindowRequests(spatial).Skip(before));
         DaggerfallExteriorCellId[] entering = [.. Window(east).Except(cells)];
         DaggerfallExteriorCellId[] leaving = [.. cells.Except(Window(east))];
         Assert.Equal(7, entering.Length);
@@ -194,10 +196,10 @@ public sealed class SessionCollisionResidencyTests
 
         // Entering the interior removes the whole window before the interior's content replaces the
         // collision set, so no exterior cell outlives the exterior.
-        before = spatial.CollisionResidencyRequests.Count;
+        before = WindowRequests(spatial).Length;
         int replacements = spatial.ReplaceCalls;
         Assert.True(session.TryTransitionTo(interior.ProfileKey));
-        CollisionResidencyRequest cleared = spatial.CollisionResidencyRequests[before];
+        CollisionResidencyRequest cleared = WindowRequests(spatial)[before];
         Assert.True(cleared.Assets.IsEmpty);
         Assert.True(cleared.Instances.IsEmpty);
         Assert.Equal(Window(east).Select(DaggerfallExteriorCellResidency.AssetId).ToHashSet(), cleared.RemovedAssets.ToArray().ToHashSet());
@@ -335,6 +337,11 @@ public sealed class SessionCollisionResidencyTests
 
     private static HashSet<ulong> ExteriorAssets(SpatialFake spatial) =>
         [.. spatial.ResidentCollisionAssets.Where(asset => asset == DaggerfallExteriorCellResidency.AssetId(Cell(asset)))];
+
+    private static CollisionResidencyRequest[] WindowRequests(SpatialFake spatial) =>
+        [.. spatial.CollisionResidencyRequests.Where(request => IsExterior(request)
+            || request.Instances.ToArray().Any(instance => IsExteriorInstance(instance.Id))
+            || request.RemovedInstances.ToArray().Any(IsExteriorInstance))];
 
     private static bool IsExteriorInstance(ulong instance) => instance == DaggerfallExteriorCellResidency.InstanceId(Cell(instance));
 
