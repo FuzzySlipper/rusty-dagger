@@ -42,6 +42,12 @@ internal sealed partial class DaggerfallSession
         var replacement = StartNew(_engine, _composition);
         try
         {
+            // A new character starts a dungeon on its Enter marker rather than the door-side Start marker
+            // (StartGameBehaviour.StartNewCharacter prefers it): Privateer's Hold's is the quiet cave.
+            DaggerfallWorldProfileKey start = replacement._sites.ActiveProfile;
+            if (start.Kind == DaggerfallWorldProfileKind.Dungeon
+                && replacement._sites.Projection.Inputs.Anchors.TryGetValue(DaggerfallLocationAssembly.EnterAnchor, out DaggerfallSiteAnchor? enter))
+                _ = replacement._sites.TryRelocatePlayer(start, enter);
             replacement.State.Character.ReplacePending(choices);
             replacement.State.Character.CommitChoices();
             replacement.ClearInitialPlayerLoadout();
