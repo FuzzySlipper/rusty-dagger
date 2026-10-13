@@ -113,9 +113,6 @@ internal static partial class DaggerfallSiteContent
         IReadOnlyList<DaggerfallSitePortal> portals = ReadSitePortals(world, diagnostics);
         IReadOnlyList<DaggerfallSiteAnchor> anchors = ReadSiteAnchors(world, start, diagnostics);
         ReadOnlyMemory<byte> normalizedWorld = files.GetExactlyOne(normalizedPath);
-        if (profileKind == DaggerfallWorldProfileKind.Dungeon && ReadEnterMarker(normalizedWorld, diagnostics) is { } enterMarker
-            && anchors.All(anchor => anchor.Id != DaggerfallLocationAssembly.EnterAnchor))
-            anchors = [.. anchors, enterMarker];
         DaggerfallInteriorBuilding? interiorBuilding = ReadInteriorBuilding(normalizedWorld, profileKind, diagnostics);
         if (interiorBuilding?.EntryFrame is { Doors.Count: > 0 } entry && start.Site is { } interiorSite)
         {
@@ -414,20 +411,6 @@ internal static partial class DaggerfallSiteContent
             diagnostics.Add($"Normalized world closure is not valid JSON: {exception.Message}");
             return [];
         }
-    }
-
-    /// <summary>
-    /// A dungeon's source Enter marker (editor flat 199/8) as its <c>enter</c> anchor, facing north as the donor's
-    /// <c>StartDungeonInterior</c> leaves a player placed there; the Start marker (199/10) stays the door arrival.
-    /// </summary>
-    private static DaggerfallSiteAnchor? ReadEnterMarker(ReadOnlyMemory<byte> normalized, DaggerfallContentDiagnostics diagnostics)
-    {
-        using JsonDocument document = JsonDocument.Parse(normalized);
-        if (!document.RootElement.GetProperty("world").TryGetProperty("enterMarker", out JsonElement marker)
-            || marker.ValueKind != JsonValueKind.Object) return null;
-        JsonElement point = marker.GetProperty("position");
-        return new DaggerfallSiteAnchor(DaggerfallLocationAssembly.EnterAnchor, new WorldPoint(DaggerfallBaseContent.Number(point, "x", diagnostics),
-            DaggerfallBaseContent.Number(point, "y", diagnostics), DaggerfallBaseContent.Number(point, "z", diagnostics)), 0F, 0F).Validate();
     }
 
     private static DaggerfallInteriorBuilding? ReadInteriorBuilding(ReadOnlyMemory<byte>? bytes,
