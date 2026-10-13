@@ -180,6 +180,7 @@ internal sealed partial class DaggerfallLocationAssembly
         private readonly JsonObject _world = new()
         {
             ["lights"] = new JsonArray(),
+            ["billboards"] = new JsonArray(),
             ["actors"] = new JsonArray(),
             ["randomEnemies"] = new JsonArray(),
             ["treasures"] = new JsonArray(),
@@ -226,6 +227,7 @@ internal sealed partial class DaggerfallLocationAssembly
                 _startMarkers.AddRange(document.StartMarkers.Select(marker => origin + marker));
                 PlaceStaticNpcs(document, origin, id => PlaceId(id, block.X, block.Y));
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, id => PlaceId(id, block.X, block.Y)));
+                foreach (JsonNode? flat in document.Section("billboards")) Append("billboards", Moved(flat, origin, id => PlaceId(id, block.X, block.Y)));
                 foreach (JsonNode? person in document.Section("population")) Append("population", Moved(person, origin));
                 if (document.ClearGround is { } bits)
                     for (int index = 0; index < AutomapSide * AutomapSide; index++)
@@ -287,6 +289,7 @@ internal sealed partial class DaggerfallLocationAssembly
             }
 
             foreach (JsonNode? light in document.Section("lights")) Append("lights", Clone(light));
+            foreach (JsonNode? flat in document.Section("billboards")) Append("billboards", Clone(flat));
             foreach (JsonNode? container in document.Section("propertyContainers")) Append("propertyContainers", Clone(container));
             DaggerfallWorldBlockBuilding slot = document.InteriorBuilding!;
             _world["interiorBuilding"] = new JsonObject
@@ -356,6 +359,7 @@ internal sealed partial class DaggerfallLocationAssembly
                     Append("waterVolumes", volume);
                 }
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, Placed));
+                foreach (JsonNode? flat in document.Section("billboards")) Append("billboards", Moved(flat, origin, Placed));
                 foreach (JsonNode? action in document.Section("actions"))
                 {
                     JsonObject value = Moved(action, origin, Placed);
@@ -524,6 +528,7 @@ internal sealed partial class DaggerfallLocationAssembly
                 AmbientZones = DaggerfallAmbientZones.Read(normalized, diagnostics),
                 DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalized, diagnostics),
                 CityGates = gates,
+                Decorations = DaggerfallSiteContent.ReadDecorations(normalized, _media.BillboardSprites, key.Kind, climate, diagnostics),
                 PropertyContainers = DaggerfallPropertyContainerPlacement.Read(normalized),
             };
         }

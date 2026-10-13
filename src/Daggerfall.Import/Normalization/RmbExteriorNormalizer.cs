@@ -123,6 +123,9 @@ public static class RmbExteriorNormalizer
         private readonly HashSet<(int X, int Z)> outdoorNavigationCells = [];
         private readonly List<NormalizedQuestMarker> questMarkers = [];
         private readonly List<NormalizedPopulationPlacement> population = [];
+        private readonly List<NormalizedBillboardPlacement> billboards = [];
+        private readonly List<NormalizedLightPlacement> lights = [];
+        private readonly RmbFlatFacts flatFacts = new(request.Sources);
         private readonly IReadOnlyDictionary<int, ClassicFaction> sourceFactions =
             FactionReader.Read(Encoding.UTF8.GetString(request.Sources.Require("FACTION.TXT").Bytes.Span),
                 request.Sources.Require("FACTION.TXT").Label).ToDictionary(faction => faction.Id);
@@ -143,6 +146,11 @@ public static class RmbExteriorNormalizer
         {
             RmbBlockContent content = RmbBlockContent.Read(blocks, reference.SourceName);
             Arena2ImportPoint origin = Arena2SourceTransform.ToExteriorBlockOrigin(reference);
+            var decoration = flatFacts.Read(content);
+            NormalizedVector3 PlaceFlat(NormalizedVector3 at) => new(at.X + origin.XMetres, at.Y + origin.YMetres, at.Z - origin.ZMetres);
+            string PlaceId(string id) { var parts = id.Split('/', 3); return $"{parts[0]}/{parts[1]}/{reference.X}/{reference.Y}/{parts[2]}"; }
+            billboards.AddRange(decoration.Billboards.Select(flat => flat with { Id = PlaceId(flat.Id), Position = PlaceFlat(flat.Position) }));
+            lights.AddRange(decoration.Lights.Select(light => light with { Id = PlaceId(light.Id), Position = PlaceFlat(light.Position) }));
             foreach (RmbBlockFlat flat in content.ExteriorFlats)
                 AddSourceMarker(flat.TextureArchive, flat.TextureRecord, RmbBlockContent.Add(origin, flat.Point));
             foreach (RmbBlockFlat flat in content.ExteriorFlats.Where(flat => flat.Source.FactionId != 0 && flat.TextureArchive != RdbSourceClassification.EditorFlatArchive))
@@ -197,6 +205,9 @@ public static class RmbExteriorNormalizer
         public void AddInterior(MapsExteriorBlock reference, int buildingIndex)
         {
             RmbBlockContent content = RmbBlockContent.Read(blocks, reference.SourceName);
+            var decoration = flatFacts.Read(content, buildingIndex);
+            billboards.AddRange(decoration.Billboards);
+            lights.AddRange(decoration.Lights);
             IReadOnlyList<RmbBlockModel> models = content.InteriorModels(buildingIndex);
             RmbBuildingSlot selected = content.Summary.Buildings[buildingIndex];
             interiorBuilding = new(reference.X, reference.Y, reference.SourceName, buildingIndex, selected.BuildingType, selected.FactionId)
@@ -381,7 +392,9 @@ public static class RmbExteriorNormalizer
                 }).ToList();
             if (doors.Count != 0)
                 resources.Add(new("door/rmb-exterior", NormalizedResourceKind.DoorDefinition, resourcesId, [], []));
-            NormalizedWorld world = new($"mesh/{root}", meshes.Select(mesh => mesh.Id).ToArray(), navigation.Id, startMarker, enterMarker, [], [], [], [], doors)
+            foreach (string sprite in billboards.Select(flat => flat.SpriteResourceId).Distinct(StringComparer.Ordinal))
+                resources.Add(new(sprite, NormalizedResourceKind.Sprite, resourcesId, [], []));
+            NormalizedWorld world = new($"mesh/{root}", meshes.Select(mesh => mesh.Id).ToArray(), navigation.Id, startMarker, enterMarker, lights, billboards, [], [], doors)
             {
                 InteriorBuilding = interiorBuilding is { EntryFrame: { } frame } building
                     ? building with { EntryFrame = frame with { Doors = interiorEntryDoors.ToArray() } } : interiorBuilding,

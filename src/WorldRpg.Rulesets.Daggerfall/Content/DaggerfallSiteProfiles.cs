@@ -11,6 +11,7 @@ internal enum DaggerfallWorldProfileKind { Exterior, Interior, Dungeon }
 /// <summary>One source-normalized point-light placement in an admitted world profile.</summary>
 internal sealed record DaggerfallSiteLight(string Id, WorldPoint Position, float Range, float Intensity, Vector3 Color)
 {
+    internal bool CityLight { get; init; }
     internal DaggerfallSiteLight Validate()
     {
         if (!DaggerfallBaseContent.ValidId(Id)) throw new ArgumentException("A site light must have a stable id.", nameof(Id));

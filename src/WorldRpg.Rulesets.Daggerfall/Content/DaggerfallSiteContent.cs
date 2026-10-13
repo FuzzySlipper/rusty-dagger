@@ -229,6 +229,8 @@ internal static partial class DaggerfallSiteContent
             DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics), billboardSprites,
             DaggerfallStaticNpcPlacement.Read(normalizedWorld, billboardSprites, definitions, start.Site, diagnostics), waterVolumes: DaggerfallDungeonWater.Read(normalizedWorld, profileId, diagnostics), terrainTextures: terrainTextures, population: population)
         { CityGates = gates,
+            Decorations = ReadDecorations(normalizedWorld, billboardSprites, profileKind,
+                start.Site is { } decorationSite ? definitions.Locations.Records.Single(location => location.Id == decorationSite).Climate ?? 231 : 231, diagnostics),
             VariantName = DaggerfallBaseContent.OptionalText(world, "variant", diagnostics),
             DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalizedWorld, diagnostics),
             VariantBaseLogicalId = DaggerfallBaseContent.OptionalText(world, "variantOf", diagnostics),
@@ -567,7 +569,8 @@ internal static partial class DaggerfallSiteContent
                 Vector3 color = ObjectVector3(DaggerfallBaseContent.Property(light, "color", diagnostics), $"normalized light '{id}' color", diagnostics);
                 try
                 {
-                    DaggerfallSiteLight projected = new DaggerfallSiteLight(id, new WorldPoint(position.X, position.Y, position.Z), range, intensity, color).Validate();
+                    DaggerfallSiteLight projected = new DaggerfallSiteLight(id, new WorldPoint(position.X, position.Y, position.Z), range, intensity, color)
+                    { CityLight = OptionalBoolean(light, "cityLight", false, diagnostics) }.Validate();
                     if (!lights.TryAdd(projected.Id, projected)) diagnostics.Add($"Normalized world repeats light '{projected.Id}'.");
                 }
                 catch (ArgumentException exception)
@@ -1683,7 +1686,9 @@ internal static partial class DaggerfallSiteContent
             if (archive < 0 || record is < 0 or > 127 || id != $"sprite/texture-{archive}-{record}" || !PositiveFinite(size))
             { diagnostics.Add($"Generated billboard '{id}' has an invalid address or world size."); continue; }
             if (!result.TryAdd((archive, record), new(resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight,
-                resource.Frames, resource.Frames[0].Id, pivot, size))) diagnostics.Add($"Generated billboard address {archive}/{record} repeats.");
+                resource.Frames, resource.Frames[0].Id, pivot, size)
+                { FramesPerSecond = billboard.TryGetProperty("playback", out var playback) && playback.ValueKind == JsonValueKind.Object
+                    ? DaggerfallBaseContent.Number(playback, "framesPerSecond", diagnostics) : 0f })) diagnostics.Add($"Generated billboard address {archive}/{record} repeats.");
         }
         return new ReadOnlyDictionary<(int, int), NormalizedBillboardSprite>(result);
     }
@@ -2703,7 +2708,10 @@ internal sealed record NormalizedClassicPresentation(IReadOnlyDictionary<string,
 }
 internal sealed record ClassicViewmodelStyle(int RenderOrder);
 internal sealed record NormalizedClassicMediaResource(string Id, string Kind, string RelativePath, ContentSha256 Sha256, long ByteLength);
-internal sealed record NormalizedBillboardSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size);
+internal sealed record NormalizedBillboardSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size)
+{
+    internal float FramesPerSecond { get; init; }
+}
 internal sealed record NormalizedTerrainTexture(string TexturePath, ContentSha256 TextureSha256);
 /// <summary>Ruleset input projected from an importer-owned source population placement.</summary>
 internal sealed record DaggerfallPopulationPlacement(string Id, WorldPoint Position, int BillboardArchive,
@@ -2775,6 +2783,7 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSite
     internal IReadOnlyList<DaggerfallAmbientZone> AmbientZones { get; init; } = [];
     /// <summary>The city gates an assembled exterior places, which open by day and close at night.</summary>
     internal IReadOnlyList<DaggerfallCityGateDefinition> CityGates { get; init; } = [];
+    internal IReadOnlyList<DaggerfallSiteDecoration> Decorations { get; init; } = [];
     internal IReadOnlyList<DaggerfallSiteLight> Lights { get; } = Array.AsReadOnly((lights ?? [])
         .Select(light => light.Validate())
         .OrderBy(light => light.Id, StringComparer.Ordinal)
