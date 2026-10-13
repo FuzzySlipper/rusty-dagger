@@ -317,13 +317,15 @@ public sealed class ExteriorOriginSessionTests
         Assert.Equal(exterior.Portals[0].Position.Z, restoredPortalProfile.Z, 3);
         // The explicit test poses are local after exterior admission.  Leaving the exterior
         // normalizes the Engine origin before the source return pose and detached actor delta are
-        // captured: the player carries the inverse saved compensation into the return pose, while
-        // the actor delta removes the admitted terrain frame and stores the canonical profile pose.
+        // captured. Both remove the admitted terrain frame and store the canonical profile pose, so a
+        // return belongs to the departed profile whichever town anchored the window.
         Vector3 restoredPlayerLocal = restored.State.PlayerControl.Position!.Value.ToVector();
         Vector3 expectedPlayerProfile = restored.Sites.LocalToProfile(restoredPlayerLocal);
+        Vector3 expectedReturnPlayer = expectedPlayerProfile;
+        // A dropped pile keeps the origin-normalized local frame rather than the profile frame.
+        Vector3 expectedGround = restoredPlayerLocal - restored.Sites.LocalCompensation;
         Vector3 expectedActorProfile = restored.Sites.LocalToProfile(
             restored.State.Actors.Get(actorId).Position.ToVector());
-        Vector3 expectedReturnPlayer = restoredPlayerLocal - restored.Sites.LocalCompensation;
         Assert.True(restored.TryTransitionTo(interior.ProfileKey));
         DaggerfallSavePayload inside = DaggerfallSavePayload.Read(restored.CaptureSave());
         DaggerfallSiteReturnPoseSave returnPose = inside.Site.ReturnPose!;
@@ -338,9 +340,9 @@ public sealed class ExteriorOriginSessionTests
         // The interior also admits its own property storage; the dropped pile is the exterior one.
         DaggerfallGroundContainerSave insideGround = Assert.Single(inside.GroundContainers,
             ground => ground.Profile.Require() == exterior.ProfileKey);
-        Assert.Equal(expectedReturnPlayer.X, insideGround.X, 3);
-        Assert.Equal(expectedReturnPlayer.Y, insideGround.Y, 3);
-        Assert.Equal(expectedReturnPlayer.Z, insideGround.Z, 3);
+        Assert.Equal(expectedGround.X, insideGround.X, 3);
+        Assert.Equal(expectedGround.Y, insideGround.Y, 3);
+        Assert.Equal(expectedGround.Z, insideGround.Z, 3);
         DurableIdentityReference actorIdentity = new(DurableIdentityKind.Actor, checked((ulong)actorId));
         Assert.Equal(DurableEntityResolution.Unloaded,
             restored.State.Actors.Entities.Classify(actorIdentity, restored.State.Npcs.Identities!));
@@ -369,18 +371,19 @@ public sealed class ExteriorOriginSessionTests
         Assert.Equal(fromInsideActorPosition.Y, fromInside.State.Actors.Get(actorId).Position.Y, 3);
         Assert.Equal(fromInsideActorPosition.Z, fromInside.State.Actors.Get(actorId).Position.Z, 3);
         Assert.Single(fromInside.DynamicActors, actor => actor.Key == actorId);
-        Assert.Equal(returnPose.X, fromInside.State.PlayerControl.Position!.Value.X, 3);
-        Assert.Equal(returnPose.Y, fromInside.State.PlayerControl.Position!.Value.Y, 3);
-        Assert.Equal(returnPose.Z, fromInside.State.PlayerControl.Position!.Value.Z, 3);
+        Vector3 fromInsidePlayerProfile = fromInside.Sites.LocalToProfile(fromInside.State.PlayerControl.Position!.Value.ToVector());
+        Assert.Equal(returnPose.X, fromInsidePlayerProfile.X, 3);
+        Assert.Equal(returnPose.Y, fromInsidePlayerProfile.Y, 3);
+        Assert.Equal(returnPose.Z, fromInsidePlayerProfile.Z, 3);
         Assert.True(restored.TryTransitionTo(exterior.ProfileKey));
         WorldPoint restoredActorPosition = restored.Sites.ProfileToLocal(savedActorProfile);
         Assert.Equal(restoredActorPosition.X, restored.State.Actors.Get(actorId).Position.X, 3);
         Assert.Equal(restoredActorPosition.Y, restored.State.Actors.Get(actorId).Position.Y, 3);
-        Assert.Equal(returnPose.X, restored.State.PlayerControl.Position!.Value.X, 3);
-        Assert.Equal(returnPose.Y, restored.State.PlayerControl.Position!.Value.Y, 3);
-        Assert.Equal(returnPose.Z, restored.State.PlayerControl.Position!.Value.Z, 3);
         Vector3 restoredPlayerProfile = restored.Sites.LocalToProfile(
             restored.State.PlayerControl.Position!.Value.ToVector());
+        Assert.Equal(returnPose.X, restoredPlayerProfile.X, 3);
+        Assert.Equal(returnPose.Y, restoredPlayerProfile.Y, 3);
+        Assert.Equal(returnPose.Z, restoredPlayerProfile.Z, 3);
         Assert.Equal(expectedPlayerProfile.X, restoredPlayerProfile.X, 3);
         Assert.Equal(expectedPlayerProfile.Y, restoredPlayerProfile.Y, 3);
         Assert.Equal(expectedPlayerProfile.Z, restoredPlayerProfile.Z, 3);
@@ -582,7 +585,7 @@ public sealed class ExteriorOriginSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
         var before = session.Sites.CaptureExteriorResidency()!.Value;
-        WorldPoint destination = new(4 * DaggerfallExteriorCellResidency.CellSize, 1, 1);
+        WorldPoint destination = new(4 * DaggerfallExteriorCellResidency.CellSize, -50, -1);
         Assert.True(session.Sites.TryRelocatePlayer(exterior.ProfileKey, new("recall", destination, .7f, .1f)));
         Assert.Single(engine.OriginCommits);
         var after = session.Sites.CaptureExteriorResidency()!.Value;

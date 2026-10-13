@@ -11,6 +11,13 @@ internal sealed record DaggerfallBuildingEntryDoor(WorldPoint Position, Vector3 
 internal sealed record DaggerfallBuildingEntryFrame(Vector3 ExteriorOrigin, float ExteriorYawDegrees, IReadOnlyList<WorldPoint> Markers)
 {
     internal IReadOnlyList<DaggerfallBuildingEntryDoor> Doors { get; init; } = [];
+
+    // Value equality over the marker and door lists, so a published and an assembled frame compare by content.
+    public bool Equals(DaggerfallBuildingEntryFrame? other) => other is not null
+        && ExteriorOrigin == other.ExteriorOrigin && ExteriorYawDegrees == other.ExteriorYawDegrees
+        && Markers.SequenceEqual(other.Markers) && Doors.SequenceEqual(other.Doors);
+
+    public override int GetHashCode() => HashCode.Combine(ExteriorOrigin, ExteriorYawDegrees, Markers.Count, Doors.Count);
     internal static DaggerfallBuildingEntryFrame? Read(JsonElement building)
     {
         if (!building.TryGetProperty("entryFrame", out JsonElement frame) || frame.ValueKind == JsonValueKind.Null) return null;

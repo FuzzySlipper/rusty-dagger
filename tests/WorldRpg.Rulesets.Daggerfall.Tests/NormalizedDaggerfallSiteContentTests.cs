@@ -55,7 +55,9 @@ public sealed class NormalizedDaggerfallSiteContentTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(GeneratedContent(root),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.charing-interior-1-1-0.json")), definitions);
-        Assert.Equal(new DaggerfallInteriorBuilding(1, 1, new("RESIAL05.RMB", 0), 18, 0), inputs.InteriorBuilding);
+        Assert.Equal(new DaggerfallInteriorBuilding(1, 1, new("RESIAL05.RMB", 0), 18, 0), inputs.InteriorBuilding! with { EntryFrame = null });
+        // The publication also carries the exterior frame that matches a building arrival to its interior door.
+        Assert.NotEmpty(inputs.InteriorBuilding.EntryFrame!.Doors);
     }
 
     [Fact]
