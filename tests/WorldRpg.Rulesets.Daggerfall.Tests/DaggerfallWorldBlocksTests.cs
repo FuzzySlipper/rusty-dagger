@@ -50,10 +50,14 @@ public sealed class DaggerfallWorldBlocksTests
         DaggerfallWorldBlockModel door = Assert.Single(rdb.Models, model => model.Id == "model/b0000000-rdb/0");
         Assert.Equal("door/b0000000-rdb/0", door.DoorId);
         Assert.NotNull(door.LocalBounds);
-        Assert.NotEmpty(door.CollisionTriangles);
+        // Its action record has zero flags, so it is an ordinary hinged door collided by its box, as the donor's
+        // RDBLayout.HasAction decides, not a moving model with its own triangles.
+        Assert.Null(door.Action);
+        Assert.Empty(door.CollisionTriangles);
         Assert.All(rdb.Models.Where(model => model.Action is null && model.DoorId is null && model.MeshArtifactId is not null),
             model => Assert.InRange(model.SamplePoints.Count, 2, 4));
-        Assert.NotEmpty(rdb.Section("actions"));
+        // That door's zero-flag record was the block's only action record.
+        Assert.Empty(rdb.Section("actions"));
         Assert.NotEmpty(rdb.RandomEnemies);
 
         // While the bundle is open, a block's collision artifact resolves by the content path and digest it states.
