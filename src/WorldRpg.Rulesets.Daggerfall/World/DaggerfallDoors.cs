@@ -658,7 +658,8 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         // after the closing tween completes. Motion is therefore the authoritative boundary,
         // not merely a zero-valued interpolant at the first opening frame.
         bool collisionEnabled = door.Motion == DaggerfallDoorMotion.Closed;
-        SpatialCollider collider = new(door.Definition.BoundsMin, door.Definition.BoundsMax, uint.MaxValue, uint.MaxValue, collisionEnabled, false, !collisionEnabled);
+        (Vector3 min, Vector3 max) = DaggerfallDoorPose.TranslationOffsetBounds(pose.Rotation, door.Definition.BoundsMin, door.Definition.BoundsMax);
+        SpatialCollider collider = new(min, max, uint.MaxValue, uint.MaxValue, collisionEnabled, false, !collisionEnabled);
         _store.Set(door.Entity, EngineComponentTypes.Transform, pose);
         _store.Set(door.Entity, EngineComponentTypes.SpatialCollider, collider);
     }
@@ -694,6 +695,24 @@ internal static class DaggerfallDoorPose
     {
         Vector3 radians = rotationDegrees * (MathF.PI / 180F);
         return Quaternion.Normalize(Quaternion.CreateFromYawPitchRoll(radians.Y, radians.X, radians.Z));
+    }
+
+    /// <summary>
+    /// The world-axis box a turned local box occupies, offset from its pose's translation. Engine colliders and
+    /// character obstacles take translation-offset axis-aligned bounds and do not turn them by the pose, so a door
+    /// turned a quarter turn would otherwise block the wall beside its doorway rather than the doorway.
+    /// </summary>
+    internal static (Vector3 Min, Vector3 Max) TranslationOffsetBounds(Quaternion rotation, Vector3 min, Vector3 max)
+    {
+        Vector3 low = new(float.PositiveInfinity), high = new(float.NegativeInfinity);
+        for (int corner = 0; corner < 8; corner++)
+        {
+            Vector3 turned = Vector3.Transform(new Vector3((corner & 1) == 0 ? min.X : max.X,
+                (corner & 2) == 0 ? min.Y : max.Y, (corner & 4) == 0 ? min.Z : max.Z), rotation);
+            low = Vector3.Min(low, turned);
+            high = Vector3.Max(high, turned);
+        }
+        return (low, high);
     }
 }
 

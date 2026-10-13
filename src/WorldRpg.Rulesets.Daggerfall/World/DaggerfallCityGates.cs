@@ -209,8 +209,9 @@ internal sealed class DaggerfallCityGates : IDisposable
     {
         if (gate.Entity.Value == 0) return;
         DaggerfallCityGateState state = State(gate);
+        (Vector3 min, Vector3 max) = DaggerfallDoorPose.TranslationOffsetBounds(gate.Pose.Rotation, state.LocalBoundsMin, state.LocalBoundsMax);
         _store.Set(gate.Entity, EngineComponentTypes.SpatialCollider,
-            new SpatialCollider(state.LocalBoundsMin, state.LocalBoundsMax, uint.MaxValue, uint.MaxValue, true, false, false));
+            new SpatialCollider(min, max, uint.MaxValue, uint.MaxValue, true, false, false));
     }
 
     private void DestroyEntities()

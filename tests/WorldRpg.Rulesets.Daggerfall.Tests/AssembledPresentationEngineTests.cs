@@ -101,6 +101,71 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     }
 
     /// <summary>
+    /// The way out of Privateer's Hold's starting cave climbs a stair of steps about 0.4 m high from the brick-door
+    /// room up to the floor above; an ordinary walk over the real Engine's character controller climbs it.
+    /// </summary>
+    [Fact(Skip = "rusty-engine #9953: the Engine step-up refuses these tilted treads; enable with the pin that fixes it (#9917).")]
+    public void A_walk_climbs_the_stair_out_of_the_hold_s_starting_rooms()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, AssembledWorld.PrivateersHold);
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        AssembledWorldRun run = host.Call(engine => world.StartInHold(engine, files));
+        try
+        {
+            Assert.Equal(hold, run.Session.Sites.ActiveProfile);
+            Assert.True(host.Call(_ => run.Session.Sites.TryRelocatePlayer(hold,
+                new DaggerfallSiteAnchor("stair-foot", new WorldPoint(27F, 0F, -16.3F), -MathF.PI / 2F, 0F))));
+            Steps(host, run, 5);
+            float foot = run.Session.State.PlayerControl.Position!.Value.Y;
+            bool climbed = host.Call(_ => run.WalkTo(new Vector3(15F, 0F, -16.3F), .75F, 60 * 20));
+            WorldPoint top = run.Session.State.PlayerControl.Position!.Value;
+            output.WriteLine($"Stair walk from y {foot:F2} ended at {top}.");
+            Assert.True(climbed && top.Y > foot + 5F, $"Walking up the stair from y {foot:F2} stopped at {top}.");
+        }
+        finally
+        {
+            host.Call(_ => run.Dispose());
+        }
+    }
+
+    /// <summary>
+    /// The brick-faced door out of the hold's starting corridor turns a quarter turn. Engine character obstacles take
+    /// world-axis bounds offset from the pose, so the closed door blocks its doorway, not the wall beside it, and the
+    /// same walk passes once it stands open.
+    /// </summary>
+    [Fact]
+    public void A_quarter_turned_closed_door_blocks_its_doorway_until_it_opens()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, AssembledWorld.PrivateersHold);
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        AssembledWorldRun run = host.Call(engine => world.StartInHold(engine, files));
+        try
+        {
+            DaggerfallDoorView door = run.Session.Sites.Projection.Doors.All.Single(view => view.Id.ToString().EndsWith(":47", StringComparison.Ordinal));
+            DaggerfallSiteAnchor corridor = new("corridor", new WorldPoint(19.5F, 0F, -19.2F), MathF.PI / 2F, 0F);
+            Vector3 room = new(25F, 0F, -19.2F);
+            Assert.True(host.Call(_ => run.Session.Sites.TryRelocatePlayer(hold, corridor)));
+            Steps(host, run, 5);
+            Assert.False(host.Call(_ => run.WalkTo(room, .3F, 60 * 6)));
+            Assert.True(run.Session.State.PlayerControl.Position!.Value.X < 22.4F, $"The closed door let the player through to {run.Session.State.PlayerControl.Position}.");
+
+            host.Call(_ => run.Session.Sites.Projection.Doors.Open(door.Id, DaggerfallDoorOperationSource.Player));
+            Steps(host, run, 120);
+            Assert.True(host.Call(_ => run.Session.Sites.TryRelocatePlayer(hold, corridor)));
+            Steps(host, run, 5);
+            Assert.True(host.Call(_ => run.WalkTo(room, .3F, 60 * 6)), $"The open door stopped the player at {run.Session.State.PlayerControl.Position}.");
+        }
+        finally
+        {
+            host.Call(_ => run.Dispose());
+        }
+    }
+
+    /// <summary>
     /// From the island, a building of a resident neighbour (the island has none of its own) is entered and left
     /// again, each site publishing through the Engine and the island window drawn again on leaving.
     /// </summary>

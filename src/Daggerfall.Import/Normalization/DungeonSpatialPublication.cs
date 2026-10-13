@@ -249,7 +249,10 @@ public sealed record DungeonSpatialPublication(
     {
         if (door.RotationDegrees.X != 0F || door.RotationDegrees.Z != 0F)
             throw new InvalidOperationException($"Action door '{door.Id}' has a non-yaw rotation that the static-mesh door publisher cannot represent.");
-        float radians = -door.RotationDegrees.Y * (MathF.PI / 180F);
+        // The runtime poses an ordinary door by its yaw (DaggerfallDoorPose.ClosedRotation), so its local visual is
+        // the placed mesh turned back by that yaw, the inverse the door's collision bounds use. Turning it by the yaw
+        // again drew a quarter-turned door half a turn about its hinge, behind the wall.
+        float radians = door.RotationDegrees.Y * (MathF.PI / 180F);
         float sine = MathF.Sin(radians), cosine = MathF.Cos(radians);
         NormalizedVector3 Convert(NormalizedVector3 value, bool normal)
         {
