@@ -186,6 +186,25 @@ public sealed class DungeonNormalizerTests
         result.Document.Validate();
     }
 
+    /// <summary>
+    /// A model whose action record has zero flags is static, as the donor's <c>RDBLayout.HasAction</c> decides:
+    /// Privateer's Hold's start stairs carry such a record and must bake into the walkable static collision.
+    /// </summary>
+    [Fact]
+    public void A_zero_flag_action_record_leaves_its_model_static_geometry()
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(zeroActionRecord: true, modelYRotation: 512))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        Assert.Empty(result.Document.World.Actions);
+        Assert.Empty(result.Document.World.ActionModels);
+        Assert.Single(result.Document.World.GeometryPlacements);
+        Assert.NotEmpty(EngineBinaryContent.ReadSpatial(result.SpatialPublication.CollisionNavigation.Bytes.Span).Triangles);
+        result.Document.Validate();
+    }
+
     [Fact]
     public void Action_door_uses_one_shared_local_visual_artifact()
     {
@@ -207,6 +226,32 @@ public sealed class DungeonNormalizerTests
         Assert.Empty(result.Document.World.StaticMeshIds!);
         Assert.Empty(result.Document.World.GeometryPlacements);
         result.Document.Validate();
+    }
+
+    /// <summary>
+    /// An ordinary quarter-turned door publishes its visual in the frame the runtime poses it from: the placed mesh
+    /// turned back by the yaw that <c>DaggerfallDoorPose.ClosedRotation</c> turns it by, so it draws in its doorway.
+    /// </summary>
+    [Fact]
+    public void A_quarter_turned_door_visual_is_local_to_the_yaw_that_poses_it()
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(modelDescription: "DOR", modelX: 12, modelYRotation: 512))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        NormalizedDoorPlacement door = Assert.Single(result.Document.World.Doors);
+        Assert.Equal(-90F, door.RotationDegrees.Y);
+        System.Numerics.Quaternion pose = System.Numerics.Quaternion.CreateFromYawPitchRoll(door.RotationDegrees.Y * (MathF.PI / 180F), 0F, 0F);
+        System.Numerics.Quaternion inverse = System.Numerics.Quaternion.Inverse(pose);
+        System.Numerics.Vector3 origin = new(door.Position.X, door.Position.Y, door.Position.Z);
+        System.Numerics.Vector3[] expected = [.. door.VisualMeshIds
+            .SelectMany(meshId => Assert.Single(result.Document.Meshes, mesh => mesh.Id == meshId).Vertices)
+            .Select(vertex => System.Numerics.Vector3.Transform(new System.Numerics.Vector3(vertex.X, vertex.Y, vertex.Z) - origin, inverse))];
+        using EngineBinaryContent.StaticMesh visual = EngineBinaryContent.ReadStaticMesh(Assert.Single(result.SpatialPublication.DoorVisuals).Artifact.Bytes);
+        System.Numerics.Vector3[] published = [.. Enumerable.Range(0, visual.Positions.Length / 3)
+            .Select(index => new System.Numerics.Vector3(visual.Positions[index * 3], visual.Positions[(index * 3) + 1], visual.Positions[(index * 3) + 2]))];
+        Assert.All(expected, local => Assert.Contains(published, point => System.Numerics.Vector3.Distance(point, local) < 1e-4F));
     }
 
     [Fact]
@@ -631,9 +676,10 @@ public sealed class DungeonNormalizerTests
         int modelZRotation = 0,
         byte modelSoundIndex = 0,
         uint rdbWidth = 1,
-        uint rdbHeight = 1) =>
+        uint rdbHeight = 1,
+        bool zeroActionRecord = false) =>
         CreateRdbFixtureWithModels(["42"], flatTextureArchive, flatTextureRecord, factionOrMobileId, modelDescription, triggerFlagStartingLock, actionFlags, actionNextObjectOffset, flatAction, flatNextObjectOffset,
-            modelX, modelY, modelZ, modelXRotation, modelYRotation, modelZRotation, modelSoundIndex, rdbWidth, rdbHeight);
+            modelX, modelY, modelZ, modelXRotation, modelYRotation, modelZRotation, modelSoundIndex, rdbWidth, rdbHeight, zeroActionRecord);
 
     /// <summary>
     /// Builds an RDB block whose single cell places one model per entry of <paramref name="modelIds"/>, in
@@ -660,8 +706,11 @@ public sealed class DungeonNormalizerTests
         int modelZRotation = 0,
         byte modelSoundIndex = 0,
         uint rdbWidth = 1,
-        uint rdbHeight = 1)
+        uint rdbHeight = 1,
+        bool zeroActionRecord = false)
     {
+        // A record whose flags are zero still exists in the source and is written when asked for.
+        bool writeAction = actionFlags != 0 || zeroActionRecord;
         // The classic RDB layout the decoder reads: a 20-byte header, a fixed 750-entry model-reference
         // table, the object-root grid, then 25-byte object nodes and their resources.
         const int headerBytes = 20;
@@ -680,7 +729,7 @@ public sealed class DungeonNormalizerTests
         int flatResource = firstModelResource + (modelIds.Count * modelResourceBytes);
         int lightResource = flatResource + flatResourceBytes;
         int actionResource = lightResource + lightResourceBytes;
-        byte[] data = new byte[actionFlags == 0 ? actionResource : actionResource + 10];
+        byte[] data = new byte[writeAction ? actionResource + 10 : actionResource];
         BitConverter.GetBytes(rdbWidth).CopyTo(data, 4);
         BitConverter.GetBytes(rdbHeight).CopyTo(data, 8);
         BitConverter.GetBytes((uint)roots).CopyTo(data, 12);
@@ -699,7 +748,7 @@ public sealed class DungeonNormalizerTests
             BitConverter.GetBytes((ushort)index).CopyTo(data, resource + 12);
             BitConverter.GetBytes(triggerFlagStartingLock).CopyTo(data, resource + 14);
             data[resource + 18] = modelSoundIndex;
-            if (actionFlags != 0) BitConverter.GetBytes(actionResource).CopyTo(data, resource + 19);
+            if (writeAction) BitConverter.GetBytes(actionResource).CopyTo(data, resource + 19);
             int next = index + 1 < modelIds.Count ? firstModelNode + ((index + 1) * nodeBytes) : flatNode;
             WriteNode(data, firstModelNode + (index * nodeBytes), next, [modelX + index, modelY, modelZ], 1, resource);
         }
@@ -712,7 +761,7 @@ public sealed class DungeonNormalizerTests
         BitConverter.GetBytes(flatNextObjectOffset).CopyTo(data, flatResource + 6);
         data[flatResource + 10] = flatAction;
         BitConverter.GetBytes((ushort)512).CopyTo(data, lightResource + 8);
-        if (actionFlags != 0)
+        if (writeAction)
         {
             data[actionResource] = 1;
             BitConverter.GetBytes((ushort)30).CopyTo(data, actionResource + 1);

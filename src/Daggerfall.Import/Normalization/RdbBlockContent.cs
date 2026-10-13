@@ -77,8 +77,12 @@ internal sealed record RdbBlockModel(int Index, RdbModelSource Source, bool Ordi
 
     public bool ActionDoor => OrdinaryActionDoor || SpecialDoorAction;
 
-    /// <summary>Whether its action record moves it, so its mesh stays local to an explicit instance transform.</summary>
-    public bool ActionModel => Source.Action is not null && Source.ObjectOffset > 0;
+    /// <summary>
+    /// Whether its action record moves it, so its mesh stays local to an explicit instance transform. As the
+    /// donor's <c>RDBLayout.HasAction</c>, a record whose flags are zero is no action: such a model (Privateer's
+    /// Hold's start stairs, R1X) is static geometry, walked like any other.
+    /// </summary>
+    public bool ActionModel => Source.Action is { Flags: not 0 } && Source.ObjectOffset > 0;
 
     /// <summary>The model's origin in its block's frame.</summary>
     public Arena2ImportPoint Point => Arena2SourceTransform.ToImportPoint(Source.X, Source.Y, Source.Z);
@@ -214,7 +218,7 @@ internal sealed class RdbBlockContent
 
         foreach (RdbBlockModel model in Models)
         {
-            if (model.Source.Action is not { } action || model.Source.ObjectOffset <= 0)
+            if (!model.ActionModel || model.Source.Action is not { } action)
                 continue;
 
             string id = actionIdsByOffset[model.Source.ObjectOffset];

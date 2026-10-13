@@ -107,7 +107,8 @@ public sealed class DaggerfallDungeonActionModelContentTests
             .Select(value => value.GetString()!)
             .ToHashSet(StringComparer.Ordinal);
 
-        Assert.Equal(6, inputs.DungeonActionModels.Count);
+        // The start stairs (R1X) carry a zero-flag action record and are static, as the donor's HasAction decides.
+        Assert.Equal(5, inputs.DungeonActionModels.Count);
         Assert.All(inputs.DungeonActionModels, model => Assert.NotEmpty(model.CollisionTriangles));
         Assert.Empty(dynamicMeshIds.Intersect(staticMeshIds, StringComparer.Ordinal));
         Assert.All(world.GetProperty("geometryPlacements").EnumerateArray(), placement =>
