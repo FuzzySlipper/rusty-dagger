@@ -169,11 +169,13 @@ internal sealed partial class DaggerfallLocationAssembly
         DaggerfallAssembledSiteDefinition presentation, DaggerfallContentDiagnostics diagnostics, Func<DaggerfallWorldBlockKey, DaggerfallBlockVariantSelection>? select)
     {
         private readonly DaggerfallProductMedia _media = owner._media();
+        private readonly int _groundClimate = owner._definitions.Grids.ClimateAtWorldPixel(record.MapPixelX, record.MapPixelY).Value;
         private readonly IReadOnlyDictionary<string, DaggerfallWorldMesh> _meshes = owner._meshes();
         private readonly List<DaggerfallSiteSpatialPart> _spatial = [];
         private readonly List<(string Path, ContentSha256 Sha256, Transform Pose, IReadOnlyDictionary<uint, string> Materials)> _placedMeshes = [];
         private readonly SortedSet<string> _materials = new(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _winterTextures = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, string> _rainTextures = new(StringComparer.Ordinal);
         private readonly List<DaggerfallRdbDoorDefinition> _doors = [];
         private readonly List<DaggerfallDungeonActionModelDefinition> _actionModels = [];
         private readonly List<DaggerfallDungeonMapGeometry> _mapGeometry = [];
@@ -432,7 +434,13 @@ internal sealed partial class DaggerfallLocationAssembly
                     if (!_media.Textures.TryGetValue(winterId, out winter))
                         diagnostics.Add($"Profile '{key.LogicalId}' winter texture '{winterId}' is not published.");
                 }
-                materials.Add(new NormalizedMaterial(slot, texture.Path, texture.Sha256, material) { WinterTexture = winter });
+                ContentArtifact? rain = null;
+                if (_rainTextures.TryGetValue(material, out var rainId) && rainId != material)
+                {
+                    if (!_media.Textures.TryGetValue(rainId, out rain))
+                        diagnostics.Add($"Profile '{key.LogicalId}' rain texture '{rainId}' is not published.");
+                }
+                materials.Add(new NormalizedMaterial(slot, texture.Path, texture.Sha256, material) { WinterTexture = winter, RainTexture = rain });
             }
 
             DaggerfallMeshMaterialBinding[] Bindings(IReadOnlyDictionary<uint, string> mesh) =>
@@ -620,15 +628,22 @@ internal sealed partial class DaggerfallLocationAssembly
 
             int drawn = _remaps is { } table
                 ? table.GetValueOrDefault(archive, archive)
-                : owner._definitions.Grids.Climate.SwapArchive(archive, recordIndex, climate, DaggerfallClimateSeason.Summer);
+                : key.Kind == DaggerfallWorldProfileKind.Exterior
+                    ? DaggerfallSiteContent.ExteriorTextureArchive(owner._definitions.Grids.Climate, archive, recordIndex, climate, _groundClimate, DaggerfallClimateSeason.Summer)
+                    : owner._definitions.Grids.Climate.SwapArchive(archive, recordIndex, climate, DaggerfallClimateSeason.Summer);
             string summer = string.Create(CultureInfo.InvariantCulture, $"{prefix}{drawn}-{recordIndex}");
             if (key.Kind == DaggerfallWorldProfileKind.Exterior)
             {
-                int winter = owner._definitions.Grids.Climate.SwapArchive(archive, recordIndex, climate, DaggerfallClimateSeason.Winter);
+                int winter = DaggerfallSiteContent.ExteriorTextureArchive(owner._definitions.Grids.Climate, archive, recordIndex, climate, _groundClimate, DaggerfallClimateSeason.Winter);
                 string winterId = string.Create(CultureInfo.InvariantCulture, $"{prefix}{winter}-{recordIndex}");
                 if (_winterTextures.TryGetValue(summer, out var existing) && existing != winterId)
                     diagnostics.Add($"Summer texture '{summer}' collapses distinct winter textures '{existing}' and '{winterId}'.");
                 else _winterTextures[summer] = winterId;
+                int rain = DaggerfallSiteContent.ExteriorTextureArchive(owner._definitions.Grids.Climate, archive, recordIndex, climate, _groundClimate, DaggerfallClimateSeason.Rain);
+                string rainId = string.Create(CultureInfo.InvariantCulture, $"{prefix}{rain}-{recordIndex}");
+                if (_rainTextures.TryGetValue(summer, out var existingRain) && existingRain != rainId)
+                    diagnostics.Add($"Summer texture '{summer}' collapses distinct rain textures '{existingRain}' and '{rainId}'.");
+                else _rainTextures[summer] = rainId;
             }
             return summer;
         }

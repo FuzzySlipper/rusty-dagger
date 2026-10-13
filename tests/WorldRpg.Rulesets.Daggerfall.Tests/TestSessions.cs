@@ -300,6 +300,7 @@ internal static class TestSessions
         {
             content.Add(material.TexturePath, material.TextureSha256);
             if (material.WinterTexture is { } winter) content.Add(winter.Path, winter.Sha256);
+            if (material.RainTexture is { } rain) content.Add(rain.Path, rain.Sha256);
         }
         foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values.Concat(inputs.MobileSprites.Values))
         {

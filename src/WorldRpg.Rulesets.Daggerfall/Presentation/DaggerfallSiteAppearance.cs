@@ -147,16 +147,18 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private SpriteAtlas? groundContainerAtlas;
     private readonly NormalizedBillboardSprite? groundContainerSprite;
     private readonly List<Material> materials = [];
-    private readonly List<(Material Material, MaterialRequest Summer, MaterialRequest Winter)> seasonalMaterials = [];
+    private readonly List<(Material Material, MaterialRequest Summer, MaterialRequest Winter, MaterialRequest Rain)> seasonalMaterials = [];
     private bool winterMaterials;
+    private DaggerfallExteriorSeason materialSeason;
 
     internal void SetExteriorSeason(DaggerfallExteriorSeason season)
     {
         bool winter = season == DaggerfallExteriorSeason.Winter;
-        if (winterMaterials == winter) return;
+        if (materialSeason == season) return;
         foreach (var material in seasonalMaterials)
-            appearance.UpdateMaterial(new MaterialUpdateRequest(material.Material, winter ? material.Winter : material.Summer));
+            appearance.UpdateMaterial(new MaterialUpdateRequest(material.Material, season == DaggerfallExteriorSeason.Rain ? material.Rain : winter ? material.Winter : material.Summer));
         winterMaterials = winter;
+        materialSeason = season;
     }
     private readonly Dictionary<uint, Material> materialsBySlot = [];
     private readonly Dictionary<DaggerfallRdbDoorId, Appearance> doorVisuals = [];
@@ -849,6 +851,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
 
     private void AdmitLocationResources()
     {
+        // Newly created materials start in their summer variant, including after a location reload.
+        materialSeason = DaggerfallExteriorSeason.Summer;
+        winterMaterials = false;
         if (inputs.Doors.Count != 0 && doors is null)
             throw new ArgumentException("Door visuals require the selected door runtime.", nameof(doors));
         foreach (NormalizedMaterial material in inputs.Materials)
@@ -862,13 +867,18 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             locationMaterials.Add(created);
             materials.Add(created);
             materialsBySlot.Add(material.Slot, created);
-            if (material.WinterTexture is { } winter)
+            if (material.WinterTexture is not null || material.RainTexture is not null)
             {
-                var winterResource = appearance.OpenResource(new RenderResourceRequest(winter.Path, TextureFilter.Nearest, TextureWrap.Repeat));
-                locationResources.Add(winterResource.Handle);
+                RenderResource Variant(ContentArtifact? variant)
+                {
+                    if (variant is null) return texture.Handle;
+                    var resource = appearance.OpenResource(new(variant.Path, TextureFilter.Nearest, TextureWrap.Repeat));
+                    locationResources.Add(resource.Handle);
+                    return resource.Handle;
+                }
                 MaterialRequest Descriptor(RenderResource resource) => new(new Color(1F, 1F, 1F, 1F), resource, 1F,
                     new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false);
-                seasonalMaterials.Add((created, Descriptor(texture.Handle), Descriptor(winterResource.Handle)));
+                seasonalMaterials.Add((created, Descriptor(texture.Handle), Descriptor(Variant(material.WinterTexture)), Descriptor(Variant(material.RainTexture))));
             }
         }
         for (int index = 0; index < inputs.Geometry.Meshes.Count; index++)
@@ -975,6 +985,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         retired.AddRange(locationMaterials.AsEnumerable().Reverse());
         foreach (Material material in locationMaterials) materials.Remove(material);
         locationMaterials.Clear();
+        seasonalMaterials.Clear();
+        materialSeason = DaggerfallExteriorSeason.Summer;
+        winterMaterials = false;
         materialsBySlot.Clear();
         retired.AddRange(locationResources.AsEnumerable().Reverse());
         locationResources.Clear();

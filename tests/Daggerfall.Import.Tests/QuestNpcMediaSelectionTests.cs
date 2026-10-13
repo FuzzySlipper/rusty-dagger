@@ -34,12 +34,13 @@ public sealed class QuestNpcMediaSelectionTests
         IReadOnlyList<string> terrain = Arena2SitePublication.RuntimeTerrainResources();
 
         Assert.Equal(12 * 31, nature.Count);
-        Assert.Equal(8 * 56, terrain.Count);
+        Assert.Equal(12 * 56, terrain.Count);
         Assert.Equal(nature.Count, nature.Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(terrain.Count, terrain.Distinct(StringComparer.Ordinal).Count());
         Assert.Contains("sprite/texture-500-1", nature);
         Assert.Contains("sprite/texture-511-31", nature);
         Assert.Contains("terrain/texture-303-0", terrain);
         Assert.Contains("terrain/texture-403-55", terrain);
+        Assert.Contains("terrain/texture-404-55", terrain);
     }
 }
