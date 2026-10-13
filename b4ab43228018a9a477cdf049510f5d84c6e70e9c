@@ -1,0 +1,1 @@
+den-k8 scripts/verify.sh --play green at b2c92161e26f5727cee72f8311e8a3a6c3018439 (2026-10-13), content regenerated at 254304ce (no importer change since): Architecture 10, Import 803, Ruleset 3388, Canary 7, Kit 165, Host 33, SpriteWorkbench 27, UI 89, play-smoke passed; 42m15s.
