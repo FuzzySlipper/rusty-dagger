@@ -1,0 +1,1 @@
+den-k8 scripts/verify.sh --play green at 511c8e3ca8c4fb50887b356dbac30cb21168e7c4 (2026-10-13), content regenerated at 25608e38 (no importer change since): Architecture 10, Import 805, Ruleset 3391 (+1 skipped: stair walk awaiting rusty-engine #9953), Canary 7, Kit 165, Host 33, SpriteWorkbench 27, UI 89, play-smoke passed; 41m49s.
