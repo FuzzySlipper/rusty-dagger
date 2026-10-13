@@ -476,6 +476,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         ArgumentNullException.ThrowIfNull(facts);
         if (disposed) return;
+        AppendDecorationFacts(facts, slot);
         foreach ((Appearance staticWorld, Transform pose, int index) in world)
             facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.WorldMesh(slot, index), false, 0,
                 Compose(worldAppearance.Transform, pose), staticWorld, worldAppearance.Visible, worldAppearance.Layer));
@@ -698,6 +699,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     internal void Advance(ProductUpdateFacts update)
     {
         if (disposed) return;
+        AdvanceDecorations();
         AppearanceOuterUpdate identity = new(update.Generation, update.ControlRevision, update.SimulationStep, update.AdmittedStepCount);
         foreach (ActorVisual visual in actors.Values)
         {
@@ -883,6 +885,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                     : throw new InvalidOperationException($"Mesh '{mesh.Path}' refers to missing world material slot {binding.WorldMaterialSlot}."))];
             appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, bindings));
         }
+        AdmitDecorations(inputs);
         foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
         {
             // An assembled exterior's door is a plane of its model's mesh, which draws it: the door is entered
@@ -958,6 +961,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private IDisposable[] TakeLocationResources()
     {
         List<IDisposable> retired = [];
+        retired.AddRange(TakeDecorationResources());
         retired.AddRange(world.Select(part => part.Appearance).Reverse());
         world.Clear();
         retired.AddRange(doorVisuals.Values.Reverse());

@@ -76,7 +76,7 @@ internal sealed record RmbBlockModel(RmbModelFrame Frame, int? BuildingIndex, in
 }
 
 /// <summary>One RMB flat in its block's frame, with the source texture that classifies it.</summary>
-internal sealed record RmbBlockFlat(int Ordinal, int TextureArchive, int TextureRecord, Arena2ImportPoint Point, RmbFlatPlacement Source);
+internal sealed record RmbBlockFlat(int Ordinal, int TextureArchive, int TextureRecord, Arena2ImportPoint Point, RmbFlatPlacement Source, int? BuildingIndex = null);
 
 /// <summary>One fixed RMB person placed by a building sub-record's outside half, in its block's frame.</summary>
 internal sealed record RmbBlockPerson(RmbPeoplePlacement Person, int BuildingIndex, int PersonIndex, Arena2ImportPoint Point, RmbBuildingSlot Slot);
@@ -119,7 +119,7 @@ internal sealed class RmbBlockContent
             RmbHalfPlacements exterior = placements.Buildings[index].Exterior;
             foreach ((RmbFlatPlacement flat, int ordinal) in exterior.Flats.Select((flat, ordinal) => (flat, ordinal)))
                 flats.Add(new(ordinal, flat.TextureArchive, flat.TextureRecord,
-                    Add(slotOrigin, rotation.Transform(Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z))), flat));
+                    Add(slotOrigin, rotation.Transform(Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z))), flat, index));
             foreach ((RmbModelPlacement model, int ordinal) in exterior.Models.Select((model, ordinal) => (model, ordinal)))
                 models.Add(new(new(model, RmbModelParent.Building, slotOrigin, slotYaw), index, ordinal, slot.Quality / 2, $"{slug}/{index}"));
             foreach ((RmbPeoplePlacement person, int personIndex) in exterior.People.Select((person, personIndex) => (person, personIndex)))

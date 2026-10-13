@@ -9,17 +9,20 @@ internal static class DaggerfallInteriorLightFacts
     internal const ushort Archive = 210;
 
     internal static bool TryProject(string id, RdbFlatSource flat, NormalizedVector3 position, float billboardHeight, out NormalizedLightPlacement light)
+        => TryProject(id, flat.TextureArchive, flat.TextureRecord, position, billboardHeight, out light);
+
+    internal static bool TryProject(string id, int archive, int record, NormalizedVector3 position, float billboardHeight, out NormalizedLightPlacement light)
     {
         light = default!;
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        if (flat.TextureArchive != Archive) return false;
-        float offset = flat.TextureRecord switch
+        if (archive != Archive) return false;
+        float offset = record switch
         {
             0 => -.1F, 2 or 3 => .1F, 5 => .15F, 6 or 20 => .6F, 9 => .4F, 11 => -.4F,
             13 => -.35F, 14 or 15 => billboardHeight / 2F, 17 => .2F, 21 => billboardHeight / 2.4F,
             22 => -.5F, 24 => -1.85F, 25 => -1F, 27 => -.02F, _ => 0F,
         };
-        (float range, float intensity, NormalizedVector3 color) = ((float Range, float Intensity, NormalizedVector3 Color))(flat.TextureRecord switch
+        (float range, float intensity, NormalizedVector3 color) = ((float Range, float Intensity, NormalizedVector3 Color))(record switch
         {
             0 => (20F, 1.1F, new(.95F, .91F, .63F)),
             2 => (10F / 3F, .6F, new(1F, .99F, .82F)),

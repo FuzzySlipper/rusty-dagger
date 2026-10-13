@@ -591,6 +591,8 @@ public sealed record NormalizedMarker(string Id, NormalizedVector3 Position)
 
 public sealed record NormalizedLightPlacement(string Id, NormalizedVector3 Position, float Range, float Intensity, NormalizedVector3 Color)
 {
+    public bool CityLight { get; init; }
+
     public void Validate()
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
@@ -607,6 +609,9 @@ public sealed record NormalizedLightPlacement(string Id, NormalizedVector3 Posit
 
 public sealed record NormalizedBillboardPlacement(string Id, string SpriteResourceId, NormalizedVector3 Position, NormalizedVector2 Size)
 {
+    public bool BaseAligned { get; init; }
+    public bool ClimateNature { get; init; }
+
     public void Validate(IReadOnlySet<string> resourceIds)
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));

@@ -21,6 +21,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private readonly string _profileId;
     private readonly List<(Light Light, LightRequest Request)> _points = [];
     private readonly List<LightRequest> _suspendedPoints = [];
+    private readonly Dictionary<ulong, float> _cityIntensities = [];
+    private bool? _lastCityLightsOn;
     private readonly IGraphicsService _graphics;
     private readonly ICameraViewService _camera;
     private readonly DaggerfallWorldProfileKind _profileKind;
@@ -83,6 +85,11 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                         0F,
                         0F,
                         LightShadowIntent.Disabled));
+                if (light.CityLight)
+                {
+                    _cityIntensities.Add(lightId, light.Intensity);
+                    request = CityRequest(request, calendar);
+                }
                 Light point = graphics.CreateLight(request);
                 created.Add(point);
                 _points.Add((point, request));
@@ -179,6 +186,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             || dungeonLevel is float variant && (!float.IsFinite(variant) || variant is < 0f or > 1f)
             || !float.IsFinite(lightningFlash) || lightningFlash < 0f)
             throw new ArgumentOutOfRangeException(nameof(exteriorDaylight), "Ambient context requires normalized daylight/zone values and finite nonnegative flash intensity.");
+        UpdateCityLights(calendar);
         _daylight = exteriorDaylight;
         _dungeonLevel = dungeonLevel;
         _flash = lightningFlash;
@@ -191,6 +199,31 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         if (!_suspended && _ambient is { } ambient)
             _graphics.UpdateLight(new LightUpdateRequest(ambient, AmbientRequest(level)));
         _ambientLevel = level;
+    }
+
+    // DaggerfallDateTime keeps city lamps on slightly beyond the ordinary night interval.
+    private static bool CityLightsOn(DaggerfallCalendar calendar) => calendar.Hour >= 17 || calendar.Hour < 8;
+
+    private LightRequest CityRequest(LightRequest request, DaggerfallCalendar calendar) =>
+        _cityIntensities.TryGetValue(request.LogicalId, out float intensity)
+            ? request with { Descriptor = request.Descriptor with { Intensity = CityLightsOn(calendar) ? intensity : 0f } }
+            : request;
+
+    internal void UpdateCityLights(DaggerfallCalendar calendar)
+    {
+        bool on = CityLightsOn(calendar);
+        if (_cityIntensities.Count == 0 || _lastCityLightsOn == on) return;
+        _lastCityLightsOn = on;
+        for (int index = 0; index < _points.Count; index++)
+        {
+            var (light, prior) = _points[index];
+            var next = CityRequest(prior, calendar);
+            if (next == prior) continue;
+            _graphics.UpdateLight(new(light, next));
+            _points[index] = (light, next);
+        }
+        for (int index = 0; index < _suspendedPoints.Count; index++)
+            _suspendedPoints[index] = CityRequest(_suspendedPoints[index], calendar);
     }
 
     /// <summary>Releases point and ambient light resources while retaining their authored requests.</summary>

@@ -1858,6 +1858,12 @@ internal sealed class DaggerfallSiteLifecycle
     }
 
     /// <summary>Applies the calendar/weather season to the resident terrain environment.</summary>
+    internal void UpdateResidentCityLights()
+    {
+        foreach (var resident in _residentExteriorLocations.Values)
+            resident.Projection.Lighting.UpdateCityLights(_time.Calendar);
+    }
+
     internal void SetExteriorSeason(DaggerfallExteriorSeason season)
     {
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior) return;

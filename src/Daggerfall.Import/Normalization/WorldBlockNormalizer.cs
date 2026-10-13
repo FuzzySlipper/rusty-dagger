@@ -20,6 +20,7 @@ public sealed class WorldBlockNormalizer
     private const string Root = "world-blocks";
 
     private readonly DungeonLogicalSourceSet sources;
+    private readonly RmbFlatFacts flatFacts;
     private readonly BsaArchive blocks;
     private readonly BsaArchive arch;
     private readonly IReadOnlyDictionary<int, ClassicFaction> factions;
@@ -36,6 +37,7 @@ public sealed class WorldBlockNormalizer
     {
         ArgumentNullException.ThrowIfNull(sources);
         this.sources = sources;
+        flatFacts = new(sources);
         flatGenders = StaticNpcNormalization.ReadGenders(sources);
         blocks = BsaArchive.Parse(sources.Require("BLOCKS.BSA").Bytes.Span, sources.Require("BLOCKS.BSA").Label);
         arch = BsaArchive.Parse(sources.Require("ARCH3D.BSA").Bytes.Span, sources.Require("ARCH3D.BSA").Label);
@@ -64,6 +66,7 @@ public sealed class WorldBlockNormalizer
     internal WorldBlockNormalization RmbExterior(RmbBlockContent content)
     {
         string key = RmbExteriorKey(content.SourceKey);
+        var decoration = flatFacts.Read(content);
         string slug = PublishedIds.Slug(content.SourceKey);
         List<DaggerfallWorldBlockModel> models = [];
         List<DaggerfallWorldBlockDoor> doors = [];
@@ -127,6 +130,8 @@ public sealed class WorldBlockNormalizer
             Doors = doors,
             TransitionDoors = transitions,
             Gates = gates,
+            Billboards = decoration.Billboards,
+            Lights = decoration.Lights,
             StartMarker = FirstMarker(content.ExteriorFlats, RdbSourceClassification.StartMarkerRecord, "marker/start"),
             StartMarkers = [.. content.ExteriorFlats
                 .Where(flat => flat.TextureArchive == RdbSourceClassification.EditorFlatArchive && flat.TextureRecord == RdbSourceClassification.StartMarkerRecord)
@@ -190,12 +195,15 @@ public sealed class WorldBlockNormalizer
         }
 
         IReadOnlyList<RmbBlockFlat> flats = content.InteriorFlats(buildingIndex);
+        var decoration = flatFacts.Read(content, buildingIndex);
         (NormalizedBounds? blockBounds, DaggerfallWorldBlockSpatial? spatial, GeneratedSpatialArtifact? artifact) = Spatial(key, geometry, null);
         DaggerfallWorldBlock block = new(key, DaggerfallWorldBlockKind.RmbInterior, content.SourceKey, Ordinal(content.SourceKey), buildingIndex, blockBounds, spatial, models)
         {
             InteriorBuilding = new(slot.Index, slot.BuildingType, slot.FactionId, slot.Quality, slot.NameSeed, true)
             { EntryFrame = content.InteriorEntryFrame(buildingIndex) with { Doors = [.. exits.Select(door => new NormalizedBuildingEntryDoor(door.Position, door.Normal))] } },
             TransitionDoors = exits,
+            Billboards = decoration.Billboards,
+            Lights = decoration.Lights,
             StartMarker = FirstMarker(flats, RdbSourceClassification.StartMarkerRecord, "marker/start"),
             EnterMarker = FirstMarker(flats, RdbSourceClassification.EnterMarkerRecord, "marker/enter"),
             QuestMarkers = [.. flats
