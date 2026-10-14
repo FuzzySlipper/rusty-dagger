@@ -100,6 +100,10 @@ internal sealed class DaggerfallSiteLifecycle
     private DaggerfallExteriorCellId? _locationCell;
     private bool _admittingInitialResidency;
     private bool _retired;
+    // The Engine composes placed artifacts on the local frame current when the first one was placed,
+    // and moves that grid with every origin commit. A new game first places at origin zero; a restore
+    // commits the saved origin before placing anything, so placements are expressed against this.
+    private Vector3? _artifactFrameCompensation;
 
     /// <summary>
     /// A nearby normalized exterior profile has the same lifetime as its cell admission, while the
@@ -227,7 +231,7 @@ internal sealed class DaggerfallSiteLifecycle
     /// (<see cref="ExteriorLocationFrame"/>): whole grid cells across, its terrain height up.
     /// </summary>
     private SpatialContentArtifactPlacement[] LocationPlacements(
-        DaggerfallSiteProfile profile,
+        DaggerfallSiteProfile profile, Vector3 frameCompensation,
         DaggerfallExteriorWorldOrigin? exteriorOrigin = null)
     {
         long columnOffset = 0, rowOffset = 0;
@@ -246,6 +250,8 @@ internal sealed class DaggerfallSiteLifecycle
             translation = Vector3.UnitY * ExteriorLocationSampleHeight(profile);
         }
 
+        // Translation is in the composition's frame, not the current local one.
+        translation += frameCompensation;
         return [.. profile.Geometry.Spatial.Select(part => new SpatialContentArtifactPlacement(
             LocationPlacementId(profile.ProfileKey, part), part.Path, part.Sha256,
             ColumnOffset: checked(columnOffset + part.ColumnOffset),
@@ -260,8 +266,12 @@ internal sealed class DaggerfallSiteLifecycle
     private void ApplyLocationResidency(DaggerfallSiteProfile? placed, DaggerfallExteriorWorldOrigin? exteriorOrigin,
         IEnumerable<ulong> removals, ulong navigationGridId)
     {
+        // Before any placement there is nothing resident to remove, and the composition starts with its first artifact.
+        if (placed is null && _artifactFrameCompensation is null) return;
+        Vector3 frame = _artifactFrameCompensation ?? EngineCompensation();
         using IDisposable? source = placed?.Geometry.SpatialSource?.Invoke();
-        _ = _spatial.ApplyContentArtifactResidency(placed is null ? [] : LocationPlacements(placed, exteriorOrigin), removals, navigationGridId);
+        _ = _spatial.ApplyContentArtifactResidency(placed is null ? [] : LocationPlacements(placed, frame, exteriorOrigin), removals, navigationGridId);
+        _artifactFrameCompensation = frame;
     }
 
     private void AdmitLocationArtifact(DaggerfallSiteProfile profile, DaggerfallExteriorWorldOrigin? exteriorOrigin = null) =>

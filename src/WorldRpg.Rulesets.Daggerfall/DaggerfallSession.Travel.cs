@@ -212,7 +212,7 @@ internal sealed partial class DaggerfallSession
                 DaggerfallRestRecoveryModule.RecoverForCautiousTravel(State.Actors.Player.Stats, noRegen);
             }
             DaggerfallTravelMapPixel departure = QuestTravelOrigin();
-            outcome = AdvanceTravelTime(quote.TravelSeconds, origin, quote.Options);
+            outcome = AdvanceTravelTime(quote.TravelSeconds, origin);
             if (outcome == DaggerfallTravelOutcome.Arrived && !_sites.TryRelocatePlayer(destination!.ProfileKey,
                     ArrivalLanding(destination, departure, $"travel:{quote.Identity}:{started}")))
                 outcome = DaggerfallTravelOutcome.Unavailable;
@@ -228,9 +228,9 @@ internal sealed partial class DaggerfallSession
                 long delay = TravelArrivalDelay(_time.Calendar,
                     State.RacialOverrides.Current?.IsVampire == true || PlayerSpecials.SunDamage,
                     quote.Options.SpeedCautious);
-                // The donor suppresses new random spawns during its arrival adjustment. Effects
-                // and deadlines still run at the actual destination through the shared calendar.
-                if (delay > 0) outcome = AdvanceTravelTime(delay, _activeProfileKey, quote.Options, selectEncounters: false);
+                // Effects and deadlines of the arrival adjustment run at the actual destination
+                // through the shared calendar.
+                if (delay > 0) outcome = AdvanceTravelTime(delay, _activeProfileKey);
             }
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException)
@@ -263,7 +263,6 @@ internal sealed partial class DaggerfallSession
     /// <summary>Player wording for a journey that ended before its destination.</summary>
     internal static string TravelInterruptionText(DaggerfallTravelOutcome outcome) => outcome switch
     {
-        DaggerfallTravelOutcome.Encounter => "Your journey was interrupted by an encounter.",
         DaggerfallTravelOutcome.Defeated => "You were defeated on the road.",
         DaggerfallTravelOutcome.Unavailable => "Your destination could not be reached; the journey ended early.",
         DaggerfallTravelOutcome.SaveBoundary => "Your journey stopped where it was saved.",
@@ -312,7 +311,11 @@ internal sealed partial class DaggerfallSession
         destination = exterior; return null;
     }
 
-    private DaggerfallTravelOutcome AdvanceTravelTime(long requestedSeconds, DaggerfallWorldProfileKey origin, DaggerfallTravelOptions options, bool selectEncounters = true)
+    /// <summary>
+    /// Raises the clock for a journey. As the donor's fast travel (DaggerfallTravelPopUp with PreventEnemySpawns),
+    /// no random encounter is selected on the road: only defeat, a relocation or a refused advance ends it early.
+    /// </summary>
+    private DaggerfallTravelOutcome AdvanceTravelTime(long requestedSeconds, DaggerfallWorldProfileKey origin)
     {
         long started = _time.Calendar.ToAbsoluteSeconds();
         while (_time.Calendar.ToAbsoluteSeconds() - started < requestedSeconds)
@@ -328,14 +331,6 @@ internal sealed partial class DaggerfallSession
             if (State.Actors.Player.IsDefeated) return DaggerfallTravelOutcome.Defeated;
             if (_activeProfileKey != origin) return DaggerfallTravelOutcome.Relocated;
             if (advance.AppliedSeconds != slice) return DaggerfallTravelOutcome.Stopped;
-            if (selectEncounters && !options.SleepModeInn && !options.TravelShip
-                && _time.Calendar.ToAbsoluteSeconds() % DaggerfallCalendar.SecondsPerMinute == 0)
-            {
-                long minute = _time.Calendar.ToAbsoluteSeconds() / DaggerfallCalendar.SecondsPerMinute;
-                DaggerfallEncounterRequest? encounter = WorldEncounterRequest(minute, resting: false);
-                if (encounter is not null && QueueEncounter(encounter).Choice.MobileId is not null)
-                    return DaggerfallTravelOutcome.Encounter;
-            }
         }
         return DaggerfallTravelOutcome.Arrived;
     }
