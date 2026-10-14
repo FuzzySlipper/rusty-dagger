@@ -1,0 +1,1 @@
+verify.sh --play green on den-k8: Architecture 10, Import 805, Ruleset 3391 (+1 skipped, #9953), Canary 7, Kit 165, Host 33, SpriteWorkbench 27, UI pass, play-smoke passed; 43m23s
