@@ -108,6 +108,14 @@ public sealed class DaggerfallRestSessionTests
                 session.State.PlayerControl.Position!.Value.ToVector());
             Assert.InRange(distance, DaggerfallEncounterPolicy.MinimumSpawnDistance(placed.Request.Context) - .01f,
                 DaggerfallEncounterPolicy.MaximumSpawnDistance);
+            // As the donor's line-of-sight spawn, the foe starts just past the edge of the view, not behind
+            // the player where a wall at their back would refuse every placement.
+            Vector3 offset = session.State.Actors.All.Single(actor => actor.DurableId == spawned).Position.ToVector()
+                - session.State.PlayerControl.Position!.Value.ToVector();
+            Vector3 facing = WorldRpg.Kit.Actors.ActorHeading.Forward(session.State.PlayerControl.YawRadians);
+            double degrees = Math.Acos(Vector3.Dot(Vector3.Normalize(offset with { Y = 0 }), Vector3.Normalize(facing with { Y = 0 }))) * 180d / Math.PI;
+            double fieldOfView = DaggerfallTuning.Defaults.Camera.FieldOfViewYDegrees;
+            Assert.InRange(degrees, fieldOfView - .1d, fieldOfView + 4.1d);
         }
 
         ContentFake resumedContent = new(releases);

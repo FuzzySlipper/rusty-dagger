@@ -109,6 +109,10 @@ internal sealed class AssembledWorld
 
     internal AssembledWorldRun Restore(RulesetSavePayload save, DaggerfallSiteId destination, DaggerfallSiteBuildingId? building = null) =>
         new(this, save, destination, building);
+
+    /// <summary>A save restored over the real Engine services of <paramref name="engine"/>, as loading it in the running product does.</summary>
+    internal AssembledWorldRun Restore(IEngineContext engine, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, RulesetSavePayload save) =>
+        new(this, engine, files, save);
 }
 
 /// <summary>One session over content admitting every place the journey and its window reach.</summary>
@@ -134,7 +138,8 @@ internal sealed class AssembledWorldRun : IDisposable
     }
 
     /// <summary>A new game over a real Engine's content, spatial, graphics and world origin; only perception stays scripted.</summary>
-    internal AssembledWorldRun(AssembledWorld world, IEngineContext real, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files)
+    internal AssembledWorldRun(AssembledWorld world, IEngineContext real, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files,
+        RulesetSavePayload? save = null)
     {
         _world = world;
         Graphics = new EngineGraphicsOutsideUpdate(real.Graphics);
@@ -146,7 +151,7 @@ internal sealed class AssembledWorldRun : IDisposable
             EngineBundleContent.Create(real.Content, DaggerfallSkyMedia.BundleId, DaggerfallSkyMedia.LogicalRoot, files));
         DaggerfallSessionComposition composition = new(world.Definitions, world.Source, DaggerfallTuning.Defaults, world.Identity)
             { Profiles = world.Profiles, Sky = DaggerfallSkyMedia.Read(sky), Blocks = world.Blocks };
-        Session = DaggerfallSession.StartNew(engine.Context, composition);
+        Session = save is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, save);
         Engine = engine;
     }
 

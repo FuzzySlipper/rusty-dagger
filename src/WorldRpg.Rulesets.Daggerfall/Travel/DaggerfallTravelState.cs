@@ -4,7 +4,7 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Travel;
 
-internal enum DaggerfallTravelOutcome { Arrived, Encounter, Defeated, Relocated, Unavailable, SaveBoundary, Stopped }
+internal enum DaggerfallTravelOutcome { Arrived, Defeated, Relocated, Unavailable, SaveBoundary, Stopped }
 
 /// <summary>The meaningful result of a paid journey, alongside the ordinary currency, calendar and site save.</summary>
 internal sealed record DaggerfallTravelResult([property: JsonRequired] DaggerfallSiteId Origin, [property: JsonRequired] DaggerfallSiteId Destination,

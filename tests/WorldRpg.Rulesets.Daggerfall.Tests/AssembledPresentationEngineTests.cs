@@ -4,6 +4,8 @@ using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using Rusty.Engine.Testing;
+using WorldRpg.Kit;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -162,6 +164,55 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         finally
         {
             host.Call(_ => run.Dispose());
+        }
+    }
+
+    /// <summary>
+    /// A save at Gaerhart Court, whose ground lies far above the world origin's starting height, is loaded into the
+    /// running Engine: the location's collision and navigation are placed where its terrain is, so the townspeople stand
+    /// at the height they were saved at and keep walking on the ground rather than climbing away from it.
+    /// </summary>
+    [Fact]
+    public void Townspeople_loaded_from_a_save_stay_on_the_ground_they_walked_on()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallSiteRecord court = world.Definitions.Locations.Records.Single(record => record.Name == "Gaerhart Court");
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, court.Id);
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        RulesetSavePayload save;
+        try
+        {
+            host.Call(_ => { run.Travel(court); run.AdvanceToHour(12); });
+            Steps(host, run, 60);
+            Assert.NotEqual(Vector3.Zero, run.Session.Sites.LocalCompensation);
+            save = host.Call(_ => run.Session.CaptureSave());
+        }
+        finally
+        {
+            host.Call(_ => run.Dispose());
+        }
+        Dictionary<long, float> saved = DaggerfallSavePayload.Read(save).DynamicActors.ToDictionary(actor => actor.EntityId, actor => actor.Y);
+
+        AssembledWorldRun restored = host.Call(engine => world.Restore(engine, files, save));
+        try
+        {
+            ActorState[] townspeople = [.. restored.Session.State.Actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian)];
+            Assert.NotEmpty(townspeople);
+            // The Engine's ground navigation leads a townsperson across the ground, not up off it.
+            Vector3 at = townspeople[0].Position.ToVector();
+            NavigationStepResult step = host.Call(_ => restored.Engine.Context.Spatial.EvaluateNavigationStep(new NavigationStepRequest(
+                restored.Session.Spatial.Session, at, at + new Vector3(2.5F, 0F, 0F), 5F, 4096)));
+            Assert.Equal(NavigationPathOutcome.Reached, step.Outcome);
+            Assert.True(MathF.Abs(step.NextWaypoint.Y - at.Y) < .5F, $"Navigation from {at} leads to {step.NextWaypoint}.");
+
+            Steps(host, restored, 300);
+            Assert.All(townspeople, actor => Assert.True(MathF.Abs(actor.Position.Y - saved[actor.DurableId]) < .5F,
+                $"Townsperson {actor.DurableId} saved at height {saved[actor.DurableId]} is at {actor.Position} after the load."));
+        }
+        finally
+        {
+            host.Call(_ => restored.Dispose());
         }
     }
 

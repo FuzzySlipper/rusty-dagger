@@ -396,71 +396,26 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal(fixture.Origin.Site!.Value, restored.Site.Active);
     }
 
+    /// <summary>
+    /// As the donor's fast travel, which raises the clock with enemy spawns prevented, a journey camping on the road
+    /// is never interrupted: even where every minute's encounter draw would select a foe, the traveller arrives, the
+    /// whole journey passes and no encounter is left pending.
+    /// </summary>
     [Fact]
-    public void Camp_encounter_interrupts_at_saved_origin_and_its_selection_survives_restore()
+    public void A_camping_journey_arrives_without_a_road_encounter()
     {
         using Fixture fixture = new(encounter: true);
         DaggerfallTravelQuote quote = fixture.Preview(inn: false);
-        Assert.Equal(0, quote.TotalCost);
-        fixture.Accept(quote);
-        var result = fixture.Session.State.Travel.LastResult!;
-        Assert.Equal(DaggerfallTravelOutcome.Encounter, result.Outcome);
-        Assert.InRange(result.ElapsedSeconds, 1, 60);
-        Assert.True(result.ElapsedSeconds < quote.TravelSeconds);
-        Assert.Equal(fixture.Origin.Site!.Value, result.ActualSite);
-        var saved = fixture.Session.CaptureSave();
-        var encounter = Assert.Single(DaggerfallSavePayload.Read(saved).Encounters.Resolved);
-        Assert.NotNull(encounter.Choice.MobileId);
-        Assert.Null(encounter.SpawnedActorId);
-        using var restored = fixture.Restore(saved);
-        Assert.Equal(result, restored.State.Travel.LastResult);
-        Assert.Equal(encounter, Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).Encounters.Resolved));
-        Assert.Equal(fixture.Now, Absolute(restored.CaptureSave()));
-        Assert.Equal(0UL, restored.State.Currency.Read().Gold);
-    }
-
-    [Fact]
-    public void Interrupted_journey_returns_control_once_and_places_the_encounter_at_the_donor_distance()
-    {
-        using Fixture fixture = new(encounter: true);
-        DaggerfallTravelQuote quote = fixture.Preview(inn: false);
-        // The journey is taken from the open menu, which the product reports as a modal mode.
-        fixture.Session.ApplyProductMode(ProductMode.Modal);
+        long started = fixture.Now;
         fixture.Accept(quote);
         DaggerfallTravelResult result = fixture.Session.State.Travel.LastResult!;
-        Assert.Equal(DaggerfallTravelOutcome.Encounter, result.Outcome);
-        // The journey closes the travel windows and its line is published once: as the result, never
-        // again as the panel's own message.
+        Assert.Equal(DaggerfallTravelOutcome.Arrived, result.Outcome);
+        Assert.Equal(fixture.Destination.Site!.Value, result.ActualSite);
+        Assert.Equal(fixture.Destination.ProfileKey, fixture.Session.Sites.ActiveProfile);
+        Assert.True(result.ElapsedSeconds >= quote.TravelSeconds);
+        Assert.Equal(started + result.ElapsedSeconds, fixture.Now);
+        Assert.Empty(DaggerfallSavePayload.Read(fixture.Session.CaptureSave()).Encounters.Resolved);
         Assert.Equal(DaggerfallPanel.Resume, fixture.Session.LatestPanelRequest?.Panel);
-        DaggerfallTravelPresentation panel = fixture.Session.ReadTravelPresentation();
-        Assert.Null(panel.Message);
-        Assert.Single(System.Text.RegularExpressions.Regex.Matches(panel.LastResult!.Message, "interrupted by an encounter"));
-        Assert.Equal(result.Message, fixture.Session.Presentation.LastOutcome);
-        // Closing the menu returns to play without wiping the line the journey left there.
-        fixture.Session.ApplyProductMode(ProductMode.Playing);
-        Assert.Equal(result.Message, fixture.Session.Presentation.LastOutcome);
-
-        // The pending foe stands in for an enemy nearby, so the journey cannot be retaken under it.
-        WorldPoint player = fixture.Session.State.PlayerControl.Position!.Value;
-        fixture.Spatial.FloorHit = request => request.Direction.Y < -.99f
-            ? new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh, Normal = Vector3.UnitY, Distance = 0,
-                Point = request.Origin with { Y = player.Y } }
-            : default;
-        fixture.Step();
-        DaggerfallEncounterResolution placed = Assert.Single(DaggerfallSavePayload.Read(fixture.Session.CaptureSave()).Encounters.Resolved);
-        long spawned = Assert.IsType<long>(placed.SpawnedActorId);
-        float distance = Vector3.Distance(fixture.Session.State.Actors.All.Single(actor => actor.DurableId == spawned).Position.ToVector(),
-            fixture.Session.State.PlayerControl.Position!.Value.ToVector());
-        Assert.InRange(distance, DaggerfallEncounterPolicy.MinimumSpawnDistance(placed.Request.Context) - .01f,
-            DaggerfallEncounterPolicy.MaximumSpawnDistance);
-        // As the donor's line-of-sight spawn, the foe starts just past the edge of the view, not behind
-        // the player where a wall at their back would refuse every placement.
-        Vector3 offset = fixture.Session.State.Actors.All.Single(actor => actor.DurableId == spawned).Position.ToVector()
-            - fixture.Session.State.PlayerControl.Position!.Value.ToVector();
-        Vector3 facing = WorldRpg.Kit.Actors.ActorHeading.Forward(fixture.Session.State.PlayerControl.YawRadians);
-        double degrees = Math.Acos(Vector3.Dot(Vector3.Normalize(offset with { Y = 0 }), Vector3.Normalize(facing with { Y = 0 }))) * 180d / Math.PI;
-        double fieldOfView = DaggerfallTuning.Defaults.Camera.FieldOfViewYDegrees;
-        Assert.InRange(degrees, fieldOfView - .1d, fieldOfView + 4.1d);
     }
 
     [Fact]
