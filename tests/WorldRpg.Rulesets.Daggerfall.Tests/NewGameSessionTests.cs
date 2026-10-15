@@ -1,3 +1,4 @@
+using WorldRpg.Kit.Controls;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -45,6 +46,24 @@ public sealed class NewGameSessionTests
         Assert.Equal(Gold(game), Assert.Single(inventory.Stacks, stack => stack.Definition.Value == "template-276").Quantity);
         Assert.DoesNotContain(inventory.UniqueItems, item => item.Definition.Value == "iron-longsword");
         Assert.NotNull(f.Title.State.Character.ReadCreation().Summary);
+    }
+
+    [Fact]
+    public void A_new_game_starts_on_the_dungeon_enter_marker_facing_north_and_door_entry_keeps_the_start_marker()
+    {
+        using Fixture f = new();
+        // Privateer's Hold's source Enter marker (199/8) is the quiet cave; its Start marker (199/10) is by the exit.
+        DaggerfallSiteAnchor enter = f.Inputs.RequireAnchor(DaggerfallLocationAssembly.EnterAnchor);
+        DaggerfallSiteAnchor start = f.Inputs.RequireAnchor(DaggerfallLocationAssembly.StartAnchor);
+        Assert.Equal(new WorldPoint(12.75F, .625F, -41.8F), enter.Position);
+        Assert.Equal(0F, enter.YawRadians);
+        Assert.NotEqual(start.Position, enter.Position);
+        Assert.Equal(start.Position, f.Title.State.PlayerControl.Position);
+
+        Commit(f.Title);
+        using var game = Assert.IsType<DaggerfallSession>(f.Title.CreateNewGame());
+        Assert.Equal(enter.Position, game.State.PlayerControl.Position);
+        Assert.Equal(0F, game.State.PlayerControl.YawRadians);
     }
 
     [Fact]

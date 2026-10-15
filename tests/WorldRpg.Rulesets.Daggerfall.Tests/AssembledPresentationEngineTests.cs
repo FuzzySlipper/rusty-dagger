@@ -106,7 +106,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     /// The way out of Privateer's Hold's starting cave climbs a stair of steps about 0.4 m high from the brick-door
     /// room up to the floor above; an ordinary walk over the real Engine's character controller climbs it.
     /// </summary>
-    [Fact(Skip = "rusty-engine #9953: the Engine step-up refuses these tilted treads; enable with the pin that fixes it (#9917).")]
+    [Fact]
     public void A_walk_climbs_the_stair_out_of_the_hold_s_starting_rooms()
     {
         AssembledWorld world = Shared.Value;
