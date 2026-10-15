@@ -34,6 +34,25 @@ public sealed class AssembledSiteProfileTests
     private static JsonElement Normalized(string closure) =>
         JsonDocument.Parse(TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports", closure, "normalized.json"))).RootElement.GetProperty("world");
 
+    [Fact]
+    public void Published_and_assembled_hold_keep_the_cave_enter_marker_separate_from_door_arrival()
+    {
+        DaggerfallSiteProfile published = Published("daggerfall.privateers-hold.json");
+        DaggerfallSiteProfile assembled = Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Dungeon(PrivateersHold));
+        JsonElement world = Normalized("privateers-hold");
+        Vector3 cave = Vector(world.GetProperty("enterMarker").GetProperty("position"));
+        Assert.Equal(new Vector3(12.75F, .625F, -41.8F), cave);
+        foreach (DaggerfallSiteProfile profile in new[] { published, assembled })
+        {
+            DaggerfallSiteAnchor enter = profile.RequireAnchor(DaggerfallLocationAssembly.EnterAnchor);
+            DaggerfallSiteAnchor start = profile.RequireAnchor(DaggerfallLocationAssembly.StartAnchor);
+            Near(cave, enter.Position.ToVector());
+            Assert.Equal(0F, enter.YawRadians);
+            Near(Vector(world.GetProperty("startMarker").GetProperty("position")), start.Position.ToVector());
+            Assert.NotEqual(start.Position, enter.Position);
+        }
+    }
+
     [Theory]
     [InlineData("S0000001.RDB")]
     [InlineData("S0000003.RDB")]
