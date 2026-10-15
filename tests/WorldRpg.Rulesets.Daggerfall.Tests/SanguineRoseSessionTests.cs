@@ -205,7 +205,7 @@ public sealed class SanguineRoseSessionTests
         };
         f.Update();
         Assert.Equal((ulong)near, Assert.Single(f.Session.LastEnemyBehavior[ally].Visibility!.Value.Pairs.ToArray()).Target);
-        Assert.Contains(f.Perception.Requests, request => request.PairCursor == 1 && request.ExpectedProjectionIdentity == 91);
+        Assert.Contains(f.Perception.Requests, request => request.PairCursor == 1);
     }
 
     [Fact]

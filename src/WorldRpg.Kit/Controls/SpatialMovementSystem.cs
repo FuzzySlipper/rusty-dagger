@@ -712,23 +712,17 @@ public sealed class SpatialMovementSystem : IDisposable
         return _spatial.CaptureCharacterContinuation(new CharacterContinuationCaptureRequest(_session, generation));
     }
 
-    /// <summary>Restores an Engine-validated continuation into this otherwise fresh canonical session.</summary>
-    public CharacterContinuationRestoreReceipt RestoreContinuation(CharacterContinuationCheckpoint checkpoint)
+    /// <summary>Resumes a saved continuation in this session: its config drives the next proposal, its motion is the caller's.</summary>
+    public CharacterMotion RestoreContinuation(CharacterContinuationCheckpoint checkpoint)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
         if (_latestGeneration is not null)
             throw new InvalidOperationException("Spatial continuation can only be restored before the first proposal.");
-        CharacterContinuationRestoreReceipt receipt = _spatial.RestoreCharacterContinuation(
-            new CharacterContinuationRestoreRequest(_session, checkpoint));
-        // Restore admission validates the full checkpoint but does not create
-        // an Engine receipt in the fresh target session.  Keep the detached
-        // checkpoint for an immediate re-save; use its config for the next
-        // proposal so continuation compatibility remains explicit.
         _controller = checkpoint.Config;
         _verticalDriven = checkpoint.Config.Vertical.Gravity == 0f;
         _latestCheckpoint = null;
         _restoredCheckpoint = checkpoint;
-        return receipt;
+        return checkpoint.Motion;
     }
 
     /// <summary>True when either an admitted receipt or a restored detached checkpoint can be saved.</summary>

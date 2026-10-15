@@ -107,7 +107,6 @@ internal class SpatialFake : DispatchProxy
         // actor's pose intact instead of reporting a bogus waypoint.
         nameof(ISpatialService.EvaluateNavigationStep) => Navigate((NavigationStepRequest)arguments![0]!),
         nameof(ISpatialService.CaptureCharacterContinuation) => Capture((CharacterContinuationCaptureRequest)arguments![0]!),
-        nameof(ISpatialService.RestoreCharacterContinuation) => Restore((CharacterContinuationRestoreRequest)arguments![0]!),
         _ => throw new NotSupportedException(method?.Name),
     };
 
@@ -343,9 +342,8 @@ internal class SpatialFake : DispatchProxy
     {
         if (request.ExpectedGeneration != checked((ulong)StepCalls)) throw new InvalidOperationException("Stale checkpoint generation.");
         CharacterMotion motion = StepRequests.Last().Motion with { LastCommandSequence = StepRequests.Last().Command.Sequence };
-        return new CharacterContinuationCheckpoint(1, request.ExpectedGeneration, 1, 1, 1, RepresentativeValidConfig, motion);
+        // The Engine's checkpoint carries the controller config of the step it captured.
+        return new CharacterContinuationCheckpoint(1, request.ExpectedGeneration, StepRequests.Last().Config, motion);
     }
 
-    private static CharacterContinuationRestoreReceipt Restore(CharacterContinuationRestoreRequest request) =>
-        new(request.Checkpoint.SourceGeneration, request.Checkpoint.Motion);
 }

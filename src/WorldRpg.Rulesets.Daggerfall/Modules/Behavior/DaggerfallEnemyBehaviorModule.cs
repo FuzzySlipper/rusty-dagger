@@ -90,7 +90,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         double detectionDistance = Math.Max(admitted.DetectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius);
         double minimumFacingCosine = DaggerfallPerceptionQueryDefaults.MinimumFacingCosine;
         _pursuitTuning = new PursuitTuning(detectionDistance, minimumFacingCosine, admitted.ChaseSpeedUnitsPerSecond, admitted.NavigationMaximumVisited).Validate();
-        _perceptionOptions = new PursuitPerceptionOptions(DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity, DaggerfallPerceptionQueryDefaults.FirstPairCursor, DaggerfallPerceptionQueryDefaults.CompleteQueryPageSize).Validate();
+        _perceptionOptions = new PursuitPerceptionOptions(DaggerfallPerceptionQueryDefaults.FirstPairCursor, DaggerfallPerceptionQueryDefaults.CompleteQueryPageSize).Validate();
         _pursuit = new PursuitCoordinator<IProductFact>(new DaggerfallEnemyPerceptionService(perception, Filter), spatial, navigation, combat);
         _wander = new ActorWanderCoordinator(navigation);
     }

@@ -304,6 +304,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         }
         public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
         public void PublishChanges(AppearanceChangesRequest request) => throw new NotSupportedException();
+        public void PublishOverlaySet(OverlaySetRequest request) => throw new NotSupportedException("This test double does not publish overlays.");
         public RenderResourceInfo OpenResourceFromContent(RenderResourceContentRequest request) => throw new NotSupportedException();
         public Appearance CreateStaticMeshFromContentReference(StaticMeshContentReferenceRequest request) => throw new NotSupportedException();
 

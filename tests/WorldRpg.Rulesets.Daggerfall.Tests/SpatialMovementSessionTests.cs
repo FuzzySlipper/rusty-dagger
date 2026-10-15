@@ -135,9 +135,9 @@ public sealed class SpatialMovementSessionTests
         CharacterContinuationCheckpoint checkpoint = first.CaptureContinuation();
 
         using SpatialMovementSystem second = new(resumed.Service, content, new SpatialContentArtifact("spatial/hold.json", Hash, 7), tuning);
-        CharacterContinuationRestoreReceipt receipt = second.RestoreContinuation(checkpoint);
+        CharacterMotion motion = second.RestoreContinuation(checkpoint);
 
-        Assert.Equal(checkpoint.SourceGeneration, receipt.SourceGeneration);
+        Assert.Equal(checkpoint.Motion, motion);
         Assert.True(second.HasContinuation);
         Assert.Equal(checkpoint, second.CaptureContinuation());
     }

@@ -13,7 +13,6 @@ internal static class DaggerfallPerceptionQueryDefaults
     internal const int BlendingBreakthroughChance = 8;
     internal const int ShadeBreakthroughChance = 4;
 
-    internal const ulong AnyProjectionIdentity = 0;
     internal const uint FirstPairCursor = 0;
     internal const uint CompleteQueryPageSize = 64;
 

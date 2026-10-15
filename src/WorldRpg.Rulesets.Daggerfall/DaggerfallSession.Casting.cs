@@ -210,7 +210,7 @@ internal sealed partial class DaggerfallSession
         if (candidates.Length == 0) return [];
         PerceptionQueryRequest request = new(_spatial.Session,
             new[] { new PerceptionObserver(checked((ulong)observer), center, Vector3.UnitZ, radius, -1d, 1d) }, candidates,
-            ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 0, 64);
+            ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 64);
         Dictionary<long, double> contacts = [];
         PerceptionReadoutResult receipt;
         do
@@ -219,7 +219,7 @@ internal sealed partial class DaggerfallSession
             // Classic detection and blast radii do not test line of sight.
             foreach (var pair in receipt.Pairs.ToArray())
                 if (exclusive ? pair.Distance < radius : pair.Distance <= radius) contacts[checked((long)pair.Target)] = pair.Distance;
-            if (receipt.HasNextPairCursor) request = request with { PairCursor = receipt.NextPairCursor, ExpectedProjectionIdentity = receipt.ProjectionIdentity };
+            if (receipt.HasNextPairCursor) request = request with { PairCursor = receipt.NextPairCursor };
         } while (receipt.HasNextPairCursor);
         return contacts;
     }

@@ -83,6 +83,7 @@ internal sealed class EngineGraphicsOutsideUpdate(IGraphicsService engine) : IGr
     public SpritePlaybackSample SampleSpritePlayback(SpritePlaybackSampleRequest arg0) => _engine.SampleSpritePlayback(arg0);
     public SpritePlaybackReadout ReadSpritePlayback(SpritePlayback arg0) => _engine.ReadSpritePlayback(arg0);
     public void PublishChanges(AppearanceChangesRequest arg0) => _engine.PublishChanges(arg0);
+    public void PublishOverlaySet(OverlaySetRequest arg0) => _engine.PublishOverlaySet(arg0);
     public Light CreateLight(LightRequest arg0) { CreatedResources++; return _engine.CreateLight(arg0); }
     public void UpdateLight(LightUpdateRequest arg0) => _engine.UpdateLight(arg0);
     public Light ReplaceLight(LightUpdateRequest arg0) => _engine.ReplaceLight(arg0);

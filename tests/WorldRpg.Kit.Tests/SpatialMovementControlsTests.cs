@@ -92,7 +92,7 @@ public sealed class SpatialMovementControlsTests
             FallOriginY = -1f,
             PeakY = 50f,
         };
-        CharacterContinuationCheckpoint checkpoint = new(1, 1, 1, 1, 1, verticalConfig, checkpointMotion);
+        CharacterContinuationCheckpoint checkpoint = new(1, 1, verticalConfig, checkpointMotion);
         SpatialDouble spatial = SpatialDouble.Create();
         spatial.DefaultConfig = baseConfig;
         ContentDouble content = ContentDouble.Create();
@@ -242,7 +242,6 @@ public sealed class SpatialMovementControlsTests
             nameof(ISpatialService.ProposeCharacterStep) => Step((CharacterStepRequest)arguments![0]!),
             nameof(ISpatialService.CastRay) => Cast((SpatialRaycastRequest)arguments![0]!),
             nameof(ISpatialService.CaptureCharacterContinuation) => Capture((CharacterContinuationCaptureRequest)arguments![0]!),
-            nameof(ISpatialService.RestoreCharacterContinuation) => Restore((CharacterContinuationRestoreRequest)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
 
@@ -255,12 +254,10 @@ public sealed class SpatialMovementControlsTests
         private CharacterContinuationCheckpoint Capture(CharacterContinuationCaptureRequest capture)
         {
             CharacterStepRequest step = Request ?? throw new InvalidOperationException("No character step to capture.");
-            return new(1, capture.ExpectedGeneration, 1, 1, 1, step.Config,
+            return new(1, capture.ExpectedGeneration, step.Config,
                 step.Motion with { LastCommandSequence = step.Command.Sequence });
         }
 
-        private static CharacterContinuationRestoreReceipt Restore(CharacterContinuationRestoreRequest request) =>
-            new(request.Checkpoint.SourceGeneration, request.Checkpoint.Motion);
 
         private CharacterStepReceipt Step(CharacterStepRequest request)
         {

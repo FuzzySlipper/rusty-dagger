@@ -57,7 +57,7 @@ public sealed class TargetingService(IPerceptionService perception, SpatialMovem
             .Select(a => new PerceptionTarget(checked((ulong)a.DurableId), policy.AimPoint(a))).ToArray();
         PerceptionQueryRequest request = new(spatial.Session,
             new[] { new PerceptionObserver(observer, origin.ToVector(), forward, policy.MaximumDistance(actionReach), policy.MinimumFacingCosine, 1d) },
-            targets, ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 0, VisibilityPageSize);
+            targets, ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, VisibilityPageSize);
         PerceptionReadoutResult receipt = perception.QueryVisibility(request);
         long? selected = receipt.Pairs.ToArray().Where(p => p.Observer == observer && p.Kind == PerceptionPairKind.Visible
             && p.Target <= long.MaxValue && actors.TryGet((long)p.Target, out ActorState actor) && IsValidTarget(actor))
