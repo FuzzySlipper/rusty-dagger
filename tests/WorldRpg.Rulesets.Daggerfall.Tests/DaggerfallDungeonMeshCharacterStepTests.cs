@@ -77,9 +77,6 @@ public sealed class DaggerfallDungeonMeshCharacterStepTests
             return new CharacterContinuationCheckpoint(
                 1,
                 request.ExpectedGeneration,
-                1,
-                1,
-                1,
                 step.Config,
                 step.Motion with { LastCommandSequence = step.Command.Sequence });
         }

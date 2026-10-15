@@ -34,7 +34,7 @@ public sealed class PursuitAndCorpseLootTests
         var pursuit = new PursuitCoordinator<TestFact>(perception.Service, movement,
             new ActorNavigationCoordinator(spatial.Service, movement.Session), action);
         var evidence = pursuit.Update(actor, new PursuitMemoryComponent(), new(1, new(0, 0, 8)),
-            new(64, 0, 2, 8), new(0, 0, 8), 1, 1, .1f, new FactBuffer<TestFact>(),
+            new(64, 0, 2, 8), new(0, 8), 1, 1, .1f, new FactBuffer<TestFact>(),
             new PursuitPolicy(ActorNavigationMode.Ground), selectPolicy: _ => new PursuitPolicy(ActorNavigationMode.Ground) { AttackReach = selectedReach });
         Assert.Equal(attacks, evidence.AttackEligible);
         Assert.Equal(attacks ? PursuitState.Attack : PursuitState.Chase, evidence.Current);
@@ -69,7 +69,7 @@ public sealed class PursuitAndCorpseLootTests
 
         PursuitEvidence evidence = pursuit.Update(
             actors.Get(42), memory, new PursuitTarget(1, new WorldPoint(200, 50, 200), IsLoaded: false),
-            new(64, 0, 2, 8), new(0, 0, 8), 1, 2, .1f, new FactBuffer<TestFact>(),
+            new(64, 0, 2, 8), new(0, 8), 1, 2, .1f, new FactBuffer<TestFact>(),
             new PursuitPolicy(ActorNavigationMode.Swimming, CanRetreat: true, CanStrafe: true, 1f, 1f, EmitTargetLost: true));
 
         Assert.Equal(PursuitState.Unloaded, evidence.Current);
@@ -92,7 +92,7 @@ public sealed class PursuitAndCorpseLootTests
         var pursuit = new PursuitCoordinator<TestFact>(perception.Service, movement,
             new ActorNavigationCoordinator(spatial.Service, movement.Session), new RecordingAttacks(1.5d));
         var evidence = pursuit.Update(actor, new PursuitMemoryComponent(), new(1, new(0, 0, 2)),
-            new(64, 0, 2, 8), new(0, 0, 8), 1, 1, .1f, new FactBuffer<TestFact>(),
+            new(64, 0, 2, 8), new(0, 8), 1, 1, .1f, new FactBuffer<TestFact>(),
             new PursuitPolicy(CanRetreat: true, RetreatDistance: 2.5f));
         Assert.Equal(PursuitState.Chase, evidence.Current);
     }
@@ -114,7 +114,7 @@ public sealed class PursuitAndCorpseLootTests
         PursuitEvidence Update(WorldPoint position, bool visible, ulong step)
         {
             perception.Pairs = new PerceptionPair[] { new(42, 1, 10, 1, visible ? PerceptionPairKind.Visible : PerceptionPairKind.Occluded, visible ? 1 : 0) };
-            return pursuit.Update(actor, memory, new(1, position), new(64, -1, 2, 8), new(0, 0, 8), 1, step, .1f, new(), policy);
+            return pursuit.Update(actor, memory, new(1, position), new(64, -1, 2, 8), new(0, 8), 1, step, .1f, new(), policy);
         }
         Update(new(5, 0, 0), true, 1);
         Update(new(6, 0, 0), true, 2);

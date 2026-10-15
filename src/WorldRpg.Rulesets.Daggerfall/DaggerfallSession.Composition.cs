@@ -642,7 +642,6 @@ internal sealed partial class DaggerfallSession
             // published closure once and publishes it to the UI that draws it.
             _hud = new DaggerfallHudProjection(
                 engine.Ui,
-                composition.UiSequence,
                 definitions.HudResources,
                 composition.Identity,
                 DaggerfallUiArt.Read(engine.Content, composition.StartSite.ClassicPresentation.InventoryIcons.Values,

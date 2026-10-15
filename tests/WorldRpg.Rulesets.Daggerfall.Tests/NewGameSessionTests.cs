@@ -82,20 +82,6 @@ public sealed class NewGameSessionTests
     }
 
     [Fact]
-    public void A_new_game_publishes_its_hud_above_the_title_session_it_replaces()
-    {
-        // The browser refuses a stream sequence that does not rise within one runtime epoch, and the new game
-        // publishes before the title session it replaces is released.
-        using Fixture f = new(); Commit(f.Title, "class00");
-        f.Title.PublishInitial();
-        ulong title = Assert.NotNull(f.TitleEngine.LastPublishedSequence);
-        using var game = Assert.IsType<DaggerfallSession>(f.Title.CreateNewGame());
-        game.PublishInitial();
-        Assert.True(f.TitleEngine.LastPublishedSequence > title,
-            $"The title published sequence {title}; the new game then published {f.TitleEngine.LastPublishedSequence}.");
-    }
-
-    [Fact]
     public void New_games_share_no_state_and_encoded_save_restore_never_regrants()
     {
         using Fixture f = new(); Commit(f.Title, "class00");

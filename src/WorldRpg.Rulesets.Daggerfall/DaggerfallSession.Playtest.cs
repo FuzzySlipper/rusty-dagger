@@ -105,8 +105,6 @@ internal sealed partial class DaggerfallSession
         Vector3 origin = center - new Vector3((float)((radius + .5) * cellSize),
             (float)((verticalRadius + .5) * cellSize), (float)((radius + .5) * cellSize));
         uint width = (uint)(radius * 2 + 1), layers = (uint)(verticalRadius * 2 + 1);
-        if ((ulong)width * width * layers > SpatialGridSnapshot.MaximumCells)
-            return DebugCommandResult.Failure(DebugCommandStatus.InvalidArguments, "Grid exceeds the Engine inspection cell limit.");
         return DebugCommandResult.Success(SpatialGridSnapshot.Capture(_engine.Spatial,
             new SpatialMapRequest(_spatial.Session, origin, cellSize, width, width,
                 origin.Y, origin.Y + cellSize, origin.Y, origin.Y + cellSize, ReadOnlyMemory<SpatialEntityCollider>.Empty),

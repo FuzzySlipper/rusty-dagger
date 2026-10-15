@@ -95,7 +95,7 @@ public sealed class PropertyCrimeSessionTests
                     var result = engine.Perception.QueryVisibility(new(spatial.Session,
                         new[] { new PerceptionObserver(1, observer, Vector3.Normalize(target.ToVector() - observer), 4, -1, 1) },
                         new[] { new PerceptionTarget(2, target.ToVector()), new PerceptionTarget(3, placement.Position.ToVector()) },
-                        ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 0, 64));
+                        ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 64));
                     if (!result.Pairs.ToArray().Any(pair => pair.Target == 2 && pair.Kind == PerceptionPairKind.Visible)) continue;
                     Assert.DoesNotContain(result.Pairs.ToArray(), pair => pair.Target == 3 && pair.Kind == PerceptionPairKind.Visible);
                     visible = true;

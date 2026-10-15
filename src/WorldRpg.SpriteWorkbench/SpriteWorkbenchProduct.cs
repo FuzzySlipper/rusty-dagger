@@ -22,7 +22,6 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
     private bool running;
     private bool stepRequested;
     private bool shutdown;
-    private ulong uiSequence;
     private SpriteAuthoredOverlay? pendingEdit;
     private string? diagnostic;
     private string saveStatus = "idle";
@@ -410,7 +409,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
             ("diagnostic", diagnostic is null ? builder.Null() : builder.String(diagnostic)),
             ("saveStatus", builder.String(saveStatus)),
             ("selected", selected ?? builder.Null()));
-        engine.Ui.PublishProjection(new UiProjection(ui, ++uiSequence, builder.Build(root)));
+        engine.Ui.PublishProjection(new UiProjection(ui, builder.Build(root)));
     }
 
     private void PublishState()

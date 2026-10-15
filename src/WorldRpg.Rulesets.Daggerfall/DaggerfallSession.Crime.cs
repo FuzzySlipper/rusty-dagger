@@ -112,7 +112,7 @@ internal sealed partial class DaggerfallSession
         if (observers.Length == 0) return DaggerfallCrimeWitnessEvidence.NotQueried;
         PerceptionQueryRequest query = new(_spatial.Session, observers,
             new[] { new PerceptionTarget(DaggerfallActorIdentity.PlayerEntityId, player.ToVector()) },
-            ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 0, 64);
+            ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 64);
         List<long> witnesses = [];
         PerceptionReadoutResult receipt;
         do
@@ -120,7 +120,7 @@ internal sealed partial class DaggerfallSession
             receipt = _engine.Perception.QueryVisibility(query);
             witnesses.AddRange(receipt.Pairs.ToArray().Where(pair => pair.Target == DaggerfallActorIdentity.PlayerEntityId
                 && pair.Kind == PerceptionPairKind.Visible).Select(pair => checked((long)pair.Observer)));
-            if (receipt.HasNextPairCursor) query = query with { PairCursor = receipt.NextPairCursor, ExpectedProjectionIdentity = receipt.ProjectionIdentity };
+            if (receipt.HasNextPairCursor) query = query with { PairCursor = receipt.NextPairCursor };
         } while (receipt.HasNextPairCursor);
         long[] ids = witnesses.Distinct().Order().ToArray();
         return new(ids.Length == 0 ? DaggerfallCrimeWitnessQuery.CompletedWithoutWitnesses : DaggerfallCrimeWitnessQuery.CompletedWithWitnesses, ids);

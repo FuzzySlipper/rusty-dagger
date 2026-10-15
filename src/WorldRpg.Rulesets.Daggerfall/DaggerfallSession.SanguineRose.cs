@@ -71,14 +71,14 @@ internal sealed partial class DaggerfallSession
             .Select(actor => new PerceptionTarget(checked((ulong)actor.DurableId), actor.Position.ToVector())).ToArray();
         PerceptionQueryRequest request = new(_spatial.Session,
             new[] { new PerceptionObserver(checked((ulong)observerId), origin.ToVector(), forward, radius, facing, 1d) },
-            targets, ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 0, 64);
+            targets, ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 64);
         PerceptionReadoutResult receipt;
         do
         {
             receipt = _engine.Perception.QueryVisibility(request);
             foreach (PerceptionPair pair in receipt.Pairs.ToArray()) yield return pair;
             if (receipt.HasNextPairCursor)
-                request = request with { PairCursor = receipt.NextPairCursor, ExpectedProjectionIdentity = receipt.ProjectionIdentity };
+                request = request with { PairCursor = receipt.NextPairCursor };
         } while (receipt.HasNextPairCursor);
     }
 

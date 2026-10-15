@@ -7,6 +7,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
 
     public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
     public void PublishChanges(AppearanceChangesRequest request) => throw new NotSupportedException();
+    public void PublishOverlaySet(OverlaySetRequest request) => throw new NotSupportedException("This test double does not publish overlays.");
     internal List<RenderResourceRequest> OpenResourceRequests { get; } = [];
     internal List<TerrainLayerMaterialRequest> TerrainLayerMaterialRequests { get; } = [];
     internal List<StaticMeshContentAppearanceRequest> StaticMeshContentRequests { get; } = [];

@@ -230,7 +230,6 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
                 loaded.Select(candidate => new PerceptionTarget(candidate.QueryIdentity, candidate.SightPoint)).ToArray(),
                 ReadOnlyMemory<SpatialEntityCollider>.Empty,
                 0,
-                0,
                 VisibilityPageSize);
             _receipt = _perception.QueryVisibility(_request.Value);
             _visibility = _receipt.Value.Pairs.ToArray()

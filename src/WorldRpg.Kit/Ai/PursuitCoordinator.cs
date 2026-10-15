@@ -147,7 +147,7 @@ public readonly record struct PursuitTuning(
 }
 
 /// <summary>Engine query handles selected by the owning product composition.</summary>
-public readonly record struct PursuitPerceptionOptions(ulong ProjectionIdentity, uint Cursor, uint PageSize)
+public readonly record struct PursuitPerceptionOptions(uint Cursor, uint PageSize)
 {
     public PursuitPerceptionOptions Validate()
     {
@@ -346,7 +346,6 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
             new PerceptionObserver[] { new(checked((ulong)actor.DurableId), actor.Position.ToVector(), forward, tuning.DetectionDistance, tuning.MinimumFacingCosine, 1d) },
             new PerceptionTarget[] { new(checked((ulong)target.DurableId), target.Position.ToVector()) },
             ReadOnlyMemory<SpatialEntityCollider>.Empty,
-            options.ProjectionIdentity,
             options.Cursor,
             options.PageSize));
     }

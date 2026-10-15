@@ -34,14 +34,13 @@ public sealed class SpriteWorkbenchProductTests
         Assert.Empty(harness.Appearance.Snapshots[0]);
 
         UiProjection projection = Assert.Single(harness.Ui.Projections);
-        Assert.Equal(1UL, projection.Sequence);
         Assert.Equal("worldrpg.sprite-workbench.snapshot.v1", harness.Ui.StreamRequest.Contract);
         Assert.Equal("sprite.actor", ValueReader.StringField(projection.Value, "entries", 0, "id"));
         Assert.Null(ValueReader.NullableStringField(projection.Value, "selectedId"));
         Assert.Empty(harness.Appearance.SetFrameRequests);
 
         harness.Product.Start();
-        Assert.Equal(2UL, harness.Ui.LastProjection.Sequence);
+        Assert.Equal(2, harness.Ui.Projections.Count);
         Assert.Equal(2, harness.Appearance.Snapshots.Count);
         Assert.Empty(harness.Appearance.Snapshots[^1]);
     }
@@ -110,21 +109,21 @@ public sealed class SpriteWorkbenchProductTests
     [Fact]
     public void Construction_rejects_duplicate_or_invalid_admitted_content_paths()
     {
-        // A repeated admitted path is refused by the Engine content snapshot's own path index, which
-        // reports a duplicate key; an invalid logical path is refused by this product's admission check.
-        Assert.Throws<ArgumentException>(() => Harness.Create(new HarnessOptions(AddDuplicateAdmittedPath: true)));
+        // The Engine content snapshot indexes a repeated path by assignment, so this product's admission
+        // check refuses a repeated admitted path as it refuses an invalid logical path.
+        Assert.Throws<FormatException>(() => Harness.Create(new HarnessOptions(AddDuplicateAdmittedPath: true)));
         Assert.Throws<FormatException>(() => Harness.Create(new HarnessOptions(AddInvalidAdmittedPath: true)));
     }
 
     [Fact]
-    public void Attach_republishes_without_recreating_resources_and_update_sequences_are_monotonic()
+    public void Attach_republishes_without_recreating_resources_and_every_update_publishes()
     {
         using Harness harness = Harness.Create();
         harness.Product.Start();
         harness.Product.Attach();
         harness.Product.Update(harness.Update());
 
-        Assert.Equal(new ulong[] { 1, 2, 3, 4 }, harness.Ui.Projections.Select(value => value.Sequence));
+        Assert.Equal(4, harness.Ui.Projections.Count);
         Assert.Equal(4, harness.Appearance.Snapshots.Count);
         Assert.All(harness.Appearance.Snapshots, Assert.Empty);
         Assert.Equal(harness.Publication.Catalog.Entries.Count, harness.Appearance.OpenResourceRequests.Count);
@@ -692,6 +691,7 @@ public sealed class SpriteWorkbenchProductTests
     {
         public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
         public void PublishChanges(AppearanceChangesRequest request) => throw new NotSupportedException();
+        public void PublishOverlaySet(OverlaySetRequest request) => throw new NotSupportedException("This test double does not publish overlays.");
 
         private readonly HarnessOptions options;
         private ulong nextHandle = 1;

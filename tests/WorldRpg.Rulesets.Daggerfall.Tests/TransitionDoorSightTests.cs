@@ -84,7 +84,7 @@ public sealed class TransitionDoorSightTests
                 PerceptionReadoutResult result = engine.Perception.QueryVisibility(new(spatial.Session,
                     new[] { new PerceptionObserver(1, front, -normal, 4, -1, 1) },
                     new[] { new PerceptionTarget(2, sight), new PerceptionTarget(3, portal.Position.ToVector()) },
-                    ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 0, 64));
+                    ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 64));
                 PerceptionPair[] pairs = result.Pairs.ToArray();
                 Assert.True(pairs.Single(pair => pair.Target == 2).Kind == PerceptionPairKind.Visible, $"{payload} {portal.Id} is hidden from its room.");
                 if (wallThroughDoor) Assert.Equal(PerceptionPairKind.Occluded, pairs.Single(pair => pair.Target == 3).Kind);
