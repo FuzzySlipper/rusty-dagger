@@ -253,6 +253,21 @@ public sealed class DaggerfallDialogueTests
         Assert.Equal(1, disclosures);
     }
 
+    /// <summary>As the donor's PlayerActivate, the default Grab activation speaks with a person; no mode switch is needed.</summary>
+    [Fact]
+    public void Grab_activation_speaks_with_a_person_as_talk_does()
+    {
+        using ConditionSessionFixture fixture = new();
+        TalkTarget talk = new(fixture.Session, fixture.Definitions);
+
+        DaggerfallActivationOutcome refused = talk.Service.ActivateNpc(new(DaggerfallActivationMode.Bash, talk.Target));
+        DaggerfallActivationOutcome spoken = talk.Service.ActivateNpc(new(DaggerfallActivationMode.Grab, talk.Target));
+
+        Assert.False(refused.Applied);
+        Assert.True(spoken.Applied, spoken.Message);
+        Assert.StartsWith("You speak with", spoken.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Dialogue_directory_and_activation_reject_a_live_actor_from_an_old_profile()
     {

@@ -286,6 +286,7 @@ internal sealed partial class DaggerfallSession
             // query. The safe Engine hit reports a static surface rather than a source id, so the
             // normalized placement resolver above is the product-side identity join.
             _ = TryTriggerDungeonActionRay(currentLook.Forward, _tuning.MeleeTargeting.MaximumDistance, DaggerfallDungeonActionEvent.Attack);
+            TryBashDoorWithSwing(currentLook);
         }
         if (acts.Interact)
             _ = TryActivateContextual(currentLook);

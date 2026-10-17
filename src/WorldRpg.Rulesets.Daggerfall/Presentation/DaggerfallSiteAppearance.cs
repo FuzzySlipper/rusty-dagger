@@ -1335,11 +1335,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         SpritePlayback? staged = null;
         try
         {
-            // Some classic frames terminate at a side of their native canvas.
-            // Fit that canvas against the same viewport edge so widescreen
-            // letterboxing cannot expose a cut-off hand or blade inside the view.
-            float alignment = action.Alignment switch { "left" => 0F, "right" => 1F, _ => .5F };
-            appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(viewmodel.Appearance, true, Vector2.Zero, Vector2.One, new Vector2(alignment, 0F), SpriteViewportFit.Contain));
+            appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(viewmodel.Appearance, true,
+                ViewmodelPlacement(weapon, action, out Vector2 size), size, Vector2.Zero, SpriteViewportFit.Stretch));
             // The classic weapon animation's authored table rate is its authoring default; the tick
             // time the rules published for this swing (FORM-04.GetMeleeWeaponAnimTime) is what the
             // donor actually plays at, so a hastened or slowed player swings at that rate.
@@ -1363,6 +1360,27 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (old is not null) Retire(old);
         }
         catch { staged?.Dispose(); throw; }
+    }
+
+    /// <summary>
+    /// Where an action's frames stand on screen, as the donor's FPSWeapon places them: the art overlays a
+    /// fixed 320x200 display, so a frame w by h pixels covers w/320 of the width and h/200 of the height,
+    /// standing on the bottom edge and aligned left (at its offset), centred, or right (at one minus it).
+    /// Every frame of the action keeps that one rectangle, so the art never rescales or drifts mid-swing.
+    /// </summary>
+    private static Vector2 ViewmodelPlacement(NormalizedClassicWeapon weapon, NormalizedClassicWeaponAction action, out Vector2 size)
+    {
+        const float ClassicWidth = 320F, ClassicHeight = 200F;
+        IEnumerable<int> played = action.Sequence ?? Enumerable.Range(action.FrameStart, action.FrameCount);
+        NormalizedAtlasFrame[] frames = [.. played.Select(index => weapon.Frames.Single(frame => frame.Id == index))];
+        size = new Vector2(frames.Max(frame => frame.Width) / ClassicWidth, frames.Max(frame => frame.Height) / ClassicHeight);
+        float left = action.Alignment switch
+        {
+            "left" => action.ScreenOffset,
+            "right" => 1F - action.ScreenOffset - size.X,
+            _ => .5F - (size.X / 2F),
+        };
+        return new Vector2(left, 0F);
     }
 
     private void RetireViewmodel()

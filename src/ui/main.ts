@@ -374,6 +374,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         <button data-action="inventory">Inventory &amp; equipment · I</button>
         <button data-action="character">Character · C</button>
         <button data-action="spells">Spells</button>
+        <button data-action="magic-items">Magic items · U</button>
         <button data-action="map">Map</button>
         <button data-action="transport">Travel &amp; transport</button>
         <button data-action="rest">Rest &amp; loiter</button>
@@ -897,7 +898,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (previous === 'debug') closeDebug();
     if (previous === 'loot') closeLoot();
     activePanel = null;
-    menu.classList.remove('has-inventory', 'has-character', 'has-transport', 'has-rest', 'has-journal', 'has-loot', 'has-debug');
+    menu.classList.remove('has-inventory', 'has-character', 'has-spells', 'has-transport', 'has-rest', 'has-journal', 'has-loot', 'has-debug');
     home.hidden = false;
     panel.hidden = true;
     menuTitle.textContent = 'Game menu';
@@ -929,6 +930,17 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     showHome();
     reportMenu(true);
   };
+  // Escape pressed under pointer lock never reaches the page: the browser, and the desktop shell
+  // likewise, spend it releasing the lock. A lock lost while the world has the pointer (Escape or
+  // focus loss) therefore opens the menu, so one press does what Escape does everywhere else. A lock
+  // this UI gives up by entering interface mode is already past gameplay when the release arrives.
+  let pointerWasLocked = document.pointerLockElement !== null;
+  const onPointerLockChange = (): void => {
+    const locked = document.pointerLockElement !== null;
+    if (pointerWasLocked && !locked && interactionMode === 'gameplay' && !menu.open && !deadMode && !titleMode) openMenu();
+    pointerWasLocked = locked;
+  };
+  document.addEventListener('pointerlockchange', onPointerLockChange);
   const dismiss = (): void => {
     if (deadMode) return;
     if (activePanel !== null) showHome();
@@ -962,6 +974,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     shell.querySelector<HTMLButtonElement>('[data-action="loot-exit"]')!.hidden = action !== 'loot';
     menu.classList.toggle('has-inventory', action === 'inventory');
     menu.classList.toggle('has-character', action === 'character');
+    menu.classList.toggle('has-spells', action === 'spells');
     menu.classList.toggle('has-transport', action === 'transport');
     menu.classList.toggle('has-rest', action === 'rest');
     menu.classList.toggle('has-journal', action === 'journal');
@@ -1106,7 +1119,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (event.code === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      if (!event.repeat && !deadMode) dismiss();
+      // Escape toggles the menu: from any panel it closes the whole menu; a pad's Back steps out instead.
+      if (!event.repeat && !deadMode) { if (menu.open) closeMenu(); else openMenu(); }
       return;
     }
     if (menu.open || event.ctrlKey || event.altKey || event.metaKey
@@ -1609,6 +1623,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     questJournalView.dispose();
     lootView.dispose();
     document.removeEventListener('keydown', onKeyDown, true);
+    document.removeEventListener('pointerlockchange', onPointerLockChange);
     document.removeEventListener('keydown', skipOnPress, true);
     document.removeEventListener('pointerdown', skipOnPress, true);
     menu.removeEventListener('cancel', onCancel);
@@ -1891,40 +1906,48 @@ export function isSpellbookProjection(value:unknown):value is SpellbookProjectio
 }
 
 function renderSpells(root:HTMLElement,view:SpellbookProjection|null):void {
+  // The menu already titles this panel, so the book carries no heading of its own.
   root.replaceChildren();
-  const title=document.createElement('h2');title.textContent='Known spells';root.append(title);
-  const status=document.createElement('p');status.setAttribute('role','status');
+  const status=document.createElement('p');status.className='dagger-spellbook-status';status.setAttribute('role','status');
   status.textContent=view?.result ?? '';root.append(status);
   if(!view) return;
-  const sort = document.createElement('button'); sort.type = 'button'; sort.dataset.action = 'spell-sort';
-  sort.textContent = 'Sort spells (name, then cost)'; root.append(sort);
+  const button=(action:string,text:string,label?:string):HTMLButtonElement=>{
+    const control=document.createElement('button');control.type='button';control.dataset.action=action;control.textContent=text;
+    if(label!==undefined){control.setAttribute('aria-label',label);control.title=label;}
+    return control;
+  };
+  // The spellbook reads as the donor's: the known spells in book order, each readied by choosing it, with
+  // its own order and removal controls, beside the chosen spell's description and the cast controls above.
+  const toolbar=document.createElement('div');toolbar.className='dagger-spellbook-toolbar';
+  const cast=button('spell-cast','Cast ready spell');const unready=button('spell-unready','Unready');
+  cast.disabled=unready.disabled=view.ready===null;
+  toolbar.append(cast,unready,button('spell-sort','Sort by name, then cost'));
+  const list=document.createElement('ol');list.className='dagger-spellbook-list';
   for(const [index, spell] of view.available.entries()) {
-    const button=document.createElement('button');button.type='button';button.dataset.action='spell-ready';button.dataset.spell=spell.key;
-    button.textContent=`${spell.name} · ${spell.canCast===false ? 'Unavailable' : `${spell.cost} magicka`}${view.ready===spell.key ? ' · Ready' : ''}`;
-    button.disabled=spell.canCast===false;
-    button.setAttribute('aria-pressed',String(view.ready===spell.key));root.append(button);
-    for (const [offset, label] of [[-1, 'Move up'], [1, 'Move down']] as const) {
-      const other = view.available[index + offset];
-      const move = document.createElement('button'); move.type = 'button'; move.dataset.action = 'spell-swap';
-      move.dataset.spell = spell.key; move.dataset.swapWith = other?.key; move.textContent = `${label} ${spell.name}`;
-      move.disabled = !other; root.append(move);
-    }
-    for(const [action,label] of [['spell-info','Info'],['spell-delete','Forget']]) {
-      const control=document.createElement('button');control.type='button';control.dataset.action=action;control.dataset.spell=spell.key;
-      control.textContent=`${label} ${spell.name}`;root.append(control);
-    }
+    const row=document.createElement('li');row.className='dagger-spellbook-row';
+    row.classList.toggle('is-ready',view.ready===spell.key);
+    const ready=button('spell-ready',`${spell.name} · ${spell.canCast===false ? 'Unavailable' : `${spell.cost} magicka`}${view.ready===spell.key ? ' · Ready' : ''}`);
+    ready.className='dagger-spellbook-ready';ready.dataset.spell=spell.key;
+    ready.disabled=spell.canCast===false;ready.setAttribute('aria-pressed',String(view.ready===spell.key));
+    const info=button('spell-info','Info',`Describe ${spell.name}`);info.dataset.spell=spell.key;
+    const moves=([[-1,'▲','Move up'],[1,'▼','Move down']] as const).map(([offset,glyph,label])=>{
+      const other=view.available[index+offset];
+      const move=button('spell-swap',glyph,`${label} ${spell.name}`);move.dataset.spell=spell.key;move.dataset.swapWith=other?.key;
+      move.disabled=!other;return move;
+    });
+    const forget=button('spell-delete','Forget',`Forget ${spell.name}`);forget.dataset.spell=spell.key;forget.classList.add('dagger-spellbook-forget');
+    row.append(ready,info,...moves,forget);list.append(row);
   }
-  renderSpellInformation(root,view);
-  if(view.available.length===0) { const empty=document.createElement('p');empty.textContent='No available known spells.';root.append(empty); }
-  for(const [action,label] of [['spell-unready','Unready'],['spell-cast','Cast ready spell']]) {
-    const button=document.createElement('button');button.type='button';button.dataset.action=action;button.textContent=label;
-    button.disabled=view.ready===null;root.append(button);
-  }
+  const body=document.createElement('div');body.className='dagger-spellbook-body';
+  body.append(list);
+  if(view.available.length===0) { const empty=document.createElement('p');empty.textContent='No available known spells.';body.append(empty); }
+  renderSpellInformation(body,view);
+  root.append(toolbar,body);
 }
 
 function renderSpellInformation(root:HTMLElement,view:SpellbookProjection):void {
   if(!view.information) return;
-  const section=document.createElement('section');const title=document.createElement('h3');title.textContent=view.information.name;section.append(title);
+  const section=document.createElement('section');section.className='dagger-spellbook-information';const title=document.createElement('h3');title.textContent=view.information.name;section.append(title);
   const target=document.createElement('p');target.textContent=`Target: ${view.information.target}; element: ${view.information.element}`;section.append(target);
   for(const line of view.information.details) { const p=document.createElement('p');p.textContent=line;section.append(p); } root.append(section);
 }

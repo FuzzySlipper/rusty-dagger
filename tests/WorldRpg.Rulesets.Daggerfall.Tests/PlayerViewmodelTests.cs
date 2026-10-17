@@ -273,7 +273,13 @@ public sealed class PlayerViewmodelTests
         AppearanceFact first = Assert.Single(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
         Assert.InRange(first.ObjectId, 2UL, (1UL << 53) - 1);
         Assert.Equal(Vector3.Zero, first.Transform.Translation);
-        Assert.Single(appearance.ViewportRequests);
+        // As the donor's FPSWeapon, the 8x8 idle frame covers 8/320 by 8/200 of the view, stretched to that
+        // rectangle, standing on the bottom edge right-aligned at its 0.1 offset rather than fitted to the view.
+        SpriteViewportUpdateRequest placement = Assert.Single(appearance.ViewportRequests);
+        Assert.Equal(SpriteViewportFit.Stretch, placement.Fit);
+        Assert.Equal(new Vector2(8F / 320F, 8F / 200F), placement.Size);
+        Assert.Equal(1F - .1F - (8F / 320F), placement.Minimum.X, 5);
+        Assert.Equal(0F, placement.Minimum.Y);
         Assert.Equal(Quaternion.Identity, first.Transform.Rotation);
         Assert.All([first.Transform.Translation.X, first.Transform.Translation.Y, first.Transform.Translation.Z], coordinate => Assert.InRange(coordinate, -16F, 16F));
         presentation.Publish(actors);

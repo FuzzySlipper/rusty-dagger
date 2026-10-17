@@ -1,4 +1,9 @@
 :root { color-scheme: dark; font-family: Georgia, serif; color: #f2e3ba; }
+/* A free cursor over the game and its menus is the game's own pixel arrow rather than the system's.
+   Text fields keep their caret. The tip of the arrow is the hotspot. */
+:root { --dagger-cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 16 16' shape-rendering='crispEdges'><path d='M1 1v12l3-3 2 5 2-1-2-5h4z' fill='%23e8c66e' stroke='%231a1206' stroke-width='1'/></svg>") 2 2, default; --dagger-cursor-pointer: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 16 16' shape-rendering='crispEdges'><path d='M1 1v12l3-3 2 5 2-1-2-5h4z' fill='%23e8c66e' stroke='%231a1206' stroke-width='1'/></svg>") 2 2, pointer; }
+:root, :root *, [data-rusty-application-renderer] { cursor: var(--dagger-cursor); }
+:root :is(input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"]) { cursor: text; }
 * { box-sizing: border-box; }
 
 .dagger-hud {
@@ -54,7 +59,7 @@
 .dagger-death-load { display: grid; gap: .35rem; color: #b9ae8c; font: .78rem ui-monospace, monospace; }
 .dagger-death-load select { padding: .55rem; color: #f7e7bd; background: #151712; border: 1px solid #aa9c7a; font: inherit; }
 .dagger-death-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
-.dagger-death-actions button { padding: .65rem 1rem; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; cursor: pointer; }
+.dagger-death-actions button { padding: .65rem 1rem; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; cursor: var(--dagger-cursor-pointer); }
 .dagger-death-actions button:disabled, .dagger-death-load select:disabled { opacity: .55; cursor: default; }
 
 .dagger-dungeon-text { position: absolute; left: 50%; top: 50%; width: min(36rem, calc(100vw - 2rem)); transform: translate(-50%, -50%); padding: 1.4rem; background: rgba(8, 9, 11, .96); border: 1px solid #c6a05a; pointer-events: auto; white-space: pre-wrap; }
@@ -69,7 +74,7 @@
 .dagger-entry { position: absolute; inset: 0; display: grid; place-items: center; background: #05060a; pointer-events: auto; }
 .dagger-entry[hidden] { display: none; }
 .dagger-entry-screen { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
-.dagger-entry-begin { position: absolute; bottom: 2%; left: 50%; transform: translateX(calc(-100% - 6px)); padding: 8px 22px; font: inherit; color: #f6ddb0; background: rgba(2, 4, 4, .78); border: 1px solid rgba(198, 160, 90, .65); cursor: pointer; }
+.dagger-entry-begin { position: absolute; bottom: 2%; left: 50%; transform: translateX(calc(-100% - 6px)); padding: 8px 22px; font: inherit; color: #f6ddb0; background: rgba(2, 4, 4, .78); border: 1px solid rgba(198, 160, 90, .65); cursor: var(--dagger-cursor-pointer); }
 .dagger-entry-begin:hover { background: rgba(40, 30, 12, .85); }
 .dagger-composition { position: absolute; right: 24px; top: 22px; max-width: min(42rem, calc(100vw - 48px)); padding: 10px 12px; background: rgba(2, 4, 4, .78); border: 1px solid rgba(198, 160, 90, .65); font: .7rem ui-monospace, monospace; }
 .dagger-composition > strong { color: #d9bf80; text-transform: uppercase; letter-spacing: .08em; }
@@ -83,7 +88,7 @@
 .dagger-hud button:hover, .dagger-hud button:focus-visible { background: #594521; outline: 2px solid #f4d983; }
 
 .dagger-menu-toggle { position: absolute; top: 22px; right: 24px; }
-.dagger-menu-toggle, .dagger-menu-home > button, .dagger-menu-panel > button { padding: 10px 18px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; cursor: pointer; pointer-events: auto; }
+.dagger-menu-toggle, .dagger-menu-home > button, .dagger-menu-panel > button { padding: 10px 18px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; cursor: var(--dagger-cursor-pointer); pointer-events: auto; }
 .dagger-menu { width: min(42rem, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; padding: 24px; border: 1px solid #d4b56b; background: #151712; color: #f2e3ba; pointer-events: auto; }
 .dagger-menu::backdrop { background: rgb(0 0 0 / .65); }
 .dagger-menu h1 { margin: 0 0 20px; font-size: 1.5rem; }
@@ -107,7 +112,7 @@
 .dagger-dialogue h2 { margin: 0 0 12px; font-size: 1.2rem; }
 .dagger-dialogue p { line-height: 1.5; white-space: pre-wrap; }
 .dagger-dialogue label { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
-.dagger-dialogue select, .dagger-dialogue input, .dagger-dialogue button { padding: 8px 12px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: inherit; cursor: pointer; }
+.dagger-dialogue select, .dagger-dialogue input, .dagger-dialogue button { padding: 8px 12px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: inherit; cursor: var(--dagger-cursor-pointer); }
 .dagger-dialogue-topics { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 .dagger-text-diagnostics { padding-left: 1.2rem; color: #cab882; font: .72rem ui-monospace, monospace; }
 .dagger-dialogue-close { margin-top: 10px; }
@@ -153,10 +158,10 @@
 .dagger-map-controls, .dagger-map-buildings { display: flex; flex-wrap: wrap; gap: .4rem; }
 .dagger-map-buildings { max-height: 12rem; overflow: auto; }
 .dagger-map-buildings button[aria-pressed="true"] { outline: 2px solid #ffe077; }
-.dagger-map-diagram [role="button"] { cursor: pointer; }
+.dagger-map-diagram [role="button"] { cursor: var(--dagger-cursor-pointer); }
 .dagger-map-note-edit { display: inline-flex; gap: .3rem; margin-left: .4rem; }
 
-.dagger-entry-create { position: absolute; bottom: 2%; left: 50%; transform: translateX(6px); padding: 8px 22px; font: inherit; color: #f6ddb0; background: #171713; border: 1px solid #c6a05a; cursor: pointer; }
+.dagger-entry-create { position: absolute; bottom: 2%; left: 50%; transform: translateX(6px); padding: 8px 22px; font: inherit; color: #f6ddb0; background: #171713; border: 1px solid #c6a05a; cursor: var(--dagger-cursor-pointer); }
 .dagger-entry-creation { position: absolute; inset: 4% 10% 10%; overflow: auto; padding: 20px; color: #f6ddb0; background: rgba(8, 12, 10, .9); border: 1px solid #c6a05a; }
 .dagger-entry-parts { position: absolute; right: 0; bottom: 0; display: flex; pointer-events: none; }
 .dagger-entry-parts img { image-rendering: pixelated; }
@@ -166,7 +171,7 @@
 /* pre-line keeps the record's line breaks but drops the leading spaces the classic text used to
    centre a line, which would otherwise indent it in a proportional font. */
 .dagger-quest-message p { margin: 0; white-space: pre-line; }
-.dagger-quest-message button { justify-self: start; margin-right: 8px; padding: 8px 16px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; cursor: pointer; pointer-events: auto; }
+.dagger-quest-message button { justify-self: start; margin-right: 8px; padding: 8px 16px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; cursor: var(--dagger-cursor-pointer); pointer-events: auto; }
 .dagger-escort-faces { display: flex; gap: .5rem; }
 .dagger-escort-faces img { width: 48px; height: 48px; object-fit: contain; image-rendering: pixelated; }
 
@@ -177,7 +182,7 @@
 
 .dagger-legal:not([hidden]) { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(5, 8, 10, .9); pointer-events: auto; }
 .dagger-legal-card { width: min(620px, 85%); padding: 2rem; border: 2px solid #b9985b; color: #f6ddb0; background: #181b1c; }
-.dagger-legal-card button { margin: .5rem .5rem 0 0; padding: .7rem 1rem; font: inherit; cursor: pointer; }
+.dagger-legal-card button { margin: .5rem .5rem 0 0; padding: .7rem 1rem; font: inherit; cursor: var(--dagger-cursor-pointer); }
 .dagger-legal[data-phase="prison"] { background: repeating-linear-gradient(90deg, #060809 0 12px, #272b2d 12px 22px, #080b0d 22px 90px); }
 
 /* Travel map: published map art with ruleset-placed regions and destinations drawn over it. */
@@ -188,7 +193,7 @@
 .dagger-travel-map-canvas[data-art-missing] { border-style: dashed; min-height: 8rem; }
 .dagger-travel-map-canvas > img { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
 .dagger-travel-map-layer { position: absolute; inset: 0; }
-.dagger-travel-map-layer > * { position: absolute; transform: translate(-50%, -50%); padding: 0; cursor: pointer; }
+.dagger-travel-map-layer > * { position: absolute; transform: translate(-50%, -50%); padding: 0; cursor: var(--dagger-cursor-pointer); }
 .dagger-travel-map-region { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff0a7; background: #6d2b14; }
 .dagger-travel-map-dot { width: 7px; height: 7px; border: 1px solid rgb(0 0 0 / .5); background: #e3b490; }
 .dagger-travel-map-dot[data-category="dungeon"] { background: #d7772b; }
@@ -203,4 +208,25 @@
 .dagger-breath[hidden] { display: none; }
 .dagger-breath meter { width: 120px; accent-color: #66b8e3; }
 .dagger-breath.low { color: #ff8d77; }
-.dagger-activation-indicator { position: absolute; left: 50%; top: calc(48% + 28px); transform: translateX(-50%); color: #eadc9e; font-size: .8rem; text-shadow: 0 1px 3px #000; }
+/* The activation mode sits with the vitals rather than under the reticle, where it would cover the target. */
+.dagger-activation-indicator { position: absolute; right: 24px; bottom: 22px; display: grid; gap: 3px; min-width: 110px; border-left: 3px solid #c6a05a; padding-left: 9px; color: #f6ddb0; font: 700 .95rem ui-monospace, monospace; }
+.dagger-activation-indicator::before { content: "Activate"; color: #aa9c7a; font: .7rem system-ui, sans-serif; text-transform: uppercase; }
+.dagger-activation-indicator:empty, .dagger-activation-indicator[hidden] { display: none; }
+
+/* Spellbook: the known spells as rows beside the chosen spell's description. */
+.dagger-spellbook-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.dagger-spellbook-status:empty { display: none; }
+.dagger-spellbook-body { display: grid; gap: 14px; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; }
+.dagger-spellbook-list { display: grid; gap: 4px; list-style: none; margin: 0; max-height: 60vh; overflow-y: auto; padding: 0; }
+.dagger-spellbook-row { align-items: center; display: grid; gap: 4px; grid-template-columns: minmax(0, 1fr) repeat(4, auto); }
+.dagger-menu.has-spells { width: min(60rem, calc(100vw - 32px)); }
+.dagger-spells-root button { padding: 5px 10px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .78rem ui-monospace, monospace; cursor: var(--dagger-cursor-pointer); }
+.dagger-spells-root button[aria-pressed="true"] { background: #5a4520; }
+.dagger-spellbook-row button { padding: 4px 8px; }
+.dagger-spellbook-ready { overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.dagger-spellbook-row.is-ready .dagger-spellbook-ready { border-color: #f0c96a; box-shadow: inset 3px 0 0 #f0c96a; }
+.dagger-spellbook-forget { color: #e3a58b; }
+.dagger-spellbook-information { background: rgb(12 13 10 / .82); border: 1px solid #7d6c45; padding: 10px 12px; }
+.dagger-spellbook-information h3 { margin: 0 0 6px; }
+.dagger-spellbook-information p { margin: 0 0 4px; }
+@media (max-width: 52rem) { .dagger-spellbook-body { grid-template-columns: 1fr; } }

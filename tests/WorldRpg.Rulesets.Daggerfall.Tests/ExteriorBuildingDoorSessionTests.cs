@@ -6,6 +6,7 @@ using WorldRpg.Kit;
 using WorldRpg.Kit.Targeting;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Crime;
+using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -70,6 +71,22 @@ public sealed class ExteriorBuildingDoorSessionTests
         Assert.True(restored.TryTransitionTo(fixture.Exterior.ProfileKey));
         Assert.Equal(0, restored.Doors.Read(fixture.DoorOf(Residence)).LockValue);
         Assert.Equal(484, restored.Doors.All.Count());
+    }
+
+    /// <summary>
+    /// As the donor's WeaponManager.WeaponEnvDamage, striking a locked door with a weapon bashes it with no mode chosen:
+    /// the default activation mode stays Grab, and the swing breaks into the residence as the Bash mode does.
+    /// </summary>
+    [Fact]
+    public void Striking_a_locked_residence_with_a_weapon_bashes_it_in_any_mode()
+    {
+        using Fixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Strength.Value)).BaseValue = 100;
+        Assert.Equal(DaggerfallActivationMode.Grab, session.ActivationMode);
+        fixture.Swing(Residence);
+        Assert.Equal(fixture.InteriorOf(Residence), session.Sites.ActiveProfile);
+        Assert.Equal(DaggerfallCrimeKind.BreakingAndEntering, Assert.Single(session.State.Crime.Incidents).Crime);
     }
 
     /// <summary>
@@ -366,6 +383,14 @@ public sealed class ExteriorBuildingDoorSessionTests
                 Point = door.Pose.Translation, Distance = 1,
             };
             return door;
+        }
+
+        /// <summary>Swings the drawn weapon at the building's door, in whatever activation mode is current.</summary>
+        internal void Swing(DaggerfallSiteBuildingId building)
+        {
+            _ = Face(building);
+            Session.State.WeaponDrawn = true;
+            Session.Update(new ProductUpdate(OuterUpdate(++_step), [Ui("{\"action\":\"attack\"}")]));
         }
 
         internal void Interact(DaggerfallSiteBuildingId building)
