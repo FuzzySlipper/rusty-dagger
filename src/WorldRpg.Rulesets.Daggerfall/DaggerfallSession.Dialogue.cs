@@ -212,14 +212,18 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     public DaggerfallActivationOutcome ActivateNpc(DaggerfallActivationSelection selection)
     {
         ArgumentNullException.ThrowIfNull(selection);
-        if (_suppressTalk()) return new(false, "You cannot talk while in beast form.");
-        if (selection.Mode != DaggerfallActivationMode.Talk)
-            return new(false, "Select Talk mode to speak with someone.");
         if (selection.Target.Kind != DaggerfallActivationTargetKind.Npc
             || !TryReadLiveNpc(checked((long)selection.Target.Identity.Value), out DaggerfallNpc? npc, out DaggerfallDialogueNpc? actor)
             || actor is null
             || actor.Entity != selection.Target.Entity)
             return new(false, "That person is no longer available here.");
+        // As the donor's PlayerActivate, Grab and Talk speak with anyone and Info speaks with a passer-by;
+        // only a static person answers Info with their name (PresentNPCInfo). The mode is not a gate on talking.
+        if (selection.Mode == DaggerfallActivationMode.Info && npc!.Kind == DaggerfallNpcKind.Static)
+            return new(true, $"You see {npc.DisplayName ?? npc.Role}.");
+        if (selection.Mode is not (DaggerfallActivationMode.Grab or DaggerfallActivationMode.Talk or DaggerfallActivationMode.Info))
+            return new(false, "That person cannot be approached that way.");
+        if (_suppressTalk()) return new(false, "You cannot talk while in beast form.");
 
         // TalkManager refuses a target whose persistent faction reaction is below -20 before it
         // opens the modal. Faction-zero civilians remain neutral through ReactionForNpc and can

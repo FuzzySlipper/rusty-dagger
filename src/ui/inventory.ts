@@ -250,10 +250,33 @@ export function mountInventory(
     renderSelection();
   };
 
+  // A press on an item becomes a drag once the pointer travels; until then it is an ordinary click.
+  const DRAG_THRESHOLD = 6;
+  let press: { readonly source: MoveSource; readonly pointer: number; readonly x: number; readonly y: number; readonly icon: string | null } | null = null;
+  let ghost: HTMLImageElement | null = null;
+  let suppressClick = false;
+  const dropTargetAt = (x: number, y: number): HTMLButtonElement | null => {
+    const hit = shell.ownerDocument.elementFromPoint(x, y);
+    const target = hit instanceof Element ? hit.closest<HTMLButtonElement>('[data-inventory-grid], [data-inventory-equipment]') : null;
+    return target !== null && shell.contains(target) && !target.disabled ? target : null;
+  };
+  const markTarget = (target: HTMLElement | null): void => {
+    shell.querySelectorAll('.is-drop-target').forEach((element) => { if (element !== target) element.classList.remove('is-drop-target'); });
+    target?.classList.add('is-drop-target');
+  };
+
   const finishDrag = (): void => {
+    press = null;
     dragging = null;
+    ghost?.remove();
+    ghost = null;
     shell.classList.remove('is-dragging');
-    shell.querySelectorAll('.is-drop-target').forEach((element) => element.classList.remove('is-drop-target'));
+    markTarget(null);
+    window.removeEventListener('pointermove', onPointerMove, true);
+    window.removeEventListener('pointerup', onPointerUp, true);
+    window.removeEventListener('pointercancel', onPointerCancel, true);
+    window.removeEventListener('keydown', onDragKey, true);
+    window.removeEventListener('blur', onPointerCancel);
     if (pending !== null) {
       const next = pending;
       pending = null;
@@ -261,42 +284,60 @@ export function mountInventory(
     }
   };
 
-  const onDragStart = (event: DragEvent): void => {
+  const onPointerDown = (event: PointerEvent): void => {
+    if (event.button !== 0 || press !== null) return;
     const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-inventory-item]') : null;
     const source = button?.dataset.inventoryItem === undefined ? null : sourceFor(button.dataset.inventoryItem);
-    if (source === null || event.dataTransfer === null) {
-      event.preventDefault();
-      return;
+    if (button === null || source === null) return;
+    press = { source, pointer: event.pointerId, x: event.clientX, y: event.clientY, icon: button.querySelector('img')?.src ?? null };
+    window.addEventListener('pointermove', onPointerMove, true);
+    window.addEventListener('pointerup', onPointerUp, true);
+    window.addEventListener('pointercancel', onPointerCancel, true);
+    window.addEventListener('keydown', onDragKey, true);
+    window.addEventListener('blur', onPointerCancel);
+  };
+  const onPointerMove = (event: PointerEvent): void => {
+    if (press === null || event.pointerId !== press.pointer) return;
+    if (dragging === null) {
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) < DRAG_THRESHOLD) return;
+      dragging = press.source;
+      select(press.source);
+      shell.classList.add('is-dragging');
+      if (press.icon !== null) {
+        ghost = shell.ownerDocument.createElement('img');
+        ghost.className = 'dagger-inventory-drag-ghost';
+        ghost.src = press.icon;
+        ghost.alt = '';
+        shell.ownerDocument.body.append(ghost);
+      }
     }
-    dragging = source;
-    select(source);
-    shell.classList.add('is-dragging');
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', source.key);
-  };
-  const onDragEnd = (): void => finishDrag();
-  const onDragOver = (event: DragEvent): void => {
-    if (dragging === null) return;
-    const target = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-inventory-grid], [data-inventory-equipment]') : null;
-    if (target === null || target.disabled) return;
     event.preventDefault();
-    event.dataTransfer!.dropEffect = 'move';
-    target.classList.add('is-drop-target');
+    if (ghost !== null) ghost.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`;
+    markTarget(dropTargetAt(event.clientX, event.clientY));
   };
-  const onDragLeave = (event: DragEvent): void => {
-    const target = event.target instanceof Element ? event.target.closest<HTMLElement>('.is-drop-target') : null;
-    target?.classList.remove('is-drop-target');
-  };
-  const onDrop = (event: DragEvent): void => {
-    const target = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-inventory-grid], [data-inventory-equipment]') : null;
+  const onPointerUp = (event: PointerEvent): void => {
+    if (press === null || event.pointerId !== press.pointer) return;
     const source = dragging;
-    if (target === null || source === null || target.disabled) return;
-    event.preventDefault();
-    if (target.dataset.inventoryGrid !== undefined) move(source, { grid: Number(target.dataset.inventoryGrid) });
-    else if (target.dataset.inventoryEquipment) move(source, { equipment: target.dataset.inventoryEquipment });
+    if (source !== null) {
+      const target = dropTargetAt(event.clientX, event.clientY);
+      if (target?.dataset.inventoryGrid !== undefined) move(source, { grid: Number(target.dataset.inventoryGrid) });
+      else if (target?.dataset.inventoryEquipment) move(source, { equipment: target.dataset.inventoryEquipment });
+      // The release that ends a drag is not also a click on whatever lies under it.
+      suppressClick = true;
+    }
     finishDrag();
   };
+  const onPointerCancel = (): void => finishDrag();
+  const onDragKey = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape' || dragging === null) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    finishDrag();
+  };
+  // Nothing in the panel starts a native drag session, whatever the element.
+  const onNativeDrag = (event: DragEvent): void => event.preventDefault();
   const onClick = (event: MouseEvent): void => {
+    if (suppressClick) { suppressClick = false; return; }
     const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('button') : null;
     if (button === null || button.disabled) return;
     if (button.dataset.inventoryItem !== undefined) {
@@ -340,14 +381,8 @@ export function mountInventory(
     }
   };
 
-  shell.addEventListener('dragstart', onDragStart);
-  shell.addEventListener('dragend', onDragEnd);
-  // Admit the destination on entry as well as movement so native drag sessions
-  // negotiate the move before mouse release, including occupied item buttons.
-  shell.addEventListener('dragenter', onDragOver);
-  shell.addEventListener('dragover', onDragOver);
-  shell.addEventListener('dragleave', onDragLeave);
-  shell.addEventListener('drop', onDrop);
+  shell.addEventListener('pointerdown', onPointerDown);
+  shell.addEventListener('dragstart', onNativeDrag);
   shell.addEventListener('click', onClick);
 
   return {
@@ -383,12 +418,9 @@ export function mountInventory(
     dispose(): void {
       if (disposed) return;
       disposed = true;
-      shell.removeEventListener('dragstart', onDragStart);
-      shell.removeEventListener('dragend', onDragEnd);
-      shell.removeEventListener('dragenter', onDragOver);
-      shell.removeEventListener('dragover', onDragOver);
-      shell.removeEventListener('dragleave', onDragLeave);
-      shell.removeEventListener('drop', onDrop);
+      finishDrag();
+      shell.removeEventListener('pointerdown', onPointerDown);
+      shell.removeEventListener('dragstart', onNativeDrag);
       shell.removeEventListener('click', onClick);
       shell.remove();
     },
@@ -599,7 +631,10 @@ function renderPlace(
 ): void {
   button.replaceChildren();
   delete button.dataset.inventoryItem;
-  button.draggable = item !== undefined;
+  // Items are dragged with pointer events: a native drag session hangs a host that renders the page
+  // off screen and never services it, so no element offers one.
+  button.draggable = false;
+  button.dataset.inventoryDraggable = String(item !== undefined);
   if (item === undefined) {
     button.setAttribute('aria-label', `${emptyLabel}, empty`);
     button.append(emptyMark());
@@ -644,7 +679,8 @@ function renderOverflow(container: HTMLElement, items: readonly InventoryItem[])
     button.type = 'button';
     button.className = 'dagger-inventory-overflow-item';
     button.dataset.inventoryItem = item.key;
-    button.draggable = true;
+    button.draggable = false;
+    button.dataset.inventoryDraggable = 'true';
     button.setAttribute('aria-label', `${item.label}, ${item.quantity}, pack overflow`);
     const iconSource = image(item.icon);
     if (iconSource !== null) {

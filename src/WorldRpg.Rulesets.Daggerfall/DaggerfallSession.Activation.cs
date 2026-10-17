@@ -74,7 +74,7 @@ internal sealed partial class DaggerfallSession
             reach,
             new DaggerfallActivationContributions(
                 new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts, CorpseSightPoint),
-                new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic, EnterExteriorBuilding, ExteriorBuildingDoor, ExteriorBuildingName, DescribeLockDifficulty, DiscoverExteriorBuilding),
+                _doorActivation = new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic, EnterExteriorBuilding, ExteriorBuildingDoor, ExteriorBuildingName, DescribeLockDifficulty, DiscoverExteriorBuilding),
                 new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination,
                     (destination, portal) => TryTransitionTo(destination, portal.ArrivalAnchor)),
                 new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyInteractionPoint, OpenPropertyLoot),
@@ -399,6 +399,29 @@ internal sealed partial class DaggerfallSession
 
     private static bool DoorTrigger(uint rawTrigger) =>
         (rawTrigger > 0x0A ? rawTrigger & 0x0F : rawTrigger) == (uint)DaggerfallDungeonTriggerFlag.Door;
+
+    private DaggerfallDoorActivationOwner? _doorActivation;
+
+    /// <summary>
+    /// As the donor's WeaponManager.WeaponEnvDamage, a swing that reaches no creature but strikes a closed door
+    /// bashes it (DaggerfallActionDoor.AttemptBash, PlayerActivate.AttemptExteriorDoorBash), through the same door
+    /// owner, crime and wording the Bash activation uses; no mode has to be chosen first.
+    /// </summary>
+    private void TryBashDoorWithSwing(LookReceipt look)
+    {
+        if (_doorActivation is null || State.Kit.Targeting.LastEvidence?.SelectedTargetId is not null) return;
+        if (FindDungeonDoorRay(look.Forward, _tuning.MeleeTargeting.MaximumDistance) is not { } id) return;
+        DaggerfallDoorView door = _doors.Read(id);
+        if (door.Motion != DaggerfallDoorMotion.Closed) return;
+        foreach (DaggerfallActivationTarget target in _doorActivation.DoorTargets())
+        {
+            if (target.Entity != door.Entity) continue;
+            DaggerfallActivationOutcome outcome = _doorActivation.ActivateDoor(new(DaggerfallActivationMode.Bash, target));
+            _activationPresentation.Report(outcome);
+            Presentation.SetOutcome(outcome.Message);
+            return;
+        }
+    }
 
     private DaggerfallRdbDoorId? FindDungeonDoorRay(Vector3 direction, double maximumDistance)
     {

@@ -26,7 +26,7 @@ after(() => rm(output, { recursive: true, force: true }));
 
 function fixture() {
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' });
-  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLDialogElement', 'Event', 'KeyboardEvent', 'Option']) {
+  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLDialogElement', 'Event', 'KeyboardEvent', 'MouseEvent', 'Option']) {
     globalThis[key] = dom.window[key];
   }
   // JSDOM lays nothing out, so art sized to its box has no box to observe.
@@ -322,6 +322,63 @@ test('inventory use and equip controls follow the ruleset eligibility of the sel
     use.click();
     assert.deepEqual(f.actions.at(-1), { action: 'inventory-use', revision: '5:1', item: 'stack:potion' });
   } finally { f.dispose(); }
+});
+
+test('inventory items drag with the pointer, never a native drag session, and Escape cancels a drag', () => {
+  const f = fixture();
+  try {
+    const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
+      condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
+    f.publish({ inventory: {
+      revision: '6:1', message: '', equipmentChange: null,
+      slots: [{ id: 'right-hand', label: 'Right hand', itemKey: null }],
+      items: [row('unique:1', { gridSlot: 0, compatibleSlots: ['right-hand'] })],
+    } });
+    // A native drag hangs a host that renders the page off screen, so nothing in the panel offers one.
+    assert.ok([...f.root.querySelectorAll('.dagger-inventory [draggable]')].every(element => element.draggable === false));
+    const item = f.root.querySelector('[data-inventory-item="unique:1"]');
+    const hand = f.root.querySelector('[data-inventory-equipment="right-hand"]');
+    document.elementFromPoint = () => hand;
+    const pointer = (target, type, x, y) => target.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y }));
+    const count = f.actions.length;
+    pointer(item, 'pointerdown', 10, 10);
+    pointer(window, 'pointermove', 40, 40);
+    assert.equal(hand.classList.contains('is-drop-target'), true);
+    window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    pointer(window, 'pointerup', 40, 40);
+    assert.equal(f.actions.length, count, 'An Escaped drag moves nothing.');
+    assert.equal(hand.classList.contains('is-drop-target'), false);
+    pointer(item, 'pointerdown', 10, 10);
+    pointer(window, 'pointermove', 40, 40);
+    pointer(window, 'pointerup', 40, 40);
+    assert.deepEqual(f.actions.at(-1), { action: 'inventory-move', revision: '6:1', item: 'unique:1', targetEquipment: 'right-hand' });
+    // A press that does not travel stays a click that selects.
+    pointer(item, 'pointerdown', 10, 10);
+    pointer(window, 'pointerup', 11, 11);
+    item.click();
+    assert.equal(item.classList.contains('is-selected'), true);
+  } finally { delete document.elementFromPoint; f.dispose(); }
+});
+
+test('Escape toggles the menu from any panel, and a pointer lock lost in play opens it', () => {
+  const f = fixture();
+  try {
+    f.publish({});
+    const menu = f.root.querySelector('.dagger-menu');
+    const escape = () => document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    escape();
+    assert.equal(menu.open, true);
+    f.root.querySelector('[data-action="inventory"]').click();
+    escape();
+    assert.equal(menu.open, false, 'Escape closes the menu from inside a panel.');
+    // Under pointer lock the browser spends Escape on releasing the lock; the release opens the menu.
+    let locked = f.root;
+    Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => locked });
+    document.dispatchEvent(new window.Event('pointerlockchange'));
+    locked = null;
+    document.dispatchEvent(new window.Event('pointerlockchange'));
+    assert.equal(menu.open, true);
+  } finally { delete document.pointerLockElement; f.dispose(); }
 });
 
 test('book reader and notebook render product state and send revision-guarded semantic actions', () => {

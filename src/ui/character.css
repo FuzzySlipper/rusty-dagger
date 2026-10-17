@@ -53,7 +53,7 @@
 .dagger-creation-panel label { color: #e4c676; display: grid; font: 700 .64rem ui-monospace, monospace; gap: 3px; letter-spacing: .06em; text-transform: uppercase; }
 .dagger-creation-background label { font: .78rem Georgia, serif; letter-spacing: 0; text-transform: none; }
 .dagger-creation-panel :is(input, select) { background: #151712; border: 1px solid #aa9c7a; color: #f7e7bd; font: .82rem Georgia, serif; min-width: 0; padding: 4px 6px; text-transform: none; }
-.dagger-creation-panel button, .dagger-creation-actions button { background: #2a2416; border: 1px solid #c6a05a; color: #f6ddb0; cursor: pointer; font: .8rem Georgia, serif; padding: 4px 10px; }
+.dagger-creation-panel button, .dagger-creation-actions button { background: #2a2416; border: 1px solid #c6a05a; color: #f6ddb0; cursor: var(--dagger-cursor-pointer); font: .8rem Georgia, serif; padding: 4px 10px; }
 .dagger-creation button:disabled { cursor: default; opacity: .45; }
 .dagger-creation-face-row { display: grid; gap: 4px; grid-template-columns: auto minmax(0, 1fr) auto; }
 .dagger-creation-biography { border: 1px solid rgb(125 108 69 / .45); max-height: 9.5rem; overflow: auto; padding: 4px 8px; }
