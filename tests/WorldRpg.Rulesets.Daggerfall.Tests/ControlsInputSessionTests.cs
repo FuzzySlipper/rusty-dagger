@@ -12,6 +12,8 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
+using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -528,6 +530,70 @@ public sealed class ControlsInputSessionTests
         Assert.Equal(feet.Z, sighted.Z);
         Assert.True(sighted.Y > feet.Y + .05F, $"The corpse at {feet} is sighted at {sighted}.");
         Assert.Equal(ProductMode.Modal, session.PendingModeRequest);
+    }
+
+    [Fact]
+    public void A_spawned_exterior_encounter_corpse_is_sighted_above_terrain_and_opens_ordinary_loot()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        var exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        List<string> releases = [];
+        ContentFake content = new(releases); PopulateContent(content, exterior);
+        var spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        var perception = PerceptionFake.Create();
+        var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using var session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
+        Assert.Equal(DaggerfallWorldProfileKind.Exterior, session.Sites.ActiveProfile.Kind);
+        float floorY = session.State.PlayerControl.Position!.Value.Y - .9f;
+        spatial.FloorHit = request => request.Direction.Y < -.99f
+            ? new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh, Normal = Vector3.UnitY, Point = request.Origin with { Y = floorY } }
+            : default;
+        var request = new DaggerfallEncounterRequest(DaggerfallEncounterContext.WildernessDay, 1, Climate: 224);
+        // Minimum rolls select this level band's first entry: a class enemy with carried gear,
+        // so defeat creates a real lootable corpse rather than an empty animal marker.
+        int entry = definitions.Encounters.Tables[DaggerfallEncounterPolicy.TableFor(request)]
+            .Select((mobile, index) => (Mobile: mobile, Index: index))
+            .First(value => value.Mobile is >= 128 and <= 145 && value.Index <= 14).Index;
+        var encounter = session.QueueEncounter(request with { PlayerLevel = entry + 3 });
+        Assert.NotNull(encounter.ActorDefinition);
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        var spawned = Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Resolved);
+        long actorId = Assert.IsType<long>(spawned.SpawnedActorId);
+        Assert.False(session.Sites.Projection.Inputs.ActorSprites.ContainsKey(actorId));
+        int mobileId = Assert.IsType<int>(session.DefinitionsByActor[actorId].MobileId);
+        Assert.True(session.Sites.Projection.Inputs.MobileSprites.ContainsKey(mobileId));
+
+        AimActivationAt(session, actorId);
+        session.State.Actors.Get(actorId).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60;
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, actorId, 1, 2, .125));
+        Assert.True(session.State.Actors.Get(actorId).IsDefeated);
+        var corpse = session.Corpses[actorId];
+        Assert.True(corpse.IsRegistered);
+        // Model the reported terrain endpoint: floor-contact targets are occluded. Visibility
+        // depends on the actual published point, rather than an unconditional Visible receipt.
+        perception.Responder = request => Receipt(request.Observers.ToArray().SelectMany(observer =>
+            request.Targets.ToArray().Select(target =>
+            {
+                var (id, point) = target;
+                return new PerceptionPair(observer.Entity, id, 1, 1,
+                    id == (ulong)actorId && point.Y > session.State.Actors.Get(actorId).Position.Y + .05f
+                        ? PerceptionPairKind.Visible : PerceptionPairKind.Occluded, 1);
+            })).ToArray());
+        session.Update(new ProductUpdate(OuterUpdate(3), [Ui("""{"action":"loot"}""")]));
+        // Exterior admission can rebase this step; compare both positions in the current local frame.
+        WorldPoint feet = session.State.Actors.Get(actorId).Position;
+        var sighted = perception.Requests.SelectMany(request => request.Targets.ToArray())
+            .Select(target => { var (id, point) = target; return (Id: id, Point: point); })
+            .Last(target => target.Id == (ulong)actorId).Point;
+        Assert.Equal(feet.X, sighted.X);
+        Assert.Equal(feet.Z, sighted.Z);
+        Assert.True(sighted.Y > feet.Y + .05f, $"The exterior corpse at {feet} is sighted at {sighted}.");
+        Assert.Equal(ProductMode.Modal, session.PendingModeRequest);
+        session.ApplyProductMode(ProductMode.Modal); // The Host adopts the request and publishes its panel.
+        Assert.StartsWith(actorId.ToString(CultureInfo.InvariantCulture) + ":", engine.PublishedNested("loot", "container"));
     }
 
     /// <summary>A session with one lootable corpse within reach, and the appearance it drives.</summary>
