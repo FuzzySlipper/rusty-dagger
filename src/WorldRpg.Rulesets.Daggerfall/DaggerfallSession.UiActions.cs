@@ -80,6 +80,12 @@ internal sealed partial class DaggerfallSession
             or DaggerfallUiActionKind.LoadGame or DaggerfallUiActionKind.SaveSlots or DaggerfallUiActionKind.SaveSlot
             or DaggerfallUiActionKind.LoadSlot)) return;
         ApplyUiAction(action, firstStep, opensInteraction, ref elapsedSubmitted);
+        // These immediate UI actions may arrive while no world step is due. Spend a step when
+        // play resumes; reading panels, preparing spells and editing preferences remain free.
+        if (action.Kind is DaggerfallUiActionKind.SpellCast or DaggerfallUiActionKind.InventoryUse
+            or DaggerfallUiActionKind.InventoryMove or DaggerfallUiActionKind.InventoryDrop
+            or DaggerfallUiActionKind.TransportSelect or DaggerfallUiActionKind.TransportToggle)
+            _pendingWorldAction = true;
     }
 
     private void ApplyUiAction(DaggerfallPlayerUiAction action, ProductUpdateState firstStep, bool opensInteraction, ref bool elapsedSubmitted)
@@ -113,6 +119,7 @@ internal sealed partial class DaggerfallSession
             // A reloaded DOM holds no art and asks for the revision it is missing; the projection
             // answers on its next snapshot rather than a second delivery channel existing.
             case DaggerfallUiActionKind.ArtRequest: _hud.RequestArt(); break;
+            case DaggerfallUiActionKind.ActionDrivenTime: ChangePlayerTime(action.Enabled!.Value); break;
             case DaggerfallUiActionKind.ControlsLook:
             case DaggerfallUiActionKind.ControlsRebind:
             case DaggerfallUiActionKind.ControlsReset: ChangeControls(action); break;

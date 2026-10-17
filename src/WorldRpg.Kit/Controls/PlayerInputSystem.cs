@@ -65,6 +65,9 @@ internal sealed class HeldPlayerInput
 public sealed class PlayerInputSystem
 {
     private readonly HeldPlayerInput _held = new();
+    private readonly HashSet<InputActionId> _pendingActions = [];
+    private Vector2 _pendingSliceIntent;
+    private Vector2 _observedPlanarIntent;
     private PlayerControlTuning _tuning;
     private PlayerControlBindings _controls;
     private readonly ControllerInputTuning? _controller;
@@ -95,30 +98,71 @@ public sealed class PlayerInputSystem
         _tuning = (_tuning with { LookSensitivity = sensitivity, InvertVertical = invertVertical }).Validate();
 
     /// <summary>Releases locally interpreted held input when physical mappings or focus change.</summary>
-    public void ClearHeldInput() => _held.Clear();
+    public void ClearHeldInput()
+    {
+        _held.Clear();
+        _pendingActions.Clear();
+        _pendingSliceIntent = _observedPlanarIntent = Vector2.Zero;
+    }
 
     /// <summary>Interprets and applies one admitted input slice before its dependent Engine movement proposal.</summary>
     public void Apply(PlayerControlState player, ProductUpdateState update, ActorControlRestrictions restrictions = default)
     {
-        ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(update);
-        player.ValidateForInput();
         update.Validate();
-        foreach (ProductInputEvent input in update.Inputs) Validate(input);
+        var read = ReadInput(player, update.Inputs, update.PlanarIntent, update.DeltaSeconds);
+        update.PlanarIntent = restrictions.Movement ? Vector2.Zero : read.Planar;
+        foreach (InputActionId action in read.Actions) update.Request(action);
+    }
+
+    /// <summary>Reads input and look once per host observation, even when the Engine admits no world step.</summary>
+    public void Observe(PlayerControlState player, ReadOnlySpan<ProductInputEvent> inputs, float lookSeconds, Vector2 directIntent = default)
+    {
+        ProductInputEvent[] batch = inputs.ToArray();
+        if (batch.Any(input => input.Kind == InputEventKind.Clear)) _pendingActions.Clear();
+        var read = ReadInput(player, batch, directIntent != Vector2.Zero ? directIntent : _pendingSliceIntent, lookSeconds);
+        _observedPlanarIntent = read.Planar;
+        _pendingSliceIntent = read.Transient;
+        _pendingActions.UnionWith(read.Actions);
+    }
+
+    public Vector2 ObservedPlanarIntent => _observedPlanarIntent;
+    public bool HasPendingActions => _pendingActions.Count != 0;
+    public void ClearPendingActions() => _pendingActions.Clear();
+    public bool TakeAction(InputActionId action) => _pendingActions.Remove(action);
+    public void Request(InputActionId action) => _pendingActions.Add(action);
+
+    /// <summary>Consumes observed action edges once; later catch-up steps use only held movement.</summary>
+    public void ApplyObserved(ProductUpdateState update, ActorControlRestrictions restrictions = default)
+    {
+        update.PlanarIntent = restrictions.Movement ? Vector2.Zero : _observedPlanarIntent;
+        foreach (InputActionId action in _pendingActions) update.Request(action);
+        _pendingActions.Clear();
+        _pendingSliceIntent = Vector2.Zero;
+        _observedPlanarIntent = Combine(PlanarIntent(_held.Keys, _held.Directions), ControllerMoveIntent(_held.Axes));
+    }
+
+    private (Vector2 Planar, Vector2 Transient, HashSet<InputActionId> Actions) ReadInput(
+        PlayerControlState player, IReadOnlyList<ProductInputEvent> inputs, Vector2 directIntent, float lookSeconds)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        player.ValidateForInput();
+        foreach (ProductInputEvent input in inputs) Validate(input);
 
         HeldPlayerInput held = _held.Copy();
         HashSet<InputActionId> actions = [];
         // Direct axes and digital movement describe this slice only; keyboard and mapped directions
         // are held, and a controller axis stays where it was left until a later event moves it.
-        Vector2 sliceIntent = update.PlanarIntent;
+        Vector2 sliceIntent = directIntent;
         float yawRadians = player.YawRadians;
         float pitchRadians = player.PitchRadians;
 
-        foreach (ProductInputEvent input in update.Inputs)
+        foreach (ProductInputEvent input in inputs)
         {
             if (input.Kind == InputEventKind.Clear)
             {
                 held.Clear();
+                actions.Clear();
                 sliceIntent = default;
             }
             else if (input.Kind == InputEventKind.PointerDelta)
@@ -154,11 +198,12 @@ public sealed class PlayerInputSystem
             else if (input.Kind == InputEventKind.ControllerButton) ApplyControllerButton(input, held.Buttons, actions);
         }
 
+        Vector2 transientIntent = sliceIntent;
         if (sliceIntent == Vector2.Zero)
             sliceIntent = PlanarIntent(held.Keys, held.Directions);
-        // A stick turned by an admitted span of time is a rate, so its look sample is scaled by that
-        // span and saturated at the same angular bound the pointer path already honours.
-        Vector2 stickLook = ControllerLookDelta(held.Axes, update.DeltaSeconds);
+        // Stick look is a rate over the observation interval, independent of world admission,
+        // saturated at the same angular bound the pointer path already honours.
+        Vector2 stickLook = ControllerLookDelta(held.Axes, lookSeconds);
         if (stickLook != Vector2.Zero)
         {
             LookRequest request = new(new LookState(yawRadians, pitchRadians), stickLook, ControllerLookConfiguration());
@@ -172,8 +217,7 @@ public sealed class PlayerInputSystem
         _held.CopyFrom(held);
         player.YawRadians = yawRadians;
         player.PitchRadians = pitchRadians;
-        update.PlanarIntent = restrictions.Movement ? Vector2.Zero : Combine(sliceIntent, ControllerMoveIntent(held.Axes));
-        foreach (InputActionId action in actions) update.Request(action);
+        return (Combine(sliceIntent, ControllerMoveIntent(held.Axes)), transientIntent, actions);
     }
 
     /// <summary>Turns by requested angles through Engine look limits, without advancing gameplay.</summary>
@@ -208,10 +252,7 @@ public sealed class PlayerInputSystem
     /// an input slice.
     /// </summary>
     /// <remarks>A focus or mode change cannot wait for a missed device release: clearing the held values prevents a paused key or stick from moving the player when play resumes.</remarks>
-    public void Neutralize()
-    {
-        _held.Clear();
-    }
+    public void Neutralize() => ClearHeldInput();
 
     private bool IsMovementKey(KeyboardControl key) => key == _controls.Forward || key == _controls.Backward || key == _controls.Left || key == _controls.Right;
 
@@ -393,6 +434,7 @@ public sealed class ProductUpdateState(float deltaSeconds)
     public void Add(ProductInputEvent input) => Inputs.Add(input);
     public void Request(InputActionId action) => _actions.Add(action);
     public bool IsRequested(InputActionId action) => _actions.Contains(action);
+    public IReadOnlyCollection<InputActionId> RequestedActions => _actions;
     internal void Validate()
     {
         if (!float.IsFinite(DeltaSeconds) || DeltaSeconds <= 0f) throw new ArgumentOutOfRangeException(nameof(DeltaSeconds));

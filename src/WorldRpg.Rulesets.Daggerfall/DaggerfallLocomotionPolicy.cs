@@ -17,6 +17,9 @@ internal sealed class DaggerfallLocomotionPolicy
     private readonly DaggerfallLocomotionTuning _tuning;
     private FpsInput _input;
     private bool _jumpInFlight;
+    private bool _pendingJump;
+    internal bool HasPendingStanceChange { get; private set; }
+    internal FpsInputFrame ObservedInput { get; private set; }
     private double _runningGameSeconds;
     private double _climbingGameSeconds;
     private double _swimmingGameSeconds;
@@ -30,10 +33,26 @@ internal sealed class DaggerfallLocomotionPolicy
     }
 
     /// <summary>Starts reading the newly selected physical keys with no retained movement from the former binding set.</summary>
-    internal void Rebind(DaggerfallControlSettings controls) => _input = CreateInput(controls ?? throw new ArgumentNullException(nameof(controls)));
+    internal void Rebind(DaggerfallControlSettings controls)
+    {
+        _input = CreateInput(controls ?? throw new ArgumentNullException(nameof(controls)));
+        Neutralize();
+    }
 
     /// <summary>Focus and product-mode changes must not leave an unseen physical release driving a later movement step.</summary>
-    internal void Neutralize() => _input.Physical.Clear();
+    internal void Neutralize() { _input.Physical.Clear(); _pendingJump = false; HasPendingStanceChange = false; ObservedInput = default; }
+
+    internal void Observe(ReadOnlySpan<ProductInputEvent> inputs)
+    {
+        foreach (var input in inputs) if (input.Kind == InputEventKind.Clear) _pendingJump = false;
+        FpsInputFrame previous = ObservedInput;
+        ObservedInput = _input.Consume(inputs, 0f);
+        HasPendingStanceChange |= previous.CrouchHeld != ObservedInput.CrouchHeld
+            || (ObservedInput.CrouchHeld && previous.SprintHeld != ObservedInput.SprintHeld);
+        _pendingJump |= ObservedInput.JumpPressed;
+    }
+
+    internal bool HasPendingJump => _pendingJump;
 
     /// <summary>Builds one Engine command from the current physical controls and live player mechanics.</summary>
     internal DaggerfallLocomotionStep BeginStep(ReadOnlySpan<ProductInputEvent> inputs, float seconds, StatsComponent stats, bool canMove,
@@ -41,6 +60,9 @@ internal sealed class DaggerfallLocomotionPolicy
     {
         ArgumentNullException.ThrowIfNull(stats);
         FpsInputFrame frame = _input.Consume(inputs, seconds);
+        frame = frame with { JumpPressed = frame.JumpPressed || _pendingJump };
+        _pendingJump = false;
+        HasPendingStanceChange = false;
         // The donor never refuses a run or a jump for fatigue; an empty pool is the exhaustion owner's.
         bool onFoot = transport?.IsOnFoot ?? true;
         bool running = canMove && onFoot && frame.SprintHeld;

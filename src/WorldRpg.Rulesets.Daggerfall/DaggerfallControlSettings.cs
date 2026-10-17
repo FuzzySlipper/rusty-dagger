@@ -67,6 +67,9 @@ public sealed class DaggerfallControlSettings
 
     /// <summary>Mouse sensitivity relative to the ruleset default.</summary>
     public float LookSensitivity { get; private set; } = 1f;
+    /// <summary>Whether idle gameplay holds Engine time until the player moves or acts.</summary>
+    public bool ActionDrivenTime { get; private set; }
+    public void SetActionDrivenTime(bool enabled) => ActionDrivenTime = enabled;
     /// <summary>Whether the vertical look device axis is inverted.</summary>
     public bool InvertVertical { get; private set; } = DaggerfallTuning.Defaults.PlayerControl.InvertVertical;
 
@@ -81,6 +84,7 @@ public sealed class DaggerfallControlSettings
     {
         _bindings = CopyBindings(preferences.Bindings);
         SetLook(preferences.LookSensitivity, preferences.InvertVertical);
+        ActionDrivenTime = preferences.ActionDrivenTime;
     }
 
     /// <summary>The controls one action answers to.</summary>
@@ -146,7 +150,7 @@ public sealed class DaggerfallControlSettings
     public void Reset() { ReplaceBindings(CreateDefaultBindings()); SetLook(1, DaggerfallTuning.Defaults.PlayerControl.InvertVertical); }
 
     /// <summary>Serializes the bindings for the settings holder.</summary>
-    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
+    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
 
     /// <summary>Parses a complete persisted binding set after validating every action and control.</summary>
     public static DaggerfallControlSettings Parse(string json)
@@ -291,7 +295,8 @@ public sealed class DaggerfallControlSettings
 internal sealed record DaggerfallControlPreferences(
     [property: JsonRequired] Dictionary<string, List<string>> Bindings,
     [property: JsonRequired] float LookSensitivity,
-    [property: JsonRequired] bool InvertVertical);
+    [property: JsonRequired] bool InvertVertical,
+    bool ActionDrivenTime = false);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(DaggerfallControlPreferences))]

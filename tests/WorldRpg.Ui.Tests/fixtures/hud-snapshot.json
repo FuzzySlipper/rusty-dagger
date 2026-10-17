@@ -1,4 +1,8 @@
 {
+  "timeControl": {
+    "enabled": false,
+    "held": false
+  },
   "legal": null,
   "dispel": null,
   "detectors": [],

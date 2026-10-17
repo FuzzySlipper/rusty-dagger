@@ -352,10 +352,11 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             // is real once the step applied it, and the director is told once per admitted update.
             AdvanceMusic();
         }
+        UpdatePlayerTime(update.Facts);
         bool ambientPlaying = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen && Cinematics?.ActiveSource is null
             && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null
             && update.Facts.LifecycleState == ProductLifecycleState.Running
-            && update.Facts.AdmittedStepCount > 0
+            && !PlayerTimeHeld
             && double.IsFinite(update.Facts.FixedDeltaSeconds) && update.Facts.FixedDeltaSeconds > 0;
         SyncWeatherContext(ambientPlaying ? update.Facts.FixedDeltaSeconds * update.Facts.AdmittedStepCount : 0, ambientPlaying);
         // A paused or held update reached no impact boundary, so acts it deferred are not performed.
@@ -368,7 +369,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     {
         // An update admits fixed steps only while the lifecycle runs; a held or paused one carries none.
         if (facts.LifecycleState != ProductLifecycleState.Running
-            || facts.AdmittedStepCount == 0
             || !double.IsFinite(facts.FixedDeltaSeconds)
             || facts.FixedDeltaSeconds <= 0d
             || facts.FixedDeltaSeconds > float.MaxValue)
@@ -415,6 +415,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
         if (elapsedSubmitted)
         {
+            _pendingWorldAction = false;
+            _input.Neutralize();
+            _locomotion.Neutralize();
             // Explicit elapsed time already passed through the one calendar and its consumers.
             // The same input slice must not also apply an ordinary realtime step or attack.
             DeliverFacts();
@@ -424,10 +427,22 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
         if (!playing || _interactions.HoldsWorldOpen)
         {
+            _input.Neutralize();
+            _locomotion.Neutralize();
             // The mode's own line was set when the mode was entered; an outcome an action set during
             // this update stays on the line rather than being overwritten by it.
             // Reactions to modal-own actions (a loot take above) deliver here rather than waiting
             // for a playing step: the batch is stable and reentrant appends wait for the next one.
+            DeliverFacts();
+            PublishPresentation();
+            return;
+        }
+
+        ObservePlayerInput(input, (float)facts.HostElapsedSeconds, firstStep);
+        if (facts.AdmittedStepCount == 0)
+        {
+            _camera.Update(State.PlayerControl);
+            ApplyIdleInterfaceActions();
             DeliverFacts();
             PublishPresentation();
             return;
@@ -556,6 +571,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     internal void Update(ProductUpdateState update)
     {
         _enemyBehavior.BeginAdmittedUpdate();
+        ObservePlayerInput(update.Inputs.ToArray(), update.DeltaSeconds, update);
         SimulateStep(update, 0, 0);
         DeliverFacts();
         // A direct step has no animation boundary of its own; its end is that boundary.
@@ -792,7 +808,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Calendar: _time.Calendar,
             Effects: ReadActiveEffects(),
             CinematicSource: Cinematics?.ActiveSource,
-            Map: _mapOpen ? ReadMapPresentation() : null, Legal: LegalView, CreateItem: CreateItemView, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors()));
+            Map: _mapOpen ? ReadMapPresentation() : null, Legal: LegalView, CreateItem: CreateItemView, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors())
+        { ActionDrivenTime = ActionDrivenPlay, TimeHeld = PlayerTimeHeld });
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         Vector3 facing = ActorHeading.Forward(State.PlayerControl.YawRadians);
         Vector3? candlePosition = !State.Actors.Player.IsDefeated && State.PlayerControl.Position is { } playerPosition

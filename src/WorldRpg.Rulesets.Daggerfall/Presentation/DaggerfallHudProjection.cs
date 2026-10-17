@@ -39,7 +39,11 @@ internal sealed record DaggerfallHudFrame(
     string? SiteName = null,
     DaggerfallLodgingView? Lodging = null,
     DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, DaggerfallIdentifyView? Identify=null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null, DaggerfallSpellbookView? Spells=null, bool CharacterCreationAvailable = true, DaggerfallPropertyView? Property = null, DaggerfallTeleportView? Teleport = null, DaggerfallCreateItemView? CreateItem = null, DaggerfallLegalView? Legal = null,
-    DaggerfallCalendar? Calendar = null, IReadOnlyList<DaggerfallActiveEffectView>? Effects = null, string? CinematicSource = null, DaggerfallBreathRead? Breath = null);
+    DaggerfallCalendar? Calendar = null, IReadOnlyList<DaggerfallActiveEffectView>? Effects = null, string? CinematicSource = null, DaggerfallBreathRead? Breath = null)
+{
+    internal bool ActionDrivenTime { get; init; }
+    internal bool TimeHeld { get; init; }
+}
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
 internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
@@ -64,6 +68,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
         [
+            ("timeControl", builder.Object(("enabled", builder.Boolean(frame.ActionDrivenTime)), ("held", builder.Boolean(frame.TimeHeld)))),
             ("legal", frame.Legal is not { } legal ? builder.Null() : builder.Object(
                 ("revision", builder.String(legal.Revision)), ("phase", builder.String(legal.Phase)),
                 ("title", builder.String(legal.Title)), ("message", builder.String(legal.Message)),

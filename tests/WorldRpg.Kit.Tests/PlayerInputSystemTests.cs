@@ -227,6 +227,46 @@ public sealed class PlayerInputSystemTests
         Assert.Equal(Vector2.Zero, afterModeChange.PlanarIntent);
     }
 
+    [Fact]
+    public void Held_observations_turn_without_a_world_step_and_deliver_actions_only_once()
+    {
+        InputActionId attack = new("test.attack");
+        PlayerInputSystem input = new(TestTuning(), DirectionalControls(), [new(attack, "attack"u8.ToArray())]);
+        PlayerControlState player = new(new WorldPoint(0, 0, 0), 0, 0);
+        input.Observe(player, [Input(InputEventKind.PointerDelta, x: 20),
+            Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack"),
+            Input(InputEventKind.Key, InputEdge.Pressed, key: KeyboardControl.KeyW)], .02f);
+        float yaw = player.YawRadians;
+        Assert.NotEqual(0, yaw);
+        Assert.True(input.HasPendingActions);
+        input.Observe(player, [], .02f);
+        ProductUpdateState first = new(1f / 60f);
+        input.ApplyObserved(first);
+        Assert.Contains(attack, first.RequestedActions);
+        Assert.Equal(Vector2.UnitY, first.PlanarIntent);
+        ProductUpdateState catchup = new(1f / 60f);
+        input.ApplyObserved(catchup);
+        Assert.Empty(catchup.RequestedActions);
+        Assert.Equal(Vector2.UnitY, catchup.PlanarIntent);
+        Assert.Equal(yaw, player.YawRadians);
+        input.Observe(player, [Input(InputEventKind.Key, InputEdge.Released, key: KeyboardControl.KeyW)], .02f);
+        Assert.Equal(Vector2.Zero, input.ObservedPlanarIntent);
+    }
+
+    [Fact]
+    public void Focus_clear_discards_a_pending_action_before_the_world_can_consume_it()
+    {
+        InputActionId attack = new("test.attack");
+        PlayerInputSystem input = new(TestTuning(), DirectionalControls(), [new(attack, "attack"u8.ToArray())]);
+        PlayerControlState player = new(new WorldPoint(0, 0, 0), 0, 0);
+        input.Observe(player, [Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack")], 0);
+        input.Observe(player, [Input(InputEventKind.Clear)], 0);
+        ProductUpdateState next = new(1f / 60f);
+        input.ApplyObserved(next);
+        Assert.Empty(next.RequestedActions);
+        Assert.Equal(Vector2.Zero, next.PlanarIntent);
+    }
+
     private static ProductInputEvent Input(InputEventKind kind, InputEdge edge = InputEdge.None, KeyboardControl key = KeyboardControl.None, float x = 0f, float y = 0f, InputPhase phase = InputPhase.None, string intent = "") => new(
         kind, edge, InputDevice.None, InputChannel.None, InputAxis.None, key, PointerButton.None, ControllerButton.None, ControllerAxis.None, InputClearReason.None, InputValueKind.None, phase, InputProvenance.None, default, default, default, x, y, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, System.Text.Encoding.UTF8.GetBytes(intent), ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty);
 

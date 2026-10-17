@@ -46,6 +46,7 @@ internal class EngineContextFake : DispatchProxy
     /// <summary>Read one named field of one element of a published array.</summary>
     internal string? PublishedArrayItem(string array, int index, string key) => ((UiServiceFake)(object)ui).ArrayItemField(array, index, key);
     internal readonly InputServiceFake PhysicalInput = new();
+    internal readonly GameplayTimeFake GameplayTime = new();
     private IContentService content = null!;
     private ISpatialService spatial = null!;
     private IGraphicsService appearance = null!;
@@ -93,6 +94,7 @@ internal class EngineContextFake : DispatchProxy
     protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
     {
         "get_Input" => PhysicalInput,
+        "get_GameplayTime" => GameplayTime,
         "get_Content" => content,
         "get_Spatial" => spatial,
         "get_Graphics" => appearance,
