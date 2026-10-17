@@ -80,6 +80,43 @@ public sealed class AlterationMobilitySessionTests
     }
 
     [Fact]
+    public void Action_driven_slowfall_continues_after_input_release_until_grounded()
+    {
+        using var f = new Fixture();
+        Cast(f.Session, 25);
+        f.Session.State.PlayerControl.Restore(new WorldPoint(0, -20, 0), default(CharacterMotion) with
+        { Grounded = false, PeakY = -18, FallOriginY = -18, ControlledVelocity = new Vector3(0, -2, 0) });
+        f.Spatial.StepResult = Descending;
+        f.Session.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Equal(0, f.Spatial.StepRequests[^1].Config.Vertical.Gravity);
+        Assert.Equal(-DaggerfallLocomotionTuning.Classic.SlowfallDescentSpeed, f.Spatial.StepRequests[^1].Motion.ControlledVelocity.Y);
+
+        // Enable while the passive descent already uses Engine vertical drive, with no held input.
+        f.Session.Update(new ProductUpdate(OuterUpdate(2) with { AdmittedStepCount = 0 },
+            [Ui("""{"action":"action-driven-time","enabled":true}"""),
+             Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.Space)]));
+        Assert.False(f.Session.PlayerTimeHeld);
+        for (ulong step = 2; step <= 4; step++)
+        {
+            float before = f.Session.State.PlayerControl.Position!.Value.Y;
+            f.Session.Update(new ProductUpdate(OuterUpdate(step), []));
+            Assert.True(f.Session.State.PlayerControl.Position!.Value.Y < before);
+            Assert.False(f.Session.PlayerTimeHeld);
+            f.Session.Update(new ProductUpdate(OuterUpdate(step + 1) with { AdmittedStepCount = 0 }, []));
+            Assert.False(f.Session.PlayerTimeHeld);
+        }
+        f.Spatial.StepResult = (step, result) => Descending(step, result) with
+        { Motion = result.Motion with { Grounded = true } };
+        f.Session.Update(new ProductUpdate(OuterUpdate(5), []));
+        Assert.True(f.Session.State.PlayerControl.Motion.Grounded);
+        Assert.True(f.Session.PlayerTimeHeld);
+        int calls = f.Spatial.StepCalls;
+        f.Session.Update(new ProductUpdate(OuterUpdate(6) with { AdmittedStepCount = 0 }, []));
+        Assert.Equal(calls, f.Spatial.StepCalls);
+        Assert.True(f.Session.PlayerTimeHeld);
+    }
+
+    [Fact]
     public void Slowfall_rejects_delivery_to_another_actor_without_granting_support()
     {
         using var f = new Fixture();

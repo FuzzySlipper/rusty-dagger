@@ -371,9 +371,12 @@ public sealed class SpatialMovementSessionTests
         using JsonDocument state = JsonDocument.Parse("{}");
         _ = session.State.Effects.Start(new DaggerfallEffectRequest("levitation-instance", "levitation-test", "test-source",
             null, DaggerfallActorIdentity.PlayerEntityId, "classic", null, null, 1, 5, state.RootElement));
+        spatial.StepResult = (step, result) => result with { Motion = result.Motion with { Grounded = false } };
         double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
 
-        session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.Space)]));
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"action-driven-time","enabled":true}"""),
+            Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.Space)]));
+        Assert.False(session.PlayerTimeHeld);
         Assert.True(session.State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId));
         Assert.Equal(0f, spatial.StepRequests[^1].Config.Vertical.Gravity);
         Assert.Equal(4f, spatial.StepRequests[^1].Motion.ControlledVelocity.Y);
@@ -381,6 +384,7 @@ public sealed class SpatialMovementSessionTests
 
         session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.Space)]));
         Assert.Equal(0f, spatial.StepRequests[^1].Motion.ControlledVelocity.Y);
+        Assert.True(session.PlayerTimeHeld);
         Assert.Equal(0f, spatial.StepRequests[^1].Config.Vertical.Gravity);
 
         ContentFake resumedContent = new(releases);
@@ -394,6 +398,8 @@ public sealed class SpatialMovementSessionTests
         Assert.Equal(0f, resumedSpatial.StepRequests[^1].Config.Vertical.Gravity);
 
         Assert.True(session.State.Effects.Cancel(EffectInstanceId.Parse("levitation-instance")));
+        session.Update(new ProductUpdate(OuterUpdate(3) with { AdmittedStepCount = 0 }, []));
+        Assert.False(session.PlayerTimeHeld); // Losing hover must wake gravity without another input.
         session.Update(new ProductUpdate(OuterUpdate(3), []));
         Assert.False(session.State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId));
         Assert.True(spatial.StepRequests[^1].Config.Vertical.Gravity > 0f);
@@ -593,10 +599,11 @@ public sealed class SpatialMovementSessionTests
         Assert.Equal(stepsBefore + 3, spatial.StepCalls);
         Assert.Equal(modalPublishesBefore + 1, appearance.PublishCalls);
 
-        // An update with no admitted steps publishes nothing and steps nothing.
+        // Zero-step observations still publish responsive input/UI, without stepping the world.
+        int heldPublishesBefore = appearance.PublishCalls;
         ProductUpdateFacts noSteps = new(ProductLifecycleState.Running, 1, 1, 7, 7, 60, 0, 0, 1d / 60d);
         session.Update(new ProductUpdate(noSteps, []));
         Assert.Equal(stepsBefore + 3, spatial.StepCalls);
-        Assert.Equal(modalPublishesBefore + 1, appearance.PublishCalls);
+        Assert.Equal(heldPublishesBefore + 1, appearance.PublishCalls);
     }
 }

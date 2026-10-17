@@ -60,7 +60,10 @@ internal sealed partial class DaggerfallSession
             && State.Quests.PendingOffer is null && _pendingDispel is null
             && _pendingIdentify is null && _pendingCreateItem is null;
         CharacterMotion motion = State.PlayerControl.Motion;
-        bool falling = !motion.Grounded && !_spatial.IsVerticalDriven && !State.Swimming.IsSwimming && !_climbing.IsAttached;
+        // Slowfall uses Engine vertical drive too, but it is still passive descent. Only
+        // the ruleset's actual hover/support modes let an idle airborne player hold time.
+        bool falling = !motion.Grounded && !State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId)
+            && !State.Swimming.IsSwimming && !_climbing.IsAttached;
         // Ignore numerical controller residue smaller than a centimetre per second.
         bool movement = _input.ObservedPlanarIntent != Vector2.Zero || _locomotion.HasPendingJump
             || _locomotion.ObservedInput.JumpHeld
