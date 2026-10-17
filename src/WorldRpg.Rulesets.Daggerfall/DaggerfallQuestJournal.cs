@@ -56,10 +56,15 @@ internal sealed partial class DaggerfallQuestInstances
         }
     }
 
-    /// <summary>The corpus display name, or the donor's generic word when the source states none.</summary>
+    /// <summary>
+    /// The authored journal title, else the corpus display name, or the donor's generic word when the
+    /// source states none.
+    /// </summary>
     private string QuestTitle(string sourceFile)
     {
-        string title = _definitions.QuestSources.Resolve(sourceFile).DisplayName;
+        var source = _definitions.QuestSources.Resolve(sourceFile);
+        if (_definitions.QuestJournalTitles.TryGetValue(source.Name, out string? authored) && authored is not null) return authored;
+        string title = source.DisplayName;
         return string.IsNullOrWhiteSpace(title) ? "Quest" : title.Trim();
     }
 

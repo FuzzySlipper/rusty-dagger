@@ -300,6 +300,10 @@ public sealed class DaggerfallRestSessionTests
         Assert.Equal(townBefore.Calendar, townAfter.Calendar);
         Assert.Equal(JsonSerializer.Serialize(townBefore.SkillUses), JsonSerializer.Serialize(townAfter.SkillUses));
         Assert.Equal(JsonSerializer.Serialize(townBefore.Actors), JsonSerializer.Serialize(townAfter.Actors));
+
+        // Loitering is not camping: as the donor's loiter, which never asks where the player is, it passes in town.
+        townSession.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"rest\",\"mode\":\"loiter\",\"hours\":1}")]));
+        Assert.Equal(3600, townSession.RestView.ElapsedSeconds);
     }
 
     [Theory]

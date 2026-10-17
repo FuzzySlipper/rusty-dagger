@@ -4834,5 +4834,8 @@
         "requiredValue": true
       }
     ]
+  },
+  "questJournalTitles": {
+    "S0000999": "Main Quest"
   }
 }

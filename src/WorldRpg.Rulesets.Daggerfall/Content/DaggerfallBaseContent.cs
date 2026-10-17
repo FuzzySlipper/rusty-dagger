@@ -127,6 +127,7 @@ internal static partial class DaggerfallBaseContent
                 DialogueWorldRules = dialogueWorldRules,
                 NewGame = newGame,
                 AssembledSites = assembledSites,
+                QuestJournalTitles = ReadQuestJournalTitles(root, diagnostics),
             };
         }
         catch (JsonException exception)
@@ -3250,6 +3251,20 @@ internal static partial class DaggerfallBaseContent
         }
         if (resources.Count == 0) diagnostics.Add("Base payload must define HUD resources.");
         return resources;
+    }
+
+    private static IReadOnlyDictionary<string, string> ReadQuestJournalTitles(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        Dictionary<string, string> titles = new(StringComparer.Ordinal);
+        JsonElement section = Object(Property(root, "questJournalTitles", diagnostics), "questJournalTitles", diagnostics);
+        if (section.ValueKind != JsonValueKind.Object) return new ReadOnlyDictionary<string, string>(titles);
+        foreach (JsonProperty entry in section.EnumerateObject())
+        {
+            if (entry.Value.ValueKind != JsonValueKind.String || entry.Value.GetString() is not { } title || string.IsNullOrWhiteSpace(title))
+                diagnostics.Add($"Quest journal title for '{entry.Name}' must be non-empty text.");
+            else titles.Add(entry.Name, title.Trim());
+        }
+        return new ReadOnlyDictionary<string, string>(titles);
     }
 
     private static IReadOnlyList<DaggerfallDonorErratum> ReadDonorErrata(JsonElement root, DaggerfallContentDiagnostics diagnostics)

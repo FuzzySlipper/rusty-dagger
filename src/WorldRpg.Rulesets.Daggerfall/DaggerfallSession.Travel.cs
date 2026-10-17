@@ -253,7 +253,7 @@ internal sealed partial class DaggerfallSession
             State.SkillUses.RaiseSkills(ended); State.LevelUps.BeginIfEligible();
         }
         // Like rest, a journey is one synthetic time increase: held items reroll once, on arrival.
-        if (ended > started) _itemCastTriggers.CompleteTimeIncrease();
+        if (ended > started) CompleteTimeIncrease();
         // The donor's travel windows are gone once the journey ends, arrived or interrupted, so the
         // player is back in control where it ended rather than under a menu.
         RequestPanel(DaggerfallPanel.Resume);

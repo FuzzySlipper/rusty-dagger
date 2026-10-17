@@ -662,8 +662,10 @@ internal sealed class DaggerfallSiteLifecycle
             {
                 _site.Leave();
                 playerRelocated = true;
+                // The player entered facing the doorway; as the donor's exit leaves them outside it, still
+                // facing the way they walked out, they stand where they entered turned away from the door.
                 _host.RelocatePlayer(DaggerfallExteriorSessionOrigin.Shift(returned.Pose.Position, destinationFrameOffset),
-                    returned.Pose.YawRadians, returned.Pose.PitchRadians);
+                    MathF.IEEERemainder(returned.Pose.YawRadians + MathF.PI, MathF.Tau), returned.Pose.PitchRadians);
             }
             else
             {

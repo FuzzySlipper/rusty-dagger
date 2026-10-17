@@ -83,7 +83,7 @@ internal sealed partial class DaggerfallSession
             });
         if (result.Interruption == DaggerfallRestInterruption.Stopped && State.Quests.Messages.Pending is not null)
             result = result with { Message = "Rest paused. Read and dismiss the pending quest message before resting again." };
-        if (result.Accepted && result.ElapsedSeconds > 0) _itemCastTriggers.CompleteTimeIncrease();
+        if (result.Accepted && result.ElapsedSeconds > 0) CompleteTimeIncrease();
         _restPresentation.Publish(result);
         Presentation.SetOutcome(result.Message ?? (result.Accepted ? "Rest complete." : "Rest refused."));
         return result;
@@ -101,9 +101,9 @@ internal sealed partial class DaggerfallSession
             _ => throw new ArgumentException($"Unknown rest mode '{action.Mode}'.", nameof(action)),
         };
         DaggerfallRestRequest request = new(mode, mode == DaggerfallRestMode.UntilHealed ? 0 : action.Hours ?? 0);
-        DaggerfallRestEligibility eligibility = CurrentRestEligibility();
+        DaggerfallRestEligibility eligibility = CurrentRestEligibility(mode);
         (bool rapidHealing, bool noRegeneration) = RestCharacterTraits();
-        DaggerfallRestResult result = ApplyRest(request, eligibility, AdvanceRestInterval, rapidHealing, noRegeneration);
+        DaggerfallRestResult result = ApplyRest(request, eligibility, seconds => AdvanceRestInterval(seconds, mode), rapidHealing, noRegeneration);
         // An encounter ends the donor's rest window: the player faces it rather than a menu.
         if (result.Interruption == DaggerfallRestInterruption.Encounter) RequestPanel(DaggerfallPanel.Resume);
         _input.Neutralize();
@@ -113,7 +113,7 @@ internal sealed partial class DaggerfallSession
     /// <summary>
     /// Reads the current location, paid room and guild privileges at the ordinary rest boundary.
     /// </summary>
-    private DaggerfallRestEligibility CurrentRestEligibility()
+    private DaggerfallRestEligibility CurrentRestEligibility(DaggerfallRestMode mode)
     {
         bool alive = State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current > 0d;
         if (!alive) return new(false, IsAlive: false, "You cannot rest while defeated.");
@@ -123,6 +123,9 @@ internal sealed partial class DaggerfallSession
         if (HasNearbyRestEnemy()) return new(false, Message: "Enemies are too close to rest.");
         if (State.PlayerControl.Position is null) return new(false, Message: "You cannot rest before the player has a world position.");
         if (_activeProfileKey.LogicalId.Length == 0) return new(false, Message: "You cannot rest without an admitted world profile.");
+        // The donor's loiter never asks where the player is (DaggerfallRestWindow.CanRest guards only
+        // resting): waiting in a town, a shop or on any ground is not camping.
+        if (mode == DaggerfallRestMode.Loiter) return new(true);
 
         // An interior needs proof of the exact placed building and a current room, property, or guild
         // privilege. The normalized profile carries that source identity; unknown interiors stay closed.
@@ -182,19 +185,20 @@ internal sealed partial class DaggerfallSession
     /// Advances exactly one rest tick through the session calendar and reports a selected encounter as
     /// the rest interruption. Pending encounter actors are placed on the next ordinary admitted step.
     /// </summary>
-    private DaggerfallRestTimeAdvance AdvanceRestInterval(long requestedSeconds)
+    private DaggerfallRestTimeAdvance AdvanceRestInterval(long requestedSeconds, DaggerfallRestMode mode)
     {
         if (HasNearbyRestEnemy()) return new(requestedSeconds, 0, DaggerfallRestInterruption.Encounter);
         if (State.Quests.Messages.Pending is not null) return new(requestedSeconds, 0, DaggerfallRestInterruption.Stopped);
         long applied = 0;
         while (applied < requestedSeconds)
         {
-            if (!CurrentRestEligibility().Allowed)
+            if (!CurrentRestEligibility(mode).Allowed)
                 return new(requestedSeconds, applied, DaggerfallRestInterruption.Prevented);
             long secondsToMinute = DaggerfallCalendar.SecondsPerMinute
                 - (_time.Calendar.ToAbsoluteSeconds() % DaggerfallCalendar.SecondsPerMinute);
             long slice = Math.Min(requestedSeconds - applied, secondsToMinute);
-            if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior
+            // A rented room bounds a rest, not a wait in the tavern.
+            if (mode != DaggerfallRestMode.Loiter && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior
                 && CurrentInteriorBuilding() is { BuildingType: DaggerfallLodgingState.TavernBuildingType } tavern)
                 slice = Math.Min(slice, State.Lodging.RemainingSeconds(_activeProfileKey.Site,
                     new(tavern.BlockX, tavern.BlockY, tavern.Building.Index), _time.Calendar.ToAbsoluteSeconds()));

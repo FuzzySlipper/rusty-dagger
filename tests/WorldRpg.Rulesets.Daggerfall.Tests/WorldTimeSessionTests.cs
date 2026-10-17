@@ -70,6 +70,45 @@ public sealed class WorldTimeSessionTests
     }
 
     /// <summary>
+    /// A journey raises the clock in many slices. Like the donor, which shows only the current holiday's text,
+    /// it announces no holiday its slices cross; the day it ends on is announced once, when the time increase completes.
+    /// </summary>
+    [Fact]
+    public void A_long_journey_announces_only_the_holiday_it_ends_on()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        DaggerfallCalendar holiday = new(406, 3, 12, 12, 0, 0);
+        DaggerfallCalendar start = DaggerfallCalendar.FromAbsoluteSeconds(holiday.ToAbsoluteSeconds() - (40 * DaggerfallCalendar.SecondsPerDay));
+        DaggerfallSavePayload baseline = CapturedSave(root);
+        DaggerfallSavePayload saved = baseline with
+        {
+            Calendar = new DaggerfallCalendarSave(start.Year, start.Month, start.Day, start.Hour, start.Minute, start.Second, 0d),
+            Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(17, 4), null, []),
+            RegionalPrices = baseline.RegionalPrices with { LastAdvancedDay = start.DayNumber },
+            Weather = baseline.Weather with { NextDay = start.DayNumber + 1 },
+        };
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+        using DaggerfallSession session = DaggerfallSession.Restore(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        string[] before = [.. session.Presentation.Messages];
+
+        for (int hour = 0; hour < 40 * 24; hour++)
+            session.AdvanceElapsedTime(3600, deferSkillAdvancement: true, idleFatigue: false, completeTimeIncrease: false);
+
+        Assert.Equal(before, session.Presentation.Messages);
+        session.AdvanceElapsedTime(1);
+        Assert.Equal(18, session.HolidayAnnouncement?.HolidayId);
+        Assert.Contains("Day of the Dead", session.Presentation.LastOutcome, StringComparison.Ordinal);
+        Assert.Single(session.Presentation.Messages, message => message.Contains("Day of the Dead", StringComparison.Ordinal));
+    }
+
+    /// <summary>
     /// The clock crossing midnight into a kept holiday announces at a settlement, once, through the
     /// existing outcome line. The donor's entry-only check cannot observe this; the product's
     /// continuous clock can, so the announcement follows the date rather than only the border.
