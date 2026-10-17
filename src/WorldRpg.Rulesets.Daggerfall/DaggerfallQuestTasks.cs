@@ -778,7 +778,7 @@ internal static class DaggerfallQuestTaskRunner
                         MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.Journal:
-                        messages.Log(instance, operation.MessageId!.Value, operation.Step!.Value);
+                        messages.Log(instance, operation.MessageId!.Value, operation.Step!.Value, calendar.ToAbsoluteSeconds());
                         MarkCompleted(state, operationIndex);
                         break;
                     case DaggerfallQuestTaskOperationKind.RemoveJournal:

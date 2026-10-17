@@ -19,20 +19,36 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
         var first = new DaggerfallQuestRuntimeInstance(Runtime(source).Capture() with { InstanceId = "z-first" }, Program(source));
         var second = new DaggerfallQuestRuntimeInstance(Runtime(source).Capture() with { InstanceId = "a-second" }, Program(source));
         var messages = Messages(source);
-        messages.Log(first, 10, 9);
-        messages.Log(first, 20, 2);
-        messages.Log(second, 10, 9);
+        messages.Log(first, 10, 9, 0);
+        messages.Log(first, 20, 2, 0);
+        messages.Log(second, 10, 9, 0);
         Assert.Equal(["quest-journal/z-first/9", "quest-journal/z-first/2", "quest-journal/a-second/9"],
             messages.RenderJournal([first, second]).Select(entry => entry.EntryId));
         var saved = messages.Capture();
         var restored = Messages(source);
         restored.Restore(saved, new Dictionary<string, DaggerfallQuestRuntimeInstance> { [first.InstanceId] = first, [second.InstanceId] = second });
         Assert.Equal(messages.Journal, restored.Journal);
-        restored.Log(first, 10, 2); // The donor replaces a step at its newest write position.
+        restored.Log(first, 10, 2, 0); // The donor replaces a step at its newest write position.
         Assert.Equal([9, 9, 2], restored.Journal.Select(entry => entry.Step));
         restored.RemoveLog(first, 9);
         Assert.Equal(["a-second", "z-first"], restored.Journal.Select(entry => entry.InstanceId));
         Assert.Equal([9, 2], restored.Journal.Select(entry => entry.Step));
+    }
+
+    /// <summary>As the donor's QuestMCP.QuestDate, an entry's %qdt names the date it was written, not an empty label.</summary>
+    [Fact]
+    public void A_journal_entry_names_the_date_it_was_written()
+    {
+        var source = Source() with { Messages = [new(10, 1, ["%qdt:", "The ship capsized."])] };
+        var quest = new DaggerfallQuestRuntimeInstance(Runtime(source).Capture(), Program(source));
+        var messages = Messages(source);
+        long written = (3 * DaggerfallCalendar.SecondsPerDay) + 3600;
+        messages.Log(quest, 10, 0, written);
+
+        string text = Assert.Single(messages.RenderJournal([quest])).Text;
+
+        Assert.StartsWith(DaggerfallCalendar.FromAbsoluteSeconds(written).DescribeDate() + ":", text);
+        Assert.Equal(written, Assert.Single(messages.Capture().Journal).LoggedAtSeconds);
     }
 
     [Fact]

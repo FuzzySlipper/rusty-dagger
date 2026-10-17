@@ -311,6 +311,12 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal DaggerfallVocabulary Vocabulary { get; } = vocabulary;
     internal DaggerfallNewGameDefinition NewGame { get; init; } = null!;
 
+    /// <summary>
+    /// Journal titles authored over a quest source's own display name, keyed by quest name, where the
+    /// donor's name is an internal label (the main story's backbone quest calls itself a backbone).
+    /// </summary>
+    internal IReadOnlyDictionary<string, string> QuestJournalTitles { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
     /// <summary>The authored presentation locations assembled from their blocks share, when the payload carries it.</summary>
     internal DaggerfallAssembledSiteDefinition? AssembledSites { get; init; }
 

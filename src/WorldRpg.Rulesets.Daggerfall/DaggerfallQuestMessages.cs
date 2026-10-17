@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -30,6 +31,8 @@ internal sealed record DaggerfallQuestMessageDeliverySave(string InstanceId, int
 }
 internal sealed record DaggerfallQuestJournalEntrySave(string InstanceId, int Step, int MessageId)
 {
+    /// <summary>The game time the entry was written, which its <c>%qdt</c> date names.</summary>
+    [JsonRequired] public long LoggedAtSeconds { get; init; }
     // Finished entries retain just their readable source and bound text values, not a quest runtime.
     public string? SourceFile { get; init; }
     public DaggerfallQuestMessageContext? Context { get; init; }
@@ -185,12 +188,13 @@ internal sealed class DaggerfallQuestMessages
     internal void RemoveDialogue(string instanceId) => _deliveries.RemoveAll(delivery => delivery.InstanceId == instanceId
         && delivery.Delivery == DaggerfallQuestMessageDelivery.Rumor);
 
-    internal void Log(DaggerfallQuestRuntimeInstance instance, int messageId, int step)
+    internal void Log(DaggerfallQuestRuntimeInstance instance, int messageId, int step, long loggedAtSeconds)
     {
         RequireMessage(instance, messageId);
         if (step < 0) throw new ArgumentOutOfRangeException(nameof(step));
+        ArgumentOutOfRangeException.ThrowIfNegative(loggedAtSeconds);
         _journal.RemoveAll(entry => entry.InstanceId == instance.InstanceId && entry.Step == step);
-        _journal.Add(new(instance.InstanceId, step, messageId));
+        _journal.Add(new(instance.InstanceId, step, messageId) { LoggedAtSeconds = loggedAtSeconds });
     }
 
     internal void RemoveLog(DaggerfallQuestRuntimeInstance instance, int step)
@@ -317,10 +321,15 @@ internal sealed class DaggerfallQuestMessages
         Dictionary<string, DaggerfallQuestRuntimeInstance> byId = instances.ToDictionary(value => value.InstanceId, StringComparer.Ordinal);
         return Journal.Select(entry =>
         {
+            // As the donor's QuestMCP.QuestDate, %qdt names the date this entry was written.
+            DaggerfallQuestMessageContext Dated(DaggerfallQuestMessageContext value) => value with
+            {
+                Text = value.Text with { Story = value.Text.Story with { QuestDate = World.DaggerfallCalendar.FromAbsoluteSeconds(entry.LoggedAtSeconds).DescribeDate() } },
+            };
             (string text, _, IReadOnlyList<string> diagnostics) = entry.SourceFile is { } source
-                ? Render(source, entry.MessageId, DaggerfallQuestMessageDelivery.Journal, 0, entry.Context!)
+                ? Render(source, entry.MessageId, DaggerfallQuestMessageDelivery.Journal, 0, Dated(entry.Context!))
                 : Render(RequireInstance(entry.InstanceId, byId), entry.MessageId, DaggerfallQuestMessageDelivery.Journal, 0,
-                    context(RequireInstance(entry.InstanceId, byId)));
+                    Dated(context(RequireInstance(entry.InstanceId, byId))));
             return new DaggerfallQuestRenderedMessage(entry.InstanceId, entry.MessageId, DaggerfallQuestMessageDelivery.Journal, text, diagnostics) { EntryId = entry.EntryId };
         }).ToArray();
     }
@@ -409,7 +418,7 @@ internal sealed class DaggerfallQuestMessages
                 if (entry.Context is not null) throw new ArgumentException("Active quest journal entry has a finished text context.");
                 RequireMessage(RequireInstance(entry.InstanceId, instances), entry.MessageId);
             }
-            if (entry.Step < 0 || _journal.Any(value => value.InstanceId == entry.InstanceId && value.Step == entry.Step))
+            if (entry.Step < 0 || entry.LoggedAtSeconds < 0 || _journal.Any(value => value.InstanceId == entry.InstanceId && value.Step == entry.Step))
                 throw new ArgumentException("Saved quest journal entries are malformed or duplicated.");
             _journal.Add(entry);
         }

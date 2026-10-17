@@ -102,7 +102,9 @@ internal sealed partial class DaggerfallSession
         StartDueCriminalInvitations();
         ExpireConjuredItems();
         AdvanceEffectsForCalendar(before, after, ordinaryPlay, resting);
-        AnnounceHoliday();
+        // An elapsed interval announces the holiday it ends on once, when it completes, rather than
+        // every holiday its slices cross (CompleteTimeIncrease).
+        if (ordinaryPlay) AnnounceHoliday();
         if (!ordinaryPlay)
         {
             // Rest suppresses newly incurred idle loss, and training charges its own source fatigue
@@ -143,7 +145,7 @@ internal sealed partial class DaggerfallSession
         if (advance.AppliedSeconds > 0)
             ReconcileNpcProjection();
         // Rest and travel admit many slices and complete the time increase once, at their end.
-        if (!resting && completeTimeIncrease && advance.AppliedSeconds > 0) _itemCastTriggers.CompleteTimeIncrease();
+        if (!resting && completeTimeIncrease && advance.AppliedSeconds > 0) CompleteTimeIncrease();
         return advance;
     }
 
@@ -153,7 +155,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallCalendar calendarBefore = _time.Calendar;
         var advance = _time.AdvanceInterval(gameSeconds, []);
         AdvanceCalendar(calendarBefore, DaggerfallCalendarAdvanceKind.QuestAction, idleFatigue: idleFatigue);
-        if (advance.AppliedSeconds > 0) _itemCastTriggers.CompleteTimeIncrease();
+        if (advance.AppliedSeconds > 0) CompleteTimeIncrease();
     }
 
     private void AdvanceEffectsForCalendar(DaggerfallCalendar before, DaggerfallCalendar after, bool ordinaryPlay, bool resting)
@@ -197,6 +199,16 @@ internal sealed partial class DaggerfallSession
     /// of a kept holiday is itself the entry. A session standing at a dungeon, a graveyard, a coven or
     /// the player's ship never announces, and leaving a holiday clears the tracking silently rather than reporting the ordinary day.
     /// </remarks>
+    /// <summary>
+    /// Ends one synthetic time increase (a rest, a journey, a service): held items reroll once and the
+    /// day it ended on announces its holiday, as the donor shows only the current holiday's text.
+    /// </summary>
+    private void CompleteTimeIncrease()
+    {
+        _itemCastTriggers.CompleteTimeIncrease();
+        AnnounceHoliday();
+    }
+
     private void AnnounceHoliday()
     {
         World.DaggerfallHolidayAnnouncement? announcement =

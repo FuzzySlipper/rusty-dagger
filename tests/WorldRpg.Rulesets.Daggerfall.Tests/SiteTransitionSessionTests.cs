@@ -115,7 +115,8 @@ public sealed class SiteTransitionSessionTests
             session.State.Actors.Entities.Classify(archerIdentity, session.State.Npcs.Identities!));
         Assert.Equal(source.Site, session.Site.Active);
         Assert.Equal(sourcePosition, session.State.PlayerControl.Position);
-        Assert.Equal(.7f, session.State.PlayerControl.YawRadians);
+        // The player comes back out where they went in, turned away from the doorway they faced.
+        Assert.Equal(MathF.IEEERemainder(.7f + MathF.PI, MathF.Tau), session.State.PlayerControl.YawRadians);
         Assert.Equal(-.2f, session.State.PlayerControl.PitchRadians);
         Assert.Equal(3, spatial.ReplaceCalls);
         Assert.Equal(sourceDoorMotion, session.Doors.Read(sourceDoor).Motion);
@@ -612,7 +613,7 @@ public sealed class SiteTransitionSessionTests
         Assert.True(restored.TryTransitionTo(source.ProfileKey));
         Assert.Equal(source.Site, restored.Site.Active);
         Assert.Equal(new WorldPoint(8f, 2f, -4f), restored.State.PlayerControl.Position);
-        Assert.Equal(.3f, restored.State.PlayerControl.YawRadians);
+        Assert.Equal(MathF.IEEERemainder(.3f + MathF.PI, MathF.Tau), restored.State.PlayerControl.YawRadians);
         Assert.Equal(-.1f, restored.State.PlayerControl.PitchRadians);
     }
 

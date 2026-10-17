@@ -398,7 +398,8 @@ generated file Git would pick up):
 The base definitions come from two packs. `daggerfall.base` is authored and tracked: its payload
 `content/worldrpg/payloads/daggerfall.base.json` carries `ruleset`, `vocabulary`,
 `armorValuesByMaterial`, `actors`, `items`, `equipmentSlots`, `actions`, `lootTables`,
-`hudResources`, `donorErrata`, `encounters` and `assembledSites` (the world
+`hudResources`, `donorErrata`, `questJournalTitles` (journal titles over a quest's internal donor
+name), `encounters` and `assembledSites` (the world
 appearance and navigation grid every location assembled from its blocks shares, and how near its
 transition doors a player must stand and how far in front of a door they land on coming out; some sections are
 transcribed from the donor by hand, each citing its source); no command writes it. `daggerfall.imported` is generated. The
