@@ -3,7 +3,7 @@ import { mountMap, isMapProjection, type MapProjection } from './maps.js';
 import { mountLodging, isLodgingProjection, type LodgingProjection } from './lodging.js';
 import { mountControls, type ControlsProjection, type ControlAction } from './controls.js';
 import { mountLiveDebugPanel, type LiveDebugPanelMount } from '@rusty-engine/live-debug';
-import { adopt, heldRevision, image, type ArtRequestAction, type UiArt } from './art.js';
+import { adopt, fitPixelArt, heldRevision, image, type ArtRequestAction, type UiArt } from './art.js';
 import { mountInventory, type InventoryProjection, type InventoryAction } from './inventory.js';
 import { mountCharacter, isCharacterProjection, type CharacterProjection, type CharacterAction } from './character.js';
 import { mountLoot, type LootProjection, type LootAction } from './loot.js';
@@ -505,6 +505,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   });
   const deathRoot = shell.querySelector<HTMLElement>('.dagger-death')!;
   const deathScreen = shell.querySelector<HTMLImageElement>('.dagger-death-screen')!;
+  fitPixelArt(deathScreen, deathRoot);
   const deathMessage = shell.querySelector<HTMLElement>('.dagger-death-message')!;
   const deathLoadSlot = shell.querySelector<HTMLSelectElement>('.dagger-death-load-slot')!;
   const deathNew = shell.querySelector<HTMLButtonElement>('.dagger-death-new')!;
@@ -532,6 +533,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   });
   const entryRoot = shell.querySelector<HTMLElement>('.dagger-entry')!;
   const entryScreen = shell.querySelector<HTMLImageElement>('.dagger-entry-screen')!;
+  fitPixelArt(entryScreen, entryRoot);
   const inventoryRoot = shell.querySelector<HTMLElement>('.dagger-inventory-root')!;
   const inventoryView = mountInventory(inventoryRoot, (action) => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
@@ -1175,7 +1177,10 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (entry !== null) entryScreen.src = entry;
     entryParts.replaceChildren(...(creationMode === 'character-pick' ? pickScreens.filter(id => id !== primary) : []).flatMap(id => {
       const source = image(id); if (source === null) return [];
-      const part = document.createElement('img'); part.src = source; part.alt = ''; part.dataset.mediaId = id; return [part];
+      const part = document.createElement('img'); part.alt = ''; part.dataset.mediaId = id;
+      // A pick part is drawn at the scale its screen is, so the two pieces of art keep one pixel size.
+      part.addEventListener('load', () => { part.style.width = `${part.naturalWidth * entryScreen.width / Math.max(1, entryScreen.naturalWidth)}px`; });
+      part.src = source; return [part];
     }));
   };
   shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!.addEventListener('click', () => {

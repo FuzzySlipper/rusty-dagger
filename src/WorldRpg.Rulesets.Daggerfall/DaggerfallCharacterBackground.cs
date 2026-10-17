@@ -39,7 +39,7 @@ internal sealed record DaggerfallCharacterBackgroundPresentation(
     DaggerfallStartingGrantPresentation[] StartingGrants, DaggerfallBiographyModifiersSave Modifiers, string[] UnsupportedEffects);
 internal sealed record DaggerfallBiographyQuestionPresentation(int Number, string Text, DaggerfallBiographyAnswerPresentation[] Answers, string? SelectedLetter);
 internal sealed record DaggerfallBiographyAnswerPresentation(string Letter, string Text);
-internal sealed record DaggerfallCreationAttributePresentation(string Id, string Label, int Rolled, int Allocated, int Value, bool CanAllocate);
+internal sealed record DaggerfallCreationAttributePresentation(string Id, string Label, int Rolled, int Allocated, int Value, int Maximum, bool CanAllocate);
 internal sealed record DaggerfallCreationSkillPresentation(string Id, string Label, string Tier, int Rolled, int Allocated, int BiographyBonus, int Value, bool CanAllocate);
 
 /// <summary>Classic creation policy interpreted from the normalized BIOG and catalog records.</summary>
@@ -92,7 +92,7 @@ internal static class DaggerfallCharacterBackgroundPolicy
         Dictionary<string, int> skillBonuses = SkillBonuses(definitions, biography, background.Answers);
         DaggerfallCreationAttributePresentation[] attributes = background.RolledAttributes.Select(value => new DaggerfallCreationAttributePresentation(
             value.Id, Label(value.Id), value.Points, attributeAllocations.GetValueOrDefault(value.Id), checked(value.Points + attributeAllocations.GetValueOrDefault(value.Id)),
-            Remaining(background.AttributeBonusPool, background.AttributeAllocations) > 0 && value.Points + attributeAllocations.GetValueOrDefault(value.Id) < DaggerfallFormulaPolicy.MaxStatValue())).ToArray();
+            DaggerfallFormulaPolicy.MaxStatValue(), Remaining(background.AttributeBonusPool, background.AttributeAllocations) > 0 && value.Points + attributeAllocations.GetValueOrDefault(value.Id) < DaggerfallFormulaPolicy.MaxStatValue())).ToArray();
         DaggerfallCreationSkillPresentation[] skills = background.RolledSkills.Select(value =>
         {
             string tier = Tier(career, value.Id);

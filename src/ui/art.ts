@@ -67,3 +67,25 @@ export function reportMissingArt(context: string, missing: readonly string[]): v
 export function cssUrl(source: string): string {
   return `url("${source.replace(/["\\\n\r\f]/g, character => `\\${character.charCodeAt(0).toString(16)} `)}")`;
 }
+
+/**
+ * Sizes a classic-art image to fill as much of `box` as a whole number of device pixels per source
+ * pixel allows, so the art is enlarged without filtering or uneven pixels. Art larger than its box is
+ * shrunk to fit instead, as no whole scale would. Call once per image; the size follows the box and
+ * each newly loaded source.
+ */
+export function fitPixelArt(art: HTMLImageElement, box: HTMLElement): void {
+  art.style.imageRendering = 'pixelated';
+  const fit = (): void => {
+    const width = art.naturalWidth, height = art.naturalHeight;
+    if (width === 0 || height === 0 || box.clientWidth === 0 || box.clientHeight === 0) return;
+    const ratio = window.devicePixelRatio || 1;
+    const room = Math.min(box.clientWidth * ratio / width, box.clientHeight * ratio / height);
+    const scale = room >= 1 ? Math.floor(room) / ratio : room / ratio;
+    art.style.width = `${width * scale}px`;
+    art.style.height = `${height * scale}px`;
+  };
+  art.addEventListener('load', fit);
+  new ResizeObserver(fit).observe(box);
+  fit();
+}

@@ -26,9 +26,11 @@ after(() => rm(output, { recursive: true, force: true }));
 
 function fixture() {
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' });
-  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLDialogElement', 'KeyboardEvent', 'Option']) {
+  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLDialogElement', 'Event', 'KeyboardEvent', 'Option']) {
     globalThis[key] = dom.window[key];
   }
+  // JSDOM lays nothing out, so art sized to its box has no box to observe.
+  globalThis.ResizeObserver = class { observe() {} disconnect() {} };
   dom.window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   dom.window.HTMLDialogElement.prototype.close = function () { this.open = false; };
   const root = document.getElementById('root');
@@ -485,11 +487,21 @@ test('title character choices are projected and committed through semantic actio
         editing: true, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
         races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }],
         faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
+        background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 2, remainingAttributePoints: 0, primarySkillPoints: 0, majorSkillPoints: 0, minorSkillPoints: 0,
+          questions: [], attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 2, value: 52, maximum: 100, canAllocate: false }],
+          skills: [], startingGrants: [], unsupportedEffects: [] },
       },
     } });
-    const name = f.root.querySelector('[aria-label="Character name"]'); name.value = 'Aubk-i';
-    f.root.querySelector('[data-testid="character-commit"]').click();
-    assert.deepEqual(f.actions.at(-1), { action: 'character-commit', name: 'Aubk-i', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' });
+    // Every dropdown is labelled, and the controls refuse a commit until the draft is complete.
+    for (const label of ['Name', 'Race', 'Gender', 'Face', 'Reflexes', 'Career']) assert.ok([...f.root.querySelectorAll('label')].some(item => item.firstChild?.textContent === label), label);
+    const name = f.root.querySelector('[aria-label="Character name"]'); const commit = f.root.querySelector('[data-testid="character-commit"]');
+    name.value = ''; name.dispatchEvent(new window.Event('input', { bubbles: true }));
+    assert.equal(commit.disabled, true);
+    assert.match(f.root.querySelector('[data-testid="character-commit-blocked"]').textContent, /Enter a name/);
+    name.value = 'Aubk-i'; name.dispatchEvent(new window.Event('input', { bubbles: true }));
+    assert.equal(commit.disabled, false);
+    commit.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-commit', name: 'Aubk-i', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '', attributeAllocations: 'strength:2', skillAllocations: '' });
   } finally { f.dispose(); }
 });
 
@@ -520,27 +532,39 @@ test('title creation renders normalized questions and sends the selected backgro
         races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }], faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
         background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 6, remainingAttributePoints: 4, primarySkillPoints: 5, majorSkillPoints: 6, minorSkillPoints: 6,
           questions: [{ number: 1, text: 'Where did you study?', selectedLetter: 'a', answers: [{ letter: 'a', text: 'At home.' }, { letter: 'b', text: 'At court.' }] }],
-          attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 2, value: 52, canAllocate: true }],
+          attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 2, value: 52, maximum: 100, canAllocate: true }],
           skills: [{ id: 'medical', label: 'Medical', tier: 'primary', rolled: 28, allocated: 1, biographyBonus: 0, value: 29, canAllocate: true }],
           startingGrants: [{ itemId: 'template-113-iron', label: 'Longsword', templateIndex: 113, quantity: 1, sourceEffect: 'IT 3 0 0' }], unsupportedEffects: ['The source retains this fatigue background effect without a gameplay consequence.'] },
       },
     } });
     assert.match(f.root.querySelector('[data-testid="character-biography"]').textContent, /readable biography/);
     assert.equal(f.root.querySelector('[data-testid="character-starting-grants"]').textContent, 'Starting grants: 1 × Longsword.');
-    assert.match(f.root.querySelector('[aria-label="Skills medical"]').parentElement.textContent, /^Medical \(primary\): 29/);
     assert.match(f.root.querySelector('[data-testid="character-background-unsupported-effects"]').textContent, /fatigue background effect/);
     const pools = f.root.querySelector('[data-testid="character-allocation-pools"]');
-    assert.match(pools.textContent, /^4 of 6 attribute points remain; 5\/6\/6/);
-    const actionsBeforeTyping = f.actions.length;
-    f.root.querySelector('[aria-label="Attributes strength"]').value = '6';
-    f.root.querySelector('[aria-label="Attributes strength"]').dispatchEvent(new window.Event('input', { bubbles: true }));
-    assert.match(pools.textContent, /^0 of 6 attribute points remain; 5\/6\/6/);
-    f.root.querySelector('[aria-label="Skills medical"]').value = '6';
-    f.root.querySelector('[aria-label="Skills medical"]').dispatchEvent(new window.Event('input', { bubbles: true }));
-    assert.match(pools.textContent, /^0 of 6 attribute points remain; 0\/6\/6/);
-    assert.equal(f.actions.length, actionsBeforeTyping, 'Draft counters do not submit gameplay changes.');
+    const commit = f.root.querySelector('[data-testid="character-commit"]');
+    const add = label => f.root.querySelector(`[aria-label="Add a point to ${label}"]`);
+    const remove = label => f.root.querySelector(`[aria-label="Remove a point from ${label}"]`);
+    assert.equal(pools.textContent, '4 of 6 bonus points left');
+    assert.equal(commit.disabled, true);
+    assert.match(f.root.querySelector('[data-testid="character-commit-blocked"]').textContent, /Spend 4 more bonus points\. Spend 5 more primary skill points\./);
+    const actionsBeforeSteps = f.actions.length;
+    for (let step = 0; step < 6; step++) add('Strength').click();
+    // The pool holds four more points: the steps past it are refused by the control itself.
+    assert.equal(f.root.querySelector('[aria-label="Attributes strength"]').textContent, '+6');
+    assert.equal(add('Strength').disabled, true);
+    assert.equal(pools.textContent, '0 of 6 bonus points left');
+    remove('Strength').click(); add('Strength').click();
+    for (let step = 0; step < 7; step++) add('Medical').click();
+    assert.equal(f.root.querySelector('[aria-label="Skills medical"]').textContent, '+6');
+    assert.equal(add('Medical').disabled, true);
+    assert.match(f.root.querySelector('h4[data-tier="primary"]').textContent, /0 of 6 points left/);
+    assert.equal(commit.disabled, true, 'The major and minor pools remain unspent.');
+    assert.equal(f.actions.length, actionsBeforeSteps, 'Draft counters do not submit gameplay changes.');
+    f.root.querySelector('[aria-label="Background question 1"]').value = 'b';
+    f.root.querySelector('[aria-label="Background question 1"]').dispatchEvent(new window.Event('change', { bubbles: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'character-update', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:b', attributeAllocations: 'strength:6', skillAllocations: 'medical:6' });
     f.root.querySelector('[data-testid="character-background-reroll"]').click();
-    assert.deepEqual(f.actions.at(-1), { action: 'character-background-reroll', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:a', attributeAllocations: 'strength:6', skillAllocations: 'medical:6' });
+    assert.deepEqual(f.actions.at(-1), { action: 'character-background-reroll', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:b', attributeAllocations: 'strength:6', skillAllocations: 'medical:6' });
   } finally { f.dispose(); }
 });
 
@@ -661,14 +685,14 @@ test('custom class editor sends typed skills traits and exposes eligibility reas
     assert.equal(minorSkill.value, 'short-blade');
     assert.equal(minorSkill.selectedOptions[0].textContent, 'Short Blade');
     assert.ok(![...minorSkill.options].some(option => option.textContent.includes('-')), 'no option shows a raw skill id');
-    f.root.querySelector('[data-testid="character-custom-update"]').click();
+    // A custom-class choice is sent as it changes, so the eligibility shown is always the ruleset's.
+    minorSkill.dispatchEvent(new window.Event('change', { bubbles: true }));
     assert.deepEqual(f.actions.at(-1), { action: 'character-update', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'custom',
       primarySkills: 'mysticism,alteration,thaumaturgy', majorSkills: 'illusion,destruction,restoration', minorSkills: 'medical,short-blade,blunt-weapon,dragonish,daedric,dodging', hitPointsPerLevel: 12, advantages: 'increased-magery:1.5', disadvantages: 'forbidden-material:steel' });
     assert.equal(f.root.querySelectorAll('[aria-label^="Advantages "]').length, 7);
     f.root.querySelector('[aria-label="Advantages 2"]').value = 'regenerate-health:immersed';
     f.root.querySelector('[aria-label="Disadvantages 2"]').value = 'damage:sunlight';
-    f.publish(structuredClone(snapshot));
-    f.root.querySelector('[data-testid="character-custom-update"]').click();
+    f.root.querySelector('[aria-label="Disadvantages 2"]').dispatchEvent(new window.Event('change', { bubbles: true }));
     assert.equal(f.actions.at(-1).advantages, 'increased-magery:1.5,regenerate-health:immersed');
     assert.equal(f.actions.at(-1).disadvantages, 'forbidden-material:steel,damage:sunlight');
 
@@ -1304,8 +1328,9 @@ test('character draft screens consume the published mode art and every pick part
     assert.deepEqual(f.actions.at(-1), { action: 'character-class-back' });
     f.publish({ mode: 'title', character: { ...character, creation }, pickScreens: ['screen.pick.02'] });
     assert.equal(entry.dataset.mode, 'character-pick');
-    entry.querySelector('[data-testid="character-commit"]').click();
-    assert.equal(f.actions.at(-1).action, 'character-commit');
+    // Without a rolled background the commit is refused by the control, which says why.
+    assert.equal(entry.querySelector('[data-testid="character-commit"]').disabled, true);
+    assert.match(entry.querySelector('[data-testid="character-commit-blocked"]').textContent, /Roll a background/);
     f.publish({ mode: 'title', character: { ...character, creation: { ...creation, editing: false, mode: null } } });
     assert.equal(entry.dataset.mode, 'title');
     assert.equal(entry.querySelector('.dagger-entry-screen').src, images[0].image);
