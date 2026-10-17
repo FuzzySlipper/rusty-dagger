@@ -187,12 +187,12 @@ log('page opened');
 
 // The entry screen accepts a pointer press on its buttons; a synthetic element click does not reach
 // the product's intent path, so the smoke presses where a player would.
-async function visibleCenter(selector) {
+async function visibleCenter(selector, { enabled = true } = {}) {
   const { result } = await cdp('Runtime.evaluate', {
     returnByValue: true,
     expression: `(() => {
       const element = document.querySelector(${JSON.stringify(selector)});
-      if (!element || element.closest('[hidden]') || element.disabled) return null;
+      if (!element || element.closest('[hidden]') || (${enabled} && element.disabled)) return null;
       element.scrollIntoView({ block: 'center' });
       const box = element.getBoundingClientRect();
       return box.width > 0 ? { x: box.x + box.width / 2, y: box.y + box.height / 2 } : null;
@@ -207,11 +207,11 @@ async function pageText(selector) {
   });
   return result.value ?? '';
 }
-async function waitFor(selector, what, attempts = 120) {
+async function waitFor(selector, what, attempts = 120, options = {}) {
   let target = null;
   for (let attempt = 0; attempt < attempts && target === null; attempt++) {
     await sleep(500);
-    target = await visibleCenter(selector);
+    target = await visibleCenter(selector, options);
   }
   if (target === null) fail(`the product never offered ${what}; it last said: ${await pageText('[aria-live], [role=status], .dagger-status')}`);
   return target;
@@ -224,29 +224,21 @@ async function press(selector, what, attempts = 120) {
 }
 
 // Begin with no character opens character creation. The smoke spends every point the rolled
-// background offers on the first field that accepts it, then commits the character.
+// background offers through the steppers, which refuse a point no pool holds, until none will take
+// another; Commit opens only once every pool is spent.
 await press('button.dagger-entry-begin', 'Begin');
-await waitFor('[data-testid="character-commit"]', 'character creation');
+await waitFor('[data-testid="character-commit"]', 'character creation', 120, { enabled: false });
 const { result: spent } = await cdp('Runtime.evaluate', {
   returnByValue: true,
   expression: `(() => {
-    const background = document.querySelector('[data-testid="character-background"]');
-    const pools = background && [...background.querySelectorAll('p')].map(p => p.textContent)
-      .map(text => /(\\d+) of \\d+ attribute points remain; (\\d+)\\/(\\d+)\\/(\\d+) primary\\/major\\/minor/.exec(text)).find(Boolean);
-    if (!pools) return 'the character background states no point pools';
-    const spend = (inputs, points) => {
-      const input = inputs.find(candidate => !candidate.disabled);
-      if (points > 0 && !input) return false;
-      if (points > 0) input.value = String(points);
-      return true;
-    };
-    const fields = title => [...background.querySelectorAll('input[type=number]')].filter(input => input.getAttribute('aria-label').startsWith(title + ' '));
-    const skill = tier => fields('Skills').filter(input => input.closest('label').textContent.includes('(' + tier + ')'));
-    const [, attributes, primary, major, minor] = pools.map(Number);
-    if (!spend(fields('Attributes'), attributes)) return 'no attribute accepts the bonus points';
-    for (const [tier, points] of [['primary', primary], ['major', major], ['minor', minor]])
-      if (!spend(skill(tier), points)) return 'no ' + tier + ' skill accepts its points';
-    return null;
+    for (let step = 0; step < 200; step++) {
+      const add = document.querySelector('[data-testid="character-background"] button[aria-label^="Add a point to "]:not(:disabled)');
+      if (!add) break;
+      add.click();
+    }
+    const commit = document.querySelector('[data-testid="character-commit"]');
+    return commit && !commit.disabled ? null
+      : 'character creation still refuses the commit: ' + (document.querySelector('[data-testid="character-commit-blocked"]')?.textContent ?? 'no reason shown');
   })()`,
 });
 if (spent.value) fail(spent.value);
