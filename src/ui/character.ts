@@ -92,7 +92,7 @@ export interface CharacterCreation {
 }
 export interface CharacterBackgroundAnswer { readonly letter: string; readonly text: string; }
 export interface CharacterBackgroundQuestion { readonly number: number; readonly text: string; readonly selectedLetter: string | null; readonly answers: readonly CharacterBackgroundAnswer[]; }
-export interface CharacterBackgroundAttribute { readonly id: string; readonly label: string; readonly rolled: number; readonly allocated: number; readonly value: number; readonly canAllocate: boolean; }
+export interface CharacterBackgroundAttribute { readonly id: string; readonly label: string; readonly rolled: number; readonly allocated: number; readonly value: number; readonly maximum: number; readonly canAllocate: boolean; }
 export interface CharacterBackgroundSkill { readonly id: string; readonly label: string; readonly tier: string; readonly rolled: number; readonly allocated: number; readonly biographyBonus: number; readonly value: number; readonly canAllocate: boolean; }
 export interface CharacterStartingGrant { readonly itemId: string; readonly label: string; readonly templateIndex: number; readonly quantity: number; readonly sourceEffect: string; }
 export interface CharacterBackground { readonly biographyClassIndex: number; readonly biography: readonly string[]; readonly questions: readonly CharacterBackgroundQuestion[]; readonly attributes: readonly CharacterBackgroundAttribute[]; readonly attributeBonusPool: number; readonly remainingAttributePoints: number; readonly skills: readonly CharacterBackgroundSkill[]; readonly primarySkillPoints: number; readonly majorSkillPoints: number; readonly minorSkillPoints: number; readonly startingGrants: readonly CharacterStartingGrant[]; readonly unsupportedEffects: readonly string[]; }
@@ -125,7 +125,7 @@ export interface CharacterProjection {
   readonly levelUp?: CharacterLevelUp | null;
 }
 
-import { image } from './art.js';
+import { heldRevision, image } from './art.js';
 
 export interface CharacterView {
   readonly creationElement: HTMLElement;
@@ -246,7 +246,8 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         value: skill.tierLabel,
         testid: `character-sheet-granted-${skill.id}`,
       })));
-      const nextCreationStamp = JSON.stringify([value.creationAvailable === true, value.creation ?? null]);
+      // The art revision is part of the stamp: a face preview drawn before its art arrived is drawn again.
+      const nextCreationStamp = JSON.stringify([value.creationAvailable === true, value.creation ?? null, heldRevision()]);
       if (creationStamp !== nextCreationStamp) {
         renderCreation(creation.rows, value.creation ?? null, value.creationAvailable === true, send);
         creationStamp = nextCreationStamp;
@@ -548,10 +549,22 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
     cancel.addEventListener('click', () => send?.({ action: 'character-cancel' }));
     root.replaceChildren(heading, prompt, ...answers, back, cancel); return;
   }
-  const name = document.createElement('input'); name.value = value.current.name; name.setAttribute('aria-label', 'Character name');
+  const focused = document.activeElement instanceof HTMLElement && root.contains(document.activeElement) ? document.activeElement.getAttribute('aria-label') : null;
+  const name = document.createElement('input'); name.value = value.current.name; name.setAttribute('aria-label', 'Character name'); name.maxLength = 32;
   const race = select(value.races, value.current.race); race.setAttribute('aria-label', 'Race');
   const gender = select([{ id: 'male', label: 'Male', available: true, restriction: null }, { id: 'female', label: 'Female', available: true, restriction: null }], value.current.gender); gender.setAttribute('aria-label', 'Gender');
   const face = select(value.faces.map(item => ({ id: String(item.index), label: `Face ${item.index + 1}`, available: true, restriction: null })), String(value.current.faceIndex)); face.setAttribute('aria-label', 'Face');
+  const facePreview = document.createElement('img'); facePreview.className = 'dagger-creation-face'; facePreview.dataset.testid = 'character-face-preview';
+  const showFace = (): void => {
+    const chosen = value.faces.find(item => String(item.index) === face.value);
+    const source = chosen ? image(chosen.mediaId) : null;
+    facePreview.hidden = source === null; if (source !== null) facePreview.src = source;
+    facePreview.alt = chosen ? `Face ${chosen.index + 1}` : '';
+  };
+  face.addEventListener('change', showFace); showFace();
+  const faceStep = (offset: number): HTMLButtonElement => stepButton(offset < 0 ? '‹' : '›', offset < 0 ? 'Previous face' : 'Next face', () => {
+    face.selectedIndex = (face.selectedIndex + offset + face.options.length) % face.options.length; showFace();
+  });
   const reflexes = select(value.reflexes.map(item => ({ id: String(item.value), label: item.label, available: true, restriction: null })), String(value.current.reflexes)); reflexes.setAttribute('aria-label', 'Reflexes');
   const career = select(value.careers, value.current.career); career.setAttribute('aria-label', 'Career');
   const custom = value.custom ?? null;
@@ -563,63 +576,172 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   const major = customSkills('Major skills', custom?.majorSkills ?? skillIds.slice(3, 6), skillValues, 3);
   const minor = customSkills('Minor skills', custom?.minorSkills ?? skillIds.slice(6, 12), skillValues, 6);
   const hp = document.createElement('input'); hp.type = 'number'; hp.min = '4'; hp.max = '30'; hp.value = String(custom?.hitPointsPerLevel ?? 8); hp.setAttribute('aria-label', 'Hit points per level');
+  hp.addEventListener('change', () => { hp.value = String(Math.min(30, Math.max(4, Math.round(Number(hp.value) || 8)))); });
   const advantages = traitInput('Advantages', custom?.advantages ?? [], custom?.supportedAdvantages ?? []);
   const disadvantages = traitInput('Disadvantages', custom?.disadvantages ?? [], custom?.supportedDisadvantages ?? []);
   const eligibility = document.createElement('ul'); eligibility.dataset.testid = 'character-custom-eligibility'; eligibility.setAttribute('aria-live', 'polite');
-  eligibility.replaceChildren(...(custom?.eligibility ?? ['Choose Custom class to edit its skills and traits.']).map(reason => { const item = document.createElement('li'); item.textContent = reason; return item; }));
+  eligibility.replaceChildren(...(custom?.eligibility ?? []).map(reason => { const item = document.createElement('li'); item.textContent = reason; return item; }));
   customFields.append(primary.element, major.element, minor.element, labeled('HP per level', hp), advantages.element, disadvantages.element, eligibility);
-  const updateVisibility = (): void => { customFields.hidden = career.value !== 'custom'; };
-  career.addEventListener('change', updateVisibility); updateVisibility();
+  customFields.hidden = career.value !== 'custom';
   const background = backgroundEditor(value.background ?? null);
-  const commit = document.createElement('button'); commit.type = 'button'; commit.textContent = 'Commit character'; commit.dataset.testid = 'character-commit';
   const action = (kind: 'character-update' | 'character-commit' | 'character-background-reroll' | 'character-class-questions'): CharacterAction => career.value === 'custom'
     ? { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value,
       primarySkills: primary.values().join(','), majorSkills: major.values().join(','), minorSkills: minor.values().join(','), hitPointsPerLevel: Number(hp.value), advantages: advantages.value(), disadvantages: disadvantages.value(), ...(kind === 'character-class-questions' ? {} : background.values()) }
     : { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value, ...(kind === 'character-class-questions' ? {} : background.values()) };
-  const update = document.createElement('button'); update.type = 'button'; update.textContent = 'Check custom class'; update.dataset.testid = 'character-custom-update'; update.addEventListener('click', () => send?.(action('character-update')));
+  // A choice the ruleset derives other choices from (the faces a race and gender have, the background a
+  // career or custom tier layout rolls, the biography its answers write) is sent as it changes, so the
+  // draft the player sees is always the ruleset's.
+  const live = (): void => send?.(action('character-update'));
+  for (const input of [race, gender, career, ...customFields.querySelectorAll('select'), hp, ...background.answers]) input.addEventListener('change', live);
+  const commit = document.createElement('button'); commit.type = 'button'; commit.textContent = 'Commit character'; commit.dataset.testid = 'character-commit';
   commit.addEventListener('click', () => send?.(action('character-commit')));
+  const blocked = document.createElement('p'); blocked.className = 'dagger-creation-blocked'; blocked.dataset.testid = 'character-commit-blocked'; blocked.setAttribute('aria-live', 'polite');
+  const refreshCommit = (): void => {
+    const reasons = [
+      ...(name.value.trim().length === 0 ? ['Enter a name.'] : []),
+      ...(value.background === null || value.background === undefined ? ['Roll a background.'] : background.unspent()),
+      ...(career.value === 'custom' ? custom?.eligibility ?? [] : []),
+    ];
+    commit.disabled = reasons.length !== 0;
+    blocked.textContent = reasons.join(' ');
+  };
+  name.addEventListener('input', refreshCommit); background.element.addEventListener('input', refreshCommit); refreshCommit();
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.dataset.testid = 'character-cancel'; cancel.addEventListener('click', () => send?.({ action: 'character-cancel' }));
   const reroll = document.createElement('button'); reroll.type = 'button'; reroll.textContent = 'Reroll background'; reroll.dataset.testid = 'character-background-reroll'; reroll.disabled = value.background === null;
   reroll.addEventListener('click', () => send?.(action('character-background-reroll')));
   const questions = document.createElement('button'); questions.type = 'button'; questions.textContent = 'Answer class questions';
   questions.dataset.testid = 'character-class-questions'; questions.disabled = value.classQuestionsAvailable !== true;
   questions.addEventListener('click', () => send?.(action('character-class-questions')));
-  root.replaceChildren(name, race, gender, face, reflexes, career, questions, customFields, background.element, reroll, update, commit, cancel);
+
+  const faceRow = document.createElement('div'); faceRow.className = 'dagger-creation-face-row'; faceRow.append(faceStep(-1), face, faceStep(1));
+  const identity = panel('Identity', 'identity', labeled('Name', name), labeled('Race', race), labeled('Gender', gender), labeled('Face', faceRow), facePreview, labeled('Reflexes', reflexes));
+  const classPanel = panel('Class', 'class', labeled('Career', career), questions, customFields);
+  const backgroundPanel = panel('Background', 'background', ...background.story, reroll);
+  const attributesPanel = panel('Attributes', 'attributes', ...background.attributes);
+  const skillsPanel = panel('Skills', 'skills', ...background.skills);
+  attributesPanel.hidden = skillsPanel.hidden = value.background === null || value.background === undefined;
+  const actions = document.createElement('footer'); actions.className = 'dagger-creation-actions'; actions.append(blocked, cancel, commit);
+  const layout = document.createElement('section'); layout.className = 'dagger-creation'; layout.dataset.testid = 'character-background';
+  layout.append(identity, classPanel, backgroundPanel, attributesPanel, skillsPanel, actions);
+  root.replaceChildren(layout);
+  // Re-rendering from the ruleset's answer keeps the control the player was using focused.
+  if (focused !== null) [...root.querySelectorAll<HTMLElement>('[aria-label]')].find(element => element.getAttribute('aria-label') === focused)?.focus();
 }
 
-function backgroundEditor(value: CharacterBackground | null): { readonly element: HTMLElement; readonly values: () => Pick<CharacterAction, 'backgroundAnswers' | 'attributeAllocations' | 'skillAllocations'> } {
-  const element = document.createElement('fieldset'); element.dataset.testid = 'character-background';
-  const legend = document.createElement('legend'); legend.textContent = 'Background and starting abilities'; element.append(legend);
-  if (value === null) { element.hidden = true; return { element, values: () => ({}) }; }
-  const biography = document.createElement('p'); biography.dataset.testid = 'character-biography'; biography.textContent = value.biography.join(' '); element.append(biography);
-  const answers = value.questions.map(question => {
-    const label = document.createElement('label'); label.textContent = `${question.number}. ${question.text}`;
+function panel(title: string, kind: string, ...children: HTMLElement[]): HTMLElement {
+  const element = document.createElement('section'); element.className = `dagger-creation-panel dagger-creation-${kind}`;
+  const heading = document.createElement('h3'); heading.textContent = title; element.append(heading, ...children); return element;
+}
+
+function stepButton(text: string, label: string, click: () => void): HTMLButtonElement {
+  const button = document.createElement('button'); button.type = 'button'; button.textContent = text; button.setAttribute('aria-label', label);
+  button.addEventListener('click', click); return button;
+}
+
+interface BackgroundEditor {
+  readonly story: readonly HTMLElement[];
+  readonly attributes: readonly HTMLElement[];
+  readonly skills: readonly HTMLElement[];
+  readonly answers: readonly HTMLSelectElement[];
+  /** The element whose `input` events report a changed allocation. */
+  readonly element: HTMLElement;
+  readonly unspent: () => string[];
+  readonly values: () => Pick<CharacterAction, 'backgroundAnswers' | 'attributeAllocations' | 'skillAllocations'>;
+}
+
+const SKILL_TIERS = [['primary', 'Primary'], ['major', 'Major'], ['minor', 'Minor']] as const;
+
+function backgroundEditor(value: CharacterBackground | null): BackgroundEditor {
+  const element = document.createElement('div');
+  if (value === null) return { story: [], attributes: [], skills: [], answers: [], element, unspent: () => [], values: () => ({}) };
+  const questions = value.questions.map(question => {
     const input = select(question.answers.map(answer => ({ id: answer.letter, label: `${answer.letter.toUpperCase()}. ${answer.text}`, available: true, restriction: null })), question.selectedLetter ?? question.answers[0]?.letter ?? '');
-    input.setAttribute('aria-label', `Background question ${question.number}`); label.append(input); element.append(label); return { question: question.number, input };
+    input.setAttribute('aria-label', `Background question ${question.number}`);
+    return { question: question.number, input, element: labeled(`${question.number}. ${question.text}`, input) };
   });
-  const attributes = allocationEditor('Attributes', value.attributes.map(attribute => ({ id: attribute.id, label: `${attribute.label}: ${attribute.value}`, allocated: attribute.allocated, canAllocate: attribute.canAllocate })));
-  const skills = allocationEditor('Skills', value.skills.map(skill => ({ id: skill.id, label: `${skill.label} (${skill.tier}): ${skill.value}`, allocated: skill.allocated, canAllocate: skill.canAllocate })));
-  const pools = document.createElement('p'); pools.dataset.testid = 'character-allocation-pools'; pools.setAttribute('aria-live', 'polite');
-  const updatePools = (): void => {
-    const remainingAttributes = value.remainingAttributePoints + value.attributes.reduce((total, attribute) => total + attribute.allocated, 0) - [...attributes.allocations().values()].reduce((total, points) => total + points, 0);
-    const skillAllocations = skills.allocations();
-    const remainingSkills = (tier: string, remaining: number): number => remaining + value.skills.filter(skill => skill.tier === tier)
-      .reduce((total, skill) => total + skill.allocated - (skillAllocations.get(skill.id) ?? 0), 0);
-    pools.textContent = `${remainingAttributes} of ${value.attributeBonusPool} attribute points remain; ${remainingSkills('primary', value.primarySkillPoints)}/${remainingSkills('major', value.majorSkillPoints)}/${remainingSkills('minor', value.minorSkillPoints)} primary/major/minor skill points remain.`;
+  const biography = document.createElement('div'); biography.className = 'dagger-creation-biography'; biography.dataset.testid = 'character-biography';
+  biography.replaceChildren(...value.biography.map(line => { const paragraph = document.createElement('p'); paragraph.textContent = line; return paragraph; }));
+  const questionGrid = document.createElement('div'); questionGrid.className = 'dagger-creation-questions';
+  questionGrid.append(...questions.map(question => question.element));
+  const story: HTMLElement[] = [questionGrid, biography];
+  if (value.startingGrants.length !== 0) { const grants = document.createElement('p'); grants.dataset.testid = 'character-starting-grants'; grants.textContent = `Starting grants: ${value.startingGrants.map(grant => `${grant.quantity} × ${grant.label}`).join(', ')}.`; story.push(grants); }
+  if (value.unsupportedEffects.length !== 0) { const unsupported = document.createElement('p'); unsupported.dataset.testid = 'character-background-unsupported-effects'; unsupported.textContent = `Recorded effects: ${value.unsupportedEffects.join(' ')}`; story.push(unsupported); }
+
+  // Each pool is what the ruleset said remains plus what the draft had allocated from it, so the
+  // steppers can spend exactly that pool and never more.
+  const attributePool = value.remainingAttributePoints + value.attributes.reduce((total, attribute) => total + attribute.allocated, 0);
+  const tierPool = (tier: string, remaining: number): number => remaining + value.skills.filter(skill => skill.tier === tier).reduce((total, skill) => total + skill.allocated, 0);
+  const tierPools = new Map<string, number>([['primary', tierPool('primary', value.primarySkillPoints)], ['major', tierPool('major', value.majorSkillPoints)], ['minor', tierPool('minor', value.minorSkillPoints)]]);
+  const attributes = value.attributes.map(attribute => stepper('Attributes', attribute.id, attribute.label, attribute.allocated, attribute.value - attribute.allocated, attribute.maximum));
+  const skills = value.skills.map(skill => ({ tier: skill.tier, row: stepper('Skills', skill.id, skill.label, skill.allocated, skill.value - skill.allocated, Number.MAX_SAFE_INTEGER) }));
+  const spent = (rows: readonly Stepper[]): number => rows.reduce((total, row) => total + row.allocated(), 0);
+  const attributeLeft = (): number => attributePool - spent(attributes);
+  const tierLeft = (tier: string): number => (tierPools.get(tier) ?? 0) - spent(skills.filter(skill => skill.tier === tier).map(skill => skill.row));
+  const pools = document.createElement('p'); pools.className = 'dagger-creation-pool'; pools.dataset.testid = 'character-allocation-pools'; pools.setAttribute('aria-live', 'polite');
+  const tierHeadings = new Map(SKILL_TIERS.map(([tier, label]) => { const heading = document.createElement('h4'); heading.dataset.tier = tier; heading.dataset.label = label; return [tier, heading]; }));
+  const refresh = (): void => {
+    for (const row of attributes) row.bound(attributeLeft());
+    for (const skill of skills) skill.row.bound(tierLeft(skill.tier));
+    pools.textContent = `${attributeLeft()} of ${attributePool} bonus points left`;
+    for (const [tier, heading] of tierHeadings) heading.textContent = `${heading.dataset.label} skills · ${tierLeft(tier)} of ${tierPools.get(tier) ?? 0} points left`;
   };
-  element.addEventListener('input', updatePools);
-  updatePools();
-  element.append(pools, attributes.element, skills.element);
-  if (value.startingGrants.length !== 0) { const grants = document.createElement('p'); grants.dataset.testid = 'character-starting-grants'; grants.textContent = `Starting grants: ${value.startingGrants.map(grant => `${grant.quantity} × ${grant.label}`).join(', ')}.`; element.append(grants); }
-  if (value.unsupportedEffects.length !== 0) { const unsupported = document.createElement('p'); unsupported.dataset.testid = 'character-background-unsupported-effects'; unsupported.textContent = `Recorded effects: ${value.unsupportedEffects.join(' ')}`; element.append(unsupported); }
-  return { element, values: () => ({ backgroundAnswers: answers.map(answer => `${answer.question}:${answer.input.value}`).join(','), attributeAllocations: attributes.values(), skillAllocations: skills.values() }) };
+  element.addEventListener('input', refresh);
+  for (const row of [...attributes, ...skills.map(skill => skill.row)]) row.onChange(() => element.dispatchEvent(new Event('input')));
+  refresh();
+  const skillElements = SKILL_TIERS.flatMap(([tier]) => {
+    const rows = skills.filter(skill => skill.tier === tier);
+    return rows.length === 0 ? [] : [tierHeadings.get(tier)!, ...rows.map(skill => skill.row.element)];
+  });
+  return {
+    story, answers: questions.map(question => question.input), element,
+    attributes: [pools, ...attributes.map(row => row.element)],
+    skills: skillElements,
+    unspent: () => [
+      ...(attributeLeft() > 0 ? [`Spend ${attributeLeft()} more bonus ${attributeLeft() === 1 ? 'point' : 'points'}.`] : []),
+      ...SKILL_TIERS.flatMap(([tier, label]) => tierLeft(tier) > 0 ? [`Spend ${tierLeft(tier)} more ${label.toLowerCase()} skill ${tierLeft(tier) === 1 ? 'point' : 'points'}.`] : []),
+    ],
+    values: () => ({
+      backgroundAnswers: questions.map(question => `${question.question}:${question.input.value}`).join(','),
+      attributeAllocations: allocations(attributes), skillAllocations: allocations(skills.map(skill => skill.row)),
+    }),
+  };
 }
 
-function allocationEditor(title: string, values: readonly { readonly id: string; readonly label: string; readonly allocated: number; readonly canAllocate: boolean }[]): { readonly element: HTMLElement; readonly values: () => string; readonly allocations: () => ReadonlyMap<string, number> } {
-  const element = document.createElement('fieldset'); const legend = document.createElement('legend'); legend.textContent = title; element.append(legend);
-  const inputs = values.map(value => { const label = document.createElement('label'); label.textContent = value.label; const input = document.createElement('input'); input.type = 'number'; input.min = '0'; input.value = String(value.allocated); input.disabled = !value.canAllocate && value.allocated === 0; input.setAttribute('aria-label', `${title} ${value.id}`); label.append(input); element.append(label); return { id: value.id, input }; });
-  const allocations = (): ReadonlyMap<string, number> => new Map(inputs.map(value => [value.id, Math.max(0, Number(value.input.value) || 0)]));
-  return { element, allocations, values: () => [...allocations()].filter(([, points]) => points !== 0).map(([id, points]) => `${id}:${points}`).join(',') };
+interface Stepper {
+  readonly id: string;
+  readonly element: HTMLElement;
+  allocated(): number;
+  /** Enables the steps the pool and the maximum allow, given the points still left in the pool. */
+  bound(left: number): void;
+  onChange(listener: () => void): void;
+}
+
+function stepper(group: string, id: string, label: string, allocated: number, base: number, maximum: number): Stepper {
+  let points = allocated;
+  const listeners: (() => void)[] = [];
+  const element = document.createElement('div'); element.className = 'dagger-creation-stepper'; element.dataset.id = id;
+  const name = document.createElement('span'); name.className = 'dagger-creation-stepper-label'; name.textContent = label;
+  const count = document.createElement('output'); count.setAttribute('aria-label', `${group} ${id}`);
+  const total = document.createElement('strong'); total.className = 'dagger-creation-stepper-total';
+  const change = (delta: number): void => { points += delta; for (const listener of listeners) listener(); };
+  const less = stepButton('−', `Remove a point from ${label}`, () => change(-1));
+  const more = stepButton('+', `Add a point to ${label}`, () => change(1));
+  element.append(name, less, count, more, total);
+  return {
+    id, element,
+    allocated: () => points,
+    bound(left: number): void {
+      count.textContent = points === 0 ? '·' : `+${points}`;
+      total.textContent = String(base + points);
+      less.disabled = points === 0;
+      more.disabled = left <= 0 || base + points >= maximum;
+    },
+    onChange: listener => { listeners.push(listener); },
+  };
+}
+
+function allocations(rows: readonly Stepper[]): string {
+  return rows.filter(row => row.allocated() !== 0).map(row => `${row.id}:${row.allocated()}`).join(',');
 }
 
 function renderLevelUp(root: HTMLElement, value: CharacterLevelUp | null, send?: (action: CharacterAction) => void): void {

@@ -45,7 +45,7 @@
    death ends. */
 .dagger-death { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; background: #05060a; pointer-events: auto; isolation: isolate; overflow: hidden; }
 .dagger-death[hidden] { display: none; }
-.dagger-death-screen { max-width: min(100%, 1280px); max-height: 100%; image-rendering: pixelated; }
+.dagger-death-screen { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
 .dagger-death-fade { position: absolute; inset: 0; z-index: 1; background: #000; opacity: 0; pointer-events: none; transition: opacity 900ms linear; }
 .dagger-death[data-fade-effect="to-black"] .dagger-death-fade { opacity: 1; }
 .dagger-death-panel { position: absolute; z-index: 2; bottom: 10%; width: min(32rem, calc(100vw - 2rem)); padding: 1.2rem; display: grid; gap: .8rem; background: rgb(8 9 11 / .92); border: 1px solid #c6a05a; box-shadow: 0 12px 44px rgb(0 0 0 / .7); }
@@ -68,8 +68,8 @@
    fills the frame and this stylesheet carries layout only. */
 .dagger-entry { position: absolute; inset: 0; display: grid; place-items: center; background: #05060a; pointer-events: auto; }
 .dagger-entry[hidden] { display: none; }
-.dagger-entry-screen { max-width: min(100%, 1280px); max-height: 100%; image-rendering: pixelated; }
-.dagger-entry-begin { position: absolute; bottom: 12%; padding: 8px 22px; font: inherit; color: #f6ddb0; background: rgba(2, 4, 4, .78); border: 1px solid rgba(198, 160, 90, .65); cursor: pointer; }
+.dagger-entry-screen { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
+.dagger-entry-begin { position: absolute; bottom: 2%; left: 50%; transform: translateX(calc(-100% - 6px)); padding: 8px 22px; font: inherit; color: #f6ddb0; background: rgba(2, 4, 4, .78); border: 1px solid rgba(198, 160, 90, .65); cursor: pointer; }
 .dagger-entry-begin:hover { background: rgba(40, 30, 12, .85); }
 .dagger-composition { position: absolute; right: 24px; top: 22px; max-width: min(42rem, calc(100vw - 48px)); padding: 10px 12px; background: rgba(2, 4, 4, .78); border: 1px solid rgba(198, 160, 90, .65); font: .7rem ui-monospace, monospace; }
 .dagger-composition > strong { color: #d9bf80; text-transform: uppercase; letter-spacing: .08em; }
@@ -156,10 +156,10 @@
 .dagger-map-diagram [role="button"] { cursor: pointer; }
 .dagger-map-note-edit { display: inline-flex; gap: .3rem; margin-left: .4rem; }
 
-.dagger-entry-create { position: absolute; bottom: 5%; padding: 8px 22px; font: inherit; color: #f6ddb0; background: #171713; border: 1px solid #c6a05a; cursor: pointer; }
+.dagger-entry-create { position: absolute; bottom: 2%; left: 50%; transform: translateX(6px); padding: 8px 22px; font: inherit; color: #f6ddb0; background: #171713; border: 1px solid #c6a05a; cursor: pointer; }
 .dagger-entry-creation { position: absolute; inset: 4% 10% 10%; overflow: auto; padding: 20px; color: #f6ddb0; background: rgba(8, 12, 10, .9); border: 1px solid #c6a05a; }
 .dagger-entry-parts { position: absolute; right: 0; bottom: 0; display: flex; pointer-events: none; }
-.dagger-entry-parts img { max-width: 320px; image-rendering: pixelated; }
+.dagger-entry-parts img { image-rendering: pixelated; }
 
 .dagger-quests:not(:empty) { position: absolute; left: 50%; top: 120px; transform: translateX(-50%); z-index: 20; display: grid; gap: 12px; width: min(44rem, calc(100vw - 32px)); max-height: calc(100vh - 220px); overflow-y: auto; pointer-events: auto; }
 .dagger-quest-message { display: grid; gap: 8px; padding: 16px 20px; border: 1px solid #d4b56b; background: rgba(12, 13, 10, .94); line-height: 1.5; }
