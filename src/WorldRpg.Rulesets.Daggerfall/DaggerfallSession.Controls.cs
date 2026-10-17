@@ -66,7 +66,7 @@ internal sealed partial class DaggerfallSession
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException)
         {
-            _controlDiagnostic = error.Message;
+            _controlDiagnostic = DaggerfallRejectionText.For(error);
         }
     }
     private void ApplyShortcut(string id)

@@ -1,5 +1,6 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -113,7 +114,7 @@ internal sealed class DaggerfallTradeQuoteService
         }
         catch (ArgumentException exception)
         {
-            return DaggerfallTradeQuoteResult.Rejected(DaggerfallTradeQuoteFailure.InvalidInput, exception.Message);
+            return DaggerfallTradeQuoteResult.Rejected(DaggerfallTradeQuoteFailure.InvalidInput, DaggerfallRejectionText.For(exception));
         }
         catch (InvalidOperationException exception)
         {

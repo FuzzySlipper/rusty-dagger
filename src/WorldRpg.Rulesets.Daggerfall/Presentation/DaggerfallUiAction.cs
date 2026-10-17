@@ -158,7 +158,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.CharacterCancel, "character-cancel", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.CharacterLevelAllocate, "character-level-allocate", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.CharacterLevelCommit, "character-level-commit", DaggerfallUiPhases.Interaction),
-        new(DaggerfallUiActionKind.ActivationMode, "activation-mode", DaggerfallUiPhases.Playing),
+        new(DaggerfallUiActionKind.ActivationMode, "activation-mode", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.SpellReady,"spell-ready",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SpellUnready,"spell-unready",DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SpellCast,"spell-cast",DaggerfallUiPhases.Interaction),

@@ -200,18 +200,27 @@ test('rest panel sends semantic durations and shows the ruleset elapsed outcome'
     hours.value = '2';
     panel.querySelector('[data-rest-mode="timed"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'rest', mode: 'timed', hours: 2 });
-    hours.value = '-1';
+    // Loiter has its own box, bounded by the ruleset's maximum: 12 hours is brought back to 3.
+    f.publish({ rest: { hasResult: false, revision: '0', mode: null, requestedSeconds: 0, elapsedSeconds: 0, recoveryHours: 0, healthRecovered: 0,
+      fatigueRecovered: 0, spellPointsRecovered: 0, interruption: 'None', message: null, maximumRestHours: 99, maximumLoiterHours: 3 } });
+    const loiter = panel.querySelector('.dagger-loiter-hours');
+    assert.equal(loiter.max, '3');
+    loiter.value = '12'; loiter.dispatchEvent(new window.Event('change', { bubbles: true }));
+    assert.equal(loiter.value, '3');
+    panel.querySelector('[data-rest-mode="loiter"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'rest', mode: 'loiter', hours: 3 });
+    loiter.value = '';
     const count = f.actions.length;
     panel.querySelector('[data-rest-mode="loiter"]').click();
     assert.equal(f.actions.length, count);
-    assert.match(panel.querySelector('.dagger-rest-status').textContent, /whole number/);
+    assert.match(panel.querySelector('.dagger-rest-status').textContent, /whole number of hours from 1 to 3/);
     panel.querySelector('[data-rest-mode="until-healed"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'rest', mode: 'until-healed' });
     f.publish({ rest: {
       hasResult: true, revision: '1', mode: 'Timed', requestedSeconds: 7200,
       elapsedSeconds: 3600, recoveryHours: 1, healthRecovered: 3,
       fatigueRecovered: 8, spellPointsRecovered: 2, interruption: 'Encounter',
-      message: 'Your rest was interrupted by an encounter.',
+      message: 'Your rest was interrupted by an encounter.', maximumRestHours: 99, maximumLoiterHours: 3,
     } });
     assert.equal(panel.querySelector('.dagger-rest-status').textContent,
       'Your rest was interrupted by an encounter.');
@@ -793,6 +802,9 @@ test('activation selection follows product mode and emits only semantic mode cha
     assert.deepEqual(f.actions.at(-1), { action: 'activation-mode', mode: 'bash' });
     f.publish({ activation: { mode: 'grab', message: '', applied: false } });
     assert.equal(select.value, 'grab');
+    // The menu that holds the selector is a modal mode, where the choice still applies.
+    f.publish({ mode: 'modal' });
+    assert.equal(select.disabled, false);
     f.publish({ mode: 'title' });
     assert.equal(select.disabled, true);
   } finally { f.dispose(); }

@@ -3,6 +3,7 @@ using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using KitItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 
@@ -92,7 +93,7 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
             return new(Revision, Draft, quote.Capacity, quote.Power, quote.Gold, [.. settings.Select(Setting)], true, null);
         }
         catch (Exception exception) when (exception is ArgumentException or OverflowException)
-        { return Refused(exception.Message); }
+        { return Refused(DaggerfallRejectionText.For(exception)); }
     }
 
     internal DaggerfallItemMakerResult Buy(DaggerfallServiceProvider provider, string revision, ulong price, bool confirm)

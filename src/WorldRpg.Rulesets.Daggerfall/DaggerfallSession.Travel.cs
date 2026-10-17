@@ -306,7 +306,7 @@ internal sealed partial class DaggerfallSession
         catch (InvalidOperationException failure)
         {
             // A location whose blocks do not assemble is named with what is missing rather than half-entered.
-            return $"You cannot travel to {quote.Destination.Name}: {failure.Message}";
+            return $"You cannot travel to {quote.Destination.Name}: {DaggerfallRejectionText.For(failure)}";
         }
         destination = exterior; return null;
     }

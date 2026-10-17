@@ -133,6 +133,9 @@ interface RestProjection {
   readonly fatigueRecovered: number;
   readonly spellPointsRecovered: number;
   readonly interruption: string;
+  /** The longest timed rest and loiter the ruleset accepts, which bound their duration boxes. */
+  readonly maximumRestHours: number;
+  readonly maximumLoiterHours: number;
   readonly message: string | null;
 }
 
@@ -404,10 +407,11 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       <section class="dagger-rest-root" hidden aria-label="Rest and loiter">
         <h2>Rest &amp; loiter</h2>
         <p class="dagger-rest-status" role="status" aria-live="polite">Choose a rest action.</p>
-        <label>Hours <input class="dagger-rest-hours" type="number" min="0" max="99" step="1" value="1"></label>
         <div class="dagger-rest-actions">
+          <label>Rest hours <input class="dagger-rest-hours" type="number" min="1" max="99" step="1" value="1"></label>
           <button type="button" data-action="rest" data-rest-mode="timed">Rest for hours</button>
           <button type="button" data-action="rest" data-rest-mode="until-healed">Rest until healed</button>
+          <label>Loiter hours <input class="dagger-loiter-hours" type="number" min="1" max="3" step="1" value="1"></label>
           <button type="button" data-action="rest" data-rest-mode="loiter">Loiter</button>
         </div>
       </section>
@@ -569,6 +573,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   }));
   const restStatus = shell.querySelector<HTMLElement>('.dagger-rest-status')!;
   const restHours = shell.querySelector<HTMLInputElement>('.dagger-rest-hours')!;
+  const loiterHours = shell.querySelector<HTMLInputElement>('.dagger-loiter-hours')!;
+  // Each duration box holds only what its mode accepts: a typed value outside the ruleset's
+  // range is brought back into it when the box is left.
+  for (const box of [restHours, loiterHours]) box.addEventListener('change', () => {
+    const typed = Number(box.value);
+    if (box.value.trim().length !== 0 && Number.isFinite(typed)) box.value = String(Math.min(Number(box.max), Math.max(Number(box.min), Math.round(typed))));
+  });
   const submitRest = (mode: string): void => {
     if (mode === 'until-healed') {
       context.intents?.claim('dagger.ui', {
@@ -576,11 +587,12 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       });
       return;
     }
-    const rawHours = restHours.value.trim();
+    const box = mode === 'loiter' ? loiterHours : restHours;
+    const rawHours = box.value.trim();
     const hours = Number(rawHours);
-    if (rawHours.length === 0 || !Number.isSafeInteger(hours) || hours < 0) {
-      restStatus.textContent = 'Enter a whole number of hours.';
-      restHours.focus();
+    if (rawHours.length === 0 || !Number.isSafeInteger(hours) || hours < Number(box.min) || hours > Number(box.max)) {
+      restStatus.textContent = `Enter a whole number of hours from ${box.min} to ${box.max}.`;
+      box.focus();
       return;
     }
     context.intents?.claim('dagger.ui', {
@@ -1377,6 +1389,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     }
     lodgingView.update(isLodgingProjection(value.lodging) ? value.lodging : null);
     if (value.rest && isRestProjection(value.rest)) {
+      restHours.max = String(value.rest.maximumRestHours);
+      loiterHours.max = String(value.rest.maximumLoiterHours);
       restStatus.textContent = value.rest.message
         ?? (value.rest.hasResult ? `Rested for ${formatRestHours(value.rest.elapsedSeconds)}.` : 'Choose a rest action.');
     }
@@ -1472,7 +1486,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     }
     if (value.controls) controlsView.update(value.controls);
     if (value.activation) activationMode.value = value.activation.mode;
-    activationMode.disabled = value.mode !== 'playing';
+    // The selector lives in the menu, which the product reports as modal, so it serves both.
+    activationMode.disabled = value.mode !== 'playing' && value.mode !== 'modal';
     // Dead mode owns the whole interaction surface. An activation projection can remain in the
     // retained snapshot for one delivery, but it must not reopen a native dialogue over the death
     // choices or leave a close action aimed at a session that has already stopped ordinary input.
@@ -1832,7 +1847,8 @@ function isRestProjection(value: unknown): value is RestProjection {
     && typeof candidate.fatigueRecovered === 'number' && Number.isFinite(candidate.fatigueRecovered)
     && typeof candidate.spellPointsRecovered === 'number' && Number.isFinite(candidate.spellPointsRecovered)
     && typeof candidate.interruption === 'string'
-    && (candidate.message === null || typeof candidate.message === 'string');
+    && (candidate.message === null || typeof candidate.message === 'string')
+    && Number.isSafeInteger(candidate.maximumRestHours) && Number.isSafeInteger(candidate.maximumLoiterHours);
 }
 
 function formatRestHours(seconds: number): string {

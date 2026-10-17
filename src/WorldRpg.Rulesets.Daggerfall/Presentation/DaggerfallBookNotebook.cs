@@ -132,7 +132,7 @@ internal sealed class DaggerfallBookNotebook(DaggerfallDefinitions definitions, 
         }
         catch (ArgumentException error)
         {
-            return new(false, error.Message);
+            return new(false, DaggerfallRejectionText.For(error));
         }
     }
 

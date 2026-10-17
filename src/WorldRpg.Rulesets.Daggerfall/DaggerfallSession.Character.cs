@@ -66,7 +66,7 @@ internal sealed partial class DaggerfallSession
         }
         catch (ArgumentException error)
         {
-            Presentation.SetOutcome($"Character choice was not accepted: {error.Message}");
+            Presentation.SetOutcome($"Character choice was not accepted: {DaggerfallRejectionText.For(error)}");
         }
     }
 
@@ -99,7 +99,7 @@ internal sealed partial class DaggerfallSession
         }
         catch (ArgumentException error)
         {
-            Presentation.SetOutcome($"Level-up choice was not accepted: {error.Message}");
+            Presentation.SetOutcome($"Level-up choice was not accepted: {DaggerfallRejectionText.For(error)}");
         }
     }
 

@@ -45,7 +45,7 @@ internal sealed partial class DaggerfallSession
         }
         catch (ArgumentException rejection)
         {
-            DaggerfallRestResult rejected = DaggerfallRestResult.Rejected(request.Mode, rejection.Message);
+            DaggerfallRestResult rejected = DaggerfallRestResult.Rejected(request.Mode, DaggerfallRejectionText.For(rejection));
             _restPresentation.Publish(rejected);
             Presentation.SetOutcome(rejected.Message!);
             return rejected;
