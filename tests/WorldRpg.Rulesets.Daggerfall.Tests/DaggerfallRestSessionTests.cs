@@ -58,6 +58,34 @@ public sealed class DaggerfallRestSessionTests
         }
     }
 
+    /// <summary>A refused duration reads as the ruleset's sentence, without the .NET parameter name or value.</summary>
+    [Fact]
+    public void An_overlong_loiter_is_refused_in_the_rulesets_words()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"loiter\",\"hours\":12}")]));
+
+        Assert.Equal($"Loiter cannot exceed {DaggerfallRestPolicy.MaximumLoiterHours} hours.", session.RestView.Message);
+        Assert.Equal(0, session.RestView.ElapsedSeconds);
+    }
+
+    [Fact]
+    public void Rejection_text_drops_the_parameter_name_and_actual_value()
+    {
+        Assert.Equal("Too long.", DaggerfallRejectionText.For(new ArgumentOutOfRangeException("Hours", 12, "Too long.")));
+        Assert.Equal("Choose a name.", DaggerfallRejectionText.For(new ArgumentException("Choose a name.", "name")));
+        Assert.Equal("Choose a name.", DaggerfallRejectionText.For(new ArgumentException("Choose a name.")));
+        Assert.Equal("Not here.", DaggerfallRejectionText.For(new InvalidOperationException("Not here.")));
+    }
+
     [Fact]
     public void Selected_rest_encounter_interrupts_at_its_minute_and_restores_the_queued_choice()
     {

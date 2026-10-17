@@ -381,6 +381,31 @@ public sealed class ControlsInputSessionTests
         Assert.Equal(PointerButton.Primary, Mapping("attack").PointerButton);
     }
 
+    /// <summary>The activation selector lives in the menu, which is a modal mode, so Talk is reachable from there.</summary>
+    [Fact]
+    public void Activation_mode_is_chosen_from_the_open_menu()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+        session.ApplyProductMode(ProductMode.Modal);
+        ProductInputEvent talk = Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes("""{"action":"activation-mode","mode":"talk"}"""),
+        };
+
+        session.Update(new ProductUpdate(OuterUpdate(1), [talk]));
+
+        Assert.Equal(DaggerfallActivationMode.Talk, session.ActivationMode);
+    }
+
     [Fact]
     public void Activation_mode_change_consumes_a_coincident_attack_without_starting_melee()
     {

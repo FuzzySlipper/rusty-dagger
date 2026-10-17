@@ -471,7 +471,9 @@
     "fatigueRecovered": 0,
     "spellPointsRecovered": 0,
     "interruption": "",
-    "message": null
+    "message": null,
+    "maximumRestHours": 99,
+    "maximumLoiterHours": 3
   },
   "lodging": null,
   "map": null,

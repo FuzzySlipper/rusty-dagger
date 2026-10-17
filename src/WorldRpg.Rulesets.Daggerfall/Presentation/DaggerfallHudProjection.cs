@@ -509,7 +509,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("fatigueRecovered", builder.Number(rest.FatigueRecovered)),
         ("spellPointsRecovered", builder.Number(rest.SpellPointsRecovered)),
         ("interruption", builder.String(DaggerfallRestPresentation.InterruptionText(rest.Interruption))),
-        ("message", rest.Message is null ? builder.Null() : builder.String(rest.Message)));
+        ("message", rest.Message is null ? builder.Null() : builder.String(rest.Message)),
+        ("maximumRestHours", builder.Number(DaggerfallRestPolicy.MaximumTimedHours)),
+        ("maximumLoiterHours", builder.Number(DaggerfallRestPolicy.MaximumLoiterHours)));
 
     private static uint Quests(UiValueBuilder builder, DaggerfallQuestPresentation quests) => builder.Object(
         ("offer", quests.Offer is not { } offer ? builder.Null() : builder.Object(
