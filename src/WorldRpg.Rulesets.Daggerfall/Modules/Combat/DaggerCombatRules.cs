@@ -61,6 +61,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     internal AttackExecution<IProductFact> Execution { get; }
     private readonly List<DeferredAttackImpact> _releasedRangedShots = [];
     private readonly Dictionary<RangedShotIdentity, InFlightRangedShot> _inFlightRangedShots = [];
+    internal bool HasPlayerRangedFlight => _releasedRangedShots.Any(shot => shot.Request.AttackerId == DaggerfallActorIdentity.PlayerEntityId)
+        || _inFlightRangedShots.Values.Any(shot => shot.Release.Request.AttackerId == DaggerfallActorIdentity.PlayerEntityId);
     // The pack's arrow item is the one ammunition the adopted ranged shots draw. A second ranged
     // action with different ammunition would move this name onto the authored action.
     private const string ArrowItemId = "arrow";

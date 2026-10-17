@@ -36,6 +36,7 @@ internal sealed partial class DaggerfallSession
         if (outcome != InputMappingReplacementOutcome.Staged)
             throw new InvalidOperationException($"Control bindings were not applied: {outcome}.");
         _controlSettings = settings;
+        PlayerTime.Select(settings.ActionDrivenTime);
         _input.ConfigureLook(_tuning.PlayerControl.LookSensitivity * settings.LookSensitivity, settings.InvertVertical);
         // Direct key observations and Engine-mapped directions share the chosen bindings.
         _input.Rebind(DaggerfallInput.Controls with

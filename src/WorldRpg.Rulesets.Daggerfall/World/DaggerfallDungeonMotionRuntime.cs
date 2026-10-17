@@ -95,6 +95,9 @@ internal sealed class DaggerfallDungeonMotionRuntime
     private readonly string _profileId;
     private readonly Dictionary<string, MotionState> _actions;
 
+    internal bool IsMoving => _actions.Values.Any(state => state.Phase is
+        DaggerfallDungeonMotionPhase.PlayingForward or DaggerfallDungeonMotionPhase.PlayingReverse);
+
     internal DaggerfallDungeonMotionRuntime(
         EntityStore entities,
         string profileId,

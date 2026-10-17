@@ -53,6 +53,18 @@
     <RustyEngineProductInputIntent Include="rest" Value="digital" />
     <RustyEngineProductInputIntent Include="map" Value="digital" />
     <RustyEngineProductInputIntent Include="transport" Value="digital" />
+    <RustyEngineProductInputIntent Include="activation.steal" Value="digital" />
+    <RustyEngineProductInputIntent Include="activation.grab" Value="digital" />
+    <RustyEngineProductInputIntent Include="activation.info" Value="digital" />
+    <RustyEngineProductInputIntent Include="activation.talk" Value="digital" />
+    <RustyEngineProductInputIntent Include="quick-save" Value="digital" />
+    <RustyEngineProductInputIntent Include="quick-load" Value="digital" />
+    <RustyEngineProductInputIntent Include="logbook" Value="digital" />
+    <RustyEngineProductInputIntent Include="notebook" Value="digital" />
+    <RustyEngineProductInputIntent Include="travel-map" Value="digital" />
+    <RustyEngineProductInputIntent Include="use-magic-item" Value="digital" />
+    <RustyEngineProductInputIntent Include="recast" Value="digital" />
+    <RustyEngineProductInputIntent Include="abort-spell" Value="digital" />
     <RustyEngineProductInputIntent Include="attack" Value="digital" />
     <RustyEngineProductInputMapping Include="attack.primary" Intent="attack" Trigger="pointer-button:primary:pressed" />
     <RustyEngineProductInputIntent Include="interact" Value="digital" />

@@ -46,6 +46,7 @@ internal sealed partial class DaggerfallSession
         long? swimmingMinuteBefore = null, long? swimmingMinuteAfter = null)
     {
         if (LegalModalOpen) return;
+        _pendingWorldAction = false;
         _latestUpdateGeneration = generation;
         _latestSimulationStep = simulationStep;
         if (State.DungeonActions.TryGetValue(_activeProfileKey, out DaggerfallDungeonActionGraph? actionGraph))
@@ -54,7 +55,7 @@ internal sealed partial class DaggerfallSession
         _combat.AdvanceEquipment(update.DeltaSeconds);
         State.Kit.AttackExecution.ObserveTimeline(generation, simulationStep);
         var restrictions = State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId);
-        _input.Apply(State.PlayerControl, update, restrictions);
+        _input.ApplyObserved(update, restrictions);
         // The Engine still receives an ordinary character step (grounding and gravity remain its
         // responsibility), but classic over-capacity removes planar intent before that proposal.
         bool alive = State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current > 0d;
@@ -64,7 +65,7 @@ internal sealed partial class DaggerfallSession
             IsIndoor: _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior,
             IsDungeon: _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon));
         bool slowfall = State.Effects.GrantsSlowfall(DaggerfallActorIdentity.PlayerEntityId);
-        DaggerfallLocomotionStep locomotion = _locomotion.BeginStep([.. update.Inputs], update.DeltaSeconds,
+        DaggerfallLocomotionStep locomotion = _locomotion.BeginStep([], update.DeltaSeconds,
             State.Actors.Player.Stats, canMove, State.Transport,
             State.Effects.EnhancesJumping(DaggerfallActorIdentity.PlayerEntityId), slowfall);
         CharacterMotion motionBefore = State.PlayerControl.Motion;
@@ -209,9 +210,8 @@ internal sealed partial class DaggerfallSession
         if (State.Actors.Player.IsDefeated
             || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d)
             return;
-        // The swing gesture is measured from the look turns this admitted update committed, so the
-        // attack below reads the gesture the player actually drew in the moments before it.
-        _playerSwings.Observe(update.DeltaSeconds, State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians);
+        // Look and its gesture trail were observed once, in host time, before these world steps;
+        // the attack reads the gesture the player actually drew before pressing it.
         DaggerfallPlayerActs acts = new(
             ToggleWeapon: update.IsRequested(DaggerfallInput.ToggleWeapon),
             Attack: update.IsRequested(DaggerfallInput.Attack) ? new(generation, simulationStep, update.DeltaSeconds) : null,

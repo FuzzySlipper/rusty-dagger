@@ -1968,3 +1968,22 @@ test('spellbook move and sort request canonical order without changing the proje
     assert.equal(f.root.querySelector('[data-action="spell-ready"]').dataset.spell, 'a');
   } finally { f.dispose(); }
 });
+
+
+test('action-driven time toggle reflects the product preference and held status', () => {
+  const f = fixture();
+  try {
+    f.publish({ timeControl: { enabled: false, held: false } });
+    const toggle = f.root.querySelector('[data-action="action-driven-time"]');
+    assert.equal(toggle.getAttribute('aria-pressed'), 'false');
+    toggle.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'action-driven-time', enabled: true });
+    f.publish({ timeControl: { enabled: true, held: true } });
+    assert.equal(toggle.getAttribute('aria-pressed'), 'true');
+    assert.match(f.root.textContent, /Action-driven · Paused/);
+    f.publish({ timeControl: { enabled: true, held: false } });
+    assert.match(f.root.textContent, /Action-driven · Acting/);
+    toggle.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'action-driven-time', enabled: false });
+  } finally { f.dispose(); }
+});

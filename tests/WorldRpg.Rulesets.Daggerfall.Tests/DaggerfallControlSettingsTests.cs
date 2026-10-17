@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Xml.Linq;
 using System.Text;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall;
@@ -9,6 +10,20 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>Control settings validate complete changes before making them observable.</summary>
 public sealed class DaggerfallControlSettingsTests
 {
+    [Fact]
+    public void Every_physical_binding_names_a_digital_intent_declared_to_the_Engine()
+    {
+        XDocument project = XDocument.Load(Path.Combine(TestData.RepositoryRoot, "src/WorldRpg.Host/WorldRpg.Host.csproj"));
+        var declared = project.Descendants("RustyEngineProductInputIntent")
+            .ToDictionary(element => (string)element.Attribute("Include")!, element => (string)element.Attribute("Value")!);
+        foreach (var mapping in new DaggerfallControlSettings().PhysicalMappings())
+        {
+            string intent = Encoding.UTF8.GetString(mapping.Intent.Span);
+            Assert.True(declared.TryGetValue(intent, out string? kind), $"Undeclared physical intent: {intent}");
+            Assert.Equal("digital", kind);
+        }
+    }
+
     [Fact]
     public void Physical_attack_mapping_uses_the_active_engine_gameplay_context()
     {

@@ -50,6 +50,7 @@ interface DaggerHud {
   readonly panelRequest?: PanelRequest | null;
   readonly saveSlots?: SaveSlotProjection;
   readonly controls?: ControlsProjection;
+  readonly timeControl?: { readonly enabled: boolean; readonly held: boolean };
   readonly activation?: { readonly mode: string; readonly message: string; readonly applied: boolean; readonly dialogue?: DialogueProjection | null };
   readonly transport?: TransportProjection | null;
   readonly property?: PropertyProjection | null;
@@ -383,7 +384,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         <button data-action="debug">Engine debug console</button>
         <button data-action="diagnostics">Composition diagnostics</button>
         <button data-action="settings">Control settings</button>
-        <p>The world continues while this menu is open.</p>
+        <button data-action="action-driven-time" aria-pressed="false">Action-driven time: Off</button>
+        <p>Action-driven time pauses while you are idle or looking around. Movement and actions advance the world; swings and jumps finish before it pauses.</p>
+        <p>The world pauses while this menu is open.</p>
       </div>
       <div class="dagger-menu-panel" hidden>
       <section class="dagger-composition" aria-label="Resolved composition diagnostics">
@@ -622,6 +625,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // A load asked for from the menu: a successful one replaces the session, which starts in play, so
   // the menu that asked closes rather than stay open over a world that is running again.
   let loadRequested = false;
+  let actionDrivenTime = false;
   const claimDeath = (action: string, key?: string): void => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: key ? { action, key } : { action },
   });
@@ -989,11 +993,15 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   };
   // One place decides what a menu action means, whether the DOM heard it from a click, a key, or the
   // product answering a button on a pad the DOM cannot see.
+  const setActionDrivenTime = (enabled: boolean): void => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'action-driven-time', enabled },
+  });
   const runMenuAction = (action: string | undefined): void => {
     if (action === 'resume' || action === 'loot-exit') closeMenu();
     else if (action === 'back') showHome();
     else if (action === 'menu') dismiss();
     else if (action === 'loot') claim('loot');
+    else if (action === 'action-driven-time') setActionDrivenTime(!actionDrivenTime);
     else if (action === 'save-game') showSaveSlots('save');
     // Quick save and quick load are the product's own actions over the Host's quick-save slot; a
     // successful quick load replaces the session, so the menu that asked closes the way a slot load does.
@@ -1410,6 +1418,11 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
 
     title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'
       : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
+    actionDrivenTime = value.timeControl?.enabled ?? false;
+    const timeToggle = menu.querySelector<HTMLButtonElement>('[data-action="action-driven-time"]')!;
+    timeToggle.setAttribute('aria-pressed', String(value.timeControl?.enabled ?? false));
+    timeToggle.textContent = `Action-driven time: ${value.timeControl?.enabled ? 'On' : 'Off'}`;
+    if (value.mode === 'playing' && value.timeControl?.enabled) title.textContent = `Action-driven · ${value.timeControl.held ? 'Paused' : 'Acting'}`;
     siteName.textContent = value.site?.name ?? '';
     outcome.replaceChildren(...value.messages.map(message => {
       const line = document.createElement('li'); line.textContent = message; return line;
@@ -1831,6 +1844,9 @@ export function isHud(value: unknown): value is DaggerHud {
     && 'resources' in value && Array.isArray(value.resources) && value.resources.every(isResourceRow)
     && 'lastOutcome' in value && typeof value.lastOutcome === 'string'
     && 'messages' in value && Array.isArray(value.messages) && value.messages.every(line => typeof line === 'string')
+    && (!('timeControl' in value) || (typeof value.timeControl === 'object' && value.timeControl !== null
+      && 'enabled' in value.timeControl && typeof value.timeControl.enabled === 'boolean'
+      && 'held' in value.timeControl && typeof value.timeControl.held === 'boolean'))
     && 'composition' in value && isCompositionIdentity(value.composition);
 }
 

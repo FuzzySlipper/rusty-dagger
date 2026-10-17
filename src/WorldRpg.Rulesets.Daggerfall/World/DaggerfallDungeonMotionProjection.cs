@@ -195,6 +195,8 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
         SyncCollisionInstances(deltaSeconds);
     }
 
+    internal bool IsMoving => _motion.IsMoving;
+
     internal DaggerfallDungeonMotionSnapshot Capture() => _motion.Capture();
 
     /// <summary>Initializes this profile after its canonical content artifact has been replaced.</summary>
