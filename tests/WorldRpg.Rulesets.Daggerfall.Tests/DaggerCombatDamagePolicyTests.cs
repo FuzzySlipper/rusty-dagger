@@ -124,6 +124,7 @@ public sealed class DaggerCombatDamagePolicyTests
             return this;
         }
         public bool UntargetedSwingsWaitForImpact => true;
+        public bool ImpactsOutliveTheirTarget => false;
         public bool TryPrepare(DaggerfallAdmittedAttack admitted, FactBuffer<IProductFact> facts, out DaggerCombatRules.DaggerfallPreparedAttack prepared)
         {
             Prepared.Add(admitted);
@@ -736,6 +737,7 @@ public sealed class DaggerCombatDamagePolicyTests
             DaggerfallDefinitions definitions = Definitions;
             DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
             _random = random ?? (IRandomService)(object)_scripted;
+            ArmorValueShift = armorValueShift;
             _actors = new ActorsState();
             PlayerActorState player = _actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId(playerDefinition.Id.Value),
                 new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
@@ -767,7 +769,7 @@ public sealed class DaggerCombatDamagePolicyTests
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : _playerEquipment,
                 itemCondition: _itemCondition, rules: new CombatResolution(), adrenalineRush: _ => default,
                 playerPosition: () => _playerPosition, character: () => _character, playerSwing: TakeGesture,
-                coverBlocksShot: coverBlocks ?? ((_, _) => false), armorValueModifier: () => armorValueShift,
+                coverBlocksShot: coverBlocks ?? ((_, _) => false), armorValueModifier: () => ArmorValueShift,
                 deliverWeaponPoison: (_, _) => throw new InvalidOperationException("This fixture coats no weapon."),
                 attackChanceModifier: () => attackChanceShift,
                 transformActor: (_, target, _, _, _) => new DaggerfallWabbajackResult(DaggerfallWabbajackOutcome.InvalidTarget, target),
@@ -852,6 +854,9 @@ public sealed class DaggerCombatDamagePolicyTests
 
         internal double? ReachOf(long actorId) => _combat.ReachOf(actorId);
 
+        /// <summary>The player's worn armor-value shift, as held enchantments would give it.</summary>
+        internal int ArmorValueShift { get; set; }
+
         /// <summary>The variant's composed owners, when the fixture runs under one.</summary>
         internal DaggerfallSeamOwners? Owners { get; }
 
@@ -867,9 +872,12 @@ public sealed class DaggerCombatDamagePolicyTests
         /// <summary>Stands another brigand at <paramref name="at"/>, for a touch or swing that reaches several actors.</summary>
         internal ActorState SpawnBrigand(long id, WorldPoint at)
         {
-            DaggerfallActorDefinition brigand = Definitions.RequireActor(new DaggerfallActorId("thief"));
-            return _actors.CreateActor(id, new EntityTypeId("brigand"),
+            DaggerfallActorDefinition brigand = Definitions.RequireActor(new DaggerfallActorId("thief")) with { ActionId = "enemy-class-equipped-melee" };
+            _authored[id] = brigand;
+            ActorState spawned = _actors.CreateActor(id, new EntityTypeId("brigand"),
                 new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(at, 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+            _actorEquipment[id] = BuildEquipment(spawned.Actor.Entity, id, spawned.Actor);
+            return spawned;
         }
 
         /// <summary>Skill uses the rules recorded, in order.</summary>
@@ -887,7 +895,8 @@ public sealed class DaggerCombatDamagePolicyTests
         /// <summary>The session reads seam owners are built over, from this fixture.</summary>
         internal DaggerfallSeamInputs SeamInputs => new(Definitions, () => _character, _random,
             id => id == DaggerfallActorIdentity.PlayerEntityId ? _playerEquipment.Read() : _actorEquipment[id].Read(),
-            id => id == DaggerfallActorIdentity.PlayerEntityId ? _actors.Player.Stats : _actors.TryGet(id, out ActorState actor) ? actor.Stats : null);
+            id => id == DaggerfallActorIdentity.PlayerEntityId ? _actors.Player.Stats : _actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
+            () => ArmorValueShift);
 
         internal ulong CooldownRemaining(long actorId, ulong generation, ulong step) =>
             _combat.Execution.CaptureCooldowns(generation, step).Single(cooldown => cooldown.AttackerId == actorId).RemainingSteps;

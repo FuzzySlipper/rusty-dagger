@@ -120,6 +120,25 @@ public sealed class AttackExecutionTests
         Assert.Null(actors.Get(2).Actor.Get<AttackState>().Pending);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_pending_impact_whose_target_falls_first_is_dropped_unless_impacts_outlive_their_target(bool outlive)
+    {
+        using ActorsState actors = Actors();
+        RecordingRules rules = new();
+        AttackExecution<TestFact> execution = new(actors, rules, impactsOutliveTheirTarget: outlive);
+        FactBuffer<TestFact> facts = new();
+        AttackRequest swing = new(2, 3, 7, 10, 1d, Delayed: true);
+
+        Assert.True(execution.Start(swing, facts));
+        actors.Get(3).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
+        execution.ApplyImpacts([new AttackImpactNotice(2, 3, 7, 10, Expired: false)], 7, facts);
+
+        Assert.Equal(outlive ? [swing] : [], rules.Applied);
+        Assert.Null(actors.Get(2).Actor.Get<AttackState>().Pending);
+    }
+
     [Fact]
     public void Immediate_attack_applies_after_start_and_refuses_defeated_targets()
     {

@@ -128,10 +128,10 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         _actorGameplayActive = actorGameplayActive ?? throw new ArgumentNullException(nameof(actorGameplayActive));
         _actorTeam = actorTeam ?? throw new ArgumentNullException(nameof(actorTeam));
         _mitigation = mitigation ?? new DaggerfallClassicPhysicalMitigation(character);
-        Execution = new(actors, this, DeferRangedImpact);
         _weaponMaterialModifiers = DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers;
         _actions = definitions.Actions;
         _delivery = delivery?.Invoke(this) ?? new DaggerfallClassicPhysicalDelivery(this);
+        Execution = new(actors, this, DeferRangedImpact, _delivery.ImpactsOutliveTheirTarget);
         Attacks = new(PlayerId, Targeting, Execution, ReachOf, facts => facts.Append(new AttackRejectedFact(AttackRejection.MissingPlayerPosition)),
             _delivery.UntargetedSwingsWaitForImpact);
     }

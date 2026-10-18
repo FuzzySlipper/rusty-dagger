@@ -13,8 +13,12 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="Random">The session's Engine random service, for keyed draws.</param>
 /// <param name="EquipmentOf">An actor's current equipment.</param>
 /// <param name="StatsOf">An actor's live stats, or null for one that is gone.</param>
+/// <param name="PlayerArmorValueModifier">
+/// The shift the player's worn enchantments give its whole armor value, in the donor's armor-value units:
+/// negative is stronger armor, positive weaker.
+/// </param>
 internal sealed record DaggerfallSeamInputs(DaggerfallDefinitions Definitions, Func<DaggerfallCharacterState?> Character,
-    IRandomService Random, Func<long, EquipmentRead> EquipmentOf, Func<long, StatsComponent?> StatsOf);
+    IRandomService Random, Func<long, EquipmentRead> EquipmentOf, Func<long, StatsComponent?> StatsOf, Func<int> PlayerArmorValueModifier);
 
 /// <summary>What a variant's seam owners are built from when its session is composed: the session's reads and the variant's own tuning.</summary>
 internal sealed record DaggerfallSeamContext(DaggerfallSeamInputs Session, TuningProfile Tuning)

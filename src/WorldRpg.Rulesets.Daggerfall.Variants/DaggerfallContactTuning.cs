@@ -15,7 +15,7 @@ internal sealed record DaggerfallContactTuning(
     double CriticalChancePerSkillPoint, double CriticalChancePerAttackChancePoint, double CriticalDamageMultiplier,
     double DeflectionBaseChance, double DeflectionPerDodgingPoint, double DeflectionPerAgilityAbove50, double DeflectionMaximumChance,
     IReadOnlyDictionary<HarmChannelId, DaggerfallChannelDeflection> Deflection,
-    double AbsorptionPerArmorPoint, double AbsorptionPerShieldPoint, double MonsterArmorBaseline, double MonsterAbsorptionPerPoint,
+    double AbsorptionPerArmorPoint, double AbsorptionPerShieldPoint, double AbsorptionPerArmorValueShift, double MonsterArmorBaseline, double MonsterAbsorptionPerPoint,
     IReadOnlyDictionary<HarmChannelId, double> AbsorptionMultipliers,
     double GuardStaminaPerSecond, double GuardDeflectionBonus, double GuardShieldDeflectionBonus, double GuardMaximumChance,
     double TouchReach, double TouchWidth, double TouchHeight, double TouchDrop)
@@ -52,7 +52,7 @@ internal sealed record DaggerfallContactTuning(
             NonNegative(critical, "chancePerSkillPoint"), NonNegative(critical, "chancePerAttackChancePoint"), Positive(critical, "damageMultiplier"),
             NonNegative(deflection, "baseChance"), NonNegative(deflection, "dodgingPerPoint"), NonNegative(deflection, "agilityPerPointAbove50"),
             Percent(deflection, "maximumChance"), channels,
-            NonNegative(absorption, "perArmorPoint"), NonNegative(absorption, "perShieldPoint"),
+            NonNegative(absorption, "perArmorPoint"), NonNegative(absorption, "perShieldPoint"), NonNegative(absorption, "perArmorValueShift"),
             NonNegative(absorption, "monsterArmorBaseline"), NonNegative(absorption, "monsterAbsorbPerPoint"), multipliers,
             NonNegative(guard, "staminaPerSecond"), NonNegative(guard, "deflectionBonus"), NonNegative(guard, "shieldDeflectionBonus"),
             Percent(guard, "maximumChance"),

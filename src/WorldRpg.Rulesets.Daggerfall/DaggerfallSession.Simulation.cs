@@ -237,10 +237,7 @@ internal sealed partial class DaggerfallSession
             ApplyPlayerActs(acts);
         }
         // The guard follows the step's acts, so a swing begun this step keeps the guard down.
-        _guard.Step(update.DeltaSeconds,
-            canGuard: State.WeaponDrawn && !restrictions.PhysicalAttacks && !State.Actors.Player.IsDefeated,
-            swinging: State.Actors.Player.Actor.Get<AttackState>().Pending is not null,
-            generation, simulationStep, _facts);
+        StepGuard(update.DeltaSeconds, generation, simulationStep);
         // Tasks consume the state committed by this admitted step. Clock actions mutate only the
         // quest clock state; elapsed duration is still consumed by the calendar owner above.
         State.Quests.Advance(State.Variables, _time.Calendar, update.DeltaSeconds);
@@ -287,6 +284,8 @@ internal sealed partial class DaggerfallSession
         if (!restrictions.PhysicalAttacks && !acts.Interact && acts.Attack is { } swing && State.WeaponDrawn && _appearance.CanStartPlayerAttack)
         {
             State.Kit.Attacks.TryPlayerMelee(State.PlayerControl, currentLook, swing.Generation, swing.SimulationStep, swing.DeltaSeconds, _facts);
+            // A swing admitted here (deferred acts included) lowers a raised guard before anything resolves against it.
+            StepGuard(0d, swing.Generation, swing.SimulationStep);
             // WeaponManager sends Attack to an action on the environment after the ordinary hit
             // query. The safe Engine hit reports a static surface rather than a source id, so the
             // normalized placement resolver above is the product-side identity join.
@@ -306,6 +305,15 @@ internal sealed partial class DaggerfallSession
         if (acts.Map) RequestPanel(DaggerfallPanel.Map);
         if (acts.Menu) RequestPanel(DaggerfallPanel.Menu);
     }
+
+    /// <summary>
+    /// Advances the player's guard by <paramref name="seconds"/>. A swing is in progress from its admission
+    /// until its strike animation completes, past the hit frame that resolves it, and keeps the guard down.
+    /// </summary>
+    private void StepGuard(double seconds, ulong generation, ulong simulationStep) => _guard.Step(seconds,
+        canGuard: State.WeaponDrawn && !State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId).PhysicalAttacks && !State.Actors.Player.IsDefeated,
+        swinging: State.Actors.Player.Actor.Get<AttackState>().Pending is not null || !_appearance.CanStartPlayerAttack,
+        generation, simulationStep, _facts);
 
     /// <summary>
     /// Runs the acts a step deferred behind an enemy hit on the player, once this update's impacts have

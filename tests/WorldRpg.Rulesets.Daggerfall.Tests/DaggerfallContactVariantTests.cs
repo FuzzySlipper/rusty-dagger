@@ -4,6 +4,7 @@ using System.Text;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Facts;
@@ -107,6 +108,47 @@ public sealed class DaggerfallContactVariantTests
     }
 
     [Fact]
+    public void Every_connect_trains_the_weapon_skill_once_whether_it_lands_or_is_deflected_and_a_whiff_trains_nothing()
+    {
+        static int WeaponHits(Fixture fixture) => fixture.SkillUses.Count(use => use.Reason == DaggerfallSkillUseReason.WeaponHit);
+        AttackRequest swing = new(Player, null, 3, 5, .125d, Delayed: true);
+
+        using Fixture landing = new(random: KeyedRandom.Create(8).Service, variant: Contact);
+        landing.Spatial.OverlapContactsResult = _ => Touching(landing.Actors.Get(2).Actor.Entity.Value);
+        landing.StartSwing(swing, out _);
+        Assert.Single(landing.DeliverImpact(swing).OfType<AttackHitFact>());
+        Assert.Equal(1, WeaponHits(landing));
+
+        // The lowest draw on every percentile deflects the edged blow whole.
+        using Fixture deflected = new(random: RandomMinimum.Create(), variant: Contact);
+        deflected.Spatial.OverlapContactsResult = _ => Touching(deflected.Actors.Get(2).Actor.Entity.Value);
+        deflected.StartSwing(swing, out _);
+        Assert.Empty(deflected.DeliverImpact(swing).OfType<AttackHitFact>());
+        Assert.Equal(1, WeaponHits(deflected));
+
+        using Fixture whiff = new(random: KeyedRandom.Create(8).Service, variant: Contact);
+        whiff.StartSwing(swing, out _);
+        whiff.DeliverImpact(swing);
+        Assert.Equal(0, WeaponHits(whiff));
+    }
+
+    [Fact]
+    public void A_swing_aimed_at_an_actor_defeated_before_its_hit_frame_still_reaches_whoever_its_volume_touches_there()
+    {
+        using Fixture fixture = new(random: KeyedRandom.Create(8).Service, variant: Contact);
+        ActorState bystander = fixture.SpawnBrigand(3, new WorldPoint(1f, 0f, .4f));
+        AttackRequest swing = new(Player, 2, 3, 5, .125d, Delayed: true);
+        fixture.StartSwing(swing, out bool admitted);
+        Assert.True(admitted);
+
+        fixture.Actors.Get(2).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0);
+        fixture.Spatial.OverlapContactsResult = _ => Touching(bystander.Actor.Entity.Value);
+
+        Assert.Equal(3L, Assert.Single(fixture.DeliverImpact(swing).OfType<AttackHitFact>()).TargetId);
+        Assert.Single(fixture.Spatial.OverlapContactsRequests);
+    }
+
+    [Fact]
     public void Deflection_negates_an_edged_blow_whole_turns_aside_part_of_a_blunt_one_and_the_material_requirement_still_holds()
     {
         using Fixture fixture = new(variant: Contact);
@@ -132,6 +174,33 @@ public sealed class DaggerfallContactVariantTests
         NegationEvent immune = new(participants, DaggerfallHarmChannels.Edged);
         never.Negate(immune, chest with { Target = player with { MinimumMaterial = "silver" } });
         Assert.Equal(HarmNegation.Immune, immune.Negation);
+    }
+
+    [Fact]
+    public void Worn_armor_enchantments_shift_what_the_players_armor_absorbs_under_the_variant()
+    {
+        using Fixture fixture = new(variant: Contact);
+        DaggerfallContactMitigation mitigation = new(fixture.VariantContext(Contact), Tuning, new FixedGuard());
+        DaggerfallActorDefinition player = TestPayload.Definitions.RequireActor(new DaggerfallActorId("player"));
+        CombatParticipants participants = new(fixture.Actors.Get(2).Actor, fixture.Actors.Player.Actor, "attack");
+        DaggerfallPhysicalHarm chest = new(2, Player, player, "long-blade", "iron", 3, 1, 1);
+        int Absorbed(int shift)
+        {
+            fixture.ArmorValueShift = shift;
+            MitigationEvent blow = new(participants, DaggerfallHarmChannels.Edged, 20);
+            mitigation.Mitigate(blow, chest);
+            return blow.Absorbed;
+        }
+
+        int plain = Absorbed(0);
+        Assert.Equal(plain + 1, Absorbed(DaggerfallHeldEnchantments.StrengthenedArmorValue));
+        Assert.Equal(Math.Max(0, plain - 1), Absorbed(DaggerfallHeldEnchantments.WeakenedArmorValue));
+        // An enemy's absorption reads no player enchantment.
+        fixture.ArmorValueShift = DaggerfallHeldEnchantments.StrengthenedArmorValue;
+        DaggerfallPhysicalHarm onEnemy = chest with { AttackerId = Player, TargetId = 2, Target = TestPayload.Definitions.RequireActor(new DaggerfallActorId("thief")) };
+        int enemyStrengthened = mitigation.Absorption(onEnemy, DaggerfallHarmChannels.Edged);
+        fixture.ArmorValueShift = 0;
+        Assert.Equal(mitigation.Absorption(onEnemy, DaggerfallHarmChannels.Edged), enemyStrengthened);
     }
 
     [Theory]
@@ -161,14 +230,8 @@ public sealed class DaggerfallContactVariantTests
     [Fact]
     public void A_game_under_the_contact_variant_composes_its_owners_and_saves_and_restores()
     {
-        string root = TestData.RepositoryRoot;
-        ResolvedGameComposition resolved = GameCompositionResolver.Resolve(TestSessions.FullContent(root), new GameBundleId("daggerfall.contact"),
-            [.. DaggerfallVariants.All.Select(variant => variant.Manifest)]).RequireComposition();
-        DaggerfallSiteProfile inputs = TestSessions.ReadInputs(root);
-        DaggerfallSessionComposition composition = new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults, resolved.Identity)
-        {
-            Seams = DaggerfallSeamSelection.From(resolved.Variants, DaggerfallVariants.All),
-        };
+        DaggerfallSiteProfile inputs = TestSessions.ReadInputs(TestData.RepositoryRoot);
+        DaggerfallSessionComposition composition = TestSessions.ContactComposition(inputs);
         List<string> releases = [];
         ContentFake content = new(releases);
         TestSessions.PopulateContent(content, inputs);
@@ -184,7 +247,7 @@ public sealed class DaggerfallContactVariantTests
         }
         using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, composition, saved);
         Assert.Equal(9, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
-        Assert.Equal([DaggerfallVariants.Contact], resolved.Identity.Variants);
+        Assert.Equal([DaggerfallVariants.Contact], composition.Identity!.Variants);
     }
 
     [Fact]
@@ -258,6 +321,7 @@ public sealed class DaggerfallContactVariantTests
     private sealed class FixedGuard : IDaggerfallPlayerGuard
     {
         public bool Raised { get; set; }
+        public bool WantsTime => false;
         public void Observe(ReadOnlySpan<ProductInputEvent> inputs) { }
         public void Step(double seconds, bool canGuard, bool swinging, ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
         public void Neutralize(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
@@ -335,14 +399,8 @@ public sealed class DaggerfallContactVariantTests
     [Fact]
     public void A_player_touch_under_the_contact_variant_that_meets_no_one_is_paid_for_and_misses()
     {
-        string root = TestData.RepositoryRoot;
-        ResolvedGameComposition resolved = GameCompositionResolver.Resolve(TestSessions.FullContent(root), new GameBundleId("daggerfall.contact"),
-            [.. DaggerfallVariants.All.Select(variant => variant.Manifest)]).RequireComposition();
-        DaggerfallSiteProfile inputs = TestSessions.ReadInputs(root);
-        DaggerfallSessionComposition composition = new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults, resolved.Identity)
-        {
-            Seams = DaggerfallSeamSelection.From(resolved.Variants, DaggerfallVariants.All),
-        };
+        DaggerfallSiteProfile inputs = TestSessions.ReadInputs(TestData.RepositoryRoot);
+        DaggerfallSessionComposition composition = TestSessions.ContactComposition(inputs);
         List<string> releases = [];
         ContentFake content = new(releases);
         TestSessions.PopulateContent(content, inputs);
