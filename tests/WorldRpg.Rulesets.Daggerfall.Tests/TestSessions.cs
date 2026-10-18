@@ -498,18 +498,22 @@ internal static class TestSessions
         };
     }
 
-    internal static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d, Action<EngineContextFake>? engineCreated = null, bool contact = false)
+    internal static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d, Action<EngineContextFake>? engineCreated = null, bool contact = false) =>
+        VisibleEnemySession(releases, out _, distance, engineCreated, contact);
+
+    /// <summary>The same visible-enemy session, also handing back the spatial fake that answers its contact queries.</summary>
+    internal static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, out SpatialFake spatial, double distance = 1d, Action<EngineContextFake>? engineCreated = null, bool contact = false, IRandomService? random = null)
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = ReadInputs(root);
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, distance, 1d, PerceptionPairKind.Visible, distance));
         AppearanceFake appearance = new(releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service, random: random);
         engineCreated?.Invoke(engine);
         return (DaggerfallSession.StartNew(engine.Context, contact ? ContactComposition(inputs) : new(definitions, inputs, DaggerfallTuning.Defaults)), appearance, perception);
     }

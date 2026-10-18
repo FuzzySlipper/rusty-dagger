@@ -3,6 +3,9 @@
 This records the current, source-backed combat timing, randomness, cooldown and
 save behavior. It describes existing behavior, not a new design requirement.
 Later work should preserve it or explicitly record a gameplay decision.
+The compiled `daggerfall.contact` rules variant replaces several of these owners
+when a bundle selects it; [combat-contact-variant.md](combat-contact-variant.md)
+records what it changes.
 
 ## Policy and owners
 

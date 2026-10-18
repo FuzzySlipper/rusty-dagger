@@ -5,13 +5,15 @@ using Xunit;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>Delegates every session to the compiled Daggerfall ruleset while exposing the real session a test created.</summary>
-internal sealed class CapturingDaggerfallRuleset : ISaveableGameRuleset
+internal sealed class CapturingDaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatalog
 {
     // Ordinary integration tests exercise gameplay and persistence, not the Engine video runtime.
     // They name disabled videos explicitly so a missing fake Video service cannot masquerade as a
     // successful production-media path.
     private readonly DaggerfallRuleset _inner;
-    internal CapturingDaggerfallRuleset(bool videosEnabled = false) => _inner = new(videosEnabled);
+    internal CapturingDaggerfallRuleset(bool videosEnabled = false, IReadOnlyList<DaggerfallRulesVariant>? variants = null) =>
+        _inner = new(variants ?? [], videosEnabled);
+    public IReadOnlyList<RulesVariantManifest> CompiledVariants => _inner.CompiledVariants;
     internal DaggerfallSession? Session { get; private set; }
     public RulesetId Id => _inner.Id;
 
