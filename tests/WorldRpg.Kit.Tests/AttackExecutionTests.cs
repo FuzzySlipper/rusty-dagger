@@ -97,6 +97,30 @@ public sealed class AttackExecutionTests
     }
 
     [Fact]
+    public void An_untargeted_delayed_swing_waits_for_its_own_untargeted_impact_and_still_expires()
+    {
+        using ActorsState actors = Actors();
+        RecordingRules rules = new();
+        AttackExecution<TestFact> execution = new(actors, rules);
+        FactBuffer<TestFact> facts = new();
+        AttackRequest swing = new(2, null, 7, 10, 1d, Delayed: true);
+
+        Assert.True(execution.Start(swing, facts));
+        Assert.Empty(rules.Applied);
+        // An impact naming a target is not this swing's; the untargeted impact (target zero) is.
+        execution.ApplyImpacts([new AttackImpactNotice(2, 3, 7, 10, Expired: false)], 7, facts);
+        Assert.Empty(rules.Applied);
+        execution.ApplyImpacts([new AttackImpactNotice(2, 0, 7, 10, Expired: false)], 7, facts);
+        Assert.Equal([swing], rules.Applied);
+
+        AttackRequest expiring = swing with { Generation = 8, SimulationStep = 30 };
+        Assert.True(execution.Start(expiring, facts));
+        execution.ApplyImpacts([new AttackImpactNotice(2, 0, 8, 30, Expired: true)], 8, facts);
+        Assert.Equal([swing], rules.Applied);
+        Assert.Null(actors.Get(2).Actor.Get<AttackState>().Pending);
+    }
+
+    [Fact]
     public void Immediate_attack_applies_after_start_and_refuses_defeated_targets()
     {
         using ActorsState actors = Actors();

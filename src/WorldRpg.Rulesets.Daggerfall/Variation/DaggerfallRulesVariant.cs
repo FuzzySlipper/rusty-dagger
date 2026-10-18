@@ -1,5 +1,6 @@
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -17,7 +18,8 @@ internal sealed record DaggerfallSeamContext(DaggerfallDefinitions Definitions, 
 public sealed class DaggerfallRulesVariant
 {
     internal DaggerfallRulesVariant(RulesVariantManifest manifest,
-        Func<DaggerfallSeamContext, IDaggerfallPhysicalMitigation>? physicalMitigation = null)
+        Func<DaggerfallSeamContext, IDaggerfallPhysicalMitigation>? physicalMitigation = null,
+        Func<DaggerfallSeamContext, IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery>? physicalDelivery = null)
     {
         Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         if (manifest.Ruleset != DaggerfallRuleset.Identity)
@@ -26,14 +28,17 @@ public sealed class DaggerfallRulesVariant
         if (manifest.OwnsSaveState)
             throw new NotSupportedException($"Rules variant '{manifest.Id.Value}' owns save state, which Daggerfall does not yet compose for variants.");
         PhysicalMitigation = physicalMitigation;
+        PhysicalDelivery = physicalDelivery;
         HashSet<RulesSeamId> supplied = [];
         if (physicalMitigation is not null) supplied.Add(DaggerfallRulesSeams.PhysicalMitigation);
+        if (physicalDelivery is not null) supplied.Add(DaggerfallRulesSeams.PhysicalDelivery);
         if (!supplied.SetEquals(manifest.Seams))
             throw new ArgumentException($"Rules variant '{manifest.Id.Value}' declares seams [{string.Join(", ", manifest.Seams.Select(seam => seam.Value))}] but supplies owners for [{string.Join(", ", supplied.Select(seam => seam.Value))}].", nameof(manifest));
     }
 
     public RulesVariantManifest Manifest { get; }
     internal Func<DaggerfallSeamContext, IDaggerfallPhysicalMitigation>? PhysicalMitigation { get; }
+    internal Func<DaggerfallSeamContext, IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery>? PhysicalDelivery { get; }
 }
 
 /// <summary>
@@ -43,20 +48,29 @@ public sealed class DaggerfallRulesVariant
 internal sealed class DaggerfallSeamSelection
 {
     private readonly (DaggerfallRulesVariant Variant, ResolvedRulesVariant Resolved)? _physicalMitigation;
+    private readonly (DaggerfallRulesVariant Variant, ResolvedRulesVariant Resolved)? _physicalDelivery;
 
-    private DaggerfallSeamSelection((DaggerfallRulesVariant, ResolvedRulesVariant)? physicalMitigation) => _physicalMitigation = physicalMitigation;
+    private DaggerfallSeamSelection((DaggerfallRulesVariant, ResolvedRulesVariant)? physicalMitigation,
+        (DaggerfallRulesVariant, ResolvedRulesVariant)? physicalDelivery)
+    {
+        _physicalMitigation = physicalMitigation;
+        _physicalDelivery = physicalDelivery;
+    }
 
-    internal static DaggerfallSeamSelection Classic { get; } = new(null);
+    internal static DaggerfallSeamSelection Classic { get; } = new(null, null);
 
     /// <summary>The variant that owns physical mitigation, or none for classic.</summary>
     internal RulesVariantId? PhysicalMitigationVariant => _physicalMitigation?.Resolved.Id;
+
+    /// <summary>The variant that owns physical delivery, or none for classic.</summary>
+    internal RulesVariantId? PhysicalDeliveryVariant => _physicalDelivery?.Resolved.Id;
 
     /// <summary>Selects owners for a resolved composition's variants from the variants this ruleset compiles.</summary>
     internal static DaggerfallSeamSelection From(IReadOnlyList<ResolvedRulesVariant> selected, IReadOnlyList<DaggerfallRulesVariant> compiled)
     {
         ArgumentNullException.ThrowIfNull(selected);
         ArgumentNullException.ThrowIfNull(compiled);
-        (DaggerfallRulesVariant, ResolvedRulesVariant)? physicalMitigation = null;
+        (DaggerfallRulesVariant, ResolvedRulesVariant)? physicalMitigation = null, physicalDelivery = null;
         foreach (ResolvedRulesVariant resolved in selected)
         {
             DaggerfallRulesVariant variant = compiled.SingleOrDefault(candidate => candidate.Manifest.Id == resolved.Id)
@@ -67,12 +81,24 @@ internal sealed class DaggerfallSeamSelection
                     throw new InvalidOperationException($"Rules variants '{physicalMitigation.Value.Item2.Id.Value}' and '{resolved.Id.Value}' both claim seam '{DaggerfallRulesSeams.PhysicalMitigation.Value}'.");
                 physicalMitigation = (variant, resolved);
             }
+            if (variant.PhysicalDelivery is not null)
+            {
+                if (physicalDelivery is not null)
+                    throw new InvalidOperationException($"Rules variants '{physicalDelivery.Value.Item2.Id.Value}' and '{resolved.Id.Value}' both claim seam '{DaggerfallRulesSeams.PhysicalDelivery.Value}'.");
+                physicalDelivery = (variant, resolved);
+            }
         }
-        return new(physicalMitigation);
+        return new(physicalMitigation, physicalDelivery);
     }
 
     internal IDaggerfallPhysicalMitigation BuildPhysicalMitigation(DaggerfallDefinitions definitions, Func<DaggerfallCharacterState?> character) =>
         _physicalMitigation is { } owner
             ? owner.Variant.PhysicalMitigation!(new DaggerfallSeamContext(definitions, character, owner.Resolved.Tuning))
             : new DaggerfallClassicPhysicalMitigation(character);
+
+    /// <summary>The selected physical delivery owner, built over the shared harm operations it delivers through.</summary>
+    internal Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery> PhysicalDelivery(DaggerfallDefinitions definitions, Func<DaggerfallCharacterState?> character) =>
+        _physicalDelivery is { } owner
+            ? ops => owner.Variant.PhysicalDelivery!(new DaggerfallSeamContext(definitions, character, owner.Resolved.Tuning), ops)
+            : ops => new DaggerfallClassicPhysicalDelivery(ops);
 }

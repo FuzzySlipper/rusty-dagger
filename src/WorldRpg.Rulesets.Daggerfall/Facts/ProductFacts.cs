@@ -58,7 +58,7 @@ internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId 
 /// </summary>
 internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep,
     long? TargetId = null, double FrameSeconds = 0d, int HitFrame = DaggerfallFormulaPolicy.MeleeWeaponHitFrame,
-    DaggerfallSwingDirection Swing = DaggerfallSwingDirection.None) : IProductFact
+    DaggerfallSwingDirection Swing = DaggerfallSwingDirection.None, bool WaitsWithoutTarget = false) : IProductFact
 { internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
 /// <summary>
 /// One enemy melee swing began. The attack's outcome is already decided, so the

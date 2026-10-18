@@ -11,4 +11,7 @@ public static class DaggerfallRulesSeams
 {
     /// <summary>What a target does to physical harm that reached it: <see cref="IDaggerfallPhysicalMitigation"/>.</summary>
     public static readonly RulesSeamId PhysicalMitigation = new("daggerfall.physical-mitigation");
+
+    /// <summary>When an admitted physical attack's harm is decided and whom it reaches: <see cref="Modules.Combat.IDaggerfallPhysicalDelivery"/>.</summary>
+    public static readonly RulesSeamId PhysicalDelivery = new("daggerfall.physical-delivery");
 }

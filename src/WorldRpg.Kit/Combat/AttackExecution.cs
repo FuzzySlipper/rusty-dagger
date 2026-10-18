@@ -15,6 +15,7 @@ public readonly record struct PendingAttack(AttackRequest Request, PreparedAttac
 /// <summary>A resolved delayed attack whose authored impact has been released for delivery.</summary>
 public readonly record struct DeferredAttackImpact(AttackRequest Request, PreparedAttack Attack);
 public readonly record struct AttackCooldown(long AttackerId, ulong RemainingSteps);
+/// <summary>An animation's impact for a pending attack; <see cref="TargetId"/> is zero for a swing admitted without a target.</summary>
 public readonly record struct AttackImpactNotice(long AttackerId, long TargetId, ulong Generation, ulong SimulationStep, bool Expired);
 /// <summary>
 /// Why execution refused to start an attack. <see cref="InProgress"/> is an attacker whose own delayed
@@ -85,10 +86,10 @@ public sealed class AttackExecution<TFact>(ActorsState actors, IAttackRules<TFac
             if (!Exists(notice.AttackerId)) continue;
             AttackState state = State(notice.AttackerId);
             if (state.Pending is not PendingAttack pending || pending.Request.Generation != notice.Generation
-                || pending.Request.SimulationStep != notice.SimulationStep || pending.Request.TargetId != notice.TargetId) continue;
+                || pending.Request.SimulationStep != notice.SimulationStep || (pending.Request.TargetId ?? 0) != notice.TargetId) continue;
             state.Pending = null;
             if (notice.Expired || notice.Generation != generation || Defeated(notice.AttackerId)
-                || !Exists(notice.TargetId) || Defeated(notice.TargetId)) continue;
+                || pending.Request.TargetId is long target && (!Exists(target) || Defeated(target))) continue;
             DeferredAttackImpact impact = new(pending.Request, pending.Attack);
             if (deferImpact?.Invoke(impact, facts) == true) continue;
             rules.Apply(impact.Request, impact.Attack, facts);
