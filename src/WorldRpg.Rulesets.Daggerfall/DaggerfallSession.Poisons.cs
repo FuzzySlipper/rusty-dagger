@@ -28,7 +28,8 @@ internal sealed partial class DaggerfallSession
             },
             variant,
             PoisonRoll,
-            itemId);
+            itemId,
+            _combatResolution);
     }
 
     /// <summary>

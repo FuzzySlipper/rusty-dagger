@@ -82,19 +82,24 @@ harm source can use:
    a to-hit roll; `ContactEvent` records whether the harm reached this target.
    The delivery owner supplies the base contact answer (an admitted target, a
    collision), and an admission refusal means no contact.
-2. **Mitigation**: `ImmunityEvent` decides from target properties whether the
-   typed `HarmChannelId` can harm the target, before the source's `DamageEvent`
-   calculation runs; `MitigationEvent` then records deflected and absorbed
-   amounts against the calculated harm. Kit owns the channel identity; the
+2. **Mitigation**: `NegationEvent` decides before calculation whether the
+   target turns the whole harm on a typed `HarmChannelId` away (`HarmNegation`:
+   immune, deflected, absorbed or resisted), so a negated harm is never
+   calculated; the source's `DamageEvent` calculation follows, then
+   `MitigationEvent` records deflected, absorbed and resisted amounts against
+   the calculated harm, or negates it whole. Kit owns the channel identity; the
    channel set and its meaning are ruleset definitions.
 3. **Application**: `ApplyHitEvent` through `Apply`/`ApplyToHealth`, with
    `DefeatEvent` for an otherwise lethal application.
 
 `Resolve` runs delivery and mitigation for one target in that order and returns
-a `HarmResolution` whose `HarmOutcome` distinguishes no contact, immune,
-negated, reduced and unmitigated harm. An owner whose timing splits the stages
-raises them separately, keeping admission before contact, immunity before
-calculation, mitigation after both, and application last. Each base calculation
+a `HarmResolution` whose `HarmOutcome` distinguishes no contact, negated,
+reduced and unmitigated harm, with the `HarmNegation` saying how a negated harm
+was turned away. An owner whose timing splits the stages raises them
+separately, keeping admission before contact, negation before calculation,
+mitigation after both, and application last. Daggerfall's physical combat,
+spell resistance, disease and poison exposure, and artifact saves all resolve
+target-side defenses through these events. Each base calculation
 precedes ordered contributions; application contributions run before the
 supplied application handler. Gathering visits attacker and target
 contributions and their distinct equipped items, then explicitly registered

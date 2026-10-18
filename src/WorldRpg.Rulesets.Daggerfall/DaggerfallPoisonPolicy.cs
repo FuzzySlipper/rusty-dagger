@@ -1,3 +1,4 @@
+using WorldRpg.Kit.Combat;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
@@ -210,40 +211,39 @@ internal static class DaggerfallPoisonPolicy
         DaggerfallPoisonExposure exposure,
         int variant,
         Func<int, int, int> roll,
-        ulong? itemId = null)
+        ulong? itemId = null,
+        CombatResolution? combat = null)
     {
         ArgumentNullException.ThrowIfNull(poisons);
         ArgumentNullException.ThrowIfNull(actors);
         ArgumentNullException.ThrowIfNull(exposure);
         ArgumentNullException.ThrowIfNull(roll);
         if (exposure.TargetLevel < 1) throw new ArgumentOutOfRangeException(nameof(exposure), "A poison target needs a level.");
-
-        // The donor's own order, kept exactly because it decides what the admitted draw is spent on: a
-        // career or race immunity is refused before it throws at all, a tolerance that cannot be beaten is
-        // the same, a bypassed delivery skips the throw, and only then does the level matter — which is why
-        // a first-level target that would have been refused still drew the throw the donor made.
-        if (exposure.CareerImmune || exposure.RaceImmune) return DaggerfallPoisonAdmission.Immune;
-        int chance = Chance(exposure);
-        DaggerfallPoisonAdmission decided;
-        if (chance == DaggerfallMagicAdmissionPolicy.CompleteResistance) decided = DaggerfallPoisonAdmission.Immune;
-        else if (exposure.BypassResistance) decided = DaggerfallPoisonAdmission.Admitted;
-        else
-        {
-            decided = DaggerfallMagicAdmissionPolicy.SavingThrowAmount(chance, () => roll(1, 100)) == 0
-                ? DaggerfallPoisonAdmission.Resisted
-                : DaggerfallPoisonAdmission.Admitted;
-        }
-
-        if (decided == DaggerfallPoisonAdmission.Admitted && exposure.TargetLevel == 1)
-            decided = DaggerfallPoisonAdmission.Immune;
-        if (decided != DaggerfallPoisonAdmission.Admitted) return decided;
         // The player is not one of the actors carrying a body, so the durable-id lookup that answers for a
         // site actor would report the player missing; the player's own state answers for it instead.
         Actor target = actors.Player.DurableId == exposure.TargetId
             ? actors.Player.Actor
             : actors.TryGet(exposure.TargetId, out ActorState? actor) && actor is not null
                 ? actor.Actor
-                : throw new ArgumentException($"An admitted poison names missing actor {exposure.TargetId}.", nameof(exposure));
+                : throw new ArgumentException($"A poison exposure names missing actor {exposure.TargetId}.", nameof(exposure));
+
+        // The target's resistance is the harm pipeline's negation on the shared DiseaseOrPoison channel, in
+        // the donor's own order, kept exactly because it decides what the admitted draw is spent on: a
+        // career or race immunity is refused before it throws at all, a tolerance that cannot be beaten is
+        // the same, a bypassed delivery skips the throw, and only then does the level matter — which is why
+        // a first-level target that would have been refused still drew the throw the donor made.
+        NegationEvent negation = (combat ?? new CombatResolution()).Negate(new CombatParticipants(target, target, "poison"),
+            DaggerfallHarmChannels.DiseaseOrPoison, value =>
+            {
+                if (exposure.CareerImmune || exposure.RaceImmune) { value.Negation = HarmNegation.Immune; return; }
+                int chance = Chance(exposure);
+                if (chance == DaggerfallMagicAdmissionPolicy.CompleteResistance) value.Negation = HarmNegation.Immune;
+                else if (!exposure.BypassResistance && DaggerfallMagicAdmissionPolicy.SavingThrowAmount(chance, () => roll(1, 100)) == 0)
+                    value.Negation = HarmNegation.Resisted;
+            });
+        if (negation.Negation == HarmNegation.Immune || negation.Negation == HarmNegation.None && exposure.TargetLevel == 1)
+            return DaggerfallPoisonAdmission.Immune;
+        if (negation.Negated) return DaggerfallPoisonAdmission.Resisted;
 
         if (!poisons.Afflict(target, variant, itemId))
         {

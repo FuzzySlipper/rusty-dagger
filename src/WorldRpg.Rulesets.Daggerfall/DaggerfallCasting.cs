@@ -1,3 +1,4 @@
+using WorldRpg.Kit.Combat;
 using System.Text.Json;
 using System.Numerics;
 using Rusty.Engine;
@@ -5,6 +6,7 @@ using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -113,8 +115,10 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
     Action<DaggerfallCastResult> completed, IRandomService random, long playerId, long nextSequence = 1,
     Func<string, bool>? playerKnowsSpell = null, Func<long, int>? casterLevel = null,
     Func<long, ulong, bool>? ownsItem = null, Func<ulong?>? releaseGeneration = null,
-    Func<ulong?>? releaseSimulationStep = null, Func<string, bool>? playerGrantedSpell = null)
+    Func<ulong?>? releaseSimulationStep = null, Func<string, bool>? playerGrantedSpell = null,
+    CombatResolution? combat = null)
 {
+    private readonly CombatResolution _combat = combat ?? new CombatResolution();
     private readonly HashSet<DaggerfallLiveSpell> _pending = [];
     private readonly HashSet<DaggerfallSpellReadiness> _armed = [];
     private readonly Func<ulong?>? _releaseGeneration = releaseGeneration;
@@ -496,23 +500,44 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
                 || (raceFlags & flags & (DaggerfallMagicEffectFlags.Disease | DaggerfallMagicEffectFlags.Paralysis)) != 0
                 || binding.IsDisease && liveProfile.CareerTolerances.Disease == DaggerfallMagicTolerance.Immune
                 || binding.IsParalysis && liveProfile.CareerTolerances.Paralysis == DaggerfallMagicTolerance.Immune;
+            // The target's whole-effect defenses are the harm pipeline's negation on the effect's element
+            // channel, in the donor's order and with its draws: immunity, spell absorption, reflection
+            // (a deflection back at the caster) and active resistance.
+            HarmChannelId channel = DaggerfallHarmChannels.For(resistanceElement);
+            CombatParticipants participants = Participants(bundle, target);
+            int absorptionRefund = 0;
+            long? reflectTo = !bundle.BypassSave && bundle.CasterId is long reflectionCaster && targetId != reflectionCaster && !bundle.Reflected
+                ? reflectionCaster : null;
+            NegationEvent negation = _combat.Negate(participants, channel, value =>
+            {
+                if (hardImmune) value.Negation = HarmNegation.Immune;
+                else if (bundle.Source is not (DaggerfallCastSource.ItemHeld or DaggerfallCastSource.Potion) && catalog.RequireEffectCost(setting).School == "destruction" && defense.AbsorptionChance > 0
+                    && stats.TryGetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), out var magicka)
+                    && AbsorptionCost(target, bundle, setting) is int refund && magicka.Current + absorbed + refund <= magicka.Maximum.Value
+                    && (defense.AbsorptionItems is { Length: > 0 } || roll(1, 100) <= defense.AbsorptionChance))
+                { absorptionRefund = refund; value.Negation = HarmNegation.Absorbed; }
+                else if (reflectTo is not null && defense.ReflectionChance > 0 && roll(1, 100) <= defense.ReflectionChance)
+                    value.Negation = HarmNegation.Deflected;
+                else if (!bundle.BypassSave && bundle.Target != DaggerfallSpellTarget.CasterOnly
+                    && resistanceChance > 0 && roll(1, 100) <= resistanceChance)
+                    value.Negation = HarmNegation.Resisted;
+            });
             DaggerfallCastOutcome outcome;
-            if (hardImmune) outcome = DaggerfallCastOutcome.Immune;
-            else if (bundle.Source is not (DaggerfallCastSource.ItemHeld or DaggerfallCastSource.Potion) && catalog.RequireEffectCost(setting).School == "destruction" && defense.AbsorptionChance > 0
-                && stats.TryGetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), out var magicka)
-                && AbsorptionCost(target, bundle, setting) is int refund && magicka.Current + absorbed + refund <= magicka.Maximum.Value
-                && (defense.AbsorptionItems is { Length: > 0 } || roll(1, 100) <= defense.AbsorptionChance))
-            { absorbed = checked(absorbed + refund); absorptionItems.UnionWith(defense.AbsorptionItems ?? []); outcome = DaggerfallCastOutcome.Absorbed; }
-            else if (!bundle.BypassSave && bundle.CasterId is long caster && targetId != caster && !bundle.Reflected
-                && defense.ReflectionChance > 0 && roll(1, 100) <= defense.ReflectionChance)
+            if (negation.Negation == HarmNegation.Immune) outcome = DaggerfallCastOutcome.Immune;
+            else if (negation.Negation == HarmNegation.Absorbed)
+            {
+                absorbed = checked(absorbed + absorptionRefund);
+                if (absorptionRefund > 0) absorptionItems.UnionWith(defense.AbsorptionItems ?? []);
+                outcome = DaggerfallCastOutcome.Absorbed;
+            }
+            else if (negation.Negation == HarmNegation.Deflected && reflectTo is long caster)
             {
                 bundle.Reflected = true;
                 DeliverTo(bundle, caster, reflected: true, roll);
                 outcome = DaggerfallCastOutcome.Reflected;
             }
-            else if (!bundle.BypassSave && bundle.Target != DaggerfallSpellTarget.CasterOnly
-                && resistanceChance > 0 && roll(1, 100) <= resistanceChance)
-                outcome = DaggerfallCastOutcome.Resisted;
+            // A deflection with nowhere to reflect, like any other negation, is withstood.
+            else if (negation.Negated) outcome = DaggerfallCastOutcome.Resisted;
             else if (!bundle.BypassChance && !(binding.BypassItemChance && bundle.ItemId is not null)
                 && binding.RollChanceOnCast && roll(1, 100) > DaggerfallMagicAdmissionPolicy.CalculateEffectChance(setting, bundle.CasterLevel)) outcome = DaggerfallCastOutcome.ChanceFailed;
             else
@@ -526,10 +551,13 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
                     DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting, bundle.CasterLevel))) : 1u;
                 // Permanent attribute damage rolls its incoming payload/save even when an incumbent exists.
                 int permanentAmount = binding.UntilHealed ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0;
-                int permanentPercent = !binding.UntilHealed || bundle.BypassSave || bundle.Target == DaggerfallSpellTarget.CasterOnly
-                    ? 100 : DaggerfallMagicAdmissionPolicy.SavingThrow(source, liveProfile, () => roll(1, 100));
-                if (permanentPercent == 0) { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.Resisted, 0)); continue; }
-                permanentAmount = (int)(permanentAmount * (permanentPercent / 100f));
+                int permanentPercent = 100;
+                if (binding.UntilHealed)
+                {
+                    (permanentAmount, permanentPercent, bool withstood) = SavingThrow(participants, channel, permanentAmount, scales: true,
+                        bundle.BypassSave || bundle.Target == DaggerfallSpellTarget.CasterOnly ? null : () => DaggerfallMagicAdmissionPolicy.SavingThrow(source, liveProfile, () => roll(1, 100)));
+                    if (withstood) { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.Resisted, 0)); continue; }
+                }
                 // An actorless action still carries its admitted source provenance into the
                 // common effect owner. Immediate destruction uses that typed action source to
                 // retain the donor's player-level power without manufacturing a caster actor.
@@ -557,12 +585,18 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
                     continue;
                 }
                 int amount = binding.UntilHealed ? permanentAmount : binding.SupportsMagnitude && !binding.MagnitudePerRound ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0;
-                int percent = binding.UntilHealed ? permanentPercent : bundle.BypassSave || bundle.Target == DaggerfallSpellTarget.CasterOnly ? 100 : DaggerfallMagicAdmissionPolicy.SavingThrow(source, liveProfile, () => roll(1, 100));
-                if (percent == 0) { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.Resisted, percent)); continue; }
+                int percent = permanentPercent;
+                if (!binding.UntilHealed)
+                {
+                    // Non-magnitude saves reject at zero and otherwise retain the full effect.
+                    (int saved, percent, bool withstood) = SavingThrow(participants, channel, amount, scales: binding.SupportsMagnitude,
+                        bundle.BypassSave || bundle.Target == DaggerfallSpellTarget.CasterOnly ? null : () => DaggerfallMagicAdmissionPolicy.SavingThrow(source, liveProfile, () => roll(1, 100)));
+                    if (withstood) { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.Resisted, 0)); continue; }
+                    amount = saved;
+                }
                 uint? duration = baseDuration;
-                // Non-magnitude saves reject at zero and otherwise retain the full duration.
                 if (binding.SupportsMagnitude && !binding.UntilHealed)
-                { amount = (int)(amount * (percent / 100f)); duration = bundle.Source == DaggerfallCastSource.ItemHeld ? null : binding.SupportsDuration ? checked((uint)Math.Max(1, DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting, bundle.CasterLevel))) : 1u; }
+                    duration = bundle.Source == DaggerfallCastSource.ItemHeld ? null : binding.SupportsDuration ? checked((uint)Math.Max(1, DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting, bundle.CasterLevel))) : 1u;
                 var state = new DaggerfallCastEffectState(setting, bundle.CasterLevel, amount, percent, origin);
                 JsonElement payload = binding.CreateState?.Invoke(state)
                     ?? JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
@@ -599,6 +633,31 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
             bundle.Absorptions.Add(new(targetId, absorbed, restored, absorptionItems.Order().ToArray()));
         }
     }
+
+    /// <summary>
+    /// The classic saving throw as the harm pipeline's mitigation of one admitted effect on its element
+    /// channel: a zero percentage withstands the whole effect, and a partial one resists the share of a
+    /// magnitude it does not let through. Without a throw (a bypassed save or a self-cast) the whole
+    /// effect passes. Returns the amount that lands, the classic percentage the effect records, and
+    /// whether the effect was withstood.
+    /// </summary>
+    private (int Amount, int Percent, bool Withstood) SavingThrow(CombatParticipants participants, HarmChannelId channel,
+        int amount, bool scales, Func<int>? savingThrow)
+    {
+        int percent = 100;
+        MitigationEvent mitigation = _combat.Mitigate(participants, channel, amount, value =>
+        {
+            percent = savingThrow?.Invoke() ?? 100;
+            if (percent == 0) value.Negation = HarmNegation.Resisted;
+            else if (scales) value.Resisted = value.Incoming - (int)(value.Incoming * (percent / 100f));
+        });
+        return (scales ? mitigation.Damage : amount, percent, mitigation.Negation != HarmNegation.None);
+    }
+
+    /// <summary>The caster against the target, or the target alone for an actorless source.</summary>
+    private CombatParticipants Participants(DaggerfallLiveSpell bundle, Actor target) => new(
+        (bundle.CasterId is long caster ? resolveActor(caster) : null) ?? target, target,
+        bundle.Source == DaggerfallCastSource.Potion ? bundle.Spell.Key : $"spell.{bundle.Spell.Key}");
 
     private int AbsorptionCost(Actor target, DaggerfallLiveSpell bundle, DaggerfallSpellEffectDefinition setting)
     {

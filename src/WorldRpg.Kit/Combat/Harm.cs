@@ -25,21 +25,39 @@ public sealed class ContactEvent(CombatParticipants participants, bool contact)
     public bool Contact { get; set; } = contact;
 }
 
+/// <summary>How a target turned a whole harm away. Presentation reads it to tell the outcomes apart.</summary>
+public enum HarmNegation
+{
+    None,
+    /// <summary>The channel cannot harm the target at all.</summary>
+    Immune,
+    /// <summary>Turned aside before it landed, possibly back at its source.</summary>
+    Deflected,
+    /// <summary>Taken by the target's protection.</summary>
+    Absorbed,
+    /// <summary>Withstood by the target's resistance.</summary>
+    Resisted,
+}
+
 /// <summary>
-/// Mitigation's first step: whether the target can be harmed on this channel at all. It is decided from
-/// target properties before the harm is calculated, so an immune target never has its harm rolled.
+/// Mitigation's first step: whether the target turns the whole harm away on this channel before it is
+/// calculated, from target properties (immunity) or the target's own chance to deflect, absorb or
+/// resist it. A negated harm is never calculated.
 /// </summary>
-public sealed class ImmunityEvent(CombatParticipants participants, HarmChannelId channel)
+public sealed class NegationEvent(CombatParticipants participants, HarmChannelId channel)
 {
     public CombatParticipants Participants { get; } = participants;
     public HarmChannelId Channel { get; } = channel;
-    public bool Immune { get; set; }
+    public HarmNegation Negation { get; set; }
+    public bool Negated => Negation != HarmNegation.None;
 }
 
 /// <summary>
 /// Mitigation's reduction step over the calculated harm. Deflection is harm turned aside before it
-/// lands; absorption is harm taken by the target's protection. Both are non-negative amounts the
-/// ruleset and contributions accumulate; the remaining damage is never below zero.
+/// lands, absorption is harm taken by the target's protection, and resistance is harm the target
+/// withstands. Each is a non-negative amount the ruleset and contributions accumulate; a
+/// <see cref="Negation"/> turns the whole harm away whatever its amount. The remaining damage is never
+/// below zero.
 /// </summary>
 public sealed class MitigationEvent(CombatParticipants participants, HarmChannelId channel, int incoming)
 {
@@ -49,7 +67,9 @@ public sealed class MitigationEvent(CombatParticipants participants, HarmChannel
     public int Incoming { get; } = Math.Max(0, incoming);
     public int Deflected { get; set => field = Math.Max(0, value); }
     public int Absorbed { get; set => field = Math.Max(0, value); }
-    public int Damage => Math.Max(0, Incoming - Deflected - Absorbed);
+    public int Resisted { get; set => field = Math.Max(0, value); }
+    public HarmNegation Negation { get; set; }
+    public int Damage => Negation != HarmNegation.None ? 0 : Math.Max(0, Incoming - Deflected - Absorbed - Resisted);
 }
 
 /// <summary>What one harm resolution leaves for application.</summary>
@@ -57,9 +77,7 @@ public enum HarmOutcome
 {
     /// <summary>Admission refused it or it never touched the target.</summary>
     NoContact,
-    /// <summary>It connected with a target the channel cannot harm; nothing was calculated.</summary>
-    Immune,
-    /// <summary>It connected and mitigation took all of it.</summary>
+    /// <summary>It connected and was turned away whole, before or after calculation.</summary>
     Negated,
     /// <summary>It connected and mitigation took part of it.</summary>
     Reduced,
@@ -72,14 +90,17 @@ public enum HarmOutcome
 /// retained so the ruleset can report the roll, the contact and the mitigation it presents.
 /// </summary>
 public sealed record HarmResolution(CombatParticipants Participants, HarmChannelId Channel, TryHitEvent? Admission,
-    ContactEvent? Contact, ImmunityEvent? Immunity, DamageEvent? Calculation, MitigationEvent? Mitigation)
+    ContactEvent? Contact, NegationEvent? PreCalculation, DamageEvent? Calculation, MitigationEvent? Mitigation)
 {
     public bool Connected => Contact?.Contact == true;
-    public bool Immune => Immunity?.Immune == true;
+    /// <summary>How the whole harm was turned away, before or after calculation; none when any of it remains.</summary>
+    public HarmNegation Negation => PreCalculation is { Negated: true } before ? before.Negation : Mitigation?.Negation ?? HarmNegation.None;
+    /// <summary>Whether the harm was turned away before it was calculated.</summary>
+    public bool NegatedBeforeCalculation => PreCalculation?.Negated == true;
     /// <summary>The amount application receives; zero unless the harm connected and was not negated.</summary>
     public int Damage => Mitigation?.Damage ?? 0;
     public HarmOutcome Outcome => !Connected ? HarmOutcome.NoContact
-        : Immune ? HarmOutcome.Immune
+        : Negation != HarmNegation.None ? HarmOutcome.Negated
         : Mitigation is not { } mitigation || mitigation.Damage == mitigation.Incoming ? HarmOutcome.Unmitigated
         : mitigation.Damage == 0 ? HarmOutcome.Negated
         : HarmOutcome.Reduced;

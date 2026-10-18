@@ -361,7 +361,7 @@ public sealed class DaggerfallHitConsequencesTests
     private sealed class RefusePhysical(string reason) : ICombatContribution
     {
         public void Hit(TryHitEvent value) { if (reason == "miss") value.Hit = false; }
-        public void Immunity(ImmunityEvent value) { if (reason == "material-refusal") value.Immune = true; }
+        public void Negate(NegationEvent value) { if (reason == "material-refusal") value.Negation = HarmNegation.Immune; }
         public void Damage(DamageEvent value) { if (reason == "zero") value.Damage = 0; }
     }
     private sealed class AbsorbHealth : ICombatContribution { public void Applying(ApplyHitEvent value) => value.Damage = 0; }

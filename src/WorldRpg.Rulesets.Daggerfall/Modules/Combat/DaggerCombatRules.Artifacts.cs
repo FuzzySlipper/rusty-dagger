@@ -13,6 +13,8 @@ internal sealed partial class DaggerCombatRules
     private const int SpecialArtifactEffect = 26;
     private const int NamiraArtifact = 7;
     private const string NamiraDamage = "artifact.namira";
+    private const string MolagBalStrike = "artifact.molag-bal";
+    private const string RazorStrike = "artifact.mehrunes-razor";
     private readonly Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)> _molagBalStrike;
 
     private (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? CaptureMolagBalSource(long attacker)
@@ -36,9 +38,14 @@ internal sealed partial class DaggerCombatRules
         var profile = DaggerfallMagicProfiles.Create(victim.Stats, victim.Definition,
             target == PlayerId ? _character() : null, _catalog, _magicDefense(target));
         ExplicitMeleeRequest request = new(attacker, target, generation, step, 1d);
-        if (DaggerfallMagicAdmissionPolicy.SavingThrow(DaggerfallMagicResistanceElement.Magic,
-            DaggerfallMagicEffectFlags.Magic, profile, 0,
-            () => Draw(request, attacker, target, CombatRandomKey.MolagBalSavingThrowSalt, 1, 100, enemy)) == 0) return;
+        // The mace's drain is magic harm the victim may withstand whole, before its amounts are drawn.
+        if (Rules.Negate(Participants(attacker, target, MolagBalStrike), DaggerfallHarmChannels.Magic, negation =>
+            {
+                if (DaggerfallMagicAdmissionPolicy.SavingThrow(DaggerfallMagicResistanceElement.Magic,
+                    DaggerfallMagicEffectFlags.Magic, profile, 0,
+                    () => Draw(request, attacker, target, CombatRandomKey.MolagBalSavingThrowSalt, 1, 100, enemy)) == 0)
+                    negation.Negation = HarmNegation.Resisted;
+            }).Negated) return;
         int strength = victim.Stats.GetTrack(TrackId.Parse("magicka")).Current <= 0
             ? Draw(request, attacker, target, CombatRandomKey.MolagBalStrengthSalt, 1, 6, enemy) : 0;
         var transferred = _molagBalStrike(attacker, target, source.Identity, damage, strength, generation, step);
@@ -100,11 +107,16 @@ internal sealed partial class DaggerCombatRules
         var character = target == PlayerId ? _character() : null;
         DaggerfallMagicTargetProfile profile = DaggerfallMagicProfiles.Create(victim.Stats, victim.Definition,
             character, _catalog, _magicDefense(target));
-        int save = DaggerfallMagicAdmissionPolicy.SavingThrow(DaggerfallMagicResistanceElement.Magic,
-            DaggerfallMagicEffectFlags.Magic, profile, 0,
-            () => Draw(new(attacker, target, generation, step, 1d), attacker, target,
-                CombatRandomKey.RazorSavingThrowSalt, 1, 100, enemy));
-        int added = save == 0 ? 0 : checked((int)Math.Ceiling(health.Current - health.Minimum));
+        // The terminal strike is magic harm the victim may withstand whole, before the remaining health it adds is read.
+        bool withstood = Rules.Negate(Participants(attacker, target, RazorStrike), DaggerfallHarmChannels.Magic, negation =>
+        {
+            if (DaggerfallMagicAdmissionPolicy.SavingThrow(DaggerfallMagicResistanceElement.Magic,
+                DaggerfallMagicEffectFlags.Magic, profile, 0,
+                () => Draw(new(attacker, target, generation, step, 1d), attacker, target,
+                    CombatRandomKey.RazorSavingThrowSalt, 1, 100, enemy)) == 0)
+                negation.Negation = HarmNegation.Resisted;
+        }).Negated;
+        int added = withstood ? 0 : checked((int)Math.Ceiling(health.Current - health.Minimum));
         facts.Append(new ArtifactTerminalStrikeFact(source, attacker, target, added, generation, step));
         if (added > 0) { chargedWeapon = weapon; chargedUnits = added; }
         return checked(damage + added);
@@ -136,6 +148,8 @@ internal sealed partial class DaggerCombatRules
         if (ring is not { } equippedRing) return;
         ulong sourceItem = _equipment.GetDurableItemId(new EntityId(equippedRing.EntityId)).Value;
         CombatParticipants participants = new(incoming.Target, incoming.Source, NamiraDamage);
+        // The reflected blow reaches its attacker as physical harm, mitigated before it applies.
+        reflected = Rules.Mitigate(participants, DaggerfallHarmChannels.Physical, reflected).Damage;
         ApplyHitEvent result = Rules.ApplyToHealth(participants, reflected,
             participants.TargetStats.GetTrack(TrackId.Parse(HealthTrack)));
         facts.Append(new ArtifactDamageReflectedFact(sourceItem, target, attacker, reflected, result.ActualHealthLost, generation, step));
