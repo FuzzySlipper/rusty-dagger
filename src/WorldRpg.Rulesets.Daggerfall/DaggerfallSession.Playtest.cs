@@ -29,6 +29,8 @@ internal sealed partial class DaggerfallSession
             AttackRejectedFact rejected => $"AttackRejected:{rejected.Reason}",
             PlayerAttackStartedFact => "PlayerAttackStarted",
             AttackMissedFact => "AttackMissed",
+            AttackNegatedFact negated => $"AttackNegated:{negated.Negation}",
+            AttackWhiffedFact => "AttackWhiffed",
             AttackHitFact => "AttackHit",
             ActorDiedFact => "ActorDied",
             _ => null,

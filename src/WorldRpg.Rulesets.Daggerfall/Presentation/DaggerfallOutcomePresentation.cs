@@ -2,6 +2,7 @@ using WorldRpg.Kit.Targeting;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Kit.Actors;
@@ -165,11 +166,28 @@ internal sealed class DaggerfallOutcomePresentation(
                     ? $"{DisplayName(definition)} missed you"
                     : $"Missed {DisplayName(definition)}");
                 break;
+            // A contact blow names what the target did with it: turned it aside, took it on armour, or met nothing.
+            case AttackNegatedFact negated:
+                _lineIsResult = true;
+                presentation.SetOutcome(NegatedLine(negated.AttackerId, negated.TargetId, negated.Negation));
+                break;
+            case AttackWhiffedFact whiff:
+                _lineIsResult = true;
+                presentation.SetOutcome(whiff.AttackerId == DaggerfallActorIdentity.PlayerEntityId
+                    ? whiff.TargetId is long aimed ? $"Your blow meets nothing; {Name(aimed)} is out of reach" : "Your blow meets nothing"
+                    : whiff.TargetId == DaggerfallActorIdentity.PlayerEntityId ? $"{Name(whiff.AttackerId)}'s blow misses you"
+                    : whiff.TargetId is long other ? $"{Name(whiff.AttackerId)}'s blow misses {Name(other)}" : $"{Name(whiff.AttackerId)}'s blow meets nothing");
+                break;
+            case AttackHitFact { FullyAbsorbed: true } absorbed:
+                _lineIsResult = true;
+                presentation.SetOutcome(NegatedLine(absorbed.AttackerId, absorbed.TargetId, HarmNegation.Absorbed));
+                break;
             case AttackHitFact hit when Actor(hit.EnemyAttack ? hit.AttackerId : hit.TargetId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;
                 presentation.SetOutcome(hit.EnemyAttack && hit.TargetId != DaggerfallActorIdentity.PlayerEntityId
                     ? $"{Name(hit.AttackerId)} hit {Name(hit.TargetId)} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage"
                     : hit.EnemyAttack ? $"{DisplayName(definition)} hit you for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage" : $"Hit {DisplayName(definition)} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage");
+                if (MitigationClause(hit.Mitigated) is { } clause) presentation.AppendOutcome(clause);
                 if (_soulTrap is { AllowsDeath: false } tethered && tethered.TargetId == hit.TargetId)
                 { presentation.AppendOutcome(tethered.Message); _soulTrap = null; }
                 break;
@@ -196,6 +214,26 @@ internal sealed class DaggerfallOutcomePresentation(
                 break;
         }
     }
+
+    /// <summary>The line for a connected blow the target negated whole, from the player's side of it.</summary>
+    private string NegatedLine(long attacker, long target, HarmNegation negation)
+    {
+        bool absorbed = negation == HarmNegation.Absorbed;
+        if (attacker == DaggerfallActorIdentity.PlayerEntityId)
+            return absorbed ? $"{Name(target)}'s armor absorbs your blow" : $"{Name(target)} deflects your blow";
+        if (target == DaggerfallActorIdentity.PlayerEntityId)
+            return absorbed ? $"Your armor absorbs {Name(attacker)}'s blow" : $"You deflect {Name(attacker)}'s blow";
+        return absorbed ? $"{Name(target)}'s armor absorbs {Name(attacker)}'s blow" : $"{Name(target)} deflects {Name(attacker)}'s blow";
+    }
+
+    /// <summary>What mitigation took off a blow that still landed, when it took anything; classic blows carry none.</summary>
+    private static string? MitigationClause(DaggerfallHarmMitigation mitigated) => (mitigated.Deflected, mitigated.Absorbed) switch
+    {
+        (0, 0) => null,
+        (0, int absorbed) => $"{absorbed} absorbed",
+        (int deflected, 0) => $"{deflected} deflected",
+        (int deflected, int absorbed) => $"{deflected} deflected, {absorbed} absorbed",
+    };
 
     private string Name(long entityId) => Actor(entityId, out DaggerfallActorDefinition definition) ? DisplayName(definition) : $"actor {entityId}";
 

@@ -165,6 +165,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         // shared application credits a blow that lands, so only a negated connect is credited here.
         string? playerSkill = attacker.Id == PlayerId ? ops.PlayerWeaponSkill() : null;
         void CreditNegatedConnect() { if (playerSkill is not null) ops.RecordPlayerWeaponHit(playerSkill); }
+        void Negated(HarmNegation how) => facts.Append(new AttackNegatedFact(attacker.Id, targetId, how, enemy, request.Generation, request.SimulationStep) { Feedback = attack.Feedback });
         ExplicitMeleeRequest key = new(attacker.Id, targetId, request.Generation, request.SimulationStep, request.FixedDeltaSeconds);
         DaggerfallAttackDefinition weapon = admission.Attack;
         int body = DaggerfallFormulaPolicy.CalculateStruckBodyPart(ops.Draw(key, attacker.Id, targetId, CombatRandomKey.BodySalt, 0, 19, enemy));
@@ -173,7 +174,13 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         NegationEvent negation = ops.Rules.Negate(participants, channel, value => ops.Mitigation.Negate(value, harm));
         if (negation.Negation == HarmNegation.Immune && !enemy)
             facts.Append(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial));
-        if (negation.Negated) { CreditNegatedConnect(); return; }
+        if (negation.Negated)
+        {
+            CreditNegatedConnect();
+            // Immunity is reported by the material refusal above; a deflection is a negation the player sees and hears.
+            if (negation.Negation != HarmNegation.Immune) Negated(negation.Negation);
+            return;
+        }
 
         DaggerfallMonsterHit[] slots = [];
         Action<DamageEvent> roll;
@@ -199,7 +206,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         }
         DamageEvent damage = ops.Rules.Damage(participants, roll);
         MitigationEvent mitigation = ops.Rules.Mitigate(participants, channel, damage.Damage, value => ops.Mitigation.Mitigate(value, harm));
-        if (mitigation.Negation != HarmNegation.None) { CreditNegatedConnect(); return; }
+        if (mitigation.Negation != HarmNegation.None) { CreditNegatedConnect(); Negated(mitigation.Negation); return; }
         PreparedPhysicalAttack connected = attack with
         {
             Outcome = new AttackOutcome(Hit: true, Allowed: true, Damage: mitigation.Damage),
@@ -207,6 +214,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
             MonsterHits = slots,
             WeaponPoison = admission.WeaponPoison,
             Harm = harm,
+            Mitigated = new DaggerfallHarmMitigation(mitigation.Deflected, mitigation.Absorbed),
         };
         ops.ApplyConnectedHarm(request with { TargetId = targetId }, targetId, connected, facts);
     }
@@ -248,13 +256,9 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         return (total, [.. landed]);
     }
 
-    /// <summary>A blow that touched no one: no Strikes payload runs, and the swing reports what it missed.</summary>
-    private static void Whiff(AttackRequest request, PreparedPhysicalAttack attack, FactBuffer<IProductFact> facts)
-    {
-        if (request.TargetId is long target)
-            facts.Append(new AttackMissedFact(request.AttackerId, target, 0, 0, request.AttackerId != PlayerId, request.Generation, request.SimulationStep) { Feedback = attack.Feedback });
-        else facts.Append(new AttackRejectedFact(AttackRejection.NoTargetInReach));
-    }
+    /// <summary>A blow that touched no one: no Strikes payload runs, and the swing reports that it met nothing.</summary>
+    private static void Whiff(AttackRequest request, PreparedPhysicalAttack attack, FactBuffer<IProductFact> facts) =>
+        facts.Append(new AttackWhiffedFact(request.AttackerId, request.TargetId, request.AttackerId != PlayerId, request.Generation, request.SimulationStep) { Feedback = attack.Feedback });
 
     private sealed class Shot(DeferredAttackImpact release, Vector3 position, Vector3 direction, double remaining, ulong releaseStep)
     {

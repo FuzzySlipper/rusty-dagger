@@ -63,6 +63,9 @@ public sealed class DaggerfallContactVariantTests
                 * Tuning.AbsorptionMultiplier(DaggerfallHarmChannels.Edged), MidpointRounding.AwayFromZero);
             Assert.True(absorbed > 0);
             Assert.Equal(feet.CalculatedDamage - absorbed, chest.CalculatedDamage);
+            // The hit carries what the armour took, for presentation; bare feet took the whole blow.
+            Assert.Equal((0, absorbed), (chest.Mitigated.Deflected, chest.Mitigated.Absorbed));
+            Assert.Equal(default, feet.Mitigated);
             Assert.DoesNotContain(chestRandom.Keys, key => key.EndsWith($":salt:{CombatRandomKey.HitSalt}", StringComparison.Ordinal));
             Assert.Contains(chestFixture.SkillUses, use => use.Skill == DaggerfallMechanicsIds.Dodging.Value);
         }
@@ -83,7 +86,7 @@ public sealed class DaggerfallContactVariantTests
     }
 
     [Fact]
-    public void A_player_swing_reaches_every_actor_its_volume_touches_and_a_whiff_reports_nothing_in_reach()
+    public void A_player_swing_reaches_every_actor_its_volume_touches_and_a_whiff_reports_it_met_nothing()
     {
         KeyedRandom random = KeyedRandom.Create(8);
         using Fixture fixture = new(random: random.Service, variant: Contact);
@@ -104,7 +107,8 @@ public sealed class DaggerfallContactVariantTests
         fixture.Spatial.OverlapContactsResult = _ => Touching();
         AttackRequest whiff = swing with { SimulationStep = 500 };
         fixture.StartSwing(whiff, out _);
-        Assert.Contains(new AttackRejectedFact(AttackRejection.NoTargetInReach), fixture.DeliverImpact(whiff));
+        AttackWhiffedFact whiffed = Assert.Single(fixture.DeliverImpact(whiff).OfType<AttackWhiffedFact>());
+        Assert.Equal((Player, (long?)null, false), (whiffed.AttackerId, whiffed.TargetId, whiffed.EnemyAttack));
     }
 
     [Fact]
@@ -123,7 +127,10 @@ public sealed class DaggerfallContactVariantTests
         using Fixture deflected = new(random: RandomMinimum.Create(), variant: Contact);
         deflected.Spatial.OverlapContactsResult = _ => Touching(deflected.Actors.Get(2).Actor.Entity.Value);
         deflected.StartSwing(swing, out _);
-        Assert.Empty(deflected.DeliverImpact(swing).OfType<AttackHitFact>());
+        IReadOnlyList<IProductFact> turned = deflected.DeliverImpact(swing);
+        Assert.Empty(turned.OfType<AttackHitFact>());
+        AttackNegatedFact negated = Assert.Single(turned.OfType<AttackNegatedFact>());
+        Assert.Equal((Player, 2L, HarmNegation.Deflected), (negated.AttackerId, negated.TargetId, negated.Negation));
         Assert.Equal(1, WeaponHits(deflected));
 
         using Fixture whiff = new(random: KeyedRandom.Create(8).Service, variant: Contact);

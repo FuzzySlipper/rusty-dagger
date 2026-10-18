@@ -466,7 +466,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         switch (fact)
         {
-            case AttackHitFact hit: StartState(hit.TargetId, "hurt", null); break;
+            case AttackHitFact { FullyAbsorbed: false } hit: StartState(hit.TargetId, "hurt", null); break;
             case ActorDiedFact or EnemyBehaviorTransitionFact: React(fact, state); break;
         }
     }
@@ -643,6 +643,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && deliveredEvents.Add(hitEvent))
                     StartAttack(hit.AttackerId, hit.TargetId, hit.OriginatingGeneration, hit.OriginatingSimulationStep, hitEvent);
                 if (!appliedImpacts.Add(hitEvent)) break;
+                // Armour that took the whole blow sounds the strike landing, without a flesh hit's pitch, hurt or blood.
+                if (hit.FullyAbsorbed) { EmitAbsorbed(hit.Feedback, hitEvent, hit.AttackerId, hit.TargetId, actorState); break; }
                 if (hit.ActualHealthLost <= 0) { EmitMiss(hit.Feedback, hitEvent, actorState); break; }
                 if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && playerBeastForm() is { } beast)
                 {
@@ -656,6 +658,19 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                     actorState, pitch: audioTuning.ContactPitch);
                 StartState(hit.TargetId, "hurt", null);
                 if (hit.TargetId != DaggerfallActorIdentity.PlayerEntityId && actorState is not null) SpawnBlood(hit, hitEvent, actorState);
+                break;
+            case AttackNegatedFact negated:
+                PresentationEventIdentity negatedEvent = Event(negated.AttackerId, negated.TargetId, negated.OriginatingGeneration, negated.OriginatingSimulationStep, "negated");
+                if (!appliedImpacts.Add(negatedEvent)) break;
+                if (negated.Negation == HarmNegation.Deflected)
+                    EmitAtActor($"sound.{428 + DrawCue(negatedEvent, "parry", 0, 8)}", negatedEvent, negated.TargetId, actorState, pitch: audioTuning.ContactPitch);
+                else EmitAbsorbed(negated.Feedback, negatedEvent, negated.AttackerId, negated.TargetId, actorState);
+                break;
+            case AttackWhiffedFact whiff:
+                PresentationEventIdentity whiffEvent = Event(whiff.AttackerId, whiff.TargetId ?? 0, whiff.OriginatingGeneration, whiff.OriginatingSimulationStep, "whiff");
+                if (!appliedImpacts.Add(whiffEvent)) break;
+                // Nothing was touched, so only the blade's own swing is heard, never a parry.
+                EmitAtActor(whiff.Feedback.SwingCue, whiffEvent, whiff.AttackerId, actorState);
                 break;
             case AttackMissedFact miss:
                 PresentationEventIdentity missEvent = Event(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, "miss");
@@ -1474,6 +1489,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         EmitAtActor(cue, identity, parry ? identity.Target : identity.Attacker, state,
             pitch: parry ? audioTuning.ContactPitch : null);
     }
+
+    /// <summary>A blow the target's protection took whole: the strike's hit cue at its own pitch, heard at whoever was struck.</summary>
+    private void EmitAbsorbed(DaggerfallStrikeFeedback feedback, PresentationEventIdentity identity, long attacker, long target, ActorsState? state) =>
+        EmitAtActor(SelectHitCue(identity, feedback.Weapon), identity, target == DaggerfallActorIdentity.PlayerEntityId ? attacker : target, state);
 
     private bool CanVoice(DaggerfallActorFeedback? feedback) => feedback is not null
         && (!audioTuning.MuteHumanSounds || feedback.MobileId < 128 || feedback.MobileId == 146);
