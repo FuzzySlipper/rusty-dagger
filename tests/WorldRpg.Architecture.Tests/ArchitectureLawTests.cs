@@ -61,7 +61,10 @@ public sealed class ArchitectureLawTests
         AssertProjectReferences("Daggerfall.Import", ["WorldRpg.SpriteAuthoring"]);
         AssertProjectReferences("WorldRpg.Kit", []);
         AssertProjectReferences("WorldRpg.Rulesets.Daggerfall", ["WorldRpg.Kit"]);
-        AssertProjectReferences("WorldRpg.Host", ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall"]);
+        AssertProjectReferences("WorldRpg.Host", ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall", "WorldRpg.Rulesets.Daggerfall.Variants"]);
+        // Variants deviate from classic by referencing it; classic never references its variants, which
+        // the classic ruleset's own expected references above already pin.
+        AssertProjectReferences("WorldRpg.Rulesets.Daggerfall.Variants", ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall"]);
         // The developer-only workbench reaches the shared sprite-authoring contract, never the importer
         // or the ruleset.
         AssertProjectReferences("WorldRpg.SpriteWorkbench", ["WorldRpg.Kit", "WorldRpg.SpriteAuthoring"]);
@@ -251,7 +254,7 @@ public sealed class ArchitectureLawTests
 
     /// <summary>Every Engine product assembly, including the developer-only sprite workbench product.</summary>
     private static IEnumerable<string> ActiveRuntimeProjects() =>
-    ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall", "WorldRpg.Host", "WorldRpg.SpriteWorkbench"];
+    ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall", "WorldRpg.Rulesets.Daggerfall.Variants", "WorldRpg.Host", "WorldRpg.SpriteWorkbench"];
 
     private static string WithoutXmlComments(string project) => Regex.Replace(project, "<!--.*?-->", string.Empty, RegexOptions.Singleline);
 

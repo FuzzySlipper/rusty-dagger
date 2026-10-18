@@ -42,7 +42,8 @@ exception to a blanket Den-unavailable stop rule.
 **Implemented today:** `src/WorldRpg.Kit/` contains the safe composition
 contract and reusable world-RPG mechanisms, while `src/WorldRpg.Rulesets.Daggerfall/` owns Daggerfall policy and session composition,
 `src/WorldRpg.Host/` owns product lifecycle, built-in selection, and the one
-ordinary product entry. The immutable `Rusty.Engine` SDK generates CoreCLR and
+ordinary product entry. `src/WorldRpg.Rulesets.Daggerfall.Variants/` holds the
+compiled rules variants a bundle may select. The immutable `Rusty.Engine` SDK generates CoreCLR and
 NativeAOT composition beneath ignored `obj` output. Inside the ruleset, session
 composition and most owners sit at the project root, domain folders (`World/`,
 `Policies/`, `Content/`, `Presentation/` and others) group related owners, and
@@ -56,6 +57,7 @@ coverage work separately; `docs/code-migration-map.md` records disposition.
 | Owner | Responsibility |
 | --- | --- |
 | `WorldRpg.Kit` | Reusable and reasonably uncertain world-RPG mechanisms: typed IDs, compiled ruleset/session contracts, bundle/content-pack/tuning resolution, controls, actor lifetime, spatial session stepping, progression, bounded facts, structured UI values, and thin Engine-backed inventory coordination. It is not a universal RPG framework. |
+| `WorldRpg.Rulesets.Daggerfall.Variants` | Compiled rules variants: deliberate deviations from classic Daggerfall that a game bundle selects with `variants`. Each declares a manifest (ruleset, claimed seams, its own tuning profile and content packs) and replaces whole seam owners; classic owners are the default and never branch on a variant. It references the classic ruleset; classic never references it. |
 | `WorldRpg.Host` | Current reference-product lifecycle, explicit built-in ruleset/default selection, and session construction. Bundle/launcher selection and diagnostics expand later. It may select Daggerfall, never interpret Daggerfall rules or source files. |
 | `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, formulas, attack and reward policy, content interpretation, presentation meaning, save behavior, and Daggerfall session composition. |
 | `WorldRpg.Host` product metadata | The one explicit product type and bundle declaration. The SDK generates ABI, lifecycle adaptation, services, handles, and both loader compositions beneath `obj`; there is no checked NativeProduct assembly. |

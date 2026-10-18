@@ -49,6 +49,48 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
+    public void A_variants_physical_mitigation_owner_replaces_classic_mitigation_for_the_prepared_attack()
+    {
+        // The same armed brigand swing as above, under a whole-owner mitigation seam that absorbs two and
+        // does not apply classic's material requirement.
+        RecordingMitigation absorbing = new(absorb: 2);
+        using DamagePolicyFixture fixture = new(mitigation: absorbing);
+        fixture.NpcStrength(50);
+        fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
+        fixture.Script(body: 3, critical: 1, hit: 1, damage: 7);
+
+        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+
+        Assert.Equal((true, true, 4), (result.Outcome.Hit, result.Outcome.Allowed, result.Outcome.Damage));
+        DaggerfallPhysicalHarm harm = Assert.Single(absorbing.Mitigated);
+        Assert.Equal((2L, DaggerfallActorIdentity.PlayerEntityId, "long-blade", "iron"), (harm.AttackerId, harm.TargetId, harm.Skill, harm.WeaponMaterial));
+        Assert.Equal(harm, Assert.Single(absorbing.Negated));
+
+        using DamagePolicyFixture negated = new(mitigation: new RecordingMitigation(negate: true));
+        negated.EquipNpcWeapon(2, "iron-longsword", 9001);
+        negated.Script(body: 3, critical: 1, hit: 1);
+        PreparedResolution turned = negated.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        Assert.Equal((true, false, 0), (turned.Outcome.Hit, turned.Outcome.Allowed, turned.Outcome.Damage));
+        Assert.DoesNotContain(turned.Ranges, range => range == (2, 16)); // A negated harm is never rolled.
+    }
+
+    private sealed class RecordingMitigation(int absorb = 0, bool negate = false) : IDaggerfallPhysicalMitigation
+    {
+        internal List<DaggerfallPhysicalHarm> Negated { get; } = [];
+        internal List<DaggerfallPhysicalHarm> Mitigated { get; } = [];
+        public void Negate(NegationEvent negation, DaggerfallPhysicalHarm harm)
+        {
+            Negated.Add(harm);
+            if (negate) negation.Negation = HarmNegation.Deflected;
+        }
+        public void Mitigate(MitigationEvent mitigation, DaggerfallPhysicalHarm harm)
+        {
+            Mitigated.Add(harm);
+            mitigation.Absorbed += absorb;
+        }
+    }
+
+    [Fact]
     public void An_unarmed_monster_fights_with_its_authored_attack_set_and_every_slot_rolls_its_own_gate()
     {
         using DamagePolicyFixture fixture = new();
@@ -589,7 +631,8 @@ public sealed class DaggerCombatDamagePolicyTests
             return gesture;
         }
 
-        internal DamagePolicyFixture(bool armed = true, Func<WorldPoint, WorldPoint, bool>? coverBlocks = null, int armorValueShift = 0, int attackChanceShift = 0)
+        internal DamagePolicyFixture(bool armed = true, Func<WorldPoint, WorldPoint, bool>? coverBlocks = null, int armorValueShift = 0, int attackChanceShift = 0,
+            IDaggerfallPhysicalMitigation? mitigation = null)
         {
             DaggerfallDefinitions definitions = Definitions;
             DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
@@ -631,7 +674,8 @@ public sealed class DaggerCombatDamagePolicyTests
                 magicDefense: _ => DaggerfallMagicDefense.None, physicalAttacksBlocked: _ => false,
                 molagBalStrike: (_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture arms no Mace of Molag Bal."),
                 itemStrike: (_, _, _, damage) => damage,
-                monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team);
+                monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team,
+                mitigation: mitigation);
         }
 
         internal void Script(int body, int critical, int hit, int? damage = null, int? backstabRoll = null)

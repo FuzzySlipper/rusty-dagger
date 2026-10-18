@@ -40,29 +40,52 @@ public sealed class WorldRpgSaveSlotsTests
     }
 
     [Fact]
+    public void A_save_records_its_rules_variants_and_loads_only_under_the_same_set()
+    {
+        InMemoryPersistenceService persistence = new();
+        using WorldRpgSaveSlots slots = new(Engine(persistence), "worldrpg-test");
+        RulesVariantId contact = new("daggerfall.contact"), armor = new("daggerfall.armor");
+        slots.SaveSlot("slot-v", "Variant", new GameSaveEnvelope(new RulesetSavePayload(new RulesetId("daggerfall"), [1]), [contact, armor]));
+        slots.SaveSlot("slot-c", "Classic", Envelope("daggerfall"));
+
+        (GameSaveEnvelope? reordered, WorldRpgSlotLoadDiagnostic? reorderedDiagnostic) = slots.LoadSlot("slot-v", "daggerfall", [armor, contact]);
+        Assert.Null(reorderedDiagnostic);
+        Assert.Equal([contact, armor], reordered!.Variants);
+
+        (GameSaveEnvelope? underClassic, WorldRpgSlotLoadDiagnostic? classicDiagnostic) = slots.LoadSlot("slot-v", "daggerfall", []);
+        Assert.Null(underClassic);
+        Assert.Equal("incompatible", classicDiagnostic!.Kind);
+        Assert.Contains("[daggerfall.armor, daggerfall.contact]", classicDiagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("none (the ruleset's own rules)", classicDiagnostic.Message, StringComparison.Ordinal);
+
+        Assert.Equal("incompatible", slots.LoadSlot("slot-c", "daggerfall", [contact]).Diagnostic!.Kind);
+        Assert.Null(slots.LoadSlot("slot-c", "daggerfall", []).Diagnostic);
+    }
+
+    [Fact]
     public void Loads_name_missing_incompatible_and_corrupt_slots()
     {
         InMemoryPersistenceService persistence = new();
         using WorldRpgSaveSlots slots = new(Engine(persistence), "worldrpg-test");
         slots.SaveSlot("slot-a", "A", Envelope("daggerfall"));
 
-        (GameSaveEnvelope? missing, WorldRpgSlotLoadDiagnostic? missingDiagnostic) = slots.LoadSlot("nope", "daggerfall");
+        (GameSaveEnvelope? missing, WorldRpgSlotLoadDiagnostic? missingDiagnostic) = slots.LoadSlot("nope", "daggerfall", []);
         Assert.Null(missing);
         Assert.Equal("missing", missingDiagnostic!.Kind);
 
-        (GameSaveEnvelope? wrong, WorldRpgSlotLoadDiagnostic? wrongDiagnostic) = slots.LoadSlot("slot-a", "other");
+        (GameSaveEnvelope? wrong, WorldRpgSlotLoadDiagnostic? wrongDiagnostic) = slots.LoadSlot("slot-a", "other", []);
         Assert.Null(wrong);
         Assert.Equal("incompatible", wrongDiagnostic!.Kind);
         Assert.Contains("daggerfall", wrongDiagnostic.Message, StringComparison.Ordinal);
 
-        (GameSaveEnvelope? ok, WorldRpgSlotLoadDiagnostic? okDiagnostic) = slots.LoadSlot("slot-a", "daggerfall");
+        (GameSaveEnvelope? ok, WorldRpgSlotLoadDiagnostic? okDiagnostic) = slots.LoadSlot("slot-a", "daggerfall", []);
         Assert.NotNull(ok);
         Assert.Null(okDiagnostic);
 
         // A catalog entry whose revision has no stored payload is corrupt, not a load of another revision.
         persistence.Put("worldrpg-test/slots", WorldRpgSaveSlots.IndexKey, System.Text.Encoding.UTF8.GetBytes(
             """[{"Key":"slot-a","Label":"A","SavedAtUtc":"2026-09-22T00:00:00Z","Ruleset":"daggerfall","Revision":5}]"""));
-        (GameSaveEnvelope? corrupt, WorldRpgSlotLoadDiagnostic? corruptDiagnostic) = slots.LoadSlot("slot-a", "daggerfall");
+        (GameSaveEnvelope? corrupt, WorldRpgSlotLoadDiagnostic? corruptDiagnostic) = slots.LoadSlot("slot-a", "daggerfall", []);
         Assert.Null(corrupt);
         Assert.Equal("corrupt", corruptDiagnostic!.Kind);
     }
@@ -77,7 +100,7 @@ public sealed class WorldRpgSaveSlotsTests
         Assert.Empty(slots.List());
         using WorldRpgSaveSlots reopened = new(Engine(persistence), "worldrpg-test");
         Assert.Empty(reopened.List());
-        Assert.Equal("missing", reopened.LoadSlot("slot-a", "daggerfall").Diagnostic!.Kind);
+        Assert.Equal("missing", reopened.LoadSlot("slot-a", "daggerfall", []).Diagnostic!.Kind);
         Assert.False(slots.DeleteSlot("slot-a"));
     }
 
@@ -101,7 +124,7 @@ public sealed class WorldRpgSaveSlotsTests
         slots.SaveSlot("slot-b", "B", Envelope("daggerfall", [9]));
         persistence.Remove("worldrpg-test/slots", WorldRpgSaveSlots.PayloadKey("slot-b", 1));
         Assert.Equal("B", Assert.Single(slots.List()).Label);
-        Assert.Equal("corrupt", slots.LoadSlot("slot-b", "daggerfall").Diagnostic!.Kind);
+        Assert.Equal("corrupt", slots.LoadSlot("slot-b", "daggerfall", []).Diagnostic!.Kind);
     }
 
     [Fact]
@@ -118,7 +141,7 @@ public sealed class WorldRpgSaveSlotsTests
         using (WorldRpgSaveSlots afterNewFailure = new(Engine(persistence), "worldrpg-test"))
         {
             Assert.Empty(afterNewFailure.List());
-            Assert.Equal("missing", afterNewFailure.LoadSlot("slot-a", "daggerfall").Diagnostic!.Kind);
+            Assert.Equal("missing", afterNewFailure.LoadSlot("slot-a", "daggerfall", []).Diagnostic!.Kind);
         }
 
         using (WorldRpgSaveSlots slots = new(Engine(persistence), "worldrpg-test"))
@@ -134,7 +157,7 @@ public sealed class WorldRpgSaveSlotsTests
         using (WorldRpgSaveSlots afterPayloadFailure = new(Engine(persistence), "worldrpg-test"))
         {
             Assert.Equal("Before", afterPayloadFailure.List().Single(entry => entry.Key == "slot-a").Label);
-            Assert.Equal([2], afterPayloadFailure.LoadSlot("slot-a", "daggerfall").Envelope!.Payload.Bytes.ToArray());
+            Assert.Equal([2], afterPayloadFailure.LoadSlot("slot-a", "daggerfall", []).Envelope!.Payload.Bytes.ToArray());
             // A catalog write that commits and then faults leaves the new slot complete.
             persistence.FailNextSaveAfterCommit(WorldRpgSaveSlots.IndexKey);
             InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => afterPayloadFailure.SaveSlot("slot-a", "After", Envelope("daggerfall", [4])));
@@ -144,8 +167,8 @@ public sealed class WorldRpgSaveSlotsTests
         using (WorldRpgSaveSlots afterOverwriteFailure = new(Engine(persistence), "worldrpg-test"))
         {
             Assert.Equal("After", afterOverwriteFailure.List().Single(entry => entry.Key == "slot-a").Label);
-            Assert.Equal([4], afterOverwriteFailure.LoadSlot("slot-a", "daggerfall").Envelope!.Payload.Bytes.ToArray());
-            Assert.Equal([3], afterOverwriteFailure.LoadSlot("slot-b", "daggerfall").Envelope!.Payload.Bytes.ToArray());
+            Assert.Equal([4], afterOverwriteFailure.LoadSlot("slot-a", "daggerfall", []).Envelope!.Payload.Bytes.ToArray());
+            Assert.Equal([3], afterOverwriteFailure.LoadSlot("slot-b", "daggerfall", []).Envelope!.Payload.Bytes.ToArray());
             persistence.FailNextSaveAfterCommit();
             InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => afterOverwriteFailure.DeleteSlot("slot-a"));
             Assert.Contains("Reload the catalog", failure.Message, StringComparison.Ordinal);
@@ -153,9 +176,9 @@ public sealed class WorldRpgSaveSlotsTests
 
         using (WorldRpgSaveSlots afterDeleteFailure = new(Engine(persistence), "worldrpg-test"))
         {
-            Assert.Equal("missing", afterDeleteFailure.LoadSlot("slot-a", "daggerfall").Diagnostic!.Kind);
+            Assert.Equal("missing", afterDeleteFailure.LoadSlot("slot-a", "daggerfall", []).Diagnostic!.Kind);
             Assert.Equal("Unrelated", afterDeleteFailure.List().Single().Label);
-            Assert.Equal([3], afterDeleteFailure.LoadSlot("slot-b", "daggerfall").Envelope!.Payload.Bytes.ToArray());
+            Assert.Equal([3], afterDeleteFailure.LoadSlot("slot-b", "daggerfall", []).Envelope!.Payload.Bytes.ToArray());
             Assert.True(afterDeleteFailure.DeleteSlot("slot-b"));
         }
 
@@ -176,7 +199,7 @@ public sealed class WorldRpgSaveSlotsTests
 
         WorldRpgSaveFormatException listFailure = Assert.Throws<WorldRpgSaveFormatException>(() => slots.List());
         Assert.True(listFailure.Message.Contains("slot catalog", StringComparison.Ordinal), description);
-        Assert.Equal("corrupt", slots.LoadSlot("slot-a", "daggerfall").Diagnostic!.Kind);
+        Assert.Equal("corrupt", slots.LoadSlot("slot-a", "daggerfall", []).Diagnostic!.Kind);
         Assert.Throws<WorldRpgSaveFormatException>(() => slots.DeleteSlot("slot-a"));
         Assert.Throws<WorldRpgSaveFormatException>(() => slots.SaveSlot("slot-a", "After the dungeon", Envelope("daggerfall")));
 
@@ -195,7 +218,7 @@ public sealed class WorldRpgSaveSlotsTests
     ];
 
     private static GameSaveEnvelope Envelope(string ruleset, byte[]? payload = null) =>
-        new(new RulesetSavePayload(new RulesetId(ruleset), payload ?? [1, 2, 3]));
+        new(new RulesetSavePayload(new RulesetId(ruleset), payload ?? [1, 2, 3]), []);
 
     private static IEngineContext Engine(IPersistenceService persistence)
     {

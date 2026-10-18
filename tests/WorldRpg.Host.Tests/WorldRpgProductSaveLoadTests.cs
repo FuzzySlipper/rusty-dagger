@@ -58,7 +58,7 @@ public sealed class WorldRpgProductSaveLoadTests
         product.Update(Update(7));
         Assert.Single(restored.SaveSlots);
         using WorldRpgSaveSlots reopened = new(Context(persistence).Engine, "worldrpg.saves");
-        (GameSaveEnvelope? deleted, WorldRpgSlotLoadDiagnostic? diagnostic) = reopened.LoadSlot(second.Key, "test");
+        (GameSaveEnvelope? deleted, WorldRpgSlotLoadDiagnostic? diagnostic) = reopened.LoadSlot(second.Key, "test", []);
         Assert.Null(deleted);
         Assert.Equal("missing", diagnostic!.Kind);
     }

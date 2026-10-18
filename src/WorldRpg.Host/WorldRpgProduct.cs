@@ -110,7 +110,9 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
     private static (ResolvedGameComposition Composition, IGameRuleset Selected) ResolveSelection(ProductCreateContext context, IGameRuleset? ruleset, GameBundleId bundle)
     {
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(context.Content, bundle).RequireComposition();
+        IReadOnlyList<RulesVariantManifest> variants = ruleset is null ? BuiltInRulesets.VariantManifests
+            : ruleset is IRulesVariantCatalog catalog ? catalog.CompiledVariants : [];
+        ResolvedGameComposition composition = GameCompositionResolver.Resolve(context.Content, bundle, variants).RequireComposition();
         IGameRuleset selected = ruleset ?? BuiltInRulesets.Resolve(composition.Ruleset);
         if (selected.Id != composition.Ruleset)
             throw new InvalidOperationException($"Selected ruleset '{selected.Id.Value}' does not match bundle ruleset '{composition.Ruleset.Value}'.");
@@ -557,7 +559,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             key = request.Key;
         }
 
-        WorldRpgSaveSlotEntry entry = SaveSlots.SaveSlot(key, request.Label.Trim(), new GameSaveEnvelope(saveable.CaptureSave()));
+        WorldRpgSaveSlotEntry entry = SaveSlots.SaveSlot(key, request.Label.Trim(), new GameSaveEnvelope(saveable.CaptureSave(), _compositionIdentity.Variants));
         requesting.ReportSaveOutcome($"Saved '{entry.Label}' (revision {entry.Revision}).");
         RefreshSaveSlots(requesting);
     }
@@ -572,14 +574,14 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        _ = SaveSlots.SaveSlot(QuickSaveKey, QuickSaveLabel, new GameSaveEnvelope(saveable.CaptureSave()));
+        _ = SaveSlots.SaveSlot(QuickSaveKey, QuickSaveLabel, new GameSaveEnvelope(saveable.CaptureSave(), _compositionIdentity.Variants));
         requesting.ReportSaveOutcome("Quick saved.");
         RefreshSaveSlots(requesting);
     }
 
     private void LoadNamedSlot(ISaveRequestingGameSession requesting, string key)
     {
-        (GameSaveEnvelope? envelope, WorldRpgSlotLoadDiagnostic? diagnostic) = SaveSlots.LoadSlot(key, _composition.Ruleset.Value);
+        (GameSaveEnvelope? envelope, WorldRpgSlotLoadDiagnostic? diagnostic) = SaveSlots.LoadSlot(key, _composition.Ruleset.Value, _compositionIdentity.Variants);
         if (diagnostic is not null)
         {
             requesting.ReportSaveOutcome($"Load failed: {diagnostic.Message}");
@@ -645,6 +647,11 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         if (envelope.Payload.Ruleset != _composition.Ruleset)
         {
             requesting.ReportSaveOutcome("Load failed: the saved game is for a different ruleset.");
+            return;
+        }
+        if (!envelope.Variants.Order().SequenceEqual(_compositionIdentity.Variants.Order()))
+        {
+            requesting.ReportSaveOutcome("Load failed: the saved game ran under different rules variants.");
             return;
         }
 

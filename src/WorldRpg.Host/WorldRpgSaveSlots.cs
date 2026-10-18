@@ -93,7 +93,8 @@ public sealed class WorldRpgSaveSlots : IDisposable
             label,
             DateTime.UtcNow,
             value.Payload.Ruleset.Value,
-            revision);
+            revision,
+            [.. value.Variants.Select(variant => variant.Value)]);
         snapshot.Entries.RemoveAll(entry => string.Equals(entry.Key, key, StringComparison.Ordinal));
         snapshot.Entries.Add(saved);
         WriteCatalog(snapshot);
@@ -102,14 +103,16 @@ public sealed class WorldRpgSaveSlots : IDisposable
     }
 
     /// <summary>
-    /// Loads a slot's envelope without touching any session: missing, corrupt and ruleset-mismatch
-    /// outcomes arrive named, and the current session is never mutated by a rejected load.
+    /// Loads a slot's envelope without touching any session: missing, corrupt, ruleset-mismatch and
+    /// rules-variant-mismatch outcomes arrive named, and the current session is never mutated by a
+    /// rejected load. A save runs only under the rules variants it was made with.
     /// </summary>
-    public (GameSaveEnvelope? Envelope, WorldRpgSlotLoadDiagnostic? Diagnostic) LoadSlot(string key, string ruleset)
+    public (GameSaveEnvelope? Envelope, WorldRpgSlotLoadDiagnostic? Diagnostic) LoadSlot(string key, string ruleset, IReadOnlyList<RulesVariantId> variants)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(ruleset);
+        ArgumentNullException.ThrowIfNull(variants);
 
         CatalogSnapshot snapshot;
         try
@@ -132,9 +135,17 @@ public sealed class WorldRpgSaveSlots : IDisposable
             return (null, new("incompatible", $"Slot '{key}' belongs to ruleset '{entry.Ruleset}', not '{ruleset}'."));
         }
 
+        string[] saved = [.. entry.SavedVariants.Order(StringComparer.Ordinal)];
+        string[] running = [.. variants.Select(variant => variant.Value).Order(StringComparer.Ordinal)];
+        if (!saved.SequenceEqual(running, StringComparer.Ordinal))
+        {
+            return (null, new("incompatible", $"Slot '{key}' was saved under rules variants {Describe(saved)}, but this game runs {Describe(running)}."));
+        }
+
         try
         {
-            return (new GameSaveEnvelope(new RulesetSavePayload(new RulesetId(entry.Ruleset), ReadPayload(key, entry.Revision))), null);
+            return (new GameSaveEnvelope(new RulesetSavePayload(new RulesetId(entry.Ruleset), ReadPayload(key, entry.Revision)),
+                entry.SavedVariants.Select(variant => new RulesVariantId(variant))), null);
         }
         catch (WorldRpgSaveFormatException error)
         {
@@ -314,12 +325,19 @@ public sealed class WorldRpgSaveSlots : IDisposable
             ? new WorldRpgSaveFormatException($"The saved slot catalog is malformed: {detail}.")
             : new WorldRpgSaveFormatException($"The saved slot catalog is malformed: {detail}.", inner);
 
+    private static string Describe(string[] variants) => variants.Length == 0 ? "none (the ruleset's own rules)" : $"[{string.Join(", ", variants)}]";
+
     private sealed record CatalogSnapshot(List<WorldRpgPersistedSaveSlot> Entries, bool Present, ulong Revision);
 }
 
-/// <summary>Durable catalog metadata for one named Host-owned save slot; its payload is stored separately.</summary>
-internal sealed record WorldRpgPersistedSaveSlot(string Key, string Label, DateTime SavedAtUtc, string Ruleset, ulong Revision)
+/// <summary>
+/// Durable catalog metadata for one named Host-owned save slot; its payload is stored separately.
+/// <paramref name="Variants"/> are the rules variants the game ran under; a slot written before any
+/// variant existed has none, which is what it ran under.
+/// </summary>
+internal sealed record WorldRpgPersistedSaveSlot(string Key, string Label, DateTime SavedAtUtc, string Ruleset, ulong Revision, string[]? Variants = null)
 {
+    internal IReadOnlyList<string> SavedVariants => Variants ?? [];
     internal WorldRpgSaveSlotEntry ToEntry() => new(Key, Label, SavedAtUtc, Ruleset, Revision);
 }
 
