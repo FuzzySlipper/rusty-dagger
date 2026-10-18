@@ -383,6 +383,22 @@ public sealed class SpatialMovementSystem : IDisposable
             QueryColliders(entities, environment), ReadOnlyMemory<ulong>.Empty));
     }
 
+    /// <summary>
+    /// Every caller-supplied entity collider and world source a shape placed at <paramref name="pose"/>
+    /// overlaps, through the Engine, with the current call-local obstacles answering as entities. The
+    /// result is copied, so it stays valid across later queries.
+    /// </summary>
+    public (SpatialContact[] Contacts, bool WorldContact, bool Truncated) OverlapContacts(SpatialShape shape, SpatialPose pose,
+        ReadOnlyMemory<SpatialEntityCollider> entities, CharacterStepEnvironment? environment = null, uint maxContacts = 0)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        ValidateColliders(entities.Span, nameof(entities));
+        SpatialContactResult result = _spatial.OverlapContacts(SpatialContactQueryRequest.Overlap(_session, shape, pose,
+            QueryColliders(entities, environment), ReadOnlyMemory<SpatialEntityPart>.Empty, ReadOnlyMemory<ulong>.Empty,
+            new SpatialQueryFilter(uint.MaxValue, uint.MaxValue), excludeWorld: false, maxContacts));
+        return (result.Contacts.ToArray(), result.WorldContact, result.Truncated);
+    }
+
     private static ReadOnlyMemory<SpatialEntityCollider> QueryColliders(
         ReadOnlyMemory<SpatialEntityCollider> entities, CharacterStepEnvironment? environment)
     {

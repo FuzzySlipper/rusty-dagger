@@ -50,6 +50,7 @@ internal sealed class EngineGraphicsOutsideUpdate(IGraphicsService engine) : IGr
 
     public RenderResourceInfo OpenResource(RenderResourceRequest arg0) { CreatedResources++; return _engine.OpenResource(arg0); }
     public TextureResourceInfo ReadTextureInfo(RenderResource arg0) => _engine.ReadTextureInfo(arg0);
+    public LandmarkReadResult ReadLandmarks(LandmarkReadRequest arg0) => _engine.ReadLandmarks(arg0);
     public RenderResourceInfo OpenResourceFromContent(RenderResourceContentRequest arg0) => _engine.OpenResourceFromContent(arg0);
     public Appearance CreateStaticMeshFromContentReference(StaticMeshContentReferenceRequest arg0) { CreatedResources++; return _engine.CreateStaticMeshFromContentReference(arg0); }
     public Material CreateMaterial(MaterialRequest arg0) { CreatedResources++; return _engine.CreateMaterial(arg0); }

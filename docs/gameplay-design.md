@@ -105,8 +105,10 @@ Physical contact for delivery is Kit `ActorContact`: query-local actor body
 colliders projected from canonical actors (the ruleset's body envelope, and the
 Engine character shape for the player), and a per-step `Segment` contact that
 reports the first world surface or actor body a projectile meets, ignoring its
-source. Spell missiles fly on it. Contact for a melee volume waits on an Engine
-overlap readout that names every entity touched. Each base calculation
+source. Spell missiles fly on it. `Volume` reports every actor body a placed
+shape touches (a melee swing at its hit frame, a touch spell's reach) through
+the Engine's overlap contacts, leaving out actors the world occludes from the
+attacker; actor bodies do not shield one another. Each base calculation
 precedes ordered contributions; application contributions run before the
 supplied application handler. Gathering visits attacker and target
 contributions and their distinct equipped items, then explicitly registered
