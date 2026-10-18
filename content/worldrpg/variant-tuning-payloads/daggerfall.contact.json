@@ -1,0 +1,41 @@
+{
+  "melee": {
+    "swingWidth": 1.2,
+    "swingHeight": 1.2,
+    "swingDrop": 0.5,
+    "defaultReach": 2.25
+  },
+  "projectile": {
+    "speedMetersPerSecond": 25,
+    "defaultRange": 51.2
+  },
+  "critical": {
+    "chancePerSkillPoint": 0.3,
+    "chancePerAttackChancePoint": 1.0,
+    "damageMultiplier": 1.5
+  },
+  "deflection": {
+    "baseChance": 5,
+    "dodgingPerPoint": 0.3,
+    "agilityPerPointAbove50": 0.2,
+    "maximumChance": 60,
+    "channels": {
+      "edged": { "mode": "full" },
+      "piercing": { "mode": "full" },
+      "blunt": { "mode": "partial", "fraction": 0.5 },
+      "physical": { "mode": "full" }
+    }
+  },
+  "absorption": {
+    "perArmorPoint": 0.4,
+    "perShieldPoint": 0.4,
+    "monsterArmorBaseline": 10,
+    "monsterAbsorbPerPoint": 0.5,
+    "channelMultipliers": {
+      "edged": 1.0,
+      "piercing": 0.8,
+      "blunt": 0.6,
+      "physical": 0.8
+    }
+  }
+}

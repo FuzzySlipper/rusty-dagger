@@ -1,14 +1,26 @@
+using Rusty.Engine;
+using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
+using EquipmentRead = WorldRpg.Kit.Inventory.EquipmentRead;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>What a variant's seam owners are built from when its session is composed.</summary>
+/// <summary>The session's live reads every seam owner may be built over.</summary>
 /// <param name="Definitions">The session's admitted definitions.</param>
 /// <param name="Character">The player's live character, when one exists.</param>
-/// <param name="Tuning">The variant's own admitted tuning profile.</param>
-internal sealed record DaggerfallSeamContext(DaggerfallDefinitions Definitions, Func<DaggerfallCharacterState?> Character, TuningProfile Tuning);
+/// <param name="Random">The session's Engine random service, for keyed draws.</param>
+/// <param name="EquipmentOf">An actor's current equipment.</param>
+/// <param name="StatsOf">An actor's live stats, or null for one that is gone.</param>
+internal sealed record DaggerfallSeamInputs(DaggerfallDefinitions Definitions, Func<DaggerfallCharacterState?> Character,
+    IRandomService Random, Func<long, EquipmentRead> EquipmentOf, Func<long, StatsComponent?> StatsOf);
+
+/// <summary>What a variant's seam owners are built from when its session is composed: the session's reads and the variant's own tuning.</summary>
+internal sealed record DaggerfallSeamContext(DaggerfallSeamInputs Session, TuningProfile Tuning)
+{
+    internal DaggerfallDefinitions Definitions => Session.Definitions;
+}
 
 /// <summary>
 /// One compiled Daggerfall rules variant: its manifest and an explicit owner factory for each seam it
@@ -91,14 +103,14 @@ internal sealed class DaggerfallSeamSelection
         return new(physicalMitigation, physicalDelivery);
     }
 
-    internal IDaggerfallPhysicalMitigation BuildPhysicalMitigation(DaggerfallDefinitions definitions, Func<DaggerfallCharacterState?> character) =>
+    internal IDaggerfallPhysicalMitigation BuildPhysicalMitigation(DaggerfallSeamInputs session) =>
         _physicalMitigation is { } owner
-            ? owner.Variant.PhysicalMitigation!(new DaggerfallSeamContext(definitions, character, owner.Resolved.Tuning))
-            : new DaggerfallClassicPhysicalMitigation(character);
+            ? owner.Variant.PhysicalMitigation!(new DaggerfallSeamContext(session, owner.Resolved.Tuning))
+            : new DaggerfallClassicPhysicalMitigation(session.Character);
 
     /// <summary>The selected physical delivery owner, built over the shared harm operations it delivers through.</summary>
-    internal Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery> PhysicalDelivery(DaggerfallDefinitions definitions, Func<DaggerfallCharacterState?> character) =>
+    internal Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery> PhysicalDelivery(DaggerfallSeamInputs session) =>
         _physicalDelivery is { } owner
-            ? ops => owner.Variant.PhysicalDelivery!(new DaggerfallSeamContext(definitions, character, owner.Resolved.Tuning), ops)
+            ? ops => owner.Variant.PhysicalDelivery!(new DaggerfallSeamContext(session, owner.Resolved.Tuning), ops)
             : ops => new DaggerfallClassicPhysicalDelivery(ops);
 }

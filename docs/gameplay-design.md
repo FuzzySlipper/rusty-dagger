@@ -132,7 +132,10 @@ manifests and refuses an unknown variant, one for another ruleset, or two
 claiming one seam; `ResolvedCompositionIdentity.Variants` records the set, and
 the Host refuses to load a save under a different set. Daggerfall declares its
 seams in `DaggerfallRulesSeams`, each with one owner interface; session
-composition builds the selected variant's owner or classic's. Additive
+composition builds the selected variant's owner or classic's. The first variant,
+`daggerfall.contact` (bundle `daggerfall.contact`), claims physical delivery and
+mitigation: no to-hit roll, swings and arrows harm whoever they physically meet,
+and targets deflect or absorb by channel through its own tuning profile. Additive
 deviations stay contributions to the shared RuleEvents, so effects and
 enchantments work under every variant.
 

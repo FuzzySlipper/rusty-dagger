@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Kit.Combat;
 using System.Numerics;
 using Rusty.Engine;
@@ -174,6 +175,24 @@ internal sealed partial class DaggerfallSession
 
     /// <summary>The upright body every site actor presents to spell and harm contact.</summary>
     internal static readonly ActorBodyEnvelope ActorContactBody = new(.3f, 1.8f);
+
+    /// <summary>A site actor's eye sits near the top of its body envelope.</summary>
+    private const float ActorEyeFraction = .9f;
+
+    /// <summary>
+    /// Where an actor strikes or looses from and which way it faces: the player from the camera eye along
+    /// the current look, a site actor from near the top of its body along its heading.
+    /// </summary>
+    private DaggerfallStrikePose? StrikePose(long actor)
+    {
+        if (actor == State.Actors.Player.DurableId)
+            return State.PlayerControl.Position is WorldPoint player
+                ? new(player.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight, _input.ResolveCurrentLook(State.PlayerControl).Forward)
+                : null;
+        return State.Actors.TryGet(actor, out ActorState site) && !site.IsDefeated
+            ? new(site.Position.ToVector() + Vector3.UnitY * (ActorContactBody.Height * ActorEyeFraction), ActorHeading.Forward(site.HeadingYawRadians))
+            : null;
+    }
     private long[] AreaSpellTargets(long? caster, Vector3 center, bool excludeCaster, double radius = 4d, bool exclusive = false)
     {
         long observer = caster ?? State.Actors.Player.DurableId;

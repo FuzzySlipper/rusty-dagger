@@ -1,3 +1,5 @@
+using WorldRpg.Kit;
+
 namespace WorldRpg.Rulesets.Daggerfall.Variants;
 
 /// <summary>
@@ -6,5 +8,16 @@ namespace WorldRpg.Rulesets.Daggerfall.Variants;
 /// </summary>
 public static class DaggerfallVariants
 {
-    public static IReadOnlyList<DaggerfallRulesVariant> All { get; } = [];
+    /// <summary>The contact + mitigation variant: no physical to-hit roll; blows that connect are deflected or absorbed.</summary>
+    public static readonly RulesVariantId Contact = new("daggerfall.contact");
+
+    public static IReadOnlyList<DaggerfallRulesVariant> All { get; } =
+    [
+        new DaggerfallRulesVariant(
+            new RulesVariantManifest(Contact, DaggerfallRuleset.Identity,
+                [DaggerfallRulesSeams.PhysicalDelivery, DaggerfallRulesSeams.PhysicalMitigation],
+                new TuningProfileId("daggerfall.contact"), [], ownsSaveState: false),
+            physicalMitigation: context => new DaggerfallContactMitigation(context, DaggerfallContactTuning.Read(context.Tuning.Payload.Span)),
+            physicalDelivery: (context, ops) => new DaggerfallContactDelivery(ops, DaggerfallContactTuning.Read(context.Tuning.Payload.Span))),
+    ];
 }
