@@ -644,7 +644,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                     StartAttack(hit.AttackerId, hit.TargetId, hit.OriginatingGeneration, hit.OriginatingSimulationStep, hitEvent);
                 if (!appliedImpacts.Add(hitEvent)) break;
                 // Armour that took the whole blow sounds the strike landing, without a flesh hit's pitch, hurt or blood.
-                if (hit.FullyAbsorbed) { EmitAbsorbed(hit.Feedback, hitEvent, hit.AttackerId, hit.TargetId, actorState); break; }
+                if (hit.FullyAbsorbed) { EmitOutcomeCue(DaggerfallOutcomeCue.Absorbed, hitEvent, hit.AttackerId, hit.TargetId, hit.Feedback.Weapon, actorState); break; }
                 if (hit.ActualHealthLost <= 0) { EmitMiss(hit.Feedback, hitEvent, actorState); break; }
                 if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && playerBeastForm() is { } beast)
                 {
@@ -662,15 +662,16 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             case AttackNegatedFact negated:
                 PresentationEventIdentity negatedEvent = Event(negated.AttackerId, negated.TargetId, negated.OriginatingGeneration, negated.OriginatingSimulationStep, "negated");
                 if (!appliedImpacts.Add(negatedEvent)) break;
-                if (negated.Negation == HarmNegation.Deflected)
-                    EmitAtActor($"sound.{428 + DrawCue(negatedEvent, "parry", 0, 8)}", negatedEvent, negated.TargetId, actorState, pitch: audioTuning.ContactPitch);
-                else EmitAbsorbed(negated.Feedback, negatedEvent, negated.AttackerId, negated.TargetId, actorState);
+                EmitOutcomeCue(negated.Negation == HarmNegation.Deflected ? DaggerfallOutcomeCue.Deflected : DaggerfallOutcomeCue.Absorbed,
+                    negatedEvent, negated.AttackerId, negated.TargetId, negated.Feedback.Weapon, actorState);
                 break;
             case AttackWhiffedFact whiff:
                 PresentationEventIdentity whiffEvent = Event(whiff.AttackerId, whiff.TargetId ?? 0, whiff.OriginatingGeneration, whiff.OriginatingSimulationStep, "whiff");
                 if (!appliedImpacts.Add(whiffEvent)) break;
-                // Nothing was touched, so only the blade's own swing is heard, never a parry.
-                EmitAtActor(whiff.Feedback.SwingCue, whiffEvent, whiff.AttackerId, actorState);
+                // Nothing was touched, so only the blade's own swing is heard, never a parry; a player swing and
+                // any loosed shot already sounded at their start, so only an enemy's melee swing sounds here.
+                if (whiff.AttackerId != DaggerfallActorIdentity.PlayerEntityId && whiff.Feedback.SwingCue != "sound.3")
+                    EmitAtActor(whiff.Feedback.SwingCue, whiffEvent, whiff.AttackerId, actorState);
                 break;
             case AttackMissedFact miss:
                 PresentationEventIdentity missEvent = Event(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, "miss");
@@ -1237,9 +1238,22 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             outcome.CompletedImmediately ? null : outcome.Instance, outcome.TargetId, outcome.CasterId, outcome.ItemId);
     }
 
-    internal void ReactSpellCast(SpellCastFact cast, ActorsState actors, WorldPoint? player)
+    internal void ReactSpellCast(SpellCastFact cast, ActorsState actors, WorldPoint? player, IDaggerfallHarmPresentation? harm = null)
     {
-        if (disposed || cast.Outcome != DaggerfallCastOutcome.Released || cast.Sequence is not long sequence || cast.CasterId is not long caster) return;
+        if (disposed || cast.Sequence is not long sequence || cast.CasterId is not long caster) return;
+        if (cast.Outcome == DaggerfallCastOutcome.DeliveryCompleted && harm is not null)
+        {
+            // Each negated effect sounds its outcome once at whoever it reached, when the selected presentation gives it one.
+            foreach (DaggerfallCastEffectResult result in cast.Effects)
+                if (result.TargetId is long target && harm.SpellOutcomeCue(result.Outcome) is DaggerfallOutcomeCue cue)
+                {
+                    PresentationEventIdentity outcome = Event(caster, target, checked((ulong)sequence), 0, $"spell-outcome:{cue}");
+                    // A caster may stand far off, so the outcome is heard where the effect arrived.
+                    if (appliedImpacts.Add(outcome)) EmitOutcomeCue(cue, outcome, target, target, weapon: false, actors);
+                }
+            return;
+        }
+        if (cast.Outcome != DaggerfallCastOutcome.Released) return;
         var identity = Event(caster, caster, checked((ulong)sequence), 0, "spell-release");
         if (!deliveredEvents.Add(identity)) return;
         WorldPoint? position = caster == DaggerfallActorIdentity.PlayerEntityId ? player
@@ -1490,9 +1504,16 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             pitch: parry ? audioTuning.ContactPitch : null);
     }
 
-    /// <summary>A blow the target's protection took whole: the strike's hit cue at its own pitch, heard at whoever was struck.</summary>
-    private void EmitAbsorbed(DaggerfallStrikeFeedback feedback, PresentationEventIdentity identity, long attacker, long target, ActorsState? state) =>
-        EmitAtActor(SelectHitCue(identity, feedback.Weapon), identity, target == DaggerfallActorIdentity.PlayerEntityId ? attacker : target, state);
+    /// <summary>
+    /// A negated harm's outcome sound at whoever it reached: a deflection is the donor parry family at contact
+    /// pitch; a harm taken whole on armour or a ward is the strike's hit cue at its own pitch, with no hurt or blood.
+    /// </summary>
+    private void EmitOutcomeCue(DaggerfallOutcomeCue cue, PresentationEventIdentity identity, long attacker, long target, bool weapon, ActorsState? state)
+    {
+        if (cue == DaggerfallOutcomeCue.Deflected)
+            EmitAtActor($"sound.{428 + DrawCue(identity, "parry", 0, 8)}", identity, target, state, pitch: audioTuning.ContactPitch);
+        else EmitAtActor(SelectHitCue(identity, weapon), identity, target == DaggerfallActorIdentity.PlayerEntityId ? attacker : target, state);
+    }
 
     private bool CanVoice(DaggerfallActorFeedback? feedback) => feedback is not null
         && (!audioTuning.MuteHumanSounds || feedback.MobileId < 128 || feedback.MobileId == 146);

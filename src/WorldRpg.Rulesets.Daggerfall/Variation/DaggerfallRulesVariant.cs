@@ -35,7 +35,8 @@ internal sealed record DaggerfallSeamOwners(
     Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery>? PhysicalDelivery = null,
     IDaggerfallPlayerGuard? PlayerGuard = null,
     Func<DaggerfallTouchOperations, IDaggerfallTouchDelivery>? TouchDelivery = null,
-    IDaggerfallEnemyEngagement? EnemyEngagement = null)
+    IDaggerfallEnemyEngagement? EnemyEngagement = null,
+    IDaggerfallHarmPresentation? HarmPresentation = null)
 {
     internal IEnumerable<RulesSeamId> Seams
     {
@@ -46,6 +47,7 @@ internal sealed record DaggerfallSeamOwners(
             if (PlayerGuard is not null) yield return DaggerfallRulesSeams.PlayerGuard;
             if (TouchDelivery is not null) yield return DaggerfallRulesSeams.TouchDelivery;
             if (EnemyEngagement is not null) yield return DaggerfallRulesSeams.EnemyEngagement;
+            if (HarmPresentation is not null) yield return DaggerfallRulesSeams.HarmPresentation;
         }
     }
 }
@@ -92,7 +94,8 @@ internal sealed record DaggerfallComposedSeams(
     Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery> PhysicalDelivery,
     IDaggerfallPlayerGuard PlayerGuard,
     Func<DaggerfallTouchOperations, IDaggerfallTouchDelivery> TouchDelivery,
-    IDaggerfallEnemyEngagement EnemyEngagement);
+    IDaggerfallEnemyEngagement EnemyEngagement,
+    IDaggerfallHarmPresentation HarmPresentation);
 
 /// <summary>
 /// Which variant owns each Daggerfall seam: a selected variant's when it claims the seam, otherwise
@@ -126,6 +129,9 @@ internal sealed class DaggerfallSeamSelection
     /// <summary>The variant that owns enemy engagement, or none for classic.</summary>
     internal RulesVariantId? EnemyEngagementVariant => Owner(DaggerfallRulesSeams.EnemyEngagement);
 
+    /// <summary>The variant that owns harm presentation, or none for classic.</summary>
+    internal RulesVariantId? HarmPresentationVariant => Owner(DaggerfallRulesSeams.HarmPresentation);
+
     private RulesVariantId? Owner(RulesSeamId seam) => _owners.TryGetValue(seam, out RulesVariantId owner) ? owner : null;
 
     /// <summary>Selects owners for a resolved composition's variants from the variants this ruleset compiles.</summary>
@@ -155,6 +161,7 @@ internal sealed class DaggerfallSeamSelection
         IDaggerfallPlayerGuard? guard = null;
         Func<DaggerfallTouchOperations, IDaggerfallTouchDelivery>? touch = null;
         IDaggerfallEnemyEngagement? engagement = null;
+        IDaggerfallHarmPresentation? presentation = null;
         foreach ((DaggerfallRulesVariant variant, ResolvedRulesVariant resolved) in _selected)
         {
             DaggerfallSeamOwners owners = variant.Compose(new DaggerfallSeamContext(session, resolved.Tuning));
@@ -163,11 +170,13 @@ internal sealed class DaggerfallSeamSelection
             guard ??= owners.PlayerGuard;
             touch ??= owners.TouchDelivery;
             engagement ??= owners.EnemyEngagement;
+            presentation ??= owners.HarmPresentation;
         }
         return new(mitigation ?? new DaggerfallClassicPhysicalMitigation(session.Character),
             delivery ?? (ops => new DaggerfallClassicPhysicalDelivery(ops)),
             guard ?? DaggerfallNoPlayerGuard.Instance,
             touch ?? (ops => new DaggerfallClassicTouchDelivery(ops)),
-            engagement ?? DaggerfallClassicEnemyEngagement.Instance);
+            engagement ?? DaggerfallClassicEnemyEngagement.Instance,
+            presentation ?? DaggerfallClassicHarmPresentation.Instance);
     }
 }

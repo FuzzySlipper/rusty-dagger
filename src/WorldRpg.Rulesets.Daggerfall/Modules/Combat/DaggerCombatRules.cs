@@ -134,7 +134,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         _weaponMaterialModifiers = DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers;
         _actions = definitions.Actions;
         _delivery = delivery?.Invoke(this) ?? new DaggerfallClassicPhysicalDelivery(this);
-        Execution = new(actors, this, DeferRangedImpact, _delivery.ImpactsOutliveTheirTarget);
+        Execution = new(actors, this, DeferRangedImpact, _delivery.ImpactsOutliveTheirTarget, _delivery.Interrupt);
         Attacks = new(PlayerId, Targeting, Execution, ReachOf, facts => facts.Append(new AttackRejectedFact(AttackRejection.MissingPlayerPosition)),
             _delivery.UntargetedSwingsWaitForImpact);
     }

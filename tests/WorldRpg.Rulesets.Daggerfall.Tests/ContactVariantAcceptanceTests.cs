@@ -12,7 +12,6 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Variants;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
-using Fixture = WorldRpg.Rulesets.Daggerfall.Tests.DaggerCombatDamagePolicyTests.DamagePolicyFixture;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -118,30 +117,56 @@ public sealed class ContactVariantAcceptanceTests
     }
 
     [Fact]
-    public void A_player_spell_missile_reaches_the_actor_its_flight_meets_and_a_touch_the_actor_its_volume_contacts()
+    public void A_released_player_missile_flies_through_ordinary_updates_to_the_enemy_it_meets()
     {
         List<string> releases = [];
-        (DaggerfallSession session, _, _) = VisibleEnemySession(releases, out SpatialFake spatial, contact: true);
+        // Far enough that the enemy only closes, so no combat line replaces the spell's.
+        (DaggerfallSession session, _, _) = VisibleEnemySession(releases, out SpatialFake spatial, distance: 20d, contact: true, random: RandomMaximum.Create());
         using DaggerfallSession disposable = session;
         Track magicka = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value));
         magicka.Maximum.BaseValue = 1000;
         magicka.SetCurrent(1000);
         ulong enemy = session.State.Actors.Get(Enemy).Actor.Entity.Value;
+        // The missile's level segments meet the enemy's body; the controller's downward probes still find no floor.
+        spatial.FloorHit = request => MathF.Abs(request.Direction.Y) < .5f
+            ? new SpatialHit(true, SpatialHitKind.Entity, enemy, 0, 0, 0, 0, 0, 0, default, request.Origin + request.Direction * .1f, -request.Direction, .1d, 0d, 0d, false, true)
+            : default;
+        string spell = Learn(session, DaggerfallSpellTarget.SingleTargetAtRange);
 
-        Ready(session, DaggerfallSpellTarget.SingleTargetAtRange);
-        DaggerfallCastResult released = session.ReleaseReadySpell(Player, Vector3.UnitZ);
-        DaggerfallLiveSpell missile = Assert.IsType<DaggerfallLiveSpell>(released.Bundle);
-        spatial.FloorHit = request => default(SpatialHit) with { Present = true, Kind = SpatialHitKind.Entity, Entity = enemy, Distance = .5d, Point = request.Origin };
-        DaggerfallCastResult arrived = session.DeliverSpellImpact(missile, Vector3.Zero, Vector3.UnitZ * 3f);
-        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, arrived.Outcome);
-        Assert.Contains(arrived.Bundle!.Results, result => result.TargetId == Enemy);
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui($$"""{"action":"spell-ready","key":"{{spell}}"}""")]));
+        session.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"spell-cast"}""")]));
+        Assert.True(magicka.Current < 1000);
+        for (ulong step = 3; step <= 60 && session.Casting.PendingRangedFlights.Count != 0; step++)
+            session.Update(new ProductUpdate(OuterUpdate(step), []));
 
-        spatial.FloorHit = _ => default;
-        Ready(session, DaggerfallSpellTarget.ByTouch);
-        spatial.OverlapContactsResult = _ => Touching(enemy);
-        DaggerfallCastResult touched = session.ReleaseReadySpell(Player, Vector3.UnitZ);
-        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, touched.Outcome);
-        Assert.Contains(touched.Bundle!.Results, result => result.TargetId == Enemy);
+        Assert.Empty(session.Casting.PendingRangedFlights);
+        Assert.Contains(spatial.FloorProbes, probe => MathF.Abs(probe.Direction.Y) < .5f);
+        string line = session.Presentation.LastOutcome ?? string.Empty;
+        Assert.Contains(TestPayload.Definitions.Magic.Spells[spell].Name, line, StringComparison.Ordinal);
+        Assert.DoesNotContain("Missed", line, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_player_touch_reaches_the_enemy_its_volume_contacts()
+    {
+        List<string> releases = [];
+        // Far enough that the enemy only closes, so no combat line replaces the spell's.
+        (DaggerfallSession session, _, _) = VisibleEnemySession(releases, out SpatialFake spatial, distance: 20d, contact: true, random: RandomMaximum.Create());
+        using DaggerfallSession disposable = session;
+        Track magicka = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value));
+        magicka.Maximum.BaseValue = 1000;
+        magicka.SetCurrent(1000);
+        spatial.OverlapContactsResult = _ => Touching(session.State.Actors.Get(Enemy).Actor.Entity.Value);
+        string spell = Learn(session, DaggerfallSpellTarget.ByTouch);
+
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui($$"""{"action":"spell-ready","key":"{{spell}}"}""")]));
+        session.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"spell-cast"}""")]));
+
+        Assert.True(magicka.Current < 1000);
+        Assert.Contains(spatial.OverlapContactsRequests, request => request.Shape.Kind == SpatialShapeKind.Box);
+        string touchLine = session.Presentation.LastOutcome ?? string.Empty;
+        Assert.Contains(TestPayload.Definitions.Magic.Spells[spell].Name, touchLine, StringComparison.Ordinal);
+        Assert.DoesNotContain("Missed", touchLine, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -178,20 +203,22 @@ public sealed class ContactVariantAcceptanceTests
     }
 
     [Fact]
-    public void A_player_arrow_flies_to_the_first_body_it_meets_under_the_variant()
+    public void A_new_archers_arrow_leaves_on_its_release_frame_and_flies_through_ordinary_updates_into_the_target()
     {
-        DaggerfallRulesVariant contact = DaggerfallVariants.All.Single(variant => variant.Manifest.Id == DaggerfallVariants.Contact);
-        using Fixture fixture = new(armed: false, random: DaggerfallContactVariantTests.KeyedRandom.Create(8).Service, variant: contact);
-        ulong brigand = fixture.Actors.Get(2).Actor.Entity.Value;
-        fixture.EquipPlayerBow("iron-short-bow", 3001);
-        fixture.GivePlayerArrows(1);
-        fixture.Spatial.FloorHit = request => new SpatialHit(true, SpatialHitKind.Entity, brigand, 0, 0, 0, 0, 0, 0, default,
-            request.Origin + request.Direction * .7f, -request.Direction, .7d, 0d, 0d, false, true);
-        AttackRequest shot = new(Player, 2, 6, 5, .125d, Delayed: true);
-        fixture.StartSwing(shot, out bool admitted);
-        Assert.True(admitted);
-        fixture.DeliverImpact(shot);
-        Assert.Equal(2L, Assert.Single(fixture.AdvanceFlight(6, 6, steps: 1).OfType<AttackHitFact>()).TargetId);
+        using NewGameBowSessionTests.Fixture f = new(4, contact: true, random: RandomMaximum.Create());
+        ulong target = f.Game.State.Actors.Get(NewGameBowSessionTests.Fixture.Target).Actor.Entity.Value;
+        f.Spatial.FloorHit = request => MathF.Abs(request.Direction.Y) < .5f
+            ? new SpatialHit(true, SpatialHitKind.Entity, target, 0, 0, 0, 0, 0, 0, default, request.Origin + request.Direction * .2f, -request.Direction, .2d, 0d, 0d, false, true)
+            : default;
+        double health = Health(f.Game, NewGameBowSessionTests.Fixture.Target);
+
+        f.Attack();
+        Assert.NotNull(f.Game.State.Actors.Player.Attack.Pending);
+        uint releaseFrame = DaggerfallFormulaPolicy.BowWeaponHitFrame;
+        f.Appearance.AdvanceReceiptForAll = WeaponHitReading(f.Appearance.PlaybackRequests.Last().Frames.Span[(int)releaseFrame].FrameId, releaseFrame);
+        for (int step = 0; step < 30 && Health(f.Game, NewGameBowSessionTests.Fixture.Target) == health; step++) f.Advance();
+
+        Assert.True(Health(f.Game, NewGameBowSessionTests.Fixture.Target) < health, f.Game.ReadPlaytestObservation().Message);
     }
 
     private static (EngineContextFake Engine, CapturingDaggerfallRuleset Ruleset) Product(InMemoryPersistenceService persistence)
@@ -205,14 +232,16 @@ public sealed class ContactVariantAcceptanceTests
         return (engine, new CapturingDaggerfallRuleset(variants: DaggerfallVariants.All));
     }
 
-    /// <summary>Teaches and readies the first stock spell of a delivery this ruleset compiles.</summary>
-    private static void Ready(DaggerfallSession session, DaggerfallSpellTarget target)
+    /// <summary>Teaches the first stock spell of a delivery this ruleset can ready, and leaves it unready for the UI to ready.</summary>
+    private static string Learn(DaggerfallSession session, DaggerfallSpellTarget target)
     {
         foreach (DaggerfallSpellDefinition spell in TestPayload.Definitions.Magic.Spells.Values.OrderBy(spell => spell.Key, StringComparer.Ordinal))
         {
             if (DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType) != target) continue;
             session.State.Character.LearnSpell(spell.Key);
-            if (session.ReadyPlayerSpell(spell.Key).Outcome == DaggerfallCastOutcome.Ready) return;
+            if (session.ReadyPlayerSpell(spell.Key).Outcome != DaggerfallCastOutcome.Ready) continue;
+            session.Casting.Cancel(Player);
+            return spell.Key;
         }
         throw new InvalidOperationException($"No stock {target} spell can be readied.");
     }

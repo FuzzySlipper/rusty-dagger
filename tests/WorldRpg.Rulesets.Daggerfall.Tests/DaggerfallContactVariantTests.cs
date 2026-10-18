@@ -177,6 +177,23 @@ public sealed class DaggerfallContactVariantTests
     }
 
     [Fact]
+    public void An_interrupted_attack_drops_its_winding_up_blow_so_it_never_lands()
+    {
+        using Fixture fixture = new(random: KeyedRandom.Create(8).Service, variant: Contact);
+        fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
+        fixture.Spatial.OverlapContactsResult = _ => Touching(fixture.Actors.Player.Actor.Entity.Value);
+        AttackRequest swing = new(2, Player, 5, 9, .125d, Delayed: true);
+        fixture.StartSwing(swing, out _);
+
+        // The early frame hands the blow to its wind-up; the enemy then leaves its attack before it ends.
+        Assert.Empty(fixture.DeliverImpact(swing).OfType<AttackHitFact>());
+        fixture.Interrupt(2, 5);
+
+        Assert.Empty(fixture.AdvanceFlight(5, 9, steps: 8).OfType<AttackHitFact>());
+        Assert.Empty(fixture.Spatial.OverlapContactsRequests);
+    }
+
+    [Fact]
     public void Melee_enemies_engage_inside_their_reach_while_archers_engage_at_range_and_classic_engages_at_reach()
     {
         IDaggerfallEnemyEngagement contact = new DaggerfallContactEngagement(Tuning);
@@ -396,7 +413,7 @@ public sealed class DaggerfallContactVariantTests
         using Fixture fixture = new(variant: Contact);
         DaggerfallSeamOwners owners = fixture.Owners!;
         Assert.IsType<DaggerfallContactGuard>(owners.PlayerGuard);
-        Assert.Equal([DaggerfallRulesSeams.PhysicalMitigation, DaggerfallRulesSeams.PhysicalDelivery, DaggerfallRulesSeams.PlayerGuard, DaggerfallRulesSeams.TouchDelivery, DaggerfallRulesSeams.EnemyEngagement], owners.Seams);
+        Assert.Equal([DaggerfallRulesSeams.PhysicalMitigation, DaggerfallRulesSeams.PhysicalDelivery, DaggerfallRulesSeams.PlayerGuard, DaggerfallRulesSeams.TouchDelivery, DaggerfallRulesSeams.EnemyEngagement, DaggerfallRulesSeams.HarmPresentation], owners.Seams);
     }
 
     private sealed class FixedGuard : IDaggerfallPlayerGuard

@@ -44,10 +44,12 @@ public interface IAttackRules<TFact> where TFact : IWorldRpgFact
 /// <summary>
 /// Single live owner for readiness, pending impacts and cancellation, over attached actor state. A pending
 /// impact is dropped when its admitted target is gone, unless <paramref name="impactsOutliveTheirTarget"/>
-/// says the ruleset decides at the impact itself whom it reaches.
+/// says the ruleset decides at the impact itself whom it reaches. <paramref name="interrupted"/> hears every
+/// interruption, so a ruleset still holding an impact it deferred past the pending attack can cancel it too.
 /// </summary>
 public sealed class AttackExecution<TFact>(ActorsState actors, IAttackRules<TFact> rules,
-    Func<DeferredAttackImpact, FactBuffer<TFact>, bool>? deferImpact = null, bool impactsOutliveTheirTarget = false) where TFact : IWorldRpgFact
+    Func<DeferredAttackImpact, FactBuffer<TFact>, bool>? deferImpact = null, bool impactsOutliveTheirTarget = false,
+    Action<long, ulong>? interrupted = null) where TFact : IWorldRpgFact
 {
     private AttackState State(long actor) => actors.Get(actor).Actor.Get<AttackState>();
     private bool Exists(long actor) => actors.Entities.TryResolve(ActorsState.Identity(actor), out _);
@@ -82,6 +84,7 @@ public sealed class AttackExecution<TFact>(ActorsState actors, IAttackRules<TFac
     {
         if (Exists(attacker) && State(attacker).Pending is PendingAttack pending && pending.Request.Generation == generation)
             State(attacker).Pending = null;
+        interrupted?.Invoke(attacker, generation);
     }
     public void ApplyImpacts(IReadOnlyList<AttackImpactNotice> notices, ulong generation, FactBuffer<TFact> facts)
     {

@@ -324,6 +324,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallActorInventories actorInventories = assembled.ActorInventories;
             DaggerfallComposedSeams seams = composition.Seams.Build(SeamInputs());
             _guard = seams.PlayerGuard;
+            _harmPresentation = seams.HarmPresentation;
             _touch = seams.TouchDelivery(new(_contact, _spatial, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion)));
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 () => character.Background?.Modifiers.AvoidHit ?? 0, actorInventories.EquipmentFor, _itemCondition, combatRules,

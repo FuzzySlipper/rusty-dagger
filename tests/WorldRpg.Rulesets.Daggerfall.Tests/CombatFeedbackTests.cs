@@ -123,11 +123,64 @@ public sealed class CombatFeedbackTests
         Assert.NotEqual(1.1F, thud.Pitch);
         Assert.Equal(2, audio.Voices.Count);
 
-        // A whiff is the swing alone.
+        // An enemy's melee whiff is the swing alone.
         AttackWhiffedFact whiff = new(12, 11, true, 1, 4) { Feedback = new(true, "sound.347") };
         presentation.React(whiff);
         presentation.React(whiff);
         Assert.EndsWith(".sound.347", Assert.Single(audio.Emits).SignalId, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_whiff_after_an_already_sounded_start_adds_no_second_swing_or_release_cue()
+    {
+        List<string> releases = [];
+        AudioRecorder audio = AudioRecorder.Create();
+        using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
+        using DaggerfallSiteAppearance presentation = new(MediaContent(releases), new AppearanceFake(releases), FeedbackInputs(0, parry: true),
+            audio.Service, random: KeyedRandomFake.Create(8).Service);
+
+        // The player's swing sounds at its start; meeting nothing at its hit frame adds no cue and no parry.
+        presentation.React(new PlayerAttackStartedFact(1, 2, WaitsWithoutTarget: true) { Feedback = new(true, "swing") }, actors);
+        int started = audio.Emits.Count + audio.Voices.Count;
+        Assert.True(started > 0);
+        presentation.React(new AttackWhiffedFact(1, null, false, 1, 2) { Feedback = new(true, "swing") }, actors);
+        Assert.Equal(started, audio.Emits.Count + audio.Voices.Count);
+
+        // A loosed shot sounded its release; flying its range without meeting a body adds nothing either.
+        presentation.React(new AttackWhiffedFact(12, 11, true, 1, 3) { Feedback = new(true, "sound.3") }, actors);
+        Assert.Equal(started, audio.Emits.Count + audio.Voices.Count);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_reflected_or_absorbed_spell_effect_sounds_its_outcome_only_under_the_contact_presentation(bool contact)
+    {
+        List<string> releases = [];
+        AudioRecorder audio = AudioRecorder.Create();
+        DaggerfallSiteProfile inputs = FeedbackInputs(0);
+        using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
+        using DaggerfallSiteAppearance presentation = new(MediaContent(releases), new AppearanceFake(releases), inputs,
+            audio.Service, random: KeyedRandomFake.Create(8).Service);
+        IDaggerfallHarmPresentation harm = contact ? new Variants.DaggerfallContactHarmPresentation() : DaggerfallClassicHarmPresentation.Instance;
+        ulong Clip(string id) => (ulong)(inputs.Audio.ToList().FindIndex(value => value.Id == id) + 1);
+        SpellCastFact Cast(long sequence, DaggerfallCastOutcome outcome) => new(DaggerfallCastOutcome.DeliveryCompleted, sequence, 1, "spell", 5,
+            [new DaggerfallCastEffectResult(0, 11, outcome)]);
+
+        // A spell that met no one, and an applied effect, keep their classic presentation: no outcome cue.
+        presentation.ReactSpellCast(Cast(1, DaggerfallCastOutcome.Missed), actors, null, harm);
+        presentation.ReactSpellCast(Cast(2, DaggerfallCastOutcome.Applied), actors, null, harm);
+        Assert.Empty(audio.Voices);
+
+        SpellCastFact reflected = Cast(3, DaggerfallCastOutcome.Reflected);
+        presentation.ReactSpellCast(reflected, actors, null, harm);
+        presentation.ReactSpellCast(reflected, actors, null, harm);
+        presentation.ReactSpellCast(Cast(4, DaggerfallCastOutcome.Absorbed), actors, null, harm);
+        if (!contact) { Assert.Empty(audio.Voices); return; }
+        Assert.Equal(2, audio.Voices.Count);
+        Assert.Equal((Clip("sound.436"), new Vector3(2, 0, 3), 1.1F), (audio.Voices[0].Clip.Handle.Value, audio.Voices[0].Position, audio.Voices[0].Pitch));
+        Assert.StartsWith("hit", inputs.Audio.ToList()[(int)audio.Voices[1].Clip.Handle.Value - 1].Id, StringComparison.Ordinal);
+        Assert.Equal(new Vector3(2, 0, 3), audio.Voices[1].Position);
     }
 
     [Fact]
