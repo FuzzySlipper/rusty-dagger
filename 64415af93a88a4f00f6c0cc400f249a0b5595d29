@@ -1,0 +1,1 @@
+verify.sh --play: EXIT=0 on den-k8 in 42m (2026-10-18). Architecture 10, Import 805, Daggerfall 3473, Canary 7, Kit 199, Host 35, SpriteWorkbench 27.
