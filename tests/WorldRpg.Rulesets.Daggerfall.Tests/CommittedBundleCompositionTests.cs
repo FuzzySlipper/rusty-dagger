@@ -7,6 +7,7 @@ using WorldRpg.Host;
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.Variants;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -38,7 +39,7 @@ public sealed class CommittedBundleCompositionTests
     public void Every_committed_bundle_creates_a_session_through_the_real_ruleset(string bundleId)
     {
         string root = TestData.RepositoryRoot;
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId(bundleId)).RequireComposition();
+        ResolvedGameComposition composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId(bundleId), CompiledVariants).RequireComposition();
         ContentPack firstSite = composition.ContentPacks.First(pack => pack.Role.Value == SiteRole);
         DaggerfallSiteProfile start = DaggerfallSiteContent.Read(FullContent(root), firstSite.Payload, TestPayload.Definitions);
         List<string> releases = [];
@@ -47,7 +48,8 @@ public sealed class CommittedBundleCompositionTests
         SpatialFake spatial = SpatialFake.Create(start.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
-        CapturingDaggerfallRuleset ruleset = new(videosEnabled: false);
+        // The product compiles every Daggerfall rules variant, as the Host's built-in catalog does.
+        CapturingDaggerfallRuleset ruleset = new(videosEnabled: false, variants: DaggerfallVariants.All);
 
         using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId(bundleId)))
         {
@@ -135,6 +137,9 @@ public sealed class CommittedBundleCompositionTests
     /// admitted by nothing, and the authored new-game definition names content the default bundle admits:
     /// its start site is a selected site pack, and a new game started from it begins every quest it names.
     /// </summary>
+    /// <summary>The manifests of every rules variant the product compiles, which a committed bundle may select.</summary>
+    private static IReadOnlyList<RulesVariantManifest> CompiledVariants => [.. DaggerfallVariants.All.Select(variant => variant.Manifest)];
+
     [Fact]
     public void Every_committed_pack_is_selected_and_the_new_game_starts_what_it_names()
     {
@@ -143,7 +148,7 @@ public sealed class CommittedBundleCompositionTests
         HashSet<string> selected = [];
         foreach (string bundleId in CommittedBundles().Cast<object[]>().Select(row => (string)row[0]))
         {
-            ResolvedGameComposition resolved = GameCompositionResolver.Resolve(content, new GameBundleId(bundleId)).RequireComposition();
+            ResolvedGameComposition resolved = GameCompositionResolver.Resolve(content, new GameBundleId(bundleId), CompiledVariants).RequireComposition();
             foreach (ContentPack pack in resolved.ContentPacks) selected.Add(pack.Id.Value);
         }
         string[] committed = [.. Directory.GetFiles(Path.Combine(root, "content/worldrpg/content-packs"), "*.pack.json")
