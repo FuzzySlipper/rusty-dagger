@@ -30,7 +30,6 @@ public sealed class DamageEvent(CombatParticipants participants)
     public int Damage { get; set; }
     /// <summary>Damage after base policy and ordered calculation contributions, before application contributions.</summary>
     public int CalculatedDamage { get => Damage; set => Damage = value; }
-    public bool Allowed { get; set; } = true;
 }
 /// <summary>Ordinary damage or an admitted terminal health application, both using the same live track owner.</summary>
 public enum HealthApplicationMode { Damage, Terminal }

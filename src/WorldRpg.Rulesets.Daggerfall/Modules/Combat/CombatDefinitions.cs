@@ -1,3 +1,4 @@
+using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -15,6 +16,13 @@ internal readonly record struct ExplicitMeleeRequest(long AttackerId, long Targe
         if (Action is DaggerfallActionId action && string.IsNullOrWhiteSpace(action.Value)) throw new ArgumentException("Action identity cannot be empty.", nameof(Action));
         return this;
     }
+}
+
+/// <summary>The harm channels classic Daggerfall resolves through the Kit harm pipeline.</summary>
+internal static class DaggerfallHarmChannels
+{
+    /// <summary>Weapon, natural and unarmed blows. Classic has one physical channel, whose mitigation is the target's material requirement.</summary>
+    internal static readonly HarmChannelId Physical = new("physical");
 }
 
 internal readonly record struct DaggerfallAdrenalineRush(bool Enabled, bool Improved);
