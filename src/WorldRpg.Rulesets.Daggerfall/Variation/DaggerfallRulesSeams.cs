@@ -14,4 +14,9 @@ public static class DaggerfallRulesSeams
 
     /// <summary>When an admitted physical attack's harm is decided and whom it reaches: <see cref="Modules.Combat.IDaggerfallPhysicalDelivery"/>.</summary>
     public static readonly RulesSeamId PhysicalDelivery = new("daggerfall.physical-delivery");
+
+    /// <summary>The player's guard: whether and how the player can block, <see cref="IDaggerfallPlayerGuard"/>. Classic has none.</summary>
+    public static readonly RulesSeamId PlayerGuard = new("daggerfall.player-guard");
+
+    internal static IReadOnlyList<RulesSeamId> All { get; } = [PhysicalMitigation, PhysicalDelivery, PlayerGuard];
 }

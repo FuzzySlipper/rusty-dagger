@@ -191,6 +191,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private Action? completeSnapshot;
     private bool locationSuspended;
     private bool disposed;
+    /// <summary>Whether the player holds a guard up, which lifts the resting weapon.</summary>
+    private bool playerGuardRaised;
 
     internal void Rebase(Vector3 delta)
     {
@@ -595,6 +597,13 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (disposed) return;
         switch (fact)
         {
+            case PlayerGuardChangedFact guard:
+                playerGuardRaised = guard.Raised;
+                // A raised guard lifts the resting weapon toward the centre; a strike plays where it always does.
+                if (viewmodel is { Strike: false } held && held.Weapon.Actions.TryGetValue("idle", out NormalizedClassicWeaponAction? rest))
+                    appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(held.Appearance, true,
+                        RestingPlacement(held.Weapon, rest, out Vector2 restSize), restSize, Vector2.Zero, SpriteViewportFit.Stretch));
+                break;
             case PlayerAttackStartedFact started:
                 PresentationEventIdentity swing = Event(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0, started.OriginatingGeneration, started.OriginatingSimulationStep, "swing");
                 if (deliveredEvents.Contains(swing)) break;
@@ -1338,7 +1347,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         try
         {
             appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(viewmodel.Appearance, true,
-                ViewmodelPlacement(weapon, action, out Vector2 size), size, Vector2.Zero, SpriteViewportFit.Stretch));
+                name == "idle" ? RestingPlacement(weapon, action, out Vector2 size) : ViewmodelPlacement(weapon, action, out size),
+                size, Vector2.Zero, SpriteViewportFit.Stretch));
             // The classic weapon animation's authored table rate is its authoring default; the tick
             // time the rules published for this swing (FORM-04.GetMeleeWeaponAnimTime) is what the
             // donor actually plays at, so a hastened or slowed player swings at that rate.
@@ -1370,6 +1380,21 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// standing on the bottom edge and aligned left (at its offset), centred, or right (at one minus it).
     /// Every frame of the action keeps that one rectangle, so the art never rescales or drifts mid-swing.
     /// </summary>
+    /// <summary>
+    /// The resting weapon's place: the classic placement, or, while the player holds a guard up, lifted by
+    /// <see cref="GuardLift"/> of the screen and drawn halfway toward the centre, across the body.
+    /// </summary>
+    private Vector2 RestingPlacement(NormalizedClassicWeapon weapon, NormalizedClassicWeaponAction action, out Vector2 size)
+    {
+        Vector2 placement = ViewmodelPlacement(weapon, action, out size);
+        if (!playerGuardRaised) return placement;
+        float centred = .5F - (size.X / 2F);
+        return new Vector2(placement.X + ((centred - placement.X) / 2F), GuardLift);
+    }
+
+    /// <summary>How far up the screen a raised guard holds the resting weapon.</summary>
+    private const float GuardLift = .12F;
+
     private static Vector2 ViewmodelPlacement(NormalizedClassicWeapon weapon, NormalizedClassicWeaponAction action, out Vector2 size)
     {
         const float ClassicWidth = 320F, ClassicHeight = 200F;

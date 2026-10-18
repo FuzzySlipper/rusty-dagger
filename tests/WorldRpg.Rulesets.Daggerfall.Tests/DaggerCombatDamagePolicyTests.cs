@@ -759,6 +759,7 @@ public sealed class DaggerCombatDamagePolicyTests
             _actorEquipment[2] = BuildEquipment(enemy.Actor.Entity, 2, enemy.Actor);
             _itemCondition = new DaggerfallItemConditionService(definitions, _itemInstances,
                 new DaggerfallEquipmentMoves(_actorInventories[DaggerfallActorIdentity.PlayerEntityId], _playerEquipment, definitions, itemInstances: _itemInstances));
+            Owners = variant?.Compose(VariantContext(variant));
             _combat = new DaggerCombatRules(_random, _actors, _playerEquipment,
                 id => _actorInventories.TryGetValue(id, out MechanicsInventoryCoordinator? quiver) ? quiver : null,
                 _itemInstances, definitions, _authored, CombatCollaborators.Targeting(_actors, _authored, out _spatial, out SpatialFake spatialFake),
@@ -774,8 +775,8 @@ public sealed class DaggerCombatDamagePolicyTests
                 molagBalStrike: (_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture arms no Mace of Molag Bal."),
                 itemStrike: (_, _, _, damage) => damage,
                 monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team,
-                mitigation: variant?.PhysicalMitigation is { } contactMitigation ? contactMitigation(VariantContext(variant)) : mitigation,
-                delivery: variant?.PhysicalDelivery is { } contactDelivery ? ops => contactDelivery(VariantContext(variant), ops) : delivery,
+                mitigation: Owners?.PhysicalMitigation ?? mitigation,
+                delivery: Owners?.PhysicalDelivery ?? delivery,
                 contact: new ActorContact(_actors, _spatial, () => new PlayerControlState(_playerPosition ?? new WorldPoint(0f, 0f, 0f), 0f, 0f),
                     DaggerfallSession.ActorContactBody, _ => true),
                 strikePose: StrikePose);
@@ -850,6 +851,9 @@ public sealed class DaggerCombatDamagePolicyTests
             .Where(stack => stack.Definition.Value == "arrow").Aggregate(0UL, (total, stack) => total + stack.Quantity);
 
         internal double? ReachOf(long actorId) => _combat.ReachOf(actorId);
+
+        /// <summary>The variant's composed owners, when the fixture runs under one.</summary>
+        internal DaggerfallSeamOwners? Owners { get; }
 
         /// <summary>The spatial fake answering contact queries.</summary>
         internal SpatialFake Spatial { get; }

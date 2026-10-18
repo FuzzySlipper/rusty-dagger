@@ -112,7 +112,7 @@ public sealed class DaggerfallContactVariantTests
         CombatParticipants participants = new(fixture.Actors.Get(2).Actor, fixture.Actors.Player.Actor, "attack");
         DaggerfallPhysicalHarm chest = new(2, Player, player, "long-blade", "iron", 3, 1, 1);
 
-        DaggerfallContactMitigation certain = new(context with { Session = context.Session with { Random = RandomMinimum.Create() } }, Tuning);
+        DaggerfallContactMitigation certain = new(context with { Session = context.Session with { Random = RandomMinimum.Create() } }, Tuning, new FixedGuard());
         NegationEvent edged = new(participants, DaggerfallHarmChannels.Edged);
         certain.Negate(edged, chest);
         Assert.Equal(HarmNegation.Deflected, edged.Negation);
@@ -121,7 +121,7 @@ public sealed class DaggerfallContactVariantTests
         Assert.Equal(5, blunt.Deflected);
         Assert.Equal(certain.Absorption(chest, DaggerfallHarmChannels.Blunt), blunt.Absorbed);
 
-        DaggerfallContactMitigation never = new(context with { Session = context.Session with { Random = RandomMaximum.Create() } }, Tuning);
+        DaggerfallContactMitigation never = new(context with { Session = context.Session with { Random = RandomMaximum.Create() } }, Tuning, new FixedGuard());
         NegationEvent landed = new(participants, DaggerfallHarmChannels.Edged);
         never.Negate(landed, chest);
         Assert.Equal(HarmNegation.None, landed.Negation);
@@ -182,6 +182,82 @@ public sealed class DaggerfallContactVariantTests
         using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, composition, saved);
         Assert.Equal(9, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
         Assert.Equal([DaggerfallVariants.Contact], resolved.Identity.Variants);
+    }
+
+    [Fact]
+    public void Holding_block_raises_a_guard_only_with_a_drawn_weapon_and_no_swing_and_it_costs_stamina_until_the_pool_empties()
+    {
+        using Fixture fixture = new(variant: Contact);
+        DaggerfallContactGuard guard = new(fixture.VariantContext(Contact), Tuning);
+        Track stamina = fixture.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
+        stamina.SetCurrent(10d);
+        FactBuffer<IProductFact> facts = new();
+
+        guard.Step(.5d, canGuard: true, swinging: false, 1, 1, facts);
+        Assert.False(guard.Raised); // Nothing is held yet.
+        guard.Observe([TestSessions.Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")]);
+        guard.Step(.5d, canGuard: false, swinging: false, 1, 2, facts);
+        Assert.False(guard.Raised); // No drawn weapon, no guard.
+        guard.Step(.5d, canGuard: true, swinging: true, 1, 3, facts);
+        Assert.False(guard.Raised); // Never raised mid-swing.
+        guard.Step(.5d, canGuard: true, swinging: false, 1, 4, facts);
+        Assert.True(guard.Raised);
+        Assert.Equal(10d, stamina.Current); // Raising is free; holding is not.
+        guard.Step(.5d, canGuard: true, swinging: false, 1, 5, facts);
+        Assert.Equal(10d - Tuning.GuardStaminaPerSecond * .5d, stamina.Current, 6);
+        guard.Step(.5d, canGuard: true, swinging: true, 1, 6, facts);
+        Assert.False(guard.Raised); // A swing ends the block.
+        guard.Step(.5d, canGuard: true, swinging: false, 1, 7, facts);
+        Assert.True(guard.Raised);
+        stamina.SetCurrent(.1d);
+        guard.Step(.5d, canGuard: true, swinging: false, 1, 8, facts);
+        Assert.False(guard.Raised); // An emptied pool drops the guard.
+        Assert.Equal(0d, stamina.Current);
+
+        stamina.SetCurrent(10d);
+        guard.Step(.5d, canGuard: true, swinging: false, 1, 9, facts);
+        guard.Observe([TestSessions.Input(InputEventKind.MappedDigital, InputEdge.Released, x: 0, intent: "block")]);
+        guard.Step(.5d, canGuard: true, swinging: false, 1, 10, facts);
+        Assert.False(guard.Raised);
+        guard.Observe([TestSessions.Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")]);
+        guard.Step(.5d, canGuard: true, swinging: false, 1, 11, facts);
+        guard.Neutralize(1, 12, facts);
+        Assert.False(guard.Raised);
+
+        List<IProductFact> published = [];
+        facts.Deliver(published.Add);
+        Assert.Equal([true, false, true, false, true, false, true, false],
+            published.OfType<PlayerGuardChangedFact>().Select(fact => fact.Raised));
+    }
+
+    [Fact]
+    public void A_raised_guard_adds_its_deflection_bonus_to_the_player_only()
+    {
+        using Fixture fixture = new(variant: Contact);
+        DaggerfallSeamContext context = fixture.VariantContext(Contact);
+        FixedGuard guard = new();
+        DaggerfallContactMitigation mitigation = new(context, Tuning, guard);
+        int lowered = mitigation.DeflectionChance(Player), enemy = mitigation.DeflectionChance(2);
+        guard.Raised = true;
+        Assert.Equal(Math.Min(lowered + (int)Tuning.GuardDeflectionBonus, (int)Tuning.GuardMaximumChance), mitigation.DeflectionChance(Player));
+        Assert.Equal(enemy, mitigation.DeflectionChance(2));
+    }
+
+    [Fact]
+    public void The_contact_variant_composes_one_guard_its_mitigation_reads()
+    {
+        using Fixture fixture = new(variant: Contact);
+        DaggerfallSeamOwners owners = fixture.Owners!;
+        Assert.IsType<DaggerfallContactGuard>(owners.PlayerGuard);
+        Assert.Equal([DaggerfallRulesSeams.PhysicalMitigation, DaggerfallRulesSeams.PhysicalDelivery, DaggerfallRulesSeams.PlayerGuard], owners.Seams);
+    }
+
+    private sealed class FixedGuard : IDaggerfallPlayerGuard
+    {
+        public bool Raised { get; set; }
+        public void Observe(ReadOnlySpan<ProductInputEvent> inputs) { }
+        public void Step(double seconds, bool canGuard, bool swinging, ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
+        public void Neutralize(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
     }
 
     /// <summary>A contact result touching the given entities, in order.</summary>

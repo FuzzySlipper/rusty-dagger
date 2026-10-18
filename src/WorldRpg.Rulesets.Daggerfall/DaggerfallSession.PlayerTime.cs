@@ -29,6 +29,7 @@ internal sealed partial class DaggerfallSession
         _input.Observe(State.PlayerControl, input, lookSeconds, firstStep.PlanarIntent);
         foreach (var action in firstStep.RequestedActions) _input.Request(action);
         _locomotion.Observe(input);
+        _guard.Observe(input);
         _playerSwings.Observe(lookSeconds, State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians);
     }
 

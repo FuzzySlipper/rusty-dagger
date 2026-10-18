@@ -14,60 +14,66 @@ public sealed class DaggerfallRulesVariantTests
         new(new(id), new(ruleset), seams ?? [DaggerfallRulesSeams.PhysicalMitigation], new("test.variant-tuning"), [], ownsSaveState);
 
     private static DaggerfallRulesVariant Variant(string id, Func<DaggerfallSeamContext, IDaggerfallPhysicalMitigation>? owner = null) =>
-        new(Manifest(id), owner ?? (_ => new Absorb()));
+        new(Manifest(id), context => new DaggerfallSeamOwners(PhysicalMitigation: (owner ?? (_ => new Absorb()))(context)));
 
     [Fact]
     public void A_variant_supplies_an_owner_for_exactly_the_seams_it_declares()
     {
-        Assert.Throws<ArgumentException>(() => new DaggerfallRulesVariant(Manifest("test.claims"), physicalMitigation: null));
-        Assert.Throws<ArgumentException>(() => new DaggerfallRulesVariant(Manifest("test.silent", seams: []), _ => new Absorb()));
-        Assert.Throws<ArgumentException>(() => new DaggerfallRulesVariant(Manifest("test.foreign", ruleset: "other"), _ => new Absorb()));
+        Assert.Throws<ArgumentException>(() => new DaggerfallRulesVariant(Manifest("test.foreign", ruleset: "other"), _ => new()));
+        Assert.Throws<ArgumentException>(() => new DaggerfallRulesVariant(Manifest("test.unknown", seams: [new RulesSeamId("test.nowhere")]), _ => new()));
         // A variant that owned save state would lose it on every save until a variant save section is composed.
-        Assert.Throws<NotSupportedException>(() => new DaggerfallRulesVariant(Manifest("test.stateful", ownsSaveState: true), _ => new Absorb()));
-        Assert.Throws<ArgumentException>(() => new DaggerfallRulesVariant(Manifest("test.contact", seams: [DaggerfallRulesSeams.PhysicalDelivery])));
-        Assert.Throws<ArgumentException>(() => new DaggerfallRulesVariant(Manifest("test.contact", seams: [DaggerfallRulesSeams.PhysicalMitigation]),
-            _ => new Absorb(), (_, ops) => new DaggerfallClassicPhysicalDelivery(ops)));
+        Assert.Throws<NotSupportedException>(() => new DaggerfallRulesVariant(Manifest("test.stateful", ownsSaveState: true), _ => new()));
+
+        DaggerfallRulesVariant missing = new(Manifest("test.claims"), _ => new());
+        DaggerfallRulesVariant extra = new(Manifest("test.contact", seams: [DaggerfallRulesSeams.PhysicalMitigation]),
+            _ => new(PhysicalMitigation: new Absorb(), PhysicalDelivery: ops => new DaggerfallClassicPhysicalDelivery(ops)));
+        foreach (DaggerfallRulesVariant variant in new[] { missing, extra })
+        {
+            DaggerfallSeamSelection selection = DaggerfallSeamSelection.From(Resolve([variant.Manifest.Id.Value], variant).Variants, [variant]);
+            Assert.Throws<InvalidOperationException>(() => selection.Build(Inputs));
+        }
     }
 
     [Fact]
-    public void A_selected_variant_claiming_delivery_builds_its_owner_over_the_shared_operations_with_its_tuning()
+    public void A_selected_variant_composes_its_owners_once_with_its_tuning_and_classic_fills_the_rest()
     {
+        int compositions = 0;
         DaggerfallSeamContext? built = null;
         DaggerfallRulesVariant contact = new(Manifest("test.contact", seams: [DaggerfallRulesSeams.PhysicalDelivery]),
-            physicalDelivery: (context, ops) => { built = context; return new DaggerfallClassicPhysicalDelivery(ops); });
+            context => { compositions++; built = context; return new(PhysicalDelivery: ops => new DaggerfallClassicPhysicalDelivery(ops)); });
         ResolvedGameComposition composition = Resolve(["test.contact"], contact);
 
         DaggerfallSeamSelection selection = DaggerfallSeamSelection.From(composition.Variants, [contact]);
+        DaggerfallComposedSeams seams = selection.Build(Inputs);
+
+        Assert.Equal(1, compositions);
         Assert.Equal(new RulesVariantId("test.contact"), selection.PhysicalDeliveryVariant);
         Assert.Null(selection.PhysicalMitigationVariant);
-        Assert.IsType<DaggerfallClassicPhysicalDelivery>(selection.PhysicalDelivery(Inputs)(null!));
+        Assert.Null(selection.PlayerGuardVariant);
+        Assert.IsType<DaggerfallClassicPhysicalDelivery>(seams.PhysicalDelivery(null!));
+        Assert.IsType<DaggerfallClassicPhysicalMitigation>(seams.PhysicalMitigation);
+        Assert.Same(DaggerfallNoPlayerGuard.Instance, seams.PlayerGuard);
         Assert.Equal("variant tuning", Encoding.UTF8.GetString(built!.Tuning.Payload.Span));
+        Assert.Same(TestPayload.Definitions, built.Definitions);
+    }
+
+    [Fact]
+    public void Classic_owns_every_seam_and_has_no_guard()
+    {
+        DaggerfallComposedSeams seams = DaggerfallSeamSelection.From([], [Variant("test.armor")]).Build(Inputs);
+        Assert.IsType<DaggerfallClassicPhysicalMitigation>(seams.PhysicalMitigation);
+        Assert.IsType<DaggerfallClassicPhysicalDelivery>(seams.PhysicalDelivery(null!));
+        Assert.Same(DaggerfallNoPlayerGuard.Instance, seams.PlayerGuard);
+        Assert.False(seams.PlayerGuard.Raised);
         Assert.Null(DaggerfallSeamSelection.Classic.PhysicalDeliveryVariant);
     }
 
     [Fact]
-    public void Classic_owns_every_seam_no_selected_variant_claims()
+    public void Two_selected_variants_claiming_one_seam_are_refused_at_selection()
     {
-        DaggerfallSeamSelection selection = DaggerfallSeamSelection.From([], [Variant("test.armor")]);
-        Assert.Null(selection.PhysicalMitigationVariant);
-        Assert.IsType<DaggerfallClassicPhysicalMitigation>(selection.BuildPhysicalMitigation(Inputs));
-        Assert.IsType<DaggerfallClassicPhysicalMitigation>(DaggerfallSeamSelection.Classic.BuildPhysicalMitigation(Inputs));
-    }
-
-    [Fact]
-    public void A_selected_variant_builds_its_owner_from_its_own_tuning()
-    {
-        DaggerfallSeamContext? built = null;
-        DaggerfallRulesVariant armor = Variant("test.armor", context => { built = context; return new Absorb(); });
-        ResolvedGameComposition composition = Resolve(["test.armor"], armor);
-
-        DaggerfallSeamSelection selection = DaggerfallSeamSelection.From(composition.Variants, [armor]);
-        IDaggerfallPhysicalMitigation owner = selection.BuildPhysicalMitigation(Inputs);
-
-        Assert.IsType<Absorb>(owner);
-        Assert.Equal(new RulesVariantId("test.armor"), selection.PhysicalMitigationVariant);
-        Assert.Equal("variant tuning", Encoding.UTF8.GetString(built!.Tuning.Payload.Span));
-        Assert.Same(TestPayload.Definitions, built.Definitions);
+        DaggerfallRulesVariant first = Variant("test.armor"), second = Variant("test.hide");
+        Assert.Throws<InvalidOperationException>(() => DaggerfallSeamSelection.From(
+            [.. Resolve(["test.armor"], first).Variants, .. Resolve(["test.hide"], second).Variants], [first, second]));
     }
 
     [Fact]

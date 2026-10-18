@@ -135,7 +135,11 @@ seams in `DaggerfallRulesSeams`, each with one owner interface; session
 composition builds the selected variant's owner or classic's. The first variant,
 `daggerfall.contact` (bundle `daggerfall.contact`), claims physical delivery and
 mitigation: no to-hit roll, swings and arrows harm whoever they physically meet,
-and targets deflect or absorb by channel through its own tuning profile. Additive
+and targets deflect or absorb by channel through its own tuning profile. It
+also claims the player guard seam: holding the product's `block` intent raises a
+guard that costs stamina and adds deflection, and classic's guard owner reads
+no input at all. A variant composes all of its owners together, so they can
+share state such as the guard its mitigation reads. Additive
 deviations stay contributions to the shared RuleEvents, so effects and
 enchantments work under every variant.
 

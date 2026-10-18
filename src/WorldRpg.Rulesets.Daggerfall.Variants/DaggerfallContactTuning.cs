@@ -16,7 +16,8 @@ internal sealed record DaggerfallContactTuning(
     double DeflectionBaseChance, double DeflectionPerDodgingPoint, double DeflectionPerAgilityAbove50, double DeflectionMaximumChance,
     IReadOnlyDictionary<HarmChannelId, DaggerfallChannelDeflection> Deflection,
     double AbsorptionPerArmorPoint, double AbsorptionPerShieldPoint, double MonsterArmorBaseline, double MonsterAbsorptionPerPoint,
-    IReadOnlyDictionary<HarmChannelId, double> AbsorptionMultipliers)
+    IReadOnlyDictionary<HarmChannelId, double> AbsorptionMultipliers,
+    double GuardStaminaPerSecond, double GuardDeflectionBonus, double GuardShieldDeflectionBonus, double GuardMaximumChance)
 {
     internal DaggerfallChannelDeflection? DeflectionFor(HarmChannelId channel) => Deflection.GetValueOrDefault(channel);
     internal double AbsorptionMultiplier(HarmChannelId channel) => AbsorptionMultipliers.GetValueOrDefault(channel);
@@ -26,7 +27,7 @@ internal sealed record DaggerfallContactTuning(
         using JsonDocument document = JsonDocument.Parse(payload.ToArray());
         JsonElement root = document.RootElement;
         JsonElement melee = root.GetProperty("melee"), projectile = root.GetProperty("projectile"), critical = root.GetProperty("critical"),
-            deflection = root.GetProperty("deflection"), absorption = root.GetProperty("absorption");
+            deflection = root.GetProperty("deflection"), absorption = root.GetProperty("absorption"), guard = root.GetProperty("guard");
         Dictionary<HarmChannelId, DaggerfallChannelDeflection> channels = [];
         foreach (JsonProperty channel in deflection.GetProperty("channels").EnumerateObject())
         {
@@ -50,7 +51,9 @@ internal sealed record DaggerfallContactTuning(
             NonNegative(deflection, "baseChance"), NonNegative(deflection, "dodgingPerPoint"), NonNegative(deflection, "agilityPerPointAbove50"),
             Percent(deflection, "maximumChance"), channels,
             NonNegative(absorption, "perArmorPoint"), NonNegative(absorption, "perShieldPoint"),
-            NonNegative(absorption, "monsterArmorBaseline"), NonNegative(absorption, "monsterAbsorbPerPoint"), multipliers);
+            NonNegative(absorption, "monsterArmorBaseline"), NonNegative(absorption, "monsterAbsorbPerPoint"), multipliers,
+            NonNegative(guard, "staminaPerSecond"), NonNegative(guard, "deflectionBonus"), NonNegative(guard, "shieldDeflectionBonus"),
+            Percent(guard, "maximumChance"));
     }
 
     private static double Value(JsonElement parent, string name) => parent.GetProperty(name).GetDouble() is double value && double.IsFinite(value)

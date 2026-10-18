@@ -19,7 +19,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Variants;
 /// scaled per channel, taken off the damage that reaches it.</item>
 /// </list>
 /// </summary>
-internal sealed class DaggerfallContactMitigation(DaggerfallSeamContext context, DaggerfallContactTuning tuning) : IDaggerfallPhysicalMitigation
+internal sealed class DaggerfallContactMitigation(DaggerfallSeamContext context, DaggerfallContactTuning tuning, IDaggerfallPlayerGuard guard) : IDaggerfallPhysicalMitigation
 {
     /// <summary>The variant's own deflection draw, keyed beside classic's combat salts without sharing one.</summary>
     internal const int DeflectionSalt = 71;
@@ -41,15 +41,27 @@ internal sealed class DaggerfallContactMitigation(DaggerfallSeamContext context,
         mitigation.Absorbed += Absorption(harm, mitigation.Channel);
     }
 
-    /// <summary>The target's deflection chance in percent: a base, its Dodging skill, and Agility above average.</summary>
+    /// <summary>
+    /// The target's deflection chance in percent: a base, its Dodging skill, and Agility above average. A
+    /// player holding a guard up adds the guard's bonus, more behind a shield, up to the guard's own cap.
+    /// </summary>
     internal int DeflectionChance(long target)
     {
         if (context.Session.StatsOf(target) is not StatsComponent stats) return 0;
         double chance = tuning.DeflectionBaseChance
             + Read(stats, DaggerfallMechanicsIds.Dodging) * tuning.DeflectionPerDodgingPoint
             + (Read(stats, DaggerfallMechanicsIds.Agility) - 50) * tuning.DeflectionPerAgilityAbove50;
-        return (int)Math.Clamp(Math.Round(chance, MidpointRounding.AwayFromZero), 0d, tuning.DeflectionMaximumChance);
+        double maximum = tuning.DeflectionMaximumChance;
+        if (target == DaggerfallActorIdentity.PlayerEntityId && guard.Raised)
+        {
+            chance += tuning.GuardDeflectionBonus + (HoldsShield(target) ? tuning.GuardShieldDeflectionBonus : 0d);
+            maximum = Math.Max(maximum, tuning.GuardMaximumChance);
+        }
+        return (int)Math.Clamp(Math.Round(chance, MidpointRounding.AwayFromZero), 0d, maximum);
     }
+
+    private bool HoldsShield(long owner) => context.Session.EquipmentOf(owner).Assignments.Any(assignment => assignment.Slot.Value == "left-hand"
+        && context.Definitions.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value)).Shield is not null);
 
     /// <summary>What the target's protection on the struck body part takes off one blow on a channel.</summary>
     internal int Absorption(DaggerfallPhysicalHarm harm, HarmChannelId channel)
