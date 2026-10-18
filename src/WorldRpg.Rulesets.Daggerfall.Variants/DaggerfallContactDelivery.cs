@@ -58,6 +58,13 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         return true;
     }
 
+    /// <summary>
+    /// A swing still winding up belongs to the attack that was interrupted: it is dropped and never lands. A
+    /// released arrow is already flying and keeps its flight.
+    /// </summary>
+    public void Interrupt(long attacker, ulong generation) =>
+        _windingUp.RemoveAll(held => held.Impact.Request.AttackerId == attacker && held.Impact.Request.Generation == generation);
+
     /// <summary>An enemy archer holds a shot that another body or the world would stop before its target.</summary>
     public bool HoldsFire(long archer, long target) => !LineOfFireClear(archer, target);
 

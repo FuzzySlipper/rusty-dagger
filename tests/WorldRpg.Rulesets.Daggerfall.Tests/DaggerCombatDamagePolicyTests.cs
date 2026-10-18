@@ -126,6 +126,7 @@ public sealed class DaggerCombatDamagePolicyTests
         public bool UntargetedSwingsWaitForImpact => true;
         public bool ImpactsOutliveTheirTarget => false;
         public bool HoldsFire(long archer, long target) => false;
+        public void Interrupt(long attacker, ulong generation) { }
         public bool TryPrepare(DaggerfallAdmittedAttack admitted, FactBuffer<IProductFact> facts, out DaggerCombatRules.DaggerfallPreparedAttack prepared)
         {
             Prepared.Add(admitted);
@@ -855,6 +856,9 @@ public sealed class DaggerCombatDamagePolicyTests
             .Where(stack => stack.Definition.Value == "arrow").Aggregate(0UL, (total, stack) => total + stack.Quantity);
 
         internal double? ReachOf(long actorId) => _combat.ReachOf(actorId);
+
+        /// <summary>Interrupts an attacker's attack, as leaving attack state or losing its target does.</summary>
+        internal void Interrupt(long attackerId, ulong generation) => _combat.Execution.Interrupt(attackerId, generation);
 
         /// <summary>The physical delivery owner the rules composed.</summary>
         internal IDaggerfallPhysicalDelivery Delivery { get; private set; } = null!;

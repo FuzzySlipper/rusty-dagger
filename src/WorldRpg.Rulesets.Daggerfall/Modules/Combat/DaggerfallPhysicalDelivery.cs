@@ -57,6 +57,9 @@ internal interface IDaggerfallPhysicalDelivery
     /// </summary>
     bool ImpactsOutliveTheirTarget { get; }
 
+    /// <summary>An attacker's attack was interrupted: drop any impact the owner still holds for it that has not landed.</summary>
+    void Interrupt(long attacker, ulong generation);
+
     /// <summary>Whether an enemy archer holds its shot at <paramref name="target"/> now, before any arrow is spent.</summary>
     bool HoldsFire(long archer, long target);
 
@@ -168,6 +171,8 @@ internal sealed class DaggerfallClassicPhysicalDelivery(IDaggerfallPhysicalHarmO
 
     public bool UntargetedSwingsWaitForImpact => false;
     public bool ImpactsOutliveTheirTarget => false;
+    /// <summary>Classic holds no impact past its pending attack; a released shot keeps flying when its archer is interrupted.</summary>
+    public void Interrupt(long attacker, ulong generation) { }
     /// <summary>A classic archer looses whenever admitted; cover stops the released shot in flight.</summary>
     public bool HoldsFire(long archer, long target) => false;
 

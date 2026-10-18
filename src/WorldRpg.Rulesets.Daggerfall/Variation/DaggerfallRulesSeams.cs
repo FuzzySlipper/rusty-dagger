@@ -24,5 +24,8 @@ public static class DaggerfallRulesSeams
     /// <summary>How close an enemy closes before it attacks: <see cref="IDaggerfallEnemyEngagement"/>.</summary>
     public static readonly RulesSeamId EnemyEngagement = new("daggerfall.enemy-engagement");
 
-    internal static IReadOnlyList<RulesSeamId> All { get; } = [PhysicalMitigation, PhysicalDelivery, PlayerGuard, TouchDelivery, EnemyEngagement];
+    /// <summary>Which outcome sound a negated spell effect makes: <see cref="IDaggerfallHarmPresentation"/>.</summary>
+    public static readonly RulesSeamId HarmPresentation = new("daggerfall.harm-presentation");
+
+    internal static IReadOnlyList<RulesSeamId> All { get; } = [PhysicalMitigation, PhysicalDelivery, PlayerGuard, TouchDelivery, EnemyEngagement, HarmPresentation];
 }

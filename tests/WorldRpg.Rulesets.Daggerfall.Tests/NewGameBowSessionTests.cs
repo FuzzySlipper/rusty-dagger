@@ -110,16 +110,20 @@ public sealed class NewGameBowSessionTests
         _ = DaggerfallSavePayload.Read(f.Game.CaptureSave());
     }
 
-    private sealed class Fixture : IDisposable
+    /// <summary>A new archer's game with the starting bow drawn at a target a given distance ahead.</summary>
+    internal sealed class Fixture : IDisposable
     {
         internal const long Target = 2008;
         internal DaggerfallSession Game { get; }
+        internal SpatialFake Spatial { get; }
         private ulong step;
         internal DaggerfallSiteProfile Inputs { get; }
         internal AppearanceFake Appearance { get; }
         private readonly DaggerfallSession title;
 
-        internal Fixture(double distance)
+        /// <param name="contact">Whether the game is composed from the <c>daggerfall.contact</c> bundle.</param>
+        /// <param name="random">The session's random service; the lowest draw on every percentile by default.</param>
+        internal Fixture(double distance, bool contact = false, IRandomService? random = null)
         {
             var inputs = ReadInputs(TestData.RepositoryRoot);
             Inputs = inputs;
@@ -128,6 +132,7 @@ public sealed class NewGameBowSessionTests
             PopulateContent(content, inputs);
             var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
             spatial.KeepPosition = true;
+            Spatial = spatial;
             var perception = PerceptionFake.Create();
             perception.Responder = request =>
             {
@@ -143,8 +148,8 @@ public sealed class NewGameBowSessionTests
             };
             Appearance = new AppearanceFake(releases);
             var engine = EngineContextFake.Create(content, spatial.Service, Appearance, perception.Service,
-                random: RandomMinimum.Create());
-            title = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+                random: random ?? RandomMinimum.Create());
+            title = DaggerfallSession.StartNew(engine.Context, contact ? ContactComposition(inputs) : new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
             NewGameSessionTests.Commit(title, "class13");
             Game = Assert.IsType<DaggerfallSession>(title.CreateNewGame());
             Game.ApplyProductMode(ProductMode.Playing);
