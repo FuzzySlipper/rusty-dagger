@@ -31,6 +31,7 @@ internal sealed partial class DaggerfallSession
             AttackMissedFact => "AttackMissed",
             AttackNegatedFact negated => $"AttackNegated:{negated.Negation}",
             AttackWhiffedFact => "AttackWhiffed",
+            EnemyAttackTelegraphFact telegraph => FormattableString.Invariant($"EnemyAttackTelegraph:{telegraph.WindUpSeconds:0.###}"),
             AttackHitFact => "AttackHit",
             ActorDiedFact => "ActorDied",
             _ => null,

@@ -18,7 +18,8 @@ internal sealed record DaggerfallContactTuning(
     double AbsorptionPerArmorPoint, double AbsorptionPerShieldPoint, double AbsorptionPerArmorValueShift, double MonsterArmorBaseline, double MonsterAbsorptionPerPoint,
     IReadOnlyDictionary<HarmChannelId, double> AbsorptionMultipliers,
     double GuardStaminaPerSecond, double GuardDeflectionBonus, double GuardShieldDeflectionBonus, double GuardMaximumChance,
-    double TouchReach, double TouchWidth, double TouchHeight, double TouchDrop)
+    double TouchReach, double TouchWidth, double TouchHeight, double TouchDrop,
+    double EngageReachFraction, double EnemyWindUpSeconds, double ArcherLeadFraction)
 {
     internal DaggerfallChannelDeflection? DeflectionFor(HarmChannelId channel) => Deflection.GetValueOrDefault(channel);
     internal double AbsorptionMultiplier(HarmChannelId channel) => AbsorptionMultipliers.GetValueOrDefault(channel);
@@ -29,7 +30,7 @@ internal sealed record DaggerfallContactTuning(
         JsonElement root = document.RootElement;
         JsonElement melee = root.GetProperty("melee"), projectile = root.GetProperty("projectile"), critical = root.GetProperty("critical"),
             deflection = root.GetProperty("deflection"), absorption = root.GetProperty("absorption"), guard = root.GetProperty("guard"),
-            touch = root.GetProperty("touch");
+            touch = root.GetProperty("touch"), engagement = root.GetProperty("engagement");
         Dictionary<HarmChannelId, DaggerfallChannelDeflection> channels = [];
         foreach (JsonProperty channel in deflection.GetProperty("channels").EnumerateObject())
         {
@@ -56,7 +57,9 @@ internal sealed record DaggerfallContactTuning(
             NonNegative(absorption, "monsterArmorBaseline"), NonNegative(absorption, "monsterAbsorbPerPoint"), multipliers,
             NonNegative(guard, "staminaPerSecond"), NonNegative(guard, "deflectionBonus"), NonNegative(guard, "shieldDeflectionBonus"),
             Percent(guard, "maximumChance"),
-            Positive(touch, "reach"), Positive(touch, "width"), Positive(touch, "height"), NonNegative(touch, "drop"));
+            Positive(touch, "reach"), Positive(touch, "width"), Positive(touch, "height"), NonNegative(touch, "drop"),
+            Fraction(engagement, "meleeReachFraction") is > 0d and var engage ? engage : throw new InvalidOperationException("Contact tuning 'meleeReachFraction' must be positive."),
+            NonNegative(engagement, "enemyWindUpSeconds"), Fraction(engagement, "archerLeadFraction"));
     }
 
     private static double Value(JsonElement parent, string name) => parent.GetProperty(name).GetDouble() is double value && double.IsFinite(value)

@@ -125,6 +125,7 @@ public sealed class DaggerCombatDamagePolicyTests
         }
         public bool UntargetedSwingsWaitForImpact => true;
         public bool ImpactsOutliveTheirTarget => false;
+        public bool HoldsFire(long archer, long target) => false;
         public bool TryPrepare(DaggerfallAdmittedAttack admitted, FactBuffer<IProductFact> facts, out DaggerCombatRules.DaggerfallPreparedAttack prepared)
         {
             Prepared.Add(admitted);
@@ -778,10 +779,11 @@ public sealed class DaggerCombatDamagePolicyTests
                 itemStrike: (_, _, _, damage) => damage,
                 monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team,
                 mitigation: Owners?.PhysicalMitigation ?? mitigation,
-                delivery: Owners?.PhysicalDelivery ?? delivery,
+                delivery: ops => Delivery = (Owners?.PhysicalDelivery ?? delivery)?.Invoke(ops) ?? new DaggerfallClassicPhysicalDelivery(ops),
                 contact: Contact = new ActorContact(_actors, _spatial, () => new PlayerControlState(_playerPosition ?? new WorldPoint(0f, 0f, 0f), 0f, 0f),
                     DaggerfallSession.ActorContactBody, _ => true),
-                strikePose: StrikePose);
+                strikePose: StrikePose,
+                actorVelocity: id => id == DaggerfallActorIdentity.PlayerEntityId ? PlayerVelocity : Vector3.Zero);
             Spatial = spatialFake;
         }
 
@@ -853,6 +855,12 @@ public sealed class DaggerCombatDamagePolicyTests
             .Where(stack => stack.Definition.Value == "arrow").Aggregate(0UL, (total, stack) => total + stack.Quantity);
 
         internal double? ReachOf(long actorId) => _combat.ReachOf(actorId);
+
+        /// <summary>The physical delivery owner the rules composed.</summary>
+        internal IDaggerfallPhysicalDelivery Delivery { get; private set; } = null!;
+
+        /// <summary>The player's controller velocity, which an archer may lead.</summary>
+        internal Vector3 PlayerVelocity { get; set; }
 
         /// <summary>The player's worn armor-value shift, as held enchantments would give it.</summary>
         internal int ArmorValueShift { get; set; }
