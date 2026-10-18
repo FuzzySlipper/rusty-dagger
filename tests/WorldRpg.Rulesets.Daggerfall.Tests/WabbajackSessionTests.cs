@@ -170,7 +170,8 @@ public sealed class WabbajackSessionTests
     private sealed class Strike(bool hit, bool allowed) : ICombatContribution
     {
         public void Hit(TryHitEvent value) => value.Hit = hit;
-        public void Damage(DamageEvent value) { value.Damage = 13; value.Allowed = allowed; }
+        public void Immunity(ImmunityEvent value) => value.Immune = !allowed;
+        public void Damage(DamageEvent value) => value.Damage = 13;
     }
 
     private sealed class Fixture : IDisposable
