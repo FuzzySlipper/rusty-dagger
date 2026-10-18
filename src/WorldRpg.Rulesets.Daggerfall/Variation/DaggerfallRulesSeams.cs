@@ -18,5 +18,8 @@ public static class DaggerfallRulesSeams
     /// <summary>The player's guard: whether and how the player can block, <see cref="IDaggerfallPlayerGuard"/>. Classic has none.</summary>
     public static readonly RulesSeamId PlayerGuard = new("daggerfall.player-guard");
 
-    internal static IReadOnlyList<RulesSeamId> All { get; } = [PhysicalMitigation, PhysicalDelivery, PlayerGuard];
+    /// <summary>Whom a touch spell reaches at its cast frame: <see cref="IDaggerfallTouchDelivery"/>.</summary>
+    public static readonly RulesSeamId TouchDelivery = new("daggerfall.touch-delivery");
+
+    internal static IReadOnlyList<RulesSeamId> All { get; } = [PhysicalMitigation, PhysicalDelivery, PlayerGuard, TouchDelivery];
 }

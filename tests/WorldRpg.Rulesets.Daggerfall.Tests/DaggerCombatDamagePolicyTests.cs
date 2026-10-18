@@ -777,7 +777,7 @@ public sealed class DaggerCombatDamagePolicyTests
                 monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team,
                 mitigation: Owners?.PhysicalMitigation ?? mitigation,
                 delivery: Owners?.PhysicalDelivery ?? delivery,
-                contact: new ActorContact(_actors, _spatial, () => new PlayerControlState(_playerPosition ?? new WorldPoint(0f, 0f, 0f), 0f, 0f),
+                contact: Contact = new ActorContact(_actors, _spatial, () => new PlayerControlState(_playerPosition ?? new WorldPoint(0f, 0f, 0f), 0f, 0f),
                     DaggerfallSession.ActorContactBody, _ => true),
                 strikePose: StrikePose);
             Spatial = spatialFake;
@@ -858,6 +858,20 @@ public sealed class DaggerCombatDamagePolicyTests
         /// <summary>The spatial fake answering contact queries.</summary>
         internal SpatialFake Spatial { get; }
 
+        /// <summary>Actor contact over the fixture's actor bodies and spatial fake.</summary>
+        internal ActorContact Contact { get; private set; }
+
+        /// <summary>The spatial reads a touch delivery owner queries, over this fixture.</summary>
+        internal DaggerfallTouchOperations TouchOperations => new(Contact, _spatial, () => null);
+
+        /// <summary>Stands another brigand at <paramref name="at"/>, for a touch or swing that reaches several actors.</summary>
+        internal ActorState SpawnBrigand(long id, WorldPoint at)
+        {
+            DaggerfallActorDefinition brigand = Definitions.RequireActor(new DaggerfallActorId("thief"));
+            return _actors.CreateActor(id, new EntityTypeId("brigand"),
+                new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(at, 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+        }
+
         /// <summary>Skill uses the rules recorded, in order.</summary>
         internal List<DaggerfallSkillUse> SkillUses { get; } = [];
 
@@ -868,10 +882,12 @@ public sealed class DaggerCombatDamagePolicyTests
             ? new((_playerPosition ?? new WorldPoint(0f, 0f, 0f)).ToVector() + new Vector3(0f, 1.65f, 0f), Vector3.UnitX)
             : _actors.TryGet(actor, out ActorState site) ? new(site.Position.ToVector() + new Vector3(0f, 1.62f, 0f), ActorHeading.Forward(site.HeadingYawRadians)) : null;
 
-        internal DaggerfallSeamContext VariantContext(DaggerfallRulesVariant variant) => DaggerfallContactVariantTests.Context(variant,
-            new DaggerfallSeamInputs(Definitions, () => _character, _random,
-                id => id == DaggerfallActorIdentity.PlayerEntityId ? _playerEquipment.Read() : _actorEquipment[id].Read(),
-                id => id == DaggerfallActorIdentity.PlayerEntityId ? _actors.Player.Stats : _actors.TryGet(id, out ActorState actor) ? actor.Stats : null));
+        internal DaggerfallSeamContext VariantContext(DaggerfallRulesVariant variant) => DaggerfallContactVariantTests.Context(variant, SeamInputs);
+
+        /// <summary>The session reads seam owners are built over, from this fixture.</summary>
+        internal DaggerfallSeamInputs SeamInputs => new(Definitions, () => _character, _random,
+            id => id == DaggerfallActorIdentity.PlayerEntityId ? _playerEquipment.Read() : _actorEquipment[id].Read(),
+            id => id == DaggerfallActorIdentity.PlayerEntityId ? _actors.Player.Stats : _actors.TryGet(id, out ActorState actor) ? actor.Stats : null);
 
         internal ulong CooldownRemaining(long actorId, ulong generation, ulong step) =>
             _combat.Execution.CaptureCooldowns(generation, step).Single(cooldown => cooldown.AttackerId == actorId).RemainingSteps;

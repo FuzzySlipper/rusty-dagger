@@ -15,7 +15,7 @@ public static class DaggerfallVariants
     [
         new DaggerfallRulesVariant(
             new RulesVariantManifest(Contact, DaggerfallRuleset.Identity,
-                [DaggerfallRulesSeams.PhysicalDelivery, DaggerfallRulesSeams.PhysicalMitigation, DaggerfallRulesSeams.PlayerGuard],
+                [DaggerfallRulesSeams.PhysicalDelivery, DaggerfallRulesSeams.PhysicalMitigation, DaggerfallRulesSeams.PlayerGuard, DaggerfallRulesSeams.TouchDelivery],
                 new TuningProfileId("daggerfall.contact"), [], ownsSaveState: false),
             ComposeContact),
     ];
@@ -28,6 +28,7 @@ public static class DaggerfallVariants
         return new DaggerfallSeamOwners(
             PhysicalMitigation: new DaggerfallContactMitigation(context, tuning, guard),
             PhysicalDelivery: ops => new DaggerfallContactDelivery(ops, tuning),
-            PlayerGuard: guard);
+            PlayerGuard: guard,
+            TouchDelivery: ops => new DaggerfallContactTouch(ops, tuning));
     }
 }

@@ -444,8 +444,9 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
             return Finish(DaggerfallCastOutcome.SourceUnavailable, bundle);
         }
         long[] unique = targets.Distinct().ToArray();
+        // A touch reaches whomever the touch delivery owner says it reached, which may be several actors.
         if (bundle.Target == DaggerfallSpellTarget.CasterOnly && (unique.Length != 1 || bundle.CasterId is not long caster || unique[0] != caster)
-            || bundle.Target is DaggerfallSpellTarget.ByTouch or DaggerfallSpellTarget.SingleTargetAtRange && unique.Length > 1)
+            || bundle.Target == DaggerfallSpellTarget.SingleTargetAtRange && unique.Length > 1)
             return Finish(DaggerfallCastOutcome.InvalidTarget, bundle);
         if (unique.Length == 0)
         {

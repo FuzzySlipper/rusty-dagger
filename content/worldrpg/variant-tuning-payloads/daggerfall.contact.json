@@ -52,5 +52,11 @@
     "deflectionBonus": 25,
     "shieldDeflectionBonus": 15,
     "maximumChance": 85
+  },
+  "touch": {
+    "reach": 2.0,
+    "width": 0.8,
+    "height": 1.0,
+    "drop": 0.3
   }
 }

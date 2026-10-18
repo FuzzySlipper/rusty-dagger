@@ -84,13 +84,17 @@ internal sealed partial class DaggerfallSession
         Vector3 origin = attempt.Origin.ToVector();
         if (attempt.Target is DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange)
             origin += attempt.Direction * DaggerfallDungeonSpellPolicy.MissileArmLengthMetres;
-        DaggerfallCastResult release = Casting.Release(attempt.ActorId, true, origin, attempt.Direction);
+        // The behavior admitted the player in touch reach; the touch owner decides whom the touch reaches.
+        DaggerfallTouchReach touch = attempt.Target == DaggerfallSpellTarget.ByTouch
+            ? _touch.Reach(new(attempt.ActorId, origin + Vector3.UnitY * (ActorContactBody.Height * ActorEyeFraction), attempt.Direction, DaggerfallActorIdentity.PlayerEntityId))
+            : default;
+        DaggerfallCastResult release = Casting.Release(attempt.ActorId, attempt.Target != DaggerfallSpellTarget.ByTouch || touch.Releases, origin, attempt.Direction);
         if (release.Bundle is not { } bundle) return release;
 
         return bundle.Target switch
         {
             DaggerfallSpellTarget.CasterOnly => Casting.Deliver(bundle, [attempt.ActorId]),
-            DaggerfallSpellTarget.ByTouch => Casting.Deliver(bundle, [DaggerfallActorIdentity.PlayerEntityId]),
+            DaggerfallSpellTarget.ByTouch => Casting.Deliver(bundle, touch.Targets),
             DaggerfallSpellTarget.AreaAroundCaster => Casting.Deliver(bundle,
                 AreaSpellTargets(attempt.ActorId, origin, excludeCaster: true)),
             _ => release,
@@ -134,24 +138,22 @@ internal sealed partial class DaggerfallSession
         if (Casting.ReadyFor(casterId) is not { } ready) return new(DaggerfallCastOutcome.Unready);
         var target = DaggerfallMagicCostPolicy.TargetForRangeType(_definitions.Magic.Spells[ready.SpellKey].RangeType);
         if (!CurrentPositions().TryGetValue(casterId, out var origin)) return Casting.Release(casterId, false);
-        long? touch = null;
+        Vector3 eye = origin.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight;
+        DaggerfallTouchReach touch = default;
         if (target == DaggerfallSpellTarget.ByTouch)
         {
             if (!ValidDirection(direction)) return Casting.Release(casterId, false);
-            SpatialHit hit = _spatial.CastCapsule(origin.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight,
-                0d, .25d, Vector3.Normalize(direction) * 3f, _contact.Colliders(casterId),
-                _sites.CharacterEnvironment(State.PlayerControl.Motion));
-            touch = _contact.ActorFor(hit);
+            touch = _touch.Reach(new(casterId, eye, Vector3.Normalize(direction), Admitted: null));
         }
-        DaggerfallCastResult release = Casting.Release(casterId, target != DaggerfallSpellTarget.ByTouch || touch.HasValue,
-            origin.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight, ValidDirection(direction) ? Vector3.Normalize(direction) : null);
+        DaggerfallCastResult release = Casting.Release(casterId, target != DaggerfallSpellTarget.ByTouch || touch.Releases,
+            eye, ValidDirection(direction) ? Vector3.Normalize(direction) : null);
         if (release.Bundle is not { } bundle) return release;
         if (casterId == State.Actors.Player.DurableId && ready.Source == DaggerfallCastSource.Spell)
             _lastPlayerSpell = ready.SpellKey;
         switch (target)
         {
             case DaggerfallSpellTarget.CasterOnly: return Casting.Deliver(bundle, [casterId]);
-            case DaggerfallSpellTarget.ByTouch: return Casting.Deliver(bundle, [touch!.Value]);
+            case DaggerfallSpellTarget.ByTouch: return Casting.Deliver(bundle, touch.Targets);
             case DaggerfallSpellTarget.AreaAroundCaster: return Casting.Deliver(bundle, AreaSpellTargets(casterId, origin.ToVector(), true));
             default: return release;
         }

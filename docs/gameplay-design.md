@@ -138,7 +138,10 @@ mitigation: no to-hit roll, swings and arrows harm whoever they physically meet,
 and targets deflect or absorb by channel through its own tuning profile. It
 also claims the player guard seam: holding the product's `block` intent raises a
 guard that costs stamina and adds deflection, and classic's guard owner reads
-no input at all. A variant composes all of its owners together, so they can
+no input at all. Its touch delivery seam owner sends a touch spell to every
+actor its touch volume contacts at the cast frame, and a touch that meets no one
+is still released and misses; classic's owner keeps the short capsule pick and
+the enemy behavior's admitted target. A variant composes all of its owners together, so they can
 share state such as the guard its mitigation reads. Additive
 deviations stay contributions to the shared RuleEvents, so effects and
 enchantments work under every variant.
