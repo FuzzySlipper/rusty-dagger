@@ -4,8 +4,9 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-public sealed class DaggerfallRuleset : ISaveableGameRuleset
+public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatalog
 {
+    private readonly IReadOnlyList<DaggerfallRulesVariant> _variants;
     private readonly ConditionalWeakTable<ResolvedGameComposition, DaggerfallAdmittedContent> _admittedContent = [];
     private readonly bool _videosEnabled;
     public static readonly RulesetId Identity = new("daggerfall");
@@ -27,13 +28,25 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
     /// <summary>The Fighters Guild receipt: the whole active guild group in catalog order, without categories.</summary>
     internal static readonly ContentPackRoleId FightersGuildQuestCorpusRole = new("daggerfall.fighters-guild-quest-corpus");
 
-    /// <summary>Creates the ordinary product ruleset with its admitted cinematic playback enabled.</summary>
-    public DaggerfallRuleset() : this(videosEnabled: true) { }
+    /// <summary>Creates the ordinary product ruleset, compiling no rules variants, with its admitted cinematic playback enabled.</summary>
+    public DaggerfallRuleset() : this([]) { }
+
+    /// <summary>Creates the ordinary product ruleset with the compiled rules variants a bundle may select.</summary>
+    public DaggerfallRuleset(IReadOnlyList<DaggerfallRulesVariant> variants) : this(variants, videosEnabled: true) { }
 
     /// <summary>Test-only explicit no-video composition; absent admitted content is never interpreted as this setting.</summary>
-    internal DaggerfallRuleset(bool videosEnabled) => _videosEnabled = videosEnabled;
+    internal DaggerfallRuleset(bool videosEnabled) : this([], videosEnabled) { }
+
+    internal DaggerfallRuleset(IReadOnlyList<DaggerfallRulesVariant> variants, bool videosEnabled)
+    {
+        ArgumentNullException.ThrowIfNull(variants);
+        _variants = [.. variants];
+        _videosEnabled = videosEnabled;
+    }
 
     public RulesetId Id => Identity;
+
+    public IReadOnlyList<RulesVariantManifest> CompiledVariants => [.. _variants.Select(variant => variant.Manifest)];
 
     public IGameSession CreateSession(GameSessionContext context)
         => CreateSessionCore(context);
@@ -70,6 +83,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             DisabledQuestSelection = admitted.DisabledQuestSelection,
             Music = admitted.Music,
             Blocks = admitted.Blocks,
+            Seams = DaggerfallSeamSelection.From(context.Composition.Variants, _variants),
         };
 
     private DaggerfallAdmittedContent Admit(ResolvedGameComposition composition) =>

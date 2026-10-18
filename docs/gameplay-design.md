@@ -121,6 +121,19 @@ health lost. Essential application must not depend on eventual subscribers.
 Do not add a universal bus, handler dependency scheduler, reflection scan,
 string/object context bag or mandatory per-handler audit trail.
 
+A **rules variant** is a compiled, deliberate deviation from a ruleset that a
+game bundle selects with `"variants": [...]`. Its `RulesVariantManifest` names
+the ruleset, the seams (`RulesSeamId`) whose owners it replaces, its own tuning
+profile, the content packs it needs and whether it owns save state.
+`GameCompositionResolver` resolves the selection against the compiled
+manifests and refuses an unknown variant, one for another ruleset, or two
+claiming one seam; `ResolvedCompositionIdentity.Variants` records the set, and
+the Host refuses to load a save under a different set. Daggerfall declares its
+seams in `DaggerfallRulesSeams`, each with one owner interface; session
+composition builds the selected variant's owner or classic's. Additive
+deviations stay contributions to the shared RuleEvents, so effects and
+enchantments work under every variant.
+
 `FactBuffer.Deliver` detaches a stable batch. Facts appended during reactions wait
 for the next delivery. A throwing reaction does not requeue already applied
 changes or undo its predecessors; it is not a transaction or retry journal.
