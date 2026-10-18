@@ -46,6 +46,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     // The line the last mode change set for its mode, so returning to play can tell it from a result.
     private string _modeLine = string.Empty;
     private readonly SpatialMovementSystem _spatial;
+    /// <summary>Harm and spell delivery's physical contact over the admitted scene and canonical actor bodies.</summary>
+    private readonly ActorContact _contact;
     private readonly FirstPersonCameraSystem _camera;
     private readonly DaggerCombatRules _combat;
     // The player's weapon swing gesture, read from the look turns each admitted update commits and

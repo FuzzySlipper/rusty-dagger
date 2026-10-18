@@ -1,3 +1,4 @@
+using WorldRpg.Kit.Combat;
 using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
@@ -114,7 +115,7 @@ internal sealed partial class DaggerfallSession
         if (!float.IsFinite(distance) || distance <= armDistance) return false;
         Vector3 direction = Vector3.Normalize(delta);
         Vector3 launch = origin + direction * armDistance;
-        ReadOnlyMemory<SpatialEntityCollider> colliders = SpellColliders(attempt.ActorId);
+        ReadOnlyMemory<SpatialEntityCollider> colliders = _contact.Colliders(attempt.ActorId);
         CharacterStepEnvironment environment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
         SpatialHit atLaunch = _spatial.OverlapCapsule(launch, 0d, .45d, colliders, environment);
         if (BlocksEnemySpellPath(atLaunch)) return false;
@@ -124,7 +125,7 @@ internal sealed partial class DaggerfallSession
     }
 
     private bool BlocksEnemySpellPath(SpatialHit hit) => hit.Present
-        && !(hit.Kind == SpatialHitKind.Entity && ActorForSpellHit(hit) == DaggerfallActorIdentity.PlayerEntityId);
+        && !(hit.Kind == SpatialHitKind.Entity && _contact.ActorFor(hit) == DaggerfallActorIdentity.PlayerEntityId);
 
     /// <summary>Releases the ready source at its live position. Ranged bundles await Engine collision delivery.</summary>
     internal DaggerfallCastResult ReleaseReadySpell(long casterId, Vector3 direction)
@@ -137,9 +138,9 @@ internal sealed partial class DaggerfallSession
         {
             if (!ValidDirection(direction)) return Casting.Release(casterId, false);
             SpatialHit hit = _spatial.CastCapsule(origin.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight,
-                0d, .25d, Vector3.Normalize(direction) * 3f, SpellColliders(casterId),
+                0d, .25d, Vector3.Normalize(direction) * 3f, _contact.Colliders(casterId),
                 _sites.CharacterEnvironment(State.PlayerControl.Motion));
-            touch = ActorForSpellHit(hit);
+            touch = _contact.ActorFor(hit);
         }
         DaggerfallCastResult release = Casting.Release(casterId, target != DaggerfallSpellTarget.ByTouch || touch.HasValue,
             origin.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight, ValidDirection(direction) ? Vector3.Normalize(direction) : null);
@@ -163,38 +164,16 @@ internal sealed partial class DaggerfallSession
             return bundle.ActionSource is not null ? Casting.Deliver(bundle, []) : new(DaggerfallCastOutcome.InvalidTarget, bundle);
         Vector3 delta = to - from;
         if (!ValidDirection(delta)) return bundle.ActionSource is not null ? Casting.Deliver(bundle, []) : new(DaggerfallCastOutcome.InvalidTarget, bundle);
-        SpatialHit hit = CastSpellRay(bundle.CasterId, from, delta, delta.Length());
-        if (!hit.Present) return new(DaggerfallCastOutcome.Released, bundle); // Still in flight.
-        _appearance.PlaySpellImpact(bundle.Sequence, bundle.Spell.Element, hit.Point);
+        SegmentContact contact = _contact.Segment(bundle.CasterId, from, to, _sites.CharacterEnvironment(State.PlayerControl.Motion));
+        if (contact.Kind == ContactKind.None) return new(DaggerfallCastOutcome.Released, bundle); // Still in flight.
+        _appearance.PlaySpellImpact(bundle.Sequence, bundle.Spell.Element, contact.Point);
         if (bundle.Target == DaggerfallSpellTarget.AreaAtRange)
-            return Casting.Deliver(bundle, AreaSpellTargets(bundle.CasterId, hit.Point, false));
-        long? target = ActorForSpellHit(hit);
-        return Casting.Deliver(bundle, target is long id ? [id] : []);
+            return Casting.Deliver(bundle, AreaSpellTargets(bundle.CasterId, contact.Point, false));
+        return Casting.Deliver(bundle, contact.ActorId is long id ? [id] : []);
     }
 
-    private SpatialHit CastSpellRay(long? caster, Vector3 origin, Vector3 direction, float distance) => _spatial.CastRay(
-        origin, Vector3.Normalize(direction), distance,
-        SpellColliders(caster), _sites.CharacterEnvironment(State.PlayerControl.Motion));
-
-    private SpatialEntityCollider[] SpellColliders(long? caster)
-    {
-        // Query-local envelopes projected from canonical actor positions, never another collision world.
-        var colliders = State.Actors.All.Where(actor => actor.DurableId != caster && !actor.IsDefeated
-            && IsSpellEligibleActor(actor.DurableId)).Select(actor =>
-            new SpatialEntityCollider(actor.Actor.Entity.Value, actor.Position.ToVector() - new Vector3(.3f, 0f, .3f),
-                actor.Position.ToVector() + new Vector3(.3f, 1.8f, .3f), 0, 0, true, false, false));
-        if (State.Actors.Player.DurableId != caster && !State.Actors.Player.IsDefeated)
-            colliders = colliders.Append(_spatial.ProjectCharacterCollider(State.PlayerControl, State.Actors.Player.Actor.Entity.Value));
-        return colliders.ToArray();
-    }
-    private long? ActorForSpellHit(SpatialHit hit)
-    {
-        if (!hit.Present || hit.Kind != SpatialHitKind.Entity) return null;
-        if (State.Actors.Player.Actor.Entity.Value == hit.Entity) return State.Actors.Player.DurableId;
-        return State.Actors.All.Where(actor => IsSpellEligibleActor(actor.DurableId)
-                && actor.Actor.Entity.Value == hit.Entity)
-            .Select(actor => (long?)actor.DurableId).SingleOrDefault();
-    }
+    /// <summary>The upright body every site actor presents to spell and harm contact.</summary>
+    internal static readonly ActorBodyEnvelope ActorContactBody = new(.3f, 1.8f);
     private long[] AreaSpellTargets(long? caster, Vector3 center, bool excludeCaster, double radius = 4d, bool exclusive = false)
     {
         long observer = caster ?? State.Actors.Player.DurableId;
