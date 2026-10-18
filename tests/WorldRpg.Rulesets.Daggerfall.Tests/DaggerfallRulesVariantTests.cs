@@ -3,6 +3,7 @@ using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -23,6 +24,25 @@ public sealed class DaggerfallRulesVariantTests
         Assert.Throws<ArgumentException>(() => new DaggerfallRulesVariant(Manifest("test.foreign", ruleset: "other"), _ => new Absorb()));
         // A variant that owned save state would lose it on every save until a variant save section is composed.
         Assert.Throws<NotSupportedException>(() => new DaggerfallRulesVariant(Manifest("test.stateful", ownsSaveState: true), _ => new Absorb()));
+        Assert.Throws<ArgumentException>(() => new DaggerfallRulesVariant(Manifest("test.contact", seams: [DaggerfallRulesSeams.PhysicalDelivery])));
+        Assert.Throws<ArgumentException>(() => new DaggerfallRulesVariant(Manifest("test.contact", seams: [DaggerfallRulesSeams.PhysicalMitigation]),
+            _ => new Absorb(), (_, ops) => new DaggerfallClassicPhysicalDelivery(ops)));
+    }
+
+    [Fact]
+    public void A_selected_variant_claiming_delivery_builds_its_owner_over_the_shared_operations_with_its_tuning()
+    {
+        DaggerfallSeamContext? built = null;
+        DaggerfallRulesVariant contact = new(Manifest("test.contact", seams: [DaggerfallRulesSeams.PhysicalDelivery]),
+            physicalDelivery: (context, ops) => { built = context; return new DaggerfallClassicPhysicalDelivery(ops); });
+        ResolvedGameComposition composition = Resolve(["test.contact"], contact);
+
+        DaggerfallSeamSelection selection = DaggerfallSeamSelection.From(composition.Variants, [contact]);
+        Assert.Equal(new RulesVariantId("test.contact"), selection.PhysicalDeliveryVariant);
+        Assert.Null(selection.PhysicalMitigationVariant);
+        Assert.IsType<DaggerfallClassicPhysicalDelivery>(selection.PhysicalDelivery(TestPayload.Definitions, () => null)(null!));
+        Assert.Equal("variant tuning", Encoding.UTF8.GetString(built!.Tuning.Payload.Span));
+        Assert.Null(DaggerfallSeamSelection.Classic.PhysicalDeliveryVariant);
     }
 
     [Fact]

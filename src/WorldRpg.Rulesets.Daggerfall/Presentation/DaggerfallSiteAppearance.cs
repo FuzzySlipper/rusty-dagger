@@ -602,7 +602,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 // frame is what delivers the admitted impact. A viewmodel that cannot play the
                 // authored strike has no frame to wait for, so the impact lands in this update
                 // rather than being withheld by a presentation the composition does not have.
-                if (!StartWeaponStrike(swing, started.Swing, started.FrameSeconds, started.TargetId, started.HitFrame))
+                if (!StartWeaponStrike(swing, started.Swing, started.FrameSeconds, started.WaitsWithoutTarget, started.TargetId, started.HitFrame))
                 {
                     attackImpacts.Add(new AttackImpactNotice(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0,
                         started.OriginatingGeneration, started.OriginatingSimulationStep, Expired: false));
@@ -1303,7 +1303,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// the update that admitted it instead of waiting for a frame nothing will play.
     /// </summary>
     private bool StartWeaponStrike(PresentationEventIdentity identity, DaggerfallSwingDirection swing, double frameSeconds = 0d,
-        long? target = null, int hitFrame = DaggerfallFormulaPolicy.MeleeWeaponHitFrame)
+        bool waitsWithoutTarget = false, long? target = null, int hitFrame = DaggerfallFormulaPolicy.MeleeWeaponHitFrame)
     {
         if (viewmodel is null) return false;
         // The rules chose the swing: the bow's fixed strike or the direction the player drew. A swing
@@ -1319,9 +1319,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (hitFrame < 0 || hitFrame >= strike.PlayedFrameCount)
             throw new InvalidOperationException($"Classic weapon '{viewmodel.Weapon.ResourceId}' strike '{name}' plays {strike.PlayedFrameCount} frames and cannot reach the swing's hit frame {hitFrame}.");
         // A new swing replaces whatever the last one left undelivered, then owns the impact its own
-        // hit frame will deliver; an untargeted swing has none.
+        // hit frame will deliver: its target's, or an untargeted one (target zero) when the rules decide
+        // contact at the frame. An untargeted swing that resolved at admission has none.
         RetireUnreportedImpact();
-        viewmodel.PendingImpact = target is long aimed ? identity with { Target = aimed } : null;
+        viewmodel.PendingImpact = target is long aimed ? identity with { Target = aimed }
+            : waitsWithoutTarget ? identity with { Target = 0 } : null;
         viewmodel.ImpactReported = false;
         viewmodel.HitFrame = hitFrame;
         StartWeaponAction(name, frameSeconds);

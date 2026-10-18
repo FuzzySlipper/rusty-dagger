@@ -333,7 +333,8 @@ internal sealed partial class DaggerfallSession
                 () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
                 actorId => effects.ControlsFor(actorId).PhysicalAttacks, TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), DeliverMonsterHit,
                 npcs.IsGameplayActive, EffectiveFoeTeam,
-                composition.Seams.BuildPhysicalMitigation(definitions, () => character));
+                composition.Seams.BuildPhysicalMitigation(definitions, () => character),
+                composition.Seams.PhysicalDelivery(definitions, () => character));
             _equipmentMoves.Changed += _combat.EquipmentChanged;
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
