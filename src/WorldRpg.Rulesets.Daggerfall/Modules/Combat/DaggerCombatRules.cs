@@ -709,6 +709,12 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         int total = 0;
         bool landed = false;
         TryHitEvent? representative = null;
+        DaggerfallPhysicalHarm physical = new(attacker.Id, target.Id, target.Definition, attack.Skill, attack.Material, body);
+        // Negation precedes calculation: the first landed slot asks once whether the target turns this
+        // physical attack away, and a negated attack rolls no slot damage or consequence. Classic
+        // negates nothing here, so the non-negated draw order is the donor's per-slot order.
+        NegationEvent? negation = null;
+        NegationEvent Negation() => negation ??= Rules.Negate(participants, DaggerfallHarmChannels.Physical, value => _mitigation.Negate(value, physical));
         // Classic tests all three slots; normalized definitions may omit trailing zero ranges.
         for (int slot = 0; slot < 3; slot++)
         {
@@ -721,6 +727,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             if (hit.Hit || !landed) representative = hit;
             if (!hit.Hit) continue;
             landed = true;
+            if (Negation().Negated) continue;
             int slotDamage = Draw(request, attacker.Id, target.Id, CombatRandomKey.MonsterDamageSaltBase + slot, slotMinimum, attacker.Definition.Attacks[slot].MaximumDamage, enemy);
             total = checked(total + slotDamage);
             if (slotDamage > 0)
@@ -732,15 +739,16 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             }
         }
 
-        // The slots are the attempt's admissions; any landed slot is contact, and the combined attack
-        // passes immunity, calculation and mitigation once.
-        DaggerfallPhysicalHarm physical = new(attacker.Id, target.Id, target.Definition, attack.Skill, attack.Material, body);
-        HarmResolution harm = Rules.Resolve(participants, DaggerfallHarmChannels.Physical, admit: null,
-            damage => damage.Damage = Math.Max(0, total), contact: landed,
-            negate: value => _mitigation.Negate(value, physical), mitigate: value => _mitigation.Mitigate(value, physical));
+        // The slots are the attempt's admissions and any landed slot is contact. The landed slots' draws
+        // are the attack's calculation, which damage contributions and mitigation then see once.
+        DaggerfallAttackDetail detail = new(body, representative?.Roll ?? 0, representative?.Chance ?? 0);
+        hits = [];
+        if (!Rules.Contact(participants, landed).Contact) return (new(false, true, 0), detail);
+        if (Negation().Negated) return (new(true, false, 0), detail);
+        DamageEvent damage = Rules.Damage(participants, value => value.Damage = Math.Max(0, total));
+        MitigationEvent mitigation = Rules.Mitigate(participants, DaggerfallHarmChannels.Physical, damage.Damage, value => _mitigation.Mitigate(value, physical));
         hits = accepted.ToArray();
-        return (new(harm.Connected, !harm.NegatedBeforeCalculation, harm.Damage),
-            new(body, representative?.Roll ?? 0, representative?.Chance ?? 0));
+        return (new(true, true, mitigation.Damage), detail);
     }
 
     private readonly Action<long, DaggerfallWeaponPoisonSource> _deliverWeaponPoison;
