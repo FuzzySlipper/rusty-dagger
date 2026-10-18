@@ -37,7 +37,7 @@ internal sealed record DaggerfallAdmittedAttack(
 
     /// <summary>The prepared attack carrying this admission's sources, with the delivery owner's outcome.</summary>
     internal PreparedPhysicalAttack Prepared(AttackOutcome outcome) => new(Attack.CooldownSeconds, outcome, Feedback, WabbajackSource,
-        MolagBalSource: MolagBalSource, ItemStrikeSource: StrikeSource, IsRanged: Ranged, RangedWeapon: RangedWeapon, Action: Action);
+        MolagBalSource: MolagBalSource, ItemStrikeSource: StrikeSource, IsRanged: Ranged, RangedWeapon: RangedWeapon, Action: Action, Admission: this);
 }
 
 /// <summary>
@@ -117,7 +117,24 @@ internal interface IDaggerfallPhysicalHarmOperations
         ulong generation, ulong step, DaggerfallStrikeFeedback feedback, FactBuffer<IProductFact> facts,
         (UniqueInventoryItem Weapon, ulong Identity)? mace, bool emitHitFact = true, int? admittedBaseDamage = null, UniqueInventoryItem? rangedWeapon = null);
     bool CoverBlocksShot(WorldPoint origin, WorldPoint aim);
+    /// <summary>How far an attacker's authored attack carries, or null when it has none.</summary>
+    double? ReachOf(long attacker);
+    /// <summary>The query-local actor bodies and Engine contact queries delivery reaches targets through.</summary>
+    ActorContact Contact { get; }
+    /// <summary>Call-local obstacles (doors, for example) contact queries answer with, for the current site.</summary>
+    CharacterStepEnvironment? ContactEnvironment();
+    /// <summary>Where an actor strikes or looses from and which way it faces, or null for one with no live pose.</summary>
+    DaggerfallStrikePose? StrikePose(long actor);
+    /// <summary>
+    /// Applies a prepared attack that connected with <paramref name="target"/>: its natural consequences and
+    /// coating, Wabbajack, the weapon's Strikes payloads, the health application with wear, artifacts and
+    /// facts, and the player's weapon skill use.
+    /// </summary>
+    void ApplyConnectedHarm(AttackRequest request, long target, PreparedPhysicalAttack attack, FactBuffer<IProductFact> facts);
 }
+
+/// <summary>Where an actor strikes from (its eye) and the direction it faces or aims.</summary>
+internal readonly record struct DaggerfallStrikePose(Vector3 Eye, Vector3 Forward);
 
 /// <summary>
 /// Classic Daggerfall physical delivery. A targeted attack decides at admission: the d100 to-hit roll is
@@ -171,7 +188,7 @@ internal sealed class DaggerfallClassicPhysicalDelivery(IDaggerfallPhysicalHarmO
             prepared = admitted.Prepared(monsterOutcome) with { MonsterHits = slots, Detail = detail };
             return true;
         }
-        DaggerfallPhysicalHarm harm = new(attacker.Id, target.Id, target.Definition, attack.Skill, attack.Material, body);
+        DaggerfallPhysicalHarm harm = new(attacker.Id, target.Id, target.Definition, attack.Skill, attack.Material, body, request.Generation, request.SimulationStep);
         Action<TryHitEvent> hitRoll = HitRoll(explicitRequest, attacker, target, attack, body, enemyAttack, modifiers.ToHit, backstabChance);
         Action<DamageEvent> damageRoll = ops.DamageRoll(explicitRequest, attacker, target, attack, enemyAttack, modifiers.Damage, backstabChance);
         AttackOutcome outcome;
@@ -220,50 +237,28 @@ internal sealed class DaggerfallClassicPhysicalDelivery(IDaggerfallPhysicalHarmO
             ops.RecordSkillUse(new DaggerfallSkillUse(DaggerfallMechanicsIds.Dodging.Value, DaggerfallSkillUseReason.DodgingEnemyAttack, DaggerfallSkillUseOutcome.Attempted));
         if (outcome.Hit && !outcome.Allowed)
         { facts.Append(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial)); return; }
-        // Natural consequences and coatings belong to positive admitted physical hits, before
-        // enchantments or health absorption can change the result or defeat the target.
-        if (outcome.Hit)
-        {
-            ops.ApplyMonsterConsequences(request, target, attack.MonsterHits ?? [], facts);
-            if (outcome.Damage > 0 && attack.WeaponPoison is { } coating)
-                ops.DeliverWeaponPoison(target, coating);
-        }
-        // WeaponManager invokes Strikes even when contact misses. Wabbajack's replacement
-        // inherits prior wounds before the removed enemy receives this strike's damage.
+        if (outcome.Hit) { ops.ApplyConnectedHarm(request, target, attack, facts); return; }
+        // A miss: WeaponManager invokes Strikes even when contact misses, and Wabbajack's replacement
+        // still happens.
         if (ops.TryTransform(request, attack, facts, out ActorTransformedFact? transformation))
         {
-            string? weaponSkill = request.AttackerId == PlayerId && outcome.Hit ? ops.PlayerWeaponSkill() : null;
-            if (outcome.Hit && outcome.Allowed && outcome.Damage > 0)
-                ops.WearAttackersWeapon(request, target, outcome.Damage, facts);
-            if (weaponSkill is not null) ops.RecordPlayerWeaponHit(weaponSkill);
             if (ops.IsDefeated(target))
                 facts.Append(new ActorDiedFact(target, request.AttackerId, DaggerfallDamageCause.Effect, 0, 0, request.Generation, request.SimulationStep));
             return;
         }
-        int strikeDamage = outcome.Hit ? outcome.Damage : 0;
+        int strikeDamage = 0;
         // An enemy's weapon runs its Strikes payloads against the player only on a damaging blow;
         // the player's own weapon, and one enemy striking another, run them on every swing.
-        bool strikes = !(request.AttackerId != PlayerId && target == PlayerId && strikeDamage <= 0);
+        bool strikes = !(request.AttackerId != PlayerId && target == PlayerId);
         if (strikes && attack.ItemStrikeSource is { } sourceItem)
             strikeDamage = ops.ItemStrike(request.AttackerId, target, sourceItem, strikeDamage);
-        if (!outcome.Hit)
-        { facts.Append(new AttackMissedFact(request.AttackerId, target, detail.Roll, detail.Chance, enemyAttack, request.Generation, request.SimulationStep) { Feedback = feedback });
-            if (transformation is not null) facts.Append(transformation);
-            // The player's weapon runs its Strikes payloads on a miss; Mehrunes Razor's terminal
-            // strike has no damage condition, so its saving throw is offered even when nothing landed.
-            if (strikeDamage > 0 || request.AttackerId == PlayerId && ops.WieldsRazor(request.AttackerId))
-                ops.ApplyDamage(ops.Participants(request.AttackerId, target, request.Action ?? "attack"), request.AttackerId, target,
-                    strikeDamage, detail.Body, enemyAttack, request.Generation, request.SimulationStep, feedback, facts, null, emitHitFact: false, admittedBaseDamage: 0);
-            return; }
-        string action = attack.Action ?? request.Action ?? ops.DefaultAction(request.AttackerId) ?? "attack";
-        // Capture the weapon skill at the admitted operation boundary. Applying the hit may break
-        // the weapon through physical wear and unequip it before the skill-use reaction runs.
-        string? playerWeaponSkill = request.AttackerId == PlayerId ? ops.PlayerWeaponSkill() : null;
-        ops.ApplyDamage(ops.Participants(request.AttackerId, target, action), request.AttackerId, target, strikeDamage, detail.Body,
-            enemyAttack, request.Generation, request.SimulationStep, feedback, facts, attack.MolagBalSource,
-            admittedBaseDamage: strikeDamage != outcome.Damage ? outcome.Damage : null, rangedWeapon: attack.RangedWeapon);
-        if (request.AttackerId == PlayerId) ops.RecordPlayerWeaponHit(playerWeaponSkill!);
+        facts.Append(new AttackMissedFact(request.AttackerId, target, detail.Roll, detail.Chance, enemyAttack, request.Generation, request.SimulationStep) { Feedback = feedback });
         if (transformation is not null) facts.Append(transformation);
+        // The player's weapon runs its Strikes payloads on a miss; Mehrunes Razor's terminal
+        // strike has no damage condition, so its saving throw is offered even when nothing landed.
+        if (strikeDamage > 0 || request.AttackerId == PlayerId && ops.WieldsRazor(request.AttackerId))
+            ops.ApplyDamage(ops.Participants(request.AttackerId, target, request.Action ?? "attack"), request.AttackerId, target,
+                strikeDamage, detail.Body, enemyAttack, request.Generation, request.SimulationStep, feedback, facts, null, emitHitFact: false, admittedBaseDamage: 0);
     }
 
     /// <summary>
@@ -436,7 +431,7 @@ internal sealed class DaggerfallClassicPhysicalDelivery(IDaggerfallPhysicalHarmO
         int total = 0;
         bool landed = false;
         TryHitEvent? representative = null;
-        DaggerfallPhysicalHarm physical = new(attacker.Id, target.Id, target.Definition, attack.Skill, attack.Material, body);
+        DaggerfallPhysicalHarm physical = new(attacker.Id, target.Id, target.Definition, attack.Skill, attack.Material, body, request.Generation, request.SimulationStep);
         // Negation precedes calculation: the first landed slot asks once whether the target turns this
         // physical attack away, and a negated attack rolls no slot damage or consequence. Classic
         // negates nothing here, so the non-negated draw order is the donor's per-slot order.
@@ -506,11 +501,7 @@ internal sealed class DaggerfallClassicPhysicalDelivery(IDaggerfallPhysicalHarmO
     private int ArmorToHit(Combatant target, int body)
     {
         int equipmentBonus = 0;
-        string bodySlot = body switch
-        {
-            0 => "head", 1 => "right-arm", 2 => "left-arm", 3 => "chest-armor",
-            4 => "gloves", 5 => "legs-armor", 6 => "feet", _ => throw new ArgumentOutOfRangeException(nameof(body)),
-        };
+        string bodySlot = DaggerCombatRules.BodySlot(body);
         foreach (EquipmentAssignment assignment in ops.EquipmentOf(target.Id).Assignments)
         {
             DaggerfallItemDefinition item = ops.Catalog.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value));

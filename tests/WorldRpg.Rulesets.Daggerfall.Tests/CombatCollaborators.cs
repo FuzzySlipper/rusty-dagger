@@ -28,11 +28,16 @@ internal static class CombatCollaborators
     /// start site. The returned spatial system is the caller's to dispose.
     /// </summary>
     internal static TargetingService Targeting(ActorsState actors, IReadOnlyDictionary<long, DaggerfallActorDefinition> authored,
-        out SpatialMovementSystem spatial)
+        out SpatialMovementSystem spatial) => Targeting(actors, authored, out spatial, out _);
+
+    /// <summary>The same targeting, also handing back the spatial fake that answers its queries.</summary>
+    internal static TargetingService Targeting(ActorsState actors, IReadOnlyDictionary<long, DaggerfallActorDefinition> authored,
+        out SpatialMovementSystem spatial, out SpatialFake fake)
     {
         DaggerfallSiteProfile inputs = Profile.Value;
         List<string> releases = [];
-        spatial = new SpatialMovementSystem(SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new ContentFake(releases),
+        fake = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial = new SpatialMovementSystem(fake.Service, new ContentFake(releases),
             null, DaggerfallTuning.Defaults.Spatial);
         return new TargetingService(PerceptionFake.Create().Service, spatial, actors,
             new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));

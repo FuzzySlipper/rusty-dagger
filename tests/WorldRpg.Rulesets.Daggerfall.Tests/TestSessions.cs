@@ -208,6 +208,7 @@ internal static class TestSessions
         || relative.StartsWith("worldrpg/bundles/", StringComparison.Ordinal)
         || relative.StartsWith("worldrpg/tuning/", StringComparison.Ordinal)
         || relative.StartsWith("worldrpg/tuning-payloads/", StringComparison.Ordinal)
+        || relative.StartsWith("worldrpg/variant-tuning-payloads/", StringComparison.Ordinal)
         || relative.StartsWith("worldrpg/media/", StringComparison.Ordinal)
             && string.Equals(Path.GetExtension(relative), ".json", StringComparison.OrdinalIgnoreCase);
 

@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
@@ -703,7 +704,7 @@ public sealed class DaggerCombatDamagePolicyTests
     /// wearing the equipped-enemy action, and a scripted keyed random that records every requested
     /// draw range in order.
     /// </summary>
-    private sealed class DamagePolicyFixture : IDisposable
+    internal sealed class DamagePolicyFixture : IDisposable
     {
         private readonly ActorsState _actors;
         private readonly DaggerfallItemInstances _itemInstances = new();
@@ -729,11 +730,12 @@ public sealed class DaggerCombatDamagePolicyTests
         }
 
         internal DamagePolicyFixture(bool armed = true, Func<WorldPoint, WorldPoint, bool>? coverBlocks = null, int armorValueShift = 0, int attackChanceShift = 0,
-            IDaggerfallPhysicalMitigation? mitigation = null, Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery>? delivery = null)
+            IDaggerfallPhysicalMitigation? mitigation = null, Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery>? delivery = null,
+            IRandomService? random = null, DaggerfallRulesVariant? variant = null)
         {
             DaggerfallDefinitions definitions = Definitions;
             DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
-            _random = (IRandomService)(object)_scripted;
+            _random = random ?? (IRandomService)(object)_scripted;
             _actors = new ActorsState();
             PlayerActorState player = _actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId(playerDefinition.Id.Value),
                 new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
@@ -759,8 +761,8 @@ public sealed class DaggerCombatDamagePolicyTests
                 new DaggerfallEquipmentMoves(_actorInventories[DaggerfallActorIdentity.PlayerEntityId], _playerEquipment, definitions, itemInstances: _itemInstances));
             _combat = new DaggerCombatRules(_random, _actors, _playerEquipment,
                 id => _actorInventories.TryGetValue(id, out MechanicsInventoryCoordinator? quiver) ? quiver : null,
-                _itemInstances, definitions, _authored, CombatCollaborators.Targeting(_actors, _authored, out _spatial),
-                skillUses: _ => { }, playerBiographyAvoidHit: () => 0,
+                _itemInstances, definitions, _authored, CombatCollaborators.Targeting(_actors, _authored, out _spatial, out SpatialFake spatialFake),
+                skillUses: SkillUses.Add, playerBiographyAvoidHit: () => 0,
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : _playerEquipment,
                 itemCondition: _itemCondition, rules: new CombatResolution(), adrenalineRush: _ => default,
                 playerPosition: () => _playerPosition, character: () => _character, playerSwing: TakeGesture,
@@ -772,7 +774,12 @@ public sealed class DaggerCombatDamagePolicyTests
                 molagBalStrike: (_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture arms no Mace of Molag Bal."),
                 itemStrike: (_, _, _, damage) => damage,
                 monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team,
-                mitigation: mitigation, delivery: delivery);
+                mitigation: variant?.PhysicalMitigation is { } contactMitigation ? contactMitigation(VariantContext(variant)) : mitigation,
+                delivery: variant?.PhysicalDelivery is { } contactDelivery ? ops => contactDelivery(VariantContext(variant), ops) : delivery,
+                contact: new ActorContact(_actors, _spatial, () => new PlayerControlState(_playerPosition ?? new WorldPoint(0f, 0f, 0f), 0f, 0f),
+                    DaggerfallSession.ActorContactBody, _ => true),
+                strikePose: StrikePose);
+            Spatial = spatialFake;
         }
 
         internal void Script(int body, int critical, int hit, int? damage = null, int? backstabRoll = null)
@@ -843,6 +850,24 @@ public sealed class DaggerCombatDamagePolicyTests
             .Where(stack => stack.Definition.Value == "arrow").Aggregate(0UL, (total, stack) => total + stack.Quantity);
 
         internal double? ReachOf(long actorId) => _combat.ReachOf(actorId);
+
+        /// <summary>The spatial fake answering contact queries.</summary>
+        internal SpatialFake Spatial { get; }
+
+        /// <summary>Skill uses the rules recorded, in order.</summary>
+        internal List<DaggerfallSkillUse> SkillUses { get; } = [];
+
+        internal ActorsState Actors => _actors;
+
+        /// <summary>The player strikes from its eye facing +X, toward the brigand; a site actor from near the top of its body along its heading.</summary>
+        private DaggerfallStrikePose? StrikePose(long actor) => actor == DaggerfallActorIdentity.PlayerEntityId
+            ? new((_playerPosition ?? new WorldPoint(0f, 0f, 0f)).ToVector() + new Vector3(0f, 1.65f, 0f), Vector3.UnitX)
+            : _actors.TryGet(actor, out ActorState site) ? new(site.Position.ToVector() + new Vector3(0f, 1.62f, 0f), ActorHeading.Forward(site.HeadingYawRadians)) : null;
+
+        internal DaggerfallSeamContext VariantContext(DaggerfallRulesVariant variant) => DaggerfallContactVariantTests.Context(variant,
+            new DaggerfallSeamInputs(Definitions, () => _character, _random,
+                id => id == DaggerfallActorIdentity.PlayerEntityId ? _playerEquipment.Read() : _actorEquipment[id].Read(),
+                id => id == DaggerfallActorIdentity.PlayerEntityId ? _actors.Player.Stats : _actors.TryGet(id, out ActorState actor) ? actor.Stats : null));
 
         internal ulong CooldownRemaining(long actorId, ulong generation, ulong step) =>
             _combat.Execution.CaptureCooldowns(generation, step).Single(cooldown => cooldown.AttackerId == actorId).RemainingSteps;
@@ -941,7 +966,7 @@ public sealed class DaggerCombatDamagePolicyTests
         }
     }
 
-    private sealed record PreparedResolution(bool Admitted, AttackOutcome Outcome, DaggerCombatRules.DaggerfallAttackDetail Detail,
+    internal sealed record PreparedResolution(bool Admitted, AttackOutcome Outcome, DaggerCombatRules.DaggerfallAttackDetail Detail,
         IReadOnlyList<(int Minimum, int Maximum)> Ranges);
 
     private class ScriptedRandom : DispatchProxy

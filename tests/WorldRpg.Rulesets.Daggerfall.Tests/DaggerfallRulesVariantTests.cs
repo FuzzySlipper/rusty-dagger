@@ -40,7 +40,7 @@ public sealed class DaggerfallRulesVariantTests
         DaggerfallSeamSelection selection = DaggerfallSeamSelection.From(composition.Variants, [contact]);
         Assert.Equal(new RulesVariantId("test.contact"), selection.PhysicalDeliveryVariant);
         Assert.Null(selection.PhysicalMitigationVariant);
-        Assert.IsType<DaggerfallClassicPhysicalDelivery>(selection.PhysicalDelivery(TestPayload.Definitions, () => null)(null!));
+        Assert.IsType<DaggerfallClassicPhysicalDelivery>(selection.PhysicalDelivery(Inputs)(null!));
         Assert.Equal("variant tuning", Encoding.UTF8.GetString(built!.Tuning.Payload.Span));
         Assert.Null(DaggerfallSeamSelection.Classic.PhysicalDeliveryVariant);
     }
@@ -50,8 +50,8 @@ public sealed class DaggerfallRulesVariantTests
     {
         DaggerfallSeamSelection selection = DaggerfallSeamSelection.From([], [Variant("test.armor")]);
         Assert.Null(selection.PhysicalMitigationVariant);
-        Assert.IsType<DaggerfallClassicPhysicalMitigation>(selection.BuildPhysicalMitigation(TestPayload.Definitions, () => null));
-        Assert.IsType<DaggerfallClassicPhysicalMitigation>(DaggerfallSeamSelection.Classic.BuildPhysicalMitigation(TestPayload.Definitions, () => null));
+        Assert.IsType<DaggerfallClassicPhysicalMitigation>(selection.BuildPhysicalMitigation(Inputs));
+        Assert.IsType<DaggerfallClassicPhysicalMitigation>(DaggerfallSeamSelection.Classic.BuildPhysicalMitigation(Inputs));
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class DaggerfallRulesVariantTests
         ResolvedGameComposition composition = Resolve(["test.armor"], armor);
 
         DaggerfallSeamSelection selection = DaggerfallSeamSelection.From(composition.Variants, [armor]);
-        IDaggerfallPhysicalMitigation owner = selection.BuildPhysicalMitigation(TestPayload.Definitions, () => null);
+        IDaggerfallPhysicalMitigation owner = selection.BuildPhysicalMitigation(Inputs);
 
         Assert.IsType<Absorb>(owner);
         Assert.Equal(new RulesVariantId("test.armor"), selection.PhysicalMitigationVariant);
@@ -93,6 +93,10 @@ public sealed class DaggerfallRulesVariantTests
             ("worldrpg/tuning/test-variant.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.variant-tuning","ruleset":"daggerfall","payload":"payload/variant-tuning.json"}"""),
             ("payload/base.json", "base"), ("payload/tuning.json", "tuning"), ("payload/variant-tuning.json", "variant tuning")),
         new GameBundleId("test.bundle"), [.. compiled.Select(variant => variant.Manifest)]).RequireComposition();
+
+    /// <summary>Session reads for building owners; nothing here reads equipment.</summary>
+    private static DaggerfallSeamInputs Inputs => new(TestPayload.Definitions, () => null, RandomMaximum.Create(),
+        _ => throw new NotSupportedException("These owners read no equipment."), _ => null);
 
     private static ProductContent Content(params (string Path, string Value)[] files) =>
         new(files.Select(file => new ProductContentFile(Encoding.UTF8.GetBytes(file.Path), Encoding.UTF8.GetBytes(file.Value))).ToArray());

@@ -60,6 +60,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     internal AttackCapabilities<IProductFact> Attacks { get; }
     internal TargetingService Targeting { get; }
     internal AttackExecution<IProductFact> Execution { get; }
+    private readonly ActorContact? _contact;
+    private readonly Func<long, DaggerfallStrikePose?>? _strikePose;
+    private readonly Func<CharacterStepEnvironment?>? _contactEnvironment;
     /// <summary>The selected physical delivery seam owner: classic's to-hit and target-locked flight unless a variant claims it.</summary>
     private readonly IDaggerfallPhysicalDelivery _delivery;
     internal bool HasPlayerRangedFlight => _delivery.HasPlayerFlight;
@@ -89,8 +92,12 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         Func<long, bool> physicalAttacksBlocked,
         Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)> molagBalStrike, Func<long, long, DaggerfallItemStrikeSource, int, int> itemStrike,
         Action<DaggerfallMonsterHitExposure> monsterHit, Func<long, bool> actorGameplayActive, Func<long, string?> actorTeam,
-        IDaggerfallPhysicalMitigation? mitigation = null, Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery>? delivery = null)
+        IDaggerfallPhysicalMitigation? mitigation = null, Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery>? delivery = null,
+        ActorContact? contact = null, Func<long, DaggerfallStrikePose?>? strikePose = null, Func<CharacterStepEnvironment?>? contactEnvironment = null)
     {
+        _contact = contact;
+        _strikePose = strikePose;
+        _contactEnvironment = contactEnvironment;
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
@@ -572,7 +579,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         DaggerfallStrikeFeedback Feedback, ulong? WabbajackSource = null, bool ReleasedProjectile = false,
         (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? MolagBalSource = null, DaggerfallItemStrikeSource? ItemStrikeSource = null, DaggerfallWeaponPoisonSource? WeaponPoison = null,
         DaggerfallMonsterHit[]? MonsterHits = null, DaggerfallAttackDetail Detail = default, bool IsRanged = false, WorldRpg.Kit.Inventory.UniqueInventoryItem? RangedWeapon = null, string? Action = null,
-        bool ContactInFlight = false, DaggerfallPhysicalHarm? Harm = null) : PreparedAttack(CooldownSeconds, Outcome);
+        bool ContactInFlight = false, DaggerfallPhysicalHarm? Harm = null, DaggerfallAdmittedAttack? Admission = null) : PreparedAttack(CooldownSeconds, Outcome);
 
     /// <summary>The struck body part and the d100 hit roll against its chance, kept for hit facts and miss reports.</summary>
     internal readonly record struct DaggerfallAttackDetail(int Body, int Roll, int Chance);
@@ -609,14 +616,17 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
             ? shield : null;
     }
 
+    /// <summary>The equipment slot whose armour covers a struck body part.</summary>
+    internal static string BodySlot(int body) => body switch
+    {
+        0 => "head", 1 => "right-arm", 2 => "left-arm", 3 => "chest-armor",
+        4 => "gloves", 5 => "legs-armor", 6 => "feet", _ => throw new ArgumentOutOfRangeException(nameof(body)),
+    };
+
     /// <summary>Armour worn on the struck body part. Classic never wears the armour a shield already covers.</summary>
     private WorldRpg.Kit.Inventory.UniqueInventoryItem? EquippedArmour(long owner, int body)
     {
-        string slot = body switch
-        {
-            0 => "head", 1 => "right-arm", 2 => "left-arm", 3 => "chest-armor",
-            4 => "gloves", 5 => "legs-armor", 6 => "feet", _ => throw new ArgumentOutOfRangeException(nameof(body)),
-        };
+        string slot = BodySlot(body);
         EquipmentRead equipment = owner == PlayerId ? _equipment.Read() : _actorEquipment(owner).Read();
         return equipment.TryGet(new WorldRpg.Kit.Inventory.EquipmentSlotId(slot), out WorldRpg.Kit.Inventory.UniqueInventoryItem armor)
             && _catalog.RequireItem(new DaggerfallItemId(armor.Definition.Value)).Armor is not null ? armor : null;
@@ -835,6 +845,47 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? mace, bool emitHitFact, int? admittedBaseDamage, WorldRpg.Kit.Inventory.UniqueInventoryItem? rangedWeapon) =>
         ApplyDamage(participants, attacker, target, damage, body, enemy, generation, step, feedback, facts, mace, emitHitFact, admittedBaseDamage, rangedWeapon);
     bool IDaggerfallPhysicalHarmOperations.CoverBlocksShot(WorldPoint origin, WorldPoint aim) => coverBlocksShot(origin, aim);
+    double? IDaggerfallPhysicalHarmOperations.ReachOf(long attacker) => ReachOf(attacker);
+    ActorContact IDaggerfallPhysicalHarmOperations.Contact => _contact
+        ?? throw new InvalidOperationException("Contact delivery needs the session's actor contact, which this composition did not supply.");
+    CharacterStepEnvironment? IDaggerfallPhysicalHarmOperations.ContactEnvironment() => _contactEnvironment?.Invoke();
+    DaggerfallStrikePose? IDaggerfallPhysicalHarmOperations.StrikePose(long actor) => (_strikePose
+        ?? throw new InvalidOperationException("Contact delivery needs the session's strike poses, which this composition did not supply."))(actor);
+    void IDaggerfallPhysicalHarmOperations.ApplyConnectedHarm(AttackRequest request, long target, DaggerfallPreparedAttack attack, FactBuffer<IProductFact> facts)
+    {
+        AttackOutcome outcome = attack.Outcome;
+        bool enemyAttack = request.AttackerId != PlayerId;
+        // Natural consequences and coatings belong to positive admitted physical hits, before
+        // enchantments or health absorption can change the result or defeat the target.
+        ((IDaggerfallPhysicalHarmOperations)this).ApplyMonsterConsequences(request, target, attack.MonsterHits ?? [], facts);
+        if (outcome.Damage > 0 && attack.WeaponPoison is { } coating) _deliverWeaponPoison(target, coating);
+        // Wabbajack's replacement inherits prior wounds before the removed enemy receives this strike's damage.
+        if (TryTransform(request, attack, facts, out ActorTransformedFact? transformation))
+        {
+            string? weaponSkill = request.AttackerId == PlayerId ? PlayerWeaponSkill() : null;
+            if (outcome.Allowed && outcome.Damage > 0)
+                ((IDaggerfallPhysicalHarmOperations)this).WearAttackersWeapon(request, target, outcome.Damage, facts);
+            if (weaponSkill is not null) RecordPlayerWeaponHit(weaponSkill);
+            if (_actors.Get(target).IsDefeated)
+                facts.Append(new ActorDiedFact(target, request.AttackerId, DaggerfallDamageCause.Effect, 0, 0, request.Generation, request.SimulationStep));
+            return;
+        }
+        int strikeDamage = outcome.Damage;
+        // An enemy's weapon runs its Strikes payloads against the player only on a damaging blow;
+        // the player's own weapon, and one enemy striking another, run them on every swing.
+        bool strikes = !(enemyAttack && target == PlayerId && strikeDamage <= 0);
+        if (strikes && attack.ItemStrikeSource is { } sourceItem)
+            strikeDamage = _itemStrike(request.AttackerId, target, sourceItem, strikeDamage);
+        string action = attack.Action ?? request.Action ?? _definitions[request.AttackerId].ActionId ?? "attack";
+        // Capture the weapon skill at the admitted operation boundary. Applying the hit may break
+        // the weapon through physical wear and unequip it before the skill-use reaction runs.
+        string? playerWeaponSkill = request.AttackerId == PlayerId ? PlayerWeaponSkill() : null;
+        ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, strikeDamage, attack.Detail.Body,
+            enemyAttack, request.Generation, request.SimulationStep, attack.Feedback, facts, attack.MolagBalSource,
+            admittedBaseDamage: strikeDamage != outcome.Damage ? outcome.Damage : null, rangedWeapon: attack.RangedWeapon);
+        if (playerWeaponSkill is not null) RecordPlayerWeaponHit(playerWeaponSkill);
+        if (transformation is not null) facts.Append(transformation);
+    }
 
     internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodge, int targetBiographyAvoidHit = 0) => DaggerfallFormulaPolicy.CalculateHitChance(skill, struckArmor, attackerLuck, targetLuck, attackerAgility, targetAgility, targetDodge, targetBiographyAvoidHit);
     private int StrengthModifier(Combatant attacker) => DaggerfallFormulaPolicy.DamageModifier(ReadStat(attacker, DaggerfallMechanicsIds.Strength));

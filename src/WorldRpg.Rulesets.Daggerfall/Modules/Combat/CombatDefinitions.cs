@@ -28,6 +28,21 @@ internal static class DaggerfallHarmChannels
 {
     /// <summary>Weapon, natural and unarmed blows and physical hazards. Classic's only physical mitigation is the target's material requirement.</summary>
     internal static readonly HarmChannelId Physical = new("physical");
+    /// <summary>Physical harm by how it lands: a ruleset that mitigates them differently resolves blows on these.</summary>
+    internal static readonly HarmChannelId Edged = new("edged");
+    internal static readonly HarmChannelId Blunt = new("blunt");
+    internal static readonly HarmChannelId Piercing = new("piercing");
+
+    /// <summary>How a weapon skill's blow lands: blades cut, archery pierces, and blunt weapons and fists bludgeon.</summary>
+    internal static HarmChannelId ForWeaponSkill(string skill) => skill switch
+    {
+        DaggerfallSkills.Archery => Piercing,
+        DaggerfallSkills.BluntWeapon or DaggerfallSkills.HandToHand => Blunt,
+        _ => Edged,
+    };
+
+    /// <summary>Whether a channel is one of the physical ones.</summary>
+    internal static bool IsPhysical(HarmChannelId channel) => channel == Physical || channel == Edged || channel == Blunt || channel == Piercing;
     internal static readonly HarmChannelId Fire = new("fire");
     internal static readonly HarmChannelId Frost = new("frost");
     internal static readonly HarmChannelId Shock = new("shock");
