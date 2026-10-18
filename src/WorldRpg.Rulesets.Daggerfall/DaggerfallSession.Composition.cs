@@ -163,6 +163,7 @@ internal sealed partial class DaggerfallSession
             _grounding = new DaggerfallActorGrounding(engine.Spatial, _spatial,
                 tuning.EnemyBehavior.SpawnGroundProbeLift, tuning.EnemyBehavior.SpawnGroundProbeDistance);
             partiallyConstructed.Add(_spatial);
+            _contact = new ActorContact(actors, _spatial, () => assembled.PlayerControl, ActorContactBody, IsSpellEligibleActor);
             Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions = [];
             IReadOnlyList<(DaggerfallWorldProfileKey Key, DaggerfallSiteProfile Inputs)> actionProfiles =
                 DaggerfallSiteLifecycle.ActionProfiles(inputs, profiles, saved?.DungeonActions.Select(snapshot => snapshot.ProfileId));
