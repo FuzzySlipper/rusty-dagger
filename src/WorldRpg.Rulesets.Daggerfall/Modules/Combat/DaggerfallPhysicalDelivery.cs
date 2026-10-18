@@ -57,6 +57,9 @@ internal interface IDaggerfallPhysicalDelivery
     /// </summary>
     bool ImpactsOutliveTheirTarget { get; }
 
+    /// <summary>Whether an enemy archer holds its shot at <paramref name="target"/> now, before any arrow is spent.</summary>
+    bool HoldsFire(long archer, long target);
+
     /// <summary>Prepares an admitted attack's delivery; false refuses it, with the reason already published.</summary>
     bool TryPrepare(DaggerfallAdmittedAttack admitted, FactBuffer<IProductFact> facts, out PreparedPhysicalAttack prepared);
 
@@ -131,6 +134,8 @@ internal interface IDaggerfallPhysicalHarmOperations
     CharacterStepEnvironment? ContactEnvironment();
     /// <summary>Where an actor strikes or looses from and which way it faces, or null for one with no live pose.</summary>
     DaggerfallStrikePose? StrikePose(long actor);
+    /// <summary>An actor's current velocity, zero for one whose motion reports none.</summary>
+    Vector3 VelocityOf(long actor);
     /// <summary>
     /// Applies a prepared attack that connected with <paramref name="target"/>: its natural consequences and
     /// coating, Wabbajack, the weapon's Strikes payloads, the health application with wear, artifacts and
@@ -163,6 +168,8 @@ internal sealed class DaggerfallClassicPhysicalDelivery(IDaggerfallPhysicalHarmO
 
     public bool UntargetedSwingsWaitForImpact => false;
     public bool ImpactsOutliveTheirTarget => false;
+    /// <summary>A classic archer looses whenever admitted; cover stops the released shot in flight.</summary>
+    public bool HoldsFire(long archer, long target) => false;
 
     public bool HasPlayerFlight => _releasedRangedShots.Any(shot => shot.Request.AttackerId == PlayerId)
         || _inFlightRangedShots.Values.Any(shot => shot.Release.Request.AttackerId == PlayerId);

@@ -63,6 +63,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     private readonly ActorContact? _contact;
     private readonly Func<long, DaggerfallStrikePose?>? _strikePose;
     private readonly Func<CharacterStepEnvironment?>? _contactEnvironment;
+    private readonly Func<long, Vector3> _actorVelocity;
     /// <summary>The selected physical delivery seam owner: classic's to-hit and target-locked flight unless a variant claims it.</summary>
     private readonly IDaggerfallPhysicalDelivery _delivery;
     internal bool HasPlayerRangedFlight => _delivery.HasPlayerFlight;
@@ -93,11 +94,13 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)> molagBalStrike, Func<long, long, DaggerfallItemStrikeSource, int, int> itemStrike,
         Action<DaggerfallMonsterHitExposure> monsterHit, Func<long, bool> actorGameplayActive, Func<long, string?> actorTeam,
         IDaggerfallPhysicalMitigation? mitigation = null, Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery>? delivery = null,
-        ActorContact? contact = null, Func<long, DaggerfallStrikePose?>? strikePose = null, Func<CharacterStepEnvironment?>? contactEnvironment = null)
+        ActorContact? contact = null, Func<long, DaggerfallStrikePose?>? strikePose = null, Func<CharacterStepEnvironment?>? contactEnvironment = null,
+        Func<long, Vector3>? actorVelocity = null)
     {
         _contact = contact;
         _strikePose = strikePose;
         _contactEnvironment = contactEnvironment;
+        _actorVelocity = actorVelocity ?? (_ => Vector3.Zero);
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
@@ -181,6 +184,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
                 : action.Interpretation == "enemy-equipped-melee"
                     ? ResolveEquippedEnemyAttack(attacker, cooldown, action.Reach.Value)
                     : ResolveFixedAttack(attacker.Definition, action, cooldown);
+            // A held shot spends nothing: the delivery owner decides before an arrow leaves the quiver.
+            if (rangedAttack && request.TargetId is long mark && _delivery.HoldsFire(request.AttackerId, mark)) return false;
             if (rangedAttack && !TrySpendArrow(request.AttackerId, facts)) return false;
         }
         DaggerfallStrikeFeedback feedback = rangedAttack ? new(true, "sound.3") : StrikeFeedback(request.AttackerId, false);
@@ -851,6 +856,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     ActorContact IDaggerfallPhysicalHarmOperations.Contact => _contact
         ?? throw new InvalidOperationException("Contact delivery needs the session's actor contact, which this composition did not supply.");
     CharacterStepEnvironment? IDaggerfallPhysicalHarmOperations.ContactEnvironment() => _contactEnvironment?.Invoke();
+    Vector3 IDaggerfallPhysicalHarmOperations.VelocityOf(long actor) => _actorVelocity(actor);
     DaggerfallStrikePose? IDaggerfallPhysicalHarmOperations.StrikePose(long actor) => (_strikePose
         ?? throw new InvalidOperationException("Contact delivery needs the session's strike poses, which this composition did not supply."))(actor);
     void IDaggerfallPhysicalHarmOperations.ApplyConnectedHarm(AttackRequest request, long target, DaggerfallPreparedAttack attack, FactBuffer<IProductFact> facts)

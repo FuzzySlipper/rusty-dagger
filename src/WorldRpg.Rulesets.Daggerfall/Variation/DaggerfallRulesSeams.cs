@@ -21,5 +21,8 @@ public static class DaggerfallRulesSeams
     /// <summary>Whom a touch spell reaches at its cast frame: <see cref="IDaggerfallTouchDelivery"/>.</summary>
     public static readonly RulesSeamId TouchDelivery = new("daggerfall.touch-delivery");
 
-    internal static IReadOnlyList<RulesSeamId> All { get; } = [PhysicalMitigation, PhysicalDelivery, PlayerGuard, TouchDelivery];
+    /// <summary>How close an enemy closes before it attacks: <see cref="IDaggerfallEnemyEngagement"/>.</summary>
+    public static readonly RulesSeamId EnemyEngagement = new("daggerfall.enemy-engagement");
+
+    internal static IReadOnlyList<RulesSeamId> All { get; } = [PhysicalMitigation, PhysicalDelivery, PlayerGuard, TouchDelivery, EnemyEngagement];
 }

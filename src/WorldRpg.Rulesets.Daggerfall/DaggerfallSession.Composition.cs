@@ -338,7 +338,9 @@ internal sealed partial class DaggerfallSession
                 npcs.IsGameplayActive, EffectiveFoeTeam,
                 seams.PhysicalMitigation,
                 seams.PhysicalDelivery,
-                _contact, StrikePose, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion));
+                _contact, StrikePose, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion),
+                // Only the player's own controller reports a velocity; site actors step between poses.
+                actor => actor == actors.Player.DurableId ? assembled.PlayerControl.Motion.ControlledVelocity : Vector3.Zero);
             DaggerfallSeamInputs SeamInputs() => new(definitions, () => character, _random,
                 id => id == actors.Player.DurableId ? equipmentCoordinator.Read() : actorInventories.EquipmentFor(id).Read(),
                 id => id == actors.Player.DurableId ? actors.Player.Stats : actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
@@ -371,7 +373,8 @@ internal sealed partial class DaggerfallSession
                     effects.GrantsWaterWalking(id),
                     effects.GrantsLevitation(id)),
                 canOpenDoors: id => DaggerfallEnemyBehaviorModule.CanOpenDoors(id, authored, definitions),
-                openBlockedDoor: TryOpenDoorForEnemy, selectTarget: SelectQuestAwareEnemyTarget, questRestrained: QuestFoeRestrained, attackAtDistance: _combat.EnemyAttackAtDistance);
+                openBlockedDoor: TryOpenDoorForEnemy, selectTarget: SelectQuestAwareEnemyTarget, questRestrained: QuestFoeRestrained, attackAtDistance: _combat.EnemyAttackAtDistance,
+                engagement: seams.EnemyEngagement);
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {

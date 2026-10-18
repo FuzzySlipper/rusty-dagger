@@ -63,6 +63,12 @@ internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulon
     DaggerfallSwingDirection Swing = DaggerfallSwingDirection.None, bool WaitsWithoutTarget = false) : IProductFact
 { internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
 /// <summary>
+/// An enemy's swing at <paramref name="TargetId"/> began a wind-up its damage cannot land before:
+/// <paramref name="WindUpSeconds"/> after the admitted step, however early the strike's frame comes.
+/// </summary>
+internal sealed record EnemyAttackTelegraphFact(long AttackerId, long TargetId, double WindUpSeconds,
+    ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+/// <summary>
 /// One enemy melee swing began. The attack's outcome is already decided, so the
 /// presentation can play the matching strike, but nothing has been applied yet:
 /// the damage lands when the authored damage frame is reached.

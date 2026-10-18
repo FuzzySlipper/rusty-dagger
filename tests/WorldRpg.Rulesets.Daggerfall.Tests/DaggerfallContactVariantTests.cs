@@ -15,6 +15,7 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Variants;
 using Xunit;
 using Fixture = WorldRpg.Rulesets.Daggerfall.Tests.DaggerCombatDamagePolicyTests.DamagePolicyFixture;
+using PreparedPhysicalAttack = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerCombatRules.DaggerfallPreparedAttack;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -80,7 +81,8 @@ public sealed class DaggerfallContactVariantTests
         AttackRequest swing = new(2, Player, 5, 9, .125d, Delayed: true);
         fixture.StartSwing(swing, out bool admitted);
         Assert.True(admitted);
-        IReadOnlyList<IProductFact> facts = fixture.DeliverImpact(swing);
+        // The strike's frame comes before the wind-up ends; the blow lands once it has.
+        IReadOnlyList<IProductFact> facts = [.. fixture.DeliverImpact(swing), .. fixture.AdvanceFlight(5, 9, steps: 5)];
         Assert.DoesNotContain(facts, fact => fact is AttackMissedFact);
         return (Assert.Single(facts.OfType<AttackHitFact>()), random, fixture);
     }
@@ -153,6 +155,78 @@ public sealed class DaggerfallContactVariantTests
 
         Assert.Equal(3L, Assert.Single(fixture.DeliverImpact(swing).OfType<AttackHitFact>()).TargetId);
         Assert.Single(fixture.Spatial.OverlapContactsRequests);
+    }
+
+    [Fact]
+    public void An_enemy_swing_publishes_its_wind_up_and_its_damage_waits_for_it_however_early_the_frame_comes()
+    {
+        using Fixture fixture = new(random: KeyedRandom.Create(8).Service, variant: Contact);
+        fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
+        fixture.Spatial.OverlapContactsResult = _ => Touching(fixture.Actors.Player.Actor.Entity.Value);
+        AttackRequest swing = new(2, Player, 5, 9, .125d, Delayed: true);
+
+        EnemyAttackTelegraphFact telegraph = Assert.Single(fixture.StartSwing(swing, out _).OfType<EnemyAttackTelegraphFact>());
+        Assert.Equal((2L, Player, Tuning.EnemyWindUpSeconds, 9UL), (telegraph.AttackerId, telegraph.TargetId, telegraph.WindUpSeconds, telegraph.OriginatingSimulationStep));
+
+        // .4s at .125s steps is four steps: the frame at step 9 waits until step 13.
+        Assert.Empty(fixture.DeliverImpact(swing).OfType<AttackHitFact>());
+        Assert.Empty(fixture.AdvanceFlight(5, 9, steps: 4).OfType<AttackHitFact>());
+        Assert.Empty(fixture.Spatial.OverlapContactsRequests);
+        Assert.Single(fixture.AdvanceFlight(5, 13, steps: 1).OfType<AttackHitFact>());
+        Assert.Empty(fixture.AdvanceFlight(5, 14, steps: 2).OfType<AttackHitFact>());
+    }
+
+    [Fact]
+    public void Melee_enemies_engage_inside_their_reach_while_archers_engage_at_range_and_classic_engages_at_reach()
+    {
+        IDaggerfallEnemyEngagement contact = new DaggerfallContactEngagement(Tuning);
+        Assert.Equal(2.25d * Tuning.EngageReachFraction, contact.EngageReach(2.25d, ranged: false), 6);
+        Assert.True(contact.EngageReach(2.25d, ranged: false) < 2.25d);
+        Assert.Equal(30d, contact.EngageReach(30d, ranged: true));
+        Assert.Equal(2.25d, DaggerfallClassicEnemyEngagement.Instance.EngageReach(2.25d, ranged: false));
+    }
+
+    [Fact]
+    public void An_enemy_archer_holds_a_shot_another_body_or_the_world_would_stop()
+    {
+        using Fixture fixture = new(variant: Contact);
+        ulong player = fixture.Actors.Player.Actor.Entity.Value;
+        ulong bystander = fixture.SpawnBrigand(3, new WorldPoint(.5f, 0f, 0f)).Actor.Entity.Value;
+        SpatialHit Struck(SpatialHitKind kind, ulong entity) => default(SpatialHit) with { Present = true, Kind = kind, Entity = entity, Distance = .4d };
+
+        fixture.Spatial.FloorHit = _ => Struck(SpatialHitKind.Entity, player);
+        Assert.False(fixture.Delivery.HoldsFire(2, Player));
+        fixture.Spatial.FloorHit = _ => Struck(SpatialHitKind.Entity, bystander);
+        Assert.True(fixture.Delivery.HoldsFire(2, Player));
+        fixture.Spatial.FloorHit = _ => Struck(SpatialHitKind.StaticMesh, 0);
+        Assert.True(fixture.Delivery.HoldsFire(2, Player));
+        using Fixture classic = new();
+        Assert.False(classic.Delivery.HoldsFire(2, Player));
+    }
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(5f)]
+    public void An_enemy_archer_leads_a_moving_target_by_the_arrows_flight_time(float sideways)
+    {
+        using Fixture fixture = new(variant: Contact);
+        fixture.PlayerVelocity = new Vector3(0f, 0f, sideways);
+        AttackRequest shot = new(2, Player, 5, 9, .125d, Delayed: true);
+        PreparedPhysicalAttack arrow = new(1d, new AttackOutcome(true, true, 0), DaggerfallStrikeFeedback.Unarmed, IsRanged: true);
+        Assert.True(fixture.Delivery.DeferImpact(new DeferredAttackImpact(shot, arrow), new FactBuffer<IProductFact>()));
+        fixture.AdvanceFlight(5, 9, steps: 1);
+
+        // The arrow's first segment is cast along its launch direction.
+        Vector3 direction = fixture.Spatial.FloorProbes.First().Direction;
+        if (sideways == 0f) Assert.Equal(0f, direction.Z, 4);
+        else
+        {
+            // Brigand eye (1, 1.62, 0) to player eye (0, 1.65, 0): about a metre, so 1/25 s of flight.
+            float distance = Vector3.Distance(new(1f, 1.62f, 0f), new(0f, 1.65f, 0f));
+            Vector3 expected = Vector3.Normalize(new Vector3(0f, 1.65f, 0f) + new Vector3(0f, 0f, sideways) * (float)(distance / Tuning.ProjectileSpeed * Tuning.ArcherLeadFraction) - new Vector3(1f, 1.62f, 0f));
+            Assert.Equal(expected.Z, direction.Z, 4);
+            Assert.True(direction.Z > 0f);
+        }
     }
 
     [Fact]
@@ -322,7 +396,7 @@ public sealed class DaggerfallContactVariantTests
         using Fixture fixture = new(variant: Contact);
         DaggerfallSeamOwners owners = fixture.Owners!;
         Assert.IsType<DaggerfallContactGuard>(owners.PlayerGuard);
-        Assert.Equal([DaggerfallRulesSeams.PhysicalMitigation, DaggerfallRulesSeams.PhysicalDelivery, DaggerfallRulesSeams.PlayerGuard, DaggerfallRulesSeams.TouchDelivery], owners.Seams);
+        Assert.Equal([DaggerfallRulesSeams.PhysicalMitigation, DaggerfallRulesSeams.PhysicalDelivery, DaggerfallRulesSeams.PlayerGuard, DaggerfallRulesSeams.TouchDelivery, DaggerfallRulesSeams.EnemyEngagement], owners.Seams);
     }
 
     private sealed class FixedGuard : IDaggerfallPlayerGuard

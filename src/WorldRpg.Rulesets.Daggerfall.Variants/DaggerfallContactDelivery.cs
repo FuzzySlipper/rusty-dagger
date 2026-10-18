@@ -19,7 +19,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Variants;
 /// <item>A melee swing, targeted or not, waits for its hit frame and reaches every actor body its swing
 /// volume touches there, which may be an actor it was not aimed at, or several.</item>
 /// <item>An arrow flies segment by segment each admitted step from the shooter's eye, and harms the first
-/// actor body it meets; world geometry stops it.</item>
+/// actor body it meets; world geometry stops it. An enemy archer leads a moving target and holds a shot
+/// another body or the world would stop.</item>
+/// <item>An enemy swing's damage lands no sooner than its published wind-up.</item>
 /// </list>
 /// What the classic miss carried has a defined meaning here: Dodging is deflection and records a use on each
 /// blow that connects with the player; Critical Strike, with a held enchantment's attack-chance shift, is a
@@ -33,17 +35,38 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
     internal const int CriticalSalt = 70;
     private readonly List<DeferredAttackImpact> _released = [];
     private readonly List<Shot> _shots = [];
+    // Enemy blows whose hit frame came before their wind-up ended, each with the step it may land on.
+    private readonly List<(DeferredAttackImpact Impact, ulong DueStep)> _windingUp = [];
 
     public bool UntargetedSwingsWaitForImpact => true;
     public bool ImpactsOutliveTheirTarget => true;
 
     public bool HasPlayerFlight => _released.Any(shot => shot.Request.AttackerId == PlayerId) || _shots.Any(shot => shot.Release.Request.AttackerId == PlayerId);
 
-    /// <summary>Nothing is decided before contact: admission's costs are spent, and the blow is resolved where it connects.</summary>
+    /// <summary>
+    /// Nothing is decided before contact: admission's costs are spent, and the blow is resolved where it
+    /// connects. An enemy's melee swing publishes the wind-up its damage cannot land before.
+    /// </summary>
     public bool TryPrepare(DaggerfallAdmittedAttack admitted, FactBuffer<IProductFact> facts, out PreparedPhysicalAttack prepared)
     {
         prepared = admitted.Prepared(new AttackOutcome(Hit: true, Allowed: true, Damage: 0));
+        AttackRequest request = admitted.Request;
+        if (request.AttackerId == PlayerId || request.TargetId is not long target) return true;
+        if (admitted.Ranged) return true;
+        if (request.Delayed && tuning.EnemyWindUpSeconds > 0d)
+            facts.Append(new EnemyAttackTelegraphFact(request.AttackerId, target, tuning.EnemyWindUpSeconds, request.Generation, request.SimulationStep));
         return true;
+    }
+
+    /// <summary>An enemy archer holds a shot that another body or the world would stop before its target.</summary>
+    public bool HoldsFire(long archer, long target) => !LineOfFireClear(archer, target);
+
+    /// <summary>Whether a shot from the archer's eye at its target's would meet the target first.</summary>
+    private bool LineOfFireClear(long archer, long target)
+    {
+        if (ops.StrikePose(archer) is not DaggerfallStrikePose from || ops.StrikePose(target) is not DaggerfallStrikePose to) return false;
+        SegmentContact first = ops.Contact.Segment(archer, from.Eye, to.Eye, ops.ContactEnvironment());
+        return first.Kind == ContactKind.None || first.Kind == ContactKind.Actor && first.ActorId == target;
     }
 
     public void Apply(AttackRequest request, PreparedPhysicalAttack attack, FactBuffer<IProductFact> facts)
@@ -67,8 +90,12 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
 
     public bool DeferImpact(DeferredAttackImpact impact, FactBuffer<IProductFact> facts)
     {
-        if (!impact.Request.Delayed || impact.Attack is not PreparedPhysicalAttack { IsRanged: true }) return false;
-        _released.Add(impact);
+        if (!impact.Request.Delayed) return false;
+        if (impact.Attack is PreparedPhysicalAttack { IsRanged: true }) { _released.Add(impact); return true; }
+        // An enemy blow lands no sooner than its published wind-up, however early its strike's frame comes.
+        if (impact.Request.AttackerId == PlayerId || tuning.EnemyWindUpSeconds <= 0d) return false;
+        ulong windUp = (ulong)Math.Ceiling(tuning.EnemyWindUpSeconds / impact.Request.FixedDeltaSeconds - 1e-9);
+        _windingUp.Add((impact, checked(impact.Request.SimulationStep + windUp)));
         return true;
     }
 
@@ -77,6 +104,13 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         IReadOnlyDictionary<long, WorldPoint> positions, FactBuffer<IProductFact> facts)
     {
         if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d) throw new ArgumentOutOfRangeException(nameof(fixedDeltaSeconds));
+        foreach ((DeferredAttackImpact impact, ulong due) in _windingUp.ToArray())
+        {
+            if (impact.Request.Generation == generation && due > simulationStep) continue;
+            _windingUp.Remove((impact, due));
+            if (impact.Request.Generation == generation && ops.IsLiveCombatant(impact.Request.AttackerId))
+                ops.Execution.ApplyDeferredImpact(impact, facts);
+        }
         foreach (DeferredAttackImpact release in _released)
             if (release.Request.Generation == generation && Launch(release, simulationStep) is Shot shot) _shots.Add(shot);
         _released.Clear();
@@ -102,6 +136,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
 
     public void ClearFlight()
     {
+        _windingUp.Clear();
         _released.Clear();
         _shots.Clear();
     }
@@ -117,11 +152,22 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         AttackRequest request = release.Request;
         if (!ops.IsLiveCombatant(request.AttackerId) || ops.StrikePose(request.AttackerId) is not DaggerfallStrikePose pose) return null;
         Vector3 aim = request.AttackerId != PlayerId && request.TargetId is long target && ops.StrikePose(target) is DaggerfallStrikePose targeted
-            ? targeted.Eye - pose.Eye : pose.Forward;
+            ? Lead(pose.Eye, targeted.Eye, ops.VelocityOf(target)) - pose.Eye : pose.Forward;
         if (!float.IsFinite(aim.LengthSquared()) || aim.LengthSquared() <= 1e-6f) return null;
         var attack = (PreparedPhysicalAttack)release.Attack;
         double range = attack.Admission?.Attack.Reach ?? ops.ReachOf(request.AttackerId) ?? tuning.DefaultRange;
         return new Shot(release, pose.Eye, Vector3.Normalize(aim), range, releaseStep ?? request.SimulationStep);
+    }
+
+    /// <summary>
+    /// Where an enemy archer aims to meet a moving target: its eye now, carried along its velocity for the
+    /// arrow's flight time there, by the tuned share of a full lead.
+    /// </summary>
+    private Vector3 Lead(Vector3 from, Vector3 target, Vector3 velocity)
+    {
+        double flight = Vector3.Distance(from, target) / tuning.ProjectileSpeed;
+        Vector3 led = target + velocity * (float)(flight * tuning.ArcherLeadFraction);
+        return float.IsFinite(led.LengthSquared()) ? led : target;
     }
 
     /// <summary>Flies one segment; true when the shot ended by meeting an actor or the world.</summary>
