@@ -262,6 +262,38 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Equal(1, result.Detail.Roll);
     }
 
+    [Fact]
+    public void A_monster_attack_the_target_negates_rolls_no_slot_damage_or_consequence()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("rat")) with
+        {
+            Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
+        });
+        List<string> order = [];
+        fixture.Contribute(new PhysicalImmunity(order));
+        // Every slot clears its reflex and hit gates; an immune target leaves nothing else to draw.
+        fixture.ScriptMonster(0, (50, 1, null, null), (50, 1, null, null), (50, 1, null, null));
+
+        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+
+        Assert.Equal((true, false, 0), (result.Outcome.Hit, result.Outcome.Allowed, result.Outcome.Damage));
+        Assert.All(result.Ranges, range => Assert.True(range is (0, 19) or (1, 100), $"An immune target drew {range}."));
+        Assert.Equal(["hit", "negate", "hit", "hit", "contact"], order);
+    }
+
+    private sealed class PhysicalImmunity(List<string> order) : ICombatContribution
+    {
+        public void Hit(TryHitEvent interaction) => order.Add("hit");
+        public void Contact(ContactEvent interaction) => order.Add("contact");
+        public void Negate(NegationEvent interaction)
+        {
+            order.Add("negate");
+            if (interaction.Channel == DaggerfallHarmChannels.Physical) interaction.Negation = HarmNegation.Immune;
+        }
+        public void Damage(DamageEvent interaction) => order.Add("damage");
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
