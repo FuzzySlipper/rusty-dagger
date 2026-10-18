@@ -184,7 +184,7 @@ internal sealed partial class DaggerfallSession
                 _travelSelectedDestination = null;
                 CloseTravelMap();
                 _dialogue?.Close();
-                _input.Neutralize(); _locomotion.Neutralize();
+                _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();
                 RequestPanel(DaggerfallPanel.Resume);
             }
             _travelMessage = arrived ? $"The guild teleports you to {quote.Destination.Name}." : "The destination could not be reached.";
@@ -199,7 +199,7 @@ internal sealed partial class DaggerfallSession
         _travelSelectedDestination = null; _travelMessage = null;
         // As the donor's travel windows close on departure, the journey ends the map view.
         CloseTravelMap();
-        _input.Neutralize(); _locomotion.Neutralize();
+        _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();
         DaggerfallWorldProfileKey origin = _activeProfileKey;
         long started = _time.Calendar.ToAbsoluteSeconds();
         State.Travel.Begin(State.Transport.ShipReturnProfile?.Site ?? origin.Site, quote, started);

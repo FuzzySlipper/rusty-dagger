@@ -322,6 +322,8 @@ internal sealed partial class DaggerfallSession
                 DaggerfallMolagBalEffects.Reconcile(effects, MolagBalEquipped);
             };
             DaggerfallActorInventories actorInventories = assembled.ActorInventories;
+            DaggerfallComposedSeams seams = composition.Seams.Build(SeamInputs());
+            _guard = seams.PlayerGuard;
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 () => character.Background?.Modifiers.AvoidHit ?? 0, actorInventories.EquipmentFor, _itemCondition, combatRules,
                 // The donor grants a career's adrenaline rush to attacker and target alike, so an enemy
@@ -333,8 +335,8 @@ internal sealed partial class DaggerfallSession
                 () => _heldEnchantments.ArmorValueModifier, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
                 actorId => effects.ControlsFor(actorId).PhysicalAttacks, TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), DeliverMonsterHit,
                 npcs.IsGameplayActive, EffectiveFoeTeam,
-                composition.Seams.BuildPhysicalMitigation(SeamInputs()),
-                composition.Seams.PhysicalDelivery(SeamInputs()),
+                seams.PhysicalMitigation,
+                seams.PhysicalDelivery,
                 _contact, StrikePose, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion));
             DaggerfallSeamInputs SeamInputs() => new(definitions, () => character, _random,
                 id => id == actors.Player.DurableId ? equipmentCoordinator.Read() : actorInventories.EquipmentFor(id).Read(),

@@ -107,7 +107,7 @@ internal sealed partial class DaggerfallSession
         // An encounter ends the donor's rest window: the player faces it rather than a menu.
         if (result.Interruption == DaggerfallRestInterruption.Encounter) RequestPanel(DaggerfallPanel.Resume);
         _input.Neutralize();
-        _locomotion.Neutralize();
+        _locomotion.Neutralize(); NeutralizeGuard();
     }
 
     /// <summary>

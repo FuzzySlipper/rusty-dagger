@@ -259,6 +259,29 @@ public sealed class PlayerViewmodelTests
     }
 
     [Fact]
+    public void A_raised_guard_lifts_the_resting_weapon_toward_the_centre_and_a_lowered_one_returns_it()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+        using ActorsState actors = EmptyActors();
+        presentation.Publish(actors);
+        SpriteViewportUpdateRequest rest = Assert.Single(appearance.ViewportRequests);
+
+        presentation.React(new PlayerGuardChangedFact(true, 1, 1));
+        SpriteViewportUpdateRequest guarded = appearance.ViewportRequests[^1];
+        Assert.Equal(.12F, guarded.Minimum.Y, 5);
+        Assert.Equal(rest.Minimum.X + (((.5F - (rest.Size.X / 2F)) - rest.Minimum.X) / 2F), guarded.Minimum.X, 5);
+        Assert.Equal(rest.Size, guarded.Size);
+
+        presentation.React(new PlayerGuardChangedFact(false, 1, 2));
+        Assert.Equal(rest.Minimum, appearance.ViewportRequests[^1].Minimum);
+    }
+
+    [Fact]
     public void Viewmodel_uses_stable_viewport_placement()
     {
         List<string> releases = [];

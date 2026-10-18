@@ -236,6 +236,11 @@ internal sealed partial class DaggerfallSession
         {
             ApplyPlayerActs(acts);
         }
+        // The guard follows the step's acts, so a swing begun this step keeps the guard down.
+        _guard.Step(update.DeltaSeconds,
+            canGuard: State.WeaponDrawn && !restrictions.PhysicalAttacks && !State.Actors.Player.IsDefeated,
+            swinging: State.Actors.Player.Actor.Get<AttackState>().Pending is not null,
+            generation, simulationStep, _facts);
         // Tasks consume the state committed by this admitted step. Clock actions mutate only the
         // quest clock state; elapsed duration is still consumed by the calendar owner above.
         State.Quests.Advance(State.Variables, _time.Calendar, update.DeltaSeconds);

@@ -114,6 +114,11 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// </remarks>
     internal World.DaggerfallSiteContext Site => _site;
 
+    /// <summary>The selected player guard seam owner; classic has none.</summary>
+    private readonly IDaggerfallPlayerGuard _guard;
+
+    /// <summary>A focus, mode, rest or travel change drops a held guard with the rest of the held input.</summary>
+    private void NeutralizeGuard() => _guard.Neutralize(_latestUpdateGeneration ?? 0UL, _latestSimulationStep ?? 0UL, _facts);
     private ulong? _latestUpdateGeneration;
     private ulong? _latestSimulationStep;
     /// <summary>What is open over the world, which of it holds the world, and the pad's panel request.</summary>
@@ -265,7 +270,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         if (!float.IsFinite(yawRadians)) throw new ArgumentOutOfRangeException(nameof(yawRadians));
         if (!float.IsFinite(pitchRadians)) throw new ArgumentOutOfRangeException(nameof(pitchRadians));
         _input.Neutralize();
-        _locomotion.Neutralize();
+        _locomotion.Neutralize(); NeutralizeGuard();
         _appearance.ResetFootsteps();
         _climbing.Detach();
         _lootUi.CloseAll();
@@ -419,7 +424,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         {
             _pendingWorldAction = false;
             _input.Neutralize();
-            _locomotion.Neutralize();
+            _locomotion.Neutralize(); NeutralizeGuard();
             // Explicit elapsed time already passed through the one calendar and its consumers.
             // The same input slice must not also apply an ordinary realtime step or attack.
             DeliverFacts();
@@ -430,7 +435,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         if (!playing || _interactions.HoldsWorldOpen)
         {
             _input.Neutralize();
-            _locomotion.Neutralize();
+            _locomotion.Neutralize(); NeutralizeGuard();
             // The mode's own line was set when the mode was entered; an outcome an action set during
             // this update stays on the line rather than being overwritten by it.
             // Reactions to modal-own actions (a loot take above) deliver here rather than waiting
@@ -556,7 +561,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // pause keeps the map, since resuming returns to the same workflow.
         if (mode is ProductMode.Title or ProductMode.Dead) CloseTravelMap();
         _input.Neutralize();
-        _locomotion.Neutralize();
+        _locomotion.Neutralize(); NeutralizeGuard();
         _appearance.ResetFootsteps();
         ApplyDeathPresentationMode(mode);
         // A death from exhaustion keeps the donor's collapse text rather than the generic death line.

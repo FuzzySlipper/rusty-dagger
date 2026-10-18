@@ -56,6 +56,8 @@ internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId 
 /// player drew a melee swing in, which is also the direction its swing modifiers read. None means the
 /// player attacked without a gesture, and the presentation plays the donor's click-attack choice.
 /// </summary>
+/// <summary>The player's guard went up or came down; presentation raises or lowers the held weapon.</summary>
+internal sealed record PlayerGuardChangedFact(bool Raised, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep,
     long? TargetId = null, double FrameSeconds = 0d, int HitFrame = DaggerfallFormulaPolicy.MeleeWeaponHitFrame,
     DaggerfallSwingDirection Swing = DaggerfallSwingDirection.None, bool WaitsWithoutTarget = false) : IProductFact

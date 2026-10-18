@@ -68,6 +68,9 @@
     <RustyEngineProductInputIntent Include="abort-spell" Value="digital" />
     <RustyEngineProductInputIntent Include="attack" Value="digital" />
     <RustyEngineProductInputMapping Include="attack.primary" Intent="attack" Trigger="pointer-button:primary:pressed" />
+    <!-- A rules variant with an active block reads this held intent; a ruleset with no guard reads nothing. -->
+    <RustyEngineProductInputIntent Include="block" Value="digital" />
+    <RustyEngineProductInputMapping Include="block.secondary" Intent="block" Trigger="pointer-button:secondary:held" />
     <RustyEngineProductInputIntent Include="interact" Value="digital" />
     <RustyEngineProductInputMapping Include="interact.key-f" Intent="interact" Trigger="key:key-f:pressed" />
     <RustyEngineProductInputMapping Include="move.forward.key-w" Intent="move.forward" Trigger="key:key-w:held" />
