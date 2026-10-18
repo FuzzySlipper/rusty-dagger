@@ -473,7 +473,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
 
     private void ApplyDamage(CombatParticipants participants, long attacker, long target, int damage, int body, bool enemy,
         ulong generation, ulong step, DaggerfallStrikeFeedback feedback, FactBuffer<IProductFact> facts,
-        (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? mace, bool emitHitFact = true, int? admittedBaseDamage = null, WorldRpg.Kit.Inventory.UniqueInventoryItem? rangedWeapon = null)
+        (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? mace, bool emitHitFact = true, int? admittedBaseDamage = null, WorldRpg.Kit.Inventory.UniqueInventoryItem? rangedWeapon = null,
+        DaggerfallHarmMitigation mitigated = default)
     {
         Track health = participants.TargetStats.GetTrack(TrackId.Parse(HealthTrack));
         int physicalDamage = damage;
@@ -482,7 +483,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         if (rangedWeapon is null)
             damage = ApplyRazor(attacker, target, damage, health, enemy, generation, step, facts, out razorWeapon, out razorWear);
         ApplyHitEvent applied = Rules.ApplyToHealth(participants, damage, health);
-        if (emitHitFact) facts.Append(new AttackHitFact(attacker, target, applied.CalculatedDamage, applied.ActualHealthLost, body, enemy, generation, step) { Feedback = feedback });
+        if (emitHitFact) facts.Append(new AttackHitFact(attacker, target, applied.CalculatedDamage, applied.ActualHealthLost, body, enemy, generation, step) { Feedback = feedback, Mitigated = mitigated });
         facts.Append(new DamageAppliedFact(attacker, target, DaggerfallDamageCause.PhysicalAttack,
             applied.CalculatedDamage, applied.ActualHealthLost, body, generation, step));
         if (applied.ActualHealthLost > 0)
@@ -579,7 +580,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         DaggerfallStrikeFeedback Feedback, ulong? WabbajackSource = null, bool ReleasedProjectile = false,
         (WorldRpg.Kit.Inventory.UniqueInventoryItem Weapon, ulong Identity)? MolagBalSource = null, DaggerfallItemStrikeSource? ItemStrikeSource = null, DaggerfallWeaponPoisonSource? WeaponPoison = null,
         DaggerfallMonsterHit[]? MonsterHits = null, DaggerfallAttackDetail Detail = default, bool IsRanged = false, WorldRpg.Kit.Inventory.UniqueInventoryItem? RangedWeapon = null, string? Action = null,
-        bool ContactInFlight = false, DaggerfallPhysicalHarm? Harm = null, DaggerfallAdmittedAttack? Admission = null) : PreparedAttack(CooldownSeconds, Outcome);
+        bool ContactInFlight = false, DaggerfallPhysicalHarm? Harm = null, DaggerfallAdmittedAttack? Admission = null,
+        DaggerfallHarmMitigation Mitigated = default) : PreparedAttack(CooldownSeconds, Outcome);
 
     /// <summary>The struck body part and the d100 hit roll against its chance, kept for hit facts and miss reports.</summary>
     internal readonly record struct DaggerfallAttackDetail(int Body, int Roll, int Chance);
@@ -882,7 +884,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         string? playerWeaponSkill = request.AttackerId == PlayerId ? PlayerWeaponSkill() : null;
         ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, strikeDamage, attack.Detail.Body,
             enemyAttack, request.Generation, request.SimulationStep, attack.Feedback, facts, attack.MolagBalSource,
-            admittedBaseDamage: strikeDamage != outcome.Damage ? outcome.Damage : null, rangedWeapon: attack.RangedWeapon);
+            admittedBaseDamage: strikeDamage != outcome.Damage ? outcome.Damage : null, rangedWeapon: attack.RangedWeapon, mitigated: attack.Mitigated);
         if (playerWeaponSkill is not null) RecordPlayerWeaponHit(playerWeaponSkill);
         if (transformation is not null) facts.Append(transformation);
     }

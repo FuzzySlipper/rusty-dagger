@@ -141,7 +141,10 @@ guard that costs stamina and adds deflection, stays down for a swing's whole
 strike, and keeps action-driven time running while it rises, holds or settles;
 classic's guard owner reads no input at all. Worn armor enchantments shift what
 the player's armor absorbs, and a connect trains the weapon skill even when it
-is deflected. Its touch delivery seam owner sends a touch spell to every
+is deflected. Its blows present four outcomes through the classic presentation
+owners: a whiff (`AttackWhiffedFact`, the swing alone), a deflection or whole
+absorption (`AttackNegatedFact`, a parry clang or an unpitched hit), and a landed
+hit whose `AttackHitFact.Mitigated` names what was deflected and absorbed. Its touch delivery seam owner sends a touch spell to every
 actor its touch volume contacts at the cast frame, and a touch that meets no one
 is still released and misses; classic's owner keeps the short capsule pick and
 the enemy behavior's admitted target. A variant composes all of its owners together, so they can

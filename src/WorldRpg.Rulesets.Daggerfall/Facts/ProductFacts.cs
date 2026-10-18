@@ -80,6 +80,27 @@ internal sealed record AttackMissedFact(long AttackerId, long TargetId, int Roll
 /// <summary>Physical contact is distinct from accepted health loss; body follows the donor table.</summary>
 internal sealed record AttackHitFact(long AttackerId, long TargetId, int CalculatedDamage, double ActualHealthLost,
     int StruckBody, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact
+{
+    internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed;
+    /// <summary>What the target turned aside or absorbed of this blow before it reached health; none under classic.</summary>
+    internal DaggerfallHarmMitigation Mitigated { get; init; }
+    /// <summary>The target's protection took the whole blow: it connected but cost no health.</summary>
+    internal bool FullyAbsorbed => Mitigated.Absorbed > 0 && ActualHealthLost <= 0d;
+}
+/// <summary>The damage a target's mitigation took off one connected blow: deflected aside and absorbed by its protection.</summary>
+internal readonly record struct DaggerfallHarmMitigation(int Deflected, int Absorbed);
+/// <summary>
+/// A blow that connected and the target negated whole before any damage, by deflecting it or absorbing all of it.
+/// Classic never negates a connected blow this way; its miss is the to-hit roll.
+/// </summary>
+internal sealed record AttackNegatedFact(long AttackerId, long TargetId, WorldRpg.Kit.Combat.HarmNegation Negation, bool EnemyAttack,
+    ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact
+{ internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
+/// <summary>
+/// A blow or shot that met no body: a swing whose volume touched no one, or an arrow that flew its range.
+/// <paramref name="TargetId"/> is whom it was aimed at, when anyone.
+/// </summary>
+internal sealed record AttackWhiffedFact(long AttackerId, long? TargetId, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact
 { internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
 internal sealed record LootAwardedFact(long ActorId, string ItemId, ulong Quantity, ulong OriginatingSequence) : IProductFact;
 /// <summary>

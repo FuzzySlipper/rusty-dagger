@@ -1,3 +1,4 @@
+using WorldRpg.Kit.Combat;
 using System.Numerics;
 using SourceSoundNames = global::Daggerfall.Import.Arena2.DaggerfallSoundNames;
 using System.Text.Json;
@@ -94,6 +95,39 @@ public sealed class CombatFeedbackTests
         presentation.React(blocked, actors);
         Assert.Equal((ulong)(inputs.Audio.ToList().FindIndex(value => value.Id == "sound.436") + 1), Assert.Single(audio.Voices).Clip.Handle.Value);
         Assert.Equal(100, actors.Get(11).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).ValueInt64);
+    }
+
+    [Fact]
+    public void Contact_outcomes_sound_apart_deflected_parries_absorbed_lands_without_flesh_pitch_and_a_whiff_only_swings()
+    {
+        List<string> releases = [];
+        AudioRecorder audio = AudioRecorder.Create();
+        DaggerfallSiteProfile inputs = FeedbackInputs(0);
+        using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
+        using DaggerfallSiteAppearance presentation = new(MediaContent(releases), new AppearanceFake(releases), inputs,
+            audio.Service, random: KeyedRandomFake.Create(8).Service);
+        ulong Clip(string id) => (ulong)(inputs.Audio.ToList().FindIndex(value => value.Id == id) + 1);
+
+        // Deflection parries even off a mobile with no parry sounds of its own, at the struck actor.
+        AttackNegatedFact deflected = new(1, 11, HarmNegation.Deflected, false, 1, 2) { Feedback = new(true, "swing") };
+        presentation.React(deflected, actors);
+        presentation.React(deflected, actors);
+        AudioSourceDescriptor parry = Assert.Single(audio.Voices);
+        Assert.Equal((Clip("sound.436"), new Vector3(2, 0, 3), 1.1F), (parry.Clip.Handle.Value, parry.Position, parry.Pitch));
+
+        // Armour that took the whole blow: the hit cue, at its own pitch, with no hurt state.
+        AttackHitFact absorbed = new(1, 11, 5, 0, 0, false, 1, 3) { Mitigated = new(0, 5) };
+        presentation.React(absorbed, actors);
+        AudioSourceDescriptor thud = audio.Voices[^1];
+        Assert.StartsWith("hit", inputs.Audio.ToList()[(int)thud.Clip.Handle.Value - 1].Id, StringComparison.Ordinal);
+        Assert.NotEqual(1.1F, thud.Pitch);
+        Assert.Equal(2, audio.Voices.Count);
+
+        // A whiff is the swing alone.
+        AttackWhiffedFact whiff = new(12, 11, true, 1, 4) { Feedback = new(true, "sound.347") };
+        presentation.React(whiff);
+        presentation.React(whiff);
+        Assert.EndsWith(".sound.347", Assert.Single(audio.Emits).SignalId, StringComparison.Ordinal);
     }
 
     [Fact]
