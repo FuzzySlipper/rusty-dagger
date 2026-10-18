@@ -23,7 +23,8 @@ internal static class DaggerfallContinuousDestructionEffects
                     Track health = effect.Target.Get<StatsComponent>().GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
                     if (health.Current <= 0) { effect.ExpireAfterCurrentRound = true; return; }
                     long target = checked((long)effect.Context.Target.Value);
-                    int amount = DaggerfallPeriodicCast.RollMagnitude(effect, random, 1, selected, "daggerfall.continuous-damage.v1", $"{key}:");
+                    int amount = vitality.MitigatePeriodicHarm(effect.Source, effect.Target, effect.Element,
+                        DaggerfallPeriodicCast.RollMagnitude(effect, random, 1, selected, "daggerfall.continuous-damage.v1", $"{key}:"));
                     // The donor protects peaceful non-player actors from Sleep/fatigue damage and aggression.
                     if (selected == 1 && target != DaggerfallActorIdentity.PlayerEntityId && !hostile(target)) return;
                     if (selected == 0) healthApplied(new(vitality.ResolveSpellHealth(effect.Source, effect.Target, amount, terminal:false)));

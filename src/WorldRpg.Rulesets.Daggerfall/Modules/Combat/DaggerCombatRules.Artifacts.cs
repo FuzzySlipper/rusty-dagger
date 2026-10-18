@@ -148,7 +148,8 @@ internal sealed partial class DaggerCombatRules
         if (ring is not { } equippedRing) return;
         ulong sourceItem = _equipment.GetDurableItemId(new EntityId(equippedRing.EntityId)).Value;
         CombatParticipants participants = new(incoming.Target, incoming.Source, NamiraDamage);
-        // The reflected blow reaches its attacker as physical harm, mitigated before it applies.
+        // The reflected blow reaches its attacker as physical harm, which it may turn away whole or mitigate.
+        if (Rules.Negate(participants, DaggerfallHarmChannels.Physical).Negated) return;
         reflected = Rules.Mitigate(participants, DaggerfallHarmChannels.Physical, reflected).Damage;
         ApplyHitEvent result = Rules.ApplyToHealth(participants, reflected,
             participants.TargetStats.GetTrack(TrackId.Parse(HealthTrack)));

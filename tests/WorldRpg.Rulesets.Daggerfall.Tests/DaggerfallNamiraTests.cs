@@ -110,6 +110,30 @@ public sealed partial class DaggerfallEquipmentWearTests
         Assert.DoesNotContain(facts.OfType<EquipmentWornFact>(), fact => fact.DurableItemId == 9501);
     }
 
+    [Fact]
+    public void An_attacker_that_negates_physical_harm_turns_away_the_reflected_blow()
+    {
+        using WearFixture f = new();
+        f.EquipEnemyWeapon("iron-longsword", 9001);
+        f.EquipNamira();
+        f.EnemyActor.Add(new CombatContributions());
+        f.EnemyActor.Get<CombatContributions>().Rules.Add(new ReflectionImmunity());
+        f.Script(9, 50, 1, 15);
+        var facts = f.RunEnemyAttack();
+        Assert.Single(facts.OfType<AttackHitFact>());
+        Assert.Empty(facts.OfType<ArtifactDamageReflectedFact>());
+        Assert.Equal(200, f.EnemyActor.Get<StatsComponent>().GetTrack(TrackId.Parse("health")).Current);
+    }
+
+    /// <summary>Turns away the reflected blow only, so the enemy's own strike on the player still lands.</summary>
+    private sealed class ReflectionImmunity : ICombatContribution
+    {
+        public void Negate(NegationEvent interaction)
+        {
+            if (interaction.Participants.Cause == "artifact.namira") interaction.Negation = HarmNegation.Immune;
+        }
+    }
+
     private sealed class NamiraDefense : ICombatContribution
     {
         public void Applying(ApplyHitEvent hit) => hit.Damage = hit.Participants.Cause == "artifact.namira" ? 2 : 4;

@@ -260,6 +260,33 @@ public sealed class DaggerfallCastingTests
         Assert.Equal(1000, h.Magicka(2).Current); // A contribution's absorption refunds nothing classic did not admit.
     }
 
+    [Theory]
+    [InlineData((int)HarmNegation.Resisted, (int)DaggerfallCastOutcome.Resisted)]
+    [InlineData((int)HarmNegation.Absorbed, (int)DaggerfallCastOutcome.Absorbed)]
+    [InlineData((int)HarmNegation.Immune, (int)DaggerfallCastOutcome.Immune)]
+    public void A_target_contribution_negating_after_the_saving_throw_is_presented_by_its_reason(int negation, int expected)
+    {
+        using Harness h = new();
+        Contributions(h.Target).Rules.Add(new SpellDefense(mitigate: value => value.Negation = (HarmNegation)negation));
+        var bundle = h.Release(); h.Casting.Deliver(bundle, [2]);
+        Assert.Equal((DaggerfallCastOutcome)expected, Assert.Single(bundle.Results).Outcome);
+        Assert.Equal(1000, h.HealthMaximum(2).Value);
+        Assert.Equal(1000, h.Magicka(2).Current);
+    }
+
+    [Fact]
+    public void A_target_contribution_deflecting_after_the_saving_throw_reflects_the_bundle_at_its_caster()
+    {
+        using Harness h = new();
+        Contributions(h.Target).Rules.Add(new SpellDefense(mitigate: value =>
+        {
+            if (value.Participants.Target.Entity == h.Target.Entity) value.Negation = HarmNegation.Deflected;
+        }));
+        var bundle = h.Release(); h.Casting.Deliver(bundle, [2]);
+        Assert.Equal(DaggerfallCastOutcome.Reflected, Assert.Single(bundle.Results, result => result.TargetId == 2).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results, result => result.TargetId == 1).Outcome);
+    }
+
     [Fact]
     public void A_target_contribution_resists_part_of_a_spell_magnitude_after_the_saving_throw()
     {
