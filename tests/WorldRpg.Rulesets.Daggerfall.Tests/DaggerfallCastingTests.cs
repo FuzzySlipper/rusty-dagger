@@ -1,3 +1,5 @@
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Kit.Combat;
 using System.Numerics;
 using System.Text.Json;
 using System.Reflection;
@@ -239,6 +241,49 @@ public sealed class DaggerfallCastingTests
         bundle = resisted.Release(); resisted.Casting.Deliver(bundle, [2]);
         Assert.Equal(DaggerfallCastOutcome.Resisted, Assert.Single(bundle.Results).Outcome);
         Assert.Equal(1000, resisted.HealthMaximum(2).Value);
+    }
+
+    [Theory]
+    [InlineData((int)HarmNegation.Resisted, (int)DaggerfallCastOutcome.Resisted)]
+    [InlineData((int)HarmNegation.Absorbed, (int)DaggerfallCastOutcome.Absorbed)]
+    [InlineData((int)HarmNegation.Immune, (int)DaggerfallCastOutcome.Immune)]
+    public void A_target_contribution_negates_a_spell_effect_on_its_element_channel_as_classic_presents_it(int negation, int expected)
+    {
+        using Harness h = new();
+        Contributions(h.Target).Rules.Add(new SpellDefense(negate: value =>
+        {
+            if (value.Channel == DaggerfallHarmChannels.Magic) value.Negation = (HarmNegation)negation;
+        }));
+        var bundle = h.Release(); h.Casting.Deliver(bundle, [2]);
+        Assert.Equal((DaggerfallCastOutcome)expected, Assert.Single(bundle.Results).Outcome);
+        Assert.Equal(1000, h.HealthMaximum(2).Value);
+        Assert.Equal(1000, h.Magicka(2).Current); // A contribution's absorption refunds nothing classic did not admit.
+    }
+
+    [Fact]
+    public void A_target_contribution_resists_part_of_a_spell_magnitude_after_the_saving_throw()
+    {
+        using Harness h = new();
+        List<int> incoming = [];
+        Contributions(h.Target).Rules.Add(new SpellDefense(mitigate: value => { incoming.Add(value.Incoming); value.Resisted += 4; }));
+        var bundle = h.Release(); h.Casting.Deliver(bundle, [2]);
+        Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results).Outcome);
+        Assert.Equal([10], incoming);
+        Assert.Equal(1006, h.HealthMaximum(2).Value);
+    }
+
+    private static CombatContributions Contributions(Actor actor)
+    {
+        if (actor.TryGet(out CombatContributions? existing) && existing is not null) return existing;
+        CombatContributions added = new();
+        actor.Add(added);
+        return added;
+    }
+
+    private sealed class SpellDefense(Action<NegationEvent>? negate = null, Action<MitigationEvent>? mitigate = null) : ICombatContribution
+    {
+        public void Negate(NegationEvent interaction) => negate?.Invoke(interaction);
+        public void Mitigate(MitigationEvent interaction) => mitigate?.Invoke(interaction);
     }
 
     [Fact]

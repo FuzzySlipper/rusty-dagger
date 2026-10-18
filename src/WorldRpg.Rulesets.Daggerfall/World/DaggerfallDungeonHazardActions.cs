@@ -4,6 +4,7 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
@@ -202,9 +203,10 @@ internal static class DaggerfallDungeonHazardActions
         Track health,
         int damage)
     {
-        ApplyHitEvent applied = combat.ApplyToHealth(
-            new CombatParticipants(context.Source, context.Target, "dungeon-hazard"),
-            damage,
+        // A trap's hurt reaches its target as physical harm, mitigated before it applies.
+        CombatParticipants participants = new(context.Source, context.Target, "dungeon-hazard");
+        ApplyHitEvent applied = combat.ApplyToHealth(participants,
+            combat.Mitigate(participants, DaggerfallHarmChannels.Physical, damage).Damage,
             health);
         DaggerfallDungeonActionOutcome outcome = applied.ActualHealthLost > 0d
             ? DaggerfallDungeonActionOutcome.Applied

@@ -209,18 +209,18 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
             // A target-locked shot is admitted and its harm calculated at release (the provisional
             // DEC-11 bow rule); its flight decides contact and mitigation when it arrives.
             admission = Rules.TryHit(participants, hitRoll);
-            ImmunityEvent? immunity = admission.Hit ? Rules.Immunity(participants, DaggerfallHarmChannels.Physical, MaterialImmunity(attack, target)) : null;
-            DamageEvent? damage = immunity is { Immune: false } ? Rules.Damage(participants, damageRoll) : null;
-            outcome = new(admission.Hit, immunity?.Immune != true, damage?.Damage ?? 0);
+            NegationEvent? negation = admission.Hit ? Rules.Negate(participants, DaggerfallHarmChannels.Physical, MaterialImmunity(attack, target)) : null;
+            DamageEvent? damage = negation is { Negated: false } ? Rules.Damage(participants, damageRoll) : null;
+            outcome = new(admission.Hit, negation?.Negated != true, damage?.Damage ?? 0);
         }
         else
         {
             // A swing's delivery is its admitted target: the to-hit roll admits contact, and the harm
             // is mitigated and prepared for the hit frame.
             HarmResolution harm = Rules.Resolve(participants, DaggerfallHarmChannels.Physical, hitRoll, damageRoll,
-                immunity: MaterialImmunity(attack, target));
+                negate: MaterialImmunity(attack, target));
             admission = harm.Admission!;
-            outcome = new(harm.Connected, !harm.Immune, harm.Damage);
+            outcome = new(harm.Connected, !harm.NegatedBeforeCalculation, harm.Damage);
         }
         prepared = new DaggerfallPreparedAttack(attack.CooldownSeconds, outcome, feedback, wabbajackSource, MolagBalSource: molagBalSource, ItemStrikeSource: strikeSource, IsRanged: rangedAttack, RangedWeapon: rangedWeapon, Action: selectedAction, WeaponPoison: poisonSource,
             Detail: new(body, admission.Roll, admission.Chance), ContactInFlight: contactInFlight);
@@ -653,20 +653,21 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     };
 
     /// <summary>
-    /// The classic weapon-material requirement as physical immunity: a weapon whose material cannot cut
+    /// The classic weapon-material requirement as physical immunity, a whole-harm negation decided before
+    /// the damage roll: a weapon whose material cannot cut
     /// the target's minimum material (silver for a player whose racial override requires it) cannot
-    /// harm it. Immunity precedes the damage roll, as the donor rejects the attempt before rolling.
+    /// harm it, as the donor rejects the attempt before rolling.
     /// </summary>
     /// <remarks>
     /// The donor returns before its hit roll for an insufficient weapon material; here the shared hit
     /// roll is keyed by (generation, step, attacker, target, salt) rather than by draw sequence, so
     /// drawing it before rejecting the attempt cannot change any other roll's value.
     /// </remarks>
-    private Action<ImmunityEvent> MaterialImmunity(DaggerfallAttackDefinition attack, Combatant target) => immunity =>
+    private Action<NegationEvent> MaterialImmunity(DaggerfallAttackDefinition attack, Combatant target) => negation =>
     {
         if (attack.Material is not null && !DaggerfallFormulaPolicy.CanHitMaterial(attack.Material, target.Id == PlayerId && _character()?.RacialOverrides?.Current?.RequiresSilver == true
                 ? "silver" : target.Definition.MinimumMaterial, _weaponMaterialRanks))
-            immunity.Immune = true;
+            negation.Negation = HarmNegation.Immune;
     };
 
     /// <summary>
@@ -710,7 +711,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
     /// The donor rolls the reflexes check even for slots whose minimum damage is zero; keyed draws are
     /// addressed per (generation, step, attacker, target, salt) rather than by draw order, so skipping
     /// those slots cannot shift any other roll. Every eligible slot resolves through the shared hit
-    /// rules independently. Contact, immunity, damage contributions, mitigation and application see the
+    /// rules independently. Contact, negation, damage contributions, mitigation and application see the
     /// combined attack once.
     /// </remarks>
     private (AttackOutcome Outcome, DaggerfallAttackDetail Detail) MonsterAttackSet(CombatParticipants participants, ExplicitMeleeRequest request,
@@ -748,9 +749,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>
         // The slots are the attempt's admissions; any landed slot is contact, and the combined attack
         // passes immunity, calculation and mitigation once.
         HarmResolution harm = Rules.Resolve(participants, DaggerfallHarmChannels.Physical, admit: null,
-            damage => damage.Damage = Math.Max(0, total), contact: landed, immunity: MaterialImmunity(attack, target));
+            damage => damage.Damage = Math.Max(0, total), contact: landed, negate: MaterialImmunity(attack, target));
         hits = accepted.ToArray();
-        return (new(harm.Connected, !harm.Immune, harm.Damage),
+        return (new(harm.Connected, !harm.NegatedBeforeCalculation, harm.Damage),
             new(body, representative?.Roll ?? 0, representative?.Chance ?? 0));
     }
 

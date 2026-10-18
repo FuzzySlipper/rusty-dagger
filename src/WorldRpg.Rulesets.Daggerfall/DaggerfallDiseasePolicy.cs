@@ -1,11 +1,13 @@
 using System.Text.Json;
 using Rusty.Engine;
+using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Effects;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -170,7 +172,8 @@ internal static class DaggerfallDiseasePolicy
         IRandomService random,
         Func<long> currentDay,
         DaggerfallDiseaseExposure exposure,
-        DaggerfallCareerDefinition? career)
+        DaggerfallCareerDefinition? career,
+        CombatResolution? combat = null)
     {
         ArgumentNullException.ThrowIfNull(effects);
         ArgumentNullException.ThrowIfNull(actors);
@@ -183,19 +186,30 @@ internal static class DaggerfallDiseasePolicy
 
         if (!exposure.BypassSavingThrows)
         {
+            // The player's disease resistance is the harm pipeline's negation on the shared DiseaseOrPoison
+            // channel: immunity, then an active resistance, then the FORM-06 saving throw.
             StatsComponent stats = actors.Player.Stats;
-            if (exposure.RaceTolerance == DaggerfallDiseaseCareerTolerance.Immune || ReadStat(stats, DaggerfallMechanicsIds.ImmunityDisease) != 0) return DaggerfallDiseaseAdmission.Immune;
-            if (exposure.ActiveResistanceChance is int activeResistance
-                && Draw(random, $"active-resist:{exposure.Instance}", 1, 100) <= activeResistance)
-                return DaggerfallDiseaseAdmission.Resisted;
-            int chance = DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(
-                ReadStat(stats, DaggerfallMechanicsIds.Willpower),
-                career is null ? DaggerfallDiseaseCareerTolerance.Normal : CareerTolerance(career),
-                exposure.BiographyModifier, exposure.RaceTolerance);
-            // A near successful throw produces a reduced nonzero payload and therefore still admits a
-            // disease, as FORM-06 does; only a zero payload cancels it.
-            if (DaggerfallMagicAdmissionPolicy.SavingThrowAmount(chance, () => Draw(random, $"resist:{exposure.Instance}", 1, 100)) == 0)
-                return DaggerfallDiseaseAdmission.Resisted;
+            Actor target = actors.Player.Actor;
+            Actor source = exposure.CasterId is long caster && actors.TryGet(caster, out ActorState? casterState) ? casterState.Actor : target;
+            NegationEvent negation = (combat ?? new CombatResolution()).Negate(new CombatParticipants(source, target, $"disease:{exposure.Source}"),
+                DaggerfallHarmChannels.DiseaseOrPoison, value =>
+                {
+                    if (exposure.RaceTolerance == DaggerfallDiseaseCareerTolerance.Immune || ReadStat(stats, DaggerfallMechanicsIds.ImmunityDisease) != 0)
+                    { value.Negation = HarmNegation.Immune; return; }
+                    if (exposure.ActiveResistanceChance is int activeResistance
+                        && Draw(random, $"active-resist:{exposure.Instance}", 1, 100) <= activeResistance)
+                    { value.Negation = HarmNegation.Resisted; return; }
+                    int chance = DaggerfallMagicAdmissionPolicy.DiseaseOrPoisonSavingThrowChance(
+                        ReadStat(stats, DaggerfallMechanicsIds.Willpower),
+                        career is null ? DaggerfallDiseaseCareerTolerance.Normal : CareerTolerance(career),
+                        exposure.BiographyModifier, exposure.RaceTolerance);
+                    // A near successful throw produces a reduced nonzero payload and therefore still admits a
+                    // disease, as FORM-06 does; only a zero payload cancels it.
+                    if (DaggerfallMagicAdmissionPolicy.SavingThrowAmount(chance, () => Draw(random, $"resist:{exposure.Instance}", 1, 100)) == 0)
+                        value.Negation = HarmNegation.Resisted;
+                });
+            if (negation.Negation == HarmNegation.Immune) return DaggerfallDiseaseAdmission.Immune;
+            if (negation.Negated) return DaggerfallDiseaseAdmission.Resisted;
         }
 
         DaggerfallClassicDisease[] candidates = exposure.Candidates?.ToArray()

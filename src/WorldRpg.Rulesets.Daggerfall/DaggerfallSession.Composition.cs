@@ -560,7 +560,7 @@ internal sealed partial class DaggerfallSession
                 _random, actors.Player.DurableId, saved?.NextCastSequence ?? 1, State.Character.KnownSpells.Contains,
                 id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1,
                 (caster, item) => itemInstances.RequireUnique(item).Owner == (caster == actors.Player.DurableId ? DaggerfallItemOwner.Player : DaggerfallItemOwner.Actor(caster)),
-                () => _latestUpdateGeneration, () => _latestSimulationStep, State.Character.IsGrantedSpell);
+                () => _latestUpdateGeneration, () => _latestSimulationStep, State.Character.IsGrantedSpell, combatRules);
             State.Quests.BindCasting(Casting, effects.Catalog);
             _enemyMagic = new(definitions.EnemySpells, definitions.Magic, Casting, _random,
                 id => authored.GetValueOrDefault(id),

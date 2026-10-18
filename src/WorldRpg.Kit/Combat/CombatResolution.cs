@@ -70,8 +70,8 @@ public interface ICombatContribution
     void Hit(TryHitEvent interaction) { }
     /// <summary>Delivery's contact with this target.</summary>
     void Contact(ContactEvent interaction) { }
-    /// <summary>Mitigation's immunity, decided before the harm is calculated.</summary>
-    void Immunity(ImmunityEvent interaction) { }
+    /// <summary>Mitigation's whole-harm negation, decided before the harm is calculated.</summary>
+    void Negate(NegationEvent interaction) { }
     /// <summary>The source's harm calculation.</summary>
     void Damage(DamageEvent interaction) { }
     /// <summary>Mitigation's deflection and absorption of the calculated harm.</summary>
@@ -88,10 +88,10 @@ public sealed class CombatContributions
 
 /// <summary>
 /// Typed synchronous resolution of the one harm pipeline: delivery (admission, then contact), mitigation
-/// (immunity, the source's calculation, then deflection and absorption) and application. Each stage is
-/// its own event, so a delivery owner whose timing splits the stages may raise them separately; the
-/// order it must keep is admission before contact, immunity before calculation, mitigation after both
-/// contact and calculation, and application last. Notifications are separate; application is never an
+/// (whole-harm negation, the source's calculation, then deflection, absorption and resistance) and
+/// application. Each stage is its own event, so an owner whose timing splits the stages may raise them
+/// separately; the order it must keep is admission before contact, negation before calculation,
+/// mitigation after both contact and calculation, and application last. Notifications are separate; application is never an
 /// eventual subscriber.
 /// </summary>
 public sealed class CombatResolution
@@ -99,22 +99,22 @@ public sealed class CombatResolution
     private readonly Dictionary<string, IReadOnlyList<ICombatContribution>> _actions = new(StringComparer.Ordinal);
     public void RegisterAction(string action, params ICombatContribution[] contributions) => _actions.Add(action, contributions);
     /// <summary>
-    /// Delivery and mitigation for one target in pipeline order, stopping at no contact or immunity.
+    /// Delivery and mitigation for one target in pipeline order, stopping at no contact or negation.
     /// Without <paramref name="admit"/> there is no admission step; <paramref name="contact"/> is the
     /// delivery owner's own contact answer, which an admission refusal overrides.
     /// </summary>
     public HarmResolution Resolve(CombatParticipants participants, HarmChannelId channel, Action<TryHitEvent>? admit,
-        Action<DamageEvent> calculate, bool contact = true, Action<ImmunityEvent>? immunity = null, Action<MitigationEvent>? mitigate = null)
+        Action<DamageEvent> calculate, bool contact = true, Action<NegationEvent>? negate = null, Action<MitigationEvent>? mitigate = null)
     {
         ArgumentNullException.ThrowIfNull(calculate);
         TryHitEvent? admission = admit is null ? null : TryHit(participants, admit);
         ContactEvent touched = Contact(participants, contact && admission?.Hit != false);
         if (!touched.Contact) return new(participants, channel, admission, touched, null, null, null);
-        ImmunityEvent immune = Immunity(participants, channel, immunity);
-        if (immune.Immune) return new(participants, channel, admission, touched, immune, null, null);
+        NegationEvent negation = Negate(participants, channel, negate);
+        if (negation.Negated) return new(participants, channel, admission, touched, negation, null, null);
         DamageEvent calculated = Damage(participants, calculate);
         MitigationEvent mitigated = Mitigate(participants, channel, calculated.Damage, mitigate);
-        return new(participants, channel, admission, touched, immune, calculated, mitigated);
+        return new(participants, channel, admission, touched, negation, calculated, mitigated);
     }
     public TryHitEvent TryHit(CombatParticipants participants, Action<TryHitEvent> resolve)
     {
@@ -129,11 +129,11 @@ public sealed class CombatResolution
         foreach (ICombatContribution rule in Gather(participants)) rule.Contact(interaction);
         return interaction;
     }
-    public ImmunityEvent Immunity(CombatParticipants participants, HarmChannelId channel, Action<ImmunityEvent>? resolve = null)
+    public NegationEvent Negate(CombatParticipants participants, HarmChannelId channel, Action<NegationEvent>? resolve = null)
     {
-        ImmunityEvent interaction = new(participants, channel);
+        NegationEvent interaction = new(participants, channel);
         resolve?.Invoke(interaction);
-        foreach (ICombatContribution rule in Gather(participants)) rule.Immunity(interaction);
+        foreach (ICombatContribution rule in Gather(participants)) rule.Negate(interaction);
         return interaction;
     }
     public DamageEvent Damage(CombatParticipants participants, Action<DamageEvent> resolve)

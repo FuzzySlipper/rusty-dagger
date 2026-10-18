@@ -249,6 +249,8 @@ public sealed class CombatResolutionTests
 
     private static readonly HarmChannelId Edged = new("edged");
     private static readonly HarmChannelId Flame = new("flame");
+    private static readonly HarmChannelId Frost = new("frost");
+    private static readonly HarmChannelId Shock = new("shock");
 
     [Fact]
     public void Harm_resolution_runs_its_stages_in_pipeline_order_and_application_last()
@@ -265,11 +267,11 @@ public sealed class CombatResolutionTests
         HarmResolution harm = resolution.Resolve(participants, Edged,
             admit: value => { order.Add("base:admit"); value.Hit = true; },
             calculate: value => { order.Add("base:calculate"); value.Damage = 10; },
-            immunity: _ => order.Add("base:immunity"),
+            negate: _ => order.Add("base:negate"),
             mitigate: _ => order.Add("base:mitigate"));
         ApplyHitEvent applied = resolution.ApplyToHealth(participants, harm.Damage, target.Stats.GetTrack(TrackId.Parse("health")));
 
-        Assert.Equal(["base:admit", "hit", "contact", "base:immunity", "immunity", "base:calculate", "damage", "base:mitigate", "mitigate", "applying"], order);
+        Assert.Equal(["base:admit", "hit", "contact", "base:negate", "negate", "base:calculate", "damage", "base:mitigate", "mitigate", "applying"], order);
         Assert.Equal(HarmOutcome.Unmitigated, harm.Outcome);
         Assert.Equal(10d, applied.ActualHealthLost);
     }
@@ -288,7 +290,7 @@ public sealed class CombatResolutionTests
         Assert.False(calculated);
         Assert.Equal((HarmOutcome.NoContact, 0), (missed.Outcome, missed.Damage));
         Assert.False(missed.Admission!.Hit);
-        Assert.Null(missed.Immunity);
+        Assert.Null(missed.PreCalculation);
         Assert.Equal(HarmOutcome.NoContact, untouched.Outcome);
         Assert.Null(untouched.Admission);
         Assert.False(untouched.Contact!.Contact);
@@ -312,11 +314,11 @@ public sealed class CombatResolutionTests
     }
 
     [Fact]
-    public void An_immune_target_connects_but_its_harm_is_never_calculated()
+    public void A_target_that_negates_the_harm_before_calculation_connects_but_its_harm_is_never_calculated()
     {
         using ActorsState actors = Actors();
         CombatContributions contributions = new();
-        contributions.Rules.Add(new ImmunityContribution(value => value.Immune |= value.Channel == Flame));
+        contributions.Rules.Add(new NegationContribution(value => { if (value.Channel == Flame) value.Negation = HarmNegation.Immune; }));
         actors.Get(3).Actor.Add(contributions);
         CombatResolution resolution = new();
         CombatParticipants participants = new(actors.Get(2).Actor, actors.Get(3).Actor, "attack");
@@ -325,14 +327,15 @@ public sealed class CombatResolutionTests
         HarmResolution burned = resolution.Resolve(participants, Flame, admit: null, value => { calculations++; value.Damage = 9; });
         HarmResolution cut = resolution.Resolve(participants, Edged, admit: null, value => { calculations++; value.Damage = 9; });
 
-        Assert.Equal((HarmOutcome.Immune, 0, true), (burned.Outcome, burned.Damage, burned.Connected));
+        Assert.Equal((HarmOutcome.Negated, HarmNegation.Immune, 0, true), (burned.Outcome, burned.Negation, burned.Damage, burned.Connected));
+        Assert.True(burned.NegatedBeforeCalculation);
         Assert.Null(burned.Calculation);
         Assert.Equal((HarmOutcome.Unmitigated, 9), (cut.Outcome, cut.Damage));
         Assert.Equal(1, calculations);
     }
 
     [Fact]
-    public void Mitigation_is_typed_by_channel_and_separates_deflected_absorbed_and_remaining_harm()
+    public void Mitigation_is_typed_by_channel_and_separates_deflected_absorbed_resisted_and_remaining_harm()
     {
         using ActorsState actors = Actors();
         CombatContributions contributions = new();
@@ -342,6 +345,8 @@ public sealed class CombatResolutionTests
         {
             if (value.Channel == Edged) value.Absorbed += 3;
             if (value.Channel == Flame) value.Deflected += 20;
+            if (value.Channel == Frost) value.Resisted += 4;
+            if (value.Channel == Shock) value.Negation = HarmNegation.Resisted;
         }));
         actors.Get(3).Actor.Add(contributions);
         CombatResolution resolution = new();
@@ -349,11 +354,16 @@ public sealed class CombatResolutionTests
 
         HarmResolution edged = resolution.Resolve(participants, Edged, admit: null, value => value.Damage = 10);
         HarmResolution flame = resolution.Resolve(participants, Flame, admit: null, value => value.Damage = 10);
-        HarmResolution frost = resolution.Resolve(participants, new HarmChannelId("frost"), admit: null, value => value.Damage = 10);
+        HarmResolution frost = resolution.Resolve(participants, Frost, admit: null, value => value.Damage = 10);
+        HarmResolution shock = resolution.Resolve(participants, Shock, admit: null, value => value.Damage = 10);
+        HarmResolution poison = resolution.Resolve(participants, new HarmChannelId("poison"), admit: null, value => value.Damage = 10);
 
         Assert.Equal((HarmOutcome.Reduced, 7, 3, 0), (edged.Outcome, edged.Damage, edged.Mitigation!.Absorbed, edged.Mitigation.Deflected));
-        Assert.Equal((HarmOutcome.Negated, 0, 20), (flame.Outcome, flame.Damage, flame.Mitigation!.Deflected));
-        Assert.Equal((HarmOutcome.Unmitigated, 10), (frost.Outcome, frost.Damage));
+        Assert.Equal((HarmOutcome.Negated, HarmNegation.None, 0, 20), (flame.Outcome, flame.Negation, flame.Damage, flame.Mitigation!.Deflected));
+        Assert.Equal((HarmOutcome.Reduced, 6, 4), (frost.Outcome, frost.Damage, frost.Mitigation!.Resisted));
+        Assert.Equal((HarmOutcome.Negated, HarmNegation.Resisted, 0), (shock.Outcome, shock.Negation, shock.Damage));
+        Assert.False(shock.NegatedBeforeCalculation);
+        Assert.Equal((HarmOutcome.Unmitigated, 10), (poison.Outcome, poison.Damage));
     }
 
     [Fact]
@@ -388,7 +398,7 @@ public sealed class CombatResolutionTests
         HarmResolution harm = resolution.Resolve(participants, Edged, value => value.Hit = true, value => value.Damage = 1);
         resolution.ApplyToHealth(participants, harm.Damage, actors.Get(3).Stats.GetTrack(TrackId.Parse("health")));
 
-        Assert.Equal(["hit", "contact", "immunity", "damage", "mitigate", "applying"], order);
+        Assert.Equal(["hit", "contact", "negate", "damage", "mitigate", "applying"], order);
     }
 
     [Fact]
@@ -421,7 +431,7 @@ public sealed class CombatResolutionTests
     {
         public void Hit(TryHitEvent interaction) => order.Add("hit");
         public void Contact(ContactEvent interaction) => order.Add("contact");
-        public void Immunity(ImmunityEvent interaction) => order.Add("immunity");
+        public void Negate(NegationEvent interaction) => order.Add("negate");
         public void Damage(DamageEvent interaction) => order.Add("damage");
         public void Mitigate(MitigationEvent interaction) => order.Add("mitigate");
         public void Applying(ApplyHitEvent interaction) => order.Add("applying");
@@ -430,9 +440,9 @@ public sealed class CombatResolutionTests
     {
         public void Contact(ContactEvent interaction) => apply(interaction);
     }
-    private sealed class ImmunityContribution(Action<ImmunityEvent> apply) : ICombatContribution
+    private sealed class NegationContribution(Action<NegationEvent> apply) : ICombatContribution
     {
-        public void Immunity(ImmunityEvent interaction) => apply(interaction);
+        public void Negate(NegationEvent interaction) => apply(interaction);
     }
     private sealed class MitigationContribution(Action<MitigationEvent> apply) : ICombatContribution
     {
