@@ -642,6 +642,11 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// <summary>The Host's slot naming: a new slot takes the first free ordinal.</summary>
     private static string SaveSlotKey(ulong ordinal) => $"slot-{ordinal}";
 
+    /// <summary>Whether two variant selections are the same set; selection order carries no meaning for a save.</summary>
+    private static bool SameVariants(IReadOnlyList<RulesVariantId> saved, IReadOnlyList<RulesVariantId> running) =>
+        saved.Select(variant => variant.Value).Order(StringComparer.Ordinal)
+            .SequenceEqual(running.Select(variant => variant.Value).Order(StringComparer.Ordinal), StringComparer.Ordinal);
+
     private void LoadSavedGame(ISaveRequestingGameSession requesting, GameSaveEnvelope envelope)
     {
         if (envelope.Payload.Ruleset != _composition.Ruleset)
@@ -649,7 +654,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             requesting.ReportSaveOutcome("Load failed: the saved game is for a different ruleset.");
             return;
         }
-        if (!envelope.Variants.Order().SequenceEqual(_compositionIdentity.Variants.Order()))
+        if (!SameVariants(envelope.Variants, _compositionIdentity.Variants))
         {
             requesting.ReportSaveOutcome("Load failed: the saved game ran under different rules variants.");
             return;

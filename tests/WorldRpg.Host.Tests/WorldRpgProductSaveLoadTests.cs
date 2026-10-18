@@ -64,6 +64,48 @@ public sealed class WorldRpgProductSaveLoadTests
     }
 
     [Fact]
+    public void A_game_under_two_variants_loads_its_save_under_the_same_set_in_either_order_and_not_under_another()
+    {
+        InMemoryPersistenceService persistence = new();
+        LoadTestRuleset ruleset = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
+        using (WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.variants")))
+        {
+            product.Start();
+            LoadTestSession session = ruleset.RequireCurrent();
+            session.SaveValue = 44;
+            session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Two variants"));
+            product.Update(Update(1));
+            session.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
+            product.Update(Update(2));
+            Assert.Equal((byte)44, Assert.IsType<LoadTestSession>(ruleset.Replacement).SaveValue);
+        }
+
+        LoadTestRuleset reordered = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
+        using (WorldRpgProduct product = new(Context(persistence), reordered, new GameBundleId("test.variants-reordered")))
+        {
+            product.Start();
+            reordered.RequireCurrent().ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
+            product.Update(Update(1));
+            Assert.Equal((byte)44, Assert.IsType<LoadTestSession>(reordered.Replacement).SaveValue);
+        }
+
+        LoadTestRuleset classic = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
+        using (WorldRpgProduct product = new(Context(persistence), classic, new GameBundleId("test.bundle")))
+        {
+            product.Start();
+            LoadTestSession session = classic.RequireCurrent();
+            session.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
+            product.Update(Update(1));
+            Assert.Null(classic.Replacement);
+            Assert.StartsWith("Load failed:", session.Outcome, StringComparison.Ordinal);
+            Assert.Contains("[test.armor, test.contact]", session.Outcome, StringComparison.Ordinal);
+        }
+    }
+
+    private static RulesVariantManifest Variant(string id, string seam) =>
+        new(new(id), new("test"), [new RulesSeamId(seam)], new("test.tuning"), [], ownsSaveState: false);
+
+    [Fact]
     public void Quick_save_overwrites_one_quick_slot_and_quick_load_reads_it()
     {
         InMemoryPersistenceService persistence = new();
@@ -215,6 +257,8 @@ public sealed class WorldRpgProductSaveLoadTests
     private static ProductContent Content() => new(new ReadOnlyMemory<ProductContentFile>(
     [
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"}}""")),
+        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.variants.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.variants","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"},"variants":["test.contact","test.armor"]}""")),
+        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.variants-reordered.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.variants-reordered","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"},"variants":["test.armor","test.contact"]}""")),
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/content-packs/test.pack.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.content-pack","id":"test.pack","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/pack.json"}""")),
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/tuning/test.tuning.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}""")),
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("payload/pack.json"), System.Text.Encoding.UTF8.GetBytes("{}")),
@@ -233,9 +277,11 @@ public sealed class WorldRpgProductSaveLoadTests
         return context;
     }
 
-    private sealed class LoadTestRuleset : ISaveableGameRuleset
+    private sealed class LoadTestRuleset(params RulesVariantManifest[] variants) : ISaveableGameRuleset, IRulesVariantCatalog
     {
         public RulesetId Id => new("test");
+
+        public IReadOnlyList<RulesVariantManifest> CompiledVariants { get; } = variants;
 
         internal LoadTestSession? Current { get; private set; }
 
