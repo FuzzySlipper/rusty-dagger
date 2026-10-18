@@ -247,6 +247,198 @@ public sealed class CombatResolutionTests
         Assert.Equal(15, damage.Damage);
     }
 
+    private static readonly HarmChannelId Edged = new("edged");
+    private static readonly HarmChannelId Flame = new("flame");
+
+    [Fact]
+    public void Harm_resolution_runs_its_stages_in_pipeline_order_and_application_last()
+    {
+        using ActorsState actors = Actors();
+        ActorState target = actors.Get(3);
+        List<string> order = [];
+        CombatContributions contributions = new();
+        contributions.Rules.Add(new RecordingContribution(order));
+        target.Actor.Add(contributions);
+        CombatResolution resolution = new();
+        CombatParticipants participants = new(actors.Get(2).Actor, target.Actor, "attack");
+
+        HarmResolution harm = resolution.Resolve(participants, Edged,
+            admit: value => { order.Add("base:admit"); value.Hit = true; },
+            calculate: value => { order.Add("base:calculate"); value.Damage = 10; },
+            immunity: _ => order.Add("base:immunity"),
+            mitigate: _ => order.Add("base:mitigate"));
+        ApplyHitEvent applied = resolution.ApplyToHealth(participants, harm.Damage, target.Stats.GetTrack(TrackId.Parse("health")));
+
+        Assert.Equal(["base:admit", "hit", "contact", "base:immunity", "immunity", "base:calculate", "damage", "base:mitigate", "mitigate", "applying"], order);
+        Assert.Equal(HarmOutcome.Unmitigated, harm.Outcome);
+        Assert.Equal(10d, applied.ActualHealthLost);
+    }
+
+    [Fact]
+    public void No_contact_stops_before_mitigation_whether_admission_or_the_delivery_owner_refused_it()
+    {
+        using ActorsState actors = Actors();
+        CombatResolution resolution = new();
+        CombatParticipants participants = new(actors.Get(2).Actor, actors.Get(3).Actor, "attack");
+        bool calculated = false;
+
+        HarmResolution missed = resolution.Resolve(participants, Edged, value => value.Hit = false, _ => calculated = true);
+        HarmResolution untouched = resolution.Resolve(participants, Edged, admit: null, _ => calculated = true, contact: false);
+
+        Assert.False(calculated);
+        Assert.Equal((HarmOutcome.NoContact, 0), (missed.Outcome, missed.Damage));
+        Assert.False(missed.Admission!.Hit);
+        Assert.Null(missed.Immunity);
+        Assert.Equal(HarmOutcome.NoContact, untouched.Outcome);
+        Assert.Null(untouched.Admission);
+        Assert.False(untouched.Contact!.Contact);
+    }
+
+    [Fact]
+    public void Contact_contributions_decide_contact_after_the_delivery_owner_and_admission()
+    {
+        using ActorsState actors = Actors();
+        CombatContributions contributions = new();
+        contributions.Rules.Add(new ContactContribution(value => value.Contact = !value.Contact));
+        actors.Get(3).Actor.Add(contributions);
+        CombatResolution resolution = new();
+        CombatParticipants participants = new(actors.Get(2).Actor, actors.Get(3).Actor, "attack");
+
+        HarmResolution passedThrough = resolution.Resolve(participants, Edged, value => value.Hit = true, value => value.Damage = 4);
+        HarmResolution grazed = resolution.Resolve(participants, Edged, admit: null, value => value.Damage = 4, contact: false);
+
+        Assert.Equal(HarmOutcome.NoContact, passedThrough.Outcome);
+        Assert.Equal((HarmOutcome.Unmitigated, 4), (grazed.Outcome, grazed.Damage));
+    }
+
+    [Fact]
+    public void An_immune_target_connects_but_its_harm_is_never_calculated()
+    {
+        using ActorsState actors = Actors();
+        CombatContributions contributions = new();
+        contributions.Rules.Add(new ImmunityContribution(value => value.Immune |= value.Channel == Flame));
+        actors.Get(3).Actor.Add(contributions);
+        CombatResolution resolution = new();
+        CombatParticipants participants = new(actors.Get(2).Actor, actors.Get(3).Actor, "attack");
+        int calculations = 0;
+
+        HarmResolution burned = resolution.Resolve(participants, Flame, admit: null, value => { calculations++; value.Damage = 9; });
+        HarmResolution cut = resolution.Resolve(participants, Edged, admit: null, value => { calculations++; value.Damage = 9; });
+
+        Assert.Equal((HarmOutcome.Immune, 0, true), (burned.Outcome, burned.Damage, burned.Connected));
+        Assert.Null(burned.Calculation);
+        Assert.Equal((HarmOutcome.Unmitigated, 9), (cut.Outcome, cut.Damage));
+        Assert.Equal(1, calculations);
+    }
+
+    [Fact]
+    public void Mitigation_is_typed_by_channel_and_separates_deflected_absorbed_and_remaining_harm()
+    {
+        using ActorsState actors = Actors();
+        CombatContributions contributions = new();
+        // The target's protection absorbs edged harm and deflects some flame; a channel it does not
+        // name passes untouched.
+        contributions.Rules.Add(new MitigationContribution(value =>
+        {
+            if (value.Channel == Edged) value.Absorbed += 3;
+            if (value.Channel == Flame) value.Deflected += 20;
+        }));
+        actors.Get(3).Actor.Add(contributions);
+        CombatResolution resolution = new();
+        CombatParticipants participants = new(actors.Get(2).Actor, actors.Get(3).Actor, "attack");
+
+        HarmResolution edged = resolution.Resolve(participants, Edged, admit: null, value => value.Damage = 10);
+        HarmResolution flame = resolution.Resolve(participants, Flame, admit: null, value => value.Damage = 10);
+        HarmResolution frost = resolution.Resolve(participants, new HarmChannelId("frost"), admit: null, value => value.Damage = 10);
+
+        Assert.Equal((HarmOutcome.Reduced, 7, 3, 0), (edged.Outcome, edged.Damage, edged.Mitigation!.Absorbed, edged.Mitigation.Deflected));
+        Assert.Equal((HarmOutcome.Negated, 0, 20), (flame.Outcome, flame.Damage, flame.Mitigation!.Deflected));
+        Assert.Equal((HarmOutcome.Unmitigated, 10), (frost.Outcome, frost.Damage));
+    }
+
+    [Fact]
+    public void Mitigated_harm_is_what_application_receives()
+    {
+        using ActorsState actors = Actors();
+        ActorState target = actors.Get(3);
+        CombatResolution resolution = new();
+        resolution.RegisterAction("shielded", new MitigationContribution(value => value.Absorbed += 6));
+        CombatParticipants participants = new(actors.Get(2).Actor, target.Actor, "shielded");
+        Track health = target.Stats.GetTrack(TrackId.Parse("health"));
+
+        HarmResolution harm = resolution.Resolve(participants, Edged, admit: null, value => value.Damage = 10);
+        ApplyHitEvent applied = resolution.ApplyToHealth(participants, harm.Damage, health);
+
+        Assert.Equal((4, 4d, 96d), (applied.CalculatedDamage, applied.ActualHealthLost, health.Current));
+    }
+
+    [Fact]
+    public void A_multislot_equipped_item_contributes_once_to_every_pipeline_stage()
+    {
+        using ActorsState actors = Actors();
+        ActorState attacker = actors.Get(2);
+        List<string> order = [];
+        EntityId item = EquipTwoSlotItem(actors, attacker);
+        CombatContributions contribution = new();
+        contribution.Rules.Add(new RecordingContribution(order));
+        actors.Store.Add(item, contribution);
+        CombatResolution resolution = new();
+        CombatParticipants participants = new(attacker.Actor, actors.Get(3).Actor, "attack");
+
+        HarmResolution harm = resolution.Resolve(participants, Edged, value => value.Hit = true, value => value.Damage = 1);
+        resolution.ApplyToHealth(participants, harm.Damage, actors.Get(3).Stats.GetTrack(TrackId.Parse("health")));
+
+        Assert.Equal(["hit", "contact", "immunity", "damage", "mitigate", "applying"], order);
+    }
+
+    [Fact]
+    public void A_harm_channel_requires_an_identity()
+    {
+        Assert.Throws<ArgumentException>(() => new HarmChannelId(" "));
+        Assert.Equal(new HarmChannelId("edged"), Edged);
+    }
+
+    private static EntityId EquipTwoSlotItem(ActorsState actors, ActorState owner)
+    {
+        InventoryStore inventory = new();
+        inventory.RegisterInventory(new InventoryState(owner.Actor.Entity));
+        inventory.RegisterEquipment(new EquipmentState(owner.Actor.Entity));
+        EquipmentComponent equipment = new(inventory, owner.Actor.Entity);
+        owner.Actor.Add(equipment);
+        EntityId item = actors.Entities.Create(new DurableIdentityReference(DurableIdentityKind.Item, 99), new EntityTypeId("two-handed-ward"));
+        ItemDefinition definition = new(ItemDefinitionId.Parse("two-handed-ward"), ItemKind.Unique, 1,
+            classifications: [ItemClassificationId.Parse("ward")], equipment: new ItemEquipmentPolicy(2));
+        inventory.MaterializeUnique(new ItemState(item, definition), owner.Actor.Entity);
+        equipment.Equip(item,
+        [
+            new(EquipmentSlotId.Parse("left"), [ItemClassificationId.Parse("ward")]),
+            new(EquipmentSlotId.Parse("right"), [ItemClassificationId.Parse("ward")]),
+        ]);
+        return item;
+    }
+
+    private sealed class RecordingContribution(List<string> order) : ICombatContribution
+    {
+        public void Hit(TryHitEvent interaction) => order.Add("hit");
+        public void Contact(ContactEvent interaction) => order.Add("contact");
+        public void Immunity(ImmunityEvent interaction) => order.Add("immunity");
+        public void Damage(DamageEvent interaction) => order.Add("damage");
+        public void Mitigate(MitigationEvent interaction) => order.Add("mitigate");
+        public void Applying(ApplyHitEvent interaction) => order.Add("applying");
+    }
+    private sealed class ContactContribution(Action<ContactEvent> apply) : ICombatContribution
+    {
+        public void Contact(ContactEvent interaction) => apply(interaction);
+    }
+    private sealed class ImmunityContribution(Action<ImmunityEvent> apply) : ICombatContribution
+    {
+        public void Immunity(ImmunityEvent interaction) => apply(interaction);
+    }
+    private sealed class MitigationContribution(Action<MitigationEvent> apply) : ICombatContribution
+    {
+        public void Mitigate(MitigationEvent interaction) => apply(interaction);
+    }
+
     private static ActorsState Actors()
     {
         ActorsState actors = new();

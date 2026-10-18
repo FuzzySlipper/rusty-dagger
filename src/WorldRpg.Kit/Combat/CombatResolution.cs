@@ -12,7 +12,7 @@ public sealed record CombatParticipants(Actor Source, Actor Target, string Cause
     public EffectsComponent TargetEffects => Target.Get<EffectsComponent>();
 }
 /// <summary>
-/// One hit decision. The ruleset's base resolution decides <see cref="Hit"/>; Kit never compares
+/// Delivery's pre-contact admission: one hit decision. The ruleset's base resolution decides <see cref="Hit"/>; Kit never compares
 /// <see cref="Chance"/> and <see cref="Roll"/>, which are carried only for the ruleset's own policy
 /// and for contributions that report or adjust them. A contribution that changes either value and
 /// means it to decide the hit sets <see cref="Hit"/> itself.
@@ -67,8 +67,16 @@ public sealed class DefeatEvent(ApplyHitEvent application, double currentHealth,
 /// <summary>Explicit participant contributions, in registration order after each base calculation and before application.</summary>
 public interface ICombatContribution
 {
+    /// <summary>Delivery's pre-contact admission, such as a to-hit roll.</summary>
     void Hit(TryHitEvent interaction) { }
+    /// <summary>Delivery's contact with this target.</summary>
+    void Contact(ContactEvent interaction) { }
+    /// <summary>Mitigation's immunity, decided before the harm is calculated.</summary>
+    void Immunity(ImmunityEvent interaction) { }
+    /// <summary>The source's harm calculation.</summary>
     void Damage(DamageEvent interaction) { }
+    /// <summary>Mitigation's deflection and absorption of the calculated harm.</summary>
+    void Mitigate(MitigationEvent interaction) { }
     void Applying(ApplyHitEvent interaction) { }
     void Defeating(DefeatEvent interaction) { }
 }
@@ -79,11 +87,36 @@ public sealed class CombatContributions
     public List<ICombatContribution> Rules { get; } = [];
 }
 
-/// <summary>Typed synchronous resolution. Notifications are separate; application is never an eventual subscriber.</summary>
+/// <summary>
+/// Typed synchronous resolution of the one harm pipeline: delivery (admission, then contact), mitigation
+/// (immunity, the source's calculation, then deflection and absorption) and application. Each stage is
+/// its own event, so a delivery owner whose timing splits the stages may raise them separately; the
+/// order it must keep is admission before contact, immunity before calculation, mitigation after both
+/// contact and calculation, and application last. Notifications are separate; application is never an
+/// eventual subscriber.
+/// </summary>
 public sealed class CombatResolution
 {
     private readonly Dictionary<string, IReadOnlyList<ICombatContribution>> _actions = new(StringComparer.Ordinal);
     public void RegisterAction(string action, params ICombatContribution[] contributions) => _actions.Add(action, contributions);
+    /// <summary>
+    /// Delivery and mitigation for one target in pipeline order, stopping at no contact or immunity.
+    /// Without <paramref name="admit"/> there is no admission step; <paramref name="contact"/> is the
+    /// delivery owner's own contact answer, which an admission refusal overrides.
+    /// </summary>
+    public HarmResolution Resolve(CombatParticipants participants, HarmChannelId channel, Action<TryHitEvent>? admit,
+        Action<DamageEvent> calculate, bool contact = true, Action<ImmunityEvent>? immunity = null, Action<MitigationEvent>? mitigate = null)
+    {
+        ArgumentNullException.ThrowIfNull(calculate);
+        TryHitEvent? admission = admit is null ? null : TryHit(participants, admit);
+        ContactEvent touched = Contact(participants, contact && admission?.Hit != false);
+        if (!touched.Contact) return new(participants, channel, admission, touched, null, null, null);
+        ImmunityEvent immune = Immunity(participants, channel, immunity);
+        if (immune.Immune) return new(participants, channel, admission, touched, immune, null, null);
+        DamageEvent calculated = Damage(participants, calculate);
+        MitigationEvent mitigated = Mitigate(participants, channel, calculated.Damage, mitigate);
+        return new(participants, channel, admission, touched, immune, calculated, mitigated);
+    }
     public TryHitEvent TryHit(CombatParticipants participants, Action<TryHitEvent> resolve)
     {
         TryHitEvent interaction = new(participants);
@@ -91,11 +124,32 @@ public sealed class CombatResolution
         foreach (ICombatContribution rule in Gather(participants)) rule.Hit(interaction);
         return interaction;
     }
+    public ContactEvent Contact(CombatParticipants participants, bool contact)
+    {
+        ContactEvent interaction = new(participants, contact);
+        foreach (ICombatContribution rule in Gather(participants)) rule.Contact(interaction);
+        return interaction;
+    }
+    public ImmunityEvent Immunity(CombatParticipants participants, HarmChannelId channel, Action<ImmunityEvent>? resolve = null)
+    {
+        ImmunityEvent interaction = new(participants, channel);
+        resolve?.Invoke(interaction);
+        foreach (ICombatContribution rule in Gather(participants)) rule.Immunity(interaction);
+        return interaction;
+    }
     public DamageEvent Damage(CombatParticipants participants, Action<DamageEvent> resolve)
     {
         DamageEvent interaction = new(participants);
         resolve(interaction);
         foreach (ICombatContribution rule in Gather(participants)) rule.Damage(interaction);
+        return interaction;
+    }
+    public MitigationEvent Mitigate(CombatParticipants participants, HarmChannelId channel, int incoming,
+        Action<MitigationEvent>? resolve = null)
+    {
+        MitigationEvent interaction = new(participants, channel, incoming);
+        resolve?.Invoke(interaction);
+        foreach (ICombatContribution rule in Gather(participants)) rule.Mitigate(interaction);
         return interaction;
     }
     public ApplyHitEvent Apply(CombatParticipants participants, int damage, Action<ApplyHitEvent> apply,
