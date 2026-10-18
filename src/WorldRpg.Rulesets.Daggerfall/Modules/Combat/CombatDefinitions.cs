@@ -47,6 +47,18 @@ internal static class DaggerfallHarmChannels
         DaggerfallMagicResistanceElement.None => Unaligned,
         _ => throw new ArgumentOutOfRangeException(nameof(element)),
     };
+
+    /// <summary>
+    /// The channel of an admitted spell effect from the bundle element it records. An effect that allows
+    /// every element takes its bundle's element, as admission did.
+    /// </summary>
+    private const DaggerfallMagicAllowedElements EveryElement = DaggerfallMagicAllowedElements.Fire | DaggerfallMagicAllowedElements.Cold
+        | DaggerfallMagicAllowedElements.Poison | DaggerfallMagicAllowedElements.Shock | DaggerfallMagicAllowedElements.Magic;
+
+    internal static HarmChannelId ForBundleElement(string? element) =>
+        Enum.TryParse(element, ignoreCase: false, out DaggerfallMagicBundleElement parsed) && Enum.IsDefined(parsed)
+            ? For(DaggerfallMagicAdmissionPolicy.GetElementType(new(true, false, false, EveryElement, parsed)))
+            : Unaligned;
 }
 
 internal readonly record struct DaggerfallAdrenalineRush(bool Enabled, bool Improved);

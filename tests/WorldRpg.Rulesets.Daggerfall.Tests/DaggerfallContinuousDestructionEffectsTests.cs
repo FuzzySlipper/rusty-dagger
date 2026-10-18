@@ -205,6 +205,31 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     }
 
     [Fact]
+    public void A_targets_amount_mitigation_reduces_each_rounds_rolled_magnitude_across_save_and_restore()
+    {
+        using Fixture f=new();var s=f.Session;var health=Track(s,1,"health");health.Maximum.BaseValue=1000;health.SetCurrent(1000);
+        Resist(s);
+        Start(s,"resisted",0,10,magnitude:10);
+        Assert.Equal(1000-6,health.Current);
+        s.State.Effects.AdvanceOrdinaryRound();Assert.Equal(1000-12,health.Current);
+        using var restored=f.Restore(s.CaptureSave());
+        // Contributions belong to their live effect owners, so the restored target's defense is attached again.
+        Resist(restored);
+        restored.State.Effects.AdvanceOrdinaryRound();Assert.Equal(1000-18,Track(restored,1,"health").Current);
+    }
+
+    private static void Resist(DaggerfallSession s)
+    {
+        s.State.Actors.Player.Actor.Get<WorldRpg.Kit.Combat.CombatContributions>().Rules.Add(new ResistMagic());
+    }
+
+    private sealed class ResistMagic:WorldRpg.Kit.Combat.ICombatContribution
+    {
+        public void Mitigate(WorldRpg.Kit.Combat.MitigationEvent interaction)
+        { if (interaction.Channel==WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerfallHarmChannels.Magic) interaction.Resisted+=4; }
+    }
+
+    [Fact]
     public void A_malformed_periodic_save_is_refused()
     {
         using Fixture f=new();var s=f.Session;Start(s,"invalid",0,100);

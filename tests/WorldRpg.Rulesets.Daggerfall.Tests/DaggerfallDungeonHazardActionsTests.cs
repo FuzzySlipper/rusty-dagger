@@ -242,6 +242,37 @@ public sealed class DaggerfallDungeonHazardActionsTests
         Assert.Equal(2UL, familyActivations);
     }
 
+    [Theory]
+    [InlineData((int)DaggerfallDungeonActionFlag.Hurt21)]
+    [InlineData((int)DaggerfallDungeonActionFlag.Hurt22)]
+    public void A_target_that_negates_physical_harm_takes_no_hurt_and_no_hurt_is_rolled(int flag)
+    {
+        using EntityDirectory entities = new();
+        Actor source = ActorWithVitals(entities, 1, health: 100, magicka: 20);
+        Actor target = ActorWithVitals(entities, 2, health: 100, magicka: 20);
+        CombatContributions defenses = new();
+        defenses.Rules.Add(new PhysicalImmunity());
+        target.Add(defenses);
+        FixedRandom random = FixedRandom.Create(5);
+        DaggerfallDungeonActionDefinition action = Action("warded", (DaggerfallDungeonActionFlag)flag, axis: 3, magnitude: 2, soundIndex: 9);
+
+        DaggerfallDungeonHazardActionResult result = DaggerfallDungeonHazardActions.Execute(
+            action, Context(source, target, targetLevel: 2, activationCount: 20), new CombatResolution(), random.Service)!;
+
+        Assert.Equal(DaggerfallDungeonActionOutcome.AppliedWithoutChange, result.Execution.Outcome);
+        Assert.Equal(100, Health(target).Current);
+        Assert.Empty(random.Requests);
+    }
+
+    private sealed class PhysicalImmunity : ICombatContribution
+    {
+        public void Negate(NegationEvent interaction)
+        {
+            if (interaction.Channel == WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerfallHarmChannels.Physical)
+                interaction.Negation = HarmNegation.Immune;
+        }
+    }
+
     private static DaggerfallDungeonHazardExecutionContext Context(
         Actor source,
         Actor target,

@@ -120,6 +120,8 @@ internal static class DaggerfallDungeonHazardActions
             return Rejected(action, $"Hurt21 action '{action.Id}' requires a durable target identity for the Engine random key.");
         }
 
+        if (Negated(action, context, combat) is { } turned) return turned;
+
         int minimum = Math.Max(1, checked((int)action.Magnitude));
         int maximumExclusive = Math.Max(1, index);
         int roll;
@@ -155,6 +157,7 @@ internal static class DaggerfallDungeonHazardActions
     {
         if (!TryGetHealth(context.Target, action, out Track? health, out DaggerfallDungeonHazardActionResult? missing))
             return missing!;
+        if (Negated(action, context, combat) is { } turned) return turned;
 
         // DFU uses Magnitude only for flat records and ActionAxisRawValue otherwise. Axis is the
         // normalized retained byte for that latter source field. Level is clamped to one exactly
@@ -196,6 +199,19 @@ internal static class DaggerfallDungeonHazardActions
             MagickaLost: lost);
     }
 
+    /// <summary>
+    /// A trap's hurt is physical harm: its target may turn it away whole before the hurt is rolled, in
+    /// which case the action applies without changing health.
+    /// </summary>
+    private static DaggerfallDungeonHazardActionResult? Negated(DaggerfallDungeonActionDefinition action,
+        DaggerfallDungeonHazardExecutionContext context, CombatResolution combat) =>
+        combat.Negate(Participants(context), DaggerfallHarmChannels.Physical).Negated
+            ? new(new DaggerfallDungeonActionExecution(action.Id, DaggerfallDungeonActionOutcome.AppliedWithoutChange,
+                Diagnostic: $"Dungeon action '{action.Id}' was turned away by its target."))
+            : null;
+
+    private static CombatParticipants Participants(DaggerfallDungeonHazardExecutionContext context) => new(context.Source, context.Target, "dungeon-hazard");
+
     private static DaggerfallDungeonHazardActionResult ApplyHealth(
         DaggerfallDungeonActionDefinition action,
         DaggerfallDungeonHazardExecutionContext context,
@@ -203,8 +219,8 @@ internal static class DaggerfallDungeonHazardActions
         Track health,
         int damage)
     {
-        // A trap's hurt reaches its target as physical harm, mitigated before it applies.
-        CombatParticipants participants = new(context.Source, context.Target, "dungeon-hazard");
+        // The rolled hurt is mitigated as physical harm before it applies.
+        CombatParticipants participants = Participants(context);
         ApplyHitEvent applied = combat.ApplyToHealth(participants,
             combat.Mitigate(participants, DaggerfallHarmChannels.Physical, damage).Damage,
             health);

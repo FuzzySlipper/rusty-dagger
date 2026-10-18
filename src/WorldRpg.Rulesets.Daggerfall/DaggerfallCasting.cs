@@ -522,22 +522,27 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
                     && resistanceChance > 0 && roll(1, 100) <= resistanceChance)
                     value.Negation = HarmNegation.Resisted;
             });
+            // One presentation of a whole-effect negation, before or after the effect's magnitude: classic
+            // absorption refunds the cost it admitted, a deflection reflects the bundle at its caster where
+            // classic reflection could, and a deflection with nowhere to reflect is withstood.
+            DaggerfallCastOutcome Turned(HarmNegation turned, int refund)
+            {
+                switch (turned)
+                {
+                    case HarmNegation.Immune: return DaggerfallCastOutcome.Immune;
+                    case HarmNegation.Absorbed:
+                        absorbed = checked(absorbed + refund);
+                        if (refund > 0) absorptionItems.UnionWith(defense.AbsorptionItems ?? []);
+                        return DaggerfallCastOutcome.Absorbed;
+                    case HarmNegation.Deflected when reflectTo is long caster:
+                        bundle.Reflected = true;
+                        DeliverTo(bundle, caster, reflected: true, roll);
+                        return DaggerfallCastOutcome.Reflected;
+                    default: return DaggerfallCastOutcome.Resisted;
+                }
+            }
             DaggerfallCastOutcome outcome;
-            if (negation.Negation == HarmNegation.Immune) outcome = DaggerfallCastOutcome.Immune;
-            else if (negation.Negation == HarmNegation.Absorbed)
-            {
-                absorbed = checked(absorbed + absorptionRefund);
-                if (absorptionRefund > 0) absorptionItems.UnionWith(defense.AbsorptionItems ?? []);
-                outcome = DaggerfallCastOutcome.Absorbed;
-            }
-            else if (negation.Negation == HarmNegation.Deflected && reflectTo is long caster)
-            {
-                bundle.Reflected = true;
-                DeliverTo(bundle, caster, reflected: true, roll);
-                outcome = DaggerfallCastOutcome.Reflected;
-            }
-            // A deflection with nowhere to reflect, like any other negation, is withstood.
-            else if (negation.Negated) outcome = DaggerfallCastOutcome.Resisted;
+            if (negation.Negated) outcome = Turned(negation.Negation, absorptionRefund);
             else if (!bundle.BypassChance && !(binding.BypassItemChance && bundle.ItemId is not null)
                 && binding.RollChanceOnCast && roll(1, 100) > DaggerfallMagicAdmissionPolicy.CalculateEffectChance(setting, bundle.CasterLevel)) outcome = DaggerfallCastOutcome.ChanceFailed;
             else
@@ -554,9 +559,9 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
                 int permanentPercent = 100;
                 if (binding.UntilHealed)
                 {
-                    (permanentAmount, permanentPercent, bool withstood) = SavingThrow(participants, channel, permanentAmount, scales: true,
+                    (permanentAmount, permanentPercent, HarmNegation withstood) = SavingThrow(participants, channel, permanentAmount, scales: true,
                         bundle.BypassSave || bundle.Target == DaggerfallSpellTarget.CasterOnly ? null : () => DaggerfallMagicAdmissionPolicy.SavingThrow(source, liveProfile, () => roll(1, 100)));
-                    if (withstood) { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.Resisted, 0)); continue; }
+                    if (withstood != HarmNegation.None) { bundle.Results.Add(new(i, targetId, Turned(withstood, 0), 0)); continue; }
                 }
                 // An actorless action still carries its admitted source provenance into the
                 // common effect owner. Immediate destruction uses that typed action source to
@@ -589,9 +594,9 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
                 if (!binding.UntilHealed)
                 {
                     // Non-magnitude saves reject at zero and otherwise retain the full effect.
-                    (int saved, percent, bool withstood) = SavingThrow(participants, channel, amount, scales: binding.SupportsMagnitude,
+                    (int saved, percent, HarmNegation withstood) = SavingThrow(participants, channel, amount, scales: binding.SupportsMagnitude,
                         bundle.BypassSave || bundle.Target == DaggerfallSpellTarget.CasterOnly ? null : () => DaggerfallMagicAdmissionPolicy.SavingThrow(source, liveProfile, () => roll(1, 100)));
-                    if (withstood) { bundle.Results.Add(new(i, targetId, DaggerfallCastOutcome.Resisted, 0)); continue; }
+                    if (withstood != HarmNegation.None) { bundle.Results.Add(new(i, targetId, Turned(withstood, 0), 0)); continue; }
                     amount = saved;
                 }
                 uint? duration = baseDuration;
@@ -638,10 +643,11 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
     /// The classic saving throw as the harm pipeline's mitigation of one admitted effect on its element
     /// channel: a zero percentage withstands the whole effect, and a partial one resists the share of a
     /// magnitude it does not let through. Without a throw (a bypassed save or a self-cast) the whole
-    /// effect passes. Returns the amount that lands, the classic percentage the effect records, and
-    /// whether the effect was withstood.
+    /// effect passes. A magnitude rolled each round is mitigated when that round rolls it, so here its
+    /// amount is zero and only a whole-effect negation decides. Returns the amount that lands, the classic
+    /// percentage the effect records, and how the whole effect was turned away, if it was.
     /// </summary>
-    private (int Amount, int Percent, bool Withstood) SavingThrow(CombatParticipants participants, HarmChannelId channel,
+    private (int Amount, int Percent, HarmNegation Withstood) SavingThrow(CombatParticipants participants, HarmChannelId channel,
         int amount, bool scales, Func<int>? savingThrow)
     {
         int percent = 100;
@@ -651,7 +657,7 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
             if (percent == 0) value.Negation = HarmNegation.Resisted;
             else if (scales) value.Resisted = value.Incoming - (int)(value.Incoming * (percent / 100f));
         });
-        return (scales ? mitigation.Damage : amount, percent, mitigation.Negation != HarmNegation.None);
+        return (scales ? mitigation.Damage : amount, percent, mitigation.Negation);
     }
 
     /// <summary>The caster against the target, or the target alone for an actorless source.</summary>
