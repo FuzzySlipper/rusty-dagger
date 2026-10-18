@@ -258,6 +258,33 @@ public sealed class DaggerfallEnemyMagicSessionTests
     }
 
     [Fact]
+    public void A_contact_touch_that_meets_no_one_is_one_paid_admitted_cast_with_no_physical_fallback_across_the_catch_up_window()
+    {
+        using Fixture fixture = new(contact: true);
+        DaggerfallSession session = fixture.Session;
+        WorldPoint playerPosition = session.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The fixture player has no position.");
+        // A ghost's only spell is a touch; its volume meets no body because no contact is answered.
+        long ghost = session.SpawnActor("ghost", new ActorPose(playerPosition with { Z = playerPosition.Z - 1f }, 0f), level: 1);
+        Track magicka = session.State.Actors.Get(ghost).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value));
+        magicka.SetCurrent(1000, clamp: true);
+        double before = magicka.Current;
+        long sequence = session.Casting.NextSequence;
+        fixture.Perception.Receipt = Receipt(new PerceptionPair(
+            checked((ulong)ghost), checked((ulong)DaggerfallActorIdentity.PlayerEntityId), 1d, 1d,
+            PerceptionPairKind.Visible, 1d));
+
+        session.Update(new ProductUpdate(OuterUpdate(1) with { SimulationStep = 3, AdmittedStepCount = 3 }, []));
+
+        Assert.True(session.LastEnemySpell.TryGetValue(ghost, out DaggerfallEnemySpellEvidence? evidence));
+        Assert.Equal(("spell.033", DaggerfallCastOutcome.Missed), (evidence!.SpellKey, evidence.Outcome));
+        Assert.Equal(sequence + 1, session.Casting.NextSequence);
+        Assert.True(magicka.Current < before);
+        Assert.Null(session.State.Actors.Get(ghost).Attack.Pending);
+        Assert.NotEmpty(fixture.Spatial.OverlapContactsRequests);
+    }
+
+    [Fact]
     public void Human_class_caster_uses_its_level_tier_through_the_same_enemy_decision()
     {
         using Fixture fixture = new();
@@ -311,7 +338,8 @@ public sealed class DaggerfallEnemyMagicSessionTests
         internal SpatialFake Spatial { get; }
         internal PerceptionFake Perception { get; }
 
-        internal Fixture()
+        /// <param name="contact">Whether the game runs under the contact + mitigation variant's bundle.</param>
+        internal Fixture(bool contact = false)
         {
             string root = TestData.RepositoryRoot;
             DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -322,8 +350,8 @@ public sealed class DaggerfallEnemyMagicSessionTests
             Perception = PerceptionFake.Create();
             EngineContextFake engine = EngineContextFake.Create(content, Spatial.Service,
                 new AppearanceFake(releases), Perception.Service);
-            Session = DaggerfallSession.StartNew(engine.Context,
-                new(definitions, inputs, DaggerfallTuning.Defaults));
+            DaggerfallSessionComposition composition = contact ? ContactComposition(inputs) : new(definitions, inputs, DaggerfallTuning.Defaults);
+            Session = DaggerfallSession.StartNew(engine.Context, composition);
         }
 
         public void Dispose() => Session.Dispose();

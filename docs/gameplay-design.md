@@ -137,8 +137,11 @@ composition builds the selected variant's owner or classic's. The first variant,
 mitigation: no to-hit roll, swings and arrows harm whoever they physically meet,
 and targets deflect or absorb by channel through its own tuning profile. It
 also claims the player guard seam: holding the product's `block` intent raises a
-guard that costs stamina and adds deflection, and classic's guard owner reads
-no input at all. Its touch delivery seam owner sends a touch spell to every
+guard that costs stamina and adds deflection, stays down for a swing's whole
+strike, and keeps action-driven time running while it rises, holds or settles;
+classic's guard owner reads no input at all. Worn armor enchantments shift what
+the player's armor absorbs, and a connect trains the weapon skill even when it
+is deflected. Its touch delivery seam owner sends a touch spell to every
 actor its touch volume contacts at the cast frame, and a touch that meets no one
 is still released and misses; classic's owner keeps the short capsule pick and
 the enemy behavior's admitted target. A variant composes all of its owners together, so they can

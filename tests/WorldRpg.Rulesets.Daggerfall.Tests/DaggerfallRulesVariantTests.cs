@@ -104,7 +104,7 @@ public sealed class DaggerfallRulesVariantTests
 
     /// <summary>Session reads for building owners; nothing here reads equipment.</summary>
     private static DaggerfallSeamInputs Inputs => new(TestPayload.Definitions, () => null, RandomMaximum.Create(),
-        _ => throw new NotSupportedException("These owners read no equipment."), _ => null);
+        _ => throw new NotSupportedException("These owners read no equipment."), _ => null, () => 0);
 
     private static ProductContent Content(params (string Path, string Value)[] files) =>
         new(files.Select(file => new ProductContentFile(Encoding.UTF8.GetBytes(file.Path), Encoding.UTF8.GetBytes(file.Value))).ToArray());

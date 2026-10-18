@@ -38,6 +38,7 @@
   "absorption": {
     "perArmorPoint": 0.4,
     "perShieldPoint": 0.4,
+    "perArmorValueShift": 0.2,
     "monsterArmorBaseline": 10,
     "monsterAbsorbPerPoint": 0.5,
     "channelMultipliers": {

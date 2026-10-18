@@ -51,6 +51,12 @@ internal interface IDaggerfallPhysicalDelivery
     /// <summary>Whether a swing that found no target still waits for its hit frame, where contact decides whom it reaches.</summary>
     bool UntargetedSwingsWaitForImpact { get; }
 
+    /// <summary>
+    /// Whether a pending impact still resolves after the actor it was aimed at is defeated or gone, because
+    /// contact at the impact decides whom it reaches rather than the admitted target.
+    /// </summary>
+    bool ImpactsOutliveTheirTarget { get; }
+
     /// <summary>Prepares an admitted attack's delivery; false refuses it, with the reason already published.</summary>
     bool TryPrepare(DaggerfallAdmittedAttack admitted, FactBuffer<IProductFact> facts, out PreparedPhysicalAttack prepared);
 
@@ -156,6 +162,7 @@ internal sealed class DaggerfallClassicPhysicalDelivery(IDaggerfallPhysicalHarmO
     private readonly Dictionary<RangedShotIdentity, InFlightRangedShot> _inFlightRangedShots = [];
 
     public bool UntargetedSwingsWaitForImpact => false;
+    public bool ImpactsOutliveTheirTarget => false;
 
     public bool HasPlayerFlight => _releasedRangedShots.Any(shot => shot.Request.AttackerId == PlayerId)
         || _inFlightRangedShots.Values.Any(shot => shot.Release.Request.AttackerId == PlayerId);

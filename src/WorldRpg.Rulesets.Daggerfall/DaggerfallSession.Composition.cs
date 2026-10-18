@@ -341,7 +341,8 @@ internal sealed partial class DaggerfallSession
                 _contact, StrikePose, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion));
             DaggerfallSeamInputs SeamInputs() => new(definitions, () => character, _random,
                 id => id == actors.Player.DurableId ? equipmentCoordinator.Read() : actorInventories.EquipmentFor(id).Read(),
-                id => id == actors.Player.DurableId ? actors.Player.Stats : actors.TryGet(id, out ActorState actor) ? actor.Stats : null);
+                id => id == actors.Player.DurableId ? actors.Player.Stats : actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
+                () => _heldEnchantments.ArmorValueModifier);
             _equipmentMoves.Changed += _combat.EquipmentChanged;
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(

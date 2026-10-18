@@ -487,7 +487,18 @@ internal static class TestSessions
     internal static DaggerfallSiteAppearance.EffectVisual Effect(DaggerfallSiteAppearance presentation) => Assert.Single((List<DaggerfallSiteAppearance.EffectVisual>)typeof(DaggerfallSiteAppearance).GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation)!);
     internal static DaggerfallSiteAppearance.ViewmodelVisual Viewmodel(DaggerfallSiteAppearance presentation) => Assert.IsType<DaggerfallSiteAppearance.ViewmodelVisual>(typeof(DaggerfallSiteAppearance).GetField("viewmodel", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation));
 
-    internal static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d, Action<EngineContextFake>? engineCreated = null)
+    /// <summary>A session composition under the <c>daggerfall.contact</c> bundle, with its compiled variant's owners.</summary>
+    internal static DaggerfallSessionComposition ContactComposition(DaggerfallSiteProfile inputs)
+    {
+        ResolvedGameComposition resolved = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.contact"),
+            [.. WorldRpg.Rulesets.Daggerfall.Variants.DaggerfallVariants.All.Select(variant => variant.Manifest)]).RequireComposition();
+        return new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults, resolved.Identity)
+        {
+            Seams = DaggerfallSeamSelection.From(resolved.Variants, WorldRpg.Rulesets.Daggerfall.Variants.DaggerfallVariants.All),
+        };
+    }
+
+    internal static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d, Action<EngineContextFake>? engineCreated = null, bool contact = false)
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -500,7 +511,7 @@ internal static class TestSessions
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         engineCreated?.Invoke(engine);
-        return (DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)), appearance, perception);
+        return (DaggerfallSession.StartNew(engine.Context, contact ? ContactComposition(inputs) : new(definitions, inputs, DaggerfallTuning.Defaults)), appearance, perception);
     }
 
     internal static long PlayerHealth(DaggerfallSession session) => session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).ValueInt64;

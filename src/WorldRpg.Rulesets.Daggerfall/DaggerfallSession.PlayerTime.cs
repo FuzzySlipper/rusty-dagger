@@ -17,6 +17,9 @@ internal sealed partial class DaggerfallSession
     internal bool ActionDrivenPlay => _controlSettings.ActionDrivenTime;
     internal bool PlayerTimeHeld => _playerTime?.Held == true;
 
+    /// <summary>Whether the player's guard is raised now; never under a ruleset with no guard.</summary>
+    internal bool PlayerGuardRaised => _guard.Raised;
+
     private void ChangePlayerTime(bool enabled)
     {
         _controlSettings.SetActionDrivenTime(enabled);
@@ -74,7 +77,7 @@ internal sealed partial class DaggerfallSession
             // momentum needs settling here; airborne gravity is covered by falling above.
             || falling || new Vector2(motion.ControlledVelocity.X, motion.ControlledVelocity.Z).LengthSquared() > .0001f
             || motion.ExternalVelocity.LengthSquared() > .0001f;
-        bool action = _pendingWorldAction || _input.HasPendingActions || !_appearance.CanStartPlayerAttack || !_combat.PlayerWeaponReady
+        bool action = _pendingWorldAction || _input.HasPendingActions || _guard.WantsTime || !_appearance.CanStartPlayerAttack || !_combat.PlayerWeaponReady
             || State.Actors.Player.Attack.ReadyAtStep > facts.SimulationStep
             || _combat.HasPlayerRangedFlight
             || Casting.PendingRangedFlights.Any(flight => flight.CasterId == DaggerfallActorIdentity.PlayerEntityId)

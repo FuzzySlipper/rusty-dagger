@@ -41,9 +41,13 @@ public interface IAttackRules<TFact> where TFact : IWorldRpgFact
     void Apply(AttackRequest request, PreparedAttack attack, FactBuffer<TFact> facts);
 }
 
-/// <summary>Single live owner for readiness, pending impacts and cancellation, over attached actor state.</summary>
+/// <summary>
+/// Single live owner for readiness, pending impacts and cancellation, over attached actor state. A pending
+/// impact is dropped when its admitted target is gone, unless <paramref name="impactsOutliveTheirTarget"/>
+/// says the ruleset decides at the impact itself whom it reaches.
+/// </summary>
 public sealed class AttackExecution<TFact>(ActorsState actors, IAttackRules<TFact> rules,
-    Func<DeferredAttackImpact, FactBuffer<TFact>, bool>? deferImpact = null) where TFact : IWorldRpgFact
+    Func<DeferredAttackImpact, FactBuffer<TFact>, bool>? deferImpact = null, bool impactsOutliveTheirTarget = false) where TFact : IWorldRpgFact
 {
     private AttackState State(long actor) => actors.Get(actor).Actor.Get<AttackState>();
     private bool Exists(long actor) => actors.Entities.TryResolve(ActorsState.Identity(actor), out _);
@@ -89,7 +93,7 @@ public sealed class AttackExecution<TFact>(ActorsState actors, IAttackRules<TFac
                 || pending.Request.SimulationStep != notice.SimulationStep || (pending.Request.TargetId ?? 0) != notice.TargetId) continue;
             state.Pending = null;
             if (notice.Expired || notice.Generation != generation || Defeated(notice.AttackerId)
-                || pending.Request.TargetId is long target && (!Exists(target) || Defeated(target))) continue;
+                || !impactsOutliveTheirTarget && pending.Request.TargetId is long target && (!Exists(target) || Defeated(target))) continue;
             DeferredAttackImpact impact = new(pending.Request, pending.Attack);
             if (deferImpact?.Invoke(impact, facts) == true) continue;
             rules.Apply(impact.Request, impact.Attack, facts);

@@ -76,6 +76,10 @@ internal sealed class DaggerfallContactMitigation(DaggerfallSeamContext context,
             else if (item.Shield is { } shield && assignment.Slot.Value == "left-hand" && DaggerCombatRules.ShieldCovers(item, harm.BodyPart))
                 points += shield.Armor * tuning.AbsorptionPerShieldPoint;
         }
+        // The player's worn armor enchantments shift its whole armor value once, not any one piece; the
+        // donor's value falls as armor strengthens, so a negative shift absorbs more.
+        if (harm.TargetId == DaggerfallActorIdentity.PlayerEntityId)
+            points = Math.Max(0d, points - context.Session.PlayerArmorValueModifier() * tuning.AbsorptionPerArmorValueShift);
         // A monster's natural armour class is lower the tougher its hide; the baseline is an unarmoured beast.
         if (harm.Target.Kind == DaggerfallActorKinds.Monster)
             points += Math.Max(0d, tuning.MonsterArmorBaseline - harm.Target.Armor) * tuning.MonsterAbsorptionPerPoint;

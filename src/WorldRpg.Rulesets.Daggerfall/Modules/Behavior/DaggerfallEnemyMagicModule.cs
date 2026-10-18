@@ -191,7 +191,8 @@ internal sealed class DaggerfallEnemyMagicModule
         DaggerfallCastResult result = _execute(attempt);
         _last[attempt.ActorId] = new(attempt.ActorId, attempt.SpellKey, attempt.Target, result.Outcome,
             generation, simulationStep);
-        return result.Outcome is DaggerfallCastOutcome.Released or DaggerfallCastOutcome.DeliveryCompleted;
+        // A cast that reached no one is still a released, paid action (a contact touch that met no body).
+        return result.Outcome is DaggerfallCastOutcome.Released or DaggerfallCastOutcome.DeliveryCompleted or DaggerfallCastOutcome.Missed;
     }
 
     private string Select(IReadOnlyList<string> keys, long actorId, ulong generation, ulong simulationStep, string lane)
