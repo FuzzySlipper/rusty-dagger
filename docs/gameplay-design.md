@@ -81,7 +81,7 @@ harm source can use:
 1. **Delivery**: `TryHitEvent` is the pre-contact admission a ruleset can use for
    a to-hit roll; `ContactEvent` records whether the harm reached this target.
    The delivery owner supplies the base contact answer (an admitted target, a
-   collision), and an admission refusal means no contact.
+   collision). An admission refusal is final: no contact is raised.
 2. **Mitigation**: `NegationEvent` decides before calculation whether the
    target turns the whole harm on a typed `HarmChannelId` away (`HarmNegation`:
    immune, deflected, absorbed or resisted), so a negated harm is never

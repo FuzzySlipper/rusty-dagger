@@ -101,14 +101,16 @@ public sealed class CombatResolution
     /// <summary>
     /// Delivery and mitigation for one target in pipeline order, stopping at no contact or negation.
     /// Without <paramref name="admit"/> there is no admission step; <paramref name="contact"/> is the
-    /// delivery owner's own contact answer, which an admission refusal overrides.
+    /// delivery owner's own contact answer. An admission refusal is final: no contact is raised, so no
+    /// contact contribution can turn a refused attempt into a hit.
     /// </summary>
     public HarmResolution Resolve(CombatParticipants participants, HarmChannelId channel, Action<TryHitEvent>? admit,
         Action<DamageEvent> calculate, bool contact = true, Action<NegationEvent>? negate = null, Action<MitigationEvent>? mitigate = null)
     {
         ArgumentNullException.ThrowIfNull(calculate);
         TryHitEvent? admission = admit is null ? null : TryHit(participants, admit);
-        ContactEvent touched = Contact(participants, contact && admission?.Hit != false);
+        if (admission is { Hit: false }) return new(participants, channel, admission, null, null, null, null);
+        ContactEvent touched = Contact(participants, contact);
         if (!touched.Contact) return new(participants, channel, admission, touched, null, null, null);
         NegationEvent negation = Negate(participants, channel, negate);
         if (negation.Negated) return new(participants, channel, admission, touched, negation, null, null);
