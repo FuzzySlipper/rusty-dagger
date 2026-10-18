@@ -690,6 +690,7 @@ public sealed class SpriteWorkbenchProductTests
     private sealed class AppearanceFake : IGraphicsService
     {
         public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
+        public LandmarkReadResult ReadLandmarks(LandmarkReadRequest request) => throw new NotSupportedException();
         public void PublishChanges(AppearanceChangesRequest request) => throw new NotSupportedException();
         public void PublishOverlaySet(OverlaySetRequest request) => throw new NotSupportedException("This test double does not publish overlays.");
 

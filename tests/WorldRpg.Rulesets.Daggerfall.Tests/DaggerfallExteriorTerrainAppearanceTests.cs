@@ -360,6 +360,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         public void SetSpriteFrame(SpriteFrameUpdateRequest request) => throw new NotSupportedException();
         public void SetSpriteViewport(SpriteViewportUpdateRequest request) => throw new NotSupportedException();
         public SpriteReadout ReadSprite(Appearance appearance) => throw new NotSupportedException();
+        public LandmarkReadResult ReadLandmarks(LandmarkReadRequest request) => throw new NotSupportedException();
         public SpritePlayback CreateSpritePlayback(SpritePlaybackCreateRequest request) => throw new NotSupportedException();
         public SpritePlaybackReadout ControlSpritePlayback(SpritePlaybackControlRequest request) => throw new NotSupportedException();
         public SpritePlaybackReadout SelectSpritePlaybackFrame(SpritePlaybackFrameSelectionRequest request) => throw new NotSupportedException();

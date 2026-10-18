@@ -172,6 +172,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     }
     public LightReadout ReadLight(Light light) => default;
     public PresentationReadout ReadPresentation() => default;
+    public LandmarkReadResult ReadLandmarks(LandmarkReadRequest request) => throw new NotSupportedException();
 
     private Appearance CreateAppearance()
     {

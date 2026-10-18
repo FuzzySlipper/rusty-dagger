@@ -31,6 +31,15 @@ public readonly record struct SegmentContact(ContactKind Kind, long? ActorId, Ve
     public static SegmentContact None { get; } = new(ContactKind.None, null, default, 0d);
 }
 
+/// <summary>One actor body a delivery volume touches, at the point on its surface the Engine reports.</summary>
+public readonly record struct ActorVolumeContact(long ActorId, Vector3 Point, double PenetrationDepth);
+
+/// <summary>
+/// Every actor a delivery volume touches, in the Engine's deterministic order, after world occlusion;
+/// whether the volume also overlaps world geometry; and whether the Engine's bound left contacts out.
+/// </summary>
+public sealed record VolumeContact(IReadOnlyList<ActorVolumeContact> Actors, bool World, bool Truncated);
+
 /// <summary>
 /// Harm delivery's physical contact queries over the admitted Engine scene. Actor bodies are query-local
 /// colliders projected from canonical actor state for each call, never a second collision world: site
@@ -71,13 +80,48 @@ public sealed class ActorContact
     }
 
     /// <summary>The live eligible actor an Engine hit names, or none for world geometry and other bodies.</summary>
-    public long? ActorFor(SpatialHit hit)
+    public long? ActorFor(SpatialHit hit) => hit.Present && hit.Kind == SpatialHitKind.Entity ? ActorFor(hit.Entity) : null;
+
+    private long? ActorFor(ulong entity)
     {
-        if (!hit.Present || hit.Kind != SpatialHitKind.Entity) return null;
-        if (_actors.Player.Actor.Entity.Value == hit.Entity) return _actors.Player.DurableId;
-        return _actors.All.Where(actor => _eligible(actor.DurableId) && actor.Actor.Entity.Value == hit.Entity)
+        if (_actors.Player.Actor.Entity.Value == entity) return _actors.Player.DurableId;
+        return _actors.All.Where(actor => _eligible(actor.DurableId) && actor.Actor.Entity.Value == entity)
             .Select(actor => (long?)actor.DurableId).SingleOrDefault();
     }
+
+    /// <summary>
+    /// Every live eligible actor a delivery volume touches during one admitted step: a melee swing's
+    /// volume at its hit frame, or a touch spell's reach. The shape is placed at
+    /// <paramref name="pose"/> and tested against the actor bodies, ignoring its own
+    /// <paramref name="source"/>. An actor the volume reaches only through world geometry is not
+    /// touched: the line from <paramref name="origin"/> (the attacker's eye or chest) to the contact
+    /// must be clear of the world. Actor bodies do not shield one another, so one swing can touch several.
+    /// </summary>
+    public VolumeContact Volume(long? source, SpatialShape shape, SpatialPose pose, Vector3 origin, CharacterStepEnvironment? environment = null)
+    {
+        (SpatialContact[] contacts, bool world, bool truncated) = _spatial.OverlapContacts(shape, pose, Colliders(source), environment);
+        List<ActorVolumeContact> touched = [];
+        foreach (SpatialContact contact in contacts)
+        {
+            if (contact.Kind != SpatialHitKind.Entity || ActorFor(contact.Entity) is not long actor
+                || touched.Any(value => value.ActorId == actor) || Occluded(origin, contact.Point, environment)) continue;
+            touched.Add(new(actor, contact.Point, contact.PenetrationDepth));
+        }
+        return new(touched, world, truncated);
+    }
+
+    /// <summary>Whether world geometry or a call-local obstacle stands on the line between two points.</summary>
+    private bool Occluded(Vector3 from, Vector3 to, CharacterStepEnvironment? environment)
+    {
+        Vector3 delta = to - from;
+        float distance = delta.Length();
+        if (!float.IsFinite(distance) || distance <= OcclusionTolerance) return false;
+        SpatialHit hit = _spatial.CastRay(from, delta / distance, distance, ReadOnlyMemory<SpatialEntityCollider>.Empty, environment);
+        return hit.Present && hit.Distance < distance - OcclusionTolerance;
+    }
+
+    /// <summary>How far short of a contact point the world may end without occluding it, absorbing surface rounding.</summary>
+    private const float OcclusionTolerance = .001f;
 
     /// <summary>
     /// The first world surface or actor body a projectile meets moving from <paramref name="from"/> to

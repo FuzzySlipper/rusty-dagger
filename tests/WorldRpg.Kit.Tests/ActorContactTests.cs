@@ -86,12 +86,46 @@ public sealed class ActorContactTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new ActorBodyEnvelope(.3f, float.NaN));
     }
 
+    private static SpatialShape Reach(float fromX, float toX) => SpatialShape.Aabb(new(fromX, .5f, -.5f), new(toX, 1.5f, .5f));
+
+    [Fact]
+    public void A_volume_touches_every_actor_body_in_it_in_the_engines_order_and_ignores_its_source()
+    {
+        using Scene scene = new();
+        VolumeContact swing = scene.Contact.Volume(1, Reach(1f, 5f), SpatialPose.Identity, Chest);
+        Assert.Equal([2L, 3L], swing.Actors.Select(actor => actor.ActorId));
+        Assert.False(swing.World);
+        Assert.DoesNotContain(scene.Spatial.Overlaps[^1].Entities.ToArray(), collider => collider.Entity == scene.Entity(1));
+
+        VolumeContact fromNear = scene.Contact.Volume(2, Reach(1f, 5f), SpatialPose.Identity, new(2f, 1f, 0f));
+        Assert.Equal([3L], fromNear.Actors.Select(actor => actor.ActorId));
+    }
+
+    [Fact]
+    public void A_volume_does_not_touch_an_actor_it_reaches_only_through_world_geometry()
+    {
+        using Scene scene = new() { WallAt = 3f, WorldOverlap = true };
+        VolumeContact swing = scene.Contact.Volume(1, Reach(1f, 5f), SpatialPose.Identity, Chest);
+        Assert.Equal([2L], swing.Actors.Select(actor => actor.ActorId)); // The wall stands between the chest and actor 3.
+        Assert.True(swing.World);
+    }
+
+    [Fact]
+    public void A_volume_with_nothing_in_reach_touches_no_one_and_defeated_bodies_are_not_touched()
+    {
+        using Scene scene = new();
+        Assert.Empty(scene.Contact.Volume(1, Reach(-5f, -1f), SpatialPose.Identity, Chest).Actors);
+        scene.Actors.Get(2).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
+        Assert.Equal([3L], scene.Contact.Volume(1, Reach(1f, 5f), SpatialPose.Identity, Chest).Actors.Select(actor => actor.ActorId));
+    }
+
     private sealed class Scene : IDisposable
     {
         internal ActorsState Actors { get; } = new();
         internal SpatialDouble Spatial { get; } = SpatialDouble.Create();
         internal ActorContact Contact { get; }
         internal float? WallAt { get => Spatial.WallAt; init => Spatial.WallAt = value; }
+        internal bool WorldOverlap { get => Spatial.WorldOverlap; init => Spatial.WorldOverlap = value; }
         private readonly SpatialMovementSystem _movement;
         private readonly PlayerControlState _player = new(new WorldPoint(0f, 1f, 0f), 0f, 0f);
 
@@ -137,7 +171,9 @@ public sealed class ActorContactTests
     {
         public ISpatialService Service { get; private set; } = null!;
         public List<SpatialRaycastRequest> Requests { get; } = [];
+        public List<SpatialContactQueryRequest> Overlaps { get; } = [];
         public float? WallAt { get; set; }
+        public bool WorldOverlap { get; set; }
         public static SpatialDouble Create()
         {
             ISpatialService service = DispatchProxy.Create<ISpatialService, SpatialDouble>();
@@ -152,6 +188,7 @@ public sealed class ActorContactTests
             nameof(ISpatialService.CreateSession) => new SpatialSession(new SpatialSessionHandle(1), static () => { }),
             nameof(ISpatialService.ReplaceContentArtifact) => new SpatialContentArtifactReplaceReceipt(),
             nameof(ISpatialService.CastRay) => Cast((SpatialRaycastRequest)arguments![0]!),
+            nameof(ISpatialService.OverlapContacts) => Overlap((SpatialContactQueryRequest)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
 
@@ -167,6 +204,22 @@ public sealed class ActorContactTests
             if (kind == SpatialHitKind.None) return default;
             return new SpatialHit(true, kind, entity, 0, 0, 0, 0, 0, 0, default,
                 request.Origin + request.Direction * (float)best, -request.Direction, best, 0d, 0d, false, true);
+        }
+
+        /// <summary>The supplied boxes an axis-aligned query box overlaps, by entity, each at its point nearest the box's centre.</summary>
+        private SpatialContactResult Overlap(SpatialContactQueryRequest request)
+        {
+            Overlaps.Add(request);
+            Vector3 min = request.Shape.Center - request.Shape.HalfExtents + request.Start.Translation;
+            Vector3 max = request.Shape.Center + request.Shape.HalfExtents + request.Start.Translation;
+            Vector3 center = (min + max) / 2f;
+            SpatialContact[] contacts = [.. request.Entities.ToArray()
+                .Where(collider => collider.Min.X <= max.X && collider.Max.X >= min.X && collider.Min.Y <= max.Y && collider.Max.Y >= min.Y
+                    && collider.Min.Z <= max.Z && collider.Max.Z >= min.Z)
+                .OrderBy(collider => collider.Entity)
+                .Select(collider => new SpatialContact(SpatialHitKind.Entity, collider.Entity, 0, 0, 0, 0, 0,
+                    Vector3.Clamp(center, collider.Min, collider.Max), Vector3.Zero, 0d, .1d, false))];
+            return new(contacts, WorldOverlap, false, 1, 1);
         }
 
         /// <summary>Where a ray first enters a box, ignoring a box it starts inside the way a cast from a body leaves it.</summary>
