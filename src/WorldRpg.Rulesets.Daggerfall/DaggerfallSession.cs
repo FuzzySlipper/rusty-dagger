@@ -116,6 +116,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>The selected player guard seam owner; classic has none.</summary>
     private readonly IDaggerfallPlayerGuard _guard;
+    private readonly IDaggerfallTouchDelivery _touch;
 
     /// <summary>A focus, mode, rest or travel change drops a held guard with the rest of the held input.</summary>
     private void NeutralizeGuard() => _guard.Neutralize(_latestUpdateGeneration ?? 0UL, _latestSimulationStep ?? 0UL, _facts);

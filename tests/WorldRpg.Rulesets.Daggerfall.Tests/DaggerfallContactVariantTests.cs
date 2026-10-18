@@ -5,10 +5,12 @@ using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Combat;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Facts;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Variants;
 using Xunit;
 using Fixture = WorldRpg.Rulesets.Daggerfall.Tests.DaggerCombatDamagePolicyTests.DamagePolicyFixture;
@@ -27,7 +29,7 @@ public sealed class DaggerfallContactVariantTests
     private static string TuningPath => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/variant-tuning-payloads/daggerfall.contact.json");
 
     [Fact]
-    public void The_contact_bundle_selects_the_variant_for_both_physical_seams_and_classic_selects_none()
+    public void The_contact_bundle_selects_the_variant_for_its_physical_and_touch_seams_and_classic_selects_none()
     {
         ProductContent content = TestSessions.FullContent(TestData.RepositoryRoot);
         RulesVariantManifest[] compiled = [.. DaggerfallVariants.All.Select(variant => variant.Manifest)];
@@ -40,6 +42,7 @@ public sealed class DaggerfallContactVariantTests
         Assert.Equal(classic.ContentPacks.Select(pack => pack.Id), contact.ContentPacks.Select(pack => pack.Id));
         DaggerfallSeamSelection selection = DaggerfallSeamSelection.From(contact.Variants, DaggerfallVariants.All);
         Assert.Equal((DaggerfallVariants.Contact, DaggerfallVariants.Contact), (selection.PhysicalDeliveryVariant!.Value, selection.PhysicalMitigationVariant!.Value));
+        Assert.Equal(DaggerfallVariants.Contact, selection.TouchDeliveryVariant);
         DaggerfallContactTuning tuning = DaggerfallContactTuning.Read(contact.Variants.Single().Tuning.Payload.Span);
         Assert.Equal(new DaggerfallChannelDeflection(DaggerfallDeflectionMode.Partial, .5d), tuning.DeflectionFor(DaggerfallHarmChannels.Blunt));
         Assert.Equal(DaggerfallDeflectionMode.Full, tuning.DeflectionFor(DaggerfallHarmChannels.Edged)!.Mode);
@@ -249,7 +252,7 @@ public sealed class DaggerfallContactVariantTests
         using Fixture fixture = new(variant: Contact);
         DaggerfallSeamOwners owners = fixture.Owners!;
         Assert.IsType<DaggerfallContactGuard>(owners.PlayerGuard);
-        Assert.Equal([DaggerfallRulesSeams.PhysicalMitigation, DaggerfallRulesSeams.PhysicalDelivery, DaggerfallRulesSeams.PlayerGuard], owners.Seams);
+        Assert.Equal([DaggerfallRulesSeams.PhysicalMitigation, DaggerfallRulesSeams.PhysicalDelivery, DaggerfallRulesSeams.PlayerGuard, DaggerfallRulesSeams.TouchDelivery], owners.Seams);
     }
 
     private sealed class FixedGuard : IDaggerfallPlayerGuard
@@ -258,6 +261,120 @@ public sealed class DaggerfallContactVariantTests
         public void Observe(ReadOnlySpan<ProductInputEvent> inputs) { }
         public void Step(double seconds, bool canGuard, bool swinging, ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
         public void Neutralize(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
+    }
+
+    [Fact]
+    public void A_touch_reaches_every_actor_its_volume_contacts_but_none_behind_the_world_and_one_that_meets_no_one_is_still_released()
+    {
+        using Fixture fixture = new(variant: Contact);
+        IDaggerfallTouchDelivery touch = fixture.Owners!.TouchDelivery!(fixture.TouchOperations);
+        ulong brigand = fixture.Actors.Get(2).Actor.Entity.Value;
+        ulong second = fixture.SpawnBrigand(3, new WorldPoint(1f, 0f, .4f)).Actor.Entity.Value;
+        DaggerfallTouchCast cast = new(Player, new Vector3(0f, 1.65f, 0f), Vector3.UnitX, Admitted: null);
+
+        fixture.Spatial.OverlapContactsResult = _ => Touching(brigand);
+        DaggerfallTouchReach one = touch.Reach(cast);
+        Assert.True(one.Releases);
+        Assert.Equal([2L], one.Targets);
+        SpatialContactQueryRequest volume = Assert.Single(fixture.Spatial.OverlapContactsRequests);
+        Assert.Equal(SpatialShapeKind.Box, volume.Shape.Kind);
+        Assert.Equal(cast.Eye, volume.Start.Translation);
+
+        fixture.Spatial.OverlapContactsResult = _ => Touching(brigand, second);
+        Assert.Equal([2L, 3L], touch.Reach(cast).Targets);
+
+        fixture.Spatial.OverlapContactsResult = _ => Touching();
+        DaggerfallTouchReach none = touch.Reach(cast);
+        Assert.True(none.Releases);
+        Assert.Empty(none.Targets);
+
+        // World geometry between the hand and the body it would touch shields that body.
+        fixture.Spatial.OverlapContactsResult = _ => Touching(brigand);
+        fixture.Spatial.FloorHit = _ => default(SpatialHit) with { Present = true, Kind = SpatialHitKind.StaticMesh, Distance = .2d };
+        DaggerfallTouchReach occluded = touch.Reach(cast);
+        Assert.True(occluded.Releases);
+        Assert.Empty(occluded.Targets);
+    }
+
+    [Fact]
+    public void An_enemy_touch_reaches_the_player_only_when_its_volume_does_whatever_its_behavior_admitted()
+    {
+        using Fixture fixture = new(variant: Contact);
+        IDaggerfallTouchDelivery touch = fixture.Owners!.TouchDelivery!(fixture.TouchOperations);
+        DaggerfallTouchCast cast = new(2, new Vector3(1f, 1.62f, 0f), -Vector3.UnitX, Admitted: Player);
+
+        fixture.Spatial.OverlapContactsResult = _ => Touching();
+        Assert.Empty(touch.Reach(cast).Targets);
+        fixture.Spatial.OverlapContactsResult = _ => Touching(fixture.Actors.Player.Actor.Entity.Value);
+        Assert.Equal([Player], touch.Reach(cast).Targets);
+    }
+
+    [Fact]
+    public void Classic_touch_picks_the_first_actor_a_short_capsule_meets_refuses_when_none_and_trusts_an_enemys_admitted_target()
+    {
+        using Fixture fixture = new();
+        IDaggerfallTouchDelivery touch = DaggerfallSeamSelection.Classic.Build(fixture.SeamInputs).TouchDelivery(fixture.TouchOperations);
+        Assert.IsType<DaggerfallClassicTouchDelivery>(touch);
+        DaggerfallTouchCast cast = new(Player, new Vector3(0f, 1.65f, 0f), Vector3.UnitX, Admitted: null);
+
+        fixture.Spatial.CapsuleCastHit = _ => default(SpatialHit) with { Present = true, Kind = SpatialHitKind.Entity, Entity = fixture.Actors.Get(2).Actor.Entity.Value };
+        DaggerfallTouchReach picked = touch.Reach(cast);
+        Assert.True(picked.Releases);
+        Assert.Equal([2L], picked.Targets);
+        SpatialCapsuleQueryRequest sweep = Assert.Single(fixture.Spatial.CapsuleCastRequests);
+        Assert.Equal((.25d, 3f), (sweep.Radius, sweep.Translation.Length()));
+
+        fixture.Spatial.CapsuleCastHit = _ => default;
+        Assert.False(touch.Reach(cast).Releases);
+
+        Assert.Equal([Player], touch.Reach(new(2, new Vector3(1f, 1.62f, 0f), -Vector3.UnitX, Admitted: Player)).Targets);
+        Assert.Equal(2, fixture.Spatial.CapsuleCastRequests.Count);
+        Assert.Empty(fixture.Spatial.OverlapContactsRequests);
+    }
+
+    [Fact]
+    public void A_player_touch_under_the_contact_variant_that_meets_no_one_is_paid_for_and_misses()
+    {
+        string root = TestData.RepositoryRoot;
+        ResolvedGameComposition resolved = GameCompositionResolver.Resolve(TestSessions.FullContent(root), new GameBundleId("daggerfall.contact"),
+            [.. DaggerfallVariants.All.Select(variant => variant.Manifest)]).RequireComposition();
+        DaggerfallSiteProfile inputs = TestSessions.ReadInputs(root);
+        DaggerfallSessionComposition composition = new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults, resolved.Identity)
+        {
+            Seams = DaggerfallSeamSelection.From(resolved.Variants, DaggerfallVariants.All),
+        };
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        TestSessions.PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession creation = DaggerfallSession.StartNew(engine.Context, composition);
+        NewGameSessionTests.Commit(creation, "class13");
+        using DaggerfallSession game = Assert.IsType<DaggerfallSession>(creation.CreateNewGame());
+        Track magicka = game.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value));
+        magicka.Maximum.BaseValue = 1000;
+        magicka.SetCurrent(1000);
+        string spell = TouchSpellThePlayerCanReady(game);
+        spatial.OverlapContactsRequests.Clear();
+
+        DaggerfallCastResult result = game.ReleaseReadySpell(Player, Vector3.UnitZ);
+
+        Assert.Equal(DaggerfallCastOutcome.Missed, result.Outcome);
+        Assert.True(magicka.Current < 1000, $"Releasing '{spell}' spent no magicka.");
+        Assert.NotEmpty(spatial.OverlapContactsRequests);
+        Assert.Null(game.Casting.ReadyFor(Player));
+    }
+
+    /// <summary>Teaches the player the first stock touch spell whose effects this ruleset compiles, and readies it.</summary>
+    private static string TouchSpellThePlayerCanReady(DaggerfallSession game)
+    {
+        foreach (DaggerfallSpellDefinition spell in TestPayload.Definitions.Magic.Spells.Values.OrderBy(spell => spell.Key, StringComparer.Ordinal))
+        {
+            if (DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType) != DaggerfallSpellTarget.ByTouch) continue;
+            game.State.Character.LearnSpell(spell.Key);
+            if (game.ReadyPlayerSpell(spell.Key).Outcome == DaggerfallCastOutcome.Ready) return spell.Key;
+        }
+        throw new InvalidOperationException("No stock touch spell can be readied.");
     }
 
     /// <summary>A contact result touching the given entities, in order.</summary>

@@ -57,15 +57,9 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         }
         if (ops.StrikePose(request.AttackerId) is not DaggerfallStrikePose pose) { Whiff(request, attack, facts); return; }
         double reach = admission.Attack.Reach ?? ops.ReachOf(request.AttackerId) ?? tuning.DefaultReach;
-        Vector3 forward = new(pose.Forward.X, 0f, pose.Forward.Z);
-        float yaw = forward.LengthSquared() > 1e-6f ? MathF.Atan2(forward.X, forward.Z) : 0f;
-        // The swing sweeps a box in front of the attacker's eye: as wide and tall as the tuning says, as deep
-        // as the attack's reach, and dropped toward the chest the blade crosses.
-        SpatialShape swing = SpatialShape.Box(
-            new Vector3((float)tuning.SwingWidth / 2f, (float)tuning.SwingHeight / 2f, (float)reach / 2f),
-            new Vector3(0f, -(float)tuning.SwingDrop, (float)reach / 2f));
-        VolumeContact touched = ops.Contact.Volume(request.AttackerId, swing,
-            new SpatialPose(pose.Eye, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw)), pose.Eye, ops.ContactEnvironment());
+        // The swing sweeps a box in front of the attacker's eye, as deep as the attack's reach.
+        (SpatialShape swing, SpatialPose at) = DaggerfallContactVolume.Ahead(pose.Eye, pose.Forward, tuning.SwingWidth, tuning.SwingHeight, tuning.SwingDrop, reach);
+        VolumeContact touched = ops.Contact.Volume(request.AttackerId, swing, at, pose.Eye, ops.ContactEnvironment());
         if (touched.Actors.Count == 0) { Whiff(request, attack, facts); return; }
         foreach (ActorVolumeContact contact in touched.Actors) Connect(request, attack, contact.ActorId, facts);
     }

@@ -65,6 +65,8 @@ public sealed class DaggerfallRulesVariantTests
         Assert.IsType<DaggerfallClassicPhysicalDelivery>(seams.PhysicalDelivery(null!));
         Assert.Same(DaggerfallNoPlayerGuard.Instance, seams.PlayerGuard);
         Assert.False(seams.PlayerGuard.Raised);
+        Assert.IsType<DaggerfallClassicTouchDelivery>(seams.TouchDelivery(null!));
+        Assert.Null(DaggerfallSeamSelection.Classic.TouchDeliveryVariant);
         Assert.Null(DaggerfallSeamSelection.Classic.PhysicalDeliveryVariant);
     }
 
