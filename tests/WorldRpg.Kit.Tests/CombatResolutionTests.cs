@@ -314,6 +314,28 @@ public sealed class CombatResolutionTests
     }
 
     [Fact]
+    public void A_refused_admission_stays_refused_whatever_contact_contributions_say()
+    {
+        using ActorsState actors = Actors();
+        List<string> order = [];
+        CombatContributions contributions = new();
+        contributions.Rules.Add(new ContactContribution(value => value.Contact = !value.Contact));
+        contributions.Rules.Add(new RecordingContribution(order));
+        actors.Get(3).Actor.Add(contributions);
+        CombatResolution resolution = new();
+        bool calculated = false;
+
+        HarmResolution missed = resolution.Resolve(new(actors.Get(2).Actor, actors.Get(3).Actor, "attack"), Edged,
+            value => value.Hit = false, value => { calculated = true; value.Damage = 4; },
+            negate: _ => order.Add("base:negate"), mitigate: _ => order.Add("base:mitigate"));
+
+        Assert.Equal((HarmOutcome.NoContact, 0), (missed.Outcome, missed.Damage));
+        Assert.False(calculated);
+        Assert.Null(missed.Contact);
+        Assert.Equal(["hit"], order); // No contact, negation, calculation or mitigation ran.
+    }
+
+    [Fact]
     public void A_target_that_negates_the_harm_before_calculation_connects_but_its_harm_is_never_calculated()
     {
         using ActorsState actors = Actors();
