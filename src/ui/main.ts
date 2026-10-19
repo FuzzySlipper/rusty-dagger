@@ -16,6 +16,8 @@ import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
 
 interface UiAction { readonly action: string; readonly [field: string]: string | number | boolean | undefined; }
 
+interface BundleProjection { readonly current: string; readonly options: readonly { readonly id: string; readonly title: string }[]; }
+
 interface DaggerHud {
   readonly detectors?: readonly { readonly source: string; readonly kind: string; readonly contacts: readonly {
     readonly kind: string; readonly id: string; readonly label: string; readonly distance: number; readonly bearingRadians: number;
@@ -49,6 +51,8 @@ interface DaggerHud {
   readonly uiArt?: UiArt | null;
   readonly panelRequest?: PanelRequest | null;
   readonly saveSlots?: SaveSlotProjection;
+  /** The games the entry screen offers while a new game can still choose one; absent or null otherwise. */
+  readonly bundles?: BundleProjection | null;
   readonly controls?: ControlsProjection;
   readonly timeControl?: { readonly enabled: boolean; readonly held: boolean };
   readonly activation?: { readonly mode: string; readonly message: string; readonly applied: boolean; readonly dialogue?: DialogueProjection | null };
@@ -620,6 +624,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   entryCreate.addEventListener('click', () => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'character-begin' },
   }));
+  // The game a new run starts under: offered only when there is a choice, and only before creation opens.
+  const entryBundle = document.createElement('label'); entryBundle.className = 'dagger-entry-bundle'; entryBundle.textContent = 'Game ';
+  const entryBundleSelect = document.createElement('select'); entryBundleSelect.dataset.testid = 'entry-bundle'; entryBundle.append(entryBundleSelect); entryRoot.append(entryBundle);
+  entryBundleSelect.addEventListener('change', () => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'bundle-select', key: entryBundleSelect.value },
+  }));
+  let bundles: BundleProjection | null = null;
   const notebookRoot = shell.querySelector<HTMLElement>('.dagger-notebook-root')!;
   const notebookView = mountNotebook(notebookRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
@@ -1198,6 +1209,11 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     creationElement.classList.toggle('dagger-entry-creation', creating);
     shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!.hidden = creating;
     entryCreate.hidden = creating;
+    entryBundle.hidden = creating || bundles === null || bundles.options.length < 2;
+    if (bundles !== null && document.activeElement !== entryBundleSelect) {
+      entryBundleSelect.replaceChildren(...bundles.options.map(option => new Option(option.title, option.id)));
+      entryBundleSelect.value = bundles.current;
+    }
     const primary = screenForMode(creationMode ?? TITLE_MODE)!;
     const entry = image(primary);
     if (entry !== null) entryScreen.src = entry;
@@ -1447,6 +1463,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     creationMode = titleMode && value.character?.creationAvailable && value.character.creation ? value.character.creation.editing
       ? value.character.creation.mode ?? null : value.character.creation.summary ? 'character-pick' : null : null;
     pickScreens = value.pickScreens ?? [];
+    bundles = isBundles(value.bundles) ? value.bundles : null;
     redrawEntry();
 
     title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'
@@ -2147,6 +2164,12 @@ function renderQuestMessages(root: HTMLElement, value: QuestPresentation | undef
   while (root.children.length > ordered.length) root.lastElementChild!.remove();
   for (const key of cache.keys()) if (!used.has(key)) cache.delete(key);
 
+}
+
+function isBundles(value: unknown): value is BundleProjection {
+  return typeof value === 'object' && value !== null && 'current' in value && typeof value.current === 'string'
+    && 'options' in value && Array.isArray(value.options) && value.options.every(option => typeof option === 'object' && option !== null
+      && 'id' in option && typeof option.id === 'string' && 'title' in option && typeof option.title === 'string');
 }
 
 function isSaveSlots(value: unknown): value is SaveSlotProjection {

@@ -226,6 +226,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.SaveSlots: _saveSlotRequest = new(SaveSlotOperation.List); break;
             case DaggerfallUiActionKind.SaveSlot: _saveSlotRequest = new(SaveSlotOperation.Save, action.Key, action.Label, action.Confirm); break;
             case DaggerfallUiActionKind.LoadSlot: _saveSlotRequest = new(SaveSlotOperation.Load, action.Key); break;
+            case DaggerfallUiActionKind.BundleSelect: ChooseBundle(action.Key!); break;
             case DaggerfallUiActionKind.DeleteSlot: _saveSlotRequest = new(SaveSlotOperation.Delete, action.Key, Confirm: action.Confirm); break;
             case DaggerfallUiActionKind.DeathNewGame:
             case DaggerfallUiActionKind.DeathLoadGame:

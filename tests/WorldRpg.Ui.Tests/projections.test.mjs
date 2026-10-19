@@ -531,6 +531,28 @@ test('a projected quest prompt renders once and returns the selected semantic ch
   } finally { f.dispose(); }
 });
 
+test('the title screen offers the games the product publishes and sends the one chosen', () => {
+  const f = fixture();
+  try {
+    const select = () => f.root.querySelector('[data-testid="entry-bundle"]');
+    f.publish({ mode: 'title', bundles: { current: 'daggerfall.classic', options: [
+      { id: 'daggerfall.classic', title: 'Classic Daggerfall' }, { id: 'daggerfall.contact', title: 'Contact + mitigation' }] } });
+    assert.equal(select().parentElement.hidden, false);
+    assert.deepEqual([...select().options].map(option => [option.value, option.textContent]),
+      [['daggerfall.classic', 'Classic Daggerfall'], ['daggerfall.contact', 'Contact + mitigation']]);
+    assert.equal(select().value, 'daggerfall.classic');
+    select().value = 'daggerfall.contact';
+    select().dispatchEvent(new window.Event('change', { bubbles: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'bundle-select', key: 'daggerfall.contact' });
+
+    // One game is no choice, and a game that has begun offers none.
+    f.publish({ mode: 'title', bundles: { current: 'daggerfall.classic', options: [{ id: 'daggerfall.classic', title: 'Classic Daggerfall' }] } });
+    assert.equal(select().parentElement.hidden, true);
+    f.publish({ mode: 'title', bundles: null });
+    assert.equal(select().parentElement.hidden, true);
+  } finally { f.dispose(); }
+});
+
 test('title character choices are projected and committed through semantic actions', () => {
   const f = fixture();
   try {

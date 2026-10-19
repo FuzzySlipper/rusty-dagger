@@ -149,6 +149,12 @@ npm ci
 rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj
 ```
 
+The title screen's **Game** selector chooses the game bundle a new run starts
+under (classic Daggerfall, or a rules variant such as contact + mitigation),
+and the choice is remembered for the next start. A save loads only under the
+game it was made in. Character creation's **Quick start** begins a new game at
+once from the draft's choices.
+
 Without the generated content, staging the product stops with a message naming
 the script. See [third-party notices](THIRD_PARTY_NOTICES.md) for what is and is
 not redistributed.

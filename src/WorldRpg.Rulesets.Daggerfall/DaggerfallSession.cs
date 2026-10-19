@@ -35,7 +35,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
-internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytestWorldInspectionSession, ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession,
+internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytestWorldInspectionSession, ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession, IGameBundleChoiceSession,
     IDaggerfallSiteTransitionHost, IDaggerfallQuestWorldAdmission
 {
     private readonly IRandomService _random;
@@ -541,6 +541,45 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         PublishPresentation();
     }
 
+    private GameBundleChoices? _bundles;
+    private GameBundleId? _bundleRequest;
+
+    /// <summary>Stores the games the Host offers at the entry screen for the next HUD projection.</summary>
+    public void ReportBundles(GameBundleChoices choices)
+    {
+        _bundles = choices ?? throw new ArgumentNullException(nameof(choices));
+        PublishPresentation();
+    }
+
+    /// <summary>Takes the game the player chose at the entry screen, for the Host to switch to.</summary>
+    public GameBundleId? TakeBundleRequest()
+    {
+        GameBundleId? request = _bundleRequest;
+        _bundleRequest = null;
+        return request;
+    }
+
+    /// <summary>Presents why the Host did not switch to the chosen game.</summary>
+    public void ReportBundleOutcome(string message)
+    {
+        Presentation.SetOutcome(message);
+        PublishPresentation();
+    }
+
+    /// <summary>
+    /// Asks for another game at the entry screen. A new game that has begun its opening belongs to the game it
+    /// was created under, so the choice is open only before then.
+    /// </summary>
+    private void ChooseBundle(string key)
+    {
+        if (_mode != ProductMode.Title || _newGameInitialized)
+        {
+            Presentation.SetOutcome("The game can be changed only from the title screen.");
+            return;
+        }
+        _bundleRequest = new GameBundleId(key);
+    }
+
     /// <summary>Stores Host-owned save metadata for the next ordinary HUD projection.</summary>
     public void ReportSaveSlots(IReadOnlyList<SaveSlotSummary> slots, string? diagnostic)
     {
@@ -797,6 +836,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             CharacterCreationAvailable: !_newGameInitialized,
             PanelRequest: LatestPanelRequest,
             SaveSlots: _saveSlots,
+            Bundles: _mode == ProductMode.Title && !_newGameInitialized ? _bundles : null,
             SaveSlotDiagnostic: _saveSlotDiagnostic,
             ControlSettings: _controlSettings,
             ControlDiagnostic: _controlDiagnostic,

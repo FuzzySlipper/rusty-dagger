@@ -12,6 +12,9 @@ internal static class BuiltInRulesets
         throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown built-in ruleset.");
     }
 
+    /// <summary>Whether a bundle's ruleset is one this product compiles.</summary>
+    internal static bool Composes(RulesetId id) => id == DaggerfallRuleset.Identity;
+
     /// <summary>The manifests of every compiled rules variant a built-in bundle may select.</summary>
     internal static IReadOnlyList<RulesVariantManifest> VariantManifests { get; } =
         [.. DaggerfallVariants.All.Select(variant => variant.Manifest)];

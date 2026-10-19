@@ -248,6 +248,91 @@ public sealed class WorldRpgProductSaveLoadTests
         previous.ThrowOnDispose = false;
     }
 
+    [Fact]
+    public void The_entry_screen_offers_every_bundle_that_composes_and_switches_to_the_chosen_one_and_remembers_it()
+    {
+        InMemoryPersistenceService persistence = new();
+        LoadTestRuleset ruleset = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
+        using (WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle")))
+        {
+            product.Start();
+            LoadTestSession title = ruleset.RequireCurrent();
+            GameBundleChoices offered = title.Bundles!;
+            Assert.Equal(new GameBundleId("test.bundle"), offered.Current);
+            Assert.Equal(["test.bundle", "test.variants", "test.variants-reordered"], offered.Options.Select(option => option.Id.Value));
+            Assert.Equal("Test bundle", offered.Options[0].Title);
+            Assert.Equal("test.variants", offered.Options[1].Title);
+
+            title.ArmBundleRequest(new GameBundleId("test.variants"));
+            product.Update(Update(1));
+
+            LoadTestSession switched = ruleset.RequireCurrent();
+            Assert.NotSame(title, switched);
+            Assert.True(title.Disposed);
+            Assert.Equal(ProductMode.Title, product.Mode);
+            Assert.Equal(new GameBundleId("test.variants"), switched.Bundles!.Current);
+            // The switched composition is the one a save records: its variants.
+            switched.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Under variants"));
+            product.Update(Update(2));
+        }
+
+        LoadTestRuleset restarted = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
+        using (WorldRpgProduct product = new(Context(persistence), restarted, new GameBundleId("test.bundle")))
+        {
+            product.Start();
+            LoadTestSession title = restarted.RequireCurrent();
+            Assert.Equal(new GameBundleId("test.variants"), title.Bundles!.Current);
+            Assert.Null(title.BundleOutcome);
+            // The remembered game loads its own save: the variant sets agree.
+            title.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
+            product.Update(Update(1));
+            Assert.NotNull(restarted.Replacement);
+        }
+    }
+
+    [Fact]
+    public void A_bundle_choice_outside_the_entry_screen_or_for_an_unoffered_bundle_is_refused()
+    {
+        InMemoryPersistenceService persistence = new();
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+        LoadTestSession title = ruleset.RequireCurrent();
+        // Without its variants compiled, only the plain bundle composes.
+        Assert.Equal(["test.bundle"], title.Bundles!.Options.Select(option => option.Id.Value));
+        title.ArmBundleRequest(new GameBundleId("test.variants"));
+        product.Update(Update(1));
+        Assert.Same(title, ruleset.RequireCurrent());
+        Assert.Equal("The game 'test.variants' is not available.", title.BundleOutcome);
+
+        product.Begin();
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        title.ArmBundleRequest(new GameBundleId("test.bundle"));
+        product.Update(Update(2));
+        Assert.Same(title, ruleset.RequireCurrent());
+        Assert.Equal("The game can be changed only from the title screen.", title.BundleOutcome);
+    }
+
+    [Fact]
+    public void A_remembered_bundle_that_no_longer_composes_starts_the_default_and_says_so()
+    {
+        InMemoryPersistenceService persistence = new();
+        LoadTestRuleset withVariants = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
+        using (WorldRpgProduct product = new(Context(persistence), withVariants, new GameBundleId("test.bundle")))
+        {
+            product.Start();
+            withVariants.RequireCurrent().ArmBundleRequest(new GameBundleId("test.variants"));
+            product.Update(Update(1));
+        }
+
+        LoadTestRuleset withoutVariants = new();
+        using WorldRpgProduct restarted = new(Context(persistence), withoutVariants, new GameBundleId("test.bundle"));
+        restarted.Start();
+        LoadTestSession title = withoutVariants.RequireCurrent();
+        Assert.Equal(new GameBundleId("test.bundle"), title.Bundles!.Current);
+        Assert.Equal("The remembered game 'test.variants' is unavailable; the default is active.", title.BundleOutcome);
+    }
+
     private static ProductUpdate Update(ulong step) =>
         new(new ProductUpdateFacts(ProductLifecycleState.Running, step, step, step, step, 60, 1, 0, 1d / 60d), ReadOnlySpan<ProductInputEvent>.Empty);
 
@@ -256,7 +341,7 @@ public sealed class WorldRpgProductSaveLoadTests
 
     private static ProductContent Content() => new(new ReadOnlyMemory<ProductContentFile>(
     [
-        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"}}""")),
+        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.bundle","title":"Test bundle","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"}}""")),
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.variants.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.variants","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"},"variants":["test.contact","test.armor"]}""")),
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.variants-reordered.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.variants-reordered","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"},"variants":["test.armor","test.contact"]}""")),
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/content-packs/test.pack.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.content-pack","id":"test.pack","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/pack.json"}""")),
@@ -303,9 +388,27 @@ public sealed class WorldRpgProductSaveLoadTests
         }
     }
 
-    private sealed class LoadTestSession : ISaveableGameSession, ISaveRequestingGameSession, IModeAwareGameSession, IPlayerPreferencesSession
+    private sealed class LoadTestSession : ISaveableGameSession, ISaveRequestingGameSession, IModeAwareGameSession, IPlayerPreferencesSession, IGameBundleChoiceSession
     {
         private SaveSlotRequest? _saveSlotRequest;
+        private GameBundleId? _bundleRequest;
+
+        internal GameBundleChoices? Bundles { get; private set; }
+
+        internal string? BundleOutcome { get; private set; }
+
+        internal void ArmBundleRequest(GameBundleId bundle) => _bundleRequest = bundle;
+
+        public void ReportBundles(GameBundleChoices choices) => Bundles = choices;
+
+        public GameBundleId? TakeBundleRequest()
+        {
+            GameBundleId? request = _bundleRequest;
+            _bundleRequest = null;
+            return request;
+        }
+
+        public void ReportBundleOutcome(string message) => BundleOutcome = message;
         private string? _playerPreferencesSave;
 
         internal bool ThrowOnDispose { get; set; }

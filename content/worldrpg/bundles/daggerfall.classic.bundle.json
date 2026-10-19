@@ -1,6 +1,7 @@
 {
   "kind": "worldrpg.game-bundle",
   "id": "daggerfall.classic",
+  "title": "Classic Daggerfall",
   "ruleset": "daggerfall",
   "contentPacks": [
     {
