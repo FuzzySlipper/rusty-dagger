@@ -118,6 +118,11 @@ internal sealed class DaggerfallOutcomePresentation(
                     _ => "Wabbajack cannot transform this target",
                 });
                 break;
+            // A swing that reaches its hit frame with nothing in reach is a whiff, and the donor's
+            // WeaponManager shows no text for one: the swing itself is the feedback. The fact stays for
+            // the playtest diagnostics, but the player's line is left to what actually happened.
+            case AttackRejectedFact { Reason: AttackRejection.NoTargetInReach }:
+                break;
             case AttackRejectedFact rejected:
                 // A rejection is about an action that did not happen, and a held attack button produces
                 // one every update. It therefore yields to a result that is still fresh: the line the
@@ -128,9 +133,6 @@ internal sealed class DaggerfallOutcomePresentation(
                 presentation.SetOutcome(rejected.Reason switch
                 {
                     AttackRejection.MissingPlayerPosition => "No authored player position",
-                    // What the perception query compared is diagnostics (the playtest targets readout
-                    // carries the last melee query's counts); the player reads only the result.
-                    AttackRejection.NoTargetInReach => "Nothing in reach.",
                     AttackRejection.Equipping => "Equipping",
                     AttackRejection.Cooldown => "Cooldown",
                     AttackRejection.AttackInProgress => "Attack in progress",
@@ -171,10 +173,15 @@ internal sealed class DaggerfallOutcomePresentation(
                 _lineIsResult = true;
                 presentation.SetOutcome(NegatedLine(negated.AttackerId, negated.TargetId, negated.Negation));
                 break;
+            // The player's swing at empty air has no line, as a classic swing with nothing in reach has
+            // none: the swing and its sound are the feedback. A swing aimed at someone out of reach does
+            // say so, because that tells the player something they could not see.
+            case AttackWhiffedFact { TargetId: null } whiff when whiff.AttackerId == DaggerfallActorIdentity.PlayerEntityId:
+                break;
             case AttackWhiffedFact whiff:
                 _lineIsResult = true;
                 presentation.SetOutcome(whiff.AttackerId == DaggerfallActorIdentity.PlayerEntityId
-                    ? whiff.TargetId is long aimed ? $"Your blow meets nothing; {Name(aimed)} is out of reach" : "Your blow meets nothing"
+                    ? $"Your blow meets nothing; {Name(whiff.TargetId!.Value)} is out of reach"
                     : whiff.TargetId == DaggerfallActorIdentity.PlayerEntityId ? $"{Name(whiff.AttackerId)}'s blow misses you"
                     : whiff.TargetId is long other ? $"{Name(whiff.AttackerId)}'s blow misses {Name(other)}" : $"{Name(whiff.AttackerId)}'s blow meets nothing");
                 break;
