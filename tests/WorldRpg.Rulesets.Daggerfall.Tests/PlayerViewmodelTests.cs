@@ -4,6 +4,7 @@ using Rusty.Engine;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
@@ -84,7 +85,7 @@ public sealed class PlayerViewmodelTests
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
         Assert.Equal(2, appearance.PlaybackRequests.Count);
         Assert.All(appearance.AtlasRequests.Last().Frames.Span.ToArray(), frame => Assert.False(frame.HasSize));
-        Assert.Equal(new Vector2(8, 8), appearance.SpriteRequests.Last().Size);
+        Assert.Equal(new Vector2(320, 200), appearance.SpriteRequests.Last().Size);
         presentation.Publish(EmptyActors());
         Assert.Contains(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
 
@@ -273,8 +274,8 @@ public sealed class PlayerViewmodelTests
 
         presentation.React(new PlayerGuardChangedFact(true, 1, 1));
         SpriteViewportUpdateRequest guarded = appearance.ViewportRequests[^1];
-        Assert.Equal(.12F, guarded.Minimum.Y, 5);
-        Assert.Equal(rest.Minimum.X + (((.5F - (rest.Size.X / 2F)) - rest.Minimum.X) / 2F), guarded.Minimum.X, 5);
+        // The right-aligned dagger lifts and draws toward the centre: the canvas moves left.
+        Assert.Equal(new Vector2(-.15F, .12F), guarded.Minimum);
         Assert.Equal(rest.Size, guarded.Size);
 
         presentation.React(new PlayerGuardChangedFact(false, 1, 2));
@@ -296,13 +297,14 @@ public sealed class PlayerViewmodelTests
         AppearanceFact first = Assert.Single(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
         Assert.InRange(first.ObjectId, 2UL, (1UL << 53) - 1);
         Assert.Equal(Vector3.Zero, first.Transform.Translation);
-        // As the donor's FPSWeapon, the 8x8 idle frame covers 8/320 by 8/200 of the view, stretched to that
-        // rectangle, standing on the bottom edge right-aligned at its 0.1 offset rather than fitted to the view.
+        // The imported 320x200 canvas already stands right-aligned at its 0.1 offset, so the view stretches the
+        // whole canvas over the screen, as FPSWeapon scales its display, and applies no second offset.
         SpriteViewportUpdateRequest placement = Assert.Single(appearance.ViewportRequests);
         Assert.Equal(SpriteViewportFit.Stretch, placement.Fit);
-        Assert.Equal(new Vector2(8F / 320F, 8F / 200F), placement.Size);
-        Assert.Equal(1F - .1F - (8F / 320F), placement.Minimum.X, 5);
-        Assert.Equal(0F, placement.Minimum.Y);
+        Assert.Equal((Vector2.Zero, Vector2.One), (placement.Minimum, placement.Size));
+        // Every action, whatever its alignment and offset, keeps that one placement: a strike at a .4 offset too.
+        presentation.React(new PlayerAttackStartedFact(1, 1, FrameSeconds: .1, Swing: DaggerfallSwingDirection.StrikeDown));
+        Assert.All(appearance.ViewportRequests, request => Assert.Equal((Vector2.Zero, Vector2.One), (request.Minimum, request.Size)));
         Assert.Equal(Quaternion.Identity, first.Transform.Rotation);
         Assert.All([first.Transform.Translation.X, first.Transform.Translation.Y, first.Transform.Translation.Z], coordinate => Assert.InRange(coordinate, -16F, 16F));
         presentation.Publish(actors);

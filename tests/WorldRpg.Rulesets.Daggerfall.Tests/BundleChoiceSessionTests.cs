@@ -50,6 +50,41 @@ public sealed class BundleChoiceSessionTests
         Assert.True(game.PlayerGuardRaised);
     }
 
+    [Fact]
+    public void A_remembered_game_that_no_longer_composes_is_explained_on_the_title_screen_after_start_and_attach()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        InMemoryPersistenceService persistence = new();
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        EngineContextFake Engine()
+        {
+            List<string> releases = [];
+            ContentFake content = new(releases);
+            PopulateContent(content, inputs);
+            return EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases), persistence: persistence);
+        }
+
+        EngineContextFake first = Engine();
+        using (WorldRpgProduct product = new(new ProductCreateContext(first.Context, FullContent(root), input), new CapturingDaggerfallRuleset(variants: DaggerfallVariants.All), new GameBundleId("daggerfall.classic")))
+        {
+            product.Start();
+            product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"daggerfall.contact"}""")]));
+            Assert.Equal("daggerfall.contact", first.PublishedNested("bundles", "current"));
+        }
+
+        // A build that no longer compiles the contact variant cannot start the remembered game.
+        EngineContextFake second = Engine();
+        using WorldRpgProduct restarted = new(new ProductCreateContext(second.Context, FullContent(root), input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.classic"));
+        restarted.Start();
+        Assert.Equal(ProductMode.Title, restarted.Mode);
+        Assert.Equal("daggerfall.classic", second.PublishedNested("bundles", "current"));
+        const string notice = "The remembered game 'daggerfall.contact' is unavailable; the default is active.";
+        Assert.Contains(notice, second.PublishedField("lastOutcome"), StringComparison.Ordinal);
+        restarted.Attach();
+        Assert.Contains(notice, second.PublishedField("lastOutcome"), StringComparison.Ordinal);
+    }
+
     /// <summary>One offered game's title, read from the decoded snapshot.</summary>
     private static string? Option(EngineContextFake engine, int index) =>
         engine.Published() is IReadOnlyDictionary<string, object?> snapshot && snapshot["bundles"] is IReadOnlyDictionary<string, object?> bundles

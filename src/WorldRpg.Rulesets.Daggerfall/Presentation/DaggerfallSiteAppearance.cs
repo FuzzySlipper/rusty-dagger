@@ -601,8 +601,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 playerGuardRaised = guard.Raised;
                 // A raised guard lifts the resting weapon toward the centre; a strike plays where it always does.
                 if (viewmodel is { Strike: false } held && held.Weapon.Actions.TryGetValue("idle", out NormalizedClassicWeaponAction? rest))
-                    appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(held.Appearance, true,
-                        RestingPlacement(held.Weapon, rest, out Vector2 restSize), restSize, Vector2.Zero, SpriteViewportFit.Stretch));
+                {
+                    (Vector2 restMinimum, Vector2 restSize) = RestingPlacement(rest);
+                    appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(held.Appearance, true, restMinimum, restSize, Vector2.Zero, SpriteViewportFit.Stretch));
+                }
                 break;
             case PlayerAttackStartedFact started:
                 PresentationEventIdentity swing = Event(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0, started.OriginatingGeneration, started.OriginatingSimulationStep, "swing");
@@ -1375,9 +1377,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         SpritePlayback? staged = null;
         try
         {
-            appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(viewmodel.Appearance, true,
-                name == "idle" ? RestingPlacement(weapon, action, out Vector2 size) : ViewmodelPlacement(weapon, action, out size),
-                size, Vector2.Zero, SpriteViewportFit.Stretch));
+            (Vector2 minimum, Vector2 size) = name == "idle" ? RestingPlacement(action) : ViewmodelPlacement();
+            appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(viewmodel.Appearance, true, minimum, size, Vector2.Zero, SpriteViewportFit.Stretch));
             // The classic weapon animation's authored table rate is its authoring default; the tick
             // time the rules published for this swing (FORM-04.GetMeleeWeaponAnimTime) is what the
             // donor actually plays at, so a hastened or slowed player swings at that rate.
@@ -1404,40 +1405,31 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     }
 
     /// <summary>
-    /// Where an action's frames stand on screen, as the donor's FPSWeapon places them: the art overlays a
-    /// fixed 320x200 display, so a frame w by h pixels covers w/320 of the width and h/200 of the height,
-    /// standing on the bottom edge and aligned left (at its offset), centred, or right (at one minus it).
-    /// Every frame of the action keeps that one rectangle, so the art never rescales or drifts mid-swing.
+    /// Where the weapon's frames stand on screen. <c>Daggerfall.Import</c> owns classic placement: it publishes
+    /// every frame as a full 320x200 reference canvas with the action's alignment and offset already applied.
+    /// The view therefore stretches that canvas over the whole screen, as the donor's FPSWeapon scales its
+    /// 320x200 display to the screen, and never offsets it again.
     /// </summary>
+    private static (Vector2 Minimum, Vector2 Size) ViewmodelPlacement() => (Vector2.Zero, Vector2.One);
+
     /// <summary>
-    /// The resting weapon's place: the classic placement, or, while the player holds a guard up, lifted by
-    /// <see cref="GuardLift"/> of the screen and drawn halfway toward the centre, across the body.
+    /// The resting weapon's place: the classic canvas, or, while the player holds a guard up, lifted by
+    /// <see cref="GuardLift"/> of the screen and drawn <see cref="GuardSwing"/> toward the centre, across the
+    /// body, from the side the action stands on.
     /// </summary>
-    private Vector2 RestingPlacement(NormalizedClassicWeapon weapon, NormalizedClassicWeaponAction action, out Vector2 size)
+    private (Vector2 Minimum, Vector2 Size) RestingPlacement(NormalizedClassicWeaponAction action)
     {
-        Vector2 placement = ViewmodelPlacement(weapon, action, out size);
-        if (!playerGuardRaised) return placement;
-        float centred = .5F - (size.X / 2F);
-        return new Vector2(placement.X + ((centred - placement.X) / 2F), GuardLift);
+        (Vector2 minimum, Vector2 size) = ViewmodelPlacement();
+        if (!playerGuardRaised) return (minimum, size);
+        float across = action.Alignment switch { "right" => -GuardSwing, "left" => GuardSwing, _ => 0F };
+        return (new Vector2(minimum.X + across, GuardLift), size);
     }
 
     /// <summary>How far up the screen a raised guard holds the resting weapon.</summary>
     private const float GuardLift = .12F;
 
-    private static Vector2 ViewmodelPlacement(NormalizedClassicWeapon weapon, NormalizedClassicWeaponAction action, out Vector2 size)
-    {
-        const float ClassicWidth = 320F, ClassicHeight = 200F;
-        IEnumerable<int> played = action.Sequence ?? Enumerable.Range(action.FrameStart, action.FrameCount);
-        NormalizedAtlasFrame[] frames = [.. played.Select(index => weapon.Frames.Single(frame => frame.Id == index))];
-        size = new Vector2(frames.Max(frame => frame.Width) / ClassicWidth, frames.Max(frame => frame.Height) / ClassicHeight);
-        float left = action.Alignment switch
-        {
-            "left" => action.ScreenOffset,
-            "right" => 1F - action.ScreenOffset - size.X,
-            _ => .5F - (size.X / 2F),
-        };
-        return new Vector2(left, 0F);
-    }
+    /// <summary>How far toward the centre of the screen a raised guard draws the resting weapon.</summary>
+    private const float GuardSwing = .15F;
 
     private void RetireViewmodel()
     {
