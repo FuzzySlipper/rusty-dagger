@@ -111,7 +111,12 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
   const refresh = (): void => {
     const top = topmost();
     drawHints();
-    if (top === current) return;
+    // The same surface can lose its focused control, as when one of several stacked messages is
+    // dismissed; focus goes back into it rather than being left on nothing.
+    if (top === current) {
+      if (top !== null && !top.root.contains(document.activeElement)) focusInto(top);
+      return;
+    }
     const previous = current;
     current = top;
     // A surface that closes gives focus back to what held it before it opened, when that is

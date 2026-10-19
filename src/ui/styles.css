@@ -127,7 +127,8 @@
 /* The controls of the device in use, at the foot of the surface that has the cursor. */
 .dagger-input-hints { margin: .8rem 0 0; color: #cab882; font: .72rem ui-monospace, monospace; pointer-events: none; }
 .dagger-input-hints kbd { padding: 0 .3rem; border: 1px solid #8a7444; border-radius: 2px; color: #f2e3ba; font: inherit; }
-.dagger-death .dagger-input-hints, .dagger-entry .dagger-input-hints { position: absolute; left: 50%; bottom: 1rem; transform: translateX(-50%); }
+/* The title and death screens keep their buttons at the foot, so their hints sit at the top. */
+.dagger-death .dagger-input-hints, .dagger-entry .dagger-input-hints { position: absolute; left: 50%; top: 1rem; margin: 0; transform: translateX(-50%); padding: .2rem .6rem; background: rgb(2 4 4 / .78); }
 
 /* The picture, or the name, that follows the pointer during a drag. */
 .dagger-drag-ghost { position: fixed; left: -20px; top: -20px; z-index: 70; min-width: 40px; height: 40px; display: grid; place-items: center; padding: 0 .3rem; color: #f2e3ba; font: .7rem Georgia, serif; pointer-events: none; }
