@@ -1,4 +1,5 @@
 import type { InventoryProjection } from './inventory.js';
+import { redraw } from './redraw.js';
 import type {
   TransportAction, TransportItemProjection, TransportMode, TransportOptionProjection, TransportProjection, WagonProjection,
 } from './projection.js';
@@ -79,66 +80,79 @@ export function mountTransport(root: HTMLElement, claim: (action: TransportActio
 
   const render = (): void => {
     if (disposed) return;
-    options.replaceChildren();
-    wagonContents.replaceChildren();
-    packContents.replaceChildren();
     if (current === null) {
+      redraw(options, '', () => options.replaceChildren());
+      redraw(wagonContents, '', () => wagonContents.replaceChildren());
+      redraw(packContents, '', () => packContents.replaceChildren());
       status.textContent = 'Transport projection unavailable.';
       summary.textContent = '';
       toggle.disabled = true;
       wagonStatus.textContent = 'Wagon storage is unavailable.';
       return;
     }
+    const view = current;
+    const mode = normalizeTransportMode(view.mode);
+    const selected = view.options.find(option => option.selected)?.label ?? mode ?? 'Foot';
+    status.textContent = view.onShip ? 'You are aboard a ship.' : `${selected} travel selected.`;
+    summary.textContent = view.summary;
+    toggle.disabled = view.onShip;
+    toggle.textContent = view.onShip ? 'Leave ship before choosing a mount' : 'Toggle mount';
+    if (view.onShip) delete toggle.dataset.tooltip; else toggle.dataset.tooltip = 'Switch between horse, cart and foot.';
 
-    const mode = normalizeTransportMode(current.mode);
-    const selected = current.options.find(option => option.selected)?.label ?? mode ?? 'Foot';
-    status.textContent = current.onShip ? 'You are aboard a ship.' : `${selected} travel selected.`;
-    summary.textContent = current.summary;
-    toggle.disabled = current.onShip;
-    toggle.textContent = current.onShip ? 'Leave ship before choosing a mount' : 'Toggle mount';
-    if (current.onShip) delete toggle.dataset.tooltip; else toggle.dataset.tooltip = 'Switch between horse, cart and foot.';
-
-    for (const option of current.options) {
-      const optionMode = normalizeTransportMode(option.mode);
-      if (optionMode === null) continue;
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.dataset.transportMode = optionMode;
-      button.textContent = `${option.label}${option.selected ? ' · selected' : ''}`;
-      if (option.message) button.dataset.tooltip = option.message;
-      if (optionMode === 'ship') {
-        button.disabled = !current.onShip && !option.available;
-        button.textContent = current.onShip ? 'Leave ship' : 'Board ship';
-        if (!button.disabled) button.addEventListener('click', () => claim({
-          action: current?.onShip ? 'transport-leave-ship' : 'transport-board-ship',
-        }));
-      } else {
-        button.disabled = current.onShip || !option.available;
-        if (!button.disabled) button.addEventListener('click', () => claim({ action: 'transport-select', mode: optionMode }));
+    // The controls rebuild only when what they offer changes, so a focused mode or item keeps focus
+    // through the snapshot every update brings.
+    redraw(options, JSON.stringify([view.onShip, view.options]), () => {
+      options.replaceChildren();
+      for (const option of view.options) {
+        const optionMode = normalizeTransportMode(option.mode);
+        if (optionMode === null) continue;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.transportMode = optionMode;
+        button.textContent = `${option.label}${option.selected ? ' · selected' : ''}`;
+        if (option.message) button.dataset.tooltip = option.message;
+        if (optionMode === 'ship') {
+          button.disabled = !view.onShip && !option.available;
+          button.textContent = view.onShip ? 'Leave ship' : 'Board ship';
+          if (!button.disabled) button.addEventListener('click', () => claim({
+            action: current?.onShip ? 'transport-leave-ship' : 'transport-board-ship',
+          }));
+        } else {
+          button.disabled = view.onShip || !option.available;
+          if (!button.disabled) button.addEventListener('click', () => claim({ action: 'transport-select', mode: optionMode }));
+        }
+        options.append(button);
       }
-      options.append(button);
-    }
-    const wagonView = current.wagon;
+    });
+    const wagonView = view.wagon;
     wagonStatus.textContent = `${wagonView.message} ${formatClassicUnits(wagonView.usedClassicUnits)} / ${formatClassicUnits(wagonView.capacityClassicUnits)} classic weight units.`;
-    if (!wagonView.accessible) return;
     const currentRevision = revision();
-    for (const item of wagonView.items) wagonContents.append(renderItem(item, 'wagon-take', !currentRevision));
-    for (const item of currentInventory?.items ?? []) {
-      const equipped = item.equippedSlots.length !== 0;
-      const invalidQuantity = item.key.startsWith('stack:') && safeAmount(item.quantity) === undefined;
-      const refused = wagonView.refusedDefinitions.includes(item.definition);
-      packContents.append(renderItem(item, 'wagon-put', !currentRevision || equipped || invalidQuantity || refused));
-    }
-    if (wagonView.items.length === 0) {
-      const empty = document.createElement('li');
-      empty.textContent = 'The wagon is empty.';
-      wagonContents.append(empty);
-    }
-    if ((currentInventory?.items.length ?? 0) === 0) {
-      const empty = document.createElement('li');
-      empty.textContent = 'Your pack has no transferable items.';
-      packContents.append(empty);
-    }
+    const packItems = wagonView.accessible ? currentInventory?.items ?? [] : [];
+    redraw(wagonContents, JSON.stringify([wagonView.accessible, wagonView.items, Boolean(currentRevision)]), () => {
+      wagonContents.replaceChildren();
+      if (!wagonView.accessible) return;
+      for (const item of wagonView.items) wagonContents.append(renderItem(item, 'wagon-take', !currentRevision));
+      if (wagonView.items.length === 0) {
+        const empty = document.createElement('li');
+        empty.textContent = 'The wagon is empty.';
+        wagonContents.append(empty);
+      }
+    });
+    redraw(packContents, JSON.stringify([wagonView.accessible, packItems, wagonView.refusedDefinitions, Boolean(currentRevision)]), () => {
+      packContents.replaceChildren();
+      if (!wagonView.accessible) return;
+      for (const item of packItems) {
+        const equipped = item.equippedSlots.length !== 0;
+        const invalidQuantity = item.key.startsWith('stack:') && safeAmount(item.quantity) === undefined;
+        const refused = wagonView.refusedDefinitions.includes(item.definition);
+        packContents.append(renderItem(item, 'wagon-put', !currentRevision || equipped || invalidQuantity || refused));
+      }
+      if (packItems.length === 0) {
+        const empty = document.createElement('li');
+        empty.textContent = 'Your pack has no transferable items.';
+        packContents.append(empty);
+      }
+    });
   };
 
   toggle.addEventListener('click', () => {
