@@ -2,7 +2,7 @@ import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
 import { UI_ACTION_CONTRACT } from './projection.js';
 
 /** Sends one semantic action to the product under the UI action contract. */
-export type Send = (data: Readonly<Record<string, unknown>>) => void;
+export type Send = (data: object) => void;
 
 export function sender(context: RustyApplicationUiContext): Send {
   return data => context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data });
