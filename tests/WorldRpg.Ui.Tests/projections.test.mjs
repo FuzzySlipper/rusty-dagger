@@ -433,6 +433,7 @@ test('without a pointer an item is picked up and placed: accept holds it, accept
     item.focus();
     f.pad('button-0');
     assert.equal(f.root.querySelector('.dagger-inventory').classList.contains('is-holding'), true);
+    assert.match(f.root.querySelector('.dagger-inventory-status').textContent, /Holding unique:1: choose a slot to place it, or go back to release it/);
     assert.equal(hand.classList.contains('is-drop-valid'), true);
     // Back releases the held item before it would step out of the panel.
     f.pad('button-1');
