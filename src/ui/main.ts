@@ -6,6 +6,8 @@ import { mountLiveDebugPanel, type LiveDebugPanelMount } from '@rusty-engine/liv
 import { adopt, cssUrl, fitPixelArt, heldRevision, image } from './art.js';
 import { mountConfirm, type ConfirmQuestion } from './confirm.js';
 import { mountTooltips } from './tooltip.js';
+import { mountInteraction } from './interaction.js';
+import { mountNavigation } from './navigation.js';
 import { mountInventory } from './inventory.js';
 import { mountCharacter, isCharacterProjection } from './character.js';
 import { mountLoot, type LootProjection } from './loot.js';
@@ -30,12 +32,8 @@ export { isSummoningProjection, renderSummoning } from './crafting.js';
 
 /** Snapshots between repeated requests for art this DOM has not received. */
 const ART_REQUEST_INTERVAL = 120;
-const MENU_CONTROLLER = Object.freeze({
-  accept: 'button-0', back: 'button-1', character: 'button-3',
-  inventory: 'button-8', menu: 'button-9', previous: 'button-12', next: 'button-13',
-  navigationAxis: 'axis-1', navigationThreshold: 0.55,
-});
-const MENU_FOCUSABLE = 'button:not(:disabled),select:not(:disabled),input:not(:disabled),a[href],[tabindex="0"]';
+/** Controller shortcuts the open menu adds to the shared navigation: Start toggles it, Select and Y open panels. */
+const MENU_SHORTCUTS = Object.freeze({ menu: 'button-9', inventory: 'button-8', character: 'button-3' });
 
 export function mountProductUi(root: HTMLElement, context: RustyApplicationUiContext): { dispose(): void } {
   const stylesheet = document.createElement('link');
@@ -610,19 +608,14 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const itemMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-itemmaker')!;
   const potionMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-potionmaker')!;
   const spellMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spellmaker')!;
-  let projectionNeedsInterface = false;
   let questAnswerRequired = false;
-  let interactionMode: 'interface' | 'gameplay' | null = null;
-  // Leaving the last cursor surface returns to play, so it takes gameplay focus back at once: closing a menu,
-  // a dialogue or a popup, or the world resuming after a modal, re-locks the pointer without a click. Whichever
-  // projection or close resolves to gameplay first does it, once, so a close while another surface still
-  // needs the cursor stays in interface mode and asks for nothing.
-  const syncInteraction = (focus = false): void => {
-    const next = projectionNeedsInterface || menu.open || dialogueWindow.open || summoningOffer.open ? 'interface' : 'gameplay';
-    const resuming = next === 'gameplay' && interactionMode === 'interface';
-    if (next !== interactionMode) { interactionMode = next; context.ui.setInteractionMode(next); }
-    if (next === 'gameplay' && (focus || resuming)) context.ui.focusGameplay();
-  };
+  // A pointer lock the world held, lost in play, is the player asking for the menu: the browser and
+  // the desktop shell spend Escape on releasing the lock, so this is what Escape does in play.
+  const interaction = mountInteraction(context, { onLockLostInPlay: () => { if (!menu.open && !deadMode && !titleMode) openMenu(); } });
+  interaction.needsCursor(() => menu.open || dialogueWindow.open || summoningOffer.open);
+  // Every cursor surface is a navigation surface; deciding the mode and the focus scope together keeps
+  // them from disagreeing about which surface is up.
+  const syncInteraction = (focus = false): void => { interaction.sync(focus); navigation.refresh(); };
   let inventorySuppressed = false;
   let activePanel: 'spells' | 'magic-items' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
   const showHome = (): void => {
@@ -648,7 +641,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     reportMap(false);
     travelView.hide();
     controlsView.cancel();
-    controllerDirection = 0;
     if (activePanel === 'loot') closeLoot();
     closeDebug();
     activePanel = null;
@@ -658,7 +650,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     reportMenu(false);
   };
   const openMenu = (): void => {
-    controllerDirection = 0;
     loadRequested = false;
     menu.showModal();
     syncInteraction();
@@ -669,13 +660,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // likewise, spend it releasing the lock. A lock lost while the world has the pointer (Escape or
   // focus loss) therefore opens the menu, so one press does what Escape does everywhere else. A lock
   // this UI gives up by entering interface mode is already past gameplay when the release arrives.
-  let pointerWasLocked = document.pointerLockElement !== null;
-  const onPointerLockChange = (): void => {
-    const locked = document.pointerLockElement !== null;
-    if (pointerWasLocked && !locked && interactionMode === 'gameplay' && !menu.open && !deadMode && !titleMode) openMenu();
-    pointerWasLocked = locked;
-  };
-  document.addEventListener('pointerlockchange', onPointerLockChange);
   const dismiss = (): void => {
     if (deadMode) return;
     if (activePanel !== null) showHome();
@@ -838,104 +822,53 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (selected) saveSlotsLabel.value = selected.label;
     redrawSaveSlots();
   });
-  // Capture before Engine input sees navigation keys. Escape's native dialog
-  // cancellation is suppressed so one physical press performs exactly one step.
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (activePanel === 'settings' && controlsView.captureKey(event)) return;
-    shell.classList.remove('controller-navigation');
-    if (menu.open && !confirmPrompt.open() && event.code === 'Tab') {
-      const buttons = Array.from(menu.querySelectorAll<HTMLElement>('button:not(:disabled),select:not(:disabled),input:not(:disabled),[tabindex="0"]'))
-        .filter((button) => button.getClientRects().length > 0);
-      const current = buttons.indexOf(document.activeElement as HTMLElement);
-      if (current < 0 || (!event.shiftKey && current === buttons.length - 1)
-        || (event.shiftKey && current === 0)) {
-        event.preventDefault();
-        event.stopPropagation();
-        buttons[event.shiftKey ? buttons.length - 1 : 0]?.focus();
-      }
-      return;
-    }
-    if (event.code === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      if (!event.repeat) onEscape();
-      return;
-    }
-    if (menu.open || event.ctrlKey || event.altKey || event.metaKey
-      || (event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable="true"]'))) return;
-
-  };
-  // Escape backs out of the innermost open surface and opens the menu only from play. From any menu
-  // panel it closes the whole menu (a pad's Back steps out one panel instead). A surface the product
-  // needs an answer to keeps its own choices, so Escape leaves it alone; one with a Cancel takes it.
-  const onEscape = (): void => {
-    if (confirmPrompt.open()) { confirmPrompt.cancel(); return; }
-    if (deadMode) return;
-    if (menu.open) { closeMenu(); return; }
-    // A required answer sits above whatever it was asked over (a summoning offer over its
-    // conversation), so it takes the press before the conversation can.
-    if (summoningOffer.open || !legal.hidden || questAnswerRequired || titleMode) return;
-    if (dialogueWindow.open) {
-      if (currentDialogue) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-        data: { action: 'dialogue-close', revision: currentDialogue.revision } });
-      return;
-    }
-    const escapable = shell.querySelector<HTMLButtonElement>('.dagger-spell-service:not([hidden]) [data-escape]:not(:disabled)');
-    if (escapable) { escapable.click(); return; }
-    if (!createItem.hidden) return;
-    if (!dungeonTextRoot.hidden) { dungeonTextClose.click(); return; }
-    openMenu();
-  };
-  // The Engine owns controller sampling and interface/gameplay arbitration.
-  // This adapter assigns only DOM menu meaning and reuses click/menu handlers.
-  let controllerDirection = 0;
-  const controllerScope = (): HTMLElement | null => confirmPrompt.open() ? confirmPrompt.dialog : menu.open ? menu : !deathRoot.hidden ? deathRoot : !entryRoot.hidden ? entryRoot : null;
-  const focusControllerItem = (direction: number): void => {
-    const scope = controllerScope();
-    if (scope === null) return;
-    const items = Array.from(scope.querySelectorAll<HTMLElement>(MENU_FOCUSABLE))
-      .filter(item => item.getClientRects().length > 0);
-    if (items.length === 0) return;
-    const current = items.indexOf(document.activeElement as HTMLElement);
-    const next = current < 0 ? (direction < 0 ? items.length - 1 : 0)
-      : (current + direction + items.length) % items.length;
-    items[next]?.focus();
-  };
-  const unsubscribeController = context.input?.subscribe(({ fact }) => {
-    shell.classList.add('controller-navigation');
-    if (fact.kind === 'controller-axis' && fact.axis === MENU_CONTROLLER.navigationAxis) {
-      const direction = Math.abs(fact.value) < MENU_CONTROLLER.navigationThreshold ? 0 : Math.sign(fact.value);
-      if (direction !== 0 && direction !== controllerDirection) focusControllerItem(direction);
-      controllerDirection = direction;
-      return;
-    }
-    if (fact.kind !== 'controller-button' || fact.edge !== 'pressed') return;
-    if (fact.button === MENU_CONTROLLER.previous) focusControllerItem(-1);
-    else if (fact.button === MENU_CONTROLLER.next) focusControllerItem(1);
-    else if (fact.button === MENU_CONTROLLER.accept) {
-      const scope = controllerScope();
-      if (scope === null) return;
-      let active = document.activeElement as HTMLElement | null;
-      if (active === null || !scope.contains(active) || !active.matches(MENU_FOCUSABLE)) {
-        focusControllerItem(1);
-        active = document.activeElement as HTMLElement | null;
-      }
-      if (active !== null && scope.contains(active)) active.click();
-    } else if (confirmPrompt.open()) {
-      if (fact.button === MENU_CONTROLLER.back || fact.button === MENU_CONTROLLER.menu) confirmPrompt.cancel();
-    } else if (menu.open) {
-      if (fact.button === MENU_CONTROLLER.back || fact.button === MENU_CONTROLLER.menu) dismiss();
-      else if (fact.button === MENU_CONTROLLER.inventory) runMenuAction('inventory');
-      else if (fact.button === MENU_CONTROLLER.character) runMenuAction('character');
-    }
+  // Key capture for rebinding runs before navigation, which would otherwise take Escape and the arrows.
+  const onKeyDown = (event: KeyboardEvent): void => { if (activePanel === 'settings') controlsView.captureKey(event); };
+  document.addEventListener('keydown', onKeyDown, true);
+  // Escape with no surface open is Escape in play: it opens the menu, except where there is none.
+  const navigation = mountNavigation(shell, context, {
+    onPlayEscape: () => { if (!deadMode && !titleMode) openMenu(); },
+    onButton: button => {
+      if (!menu.open || confirmPrompt.open()) return;
+      if (button === MENU_SHORTCUTS.menu) dismiss();
+      else if (button === MENU_SHORTCUTS.inventory) runMenuAction('inventory');
+      else if (button === MENU_SHORTCUTS.character) runMenuAction('character');
+    },
   });
+  // The surfaces that take the cursor, topmost first. Escape and Back go to the topmost: from any menu
+  // panel Escape closes the whole menu while Back steps out one panel. A question the product needs
+  // answered (a summoning offer, a court, a quest prompt, the death and title screens) has no back, so
+  // neither press acts on it or on what it was asked over; a spell choice with a Cancel takes Cancel.
+  const MENU_PANELS = ['inventory', 'character', 'spells', 'magic-items', 'map', 'transport', 'rest', 'journal'] as const;
+  const surfaces = [
+    navigation.register({ name: 'confirm', root: confirmPrompt.dialog, layer: 100, isOpen: confirmPrompt.open, back: confirmPrompt.cancel }),
+    navigation.register({ name: 'menu', root: menu, layer: 90, isOpen: () => menu.open,
+      back: source => { if (source === 'escape') closeMenu(); else dismiss(); },
+      panel: direction => {
+        const index = MENU_PANELS.indexOf(activePanel as typeof MENU_PANELS[number]);
+        const from = index < 0 ? (direction > 0 ? -1 : 0) : index;
+        const next = MENU_PANELS[(from + direction + MENU_PANELS.length) % MENU_PANELS.length]!;
+        runMenuAction(next);
+      } }),
+    navigation.register({ name: 'summoning-offer', root: summoningOffer, layer: 80, isOpen: () => summoningOffer.open }),
+    navigation.register({ name: 'legal', root: legal, layer: 70, isOpen: () => !legal.hidden }),
+    navigation.register({ name: 'quests', root: quests, layer: 60, isOpen: () => questAnswerRequired && !deadMode }),
+    navigation.register({ name: 'dialogue', root: dialogueWindow, layer: 50, isOpen: () => dialogueWindow.open,
+      back: () => { if (currentDialogue) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,
+        data: { action: 'dialogue-close', revision: currentDialogue.revision } }); } }),
+    navigation.register({ name: 'create-item', root: createItem, layer: 45, isOpen: () => !createItem.hidden }),
+    ...[identify, teleport, dispel].map(service => navigation.register({ name: service.getAttribute('aria-label')!, root: service, layer: 45,
+      isOpen: () => !service.hidden, back: () => service.querySelector<HTMLButtonElement>('[data-escape]:not(:disabled)')?.click() })),
+    navigation.register({ name: 'dungeon-text', root: dungeonTextRoot, layer: 40, isOpen: () => !dungeonTextRoot.hidden, back: () => dungeonTextClose.click() }),
+    navigation.register({ name: 'death', root: deathRoot, layer: 20, isOpen: () => !deathRoot.hidden }),
+    navigation.register({ name: 'title', root: entryRoot, layer: 10, isOpen: () => !entryRoot.hidden }),
+  ];
   const onCancel = (event: Event): void => event.preventDefault();
   // One named handler, so the listener dispose removes is the listener this mount added.
   const onMenuToggle = (): void => runMenuAction('menu');
   menu.addEventListener('cancel', onCancel);
   menu.addEventListener('click', onMenuClick);
   menuToggle.addEventListener('click', onMenuToggle);
-  document.addEventListener('keydown', onKeyDown, true);
   // The published art arrives inside a snapshot: bytes the session read from admitted content, keyed
   // by the pack's media identity. The DOM holds the last block it saw and asks the product for the
   // revision it is missing, which is what a reload needs and what a republished artifact produces.
@@ -1371,9 +1304,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     // The Engine owns pointer lock; the product tells it whether any current surface needs a cursor.
     questAnswerRequired = Boolean(value.quests?.offer || value.quests?.pending
       || value.quests?.deliveries.some(message => message.delivery === 'popup' || message.delivery === 'letter'));
-    projectionNeedsInterface = value.mode === 'title' || value.mode === 'dead' || value.mode === 'paused' || value.mode === 'modal'
+    interaction.setProjectionNeedsCursor(value.mode === 'title' || value.mode === 'dead' || value.mode === 'paused' || value.mode === 'modal'
       || cinematicPlaying || questAnswerRequired
-      || Boolean(value.dungeonText || value.legal || value.createItem || value.identify || value.teleport || value.dispel);
+      || Boolean(value.dungeonText || value.legal || value.createItem || value.identify || value.teleport || value.dispel));
     // A question outlives nothing it was asked over: death, or the menu or dialogue closing, answers no.
     if (deadMode) confirmPrompt.cancel(); else confirmPrompt.dropIfOwnerClosed();
     syncInteraction();
@@ -1382,7 +1315,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   return { dispose: () => {
     reportMap(false);
     tooltips.dispose();
-    unsubscribeController?.();
+    for (const unregister of surfaces) unregister();
+    navigation.dispose();
+    interaction.dispose();
     unsubscribe();
     closeDebug();
     controlsView.dispose();
@@ -1396,7 +1331,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     questJournalView.dispose();
     lootView.dispose();
     document.removeEventListener('keydown', onKeyDown, true);
-    document.removeEventListener('pointerlockchange', onPointerLockChange);
     document.removeEventListener('keydown', skipOnPress, true);
     document.removeEventListener('pointerdown', skipOnPress, true);
     menu.removeEventListener('cancel', onCancel);

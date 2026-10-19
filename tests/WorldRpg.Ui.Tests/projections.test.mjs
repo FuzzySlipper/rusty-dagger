@@ -26,7 +26,7 @@ after(() => rm(output, { recursive: true, force: true }));
 
 function fixture() {
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' });
-  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLDialogElement', 'Event', 'KeyboardEvent', 'MouseEvent', 'Option']) {
+  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLDialogElement', 'HTMLSelectElement', 'HTMLInputElement', 'Event', 'KeyboardEvent', 'MouseEvent', 'Option']) {
     globalThis[key] = dom.window[key];
   }
   // JSDOM lays nothing out, so art sized to its box has no box to observe.
@@ -38,7 +38,10 @@ function fixture() {
   const root = document.getElementById('root');
   const actions = [];const modes=[];const focuses=[];
   let receive;
+  let observe = null;
   const mounted = mountProductUi(root, {
+    // A controller with no device: the test speaks the Engine's interface observations directly.
+    input: { subscribe(observer) { observe = observer; return () => { observe = null; }; } },
     ui: { setInteractionMode(mode) {modes.push(mode);}, focusGameplay() {focuses.push(modes.at(-1));} },
     projection: { subscribe(callback) { receive = callback; return () => {}; } },
     intents: { claim(_intent, value) { actions.push(value.data); } },
@@ -52,6 +55,11 @@ function fixture() {
   };
   return {
     root, actions, modes, focuses, answer,
+    pad(button) {
+      observe?.({ context: 'interface', fact: { kind: 'controller-button', button, edge: 'pressed' } });
+      observe?.({ context: 'interface', fact: { kind: 'controller-button', button, edge: 'released' } });
+    },
+    stick(axis, value) { observe?.({ context: 'interface', fact: { kind: 'controller-axis', axis, value } }); },
     publish(value = {}) {
       receive({ contract: 'dagger.ui.snapshot.v1', value: {
         resources: [], lastOutcome: '', messages: [], mode: 'playing',
@@ -501,6 +509,99 @@ test('the spell choices are centred dialogs, and game UI explains itself with dr
     info.dispatchEvent(new window.Event('focusout', { bubbles: true }));
     assert.equal(tip.hidden, true);
     assert.equal(f.root.querySelector('[title]'), null, 'No title attribute carries information.');
+  } finally { f.dispose(); }
+});
+
+test('a controller reaches the dialogue: directions move focus, accept presses, Back ends the conversation', () => {
+  const f = fixture();
+  try {
+    const dialogue = { revision: 'talk-5', targetLabel: 'A smith', greeting: 'Well met.', tone: 'normal', question: null, reply: null,
+      topics: [{ id: 'news', label: 'News' }, { id: 'work', label: 'Work' }], diagnostics: [] };
+    f.publish({ activation: { mode: 'talk', message: '', applied: true, dialogue } });
+    const window_ = f.root.querySelector('.dagger-dialogue');
+    assert.ok(window_.contains(document.activeElement), 'Focus moves into the conversation when it opens.');
+    const topics = [...f.root.querySelectorAll('.dagger-dialogue-topics button')];
+    topics[0].focus();
+    f.pad('button-13');
+    assert.equal(document.activeElement, topics[1]);
+    f.pad('button-0');
+    assert.deepEqual(f.actions.at(-1), { action: 'dialogue-topic', revision: 'talk-5', topic: 'work' });
+    // A held stick moves once until it is released, and losing window focus releases it.
+    f.stick('axis-1', -1);
+    assert.equal(document.activeElement, topics[0]);
+    f.stick('axis-1', -1);
+    assert.equal(document.activeElement, topics[0]);
+    window.dispatchEvent(new window.Event('blur'));
+    f.stick('axis-1', -1);
+    assert.notEqual(document.activeElement, topics[0], 'After blur the held direction counts as a new press.');
+    f.pad('button-1');
+    assert.deepEqual(f.actions.at(-1), { action: 'dialogue-close', revision: 'talk-5' });
+  } finally { f.dispose(); }
+});
+
+test('a controller changes a choice with left and right, so it can load from the death screen', () => {
+  const f = fixture();
+  try {
+    const choices = ['death-new-game', 'death-load-game', 'death-quit'].map((action, index) => ({ action, id: String(index), label: action, available: true }));
+    f.publish({ mode: 'dead', death: { active: true, screen: 'screen.death', revision: '1', message: 'Dead.', controlsSuppressed: true,
+      cameraEffect: 'none', fadeEffect: 'none', audioCue: 'none', selected: null, choices },
+      saveSlots: { entries: [{ key: 'slot-1', label: 'Before', savedAtUtc: '2026-09-23T00:00:00Z', ruleset: 'test' }], diagnostic: null } });
+    const root = f.root.querySelector('.dagger-death');
+    assert.ok(root.contains(document.activeElement), 'Focus moves into the death screen when it appears.');
+    const select = f.root.querySelector('.dagger-death-load-slot');
+    select.focus();
+    f.pad('button-15');
+    assert.equal(select.value, 'slot-1');
+    f.pad('button-1');
+    assert.equal(root.hidden, false, 'Back leaves a required answer alone.');
+    f.root.querySelector('.dagger-death-load-button').focus();
+    f.pad('button-0');
+    assert.deepEqual(f.actions.at(-1), { action: 'death-load-game', key: 'slot-1' });
+  } finally { f.dispose(); }
+});
+
+test('the menu steps panels on the shoulder buttons, and Back and Start step out one panel before closing it', () => {
+  const f = fixture();
+  try {
+    f.publish({});
+    const menu = f.root.querySelector('.dagger-menu');
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    assert.equal(menu.open, true);
+    f.pad('button-5');
+    assert.equal(f.root.querySelector('.dagger-inventory-root').hidden, false);
+    f.pad('button-5');
+    assert.equal(f.root.querySelector('.dagger-character-root').hidden, false);
+    f.pad('button-4');
+    assert.equal(f.root.querySelector('.dagger-inventory-root').hidden, false);
+    f.pad('button-1');
+    assert.equal(f.root.querySelector('.dagger-menu-home').hidden, false);
+    assert.equal(document.activeElement, f.root.querySelector('.dagger-menu-home [data-action="inventory"]'), 'Focus returns to the panel it left.');
+    // A focused amount steps with left and right.
+    f.root.querySelector('[data-action="rest"]').click();
+    const hours = f.root.querySelector('.dagger-rest-hours');
+    hours.focus();
+    f.pad('button-15');
+    assert.equal(hours.value, '2');
+    // Start steps out of a panel as Back does, then closes the menu from its home.
+    f.pad('button-9');
+    assert.equal(menu.open, true);
+    f.pad('button-9');
+    assert.equal(menu.open, false);
+  } finally { f.dispose(); }
+});
+
+test('a quest prompt takes focus and the pad answers it; Back does not dismiss it', () => {
+  const f = fixture();
+  try {
+    const prompt = { instance: 'quest:1', message: 1010, delivery: 'prompt', text: 'Will you help?', signoff: null, diagnostics: [], promptId: 'prompt:1', options: [{ id: 3, label: 'Yes' }, { id: 4, label: 'No' }] };
+    f.publish({ quests: { deliveries: [prompt], journal: { active: [], finished: [] }, pending: prompt } });
+    const yes = f.root.querySelector('.dagger-quest-prompt button');
+    assert.equal(document.activeElement, yes);
+    const before = f.actions.length;
+    f.pad('button-1');
+    assert.equal(f.actions.length, before);
+    f.pad('button-0');
+    assert.deepEqual(f.actions.at(-1), { action: 'quest-choice', questInstance: 'quest:1', questMessage: 1010, questPrompt: 'prompt:1', questChoice: 3 });
   } finally { f.dispose(); }
 });
 
