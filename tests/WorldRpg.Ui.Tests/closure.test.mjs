@@ -129,7 +129,7 @@ test('every action the DOM sends is one the ruleset admits, and every admitted a
 
   // The payload contract the actions travel under is one name on both sides.
   const csharp = /Contract => "([^"]+)"u8/.exec(readFileSync(join(ruleset, 'Presentation/DaggerfallUiAction.cs'), 'utf8'))?.[1];
-  const dom = /const UI_ACTION_CONTRACT = '([^']+)'/.exec(readFileSync(join(ui, 'main.ts'), 'utf8'))?.[1];
+  const dom = /const UI_ACTION_CONTRACT = '([^']+)'/.exec(readFileSync(join(ui, 'projection.ts'), 'utf8'))?.[1];
   assert.ok(csharp);
   assert.equal(dom, csharp);
 });
@@ -197,8 +197,8 @@ const UNREAD_HUD_FIELDS = new Map([
 
 /** The interface the DOM reads every snapshot through. */
 function hudType() {
-  const main = domSources.find(file => basename(file.fileName) === 'main.ts');
-  const declaration = main.statements.find(statement => ts.isInterfaceDeclaration(statement) && statement.name.text === 'DaggerHud');
+  const projection = domSources.find(file => basename(file.fileName) === 'projection.ts');
+  const declaration = projection.statements.find(statement => ts.isInterfaceDeclaration(statement) && statement.name.text === 'DaggerHud');
   assert.ok(declaration, 'the DOM no longer declares DaggerHud');
   return checker.getTypeAtLocation(declaration.name);
 }
