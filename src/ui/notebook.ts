@@ -44,7 +44,7 @@ export function mountNotebook(root: HTMLElement, claim: (action: NotebookAction)
 
   const render = (value: NotebookProjection): void => {
     // The reader redraws only for a new page, so Previous and Next keep focus as the player turns pages.
-    redraw(reader, JSON.stringify(value.book), () => renderReader(reader, value, claim));
+    redraw(reader, JSON.stringify([value.revision, value.book]), () => renderReader(reader, value, claim));
     renderNotes(notes, value, claim);
   };
 

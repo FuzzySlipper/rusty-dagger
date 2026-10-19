@@ -769,6 +769,96 @@ test('dismissing one of several stacked messages leaves focus in the ones that r
   } finally { f.dispose(); }
 });
 
+test('reopening a menu panel puts focus back on the control it last held', () => {
+  const f = fixture();
+  try {
+    f.publish({});
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    f.root.querySelector('.dagger-menu-home [data-action="rest"]').click();
+    const hours = f.root.querySelector('.dagger-rest-hours');
+    hours.focus();
+    f.pad('button-1');
+    assert.equal(f.root.querySelector('.dagger-menu-home').hidden, false);
+    f.root.querySelector('.dagger-menu-home [data-action="rest"]').click();
+    assert.equal(document.activeElement, hours, 'Reopening Rest returns to the hours field.');
+    // Switching away by the shoulder buttons and back does the same.
+    f.pad('button-5');
+    f.pad('button-4');
+    assert.equal(document.activeElement, hours);
+  } finally { f.dispose(); }
+});
+
+test('transport controls keep focus through an unchanged snapshot, and a focus fallback never lands on a hidden control', () => {
+  const f = fixture();
+  try {
+    const transport = { mode: 'foot', onShip: false, canRun: true, summary: 'On foot.', travelModifier: 256, oceanMinutesPerMapPixel: 255,
+      options: [
+        { id: 'foot', mode: 'foot', available: true, selected: true, label: 'Foot', message: 'Walk.', travelModifier: 256 },
+        { id: 'horse', mode: 'horse', available: true, selected: false, label: 'Horse', message: 'Ride.', travelModifier: 128 },
+      ],
+      wagon: { exists: false, accessible: false, id: null, usedClassicUnits: 0, capacityClassicUnits: 300000, storeRevision: null, message: 'Unavailable.', items: [], refusedDefinitions: [] } };
+    f.publish({ transport });
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    f.root.querySelector('.dagger-menu-home [data-action="transport"]').click();
+    const foot = f.root.querySelector('[data-transport-mode="foot"]');
+    foot.focus();
+    f.publish({ transport });
+    assert.equal(document.activeElement, foot, 'An identical snapshot leaves the mode button in place.');
+    f.pad('button-13');
+    f.publish({ transport });
+    f.pad('button-0');
+    assert.deepEqual(f.actions.at(-1), { action: 'transport-select', mode: 'horse' }, 'A snapshot between direction and accept does not lose the place.');
+    // A control removed under focus never sends focus to a hidden one.
+    document.activeElement.remove();
+    f.publish({ transport });
+    assert.equal(document.activeElement.closest('[hidden]'), null);
+  } finally { f.dispose(); }
+});
+
+test('book page controls send the notebook revision current when they are pressed', () => {
+  const f = fixture();
+  try {
+    const book = { id: 59, title: 'A book', author: 'An author', page: 0, pageCount: 2, text: 'First page.' };
+    f.publish({ notebook: { revision: '9', book, notes: [] } });
+    f.root.querySelector('[data-action="journal"]').click();
+    const next = f.root.querySelector('[data-testid="book-reader-next"]');
+    next.focus();
+    f.publish({ notebook: { revision: '10', book, notes: [{ id: 'note:1', text: 'Added.' }] } });
+    f.root.querySelector('[data-testid="book-reader-next"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'notebook-page', revision: '10', page: 1 });
+    assert.equal(document.activeElement.dataset.testid, 'book-reader-next', 'A rebuild keeps focus on Next.');
+  } finally { f.dispose(); }
+});
+
+test('an inventory context menu closes with its panel, so navigation belongs to what is visible', () => {
+  const f = fixture();
+  try {
+    const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
+      condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
+    f.publish({ inventory: { revision: '9:1', message: '', equipmentChange: null, slots: [], items: [row('stack:potion', { canUse: true })] } });
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    f.root.querySelector('.dagger-menu-home [data-action="inventory"]').click();
+    const contextMenu = f.root.querySelector('.dagger-context-menu');
+    f.root.querySelector('[data-inventory-item="stack:potion"]').focus();
+    f.pad('button-2');
+    assert.equal(contextMenu.hidden, false);
+    f.pad('button-3');
+    assert.equal(f.root.querySelector('.dagger-character-root').hidden, false);
+    assert.equal(contextMenu.hidden, true, 'Switching panel closes the context menu.');
+    // Back now acts on the visible panel.
+    f.pad('button-1');
+    assert.equal(f.root.querySelector('.dagger-menu-home').hidden, false);
+    // Closing the whole menu closes it too.
+    f.root.querySelector('.dagger-menu-home [data-action="inventory"]').click();
+    f.root.querySelector('[data-inventory-item="stack:potion"]').focus();
+    f.pad('button-2');
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    assert.equal(f.root.querySelector('.dagger-menu').open, false);
+    assert.equal(contextMenu.hidden, true);
+  } finally { f.dispose(); }
+});
+
 test('book reader and notebook render product state and send revision-guarded semantic actions', () => {
   const f = fixture();
   try {

@@ -166,7 +166,22 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     });
   };
 
+  // Each panel remembers the control that last held focus, so reopening it (from home or by the
+  // shoulder buttons) puts the player back where they were rather than on its Back button.
+  const panelFocus = new Map<Panel, HTMLElement>();
+  panel.addEventListener('focusin', event => {
+    if (activePanel !== null && event.target instanceof HTMLElement && !event.target.matches(':scope > [data-action="back"]'))
+      panelFocus.set(activePanel, event.target);
+  });
+  const restorePanelFocus = (action: Panel): boolean => {
+    const remembered = panelFocus.get(action);
+    if (!remembered?.isConnected || !panel.contains(remembered) || remembered.closest('[hidden]')
+      || (remembered as HTMLButtonElement).disabled) return false;
+    remembered.focus();
+    return document.activeElement === remembered;
+  };
   const showHome = (): void => {
+    inventoryView.closeContextMenu();
     reportMap(false);
     controlsView.cancel();
     const previous = activePanel;
@@ -183,6 +198,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   };
   const reportMenu = (open: boolean): void => send({ action: 'menu', open });
   const closeMenu = (): void => {
+    inventoryView.closeContextMenu();
     reportMap(false);
     travelView.hide();
     controlsView.cancel();
@@ -210,6 +226,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const showPanel = (action: Panel): void => {
     if (action === 'inventory' && inventorySuppressed) return;
     if (!menu.open) openMenu();
+    inventoryView.closeContextMenu();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     if (activePanel === 'debug') closeDebug();
     reportMap(action === 'map');
@@ -235,6 +252,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     for (const name of ['inventory', 'character', 'spells', 'transport', 'rest', 'journal', 'loot', 'debug'] as const)
       menu.classList.toggle(`has-${name}`, action === name);
     menuTitle.textContent = PANEL_TITLES[action] ?? (saveSlotMode === 'save' ? 'Save game' : 'Load game');
+    if (restorePanelFocus(action)) return;
     if (action === 'character') {
       menuTitle.focus({ preventScroll: true });
       menu.scrollTop = 0;

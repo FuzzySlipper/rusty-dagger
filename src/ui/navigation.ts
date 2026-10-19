@@ -101,10 +101,14 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
   const focusables = (scope: HTMLElement): HTMLElement[] =>
     Array.from(scope.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(element => visible(element) && !element.closest('[hidden]'));
 
+  /** A control focus can land on now: connected, inside the surface, enabled and not in a hidden part of it. */
+  const usable = (surface: NavigationSurface, element: HTMLElement | null | undefined): element is HTMLElement =>
+    element != null && element.isConnected && surface.root.contains(element) && element.matches(FOCUSABLE)
+      && !element.closest('[hidden]') && visible(element);
   const focusInto = (surface: NavigationSurface): void => {
     const remembered = lastFocus.get(surface);
-    const target = remembered?.isConnected && surface.root.contains(remembered) && remembered.matches(FOCUSABLE) ? remembered
-      : surface.initialFocus?.() ?? surface.root.querySelector<HTMLElement>('[autofocus]') ?? focusables(surface.root)[0] ?? null;
+    const preferred = [remembered, surface.initialFocus?.(), surface.root.querySelector<HTMLElement>('[autofocus]')];
+    const target = preferred.find(candidate => usable(surface, candidate)) ?? focusables(surface.root)[0] ?? null;
     target?.focus({ preventScroll: false });
   };
 
