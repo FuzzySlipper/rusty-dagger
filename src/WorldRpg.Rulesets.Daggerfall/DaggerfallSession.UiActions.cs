@@ -24,6 +24,8 @@ internal sealed partial class DaggerfallSession
     {
         DaggerfallUiInput parsed = _uiInput is { } cached && cached.Matches(input) ? cached : DaggerfallUiInput.Parse(input);
         _uiInput = parsed;
+        // Quick start commits its character in this update's actions, before the product begins from it.
+        if (parsed.Contains(DaggerfallUiActionKind.CharacterQuickStart)) return true;
         if (parsed.Contains(DaggerfallUiActionKind.Begin) && State.Character.Pending is not null)
         {
             Presentation.SetOutcome("Commit or cancel character choices before beginning play.");
@@ -130,7 +132,8 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.CharacterUpdate:
             case DaggerfallUiActionKind.CharacterBackgroundReroll:
             case DaggerfallUiActionKind.CharacterCommit:
-            case DaggerfallUiActionKind.CharacterCancel: ChangeCharacter(action); break;
+            case DaggerfallUiActionKind.CharacterCancel:
+            case DaggerfallUiActionKind.CharacterQuickStart: ChangeCharacter(action); break;
             case DaggerfallUiActionKind.CharacterLevelAllocate:
             case DaggerfallUiActionKind.CharacterLevelCommit: ChangeLevelUp(action); break;
             case DaggerfallUiActionKind.ActivationMode: ApplyActivationMode(action); break;

@@ -60,6 +60,16 @@ internal sealed partial class DaggerfallSession
                     State.Character.CommitChoices(replaceCommitted: true);
                     Presentation.SetOutcome("Character committed. Review the final summary, then begin the new game.");
                     break;
+                case DaggerfallUiActionKind.CharacterQuickStart:
+                    // A testing convenience: the draft's identity and career, a background completed without
+                    // asking, committed at once; the entry screen begins the new game in this same update.
+                    if (State.Character.Pending is null) State.Character.BeginFreshChoices(_random);
+                    if (State.Character.CreationMode == "character-generation") State.Character.BackToClassPick();
+                    DaggerfallPlayerUiAction named = string.IsNullOrWhiteSpace(action.Name) ? action with { Name = QuickStartName } : action;
+                    State.Character.ReplacePending(State.Character.WithCompletedBackground(Choices(named, null), _random));
+                    State.Character.CommitChoices(replaceCommitted: true);
+                    Presentation.SetOutcome("Quick start: character committed; beginning the new game.");
+                    break;
                 default:
                     throw new ArgumentException($"'{action.Action}' is not a character action.", nameof(action));
             }
@@ -69,6 +79,9 @@ internal sealed partial class DaggerfallSession
             Presentation.SetOutcome($"Character choice was not accepted: {DaggerfallRejectionText.For(error)}");
         }
     }
+
+    /// <summary>The name a quick-started character takes when the draft has none.</summary>
+    private const string QuickStartName = "Adventurer";
 
     private void RequireCharacterDraft()
     {

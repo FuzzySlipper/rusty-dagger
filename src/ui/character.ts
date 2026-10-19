@@ -584,10 +584,14 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   customFields.append(primary.element, major.element, minor.element, labeled('HP per level', hp), advantages.element, disadvantages.element, eligibility);
   customFields.hidden = career.value !== 'custom';
   const background = backgroundEditor(value.background ?? null);
-  const action = (kind: 'character-update' | 'character-commit' | 'character-background-reroll' | 'character-class-questions'): CharacterAction => career.value === 'custom'
-    ? { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value,
-      primarySkills: primary.values().join(','), majorSkills: major.values().join(','), minorSkills: minor.values().join(','), hitPointsPerLevel: Number(hp.value), advantages: advantages.value(), disadvantages: disadvantages.value(), ...(kind === 'character-class-questions' ? {} : background.values()) }
-    : { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value, ...(kind === 'character-class-questions' ? {} : background.values()) };
+  // Class questions and quick start carry no background: the ruleset rolls one, and quick start completes it.
+  const action = (kind: 'character-update' | 'character-commit' | 'character-background-reroll' | 'character-class-questions' | 'character-quick-start'): CharacterAction => {
+    const withBackground = kind !== 'character-class-questions' && kind !== 'character-quick-start';
+    return career.value === 'custom'
+      ? { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value,
+        primarySkills: primary.values().join(','), majorSkills: major.values().join(','), minorSkills: minor.values().join(','), hitPointsPerLevel: Number(hp.value), advantages: advantages.value(), disadvantages: disadvantages.value(), ...(withBackground ? background.values() : {}) }
+      : { action: kind, name: name.value, race: race.value, gender: gender.value, faceIndex: Number(face.value), reflexes: Number(reflexes.value), career: career.value, ...(withBackground ? background.values() : {}) };
+  };
   // A choice the ruleset derives other choices from (the faces a race and gender have, the background a
   // career or custom tier layout rolls, the biography its answers write) is sent as it changes, so the
   // draft the player sees is always the ruleset's.
@@ -620,7 +624,12 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   const attributesPanel = panel('Attributes', 'attributes', ...background.attributes);
   const skillsPanel = panel('Skills', 'skills', ...background.skills);
   attributesPanel.hidden = skillsPanel.hidden = value.background === null || value.background === undefined;
-  const actions = document.createElement('footer'); actions.className = 'dagger-creation-actions'; actions.append(blocked, cancel, commit);
+  // A testing convenience: start a new game at once from these choices, with the background completed for you.
+  const quickStart = document.createElement('button'); quickStart.type = 'button'; quickStart.textContent = 'Quick start';
+  quickStart.title = 'Begin a new game now with these choices and a background completed automatically';
+  quickStart.dataset.testid = 'character-quick-start'; quickStart.disabled = career.value === 'custom' && (custom?.eligibility ?? []).length !== 0;
+  quickStart.addEventListener('click', () => send?.(action('character-quick-start')));
+  const actions = document.createElement('footer'); actions.className = 'dagger-creation-actions'; actions.append(blocked, cancel, quickStart, commit);
   const layout = document.createElement('section'); layout.className = 'dagger-creation'; layout.dataset.testid = 'character-background';
   layout.append(identity, classPanel, backgroundPanel, attributesPanel, skillsPanel, actions);
   root.replaceChildren(layout);

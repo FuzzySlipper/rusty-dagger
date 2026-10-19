@@ -634,6 +634,23 @@ test('title creation renders normalized questions and sends the selected backgro
   } finally { f.dispose(); }
 });
 
+test('quick start sends the draft identity and career without background fields, even with points unspent', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'title', character: {
+      name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true,
+      creation: { editing: true, current: { name: '', race: 'breton', gender: 'female', faceIndex: 0, reflexes: 2, career: 'class00' },
+        races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }], faces: [{ index: 0, mediaId: 'character.head.female.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
+        background: null },
+    } });
+    const quickStart = f.root.querySelector('[data-testid="character-quick-start"]');
+    assert.equal(quickStart.disabled, false);
+    assert.equal(f.root.querySelector('[data-testid="character-commit"]').disabled, true, 'An ordinary commit still needs a name and a background.');
+    quickStart.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-quick-start', name: '', race: 'breton', gender: 'female', faceIndex: 0, reflexes: 2, career: 'class00' });
+  } finally { f.dispose(); }
+});
+
 test('an empty loot panel presents its owner message exactly once', () => {
   const f = fixture();
   try {

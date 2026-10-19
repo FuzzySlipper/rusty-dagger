@@ -88,6 +88,14 @@ public sealed class DaggerfallUiActionTests
         => Assert.Equal(expected, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json))?.Mode);
 
     [Theory]
+    [InlineData("{\"action\":\"character-quick-start\",\"name\":\"\",\"race\":\"breton\",\"gender\":\"male\",\"faceIndex\":0,\"reflexes\":2,\"career\":\"class00\"}", true)]
+    [InlineData("{\"action\":\"character-quick-start\",\"name\":\"Aubk-i\",\"race\":\"breton\",\"gender\":\"male\",\"faceIndex\":0,\"reflexes\":2,\"career\":\"class00\"}", true)]
+    [InlineData("{\"action\":\"character-quick-start\",\"name\":\"\",\"race\":\"breton\",\"gender\":\"male\",\"faceIndex\":0,\"reflexes\":2,\"career\":\"class00\",\"backgroundAnswers\":\"\",\"attributeAllocations\":\"\",\"skillAllocations\":\"\"}", false)]
+    [InlineData("{\"action\":\"character-quick-start\",\"name\":\"\",\"gender\":\"male\",\"faceIndex\":0,\"reflexes\":2,\"career\":\"class00\"}", false)]
+    public void Quick_start_carries_the_draft_identity_and_career_and_no_background(string json, bool accepted)
+        => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+
+    [Theory]
     [InlineData("{\"action\":\"save-slots\"}", true)]
     [InlineData("{\"action\":\"save-slot\",\"label\":\"Before the dungeon\"}", true)]
     [InlineData("{\"action\":\"save-slot\",\"key\":\"slot-1\",\"label\":\"Before the dungeon\",\"confirm\":true}", true)]

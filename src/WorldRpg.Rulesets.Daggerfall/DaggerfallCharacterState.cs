@@ -315,6 +315,13 @@ internal sealed partial class DaggerfallCharacterState
     internal DaggerfallCharacterCreationChoices WithFreshBackground(DaggerfallCharacterCreationChoices choices, Rusty.Engine.IRandomService random) =>
         choices with { Background = DaggerfallCharacterBackgroundPolicy.Roll(_definitions, CurrentCareer(choices), choices.ToIdentity(), random, NextBackgroundRollSequence()) };
 
+    /// <summary>The choices with a freshly rolled background whose answers stand and whose points are all spent.</summary>
+    internal DaggerfallCharacterCreationChoices WithCompletedBackground(DaggerfallCharacterCreationChoices choices, Rusty.Engine.IRandomService random)
+    {
+        DaggerfallCharacterCreationChoices rolled = WithFreshBackground(choices, random);
+        return rolled with { Background = DaggerfallCharacterBackgroundPolicy.SpendAll(_definitions, CurrentCareer(rolled), rolled.ToIdentity(), rolled.Background!) };
+    }
+
     internal void ReplacePending(DaggerfallCharacterCreationChoices choices)
     {
         ArgumentNullException.ThrowIfNull(choices);
