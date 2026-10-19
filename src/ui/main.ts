@@ -3,9 +3,15 @@ import { mountMap, isMapProjection } from './maps.js';
 import { mountLodging, isLodgingProjection } from './lodging.js';
 import { mountControls } from './controls.js';
 import { mountLiveDebugPanel, type LiveDebugPanelMount } from '@rusty-engine/live-debug';
-import { adopt, cssUrl, fitPixelArt, heldRevision, image } from './art.js';
+import { adopt, heldRevision } from './art.js';
 import { mountConfirm, type ConfirmQuestion } from './confirm.js';
 import { mountTooltips } from './tooltip.js';
+import { mountShell } from './shell.js';
+import { sender } from './host.js';
+import { mountChoices } from './choices.js';
+import { mountDungeonText } from './dungeon-text.js';
+import { mountDeath } from './death.js';
+import { mountEntry } from './entry.js';
 import { mountInteraction } from './interaction.js';
 import { mountNavigation } from './navigation.js';
 import { mountInventory } from './inventory.js';
@@ -13,14 +19,12 @@ import { mountCharacter, isCharacterProjection } from './character.js';
 import { mountLoot, type LootProjection } from './loot.js';
 import { mountNotebook } from './notebook.js';
 import { mountQuestJournal } from './journal.js';
-import { BEGIN_ACTION, TITLE_MODE, screenForMode } from './screens.js';
 import { mountTravel, isTravelProjection } from './travel.js';
 
 import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
 import {
-  UI_ACTION_CONTRACT, diagnosticRows, formatRestHours, isBundles, isDeathProjection, isHud, isRestProjection, isSaveSlots, viewSummary,
-  type BundleProjection, type DaggerHud, type DeathProjection, type DialogueProjection, type MerchantItemProjection,
-  type MerchantProjection, type SaveSlotProjection,
+  UI_ACTION_CONTRACT, diagnosticRows, formatRestHours, isHud, isRestProjection, isSaveSlots, viewSummary, type DialogueProjection, type MerchantItemProjection,
+  type MerchantProjection, type SaveSlotProjection
 } from './projection.js';
 import { isTransportProjection, mountTransport } from './transport.js';
 import { isSpellbookProjection, renderSpellSales, renderSpells } from './spells.js';
@@ -36,142 +40,8 @@ const ART_REQUEST_INTERVAL = 120;
 const MENU_SHORTCUTS = Object.freeze({ menu: 'button-9', inventory: 'button-8', character: 'button-3' });
 
 export function mountProductUi(root: HTMLElement, context: RustyApplicationUiContext): { dispose(): void } {
-  const stylesheet = document.createElement('link');
-  stylesheet.rel = 'stylesheet';
-  stylesheet.href = new URL('./styles.css', import.meta.url).href;
-  const inventoryStylesheet = document.createElement('link');
-  inventoryStylesheet.rel = 'stylesheet';
-  inventoryStylesheet.href = new URL('./inventory.css', import.meta.url).href;
-  const characterStylesheet = document.createElement('link');
-  characterStylesheet.rel = 'stylesheet';
-  characterStylesheet.href = new URL('./character.css', import.meta.url).href;
-  const lootStylesheet = document.createElement('link');
-  lootStylesheet.rel = 'stylesheet';
-  lootStylesheet.href = new URL('./loot.css', import.meta.url).href;
-  document.head.append(stylesheet, inventoryStylesheet, characterStylesheet, lootStylesheet);
+  const { shell, dispose: disposeShell } = mountShell(root);
 
-  const shell = document.createElement('section');
-  shell.className = 'dagger-hud';
-  shell.innerHTML = `
-    <div class="dagger-title"><span class="dagger-site"></span><strong>Exploring</strong><span class="dagger-calendar" aria-live="off"></span></div>
-    <div class="dagger-reticle" aria-hidden="true">+</div>
-    <section class="dagger-vitals" aria-live="polite">
-    </section>
-    <ol class="dagger-outcome" role="status" aria-label="Recent messages"><li>Awaiting projection…</li></ol>
-    <label class="dagger-breath" hidden>Breath <meter min="0" max="1" value="1"></meter><span></span></label>
-    <span class="dagger-activation-indicator" aria-live="polite"></span>
-    <section class="dagger-quests" aria-live="polite"></section>
-    <p class="dagger-view" aria-live="polite"></p><section class="dagger-detectors" aria-label="Detected nearby objects"></section><section class="dagger-status"></section><section class="dagger-effects" aria-label="Active effects" hidden><h2>Active effects</h2><ul></ul></section><button class="dagger-cinematic-skip" type="button" hidden>Skip</button>
-    <div class="dagger-death" role="alertdialog" aria-labelledby="dagger-death-title" hidden>
-      <img class="dagger-death-screen" alt="You have died.">
-      <div class="dagger-death-fade" aria-hidden="true"></div>
-      <section class="dagger-death-panel">
-        <h1 class="dagger-death-message" id="dagger-death-title"></h1>
-        <label class="dagger-death-load">Load saved game <select class="dagger-death-load-slot"><option value="">Choose a saved game</option></select></label>
-        <div class="dagger-death-actions">
-          <button class="dagger-death-new" type="button">New game</button>
-          <button class="dagger-death-load-button" type="button">Load game</button>
-          <button class="dagger-death-quit" type="button">Quit to title</button>
-        </div>
-      </section>
-    </div>
-    <section class="dagger-dungeon-text" role="dialog" aria-label="Dungeon text" hidden>
-      <p class="dagger-dungeon-text-body"></p>
-      <form class="dagger-dungeon-text-answer" hidden><label>Answer <input maxlength="256" autocomplete="off"></label><button type="submit">Answer</button></form>
-      <button class="dagger-dungeon-text-close" type="button">Continue</button>
-    </section>
-    <div class="dagger-entry" role="dialog" aria-label="Title" hidden><img class="dagger-entry-screen" alt="Rusty Dagger"><button class="dagger-entry-begin" type="button">Begin</button></div>
-    <button class="dagger-menu-toggle" type="button" data-action="menu" aria-haspopup="dialog">Menu · Esc</button>
-    <dialog class="dagger-menu" aria-labelledby="dagger-menu-title">
-      <h1 id="dagger-menu-title" tabindex="-1">Game menu</h1>
-      <div class="dagger-menu-home">
-        <button data-action="resume" autofocus>Return to game</button>
-        <button data-action="inventory">Inventory &amp; equipment · I</button>
-        <button data-action="character">Character · C</button>
-        <button data-action="spells">Spells</button>
-        <button data-action="magic-items">Magic items · U</button>
-        <button data-action="map">Map</button>
-        <button data-action="transport">Travel &amp; transport</button>
-        <button data-action="rest">Rest &amp; loiter</button>
-        <button data-action="journal">Journal &amp; notes</button>
-        <button data-action="loot">Activate aimed target · F</button>
-        <label>Activation mode <select class="dagger-activation-mode"><option value="grab">Grab</option><option value="info">Information</option><option value="talk">Talk</option><option value="steal">Steal / Lockpick</option><option value="bash">Bash</option></select></label>
-        <button data-action="save-game">Save game</button>
-        <button data-action="load-game">Load game</button>
-        <button data-action="quick-save">Quick save</button>
-        <button data-action="quick-load">Quick load</button>
-        <button data-action="debug">Engine debug console</button>
-        <button data-action="diagnostics">Composition diagnostics</button>
-        <button data-action="settings">Control settings</button>
-        <button data-action="action-driven-time" aria-pressed="false">Action-driven time: Off</button>
-        <p>Action-driven time pauses while you are idle or looking around. Movement and actions advance the world; swings and jumps finish before it pauses.</p>
-        <p>The world pauses while this menu is open.</p>
-      </div>
-      <div class="dagger-menu-panel" hidden>
-      <section class="dagger-composition" aria-label="Resolved composition diagnostics">
-      <strong>Resolved composition</strong>
-      <dl></dl>
-      <strong>Text diagnostics</strong>
-      <ul class="dagger-text-diagnostics" aria-label="Text diagnostics"></ul>
-    </section>
-      <div class="dagger-controls-root" hidden></div>
-      <div class="dagger-inventory-root" hidden></div>
-      <div class="dagger-character-root" hidden></div>
-      <section class="dagger-spells-root" hidden aria-label="Known spells"></section>
-      <div class="dagger-map-root" hidden></div>
-      <div class="dagger-transport-root" hidden></div>
-      <section class="dagger-rest-root" hidden aria-label="Rest and loiter">
-        <h2>Rest &amp; loiter</h2>
-        <p class="dagger-rest-status" role="status" aria-live="polite">Choose a rest action.</p>
-        <div class="dagger-rest-actions">
-          <label>Rest hours <input class="dagger-rest-hours" type="number" min="1" max="99" step="1" value="1"></label>
-          <button type="button" data-action="rest" data-rest-mode="timed">Rest for hours</button>
-          <button type="button" data-action="rest" data-rest-mode="until-healed">Rest until healed</button>
-          <label>Loiter hours <input class="dagger-loiter-hours" type="number" min="1" max="3" step="1" value="1"></label>
-          <button type="button" data-action="rest" data-rest-mode="loiter">Loiter</button>
-        </div>
-      </section>
-      <div class="dagger-notebook-root" hidden></div>
-      <div class="dagger-loot-root" hidden></div>
-      <section class="dagger-save-slots" hidden aria-label="Save slots">
-        <p class="dagger-save-slots-diagnostic" role="status"></p>
-        <label>Save name <input class="dagger-save-slots-label" maxlength="120" autocomplete="off"></label>
-        <label>Selected slot <select class="dagger-save-slots-select"><option value="">New slot</option></select></label>
-        <div class="dagger-save-slots-actions">
-          <button data-action="save-slot">Save</button>
-          <button data-action="load-slot">Load selected</button>
-          <button data-action="delete-slot">Delete selected</button>
-        </div>
-      </section>
-      <div class="dagger-debug-root" data-rusty-ui-interactive hidden></div>
-      <button data-action="loot-exit" hidden>Exit loot</button>
-      <button data-action="back">Back to menu</button>
-      </div>
-    </dialog>
-    <dialog class="dagger-dialogue" aria-labelledby="dagger-dialogue-title">
-      <h2 id="dagger-dialogue-title" class="dagger-dialogue-target"></h2>
-      <p class="dagger-dialogue-greeting" aria-live="polite"></p>
-      <label>Tone <select class="dagger-dialogue-tone"><option value="polite">Polite</option><option value="normal">Normal</option><option value="blunt">Blunt</option></select></label>
-      <label class="dagger-dialogue-donation" hidden>Donation gold <input class="dagger-dialogue-donation-amount" type="number" min="1" step="1" value="1" inputmode="numeric"></label>
-      <p class="dagger-dialogue-question" aria-live="polite"></p>
-      <p class="dagger-dialogue-reply" aria-live="polite"></p>
-      <div class="dagger-dialogue-topics"></div>
-      <section class="dagger-dialogue-training" aria-label="Skill training" hidden>
-        <h3>Skill training</h3>
-        <p class="dagger-dialogue-training-summary"></p>
-        <div class="dagger-dialogue-training-skills"></div>
-        <div class="dagger-training-confirm" hidden><p></p><button type="button" data-training-yes>Yes</button><button type="button" data-training-no>No</button></div>
-      </section>
-      <section class="dagger-dialogue-tavern" aria-label="Tavern food and drink"></section>
-      <section class="dagger-dialogue-merchant" aria-label="Merchant services"></section>
-      <section class="dagger-dialogue-spells" aria-label="Spells for sale"></section>
-      <section class="dagger-dialogue-summoning" aria-label="Daedric summoning"></section>
-      <section class="dagger-dialogue-itemmaker" aria-label="Item enchanting"></section>
-      <section class="dagger-dialogue-potionmaker" aria-label="Potion making"></section>
-      <section class="dagger-dialogue-spellmaker" aria-label="Spell construction"></section>
-      <button class="dagger-dialogue-close" type="button">End conversation</button>
-    </dialog><dialog class="dagger-daedric-offer" aria-label="Daedric quest offer"></dialog>`;
-  root.append(shell);
   const confirmPrompt = mountConfirm(shell);
   const askConfirm = (question: ConfirmQuestion): void => confirmPrompt.ask(question);
   const tooltips = mountTooltips(shell);
@@ -186,21 +56,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const breath = shell.querySelector<HTMLLabelElement>('.dagger-breath')!;
   const activationIndicator = shell.querySelector<HTMLElement>('.dagger-activation-indicator')!;
   const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
-  const legal = document.createElement('section');
-  legal.className = 'dagger-legal'; legal.hidden = true; legal.setAttribute('role', 'dialog');
-  legal.setAttribute('aria-modal', 'true'); legal.setAttribute('aria-label', 'Law and court'); shell.append(legal);
-  // A spell that asks the caster to choose shows its choice as a centred panel over the world.
-  const spellService = (name: string, label: string): HTMLElement => {
-    const section = document.createElement('section');
-    section.className = `dagger-spell-service dagger-${name}`; section.hidden = true;
-    section.setAttribute('role', 'dialog'); section.setAttribute('aria-label', label);
-    quests.before(section);
-    return section;
-  };
-  const createItem = spellService('create-item', 'Create item');
-  const identify = spellService('identify', 'Identify');
-  const teleport = spellService('teleport', 'Teleport');
-  const dispel = spellService('dispel', 'Dispel magic');
+  const send = sender(context);
+  const choices = mountChoices(shell, quests, send);
+  const { legal, createItem } = choices;
   const view = shell.querySelector<HTMLParagraphElement>('.dagger-view')!;
   const detectors = shell.querySelector<HTMLElement>('.dagger-detectors')!;
   const status = shell.querySelector<HTMLElement>('.dagger-status')!;
@@ -228,37 +86,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const claim = (action: string): void => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action },
   });
-  const deathRoot = shell.querySelector<HTMLElement>('.dagger-death')!;
-  const deathScreen = shell.querySelector<HTMLImageElement>('.dagger-death-screen')!;
-  fitPixelArt(deathScreen, deathRoot);
-  const deathMessage = shell.querySelector<HTMLElement>('.dagger-death-message')!;
-  const deathLoadSlot = shell.querySelector<HTMLSelectElement>('.dagger-death-load-slot')!;
-  const deathNew = shell.querySelector<HTMLButtonElement>('.dagger-death-new')!;
-  const deathLoad = shell.querySelector<HTMLButtonElement>('.dagger-death-load-button')!;
-  const deathQuit = shell.querySelector<HTMLButtonElement>('.dagger-death-quit')!;
-  const dungeonTextRoot = shell.querySelector<HTMLElement>('.dagger-dungeon-text')!;
-  const dungeonTextBody = shell.querySelector<HTMLElement>('.dagger-dungeon-text-body')!;
-  const dungeonTextForm = shell.querySelector<HTMLFormElement>('.dagger-dungeon-text-answer')!;
-  const dungeonTextAnswer = dungeonTextForm.querySelector<HTMLInputElement>('input')!;
-  const dungeonTextClose = shell.querySelector<HTMLButtonElement>('.dagger-dungeon-text-close')!;
-  let currentDungeonText: NonNullable<DaggerHud['dungeonText']> | null = null;
-  dungeonTextForm.addEventListener('submit', event => {
-    event.preventDefault();
-    if (!currentDungeonText?.requiresAnswer) return;
-    context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: {
-      action: 'dungeon-text-answer', revision: currentDungeonText.revision,
-      item: currentDungeonText.actionId, text: dungeonTextAnswer.value,
-    } });
-  });
-  dungeonTextClose.addEventListener('click', () => {
-    if (!currentDungeonText) return;
-    context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: {
-      action: 'dungeon-text-close', revision: currentDungeonText.revision, item: currentDungeonText.actionId,
-    } });
-  });
-  const entryRoot = shell.querySelector<HTMLElement>('.dagger-entry')!;
-  const entryScreen = shell.querySelector<HTMLImageElement>('.dagger-entry-screen')!;
-  fitPixelArt(entryScreen, entryRoot);
+  const death = mountDeath(shell, send);
+  const dungeonText = mountDungeonText(shell, send);
   const inventoryRoot = shell.querySelector<HTMLElement>('.dagger-inventory-root')!;
   const inventoryView = mountInventory(inventoryRoot, (action) => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
@@ -331,22 +160,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const characterView = mountCharacter(characterRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
-  const creationElement = characterView.creationElement;
-  const creationHome = creationElement.parentElement!;
-  const entryOutcome = document.createElement('p'); entryOutcome.className = 'dagger-entry-outcome'; entryOutcome.setAttribute('role', 'status'); entryRoot.append(entryOutcome);
-  const entryParts = document.createElement('div'); entryParts.className = 'dagger-entry-parts'; entryRoot.append(entryParts);
-  const entryCreate = document.createElement('button'); entryCreate.type = 'button'; entryCreate.textContent = 'Create character';
-  entryCreate.className = 'dagger-entry-create'; entryCreate.dataset.testid = 'entry-create-character'; entryRoot.append(entryCreate);
-  entryCreate.addEventListener('click', () => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'character-begin' },
-  }));
-  // The game a new run starts under: offered only when there is a choice, and only before creation opens.
-  const entryBundle = document.createElement('label'); entryBundle.className = 'dagger-entry-bundle'; entryBundle.textContent = 'Game ';
-  const entryBundleSelect = document.createElement('select'); entryBundleSelect.dataset.testid = 'entry-bundle'; entryBundle.append(entryBundleSelect); entryRoot.append(entryBundle);
-  entryBundleSelect.addEventListener('change', () => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'bundle-select', key: entryBundleSelect.value },
-  }));
-  let bundles: BundleProjection | null = null;
+  const entry = mountEntry(shell, send, characterView.creationElement, () => { if (menu.open) menu.close(); });
   const notebookRoot = shell.querySelector<HTMLElement>('.dagger-notebook-root')!;
   const notebookView = mountNotebook(notebookRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
@@ -368,17 +182,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // the menu that asked closes rather than stay open over a world that is running again.
   let loadRequested = false;
   let actionDrivenTime = false;
-  const claimDeath = (action: string, key?: string): void => context.intents?.claim('dagger.ui', {
-    kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: key ? { action, key } : { action },
-  });
-  deathNew.addEventListener('click', () => claimDeath('death-new-game'));
-  deathLoad.addEventListener('click', () => {
-    if (deathLoadSlot.value) claimDeath('death-load-game', deathLoadSlot.value);
-  });
-  deathQuit.addEventListener('click', () => claimDeath('death-quit'));
-  deathLoadSlot.addEventListener('change', () => {
-    deathLoad.disabled = deathLoadSlot.value.length === 0;
-  });
   const lootView = mountLoot(lootRoot, action => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
   }));
@@ -611,7 +414,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   let questAnswerRequired = false;
   // A pointer lock the world held, lost in play, is the player asking for the menu: the browser and
   // the desktop shell spend Escape on releasing the lock, so this is what Escape does in play.
-  const interaction = mountInteraction(context, { onLockLostInPlay: () => { if (!menu.open && !deadMode && !titleMode) openMenu(); } });
+  const interaction = mountInteraction(context, { onLockLostInPlay: () => { if (!menu.open && !deadMode && !entry.isTitle()) openMenu(); } });
   interaction.needsCursor(() => menu.open || dialogueWindow.open || summoningOffer.open);
   // Every cursor surface is a navigation surface; deciding the mode and the focus scope together keeps
   // them from disagreeing about which surface is up.
@@ -827,7 +630,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   document.addEventListener('keydown', onKeyDown, true);
   // Escape with no surface open is Escape in play: it opens the menu, except where there is none.
   const navigation = mountNavigation(shell, context, {
-    onPlayEscape: () => { if (!deadMode && !titleMode) openMenu(); },
+    onPlayEscape: () => { if (!deadMode && !entry.isTitle()) openMenu(); },
     onButton: button => {
       if (!menu.open || confirmPrompt.open()) return;
       if (button === MENU_SHORTCUTS.menu) dismiss();
@@ -857,11 +660,11 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       back: () => { if (currentDialogue) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,
         data: { action: 'dialogue-close', revision: currentDialogue.revision } }); } }),
     navigation.register({ name: 'create-item', root: createItem, layer: 45, isOpen: () => !createItem.hidden }),
-    ...[identify, teleport, dispel].map(service => navigation.register({ name: service.getAttribute('aria-label')!, root: service, layer: 45,
+    ...choices.cancellable.map(service => navigation.register({ name: service.getAttribute('aria-label')!, root: service, layer: 45,
       isOpen: () => !service.hidden, back: () => service.querySelector<HTMLButtonElement>('[data-escape]:not(:disabled)')?.click() })),
-    navigation.register({ name: 'dungeon-text', root: dungeonTextRoot, layer: 40, isOpen: () => !dungeonTextRoot.hidden, back: () => dungeonTextClose.click() }),
-    navigation.register({ name: 'death', root: deathRoot, layer: 20, isOpen: () => !deathRoot.hidden }),
-    navigation.register({ name: 'title', root: entryRoot, layer: 10, isOpen: () => !entryRoot.hidden }),
+    navigation.register({ name: 'dungeon-text', root: dungeonText.root, layer: 40, isOpen: () => !dungeonText.root.hidden, back: dungeonText.close }),
+    navigation.register({ name: 'death', root: death.root, layer: 20, isOpen: () => !death.root.hidden }),
+    navigation.register({ name: 'title', root: entry.root, layer: 10, isOpen: () => !entry.root.hidden }),
   ];
   const onCancel = (event: Event): void => event.preventDefault();
   // One named handler, so the listener dispose removes is the listener this mount added.
@@ -875,87 +678,14 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   let artRevision = heldRevision();
   let artCooldown = 0;
   let deadMode = false;
-  let titleMode = false;
-  let creationMode: string | null = null;
-  let pickScreens: readonly string[] = [];
-  let currentDeath: DeathProjection | null = null;
-  // The entry screen is the mode's own screen: the mode shows the published artifact, and the one thing
-  // the screen does is ask the product to begin. The product decides, so the answer is the mode changing
-  // rather than this hiding itself.
-  const redrawEntry = (): void => {
-    entryRoot.hidden = !titleMode;
-    if (!titleMode) return;
-    entryRoot.dataset.mode = creationMode ?? TITLE_MODE;
-    const creating = creationMode !== null;
-    if (creating && menu.open) menu.close();
-    (creating ? entryRoot : creationHome).append(creationElement);
-    creationElement.classList.toggle('dagger-entry-creation', creating);
-    shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!.hidden = creating;
-    entryCreate.hidden = creating;
-    entryBundle.hidden = creating || bundles === null || bundles.options.length < 2;
-    if (bundles !== null && document.activeElement !== entryBundleSelect) {
-      entryBundleSelect.replaceChildren(...bundles.options.map(option => new Option(option.title, option.id)));
-      entryBundleSelect.value = bundles.current;
-    }
-    const primary = screenForMode(creationMode ?? TITLE_MODE)!;
-    const entry = image(primary);
-    if (entry !== null) entryScreen.src = entry;
-    entryParts.replaceChildren(...(creationMode === 'character-pick' ? pickScreens.filter(id => id !== primary) : []).flatMap(id => {
-      const source = image(id); if (source === null) return [];
-      const part = document.createElement('img'); part.alt = ''; part.dataset.mediaId = id;
-      // A pick part is drawn at the scale its screen is, so the two pieces of art keep one pixel size.
-      part.addEventListener('load', () => { part.style.width = `${part.naturalWidth * entryScreen.width / Math.max(1, entryScreen.naturalWidth)}px`; });
-      part.src = source; return [part];
-    }));
-  };
-  shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!.addEventListener('click', () => {
-    context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: BEGIN_ACTION },
-    });
-  });
   let lastPanelRevision: string | null = null;
   const requestArt = (revision: string): void => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'art-request', revision },
   });
-  const redrawDeath = (death: DeathProjection | null): void => {
-    deathRoot.hidden = !deadMode;
-    menuToggle.hidden = deadMode;
-    if (!deadMode) return;
-    deathMessage.textContent = death?.message ?? 'You have died.';
-    deathRoot.dataset.cameraEffect = death?.cameraEffect ?? 'fall';
-    deathRoot.dataset.fadeEffect = death?.fadeEffect ?? 'to-black';
-    deathRoot.dataset.audioCue = death?.audioCue ?? 'player-death';
-    // The ruleset owns which choices death offers; a snapshot without them offers none.
-    const choices = death?.choices ?? [];
-    const findChoice = (action: string) => choices.find(choice => choice.action === action);
-    const selected = death?.selected ?? null;
-    const newChoice = findChoice('death-new-game');
-    const loadChoice = findChoice('death-load-game');
-    const quitChoice = findChoice('death-quit');
-    deathNew.textContent = newChoice?.label ?? 'New game';
-    deathLoad.textContent = loadChoice?.label ?? 'Load game';
-    deathQuit.textContent = quitChoice?.label ?? 'Quit to title';
-    deathNew.disabled = selected !== null || newChoice?.available !== true;
-    deathQuit.disabled = selected !== null || quitChoice?.available !== true;
-
-    const selectedSlot = deathLoadSlot.value;
-    deathLoadSlot.replaceChildren(new Option('Choose a saved game', ''));
-    for (const entry of saveSlots.entries) deathLoadSlot.add(new Option(entry.label, entry.key));
-    deathLoadSlot.value = saveSlots.entries.some(entry => entry.key === selectedSlot) ? selectedSlot : '';
-    const loadAvailable = loadChoice?.available === true;
-    deathLoadSlot.disabled = selected !== null || !loadAvailable;
-    deathLoad.disabled = selected !== null || !loadAvailable || deathLoadSlot.value.length === 0;
-    if (death?.screen) {
-      const screen = image(death.screen);
-      if (screen !== null) deathScreen.src = screen;
-    } else {
-      const screen = image(screenForMode('dead')!);
-      if (screen !== null) deathScreen.src = screen;
-    }
-  };
   const redrawArt = (): void => {
-    redrawDeath(currentDeath);
-    redrawEntry();
+    choices.refreshArt();
+    death.refreshArt();
+    entry.refreshArt();
     // The panels memo their own state revision, so art that arrived after the state it draws has to
     // ask them to paint again rather than re-send a projection they would ignore.
     inventoryView.refresh();
@@ -965,91 +695,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const unsubscribe = context.projection?.subscribe((projection) => {
     if (projection?.contract !== 'dagger.ui.snapshot.v1' || !isHud(projection.value)) return;
     const value = projection.value;
-    legal.hidden = !value.legal;
-    legal.replaceChildren();
-    if (value.legal) {
-      const caseView = value.legal;
-      legal.dataset.phase = caseView.phase;
-      const prisonArt = caseView.phase === 'prison' ? image('screen.prison') : null;
-      legal.style.backgroundImage = prisonArt === null ? '' : cssUrl(prisonArt);
-      const card = document.createElement('div'); card.className = 'dagger-legal-card';
-      const title = document.createElement('h2'); title.textContent = caseView.title;
-      const charges = document.createElement('p'); charges.textContent = `Charges: ${caseView.charges.join(', ')}`;
-      const message = document.createElement('p'); message.textContent = caseView.message;
-      card.append(title, charges, message);
-      for (const choice of caseView.choices) {
-        const button = document.createElement('button'); button.textContent = choice.label;
-        button.addEventListener('click', () => context.intents?.claim('dagger.ui', {
-          kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-          data: {action: 'legal-choice', revision: caseView.revision, key: choice.id},
-        })); card.append(button);
-      }
-      legal.append(card);
-    }
-    createItem.hidden = !value.createItem;
-    createItem.replaceChildren();
-    if (value.createItem) {
-      const choice = value.createItem;
-      const title = document.createElement('h2'); title.textContent = 'Create Item'; createItem.append(title);
-      for (const option of choice.options) {
-        const button = document.createElement('button'); button.textContent = option.label;
-        button.addEventListener('click', () => context.intents?.claim('dagger.ui', {kind:'product-payload', contract:UI_ACTION_CONTRACT,
-          data:{action:'create-item-select', revision:choice.revision, key:option.id}}));
-        createItem.append(button);
-      }
-    }
-    identify.hidden = !value.identify;
-    identify.replaceChildren();
-    if (value.identify) {
-      const choice=value.identify;
-      const title=document.createElement('h2');title.textContent=`Identify (${choice.cost} magicka per selection)`;identify.append(title);
-      const choose=(key?:string):void=>{context.intents?.claim('dagger.ui',{
-        kind:'product-payload',contract:UI_ACTION_CONTRACT,
-        data:key ? {action:'identify-select',revision:choice.revision,key} : {action:'identify-cancel',revision:choice.revision},
-      });};
-      for(const option of [...choice.options,...(choice.options.length ? [{id:'all',label:'All unidentified items'}] : [])]) {
-        const button=document.createElement('button');button.textContent=option.label;
-        button.addEventListener('click',()=>choose(option.id));identify.append(button);
-      }
-      const cancel=document.createElement('button');cancel.textContent='Cancel';cancel.dataset.escape='';cancel.addEventListener('click',()=>choose());identify.append(cancel);
-    }
-    teleport.hidden = !value.teleport;
-    teleport.replaceChildren();
-    if (value.teleport) {
-      const choice=value.teleport;
-      const title=document.createElement('h2');title.textContent='Teleport';teleport.append(title);
-      for (const [key,label] of [['anchor','Set anchor'],['recall','Recall to anchor'],['cancel','Cancel']] as const) {
-        const button=document.createElement('button');button.textContent=label;
-        button.disabled=key==='recall' && !choice.anchorSet;
-        if(key==='cancel') button.dataset.escape='';
-        button.addEventListener('click',()=>context.intents?.claim('dagger.ui', {
-          kind:'product-payload',contract:UI_ACTION_CONTRACT,data:{action:'teleport-select',revision:choice.revision,key},
-        }));teleport.append(button);
-      }
-    }
-    dispel.hidden = !value.dispel;
-    dispel.replaceChildren();
-    if (value.dispel) {
-      const choice = value.dispel;
-      const heading = document.createElement('h2');
-      heading.textContent = 'Dispel magic';
-      dispel.append(heading);
-      const choose = (key?: string): void => { context.intents?.claim('dagger.ui', {
-        kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-        data: key ? { action: 'dispel-select', revision: choice.revision, key } : { action: 'dispel-cancel', revision: choice.revision },
-      }); };
-      for (const option of choice.options) {
-        const button = document.createElement('button');
-        button.textContent = option.label;
-        button.addEventListener('click', () => choose(option.id));
-        dispel.append(button);
-      }
-      const cancel = document.createElement('button');
-      cancel.textContent = 'Cancel';
-      cancel.dataset.escape = '';
-      cancel.addEventListener('click', () => choose());
-      dispel.append(cancel);
-    }
+    choices.update(value);
     const adopted = value.uiArt ? adopt(value.uiArt) : '';
     if (adopted.length > 0 && adopted !== artRevision) {
       artRevision = adopted;
@@ -1092,16 +738,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
     if (value.notebook) notebookView.update(value.notebook);
     questJournalView.update(value.quests?.journal);
-    const dungeonText = value.dungeonText ?? null;
-    if (dungeonText?.revision !== currentDungeonText?.revision || dungeonText?.actionId !== currentDungeonText?.actionId)
-      dungeonTextAnswer.value = '';
-    currentDungeonText = dungeonText;
-    dungeonTextRoot.hidden = dungeonText === null || value.mode === 'dead';
-    if (dungeonText !== null) {
-      dungeonTextBody.textContent = dungeonText.text;
-      dungeonTextForm.hidden = !dungeonText.requiresAnswer;
-      dungeonTextClose.textContent = dungeonText.requiresAnswer ? 'Cancel' : 'Continue';
-    }
+    dungeonText.update(value);
     lodgingView.update(isLodgingProjection(value.lodging) ? value.lodging : null);
     if (value.rest && isRestProjection(value.rest)) {
       restHours.max = String(value.rest.maximumRestHours);
@@ -1139,17 +776,10 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     // The open menu holds the world, so the product reports modal until a requested load replaces the
     // session; a failed load leaves the old session, still modal, and the menu shows why.
     if (loadRequested && menu.open && value.mode === 'playing') closeMenu();
-    currentDeath = isDeathProjection(value.death) ? value.death : null;
-    redrawDeath(currentDeath);
-
-    // The entry screen is the mode's screen, the way the death screen is the dead mode's: the mode
-    // value decides which one is up, and the artifact the mode names is what it shows.
-    titleMode = value.mode === TITLE_MODE;
-    creationMode = titleMode && value.character?.creationAvailable && value.character.creation ? value.character.creation.editing
-      ? value.character.creation.mode ?? null : value.character.creation.summary ? 'character-pick' : null : null;
-    pickScreens = value.pickScreens ?? [];
-    bundles = isBundles(value.bundles) ? value.bundles : null;
-    redrawEntry();
+    if (isSaveSlots(value.saveSlots)) saveSlots = value.saveSlots;
+    death.update(deadMode, value.death, saveSlots);
+    menuToggle.hidden = deadMode;
+    entry.update(value);
 
     title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'
       : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
@@ -1173,7 +803,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     const modeLabels: Record<string, string> = { grab: 'Grab', info: 'Information', talk: 'Talk', steal: 'Steal / Lockpick', bash: 'Bash' };
     activationIndicator.textContent = value.activation ? modeLabels[value.activation.mode] ?? value.activation.mode : '';
     activationIndicator.hidden = value.mode !== 'playing' || !value.activation;
-    entryOutcome.textContent = value.lastOutcome;
     renderQuestMessages(quests, value.quests, (action) => context.intents?.claim('dagger.ui', {
       kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: action,
     }));
@@ -1296,11 +925,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     cinematicSkip.hidden = cinematic === null;
     cinematicSkip.textContent = cinematic?.skipLabel ?? 'Skip';
     status.replaceChildren(...(value.slots ?? []).map(row => { const item = document.createElement('p'); item.textContent = `${row.label}: ${row.detail}`; return item; }));
-    if (isSaveSlots(value.saveSlots)) {
-      saveSlots = value.saveSlots;
-      redrawSaveSlots();
-      if (deadMode) redrawDeath(currentDeath);
-    }
+    if (isSaveSlots(value.saveSlots)) redrawSaveSlots();
     // The Engine owns pointer lock; the product tells it whether any current surface needs a cursor.
     questAnswerRequired = Boolean(value.quests?.offer || value.quests?.pending
       || value.quests?.deliveries.some(message => message.delivery === 'popup' || message.delivery === 'letter'));
@@ -1338,10 +963,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     menuToggle.removeEventListener('click', onMenuToggle);
     saveSlotsSelect.replaceChildren();
     if (menu.open) menu.close();
-    stylesheet.remove();
-    inventoryStylesheet.remove();
-    characterStylesheet.remove();
-    lootStylesheet.remove();
-    shell.remove();
+    disposeShell();
   } };
 }
