@@ -1,4 +1,5 @@
 import { cssUrl, image, reportMissingArt } from './art.js';
+import { redraw } from './redraw.js';
 
 export interface InventoryProjection {
   readonly revision: string;
@@ -245,7 +246,8 @@ export function mountInventory(
       button.disabled = slot === undefined;
       renderPlace(button, slot === undefined ? undefined : byEquipment.get(slot.id), label, label);
     });
-    renderOverflow(overflow, value.items.filter((item) => item.gridSlot === null && item.equippedSlots.length === 0));
+    const overflowItems = value.items.filter((item) => item.gridSlot === null && item.equippedSlots.length === 0);
+    redraw(overflow, JSON.stringify([overflowItems, overflowItems.map(item => image(item.icon) !== null)]), () => renderOverflow(overflow, overflowItems));
     if (selected !== null && !byKey.has(selected.key)) selected = null;
     renderSelection();
   };

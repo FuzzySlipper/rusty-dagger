@@ -126,6 +126,7 @@ export interface CharacterProjection {
 }
 
 import { heldRevision, image } from './art.js';
+import { redraw } from './redraw.js';
 
 export interface CharacterView {
   readonly creationElement: HTMLElement;
@@ -253,7 +254,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         creationStamp = nextCreationStamp;
       }
       levelUp.heading.textContent = value.levelUp?.title ?? "Level up";
-      renderLevelUp(levelUp.rows, value.levelUp ?? null, send);
+      redraw(levelUp.rows, JSON.stringify(value.levelUp ?? null), () => renderLevelUp(levelUp.rows, value.levelUp ?? null, send));
     },
     // The sheet's chrome is published art that can arrive after the sheet's own state.
     refresh(): void {

@@ -1,4 +1,5 @@
 import type { InventoryProjection } from './inventory.js';
+import { redraw } from './redraw.js';
 
 export interface PropertyProjection {
   readonly bankAvailable: boolean;
@@ -21,7 +22,11 @@ export function mountProperty(root: HTMLElement, claim: (action: PropertyAction)
     control.addEventListener('click', () => claim(action));
     return control;
   }
+  // Property redraws only when what it offers changes, so a focused Take or Store keeps focus.
   return { update(value, inventory): void {
+    redraw(root, JSON.stringify([value, inventory?.items ?? null]), () => draw(value, inventory));
+  } };
+  function draw(value: PropertyProjection | null, inventory?: InventoryProjection): void {
     root.replaceChildren();
     if (!value) { root.hidden = true; return; }
     root.hidden = !value.bankAvailable && value.storage === null && !value.offers.some(offer => offer.owned);
@@ -53,5 +58,5 @@ export function mountProperty(root: HTMLElement, claim: (action: PropertyAction)
       root.append(button(`Store ${item.quantity} ${item.label}`, item.equippedSlots.length === 0 && Number.isSafeInteger(amount) && amount > 0,
         { action: 'property-put', key: storage.key, item: item.key, revision: storage.revision, amount }));
     }
-  } };
+  }
 }

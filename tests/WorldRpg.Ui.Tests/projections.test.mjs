@@ -605,6 +605,30 @@ test('a quest prompt takes focus and the pad answers it; Back does not dismiss i
   } finally { f.dispose(); }
 });
 
+test('a snapshot that arrives every update keeps the focused control, and a changed list keeps the player in place', () => {
+  const f = fixture();
+  try {
+    const spell = (key, name) => ({ key, name, cost: 5 });
+    const spells = available => ({ available, ready: null, result: '', sale: null, information: null });
+    f.publish({ spells: spells([spell('spell.1', 'Heal'), spell('spell.2', 'Light')]) });
+    f.root.querySelector('[data-action="spells"]').click();
+    const info = f.root.querySelector('[data-action="spell-info"][data-spell="spell.2"]');
+    info.focus();
+    f.publish({ spells: spells([spell('spell.1', 'Heal'), spell('spell.2', 'Light')]) });
+    assert.equal(document.activeElement, info, 'An unchanged snapshot leaves the control in place.');
+    f.publish({ spells: spells([spell('spell.0', 'Cure'), spell('spell.1', 'Heal'), spell('spell.2', 'Light')]) });
+    assert.equal(document.activeElement.dataset.spell, 'spell.2', 'A rebuilt list focuses the same spell again.');
+    assert.equal(document.activeElement.dataset.action, 'spell-info');
+
+    const dialogue = topics => ({ revision: 'talk-1', targetLabel: 'A smith', greeting: 'Hello.', tone: 'normal', question: null, reply: null, topics, diagnostics: [] });
+    f.publish({ activation: { mode: 'talk', message: '', applied: true, dialogue: dialogue([{ id: 'news', label: 'News' }, { id: 'work', label: 'Work' }]) } });
+    const work = f.root.querySelector('.dagger-dialogue-topics [data-topic="work"]');
+    work.focus();
+    f.publish({ activation: { mode: 'talk', message: '', applied: true, dialogue: dialogue([{ id: 'news', label: 'News' }, { id: 'work', label: 'Work' }]) } });
+    assert.equal(document.activeElement, work);
+  } finally { f.dispose(); }
+});
+
 test('book reader and notebook render product state and send revision-guarded semantic actions', () => {
   const f = fixture();
   try {
