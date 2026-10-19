@@ -34,15 +34,15 @@ function fixture() {
   dom.window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   dom.window.HTMLDialogElement.prototype.close = function () { this.open = false; };
   const root = document.getElementById('root');
-  const actions = [];const modes=[];
+  const actions = [];const modes=[];const focuses=[];
   let receive;
   const mounted = mountProductUi(root, {
-    ui: { setInteractionMode(mode) {modes.push(mode);}, focusGameplay() {} },
+    ui: { setInteractionMode(mode) {modes.push(mode);}, focusGameplay() {focuses.push(modes.at(-1));} },
     projection: { subscribe(callback) { receive = callback; return () => {}; } },
     intents: { claim(_intent, value) { actions.push(value.data); } },
   });
   return {
-    root, actions, modes,
+    root, actions, modes, focuses,
     publish(value = {}) {
       receive({ contract: 'dagger.ui.snapshot.v1', value: {
         resources: [], lastOutcome: '', messages: [], mode: 'playing',
@@ -969,6 +969,41 @@ test('cinematic and menu retain interface input until the last cursor surface cl
     assert.equal(f.modes.at(-1), 'interface');
     f.root.querySelector('.dagger-menu-toggle').click();
     assert.equal(f.modes.at(-1), 'gameplay');
+  } finally { f.dispose(); }
+});
+
+test('closing a menu that held the world re-takes gameplay focus once the world resumes, without a click', () => {
+  const f = fixture();
+  try {
+    f.publish();
+    assert.deepEqual(f.focuses, []);
+    // The menu opens and the product holds the world in a modal while it is open.
+    f.root.querySelector('.dagger-menu-toggle').click();
+    f.publish({ mode: 'modal' });
+    assert.equal(f.modes.at(-1), 'interface');
+    // Closing it still waits on the product: the projection says modal until the world resumes.
+    f.root.querySelector('.dagger-menu-toggle').click();
+    assert.equal(f.modes.at(-1), 'interface');
+    assert.deepEqual(f.focuses, []);
+    f.publish({ mode: 'playing' });
+    assert.equal(f.modes.at(-1), 'gameplay');
+    assert.deepEqual(f.focuses, ['gameplay']);
+    // Further playing snapshots ask for nothing more.
+    f.publish({ mode: 'playing' });
+    assert.deepEqual(f.focuses, ['gameplay']);
+
+    // A close while another surface still needs the cursor stays in interface mode and asks for no focus.
+    const popup = { instance: 'quest:2', entryId: 'opening:1', message: 1, delivery: 'popup', heading: 'Welcome',
+      text: 'You awaken.', signoff: null, diagnostics: [] };
+    f.root.querySelector('.dagger-menu-toggle').click();
+    f.publish({ mode: 'modal', quests: { deliveries: [popup], journal: { active: [], finished: [] }, pending: null } });
+    f.root.querySelector('.dagger-menu-toggle').click();
+    f.publish({ mode: 'playing', quests: { deliveries: [popup], journal: { active: [], finished: [] }, pending: null } });
+    assert.equal(f.modes.at(-1), 'interface');
+    assert.deepEqual(f.focuses, ['gameplay']);
+    // The popup's dismissal is the last surface: play resumes and takes focus.
+    f.publish({ mode: 'playing', quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null } });
+    assert.deepEqual(f.focuses, ['gameplay', 'gameplay']);
   } finally { f.dispose(); }
 });
 
