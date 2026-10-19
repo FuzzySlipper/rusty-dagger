@@ -1073,7 +1073,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       if (action === 'spell-info') send();
       else askConfirm(action === 'spell-buy'
         ? { message: `Buy this spell for ${button.dataset.price} gold?`, accept: 'Buy', onAccept: send }
-        : { message: 'Forget this spell?', accept: 'Forget', onAccept: send });
+        : { message: `${button.getAttribute('aria-label') ?? 'Forget this spell'}?`, accept: 'Forget', onAccept: send });
       return;
     }
     if (action === 'spell-sort' || action === 'spell-swap') {
