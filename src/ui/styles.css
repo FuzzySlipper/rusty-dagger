@@ -117,6 +117,24 @@
 .dagger-text-diagnostics { padding-left: 1.2rem; color: #cab882; font: .72rem ui-monospace, monospace; }
 .dagger-dialogue-close { margin-top: 10px; }
 
+/* The drawn confirmation every purchase asks through, above the menu or dialogue that asked. */
+.dagger-confirm { width: min(26rem, calc(100vw - 32px)); padding: 1.2rem; border: 1px solid #d4b56b; background: #151712; color: #f2e3ba; box-shadow: 0 12px 44px rgb(0 0 0 / .7); }
+.dagger-confirm::backdrop { background: rgb(0 0 0 / .5); }
+.dagger-confirm p { margin: 0 0 1rem; line-height: 1.45; }
+.dagger-confirm-choices { display: flex; gap: .6rem; justify-content: flex-end; }
+.dagger-confirm button { padding: .55rem 1rem; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; cursor: var(--dagger-cursor-pointer); }
+
+/* A drawn tooltip: the window never shows a title attribute. */
+.dagger-tooltip { position: fixed; z-index: 60; max-width: 22rem; padding: .3rem .55rem; border: 1px solid #aa9c7a; background: #0c0d0a; color: #f2e3ba; font: .75rem Georgia, serif; pointer-events: none; }
+.dagger-tooltip[hidden] { display: none; }
+
+/* A spell's choice (create item, identify, teleport, dispel), centred over the world. */
+.dagger-spell-service { position: absolute; left: 50%; top: 50%; z-index: 25; display: grid; gap: .5rem; width: min(30rem, calc(100vw - 2rem)); max-height: calc(100vh - 4rem); overflow-y: auto; transform: translate(-50%, -50%); padding: 1.2rem; background: rgba(8, 9, 11, .96); border: 1px solid #c6a05a; pointer-events: auto; }
+.dagger-spell-service[hidden] { display: none; }
+.dagger-spell-service h2 { margin: 0 0 .4rem; font-size: 1.1rem; }
+.dagger-spell-service button { justify-self: stretch; padding: .5rem .9rem; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; text-align: left; cursor: var(--dagger-cursor-pointer); }
+.dagger-spell-service button:disabled { opacity: .55; cursor: default; }
+
 .dagger-menu.has-inventory { width: min(72rem, calc(100vw - 24px)); }
 .dagger-menu.has-inventory > h1 { font-size: 1rem; margin-bottom: 8px; }
 .dagger-inventory-root { margin-bottom: 12px; }

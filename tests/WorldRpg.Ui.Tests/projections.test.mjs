@@ -33,6 +33,8 @@ function fixture() {
   globalThis.ResizeObserver = class { observe() {} disconnect() {} };
   dom.window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   dom.window.HTMLDialogElement.prototype.close = function () { this.open = false; };
+  // The desktop window cancels these at once, so game UI never asks through them.
+  for (const name of ['alert', 'confirm', 'prompt']) dom.window[name] = () => { throw new Error(`window.${name} is not game UI`); };
   const root = document.getElementById('root');
   const actions = [];const modes=[];const focuses=[];
   let receive;
@@ -41,8 +43,15 @@ function fixture() {
     projection: { subscribe(callback) { receive = callback; return () => {}; } },
     intents: { claim(_intent, value) { actions.push(value.data); } },
   });
+  // Answer the drawn confirmation, which must be the one open question.
+  const answer = (accept) => {
+    const dialog = root.querySelector('.dagger-confirm');
+    assert.equal(dialog?.open, true, 'A drawn confirmation is open.');
+    dialog.querySelector(accept ? '.dagger-confirm-accept' : '.dagger-confirm-cancel').click();
+    assert.equal(dialog.open, false);
+  };
   return {
-    root, actions, modes, focuses,
+    root, actions, modes, focuses, answer,
     publish(value = {}) {
       receive({ contract: 'dagger.ui.snapshot.v1', value: {
         resources: [], lastOutcome: '', messages: [], mode: 'playing',
@@ -379,6 +388,107 @@ test('Escape toggles the menu from any panel, and a pointer lock lost in play op
     document.dispatchEvent(new window.Event('pointerlockchange'));
     assert.equal(menu.open, true);
   } finally { delete document.pointerLockElement; f.dispose(); }
+});
+
+test('Escape backs out of the innermost surface and opens the menu only from play', () => {
+  const f = fixture();
+  try {
+    const menu = f.root.querySelector('.dagger-menu');
+    const escape = () => document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    const empty = { deliveries: [], journal: { active: [], finished: [] }, pending: null };
+    const dialogue = { revision: 'talk-3', targetLabel: 'A guard', greeting: 'Halt.', tone: 'normal', question: null, reply: null, topics: [], diagnostics: [] };
+
+    // A conversation ends; the game menu does not open over it.
+    f.publish({ activation: { mode: 'talk', message: '', applied: true, dialogue } });
+    escape();
+    assert.equal(menu.open, false);
+    assert.deepEqual(f.actions.at(-1), { action: 'dialogue-close', revision: 'talk-3' });
+    f.publish({});
+
+    // Surfaces that need an answer keep their own choices.
+    const before = f.actions.length;
+    const prompt = { instance: 'quest:1', message: 1010, delivery: 'prompt', text: 'Will you help?', signoff: null, diagnostics: [], promptId: 'prompt:1', options: [{ id: 3, label: 'Yes' }] };
+    f.publish({ quests: { ...empty, deliveries: [prompt], pending: prompt } });
+    escape();
+    f.publish({ quests: empty, legal: { revision: 'case-1', phase: 'court', title: 'Court', message: 'Plead.', charges: ['Theft'], choices: [{ id: 'guilty', label: 'Guilty' }] } });
+    escape();
+    f.publish({ quests: empty, createItem: { revision: 'create-1', options: [{ id: 'sword', label: 'Sword' }] } });
+    escape();
+    assert.equal(menu.open, false, 'Escape leaves a required answer alone.');
+    assert.equal(f.actions.length, before);
+
+    // A spell's choice with a Cancel takes Escape as Cancel.
+    f.publish({ identify: { revision: 'id-1', cost: 5, options: [{ id: 'ring', label: 'Ring' }] } });
+    escape();
+    assert.deepEqual(f.actions.at(-1), { action: 'identify-cancel', revision: 'id-1' });
+    f.publish({ teleport: { revision: 'tp-1', anchorSet: false } });
+    escape();
+    assert.deepEqual(f.actions.at(-1), { action: 'teleport-select', revision: 'tp-1', key: 'cancel' });
+    f.publish({});
+
+    // The title screen has no game menu to open.
+    f.publish({ mode: 'title' });
+    escape();
+    assert.equal(menu.open, false);
+
+    // In play, Escape still opens and closes the menu.
+    f.publish({});
+    escape();
+    assert.equal(menu.open, true);
+    escape();
+    assert.equal(menu.open, false);
+  } finally { f.dispose(); }
+});
+
+test('a drawn confirmation answers Escape and death with no, and returns focus to what asked', () => {
+  const f = fixture();
+  try {
+    const spells = { available: [{ key: 'spell.023', name: 'Heal', cost: 15 }], ready: null, result: '', sale: null, information: null };
+    f.publish({ spells });
+    const menu = f.root.querySelector('.dagger-menu');
+    const escape = () => document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    f.root.querySelector('[data-action="spells"]').click();
+    const forget = f.root.querySelector('[data-action="spell-delete"]');
+    forget.focus();
+    forget.click();
+    const confirm = f.root.querySelector('.dagger-confirm');
+    assert.equal(confirm.open, true);
+    assert.equal(confirm.querySelector('.dagger-confirm-accept').textContent, 'Forget');
+    assert.equal(document.activeElement, confirm.querySelector('.dagger-confirm-cancel'), 'Focus starts on Cancel.');
+    escape();
+    assert.equal(confirm.open, false);
+    assert.equal(menu.open, true, 'Escape answered the question, not the menu.');
+    assert.equal(document.activeElement, forget);
+    assert.equal(f.actions.some(action => action.action === 'spell-delete'), false);
+
+    forget.click();
+    f.publish({ spells, mode: 'dead', death: null });
+    assert.equal(confirm.open, false, 'Death answers an open question with no.');
+    assert.equal(f.actions.some(action => action.action === 'spell-delete'), false);
+  } finally { f.dispose(); }
+});
+
+test('the spell choices are centred dialogs, and game UI explains itself with drawn tooltips, never title', () => {
+  const f = fixture();
+  try {
+    f.publish({ identify: { revision: 'id-1', cost: 5, options: [{ id: 'ring', label: 'Ring' }] } });
+    const identify = f.root.querySelector('.dagger-identify');
+    assert.equal(identify.classList.contains('dagger-spell-service'), true);
+    assert.equal(identify.getAttribute('role'), 'dialog');
+    assert.equal(identify.getAttribute('aria-label'), 'Identify');
+
+    f.publish({ spells: { available: [{ key: 'spell.023', name: 'Heal', cost: 15 }], ready: null, result: '', sale: null, information: null } });
+    f.root.querySelector('[data-action="spells"]').click();
+    const info = f.root.querySelector('[data-action="spell-info"]');
+    info.dispatchEvent(new window.Event('focusin', { bubbles: true }));
+    const tip = f.root.querySelector('.dagger-tooltip');
+    assert.equal(tip.hidden, false);
+    assert.equal(tip.textContent, 'Describe Heal');
+    assert.equal(tip.parentElement, f.root.querySelector('.dagger-menu'), 'The tooltip draws inside the open modal.');
+    info.dispatchEvent(new window.Event('focusout', { bubbles: true }));
+    assert.equal(tip.hidden, true);
+    assert.equal(f.root.querySelector('[title]'), null, 'No title attribute carries information.');
+  } finally { f.dispose(); }
 });
 
 test('book reader and notebook render product state and send revision-guarded semantic actions', () => {
@@ -1238,7 +1348,7 @@ test('travel map draws the published world and region art from the projected map
     const [left, top] = percent(regions[0]);
     near(left, (first.x - world.world.left) / (world.world.right - world.world.left) * 100);
     near(top, (first.y - world.world.top) / (world.world.bottom - world.world.top) * 100);
-    assert.match(regions[0].title, new RegExp(`^${first.name}: ${first.discovered} known`));
+    assert.match(regions[0].dataset.tooltip, new RegExp(`^${first.name}: ${first.discovered} known`));
     assert.ok(root.querySelector('.dagger-travel-map-player'));
     const picker = root.querySelector('.dagger-travel-map-regions');
     assert.equal(picker.options.length, world.regions.length + 1);
@@ -1265,7 +1375,8 @@ test('travel map draws the published world and region art from the projected map
     const dots = root.querySelectorAll('.dagger-travel-map-dot');
     assert.equal(dots.length, 2);
     assert.deepEqual([dots[0].dataset.category, dots[1].dataset.category], ['town', 'dungeon']);
-    assert.equal(dots[0].title, 'Hand-drawn Hamlet (Town)');
+    assert.equal(dots[0].dataset.tooltip, 'Hand-drawn Hamlet (Town)');
+    assert.equal(dots[0].getAttribute('aria-label'), 'Hand-drawn Hamlet (Town)');
     const [dotLeft, dotTop] = percent(dots[0]);
     near(dotLeft, 70 / (frame.right - frame.left) * 100);
     near(dotTop, 52 / (frame.bottom - frame.top) * 100);
@@ -1600,7 +1711,6 @@ test('committed character summary stays at the entry screen and sends launch res
 test('spell seller and spellbook use confirmed semantic changes and source settings', () => {
   const f=fixture();
   try {
-    let accepted=false; window.confirm=()=>accepted;
     const spells={available:[{key:'spell.023',name:'Heal',cost:15},{key:'spell.001',name:'Unavailable spell',cost:0,canCast:false}],
       ready:'spell.023',result:'',sale:{revision:'seller-1',provider:'Mage',offers:[
         {key:'spell.002',name:'Cure',castingCost:12,price:48,known:false},
@@ -1610,16 +1720,17 @@ test('spell seller and spellbook use confirmed semantic changes and source setti
     const sales=f.root.querySelector('.dagger-dialogue-spells');
     assert.equal(sales.querySelector('[data-action="spell-buy"][data-spell="spell.023"]').disabled,true);
     const buy=sales.querySelector('[data-action="spell-buy"][data-spell="spell.002"]');
-    buy.click(); assert.equal(f.actions.some(action=>action.action==='spell-buy'),false);
-    accepted=true; buy.click();assert.deepEqual(f.actions.at(-1),{action:'spell-buy',key:'spell.002',revision:'seller-1',amount:48,confirm:true});
+    buy.click(); assert.match(f.root.querySelector('.dagger-confirm').textContent,/Buy this spell for 48 gold\?/);
+    f.answer(false); assert.equal(f.actions.some(action=>action.action==='spell-buy'),false);
+    buy.click(); f.answer(true); assert.deepEqual(f.actions.at(-1),{action:'spell-buy',key:'spell.002',revision:'seller-1',amount:48,confirm:true});
     sales.querySelector('[data-action="spell-info"]').click();assert.deepEqual(f.actions.at(-1),{action:'spell-info',key:'spell.002'});
     f.root.querySelector('[data-action="spells"]').click();
     const book=f.root.querySelector('.dagger-spells-root');
     assert.equal(book.querySelector('[data-action="spell-ready"][data-spell="spell.001"]').disabled,true);
     assert.match(book.textContent,/Unavailable spell · Unavailable/);assert.match(book.textContent,/magnitude 1–10/);
     assert.match(book.textContent,/Target: Self; element: Magic/);
-    book.querySelector('[data-action="spell-delete"]').click();assert.deepEqual(f.actions.at(-1),{action:'spell-delete',key:'spell.023',confirm:true});
-    accepted=false;book.querySelector('[data-action="spell-delete"]').click();
+    book.querySelector('[data-action="spell-delete"]').click();f.answer(true);assert.deepEqual(f.actions.at(-1),{action:'spell-delete',key:'spell.023',confirm:true});
+    book.querySelector('[data-action="spell-delete"]').click();f.answer(false);
     assert.equal(f.actions.filter(action=>action.action==='spell-delete').length,1);
   } finally { f.dispose(); }
 });
@@ -1723,7 +1834,6 @@ test('create item presents authoritative paid choices and submits selection with
 test('spellmaker edits supported settings, preserves typing on repeated projection, previews and confirms one semantic purchase', () => {
   const f=fixture();
   try {
-    let confirmed=false;window.confirm=()=>confirmed;
     const settings={key:'free-action',type:26,subType:-1,durationBase:3,durationMod:7,durationPerLevel:2,
       chanceBase:1,chanceMod:1,chancePerLevel:1,magnitudeBaseLow:1,magnitudeBaseHigh:1,magnitudeLevelBase:1,magnitudeLevelHigh:1,magnitudePerLevel:1};
     const targets=['Self','Touch','Single target at range','Area around self','Area at range'].map((label,value)=>({value,label}));
@@ -1735,8 +1845,8 @@ test('spellmaker edits supported settings, preserves typing on repeated projecti
     publish();const root=f.root.querySelector('.dagger-dialogue-spellmaker');
     assert.match(root.textContent,/300 gold · 15 magicka/);
     const buy=[...root.querySelectorAll('button')].find(b=>b.textContent==='Buy constructed spell');
-    buy.click();assert.equal(f.actions.some(a=>a.action==='spellmaker-buy'),false);
-    confirmed=true;buy.click();assert.deepEqual(f.actions.at(-1),{action:'spellmaker-buy',revision:'maker-1',key:'draft-2',amount:300,confirm:true});
+    buy.click();f.answer(false);assert.equal(f.actions.some(a=>a.action==='spellmaker-buy'),false);
+    buy.click();f.answer(true);assert.deepEqual(f.actions.at(-1),{action:'spellmaker-buy',revision:'maker-1',key:'draft-2',amount:300,confirm:true});
     const form=root.querySelector('form');const name=form.querySelector('[name="name"]');name.value='New name';
     name.dispatchEvent(new window.Event('input',{bubbles:true}));assert.equal(buy.disabled,true);
     publish();assert.equal(root.querySelector('[name="name"]'),name);assert.equal(name.value,'New name');
@@ -1854,15 +1964,14 @@ test('potion maker selects an owned recipe or an ingredient experiment through t
 test('item maker edits named settings, shows forced payloads, and confirms the quoted purchase', () => {
   const f=fixture();
   try {
-    let confirmed=false;window.confirm=()=>confirmed;
     const setting={key:'enchantment.15.18',name:'Soul Bound: Ghost',cost:-300,forced:['Feather Weight','Item Deteriorates','Low Damage']};
     const itemMaker={revision:'enchant-1',provider:'Enchanter',eligible:true,items:[{key:'stack:rubies',name:'Ruby',capacity:1800,quantity:3}],settings:[setting],
       draft:{item:'stack:rubies',name:'Ghost ruby',settings:[setting.key]},quote:{key:'draft-1',capacity:1800,power:-300,gold:1000,eligible:true,reason:null,payloads:[setting,{key:'forced',name:'Feather Weight',cost:100,forced:[]}]}};
     const publish=()=>f.publish({spells:{available:[],ready:null,result:'',itemMaker},activation:{mode:'talk',message:'',applied:true,
       dialogue:{revision:'enchant-1',targetLabel:'Enchanter',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
     publish();const root=f.root.querySelector('.dagger-dialogue-itemmaker');assert.match(root.textContent,/-300\/1800 power · 1000 gold/);assert.match(root.textContent,/Feather Weight/);
-    const buy=[...root.querySelectorAll('button')].find(b=>b.textContent==='Enchant item');buy.click();assert.equal(f.actions.length,0);
-    confirmed=true;buy.click();assert.deepEqual(f.actions.at(-1),{action:'itemmaker-buy',revision:'enchant-1',key:'draft-1',amount:1000,confirm:true});
+    const buy=[...root.querySelectorAll('button')].find(b=>b.textContent==='Enchant item');buy.click();f.answer(false);assert.equal(f.actions.length,0);
+    buy.click();f.answer(true);assert.deepEqual(f.actions.at(-1),{action:'itemmaker-buy',revision:'enchant-1',key:'draft-1',amount:1000,confirm:true});
     const name=root.querySelector('[name="enchanted-name"]');name.value='Changed';name.dispatchEvent(new window.Event('input',{bubbles:true}));assert.equal(buy.disabled,true);
     publish();assert.equal(root.querySelector('[name="enchanted-name"]'),name);
     root.querySelector('form').dispatchEvent(new window.Event('submit',{cancelable:true}));assert.deepEqual(JSON.parse(f.actions.at(-1).text),{item:'stack:rubies',name:'Changed',settings:[setting.key]});

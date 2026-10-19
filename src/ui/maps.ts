@@ -73,7 +73,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
     for (const label of value.labels) {
       if (!showAll && Math.abs(label.y - slice) > 1) continue;
       const point = svgElement('circle', { cx: String(label.x), cy: String(label.z), r: String(3 / zoom), fill: label.selected ? '#ffe077' : '#d5e2e7', 'data-label-id': label.id });
-      const title = svgElement('title', {}); title.textContent = label.name; point.append(title); viewport.append(point);
+      point.setAttribute('data-tooltip', label.name); viewport.append(point);
       if (value.kind === 'city' && value.region !== null && value.location !== null) {
         const button = document.createElement('button'); button.type = 'button'; button.textContent = label.name; button.dataset.building = label.id;
         button.setAttribute('aria-pressed', String(label.selected));
