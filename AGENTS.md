@@ -65,7 +65,7 @@ coverage work separately; `docs/code-migration-map.md` records disposition.
 | `WorldRpg.SpriteAuthoring` | Product-neutral sprite inspection document and authored-overlay contract shared by `Daggerfall.Import` and the sprite workbench. It has no references or packages and carries no ruleset vocabulary. |
 | `WorldRpg.SpriteWorkbench` | Admitted developer-only Engine product for inspecting sprite atlases and writing authored overlays; not part of a game bundle. It references only `WorldRpg.Kit` and `WorldRpg.SpriteAuthoring`, never the importer or a ruleset, and the architecture laws scan it like the shipped product. |
 | Content packs | Authored actors, items, worlds, placements, encounters, quests, assets, and scenario state interpreted by a ruleset. |
-| TypeScript UI | Thin DOM presentation of Engine-delivered projections and semantic actions. It owns neither gameplay state nor game-world rendering. |
+| TypeScript UI | Thin DOM presentation of Engine-delivered projections and semantic actions. It owns neither gameplay state nor game-world rendering. Game UI follows [docs/game-ui.md](docs/game-ui.md). |
 
 Rulesets are **compiled** into the SDK-generated product composition. Content packs, typed tuning
 profiles, and game bundles are **loaded**. Adding code-bearing ruleset semantics
