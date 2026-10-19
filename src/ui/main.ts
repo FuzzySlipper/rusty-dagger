@@ -1161,12 +1161,14 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (confirmPrompt.open()) { confirmPrompt.cancel(); return; }
     if (deadMode) return;
     if (menu.open) { closeMenu(); return; }
+    // A required answer sits above whatever it was asked over (a summoning offer over its
+    // conversation), so it takes the press before the conversation can.
+    if (summoningOffer.open || !legal.hidden || questAnswerRequired || titleMode) return;
     if (dialogueWindow.open) {
       if (currentDialogue) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,
         data: { action: 'dialogue-close', revision: currentDialogue.revision } });
       return;
     }
-    if (summoningOffer.open || !legal.hidden || questAnswerRequired || titleMode) return;
     const escapable = shell.querySelector<HTMLButtonElement>('.dagger-spell-service:not([hidden]) [data-escape]:not(:disabled)');
     if (escapable) { escapable.click(); return; }
     if (!createItem.hidden) return;

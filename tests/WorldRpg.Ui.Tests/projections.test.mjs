@@ -403,6 +403,18 @@ test('Escape backs out of the innermost surface and opens the menu only from pla
     escape();
     assert.equal(menu.open, false);
     assert.deepEqual(f.actions.at(-1), { action: 'dialogue-close', revision: 'talk-3' });
+
+    // A summoning offer keeps its provider's conversation open beneath it; Escape acts on neither.
+    const summoning = { revision: 'talk-3', provider: 'Witch', quote: null, offerRevision: '7', prince: 'Azura', message: 'Bring the Ring.', diagnostics: [] };
+    f.publish({ spells: { available: [], ready: null, result: '', summoning }, activation: { mode: 'talk', message: '', applied: true, dialogue } });
+    const offer = f.root.querySelector('.dagger-daedric-offer');
+    assert.equal(offer.open, true);
+    const beforeOffer = f.actions.length;
+    escape();
+    assert.equal(f.actions.length, beforeOffer, 'Escape sends nothing while the offer needs an answer.');
+    assert.equal(offer.open, true);
+    assert.equal(f.root.querySelector('.dagger-dialogue').open, true);
+    assert.equal(menu.open, false);
     f.publish({});
 
     // Surfaces that need an answer keep their own choices.
