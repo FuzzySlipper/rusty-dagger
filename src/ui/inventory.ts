@@ -281,7 +281,10 @@ export function mountInventory(
       if (target.dataset.inventoryGrid !== undefined) move(source, { grid: Number(target.dataset.inventoryGrid) });
       else if (target.dataset.inventoryEquipment) move(source, { equipment: target.dataset.inventoryEquipment });
     },
-    onHold: select,
+    onHold: source => {
+      select(source);
+      status.textContent = `Holding ${itemFor(source)?.label ?? 'an item'}: choose a slot to place it, or go back to release it.`;
+    },
     onRefused: (source, target) => {
       const item = itemFor(source);
       status.textContent = item?.equipRefusal ?? `${target.getAttribute('aria-label')?.split(',')[0] ?? 'That slot'} does not take ${item?.label ?? 'that item'}.`;
