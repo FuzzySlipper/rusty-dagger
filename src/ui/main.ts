@@ -12,6 +12,7 @@ import { mountChoices } from './choices.js';
 import { mountDungeonText } from './dungeon-text.js';
 import { mountDeath } from './death.js';
 import { mountEntry } from './entry.js';
+import { mountDialogue } from './dialogue.js';
 import { mountInteraction } from './interaction.js';
 import { mountNavigation } from './navigation.js';
 import { mountInventory } from './inventory.js';
@@ -23,12 +24,10 @@ import { mountTravel, isTravelProjection } from './travel.js';
 
 import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
 import {
-  UI_ACTION_CONTRACT, diagnosticRows, formatRestHours, isHud, isRestProjection, isSaveSlots, viewSummary, type DialogueProjection, type MerchantItemProjection,
-  type MerchantProjection, type SaveSlotProjection
+  UI_ACTION_CONTRACT, diagnosticRows, formatRestHours, isHud, isRestProjection, isSaveSlots, viewSummary, type SaveSlotProjection
 } from './projection.js';
 import { isTransportProjection, mountTransport } from './transport.js';
-import { isSpellbookProjection, renderSpellSales, renderSpells } from './spells.js';
-import { renderItemMaker, renderPotionMaker, renderSpellMaker, renderSummoning } from './crafting.js';
+import { isSpellbookProjection, renderSpells, spellAction } from './spells.js';
 import { renderQuestMessages } from './quests.js';
 
 export { isHud } from './projection.js';
@@ -193,196 +192,10 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     });
   };
   const menu = shell.querySelector<HTMLDialogElement>('dialog')!;
-  const dialogueWindow = shell.querySelector<HTMLDialogElement>('.dagger-dialogue')!;
-  const dialogueTarget = shell.querySelector<HTMLElement>('.dagger-dialogue-target')!;
-  const dialogueGreeting = shell.querySelector<HTMLElement>('.dagger-dialogue-greeting')!;
-  const dialogueTone = shell.querySelector<HTMLSelectElement>('.dagger-dialogue-tone')!;
-  const dialogueDonation = shell.querySelector<HTMLLabelElement>('.dagger-dialogue-donation')!;
-  const dialogueDonationAmount = shell.querySelector<HTMLInputElement>('.dagger-dialogue-donation-amount')!;
-  const dialogueQuestion = shell.querySelector<HTMLElement>('.dagger-dialogue-question')!;
-  const dialogueReply = shell.querySelector<HTMLElement>('.dagger-dialogue-reply')!;
-  const dialogueTopics = shell.querySelector<HTMLElement>('.dagger-dialogue-topics')!;
-  const dialogueTraining = shell.querySelector<HTMLElement>('.dagger-dialogue-training')!;
-  const dialogueTrainingSummary = shell.querySelector<HTMLElement>('.dagger-dialogue-training-summary')!;
-  const dialogueTrainingSkills = shell.querySelector<HTMLElement>('.dagger-dialogue-training-skills')!;
-  const dialogueMerchant = shell.querySelector<HTMLElement>('.dagger-dialogue-merchant')!;
+  const dialogue = mountDialogue(shell, send, askConfirm);
   // Unresolved text symbols are developer diagnostics: they are listed in the composition
   // diagnostics panel, never in the conversation, quest message or summoning text the player reads.
   const textDiagnostics = shell.querySelector<HTMLElement>('.dagger-text-diagnostics')!;
-  let currentDialogue: DialogueProjection | null = null;
-  let pendingTraining: { revision: string; key: string; price: number; label: string } | null = null;
-  const trainingConfirm = shell.querySelector<HTMLElement>('.dagger-training-confirm')!;
-  function renderTrainingConfirmation() {
-    trainingConfirm.hidden = pendingTraining === null;
-    trainingConfirm.querySelector('p')!.textContent = pendingTraining ? `Train ${pendingTraining.label} for ${pendingTraining.price} gold?` : '';
-  }
-  trainingConfirm.querySelector('[data-training-no]')!.addEventListener('click', () => { pendingTraining = null; renderTrainingConfirmation(); });
-  trainingConfirm.querySelector('[data-training-yes]')!.addEventListener('click', () => {
-    const selected = pendingTraining;
-    pendingTraining = null; renderTrainingConfirmation();
-    if (!deadMode && selected && currentDialogue?.revision === selected.revision
-      && currentDialogue.training?.price === selected.price) context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-      data: { action: 'training-commit', revision: selected.revision, key: selected.key, amount: selected.price, confirm: true },
-    });
-  });
-  const tavernRoot = shell.querySelector<HTMLElement>('.dagger-dialogue-tavern')!;
-  tavernRoot.addEventListener('click', event => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-tavern-item]');
-    const option = currentDialogue?.tavern?.menu.find(item => item.id === button?.dataset.tavernItem);
-    if (!deadMode && option && currentDialogue?.tavern?.hungry) context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-      data: { action: 'tavern-buy', revision: currentDialogue.revision, key: option.id, amount: option.price },
-    });
-  });
-  const merchantAmount = (item: MerchantItemProjection): number | undefined => {
-    if (!item.key.startsWith('stack:')) return undefined;
-    const amount = typeof item.quantity === 'number' ? item.quantity : Number(item.quantity);
-    return Number.isSafeInteger(amount) && amount > 0 ? amount : undefined;
-  };
-  const merchantQuantityInput = (item: MerchantItemProjection): HTMLInputElement | undefined => {
-    if (!item.key.startsWith('stack:')) return undefined;
-    const available = merchantAmount(item);
-    if (available === undefined) return undefined;
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.min = '1';
-    input.max = String(available);
-    input.value = '1';
-    input.step = '1';
-    input.inputMode = 'numeric';
-    input.className = 'dagger-merchant-quantity';
-    input.setAttribute('aria-label', `Quantity of ${item.label}`);
-    return input;
-  };
-  const merchantPriceLabel = (item: MerchantItemProjection, amountInput?: HTMLInputElement): HTMLSpanElement => {
-    const label = document.createElement('span');
-    const unitPrice = String(item.unitPrice);
-    label.textContent = amountInput === undefined ? `Unit price ${unitPrice} gold` : `Unit price ${unitPrice} gold each`;
-    return label;
-  };
-  const merchantAction = (action: string, merchant: MerchantProjection, item: MerchantItemProjection, label: string,
-    amountInput?: HTMLInputElement): HTMLButtonElement => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = label;
-    button.addEventListener('click', () => {
-      const data = amountInput === undefined
-        ? { action, revision: merchant.revision, item: item.key }
-        : (() => {
-          const available = merchantAmount(item);
-          const amount = Number(amountInput.value);
-          if (available === undefined || !Number.isSafeInteger(amount) || amount < 1 || amount > available) {
-            amountInput.focus();
-            return undefined;
-          }
-          return { action, revision: merchant.revision, item: item.key, amount };
-        })();
-      if (data === undefined) return;
-      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT, data });
-    });
-    return button;
-  };
-  const renderMerchant = (merchant: MerchantProjection | null): void => {
-    dialogueMerchant.hidden = merchant === null;
-    dialogueMerchant.replaceChildren();
-    if (merchant === null) return;
-    const heading = document.createElement('h3');
-    heading.textContent = `${merchant.provider} · shop quality ${merchant.quality}`;
-    const gold = document.createElement('p');
-    gold.textContent = `Carried gold: ${merchant.gold}`;
-    dialogueMerchant.append(heading, gold);
-    const addItems = (title: string, items: readonly MerchantItemProjection[], action: string, predicate: (item: MerchantItemProjection) => boolean): void => {
-      const section = document.createElement('section');
-      const sectionHeading = document.createElement('h4'); sectionHeading.textContent = title;
-      const list = document.createElement('ul');
-      for (const item of items) {
-        const row = document.createElement('li');
-        const condition = action === 'merchant-sell' && item.maximumCondition > 0 && item.currentCondition < item.maximumCondition
-          ? ` · condition ${item.currentCondition}/${item.maximumCondition}` : '';
-        row.textContent = `${item.label} × ${item.quantity}${item.stolen ? ' · stolen' : ''}${condition} · `;
-        const tradeAvailable = predicate(item);
-        const amountInput = tradeAvailable ? merchantQuantityInput(item) : undefined;
-        row.append(merchantPriceLabel(item, amountInput));
-        if (amountInput) row.append(' ', amountInput);
-        if (tradeAvailable) row.append(' ', merchantAction(action, merchant, item, action === 'merchant-buy' ? 'Buy' : 'Sell', amountInput));
-        if (action === 'merchant-buy' && tradeAvailable && merchant.shopliftAvailable !== false) row.append(' ', merchantAction('merchant-shoplift', merchant, item, 'Steal', amountInput));
-        if (action === 'merchant-sell' && item.canRepair === true)
-          row.append(' ', merchantAction('merchant-repair', merchant, item, item.repairCost == null ? 'Repair' : `Repair (${item.repairCost} gold)`));
-        if (action === 'merchant-sell' && item.canIdentify === true)
-          row.append(' ', merchantAction('merchant-identify', merchant, item, item.identifyCost == null ? 'Identify' : `Identify (${item.identifyCost} gold)`));
-        list.append(row);
-      }
-      if (items.length === 0) { const empty = document.createElement('li'); empty.textContent = 'None.'; list.append(empty); }
-      section.append(sectionHeading, list); dialogueMerchant.append(section);
-    };
-    if (merchant.buyAvailable) addItems('Stock', merchant.stock, 'merchant-buy', item => item.canBuy);
-    if (merchant.sellAvailable || merchant.repairAvailable || merchant.identifyAvailable)
-      addItems('Your items', merchant.playerItems, 'merchant-sell', item => merchant.sellAvailable && item.canSell);
-    if (merchant.repairAvailable && merchant.repairs.length > 0) {
-      const section = document.createElement('section');
-      const sectionHeading = document.createElement('h4'); sectionHeading.textContent = 'Repairs';
-      const list = document.createElement('ul');
-      for (const repair of merchant.repairs) {
-        const row = document.createElement('li'); row.textContent = `${repair.label ?? repair.definition} · ${repair.status ?? (repair.ready ? 'ready' : 'in progress')}`;
-        if (repair.ready) {
-          const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Collect';
-          button.addEventListener('click', () => context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-            data: { action: 'merchant-collect-repair', revision: merchant.revision, key: repair.requestId } }));
-          row.append(' ', button);
-        }
-        list.append(row);
-      }
-      section.append(sectionHeading, list); dialogueMerchant.append(section);
-    }
-  };
-  dialogueTone.addEventListener('change', () => {
-    if (!deadMode && currentDialogue) context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-      data: { action: 'dialogue-tone', revision: currentDialogue.revision, tone: dialogueTone.value },
-    });
-  });
-  dialogueTopics.addEventListener('click', event => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-topic]');
-    if (deadMode || !button?.dataset.topic || !currentDialogue) return;
-    const data: Record<string, unknown> = {
-      action: 'dialogue-topic', revision: currentDialogue.revision, topic: button.dataset.topic,
-    };
-    if (button.dataset.topic === 'donate') {
-      const amount = Number(dialogueDonationAmount.value);
-      if (!Number.isSafeInteger(amount) || amount <= 0) {
-        dialogueDonationAmount.focus();
-        return;
-      }
-      data.amount = amount;
-    }
-    if (button.dataset.key) data.key = button.dataset.key;
-    context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: UI_ACTION_CONTRACT, data,
-    });
-  });
-  dialogueTrainingSkills.addEventListener('click', event => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-training-skill]');
-    const training = currentDialogue?.training;
-    const skill = training?.skills.find(value => value.id === button?.dataset.trainingSkill);
-    if (!deadMode && skill && training && currentDialogue && skill.permanentValue < skill.maximumValue) {
-      pendingTraining = { revision: currentDialogue.revision, key: skill.id, price: training.price, label: skill.label };
-      renderTrainingConfirmation();
-    }
-  });
-  shell.querySelector<HTMLButtonElement>('.dagger-dialogue-close')!.addEventListener('click', () => {
-    if (!deadMode && currentDialogue) context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-      data: { action: 'dialogue-close', revision: currentDialogue.revision },
-    });
-  });
-  dialogueWindow.addEventListener('cancel', event => {
-    event.preventDefault();
-    if (!deadMode && currentDialogue) context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-      data: { action: 'dialogue-close', revision: currentDialogue.revision },
-    });
-  });
   const menuTitle = shell.querySelector<HTMLElement>('#dagger-menu-title')!;
   const home = shell.querySelector<HTMLElement>('.dagger-menu-home')!;
   const panel = shell.querySelector<HTMLElement>('.dagger-menu-panel')!;
@@ -404,18 +217,11 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     });
   };
   const spellsRoot=shell.querySelector<HTMLElement>('.dagger-spells-root')!;
-  const spellSalesRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spells')!;
-  const summoningRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-summoning')!;
-  const summoningOffer=shell.querySelector<HTMLDialogElement>('.dagger-daedric-offer')!;
-  summoningOffer.addEventListener('cancel',event=>event.preventDefault());
-  const itemMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-itemmaker')!;
-  const potionMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-potionmaker')!;
-  const spellMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spellmaker')!;
   let questAnswerRequired = false;
   // A pointer lock the world held, lost in play, is the player asking for the menu: the browser and
   // the desktop shell spend Escape on releasing the lock, so this is what Escape does in play.
   const interaction = mountInteraction(context, { onLockLostInPlay: () => { if (!menu.open && !deadMode && !entry.isTitle()) openMenu(); } });
-  interaction.needsCursor(() => menu.open || dialogueWindow.open || summoningOffer.open);
+  interaction.needsCursor(() => menu.open || dialogue.window.open || dialogue.summoningOffer.open);
   // Every cursor surface is a navigation surface; deciding the mode and the focus scope together keeps
   // them from disagreeing about which surface is up.
   const syncInteraction = (focus = false): void => { interaction.sync(focus); navigation.refresh(); };
@@ -563,30 +369,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button');
     if(button?.disabled) return;
     const action = button?.dataset.action;
-    if ((action==='spell-buy' || action==='spell-delete' || action==='spell-info') && button?.dataset.spell) {
-      const data = action==='spell-buy'
-        ? {action,key:button.dataset.spell,revision:button.dataset.revision,amount:Number(button.dataset.price),confirm:true}
-        : action==='spell-delete' ? {action,key:button.dataset.spell,confirm:true} : {action,key:button.dataset.spell};
-      const send = (): void => { context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data}); };
-      if (action === 'spell-info') send();
-      else askConfirm(action === 'spell-buy'
-        ? { message: `Buy this spell for ${button.dataset.price} gold?`, accept: 'Buy', onAccept: send }
-        : { message: `${button.getAttribute('aria-label') ?? 'Forget this spell'}?`, accept: 'Forget', onAccept: send });
-      return;
-    }
-    if (action === 'spell-sort' || action === 'spell-swap') {
-      context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-        data: action === 'spell-sort' ? { action } : { action, key: button!.dataset.spell, item: button!.dataset.swapWith } });
-      return;
-    }
-    if (action==='spell-ready' && button?.dataset.spell) {
-      context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:{action,key:button.dataset.spell}});
-      return;
-    }
-    if (action==='spell-unready' || action==='spell-cast') {
-      if(action==='spell-cast') closeMenu();
-      claim(action); return;
-    }
+    if (button && spellAction(button, send, askConfirm, closeMenu)) return;
     if (action === 'rest' && button?.dataset.restMode) {
       submitRest(button.dataset.restMode);
       return;
@@ -617,7 +400,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     }
     runMenuAction(action);
   };
-  spellSalesRoot.addEventListener('click', onMenuClick);
   saveSlotsSelect.addEventListener('change', () => {
     saveConfirm = false;
     deleteConfirm = false;
@@ -653,12 +435,10 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         const next = MENU_PANELS[(from + direction + MENU_PANELS.length) % MENU_PANELS.length]!;
         runMenuAction(next);
       } }),
-    navigation.register({ name: 'summoning-offer', root: summoningOffer, layer: 80, isOpen: () => summoningOffer.open }),
+    navigation.register({ name: 'summoning-offer', root: dialogue.summoningOffer, layer: 80, isOpen: () => dialogue.summoningOffer.open }),
     navigation.register({ name: 'legal', root: legal, layer: 70, isOpen: () => !legal.hidden }),
     navigation.register({ name: 'quests', root: quests, layer: 60, isOpen: () => questAnswerRequired && !deadMode }),
-    navigation.register({ name: 'dialogue', root: dialogueWindow, layer: 50, isOpen: () => dialogueWindow.open,
-      back: () => { if (currentDialogue) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,
-        data: { action: 'dialogue-close', revision: currentDialogue.revision } }); } }),
+    navigation.register({ name: 'dialogue', root: dialogue.window, layer: 50, isOpen: () => dialogue.window.open, back: dialogue.close }),
     navigation.register({ name: 'create-item', root: createItem, layer: 45, isOpen: () => !createItem.hidden }),
     ...choices.cancellable.map(service => navigation.register({ name: service.getAttribute('aria-label')!, root: service, layer: 45,
       isOpen: () => !service.hidden, back: () => service.querySelector<HTMLButtonElement>('[data-escape]:not(:disabled)')?.click() })),
@@ -717,16 +497,6 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
 
     const spellbook = isSpellbookProjection(value.spells) ? value.spells : null;
     renderSpells(spellsRoot,spellbook);
-    renderSpellSales(spellSalesRoot,spellbook);
-    const summoning=spellbook?.summoning ?? null;
-    renderSummoning(summoning?.offerRevision ? summoningOffer : summoningRoot,summoning,
-      action=>context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
-    if(summoning?.offerRevision){summoningRoot.replaceChildren();if(!summoningOffer.open)summoningOffer.showModal();}
-    else if(summoningOffer.open)summoningOffer.close();
-    renderItemMaker(itemMakerRoot,spellbook?.itemMaker ?? null,action => context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}),askConfirm);
-    renderPotionMaker(potionMakerRoot,spellbook?.potionMaker ?? null,action => context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
-    renderSpellMaker(spellMakerRoot,spellbook?.maker ?? null,action =>
-      context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}),askConfirm);
     inventorySuppressed = value.character?.identity?.racialOverride?.suppressInventory === true;
     for (const button of shell.querySelectorAll<HTMLButtonElement>('[data-action="inventory"]')) button.disabled = inventorySuppressed;
     if (inventorySuppressed && activePanel === 'inventory') showHome();
@@ -833,66 +603,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (value.activation) activationMode.value = value.activation.mode;
     // The selector lives in the menu, which the product reports as modal, so it serves both.
     activationMode.disabled = value.mode !== 'playing' && value.mode !== 'modal';
-    // Dead mode owns the whole interaction surface. An activation projection can remain in the
-    // retained snapshot for one delivery, but it must not reopen a native dialogue over the death
-    // choices or leave a close action aimed at a session that has already stopped ordinary input.
-    const dialogue = deadMode ? null : value.activation?.dialogue ?? null;
-    currentDialogue = dialogue;
-    if (pendingTraining && (dialogue?.revision !== pendingTraining.revision || dialogue.training?.price !== pendingTraining.price
-      || !dialogue.training.skills.some(skill => skill.id === pendingTraining!.key && skill.permanentValue < skill.maximumValue))) pendingTraining = null;
-    renderTrainingConfirmation();
-    const tavern = dialogue?.tavern;
-    tavernRoot.replaceChildren();
-    if (tavern) {
-      const title = document.createElement('h3'); title.textContent = 'Food and drink'; tavernRoot.append(title);
-      if (!tavern.hungry) { const note = document.createElement('p'); note.textContent = 'You are not hungry.'; tavernRoot.append(note); }
-      for (const item of tavern.menu) {
-        const button = document.createElement('button'); button.type = 'button'; button.dataset.tavernItem = item.id;
-        button.textContent = `${item.label} — ${item.price} gold`; button.disabled = !tavern.hungry; tavernRoot.append(button);
-      }
-    }
-    renderMerchant(dialogue?.merchant ?? null);
-    if (dialogue === null) {
-      if (dialogueWindow.open) dialogueWindow.close();
-    } else {
-      dialogueTarget.textContent = dialogue.targetLabel + (dialogue.questContacts?.length ? " — quest contact" : "");
-      dialogueGreeting.textContent = dialogue.greeting + (dialogue.comprehendLanguagesBonus ? ` Language comprehension: +${dialogue.comprehendLanguagesBonus}.` : '');
-      dialogueTone.value = dialogue.tone;
-      dialogueDonation.hidden = !dialogue.topics.some(topic => topic.id === 'donate');
-      dialogueQuestion.textContent = dialogue.question ?? '';
-      dialogueReply.textContent = dialogue.reply ?? '';
-      dialogueTopics.replaceChildren(...dialogue.topics.map(topic => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.dataset.topic = topic.id;
-        if (topic.key) button.dataset.key = topic.key;
-        button.textContent = topic.label;
-        return button;
-      }));
-      const training = dialogue.training ?? null;
-      dialogueTraining.hidden = training === null;
-      if (training) {
-        const hours = Math.max(1, Math.round(training.durationSeconds / 3600));
-        dialogueTrainingSummary.textContent = `${training.price} gold for ${hours} hour${hours === 1 ? '' : 's'}${training.member ? ' (member rate)' : ''}.`;
-        dialogueTrainingSkills.replaceChildren(...training.skills.map(skill => {
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.dataset.trainingSkill = skill.id;
-          button.textContent = `Train ${skill.label} (${skill.permanentValue}/${skill.maximumValue})`;
-          button.disabled = skill.permanentValue >= skill.maximumValue;
-          return button;
-        }));
-      } else dialogueTrainingSkills.replaceChildren();
-      if (dialogue.bankAvailable) {
-        const bank = document.createElement('button'); bank.type = 'button'; bank.textContent = 'Bank services';
-        bank.dataset.bankOpen = 'true';
-        bank.addEventListener('click', () => context.intents?.claim('dagger.ui', {
-          kind: 'product-payload', contract: UI_ACTION_CONTRACT, data: { action: 'bank-open', revision: dialogue.revision },
-        }));
-        dialogueTopics.append(bank);
-      }
-      if (!dialogueWindow.open) dialogueWindow.showModal();
-    }
+    dialogue.update(value, deadMode, spellbook);
     view.textContent = value.view ? viewSummary(value.view) : '';
     detectors.replaceChildren();
     detectors.hidden = !value.detectors?.length;

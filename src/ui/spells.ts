@@ -1,5 +1,34 @@
 import { isItemMakerProjection, isPotionMakerProjection, isSpellMakerProjection, isSummoningProjection } from './crafting.js';
+import type { ConfirmQuestion } from './confirm.js';
+import type { Send } from './host.js';
 import type { SpellbookProjection } from './projection.js';
+import { redraw } from './redraw.js';
+
+/**
+ * Performs the spell action a clicked control names, for the spellbook and a spell seller alike.
+ * Buying and forgetting ask first. Returns false when the control is not a spell action.
+ */
+export function spellAction(control: HTMLButtonElement, send: Send, ask: (question: ConfirmQuestion) => void, onCast: () => void): boolean {
+  const action = control.dataset.action;
+  const key = control.dataset.spell;
+  if ((action === 'spell-buy' || action === 'spell-delete' || action === 'spell-info') && key) {
+    if (action === 'spell-info') { send({ action, key }); return true; }
+    if (action === 'spell-buy') {
+      const data = { action, key, revision: control.dataset.revision, amount: Number(control.dataset.price), confirm: true };
+      ask({ message: `Buy this spell for ${control.dataset.price} gold?`, accept: 'Buy', onAccept: () => send(data) });
+    } else {
+      const data = { action, key, confirm: true };
+      ask({ message: `${control.getAttribute('aria-label') ?? 'Forget this spell'}?`, accept: 'Forget', onAccept: () => send(data) });
+    }
+    return true;
+  }
+  if (action === 'spell-sort') { send({ action }); return true; }
+  if (action === 'spell-swap') { send({ action, key, item: control.dataset.swapWith }); return true; }
+  if (action === 'spell-ready' && key) { send({ action, key }); return true; }
+  if (action === 'spell-unready') { send({ action }); return true; }
+  if (action === 'spell-cast') { onCast(); send({ action }); return true; }
+  return false;
+}
 
 export function isSpellbookProjection(value:unknown):value is SpellbookProjection {
   if(!value || typeof value!=='object') return false;
@@ -21,6 +50,10 @@ export function isSpellbookProjection(value:unknown):value is SpellbookProjectio
 }
 
 export function renderSpells(root:HTMLElement,view:SpellbookProjection|null):void {
+  redraw(root, JSON.stringify(view), () => drawSpells(root, view));
+}
+
+function drawSpells(root:HTMLElement,view:SpellbookProjection|null):void {
   // The menu already titles this panel, so the book carries no heading of its own.
   root.replaceChildren();
   const status=document.createElement('p');status.className='dagger-spellbook-status';status.setAttribute('role','status');
@@ -68,6 +101,10 @@ export function renderSpellInformation(root:HTMLElement,view:SpellbookProjection
 }
 
 export function renderSpellSales(root:HTMLElement,view:SpellbookProjection|null):void {
+  redraw(root, JSON.stringify(view && [view.sale, view.result, view.information]), () => drawSpellSales(root, view));
+}
+
+function drawSpellSales(root:HTMLElement,view:SpellbookProjection|null):void {
   root.replaceChildren();if(!view?.sale) return;
   const heading=document.createElement('h3');heading.textContent=`Spells offered by ${view.sale.provider}`;root.append(heading);
   const status=document.createElement('p');status.setAttribute('role','status');status.textContent=view.result;root.append(status);
