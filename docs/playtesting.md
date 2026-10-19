@@ -21,6 +21,9 @@ Give each concurrent tester a separate native host and persistence directory.
 Browsers connected to one host share player, world, simulation mode and health.
 Reconnecting does not reset gameplay. New Game and Load use the ordinary menu;
 the debug callbacks resolve the replacement session on every call.
+To start a fresh game quickly, open character creation and press **Quick start**:
+it keeps the draft's identity and career, completes the background without
+asking, and begins the game.
 Only stop browser sessions and hosts the tester owns.
 
 ## Agent procedure

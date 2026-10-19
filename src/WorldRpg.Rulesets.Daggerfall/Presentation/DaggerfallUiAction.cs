@@ -23,7 +23,7 @@ internal enum DaggerfallUiActionKind
     Begin, CinematicSkip, MapNoteAdd, MapNoteEdit, MapNoteRemove, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellSwap, SpellSort, SpellMakerDraft, SpellMakerBuy, PotionMix, ItemMakerDraft, ItemMakerBuy, DaedraSummon, DaedraAnswer,
     ControlsRebind, ControlsReset, ControlsLook, ActionDrivenTime,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
-    CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel,
+    CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel, CharacterQuickStart,
     CharacterLevelAllocate, CharacterLevelCommit,
     ActivationMode, Attack, Loot, Menu,
     DialogueTone, DialogueTopic, DialogueClose, TavernBuy, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift,
@@ -155,6 +155,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.CharacterUpdate, "character-update", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.CharacterBackgroundReroll, "character-background-reroll", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.CharacterCommit, "character-commit", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.CharacterQuickStart, "character-quick-start", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.CharacterCancel, "character-cancel", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.CharacterLevelAllocate, "character-level-allocate", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.CharacterLevelCommit, "character-level-commit", DaggerfallUiPhases.Interaction),
@@ -556,6 +557,18 @@ internal static class DaggerfallUiAction
                     ? new(action, Name: name, Race: race, Gender: gender, FaceIndex: faceIndex, Reflexes: reflexes, Career: career,
                         PrimarySkills: primarySkills, MajorSkills: majorSkills, MinorSkills: minorSkills, Advantages: advantages, Disadvantages: disadvantages, HitPointsPerLevel: hitPointsPerLevel,
                         BackgroundAnswers: backgroundAnswers, AttributeAllocations: attributeAllocations, SkillAllocations: skillAllocations) : null;
+            }
+            if (action == "character-quick-start")
+            {
+                // The draft's identity and career, with no background: quick start completes it. A blank name is allowed.
+                HashSet<string> required = career == DaggerfallCustomCareerPolicy.CareerId
+                    ? ["action", "name", "race", "gender", "faceIndex", "reflexes", "career", "primarySkills", "majorSkills", "minorSkills", "hitPointsPerLevel", "advantages", "disadvantages"]
+                    : ["action", "name", "race", "gender", "faceIndex", "reflexes", "career"];
+                return fields.SetEquals(required) && name is not null
+                    && !string.IsNullOrWhiteSpace(race) && !string.IsNullOrWhiteSpace(gender) && !string.IsNullOrWhiteSpace(career)
+                    && faceIndex is not null && reflexes is not null
+                    ? new(action, Name: name, Race: race, Gender: gender, FaceIndex: faceIndex, Reflexes: reflexes, Career: career,
+                        PrimarySkills: primarySkills, MajorSkills: majorSkills, MinorSkills: minorSkills, Advantages: advantages, Disadvantages: disadvantages, HitPointsPerLevel: hitPointsPerLevel) : null;
             }
             if (action == "character-class-back") return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "character-class-answer")

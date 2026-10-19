@@ -78,6 +78,38 @@ internal static class DaggerfallCharacterBackgroundPolicy
             current.RolledSkills, skills.ToArray(), requireComplete: false, current.People);
     }
 
+    /// <summary>
+    /// Completes a rolled background without asking: the rolled questionnaire answers stand, the attribute
+    /// pool is spread a point at a time across the career's attributes in order (skipping one at the
+    /// maximum), and each skill tier's points across that tier's skills in order.
+    /// </summary>
+    internal static DaggerfallCharacterBackgroundSave SpendAll(DaggerfallDefinitions definitions, DaggerfallCareerDefinition career,
+        DaggerfallCharacterIdentity identity, DaggerfallCharacterBackgroundSave rolled)
+    {
+        ArgumentNullException.ThrowIfNull(rolled);
+        Dictionary<string, int> rolledAttributes = Values(rolled.RolledAttributes), attributes = [];
+        int left = rolled.AttributeBonusPool;
+        for (bool placed = true; left > 0 && placed;)
+        {
+            placed = false;
+            foreach (string attribute in career.Attributes)
+            {
+                if (left == 0) break;
+                int spent = attributes.GetValueOrDefault(attribute);
+                if (rolledAttributes[attribute] + spent >= DaggerfallFormulaPolicy.MaxStatValue()) continue;
+                attributes[attribute] = spent + 1;
+                left--;
+                placed = true;
+            }
+        }
+        List<DaggerfallCreationAllocationSave> skills = [];
+        foreach (IReadOnlyList<string> tier in new[] { career.PrimarySkills, career.MajorSkills, career.MinorSkills })
+            skills.AddRange(tier.Select((skill, index) => new DaggerfallCreationAllocationSave(skill, TierPool / tier.Count + (index < TierPool % tier.Count ? 1 : 0)))
+                .Where(value => value.Points > 0));
+        return Update(definitions, career, identity, rolled, rolled.Answers,
+            [.. attributes.Select(value => new DaggerfallCreationAllocationSave(value.Key, value.Value))], skills);
+    }
+
     internal static DaggerfallCharacterBackgroundSave RequireComplete(DaggerfallDefinitions definitions, DaggerfallCareerDefinition career, DaggerfallCharacterIdentity identity, DaggerfallCharacterBackgroundSave value) =>
         Build(definitions, career, identity, BiographyFor(definitions, career), value.RollSequence, value.Answers, value.RolledAttributes, value.AttributeAllocations,
             value.AttributeBonusPool, value.RolledSkills, value.SkillAllocations, requireComplete: true, value.People);
