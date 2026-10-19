@@ -170,8 +170,10 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   // shoulder buttons) puts the player back where they were rather than on its Back button.
   const panelFocus = new Map<Panel, HTMLElement>();
   panel.addEventListener('focusin', event => {
-    if (activePanel !== null && event.target instanceof HTMLElement && !event.target.matches(':scope > [data-action="back"]'))
-      panelFocus.set(activePanel, event.target);
+    // The panel's own Back and Exit buttons leave the panel; they are never where its content focus was.
+    const leaving = event.target instanceof HTMLElement && event.target.parentElement === panel
+      && (event.target.dataset.action === 'back' || event.target.dataset.action === 'loot-exit');
+    if (activePanel !== null && event.target instanceof HTMLElement && !leaving) panelFocus.set(activePanel, event.target);
   });
   const restorePanelFocus = (action: Panel): boolean => {
     const remembered = panelFocus.get(action);
