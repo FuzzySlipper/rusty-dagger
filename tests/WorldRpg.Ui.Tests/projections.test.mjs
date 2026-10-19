@@ -785,6 +785,13 @@ test('reopening a menu panel puts focus back on the control it last held', () =>
     f.pad('button-5');
     f.pad('button-4');
     assert.equal(document.activeElement, hours);
+    // Leaving through the drawn Back button, focused and accepted, keeps the place too.
+    const back = f.root.querySelector('.dagger-menu-panel > [data-action="back"]');
+    back.focus();
+    f.pad('button-0');
+    assert.equal(f.root.querySelector('.dagger-menu-home').hidden, false);
+    f.root.querySelector('.dagger-menu-home [data-action="rest"]').click();
+    assert.equal(document.activeElement, hours, 'Back is never remembered as the panel position.');
   } finally { f.dispose(); }
 });
 
