@@ -894,10 +894,15 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const spellMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spellmaker')!;
   let projectionNeedsInterface = false;
   let interactionMode: 'interface' | 'gameplay' | null = null;
+  // Leaving the last cursor surface returns to play, so it takes gameplay focus back at once: closing a menu,
+  // a dialogue or a popup, or the world resuming after a modal, re-locks the pointer without a click. Whichever
+  // projection or close resolves to gameplay first does it, once, so a close while another surface still
+  // needs the cursor stays in interface mode and asks for nothing.
   const syncInteraction = (focus = false): void => {
     const next = projectionNeedsInterface || menu.open || dialogueWindow.open || summoningOffer.open ? 'interface' : 'gameplay';
+    const resuming = next === 'gameplay' && interactionMode === 'interface';
     if (next !== interactionMode) { interactionMode = next; context.ui.setInteractionMode(next); }
-    if (focus && next === 'gameplay') context.ui.focusGameplay();
+    if (next === 'gameplay' && (focus || resuming)) context.ui.focusGameplay();
   };
   let inventorySuppressed = false;
   let activePanel: 'spells' | 'magic-items' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings' | null = null;
