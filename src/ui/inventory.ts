@@ -1,4 +1,7 @@
 import { cssUrl, image, reportMissingArt } from './art.js';
+import { mountContextMenu } from './context-menu.js';
+import { mountDrag, type Drag } from './drag.js';
+import type { NavigationSurface } from './navigation.js';
 import { redraw } from './redraw.js';
 
 export interface InventoryProjection {
@@ -128,7 +131,8 @@ const EQUIPMENT_SLOT_COUNT = 25;
 export function mountInventory(
   root: HTMLElement,
   claim: (action: InventoryAction) => void,
-): { update(value: InventoryProjection): void; refresh(): void; dispose(): void } {
+  register?: (surface: NavigationSurface) => () => void,
+): { update(value: InventoryProjection): void; refresh(): void; release(): boolean; openContextMenu(): boolean; dispose(): void } {
   const shell = document.createElement('section');
   shell.className = 'dagger-inventory';
   applyAuthoredArt(shell);
@@ -198,7 +202,6 @@ export function mountInventory(
   let lastRevision: string | null = null;
   let lastMessage: string | null = null;
   let selected: MoveSource | null = null;
-  let dragging: MoveSource | null = null;
   let pending: InventoryProjection | null = null;
   let disposed = false;
 
@@ -249,104 +252,116 @@ export function mountInventory(
     const overflowItems = value.items.filter((item) => item.gridSlot === null && item.equippedSlots.length === 0);
     redraw(overflow, JSON.stringify([overflowItems, overflowItems.map(item => image(item.icon) !== null)]), () => renderOverflow(overflow, overflowItems));
     if (selected !== null && !byKey.has(selected.key)) selected = null;
+    const held = drag.held();
+    if (held !== null && !byKey.has(held.key)) drag.release();
     renderSelection();
+    drag.remark();
   };
 
-  // A press on an item becomes a drag once the pointer travels; until then it is an ordinary click.
-  const DRAG_THRESHOLD = 6;
-  let press: { readonly source: MoveSource; readonly pointer: number; readonly x: number; readonly y: number; readonly icon: string | null } | null = null;
-  let ghost: HTMLImageElement | null = null;
-  let suppressClick = false;
-  const dropTargetAt = (x: number, y: number): HTMLButtonElement | null => {
-    const hit = shell.ownerDocument.elementFromPoint(x, y);
-    const target = hit instanceof Element ? hit.closest<HTMLButtonElement>('[data-inventory-grid], [data-inventory-equipment]') : null;
-    return target !== null && shell.contains(target) && !target.disabled ? target : null;
+  // Items move by pointer drag or by pick and place (accept an item, then accept a slot), through the
+  // shared drag owner. Eligibility is the projection's: any pack slot, or an equipment slot the item
+  // lists as compatible while the ruleset lets it be equipped.
+  const itemFor = (source: MoveSource): InventoryItem | undefined => current?.items.find(candidate => candidate.key === source.key);
+  const accepts = (source: MoveSource, target: HTMLElement): boolean => {
+    if (target.dataset.inventoryGrid !== undefined) return true;
+    const slot = target.dataset.inventoryEquipment;
+    const item = itemFor(source);
+    return slot !== undefined && slot !== '' && item !== undefined && item.compatibleSlots.includes(slot)
+      && (item.canEquip !== false || item.equippedSlots.length > 0);
   };
-  const markTarget = (target: HTMLElement | null): void => {
-    shell.querySelectorAll('.is-drop-target').forEach((element) => { if (element !== target) element.classList.remove('is-drop-target'); });
-    target?.classList.add('is-drop-target');
-  };
-
-  const finishDrag = (): void => {
-    press = null;
-    dragging = null;
-    ghost?.remove();
-    ghost = null;
-    shell.classList.remove('is-dragging');
-    markTarget(null);
-    window.removeEventListener('pointermove', onPointerMove, true);
-    window.removeEventListener('pointerup', onPointerUp, true);
-    window.removeEventListener('pointercancel', onPointerCancel, true);
-    window.removeEventListener('keydown', onDragKey, true);
-    window.removeEventListener('blur', onPointerCancel);
-    if (pending !== null) {
+  const drag: Drag<MoveSource> = mountDrag<MoveSource>({
+    root: shell,
+    sourceSelector: '[data-inventory-item]',
+    // A place that holds an item is that item when accepted, so only an empty slot receives a placed item by
+    // accept; a drag can still drop onto a filled one.
+    targetSelector: '[data-inventory-grid], [data-inventory-equipment]',
+    source: element => element.dataset.inventoryItem === undefined ? null : sourceFor(element.dataset.inventoryItem),
+    accepts,
+    drop: (source, target) => {
+      if (target.dataset.inventoryGrid !== undefined) move(source, { grid: Number(target.dataset.inventoryGrid) });
+      else if (target.dataset.inventoryEquipment) move(source, { equipment: target.dataset.inventoryEquipment });
+    },
+    onHold: select,
+    onRefused: (source, target) => {
+      const item = itemFor(source);
+      status.textContent = item?.equipRefusal ?? `${target.getAttribute('aria-label')?.split(',')[0] ?? 'That slot'} does not take ${item?.label ?? 'that item'}.`;
+    },
+    onEnd: () => {
+      if (pending === null) return;
       const next = pending;
       pending = null;
       render(next);
-    }
+    },
+    label: element => current?.items.find(item => item.key === element.dataset.inventoryItem)?.label ?? '',
+  });
+
+  // Accelerators over the same actions the details pane offers: a right-click, the menu key or the
+  // controller's X opens a drawn context menu on an item, and a double-click equips, unequips or uses it.
+  const contextMenu = mountContextMenu(shell, register);
+  const firstEquipSlot = (item: InventoryItem): string | null => {
+    if (item.canEquip !== true || current === null) return null;
+    const compatible = current.slots.filter(slot => item.compatibleSlots.includes(slot.id));
+    return (compatible.find(slot => slot.itemKey === null) ?? compatible[0])?.id ?? null;
+  };
+  const firstFreeGrid = (): number | null => {
+    const used = new Set(current?.items.map(item => item.gridSlot) ?? []);
+    for (let index = 0; index < GRID_SLOT_COUNT; index += 1) if (!used.has(index)) return index;
+    return null;
+  };
+  const quickAction = (item: InventoryItem, source: MoveSource): (() => void) | null => {
+    if (item.equippedSlots.length > 0) { const grid = firstFreeGrid(); return grid === null ? null : () => move(source, { grid }); }
+    const slot = firstEquipSlot(item);
+    if (slot !== null) return () => move(source, { equipment: slot });
+    if (item.canUse === true) return () => claim({ action: 'inventory-use', revision: source.revision, item: source.key });
+    return null;
+  };
+  const openContextMenu = (element: HTMLElement, at: HTMLElement | { x: number; y: number }): boolean => {
+    const source = element.dataset.inventoryItem === undefined ? null : sourceFor(element.dataset.inventoryItem);
+    const item = source === null ? undefined : itemFor(source);
+    if (source === null || item === undefined) return false;
+    drag.release();
+    select(source);
+    const equipped = item.equippedSlots.length > 0;
+    const grid = firstFreeGrid();
+    const slot = firstEquipSlot(item);
+    contextMenu.open(at, [
+      equipped
+        ? { label: 'Unequip', disabled: grid === null, run: () => { if (grid !== null) move(source, { grid }); } }
+        : { label: 'Equip', disabled: slot === null, run: () => { if (slot !== null) move(source, { equipment: slot }); } },
+      { label: 'Use', disabled: item.canUse !== true, run: () => claim({ action: 'inventory-use', revision: source.revision, item: source.key }) },
+      { label: 'Inspect', run: () => claim({ action: 'inventory-inspect', revision: source.revision, item: source.key }) },
+      { label: 'Drop', run: () => {
+        const quantity = Number(details.dropQuantity.value);
+        if (Number.isSafeInteger(quantity) && quantity > 0) claim({ action: 'inventory-drop', revision: source.revision, item: source.key, amount: quantity });
+      } },
+    ]);
+    return true;
+  };
+  const onContextMenu = (event: MouseEvent): void => {
+    const element = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-inventory-item]') : null;
+    if (element === null) return;
+    event.preventDefault();
+    openContextMenu(element, { x: event.clientX, y: event.clientY });
+  };
+  const onMenuKey = (event: KeyboardEvent): void => {
+    if (event.code !== 'ContextMenu' && !(event.shiftKey && event.code === 'F10')) return;
+    const element = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-inventory-item]') : null;
+    if (element === null) return;
+    event.preventDefault();
+    openContextMenu(element, element);
+  };
+  const onDoubleClick = (event: MouseEvent): void => {
+    const element = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-inventory-item]') : null;
+    const source = element?.dataset.inventoryItem === undefined ? null : sourceFor(element.dataset.inventoryItem);
+    const item = source === null ? undefined : itemFor(source);
+    if (source === null || item === undefined) return;
+    drag.release();
+    quickAction(item, source)?.();
   };
 
-  const onPointerDown = (event: PointerEvent): void => {
-    if (event.button !== 0 || press !== null) return;
-    const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-inventory-item]') : null;
-    const source = button?.dataset.inventoryItem === undefined ? null : sourceFor(button.dataset.inventoryItem);
-    if (button === null || source === null) return;
-    press = { source, pointer: event.pointerId, x: event.clientX, y: event.clientY, icon: button.querySelector('img')?.src ?? null };
-    window.addEventListener('pointermove', onPointerMove, true);
-    window.addEventListener('pointerup', onPointerUp, true);
-    window.addEventListener('pointercancel', onPointerCancel, true);
-    window.addEventListener('keydown', onDragKey, true);
-    window.addEventListener('blur', onPointerCancel);
-  };
-  const onPointerMove = (event: PointerEvent): void => {
-    if (press === null || event.pointerId !== press.pointer) return;
-    if (dragging === null) {
-      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) < DRAG_THRESHOLD) return;
-      dragging = press.source;
-      select(press.source);
-      shell.classList.add('is-dragging');
-      if (press.icon !== null) {
-        ghost = shell.ownerDocument.createElement('img');
-        ghost.className = 'dagger-inventory-drag-ghost';
-        ghost.src = press.icon;
-        ghost.alt = '';
-        shell.ownerDocument.body.append(ghost);
-      }
-    }
-    event.preventDefault();
-    if (ghost !== null) ghost.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`;
-    markTarget(dropTargetAt(event.clientX, event.clientY));
-  };
-  const onPointerUp = (event: PointerEvent): void => {
-    if (press === null || event.pointerId !== press.pointer) return;
-    const source = dragging;
-    if (source !== null) {
-      const target = dropTargetAt(event.clientX, event.clientY);
-      if (target?.dataset.inventoryGrid !== undefined) move(source, { grid: Number(target.dataset.inventoryGrid) });
-      else if (target?.dataset.inventoryEquipment) move(source, { equipment: target.dataset.inventoryEquipment });
-      // The release that ends a drag is not also a click on whatever lies under it.
-      suppressClick = true;
-    }
-    finishDrag();
-  };
-  const onPointerCancel = (): void => finishDrag();
-  const onDragKey = (event: KeyboardEvent): void => {
-    if (event.key !== 'Escape' || dragging === null) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    finishDrag();
-  };
-  // Nothing in the panel starts a native drag session, whatever the element.
-  const onNativeDrag = (event: DragEvent): void => event.preventDefault();
   const onClick = (event: MouseEvent): void => {
-    if (suppressClick) { suppressClick = false; return; }
     const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('button') : null;
-    if (button === null || button.disabled) return;
-    if (button.dataset.inventoryItem !== undefined) {
-      const source = sourceFor(button.dataset.inventoryItem);
-      if (source !== null) select(source);
-      return;
-    }
+    if (button === null || button.disabled || button.dataset.inventoryItem !== undefined) return;
     const bankAction = button.dataset.bankAction;
     if (bankAction !== undefined) {
       const parsedAmount = Number(bankControls.amount.value);
@@ -366,9 +381,7 @@ export function mountInventory(
       return;
     }
     if (selected === null) return;
-    if (button.dataset.inventoryGrid !== undefined) move(selected, { grid: Number(button.dataset.inventoryGrid) });
-    else if (button.dataset.inventoryEquipment) move(selected, { equipment: button.dataset.inventoryEquipment });
-    else if (button.dataset.inventoryAction === 'move-grid') {
+    if (button.dataset.inventoryAction === 'move-grid') {
       move(selected, { grid: Number(details.gridTarget.value) });
     } else if (button.dataset.inventoryAction === 'move-equipment' && details.equipmentTarget.value) {
       move(selected, { equipment: details.equipmentTarget.value });
@@ -383,9 +396,10 @@ export function mountInventory(
     }
   };
 
-  shell.addEventListener('pointerdown', onPointerDown);
-  shell.addEventListener('dragstart', onNativeDrag);
   shell.addEventListener('click', onClick);
+  shell.addEventListener('contextmenu', onContextMenu);
+  shell.addEventListener('keydown', onMenuKey);
+  shell.addEventListener('dblclick', onDoubleClick);
 
   return {
     update(value: InventoryProjection): void {
@@ -397,7 +411,7 @@ export function mountInventory(
         }
         return;
       }
-      if (dragging !== null) {
+      if (drag.dragging()) {
         pending = value;
         if (value.message !== lastMessage) {
           lastMessage = value.message;
@@ -417,13 +431,22 @@ export function mountInventory(
       if (current === null) return;
       render(current);
     },
+    /** Release a held or dragged item; returns whether there was one, so Back can do that first. */
+    release: () => drag.release(),
+    /** The controller's X: a context menu on the focused item. */
+    openContextMenu(): boolean {
+      const focused = shell.ownerDocument.activeElement;
+      return focused instanceof HTMLElement && shell.contains(focused) && openContextMenu(focused, focused);
+    },
     dispose(): void {
       if (disposed) return;
       disposed = true;
-      finishDrag();
-      shell.removeEventListener('pointerdown', onPointerDown);
-      shell.removeEventListener('dragstart', onNativeDrag);
+      drag.dispose();
+      contextMenu.dispose();
       shell.removeEventListener('click', onClick);
+      shell.removeEventListener('contextmenu', onContextMenu);
+      shell.removeEventListener('keydown', onMenuKey);
+      shell.removeEventListener('dblclick', onDoubleClick);
       shell.remove();
     },
   };

@@ -12,6 +12,7 @@ import { mountNotebook } from './notebook.js';
 import { diagnosticRows, formatRestHours, isRestProjection, isSaveSlots, type DaggerHud, type SaveSlotProjection, type SpellbookProjection } from './projection.js';
 import { mountProperty } from './property.js';
 import { redraw } from './redraw.js';
+import type { NavigationSurface } from './navigation.js';
 import { renderSpells, spellAction } from './spells.js';
 import { isTransportProjection, mountTransport } from './transport.js';
 import { mountTravel, isTravelProjection } from './travel.js';
@@ -34,7 +35,14 @@ export interface GameMenu {
   close(): void;
   /** Back: step out of a panel, or close the menu from its home. */
   dismiss(): void;
+  /**
+   * Escape or Back: a held item is released first. Then Escape closes the menu from any panel and
+   * Back steps out one panel.
+   */
+  back(source: 'escape' | 'controller'): void;
   runAction(action: string | undefined): void;
+  /** The controller's X: a context menu on the focused control, where the panel offers one. */
+  contextMenu(): void;
   stepPanel(direction: -1 | 1): void;
   /** Key capture for rebinding, which runs before navigation takes Escape and the arrows. */
   captureKey(event: KeyboardEvent): void;
@@ -49,6 +57,8 @@ export interface MenuHost {
   /** The menu opened or closed; `focus` asks for gameplay focus back. */
   readonly sync: (focus?: boolean) => void;
   readonly isDead: () => boolean;
+  /** Registers a surface a panel opens over the menu, such as a context menu. */
+  readonly register: (surface: NavigationSurface) => () => void;
 }
 
 export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
@@ -67,7 +77,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   activationMode.addEventListener('change', () => send({ action: 'activation-mode', mode: activationMode.value }));
 
   const inventoryRoot = shell.querySelector<HTMLElement>('.dagger-inventory-root')!;
-  const inventoryView = mountInventory(inventoryRoot, send);
+  const inventoryView = mountInventory(inventoryRoot, send, host.register);
   const mapRoot = shell.querySelector<HTMLElement>('.dagger-map-root')!;
   const mapView = mountMap(mapRoot, send, () => showPanel('transport'));
   let mapReported = false;
@@ -328,7 +338,12 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     open: openMenu,
     close: closeMenu,
     dismiss,
+    back(source) {
+      if (activePanel === 'inventory' && inventoryView.release()) return;
+      if (source === 'escape') closeMenu(); else dismiss();
+    },
     runAction,
+    contextMenu() { if (activePanel === 'inventory') inventoryView.openContextMenu(); },
     stepPanel(direction) {
       const index = STEPPED_PANELS.indexOf(activePanel as typeof STEPPED_PANELS[number]);
       const from = index < 0 ? (direction > 0 ? -1 : 0) : index;
