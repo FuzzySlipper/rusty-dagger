@@ -744,12 +744,28 @@ test('a snapshot that arrives every update keeps the focused control, and a chan
     assert.equal(document.activeElement.dataset.spell, 'spell.2', 'A rebuilt list focuses the same spell again.');
     assert.equal(document.activeElement.dataset.action, 'spell-info');
 
+    // The menu is modal; close it before talking, as play would.
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
     const dialogue = topics => ({ revision: 'talk-1', targetLabel: 'A smith', greeting: 'Hello.', tone: 'normal', question: null, reply: null, topics, diagnostics: [] });
     f.publish({ activation: { mode: 'talk', message: '', applied: true, dialogue: dialogue([{ id: 'news', label: 'News' }, { id: 'work', label: 'Work' }]) } });
     const work = f.root.querySelector('.dagger-dialogue-topics [data-topic="work"]');
     work.focus();
     f.publish({ activation: { mode: 'talk', message: '', applied: true, dialogue: dialogue([{ id: 'news', label: 'News' }, { id: 'work', label: 'Work' }]) } });
     assert.equal(document.activeElement, work);
+  } finally { f.dispose(); }
+});
+
+test('dismissing one of several stacked messages leaves focus in the ones that remain', () => {
+  const f = fixture();
+  try {
+    const popup = { instance: 'quest:1', message: 10, delivery: 'popup', heading: 'Message', text: 'You wake.', signoff: null,
+      diagnostics: [], promptId: null, options: [], entryId: 'quest-message:1' };
+    const prompt = { instance: 'quest:2', message: 1010, delivery: 'prompt', text: 'Tutorial?', signoff: null, diagnostics: [], promptId: 'prompt:1', options: [{ id: 3, label: 'Yes' }, { id: 4, label: 'No' }] };
+    const empty = { journal: { active: [], finished: [] } };
+    f.publish({ quests: { ...empty, deliveries: [popup, prompt], pending: prompt } });
+    f.root.querySelector('.dagger-quest-popup button').click();
+    f.publish({ quests: { ...empty, deliveries: [prompt], pending: prompt } });
+    assert.ok(f.root.querySelector('.dagger-quests').contains(document.activeElement), 'Focus returns to the remaining prompt.');
   } finally { f.dispose(); }
 });
 

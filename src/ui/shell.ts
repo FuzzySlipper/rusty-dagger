@@ -88,7 +88,6 @@ const SHELL_MARKUP = `
       <div class="dagger-map-root" hidden></div>
       <div class="dagger-transport-root" hidden></div>
       <section class="dagger-rest-root" hidden aria-label="Rest and loiter">
-        <h2>Rest &amp; loiter</h2>
         <p class="dagger-rest-status" role="status" aria-live="polite">Choose a rest action.</p>
         <div class="dagger-rest-actions">
           <label>Rest hours <input class="dagger-rest-hours" type="number" min="1" max="99" step="1" value="1"></label>
