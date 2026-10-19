@@ -266,7 +266,7 @@ public sealed class PlayerAttackSessionTests
     }
 
     [Fact]
-    public void A_melee_request_that_found_nothing_tells_the_player_plainly_and_keeps_the_query_counts_in_diagnostics()
+    public void A_melee_request_that_found_nothing_is_a_silent_whiff_and_keeps_the_query_counts_in_diagnostics()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -279,14 +279,16 @@ public sealed class PlayerAttackSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        // Every placed actor is outside melee reach. The player reads only that nothing was in reach;
-        // what the perception query compared belongs to the playtest diagnostics, not the outcome line.
+        // Every placed actor is outside melee reach. A swing at nothing is a whiff, which the donor
+        // shows no text for; what the perception query compared belongs to the playtest diagnostics.
         perception.Receipt = new PerceptionReadoutResult(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 42, 42, 42, 41, 1, 0, 0);
+        string before = session.Presentation.LastOutcome;
         session.Update(new ProductUpdate(OuterUpdate(1), [PadButton(ControllerButton.Button0, InputEdge.Pressed)]));
 
-        Assert.Equal("Nothing in reach.", session.Presentation.LastOutcome);
+        Assert.Equal(before, session.Presentation.LastOutcome);
+        Assert.DoesNotContain("Nothing in reach", session.Presentation.LastOutcome);
         Dictionary<string, object?> published = (Dictionary<string, object?>)engine.Published()!;
-        Assert.Equal("Nothing in reach.", (string)published["lastOutcome"]!);
+        Assert.DoesNotContain("Nothing in reach", (string)published["lastOutcome"]!);
         using System.Text.Json.JsonDocument readout = System.Text.Json.JsonDocument.Parse(session.ReadPlaytestTargets().Message);
         System.Text.Json.JsonElement query = readout.RootElement.GetProperty("lastMeleeQuery");
         Assert.Equal(System.Text.Json.JsonValueKind.Null, query.GetProperty("selectedTarget").ValueKind);

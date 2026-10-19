@@ -47,8 +47,11 @@ public sealed class DaggerfallOutcomePresentationTests
             definitions.Mobiles, definitions.Text);
         const long player = DaggerfallActorIdentity.PlayerEntityId;
 
+        // A swing at empty air is its own feedback and writes no line; one aimed at someone out of reach says so.
         outcome.React(new AttackWhiffedFact(player, null, EnemyAttack: false, 1, 1));
-        Assert.Equal("Your blow meets nothing", state.LastOutcome);
+        Assert.Equal(string.Empty, state.LastOutcome);
+        outcome.React(new AttackWhiffedFact(player, 2000, EnemyAttack: false, 1, 1));
+        Assert.Equal("Your blow meets nothing; Rat is out of reach", state.LastOutcome);
         outcome.React(new AttackWhiffedFact(2000, player, EnemyAttack: true, 1, 2));
         Assert.Equal("Rat's blow misses you", state.LastOutcome);
         outcome.React(new AttackNegatedFact(player, 2000, HarmNegation.Deflected, EnemyAttack: false, 1, 3));
