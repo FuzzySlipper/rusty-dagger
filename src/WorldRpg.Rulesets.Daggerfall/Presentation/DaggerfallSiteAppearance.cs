@@ -387,7 +387,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         {
             if (groundVisuals.TryGetValue(container.Id, out BillboardVisual? visual))
                 facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.Gameplay(container.Id, "Ground container"), false, 0,
-                    new Transform(container.Position.ToVector(), Quaternion.Identity, Vector3.One), visual.Appearance, true, RenderLayer.Scene));
+                    new Transform(container.Position.ToVector() + Vector3.UnitY * GroundContainerLift, Quaternion.Identity, Vector3.One), visual.Appearance, true, RenderLayer.Scene));
         }
         foreach (var npc in npcs ?? [])
             if (npcVisuals.TryGetValue(npc.Id, out var visual))
@@ -1073,6 +1073,13 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         if (npcVisuals.Remove(id, out var visual)) Retire(visual);
     }
+
+    /// <summary>
+    /// A ground pile's position is the floor it rests on; its billboard is lifted by its pivot's share of its
+    /// height so the sprite stands on that floor whatever pivot the source publishes, as the donor lifts dropped
+    /// containers by half their height.
+    /// </summary>
+    private float GroundContainerLift => groundContainerSprite is { } sprite ? sprite.Pivot.Y * sprite.Size.Y : 0F;
 
     private void ReconcileGroundVisuals(IReadOnlyDictionary<long, DaggerfallGroundContainer> containers)
     {

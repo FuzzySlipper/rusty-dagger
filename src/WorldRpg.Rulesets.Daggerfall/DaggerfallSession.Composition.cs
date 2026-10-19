@@ -514,7 +514,8 @@ internal sealed partial class DaggerfallSession
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,
                 entity => State.Actors.Entities.IdentityOf(new Rusty.Engine.Entities.EntityId(entity)).Value);
             _inventoryUi.UseItemCondition(_itemCondition);
-            _inventoryUi.UseGroundDrops(_groundContainers, () => State.PlayerControl.Position);
+            // A dropped pile rests on the floor under the player, not at the body centre the player's position names.
+            _inventoryUi.UseGroundDrops(_groundContainers, () => State.PlayerControl.Position is WorldPoint at ? _grounding.RestingPosition(at) : null);
             _notebook = new DaggerfallBookNotebook(definitions, new DaggerfallTextResolver(definitions.Text));
             assembled.Quests.BindNotebook(_notebook.AddQuestNote);
             assembled.Quests.BindItemCleanup(RemoveCarriedQuestItems);

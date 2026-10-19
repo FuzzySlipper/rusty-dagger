@@ -114,7 +114,8 @@ public sealed class SiteAppearanceLifecycleTests
 
         presentation.Publish(actors, new Dictionary<long, DaggerfallGroundContainer> { [pile.Id] = pile });
         AppearanceFact fact = Assert.Single(appearance.Snapshots.Last(), value => value.ObjectId == (ulong)pile.Id);
-        Assert.Equal(pile.Position.ToVector(), fact.Transform.Translation);
+        // The pile rests on the floor at its position; its centre-pivoted billboard is lifted half its height to stand there.
+        Assert.Equal(pile.Position.ToVector() + new Vector3(0F, .65F * .5F, 0F), fact.Transform.Translation);
         Assert.Equal(RenderLayer.Scene, fact.Layer);
         SpriteFromAtlasRequest request = appearance.SpriteRequests.Last();
         Assert.Equal(sprite.InitialFrameId, request.FrameId);

@@ -619,6 +619,15 @@ internal sealed class DaggerfallActorGrounding(ISpatialService spatialService, S
         actor.ApplyPose(new ActorPose(GroundPosition(actor.Position), actor.HeadingYawRadians));
     }
 
+    /// <summary>
+    /// How far below a falling thing's point the floor is looked for: a corpse of a flyer killed in the air or a
+    /// pile dropped from the player's body centre. Beyond it nothing lies, and the thing stays where it was.
+    /// </summary>
+    internal const double FallDistance = 64d;
+
+    /// <summary>The floor under a thing that falls to rest: a dropped pile, a treasure marker, or a corpse.</summary>
+    internal WorldPoint RestingPosition(WorldPoint position) => GroundPosition(position, FallDistance);
+
     internal WorldPoint GroundPosition(WorldPoint position, double? maximumDistance = null)
     {
         SpatialHit floor = spatialService.CastRay(new SpatialRaycastRequest(
