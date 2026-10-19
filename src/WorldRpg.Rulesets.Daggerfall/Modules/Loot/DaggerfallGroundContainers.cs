@@ -192,7 +192,8 @@ internal sealed class DaggerfallGroundContainers
         ? _containers.Read(container.Owner) : null;
 
     /// <summary>Populates a source treasure pile once; an emptied pile remains as the current durable source state.</summary>
-    internal DaggerfallGroundContainer EnsureTreasure(DaggerfallDungeonTreasurePlacement placement, int dungeonType,
+    /// <param name="position">Where the pile rests: the floor under its classic marker.</param>
+    internal DaggerfallGroundContainer EnsureTreasure(DaggerfallDungeonTreasurePlacement placement, WorldPoint position, int dungeonType,
         int level, string race, string gender, DaggerfallLootPopulation population)
     {
         var prior = _ground.Values.SingleOrDefault(value => value.Profile == _activeProfile && value.TreasurePlacement == placement.Id);
@@ -201,9 +202,7 @@ internal sealed class DaggerfallGroundContainers
         long id = checked((long)identity.Value);
         var owner = _containers.Entities.Create(identity, GroundContainerType);
         _containers.RegisterOwner(owner);
-        // The classic marker is 40 source units high, centered half a metre above its base.
-        var container = new DaggerfallGroundContainer(_activeProfile, id, owner,
-            placement.Position with { Y = placement.Position.Y - .5f }, TreasurePlacement: placement.Id);
+        var container = new DaggerfallGroundContainer(_activeProfile, id, owner, position, TreasurePlacement: placement.Id);
         try
         {
             var generated = population.Generate(new(new("world-treasure", identity.Value), DaggerfallItemOwner.Ground(id),

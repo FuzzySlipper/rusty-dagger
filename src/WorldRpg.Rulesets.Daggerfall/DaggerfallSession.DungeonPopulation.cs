@@ -16,7 +16,7 @@ internal sealed partial class DaggerfallSession
         var loot = new DaggerfallLootPopulation(_definitions, _random, _uniqueItems);
         string gender = State.Character.Identity.Gender.ToString().ToLowerInvariant();
         foreach (var marker in population.Treasures)
-            _groundContainers.EnsureTreasure(marker, site.DungeonType, State.Progression.Level, State.Character.Identity.RaceId, gender, loot);
+            _groundContainers.EnsureTreasure(marker, _grounding.RestingPosition(marker.Position), site.DungeonType, State.Progression.Level, State.Character.Identity.RaceId, gender, loot);
         if (_encounters.DungeonPopulated(profile.ProfileKey.LogicalId)) return;
         foreach (var marker in population.Enemies)
         {

@@ -790,6 +790,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             DaggerfallConcealmentEffects.End(State.Effects, died.ActorId);
             foreach (var light in State.Effects.Active.Where(effect => effect.Definition.Key == DaggerfallIllusionEffects.LightKey
                 && effect.Context.Target.Value == (ulong)died.ActorId).ToArray()) State.Effects.Cancel(light.Context.Instance);
+            // A corpse rests on the floor: a flyer killed in the air, or a walker on a marker above the floor, falls to it.
+            if (died.ActorId != DaggerfallActorIdentity.PlayerEntityId && State.Actors.TryGet(died.ActorId, out ActorState fallen))
+                fallen.ApplyPose(new ActorPose(_grounding.RestingPosition(fallen.Position), fallen.HeadingYawRadians));
             _corpseLoot.Create(died);
             _rewards.React(died, _facts);
         }
