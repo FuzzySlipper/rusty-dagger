@@ -1,3 +1,4 @@
+import { redraw } from './redraw.js';
 export interface BookReaderProjection {
   readonly id: number;
   readonly title: string;
@@ -42,7 +43,8 @@ export function mountNotebook(root: HTMLElement, claim: (action: NotebookAction)
   let disposed = false;
 
   const render = (value: NotebookProjection): void => {
-    renderReader(reader, value, claim);
+    // The reader redraws only for a new page, so Previous and Next keep focus as the player turns pages.
+    redraw(reader, JSON.stringify(value.book), () => renderReader(reader, value, claim));
     renderNotes(notes, value, claim);
   };
 
