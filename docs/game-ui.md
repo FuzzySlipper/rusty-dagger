@@ -99,28 +99,41 @@ Controller buttons follow the standard layout the Engine normalizes: A
 (`button-0`) accepts, B (`button-1`) backs out, the D-pad (`button-12`–`15`)
 and the left stick (`axis-0`, `axis-1`) move, LB and RB (`button-4`, `5`)
 step panels. With the menu open, Start (`button-9`) steps out as Back does,
-Select (`button-8`) opens the inventory and Y (`button-3`) the character.
+Select (`button-8`) opens the inventory, Y (`button-3`) the character, and X
+(`button-2`) a context menu on the focused item.
 
 ## Drag and drop
 
 Native HTML5 drag and drop is not used. The desktop window refuses it (the
-owner's decision on rusty-engine #10045), so drag follows the Engine's
+owner's decision on rusty-engine #10045), and a test fails if anything in
+`src/ui` makes an element draggable or handles a native drop. Every drag goes
+through the one drag owner, `src/ui/drag.ts`, which follows the Engine's
 pointer-event recipe:
 
-- Images and links in game UI are `draggable="false"`.
-- `pointerdown` captures the pointer; the drag starts only after a small
-  movement, so a click stays a click.
-- A ghost with `pointer-events: none` follows the pointer, and the target is
-  found with `document.elementFromPoint` and `closest('[data-slot]')`.
-- While hovering, targets show valid or invalid from the eligibility the
-  projection publishes.
-- `pointerup` on a target sends one semantic action. `pointercancel`,
-  `lostpointercapture`, Escape and `blur` cancel and send nothing.
+- `pointerdown` on a source captures the pointer; the press becomes a drag
+  only after it travels a few pixels, so a click stays a click.
+- A ghost follows the pointer: the source's picture, or its name when it has
+  none. It draws inside the open modal, above everything outside it.
+- The target under the pointer is found with `document.elementFromPoint`.
+  While a source is held or dragged, every target shows whether it takes it,
+  from eligibility the caller reads out of the projection.
+- A release over a target that takes the source sends one semantic action; a
+  release over one that does not sends nothing and says why. Escape, Back,
+  `pointercancel`, `lostpointercapture` and window `blur` cancel and send
+  nothing. The UI redraws from what the product publishes; nothing moves
+  locally.
 
-Every drag has a keyboard and controller equivalent: accept picks the focused
-item up, focus moves between targets, accept places it and back cancels. It
-sends the same action. Drag is also never the only way to do something: the
-same move is available from a button or context menu.
+Without a pointer the same move is pick up and place: accept (a click, Enter
+or the controller's A) on a source holds it, accept on an empty target places
+it, and Back or Escape releases it before doing anything else. Accepting
+another source holds that one instead, so selecting still works with the
+mouse; a drag or the details pane moves onto a filled slot.
+
+Drag is never the only way to do something. The same moves are buttons in the
+surface, and a drawn context menu (`src/ui/context-menu.ts`) on a right-click,
+the menu key or Shift+F10, or the controller's X offers them as accelerators,
+as a double-click does for the item's main action. The inventory is the worked
+example (`src/ui/inventory.ts`).
 
 ## Controls
 
@@ -131,7 +144,8 @@ same move is available from a button or context menu.
 - **Tooltips** come from `data-tooltip` (`src/ui/tooltip.ts`), drawn on hover
   and on focus inside the open modal. The `title` attribute is not used for
   information, since the window never shows it.
-- **Context menus** call `preventDefault()` on `contextmenu` and draw the menu.
+- **Context menus** call `preventDefault()` on `contextmenu` and open the
+  drawn context menu, which registers with navigation above its surface.
 - **Lists** scroll with the wheel and follow controller focus.
 - **Choices** are `<select>` or focusable options. The window draws a
   `<select>` popup for the mouse, and navigation changes its value with left

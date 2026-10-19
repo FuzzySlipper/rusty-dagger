@@ -287,3 +287,17 @@ test('every published HUD field is one the DOM reads or names as deliberately un
   assert.deepEqual(unread.sort(), [...UNREAD_HUD_FIELDS.keys()].sort(), 'the DOM leaves HUD fields unread that are not named as deliberate, or names one it now reads');
   for (const reason of UNREAD_HUD_FIELDS.values()) assert.ok(reason.length > 0);
 });
+
+test('game UI never starts a native HTML5 drag: nothing is draggable and nothing handles a native drop', () => {
+  // The desktop window refuses a native drag (rusty-engine #10045); drag goes through src/ui/drag.ts.
+  const offences = [];
+  for (const file of domSources) {
+    const text = file.getFullText();
+    for (const [pattern, why] of [
+      [/draggable\s*=\s*true|setAttribute\(\s*['"]draggable['"]\s*,\s*['"]true['"]|draggable=["']true["']/g, 'makes an element draggable'],
+      [/\.dataTransfer\b/g, 'reads a native drag payload'],
+      [/addEventListener\(\s*['"](drop|dragover|dragenter|dragleave|drag)['"]/g, 'handles a native drag'],
+    ]) for (const match of text.matchAll(pattern)) offences.push(`${basename(file.fileName)}:${file.getLineAndCharacterOfPosition(match.index).line + 1} ${why}`);
+  }
+  assert.deepEqual(offences, []);
+});

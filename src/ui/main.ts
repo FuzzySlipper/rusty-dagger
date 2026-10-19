@@ -22,8 +22,8 @@ export { isSummoningProjection, renderSummoning } from './crafting.js';
 
 /** Snapshots between repeated requests for art this DOM has not received. */
 const ART_REQUEST_INTERVAL = 120;
-/** Controller shortcuts the open menu adds to the shared navigation: Start, Select and Y. */
-const MENU_SHORTCUTS = Object.freeze({ menu: 'button-9', inventory: 'button-8', character: 'button-3' });
+/** Controller shortcuts the open menu adds to the shared navigation: Start, Select, Y and X. */
+const MENU_SHORTCUTS = Object.freeze({ menu: 'button-9', inventory: 'button-8', character: 'button-3', contextMenu: 'button-2' });
 
 /**
  * Mounts the product UI and routes each published snapshot to the surface that draws it. Every
@@ -44,19 +44,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // Deciding the mode and the focus scope together keeps them from disagreeing about which surface is up.
   const sync = (focus = false): void => { interaction.sync(focus); navigation.refresh(); };
 
+  // A playing cinematic takes any key or press first, so the HUD listens before navigation does.
   const hud = mountHud(shell, send);
-  const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
-  const choices = mountChoices(shell, quests, send);
-  const death = mountDeath(shell, send);
-  const dungeonText = mountDungeonText(shell, send);
-  const menu = mountMenu(shell, { send, ask, sync, isDead: () => dead });
-  const entry = mountEntry(shell, send, menu.creation, () => { if (menu.dialog.open) menu.dialog.close(); });
-  const dialogue = mountDialogue(shell, send, ask);
-
-  // A pointer lock the world held, lost in play, is the player asking for the menu: the browser and
-  // the desktop shell spend Escape on releasing the lock, so this is what Escape does in play.
-  const interaction = mountInteraction(context, { onLockLostInPlay: () => { if (!menu.dialog.open && !dead && !entry.isTitle()) menu.open(); } });
-  interaction.needsCursor(() => menu.dialog.open || dialogue.window.open || dialogue.summoningOffer.open);
   // Key capture for rebinding runs before navigation, which would otherwise take Escape and the arrows.
   const onKeyDown = (event: KeyboardEvent): void => menu.captureKey(event);
   document.addEventListener('keydown', onKeyDown, true);
@@ -68,8 +57,21 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       if (button === MENU_SHORTCUTS.menu) menu.dismiss();
       else if (button === MENU_SHORTCUTS.inventory) menu.runAction('inventory');
       else if (button === MENU_SHORTCUTS.character) menu.runAction('character');
+      else if (button === MENU_SHORTCUTS.contextMenu) menu.contextMenu();
     },
   });
+  const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
+  const choices = mountChoices(shell, quests, send);
+  const death = mountDeath(shell, send);
+  const dungeonText = mountDungeonText(shell, send);
+  const menu = mountMenu(shell, { send, ask, sync, isDead: () => dead, register: surface => navigation.register(surface) });
+  const entry = mountEntry(shell, send, menu.creation, () => { if (menu.dialog.open) menu.dialog.close(); });
+  const dialogue = mountDialogue(shell, send, ask);
+
+  // A pointer lock the world held, lost in play, is the player asking for the menu: the browser and
+  // the desktop shell spend Escape on releasing the lock, so this is what Escape does in play.
+  const interaction = mountInteraction(context, { onLockLostInPlay: () => { if (!menu.dialog.open && !dead && !entry.isTitle()) menu.open(); } });
+  interaction.needsCursor(() => menu.dialog.open || dialogue.window.open || dialogue.summoningOffer.open);
   // The surfaces that take the cursor, topmost first. Escape and Back go to the topmost: from any menu
   // panel Escape closes the whole menu while Back steps out one panel. A question the product needs
   // answered (a summoning offer, a court, a quest prompt, the death and title screens) has no back, so
@@ -77,7 +79,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const surfaces = [
     navigation.register({ name: 'confirm', root: confirmPrompt.dialog, layer: 100, isOpen: confirmPrompt.open, back: confirmPrompt.cancel }),
     navigation.register({ name: 'menu', root: menu.dialog, layer: 90, isOpen: () => menu.dialog.open,
-      back: source => { if (source === 'escape') menu.close(); else menu.dismiss(); }, panel: menu.stepPanel }),
+      back: menu.back, panel: menu.stepPanel }),
     navigation.register({ name: 'summoning-offer', root: dialogue.summoningOffer, layer: 80, isOpen: () => dialogue.summoningOffer.open }),
     navigation.register({ name: 'legal', root: choices.legal, layer: 70, isOpen: () => !choices.legal.hidden }),
     navigation.register({ name: 'quests', root: quests, layer: 60, isOpen: () => questAnswerRequired && !dead }),

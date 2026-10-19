@@ -129,6 +129,17 @@
 .dagger-input-hints kbd { padding: 0 .3rem; border: 1px solid #8a7444; border-radius: 2px; color: #f2e3ba; font: inherit; }
 .dagger-death .dagger-input-hints, .dagger-entry .dagger-input-hints { position: absolute; left: 50%; bottom: 1rem; transform: translateX(-50%); }
 
+/* The picture, or the name, that follows the pointer during a drag. */
+.dagger-drag-ghost { position: fixed; left: -20px; top: -20px; z-index: 70; min-width: 40px; height: 40px; display: grid; place-items: center; padding: 0 .3rem; color: #f2e3ba; font: .7rem Georgia, serif; pointer-events: none; }
+.dagger-drag-ghost img { max-width: 40px; max-height: 40px; image-rendering: pixelated; }
+
+/* A drawn context menu: the window shows no native one. */
+.dagger-context-menu { position: fixed; z-index: 65; display: grid; min-width: 9rem; padding: .25rem; border: 1px solid #d4b56b; background: #151712; box-shadow: 0 8px 24px rgb(0 0 0 / .6); }
+.dagger-context-menu[hidden] { display: none; }
+.dagger-context-menu button { padding: .4rem .7rem; border: 0; background: transparent; color: #f2e3ba; font: .8rem Georgia, serif; text-align: left; cursor: var(--dagger-cursor-pointer); }
+.dagger-context-menu button:focus, .dagger-context-menu button:hover { background: #312817; }
+.dagger-context-menu button:disabled { opacity: .5; cursor: default; }
+
 /* A drawn tooltip: the window never shows a title attribute. */
 .dagger-tooltip { position: fixed; z-index: 60; max-width: 22rem; padding: .3rem .55rem; border: 1px solid #aa9c7a; background: #0c0d0a; color: #f2e3ba; font: .75rem Georgia, serif; pointer-events: none; }
 .dagger-tooltip[hidden] { display: none; }

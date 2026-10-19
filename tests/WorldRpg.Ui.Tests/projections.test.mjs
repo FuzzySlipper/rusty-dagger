@@ -341,40 +341,158 @@ test('inventory use and equip controls follow the ruleset eligibility of the sel
   } finally { f.dispose(); }
 });
 
-test('inventory items drag with the pointer, never a native drag session, and Escape cancels a drag', () => {
+test('inventory items drag with the pointer under capture, never a native drag session, and every cancel sends nothing', () => {
   const f = fixture();
   try {
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
       condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
     f.publish({ inventory: {
       revision: '6:1', message: '', equipmentChange: null,
-      slots: [{ id: 'right-hand', label: 'Right hand', itemKey: null }],
-      items: [row('unique:1', { gridSlot: 0, compatibleSlots: ['right-hand'] })],
+      slots: [{ id: 'right-hand', label: 'Right hand', itemKey: null }, { id: 'head', label: 'Head', itemKey: null }],
+      items: [row('unique:1', { gridSlot: 0, compatibleSlots: ['right-hand'], label: 'Steel sword' })],
     } });
+    f.root.querySelector('[data-action="inventory"]').click();
     // A native drag hangs a host that renders the page off screen, so nothing in the panel offers one.
     assert.ok([...f.root.querySelectorAll('.dagger-inventory [draggable]')].every(element => element.draggable === false));
     const item = f.root.querySelector('[data-inventory-item="unique:1"]');
     const hand = f.root.querySelector('[data-inventory-equipment="right-hand"]');
-    document.elementFromPoint = () => hand;
-    const pointer = (target, type, x, y) => target.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y }));
+    const head = f.root.querySelector('[data-inventory-equipment="head"]');
+    let under = hand;
+    document.elementFromPoint = () => under;
+    // Under pointer capture every event of the press goes to the item that was pressed.
+    const pointer = (type, x, y) => item.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y }));
     const count = f.actions.length;
-    pointer(item, 'pointerdown', 10, 10);
-    pointer(window, 'pointermove', 40, 40);
+
+    // A press that travels no further than the threshold is not a drag.
+    pointer('pointerdown', 10, 10);
+    pointer('pointermove', 14, 13);
+    assert.equal(f.root.querySelector('.dagger-drag-ghost'), null);
+    pointer('pointerup', 14, 13);
+
+    // Escape mid-drag releases the item and leaves the menu open.
+    pointer('pointerdown', 10, 10);
+    pointer('pointermove', 40, 40);
+    const ghost = f.root.querySelector('.dagger-menu .dagger-drag-ghost');
+    assert.ok(ghost, 'The ghost draws inside the open menu, above everything outside it.');
+    assert.equal(ghost.textContent, 'Steel sword', 'An item with no picture drags its name.');
     assert.equal(hand.classList.contains('is-drop-target'), true);
-    window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
-    pointer(window, 'pointerup', 40, 40);
+    assert.equal(hand.classList.contains('is-drop-valid'), true);
+    assert.equal(head.classList.contains('is-drop-invalid'), true, 'Published eligibility marks the slots that do not take it.');
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    assert.equal(f.root.querySelector('.dagger-menu').open, true);
+    pointer('pointerup', 40, 40);
     assert.equal(f.actions.length, count, 'An Escaped drag moves nothing.');
     assert.equal(hand.classList.contains('is-drop-target'), false);
-    pointer(item, 'pointerdown', 10, 10);
-    pointer(window, 'pointermove', 40, 40);
-    pointer(window, 'pointerup', 40, 40);
-    assert.deepEqual(f.actions.at(-1), { action: 'inventory-move', revision: '6:1', item: 'unique:1', targetEquipment: 'right-hand' });
-    // A press that does not travel stays a click that selects.
-    pointer(item, 'pointerdown', 10, 10);
-    pointer(window, 'pointerup', 11, 11);
+
+    // Losing capture or window focus cancels too.
+    pointer('pointerdown', 10, 10);
+    pointer('pointermove', 40, 40);
+    item.dispatchEvent(new window.Event('lostpointercapture'));
+    pointer('pointerup', 40, 40);
+    pointer('pointerdown', 10, 10);
+    pointer('pointermove', 40, 40);
+    window.dispatchEvent(new window.Event('blur'));
+    pointer('pointerup', 40, 40);
+    assert.equal(f.actions.length, count);
+
+    // A drop on a slot that does not take the item sends nothing and says why.
+    under = head;
+    pointer('pointerdown', 10, 10);
+    pointer('pointermove', 40, 40);
+    pointer('pointerup', 40, 40);
+    assert.equal(f.actions.length, count);
+    assert.match(f.root.querySelector('.dagger-inventory-status').textContent, /Head does not take Steel sword/);
+
+    // A drop on a slot that takes it sends exactly one move, and the release is not also a click.
+    under = hand;
+    pointer('pointerdown', 10, 10);
+    pointer('pointermove', 40, 40);
+    pointer('pointerup', 40, 40);
     item.click();
-    assert.equal(item.classList.contains('is-selected'), true);
+    assert.equal(f.actions.length, count + 1);
+    assert.deepEqual(f.actions.at(-1), { action: 'inventory-move', revision: '6:1', item: 'unique:1', targetEquipment: 'right-hand' });
   } finally { delete document.elementFromPoint; f.dispose(); }
+});
+
+test('without a pointer an item is picked up and placed: accept holds it, accept on a slot places it, Back releases it', () => {
+  const f = fixture();
+  try {
+    const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
+      condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
+    f.publish({ inventory: {
+      revision: '7:1', message: '', equipmentChange: null,
+      slots: [{ id: 'right-hand', label: 'Right hand', itemKey: null }, { id: 'head', label: 'Head', itemKey: null }],
+      items: [row('unique:1', { gridSlot: 0, compatibleSlots: ['right-hand'] })],
+    } });
+    f.root.querySelector('[data-action="inventory"]').click();
+    const item = f.root.querySelector('[data-inventory-item="unique:1"]');
+    const hand = f.root.querySelector('[data-inventory-equipment="right-hand"]');
+    const head = f.root.querySelector('[data-inventory-equipment="head"]');
+    const empty = f.root.querySelector('[data-inventory-grid="4"]');
+    const count = f.actions.length;
+    item.focus();
+    f.pad('button-0');
+    assert.equal(f.root.querySelector('.dagger-inventory').classList.contains('is-holding'), true);
+    assert.equal(hand.classList.contains('is-drop-valid'), true);
+    // Back releases the held item before it would step out of the panel.
+    f.pad('button-1');
+    assert.equal(f.root.querySelector('.dagger-inventory').classList.contains('is-holding'), false);
+    assert.equal(f.root.querySelector('.dagger-inventory-root').hidden, false);
+    item.focus();
+    f.pad('button-0');
+    head.focus();
+    f.pad('button-0');
+    assert.equal(f.actions.length, count, 'A slot that does not take the item receives nothing.');
+    empty.focus();
+    f.pad('button-0');
+    assert.deepEqual(f.actions.at(-1), { action: 'inventory-move', revision: '7:1', item: 'unique:1', targetGrid: 4 });
+    // The keyboard does the same: Enter is a click.
+    item.focus(); item.click();
+    hand.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'inventory-move', revision: '7:1', item: 'unique:1', targetEquipment: 'right-hand' });
+  } finally { f.dispose(); }
+});
+
+test('a drawn context menu and a double-click are accelerators over the same item actions', () => {
+  const f = fixture();
+  try {
+    const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
+      condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
+    f.publish({ inventory: {
+      revision: '8:1', message: '', equipmentChange: null,
+      slots: [{ id: 'right-hand', label: 'Right hand', itemKey: 'unique:2' }, { id: 'left-hand', label: 'Left hand', itemKey: null }],
+      items: [
+        row('unique:1', { gridSlot: 0, compatibleSlots: ['right-hand', 'left-hand'], canEquip: true }),
+        row('unique:2', { gridSlot: null, equippedSlots: ['right-hand'], compatibleSlots: ['right-hand'] }),
+        row('stack:potion', { gridSlot: 1, canUse: true }),
+      ],
+    } });
+    f.root.querySelector('[data-action="inventory"]').click();
+    const sword = f.root.querySelector('.dagger-inventory-grid [data-inventory-item="unique:1"]');
+    // Right-click opens the drawn menu; the window shows no native one.
+    const opened = new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 30, clientY: 40 });
+    sword.dispatchEvent(opened);
+    assert.equal(opened.defaultPrevented, true);
+    const menu = f.root.querySelector('.dagger-context-menu');
+    assert.equal(menu.hidden, false);
+    assert.deepEqual([...menu.querySelectorAll('button')].map(entry => entry.textContent), ['Equip', 'Use', 'Inspect', 'Drop']);
+    assert.equal(document.activeElement, menu.querySelector('button'), 'Focus moves into the context menu.');
+    // Escape closes it and leaves the menu open.
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    assert.equal(menu.hidden, true);
+    assert.equal(f.root.querySelector('.dagger-menu').open, true);
+    // The controller's X opens it on the focused item; Equip prefers the free compatible slot.
+    sword.focus();
+    f.pad('button-2');
+    assert.equal(menu.hidden, false);
+    menu.querySelector('button').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'inventory-move', revision: '8:1', item: 'unique:1', targetEquipment: 'left-hand' });
+    // A double-click uses what can be used, and moves an equipped item back to a free pack slot.
+    f.root.querySelector('[data-inventory-item="stack:potion"]').dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'inventory-use', revision: '8:1', item: 'stack:potion' });
+    f.root.querySelector('.dagger-inventory-equipment [data-inventory-item="unique:2"]').dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'inventory-move', revision: '8:1', item: 'unique:2', targetGrid: 2 });
+  } finally { f.dispose(); }
 });
 
 test('Escape toggles the menu from any panel, and a pointer lock lost in play opens it', () => {
