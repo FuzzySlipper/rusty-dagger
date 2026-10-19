@@ -128,6 +128,24 @@ public sealed class GameCompositionTests
         string[]? packs = null) =>
         new(new(id), new(ruleset), seams ?? [Mitigation], new(tuning), (packs ?? []).Select(pack => new ContentPackId(pack)), ownsSaveState: false);
 
+    [Fact]
+    public void Bundles_list_by_id_with_their_authored_title_or_their_id_and_a_resolved_bundle_carries_its_title()
+    {
+        ProductContent content = Content(
+            ("worldrpg/bundles/b.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.b","title":"  The B game ","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""),
+            ("worldrpg/bundles/a.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.a","ruleset":"other","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""),
+            ("worldrpg/bundles/bad.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bad","title":"","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""),
+            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/base.json"}"""),
+            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
+            ("payload/base.json", "{}"), ("payload/tuning.json", "{}"));
+
+        // A malformed descriptor (an empty title) is not offered; listing never resolves packs or tuning.
+        Assert.Equal([new GameBundleSummary(new("test.a"), new("other"), "test.a"), new GameBundleSummary(new("test.b"), new("test"), "The B game")],
+            GameCompositionResolver.ListBundles(content));
+        ProductContent wellFormed = new(content.Files.ToArray().Where(file => !Encoding.UTF8.GetString(file.Path.Span).EndsWith("bad.bundle.json", StringComparison.Ordinal)).ToArray());
+        Assert.Equal("The B game", GameCompositionResolver.Resolve(wellFormed, new GameBundleId("test.b")).RequireComposition().Bundle.Title);
+    }
+
     private static ProductContent VariantContent(string variants) => Content(
         ("worldrpg/bundles/test.bundle.json", $$"""{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"},"variants":{{variants}}}"""),
         ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/base.json"}"""),

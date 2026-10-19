@@ -29,7 +29,7 @@ internal sealed class CapturingDaggerfallRuleset : ISaveableGameRuleset, IRulesV
     private sealed class CapturingSession(DaggerfallSession inner, CapturingDaggerfallRuleset owner)
         : IGameSession, ICharacterCreationSession, IEntryScreenSession, IEntryScreenStartupSession,
         IModeAwareGameSession, ISaveableGameSession, ISaveRequestingGameSession, IPlayerPreferencesSession,
-        IPlayerDefeatOutcomeSession, IPlaytestGameSession
+        IPlayerDefeatOutcomeSession, IPlaytestGameSession, IGameBundleChoiceSession
     {
         public bool RequiresCharacterInitialization => inner.RequiresCharacterInitialization;
         public bool HasCommittedCharacter => inner.HasCommittedCharacter;
@@ -54,6 +54,9 @@ internal sealed class CapturingDaggerfallRuleset : ISaveableGameRuleset, IRulesV
         public void ReportPlayerPreferencesOutcome(string message) => inner.ReportPlayerPreferencesOutcome(message);
         public PlayerDefeatOutcomeRequest? TakePlayerDefeatOutcomeRequest() => inner.TakePlayerDefeatOutcomeRequest();
         public void ReportPlayerDefeatOutcome(string message) => inner.ReportPlayerDefeatOutcome(message);
+        public void ReportBundles(GameBundleChoices choices) => inner.ReportBundles(choices);
+        public GameBundleId? TakeBundleRequest() => inner.TakeBundleRequest();
+        public void ReportBundleOutcome(string message) => inner.ReportBundleOutcome(message);
         public IReadOnlyList<string> PlaytestActions => inner.PlaytestActions;
         public Rusty.Engine.Debugging.DebugCommandResult ReadPlaytestObservation() => inner.ReadPlaytestObservation();
         public Rusty.Engine.Debugging.PlaytestAction InspectPlaytestAction(string id) => inner.InspectPlaytestAction(id);

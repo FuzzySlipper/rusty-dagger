@@ -40,7 +40,7 @@ internal enum DaggerfallUiActionKind
     CurrencyDepositGold, CurrencyWithdrawGold, CurrencyDepositLetters, CurrencyWithdrawLetter, BankTransfer,
     BankOpen, BankLoanIssue, BankLoanRepayAccount, BankLoanRepayCarried,
     LootClose, LootTake,
-    SaveGame, LoadGame, SaveSlots, SaveSlot, LoadSlot, DeleteSlot,
+    SaveGame, LoadGame, SaveSlots, SaveSlot, LoadSlot, DeleteSlot, BundleSelect,
     DeathNewGame, DeathLoadGame, DeathQuit,
 }
 
@@ -252,6 +252,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.SaveSlots, "save-slots", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SaveSlot, "save-slot", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LoadSlot, "load-slot", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.BundleSelect, "bundle-select", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.DeleteSlot, "delete-slot", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.DeathNewGame, DaggerfallDeathPresentation.NewGameAction, DaggerfallUiPhases.Dead, Unrecognized),
         new(DaggerfallUiActionKind.DeathLoadGame, DaggerfallDeathPresentation.LoadGameAction, DaggerfallUiPhases.Dead, Unrecognized),
@@ -524,6 +525,9 @@ internal static class DaggerfallUiAction
                     && !string.IsNullOrWhiteSpace(label)
                     && (key is null || !string.IsNullOrWhiteSpace(key))
                     ? new(action, Key: key, Label: label, Confirm: confirm) : null;
+            if (action == "bundle-select")
+                return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key)
+                    ? new(action, Key: key) : null;
             if (action == "load-slot")
                 return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key)
                     ? new(action, Key: key) : null;

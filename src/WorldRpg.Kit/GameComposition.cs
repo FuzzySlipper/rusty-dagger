@@ -16,7 +16,10 @@ public readonly record struct RulesVariantId(string Value);
 public readonly record struct RulesSeamId(string Value);
 
 public sealed record GameBundle(GameBundleId Id, RulesetId Ruleset, IReadOnlyList<ContentPackReference> ContentPacks, TuningProfileReference Tuning,
-    IReadOnlyList<RulesVariantId> Variants);
+    IReadOnlyList<RulesVariantId> Variants, string Title);
+
+/// <summary>An admitted game bundle as a player chooses it: its id, the ruleset it composes, and its authored title.</summary>
+public sealed record GameBundleSummary(GameBundleId Id, RulesetId Ruleset, string Title);
 
 /// <summary>
 /// What a compiled rules variant declares about itself: the ruleset it deviates from, the seams whose
@@ -216,8 +219,24 @@ public static class GameCompositionResolver
                 variants.Add(new(manifest, variantTuning));
         }
         if (diagnostics.Any(diagnostic => diagnostic.Code == "error") || tuning is null) return new(null, diagnostics);
-        GameBundle bundle = new(selected.Id, selected.Ruleset, Freeze(selected.ContentPacks), selected.Tuning, Freeze(selected.Variants));
+        GameBundle bundle = new(selected.Id, selected.Ruleset, Freeze(selected.ContentPacks), selected.Tuning, Freeze(selected.Variants), selected.Title);
         return new(new ResolvedGameComposition(bundle, ordered, tuning, variants, content), diagnostics);
+    }
+
+    /// <summary>
+    /// Every well-formed game bundle the content admits, by id, without resolving any: whether one composes
+    /// is <see cref="Resolve(ProductContent, GameBundleId, IReadOnlyList{RulesVariantManifest})"/>'s answer.
+    /// </summary>
+    public static IReadOnlyList<GameBundleSummary> ListBundles(ProductContent content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        List<CompositionDiagnostic> diagnostics = [];
+        Dictionary<GameBundleId, GameBundleDescriptor> bundles = [];
+        Dictionary<ContentPackId, ContentPackDescriptor> packs = [];
+        Dictionary<TuningProfileId, TuningDescriptor> tunings = [];
+        foreach (string path in IndexFiles(content, diagnostics).Keys)
+            if (path.EndsWith(".bundle.json", StringComparison.Ordinal)) ReadDescriptor(path, content.ReadBytes(path), bundles, packs, tunings, diagnostics);
+        return [.. bundles.Values.OrderBy(bundle => bundle.Id.Value, StringComparer.Ordinal).Select(bundle => new GameBundleSummary(bundle.Id, bundle.Ruleset, bundle.Title))];
     }
 
     private static List<RulesVariantManifest> SelectVariants(GameBundleDescriptor bundle, IReadOnlyList<RulesVariantManifest> compiled, List<CompositionDiagnostic> diagnostics)
@@ -305,7 +324,13 @@ public static class GameCompositionResolver
             }
             if (variants.Distinct().Count() != variants.Count) throw new InvalidOperationException("Game bundle selects a rules variant more than once.");
         }
-        return new(new(Id(root, "id")), new(Id(root, "ruleset")), contentPacks.ToArray(), new(new(Id(tuning, "id"))), variants.ToArray());
+        string id = Id(root, "id");
+        // A bundle's title is what a player chooses it by; one that authors none is named by its id.
+        string title = id;
+        if (root.TryGetProperty("title", out JsonElement authored))
+            title = authored.ValueKind == JsonValueKind.String && authored.GetString() is { } text && !string.IsNullOrWhiteSpace(text)
+                ? text.Trim() : throw new InvalidOperationException("'title' must be a non-empty string.");
+        return new(new(id), new(Id(root, "ruleset")), contentPacks.ToArray(), new(new(Id(tuning, "id"))), variants.ToArray(), title);
     }
 
     private static ContentPackDescriptor Pack(JsonElement root)
@@ -366,7 +391,7 @@ public static class GameCompositionResolver
     internal sealed record ContentPackDescriptor(ContentPackId Id, RulesetId Ruleset, ContentPackRoleId Role, IReadOnlyList<ContentPackReference> Dependencies, string PayloadPath);
     internal sealed record TuningDescriptor(TuningProfileId Id, RulesetId Ruleset, string PayloadPath);
     private sealed record GameBundleDescriptor(GameBundleId Id, RulesetId Ruleset, IReadOnlyList<ContentPackReference> ContentPacks, TuningProfileReference Tuning,
-        IReadOnlyList<RulesVariantId> Variants);
+        IReadOnlyList<RulesVariantId> Variants, string Title);
 }
 
 public sealed class GameSessionContext(IEngineContext engine, ResolvedGameComposition composition)
@@ -533,6 +558,26 @@ public interface ISaveRequestingGameSession : IGameSession
     /// </summary>
     void ReportSaveSlots(IReadOnlyList<SaveSlotSummary> slots, string? diagnostic);
 }
+
+/// <summary>
+/// Optional session seam for choosing the game bundle at the entry screen. The Host offers the bundles that
+/// compose and names the current one; the session presents them, takes the player's choice, and presents the
+/// outcome. Only the Host switches: it resolves the chosen bundle and replaces the entry-screen session.
+/// </summary>
+public interface IGameBundleChoiceSession : IGameSession
+{
+    /// <summary>Delivers the bundles the player may choose and the one this session runs under.</summary>
+    void ReportBundles(GameBundleChoices choices);
+
+    /// <summary>Takes the bundle the player chose, if any, since the last take.</summary>
+    GameBundleId? TakeBundleRequest();
+
+    /// <summary>Presents why a requested bundle was not switched to.</summary>
+    void ReportBundleOutcome(string message);
+}
+
+/// <summary>The bundles a player may choose at the entry screen, and the current one.</summary>
+public sealed record GameBundleChoices(GameBundleId Current, IReadOnlyList<GameBundleSummary> Options);
 
 /// <summary>The named operation a ruleset asks the Host's ordinary save-slot owner to perform.</summary>
 public enum SaveSlotOperation

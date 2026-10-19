@@ -39,7 +39,8 @@ internal sealed record DaggerfallHudFrame(
     string? SiteName = null,
     DaggerfallLodgingView? Lodging = null,
     DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, DaggerfallIdentifyView? Identify=null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null, DaggerfallSpellbookView? Spells=null, bool CharacterCreationAvailable = true, DaggerfallPropertyView? Property = null, DaggerfallTeleportView? Teleport = null, DaggerfallCreateItemView? CreateItem = null, DaggerfallLegalView? Legal = null,
-    DaggerfallCalendar? Calendar = null, IReadOnlyList<DaggerfallActiveEffectView>? Effects = null, string? CinematicSource = null, DaggerfallBreathRead? Breath = null)
+    DaggerfallCalendar? Calendar = null, IReadOnlyList<DaggerfallActiveEffectView>? Effects = null, string? CinematicSource = null, DaggerfallBreathRead? Breath = null,
+    GameBundleChoices? Bundles = null)
 {
     internal bool ActionDrivenTime { get; init; }
     internal bool TimeHeld { get; init; }
@@ -63,7 +64,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ArgumentNullException.ThrowIfNull(frame);
         var (player, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
-            dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _, _, calendar, effects, cinematicSource, _) = frame;
+            dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _, _, calendar, effects, cinematicSource, _, bundles) = frame;
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
@@ -162,6 +163,11 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             // A playing cinematic offers the one control its owner supports: skipping it.
             ("cinematic", cinematicSource is null ? builder.Null() : builder.Object(
                 ("source", builder.String(cinematicSource)), ("skipLabel", builder.String("Skip")))),
+            // The games the entry screen offers, while a new game can still choose one; absent otherwise.
+            ("bundles", bundles is null ? builder.Null() : builder.Object(
+                ("current", builder.String(bundles.Current.Value)),
+                ("options", builder.Array(bundles.Options.Select(option => builder.Object(
+                    ("id", builder.String(option.Id.Value)), ("title", builder.String(option.Title)))).ToArray())))),
             ("saveSlots", builder.Object(
                 ("entries", builder.Array((saveSlots ?? []).Select(slot => builder.Object(
                     ("key", builder.String(slot.Key)),

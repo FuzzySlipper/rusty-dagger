@@ -27,14 +27,23 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// <summary>The one Host-owned catalog and payload owner used by ordinary menu save actions.</summary>
     private WorldRpgSaveSlots SaveSlots => _saveSlots ??= new WorldRpgSaveSlots(_context.Engine, SaveStoreScope);
 
+    /// <summary>Engine persistence scope for the game bundle the player last chose at the entry screen.</summary>
+    private const string BundleChoiceScope = "worldrpg.bundle";
+    private const string BundleChoiceKey = "selected";
+
     private readonly ProductCreateContext _context;
-    private readonly ResolvedGameComposition _composition;
-    private readonly IGameRuleset _ruleset;
+    private ResolvedGameComposition _composition;
+    private IGameRuleset _ruleset;
+    // The ruleset a caller composed explicitly, which every offered bundle must use; null selects built-ins.
+    private readonly IGameRuleset? _explicitRuleset;
+    private IReadOnlyList<GameBundleSummary>? _bundleOptions;
+    private ProductStateStore<string>? _bundleChoice;
+    private string? _bundleNotice;
     private readonly List<ProductModeChange> _modeHistory = [];
     private WorldRpgSaveSlots? _saveSlots;
     private ProductStateStore<string>? _playerPreferences;
     private IGameSession _session;
-    private readonly ResolvedCompositionIdentity _compositionIdentity;
+    private ResolvedCompositionIdentity _compositionIdentity;
     private bool _started;
     private bool _shutdown;
     private ProductMode _mode = ProductMode.Playing;
@@ -42,6 +51,11 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     private ProductStateStore<string> PlayerPreferences => _playerPreferences ??= new ProductStateStore<string>(
         _context.Engine,
         PlayerPreferencesScope,
+        new JsonProductStateCodec<string>(WorldRpgSaveJsonContext.Default.String));
+
+    private ProductStateStore<string> BundleChoice => _bundleChoice ??= new ProductStateStore<string>(
+        _context.Engine,
+        BundleChoiceScope,
         new JsonProductStateCodec<string>(WorldRpgSaveJsonContext.Default.String));
 
     public WorldRpgProduct(ProductCreateContext context)
@@ -58,8 +72,11 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     private WorldRpgProduct(ProductCreateContext context, GameBundleId bundle, IGameRuleset? ruleset)
     {
         ArgumentNullException.ThrowIfNull(context);
-        (ResolvedGameComposition composition, IGameRuleset selected) = ResolveSelection(context, ruleset, bundle);
         _context = context;
+        _explicitRuleset = ruleset;
+        // The bundle the player last chose starts the product when it still composes; otherwise the
+        // default does, and the entry screen says why the remembered one was set aside.
+        (ResolvedGameComposition composition, IGameRuleset selected) = RememberedSelection() ?? ResolveSelection(context, ruleset, bundle);
         _composition = composition;
         _ruleset = selected;
         _compositionIdentity = composition.Identity;
@@ -68,6 +85,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         {
             ApplyPlayerPreferences(_session);
             RefreshSaveSlots();
+            OfferBundles(_session);
             _session.PublishInitial();
         }
         catch
@@ -108,11 +126,101 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// </summary>
     public IReadOnlyList<ProductModeChange> ModeHistory => _modeHistory;
 
+    /// <summary>The remembered bundle's composition, or null when none is remembered or it no longer composes.</summary>
+    private (ResolvedGameComposition, IGameRuleset)? RememberedSelection()
+    {
+        string? remembered;
+        try
+        {
+            ProductStateLoad<string> loaded = BundleChoice.Load(BundleChoiceKey);
+            remembered = loaded.Present ? loaded.State : null;
+        }
+        catch (Exception error)
+        {
+            _bundleNotice = $"The remembered game choice could not be read; the default is active: {error.Message}";
+            return null;
+        }
+        if (string.IsNullOrWhiteSpace(remembered)) return null;
+        try
+        {
+            return ResolveSelection(_context, _explicitRuleset, new GameBundleId(remembered));
+        }
+        catch (Exception error) when (error is InvalidOperationException or ArgumentException)
+        {
+            _bundleNotice = $"The remembered game '{remembered}' is unavailable; the default is active.";
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The bundles a player may choose: every admitted bundle for a ruleset this product composes that
+    /// resolves against its compiled variants. Content does not change while the product runs.
+    /// </summary>
+    private IReadOnlyList<GameBundleSummary> BundleOptions() => _bundleOptions ??= [.. GameCompositionResolver.ListBundles(_context.Content)
+        .Where(option => _explicitRuleset is null ? BuiltInRulesets.Composes(option.Ruleset) : option.Ruleset == _explicitRuleset.Id)
+        .Where(option => GameCompositionResolver.Resolve(_context.Content, option.Id, CompiledVariants(_explicitRuleset)).IsResolved)];
+
+    private static IReadOnlyList<RulesVariantManifest> CompiledVariants(IGameRuleset? ruleset) => ruleset is null ? BuiltInRulesets.VariantManifests
+        : ruleset is IRulesVariantCatalog catalog ? catalog.CompiledVariants : [];
+
+    /// <summary>Tells a session that presents the entry screen's bundle choice what it may offer.</summary>
+    private void OfferBundles(IGameSession session)
+    {
+        if (session is not IGameBundleChoiceSession choosing) return;
+        choosing.ReportBundles(new GameBundleChoices(_composition.Bundle.Id, BundleOptions()));
+        if (_bundleNotice is { } notice)
+        {
+            choosing.ReportBundleOutcome(notice);
+            _bundleNotice = null;
+        }
+    }
+
+    /// <summary>
+    /// Switches the game bundle the player chose at the entry screen: the chosen bundle is resolved, a fresh
+    /// entry-screen session replaces the running one under it, and the choice is remembered for the next start.
+    /// </summary>
+    private void HonorBundleRequest()
+    {
+        if (_session is not IGameBundleChoiceSession choosing || choosing.TakeBundleRequest() is not { } requested) return;
+        if (_mode != ProductMode.Title)
+        {
+            choosing.ReportBundleOutcome("The game can be changed only from the title screen.");
+            return;
+        }
+        if (requested == _composition.Bundle.Id) return;
+        if (!BundleOptions().Any(option => option.Id == requested))
+        {
+            choosing.ReportBundleOutcome($"The game '{requested.Value}' is not available.");
+            return;
+        }
+        (ResolvedGameComposition composition, IGameRuleset selected) = ResolveSelection(_context, _explicitRuleset, requested);
+        IGameSession replacement = selected.CreateSession(new GameSessionContext(_context.Engine, composition));
+        (ResolvedGameComposition previousComposition, IGameRuleset previousRuleset, ResolvedCompositionIdentity previousIdentity) = (_composition, _ruleset, _compositionIdentity);
+        (_composition, _ruleset, _compositionIdentity) = (composition, selected, composition.Identity);
+        try
+        {
+            ReplaceSession(replacement, ProductMode.Title, $"the entry screen chose the game '{requested.Value}'");
+        }
+        catch
+        {
+            (_composition, _ruleset, _compositionIdentity) = (previousComposition, previousRuleset, previousIdentity);
+            throw;
+        }
+        try
+        {
+            PersistenceSaveReceipt receipt = BundleChoice.Save(BundleChoiceKey, requested.Value, PersistenceRevisionGuard.Any);
+            if (receipt.Outcome != PersistenceSaveOutcome.Saved && _session is IGameBundleChoiceSession current)
+                current.ReportBundleOutcome($"The game is active but will not be remembered: persistence returned {receipt.Outcome}.");
+        }
+        catch (Exception error)
+        {
+            if (_session is IGameBundleChoiceSession current) current.ReportBundleOutcome($"The game is active but will not be remembered: {error.Message}");
+        }
+    }
+
     private static (ResolvedGameComposition Composition, IGameRuleset Selected) ResolveSelection(ProductCreateContext context, IGameRuleset? ruleset, GameBundleId bundle)
     {
-        IReadOnlyList<RulesVariantManifest> variants = ruleset is null ? BuiltInRulesets.VariantManifests
-            : ruleset is IRulesVariantCatalog catalog ? catalog.CompiledVariants : [];
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(context.Content, bundle, variants).RequireComposition();
+        ResolvedGameComposition composition = GameCompositionResolver.Resolve(context.Content, bundle, CompiledVariants(ruleset)).RequireComposition();
         IGameRuleset selected = ruleset ?? BuiltInRulesets.Resolve(composition.Ruleset);
         if (selected.Id != composition.Ruleset)
             throw new InvalidOperationException($"Selected ruleset '{selected.Id.Value}' does not match bundle ruleset '{composition.Ruleset.Value}'.");
@@ -268,6 +376,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         try
         {
             ApplyPlayerPreferences(replacement);
+            OfferBundles(replacement);
             replacement.PublishInitial();
         }
         catch
@@ -291,6 +400,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         _session.Dispose();
         _saveSlots?.Dispose();
         _playerPreferences?.Dispose();
+        _bundleChoice?.Dispose();
         _shutdown = true;
     }
 
@@ -315,6 +425,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         AdoptSessionRequest();
         HonorPlayerDefeatOutcomeRequests();
         HonorSaveRequests();
+        HonorBundleRequest();
 
         // The entry screen's own action leaves that mode after the session has run, not before: the
         // session is still in the entry-screen mode for that update, so it interprets no gameplay input
