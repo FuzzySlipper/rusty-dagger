@@ -3,7 +3,9 @@ import { mountMap, isMapProjection, type MapProjection } from './maps.js';
 import { mountLodging, isLodgingProjection, type LodgingProjection } from './lodging.js';
 import { mountControls, type ControlsProjection, type ControlAction } from './controls.js';
 import { mountLiveDebugPanel, type LiveDebugPanelMount } from '@rusty-engine/live-debug';
-import { adopt, fitPixelArt, heldRevision, image, type ArtRequestAction, type UiArt } from './art.js';
+import { adopt, cssUrl, fitPixelArt, heldRevision, image, type ArtRequestAction, type UiArt } from './art.js';
+import { mountConfirm, type ConfirmQuestion } from './confirm.js';
+import { mountTooltips } from './tooltip.js';
 import { mountInventory, type InventoryProjection, type InventoryAction } from './inventory.js';
 import { mountCharacter, isCharacterProjection, type CharacterProjection, type CharacterAction } from './character.js';
 import { mountLoot, type LootProjection, type LootAction } from './loot.js';
@@ -461,6 +463,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       <button class="dagger-dialogue-close" type="button">End conversation</button>
     </dialog><dialog class="dagger-daedric-offer" aria-label="Daedric quest offer"></dialog>`;
   root.append(shell);
+  const confirmPrompt = mountConfirm(shell);
+  const askConfirm = (question: ConfirmQuestion): void => confirmPrompt.ask(question);
+  const tooltips = mountTooltips(shell);
 
   const activationMode = shell.querySelector<HTMLSelectElement>('.dagger-activation-mode')!;
   activationMode.addEventListener('change', () => context.intents?.claim('dagger.ui', {
@@ -475,16 +480,18 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const legal = document.createElement('section');
   legal.className = 'dagger-legal'; legal.hidden = true; legal.setAttribute('role', 'dialog');
   legal.setAttribute('aria-modal', 'true'); legal.setAttribute('aria-label', 'Law and court'); shell.append(legal);
-  const createItem = document.createElement('section');
-  createItem.className = 'dagger-create-item'; createItem.hidden = true; quests.before(createItem);
-  const identify = document.createElement('section');
-  identify.className = 'dagger-identify'; identify.hidden = true; quests.before(identify);
-  const teleport = document.createElement('section');
-  teleport.className = 'dagger-teleport'; teleport.hidden = true; quests.before(teleport);
-  const dispel = document.createElement('section');
-  dispel.className = 'dagger-dispel';
-  dispel.hidden = true;
-  quests.before(dispel);
+  // A spell that asks the caster to choose shows its choice as a centred panel over the world.
+  const spellService = (name: string, label: string): HTMLElement => {
+    const section = document.createElement('section');
+    section.className = `dagger-spell-service dagger-${name}`; section.hidden = true;
+    section.setAttribute('role', 'dialog'); section.setAttribute('aria-label', label);
+    quests.before(section);
+    return section;
+  };
+  const createItem = spellService('create-item', 'Create item');
+  const identify = spellService('identify', 'Identify');
+  const teleport = spellService('teleport', 'Teleport');
+  const dispel = spellService('dispel', 'Dispel magic');
   const view = shell.querySelector<HTMLParagraphElement>('.dagger-view')!;
   const detectors = shell.querySelector<HTMLElement>('.dagger-detectors')!;
   const status = shell.querySelector<HTMLElement>('.dagger-status')!;
@@ -893,6 +900,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const potionMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-potionmaker')!;
   const spellMakerRoot=shell.querySelector<HTMLElement>('.dagger-dialogue-spellmaker')!;
   let projectionNeedsInterface = false;
+  let questAnswerRequired = false;
   let interactionMode: 'interface' | 'gameplay' | null = null;
   // Leaving the last cursor surface returns to play, so it takes gameplay focus back at once: closing a menu,
   // a dialogue or a popup, or the world resuming after a modal, re-locks the pointer without a click. Whichever
@@ -1058,11 +1066,15 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if(button?.disabled) return;
     const action = button?.dataset.action;
     if ((action==='spell-buy' || action==='spell-delete' || action==='spell-info') && button?.dataset.spell) {
-      if (action !== 'spell-info' && !window.confirm(action==='spell-buy' ? `Buy this spell for ${button.dataset.price} gold?` : 'Forget this spell?')) return;
       const data = action==='spell-buy'
         ? {action,key:button.dataset.spell,revision:button.dataset.revision,amount:Number(button.dataset.price),confirm:true}
         : action==='spell-delete' ? {action,key:button.dataset.spell,confirm:true} : {action,key:button.dataset.spell};
-      context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data});return;
+      const send = (): void => { context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data}); };
+      if (action === 'spell-info') send();
+      else askConfirm(action === 'spell-buy'
+        ? { message: `Buy this spell for ${button.dataset.price} gold?`, accept: 'Buy', onAccept: send }
+        : { message: 'Forget this spell?', accept: 'Forget', onAccept: send });
+      return;
     }
     if (action === 'spell-sort' || action === 'spell-swap') {
       context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,
@@ -1120,7 +1132,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const onKeyDown = (event: KeyboardEvent): void => {
     if (activePanel === 'settings' && controlsView.captureKey(event)) return;
     shell.classList.remove('controller-navigation');
-    if (menu.open && event.code === 'Tab') {
+    if (menu.open && !confirmPrompt.open() && event.code === 'Tab') {
       const buttons = Array.from(menu.querySelectorAll<HTMLElement>('button:not(:disabled),select:not(:disabled),input:not(:disabled),[tabindex="0"]'))
         .filter((button) => button.getClientRects().length > 0);
       const current = buttons.indexOf(document.activeElement as HTMLElement);
@@ -1135,18 +1147,36 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     if (event.code === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      // Escape toggles the menu: from any panel it closes the whole menu; a pad's Back steps out instead.
-      if (!event.repeat && !deadMode) { if (menu.open) closeMenu(); else openMenu(); }
+      if (!event.repeat) onEscape();
       return;
     }
     if (menu.open || event.ctrlKey || event.altKey || event.metaKey
       || (event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable="true"]'))) return;
 
   };
+  // Escape backs out of the innermost open surface and opens the menu only from play. From any menu
+  // panel it closes the whole menu (a pad's Back steps out one panel instead). A surface the product
+  // needs an answer to keeps its own choices, so Escape leaves it alone; one with a Cancel takes it.
+  const onEscape = (): void => {
+    if (confirmPrompt.open()) { confirmPrompt.cancel(); return; }
+    if (deadMode) return;
+    if (menu.open) { closeMenu(); return; }
+    if (dialogueWindow.open) {
+      if (currentDialogue) context.intents?.claim('dagger.ui', { kind: 'product-payload', contract: UI_ACTION_CONTRACT,
+        data: { action: 'dialogue-close', revision: currentDialogue.revision } });
+      return;
+    }
+    if (summoningOffer.open || !legal.hidden || questAnswerRequired || titleMode) return;
+    const escapable = shell.querySelector<HTMLButtonElement>('.dagger-spell-service:not([hidden]) [data-escape]:not(:disabled)');
+    if (escapable) { escapable.click(); return; }
+    if (!createItem.hidden) return;
+    if (!dungeonTextRoot.hidden) { dungeonTextClose.click(); return; }
+    openMenu();
+  };
   // The Engine owns controller sampling and interface/gameplay arbitration.
   // This adapter assigns only DOM menu meaning and reuses click/menu handlers.
   let controllerDirection = 0;
-  const controllerScope = (): HTMLElement | null => menu.open ? menu : !deathRoot.hidden ? deathRoot : !entryRoot.hidden ? entryRoot : null;
+  const controllerScope = (): HTMLElement | null => confirmPrompt.open() ? confirmPrompt.dialog : menu.open ? menu : !deathRoot.hidden ? deathRoot : !entryRoot.hidden ? entryRoot : null;
   const focusControllerItem = (direction: number): void => {
     const scope = controllerScope();
     if (scope === null) return;
@@ -1178,6 +1208,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         active = document.activeElement as HTMLElement | null;
       }
       if (active !== null && scope.contains(active)) active.click();
+    } else if (confirmPrompt.open()) {
+      if (fact.button === MENU_CONTROLLER.back || fact.button === MENU_CONTROLLER.menu) confirmPrompt.cancel();
     } else if (menu.open) {
       if (fact.button === MENU_CONTROLLER.back || fact.button === MENU_CONTROLLER.menu) dismiss();
       else if (fact.button === MENU_CONTROLLER.inventory) runMenuAction('inventory');
@@ -1293,7 +1325,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       const caseView = value.legal;
       legal.dataset.phase = caseView.phase;
       const prisonArt = caseView.phase === 'prison' ? image('screen.prison') : null;
-      legal.style.backgroundImage = prisonArt === null ? '' : `url("${prisonArt}")`;
+      legal.style.backgroundImage = prisonArt === null ? '' : cssUrl(prisonArt);
       const card = document.createElement('div'); card.className = 'dagger-legal-card';
       const title = document.createElement('h2'); title.textContent = caseView.title;
       const charges = document.createElement('p'); charges.textContent = `Charges: ${caseView.charges.join(', ')}`;
@@ -1333,7 +1365,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
         const button=document.createElement('button');button.textContent=option.label;
         button.addEventListener('click',()=>choose(option.id));identify.append(button);
       }
-      const cancel=document.createElement('button');cancel.textContent='Cancel';cancel.addEventListener('click',()=>choose());identify.append(cancel);
+      const cancel=document.createElement('button');cancel.textContent='Cancel';cancel.dataset.escape='';cancel.addEventListener('click',()=>choose());identify.append(cancel);
     }
     teleport.hidden = !value.teleport;
     teleport.replaceChildren();
@@ -1343,6 +1375,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       for (const [key,label] of [['anchor','Set anchor'],['recall','Recall to anchor'],['cancel','Cancel']] as const) {
         const button=document.createElement('button');button.textContent=label;
         button.disabled=key==='recall' && !choice.anchorSet;
+        if(key==='cancel') button.dataset.escape='';
         button.addEventListener('click',()=>context.intents?.claim('dagger.ui', {
           kind:'product-payload',contract:UI_ACTION_CONTRACT,data:{action:'teleport-select',revision:choice.revision,key},
         }));teleport.append(button);
@@ -1367,6 +1400,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       }
       const cancel = document.createElement('button');
       cancel.textContent = 'Cancel';
+      cancel.dataset.escape = '';
       cancel.addEventListener('click', () => choose());
       dispel.append(cancel);
     }
@@ -1397,10 +1431,10 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       action=>context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
     if(summoning?.offerRevision){summoningRoot.replaceChildren();if(!summoningOffer.open)summoningOffer.showModal();}
     else if(summoningOffer.open)summoningOffer.close();
-    renderItemMaker(itemMakerRoot,spellbook?.itemMaker ?? null,action => context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
+    renderItemMaker(itemMakerRoot,spellbook?.itemMaker ?? null,action => context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}),askConfirm);
     renderPotionMaker(potionMakerRoot,spellbook?.potionMaker ?? null,action => context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
     renderSpellMaker(spellMakerRoot,spellbook?.maker ?? null,action =>
-      context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}));
+      context.intents?.claim('dagger.ui',{kind:'product-payload',contract:UI_ACTION_CONTRACT,data:action}),askConfirm);
     inventorySuppressed = value.character?.identity?.racialOverride?.suppressInventory === true;
     for (const button of shell.querySelectorAll<HTMLButtonElement>('[data-action="inventory"]')) button.disabled = inventorySuppressed;
     if (inventorySuppressed && activePanel === 'inventory') showHome();
@@ -1622,15 +1656,19 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       if (deadMode) redrawDeath(currentDeath);
     }
     // The Engine owns pointer lock; the product tells it whether any current surface needs a cursor.
+    questAnswerRequired = Boolean(value.quests?.offer || value.quests?.pending
+      || value.quests?.deliveries.some(message => message.delivery === 'popup' || message.delivery === 'letter'));
     projectionNeedsInterface = value.mode === 'title' || value.mode === 'dead' || value.mode === 'paused' || value.mode === 'modal'
-      || cinematicPlaying || Boolean(value.quests?.offer || value.quests?.pending
-        || value.quests?.deliveries.some(message => message.delivery === 'popup' || message.delivery === 'letter')
-        || value.dungeonText || value.legal || value.createItem || value.identify || value.teleport || value.dispel);
+      || cinematicPlaying || questAnswerRequired
+      || Boolean(value.dungeonText || value.legal || value.createItem || value.identify || value.teleport || value.dispel);
+    // A question outlives nothing it was asked over: death, or the menu or dialogue closing, answers no.
+    if (deadMode) confirmPrompt.cancel(); else confirmPrompt.dropIfOwnerClosed();
     syncInteraction();
     composition.replaceChildren(...diagnosticRows(value.composition));
   }) ?? (() => {});
   return { dispose: () => {
     reportMap(false);
+    tooltips.dispose();
     unsubscribeController?.();
     unsubscribe();
     closeDebug();
@@ -1730,7 +1768,6 @@ function mountTransport(root: HTMLElement, claim: (action: TransportAction) => v
     button.dataset.item = item.key;
     button.disabled = disabled;
     button.textContent = `${action === 'wagon-put' ? 'Store' : 'Take'} ${item.label} × ${itemQuantity(item.quantity)}`;
-    button.title = item.key;
     button.addEventListener('click', () => sendItem(action, item));
     row.append(button);
     return row;
@@ -1755,7 +1792,7 @@ function mountTransport(root: HTMLElement, claim: (action: TransportAction) => v
     summary.textContent = current.summary;
     toggle.disabled = current.onShip;
     toggle.textContent = current.onShip ? 'Leave ship before choosing a mount' : 'Toggle mount';
-    toggle.title = current.onShip ? 'Ship travel is a separate state.' : 'Choose horse, cart, or foot through the ruleset policy.';
+    if (current.onShip) delete toggle.dataset.tooltip; else toggle.dataset.tooltip = 'Switch between horse, cart and foot.';
 
     for (const option of current.options) {
       const optionMode = normalizeTransportMode(option.mode);
@@ -1764,7 +1801,7 @@ function mountTransport(root: HTMLElement, claim: (action: TransportAction) => v
       button.type = 'button';
       button.dataset.transportMode = optionMode;
       button.textContent = `${option.label}${option.selected ? ' · selected' : ''}`;
-      button.title = option.message;
+      if (option.message) button.dataset.tooltip = option.message;
       if (optionMode === 'ship') {
         button.disabled = !current.onShip && !option.available;
         button.textContent = current.onShip ? 'Leave ship' : 'Board ship';
@@ -1935,7 +1972,7 @@ function renderSpells(root:HTMLElement,view:SpellbookProjection|null):void {
   if(!view) return;
   const button=(action:string,text:string,label?:string):HTMLButtonElement=>{
     const control=document.createElement('button');control.type='button';control.dataset.action=action;control.textContent=text;
-    if(label!==undefined){control.setAttribute('aria-label',label);control.title=label;}
+    if(label!==undefined){control.setAttribute('aria-label',label);control.dataset.tooltip=label;}
     return control;
   };
   // The spellbook reads as the donor's: the known spells in book order, each readied by choosing it, with
@@ -2007,7 +2044,7 @@ export function isSpellMakerProjection(value:unknown):value is SpellMakerProject
       && typeof v.quote.eligible==='boolean' && (v.quote.reason===null || typeof v.quote.reason==='string'));
 }
 
-export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null,claim:(action:UiAction)=>void):void {
+export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null,claim:(action:UiAction)=>void,ask:(question:ConfirmQuestion)=>void):void {
   const stamp=JSON.stringify(view);
   // Admitted modal updates can publish the same projection while the player types.
   if(root.dataset.spellMaker===stamp) return;
@@ -2066,8 +2103,9 @@ export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null
   const buy=document.createElement('button');buy.type='button';buy.textContent='Buy constructed spell';buy.disabled=!view.quote?.eligible;root.append(buy);
   const stale=():void=>{buy.disabled=true;status.textContent='Update the cost preview after editing.';};
   form.addEventListener('input',stale);form.addEventListener('change',stale);
-  buy.addEventListener('click',()=>{if(!buy.disabled && view.quote?.eligible && window.confirm(`Make this spell for ${view.quote.gold} gold?`))
-    claim({action:'spellmaker-buy',revision:view.revision,key:view.quote.key,amount:view.quote.gold,confirm:true});});
+  buy.addEventListener('click',()=>{const quote=view.quote;if(buy.disabled || !quote?.eligible) return;
+    ask({message:`Make this spell for ${quote.gold} gold?`,accept:'Buy',
+      onAccept:()=>claim({action:'spellmaker-buy',revision:view.revision,key:quote.key,amount:quote.gold,confirm:true})});});
 }
 
 const questMessageNodes = new WeakMap<HTMLElement, Map<string, { signature: string; node: HTMLElement }>>();
@@ -2298,7 +2336,7 @@ export function isItemMakerProjection(value:unknown):value is ItemMakerProjectio
       && Array.isArray(v.quote.payloads) && v.quote.payloads.every(setting));
 }
 
-export function renderItemMaker(root:HTMLElement,view:ItemMakerProjection|null,claim:(action:UiAction)=>void):void {
+export function renderItemMaker(root:HTMLElement,view:ItemMakerProjection|null,claim:(action:UiAction)=>void,ask:(question:ConfirmQuestion)=>void):void {
   const stamp=JSON.stringify(view);if(root.dataset.itemMaker===stamp) return;
   root.dataset.itemMaker=stamp;root.replaceChildren();if(!view)return;
   const title=document.createElement('h3');title.textContent=`Enchant an item with ${view.provider}`;root.append(title);
@@ -2327,7 +2365,8 @@ export function renderItemMaker(root:HTMLElement,view:ItemMakerProjection|null,c
     const payloads=document.createElement('ul');for(const payload of quote.payloads){const row=document.createElement('li');row.textContent=payload.name;payloads.append(row);}root.append(payloads);
     const buy=document.createElement('button');buy.type='button';buy.textContent='Enchant item';buy.disabled=!quote.eligible;
     form.addEventListener('input',()=>{buy.disabled=true;});form.addEventListener('change',()=>{buy.disabled=true;});
-    buy.addEventListener('click',()=>{if(window.confirm(`Enchant ${view.draft.name} for ${quote.gold} gold?`))claim({action:'itemmaker-buy',revision:view.revision,key:quote.key,amount:quote.gold,confirm:true});});root.append(buy);
+    buy.addEventListener('click',()=>ask({message:`Enchant ${view.draft.name} for ${quote.gold} gold?`,accept:'Enchant',
+      onAccept:()=>claim({action:'itemmaker-buy',revision:view.revision,key:quote.key,amount:quote.gold,confirm:true})}));root.append(buy);
   }
 }
 

@@ -626,7 +626,7 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   attributesPanel.hidden = skillsPanel.hidden = value.background === null || value.background === undefined;
   // A testing convenience: start a new game at once from these choices, with the background completed for you.
   const quickStart = document.createElement('button'); quickStart.type = 'button'; quickStart.textContent = 'Quick start';
-  quickStart.title = 'Begin a new game now with these choices and a background completed automatically';
+  quickStart.dataset.tooltip = 'Begin a new game now with these choices and a background completed automatically';
   quickStart.dataset.testid = 'character-quick-start'; quickStart.disabled = career.value === 'custom' && (custom?.eligibility ?? []).length !== 0;
   quickStart.addEventListener('click', () => send?.(action('character-quick-start')));
   const actions = document.createElement('footer'); actions.className = 'dagger-creation-actions'; actions.append(blocked, cancel, quickStart, commit);

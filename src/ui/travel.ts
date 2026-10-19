@@ -229,7 +229,8 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
       if (map.player) {
         const marker = document.createElement('span');
         marker.className = 'dagger-travel-map-player';
-        marker.title = 'You are here';
+        marker.setAttribute('role', 'img');
+        marker.setAttribute('aria-label', 'You are here');
         if (place(marker, frame, map.player.x, map.player.y)) layer.append(marker);
       }
       const sheet = map.sheet;
@@ -241,7 +242,7 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
           button.className = 'dagger-travel-map-region';
           button.dataset.region = String(region.region);
           button.setAttribute('aria-label', region.name);
-          button.title = `${region.name}: ${region.discovered} known ${region.discovered === 1 ? 'destination' : 'destinations'}`;
+          button.dataset.tooltip = `${region.name}: ${region.discovered} known ${region.discovered === 1 ? 'destination' : 'destinations'}`;
           button.addEventListener('click', () => claim({ action: 'travel-map', open: true, region: region.region, page: 0 }));
           if (place(button, frame, region.x, region.y)) layer.append(button);
         }
@@ -256,8 +257,8 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
         dot.dataset.category = destination.category;
         dot.dataset.region = String(sheet.region);
         dot.dataset.index = String(destination.index);
-        dot.title = `${destination.name} (${destination.kind})`;
-        dot.setAttribute('aria-label', dot.title);
+        dot.dataset.tooltip = `${destination.name} (${destination.kind})`;
+        dot.setAttribute('aria-label', dot.dataset.tooltip);
         if (`${sheet.region}:${destination.index}` === selected) dot.setAttribute('aria-pressed', 'true');
         dot.addEventListener('click', () => choose(sheet.region, destination.index));
         if (place(dot, frame, destination.x, destination.y)) layer.append(dot);
