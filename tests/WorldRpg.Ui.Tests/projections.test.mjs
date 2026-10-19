@@ -454,6 +454,7 @@ test('a drawn confirmation answers Escape and death with no, and returns focus t
     const confirm = f.root.querySelector('.dagger-confirm');
     assert.equal(confirm.open, true);
     assert.equal(confirm.querySelector('.dagger-confirm-accept').textContent, 'Forget');
+    assert.equal(confirm.querySelector('p').textContent, 'Forget Heal?', 'The question names the spell.');
     assert.equal(document.activeElement, confirm.querySelector('.dagger-confirm-cancel'), 'Focus starts on Cancel.');
     escape();
     assert.equal(confirm.open, false);
