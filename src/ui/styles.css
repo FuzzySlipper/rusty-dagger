@@ -124,6 +124,11 @@
 .dagger-confirm-choices { display: flex; gap: .6rem; justify-content: flex-end; }
 .dagger-confirm button { padding: .55rem 1rem; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; cursor: var(--dagger-cursor-pointer); }
 
+/* The controls of the device in use, at the foot of the surface that has the cursor. */
+.dagger-input-hints { margin: .8rem 0 0; color: #cab882; font: .72rem ui-monospace, monospace; pointer-events: none; }
+.dagger-input-hints kbd { padding: 0 .3rem; border: 1px solid #8a7444; border-radius: 2px; color: #f2e3ba; font: inherit; }
+.dagger-death .dagger-input-hints, .dagger-entry .dagger-input-hints { position: absolute; left: 50%; bottom: 1rem; transform: translateX(-50%); }
+
 /* A drawn tooltip: the window never shows a title attribute. */
 .dagger-tooltip { position: fixed; z-index: 60; max-width: 22rem; padding: .3rem .55rem; border: 1px solid #aa9c7a; background: #0c0d0a; color: #f2e3ba; font: .75rem Georgia, serif; pointer-events: none; }
 .dagger-tooltip[hidden] { display: none; }

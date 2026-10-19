@@ -526,6 +526,10 @@ test('a controller reaches the dialogue: directions move focus, accept presses, 
     assert.equal(document.activeElement, topics[1]);
     f.pad('button-0');
     assert.deepEqual(f.actions.at(-1), { action: 'dialogue-topic', revision: 'talk-5', topic: 'work' });
+    // Hints name the controller's buttons once it is in use, inside the surface that has the cursor.
+    const hints = window_.querySelector('.dagger-input-hints');
+    assert.equal(hints.dataset.device, 'controller');
+    assert.match(hints.textContent, /A Select · B Back/);
     // A held stick moves once until it is released, and losing window focus releases it.
     f.stick('axis-1', -1);
     assert.equal(document.activeElement, topics[0]);
@@ -548,6 +552,7 @@ test('a controller changes a choice with left and right, so it can load from the
       saveSlots: { entries: [{ key: 'slot-1', label: 'Before', savedAtUtc: '2026-09-23T00:00:00Z', ruleset: 'test' }], diagnostic: null } });
     const root = f.root.querySelector('.dagger-death');
     assert.ok(root.contains(document.activeElement), 'Focus moves into the death screen when it appears.');
+    assert.doesNotMatch(root.querySelector('.dagger-input-hints').textContent, /Back/, 'A required answer offers no Back.');
     const select = f.root.querySelector('.dagger-death-load-slot');
     select.focus();
     f.pad('button-15');

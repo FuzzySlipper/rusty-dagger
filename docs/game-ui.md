@@ -20,6 +20,10 @@ and death. It keeps to the green path and is checked in
 `rusty dev --output window` before it is called done, because the window is
 what ships. A browser tab is for iterating.
 
+Each surface is its own module in `src/ui` (`menu.ts`, `dialogue.ts`,
+`hud.ts`, `death.ts`, `entry.ts`, `choices.ts`, `dungeon-text.ts` beside the
+panel modules); `main.ts` only mounts them and routes each snapshot.
+
 **Diagnostic UI** is for developers and agents: the diagnostics and debug
 panels, tuning and test controls. It may use any browser feature and may be
 exercised only in a browser. It is kept apart in the page and visibly marked
@@ -43,13 +47,14 @@ as diagnostic, so its needs never shape a game surface.
 
 ## Input
 
-**One interaction lifecycle.** Interface versus gameplay mode is decided in
-one place, from the projection and the surfaces open in the page. Entering
-interface mode releases pointer lock (`context.ui.setInteractionMode`).
-Leaving it for play re-takes the lock with `context.ui.focusGameplay()` on the
-projection that returns the product to play, so closing a menu needs no
-click. A free-cursor screen in play (a map) uses `context.ui.setCursorMode`
-and returns to `'pointer-lock'` when it closes.
+**One interaction lifecycle** (`src/ui/interaction.ts`). Interface versus
+gameplay mode is decided in one place: the projection says whether its mode
+or question needs the cursor, and each surface registers a predicate with
+`needsCursor`. Entering interface mode releases pointer lock
+(`context.ui.setInteractionMode`). Leaving the last cursor surface re-takes
+the lock with `context.ui.focusGameplay()`, so closing a menu needs no click.
+A free-cursor screen in play (a map) uses `context.ui.setCursorMode` and
+returns to `'pointer-lock'` when it closes.
 
 **Escape and focus.** Under pointer lock, Escape ends the lock and the page
 sees the lock end rather than the key; the product treats a lock lost during
@@ -69,8 +74,32 @@ keyboard alone and controller alone:
   directional movement through lists and grids map onto the same focus model
   as the keyboard. Hints name the bindings of the device in use.
 
-One focus-navigation owner serves every surface; a screen registers its
-focusable regions rather than keeping its own controller table.
+**One focus-navigation owner** (`src/ui/navigation.ts`) serves every surface;
+no screen keeps a controller table of its own. A surface that takes the
+cursor registers with `navigation.register` in `main.ts`:
+
+- `root` and `layer`: the topmost open surface is the focus scope. Directions
+  and arrows move to the nearest control in that direction, so a list and a
+  slot grid need nothing more. Tab stays inside the surface.
+- `isOpen()`: when a surface becomes topmost it takes focus (its last-focused
+  control, `initialFocus()`, `[autofocus]` or its first control), and focus
+  goes back to where it was when the last surface closes.
+- `back(source)`: Escape and the controller's Back. A surface without it is a
+  question the product needs answered (death, title, a court, a summoning
+  offer, a quest prompt), and neither press acts on it or on what it was asked
+  over.
+- `panel(direction)`: the shoulder buttons, which step the menu's panels.
+
+A focused `<select>`, number or range field takes the controller's left and
+right as a change of value, so native choices and amounts work from a pad.
+Hints at the foot of the topmost surface name the keys or buttons of the
+device in use for what that surface accepts.
+
+Controller buttons follow the standard layout the Engine normalizes: A
+(`button-0`) accepts, B (`button-1`) backs out, the D-pad (`button-12`–`15`)
+and the left stick (`axis-0`, `axis-1`) move, LB and RB (`button-4`, `5`)
+step panels. With the menu open, Start (`button-9`) steps out as Back does,
+Select (`button-8`) opens the inventory and Y (`button-3`) the character.
 
 ## Drag and drop
 
@@ -95,22 +124,24 @@ same move is available from a button or context menu.
 
 ## Controls
 
-- **Modals** are `<dialog>` with `showModal()`. Confirmations are drawn
-  dialogs; `alert`, `confirm` and `prompt` are never used.
-- **Tooltips** are drawn on `pointerenter`/`pointerleave` and on focus. The
-  `title` attribute is not used for information, since the window never shows
-  it.
+- **Modals** are `<dialog>` with `showModal()`. Every confirmation asks
+  through the one drawn confirm (`src/ui/confirm.ts`): focus starts on Cancel,
+  and Escape, death or its owner closing answer no. `alert`, `confirm` and
+  `prompt` are never used.
+- **Tooltips** come from `data-tooltip` (`src/ui/tooltip.ts`), drawn on hover
+  and on focus inside the open modal. The `title` attribute is not used for
+  information, since the window never shows it.
 - **Context menus** call `preventDefault()` on `contextmenu` and draw the menu.
 - **Lists** scroll with the wheel and follow controller focus.
-- **Choices** are drawn as focusable options (a list, cycler or option
-  buttons), not `<select>`. The window can draw a `<select>` popup, but a
-  controller cannot open or change one.
-- **Numbers** use bounded steppers whose limits come from the projection, so
-  an invalid value cannot be entered and a controller can change them. A
+- **Choices** are `<select>` or focusable options. The window draws a
+  `<select>` popup for the mouse, and navigation changes its value with left
+  and right for a controller.
+- **Numbers** are bounded by limits the projection publishes, so an invalid
+  value cannot be entered and a controller steps them with left and right. A
   confirm step is never the first place a constraint appears.
-- **Redraws keep focus.** A projection update reconciles keyed nodes in place;
-  it never rebuilds the control that holds focus, so keyboard and controller
-  focus survives every update.
+- **Redraws keep focus.** A snapshot arrives every update. A surface rebuilds
+  its controls through `redraw` (`src/ui/redraw.ts`), which skips content that
+  did not change and, after a real rebuild, focuses the same control again.
 - **Text entry** uses `<input>` and `<textarea>`.
 - Everything stays in the one page: no `window.open`, `target="_blank"`,
   native file or colour pickers.

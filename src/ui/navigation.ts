@@ -70,6 +70,30 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
   const returnFocus = new Map<NavigationSurface, HTMLElement | null>();
   let current: NavigationSurface | null = null;
   let held: { horizontal: number; vertical: number } = { horizontal: 0, vertical: 0 };
+  let device: 'keyboard' | 'controller' = 'keyboard';
+  // Hints name the controls of the device in use for what the topmost surface accepts. They sit
+  // inside that surface, because a modal dialog draws in the top layer above anything outside it.
+  const hints = document.createElement('p');
+  hints.className = 'dagger-input-hints';
+  hints.setAttribute('aria-hidden', 'true');
+  const drawHints = (): void => {
+    const top = topmost();
+    if (top === null) { hints.remove(); return; }
+    const parts = device === 'controller'
+      ? [['A', 'Select'], ...(top.back ? [['B', 'Back']] : []), ...(top.panel ? [['LB / RB', 'Panels']] : [])]
+      : [['Enter', 'Select'], ...(top.back ? [['Esc', 'Back']] : []), ['Tab', 'Next']];
+    const text = parts.map(([key, label]) => `${key} ${label}`).join(' · ');
+    if (hints.textContent !== text) hints.replaceChildren(...parts.flatMap(([key, label], index) => {
+      const glyph = document.createElement('kbd'); glyph.textContent = key!;
+      return [...(index > 0 ? [' · '] : []), glyph, ` ${label}`];
+    }));
+    hints.dataset.device = device;
+    if (hints.parentElement !== top.root) top.root.append(hints);
+  };
+  const useDevice = (next: 'keyboard' | 'controller'): void => {
+    shell.classList.toggle('controller-navigation', next === 'controller');
+    if (next !== device) { device = next; drawHints(); }
+  };
 
   const open = (): NavigationSurface[] => surfaces.filter(surface => surface.isOpen()).sort((a, b) => b.layer - a.layer);
   const topmost = (): NavigationSurface | null => open()[0] ?? null;
@@ -86,6 +110,7 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
 
   const refresh = (): void => {
     const top = topmost();
+    drawHints();
     if (top === current) return;
     const previous = current;
     current = top;
@@ -150,7 +175,7 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented) return;
-    shell.classList.remove('controller-navigation');
+    useDevice('keyboard');
     const top = topmost();
     if (event.code === 'Escape') {
       event.preventDefault();
@@ -196,7 +221,7 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
   };
 
   const unsubscribe = context.input?.subscribe(({ fact }) => {
-    shell.classList.add('controller-navigation');
+    useDevice('controller');
     if (fact.kind === 'controller-axis' && (fact.axis === CONTROLLER.verticalAxis || fact.axis === CONTROLLER.horizontalAxis)) {
       const vertical = fact.axis === CONTROLLER.verticalAxis;
       const sign = Math.abs(fact.value) < CONTROLLER.axisThreshold ? 0 : Math.sign(fact.value);
@@ -235,6 +260,7 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
       document.removeEventListener('keydown', onKeyDown, true);
       document.removeEventListener('focusin', onFocusIn);
       window.removeEventListener('blur', onBlur);
+      hints.remove();
       surfaces.length = 0;
     },
   };
