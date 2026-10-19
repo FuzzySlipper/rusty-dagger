@@ -168,11 +168,17 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     {
         if (session is not IGameBundleChoiceSession choosing) return;
         choosing.ReportBundles(new GameBundleChoices(_composition.Bundle.Id, BundleOptions()));
-        if (_bundleNotice is { } notice)
-        {
-            choosing.ReportBundleOutcome(notice);
-            _bundleNotice = null;
-        }
+    }
+
+    /// <summary>
+    /// Tells the entry screen why a remembered game was set aside. It is reported once the entry screen is
+    /// up, because entering a mode is free to reset what the session was showing before it.
+    /// </summary>
+    private void ReportBundleNotice()
+    {
+        if (_bundleNotice is not { } notice || _session is not IGameBundleChoiceSession choosing) return;
+        choosing.ReportBundleOutcome(notice);
+        _bundleNotice = null;
     }
 
     /// <summary>
@@ -246,6 +252,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         if (_shutdown || _started) return;
         _started = true;
         Apply(ProductMode.Title, "the product started at its entry screen");
+        ReportBundleNotice();
     }
 
     /// <summary>
