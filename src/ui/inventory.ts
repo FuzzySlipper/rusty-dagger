@@ -132,7 +132,7 @@ export function mountInventory(
   root: HTMLElement,
   claim: (action: InventoryAction) => void,
   register?: (surface: NavigationSurface) => () => void,
-): { update(value: InventoryProjection): void; refresh(): void; release(): boolean; openContextMenu(): boolean; dispose(): void } {
+): { update(value: InventoryProjection): void; refresh(): void; release(): boolean; openContextMenu(): boolean; closeContextMenu(): void; dispose(): void } {
   const shell = document.createElement('section');
   shell.className = 'dagger-inventory';
   applyAuthoredArt(shell);
@@ -436,6 +436,7 @@ export function mountInventory(
     },
     /** Release a held or dragged item; returns whether there was one, so Back can do that first. */
     release: () => drag.release(),
+    closeContextMenu: () => contextMenu.close(),
     /** The controller's X: a context menu on the focused item. */
     openContextMenu(): boolean {
       const focused = shell.ownerDocument.activeElement;

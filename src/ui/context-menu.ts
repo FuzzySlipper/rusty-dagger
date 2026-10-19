@@ -40,7 +40,9 @@ export function mountContextMenu(host: HTMLElement, register?: (surface: Navigat
     if (!root.hidden && !(event.target instanceof Node && root.contains(event.target))) close();
   };
   document.addEventListener('pointerdown', onPointerDown, true);
-  const unregister = register?.({ name: 'context-menu', root, layer: 95, isOpen: () => !root.hidden, back: close });
+  // Open only while its owner is on screen: a panel that hides or a dialog that closes takes it along.
+  const isOpen = (): boolean => !root.hidden && !host.closest('[hidden]') && (host.closest('dialog')?.open ?? true);
+  const unregister = register?.({ name: 'context-menu', root, layer: 95, isOpen, back: close });
 
   return {
     root,
@@ -62,7 +64,7 @@ export function mountContextMenu(host: HTMLElement, register?: (surface: Navigat
       root.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
     },
     close,
-    isOpen: () => !root.hidden,
+    isOpen,
     dispose() {
       close();
       unregister?.();
