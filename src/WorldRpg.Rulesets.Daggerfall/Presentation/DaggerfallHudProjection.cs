@@ -562,9 +562,15 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
 
     private static uint Art(UiValueBuilder builder, DaggerfallUiArt art)
     {
-        uint[] images = art.Images.Select(image => builder.Object(
-            ("id", builder.String(image.Id)),
-            ("image", builder.String(image.Image)))).ToArray();
+        uint[] images = art.Images.Select(image => image.Display is not { } display
+            ? builder.Object(("id", builder.String(image.Id)), ("image", builder.String(image.Image)))
+            : builder.Object(
+                ("id", builder.String(image.Id)),
+                ("image", builder.String(image.Image)),
+                ("display", builder.Object(
+                    ("scale", builder.Number(display.Scale)),
+                    ("slice", display.Slice is null ? builder.Null() : builder.Array(display.Slice.Select(inset => builder.Number(inset)).ToArray())),
+                    ("hotspot", display.Hotspot is null ? builder.Null() : builder.Array(display.Hotspot.Select(value => builder.Number(value)).ToArray())))))).ToArray();
         return builder.Object(("revision", builder.String(art.Revision)), ("images", builder.Array(images)));
     }
 

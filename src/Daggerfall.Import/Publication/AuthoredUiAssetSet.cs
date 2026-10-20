@@ -71,7 +71,8 @@ public static class AuthoredUiAssetSet
                 $"ui-original/{asset.SourceFile}",
                 bytes,
                 asset.Generator,
-                asset.Prompt));
+                asset.Prompt,
+                asset.Display is null ? null : new ClassicAuthoredUiDisplay(asset.Display.Scale, asset.Display.Slice, asset.Display.Hotspot)));
         }
 
         return new Arena2ClassicMediaProfile(
@@ -92,5 +93,8 @@ public static class AuthoredUiAssetSet
 
     private sealed record AssetSet(IReadOnlyList<Asset> Assets);
 
-    private sealed record Asset(string Id, string File, string SourceFile, string Generator, string Prompt);
+    private sealed record Asset(string Id, string File, string SourceFile, string Generator, string Prompt, Display? Display = null);
+
+    /// <summary>How the DOM draws the asset; the publication checks the values against the image.</summary>
+    private sealed record Display(double Scale, IReadOnlyList<int>? Slice = null, IReadOnlyList<int>? Hotspot = null);
 }

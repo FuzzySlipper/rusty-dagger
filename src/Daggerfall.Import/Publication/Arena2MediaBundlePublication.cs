@@ -622,6 +622,8 @@ public sealed record Arena2MediaBundlePublication(
                 throw new InvalidOperationException("Persisted classic authored UI metadata is incomplete.");
             }
 
+            asset.Display?.Validate(asset.Id);
+
             NormalizedMediaDescriptor descriptor = RequirePersistedDescriptor(media, asset.Id, NormalizedMediaKind.UserInterface, "classic authored UI");
             if (!StringComparer.Ordinal.Equals(descriptor.RelativePath, asset.RelativePath))
             {

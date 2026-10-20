@@ -154,6 +154,37 @@ public sealed class Arena2ClassicMediaPublicationTests
     }
 
     [Fact]
+    public void CarriesHowTheDomDrawsAnAuthoredImageAndRefusesSlicesItWouldMove()
+    {
+        ClassicAuthoredUiDisplay frame = new(0.5, Slice: [16, 16, 16, 16]);
+        Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(CreateInputs(), AuthoredProfile(
+            new ClassicAuthoredUiAsset("ui.stone.window.v2", "media/ui/authored/ui-stone-window-v2.png", "ui-original/ui-stone-window-v2.png",
+                SolidPng(64, 64, [90, 90, 96, 255]), "generator", "prompt", frame)));
+        Assert.Equal(frame, Assert.Single(publication.AuthoredUiAssets).Display);
+
+        // An original past the publication bound is resampled, which would move every slice line.
+        InvalidOperationException resampled = Assert.Throws<InvalidOperationException>(() => Arena2ClassicMediaPublication.Create(CreateInputs(), AuthoredProfile(
+            new ClassicAuthoredUiAsset("ui.stone.window.v2", "media/ui/authored/ui-stone-window-v2.png", "ui-original/ui-stone-window-v2.png",
+                SolidPng(512, 512, [90, 90, 96, 255]), "generator", "prompt", frame))));
+        Assert.Contains("ui.stone.window.v2", resampled.Message, StringComparison.Ordinal);
+        Assert.Contains("published size", resampled.Message, StringComparison.Ordinal);
+
+        // Insets that leave no centre, a hotspot outside the image and a non-positive scale are each refused by name.
+        foreach (ClassicAuthoredUiDisplay invalid in new ClassicAuthoredUiDisplay[]
+        {
+            new(0.5, Slice: [32, 32, 32, 32]),
+            new(0.5, Hotspot: [64, 0]),
+            new(0, Slice: [8, 8, 8, 8]),
+        })
+        {
+            InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => Arena2ClassicMediaPublication.Create(CreateInputs(), AuthoredProfile(
+                new ClassicAuthoredUiAsset("ui.stone.bad.v2", "media/ui/authored/ui-stone-bad-v2.png", "ui-original/ui-stone-bad-v2.png",
+                    SolidPng(64, 64, [90, 90, 96, 255]), "generator", "prompt", invalid))));
+            Assert.Contains("ui.stone.bad.v2", failure.Message, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void RefusesAnAuthoredUiArtifactPastTheDomDecorationBound()
     {
         // A noise plate does not compress, so a bound that only counted pixels would let it through.

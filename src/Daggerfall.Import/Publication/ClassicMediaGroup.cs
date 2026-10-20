@@ -60,7 +60,8 @@ public sealed class ClassicMediaGroup
     }
 
     /// <summary>
-    /// The group's inventory. A published UI image states the semantic screen it fills, a screen drawn
+    /// The group's inventory. A published UI image states the semantic screen it fills, an authored image
+    /// states how the DOM draws it (scale, 9-slice insets, cursor hotspot), a screen drawn
     /// with the palette inside its own file states that conversion fact, and a slot's original IMG is
     /// named beside the regenerated PNG's digest: generated-byte stability cannot prove that a slot still
     /// came from the required donor input.
@@ -72,9 +73,21 @@ public sealed class ClassicMediaGroup
         ArgumentException.ThrowIfNullOrWhiteSpace(group);
         ArgumentNullException.ThrowIfNull(suppliedFiles);
         Dictionary<string, ClassicUiImageManifest> images = Publication.UiImages.ToDictionary(image => image.MediaId, StringComparer.Ordinal);
+        Dictionary<string, ClassicAuthoredUiDisplay> displays = Publication.AuthoredUiAssets
+            .Where(asset => asset.Display is not null)
+            .ToDictionary(asset => asset.Id, asset => asset.Display!, StringComparer.Ordinal);
         JsonObject Entry(ImportPublicationArtifact artifact)
         {
             JsonObject entry = ArtifactInventory.Entry($"{group}/{artifact.RelativePath}", artifact.Bytes.Span, artifact.MediaId);
+            if (artifact.MediaId is { } authoredId && displays.TryGetValue(authoredId, out ClassicAuthoredUiDisplay? display))
+            {
+                // The DOM reads how to draw an authored image from the same entry that names its bytes.
+                JsonObject drawn = new() { ["scale"] = display.Scale };
+                if (display.Slice is { } slice) drawn["slice"] = new JsonArray([.. slice.Select(inset => (JsonNode)inset)]);
+                if (display.Hotspot is { } hotspot) drawn["hotspot"] = new JsonArray([.. hotspot.Select(value => (JsonNode)value)]);
+                entry["display"] = drawn;
+            }
+
             if (artifact.MediaId is not { } mediaId || !images.TryGetValue(mediaId, out ClassicUiImageManifest? image)) return entry;
             string slot = image.Slot.ToString();
             entry["slot"] = char.ToLowerInvariant(slot[0]) + slot[1..];

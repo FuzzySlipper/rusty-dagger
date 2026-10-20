@@ -79,8 +79,9 @@ public sealed class PublishedContentDeliveryTests
         // the clips it maps and opens them through its own audio bundle, so the group carries neither WAV
         // bodies nor a catalog of them. Product-wide sky resources have their own manifest and group below.
         Assert.DoesNotContain(GeneratedContentFiles(content), path => path.StartsWith("worldrpg/media/audio/", StringComparison.Ordinal));
-        // Includes one TEXTURE.205 inventory icon for each of the 20 classic potion recipes.
-        Assert.Equal(167, listed.Count);
+        // Includes one TEXTURE.205 inventory icon for each of the 20 classic potion recipes and the 60
+        // images of the authored UI kit.
+        Assert.Equal(224, listed.Count);
 
         // The score is published by its own command into its own group, so it carries its own generated
         // index and the classic index above does not account for it.
@@ -458,7 +459,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal("worldrpg/media/ui/window-merchant-buttons-buy.png", identified["window.merchant.buttons.buy"].Path);
         Assert.Equal("worldrpg/media/ui/window-merchant-buttons-identify.png", identified["window.merchant.buttons.identify"].Path);
         Assert.Equal("worldrpg/media/ui/inventory-icons/inventory-icon-iron-dagger.png", identified["inventory.icon.iron-dagger"].Path);
-        Assert.Equal("worldrpg/media/ui/authored/inventory-skin-panel-slate-v1.png", identified["inventory.skin.panel-slate.v1"].Path);
+        Assert.Equal("worldrpg/media/ui/authored/ui-stone-window-v2.png", identified["ui.stone.window.v2"].Path);
         Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", identified["map.fmap0i17"].Path);
         Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", identified["font.classic.0000"].Path);
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", identified["weapon.werecreature"].Path);
@@ -466,7 +467,7 @@ public sealed class PublishedContentDeliveryTests
         // sky group is validated above and does not belong in this count. The 20 classic potion recipes
         // each publish their TEXTURE.205 inventory icon.
         Assert.DoesNotContain(identified.Keys, id => id.StartsWith("audio.", StringComparison.Ordinal));
-        Assert.Equal(167, identified.Count);
+        Assert.Equal(224, identified.Count);
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
@@ -517,7 +518,7 @@ public sealed class PublishedContentDeliveryTests
         DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(content, inputs.ClassicPresentation);
         DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(content, castle.ClassicPresentation);
 
-        Assert.Equal(167, media.Paths.Count);
+        Assert.Equal(224, media.Paths.Count);
         JsonElement inventory = JsonDocument.Parse(content.ReadBytes(DaggerfallUiArt.InventoryPath).ToArray()).RootElement;
         Dictionary<string, string> published = inventory.GetProperty("artifacts").EnumerateArray()
             .Where(artifact => artifact.TryGetProperty("mediaId", out _))

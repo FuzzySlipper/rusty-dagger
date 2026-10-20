@@ -174,20 +174,75 @@ and `fitPixelArt` draws a classic screen at the largest whole number of device
 pixels per source pixel, unfiltered.
 
 **Authored art** (frames, panels, buttons, slots, icons, cursors) is original
-art made for this project:
-
-- Each asset has an entry in `data/ui-authored-assets.json` (ID, published
-  file, original in `data/ui-original/`, generator and prompt), as
-  `data/README.md` describes.
-- `scripts/regenerate-content.sh` publishes it through `Daggerfall.Import`, and
-  `DaggerfallUiArt` delivers it beside the classic art.
-- Pixel art is drawn with `image-rendering: pixelated`.
+art made for this project; see "Authored UI art" below.
 
 **Plain CSS** stays plain: colour, type, spacing, borders and layout that need
 no picture.
 
 **Cursors** are CSS image cursors (`cursor: url(...) x y, fallback`) with the
-tip as hotspot; text fields keep the text caret.
+kit's hotspot; text fields keep the text caret.
+
+## Authored UI art
+
+**Direction.** The kit is inked dark-fantasy illustration with a tight
+palette, not pixel art on a grid (the owner's pick on #10120). Weathered stone
+and brass is the chrome: HUD, inventory, character sheet, menus, buttons,
+slots, title. Parchment is only for surfaces the player reads: dialogue,
+books and letters, journal, quest and message pop-ups, tooltips. A parchment
+surface sits inside or over stone chrome, takes dark ink text, and keeps stone
+controls.
+
+**Recipe.** `scripts/ui-art-kit.py` generates and processes the kit. Its
+header and the Den document `rusty-dagger/ui-art-recipe` give the exact
+recipe:
+
+- Krea 2 turbo with the Retro Dark Fantasy Illustration LoRA at 0.8, drawn on
+  a flat green ground;
+- the green keyed out, and the image fitted to its published size;
+- a 64-colour perceptual palette pass with a hard alpha edge, through the
+  Krea 2 Pixel Art Refiner node at grid 1.
+
+Button, tab and slot states are derived from one base image, so their slices
+line up. The script needs the LAN GPU hosts, so it is an operator tool, not a
+step of `scripts/regenerate-content.sh`. Its output is committed:
+
+- the processed originals in `data/ui-original/`;
+- their entries in `data/ui-authored-assets.json`, whose prompt is the exact
+  generation prompt.
+
+**Adding an asset.**
+1. Add its source prompt and its published entry (ID, published size, display
+   metadata, derived states) to `scripts/ui-art-kit.py`.
+2. Run `generate` for that source, pick a seed, then run `process` and
+   `manifest`.
+3. Run `scripts/regenerate-content.sh`, which publishes the asset under
+   `media/ui/authored/`.
+
+`DaggerfallUiArt` delivers every image under that path in the HUD
+projection's `uiArt`, with no list to update. `art.image(id)` returns its
+data URL and `art.display(id)` returns how it is drawn.
+
+**Scale rules.**
+- An original is at most 256 pixels on a side. The importer then publishes it
+  unresampled, so 9-slice insets stay exact. It refuses insets on an original
+  it would resample.
+- `display.scale` is CSS pixels per image pixel at UI scale 1. The kit uses
+  0.5, so its art is 2× at UI scale 1 and stays sharp on 4K and high-DPI
+  screens.
+- The kit has no pixel grid, so any UI scale is fine. Draw it with ordinary
+  smoothing, not `image-rendering: pixelated`; `pixelated` stays for classic
+  art.
+
+**9-slice metadata.** `display.slice` is the insets (top, right, bottom, left)
+in image pixels, as CSS `border-image-slice` takes them. The drawn border
+width is each inset times `display.scale` (`border-image-width`, in `rem` at
+1 rem = 16 px). A frame without a fill leaves its centre to the panel
+texture, `ui.stone.texture.v2` or `ui.parchment.texture.v2`, which tiles at its
+own scale.
+
+`display.hotspot` is a cursor's hotspot in image pixels. The CSS cursor
+uses it times `display.scale`, with a 2× image through `image-set` or the
+cursor's own size.
 
 ## Done
 
