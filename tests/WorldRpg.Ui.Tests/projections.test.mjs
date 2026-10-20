@@ -3171,6 +3171,35 @@ test('training asks through the drawn confirm with the ruleset price and hours; 
   } finally { f.dispose(); }
 });
 
+test('arrow navigation treats a wide row the focus sits over as in line, ahead of a nearer-centred control off to the side', () => {
+  const f = fixture();
+  const original = window.HTMLElement.prototype.getBoundingClientRect;
+  const originalRects = window.Element.prototype.getClientRects;
+  try {
+    f.publish({ spells: { available: [{ key: 'a', name: 'Alpha', cost: 8 }], ready: null, result: '' } });
+    f.root.querySelector('[data-action="spells"]').click();
+    const book = f.root.querySelector('.dagger-spells-root');
+    const row = book.querySelector('[data-action="spell-select"]');
+    const tab = book.querySelector('[data-spell-school="all"]');
+    const back = [...f.root.querySelectorAll('.dagger-menu button')].find(button => button.textContent === 'Back to menu');
+    // The spellbook as drawn: a tab far above, a wide row just above, and Back under the row's left end.
+    const rects = new Map([[tab, [420, 265, 50, 20]], [row, [422, 432, 233, 28]], [back, [420, 492, 75, 20]]]);
+    window.HTMLElement.prototype.getBoundingClientRect = function () {
+      const [left, top, width, height] = this === document.documentElement ? [0, 0, 1280, 720] : rects.get(this) ?? [-9999, -9999, 0, 0];
+      return { left, top, width, height, right: left + width, bottom: top + height, x: left, y: top };
+    };
+    // Only the three drawn controls are laid out; the rest of the page is not.
+    window.Element.prototype.getClientRects = function () { return rects.has(this) ? [this.getBoundingClientRect()] : []; };
+    back.focus();
+    back.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowUp', bubbles: true, cancelable: true }));
+    assert.equal(document.activeElement, row);
+  } finally {
+    window.HTMLElement.prototype.getBoundingClientRect = original;
+    window.Element.prototype.getClientRects = originalRects;
+    f.dispose();
+  }
+});
+
 test('spellbook move and sort request canonical order without changing the projection locally', () => {
   const f = fixture();
   try {

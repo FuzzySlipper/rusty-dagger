@@ -282,7 +282,8 @@ function hasLayout(): boolean {
 
 /**
  * The control nearest `from` in a direction: the closest centre ahead of it, with distance across
- * the direction weighted so a control in line wins over a nearer one off to the side. With no
+ * the direction (to the control's nearer edge) weighted so a control in line wins over a nearer
+ * one off to the side. With no
  * layout, up and left are the previous control in document order and down and right the next.
  */
 function nearest(from: HTMLElement, items: readonly HTMLElement[], direction: Direction): HTMLElement | null {
@@ -301,7 +302,9 @@ function nearest(from: HTMLElement, items: readonly HTMLElement[], direction: Di
     const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
     const along = direction === 'up' ? oy - y : direction === 'down' ? y - oy : direction === 'left' ? ox - x : x - ox;
     if (along <= 1) continue;
-    const across = direction === 'up' || direction === 'down' ? Math.abs(x - ox) : Math.abs(y - oy);
+    // Across is measured to the control's edge, so a wide row the origin sits over counts as in line.
+    const across = direction === 'up' || direction === 'down'
+      ? Math.max(0, rect.left - ox, ox - rect.right) : Math.max(0, rect.top - oy, oy - rect.bottom);
     const score = along + across * 3;
     if (score < bestScore) { bestScore = score; best = item; }
   }
