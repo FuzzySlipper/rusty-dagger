@@ -584,11 +584,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         uint[] items = value.Items.Select(item => Item(builder, item)).ToArray();
         uint[] slots = value.Slots.Select(slot => builder.Object(
             ("id", builder.String(slot.Id)), ("label", builder.String(slot.Label)),
-            ("itemKey", slot.ItemKey is null ? builder.Null() : builder.String(slot.ItemKey)))).ToArray();
+            ("itemKey", slot.ItemKey is null ? builder.Null() : builder.String(slot.ItemKey)), ("group", builder.String(slot.Group)))).ToArray();
         return builder.Object(("revision", builder.String(value.Revision)), ("message", builder.String(value.Message)),
             ("encumbrance", value.Encumbrance is { } encumbrance ? builder.Object(
                 ("currentClassicUnits", builder.Number(encumbrance.CurrentClassicUnits)), ("maximumClassicUnits", builder.Number(encumbrance.MaximumClassicUnits)),
-                ("canMove", builder.Boolean(encumbrance.CanMove))) : builder.Null()),
+                ("canMove", builder.Boolean(encumbrance.CanMove)),
+                ("currentKilograms", builder.Number(encumbrance.CurrentKilograms)), ("maximumKilograms", builder.Number(encumbrance.MaximumKilograms))) : builder.Null()),
             ("currency", value.Currency is { } currency ? builder.Object(
                 ("gold", builder.String(currency.Gold.ToString(CultureInfo.InvariantCulture))), ("lettersOfCredit", builder.String(currency.LettersOfCredit.ToString(CultureInfo.InvariantCulture))),
                 ("accountGold", builder.String(currency.AccountGold.ToString(CultureInfo.InvariantCulture)))) : builder.Null()),
@@ -609,13 +610,15 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("equipmentChange", value.EquipmentChange is { } change ? builder.Object(
                 ("cue", builder.String(change.Cue)), ("rightHandDelayMilliseconds", builder.Number(change.RightHandDelayMilliseconds)),
                 ("leftHandDelayMilliseconds", builder.Number(change.LeftHandDelayMilliseconds))) : builder.Null()),
-            ("items", builder.Array(items)), ("slots", builder.Array(slots)));
+            ("items", builder.Array(items)), ("slots", builder.Array(slots)),
+            ("categories", builder.Array((value.Categories ?? []).Select(category => builder.Object(
+                ("id", builder.String(category.Id)), ("label", builder.String(category.Label)))).ToArray())));
     }
 
     private static uint Item(UiValueBuilder builder, InventoryItemPresentation item) => builder.Object(
         ("key", builder.String(item.Key)), ("definition", builder.String(item.Definition)),
         ("label", builder.String(item.Label)), ("quantity", builder.String(item.Quantity)),
-        ("weight", builder.Number(item.Weight)), ("value", builder.Number(item.Value)),
+        ("weight", builder.Number(item.Weight)), ("weightKilograms", builder.Number(item.WeightKilograms)), ("value", builder.Number(item.Value)),
         ("details", builder.String(item.Details)), ("icon", item.Icon is null ? builder.Null() : builder.String(item.Icon)),
         ("condition", item.Condition is { } condition ? builder.Object(("current", builder.Number(condition.Current)),
             ("maximum", builder.Number(condition.Maximum)), ("percentage", builder.Number(condition.Percentage)),
@@ -625,7 +628,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("equippedSlots", builder.Array(item.EquippedSlots.Select(builder.String).ToArray())),
         ("compatibleSlots", builder.Array(item.CompatibleSlots.Select(builder.String).ToArray())),
         ("canUse", builder.Boolean(item.CanUse)), ("canUseMagic", builder.Boolean(item.CanUseMagic)), ("canEquip", builder.Boolean(item.CanEquip)),
-        ("equipRefusal", item.EquipRefusal is null ? builder.Null() : builder.String(item.EquipRefusal)));
+        ("equipRefusal", item.EquipRefusal is null ? builder.Null() : builder.String(item.EquipRefusal)),
+        ("category", builder.String(item.Category)), ("stackable", builder.Boolean(item.Stackable)),
+        ("dropRefusal", item.DropRefusal is null ? builder.Null() : builder.String(item.DropRefusal)));
 
     private static uint Loot(UiValueBuilder builder, LootPresentation value) => builder.Object(
         ("container", builder.String(value.Container)), ("revision", builder.String(value.Revision)),

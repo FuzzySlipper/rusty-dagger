@@ -70,10 +70,10 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
       }
       row.label.textContent = `${item.label} × ${item.quantity}`;
       row.detail.textContent = item.details;
-      row.quantity.hidden = !item.key.startsWith('stack:');
+      row.quantity.hidden = item.stackable !== true;
       row.quantity.max = item.quantity;
       if (Number(row.quantity.value) > Number(item.quantity)) row.quantity.value = item.quantity;
-      row.button.textContent = item.key.startsWith('stack:') ? 'Take' : 'Take';
+      row.button.textContent = 'Take';
       row.button.setAttribute('aria-label', `${row.button.textContent} ${item.label}`);
       const iconSource = image(item.icon);
       row.icon.hidden = iconSource === null;

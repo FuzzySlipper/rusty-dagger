@@ -10,9 +10,17 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 internal sealed record InventoryItemPresentation(string Key, string Definition, string Label, string Quantity, int Weight, int Value,
     string Details, string? Icon, int? GridSlot, string[] EquippedSlots, string[] CompatibleSlots,
-    ItemConditionPresentation? Condition = null, bool Identified = true, bool CanUse = false, bool CanEquip = false, string? EquipRefusal = null, bool CanUseMagic = false);
+    ItemConditionPresentation? Condition = null, bool Identified = true, bool CanUse = false, bool CanEquip = false, string? EquipRefusal = null, bool CanUseMagic = false,
+    string Category = DaggerfallInventoryPresentation.OtherCategory, bool Stackable = false, string? DropRefusal = null)
+{
+    /// <summary>The weight in kilograms; <see cref="Weight"/> is in the template's quarter-kilogram units.</summary>
+    internal double WeightKilograms => Weight * (double)DaggerfallEncumbrancePolicy.TemplateWeightToClassicUnits / DaggerfallEncumbrance.ClassicUnitsPerKilogram;
+}
 internal sealed record ItemConditionPresentation(int Current, int Maximum, int Percentage, bool Broken);
-internal sealed record EquipmentSlotPresentation(string Id, string Label, string? ItemKey);
+/// <summary>One equipment slot, with the group the screen lays it out in: armour, clothing, weapons or accessories.</summary>
+internal sealed record EquipmentSlotPresentation(string Id, string Label, string? ItemKey, string Group = "accessories");
+/// <summary>One tab of the pack: the category an item row names, and its player-facing name.</summary>
+internal sealed record InventoryCategoryPresentation(string Id, string Label);
 internal sealed record EquipmentChangePresentation(string Cue, int RightHandDelayMilliseconds, int LeftHandDelayMilliseconds);
 internal sealed record DaggerfallBankAccountPresentation(int Region, string Gold, string RegionName);
 internal sealed record DaggerfallLoanPresentation(string Principal, string Remaining, long DueMinute, bool Defaulted, long DaysRemaining);
@@ -20,7 +28,7 @@ internal sealed record DaggerfallBankPresentation(int CurrentRegion, string Curr
     DaggerfallLoanPresentation? Loan, long MaximumNewLoan, string CurrentRegionName = DaggerfallRegionNames.Unnamed);
 internal sealed record InventoryPresentation(string Revision, InventoryItemPresentation[] Items, EquipmentSlotPresentation[] Slots, string Message,
     EquipmentChangePresentation? EquipmentChange = null, DaggerfallEncumbrance? Encumbrance = null, DaggerfallCurrencyTotals? Currency = null,
-    DaggerfallBankPresentation? Bank = null);
+    DaggerfallBankPresentation? Bank = null, InventoryCategoryPresentation[]? Categories = null);
 
 /// <summary>Daggerfall inventory projection and UI-action translation; quantities and equipment remain Engine facts.</summary>
 internal sealed class DaggerfallInventoryPresentation
@@ -153,10 +161,72 @@ internal sealed class DaggerfallInventoryPresentation
         int? region = bank is not null && currentRegion is not null ? currentRegion() : null;
         return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}:{MetadataRevision}:{bank?.Revision}:{region}", items.Select(item =>
             DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? moves.GridPosition(item.Key) : null, item.Slots)).ToArray(),
-            definitions.EquipmentSlots.Values.Select(slot => new EquipmentSlotPresentation(slot.Id.Value, Label(slot.Id.Value),
+            definitions.EquipmentSlots.Values.OrderBy(slot => SlotOrder(slot.Id.Value)).Select(slot => SlotPresentation(slot.Id.Value,
                 equipped.TryGet(new EquipmentSlotId(slot.Id.Value), out UniqueInventoryItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), Message,
             LastEquipmentChange is { } change ? new(change.Cue.ToString().ToLowerInvariant(), change.Timing.RightHandMilliseconds, change.Timing.LeftHandMilliseconds) : null,
-            encumbrance?.Read(), currency?.Read(), ReadBank());
+            encumbrance?.Read(), currency?.Read(), ReadBank(), PackCategories);
+    }
+
+    /// <summary>
+    /// The pack's tabs, after the donor's inventory window: weapons and armour, magic items (anything
+    /// enchanted, and spellbooks), ingredients, and clothing with everything else.
+    /// </summary>
+    internal const string OtherCategory = "clothing-misc";
+    private static readonly InventoryCategoryPresentation[] PackCategories =
+        [new("weapons-armor", "Weapons & armour"), new("magic-items", "Magic items"), new(OtherCategory, "Clothing & misc"), new("ingredients", "Ingredients")];
+    private const int SpellbookTemplate = 132;
+
+    internal static string Category(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata)
+    {
+        if (metadata?.HasEnchantment == true || definition.Template?.Index == SpellbookTemplate) return "magic-items";
+        bool weaponOrArmor = definition.Template is { } template
+            ? template.Groups.Count > 0 && template.Groups[0] is "Weapons" or "Armor"
+            : definition.Weapon is not null || definition.Armor is not null || definition.Shield is not null;
+        if (weaponOrArmor) return "weapons-armor";
+        return definition.Template?.IsIngredient == true ? "ingredients" : OtherCategory;
+    }
+
+    /// <summary>
+    /// Where the equipment screen lays each classic slot out, and the name it gives it: worn armour
+    /// beside the doll on one side, clothing and the hands on the other, and the paired accessories
+    /// below. A slot this table does not name is an accessory under its own name.
+    /// </summary>
+    private static readonly (string Id, string Group, string Label)[] SlotLayout =
+    [
+        ("head", "armour", "Helm"), ("right-arm", "armour", "Right pauldron"), ("left-arm", "armour", "Left pauldron"),
+        ("chest-armor", "armour", "Cuirass"), ("gloves", "armour", "Gauntlets"), ("legs-armor", "armour", "Greaves"), ("feet", "armour", "Feet"),
+        ("cloak1", "clothing", "Cloak"), ("cloak2", "clothing", "Second cloak"), ("chest-clothes", "clothing", "Chest clothing"),
+        ("legs-clothes", "clothing", "Leg clothing"), ("right-hand", "weapons", "Right hand"), ("left-hand", "weapons", "Left hand"),
+        ("amulet0", "accessories", "Amulet"), ("amulet1", "accessories", "Second amulet"),
+        ("bracelet0", "accessories", "Bracelet"), ("bracelet1", "accessories", "Second bracelet"),
+        ("ring0", "accessories", "Ring"), ("ring1", "accessories", "Second ring"),
+        ("bracer0", "accessories", "Bracer"), ("bracer1", "accessories", "Second bracer"),
+        ("mark0", "accessories", "Mark"), ("mark1", "accessories", "Second mark"),
+        ("crystal0", "accessories", "Crystal"), ("crystal1", "accessories", "Second crystal"),
+    ];
+
+    private static int SlotOrder(string id)
+    {
+        int index = Array.FindIndex(SlotLayout, entry => entry.Id == id);
+        return index < 0 ? SlotLayout.Length : index;
+    }
+
+    private static EquipmentSlotPresentation SlotPresentation(string id, string? itemKey)
+    {
+        int index = Array.FindIndex(SlotLayout, entry => entry.Id == id);
+        return index < 0 ? new(id, Label(id), itemKey) : new(id, SlotLayout[index].Label, itemKey, SlotLayout[index].Group);
+    }
+
+    /// <summary>Lays the pack out by tab, then by name, from the first cell.</summary>
+    internal void Sort()
+    {
+        InventoryPresentation current = Read();
+        string[] order = [.. current.Items.Where(item => item.EquippedSlots.Length == 0)
+            .OrderBy(item => Array.FindIndex(PackCategories, category => category.Id == item.Category))
+            .ThenBy(item => item.Label, StringComparer.CurrentCultureIgnoreCase).ThenBy(item => item.Key, StringComparer.Ordinal)
+            .Select(item => item.Key)];
+        moves.ArrangeGrid(order);
+        Message = "Pack sorted.";
     }
 
     private DaggerfallBankPresentation? ReadBank()
@@ -324,6 +394,9 @@ internal sealed class DaggerfallInventoryPresentation
         // Eligibility belongs to the carried rows only: a loot or container row is taken before it is used.
         bool carried = owner is null;
         string? equipRefusal = carried ? moves.EquipRefusal(definition, key.StartsWith("unique:", StringComparison.Ordinal), metadata?.CurrentCondition) : null;
+        string? dropRefusal = !carried ? null
+            : equippedSlots is { Length: > 0 } ? "Unequip that item before dropping it."
+            : metadata is not null ? canDropQuestItem?.Invoke(metadata) : null;
         return new InventoryItemPresentation(key, itemId, display.Label, quantity.ToString(CultureInfo.InvariantCulture),
             metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), details, icons.GetValueOrDefault(definition.Template?.Index == 83 && metadata?.PotionRecipeKey is int recipe ? $"potion.{recipe}" : itemId), gridSlot, equippedSlots ?? [],
             definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray(),
@@ -331,7 +404,8 @@ internal sealed class DaggerfallInventoryPresentation
             CanUse: carried && metadata is not null && itemUse?.CanUse(itemId, metadata) == true,
             CanEquip: carried && equipRefusal is null, EquipRefusal: equipRefusal,
             CanUseMagic: carried && metadata is not null && (metadata.HasEnchantment || metadata.PotionRecipeKey is not null)
-                && itemUse?.CanUse(itemId, metadata) == true);
+                && itemUse?.CanUse(itemId, metadata) == true,
+            Category: Category(definition, metadata), Stackable: key.StartsWith("stack:", StringComparison.Ordinal), DropRefusal: dropRefusal);
     }
 
     private DaggerfallItemInstanceMetadata? Metadata(string key, DaggerfallItemOwner? owner)

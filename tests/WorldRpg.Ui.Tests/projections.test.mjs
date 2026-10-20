@@ -284,18 +284,29 @@ test('accessible wagon projection sends revision guarded put and take selections
   } finally { f.dispose(); }
 });
 
-test('item details show published labels and values without internal template identities', () => {
+test('an item tooltip shows published labels and values without internal template identities', () => {
   const f = fixture();
   try {
     f.publish({ inventory: {
       revision: '1', message: '', equipmentChange: null, slots: [],
-      items: [{ key: 'unique:7', definition: 'template-116-steel', label: 'Steel Broadsword', quantity: '1', weight: 3, value: 25, details: 'A steel blade.', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] }],
+      items: [{ key: 'unique:7', definition: 'template-116-steel', label: 'Steel Broadsword', quantity: '1', weight: 12, weightKilograms: 3, value: 25,
+        details: 'A steel blade.', icon: null, condition: { current: 30, maximum: 60, percentage: 50, broken: false }, identified: false,
+        gridSlot: 0, equippedSlots: [], compatibleSlots: ['right-hand'], canEquip: false, equipRefusal: 'Your class cannot use long blade weapons.' }],
     } });
-    f.root.querySelector('[data-inventory-item="unique:7"]').click();
-    const details = f.root.querySelector('.dagger-inventory-details');
-    assert.match(details.textContent, /Steel Broadsword/);
-    assert.match(details.textContent, /Weight 3 · Value 25/);
-    assert.doesNotMatch(details.textContent, /template-|unique:7/);
+    const item = f.root.querySelector('[data-inventory-item="unique:7"]');
+    item.dispatchEvent(new window.Event('focusin', { bubbles: true }));
+    const tip = f.root.querySelector('.dagger-inventory-tip');
+    assert.equal(tip.hidden, false, 'Focus shows the tooltip, as hovering does.');
+    assert.match(tip.textContent, /Steel Broadsword/);
+    assert.match(tip.textContent, /Unidentified/);
+    assert.match(tip.textContent, /Weight3 kg/);
+    assert.match(tip.textContent, /Value25 gold/);
+    assert.match(tip.textContent, /Condition 30 \/ 60/);
+    assert.match(tip.textContent, /Your class cannot use long blade weapons\./);
+    assert.doesNotMatch(tip.textContent, /template-|unique:7/);
+    assert.equal(f.root.querySelector('.dagger-inventory-details'), null, 'There is no details panel; the tooltip is the item view.');
+    item.dispatchEvent(new window.Event('focusout', { bubbles: true }));
+    assert.equal(tip.hidden, true);
   } finally { f.dispose(); }
 });
 
@@ -327,7 +338,7 @@ test('quick save and quick load send the product actions over the Host quick-sav
   } finally { f.dispose(); }
 });
 
-test('inventory use and equip controls follow the ruleset eligibility of the selected item', () => {
+test('the action bar offers what the ruleset allows for the item it opened on, and says why not', () => {
   const f = fixture();
   try {
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
@@ -336,21 +347,41 @@ test('inventory use and equip controls follow the ruleset eligibility of the sel
       revision: '5:1', message: '', equipmentChange: null,
       slots: [{ id: 'right-hand', label: 'Right hand', itemKey: null }, { id: 'head', label: 'Head', itemKey: null }],
       items: [
-        row('unique:1', { gridSlot: 0, compatibleSlots: ['right-hand'], canUse: false, canEquip: false, equipRefusal: 'Your class cannot use long blade weapons.' }),
-        row('stack:potion', { gridSlot: 1, canUse: true, canEquip: false, equipRefusal: 'This item cannot be equipped.' }),
+        row('unique:1', { gridSlot: 0, compatibleSlots: ['right-hand'], canUse: false, canEquip: false, equipRefusal: 'Your class cannot use long blade weapons.',
+          dropRefusal: 'You cannot drop a quest item.' }),
+        row('stack:potion', { gridSlot: 1, canUse: true, canEquip: false, stackable: true, quantity: '5', equipRefusal: 'This item cannot be equipped.' }),
       ],
     } });
-    const pick = key => f.root.querySelector(`[data-inventory-item="${key}"]`).click();
-    pick('unique:1');
-    const use = f.root.querySelector('[data-inventory-action="use"]');
-    const equip = f.root.querySelector('[data-inventory-action="move-equipment"]');
-    assert.equal(use.disabled, true);
-    assert.equal(equip.disabled, true);
-    assert.equal(f.root.querySelector('.dagger-inventory-equip-refusal').textContent, 'Your class cannot use long blade weapons.');
-    pick('stack:potion');
-    assert.equal(use.disabled, false);
-    use.click();
+    const bar = f.root.querySelector('.dagger-inventory-actions-bar');
+    const command = name => bar.querySelector(`[data-inventory-action="${name}"]`);
+    // Enter (a click no pointer made) opens the bar above the pack.
+    assert.equal(bar.hidden, true);
+    f.root.querySelector('[data-inventory-item="unique:1"]').click();
+    assert.equal(bar.hidden, false);
+    assert.equal(command('use').disabled, true);
+    assert.equal(command('equip').disabled, true);
+    assert.equal(command('drop').disabled, true);
+    assert.equal(bar.querySelector('.dagger-inventory-actions-note').textContent,
+      'Your class cannot use long blade weapons. You cannot drop a quest item.');
+    command('cancel').click();
+    assert.equal(bar.hidden, true);
+    f.root.querySelector('[data-inventory-item="stack:potion"]').click();
+    assert.equal(command('use').disabled, false);
+    // A stack drops a chosen part of itself, bounded by what the stack holds.
+    const quantity = bar.querySelector('.dagger-stepper input');
+    assert.equal(bar.querySelector('.dagger-stepper').hidden, false);
+    assert.equal(quantity.max, '5');
+    assert.equal(quantity.value, '5');
+    bar.querySelector('[data-stepper="up"]').click();
+    assert.equal(quantity.value, '5', 'The stepper stops at the published bound.');
+    bar.querySelector('[data-stepper="down"]').click();
+    bar.querySelector('[data-stepper="down"]').click();
+    command('drop').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'inventory-drop', revision: '5:1', item: 'stack:potion', amount: 3 });
+    f.root.querySelector('[data-inventory-item="stack:potion"]').click();
+    command('use').click();
     assert.deepEqual(f.actions.at(-1), { action: 'inventory-use', revision: '5:1', item: 'stack:potion' });
+    assert.equal(bar.hidden, true, 'A command closes the bar.');
   } finally { f.dispose(); }
 });
 
@@ -427,7 +458,7 @@ test('inventory items drag with the pointer under capture, never a native drag s
   } finally { delete document.elementFromPoint; f.dispose(); }
 });
 
-test('without a pointer an item is picked up and placed: accept holds it, accept on a slot places it, Back releases it', () => {
+test('without a pointer an item is picked up and placed: Move holds it, accept on a slot places it, Back releases it', () => {
   const f = fixture();
   try {
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
@@ -442,9 +473,17 @@ test('without a pointer an item is picked up and placed: accept holds it, accept
     const hand = f.root.querySelector('[data-inventory-equipment="right-hand"]');
     const head = f.root.querySelector('[data-inventory-equipment="head"]');
     const empty = f.root.querySelector('[data-inventory-grid="4"]');
+    const bar = f.root.querySelector('.dagger-inventory-actions-bar');
     const count = f.actions.length;
-    item.focus();
-    f.pad('button-0');
+    const pickUp = () => {
+      item.focus();
+      f.pad('button-0');
+      assert.equal(bar.hidden, false, 'Accept on an item opens its actions.');
+      assert.equal(document.activeElement.closest('.dagger-inventory-actions-bar'), bar, 'Focus moves into the bar.');
+      bar.querySelector('[data-inventory-action="move"]').click();
+      assert.equal(bar.hidden, true);
+    };
+    pickUp();
     assert.equal(f.root.querySelector('.dagger-inventory').classList.contains('is-holding'), true);
     assert.match(f.root.querySelector('.dagger-inventory-status').textContent, /Holding unique:1: choose a slot to place it, or go back to release it/);
     assert.equal(hand.classList.contains('is-drop-valid'), true);
@@ -452,29 +491,37 @@ test('without a pointer an item is picked up and placed: accept holds it, accept
     f.pad('button-1');
     assert.equal(f.root.querySelector('.dagger-inventory').classList.contains('is-holding'), false);
     assert.equal(f.root.querySelector('.dagger-inventory-root').hidden, false);
-    item.focus();
-    f.pad('button-0');
+    pickUp();
     head.focus();
     f.pad('button-0');
     assert.equal(f.actions.length, count, 'A slot that does not take the item receives nothing.');
     empty.focus();
     f.pad('button-0');
     assert.deepEqual(f.actions.at(-1), { action: 'inventory-move', revision: '7:1', item: 'unique:1', targetGrid: 4 });
-    // The keyboard does the same: Enter is a click.
-    item.focus(); item.click();
+    // Back on the open bar closes it, and only it.
+    item.focus();
+    f.pad('button-0');
+    f.pad('button-1');
+    assert.equal(bar.hidden, true);
+    assert.equal(f.root.querySelector('.dagger-inventory-root').hidden, false);
+    // A mouse click (one a pointer pressed) still picks up for pick and place.
+    item.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+    item.dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true, button: 0 }));
+    item.click();
+    assert.equal(bar.hidden, true);
     hand.click();
     assert.deepEqual(f.actions.at(-1), { action: 'inventory-move', revision: '7:1', item: 'unique:1', targetEquipment: 'right-hand' });
   } finally { f.dispose(); }
 });
 
-test('a drawn context menu and a double-click are accelerators over the same item actions', () => {
+test('a double-click, a right-click and the controller X open the same action bar over the pack', () => {
   const f = fixture();
   try {
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
       condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
     f.publish({ inventory: {
       revision: '8:1', message: '', equipmentChange: null,
-      slots: [{ id: 'right-hand', label: 'Right hand', itemKey: 'unique:2' }, { id: 'left-hand', label: 'Left hand', itemKey: null }],
+      slots: [{ id: 'right-hand', label: 'Right hand', itemKey: 'unique:2', group: 'weapons' }, { id: 'left-hand', label: 'Left hand', itemKey: null, group: 'weapons' }],
       items: [
         row('unique:1', { gridSlot: 0, compatibleSlots: ['right-hand', 'left-hand'], canEquip: true }),
         row('unique:2', { gridSlot: null, equippedSlots: ['right-hand'], compatibleSlots: ['right-hand'] }),
@@ -482,30 +529,122 @@ test('a drawn context menu and a double-click are accelerators over the same ite
       ],
     } });
     f.root.querySelector('[data-action="inventory"]').click();
+    const bar = f.root.querySelector('.dagger-inventory-actions-bar');
+    const visible = () => [...bar.querySelectorAll('button[data-inventory-action]')].filter(button => !button.hidden).map(button => button.textContent);
     const sword = f.root.querySelector('.dagger-inventory-grid [data-inventory-item="unique:1"]');
-    // Right-click opens the drawn menu; the window shows no native one.
+    // The bar sits directly above the pack grid.
+    assert.equal(f.root.querySelector('.dagger-inventory-actions').nextElementSibling, f.root.querySelector('.dagger-inventory-pack'));
+    // Right-click opens it; the window shows no native menu.
     const opened = new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 30, clientY: 40 });
     sword.dispatchEvent(opened);
     assert.equal(opened.defaultPrevented, true);
-    const menu = f.root.querySelector('.dagger-context-menu');
-    assert.equal(menu.hidden, false);
-    assert.deepEqual([...menu.querySelectorAll('button')].map(entry => entry.textContent), ['Equip', 'Use', 'Inspect', 'Drop']);
-    assert.equal(document.activeElement, menu.querySelector('button'), 'Focus moves into the context menu.');
-    // Escape closes it and leaves the menu open.
+    assert.equal(bar.hidden, false);
+    assert.deepEqual(visible(), ['Equip', 'Use', 'Move', 'Drop', 'Cancel']);
+    assert.equal(document.activeElement, bar.querySelector('[data-inventory-action="equip"]'), 'Focus moves into the bar.');
+    // Escape closes it and leaves the menu open, with focus back on the item.
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
-    assert.equal(menu.hidden, true);
+    assert.equal(bar.hidden, true);
     assert.equal(f.root.querySelector('.dagger-menu').open, true);
+    assert.equal(document.activeElement, sword);
     // The controller's X opens it on the focused item; Equip prefers the free compatible slot.
-    sword.focus();
     f.pad('button-2');
-    assert.equal(menu.hidden, false);
-    menu.querySelector('button').click();
+    assert.equal(bar.hidden, false);
+    bar.querySelector('[data-inventory-action="equip"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'inventory-move', revision: '8:1', item: 'unique:1', targetEquipment: 'left-hand' });
-    // A double-click uses what can be used, and moves an equipped item back to a free pack slot.
+    // A double-click opens it too: Use on the potion, Unequip on the worn sword to a free pack slot.
     f.root.querySelector('[data-inventory-item="stack:potion"]').dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
+    bar.querySelector('[data-inventory-action="use"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'inventory-use', revision: '8:1', item: 'stack:potion' });
-    f.root.querySelector('.dagger-inventory-equipment [data-inventory-item="unique:2"]').dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
+    f.root.querySelector('.dagger-inventory-equipment-section [data-inventory-item="unique:2"]').dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
+    assert.deepEqual(visible(), ['Unequip', 'Use', 'Move', 'Drop', 'Cancel']);
+    bar.querySelector('[data-inventory-action="unequip"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'inventory-move', revision: '8:1', item: 'unique:2', targetGrid: 2 });
+    // Cancel sends nothing.
+    const count = f.actions.length;
+    sword.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
+    bar.querySelector('[data-inventory-action="cancel"]').click();
+    assert.equal(f.actions.length, count);
+    assert.equal(bar.hidden, true);
+  } finally { f.dispose(); }
+});
+
+test('equipment lays out by published group around the doll, the pack filters by tab and sorts through the ruleset', () => {
+  const f = fixture();
+  try {
+    const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
+      condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
+    art.adopt({ revision: 'doll', images: [{ id: 'character.background.breton', image: 'data:image/png;base64,AA==' }] });
+    f.publish({
+      inventory: {
+        revision: '10:1', message: '', equipmentChange: null,
+        categories: [{ id: 'weapons-armor', label: 'Weapons & armour' }, { id: 'ingredients', label: 'Ingredients' }],
+        slots: [
+          { id: 'head', label: 'Helm', itemKey: null, group: 'armour' },
+          { id: 'cloak1', label: 'Cloak', itemKey: null, group: 'clothing' },
+          { id: 'right-hand', label: 'Right hand', itemKey: null, group: 'weapons' },
+          { id: 'ring0', label: 'Ring', itemKey: null, group: 'accessories' },
+        ],
+        items: [row('unique:1', { gridSlot: 0, category: 'weapons-armor' }), row('stack:herb', { gridSlot: 1, category: 'ingredients', stackable: true, quantity: '3' })],
+        encumbrance: { currentClassicUnits: 4000, maximumClassicUnits: 20000, canMove: true, currentKilograms: 10, maximumKilograms: 50 },
+        currency: { gold: '120', lettersOfCredit: '0', accountGold: '0' },
+        bank: null,
+      },
+      character: { name: 'Aubk-i', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [],
+        identity: { race: 'breton', raceLabel: 'Breton', donorRaceId: 1, portrait: '', gender: 'male', faceIndex: 0, career: 'Mage', media: [],
+          selectedMedia: [{ layer: 'background', mediaId: 'character.background.breton' }] } },
+    });
+    const slot = id => f.root.querySelector(`[data-inventory-equipment="${id}"]`);
+    const columns = f.root.querySelectorAll('.dagger-inventory-slot-column');
+    assert.equal(slot('head').parentElement, columns[0], 'Armour runs down one side of the doll.');
+    assert.equal(slot('cloak1').parentElement, columns[1], 'Clothing and the hands run down the other.');
+    assert.equal(slot('right-hand').classList.contains('starts-group'), true, 'The hands sit apart from the clothing.');
+    assert.equal(slot('ring0').parentElement, f.root.querySelector('.dagger-inventory-accessories'));
+    assert.equal(slot('head').dataset.tooltip, 'Helm: empty');
+    const doll = f.root.querySelector('.dagger-inventory-doll-background');
+    assert.equal(doll.hidden, false);
+    assert.equal(doll.src, 'data:image/png;base64,AA==');
+    assert.match(f.root.querySelector('.dagger-inventory-load').textContent, /Load 10 \/ 50 kg/);
+    assert.equal(f.root.querySelector('.dagger-inventory-gold').textContent, '120 gold');
+    assert.deepEqual([...f.root.querySelectorAll('[data-inventory-tab]')].map(tab => tab.textContent), ['All', 'Weapons & armour', 'Ingredients'],
+      'No bank tab without a bank.');
+    f.root.querySelector('[data-inventory-tab="ingredients"]').click();
+    assert.equal(f.root.querySelector('[data-inventory-item="unique:1"]').classList.contains('is-filtered-out'), true);
+    assert.equal(f.root.querySelector('[data-inventory-item="stack:herb"]').classList.contains('is-filtered-out'), false);
+    assert.equal(f.root.querySelector('[data-inventory-item="stack:herb"] .dagger-inventory-quantity').textContent, '3');
+    f.root.querySelector('[data-inventory-tab="all"]').click();
+    assert.equal(f.root.querySelector('[data-inventory-item="unique:1"]').classList.contains('is-filtered-out'), false);
+    f.root.querySelector('.dagger-inventory-sort').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'inventory-sort' });
+  } finally { art.adopt({ revision: '', images: [] }); f.dispose(); }
+});
+
+test('the bank is its own tab of the inventory while a bank serves the player', () => {
+  const f = fixture();
+  try {
+    f.publish({ inventory: {
+      revision: '11:1', message: '', equipmentChange: null, slots: [], items: [], categories: [],
+      bank: { currentRegion: 17, currentRegionName: 'Daggerfall', currentBalance: '500', maximumNewLoan: '1000', loan: null,
+        accounts: [{ region: 17, regionName: 'Daggerfall', gold: '500' }, { region: 20, regionName: 'Glenpoint', gold: '0' }] },
+    } });
+    const bankTab = f.root.querySelector('[data-inventory-tab="bank"]');
+    assert.ok(bankTab);
+    const bank = f.root.querySelector('.dagger-bank');
+    assert.equal(bank.hidden, true);
+    bankTab.click();
+    assert.equal(bank.hidden, false);
+    assert.equal(f.root.querySelector('.dagger-inventory-pack').hidden, true);
+    assert.match(bank.textContent, /Daggerfall: 500 gold/);
+    bank.querySelector('[aria-label="Bank transaction amount"]').value = '50';
+    bank.querySelector('[data-bank-action="currency-deposit-gold"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'currency-deposit-gold', amount: 50 });
+    bank.querySelector('[data-bank-action="bank-transfer"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'bank-transfer', amount: 50, destination: 20 });
+    bank.querySelector('[data-bank-action="currency-deposit-letters"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'currency-deposit-letters' });
+    // Leaving the bank takes its tab away and shows the pack again.
+    f.publish({ inventory: { revision: '11:2', message: '', equipmentChange: null, slots: [], items: [], categories: [], bank: null } });
+    assert.equal(f.root.querySelector('[data-inventory-tab="bank"]'), null);
+    assert.equal(f.root.querySelector('.dagger-inventory-pack').hidden, false);
   } finally { f.dispose(); }
 });
 
@@ -850,7 +989,7 @@ test('book page controls send the notebook revision current when they are presse
   } finally { f.dispose(); }
 });
 
-test('an inventory context menu closes with its panel, so navigation belongs to what is visible', () => {
+test('an inventory action bar closes with its panel, so navigation belongs to what is visible', () => {
   const f = fixture();
   try {
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
@@ -858,13 +997,13 @@ test('an inventory context menu closes with its panel, so navigation belongs to 
     f.publish({ inventory: { revision: '9:1', message: '', equipmentChange: null, slots: [], items: [row('stack:potion', { canUse: true })] } });
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
     f.root.querySelector('.dagger-menu-home [data-action="inventory"]').click();
-    const contextMenu = f.root.querySelector('.dagger-context-menu');
+    const bar = f.root.querySelector('.dagger-inventory-actions-bar');
     f.root.querySelector('[data-inventory-item="stack:potion"]').focus();
     f.pad('button-2');
-    assert.equal(contextMenu.hidden, false);
+    assert.equal(bar.hidden, false);
     f.pad('button-3');
     assert.equal(f.root.querySelector('.dagger-character-root').hidden, false);
-    assert.equal(contextMenu.hidden, true, 'Switching panel closes the context menu.');
+    assert.equal(bar.hidden, true, 'Switching panel closes the action bar.');
     // Back now acts on the visible panel.
     f.pad('button-1');
     assert.equal(f.root.querySelector('.dagger-menu-home').hidden, false);
@@ -875,7 +1014,7 @@ test('an inventory context menu closes with its panel, so navigation belongs to 
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
     assert.equal(f.root.querySelector('.dagger-menu').open, false);
-    assert.equal(contextMenu.hidden, true);
+    assert.equal(bar.hidden, true);
   } finally { f.dispose(); }
 });
 
@@ -1168,6 +1307,23 @@ test('quick start sends the draft identity and career without background fields,
     assert.equal(f.root.querySelector('[data-testid="character-commit"]').disabled, true, 'An ordinary commit still needs a name and a background.');
     quickStart.click();
     assert.deepEqual(f.actions.at(-1), { action: 'character-quick-start', name: '', race: 'breton', gender: 'female', faceIndex: 0, reflexes: 2, career: 'class00' });
+  } finally { f.dispose(); }
+});
+
+test('loot takes a chosen part of a row the ruleset marks as a stack, and a whole unique item', () => {
+  const f = fixture();
+  try {
+    const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
+      condition: null, identified: true, gridSlot: null, equippedSlots: [], compatibleSlots: [], ...overrides });
+    f.publish({ mode: 'modal', loot: { container: '2000:1', revision: '3', title: 'Rat — loot', message: '',
+      items: [row('stack:5', { label: 'Arrows', quantity: '12', stackable: true }), row('unique:9', { label: 'Dagger' })] } });
+    const quantity = f.root.querySelector('[data-loot-quantity="stack:5"]');
+    assert.equal(quantity.hidden, false);
+    assert.equal(f.root.querySelector('[data-loot-quantity="unique:9"]').hidden, true, 'A unique item is taken whole.');
+    quantity.value = '4';
+    f.root.querySelector('[data-loot-item="stack:5"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'loot-take', container: '2000:1', revision: '3', item: 'stack:5', amount: 4 });
+    assert.equal(f.root.querySelector('[data-loot-item="unique:9"]').textContent, 'Take');
   } finally { f.dispose(); }
 });
 

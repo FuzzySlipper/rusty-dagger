@@ -41,8 +41,9 @@ public sealed class UiArtDeliverySessionTests
             .ToDictionary(image => Assert.IsType<string>(image["id"]), image => (object?)Assert.IsType<string>(image["image"]), StringComparer.Ordinal);
         // One artifact per identity the DOM draws: the mode screen, the chrome, every image of the
         // authored kit the inventory publishes, every admitted item icon, the adult, faction and child portraits the
-        // quest escort HUD selects, and the head and body of each racial form (vampire, were-creature)
-        // the HUD draws while it is held. Other paper-doll backgrounds and bodies stay with the sheet.
+        // quest escort HUD selects, the head and body of each racial form (vampire, were-creature)
+        // the HUD draws while it is held, and each race's background, the inventory's paper-doll
+        // backdrop. The paper-doll bodies are not drawn yet and are not published.
         string[] heads = [.. definitions.CharacterPresentation.Races.Values
             .SelectMany(race => race.Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head))
             .Select(layer => layer.MediaId).Distinct(StringComparer.Ordinal)];
@@ -53,7 +54,9 @@ public sealed class UiArtDeliverySessionTests
         Assert.Equal(4, childFaces.Length);
         string[] racialForms = [.. definitions.CharacterPresentation.RacialForms.Values
             .SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId }).Distinct(StringComparer.Ordinal)];
-        string[] portraits = [.. heads, .. factionFaces, .. childFaces, .. racialForms];
+        string[] backgrounds = [.. definitions.CharacterPresentation.Races.Values.Select(race => race.Background.MediaId).Distinct(StringComparer.Ordinal)];
+        Assert.Equal(8, backgrounds.Length);
+        string[] portraits = [.. heads, .. factionFaces, .. childFaces, .. racialForms, .. backgrounds];
         string[] kit = AuthoredKit(root);
         Assert.Contains("ui.stone.window.v2", kit);
         Assert.Equal(7 + kit.Length + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length + DaggerfallTravelMap.MediaIds.Count, images.Count);

@@ -127,11 +127,6 @@
 .dagger-drag-ghost img { max-width: 2.5rem; max-height: 2.5rem; image-rendering: pixelated; }
 
 /* A drawn context menu: the window shows no native one. */
-.dagger-context-menu { position: fixed; z-index: 65; display: grid; min-width: 9rem; padding: .25rem; border: 1px solid #d4b56b; background: #151712; box-shadow: 0 .5rem 1.5rem rgb(0 0 0 / .6); }
-.dagger-context-menu[hidden] { display: none; }
-.dagger-context-menu button { padding: .4rem .7rem; border: 0; background: transparent; color: #f2e3ba; font: .8rem Georgia, serif; text-align: left; cursor: var(--dagger-cursor-pointer); }
-.dagger-context-menu button:focus, .dagger-context-menu button:hover { background: #312817; }
-.dagger-context-menu button:disabled { opacity: .5; cursor: default; }
 
 /* A drawn tooltip: the window never shows a title attribute. It is text to read, so parchment. */
 .dagger-tooltip { position: fixed; z-index: 60; max-width: 22rem; padding: .3rem .55rem; border: 1px solid #6b4a24; background: #e8d9b5 var(--skin-parchment-texture, none) 0 0 / var(--skin-parchment-texture-size, auto) repeat; color: var(--ink-dark); text-shadow: none; font: .75rem Georgia, serif; pointer-events: none; }
@@ -143,7 +138,7 @@
 .dagger-spell-service h2 { margin: 0 0 .4rem; font-size: 1.1rem; }
 .dagger-spell-service button { justify-self: stretch; padding: .5rem .9rem; font: 700 .8rem ui-monospace, monospace; text-align: left; }
 
-.dagger-menu.has-inventory { width: min(72rem, calc(100vw - 1.5rem)); }
+.dagger-menu.has-inventory { width: min(86rem, calc(100vw - 1.5rem)); }
 .dagger-menu.has-inventory > h1 { margin-bottom: .5rem; }
 /* Inside the menu, the menu's own title plate names the panel. */
 .dagger-menu .dagger-inventory-title { display: none; }
@@ -258,6 +253,13 @@
 .dagger-spellbook-information h3 { margin: 0 0 .375rem; }
 .dagger-spellbook-information p { margin: 0 0 .25rem; }
 @media (max-width: 52rem) { .dagger-spellbook-body { grid-template-columns: 1fr; } }
+
+/* The quantity stepper primitive (stepper.ts): an amount bounded by the projection, with − and +. */
+.dagger-stepper { align-items: center; display: inline-flex; gap: .25rem; }
+.dagger-stepper[hidden] { display: none; }
+.dagger-stepper input { appearance: textfield; background: #302817; border: 1px solid #a88b4f; color: #f4e6bd; font: .85rem ui-monospace, monospace; padding: .3rem .25rem; text-align: center; width: 3.5rem; }
+.dagger-stepper input::-webkit-inner-spin-button, .dagger-stepper input::-webkit-outer-spin-button { appearance: none; margin: 0; }
+.dagger-stepper-step { font: 700 .95rem ui-monospace, monospace; line-height: 1; min-width: 2rem; padding: .3rem .4rem; }
 
 /* Settings: the interface-scale stepper. */
 .dagger-controls-scale { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .5rem 0 1rem; }

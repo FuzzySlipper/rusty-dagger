@@ -38,6 +38,20 @@ public sealed class InventoryGridLayout(int capacity)
         Revision++;
     }
 
+    /// <summary>
+    /// Lays the given current keys out from the first position in order, as a sort does; placed keys
+    /// the order does not name follow them. Keys past the capacity stay unplaced, as overflow does.
+    /// </summary>
+    public void Arrange(IEnumerable<string> orderedKeys)
+    {
+        string[] keys = orderedKeys.Distinct(StringComparer.Ordinal).ToArray();
+        HashSet<string> named = new(keys, StringComparer.Ordinal);
+        string[] rest = _positions.Keys.Where(key => !named.Contains(key)).OrderBy(key => _positions[key]).ToArray();
+        _positions.Clear();
+        foreach (string key in keys.Concat(rest).Take(Capacity)) _positions.Add(key, _positions.Count);
+        Revision++;
+    }
+
     public void Place(string key, int target)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);

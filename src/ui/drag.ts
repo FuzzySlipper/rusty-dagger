@@ -39,6 +39,8 @@ export interface Drag<S> {
   /** The source held for pick-and-place, or being dragged. */
   held(): S | null;
   dragging(): boolean;
+  /** Hold a source for pick-and-place, as accepting it would; a surface's own Move command uses it. */
+  hold(source: S): void;
   /** Release a held source or cancel a drag; returns whether there was one. */
   release(): boolean;
   /** Re-mark which targets take the held source, after the targets were redrawn. */
@@ -177,6 +179,7 @@ export function mountDrag<S>(options: DragOptions<S>): Drag<S> {
   return {
     held: () => held,
     dragging: () => dragging,
+    hold,
     release() {
       if (press !== null && dragging) { endDrag(); return true; }
       if (held === null) return false;

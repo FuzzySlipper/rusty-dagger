@@ -185,7 +185,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     return document.activeElement === remembered;
   };
   const showHome = (): void => {
-    inventoryView.closeContextMenu();
+    inventoryView.closeActions();
     reportMap(false);
     controlsView.cancel();
     const previous = activePanel;
@@ -202,7 +202,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   };
   const reportMenu = (open: boolean): void => send({ action: 'menu', open });
   const closeMenu = (): void => {
-    inventoryView.closeContextMenu();
+    inventoryView.closeActions();
     reportMap(false);
     travelView.hide();
     controlsView.cancel();
@@ -230,7 +230,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const showPanel = (action: Panel): void => {
     if (action === 'inventory' && inventorySuppressed) return;
     if (!menu.open) openMenu();
-    inventoryView.closeContextMenu();
+    inventoryView.closeActions();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     if (activePanel === 'debug') closeDebug();
     reportMap(action === 'map');
@@ -365,7 +365,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       if (source === 'escape') closeMenu(); else dismiss();
     },
     runAction,
-    contextMenu() { if (activePanel === 'inventory') inventoryView.openContextMenu(); },
+    contextMenu() { if (activePanel === 'inventory') inventoryView.openActions(); },
     stepPanel(direction) {
       const index = STEPPED_PANELS.indexOf(activePanel as typeof STEPPED_PANELS[number]);
       const from = index < 0 ? (direction > 0 ? -1 : 0) : index;
@@ -378,6 +378,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       for (const control of shell.querySelectorAll<HTMLButtonElement>('[data-action="inventory"]')) control.disabled = inventorySuppressed;
       if (inventorySuppressed && activePanel === 'inventory') showHome();
       if (value.inventory) inventoryView.update(value.inventory);
+      inventoryView.updateIdentity(value.character && isCharacterProjection(value.character) ? value.character.identity : null);
       propertyView.update(value.property ?? null, value.inventory);
       transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);
       mapView.update(isMapProjection(value.map) ? value.map : null);

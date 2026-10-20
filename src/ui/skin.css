@@ -91,7 +91,7 @@
 /* Buttons: every game-UI button is the stone button unless it is a slot, a tab, a map marker or a menu
    entry, which have their own primitives. Hover and keyboard or controller focus light it; pressed
    sinks it; disabled dims it. Focus also keeps an outline, so it is visible on any ground. */
-.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-context-menu button, .dagger-travel-map-layer > *, .dagger-inventory-overflow-item) {
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *) {
   border: 1px solid var(--brass);
   border-width: var(--skin-stone-button-width, 1px);
   border-image: var(--skin-stone-button) var(--skin-stone-button-slice) fill / var(--skin-stone-button-width) stretch;
@@ -101,16 +101,16 @@
   cursor: var(--dagger-cursor-pointer);
   pointer-events: auto;
 }
-.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-context-menu button, .dagger-travel-map-layer > *, .dagger-inventory-overflow-item):is(:hover, :focus-visible):not(:disabled) {
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):is(:hover, :focus-visible):not(:disabled) {
   border-image-source: var(--skin-stone-button-focus, none);
   background: var(--skin-button-face, #594521);
 }
-.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-context-menu button, .dagger-travel-map-layer > *, .dagger-inventory-overflow-item):active:not(:disabled),
-.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-context-menu button, .dagger-travel-map-layer > *, .dagger-inventory-overflow-item)[aria-pressed="true"] {
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):active:not(:disabled),
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *)[aria-pressed="true"] {
   border-image-source: var(--skin-stone-button-pressed, none);
   background: var(--skin-button-face, #5a4520);
 }
-.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-context-menu button, .dagger-travel-map-layer > *, .dagger-inventory-overflow-item):disabled {
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):disabled {
   border-image-source: var(--skin-stone-button-disabled, none);
   color: #a39a85;
   cursor: default;
@@ -193,6 +193,12 @@
 [data-icon="grab"] { --icon: var(--skin-icon-activation-grab); }
 [data-icon="info"] { --icon: var(--skin-icon-activation-info); }
 [data-icon="talk"] { --icon: var(--skin-icon-activation-talk); }
+[data-icon="category-all"] { --icon: var(--skin-icon-category-all); }
+[data-icon="category-weapons-armor"] { --icon: var(--skin-icon-category-weapons-armor); }
+[data-icon="category-magic-items"] { --icon: var(--skin-icon-category-magic-items); }
+[data-icon="category-clothing-misc"] { --icon: var(--skin-icon-category-clothing-misc); }
+[data-icon="category-ingredients"] { --icon: var(--skin-icon-category-ingredients); }
+[data-icon="category-bank"] { --icon: var(--skin-icon-category-gold); }
 
 /* An empty equipment slot shows the silhouette of what it holds, above the slot art's filled centre. */
 .dagger-inventory-equipment-slot:not([data-inventory-item])::after {

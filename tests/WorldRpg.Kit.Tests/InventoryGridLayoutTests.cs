@@ -32,4 +32,19 @@ public sealed class InventoryGridLayoutTests
         Assert.Null(layout.Position("b"));
         Assert.Equal(2, layout.Positions.Count);
     }
+
+    [Fact]
+    public void Arranging_lays_the_named_keys_out_first_and_leaves_what_does_not_fit_as_overflow()
+    {
+        InventoryGridLayout layout = new(3);
+        layout.Reconcile(["a", "b", "c", "d"]);
+        Assert.Null(layout.Position("d"));
+        ulong revision = layout.Revision;
+        layout.Arrange(["d", "b", "a"]);
+        Assert.Equal((0, 1, 2), (layout.Position("d"), layout.Position("b"), layout.Position("a")));
+        Assert.Null(layout.Position("c"));
+        Assert.True(layout.Revision > revision);
+        layout.Arrange(["a"]);
+        Assert.Equal((0, 1, 2), (layout.Position("a"), layout.Position("d"), layout.Position("b")));
+    }
 }

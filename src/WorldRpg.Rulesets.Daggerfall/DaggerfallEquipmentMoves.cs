@@ -100,6 +100,13 @@ internal sealed class DaggerfallEquipmentMoves(
             .Concat(current.UniqueItems.Where(item => !equipped.Contains(item.Entity.Value)).Select(item => LayoutKey(new UniqueItem(item.Entity.Value, new InventoryItemId(item.Definition.Value))))));
     }
 
+    /// <summary>Lays the pack out in the given order of layout keys, from the first cell.</summary>
+    internal void ArrangeGrid(IEnumerable<string> orderedKeys)
+    {
+        ReconcileLayout();
+        _layout.Arrange(orderedKeys);
+    }
+
     internal EquipmentMoveResult MoveStackToGrid(InventoryStackId stack, int target)
     {
         if (target < 0 || target >= GridCapacity) return new(EquipmentMoveOutcome.InvalidDestination);

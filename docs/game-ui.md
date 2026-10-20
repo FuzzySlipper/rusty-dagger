@@ -100,7 +100,7 @@ Controller buttons follow the standard layout the Engine normalizes: A
 and the left stick (`axis-0`, `axis-1`) move, LB and RB (`button-4`, `5`)
 step panels. With the menu open, Start (`button-9`) steps out as Back does,
 Select (`button-8`) opens the inventory, Y (`button-3`) the character, and X
-(`button-2`) a context menu on the focused item.
+(`button-2`) the actions of the focused item.
 
 ## Drag and drop
 
@@ -123,17 +123,52 @@ pointer-event recipe:
   nothing. The UI redraws from what the product publishes; nothing moves
   locally.
 
-Without a pointer the same move is pick up and place: accept (a click, Enter
-or the controller's A) on a source holds it, accept on an empty target places
-it, and Back or Escape releases it before doing anything else. Accepting
-another source holds that one instead, so selecting still works with the
-mouse; a drag or the details pane moves onto a filled slot.
+Without a pointer the same move is pick up and place: holding a source (a
+mouse click on it, or a surface's own Move command through `Drag.hold`),
+then accepting an empty target places it, and Back or Escape releases it
+before doing anything else. Accepting another source holds that one instead;
+a drag moves onto a filled slot.
 
-Drag is never the only way to do something. The same moves are buttons in the
-surface, and a drawn context menu (`src/ui/context-menu.ts`) on a right-click,
-the menu key or Shift+F10, or the controller's X offers them as accelerators,
-as a double-click does for the item's main action. The inventory is the worked
-example (`src/ui/inventory.ts`).
+Drag is never the only way to do something. Every move is also a command in
+the surface. The inventory is the worked example; see below.
+
+## The inventory: the worked example
+
+`src/ui/inventory.ts` is the reference item screen, and later item screens
+follow its shape.
+
+- **Layout.** Equipment surrounds a paper doll on the left: armour down one
+  side, clothing and the hands down the other, the paired accessories in a row
+  beneath. The ruleset publishes each slot's `group` and name
+  (`DaggerfallInventoryPresentation`), so the screen holds no Daggerfall slot
+  table. The doll draws the race background from the character projection;
+  the figure and worn items draw in its layer box once the ruleset publishes
+  them as placed layers. The pack fills the right: category tabs, a reserved
+  row for the action bar, then a grid of large slots, with gold and load
+  beneath.
+- **Tabs and sort.** The ruleset publishes the tabs (`categories`) and each
+  row's `category`. A tab dims the items outside it, and every item keeps its
+  place. Sort pack sends `inventory-sort`, and the ruleset lays the pack out
+  by tab and name.
+- **Tooltips, not a details pane.** Hovering or focusing an item shows a
+  parchment tooltip with its name, description, quantity, weight, value,
+  condition and why it cannot be equipped, all from the projection. An empty
+  equipment slot names itself through `data-tooltip`.
+- **The action bar.** A double-click, a right-click, Enter or the
+  controller's A on an item (a click no pointer made), the menu key or
+  Shift+F10, or the controller's X open the item's actions in the row above
+  the grid: Equip or Unequip, Use, Move, Drop and Cancel. Each is enabled from
+  the projection (`canEquip`, `canUse`, `dropRefusal`), and the bar says why
+  one is not. A stack drops a chosen part of itself through the quantity
+  stepper. The bar registers with navigation above the panel, so arrows stay
+  in it and Cancel, Escape or Back close it and return focus to the item.
+- **Drag.** Items drag between pack cells and equipment slots, and Move holds
+  one for pick and place.
+- **The bank** is its own tab while a bank serves the player.
+
+The quantity stepper (`src/ui/stepper.ts`) is the shared bounded amount: −
+and + beside a number field, with its limits from the projection. The
+keyboard's and controller's left and right step it.
 
 ## Controls
 
@@ -145,7 +180,8 @@ example (`src/ui/inventory.ts`).
   and on focus inside the open modal. The `title` attribute is not used for
   information, since the window never shows it.
 - **Context menus** call `preventDefault()` on `contextmenu` and open the
-  drawn context menu, which registers with navigation above its surface.
+  surface's own drawn commands (the inventory's action bar), which register
+  with navigation above the surface.
 - **Lists** scroll with the wheel and follow controller focus.
 - **Choices** are `<select>` or focusable options. The window draws a
   `<select>` popup for the mouse, and navigation changes its value with left
@@ -224,12 +260,12 @@ vocabulary:
 | `.dagger-frame` | Stone window (9-slice, no fill) over the tiled stone ground: the menu, confirmations, spell choices, the court, death and character creation |
 | `.dagger-frame[data-skin="parchment"]` | Parchment reading surface with its page filled and dark ink: dialogue, dungeon text, quest messages, the journal page and the book reader. Controls on it stay stone |
 | `.dagger-frame-title` | Brass title plate |
-| `.dagger-panel` | Recessed stone inset inside a frame, such as item details and character sections |
+| `.dagger-panel` | Recessed stone inset inside a frame, such as the equipment panel, the bank and character sections |
 | `.dagger-divider` | Brass rule |
-| Game-UI `button` | Stone button. Hover and focus are lit, pressed sinks, disabled is dimmed. Slots, tabs, map markers and context-menu entries are excluded |
+| Game-UI `button` | Stone button. Hover and focus are lit, pressed sinks, disabled is dimmed. Slots, tabs and map markers are excluded |
 | `[role="tab"]` | Stone tab; `aria-selected="true"` is lit |
 | `.dagger-slot` | Stone slot. Focus, selection and a drop target are lit; `is-drop-invalid` is red |
-| `[data-icon]` | A kit icon before the label: menu actions, activation modes |
+| `[data-icon]` | A kit icon before the label: menu actions, activation modes, inventory tabs |
 | `[data-inventory-equipment]` | An empty equipment slot shows its silhouette |
 | Scrollbars | Slate groove and brass handle |
 

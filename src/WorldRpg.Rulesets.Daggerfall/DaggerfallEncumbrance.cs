@@ -24,7 +24,7 @@ internal readonly record struct DaggerfallEncumbrance(long CurrentClassicUnits, 
 internal sealed class DaggerfallEncumbrancePolicy
 {
     private const string GoldPiece = "gold-piece";
-    private const int TemplateWeightToClassicUnits = 100;
+    internal const int TemplateWeightToClassicUnits = 100;
     private readonly MechanicsInventoryCoordinator _playerInventory;
     private readonly StatsComponent _playerStats;
     private readonly Func<double> _carryMultiplier;
