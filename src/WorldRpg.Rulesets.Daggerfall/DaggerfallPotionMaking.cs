@@ -16,6 +16,10 @@ internal sealed record DaggerfallPotionMakingResult(bool Accepted, string Outcom
 internal sealed class DaggerfallPotionMaking(DaggerfallDefinitions definitions, DaggerfallState state,
     IRandomService random, Func<DaggerfallCalendar> calendar)
 {
+    /// <summary>How many ingredients one mix takes, as the classic potion maker allows.</summary>
+    internal const int MinimumIngredients = 1;
+    internal const int MaximumIngredients = 8;
+
     private sealed record Ingredient(EntityId Owner, DaggerfallItemOwner MetadataOwner, InventoryStack Stack, int Template);
 
     internal bool CanUse(DaggerfallServiceProvider provider)
@@ -65,7 +69,7 @@ internal sealed class DaggerfallPotionMaking(DaggerfallDefinitions definitions, 
     internal DaggerfallPotionMakingResult Mix(DaggerfallServiceProvider provider, int[] selected)
     {
         if (!CanUse(provider)) return new(false, "ProviderUnavailable");
-        if (selected is null || selected.Length is < 1 or > 8) return new(false, "InvalidIngredients");
+        if (selected is null || selected.Length < MinimumIngredients || selected.Length > MaximumIngredients) return new(false, "InvalidIngredients");
         var ingredients = Ingredients().ToArray();
         List<(Ingredient Ingredient, ulong Quantity)> consumed = [];
         foreach (var group in selected.GroupBy(value => value))

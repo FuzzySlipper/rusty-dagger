@@ -219,39 +219,36 @@ test('transport projection exposes land selection and admitted ship boarding', (
   } finally { f.dispose(); }
 });
 
-test('rest panel sends semantic durations and shows the ruleset elapsed outcome', () => {
+test('rest panel sends semantic durations bounded by the ruleset and shows the elapsed outcome', () => {
   const f = fixture();
   try {
-    f.publish();
+    const rest = { hasResult: false, revision: '0', mode: null, requestedSeconds: 0, elapsedSeconds: 0, recoveryHours: 0, healthRecovered: 0,
+      fatigueRecovered: 0, spellPointsRecovered: 0, interruption: 'None', message: null, maximumRestHours: 99, maximumLoiterHours: 3 };
+    f.publish({ rest });
     f.root.querySelector('[data-action="rest"]:not([data-rest-mode])').click();
     const panel = f.root.querySelector('.dagger-rest-root');
     assert.equal(panel.hidden, false);
     const hours = panel.querySelector('.dagger-rest-hours');
-    hours.value = '2';
+    assert.equal(hours.max, '99');
+    hours.value = '2'; hours.dispatchEvent(new window.Event('change', { bubbles: true }));
     panel.querySelector('[data-rest-mode="timed"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'rest', mode: 'timed', hours: 2 });
-    // Loiter has its own box, bounded by the ruleset's maximum: 12 hours is brought back to 3.
-    f.publish({ rest: { hasResult: false, revision: '0', mode: null, requestedSeconds: 0, elapsedSeconds: 0, recoveryHours: 0, healthRecovered: 0,
-      fatigueRecovered: 0, spellPointsRecovered: 0, interruption: 'None', message: null, maximumRestHours: 99, maximumLoiterHours: 3 } });
+    // Loiter has its own stepper, bounded by the ruleset's maximum: 12 hours is brought back to 3.
     const loiter = panel.querySelector('.dagger-loiter-hours');
     assert.equal(loiter.max, '3');
     loiter.value = '12'; loiter.dispatchEvent(new window.Event('change', { bubbles: true }));
     assert.equal(loiter.value, '3');
+    assert.equal(panel.querySelector('[data-rest-amount="loiter"] [data-stepper="up"]').disabled, true, 'The stepper stops at the bound.');
     panel.querySelector('[data-rest-mode="loiter"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'rest', mode: 'loiter', hours: 3 });
-    loiter.value = '';
-    const count = f.actions.length;
-    panel.querySelector('[data-rest-mode="loiter"]').click();
-    assert.equal(f.actions.length, count);
-    assert.match(panel.querySelector('.dagger-rest-status').textContent, /whole number of hours from 1 to 3/);
+    // A later projection keeps the player's choice while it still fits.
+    f.publish({ rest: { ...rest, revision: '0b' } });
+    assert.equal(hours.value, '2');
     panel.querySelector('[data-rest-mode="until-healed"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'rest', mode: 'until-healed' });
-    f.publish({ rest: {
-      hasResult: true, revision: '1', mode: 'Timed', requestedSeconds: 7200,
-      elapsedSeconds: 3600, recoveryHours: 1, healthRecovered: 3,
-      fatigueRecovered: 8, spellPointsRecovered: 2, interruption: 'Encounter',
-      message: 'Your rest was interrupted by an encounter.', maximumRestHours: 99, maximumLoiterHours: 3,
-    } });
+    f.publish({ rest: { ...rest, hasResult: true, revision: '1', mode: 'Timed', requestedSeconds: 7200,
+      elapsedSeconds: 3600, recoveryHours: 1, healthRecovered: 3, fatigueRecovered: 8, spellPointsRecovered: 2, interruption: 'Encounter',
+      message: 'Your rest was interrupted by an encounter.' } });
     assert.equal(panel.querySelector('.dagger-rest-status').textContent,
       'Your rest was interrupted by an encounter.');
   } finally { f.dispose(); }
@@ -937,7 +934,7 @@ test('a controller changes a choice with left and right, so it can load from the
 test('the menu steps panels on the shoulder buttons, and Back and Start step out one panel before closing it', () => {
   const f = fixture();
   try {
-    f.publish({});
+    f.publish({ rest: { hasResult: false, revision: '0', mode: null, requestedSeconds: 0, elapsedSeconds: 0, recoveryHours: 0, healthRecovered: 0, fatigueRecovered: 0, spellPointsRecovered: 0, interruption: 'None', message: null, maximumRestHours: 99, maximumLoiterHours: 3 } });
     const menu = f.root.querySelector('.dagger-menu');
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
     assert.equal(menu.open, true);
@@ -1022,7 +1019,7 @@ test('dismissing one of several stacked messages leaves focus in the ones that r
 test('reopening a menu panel puts focus back on the control it last held', () => {
   const f = fixture();
   try {
-    f.publish({});
+    f.publish({ rest: { hasResult: false, revision: '0', mode: null, requestedSeconds: 0, elapsedSeconds: 0, recoveryHours: 0, healthRecovered: 0, fatigueRecovered: 0, spellPointsRecovered: 0, interruption: 'None', message: null, maximumRestHours: 99, maximumLoiterHours: 3 } });
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
     f.root.querySelector('.dagger-menu-home [data-action="rest"]').click();
     const hours = f.root.querySelector('.dagger-rest-hours');
@@ -2461,6 +2458,8 @@ test('property offers stay in the inventory panel, and its storage is a Storage 
           storeRefusals: [{ item: 'unique:3', reason: 'Unequip that item before storing it.' }] } } });
     f.root.querySelector('[data-action="inventory"]').click();
     [...f.root.querySelectorAll('.dagger-property-root button')].find(button => button.textContent === 'Buy').click();
+    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Buy Small ship for 100000 gold\?/);
+    f.answer(true);
     assert.deepEqual(f.actions.at(-1), { action: 'property-buy', key: 'ship/small' });
     f.root.querySelector('[data-inventory-tab="storage"]').click();
     const storage = f.root.querySelector('.dagger-inventory-storage');
@@ -2498,47 +2497,116 @@ test('live banking dialogue emits bank-open with its actual revision', () => {
   } finally { f.dispose(); }
 });
 
-test('merchant rows keep unit and selected stack totals explicit and expose service-only actions', () => {
+test('the conversation groups its topics under the published headings, keeps a short log, and summoning pays only after the confirm', () => {
   const f = fixture();
   try {
-    const stack = { key: 'stack:shop.arrows', definition: 'template-131', label: 'Arrows', quantity: '10', unitPrice: '7',
+    const groups = [{ id: 'talk', label: 'Ask about' }, { id: 'quests', label: 'Your business' }, { id: 'places', label: 'Where is…' }, { id: 'services', label: 'Services' }];
+    const dialogue = (revision, question, reply) => ({ revision, targetLabel: 'Hrolf', greeting: 'Well met.', tone: 'normal', question, reply, diagnostics: [],
+      bankAvailable: true, topicGroups: groups, topics: [
+        { id: 'news', label: 'Any news?', group: 'talk' }, { id: 'directions', label: 'The Odd Blades', key: 'place.7', group: 'places' },
+        { id: 'donate', label: 'Donate gold', group: 'services' }] });
+    const summoning = { revision: 'summon-1', provider: 'Hrolf', offerRevision: null, prince: null, message: null, diagnostics: [],
+      quote: { key: 'azura', name: 'Azura', quest: 'Q0C00Y00', gold: 2000, eligible: true, reason: null } };
+    const publish = (value) => f.publish({ activation: { mode: 'talk', dialogue: value }, spells: { available: [], ready: null, result: '', summoning } });
+    publish(dialogue('d-1', null, null));
+    const sections = [...f.root.querySelectorAll('.dagger-dialogue-topic-group')];
+    assert.deepEqual(sections.map(section => section.querySelector('h3').textContent), ['Ask about', 'Where is…', 'Services'], 'Empty groups are left out.');
+    assert.equal(sections[1].querySelector('[data-topic="directions"]').dataset.key, 'place.7');
+    assert.ok(sections[2].querySelector('[data-bank-open]'), 'The bank sits with the services.');
+    // Donation takes its amount from the stepper.
+    f.root.querySelector('.dagger-dialogue-donation input').value = '50';
+    f.root.querySelector('.dagger-dialogue-donation input').dispatchEvent(new window.Event('change', { bubbles: true }));
+    f.root.querySelector('[data-topic="donate"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'dialogue-topic', revision: 'd-1', topic: 'donate', amount: 50 });
+    // Each exchange joins the log, newest last, and a repeated projection adds nothing.
+    publish(dialogue('d-2', 'Any news?', 'They say the harbour flooded.'));
+    publish(dialogue('d-2', 'Any news?', 'They say the harbour flooded.'));
+    publish(dialogue('d-3', 'Where is The Odd Blades?', 'North of the temple.'));
+    const log = [...f.root.querySelectorAll('.dagger-dialogue-log li')];
+    assert.deepEqual(log.map(entry => entry.querySelector('.dagger-dialogue-reply').textContent), ['They say the harbour flooded.', 'North of the temple.']);
+    assert.equal(log[1].classList.contains('is-latest'), true);
+    // Summoning pays only through the confirm, which names the loss on failure.
+    const pay = [...f.root.querySelectorAll('.dagger-dialogue-summoning button')].find(button => button.textContent === 'Pay and summon');
+    const count = f.actions.length;
+    pay.click();
+    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Pay 2000 gold to summon Azura\? The payment is lost if the summoning fails\./);
+    f.answer(false);
+    assert.equal(f.actions.length, count);
+    pay.click();
+    f.answer(true);
+    assert.deepEqual(f.actions.at(-1), { action: 'daedra-summon', revision: 'summon-1', key: 'azura', amount: 2000, confirm: true });
+    // A new conversation starts with an empty log.
+    f.publish({ activation: { mode: 'talk', dialogue: null } });
+    publish({ ...dialogue('d-9', null, null), targetLabel: 'Someone else' });
+    assert.equal(f.root.querySelectorAll('.dagger-dialogue-log li').length, 0);
+  } finally { f.dispose(); }
+});
+
+test('the shop is the transfer layout: line totals, confirms for large trades and theft, and service-only rows', () => {
+  const f = fixture();
+  try {
+    const stack = { key: 'stack:shop.arrows', definition: 'template-131', label: 'Arrows', quantity: '100', maximumQuantity: 100, unitPrice: '7',
       currentCondition: 10, maximumCondition: 10, identified: true, stolen: false, canBuy: true, canSell: false };
-    const player = { key: 'unique:17', definition: 'template-113', label: 'Worn sword', quantity: 1, unitPrice: 20,
+    const player = { key: 'unique:17', definition: 'template-113', label: 'Worn sword', quantity: 1, maximumQuantity: 1, unitPrice: 20,
       currentCondition: 3, maximumCondition: 10, identified: false, stolen: false, canBuy: false, canSell: false };
     const dialogue = (merchant) => ({ revision: 'merchant-1', targetLabel: 'Guild officer', greeting: 'Welcome.', tone: 'normal',
       question: null, reply: null, topics: [], diagnostics: [], merchant });
     const baseMerchant = { revision: 'merchant-1', provider: 'Guild officer', quality: 10, gold: '100', buyAvailable: true,
-      sellAvailable: false, repairAvailable: false, identifyAvailable: false, result: '', stock: [stack], playerItems: [], repairs: [] };
+      sellAvailable: false, repairAvailable: false, identifyAvailable: false, result: '', largeTradeGold: 500, stock: [stack], playerItems: [], repairs: [] };
     f.publish({ activation: { mode: 'talk', dialogue: dialogue(baseMerchant) } });
 
-    const stockRow = [...f.root.querySelectorAll('.dagger-dialogue-merchant li')].find(row => row.textContent.includes('Arrows'));
-    assert.ok(stockRow);
-    assert.match(stockRow.textContent, /Unit price 7 gold each/);
-    const quantity = stockRow.querySelector('.dagger-merchant-quantity');
+    const shop = f.root.querySelector('.dagger-dialogue-merchant');
+    const stockRow = shop.querySelector('[data-transfer-side="source"] [data-transfer-item="stack:shop.arrows"]');
+    assert.match(stockRow.textContent, /7 gold each/);
+    const quantity = stockRow.querySelector('.dagger-stepper input');
+    assert.equal(quantity.max, '100', 'The bound is the projected maximum.');
+    assert.equal(stockRow.querySelector('.dagger-transfer-total').textContent, '7 gold');
     quantity.value = '3';
-    quantity.dispatchEvent(new window.Event('input', { bubbles: true }));
-    assert.match(stockRow.textContent, /Unit price 7 gold each/);
-    stockRow.querySelector('button').click();
+    quantity.dispatchEvent(new window.Event('change', { bubbles: true }));
+    assert.equal(stockRow.querySelector('.dagger-transfer-total').textContent, '21 gold', 'The line total follows the amount.');
+    // A small purchase goes straight through.
+    stockRow.querySelector('[data-transfer-command="merchant-buy"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'merchant-buy', revision: 'merchant-1', item: 'stack:shop.arrows', amount: 3 });
+    // A purchase at or over the ruleset's large-trade amount asks first, and No buys nothing.
+    quantity.value = '80';
+    quantity.dispatchEvent(new window.Event('change', { bubbles: true }));
+    const count = f.actions.length;
+    stockRow.querySelector('[data-transfer-command="merchant-buy"]').click();
+    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Buy 80 × Arrows for 560 gold\?/);
+    f.answer(false);
+    assert.equal(f.actions.length, count);
+    stockRow.querySelector('[data-transfer-command="merchant-buy"]').click();
+    f.answer(true);
+    assert.deepEqual(f.actions.at(-1), { action: 'merchant-buy', revision: 'merchant-1', item: 'stack:shop.arrows', amount: 80 });
+    // Stealing is set apart and always asks.
+    const steal = stockRow.querySelector('[data-transfer-command="merchant-shoplift"]');
+    assert.equal(steal.classList.contains('is-danger'), true);
+    quantity.value = '1';
+    quantity.dispatchEvent(new window.Event('change', { bubbles: true }));
+    steal.click();
+    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Steal Arrows\? If you are caught, it is a crime\./);
+    f.answer(true);
+    assert.deepEqual(f.actions.at(-1), { action: 'merchant-shoplift', revision: 'merchant-1', item: 'stack:shop.arrows', amount: 1 });
 
     const serviceOnly = { ...baseMerchant, buyAvailable: false, repairAvailable: true, stock: [], playerItems: [{ ...player, canRepair: true, canIdentify: false, repairCost: '45', identifyCost: null }],
-      repairs: [{ requestId: 'repair-1', durableItemId: '9', definition: 'iron-dagger', dueMinute: 900, ready: false, label: 'Iron Dagger', status: 'Ready in 2 hours' }] };
+      repairs: [{ requestId: 'repair-1', durableItemId: '9', definition: 'iron-dagger', dueMinute: 900, ready: true, label: 'Iron Dagger', status: 'Ready' }] };
     f.publish({ activation: { mode: 'talk', dialogue: dialogue(serviceOnly) } });
-    const repairRow = [...f.root.querySelectorAll('.dagger-dialogue-merchant li')].find(row => row.textContent.includes('Worn sword'));
-    assert.ok(repairRow);
-    assert.ok([...repairRow.querySelectorAll('button')].some(button => button.textContent === 'Repair (45 gold)'));
+    const repairRow = shop.querySelector('[data-transfer-side="pack"] [data-transfer-item="unique:17"]');
     assert.match(repairRow.textContent, /condition 3\/10/);
-    const order = [...f.root.querySelectorAll('.dagger-dialogue-merchant li')].find(row => row.textContent.includes('Iron Dagger'));
-    assert.equal(order.textContent, 'Iron Dagger · Ready in 2 hours');
-    repairRow.querySelector('button').click();
+    assert.equal(repairRow.querySelector('.dagger-stepper'), null, 'A single item has no quantity.');
+    const repair = repairRow.querySelector('[data-transfer-command="merchant-repair"]');
+    assert.equal(repair.textContent, 'Repair · 45 gold');
+    repair.click();
     assert.deepEqual(f.actions.at(-1), { action: 'merchant-repair', revision: 'merchant-1', item: 'unique:17' });
+    assert.match(shop.querySelector('.dagger-shop-repairs').textContent, /Iron Dagger · Ready/);
+    shop.querySelector('[data-repair="repair-1"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'merchant-collect-repair', revision: 'merchant-1', key: 'repair-1' });
 
-    const identifyOnly = { ...serviceOnly, repairAvailable: false, identifyAvailable: true, playerItems: [{ ...player, canRepair: false, canIdentify: true, identifyCost: '0' }] };
+    const identifyOnly = { ...serviceOnly, repairAvailable: false, identifyAvailable: true, repairs: [], playerItems: [{ ...player, canRepair: false, canIdentify: true, identifyCost: '0' }] };
     f.publish({ activation: { mode: 'talk', dialogue: dialogue(identifyOnly) } });
-    const identifyRow = [...f.root.querySelectorAll('.dagger-dialogue-merchant li')].find(row => row.textContent.includes('Worn sword'));
-    assert.ok(identifyRow);
-    assert.ok([...identifyRow.querySelectorAll('button')].some(button => button.textContent === 'Identify (0 gold)'));
-    identifyRow.querySelector('button').click();
+    const identify = shop.querySelector('[data-transfer-command="merchant-identify"]');
+    assert.equal(identify.textContent, 'Identify · 0 gold');
+    identify.click();
     assert.deepEqual(f.actions.at(-1), { action: 'merchant-identify', revision: 'merchant-1', item: 'unique:17' });
   } finally { f.dispose(); }
 });
@@ -2557,14 +2625,15 @@ test('create item presents authoritative paid choices and submits selection with
 });
 
 
-test('spellmaker edits supported settings, preserves typing on repeated projection, previews and confirms one semantic purchase', () => {
+test('spellmaker draws its fields from the published limits, picks an icon, keeps typing on repeated projection, previews and confirms one purchase', () => {
   const f=fixture();
   try {
     const settings={key:'free-action',type:26,subType:-1,durationBase:3,durationMod:7,durationPerLevel:2,
       chanceBase:1,chanceMod:1,chancePerLevel:1,magnitudeBaseLow:1,magnitudeBaseHigh:1,magnitudeLevelBase:1,magnitudeLevelHigh:1,magnitudePerLevel:1};
     const targets=['Self','Touch','Single target at range','Area around self','Area at range'].map((label,value)=>({value,label}));
     const elements=['Fire','Cold','Poison','Shock','Magic'].map((label,value)=>({value,label}));
-    const maker={revision:'maker-1',provider:'Mage',targets,elements,effects:[{key:'free-action',name:'Free action',type:26,subType:-1,school:'restoration',duration:true,chance:false,magnitude:false,targets:31,elements:16}],
+    const limits={nameLength:31,icons:69,effects:3,duration:60,chance:100,magnitude:100,perLevels:20};
+    const maker={revision:'maker-1',provider:'Mage',targets,elements,limits,effects:[{key:'free-action',name:'Free action',type:26,subType:-1,school:'restoration',duration:true,chance:false,magnitude:false,targets:31,elements:16}],
       draft:{name:'Freedom',element:4,rangeType:0,icon:68,effects:[settings]},quote:{key:'draft-2',gold:300,spellPoints:15,eligible:true,reason:null}};
     const publish=()=>f.publish({spells:{available:[],ready:null,result:'',maker},activation:{mode:'talk',message:'',applied:true,
       dialogue:{revision:'maker-1',targetLabel:'Mage',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
@@ -2573,16 +2642,25 @@ test('spellmaker edits supported settings, preserves typing on repeated projecti
     const buy=[...root.querySelectorAll('button')].find(b=>b.textContent==='Buy constructed spell');
     buy.click();f.answer(false);assert.equal(f.actions.some(a=>a.action==='spellmaker-buy'),false);
     buy.click();f.answer(true);assert.deepEqual(f.actions.at(-1),{action:'spellmaker-buy',revision:'maker-1',key:'draft-2',amount:300,confirm:true});
-    const form=root.querySelector('form');const name=form.querySelector('[name="name"]');name.value='New name';
-    name.dispatchEvent(new window.Event('input',{bubbles:true}));assert.equal(buy.disabled,true);
+    const form=root.querySelector('form');const name=form.querySelector('[name="name"]');
+    assert.equal(name.maxLength,31);
+    name.value='New name';name.dispatchEvent(new window.Event('input',{bubbles:true}));assert.equal(buy.disabled,true);
     publish();assert.equal(root.querySelector('[name="name"]'),name);assert.equal(name.value,'New name');
-    assert.equal(root.querySelector('[name="chanceBase"]'),null);
+    // The published limits shape the form: three effect slots, 69 icons, and only the settings this effect has, each bounded.
+    assert.equal(root.querySelectorAll('.dagger-maker-effect').length,3);
+    assert.equal(root.querySelectorAll('[data-spell-icon]').length,69);
+    assert.equal(root.querySelector('[data-spell-icon="68"]').getAttribute('aria-checked'),'true');
+    const durationBase=root.querySelector('[aria-label="Effect 1: Duration base"]');
+    assert.equal(durationBase.max,'60');assert.equal(durationBase.value,'3');
+    assert.equal(root.querySelector('[aria-label="Effect 1: Duration per levels"]').max,'20');
+    assert.equal(root.querySelector('[aria-label="Effect 1: Chance base"]'),null);
+    root.querySelector('[data-spell-icon="4"]').click();
+    assert.equal(root.querySelector('[data-spell-icon="4"]').getAttribute('aria-checked'),'true');
     form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
     const action=f.actions.at(-1);assert.equal(action.action,'spellmaker-draft');assert.equal(action.revision,'maker-1');
-    assert.deepEqual(JSON.parse(action.text),{name:'New name',element:4,rangeType:0,icon:68,effects:[settings]});
-    assert.equal(root.querySelectorAll('[name="icon"] option').length,69);
-    assert.equal(root.querySelector('[name="element"] option[value="0"]').textContent,'Fire');
-    assert.equal(root.querySelector('[name="element"]').selectedOptions[0].textContent,'Magic');
+    assert.deepEqual(JSON.parse(action.text),{name:'New name',element:4,rangeType:0,icon:4,effects:[settings]});
+    assert.equal(root.querySelector('[aria-label="Element"] option[value="0"]').textContent,'Fire');
+    assert.equal(root.querySelector('[aria-label="Element"]').selectedOptions[0].textContent,'Magic');
     assert.ok([...root.querySelectorAll('option')].some(option=>option.textContent==='restoration: Free action'));
     f.publish({spells:{available:[],ready:null,result:'',maker:null}});assert.equal(root.childElementCount,0);
   } finally {f.dispose();}
@@ -2671,7 +2749,7 @@ test('legal interaction shows charges and submits only authoritative arrest tria
 test('potion maker selects an owned recipe or an ingredient experiment through the dialogue', () => {
   const f=fixture();
   try {
-    const potionMaker={revision:'mix-1',provider:'Apothecary',eligible:true,
+    const potionMaker={revision:'mix-1',provider:'Apothecary',eligible:true,minimumIngredients:1,maximumIngredients:8,
       ingredients:[{template:62,name:'Aloe',quantity:2},{template:31,name:'Petals',quantity:1}],
       recipes:[{key:1,name:'Test recipe',ingredients:[62,31],available:true}]};
     const publish=()=>f.publish({spells:{available:[],ready:null,result:'',potionMaker},activation:{mode:'talk',message:'',applied:true,
@@ -2683,6 +2761,8 @@ test('potion maker selects an owned recipe or an ingredient experiment through t
     assert.deepEqual(f.actions.at(-1),{action:'potion-mix',revision:'mix-1',text:'[62,31]'});
     aloe.value='2';aloe.dispatchEvent(new window.Event('input'));assert.equal(recipe.value,'');
     root.querySelector('form').dispatchEvent(new window.Event('submit',{cancelable:true}));assert.equal(f.actions.at(-1).text,'[62,62,31]');
+    // Each ingredient's stepper is bounded by what is carried and the ruleset's most per mix.
+    assert.equal(aloe.max,'2');assert.match(root.querySelector('.dagger-potion-count').textContent,/of 8 ingredients/);
     f.publish({spells:{available:[],ready:null,result:'',potionMaker:{...potionMaker,eligible:false}}});assert.equal(root.querySelector('form'),null);
   } finally {f.dispose();}
 });
@@ -3007,27 +3087,30 @@ test('magic-item shortcut lists only eligible carried items and uses the current
   } finally { f.dispose(); }
 });
 
-test('training confirms price in a second step and cancels without paying; tavern sends its quoted item', () => {
+test('training asks through the drawn confirm with the ruleset price and hours; a changed offer pays nothing; tavern sends its quoted item', () => {
   const f = fixture();
   try {
     const dialogue = { revision: 'trainer-1', targetLabel: 'Trainer', greeting: 'Welcome', tone: 'normal',
       question: null, reply: null, topics: [], diagnostics: [],
-      training: { providerFaction: 1, membershipFaction: 1, member: true, rank: 0, price: 100, durationSeconds: 10800,
-        cooldownReadySecond: 0, skills: [{ id: 'medical', label: 'Medical', permanentValue: 10, maximumValue: 50 }] },
+      training: { providerFaction: 1, membershipFaction: 1, member: true, rank: 0, price: 100, durationSeconds: 10800, durationHours: 3,
+        cooldownReadySecond: 0, skills: [{ id: 'medical', label: 'Medical', permanentValue: 10, maximumValue: 50, trainable: true },
+          { id: 'archery', label: 'Archery', permanentValue: 50, maximumValue: 50, trainable: false }] },
       tavern: { hungry: true, menu: [{ id: 'wine', label: 'Wine', price: 3 }] } };
     const publish = () => f.publish({ mode: 'playing', activation: { mode: 'talk', message: '', applied: true, dialogue } });
     publish();
-    f.root.querySelector('[data-training-skill]').click();
+    assert.equal(f.root.querySelector('[data-training-skill="archery"]').disabled, true, 'The ruleset says this skill is mastered here.');
+    assert.match(f.root.querySelector('.dagger-dialogue-training-summary').textContent, /100 gold for 3 hours/);
+    f.root.querySelector('[data-training-skill="medical"]').click();
     assert.equal(f.actions.length, 0);
-    assert.match(f.root.querySelector('.dagger-training-confirm').textContent, /100 gold/);
+    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Train Medical for 100 gold\? It takes 3 hours\./);
     publish(); // A repeated projection must not dismiss the pending choice.
-    f.root.querySelector('[data-training-no]').click();
+    f.answer(false);
     assert.equal(f.actions.length, 0);
-    f.root.querySelector('[data-training-skill]').click();
-    f.root.querySelector('[data-training-yes]').click();
+    f.root.querySelector('[data-training-skill="medical"]').click();
+    f.answer(true);
     assert.deepEqual(f.actions.pop(), { action: 'training-commit', revision: 'trainer-1', key: 'medical', amount: 100, confirm: true });
-    f.root.querySelector('[data-training-skill]').click(); dialogue.revision = 'trainer-2'; publish();
-    f.root.querySelector('[data-training-yes]').click(); assert.equal(f.actions.length, 0);
+    f.root.querySelector('[data-training-skill="medical"]').click(); dialogue.revision = 'trainer-2'; publish();
+    f.answer(true); assert.equal(f.actions.length, 0, 'An offer that changed while asked pays nothing.');
     f.root.querySelector('[data-tavern-item]').click();
     assert.deepEqual(f.actions.pop(), { action: 'tavern-buy', revision: 'trainer-2', key: 'wine', amount: 3 });
     dialogue.tavern.hungry = false; publish(); assert.equal(f.root.querySelector('[data-tavern-item]').disabled, true);

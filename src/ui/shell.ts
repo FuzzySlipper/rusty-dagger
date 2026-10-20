@@ -91,10 +91,10 @@ const SHELL_MARKUP = `
       <section class="dagger-rest-root" hidden aria-label="Rest and loiter">
         <p class="dagger-rest-status" role="status" aria-live="polite">Choose a rest action.</p>
         <div class="dagger-rest-actions">
-          <label>Rest hours <input class="dagger-rest-hours" type="number" min="1" max="99" step="1" value="1"></label>
+          <div class="dagger-rest-amount" data-rest-amount="rest"><span>Rest hours</span></div>
           <button type="button" data-action="rest" data-rest-mode="timed">Rest for hours</button>
           <button type="button" data-action="rest" data-rest-mode="until-healed">Rest until healed</button>
-          <label>Loiter hours <input class="dagger-loiter-hours" type="number" min="1" max="3" step="1" value="1"></label>
+          <div class="dagger-rest-amount" data-rest-amount="loiter"><span>Loiter hours</span></div>
           <button type="button" data-action="rest" data-rest-mode="loiter">Loiter</button>
         </div>
       </section>
@@ -117,17 +117,17 @@ const SHELL_MARKUP = `
     </dialog>
     <dialog class="dagger-dialogue dagger-frame" data-skin="parchment" aria-labelledby="dagger-dialogue-title">
       <h2 id="dagger-dialogue-title" class="dagger-dialogue-target dagger-frame-title"></h2>
-      <p class="dagger-dialogue-greeting" aria-live="polite"></p>
-      <label>Tone <select class="dagger-dialogue-tone"><option value="polite">Polite</option><option value="normal">Normal</option><option value="blunt">Blunt</option></select></label>
-      <label class="dagger-dialogue-donation" hidden>Donation gold <input class="dagger-dialogue-donation-amount" type="number" min="1" step="1" value="1" inputmode="numeric"></label>
-      <p class="dagger-dialogue-question" aria-live="polite"></p>
-      <p class="dagger-dialogue-reply" aria-live="polite"></p>
+      <div class="dagger-dialogue-head">
+        <p class="dagger-dialogue-greeting" aria-live="polite"></p>
+        <label>Tone <select class="dagger-dialogue-tone"><option value="polite">Polite</option><option value="normal">Normal</option><option value="blunt">Blunt</option></select></label>
+      </div>
+      <ol class="dagger-dialogue-log" aria-label="Conversation" aria-live="polite"></ol>
       <div class="dagger-dialogue-topics"></div>
+      <div class="dagger-dialogue-donation" hidden><span>Donation</span></div>
       <section class="dagger-dialogue-training" aria-label="Skill training" hidden>
-        <h3>Skill training</h3>
+        <h3>Training</h3>
         <p class="dagger-dialogue-training-summary"></p>
         <div class="dagger-dialogue-training-skills"></div>
-        <div class="dagger-training-confirm" hidden><p></p><button type="button" data-training-yes>Yes</button><button type="button" data-training-no>No</button></div>
       </section>
       <section class="dagger-dialogue-tavern" aria-label="Tavern food and drink"></section>
       <section class="dagger-dialogue-merchant" aria-label="Merchant services"></section>

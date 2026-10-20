@@ -15,6 +15,15 @@ internal sealed record DaggerfallSpellConstructionQuote(string Key, DaggerfallSp
 /// <summary>Classic construction settings over compiled effects and the common normalized catalog.</summary>
 internal static class DaggerfallSpellConstruction
 {
+    /// <summary>The classic spellmaker's editor bounds; the screen draws its fields from these.</summary>
+    internal const int MaximumNameLength = 31;
+    internal const int IconCount = 69;
+    internal const int MaximumEffects = 3;
+    internal const int MaximumDuration = 60;
+    internal const int MaximumChance = 100;
+    internal const int MaximumMagnitude = 100;
+    internal const int MaximumPerLevels = 20;
+
     internal static DaggerfallSpellMakerEffect[] Effects(DaggerfallMagicCatalogSet magic, DaggerfallEffectCatalog effects) =>
         [.. effects.SpellDefinitions.Where(definition => definition.Spell is { SpellMaker: true } spell
             && magic.EffectCosts.ContainsKey((spell.Type, spell.SubType)))
@@ -46,19 +55,19 @@ internal static class DaggerfallSpellConstruction
     internal static void ValidateDraft(DaggerfallMagicCatalogSet magic, DaggerfallSpellDraft draft)
     {
         ArgumentNullException.ThrowIfNull(draft);
-        if (string.IsNullOrEmpty(draft.Name) || draft.Name.Length > 31
-            || draft.Element is < 0 or > 4 || draft.RangeType is < 0 or > 4 || draft.Icon is < 0 or > 68
-            || draft.Effects is null || draft.Effects.Length is < 1 or > 3)
+        if (string.IsNullOrEmpty(draft.Name) || draft.Name.Length > MaximumNameLength
+            || draft.Element is < 0 or > 4 || draft.RangeType is < 0 or > 4 || draft.Icon < 0 || draft.Icon >= IconCount
+            || draft.Effects is null || draft.Effects.Length < 1 || draft.Effects.Length > MaximumEffects)
             throw new ArgumentException("Name, icon, target, element and one to three effects are required.");
         foreach (var setting in draft.Effects)
         {
             ArgumentNullException.ThrowIfNull(setting);
             var components = magic.RequireEffectCost(setting).RegularComponents
                 ?? throw new ArgumentException("This effect has no construction settings.");
-            if (components.Duration is not null && (!Range(setting.DurationBase, 60) || !Range(setting.DurationMod, 60) || !Range(setting.DurationPerLevel, 20))
-                || components.Chance is not null && (!Range(setting.ChanceBase, 100) || !Range(setting.ChanceMod, 100) || !Range(setting.ChancePerLevel, 20))
-                || components.Magnitude is not null && (!Range(setting.MagnitudeBaseLow, 100) || !Range(setting.MagnitudeBaseHigh, 100)
-                    || !Range(setting.MagnitudeLevelBase, 100) || !Range(setting.MagnitudeLevelHigh, 100) || !Range(setting.MagnitudePerLevel, 20)
+            if (components.Duration is not null && (!Range(setting.DurationBase, MaximumDuration) || !Range(setting.DurationMod, MaximumDuration) || !Range(setting.DurationPerLevel, MaximumPerLevels))
+                || components.Chance is not null && (!Range(setting.ChanceBase, MaximumChance) || !Range(setting.ChanceMod, MaximumChance) || !Range(setting.ChancePerLevel, MaximumPerLevels))
+                || components.Magnitude is not null && (!Range(setting.MagnitudeBaseLow, MaximumMagnitude) || !Range(setting.MagnitudeBaseHigh, MaximumMagnitude)
+                    || !Range(setting.MagnitudeLevelBase, MaximumMagnitude) || !Range(setting.MagnitudeLevelHigh, MaximumMagnitude) || !Range(setting.MagnitudePerLevel, MaximumPerLevels)
                     || setting.MagnitudeBaseLow > setting.MagnitudeBaseHigh || setting.MagnitudeLevelBase > setting.MagnitudeLevelHigh))
                 throw new ArgumentException("Construction settings are outside the classic editor ranges.");
             if (new[] { setting.DurationBase, setting.DurationMod, setting.DurationPerLevel, setting.ChanceBase,

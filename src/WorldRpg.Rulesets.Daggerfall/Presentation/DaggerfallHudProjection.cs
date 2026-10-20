@@ -383,7 +383,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("quantity", builder.String(item.Quantity)))).ToArray())),
                 ("refusedDefinitions", builder.Array(transport.Wagon.RefusedDefinitions.Select(builder.String).ToArray())))));
 
-    private static uint Dialogue(UiValueBuilder builder, DaggerfallDialogueView dialogue) => builder.Object(
+    internal static uint Dialogue(UiValueBuilder builder, DaggerfallDialogueView dialogue) => builder.Object(
         ("revision", builder.String(dialogue.Revision)),
         ("targetLabel", builder.String(dialogue.TargetLabel)),
         ("questContacts", builder.Array(dialogue.QuestContacts.Select(contact => builder.Object(
@@ -398,7 +398,10 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("topics", builder.Array(dialogue.Topics.Select(topic => builder.Object(
             ("id", builder.String(topic.Id)),
             ("label", builder.String(topic.Label)),
-            ("key", topic.Key is null ? builder.Null() : builder.String(topic.Key)))).ToArray())),
+            ("key", topic.Key is null ? builder.Null() : builder.String(topic.Key)),
+            ("group", builder.String(topic.Group)))).ToArray())),
+        ("topicGroups", builder.Array(DaggerfallDialogueTopicGroups.All.Select(group => builder.Object(
+            ("id", builder.String(group.Id)), ("label", builder.String(group.Label)))).ToArray())),
         ("tavern", dialogue.Tavern is not { } tavern ? builder.Null() : builder.Object(
             ("hungry", builder.Boolean(tavern.Hungry)),
             ("menu", builder.Array(tavern.Menu.Select(item => builder.Object(
@@ -410,12 +413,14 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("rank", builder.Number(training.Rank)),
             ("price", builder.Number(training.Price)),
             ("durationSeconds", builder.Number(training.DurationSeconds)),
+            ("durationHours", builder.Number(Math.Max(1, (long)Math.Round(training.DurationSeconds / 3600d, MidpointRounding.AwayFromZero)))),
             ("cooldownReadySecond", builder.Number(training.CooldownReadySecond)),
             ("skills", builder.Array(training.Skills.Select(skill => builder.Object(
                 ("id", builder.String(skill.Id)),
                 ("label", builder.String(DaggerfallCharacterPresentation.Label(skill.Id))),
                 ("permanentValue", builder.Number(skill.PermanentValue)),
-                ("maximumValue", builder.Number(skill.MaximumValue)))).ToArray())))),
+                ("maximumValue", builder.Number(skill.MaximumValue)),
+                ("trainable", builder.Boolean(skill.Trainable)))).ToArray())))),
         ("diagnostics", builder.Array(dialogue.Diagnostics.Select(builder.String).ToArray())));
 
     private static uint ItemMakerSetting(UiValueBuilder builder, DaggerfallItemMakerSetting setting) => builder.Object(
@@ -425,8 +430,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     private static uint Options(UiValueBuilder builder, IReadOnlyList<string> labels) =>
         builder.Array(labels.Select((label, value) => builder.Object(("value", builder.Number(value)), ("label", builder.String(label)))).ToArray());
 
-    private static uint SpellMaker(UiValueBuilder builder, DaggerfallSpellMakerView maker) => builder.Object(
+    internal static uint SpellMaker(UiValueBuilder builder, DaggerfallSpellMakerView maker) => builder.Object(
         ("revision", builder.String(maker.Revision)), ("provider", builder.String(maker.Provider)),
+        ("limits", builder.Object(("nameLength", builder.Number(DaggerfallSpellConstruction.MaximumNameLength)),
+            ("icons", builder.Number(DaggerfallSpellConstruction.IconCount)), ("effects", builder.Number(DaggerfallSpellConstruction.MaximumEffects)),
+            ("duration", builder.Number(DaggerfallSpellConstruction.MaximumDuration)), ("chance", builder.Number(DaggerfallSpellConstruction.MaximumChance)),
+            ("magnitude", builder.Number(DaggerfallSpellConstruction.MaximumMagnitude)), ("perLevels", builder.Number(DaggerfallSpellConstruction.MaximumPerLevels)))),
         ("targets", Options(builder, Policies.DaggerfallMagicCostPolicy.TargetLabels)),
         ("elements", Options(builder, Policies.DaggerfallMagicCostPolicy.ElementLabels)),
         ("effects", builder.Array(maker.Effects.Select(effect => builder.Object(("key", builder.String(effect.Key)),
@@ -460,8 +469,10 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("eligible", builder.Boolean(quote.Eligible)), ("reason", quote.Reason is null ? builder.Null() : builder.String(DaggerfallSession.ItemMakerOutcomeText(quote.Reason))),
             ("payloads", builder.Array(quote.Payloads.Select(setting => ItemMakerSetting(builder, setting)).ToArray())))));
 
-    private static uint PotionMaker(UiValueBuilder builder, DaggerfallPotionMakerView maker) => builder.Object(
+    internal static uint PotionMaker(UiValueBuilder builder, DaggerfallPotionMakerView maker) => builder.Object(
         ("revision", builder.String(maker.Revision)), ("provider", builder.String(maker.Provider)), ("eligible", builder.Boolean(maker.Eligible)),
+        ("minimumIngredients", builder.Number(DaggerfallPotionMaking.MinimumIngredients)),
+        ("maximumIngredients", builder.Number(DaggerfallPotionMaking.MaximumIngredients)),
         ("ingredients", builder.Array(maker.Ingredients.Select(value => builder.Object(
             ("template", builder.Number(value.Template)), ("name", builder.String(value.Name)), ("quantity", builder.Number(checked((long)value.Quantity))))).ToArray())),
         ("recipes", builder.Array(maker.Recipes.Select(value => builder.Object(
@@ -479,6 +490,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("repairAvailable", builder.Boolean(merchant.CanRepair)),
         ("identifyAvailable", builder.Boolean(merchant.CanIdentify)),
         ("result", builder.String(merchant.Result)),
+        ("largeTradeGold", builder.Number(DaggerfallMerchantService.LargeTradeGold)),
         ("stock", builder.Array(merchant.Stock.Select(item => MerchantItem(builder, item, false, false)).ToArray())),
         ("playerItems", builder.Array(merchant.PlayerItems.Select(item => MerchantItem(builder, item,
             merchant.CanRepair && item.RepairCost is not null, merchant.CanIdentify && item.IdentifyCost is not null)).ToArray())),
@@ -496,6 +508,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("definition", builder.String(item.Definition)),
         ("label", builder.String(item.Label)),
         ("quantity", builder.String(item.Quantity.ToString(CultureInfo.InvariantCulture))),
+        ("maximumQuantity", builder.Number(item.Key.StartsWith("stack:", StringComparison.Ordinal) ? checked((long)item.Quantity) : 1)),
         ("unitPrice", builder.String(item.UnitPrice.ToString(CultureInfo.InvariantCulture))),
         ("currentCondition", builder.Number(item.CurrentCondition)),
         ("maximumCondition", builder.Number(item.MaximumCondition)),

@@ -11,6 +11,7 @@ import { mountMap, isMapProjection } from './maps.js';
 import { mountNotebook } from './notebook.js';
 import { diagnosticRows, formatRestHours, isRestProjection, isSaveSlots, type DaggerHud, type SaveSlotProjection, type SpellbookProjection } from './projection.js';
 import { mountProperty } from './property.js';
+import { createStepper } from './stepper.js';
 import { redraw } from './redraw.js';
 import type { NavigationSurface } from './navigation.js';
 import { renderSpells, spellAction } from './spells.js';
@@ -93,30 +94,23 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const propertyRoot = document.createElement('section');
   propertyRoot.className = 'dagger-property-root';
   inventoryRoot.append(propertyRoot);
-  const propertyView = mountProperty(propertyRoot, send);
+  const propertyView = mountProperty(propertyRoot, send, ask);
   const travelView = mountTravel(transportRoot, send);
   const restRoot = shell.querySelector<HTMLElement>('.dagger-rest-root')!;
   const lodgingView = mountLodging(restRoot, send);
   const restStatus = shell.querySelector<HTMLElement>('.dagger-rest-status')!;
-  const restHours = shell.querySelector<HTMLInputElement>('.dagger-rest-hours')!;
-  const loiterHours = shell.querySelector<HTMLInputElement>('.dagger-loiter-hours')!;
-  // Each duration box holds only what its mode accepts: a typed value outside the ruleset's
-  // range is brought back into it when the box is left.
-  for (const box of [restHours, loiterHours]) box.addEventListener('change', () => {
-    const typed = Number(box.value);
-    if (box.value.trim().length !== 0 && Number.isFinite(typed)) box.value = String(Math.min(Number(box.max), Math.max(Number(box.min), Math.round(typed))));
-  });
+  // Each duration is a stepper bounded by what its mode accepts, as the ruleset publishes it.
+  const restHours = createStepper('Rest hours');
+  const loiterHours = createStepper('Loiter hours');
+  restHours.input.classList.add('dagger-rest-hours');
+  loiterHours.input.classList.add('dagger-loiter-hours');
+  restHours.limit(1, 1, 1);
+  loiterHours.limit(1, 1, 1);
+  shell.querySelector('[data-rest-amount="rest"]')!.append(restHours.element);
+  shell.querySelector('[data-rest-amount="loiter"]')!.append(loiterHours.element);
   const submitRest = (mode: string): void => {
     if (mode === 'until-healed') { send({ action: 'rest', mode }); return; }
-    const box = mode === 'loiter' ? loiterHours : restHours;
-    const rawHours = box.value.trim();
-    const hours = Number(rawHours);
-    if (rawHours.length === 0 || !Number.isSafeInteger(hours) || hours < Number(box.min) || hours > Number(box.max)) {
-      restStatus.textContent = `Enter a whole number of hours from ${box.min} to ${box.max}.`;
-      box.focus();
-      return;
-    }
-    send({ action: 'rest', mode, hours });
+    send({ action: 'rest', mode, hours: (mode === 'loiter' ? loiterHours : restHours).value() });
   };
   const magicItemsRoot = document.createElement('section'); magicItemsRoot.className = 'dagger-magic-items'; magicItemsRoot.hidden = true;
   shell.querySelector('.dagger-controls-root')!.before(magicItemsRoot);
@@ -394,8 +388,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       questJournalView.update(value.quests?.journal);
       lodgingView.update(isLodgingProjection(value.lodging) ? value.lodging : null);
       if (value.rest && isRestProjection(value.rest)) {
-        restHours.max = String(value.rest.maximumRestHours);
-        loiterHours.max = String(value.rest.maximumLoiterHours);
+        restHours.limit(1, value.rest.maximumRestHours, 1);
+        loiterHours.limit(1, value.rest.maximumLoiterHours, 1);
         restStatus.textContent = value.rest.message
           ?? (value.rest.hasResult ? `Rested for ${formatRestHours(value.rest.elapsedSeconds)}.` : 'Choose a rest action.');
       }

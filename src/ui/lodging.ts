@@ -1,3 +1,5 @@
+import { createStepper } from './stepper.js';
+
 export interface LodgingProjection {
   readonly key: string;
   readonly name: string;
@@ -19,6 +21,7 @@ export function isLodgingProjection(value: unknown): value is LodgingProjection 
     && Number.isSafeInteger(v.price) && (v.price as number) >= 0
     && Number.isSafeInteger(v.remainingHours) && (v.remainingHours as number) >= 0;
 }
+/** Tavern lodging: the extra days as a stepper bounded by the ruleset's maximum stay, quoted before booking. */
 export function mountLodging(root: HTMLElement, claim: (action: LodgingAction) => void): {
   update(value: LodgingProjection | null): void; dispose(): void;
 } {
@@ -26,44 +29,44 @@ export function mountLodging(root: HTMLElement, claim: (action: LodgingAction) =
   shell.className = 'dagger-lodging';
   shell.setAttribute('aria-label', 'Tavern lodging');
   shell.innerHTML = `<h3>Tavern lodging</h3><p class="dagger-lodging-status" role="status"></p>
-    <label>Additional days <input class="dagger-lodging-days" type="number" min="1" step="1" value="1"></label>
+    <div class="dagger-lodging-stay"><span>Additional days</span></div>
     <button class="dagger-lodging-quote" type="button">Get room quote</button>
     <p class="dagger-lodging-price"></p><button class="dagger-lodging-book" type="button">Book room</button>`;
   root.append(shell);
   const status = shell.querySelector<HTMLElement>('.dagger-lodging-status')!;
   const price = shell.querySelector<HTMLElement>('.dagger-lodging-price')!;
-  const days = shell.querySelector<HTMLInputElement>('.dagger-lodging-days')!;
+  const days = createStepper('Additional days');
+  days.input.classList.add('dagger-lodging-days');
+  days.limit(1, 1, 1);
+  shell.querySelector('.dagger-lodging-stay')!.append(days.element);
   const quote = shell.querySelector<HTMLButtonElement>('.dagger-lodging-quote')!;
   const book = shell.querySelector<HTMLButtonElement>('.dagger-lodging-book')!;
   let current: LodgingProjection | null = null;
-  const selectedDays = (): number => days.value.trim() === '' ? NaN : Number(days.value);
-  const valid = (): boolean => !!current && Number.isSafeInteger(selectedDays()) && selectedDays() >= 1 && selectedDays() <= current.maximumDays;
-  const changed = (): void => { book.disabled = !current?.canBook || !valid() || current.days !== selectedDays(); };
-  const request = (): void => {
-    if (!current) return;
-    if (!valid()) { price.textContent = `Enter a whole number from 1 to ${current.maximumDays} days.`; days.focus(); return; }
-    claim({ action: 'lodging-quote', key: current.key, days: selectedDays() });
-  };
+  // Booking takes the quoted price, so it is offered only for the stay that was quoted.
+  const changed = (): void => { book.disabled = !current?.canBook || current.days !== days.value(); };
+  const request = (): void => { if (current) claim({ action: 'lodging-quote', key: current.key, days: days.value() }); };
   const reserve = (): void => {
     if (!current || book.disabled) return;
-    claim({ action: 'lodging-book', key: current.key, days: selectedDays(), amount: current.price });
+    claim({ action: 'lodging-book', key: current.key, days: days.value(), amount: current.price });
   };
-  days.addEventListener('input', changed);
+  days.input.addEventListener('input', changed);
   quote.addEventListener('click', request);
   book.addEventListener('click', reserve);
   shell.hidden = true;
   return {
     update(value) {
-      if (value?.key !== current?.key) days.value = String(value?.days ?? 1);
+      const fresh = value?.key !== current?.key;
       current = value;
       shell.hidden = value === null;
       if (value) {
-        days.max = String(value.maximumDays);
+        // A new inn starts from its own quoted stay; the same inn keeps the player's choice.
+        if (fresh) days.input.value = '';
+        days.limit(1, value.maximumDays, value.days);
         status.textContent = `${value.name}: ${value.remainingHours > 0 ? `${value.remainingHours} paid hour(s) remaining.` : 'No current room booking.'}`;
         price.textContent = value.canBook ? `${value.days} additional day(s): ${value.price} gold.` : `A stay may total up to ${value.maximumDays} days.`;
       }
       changed();
     },
-    dispose() { days.removeEventListener('input', changed); quote.removeEventListener('click', request); book.removeEventListener('click', reserve); shell.remove(); },
+    dispose() { days.input.removeEventListener('input', changed); quote.removeEventListener('click', request); book.removeEventListener('click', reserve); shell.remove(); },
   };
 }

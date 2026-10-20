@@ -171,7 +171,7 @@ const UNREAD_HUD_FIELDS = new Map([
   ['hud.activation.applied', 'The DOM shows the activation outcome text and does not branch on whether it applied.'],
   ['hud.activation.dialogue.questContacts[].instance', 'The DOM marks a quest contact by the list being non-empty; instance and symbol are quest-owner identities.'],
   ['hud.activation.dialogue.questContacts[].symbol', 'The DOM marks a quest contact by the list being non-empty; instance and symbol are quest-owner identities.'],
-  ['hud.activation.dialogue.merchant.result', 'The session projects the merchant without a result; trade outcomes reach the player as lastOutcome.'],
+  ['hud.activation.dialogue.training.durationSeconds', 'The ruleset rounds the training length to the durationHours the DOM shows; the seconds stay for consumers that format their own.'],
   ['hud.activation.dialogue.merchant.stock[].definition', UNREAD_INTERNAL],
   ['hud.activation.dialogue.merchant.repairs[].durableItemId', UNREAD_INTERNAL],
   ['hud.activation.dialogue.merchant.repairs[].dueMinute', UNREAD_INTERNAL],

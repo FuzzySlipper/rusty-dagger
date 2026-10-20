@@ -1,4 +1,6 @@
+import { image } from './art.js';
 import type { ConfirmQuestion } from './confirm.js';
+import { createStepper, type Stepper } from './stepper.js';
 import type {
   ItemMakerProjection, ItemMakerSetting, PotionMakerProjection, SpellMakerOption, SpellMakerProjection, SpellMakerSetting,
   SummoningProjection, UiAction,
@@ -8,7 +10,9 @@ export function isSpellMakerProjection(value:unknown):value is SpellMakerProject
   if(!value || typeof value!=='object') return false;
   const v=value as Partial<SpellMakerProjection>;const draft=v.draft;
   const options=(list:unknown):boolean=>Array.isArray(list) && list.every(o=>o && typeof o==='object' && Number.isInteger(o.value) && typeof o.label==='string');
+  const limits=v.limits;
   return typeof v.revision==='string' && typeof v.provider==='string' && Array.isArray(v.effects) && options(v.targets) && options(v.elements)
+    && !!limits && ['nameLength','icons','effects','duration','chance','magnitude','perLevels'].every(key=>Number.isSafeInteger(limits[key as keyof typeof limits]) && limits[key as keyof typeof limits]>0)
     && v.effects.every(e=>e && typeof e.key==='string' && typeof e.name==='string' && typeof e.school==='string' && Number.isInteger(e.type)
       && Number.isInteger(e.subType) && typeof e.duration==='boolean' && typeof e.chance==='boolean' && typeof e.magnitude==='boolean'
       && Number.isInteger(e.targets) && Number.isInteger(e.elements))
@@ -23,43 +27,63 @@ export function isSpellMakerProjection(value:unknown):value is SpellMakerProject
       && typeof v.quote.eligible==='boolean' && (v.quote.reason===null || typeof v.quote.reason==='string'));
 }
 
+/**
+ * The spellmaker: name, target, element, an icon picker and the effect slots, every field bounded by
+ * the limits the ruleset publishes. Update the cost preview to quote the draft; a quoted spell is
+ * bought through the drawn confirm.
+ */
 export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null,claim:(action:UiAction)=>void,ask:(question:ConfirmQuestion)=>void):void {
   const stamp=JSON.stringify(view);
   // Admitted modal updates can publish the same projection while the player types.
   if(root.dataset.spellMaker===stamp) return;
   root.dataset.spellMaker=stamp;root.replaceChildren();if(!view) return;
+  const limits=view.limits;
   const title=document.createElement('h3');title.textContent=`Make a spell with ${view.provider}`;root.append(title);
-  const form=document.createElement('form');root.append(form);
-  const input=(parent:HTMLElement,label:string,name:string,value:string|number,max?:number):HTMLInputElement=>{
-    const wrap=document.createElement('label');wrap.textContent=`${label} `;
-    const field=document.createElement('input');field.name=name;field.value=String(value);
-    if(max!==undefined) {field.type='number';field.min='1';field.max=String(max);field.step='1';} else field.maxLength=31;
-    wrap.append(field);parent.append(wrap);return field;
+  const form=document.createElement('form');form.className='dagger-maker-form';root.append(form);
+  const field=(label:string,control:HTMLElement):void=>{const wrap=document.createElement('label');wrap.className='dagger-maker-field';
+    const text=document.createElement('span');text.textContent=label;wrap.append(text,control);form.append(wrap);};
+  const name=document.createElement('input');name.name='name';name.value=view.draft.name;name.maxLength=limits.nameLength;name.required=true;field('Name',name);
+  const select=(label:string,values:readonly SpellMakerOption[],selected:number):HTMLSelectElement=>{
+    const control=document.createElement('select');control.setAttribute('aria-label',label);
+    values.forEach(value=>control.append(new Option(value.label,String(value.value))));control.value=String(selected);field(label,control);return control;
   };
-  const name=input(form,'Name','name',view.draft.name);name.required=true;
-  const select=(label:string,name:string,values:readonly SpellMakerOption[],selected:number):HTMLSelectElement=>{
-    const wrap=document.createElement('label');wrap.textContent=`${label} `;const field=document.createElement('select');field.name=name;
-    values.forEach(value=>{const option=document.createElement('option');option.value=String(value.value);option.textContent=value.label;field.append(option);});
-    field.value=String(selected);wrap.append(field);form.append(wrap);return field;
-  };
-  const target=select('Target','target',view.targets,view.draft.rangeType);
-  const element=select('Element','element',view.elements,view.draft.element);
-  const icon=select('Icon','icon',Array.from({length:69},(_,i)=>({value:i,label:String(i+1)})),view.draft.icon);
-  const slots:{select:HTMLSelectElement;fields:HTMLElement}[]=[];
-  for(let slot=0;slot<3;slot++) {
-    const section=document.createElement('fieldset');const legend=document.createElement('legend');legend.textContent=`Effect ${slot+1}`;section.append(legend);form.append(section);
+  const target=select('Target',view.targets,view.draft.rangeType);
+  const element=select('Element',view.elements,view.draft.element);
+  // The icon picker: one button per published icon, the spell's own picture where the art carries it.
+  let icon=Math.min(Math.max(0,view.draft.icon),limits.icons-1);
+  const icons=document.createElement('div');icons.className='dagger-spell-icons';icons.setAttribute('role','radiogroup');icons.setAttribute('aria-label','Icon');
+  for(let index=0;index<limits.icons;index++){
+    const choice=document.createElement('button');choice.type='button';choice.className='dagger-spell-icon dagger-slot';choice.dataset.spellIcon=String(index);
+    choice.setAttribute('role','radio');choice.setAttribute('aria-label',`Icon ${index+1}`);choice.setAttribute('aria-checked',String(index===icon));
+    const source=image(`spell.icon.${index}`);
+    if(source!==null){const picture=document.createElement('img');picture.src=source;picture.alt='';picture.draggable=false;choice.append(picture);}
+    else choice.textContent=String(index+1);
+    icons.append(choice);
+  }
+  icons.addEventListener('click',event=>{const choice=(event.target as HTMLElement).closest<HTMLButtonElement>('[data-spell-icon]');if(!choice) return;
+    icon=Number(choice.dataset.spellIcon);for(const other of icons.querySelectorAll<HTMLElement>('[data-spell-icon]')) other.setAttribute('aria-checked',String(other===choice));
+    form.dispatchEvent(new Event('change',{bubbles:true}));});
+  const iconField=document.createElement('div');iconField.className='dagger-maker-field';const iconLabel=document.createElement('span');iconLabel.textContent='Icon';iconField.append(iconLabel,icons);form.append(iconField);
+  const slots:{select:HTMLSelectElement;values:Map<keyof SpellMakerSetting,Stepper>}[]=[];
+  for(let slot=0;slot<limits.effects;slot++) {
+    const section=document.createElement('fieldset');section.className='dagger-maker-effect';const legend=document.createElement('legend');legend.textContent=`Effect ${slot+1}`;section.append(legend);form.append(section);
     const picker=document.createElement('select');picker.setAttribute('aria-label',`Effect ${slot+1}`);
-    const empty=document.createElement('option');empty.value='';empty.textContent='No effect';picker.append(empty);
-    for(const effect of view.effects) {const option=document.createElement('option');option.value=effect.key;option.textContent=`${effect.school}: ${effect.name}`;picker.append(option);}
+    picker.append(new Option('No effect',''));
+    for(const effect of view.effects) picker.append(new Option(`${effect.school}: ${effect.name}`,effect.key));
     const saved=view.draft.effects[slot];picker.value=saved?.key ?? '';section.append(picker);
-    const fields=document.createElement('div');section.append(fields);slots.push({select:picker,fields});
+    const fields=document.createElement('div');fields.className='dagger-maker-settings';section.append(fields);
+    const values=new Map<keyof SpellMakerSetting,Stepper>();slots.push({select:picker,values});
     const settings=():void=>{
-      fields.replaceChildren();const effect=view.effects.find(e=>e.key===picker.value);if(!effect) return;
-      const add=(label:string,key:keyof SpellMakerSetting,max:number):void=>{input(fields,label,key,saved?.key===effect.key ? Number(saved[key]) : 1,max);};
-      if(effect.duration) {add('Duration base','durationBase',60);add('Duration increase','durationMod',60);add('Duration per levels','durationPerLevel',20);}
-      if(effect.chance) {add('Chance base','chanceBase',100);add('Chance increase','chanceMod',100);add('Chance per levels','chancePerLevel',20);}
-      if(effect.magnitude) {add('Magnitude minimum','magnitudeBaseLow',100);add('Magnitude maximum','magnitudeBaseHigh',100);
-        add('Magnitude increase minimum','magnitudeLevelBase',100);add('Magnitude increase maximum','magnitudeLevelHigh',100);add('Magnitude per levels','magnitudePerLevel',20);}
+      fields.replaceChildren();values.clear();const effect=view.effects.find(e=>e.key===picker.value);if(!effect) return;
+      const add=(label:string,key:keyof SpellMakerSetting,max:number):void=>{
+        const stepper=createStepper(`Effect ${slot+1}: ${label}`);stepper.limit(1,max,saved?.key===effect.key ? Number(saved[key]) : 1);
+        const wrap=document.createElement('label');wrap.className='dagger-maker-setting';const text=document.createElement('span');text.textContent=label;
+        wrap.append(text,stepper.element);fields.append(wrap);values.set(key,stepper);
+      };
+      if(effect.duration) {add('Duration base','durationBase',limits.duration);add('Duration increase','durationMod',limits.duration);add('Duration per levels','durationPerLevel',limits.perLevels);}
+      if(effect.chance) {add('Chance base','chanceBase',limits.chance);add('Chance increase','chanceMod',limits.chance);add('Chance per levels','chancePerLevel',limits.perLevels);}
+      if(effect.magnitude) {add('Magnitude minimum','magnitudeBaseLow',limits.magnitude);add('Magnitude maximum','magnitudeBaseHigh',limits.magnitude);
+        add('Magnitude increase minimum','magnitudeLevelBase',limits.magnitude);add('Magnitude increase maximum','magnitudeLevelHigh',limits.magnitude);add('Magnitude per levels','magnitudePerLevel',limits.perLevels);}
     };
     picker.addEventListener('change',settings);settings();
   }
@@ -71,11 +95,11 @@ export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null
       const values:Record<string,string|number>={key:option.key,type:option.type,subType:option.subType,
         durationBase:1,durationMod:1,durationPerLevel:1,chanceBase:1,chanceMod:1,chancePerLevel:1,
         magnitudeBaseLow:1,magnitudeBaseHigh:1,magnitudeLevelBase:1,magnitudeLevelHigh:1,magnitudePerLevel:1};
-      for(const field of slot.fields.querySelectorAll<HTMLInputElement>('input')) values[field.name]=Number(field.value);
+      for(const [key,stepper] of slot.values) values[key]=stepper.value();
       return [values];
     });
     claim({action:'spellmaker-draft',revision:view.revision,text:JSON.stringify({name:name.value,element:Number(element.value),
-      rangeType:Number(target.value),icon:Number(icon.value),effects})});
+      rangeType:Number(target.value),icon,effects})});
   });
   const status=document.createElement('p');status.setAttribute('role','status');
   status.textContent=view.quote?.eligible ? `${view.quote.gold} gold · ${view.quote.spellPoints} magicka to cast` : view.quote?.reason ?? 'Update the preview with valid settings.';root.append(status);
@@ -92,31 +116,43 @@ export function isPotionMakerProjection(value:unknown):value is PotionMakerProje
   if(!value || typeof value!=='object') return false;
   const v=value as Partial<PotionMakerProjection>;
   return typeof v.revision==='string' && typeof v.provider==='string' && typeof v.eligible==='boolean'
+    && Number.isSafeInteger(v.minimumIngredients) && Number.isSafeInteger(v.maximumIngredients)
     && Array.isArray(v.ingredients) && v.ingredients.every(i=>i && Number.isInteger(i.template) && typeof i.name==='string' && Number.isSafeInteger(i.quantity) && i.quantity>0)
     && Array.isArray(v.recipes) && v.recipes.every(r=>r && Number.isInteger(r.key) && typeof r.name==='string' && typeof r.available==='boolean'
       && Array.isArray(r.ingredients) && r.ingredients.every(Number.isInteger));
 }
 
+/** The potion maker: a carried recipe, or an experiment with a stepper per ingredient, within the ruleset's ingredient count. */
 export function renderPotionMaker(root:HTMLElement,view:PotionMakerProjection|null,claim:(action:UiAction)=>void):void {
   const stamp=JSON.stringify(view); if(root.dataset.potionMaker===stamp) return;
   root.dataset.potionMaker=stamp;root.replaceChildren();if(!view) return;
   const title=document.createElement('h3');title.textContent=`Make a potion with ${view.provider}`;root.append(title);
   if(!view.eligible) { const p=document.createElement('p');p.textContent='Your current guild standing does not permit potion making.';root.append(p);return; }
-  const note=document.createElement('p');note.textContent='Choose a recipe you carry, or experiment with up to eight ingredients from your pack and wagon. Mixing uses the ingredients even if it fails.';root.append(note);
-  const form=document.createElement('form');root.append(form);
+  const note=document.createElement('p');
+  const explain=():string=>`Choose a recipe you carry, or experiment with ${view.minimumIngredients} to ${view.maximumIngredients} ingredients from your pack and wagon. Mixing uses the ingredients even if it fails.`;
+  note.textContent=explain();root.append(note);
+  const form=document.createElement('form');form.className='dagger-maker-form';root.append(form);
   const recipe=document.createElement('select');recipe.setAttribute('aria-label','Recipe');
-  const experiment=document.createElement('option');experiment.value='';experiment.textContent='Experiment';recipe.append(experiment);
-  for(const r of view.recipes) {const option=document.createElement('option');option.value=String(r.key);option.textContent=r.name+(r.available?'':' — ingredients missing');option.disabled=!r.available;recipe.append(option);}form.append(recipe);
-  const inputs=new Map<number,HTMLInputElement>();
+  recipe.append(new Option('Experiment',''));
+  for(const r of view.recipes) {const option=new Option(r.name+(r.available?'':' — ingredients missing'),String(r.key));option.disabled=!r.available;recipe.append(option);}form.append(recipe);
+  const amounts=new Map<number,Stepper>();
+  const count=document.createElement('p');count.className='dagger-potion-count';
+  const total=():number=>[...amounts.values()].reduce((sum,stepper)=>sum+stepper.value(),0);
+  const showCount=():void=>{count.textContent=`${total()} of ${view.maximumIngredients} ingredients chosen.`;};
   for(const i of view.ingredients) {
-    const label=document.createElement('label');label.textContent=`${i.name} (${i.quantity} available) `;
-    const input=document.createElement('input');input.type='number';input.min='0';input.max=String(Math.min(8,i.quantity));input.step='1';input.value='0';
-    input.setAttribute('aria-label',i.name);input.addEventListener('input',()=>{recipe.value='';});label.append(input);form.append(label);inputs.set(i.template,input);
+    const stepper=createStepper(i.name);stepper.limit(0,Math.min(view.maximumIngredients,i.quantity),0);
+    const label=document.createElement('label');label.className='dagger-maker-setting';const text=document.createElement('span');text.textContent=`${i.name} (${i.quantity} carried)`;
+    label.append(text,stepper.element);form.append(label);amounts.set(i.template,stepper);
+    stepper.input.addEventListener('input',()=>{if(recipe.value!=='') recipe.value='';showCount();});
   }
-  recipe.addEventListener('change',()=>{const chosen=view.recipes.find(r=>String(r.key)===recipe.value);for(const [template,input] of inputs) input.value=String(chosen?.ingredients.filter(i=>i===template).length ?? 0);});
+  recipe.addEventListener('change',()=>{const chosen=view.recipes.find(r=>String(r.key)===recipe.value);
+    for(const [template,stepper] of amounts) {stepper.input.value='';stepper.limit(0,Math.min(view.maximumIngredients,view.ingredients.find(i=>i.template===template)!.quantity),chosen?.ingredients.filter(i=>i===template).length ?? 0);}
+    // The steppers' own updates clear a chosen recipe, so the choice is set again once they are filled.
+    if(chosen) recipe.value=String(chosen.key);showCount();});
+  form.append(count);showCount();
   const mix=document.createElement('button');mix.type='submit';mix.textContent='Mix potion';mix.disabled=view.ingredients.length===0;form.append(mix);
-  form.addEventListener('submit',event=>{event.preventDefault();const selected:number[]=[];for(const [template,input] of inputs) for(let i=0;i<Number(input.value);i++) selected.push(template);
-    if(selected.length<1 || selected.length>8) {note.textContent='Choose one to eight ingredients.';return;}
+  form.addEventListener('submit',event=>{event.preventDefault();const selected:number[]=[];for(const [template,stepper] of amounts) for(let i=0;i<stepper.value();i++) selected.push(template);
+    if(selected.length<view.minimumIngredients || selected.length>view.maximumIngredients) {note.textContent=`Choose ${view.minimumIngredients} to ${view.maximumIngredients} ingredients.`;return;}
     claim({action:'potion-mix',revision:view.revision,text:JSON.stringify(selected)});
   });
 }
@@ -178,7 +214,8 @@ export function isSummoningProjection(value:unknown):value is SummoningProjectio
     && (v.quote===null || !!v.quote && typeof v.quote.key==='string' && typeof v.quote.name==='string' && typeof v.quote.quest==='string'
       && Number.isSafeInteger(v.quote.gold) && v.quote.gold>=0 && typeof v.quote.eligible==='boolean' && (v.quote.reason===null || typeof v.quote.reason==='string'));
 }
-export function renderSummoning(root:HTMLElement,view:SummoningProjection|null,claim:(action:UiAction)=>void):void {
+/** Summoning: a quoted summoning is paid for through the drawn confirm, and an offer is answered in its own dialog. */
+export function renderSummoning(root:HTMLElement,view:SummoningProjection|null,claim:(action:UiAction)=>void,ask:(question:ConfirmQuestion)=>void):void {
   root.replaceChildren();if(!view)return;
   const title=document.createElement('h3');title.textContent=view.offerRevision ? view.prince : 'Daedric summoning';root.append(title);
   const p=document.createElement('p');root.append(p);
@@ -189,10 +226,10 @@ export function renderSummoning(root:HTMLElement,view:SummoningProjection|null,c
       button.addEventListener('click',()=>claim({action:'daedra-answer',revision:view.offerRevision!,confirm:accept}));root.append(button);
     }
   } else if(view.quote){
-    p.textContent=view.quote.eligible ? `Summon ${view.quote.name} for ${view.quote.gold} gold. Payment is lost if the summoning fails.`
-      : view.quote.reason;
-    const button=document.createElement('button');button.type='button';button.textContent='Pay and summon';button.disabled=!view.quote.eligible;
-    button.addEventListener('click',()=>claim({action:'daedra-summon',revision:view.revision,key:view.quote!.key,amount:view.quote!.gold,confirm:true}));root.append(button);
+    const quote=view.quote;
+    p.textContent=quote.eligible ? `Summon ${quote.name} for ${quote.gold} gold. The payment is lost if the summoning fails.` : quote.reason;
+    const button=document.createElement('button');button.type='button';button.textContent='Pay and summon';button.disabled=!quote.eligible;
+    button.addEventListener('click',()=>ask({message:`Pay ${quote.gold} gold to summon ${quote.name}? The payment is lost if the summoning fails.`,accept:'Pay and summon',
+      onAccept:()=>claim({action:'daedra-summon',revision:view.revision,key:quote.key,amount:quote.gold,confirm:true})}));root.append(button);
   }
 }
-
