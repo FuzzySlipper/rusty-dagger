@@ -39,6 +39,93 @@ public sealed class DaggerfallItemFactoryTests
         }
     }
 
+    [Theory]
+    [InlineData(102, "leather", 3, 0)]
+    [InlineData(102, "chain", 0, 4)]
+    [InlineData(102, "iron", 0, 1)]
+    [InlineData(102, "daedric", 4, 3)]
+    [InlineData(104, "leather", 5, 1)]
+    [InlineData(104, "chain", 0, 6)]
+    [InlineData(104, "steel", 0, 2)]
+    [InlineData(104, "steel", 6, 5)]
+    [InlineData(105, "chain", 1, 4)]
+    [InlineData(106, "ebony", 4, 3)]
+    [InlineData(103, "leather", 1, 0)]
+    [InlineData(103, "iron", 0, 1)]
+    [InlineData(108, "leather", 2, 0)]
+    [InlineData(108, "mithril", 0, 1)]
+    [InlineData(108, "mithril", 2, 2)]
+    [InlineData(107, "iron", 2, 2)]
+    public void Requested_armor_variants_clamp_into_the_material_family_as_SetVariant_does(int template, string material, int requested, int expected)
+    {
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        DaggerfallItemFactory factory = new(definitions, RandomMinimum.Create());
+
+        DaggerfallCreatedItem item = factory.Create(new DaggerfallItemCreateRequest("Armor", $"clamp-{template}-{material}", DaggerfallItemOwner.Player,
+            TemplateIndex: template, Material: material, Variant: requested, Race: "breton", Gender: "male"));
+
+        Assert.Equal(expected, item.Metadata.Variant);
+    }
+
+    [Theory]
+    [InlineData(102, "leather", 0, 0)]
+    [InlineData(102, "chain", 4, 4)]
+    [InlineData(102, "iron", 1, 3)]
+    [InlineData(103, "chain", 1, 1)]
+    [InlineData(104, "leather", 0, 1)]
+    [InlineData(104, "chain", 6, 6)]
+    [InlineData(104, "iron", 2, 5)]
+    [InlineData(105, "leather", 0, 0)]
+    [InlineData(106, "steel", 1, 3)]
+    [InlineData(108, "chain", 1, 1)]
+    [InlineData(108, "iron", 1, 2)]
+    [InlineData(108, "leather", 0, 0)]
+    public void A_chosen_armor_template_randomizes_only_within_its_material_family(int template, string material, int minimum, int maximum)
+    {
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        DaggerfallItemCreateRequest request = new("Armor", $"random-{template}-{material}", DaggerfallItemOwner.Player,
+            TemplateIndex: template, Material: material, Race: "breton", Gender: "male");
+
+        Assert.Equal(minimum, new DaggerfallItemFactory(definitions, RandomMinimum.Create()).Create(request).Metadata.Variant);
+        Assert.Equal(maximum, new DaggerfallItemFactory(definitions, RandomMaximum.Create()).Create(request).Metadata.Variant);
+    }
+
+    [Fact]
+    public void Random_armor_and_non_clothing_items_take_the_donor_default_variant()
+    {
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        DaggerfallItemTemplateDefinition helm = definitions.ItemTemplateCatalog.Templates[107];
+        Assert.True(helm.Variants > 1);
+
+        // CreateRandomArmor applies variant 0 through SetVariant: an iron cuirass takes the first plate look.
+        DaggerfallCreatedItem randomArmor = new DaggerfallItemFactory(definitions, RandomMinimum.Create()).Create(
+            new DaggerfallItemCreateRequest("Armor", "random-armor", DaggerfallItemOwner.Player, Material: "iron", Race: "breton", Gender: "male"));
+        Assert.Equal((102, 1), (randomArmor.TemplateIndex, randomArmor.Metadata.Variant));
+
+        DaggerfallItemFactory maximum = new(definitions, RandomMaximum.Create());
+        Assert.Equal(helm.Variants - 1, maximum.Create(new DaggerfallItemCreateRequest("Armor", "helm", DaggerfallItemOwner.Player,
+            TemplateIndex: 107, Material: "iron", Race: "breton", Gender: "male")).Metadata.Variant);
+        foreach (DaggerfallItemTemplateDefinition template in definitions.ItemTemplateCatalog.Templates.Values
+            .Where(template => template.Variants > 1 && template.Index != 131 && template.Groups.Count != 0
+                && !template.Groups.Any(group => group is "Armor" or "MensClothing" or "WomensClothing")))
+            Assert.Equal(0, maximum.Create(Request(template)).Metadata.Variant);
+    }
+
+    [Fact]
+    public void Authored_armor_without_a_variant_defaults_to_its_material_family_first_look()
+    {
+        DaggerfallDefinitions definitions = LoadDefinitions();
+        DaggerfallItemDefinition DefinitionFor(int template, string material) =>
+            definitions.RequireItem(new DaggerfallItemId(new DaggerfallItemFactory(definitions, RandomMinimum.Create()).Create(
+                new DaggerfallItemCreateRequest("Armor", $"authored-{template}-{material}", DaggerfallItemOwner.Player,
+                    TemplateIndex: template, Material: material, Race: "breton", Gender: "male")).Item.Value));
+
+        Assert.Equal(1, DaggerfallItemInstanceMetadata.Default(DefinitionFor(102, "iron"), DaggerfallItemOwner.Player).Variant);
+        Assert.Equal(6, DaggerfallItemInstanceMetadata.Default(DefinitionFor(104, "chain"), DaggerfallItemOwner.Player).Variant);
+        Assert.Equal(0, DaggerfallItemInstanceMetadata.Default(DefinitionFor(104, "leather"), DaggerfallItemOwner.Player).Variant);
+        Assert.Equal(1, DaggerfallItemInstanceMetadata.Default(DefinitionFor(103, "steel"), DaggerfallItemOwner.Player).Variant);
+    }
+
     [Fact]
     public void Materialized_definitions_and_instance_condition_follow_ItemBuilder_material_rules()
     {
@@ -100,6 +187,8 @@ public sealed class DaggerfallItemFactoryTests
         var artifact = new DaggerfallItemFactory(definitions, RandomMinimum.Create()).Create(
             new("Magic", key, DaggerfallItemOwner.Player, MagicItemKey: key, Race: "breton", Gender: "male"));
         Assert.Equal(material, artifact.Metadata.Material);
+        // SetArtifact resets the variant to 0 without SetVariant's material clamp.
+        Assert.Equal(0, artifact.Metadata.Variant);
         var definition = definitions.RequireItem(new(artifact.Item.Value));
         if (definition.Armor is { } armor) Assert.Equal(material, armor.Material);
         else
