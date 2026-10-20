@@ -34,7 +34,7 @@ export function mountNotebook(root: HTMLElement, claim: (action: NotebookAction)
   shell.className = 'dagger-notebook';
   shell.setAttribute('aria-label', 'Book reader and notebook');
   const reader = document.createElement('section');
-  reader.className = 'dagger-book-reader';
+  reader.className = 'dagger-book-reader dagger-frame'; reader.dataset.skin = 'parchment';
   const notes = document.createElement('section');
   notes.className = 'dagger-user-notes';
   shell.append(reader, notes);

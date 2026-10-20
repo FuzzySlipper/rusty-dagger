@@ -58,8 +58,11 @@ internal sealed partial class DaggerfallSession
         {
             DaggerfallControlSettings candidate = action.Kind == DaggerfallUiActionKind.ControlsReset
                 ? new() : DaggerfallControlSettings.Parse(_controlSettings.Serialize());
+            // Resetting the controls keeps the interface scale: it is a display choice, not a binding.
+            if (action.Kind == DaggerfallUiActionKind.ControlsReset) candidate.SetUiScale(_controlSettings.UiScale);
             if (action.Kind == DaggerfallUiActionKind.ControlsLook) candidate.SetLook(action.Sensitivity!.Value, action.Invert!.Value);
             else if (action.Kind == DaggerfallUiActionKind.ControlsRebind) candidate.Rebind(action.Item!, [action.Key!], action.Confirm);
+            else if (action.Kind == DaggerfallUiActionKind.ControlsUiScale) candidate.SetUiScale(action.Scale);
             ApplyControlSettings(candidate);
             _preferencesToSave = candidate.Serialize();
             _controlDiagnostic = "Control settings applied.";

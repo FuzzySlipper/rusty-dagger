@@ -1,4 +1,4 @@
-import { cssUrl, image, reportMissingArt } from './art.js';
+import { image } from './art.js';
 import { mountContextMenu } from './context-menu.js';
 import { mountDrag, type Drag } from './drag.js';
 import type { NavigationSurface } from './navigation.js';
@@ -135,11 +135,10 @@ export function mountInventory(
 ): { update(value: InventoryProjection): void; refresh(): void; release(): boolean; openContextMenu(): boolean; closeContextMenu(): void; dispose(): void } {
   const shell = document.createElement('section');
   shell.className = 'dagger-inventory';
-  applyAuthoredArt(shell);
   shell.setAttribute('aria-label', 'Inventory and equipment');
 
   const heading = document.createElement('h2');
-  heading.className = 'dagger-inventory-title';
+  heading.className = 'dagger-inventory-title dagger-frame-title';
   heading.textContent = 'Inventory & equipment';
   const status = document.createElement('p');
   status.className = 'dagger-inventory-status';
@@ -182,7 +181,7 @@ export function mountInventory(
   const gridButtons = Array.from({ length: GRID_SLOT_COUNT }, (_, index) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'dagger-inventory-grid-slot';
+    button.className = 'dagger-inventory-grid-slot dagger-slot';
     button.dataset.inventoryGrid = String(index);
     button.setAttribute('aria-label', `Pack slot ${index + 1}, empty`);
     grid.append(button);
@@ -191,7 +190,7 @@ export function mountInventory(
   const equipmentButtons = Array.from({ length: EQUIPMENT_SLOT_COUNT }, (_, index) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'dagger-inventory-equipment-slot';
+    button.className = 'dagger-inventory-equipment-slot dagger-slot';
     button.dataset.inventoryEquipmentIndex = String(index);
     button.setAttribute('aria-label', `Equipment slot ${index + 1}, empty`);
     equipment.append(button);
@@ -428,9 +427,6 @@ export function mountInventory(
     // otherwise leave the panel painted without it.
     refresh(): void {
       if (disposed) return;
-      // Published art can arrive after the panel was mounted, so the frame's custom properties are
-      // re-applied even while the panel still holds no state to redraw.
-      applyAuthoredArt(shell);
       if (current === null) return;
       render(current);
     },
@@ -478,7 +474,7 @@ function createDetails(): {
   render(item: InventoryItem | undefined, slots: readonly EquipmentSlot[]): void;
 } {
   const element = document.createElement('section');
-  element.className = 'dagger-inventory-details';
+  element.className = 'dagger-inventory-details dagger-panel';
   const heading = document.createElement('h3');
   heading.textContent = 'Item details';
   const name = document.createElement('strong');
@@ -729,34 +725,6 @@ function renderOverflow(container: HTMLElement, items: readonly InventoryItem[])
     row.append(button);
     return row;
   }));
-}
-
-function applyAuthoredArt(element: HTMLElement): void {
-  // The frame art is published content the product reads by media identity, not a file staged
-  // beside this bundle. A session that cannot deliver one says which, rather than painting a panel
-  // that silently lost its frame.
-  const missing: string[] = [];
-  const art = (id: string): string => {
-    const source = image(id);
-    if (source === null) {
-      missing.push(id);
-      return 'none';
-    }
-
-    return cssUrl(source);
-  };
-  element.style.setProperty('--inventory-panel-art', art('ui.stone.texture.v2'));
-  element.style.setProperty('--inventory-title-art', art('ui.stone.title.v2'));
-  element.style.setProperty('--inventory-slot-art', art('ui.stone.slot.v2'));
-  if (missing.length === 0) {
-    element.removeAttribute('data-art-missing');
-  } else {
-    element.setAttribute('data-art-missing', missing.join(' '));
-  }
-  // The attribute above stays current on every paint; the console report fires only when the
-  // missing set changes, so mount-before-art and steady-state repaints stay silent after the
-  // first report while newly missing art still warns.
-  reportMissingArt('inventory', missing);
 }
 
 function emptyMark(): HTMLElement {

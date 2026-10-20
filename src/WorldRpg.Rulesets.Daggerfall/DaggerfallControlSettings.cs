@@ -73,6 +73,33 @@ public sealed class DaggerfallControlSettings
     /// <summary>Whether the vertical look device axis is inverted.</summary>
     public bool InvertVertical { get; private set; } = DaggerfallTuning.Defaults.PlayerControl.InvertVertical;
 
+    /// <summary>The smallest UI scale a player may choose.</summary>
+    public const float MinimumUiScale = 0.5f;
+    /// <summary>The largest UI scale a player may choose.</summary>
+    public const float MaximumUiScale = 3f;
+    /// <summary>The step a chosen UI scale moves in.</summary>
+    public const float UiScaleStep = 0.25f;
+
+    /// <summary>
+    /// The player's chosen UI scale, or null to follow the window: the DOM then picks the largest
+    /// step that fits its reference layout. A presentation preference, persisted with the controls.
+    /// </summary>
+    public float? UiScale { get; private set; }
+
+    /// <summary>Chooses a UI scale, or null for automatic; a value off the steps or out of range is refused.</summary>
+    public void SetUiScale(float? scale)
+    {
+        if (scale is float value
+            && (!float.IsFinite(value) || value < MinimumUiScale || value > MaximumUiScale
+                || MathF.Abs(value / UiScaleStep - MathF.Round(value / UiScaleStep)) > 1e-4f))
+        {
+            throw new ArgumentOutOfRangeException(nameof(scale), scale,
+                $"The interface scale is {MinimumUiScale:0.##} to {MaximumUiScale:0.##} in steps of {UiScaleStep:0.##}.");
+        }
+
+        UiScale = scale;
+    }
+
     /// <summary>Changes the player look preferences without changing authored tuning.</summary>
     public void SetLook(float sensitivity, bool invertVertical)
     {
@@ -85,6 +112,7 @@ public sealed class DaggerfallControlSettings
         _bindings = CopyBindings(preferences.Bindings);
         SetLook(preferences.LookSensitivity, preferences.InvertVertical);
         ActionDrivenTime = preferences.ActionDrivenTime;
+        SetUiScale(preferences.UiScale);
     }
 
     /// <summary>The controls one action answers to.</summary>
@@ -150,7 +178,7 @@ public sealed class DaggerfallControlSettings
     public void Reset() { ReplaceBindings(CreateDefaultBindings()); SetLook(1, DaggerfallTuning.Defaults.PlayerControl.InvertVertical); }
 
     /// <summary>Serializes the bindings for the settings holder.</summary>
-    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
+    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
 
     /// <summary>Parses a complete persisted binding set after validating every action and control.</summary>
     public static DaggerfallControlSettings Parse(string json)
@@ -296,7 +324,8 @@ internal sealed record DaggerfallControlPreferences(
     [property: JsonRequired] Dictionary<string, List<string>> Bindings,
     [property: JsonRequired] float LookSensitivity,
     [property: JsonRequired] bool InvertVertical,
-    bool ActionDrivenTime = false);
+    bool ActionDrivenTime = false,
+    float? UiScale = null);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(DaggerfallControlPreferences))]

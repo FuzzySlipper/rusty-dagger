@@ -162,10 +162,28 @@ example (`src/ui/inventory.ts`).
 
 ## Scale and art
 
-**UI scale.** Game UI is sized in `rem`, so the Engine's UI scale
+**UI scale.** Game UI is sized in `rem`; only hairline borders and
+outlines (1-2 px) stay in pixels. The Engine's UI scale
 (`context.ui.setScale`, which sets the root font size and
-`--rusty-ui-scale`) scales all of it. The player's UI scale is a persisted
-player preference, offered in Settings.
+`--rusty-ui-scale`) therefore scales all of it, and `src/ui/scale.ts` is
+the one owner that calls it:
+
+- The layout is designed for a 1920x1080 window in CSS pixels at UI scale 1.
+- While the player has chosen automatic, the scale is the largest step at
+  which that layout still fits the window. For example, 1 at 1080p, 1.25 at
+  1440p and 2 at 4K (with the operating system at 100%), and 0.5 for a
+  1280x720 window. It follows the window as it resizes.
+- The player can choose a scale instead, in Settings ("Interface scale": a
+  stepper plus Automatic). The choice is a player preference that
+  `DaggerfallControlSettings.UiScale` persists, never TypeScript state.
+  `controls-ui-scale` sets it, and no `scale` means automatic.
+- The bounds and step (0.5 to 3 in steps of 0.25) are published with the
+  controls (`controls.uiScaleRange`), so the stepper cannot leave them.
+
+The kit has no pixel grid, so any step is fine for it. Classic art keeps its
+own whole-pixel rule through `fitPixelArt`. The browser's default
+fixed-pixel font for form controls is replaced by a rem size, so inputs,
+selects and buttons scale too.
 
 **Classic art** (title, death, character-sheet chrome, faces, item icons) is
 derived from the operator's Arena2 files, never committed, and delivered in
@@ -179,8 +197,49 @@ art made for this project; see "Authored UI art" below.
 **Plain CSS** stays plain: colour, type, spacing, borders and layout that need
 no picture.
 
-**Cursors** are CSS image cursors (`cursor: url(...) x y, fallback`) with the
-kit's hotspot; text fields keep the text caret.
+**Cursors** are CSS image cursors from the kit
+(`image-set(url(...) 2x) x y, fallback`) with the kit's hotspot; text
+fields keep the text caret. The desktop window draws only the fallback
+until the Engine maps image cursors (#10104).
+
+## Skin
+
+`src/ui/skin.ts` turns the published kit into CSS custom properties on the
+document root each time art arrives. Every primitive in `src/ui/skin.css`
+is drawn from them:
+
+- An image `ui.<family>.<name>[.<state>].v2` is published as
+  `--skin-<family>-<name>[-<state>]` (its `url()`).
+- Alongside it go `-slice` (9-slice insets in image pixels), `-width` (the
+  insets in rem at the image's display scale) and `-size` (the whole image
+  in rem).
+- Cursors become `--dagger-cursor`, `--dagger-cursor-pointer` and
+  `--dagger-cursor-grab`, drawn at half size with the scaled hotspot.
+
+Screens lay out; they do not set frame, button or slot art of their own. The
+vocabulary:
+
+| Hook | Draws |
+| --- | --- |
+| `.dagger-frame` | Stone window (9-slice, no fill) over the tiled stone ground: the menu, confirmations, spell choices, the court, death and character creation |
+| `.dagger-frame[data-skin="parchment"]` | Parchment reading surface with its page filled and dark ink: dialogue, dungeon text, quest messages, the journal page and the book reader. Controls on it stay stone |
+| `.dagger-frame-title` | Brass title plate |
+| `.dagger-panel` | Recessed stone inset inside a frame, such as item details and character sections |
+| `.dagger-divider` | Brass rule |
+| Game-UI `button` | Stone button. Hover and focus are lit, pressed sinks, disabled is dimmed. Slots, tabs, map markers and context-menu entries are excluded |
+| `[role="tab"]` | Stone tab; `aria-selected="true"` is lit |
+| `.dagger-slot` | Stone slot. Focus, selection and a drop target are lit; `is-drop-invalid` is red |
+| `[data-icon]` | A kit icon before the label: menu actions, activation modes |
+| `[data-inventory-equipment]` | An empty equipment slot shows its silhouette |
+| Scrollbars | Slate groove and brass handle |
+
+Focus always also keeps a brass outline, so keyboard and controller focus is
+visible on any ground.
+
+Every rule keeps a plain-CSS look when its image is absent. `applySkin`
+reports the primitives a session did not publish through `reportMissingArt`
+(context `skin`), so missing art is named, never blank. The tooltip is a
+small parchment note: a texture and a thin border, with no frame.
 
 ## Authored UI art
 

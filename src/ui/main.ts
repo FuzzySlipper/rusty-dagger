@@ -11,6 +11,8 @@ import { mountHud } from './hud.js';
 import { mountInteraction } from './interaction.js';
 import { mountMenu } from './menu.js';
 import { mountNavigation } from './navigation.js';
+import { mountScale } from './scale.js';
+import { applySkin } from './skin.js';
 import { isHud, isSaveSlots, type SaveSlotProjection } from './projection.js';
 import { renderQuestMessages } from './quests.js';
 import { mountShell } from './shell.js';
@@ -64,7 +66,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const choices = mountChoices(shell, quests, send);
   const death = mountDeath(shell, send);
   const dungeonText = mountDungeonText(shell, send);
-  const menu = mountMenu(shell, { send, ask, sync, isDead: () => dead, register: surface => navigation.register(surface) });
+  const scale = mountScale(context);
+  const menu = mountMenu(shell, { send, ask, sync, isDead: () => dead, register: surface => navigation.register(surface), uiScale: scale.current });
   const entry = mountEntry(shell, send, menu.creation, () => { if (menu.dialog.open) menu.dialog.close(); });
   const dialogue = mountDialogue(shell, send, ask);
 
@@ -98,6 +101,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   let artRevision = heldRevision();
   let artCooldown = 0;
   const redrawArt = (): void => {
+    // The kit becomes the skin's custom properties once per art block; every primitive draws from them.
+    applySkin();
     choices.refreshArt();
     death.refreshArt();
     entry.refreshArt();
@@ -129,6 +134,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     // joining it; its semantic choices and effects arrive in the same projection as the image.
     dead = value.mode === 'dead';
     if (isSaveSlots(value.saveSlots)) saveSlots = value.saveSlots;
+    // The interface scale follows the player's persisted choice, or the window while it is automatic.
+    if (value.controls?.uiScaleRange) scale.update(value.controls.uiScale ?? null, value.controls.uiScaleRange);
     const spellbook = isSpellbookProjection(value.spells) ? value.spells : null;
     choices.update(value);
     dungeonText.update(value);
@@ -158,6 +165,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
 
   return { dispose: () => {
     tooltips.dispose();
+    scale.dispose();
     for (const unregister of surfaces) unregister();
     navigation.dispose();
     interaction.dispose();

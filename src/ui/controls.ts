@@ -1,10 +1,15 @@
+import type { UiScaleRange } from './scale.js';
+
 export interface ControlsProjection {
   readonly diagnostic: string;
   readonly lookSensitivity?: number;
   readonly invertVertical?: boolean;
+  /** The player's chosen interface scale, or null to follow the window. */
+  readonly uiScale?: number | null;
+  readonly uiScaleRange?: UiScaleRange;
   readonly bindings: readonly { readonly id: string; readonly category: string; readonly keys: readonly string[]; readonly fixed: boolean }[];
 }
-export interface ControlAction { readonly action: string; readonly item?: string; readonly key?: string; readonly confirm?: boolean; readonly sensitivity?: number; readonly invert?: boolean }
+export interface ControlAction { readonly action: string; readonly item?: string; readonly key?: string; readonly confirm?: boolean; readonly sensitivity?: number; readonly invert?: boolean; readonly scale?: number }
 
 /** Only captures the player's proposed key. C# validates conflicts and owns the active map. */
 export function mountControls(root: HTMLElement, claim: (action: ControlAction) => void) {
@@ -31,7 +36,36 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
     const value = Number(sensitivity.value);
     if (Number.isFinite(value) && value > 0) claim({ action: 'controls-look', sensitivity: value, invert: invert.checked });
   });
-  root.append(status, sensitivityLabel, invertLabel, applyLook, rows, swapLabel, cancel, reset);
+  // Interface scale: a bounded stepper whose limits and steps the ruleset publishes, plus automatic.
+  // The choice is a player preference the ruleset persists; scale.ts applies it.
+  const scaleGroup = document.createElement('div'); scaleGroup.className = 'dagger-controls-scale'; scaleGroup.setAttribute('role', 'group');
+  scaleGroup.setAttribute('aria-label', 'Interface scale');
+  const scaleCaption = document.createElement('span'); scaleCaption.textContent = 'Interface scale ';
+  const smaller = document.createElement('button'); smaller.type = 'button'; smaller.textContent = '−'; smaller.setAttribute('aria-label', 'Smaller interface');
+  const scaleValue = document.createElement('output'); scaleValue.setAttribute('aria-live', 'polite');
+  const larger = document.createElement('button'); larger.type = 'button'; larger.textContent = '+'; larger.setAttribute('aria-label', 'Larger interface');
+  const automatic = document.createElement('button'); automatic.type = 'button'; automatic.textContent = 'Automatic';
+  scaleGroup.append(scaleCaption, smaller, scaleValue, larger, automatic);
+  let scale: { chosen: number | null; range: UiScaleRange; effective: number } | null = null;
+  const stepScale = (direction: number): void => {
+    if (scale === null) return;
+    const { range } = scale;
+    const next = Math.round(((scale.chosen ?? scale.effective) + direction * range.step) / range.step) * range.step;
+    if (next >= range.minimum && next <= range.maximum) claim({ action: 'controls-ui-scale', scale: next });
+  };
+  smaller.addEventListener('click', () => stepScale(-1));
+  larger.addEventListener('click', () => stepScale(1));
+  automatic.addEventListener('click', () => { if (scale?.chosen !== null) claim({ action: 'controls-ui-scale' }); });
+  const paintScale = (): void => {
+    if (scale === null) { scaleGroup.hidden = true; return; }
+    scaleGroup.hidden = false;
+    const shown = scale.chosen ?? scale.effective;
+    scaleValue.textContent = scale.chosen === null ? `Automatic (${shown}×)` : `${shown}×`;
+    smaller.disabled = shown - scale.range.step < scale.range.minimum - 1e-6;
+    larger.disabled = shown + scale.range.step > scale.range.maximum + 1e-6;
+    automatic.setAttribute('aria-pressed', String(scale.chosen === null));
+  };
+  root.append(status, scaleGroup, sensitivityLabel, invertLabel, applyLook, rows, swapLabel, cancel, reset);
   let lastLook = '';
   const submit = (key: string): void => {
     const item = capture;
@@ -46,8 +80,10 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
   };
   root.addEventListener('mousedown', pointer);
   return {
-    update(value: ControlsProjection): void {
+    update(value: ControlsProjection, effectiveScale = 1): void {
       diagnostic = value.diagnostic;
+      scale = value.uiScaleRange ? { chosen: value.uiScale ?? null, range: value.uiScaleRange, effective: effectiveScale } : null;
+      paintScale();
       const look = JSON.stringify([value.lookSensitivity, value.invertVertical]);
       if (look !== lastLook) { sensitivity.value = String(value.lookSensitivity ?? 1); invert.checked = value.invertVertical ?? true; lastLook = look; }
       if (!capture) status.textContent = diagnostic;

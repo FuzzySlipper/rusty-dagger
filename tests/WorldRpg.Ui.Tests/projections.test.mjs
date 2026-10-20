@@ -22,6 +22,17 @@ for (const file of await readdir(new URL('../../src/ui/', import.meta.url))) {
 await writeFile(join(output, 'debug-stub.js'), 'export async function mountLiveDebugPanel() { return { dispose() {} }; }');
 const { mountProductUi } = await import(pathToFileURL(join(output, 'main.js')));
 const art = await import(pathToFileURL(join(output, 'art.js')));
+const skin = await import(pathToFileURL(join(output, 'skin.js')));
+const uiScale = await import(pathToFileURL(join(output, 'scale.js')));
+
+/** A PNG data URL whose header states `width` x `height`: enough for the skin, which reads only the header. */
+function pngHeader(width, height) {
+  const bytes = Buffer.alloc(33);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(bytes, 0);
+  bytes.writeUInt32BE(13, 8); bytes.write('IHDR', 12, 'latin1');
+  bytes.writeUInt32BE(width, 16); bytes.writeUInt32BE(height, 20);
+  return `data:image/png;base64,${bytes.toString('base64')}`;
+}
 after(() => rm(output, { recursive: true, force: true }));
 
 function fixture() {
@@ -36,13 +47,15 @@ function fixture() {
   // The desktop window cancels these at once, so game UI never asks through them.
   for (const name of ['alert', 'confirm', 'prompt']) dom.window[name] = () => { throw new Error(`window.${name} is not game UI`); };
   const root = document.getElementById('root');
-  const actions = [];const modes=[];const focuses=[];
+  const actions = [];const modes=[];const focuses=[];const scales=[];
+  let uiScale = 1;
   let receive;
   let observe = null;
   const mounted = mountProductUi(root, {
     // A controller with no device: the test speaks the Engine's interface observations directly.
     input: { subscribe(observer) { observe = observer; return () => { observe = null; }; } },
-    ui: { setInteractionMode(mode) {modes.push(mode);}, focusGameplay() {focuses.push(modes.at(-1));} },
+    ui: { setInteractionMode(mode) {modes.push(mode);}, focusGameplay() {focuses.push(modes.at(-1));},
+      scale: () => uiScale, setScale(value) { uiScale = value; scales.push(value); } },
     projection: { subscribe(callback) { receive = callback; return () => {}; } },
     intents: { claim(_intent, value) { actions.push(value.data); } },
   });
@@ -54,7 +67,7 @@ function fixture() {
     assert.equal(dialog.open, false);
   };
   return {
-    root, actions, modes, focuses, answer,
+    root, actions, modes, focuses, scales, answer,
     pad(button) {
       observe?.({ context: 'interface', fact: { kind: 'controller-button', button, edge: 'pressed' } });
       observe?.({ context: 'interface', fact: { kind: 'controller-button', button, edge: 'released' } });
@@ -2563,6 +2576,81 @@ test('HUD projects the timed message stack, breath and activation mode without l
   } finally { f.dispose(); }
 });
 
+
+test('the skin publishes the kit as custom properties and reports the primitives it lacks', () => {
+  const f = fixture();
+  const warnings = [];
+  const warn = console.warn;
+  console.warn = message => warnings.push(message);
+  try {
+    const kit = [
+      { id: 'ui.stone.window.v2', image: pngHeader(256, 256), display: { scale: 0.5, slice: [36, 36, 36, 36], hotspot: null } },
+      { id: 'ui.stone.button.focus.v2', image: pngHeader(256, 72), display: { scale: 0.5, slice: [18, 22, 18, 22], hotspot: null } },
+      { id: 'ui.stone.texture.v2', image: pngHeader(256, 256), display: { scale: 0.5, slice: null, hotspot: null } },
+      { id: 'ui.cursor.grab.v2', image: pngHeader(64, 64), display: { scale: 0.5, slice: null, hotspot: [32, 32] } },
+      { id: 'ui.icon.menu.map.v2', image: pngHeader(128, 128), display: { scale: 0.5, slice: null, hotspot: null } },
+      { id: 'screen.title', image: pngHeader(320, 200) },
+    ];
+    f.publish({ uiArt: { revision: 'kit-1', images: kit } });
+    const root = document.documentElement.style;
+    assert.equal(root.getPropertyValue('--skin-stone-window'), `url("${kit[0].image}")`);
+    assert.equal(root.getPropertyValue('--skin-stone-window-slice'), '36 36 36 36');
+    assert.equal(root.getPropertyValue('--skin-stone-window-width'), '1.125rem 1.125rem 1.125rem 1.125rem');
+    assert.equal(root.getPropertyValue('--skin-stone-window-size'), '8rem 8rem');
+    assert.equal(root.getPropertyValue('--skin-stone-button-focus-width'), '.5625rem .6875rem .5625rem .6875rem'.replaceAll('.', '0.'));
+    assert.equal(root.getPropertyValue('--skin-stone-texture-size'), '8rem 8rem');
+    assert.equal(root.getPropertyValue('--skin-stone-texture-slice'), '');
+    assert.equal(root.getPropertyValue('--skin-icon-menu-map'), `url("${kit[4].image}")`);
+    // The 2x cursor is drawn at half size with its hotspot halved, falling back to the system cursor.
+    assert.equal(root.getPropertyValue('--dagger-cursor-grab'), `image-set(url("${kit[3].image}") 2x) 16 16, grabbing`);
+    assert.equal(root.getPropertyValue('--skin-button-face'), '');
+    assert.equal(document.documentElement.hasAttribute('data-skin'), true);
+    // Classic art is not kit art and publishes no skin property.
+    assert.equal(skin.skinProperty('screen.title'), null);
+    // The primitives this block lacks are named once; their CSS keeps its plain look.
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /^skin frame art is not published by this session: /);
+    assert.match(warnings[0], /ui\.stone\.button\.v2/);
+    assert.doesNotMatch(warnings[0], /ui\.stone\.window\.v2/);
+    // A later block that drops an image clears its properties.
+    f.publish({ uiArt: { revision: 'kit-2', images: kit.slice(1) } });
+    assert.equal(root.getPropertyValue('--skin-stone-window'), '');
+    assert.equal(root.getPropertyValue('--skin-stone-window-slice'), '');
+  } finally { console.warn = warn; f.dispose(); art.adopt({ revision: '', images: [] }); skin.applySkin(); document.documentElement.removeAttribute('style'); }
+});
+
+test('the interface scale fits the reference layout to the window unless the player chose one', () => {
+  const range = { minimum: 0.5, maximum: 3, step: 0.25 };
+  assert.equal(uiScale.chooseScale(1920, 1080, null, range), 1);
+  assert.equal(uiScale.chooseScale(2560, 1440, null, range), 1.25);
+  assert.equal(uiScale.chooseScale(3840, 2160, null, range), 2);
+  assert.equal(uiScale.chooseScale(1280, 720, null, range), 0.5);
+  assert.equal(uiScale.chooseScale(3440, 1440, null, range), 1.25, 'an ultrawide window is bounded by its height');
+  assert.equal(uiScale.chooseScale(200, 100, null, range), 0.5, 'the bounds hold');
+  assert.equal(uiScale.chooseScale(1920, 1080, 1.5, range), 1.5, "the player's choice wins");
+  assert.equal(uiScale.chooseScale(1920, 1080, 9, range), 3);
+  const f = fixture();
+  try {
+    window.innerWidth = 3840; window.innerHeight = 2160;
+    f.publish({ controls: { diagnostic: '', bindings: [], uiScale: null, uiScaleRange: range } });
+    assert.deepEqual(f.scales, [2]);
+    f.publish({ controls: { diagnostic: '', bindings: [], uiScale: 1.5, uiScaleRange: range } });
+    assert.deepEqual(f.scales, [2, 1.5]);
+    // Settings steps the scale through the ruleset and offers automatic back.
+    f.root.querySelector('[data-action="settings"]').click();
+    const group = f.root.querySelector('.dagger-controls-scale');
+    assert.equal(group.hidden, false);
+    assert.equal(group.querySelector('output').textContent, '1.5×');
+    group.querySelector('[aria-label="Larger interface"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-ui-scale', scale: 1.75 });
+    group.querySelector('[aria-label="Smaller interface"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-ui-scale', scale: 1.25 });
+    [...group.querySelectorAll('button')].find(button => button.textContent === 'Automatic').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-ui-scale' });
+    f.publish({ controls: { diagnostic: '', bindings: [], uiScale: 3, uiScaleRange: range } });
+    assert.equal(group.querySelector('[aria-label="Larger interface"]').disabled, true);
+  } finally { f.dispose(); }
+});
 
 test('look settings claim complete preferences and refresh after reload', () => {
   const f = fixture();

@@ -11,7 +11,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null, string? QuestDelivery = null,
     string? Note = null, string? Text = null, int? Page = null, int? Destination = null,
     string? Tone = null, string? Topic = null, int? Hours = null, int? Region = null, int? Days = null,
-    bool Cautious = false, bool Inn = false, bool Ship = false, bool Open = false, int? Question = null, int? Answer = null, float? Sensitivity = null, bool? Invert = null, bool? Enabled = null)
+    bool Cautious = false, bool Inn = false, bool Ship = false, bool Open = false, int? Question = null, int? Answer = null, float? Sensitivity = null, bool? Invert = null, bool? Enabled = null, float? Scale = null)
 {
     /// <summary>The typed action the wire name names; resolved once when the action is built.</summary>
     internal DaggerfallUiActionKind Kind { get; } = DaggerfallUiAction.KindOf(Action);
@@ -21,7 +21,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
 internal enum DaggerfallUiActionKind
 {
     Begin, CinematicSkip, MapNoteAdd, MapNoteEdit, MapNoteRemove, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellSwap, SpellSort, SpellMakerDraft, SpellMakerBuy, PotionMix, ItemMakerDraft, ItemMakerBuy, DaedraSummon, DaedraAnswer,
-    ControlsRebind, ControlsReset, ControlsLook, ActionDrivenTime,
+    ControlsRebind, ControlsReset, ControlsLook, ControlsUiScale, ActionDrivenTime,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel, CharacterQuickStart,
     CharacterLevelAllocate, CharacterLevelCommit,
@@ -145,6 +145,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.ArtRequest, "art-request", DaggerfallUiPhases.Live | DaggerfallUiPhases.Dead),
         new(DaggerfallUiActionKind.ControlsRebind, "controls-rebind", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsLook, "controls-look", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.ControlsUiScale, "controls-ui-scale", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ActionDrivenTime, "action-driven-time", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsReset, "controls-reset", DaggerfallUiPhases.Live),
         // Character creation checks the entry screen itself, so a refusal is reported rather than dropped.
@@ -284,7 +285,7 @@ internal static class DaggerfallUiAction
             string? action = null, revision = null, item = null, targetEquipment = null, container = null, key = null, label = null, name = null, race = null, gender = null, career = null, mode = null, primarySkills = null, majorSkills = null, minorSkills = null, advantages = null, disadvantages = null, attribute = null, backgroundAnswers = null, attributeAllocations = null, skillAllocations = null, questInstance = null, questPrompt = null, questDelivery = null, note = null, text = null, tone = null, topic = null;
             int? targetGrid = null, faceIndex = null, reflexes = null, hitPointsPerLevel = null, questMessage = null, page = null, destination = null, hours = null, region = null, days = null;
             ulong? amount = null;
-            float? sensitivity = null; bool? invert = null, enabled = null;
+            float? sensitivity = null, scale = null; bool? invert = null, enabled = null;
             bool confirm = false, cautious = false, inn = false, ship = false, open = false;
             int? questChoice = null, classQuestion = null, classAnswer = null;
             foreach (JsonProperty property in root.EnumerateObject())
@@ -309,6 +310,11 @@ internal static class DaggerfallUiAction
                 {
                     if (!property.Value.TryGetSingle(out float number) || !float.IsFinite(number) || number <= 0) return null;
                     sensitivity = number; continue;
+                }
+                if (property.Name == "scale")
+                {
+                    if (!property.Value.TryGetSingle(out float number) || !float.IsFinite(number) || number <= 0) return null;
+                    scale = number; continue;
                 }
                 if (property.Name == "enabled")
                 {
@@ -502,6 +508,8 @@ internal static class DaggerfallUiAction
                 && enabled.HasValue ? new(action, Enabled: enabled) : null;
             if (action == "controls-look") return fields.SetEquals(["action", "sensitivity", "invert"])
                 && sensitivity.HasValue && invert.HasValue ? new(action, Sensitivity: sensitivity, Invert: invert) : null;
+            // No scale is the player choosing automatic: the DOM follows the window.
+            if (action == "controls-ui-scale") return fields.IsSubsetOf(["action", "scale"]) ? new(action, Scale: scale) : null;
             if (action == "controls-rebind")
                 return fields.IsSubsetOf(["action", "item", "key", "confirm"])
                     && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(key)
