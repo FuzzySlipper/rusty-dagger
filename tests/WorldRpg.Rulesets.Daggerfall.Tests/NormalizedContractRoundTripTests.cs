@@ -48,7 +48,7 @@ public sealed class NormalizedContractRoundTripTests
     /// The sections an importer document builder writes without a record type. Their names are fixed in
     /// that builder, so the ruleset's read of the published section is the check.
     /// </summary>
-    private static readonly string[] BuilderSections = ["itemTemplateLedger", "magic", "mobiles"];
+    private static readonly string[] BuilderSections = ["itemTemplateLedger", "magic", "mobiles", "paperDoll"];
 
     [Fact]
     public void Every_imported_section_is_written_by_an_importer_contract_this_suite_names()

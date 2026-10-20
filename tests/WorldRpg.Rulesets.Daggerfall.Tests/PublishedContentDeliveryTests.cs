@@ -135,7 +135,8 @@ public sealed class PublishedContentDeliveryTests
         Assert.Empty(unreachable);
 
         HashSet<string> characterPublished = [.. GeneratedContentFiles(content)
-            .Where(path => path.StartsWith("worldrpg/media/character/", StringComparison.Ordinal) && !path.EndsWith("character-media-inventory.json", StringComparison.Ordinal))];
+            .Where(path => path.StartsWith("worldrpg/media/character/", StringComparison.Ordinal) && !path.EndsWith("character-media-inventory.json", StringComparison.Ordinal)
+                && !path.StartsWith(PaperDollGroup, StringComparison.Ordinal))];
         // Every artifact the index names is an admitted file, and the group carries no other: an
         // artifact written without an index entry, or an entry with no artifact, fails here.
         // The escort HUD adds four child faces and binds the 61 faction faces alongside the
@@ -146,6 +147,23 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(
             [.. characterPublished.Except(characterListed).Order(StringComparer.Ordinal)],
             [.. characterListed.Except(characterPublished).Order(StringComparer.Ordinal)]);
+
+        // The paper doll's worn-item images are their own group under the character media, with their own
+        // generated index, which states the bytes it names and names every image the group carries.
+        HashSet<string> dollListed = [];
+        foreach (JsonElement artifact in Index(PaperDollGroup + "paper-doll-inventory.json").Artifacts)
+        {
+            string path = artifact.GetProperty("path").GetString()!;
+            byte[] bytes = content.ReadBytes(path).ToArray();
+            Assert.Equal(artifact.GetProperty("byteLength").GetInt64(), bytes.Length);
+            Assert.Equal(artifact.GetProperty("sha256").GetString(), Convert.ToHexStringLower(SHA256.HashData(bytes)));
+            dollListed.Add(path);
+        }
+
+        Assert.NotEmpty(dollListed);
+        Assert.Equal(
+            [.. GeneratedContentFiles(content).Where(path => path.StartsWith(PaperDollGroup, StringComparison.Ordinal) && !path.EndsWith("paper-doll-inventory.json", StringComparison.Ordinal)).Order(StringComparer.Ordinal)],
+            [.. dollListed.Order(StringComparer.Ordinal)]);
 
         // The families this repository cannot read at all are stated with their files and the donor
         // anchor, so a consumer that finds no artifact for one of them can tell "not published" from
@@ -800,6 +818,9 @@ public sealed class PublishedContentDeliveryTests
         content.ReadDirectory("worldrpg/media", recursive: true).Select(file => Encoding.UTF8.GetString(file.Path.Span));
 
     /// <summary>One generated content-group index, parsed, with its entries already checked to be an array.</summary>
+    /// <summary>The paper doll's worn-item image group, which carries its own generated index.</summary>
+    private const string PaperDollGroup = "worldrpg/media/character/paper-doll/";
+
     private readonly record struct GeneratedIndex(JsonElement Root, JsonElement[] Artifacts)
     {
         /// <summary>The families whose canvases the producer could not publish, with the reason it gave.</summary>
