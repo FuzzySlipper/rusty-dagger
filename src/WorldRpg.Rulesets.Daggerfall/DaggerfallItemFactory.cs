@@ -29,9 +29,9 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         DaggerfallItemTemplateDefinition template = request.TemplateIndex is int index
             ? eligible.SingleOrDefault(value => value.Index == index) ?? throw new ArgumentException($"Template {index} is not in category '{request.Category}'.", nameof(request))
             : eligible[Draw(request.Key + ".template", 0, eligible.Length - 1)];
-        int variant = request.Variant ?? (template.Variants > 0 ? Draw(request.Key + ".variant", 0, template.Variants - 1) : 0);
-        if (variant < 0 || variant >= Math.Max(1, template.Variants)) throw new ArgumentOutOfRangeException(nameof(request), "The selected variant is outside the template's retained range.");
+        if (request.Variant is < 0 || request.Variant >= Math.Max(1, template.Variants)) throw new ArgumentOutOfRangeException(nameof(request), "The selected variant is outside the template's retained range.");
         string material = SelectMaterial(template, request);
+        int variant = SelectVariant(template, request, material);
         (string? race, string? gender, string? dye) = SelectAppearance(template, request, material);
         int? bookId = SelectBook(template, request);
         int? potionRecipeKey = SelectPotionRecipe(template, request);
@@ -83,6 +83,8 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
             MaximumCondition = magic.Uses,
             Identified = magic.Type != 0,
             Enchantment = magic.Key,
+            // SetArtifact resets the variant without SetVariant's material clamp.
+            Variant = magic.Type != 0 ? 0 : baseItem.Metadata.Variant,
         };
         return new(baseItem.TemplateIndex, new InventoryItemId(itemId), Stackable: false, Quantity: 1, metadata.Validate());
     }
@@ -179,6 +181,21 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         if (template.Groups.Contains("Armor", StringComparer.Ordinal))
             return DaggerfallItemMaterialPolicy.RandomArmorMaterial(request.Level, Draw(request.Key + ".armor", 1, 100), Draw(request.Key + ".plate", 0, 255));
         return "none";
+    }
+
+    /// <summary>
+    /// ItemBuilder varies only clothing and armor. Clothing draws any variant; armor keeps to its material's
+    /// family, where CreateRandomArmor clamps variant 0 and CreateArmor for a chosen template randomizes.
+    /// </summary>
+    private int SelectVariant(DaggerfallItemTemplateDefinition template, DaggerfallItemCreateRequest request, string material)
+    {
+        if (template.Groups.Contains("Armor", StringComparer.Ordinal))
+            return request.Variant is not null || request.TemplateIndex is null
+                ? DaggerfallArmorVariantPolicy.Clamp(template.Index, material, template.Variants, request.Variant ?? 0)
+                : DaggerfallArmorVariantPolicy.Random(template.Index, material, template.Variants,
+                    (minimum, maximum) => Draw(request.Key + ".variant", minimum, maximum));
+        bool clothing = template.Groups.Any(group => group is "MensClothing" or "WomensClothing");
+        return request.Variant ?? (clothing && template.Variants > 0 ? Draw(request.Key + ".variant", 0, template.Variants - 1) : 0);
     }
 
     private (string? Race, string? Gender, string? Dye) SelectAppearance(DaggerfallItemTemplateDefinition template, DaggerfallItemCreateRequest request, string material)

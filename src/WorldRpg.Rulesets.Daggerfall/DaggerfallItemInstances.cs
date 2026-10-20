@@ -3,6 +3,7 @@ using WorldRpg.Kit.World;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -122,8 +123,13 @@ internal sealed record DaggerfallItemInstanceMetadata(
             && HeldCast is null && other.HeldCast is null;
     }
 
+    /// <summary>
+    /// Metadata for an authored item, which records no variant: armor takes ApplyArmorSettings' default,
+    /// variant 0 clamped into its material's family, so authored plate is never drawn with the leather look.
+    /// </summary>
     internal static DaggerfallItemInstanceMetadata Default(DaggerfallItemDefinition definition, DaggerfallItemOwner owner, ulong? creditValue = null) =>
-        new DaggerfallItemInstanceMetadata(definition.Id.Value, definition.Weapon?.Material ?? definition.Armor?.Material ?? "none", 0, 1, 1,
+        new DaggerfallItemInstanceMetadata(definition.Id.Value, definition.Weapon?.Material ?? definition.Armor?.Material ?? "none",
+            definition is { Template: { } template, Armor.Material: { } material } ? DaggerfallArmorVariantPolicy.Clamp(template.Index, material, template.Variants, 0) : 0, 1, 1,
             Identified: true, Stolen: false, QuestId: null, QuestItemSymbol: null, Enchantment: null, owner, CreditValue: creditValue).Validate();
 
     internal DaggerfallItemMetadataSave Capture() => new(Material, Variant, CurrentCondition, MaximumCondition,
