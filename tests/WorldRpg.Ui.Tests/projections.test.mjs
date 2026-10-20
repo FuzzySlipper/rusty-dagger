@@ -37,7 +37,7 @@ after(() => rm(output, { recursive: true, force: true }));
 
 function fixture() {
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' });
-  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLDialogElement', 'HTMLSelectElement', 'HTMLInputElement', 'Event', 'KeyboardEvent', 'MouseEvent', 'Option']) {
+  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLDialogElement', 'HTMLSelectElement', 'HTMLInputElement', 'Event', 'KeyboardEvent', 'MouseEvent', 'Option', 'MutationObserver']) {
     globalThis[key] = dom.window[key];
   }
   // JSDOM lays nothing out, so art sized to its box has no box to observe.
@@ -284,6 +284,24 @@ test('accessible wagon projection sends revision guarded put and take selections
   } finally { f.dispose(); }
 });
 
+test('a drawn tooltip goes away when the slot it named is filled', async () => {
+  const f = fixture();
+  try {
+    const empty = { revision: '1', message: '', equipmentChange: null, items: [], slots: [{ id: 'right-hand', label: 'Right hand', itemKey: null, group: 'weapons' }] };
+    f.publish({ inventory: empty });
+    f.root.querySelector('[data-action="inventory"]').click();
+    const slot = f.root.querySelector('[data-inventory-equipment="right-hand"]');
+    slot.dispatchEvent(new window.Event('pointerover', { bubbles: true }));
+    const tip = [...document.querySelectorAll('.dagger-tooltip')].find(element => !element.hidden);
+    assert.equal(tip?.textContent, 'Right hand: empty');
+    f.publish({ inventory: { ...empty, revision: '2', slots: [{ id: 'right-hand', label: 'Right hand', itemKey: 'unique:1', group: 'weapons' }],
+      items: [{ key: 'unique:1', definition: 'sword', label: 'Sword', quantity: '1', weight: 1, value: 1, details: '', icon: null, condition: null,
+        identified: true, gridSlot: null, equippedSlots: ['right-hand'], compatibleSlots: ['right-hand'] }] } });
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(tip.hidden, true, 'The filled slot no longer has a tooltip of its own, so the drawn one hides.');
+  } finally { f.dispose(); }
+});
+
 test('an item tooltip shows published labels and values without internal template identities', () => {
   const f = fixture();
   try {
@@ -310,7 +328,13 @@ test('an item tooltip shows published labels and values without internal templat
     assert.match(tip.textContent, /Your class cannot use long blade weapons\./);
     assert.doesNotMatch(tip.textContent, /template-|unique:7/);
     assert.equal(f.root.querySelector('.dagger-inventory-details'), null, 'There is no details panel; the tooltip is the item view.');
-    item.dispatchEvent(new window.Event('focusout', { bubbles: true }));
+    // A new projection redraws a shown tooltip from the new row, and hides it when the item has gone.
+    f.publish({ inventory: { revision: '2', message: '', equipmentChange: null, slots: [],
+      items: [{ key: 'unique:7', definition: 'template-116-steel', label: 'Steel Broadsword', quantity: '1', weight: 12, weightKilograms: 3, value: 40,
+        details: 'A steel blade.', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] }] } });
+    assert.equal(tip.hidden, false);
+    assert.match(tip.textContent, /Value40 gold/);
+    f.publish({ inventory: { revision: '3', message: '', equipmentChange: null, slots: [], items: [] } });
     assert.equal(tip.hidden, true);
   } finally { f.dispose(); }
 });
@@ -1397,6 +1421,7 @@ test('loot sits beside the pack: Take moves a chosen part of a stack or a whole 
     const panel = f.root.querySelector('.dagger-loot');
     const source = panel.querySelector('[data-transfer-side="source"]');
     const pack = panel.querySelector('[data-transfer-side="pack"]');
+    assert.equal(document.activeElement, source.querySelector('[data-transfer-key="stack:5"]'), 'The loot screen opens on its first Take.');
     assert.match(pack.textContent, /Gold × 25/, 'The pack pane shows what the player carries.');
     assert.equal(pack.querySelector('button'), null, 'Nothing is put into a corpse.');
     assert.match(panel.querySelector('.dagger-transfer-load').textContent, /Load 10 \/ 50 kg/);

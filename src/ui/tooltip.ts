@@ -14,10 +14,20 @@ export function mountTooltips(root: HTMLElement): { dispose(): void } {
   tip.hidden = true;
   let shownFor: Element | null = null;
 
+  // A redraw can take the text away from, or change it on, the element the tooltip is showing for
+  // (an equipment slot that has just been filled), so the tooltip follows its attribute.
+  const watch = new MutationObserver(() => {
+    if (shownFor === null) return;
+    const text = shownFor.getAttribute('data-tooltip');
+    if (!text || !shownFor.isConnected) hide(null);
+    else tip.textContent = text;
+  });
   const show = (target: Element): void => {
     const text = target.getAttribute('data-tooltip');
     if (!text) return;
     shownFor = target;
+    watch.disconnect();
+    watch.observe(target, { attributes: true, attributeFilter: ['data-tooltip'] });
     tip.textContent = text;
     (target.closest('dialog[open]') ?? root).append(tip);
     tip.hidden = false;
@@ -29,6 +39,7 @@ export function mountTooltips(root: HTMLElement): { dispose(): void } {
   const hide = (target: Element | null): void => {
     if (target !== null && target !== shownFor) return;
     shownFor = null;
+    watch.disconnect();
     tip.hidden = true;
   };
   const owner = (event: Event): Element | null => {
@@ -55,6 +66,7 @@ export function mountTooltips(root: HTMLElement): { dispose(): void } {
       root.removeEventListener('focusin', onOver);
       root.removeEventListener('focusout', onOut);
       window.removeEventListener('blur', onLeave);
+      watch.disconnect();
       tip.remove();
     },
   };

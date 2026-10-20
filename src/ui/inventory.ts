@@ -423,7 +423,12 @@ export function mountInventory(
     if (held !== null && !byKey.has(held.key)) drag.release();
     actions.refresh();
     drag.remark();
-    if (shownTipFor !== null && !shownTipFor.isConnected) hideTip();
+    // The item under a shown tooltip may have changed or gone with this projection: show it afresh.
+    if (shownTipFor !== null) {
+      const under = shownTipFor;
+      hideTip();
+      if (under.isConnected && itemFor(under.dataset.inventoryItem) !== undefined) showTip(under);
+    }
   };
 
   const renderPurse = (value: InventoryProjection): void => {

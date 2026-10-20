@@ -257,6 +257,11 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       menu.classList.toggle(`has-${name}`, action === name);
     menuTitle.textContent = PANEL_TITLES[action] ?? (saveSlotMode === 'save' ? 'Save game' : 'Load game');
     if (restorePanelFocus(action)) return;
+    // An item screen opens on its content: the first thing to take, or the first item in the pack.
+    const content = action === 'loot'
+      ? lootRoot.querySelector<HTMLButtonElement>('[data-transfer-move]:not(:disabled)') ?? lootRoot.querySelector<HTMLButtonElement>('.dagger-transfer-take-all:not(:disabled)')
+      : action === 'inventory' ? inventoryRoot.querySelector<HTMLButtonElement>('.dagger-inventory-grid [data-inventory-item], .dagger-inventory-grid button') : null;
+    if (content !== null) { content.focus(); return; }
     if (action === 'character') {
       menuTitle.focus({ preventScroll: true });
       menu.scrollTop = 0;
