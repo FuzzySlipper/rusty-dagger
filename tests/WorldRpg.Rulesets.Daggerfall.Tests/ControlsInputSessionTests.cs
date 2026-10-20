@@ -210,7 +210,7 @@ public sealed class ControlsInputSessionTests
         // button of the same name opens. There is no DOM harness in this repository, so the agreement
         // is pinned where the DOM spells it: as the data-action of a button in the DOM's own source.
         Assert.Equal(["inventory", "character", "menu"], requested);
-        string dom = File.ReadAllText(Path.Combine(root, "src/ui/main.ts"));
+        string dom = File.ReadAllText(Path.Combine(root, "src/ui/shell.ts"));
         Assert.All(requested, panel => Assert.Contains($"data-action=\"{panel}\"", dom, StringComparison.Ordinal));
     }
 

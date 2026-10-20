@@ -63,9 +63,11 @@ public sealed class HudSnapshotContractTests
             Convert.ToInt64(fatigue["current"]));
         Assert.True(snapshot.Remove("uiArt"));
         // The art revision is minted per session, so the shared file names a fixed one.
-        Assert.False(string.IsNullOrEmpty(Assert.IsType<string>(snapshot["uiArtRevision"])));
-        snapshot["uiArtRevision"] = "session-art-revision";
-        string published = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true }) + "\n";
+        string artRevision = Assert.IsType<string>(snapshot["uiArtRevision"]);
+        Assert.False(string.IsNullOrEmpty(artRevision));
+        // Demanded art revisions name parts of that same revision, so every copy takes the fixed name.
+        string published = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true })
+            .Replace(artRevision, "session-art-revision", StringComparison.Ordinal) + "\n";
         Assert.Contains("\"dialogue\": {", published, StringComparison.Ordinal);
         Assert.Contains("\"sheet\": {", published, StringComparison.Ordinal);
         string path = Path.Combine(root, HudSnapshotFixture);
