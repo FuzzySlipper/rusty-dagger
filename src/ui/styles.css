@@ -288,10 +288,11 @@
 .dagger-spellbook-entry { align-items: center; display: grid; gap: .625rem; grid-template-columns: auto minmax(0, 1fr) auto; text-align: left; width: 100%; }
 .dagger-spellbook-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dagger-spellbook-cost { color: #c9b78c; font-weight: 400; }
-/* The chosen spell is outlined, the readied one barred on the left; the skin's button rules would hide a tint. */
-.dagger-hud .dagger-spellbook-entry[aria-pressed="true"] { box-shadow: inset 0 0 0 .125rem #f0c96a; color: #fff3c9; }
-.dagger-hud .dagger-spellbook-row.is-ready .dagger-spellbook-entry { box-shadow: inset .25rem 0 0 #f0c96a; }
-.dagger-hud .dagger-spellbook-row.is-ready .dagger-spellbook-entry[aria-pressed="true"] { box-shadow: inset .25rem 0 0 #f0c96a, inset 0 0 0 .125rem #f0c96a; }
+/* The chosen spell is outlined, the readied one barred on the left. The skin's filled border image
+   paints over backgrounds and inset shadows, so both marks sit above it: an outline and a bar. */
+.dagger-hud .dagger-spellbook-entry[aria-pressed="true"] { color: #fff3c9; outline: .125rem solid #f0c96a; outline-offset: -.3125rem; }
+.dagger-spellbook-entry { position: relative; }
+.dagger-spellbook-row.is-ready .dagger-spellbook-entry::before { background: #f0c96a; bottom: .375rem; content: ""; left: .3125rem; position: absolute; top: .375rem; width: .25rem; }
 .dagger-spell-glyph { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 2rem; height: 2rem;
   background-repeat: no-repeat; image-rendering: pixelated; border: 1px solid #5b4d31; font: .7rem ui-monospace, monospace; color: #aa9c7a; }
 .dagger-spellbook-details { display: grid; gap: .5rem; padding: .75rem; }
