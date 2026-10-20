@@ -101,8 +101,10 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
   const open = (): NavigationSurface[] => surfaces.filter(surface => surface.isOpen()).sort((a, b) => b.layer - a.layer);
   const topmost = (): NavigationSurface | null => open()[0] ?? null;
   const visible = (element: HTMLElement): boolean => element.getClientRects().length > 0 || !hasLayout();
+  // A closed disclosure keeps its contents laid out but unseen, so only its summary can take focus.
+  const folded = (element: HTMLElement): boolean => element.closest('details:not([open]) > :not(summary)') !== null;
   const focusables = (scope: HTMLElement): HTMLElement[] =>
-    Array.from(scope.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(element => visible(element) && !element.closest('[hidden]'));
+    Array.from(scope.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(element => visible(element) && !element.closest('[hidden]') && !folded(element));
 
   /** A control focus can land on now: connected, inside the surface, enabled and not in a hidden part of it. */
   const usable = (surface: NavigationSurface, element: HTMLElement | null | undefined): element is HTMLElement =>

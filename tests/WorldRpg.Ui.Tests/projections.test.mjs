@@ -2543,6 +2543,20 @@ test('live banking dialogue emits bank-open with its actual revision', () => {
   } finally { f.dispose(); }
 });
 
+test('arrows step over the topics of a closed directory list to the next list', () => {
+  const f = fixture();
+  try {
+    f.publish({ activation: { mode: 'talk', dialogue: { revision: 'd-1', targetLabel: 'Hrolf', greeting: 'Well met.', tone: 'normal', question: null, reply: null,
+      diagnostics: [], topicGroups: [{ id: 'places', label: 'Where is…' }], topics: [
+        { id: 'direction:building:1', label: 'Where is The Gem?', group: 'places', category: 'Gem stores' },
+        { id: 'direction:building:2', label: 'Where is The Store?', group: 'places', category: 'General stores' }] } } });
+    const [gems, general] = f.root.querySelectorAll('.dagger-dialogue-topic-category > summary');
+    assert.equal(document.activeElement, gems);
+    gems.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown', bubbles: true, cancelable: true }));
+    assert.equal(document.activeElement, general, 'The closed list\'s own topics are not stops.');
+  } finally { f.dispose(); }
+});
+
 test('a conversation opens on its first topic, and keys hide the hover highlight until the pointer moves', () => {
   const f = fixture();
   try {
