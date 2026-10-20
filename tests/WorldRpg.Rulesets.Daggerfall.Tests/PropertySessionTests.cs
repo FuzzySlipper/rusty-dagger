@@ -232,6 +232,11 @@ public sealed class PropertySessionTests
         string coins = f.Session.State.Inventory.Read().Stacks.First(item => item.Definition.Value == "gold-piece").Id.Value;
         f.Submit(new { action = "property-put", key, item = $"stack:{coins}", amount = 4, revision = storage.Revision });
         Assert.Equal("4", Assert.Single(f.Session.ReadPropertyPresentation().Storage!.Items).Quantity);
+        Assert.True(Assert.Single(f.Session.ReadPropertyPresentation().Storage!.Items).Stackable, "Stored rows are inventory rows, so a part of a stack can be taken.");
+        // The store refuses exactly what is worn, and says so, so the screen offers only what it takes.
+        string[] worn = [.. f.Session.ReadInventoryPresentation().Items.Where(item => item.EquippedSlots.Length > 0).Select(item => item.Key)];
+        Assert.Equal(worn, storage.StoreRefusals.Select(refusal => refusal.Item));
+        Assert.All(storage.StoreRefusals, refusal => Assert.Equal("Unequip that item before storing it.", refusal.Reason));
         RulesetSavePayload saved = f.Session.CaptureSave();
         using DaggerfallSession restored = f.Restore(saved);
         Assert.Equal(ship.ProfileKey, restored.Sites.ActiveProfile);

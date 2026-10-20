@@ -1,4 +1,5 @@
-import type { InventoryItem } from './inventory.js';
+import type { InventoryItem, InventoryProjection } from './inventory.js';
+import { mountTransfer } from './transfer.js';
 
 export interface LootProjection {
   readonly container: string;
@@ -9,86 +10,57 @@ export interface LootProjection {
 }
 export type LootAction =
   | { readonly action: 'loot-take'; readonly container: string; readonly revision: string; readonly item: string; readonly amount?: number }
+  | { readonly action: 'loot-take-all'; readonly container: string; readonly revision: string }
   | { readonly action: 'loot-close'; readonly container: string };
 
-/** Stable DOM rows render C# values; a click only claims the selected item and revision. */
-import { image } from './art.js';
-
+/**
+ * A corpse, chest or pile beside the player's pack on the two-pane transfer layout. Take moves a
+ * row (a chosen part of a stack), Take All moves everything; each claims the revision shown.
+ */
 export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void): {
-  update(value: LootProjection | null): void; refresh(): void; dispose(): void;
+  update(value: LootProjection | null, inventory?: InventoryProjection | null): void; refresh(): void; dispose(): void;
 } {
   const shell = document.createElement('section');
   shell.className = 'dagger-loot';
   const heading = document.createElement('h2');
-  const rows = document.createElement('ul');
-  rows.className = 'dagger-loot-items';
   const status = document.createElement('p');
+  status.className = 'dagger-loot-status';
   status.setAttribute('role', 'status');
-  shell.append(heading, rows, status);
   root.append(shell);
+  shell.append(heading);
   let current: LootProjection | null = null;
-  const entries = new Map<string, { element: HTMLLIElement; label: HTMLElement; detail: HTMLElement; quantity: HTMLInputElement; button: HTMLButtonElement; icon: HTMLImageElement }>();
-  const onClick = (event: MouseEvent): void => {
-    const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-loot-item]') : null;
-    if (button?.dataset.lootItem && current) {
-      const quantity = button.closest('li')?.querySelector<HTMLInputElement>('[data-loot-quantity]');
-      const amount = quantity == null ? 1 : Number(quantity.value);
-      if (Number.isSafeInteger(amount) && amount > 0)
-        claim({ action: 'loot-take', container: current.container, revision: current.revision, item: button.dataset.lootItem, amount });
-    }
-  };
-  shell.addEventListener('click', onClick);
-  const render = (value: LootProjection | null): void => {
-    // The frame and its buttons are the skin's (skin.css), so a hidden panel has nothing to paint.
-    if (value === null) { current = null; return; }
+  const transfer = mountTransfer(shell, {
+    move(side, key, amount) {
+      if (side === 'source' && current !== null)
+        claim({ action: 'loot-take', container: current.container, revision: current.revision, item: key, amount });
+    },
+    takeAll() {
+      if (current !== null) claim({ action: 'loot-take-all', container: current.container, revision: current.revision });
+    },
+  });
+  shell.append(status);
+  let pack: InventoryProjection | null = null;
 
-    heading.textContent = value.title;
-    status.textContent = value.message;
-    if (current?.revision === value.revision) { current = value; return; }
-    current = value;
-    const keys = new Set(value.items.map(item => item.key));
-    for (const [key, row] of entries) if (!keys.has(key)) { row.element.remove(); entries.delete(key); }
-    for (const item of value.items) {
-      let row = entries.get(item.key);
-      if (!row) {
-        const element = document.createElement('li');
-        const icon = document.createElement('img');
-        icon.alt = ''; icon.draggable = false;
-        const text = document.createElement('div');
-        const label = document.createElement('strong');
-        const detail = document.createElement('p');
-        text.append(label, detail);
-        const quantity = document.createElement('input');
-        quantity.type = 'number'; quantity.min = '1'; quantity.step = '1'; quantity.value = '1';
-        quantity.dataset.lootQuantity = item.key;
-        quantity.setAttribute('aria-label', `Take quantity for ${item.label}`);
-        const button = document.createElement('button');
-        button.type = 'button'; button.dataset.lootItem = item.key;
-        element.append(icon, text, quantity, button);
-        row = { element, icon, label, detail, quantity, button };
-        entries.set(item.key, row); rows.append(element);
-      }
-      row.label.textContent = `${item.label} × ${item.quantity}`;
-      row.detail.textContent = item.details;
-      row.quantity.hidden = item.stackable !== true;
-      row.quantity.max = item.quantity;
-      if (Number(row.quantity.value) > Number(item.quantity)) row.quantity.value = item.quantity;
-      row.button.textContent = 'Take';
-      row.button.setAttribute('aria-label', `${row.button.textContent} ${item.label}`);
-      const iconSource = image(item.icon);
-      row.icon.hidden = iconSource === null;
-      if (iconSource !== null) row.icon.src = iconSource;
-    }
+  const render = (): void => {
+    // The frame and its buttons are the skin's (skin.css), so a hidden panel has nothing to paint.
+    if (current === null) { transfer.update(null); return; }
+    heading.textContent = current.title;
+    status.textContent = current.message;
+    transfer.update({
+      source: { title: 'Contents', empty: 'Nothing left to take.', rows: current.items.map(item => ({ item, command: 'Take' })) },
+      pack: { title: 'Your pack', empty: 'Your pack is empty.',
+        rows: (pack?.items ?? []).filter(item => item.equippedSlots.length === 0).map(item => ({ item, command: null })) },
+      takeAll: 'Take all',
+      encumbrance: pack?.encumbrance ?? null,
+    });
   };
   return {
-    update: render,
-    // Rows keep their icons, so art that arrives later repaints the contents already shown.
-    refresh(): void {
-      if (current === null) return;
-      const held = current;
-      current = null;
-      render(held);
+    update(value, inventory) {
+      current = value;
+      if (inventory !== undefined) pack = inventory;
+      render();
     },
-    dispose(): void { shell.removeEventListener('click', onClick); shell.remove(); },
+    refresh() { transfer.refresh(); },
+    dispose(): void { transfer.dispose(); shell.remove(); },
   };
 }

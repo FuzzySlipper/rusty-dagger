@@ -15,7 +15,13 @@ internal sealed record DaggerfallPropertyOfferView(string Key, string Name, stri
     /// <summary>Whether this property is a house the player can walk into once owned; ships are boarded instead.</summary>
     internal bool Enterable { get; init; }
 }
-internal sealed record DaggerfallPropertyStorageView(string Key, string Revision, DaggerfallWagonItemPresentation[] Items);
+/// <summary>
+/// An accessible property's storage: its rows as the inventory describes them, and the carried
+/// items it will not take now with the reason, so the transfer screen offers only what the store accepts.
+/// </summary>
+internal sealed record DaggerfallPropertyStorageView(string Key, string Revision, InventoryItemPresentation[] Items, DaggerfallTransferRefusal[] StoreRefusals);
+/// <summary>A carried item a transfer refuses, and why.</summary>
+internal sealed record DaggerfallTransferRefusal(string Item, string Reason);
 internal sealed record DaggerfallPropertyView(bool BankAvailable, DaggerfallPropertyOfferView[] Offers, DaggerfallPropertyStorageView? Storage);
 
 internal sealed partial class DaggerfallSession
@@ -109,7 +115,8 @@ internal sealed partial class DaggerfallSession
         if (AccessiblePropertyStorage() is { } key)
         {
             InventoryView contents = PropertyStorage.Read(key);
-            storage = new(key.Value, contents.StoreRevision.ToString(CultureInfo.InvariantCulture), PropertyItems(contents, PropertyStorage.DaggerfallItemOwnerFor(key)));
+            storage = new(key.Value, contents.StoreRevision.ToString(CultureInfo.InvariantCulture), PropertyItems(contents, PropertyStorage.DaggerfallItemOwnerFor(key)),
+                [.. _inventoryUi.Read().Items.Where(item => item.EquippedSlots.Length > 0).Select(item => new DaggerfallTransferRefusal(item.Key, UnequipBeforeStoring))]);
         }
         return new(bank, [.. offers], storage);
     }
@@ -159,7 +166,7 @@ internal sealed partial class DaggerfallSession
             || action.Item is null || !TryWagonSelection(source, action.Item, action.Amount, out InventoryContainerSelection? selection))
         { Presentation.SetOutcome("Inventory changed. Choose the item again."); return; }
         if (put && _inventoryUi.Read().Items.Any(item => item.Key == action.Item && item.EquippedSlots.Length > 0))
-        { Presentation.SetOutcome("Unequip that item before storing it."); return; }
+        { Presentation.SetOutcome(UnequipBeforeStoring); return; }
         try
         {
             if (put) PropertyStorage.TransferTo(key, selection!, revision);
@@ -170,9 +177,11 @@ internal sealed partial class DaggerfallSession
         { Presentation.SetOutcome(put ? "That item cannot be stored here." : "That item cannot be taken from storage."); }
     }
 
-    private DaggerfallWagonItemPresentation[] PropertyItems(InventoryView contents, DaggerfallItemOwner owner) =>
-        [.. contents.UniqueItems.Select(item => new DaggerfallWagonItemPresentation($"unique:{item.Entity.Value}", item.Definition.Value, "1", _inventoryUi.DescribeItem($"unique:{item.Entity.Value}", item.Definition.Value, 1, owner: owner).Label)),
-            .. contents.Stacks.Select(item => new DaggerfallWagonItemPresentation($"stack:{item.Id.Value}", item.Definition.Value, item.Quantity.ToString(CultureInfo.InvariantCulture), _inventoryUi.DescribeItem($"stack:{item.Id.Value}", item.Definition.Value, item.Quantity, owner: owner).Label))];
+    private const string UnequipBeforeStoring = "Unequip that item before storing it.";
+
+    private InventoryItemPresentation[] PropertyItems(InventoryView contents, DaggerfallItemOwner owner) =>
+        [.. contents.UniqueItems.Select(item => _inventoryUi.DescribeItem($"unique:{item.Entity.Value}", item.Definition.Value, 1, owner: owner)),
+            .. contents.Stacks.Select(item => _inventoryUi.DescribeItem($"stack:{item.Id.Value}", item.Definition.Value, item.Quantity, owner: owner))];
 
     private DaggerfallTransportActionResult BoardPropertyShip()
     {

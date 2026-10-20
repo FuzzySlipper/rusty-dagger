@@ -24,8 +24,17 @@ internal sealed record InventoryCategoryPresentation(string Id, string Label);
 internal sealed record EquipmentChangePresentation(string Cue, int RightHandDelayMilliseconds, int LeftHandDelayMilliseconds);
 internal sealed record DaggerfallBankAccountPresentation(int Region, string Gold, string RegionName);
 internal sealed record DaggerfallLoanPresentation(string Principal, string Remaining, long DueMinute, bool Defaulted, long DaysRemaining);
+/// <summary>
+/// One bank operation as the bank offers it now: whether it is available, the bounds of its amount
+/// (both zero when it takes none), and why it is not available when it is not.
+/// </summary>
+internal sealed record DaggerfallBankActionPresentation(string Action, string Label, bool Available, long Minimum, long Maximum, string? Refusal = null)
+{
+    internal bool TakesAmount => Maximum > 0 || Minimum > 0;
+}
 internal sealed record DaggerfallBankPresentation(int CurrentRegion, string CurrentBalance, DaggerfallBankAccountPresentation[] Accounts,
-    DaggerfallLoanPresentation? Loan, long MaximumNewLoan, string CurrentRegionName = DaggerfallRegionNames.Unnamed);
+    DaggerfallLoanPresentation? Loan, long MaximumNewLoan, string CurrentRegionName = DaggerfallRegionNames.Unnamed,
+    DaggerfallBankActionPresentation[]? Actions = null);
 internal sealed record InventoryPresentation(string Revision, InventoryItemPresentation[] Items, EquipmentSlotPresentation[] Slots, string Message,
     EquipmentChangePresentation? EquipmentChange = null, DaggerfallEncumbrance? Encumbrance = null, DaggerfallCurrencyTotals? Currency = null,
     DaggerfallBankPresentation? Bank = null, InventoryCategoryPresentation[]? Categories = null);
@@ -47,6 +56,7 @@ internal sealed class DaggerfallInventoryPresentation
     private Func<WorldRpg.Kit.Controls.WorldPoint?>? groundPosition;
     private DaggerfallInventoryUseService? itemUse;
     private DaggerfallRegionalBankState? bank;
+    private Func<ulong>? depositableGold;
     private DaggerfallLoanState? loans;
     private Func<DaggerfallCalendar>? loanCalendar;
     private Func<int>? loanLevel;
@@ -109,11 +119,12 @@ internal sealed class DaggerfallInventoryPresentation
         itemUse = use ?? throw new ArgumentNullException(nameof(use));
     }
 
-    internal void UseBank(DaggerfallRegionalBankState state, Func<int?> resolveCurrentRegion)
+    internal void UseBank(DaggerfallRegionalBankState state, Func<int?> resolveCurrentRegion, Func<ulong>? resolveDepositableGold = null)
     {
         if (bank is not null) throw new InvalidOperationException("Regional bank presentation is already configured.");
         bank = state ?? throw new ArgumentNullException(nameof(state));
         currentRegion = resolveCurrentRegion ?? throw new ArgumentNullException(nameof(resolveCurrentRegion));
+        depositableGold = resolveDepositableGold;
     }
 
     internal void UseLoans(DaggerfallLoanState state, Func<DaggerfallCalendar> calendar, Func<int> level)
@@ -240,7 +251,64 @@ internal sealed class DaggerfallInventoryPresentation
                 account.Gold.ToString(CultureInfo.InvariantCulture), RegionName(account.Region))).ToArray(),
             loan is null ? null : new(loan.Principal.ToString(CultureInfo.InvariantCulture), loan.Remaining.ToString(CultureInfo.InvariantCulture),
                 loan.DueMinute, loan.Defaulted, loan.Remaining == 0 ? 0 : Math.Max(0, (loan.DueMinute - now) / DaggerfallLoanPolicy.MinutesPerDay)),
-            loanLevel is null ? 0 : DaggerfallLoanPolicy.CalculateMaxBankLoan(loanLevel()), RegionName(region));
+            loanLevel is null ? 0 : DaggerfallLoanPolicy.CalculateMaxBankLoan(loanLevel()), RegionName(region), BankActions(region, loan));
+    }
+
+    /// <summary>
+    /// What each bank operation allows now, from the same owners the operations use: the amount
+    /// bounds the screen's steppers keep to and the reason an operation is closed.
+    /// </summary>
+    private DaggerfallBankActionPresentation[] BankActions(int region, DaggerfallLoanRecord? loan)
+    {
+        const long most = DaggerfallRegionalBankPolicy.MaximumTransactionAmount;
+        static long Bound(ulong value) => value > most ? most : (long)value;
+        DaggerfallCurrencyTotals funds = currency?.Read() ?? new(0, 0, 0);
+        ulong balance = bank!.BalanceForRegion(region);
+        ulong room = DaggerfallRegionalBankPolicy.MaximumAccountBalance - Math.Min(balance, DaggerfallRegionalBankPolicy.MaximumAccountBalance);
+        ulong reachable = depositableGold?.Invoke() ?? funds.Gold;
+        const string Empty = "This account holds no gold.";
+
+        long deposit = Math.Min(Bound(reachable), Bound(room));
+        long withdraw = Bound(balance);
+        long letter = LargestLetter(withdraw);
+        bool owing = loan is { Remaining: > 0 };
+        long levelLoan = loanLevel is null ? 0 : DaggerfallLoanPolicy.CalculateMaxBankLoan(loanLevel());
+        long lend = Math.Min(levelLoan, Bound(room));
+        string? lendRefusal = loan?.Defaulted == true ? "You defaulted on a loan here; this bank will not lend to you again."
+            : owing ? "Repay the loan you hold here before borrowing again."
+            : lend < DaggerfallLoanPolicy.MinimumPrincipal ? $"This bank lends no less than {DaggerfallLoanPolicy.MinimumPrincipal} gold, and will not lend you that much."
+            : null;
+        long remaining = owing ? Bound(loan!.Remaining) : 0;
+        ulong carriedFunds = funds.Gold > ulong.MaxValue - funds.LettersOfCredit ? ulong.MaxValue : funds.Gold + funds.LettersOfCredit;
+        long repayAccount = Math.Min(remaining, withdraw);
+        long repayCarried = Math.Min(remaining, Bound(carriedFunds > ulong.MaxValue - balance ? ulong.MaxValue : carriedFunds + balance));
+        return
+        [
+            new("currency-deposit-gold", "Deposit gold", deposit > 0, deposit > 0 ? 1 : 0, deposit,
+                deposit > 0 ? null : reachable == 0 ? "You carry no gold to deposit." : "This account cannot hold any more gold."),
+            new("currency-withdraw-gold", "Withdraw gold", withdraw > 0, withdraw > 0 ? 1 : 0, withdraw, withdraw > 0 ? null : Empty),
+            new("currency-deposit-letters", "Deposit all letters of credit", funds.LettersOfCredit > 0, 0, 0,
+                funds.LettersOfCredit > 0 ? null : "You carry no letters of credit."),
+            new("currency-withdraw-letter", "Withdraw a letter of credit", letter > 0, letter > 0 ? DaggerfallRegionalBankPolicy.MinimumLetterOfCredit : 0, letter,
+                letter > 0 ? null : $"A letter of credit is worth at least {DaggerfallRegionalBankPolicy.MinimumLetterOfCredit} gold, and the bank keeps {DaggerfallRegionalBankPolicy.LetterCommissionPercent}% more from the account."),
+            new("bank-transfer", "Transfer to another region", withdraw > 0, withdraw > 0 ? 1 : 0, withdraw, withdraw > 0 ? null : Empty),
+            new("bank-loan-issue", "Borrow into this account", lendRefusal is null, lendRefusal is null ? DaggerfallLoanPolicy.MinimumPrincipal : 0,
+                lendRefusal is null ? lend : 0, lendRefusal),
+            new("bank-loan-repay-account", "Repay the loan from this account", repayAccount > 0, repayAccount > 0 ? 1 : 0, repayAccount,
+                repayAccount > 0 ? null : owing ? Empty : "You hold no loan here."),
+            new("bank-loan-repay-carried", "Repay with carried gold and letters, then the account", repayCarried > 0, repayCarried > 0 ? 1 : 0, repayCarried,
+                repayCarried > 0 ? null : owing ? "You have no gold to repay with." : "You hold no loan here."),
+        ];
+    }
+
+    /// <summary>The largest letter of credit an account balance pays for, its commission included, or zero.</summary>
+    private static long LargestLetter(long balance)
+    {
+        long letter = balance * 100 / (100 + DaggerfallRegionalBankPolicy.LetterCommissionPercent);
+        while (DaggerfallRegionalBankPolicy.TryLetterDebit(letter + 1, out long debit, out _) && debit <= balance) letter++;
+        while (letter >= DaggerfallRegionalBankPolicy.MinimumLetterOfCredit
+            && !(DaggerfallRegionalBankPolicy.TryLetterDebit(letter, out long debit, out _) && debit <= balance)) letter--;
+        return letter >= DaggerfallRegionalBankPolicy.MinimumLetterOfCredit ? letter : 0;
     }
 
     private string RegionName(int region) => definitions.BuildingNames.RegionName(region);
