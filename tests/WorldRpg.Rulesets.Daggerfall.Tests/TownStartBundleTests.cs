@@ -82,6 +82,11 @@ public sealed class TownStartBundleTests
         Assert.Equal(DaggerfallWorldProfileIds.Interior(exterior.ProfileKey.Site, GeneralStore), game.Sites.ActiveProfile);
         Assert.Empty(game.State.Crime.Incidents);
 
+        // Inside the store the directory still answers, pointing from the store's door to each building.
+        DaggerfallDialogueTopicOption armorer = game.DialogueDirectory().First(topic => topic.Category == "Armorers");
+        DaggerfallDialogueDestination answer = Assert.IsType<DaggerfallDialogueDestination>(game.ResolveDialogueDirection(armorer.Id));
+        Assert.Contains(answer.Hint, new[] { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" });
+
         DaggerfallNpc merchant = Assert.Single(game.State.Npcs.All,
             npc => npc.Kind == DaggerfallNpcKind.Static && npc.Profile == game.Sites.ActiveProfile && npc.Services.Contains("shop"));
         Assert.Equal(DaggerfallServiceDenial.None, game.State.Services.ProviderAvailable(new(merchant.DurableId, merchant.Site, "shop")));
