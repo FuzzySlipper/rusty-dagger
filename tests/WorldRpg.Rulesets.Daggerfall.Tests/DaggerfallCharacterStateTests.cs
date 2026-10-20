@@ -307,9 +307,12 @@ public sealed class DaggerfallCharacterStateTests
 
         DaggerfallCharacterBackgroundSave changed = DaggerfallCharacterBackgroundPolicy.Update(definitions, career, draft.ToIdentity(), initial, answers, [], []);
 
-        Assert.Contains(originalFragment, initial.Biography.Single());
-        Assert.Contains(replacementFragment, changed.Biography.Single());
-        Assert.DoesNotContain(originalFragment, changed.Biography.Single());
+        // The donor's backstory is one line per record line (BiogFile.GenerateBackstory), and the
+        // record's justify tokens end those lines, so a fragment lands in one of several lines.
+        Assert.True(initial.Biography.Length > 1);
+        Assert.Contains(initial.Biography, line => line.Contains(originalFragment, StringComparison.Ordinal));
+        Assert.Contains(changed.Biography, line => line.Contains(replacementFragment, StringComparison.Ordinal));
+        Assert.DoesNotContain(changed.Biography, line => line.Contains(originalFragment, StringComparison.Ordinal));
         Assert.DoesNotContain(changed.Biography, line => line.Contains("%q", StringComparison.Ordinal));
 
         static string Fragment(DaggerfallDefinitions definitions, DaggerfallBiographyAnswerDefinition answer, string position) => definitions.Text.Require(
