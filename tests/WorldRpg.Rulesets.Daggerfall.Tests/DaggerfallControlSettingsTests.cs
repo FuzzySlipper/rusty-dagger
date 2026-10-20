@@ -11,6 +11,18 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallControlSettingsTests
 {
     [Fact]
+    public void Preferences_written_in_an_older_layout_are_refused_naming_what_is_missing_and_current_ones_round_trip()
+    {
+        // An earlier build stored the bindings as a bare action map, without the bindings wrapper or the look settings.
+        ArgumentException old = Assert.Throws<ArgumentException>(() => DaggerfallControlSettings.Parse("""{"move.forward":["KeyW"]}"""));
+        Assert.Contains("not the current preference layout", old.Message, StringComparison.Ordinal);
+        Assert.Contains("bindings", old.Message, StringComparison.Ordinal);
+        DaggerfallControlSettings current = new();
+        current.SetUiScale(1.5f);
+        Assert.Equal(current.Serialize(), DaggerfallControlSettings.Parse(current.Serialize()).Serialize());
+    }
+
+    [Fact]
     public void Every_physical_binding_names_a_digital_intent_declared_to_the_Engine()
     {
         XDocument project = XDocument.Load(Path.Combine(TestData.RepositoryRoot, "src/WorldRpg.Host/WorldRpg.Host.csproj"));

@@ -204,6 +204,16 @@ public sealed class WorldRpgProductSaveLoadTests
     }
 
     [Fact]
+    public void A_fresh_profile_starts_on_default_preferences_without_a_warning()
+    {
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(new InMemoryPersistenceService()), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+        Assert.Null(ruleset.RequireCurrent().PlayerPreferencesOutcome);
+        Assert.Null(ruleset.RequireCurrent().ActivePreferences);
+    }
+
+    [Fact]
     public void Corrupt_or_unwritten_player_preferences_keep_defaults_or_the_active_session_binding()
     {
         InMemoryPersistenceService persistence = new();
@@ -214,6 +224,14 @@ public sealed class WorldRpgProductSaveLoadTests
         Assert.Null(session.ActivePreferences);
         Assert.Null(session.PreferencesAtInitialPublication);
         Assert.Contains("defaults are active", session.PlayerPreferencesOutcome, StringComparison.Ordinal);
+        // Reported once, the unreadable value is removed: the next start is a clean one, with no warning.
+        Assert.Contains("discarded", session.PlayerPreferencesOutcome, StringComparison.Ordinal);
+        LoadTestRuleset next = new();
+        using (WorldRpgProduct restarted = new(Context(persistence), next, new GameBundleId("test.bundle")))
+        {
+            Assert.Null(next.RequireCurrent().PlayerPreferencesOutcome);
+            Assert.Null(next.RequireCurrent().ActivePreferences);
+        }
 
         product.Start();
         session.ArmPlayerPreferencesSave("look:normal");
