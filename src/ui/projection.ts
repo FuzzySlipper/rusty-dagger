@@ -3,6 +3,7 @@ import type { CharacterProjection } from './character.js';
 import type { ControlsProjection } from './controls.js';
 import type { InventoryProjection } from './inventory.js';
 import type { QuestJournalProjection } from './journal.js';
+import type { SpellIconAtlas } from './spell-icon.js';
 import type { LodgingProjection } from './lodging.js';
 import type { LootProjection } from './loot.js';
 import type { MapProjection } from './maps.js';
@@ -25,7 +26,7 @@ export interface DaggerHud {
   readonly legal?: {readonly revision:string; readonly phase:string; readonly title:string; readonly message:string; readonly charges:readonly string[]; readonly choices:readonly {readonly id:string; readonly label:string}[]} | null;
   readonly createItem?: { readonly revision:string; readonly options:readonly { readonly id:string; readonly label:string }[] } | null;
   readonly identify?: { readonly revision:string; readonly cost:number; readonly options:readonly { readonly id:string; readonly label:string }[] } | null;
-  readonly teleport?: { readonly revision:string; readonly anchorSet:boolean } | null;
+  readonly teleport?: { readonly revision:string; readonly options:readonly { readonly id:string; readonly label:string; readonly available:boolean }[] } | null;
   readonly dispel?: { readonly revision: string; readonly options: readonly { readonly id: string; readonly label: string }[] } | null;
   readonly resources: readonly { readonly id: string; readonly label: string; readonly current: number; readonly maximum: number }[];
   readonly lastOutcome: string;
@@ -97,6 +98,8 @@ export interface SpellMakerLimits {
 }
 export interface SpellMakerProjection {
   readonly revision:string;readonly provider:string;readonly draft:SpellMakerDraft;readonly limits:SpellMakerLimits;
+  /** The atlas the icon picker cuts each icon from. */
+  readonly icons?:SpellIconAtlas;
   readonly targets:readonly SpellMakerOption[];readonly elements:readonly SpellMakerOption[];
   readonly effects:readonly {readonly key:string;readonly name:string;readonly type:number;readonly subType:number;readonly school:string;
     readonly duration:boolean;readonly chance:boolean;readonly magnitude:boolean;readonly targets:number;readonly elements:number}[];
@@ -124,8 +127,12 @@ export interface PotionMakerProjection {
 }
 
 export interface SpellbookProjection {
-  readonly available: readonly {readonly key:string;readonly name:string;readonly cost:number;readonly canCast?:boolean}[];
+  /** Each known spell with its icon in the atlas and the school of its first effect, which the tabs group by. */
+  readonly available: readonly {readonly key:string;readonly name:string;readonly cost:number;readonly canCast?:boolean;readonly icon?:number;readonly school?:string}[];
   readonly ready:string|null;readonly result:string;
+  readonly icons?:SpellIconAtlas;
+  /** The schools in the order the tabs show them. */
+  readonly schools?:readonly {readonly id:string;readonly label:string}[];
   readonly sale?: {readonly revision:string;readonly provider:string;readonly offers:readonly {readonly key:string;readonly name:string;readonly castingCost:number;readonly price:number;readonly known:boolean}[]} | null;
   readonly maker?:SpellMakerProjection|null;
   readonly potionMaker?:PotionMakerProjection|null;

@@ -18,6 +18,13 @@ internal static class DaggerfallSpellConstruction
     /// <summary>The classic spellmaker's editor bounds; the screen draws its fields from these.</summary>
     internal const int MaximumNameLength = 31;
     internal const int IconCount = 69;
+    /// <summary>The classic icon atlas (<c>spell.icons</c>) lays its icons out this many to a row (donor SpellIconCollection).</summary>
+    internal const int IconAtlasColumns = 20;
+    internal const string IconAtlasMedia = "spell.icons";
+    /// <summary>The six schools of magic, in the order the spellbook's tabs show them.</summary>
+    internal static readonly (string Id, string Label)[] Schools =
+        [("destruction", "Destruction"), ("restoration", "Restoration"), ("illusion", "Illusion"),
+         ("alteration", "Alteration"), ("thaumaturgy", "Thaumaturgy"), ("mysticism", "Mysticism")];
     internal const int MaximumEffects = 3;
     internal const int MaximumDuration = 60;
     internal const int MaximumChance = 100;

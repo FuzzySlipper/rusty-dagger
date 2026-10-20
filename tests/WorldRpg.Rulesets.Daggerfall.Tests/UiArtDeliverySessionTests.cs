@@ -59,7 +59,7 @@ public sealed class UiArtDeliverySessionTests
         string[] portraits = [.. heads, .. factionFaces, .. childFaces, .. racialForms, .. backgrounds];
         string[] kit = AuthoredKit(root);
         Assert.Contains("ui.stone.window.v2", kit);
-        Assert.Equal(7 + kit.Length + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length + DaggerfallTravelMap.MediaIds.Count, images.Count);
+        Assert.Equal(8 + kit.Length + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length + DaggerfallTravelMap.MediaIds.Count, images.Count);
         Assert.All(images.Values, image => Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(image), StringComparison.Ordinal));
 
         // The bytes are the published artifacts, read from admitted content by their content name.
@@ -95,6 +95,8 @@ public sealed class UiArtDeliverySessionTests
             "screen.prison",
             "screen.start-menu",
             "screen.title",
+            // The spell icon atlas the spellbook and spellmaker cut every icon from.
+            "spell.icons",
             // The authored kit is published art, not files staged beside the UI bundle.
             .. kit,
             .. inputs.ClassicPresentation.InventoryIcons.Values,
@@ -359,7 +361,7 @@ public sealed class UiArtDeliverySessionTests
         // The supplied screens are served from the published group rather than fabricated: this fixture
         // states a minimal inventory, so every identity the art set carries has to be present here, and
         // reading the real artifacts keeps its entries honest about their bytes and digests.
-        string[] supplied = ["screen-character-generation", "screen-pick-02", "screen-prison", "screen-start-menu", "screen-title"];
+        string[] supplied = ["screen-character-generation", "screen-pick-02", "screen-prison", "screen-start-menu", "screen-title", "spell-icons"];
         Dictionary<string, (string Path, byte[] Bytes)> published = [];
         foreach (string name in supplied)
         {
@@ -381,7 +383,8 @@ public sealed class UiArtDeliverySessionTests
                 Entry("screen.pick.02", published["screen-pick-02"].Path, published["screen-pick-02"].Bytes),
                 Entry("screen.prison", published["screen-prison"].Path, published["screen-prison"].Bytes),
                 Entry("screen.start-menu", published["screen-start-menu"].Path, published["screen-start-menu"].Bytes),
-                Entry("screen.title", published["screen-title"].Path, published["screen-title"].Bytes)),
+                Entry("screen.title", published["screen-title"].Path, published["screen-title"].Bytes),
+                Entry("spell.icons", published["spell-icons"].Path, published["spell-icons"].Bytes)),
         }.ToJsonString()));
 
         DaggerfallUiArt art = DaggerfallUiArt.Read(content, []);

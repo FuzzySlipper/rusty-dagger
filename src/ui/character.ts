@@ -5,6 +5,11 @@ export interface CharacterStat {
   readonly label: string;
   readonly value: number;
   readonly permanent: number;
+  /** For a skill: its career group, and its uses toward the next rise by the ruleset's own threshold. */
+  readonly group?: string;
+  readonly uses?: number;
+  readonly usesNeeded?: number;
+  readonly mastered?: boolean;
 }
 
 export interface CharacterResource {
@@ -111,6 +116,8 @@ export interface CharacterProjection {
   readonly name: string;
   readonly attributes: readonly CharacterStat[];
   readonly skills: readonly CharacterStat[];
+  /** The skill groups in the order the sheet shows them. */
+  readonly skillGroups?: readonly { readonly id: string; readonly label: string }[];
   readonly resources: readonly CharacterResource[];
   readonly progression: CharacterProgression;
   readonly equipment: readonly CharacterEquipment[];
@@ -239,28 +246,29 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         value: stat.value === stat.permanent ? format(stat.value) : `${format(stat.value)} live / ${format(stat.permanent)} permanent`,
         testid: `character-sheet-attribute-${stat.id}`,
       })));
-      renderRows(skills.rows, value.skills.map(stat => ({
-        label: stat.label,
-        value: stat.value === stat.permanent ? format(stat.value) : `${format(stat.value)} live / ${format(stat.permanent)} permanent`,
-        testid: `character-sheet-skill-${stat.id}`,
-      })));
+      redraw(skills.rows, JSON.stringify([value.skills, value.skillGroups]), () => renderSkills(skills.rows, value.skills, value.skillGroups ?? []));
       renderRows(resistances.rows, (value.resistances ?? []).map(stat => ({
         label: stat.label,
         value: stat.value === stat.permanent ? format(stat.value) : `${format(stat.value)} live / ${format(stat.permanent)} permanent`,
         testid: `character-sheet-resistance-${stat.id}`,
       })));
-      renderRows(affiliations.rows, (value.affiliations ?? []).map(affiliation => ({
+      // Each affiliation as a row: the faction and its rank, then the standing that decides the next one.
+      factRows(affiliations.rows, (value.affiliations ?? []).map(affiliation => ({
         label: affiliation.faction,
-        value: `${affiliation.guildGroup || 'Guild'} · ${affiliation.rankTitle ?? `Rank ${format(affiliation.rank)}`} · Reputation ${format(affiliation.reputation)} · Recognition ${format(affiliation.recognition)}`
-          + (affiliation.nextRequirement ? ` · Next rank ${format(affiliation.nextRequirement.rank)}: reputation ${format(affiliation.nextRequirement.reputation)}, skills ${format(affiliation.nextRequirement.highSkill)}/${format(affiliation.nextRequirement.lowSkill)}` : '')
-          + (affiliation.daysUntilReview != null ? ` · Review in ${format(affiliation.daysUntilReview)} days` : '')
-          + (affiliation.privileges?.length ? ` · Privileges: ${affiliation.privileges.join(', ')}` : ''),
+        value: `${affiliation.guildGroup || 'Guild'} · ${affiliation.rankTitle ?? `Rank ${format(affiliation.rank)}`}`,
+        facts: [`Reputation ${format(affiliation.reputation)}`, `Recognition ${format(affiliation.recognition)}`,
+          ...(affiliation.nextRequirement ? [`Next rank ${format(affiliation.nextRequirement.rank)}: reputation ${format(affiliation.nextRequirement.reputation)}, skills ${format(affiliation.nextRequirement.highSkill)}/${format(affiliation.nextRequirement.lowSkill)}`] : []),
+          ...(affiliation.daysUntilReview != null ? [`Review in ${format(affiliation.daysUntilReview)} days`] : []),
+          ...(affiliation.privileges?.length ? [`Privileges: ${affiliation.privileges.join(', ')}`] : [])],
         testid: `character-sheet-affiliation-${affiliation.faction}`,
       })));
-      renderRows(legal.rows, (value.legalStandings ?? []).map(standing => ({
-        label: standing.label,
-        value: `Reputation ${format(standing.reputation)}`,
+      // Each region's standing as a row, the region the player is in marked, a banishment called out.
+      factRows(legal.rows, (value.legalStandings ?? []).map(standing => ({
+        label: standing.regionName,
+        value: standing.label,
+        facts: [`Reputation ${format(standing.reputation)}`, ...(standing.current ? ['Current region'] : []), ...(standing.banished ? ['Banished'] : [])],
         testid: `character-sheet-legal-${standing.region}`,
+        warning: standing.banished,
       })));
       renderRows(history.rows, (value.history?.biography ?? []).map((line, index) => ({
         label: `History ${format(index + 1)}`,
@@ -351,14 +359,104 @@ function renderRows(root: HTMLElement, values: readonly { readonly label: string
 
 function equipmentRow(item: CharacterEquipment): HTMLElement {
   const row = document.createElement('div');
+  row.className = 'dagger-character-equipment';
   const label = document.createElement('dt');
   const slots = document.createElement('span');
   const details = document.createElement('dd');
   label.textContent = item.label;
+  if (item.identified === false) label.append(badge('Unidentified'));
   slots.textContent = item.slots.join(' · ');
   details.textContent = item.details;
-  row.append(label, slots, details);
+  row.append(label, slots);
+  // Wear as a bar, so a nearly broken piece reads at a glance; the ruleset's wording stays below it.
+  if (item.condition && item.condition.maximum > 1) {
+    const wear = meter(item.condition.broken ? 0 : item.condition.percentage / 100, item.condition.broken ? 'Broken' : `Condition ${format(item.condition.percentage)}%`);
+    wear.classList.toggle('is-low', item.condition.broken || item.condition.percentage < 25);
+    row.append(wear);
+  }
+  row.append(details);
   return row;
+}
+
+function badge(text: string): HTMLElement {
+  const element = document.createElement('span');
+  element.className = 'dagger-character-badge';
+  element.textContent = text;
+  return element;
+}
+
+/** A labelled bar: `fraction` of it filled, the label beside it for the reader and for assistive tools. */
+function meter(fraction: number, label: string): HTMLElement {
+  const element = document.createElement('span');
+  element.className = 'dagger-character-meter';
+  element.setAttribute('role', 'meter');
+  element.setAttribute('aria-valuemin', '0');
+  element.setAttribute('aria-valuemax', '100');
+  element.setAttribute('aria-valuenow', String(Math.round(Math.min(1, Math.max(0, fraction)) * 100)));
+  element.setAttribute('aria-label', label);
+  const fill = document.createElement('span');
+  fill.style.width = `${Math.min(1, Math.max(0, fraction)) * 100}%`;
+  const text = document.createElement('span');
+  text.className = 'dagger-character-meter-label';
+  text.textContent = label;
+  element.append(fill, text);
+  return element;
+}
+
+/**
+ * The skills under their career groups, each with its value and a bar of its uses toward the next
+ * rise; the tooltip says how many. Skills the ruleset gives no group are listed after the groups.
+ */
+function renderSkills(root: HTMLElement, skills: readonly CharacterStat[], groups: readonly { readonly id: string; readonly label: string }[]): void {
+  const sections: HTMLElement[] = [];
+  const listed = new Set<string>();
+  const add = (title: string | null, members: readonly CharacterStat[]): void => {
+    if (members.length === 0) return;
+    if (title !== null) { const heading = document.createElement('dt'); heading.className = 'dagger-character-group'; heading.textContent = title; sections.push(heading); }
+    for (const stat of members) {
+      listed.add(stat.id);
+      const row = document.createElement('div');
+      row.className = 'dagger-character-skill';
+      const term = document.createElement('dt');
+      const definition = document.createElement('dd');
+      term.textContent = stat.label;
+      definition.textContent = stat.value === stat.permanent ? format(stat.value) : `${format(stat.value)} live / ${format(stat.permanent)} permanent`;
+      definition.dataset.testid = `character-sheet-skill-${stat.id}`;
+      row.append(term, definition);
+      if (stat.usesNeeded !== undefined && stat.uses !== undefined) {
+        const tip = stat.mastered ? `${stat.label} can rise no further by use.`
+          : `${format(stat.uses)} of ${format(stat.usesNeeded)} uses toward the next rise.`;
+        row.dataset.tooltip = tip;
+        row.tabIndex = 0;
+        row.append(meter(stat.mastered ? 1 : stat.usesNeeded > 0 ? stat.uses / stat.usesNeeded : 0, stat.mastered ? 'Mastered' : `${format(stat.uses)} / ${format(stat.usesNeeded)}`));
+      }
+      sections.push(row);
+    }
+  };
+  for (const group of groups) add(group.label, skills.filter(skill => skill.group === group.id));
+  add(groups.length > 0 && listed.size > 0 ? 'Other skills' : null, skills.filter(skill => !listed.has(skill.id)));
+  root.replaceChildren(...sections);
+}
+
+/** Rows whose value has a line of supporting facts under it. */
+function factRows(root: HTMLElement, values: readonly { readonly label: string; readonly value: string; readonly facts: readonly string[]; readonly testid: string; readonly warning?: boolean }[]): void {
+  root.replaceChildren(...values.map(value => {
+    const row = document.createElement('div');
+    row.className = 'dagger-character-fact-row';
+    row.classList.toggle('is-warning', value.warning === true);
+    const term = document.createElement('dt');
+    const definition = document.createElement('dd');
+    term.textContent = value.label;
+    definition.dataset.testid = value.testid;
+    const main = document.createElement('strong');
+    main.textContent = value.value;
+    const facts = document.createElement('span');
+    facts.className = 'dagger-character-facts';
+    facts.textContent = value.facts.join(' · ');
+    definition.append(main, facts);
+    row.append(term, definition);
+    return row;
+  }));
 }
 
 function isStats(value: unknown): value is readonly CharacterStat[] {

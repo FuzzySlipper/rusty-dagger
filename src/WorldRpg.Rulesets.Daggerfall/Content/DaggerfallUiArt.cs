@@ -36,6 +36,8 @@ internal sealed class DaggerfallUiArt
         "screen.start-menu",
         "screen.title",
         "window.character-sheet.chrome",
+        // The spell icon atlas the spellbook and spellmaker draw every spell's icon from.
+        "spell.icons",
     ];
 
     /// <summary>

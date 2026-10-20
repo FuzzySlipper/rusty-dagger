@@ -798,8 +798,6 @@ test('Escape backs out of the innermost surface and opens the menu only from pla
     escape();
     f.publish({ quests: empty, legal: { revision: 'case-1', phase: 'court', title: 'Court', message: 'Plead.', charges: ['Theft'], choices: [{ id: 'guilty', label: 'Guilty' }] } });
     escape();
-    f.publish({ quests: empty, createItem: { revision: 'create-1', options: [{ id: 'sword', label: 'Sword' }] } });
-    escape();
     assert.equal(menu.open, false, 'Escape leaves a required answer alone.');
     assert.equal(f.actions.length, before);
 
@@ -807,9 +805,12 @@ test('Escape backs out of the innermost surface and opens the menu only from pla
     f.publish({ identify: { revision: 'id-1', cost: 5, options: [{ id: 'ring', label: 'Ring' }] } });
     escape();
     assert.deepEqual(f.actions.at(-1), { action: 'identify-cancel', revision: 'id-1' });
-    f.publish({ teleport: { revision: 'tp-1', anchorSet: false } });
+    f.publish({ teleport: { revision: 'tp-1', options: [] } });
     escape();
     assert.deepEqual(f.actions.at(-1), { action: 'teleport-select', revision: 'tp-1', key: 'cancel' });
+    f.publish({ quests: empty, createItem: { revision: 'create-1', options: [{ id: 'sword', label: 'Sword' }] } });
+    escape();
+    assert.deepEqual(f.actions.at(-1), { action: 'create-item-cancel', revision: 'create-1' });
     f.publish({});
 
     // The title screen has no game menu to open.
@@ -866,11 +867,11 @@ test('the spell choices are centred dialogs, and game UI explains itself with dr
 
     f.publish({ spells: { available: [{ key: 'spell.023', name: 'Heal', cost: 15 }], ready: null, result: '', sale: null, information: null } });
     f.root.querySelector('[data-action="spells"]').click();
-    const info = f.root.querySelector('[data-action="spell-info"]');
+    const info = f.root.querySelector('[data-action="spell-ready"]');
     info.dispatchEvent(new window.Event('focusin', { bubbles: true }));
     const tip = f.root.querySelector('.dagger-tooltip');
     assert.equal(tip.hidden, false);
-    assert.equal(tip.textContent, 'Describe Heal');
+    assert.equal(tip.textContent, 'Set Heal active');
     assert.equal(tip.parentElement, f.root.querySelector('.dagger-menu'), 'The tooltip draws inside the open modal.');
     info.dispatchEvent(new window.Event('focusout', { bubbles: true }));
     assert.equal(tip.hidden, true);
@@ -983,13 +984,13 @@ test('a snapshot that arrives every update keeps the focused control, and a chan
     const spells = available => ({ available, ready: null, result: '', sale: null, information: null });
     f.publish({ spells: spells([spell('spell.1', 'Heal'), spell('spell.2', 'Light')]) });
     f.root.querySelector('[data-action="spells"]').click();
-    const info = f.root.querySelector('[data-action="spell-info"][data-spell="spell.2"]');
+    const info = f.root.querySelector('[data-action="spell-select"][data-spell="spell.2"]');
     info.focus();
     f.publish({ spells: spells([spell('spell.1', 'Heal'), spell('spell.2', 'Light')]) });
     assert.equal(document.activeElement, info, 'An unchanged snapshot leaves the control in place.');
     f.publish({ spells: spells([spell('spell.0', 'Cure'), spell('spell.1', 'Heal'), spell('spell.2', 'Light')]) });
     assert.equal(document.activeElement.dataset.spell, 'spell.2', 'A rebuilt list focuses the same spell again.');
-    assert.equal(document.activeElement.dataset.action, 'spell-info');
+    assert.equal(document.activeElement.dataset.action, 'spell-select');
 
     // The menu is modal; close it before talking, as play would.
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
@@ -1584,6 +1585,28 @@ test('character sheet refreshes owner-published progression, resistance, affilia
     assert.match(legal.parentElement.textContent, /Daggerfall: a criminal, banished/);
     assert.equal(f.root.querySelector('[data-testid="character-sheet-history-0"]').textContent, 'A revised retained account.');
     assert.match(equipment.textContent, /Dagger of Fire.*Condition: 1\/2 \(50%\).*Enchantment: Fire/);
+  } finally { f.dispose(); }
+});
+
+test('character sheet groups skills by career group with their uses toward the next rise', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'playing', character: {
+      name: 'Aubk-i', attributes: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: false,
+      skillGroups: [{ id: 'primary', label: 'Primary skills' }, { id: 'major', label: 'Major skills' }, { id: 'minor', label: 'Minor skills' }, { id: 'miscellaneous', label: 'Miscellaneous skills' }],
+      skills: [{ id: 'swimming', label: 'Swimming', value: 12, permanent: 12, group: 'miscellaneous', uses: 0, usesNeeded: 40, mastered: false },
+        { id: 'long-blade', label: 'Long Blade', value: 40, permanent: 38, group: 'primary', uses: 12, usesNeeded: 48, mastered: false },
+        { id: 'archery', label: 'Archery', value: 100, permanent: 100, group: 'major', uses: 0, usesNeeded: 90, mastered: true }],
+      legalStandings: [{ region: 17, regionName: 'Daggerfall', reputation: 4, standing: 'respected', banished: false, current: true, label: 'Daggerfall: respected' }],
+    } });
+    const skills = [...f.root.querySelectorAll('.dagger-character-section')].find(section => section.querySelector('h3')?.textContent === 'Skills');
+    // The groups in the ruleset's order, an empty group left out.
+    assert.deepEqual([...skills.querySelectorAll('.dagger-character-group')].map(group => group.textContent), ['Primary skills', 'Major skills', 'Miscellaneous skills']);
+    const blade = f.root.querySelector('[data-testid="character-sheet-skill-long-blade"]').parentElement;
+    assert.equal(blade.dataset.tooltip, '12 of 48 uses toward the next rise.');
+    assert.equal(blade.querySelector('[role="meter"]').getAttribute('aria-valuenow'), '25');
+    assert.equal(f.root.querySelector('[data-testid="character-sheet-skill-archery"]').parentElement.dataset.tooltip, 'Archery can rise no further by use.');
+    assert.match(f.root.querySelector('[data-testid="character-sheet-legal-17"]').textContent, /Daggerfall: respected.*Reputation 4.*Current region/);
   } finally { f.dispose(); }
 });
 
@@ -2306,14 +2329,15 @@ test('character draft screens consume the published mode art and every pick part
 test('teleport presents the paid anchor choice and sends current semantic actions', () => {
   const f = fixture();
   try {
-    f.publish({mode:'modal',teleport:{revision:'cast.12',anchorSet:false}});
+    const options=anchorSet=>[{id:'anchor',label:'Set anchor',available:true},{id:'recall',label:'Recall to anchor',available:anchorSet}];
+    f.publish({mode:'modal',teleport:{revision:'cast.12',options:options(false)}});
     const panel=f.root.querySelector('.dagger-teleport');
     assert.equal(panel.hidden,false);
     let buttons=panel.querySelectorAll('button');
     assert.equal(buttons[1].disabled,true);
     buttons[0].click();
     assert.deepEqual(f.actions.at(-1),{action:'teleport-select',revision:'cast.12',key:'anchor'});
-    f.publish({teleport:{revision:'cast.13',anchorSet:true}});
+    f.publish({teleport:{revision:'cast.13',options:options(true)}});
     buttons=panel.querySelectorAll('button');assert.equal(buttons[1].disabled,false);
     buttons[1].click();assert.deepEqual(f.actions.at(-1),{action:'teleport-select',revision:'cast.13',key:'recall'});
     buttons[2].click();assert.deepEqual(f.actions.at(-1),{action:'teleport-select',revision:'cast.13',key:'cancel'});
@@ -2357,25 +2381,43 @@ test('detectors render only resolved contacts and clear retired sources without 
   } finally { f.dispose(); }
 });
 
-test('spell selection uses projected known rows and sends ready unready and cast actions', () => {
+test('spellbook rows describe the chosen spell and its details panel readies, casts and unreadies it', () => {
   const f=fixture();
   try {
-    const spells={available:[{key:'spell.023',name:'Troll\'s Blood',cost:12}],ready:null,result:''};
-    f.publish({spells});
+    const spells={available:[{key:'spell.023',name:'Troll\'s Blood',cost:12,icon:3,school:'restoration'}],ready:null,result:'',
+      icons:{media:'spell.icons',columns:20,count:69},schools:[{id:'destruction',label:'Destruction'},{id:'restoration',label:'Restoration'}]};
+    f.publish({spells,controls:{diagnostic:'',bindings:[{id:'recast',category:'magic',keys:['KeyQ'],fixed:false},{id:'abort-spell',category:'magic',keys:['KeyE'],fixed:false}]}});
     f.root.querySelector('[data-action="spells"]').click();
     const panel=f.root.querySelector('.dagger-spells-root');
     assert.equal(panel.hidden,false);
     assert.equal(f.root.querySelector('#dagger-menu-title').textContent,'Known spells');
-    assert.equal(panel.querySelector('[data-action="spell-cast"]').disabled,true);
-    panel.querySelector('[data-spell="spell.023"]').click();
+    assert.match(panel.querySelector('.dagger-spellbook-keys').textContent,/Recast: Q · Abort: E/);
+    // Tabs count each school and close the empty ones.
+    assert.equal(panel.querySelector('[data-spell-school="restoration"]').textContent,'Restoration 1');
+    assert.equal(panel.querySelector('[data-spell-school="destruction"]').disabled,true);
+    // The only row is chosen, and choosing it again asks for its description.
+    assert.equal(panel.querySelector('[data-action="spell-select"]').getAttribute('aria-pressed'),'true');
+    panel.querySelector('[data-action="spell-select"][data-spell="spell.023"]').click();
+    assert.deepEqual(f.actions.at(-1),{action:'spell-info',key:'spell.023'});
+    panel.querySelector('[data-action="spell-ready"]').click();
     assert.deepEqual(f.actions.at(-1),{action:'spell-ready',key:'spell.023'});
-    assert.equal(panel.querySelector('[data-action="spell-cast"]').disabled,true);
     f.publish({spells:{...spells,ready:'spell.023',result:'Ready'}});
     assert.match(panel.textContent,/Ready/);assert.match(panel.textContent,/12 magicka/);
     panel.querySelector('[data-action="spell-unready"]').click();
     assert.deepEqual(f.actions.at(-1),{action:'spell-unready'});
     panel.querySelector('[data-action="spell-cast"]').click();
     assert.deepEqual(f.actions.slice(-2),[{action:'menu',open:false},{action:'spell-cast'}]);
+    // Casting a spell that is not the readied one readies it first.
+    f.publish({spells:{...spells,ready:null}});
+    panel.querySelector('[data-action="spell-cast"]').click();
+    assert.deepEqual(f.actions.slice(-3),[{action:'spell-ready',key:'spell.023'},{action:'menu',open:false},{action:'spell-cast'}]);
+    // Double-clicking a row readies it.
+    panel.querySelector('[data-action="spell-select"]').dispatchEvent(new window.MouseEvent('dblclick',{bubbles:true}));
+    assert.deepEqual(f.actions.at(-1),{action:'spell-ready',key:'spell.023'});
+    // The school tab filters the rows.
+    panel.querySelector('[data-spell-school="restoration"]').click();
+    assert.equal(panel.querySelectorAll('[data-action="spell-select"]').length,1);
+    panel.querySelector('[data-spell-school="all"]').click();
     f.publish({spells:{...spells,available:[],ready:null,result:'UnknownSpell'}});
     assert.equal(panel.querySelector('[data-spell]'),null);assert.match(panel.textContent,/No available known spells/);
     f.publish({spells:{available:[{key:'bad',name:'Bad',cost:NaN}],ready:'bad',result:''}});
@@ -2386,7 +2428,7 @@ test('spell selection uses projected known rows and sends ready unready and cast
 test('identify formats authoritative choices and sends a semantic batch selection without optimistic item changes', () => {
   const f=fixture();
   try {
-    f.publish({identify:{revision:'cast:9',cost:5,options:[{id:'409',label:'Unidentified sword'}]}});
+    f.publish({identify:{revision:'cast:9',cost:5,options:[{id:'409',label:'Unidentified sword'},{id:'all',label:'All unidentified items'}]}});
     const panel=f.root.querySelector('.dagger-identify');
     assert.equal(panel.hidden,false);
     assert.match(panel.querySelector('h2').textContent,/5 magicka/);
@@ -2435,12 +2477,16 @@ test('spell seller and spellbook use confirmed semantic changes and source setti
     sales.querySelector('[data-action="spell-info"]').click();assert.deepEqual(f.actions.at(-1),{action:'spell-info',key:'spell.002'});
     f.root.querySelector('[data-action="spells"]').click();
     const book=f.root.querySelector('.dagger-spells-root');
-    assert.equal(book.querySelector('[data-action="spell-ready"][data-spell="spell.001"]').disabled,true);
-    assert.match(book.textContent,/Unavailable spell · Unavailable/);assert.match(book.textContent,/magnitude 1–10/);
+    // The readied spell is chosen first, with its description beside it.
+    assert.match(book.textContent,/magnitude 1–10/);
     assert.match(book.textContent,/Target: Self; element: Magic/);
     book.querySelector('[data-action="spell-delete"]').click();f.answer(true);assert.deepEqual(f.actions.at(-1),{action:'spell-delete',key:'spell.023',confirm:true});
     book.querySelector('[data-action="spell-delete"]').click();f.answer(false);
     assert.equal(f.actions.filter(action=>action.action==='spell-delete').length,1);
+    book.querySelector('[data-action="spell-select"][data-spell="spell.001"]').click();
+    assert.match(book.querySelector('.dagger-spellbook-row:nth-child(2)').textContent,/Unavailable spell.*Unavailable/);
+    assert.equal(book.querySelector('[data-action="spell-ready"][data-spell="spell.001"]').disabled,true);
+    assert.equal(book.querySelector('[data-action="spell-cast"]').disabled,true);
   } finally { f.dispose(); }
 });
 
@@ -2611,15 +2657,17 @@ test('the shop is the transfer layout: line totals, confirms for large trades an
   } finally { f.dispose(); }
 });
 
-test('create item presents authoritative paid choices and submits selection without cancellation or optimistic inventory', () => {
+test('create item presents authoritative paid choices and submits a selection or a cancel without optimistic inventory', () => {
   const f = fixture();
   try {
     f.publish({mode:'modal', createItem:{revision:'cast.42', options:[{id:'steel-102',label:'Steel Cuirass'},{id:'robes',label:'Robes'}]}});
     const panel=f.root.querySelector('.dagger-create-item');
-    assert.equal(panel.hidden,false); assert.equal(panel.querySelectorAll('button').length,2);
+    assert.equal(panel.hidden,false); assert.equal(panel.querySelectorAll('button').length,3);
     panel.querySelectorAll('button')[1].click();
     assert.deepEqual(f.actions.at(-1),{action:'create-item-select',revision:'cast.42',key:'robes'});
     assert.equal(panel.hidden,false);
+    panel.querySelector('[data-escape]').click();
+    assert.deepEqual(f.actions.at(-1),{action:'create-item-cancel',revision:'cast.42'});
     f.publish({createItem:null}); assert.equal(panel.hidden,true); assert.equal(panel.children.length,0);
   } finally { f.dispose(); }
 });
@@ -3069,16 +3117,22 @@ test('look settings claim complete preferences and refresh after reload', () => 
 test('magic-item shortcut lists only eligible carried items and uses the current inventory owner', () => {
   const f = fixture();
   try {
-    const row = (key, canUseMagic) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
-      condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], canUseMagic });
+    const row = (key, canUseMagic, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
+      condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], canUseMagic, ...overrides });
     const state = { panelRequest: { panel: 'magic-items', revision: '1' }, inventory: {
-      revision: '6:1', message: '', equipmentChange: null, slots: [], items: [row('potion', true), row('book', false)] } };
+      revision: '6:1', message: '', equipmentChange: null, slots: [], items: [row('potion', true),
+        row('ring', true, { label: 'Ring of Warding', details: 'Ring of Warding\nCast when used: Shield\nCondition: Used', condition: { current: 18, maximum: 40, percentage: 45, broken: false } }),
+        row('book', false)] } };
     f.publish(state);
     const root = f.root.querySelector('.dagger-magic-items');
     assert.equal(root.hidden, false);
-    const button = root.querySelector('button');
-    assert.equal(button.textContent, 'potion');
-    assert.equal(root.querySelectorAll('button').length, 1);
+    const button = root.querySelector('[data-magic-item="potion"]');
+    assert.equal(button.getAttribute('aria-label'), 'Use potion');
+    assert.equal(root.querySelectorAll('button').length, 2);
+    // A charged item shows its charges (its condition) and its description after the name line.
+    const ring = root.querySelector('[data-magic-item="ring"]');
+    assert.equal(ring.querySelector('.dagger-magic-item-charges').textContent, 'Charges 18 / 40');
+    assert.equal(ring.querySelector('.dagger-magic-item-details').textContent, 'Cast when used: Shield · Condition: Used');
     f.publish(state);
     assert.equal(root.querySelector('button'), button);
     button.click();
@@ -3123,10 +3177,10 @@ test('spellbook move and sort request canonical order without changing the proje
     f.publish({ spells: { available: [{ key: 'b', name: 'Beta', cost: 5 }, { key: 'a', name: 'Alpha', cost: 8 }], ready: null, result: '' } });
     const move = f.root.querySelector('[data-action="spell-swap"][data-spell="b"][data-swap-with="a"]');
     move.click(); assert.deepEqual(f.actions.pop(), { action: 'spell-swap', key: 'b', item: 'a' });
-    assert.equal(f.root.querySelector('[data-action="spell-ready"]').dataset.spell, 'b');
+    assert.equal(f.root.querySelector('[data-action="spell-select"]').dataset.spell, 'b');
     f.root.querySelector('[data-action="spell-sort"]').click(); assert.deepEqual(f.actions.pop(), { action: 'spell-sort' });
     f.publish({ spells: { available: [{ key: 'a', name: 'Alpha', cost: 8 }, { key: 'b', name: 'Beta', cost: 5 }], ready: null, result: 'Sorted' } });
-    assert.equal(f.root.querySelector('[data-action="spell-ready"]').dataset.spell, 'a');
+    assert.equal(f.root.querySelector('[data-action="spell-select"]').dataset.spell, 'a');
   } finally { f.dispose(); }
 });
 

@@ -61,6 +61,8 @@ public sealed class DaggerfallMysticismEffectsTests
         s.State.PlayerControl.MoveTo(position.ToVector()); s.State.PlayerControl.YawRadians = .7f; s.State.PlayerControl.PitchRadians = -.2f;
         Cast(s, Setting(43, -1, 0)); var view = s.TeleportView!;
         Assert.False(view.AnchorSet); Assert.Equal(ProductMode.Modal, s.PendingModeRequest);
+        // Recall is offered but closed until an anchor is set.
+        Assert.Equal([new("anchor", "Set anchor", true), new("recall", "Recall to anchor", false)], view.Options);
         var before = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current;
         using var pending = f.Restore(s.CaptureSave()); Assert.Equal(view.Revision, pending.TeleportView!.Revision);
         pending.ChooseTeleport("stale", "anchor"); Assert.NotNull(pending.TeleportView);

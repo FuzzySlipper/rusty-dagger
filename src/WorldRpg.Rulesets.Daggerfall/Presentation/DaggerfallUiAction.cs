@@ -27,7 +27,7 @@ internal enum DaggerfallUiActionKind
     CharacterLevelAllocate, CharacterLevelCommit,
     ActivationMode, Attack, Loot, Menu,
     DialogueTone, DialogueTopic, DialogueClose, TavernBuy, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift,
-    LegalChoice, CreateItemSelect, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
+    LegalChoice, CreateItemSelect, CreateItemCancel, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
     TransportSelect, TransportToggle, TransportLeaveShip, TransportBoardShip,
     PropertyBuy, PropertySell, PropertyEnter, PropertyPut, PropertyTake,
     TravelSearch, TravelPreview, TravelAccept, TravelMap, MapOpen, MapBuilding,
@@ -185,6 +185,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.IdentifyCancel, "identify-cancel", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LegalChoice, "legal-choice", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.CreateItemSelect, "create-item-select", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.CreateItemCancel, "create-item-cancel", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DispelSelect, "dispel-select", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DispelCancel, "dispel-cancel", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TeleportSelect, "teleport-select", DaggerfallUiPhases.Interaction),
@@ -628,7 +629,7 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && key is "yield" or "resist" or "escape" or "guilty" or "etiquette" or "streetwise" or "accept" or "continue" ? new(action, Revision: revision, Key: key) : null;
             if (action is "dispel-select" or "identify-select" or "create-item-select")
                 return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) ? new(action, Revision: revision, Key: key) : null;
-            if (action is "dispel-cancel" or "identify-cancel")
+            if (action is "dispel-cancel" or "identify-cancel" or "create-item-cancel")
                 return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision) ? new(action, Revision: revision) : null;
             if (action == "bank-open")
                 return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision) ? new(action, Revision: revision) : null;

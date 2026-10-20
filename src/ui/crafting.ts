@@ -1,4 +1,4 @@
-import { image } from './art.js';
+import { isSpellIconAtlas, spellIcon, spellIconsReady } from './spell-icon.js';
 import type { ConfirmQuestion } from './confirm.js';
 import { createStepper, type Stepper } from './stepper.js';
 import type {
@@ -12,6 +12,7 @@ export function isSpellMakerProjection(value:unknown):value is SpellMakerProject
   const options=(list:unknown):boolean=>Array.isArray(list) && list.every(o=>o && typeof o==='object' && Number.isInteger(o.value) && typeof o.label==='string');
   const limits=v.limits;
   return typeof v.revision==='string' && typeof v.provider==='string' && Array.isArray(v.effects) && options(v.targets) && options(v.elements)
+    && (v.icons===undefined || isSpellIconAtlas(v.icons))
     && !!limits && ['nameLength','icons','effects','duration','chance','magnitude','perLevels'].every(key=>Number.isSafeInteger(limits[key as keyof typeof limits]) && limits[key as keyof typeof limits]>0)
     && v.effects.every(e=>e && typeof e.key==='string' && typeof e.name==='string' && typeof e.school==='string' && Number.isInteger(e.type)
       && Number.isInteger(e.subType) && typeof e.duration==='boolean' && typeof e.chance==='boolean' && typeof e.magnitude==='boolean'
@@ -33,7 +34,8 @@ export function isSpellMakerProjection(value:unknown):value is SpellMakerProject
  * bought through the drawn confirm.
  */
 export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null,claim:(action:UiAction)=>void,ask:(question:ConfirmQuestion)=>void):void {
-  const stamp=JSON.stringify(view);
+  // The icons ride the stamp so the picker redraws once the atlas arrives.
+  const stamp=JSON.stringify([view,spellIconsReady(view?.icons)]);
   // Admitted modal updates can publish the same projection while the player types.
   if(root.dataset.spellMaker===stamp) return;
   root.dataset.spellMaker=stamp;root.replaceChildren();if(!view) return;
@@ -49,15 +51,13 @@ export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null
   };
   const target=select('Target',view.targets,view.draft.rangeType);
   const element=select('Element',view.elements,view.draft.element);
-  // The icon picker: one button per published icon, the spell's own picture where the art carries it.
+  // The icon picker: one button per published icon, each cut from the ruleset's icon atlas.
   let icon=Math.min(Math.max(0,view.draft.icon),limits.icons-1);
   const icons=document.createElement('div');icons.className='dagger-spell-icons';icons.setAttribute('role','radiogroup');icons.setAttribute('aria-label','Icon');
   for(let index=0;index<limits.icons;index++){
     const choice=document.createElement('button');choice.type='button';choice.className='dagger-spell-icon dagger-slot';choice.dataset.spellIcon=String(index);
     choice.setAttribute('role','radio');choice.setAttribute('aria-label',`Icon ${index+1}`);choice.setAttribute('aria-checked',String(index===icon));
-    const source=image(`spell.icon.${index}`);
-    if(source!==null){const picture=document.createElement('img');picture.src=source;picture.alt='';picture.draggable=false;choice.append(picture);}
-    else choice.textContent=String(index+1);
+    choice.append(spellIcon(view.icons,index));
     icons.append(choice);
   }
   icons.addEventListener('click',event=>{const choice=(event.target as HTMLElement).closest<HTMLButtonElement>('[data-spell-icon]');if(!choice) return;

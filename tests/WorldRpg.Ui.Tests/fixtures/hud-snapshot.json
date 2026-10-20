@@ -9,6 +9,37 @@
   "identify": null,
   "spells": {
     "available": [],
+    "icons": {
+      "media": "spell.icons",
+      "columns": 20,
+      "count": 69
+    },
+    "schools": [
+      {
+        "id": "destruction",
+        "label": "Destruction"
+      },
+      {
+        "id": "restoration",
+        "label": "Restoration"
+      },
+      {
+        "id": "illusion",
+        "label": "Illusion"
+      },
+      {
+        "id": "alteration",
+        "label": "Alteration"
+      },
+      {
+        "id": "thaumaturgy",
+        "label": "Thaumaturgy"
+      },
+      {
+        "id": "mysticism",
+        "label": "Mysticism"
+      }
+    ],
     "ready": null,
     "result": "",
     "sale": null,
@@ -1270,211 +1301,369 @@
         "id": "medical",
         "label": "Medical",
         "value": 30,
-        "permanent": 30
+        "permanent": 30,
+        "group": "minor",
+        "uses": 0,
+        "usesNeeded": 156,
+        "mastered": false
       },
       {
         "id": "etiquette",
         "label": "Etiquette",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "streetwise",
         "label": "Streetwise",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "jumping",
         "label": "Jumping",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "orcish",
         "label": "Orcish",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "harpy",
         "label": "Harpy",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "giantish",
         "label": "Giantish",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "dragonish",
         "label": "Dragonish",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "minor",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "nymph",
         "label": "Nymph",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "daedric",
         "label": "Daedric",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "minor",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "spriggan",
         "label": "Spriggan",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "centaurian",
         "label": "Centaurian",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "impish",
         "label": "Impish",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "lockpicking",
         "label": "Lockpicking",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "mercantile",
         "label": "Mercantile",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "pickpocket",
         "label": "Pickpocket",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "stealth",
         "label": "Stealth",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "swimming",
         "label": "Swimming",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "climbing",
         "label": "Climbing",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "backstabbing",
         "label": "Backstabbing",
         "value": 30,
-        "permanent": 30
+        "permanent": 30,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 13,
+        "mastered": false
       },
       {
         "id": "dodging",
         "label": "Dodging",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "minor",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "running",
         "label": "Running",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "destruction",
         "label": "Destruction",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "major",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "restoration",
         "label": "Restoration",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "major",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "illusion",
         "label": "Illusion",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "major",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "alteration",
         "label": "Alteration",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "primary",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "thaumaturgy",
         "label": "Thaumaturgy",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "primary",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "mysticism",
         "label": "Mysticism",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "primary",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "short-blade",
         "label": "Short Blade",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "minor",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "long-blade",
         "label": "Long Blade",
         "value": 60,
-        "permanent": 60
+        "permanent": 60,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 52,
+        "mastered": false
       },
       {
         "id": "hand-to-hand",
         "label": "Hand-to-Hand",
         "value": 40,
-        "permanent": 40
+        "permanent": 40,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 35,
+        "mastered": false
       },
       {
         "id": "axe",
         "label": "Axe",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "blunt-weapon",
         "label": "Blunt Weapon",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "minor",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "archery",
         "label": "Archery",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
       },
       {
         "id": "critical-strike",
         "label": "Critical Strike",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "group": "miscellaneous",
+        "uses": 0,
+        "usesNeeded": 1,
+        "mastered": false
+      }
+    ],
+    "skillGroups": [
+      {
+        "id": "primary",
+        "label": "Primary skills"
+      },
+      {
+        "id": "major",
+        "label": "Major skills"
+      },
+      {
+        "id": "minor",
+        "label": "Minor skills"
+      },
+      {
+        "id": "miscellaneous",
+        "label": "Miscellaneous skills"
       }
     ],
     "resources": [

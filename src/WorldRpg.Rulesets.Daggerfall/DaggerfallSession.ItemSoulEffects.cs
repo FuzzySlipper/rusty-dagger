@@ -113,4 +113,13 @@ internal sealed partial class DaggerfallSession
         _pendingCreateItem = request.Next;
         Presentation.SetOutcome($"Created {option.Label} for {request.Duration} minutes.");
     }
+
+    /// <summary>Declines the current Create Item choice: the spell's magicka is spent and no item is made, as when the donor's picker closes.</summary>
+    internal void CancelCreateItem(string revision)
+    {
+        if (_pendingCreateItem is not { } request || request.Instance != revision)
+        { Presentation.SetOutcome("Create Item choice is no longer current."); return; }
+        _pendingCreateItem = request.Next;
+        Presentation.SetOutcome("Create Item cancelled.");
+    }
 }

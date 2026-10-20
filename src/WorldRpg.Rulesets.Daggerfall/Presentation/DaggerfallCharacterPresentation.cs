@@ -10,7 +10,8 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>Read-only player-sheet projection from the current Mechanics, progression, and equipment state.</summary>
-internal sealed record CharacterStatPresentation(string Id, string Label, long Value, long Permanent);
+/// <param name="Progress">For a skill, its career group and uses toward the next rise; null for other stats.</param>
+internal sealed record CharacterStatPresentation(string Id, string Label, long Value, long Permanent, DaggerfallSkillProgress? Progress = null);
 internal sealed record CharacterResourcePresentation(string Id, string Label, long Current, long Maximum);
 internal sealed record CharacterProgressionPresentation(int Level, int Experience, int? SkillProgress = null, int? NextLevelSkillProgress = null, bool PendingLevelUp = false);
 internal sealed record CharacterEquipmentPresentation(string Label, string[] Slots, string Details, ItemConditionPresentation? Condition = null, bool Identified = true);
@@ -267,7 +268,7 @@ internal sealed class DaggerfallCharacterPresentation
         return new CharacterSheetPresentation(
             _character?.Identity.Name ?? "Player",
             Stats(player, _definitions.Vocabulary.Attributes),
-            Stats(player, _definitions.Vocabulary.Skills),
+            [.. Stats(player, _definitions.Vocabulary.Skills).Select(skill => _skills is null ? skill : skill with { Progress = _skills.ReadSkillProgress(skill.Id) })],
             _definitions.HudResources.Select(resource => Resource(player, resource)).ToArray(),
             Progression(progression),
             Equipment(),
