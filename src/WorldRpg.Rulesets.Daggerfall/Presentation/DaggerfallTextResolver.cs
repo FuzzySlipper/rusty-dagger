@@ -130,6 +130,15 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
         StringBuilder output = new();
         int current = 0;
         string? attributeRating = context.Player.AttributeRating;
+        // The donor's record label (MultiFormatTextLabel.LayoutTextElements) ends a line at each
+        // justify token: JustifyLeft calls NewLine(), JustifyCenter centres the line it closes and
+        // then calls NewLine(). A record's last justify token places nothing after it, so its line
+        // end is held until more output follows and a record never gains a trailing line from it.
+        // Only TEXT.RSC records draw through that label. The book reader reads justify as the
+        // alignment of the line it opens, and the talk window flattens a rumor with
+        // TalkManager.TokensToString(tokens, false), whose runs carry their own joining spaces.
+        bool endsLines = key.Kind == DaggerfallTextKind.Resource;
+        bool pendingLineEnd = false;
         foreach (DaggerfallTextElement token in value.Tokens)
         {
             if (subrecord is int selected)
@@ -137,9 +146,19 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
                 if (token.Code == DaggerfallTextCode.SubrecordSeparator) { current++; continue; }
                 if (current != selected) continue;
             }
+            if (token.Code is DaggerfallTextCode.JustifyLeft or DaggerfallTextCode.JustifyCenter)
+            {
+                if (endsLines) { if (pendingLineEnd) output.Append('\n'); pendingLineEnd = true; }
+                continue;
+            }
+            if (pendingLineEnd && token.Code is DaggerfallTextCode.Text or DaggerfallTextCode.NewLineOffset or DaggerfallTextCode.EndOfPage or DaggerfallTextCode.SubrecordSeparator)
+            {
+                output.Append('\n');
+                pendingLineEnd = false;
+            }
             if (token.Code == DaggerfallTextCode.Text) Expand(output, token.Text!, key, context, diagnostics, ref attributeRating);
             else if (token.Code is DaggerfallTextCode.NewLineOffset or DaggerfallTextCode.EndOfPage or DaggerfallTextCode.SubrecordSeparator) output.Append('\n');
-            else if (token.Code is not (DaggerfallTextCode.SameLineOffset or DaggerfallTextCode.PullPreceeding or DaggerfallTextCode.InputCursorPositioner or DaggerfallTextCode.FontPrefix or DaggerfallTextCode.PositionPrefix or DaggerfallTextCode.JustifyLeft or DaggerfallTextCode.JustifyCenter))
+            else if (token.Code is not (DaggerfallTextCode.SameLineOffset or DaggerfallTextCode.PullPreceeding or DaggerfallTextCode.InputCursorPositioner or DaggerfallTextCode.FontPrefix or DaggerfallTextCode.PositionPrefix))
                 diagnostics.Add(new(DaggerfallTextDiagnosticKind.UnknownLayoutToken, key, $"The normalized text value carries unsupported layout token '{token.Code}'."));
         }
         if (subrecord is int wanted && current < wanted)

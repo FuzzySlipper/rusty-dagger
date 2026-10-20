@@ -57,9 +57,34 @@ public sealed class DaggerfallTextResolverTests
 
         DaggerfallTextRenderResult rendered = new DaggerfallTextResolver(text).Resolve(Key, Context("Nulfaga", "Daggerfall", "date", "faction", "item"));
 
-        // The donor consumes the pipe terminator for postfix composition: %pcn|s is Nulfagas.
-        Assert.Equal("<ce>Nulfagas 100% ready\n<tag>\nnext", rendered.Text);
+        // The donor consumes the pipe terminator for postfix composition: %pcn|s is Nulfagas. The
+        // justify token after the line end ends a line of its own, as the donor's record label does.
+        Assert.Equal("<ce>Nulfagas 100% ready\n\n<tag>\nnext", rendered.Text);
         Assert.True(rendered.IsComplete);
+    }
+
+    [Fact]
+    public void Justify_tokens_end_resource_lines_without_a_trailing_line_but_not_book_or_rumor_lines()
+    {
+        // TEXT.RSC 1001, the weapon info record: each line closes with a justify-centre token.
+        DaggerfallTextElement[] tokens = [
+            new(DaggerfallTextCode.Text, "Iron Dagger ", null, null),
+            new(DaggerfallTextCode.JustifyCenter, null, null, null),
+            new(DaggerfallTextCode.Text, "1 - 5 points of damage", null, null),
+            new(DaggerfallTextCode.JustifyLeft, null, null, null),
+            new(DaggerfallTextCode.Text, "Condition: New", null, null),
+            new(DaggerfallTextCode.JustifyCenter, null, null, null),
+        ];
+        DaggerfallTextKey book = new(DaggerfallTextKind.Book, "test"), rumor = new(DaggerfallTextKind.Rumor, "test");
+
+        string record = new DaggerfallTextResolver(TextSet("record", tokens)).Resolve(Key, DaggerfallTextContext.Empty).Text;
+        string page = new DaggerfallTextResolver(TextSet("page", tokens, book)).Resolve(book, DaggerfallTextContext.Empty).Text;
+        string news = new DaggerfallTextResolver(TextSet("news", tokens, rumor)).Resolve(rumor, DaggerfallTextContext.Empty).Text;
+
+        Assert.Equal("Iron Dagger \n1 - 5 points of damage\nCondition: New", record);
+        // The book reader reads justify as alignment; the talk window flattens a rumor's runs.
+        Assert.Equal("Iron Dagger 1 - 5 points of damageCondition: New", page);
+        Assert.Equal(page, news);
     }
 
     [Fact]
@@ -102,8 +127,8 @@ public sealed class DaggerfallTextResolverTests
 
     private static readonly DaggerfallTextKey Key = new(DaggerfallTextKind.Resource, "test");
     private static DaggerfallTextResolver Resolver(string source) => new(TextSet(source, [new(DaggerfallTextCode.Text, source, null, null)]));
-    private static DaggerfallTextSet TextSet(string source, IReadOnlyList<DaggerfallTextElement> tokens) => new(
-        new Dictionary<DaggerfallTextKey, DaggerfallTextValue> { [Key] = new(Key, "test", "en", 0, 0, source.Length, 1, DaggerfallTextState.Read, string.Empty, [], tokens) }, []);
+    private static DaggerfallTextSet TextSet(string source, IReadOnlyList<DaggerfallTextElement> tokens, DaggerfallTextKey? key = null) => new(
+        new Dictionary<DaggerfallTextKey, DaggerfallTextValue> { [key ?? Key] = new(key ?? Key, "test", "en", 0, 0, source.Length, 1, DaggerfallTextState.Read, string.Empty, [], tokens) }, []);
 
     private static DaggerfallTextContext Context(string player, string city, string date, string faction, string item) => new(
         new(Name: player, FirstName: player, LastName: player), new(Date: date), new(City: city), new(FactionName: faction), new(ItemName: item), new());
