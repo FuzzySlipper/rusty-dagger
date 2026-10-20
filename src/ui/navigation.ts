@@ -92,6 +92,9 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
   };
   const useDevice = (next: 'keyboard' | 'controller'): void => {
     shell.classList.toggle('controller-navigation', next === 'controller');
+    // While keys or a controller move focus, the pointer's hover is not drawn: only the focused control
+    // is lit, so a button left under a still cursor never looks like the one Enter would press.
+    shell.classList.add('keyed-navigation');
     if (next !== device) { device = next; drawHints(); }
   };
 
@@ -245,9 +248,13 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
   }) ?? null;
 
   const onBlur = (): void => { held = { horizontal: 0, vertical: 0 }; };
+  const onPointerMove = (event: PointerEvent): void => {
+    if (event.movementX !== 0 || event.movementY !== 0) shell.classList.remove('keyed-navigation');
+  };
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener('focusin', onFocusIn);
   window.addEventListener('blur', onBlur);
+  document.addEventListener('pointermove', onPointerMove, true);
 
   return {
     register(surface) {
@@ -269,6 +276,7 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
       document.removeEventListener('keydown', onKeyDown, true);
       document.removeEventListener('focusin', onFocusIn);
       window.removeEventListener('blur', onBlur);
+      document.removeEventListener('pointermove', onPointerMove, true);
       hints.remove();
       surfaces.length = 0;
     },

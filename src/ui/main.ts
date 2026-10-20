@@ -86,7 +86,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     navigation.register({ name: 'summoning-offer', root: dialogue.summoningOffer, layer: 80, isOpen: () => dialogue.summoningOffer.open }),
     navigation.register({ name: 'legal', root: choices.legal, layer: 70, isOpen: () => !choices.legal.hidden }),
     navigation.register({ name: 'quests', root: quests, layer: 60, isOpen: () => questAnswerRequired && !dead }),
-    navigation.register({ name: 'dialogue', root: dialogue.window, layer: 50, isOpen: () => dialogue.window.open, back: dialogue.close }),
+    // A conversation opens on its first topic, not on the tone choice, which would take the arrows.
+    navigation.register({ name: 'dialogue', root: dialogue.window, layer: 50, isOpen: () => dialogue.window.open, back: dialogue.close,
+      initialFocus: () => dialogue.window.querySelector<HTMLElement>('.dagger-dialogue-topics button, .dagger-dialogue-topics summary') }),
     ...choices.cancellable.map(service => navigation.register({ name: service.getAttribute('aria-label')!, root: service, layer: 45,
       isOpen: () => !service.hidden, back: () => service.querySelector<HTMLButtonElement>('[data-escape]:not(:disabled)')?.click() })),
     navigation.register({ name: 'dungeon-text', root: dungeonText.root, layer: 40, isOpen: () => !dungeonText.root.hidden, back: dungeonText.close }),
