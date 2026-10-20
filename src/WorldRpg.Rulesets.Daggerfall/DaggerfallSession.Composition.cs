@@ -662,6 +662,8 @@ internal sealed partial class DaggerfallSession
                 composition.Identity,
                 DaggerfallUiArt.Read(engine.Content, composition.StartSite.ClassicPresentation.InventoryIcons.Values,
                     _definitions.CharacterPresentation.Races.Values.SelectMany(race => race.Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head)).Select(layer => layer.MediaId)
+                    // The race's background is the inventory's paper-doll backdrop.
+                    .Concat(_definitions.CharacterPresentation.Races.Values.Select(race => race.Background.MediaId))
                     .Concat(_definitions.CharacterPresentation.FactionFaces.Select(face => face.MediaId))
                     .Concat(_definitions.CharacterPresentation.ChildFaces.Select(face => face.MediaId))
                     .Concat(_definitions.CharacterPresentation.RacialForms.Values.SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId })),

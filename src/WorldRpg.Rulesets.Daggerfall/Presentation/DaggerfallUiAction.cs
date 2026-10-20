@@ -35,7 +35,7 @@ internal enum DaggerfallUiActionKind
     WagonPut, WagonTake,
     QuestChoice, QuestDismiss, QuestOfferAnswer,
     DungeonTextAnswer, DungeonTextClose,
-    InventoryMove, InventoryInspect, InventoryUse, InventoryDrop,
+    InventoryMove, InventoryInspect, InventoryUse, InventoryDrop, InventorySort,
     NotebookPage, NotebookAdd, NotebookEdit, NotebookRemove, NotebookMove,
     CurrencyDepositGold, CurrencyWithdrawGold, CurrencyDepositLetters, CurrencyWithdrawLetter, BankTransfer,
     BankOpen, BankLoanIssue, BankLoanRepayAccount, BankLoanRepayCarried,
@@ -232,6 +232,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.InventoryInspect, "inventory-inspect", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.InventoryUse, "inventory-use", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.InventoryDrop, "inventory-drop", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.InventorySort, "inventory-sort", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.NotebookPage, "notebook-page", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.NotebookAdd, "notebook-add", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.NotebookEdit, "notebook-edit", DaggerfallUiPhases.Interaction),
@@ -447,6 +448,7 @@ internal static class DaggerfallUiAction
             if (action == "spell-delete")
                 return fields.SetEquals(["action", "key", "confirm"]) && !string.IsNullOrWhiteSpace(key)
                     ? new(action, Key: key, Confirm: confirm) : null;
+            if (action == "inventory-sort") return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "spell-sort") return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "spell-swap")
                 return fields.SetEquals(["action", "key", "item"]) && !string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(item)

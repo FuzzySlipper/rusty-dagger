@@ -49,6 +49,62 @@ public sealed class DaggerfallInventoryPresentationTests
     }
 
     [Fact]
+    public void Rows_publish_their_pack_tab_whether_they_stack_and_why_they_cannot_be_dropped()
+    {
+        using Fixture f = new();
+        InventoryPresentation inventory = f.Ui.Read();
+        Assert.Equal(["weapons-armor", "magic-items", "clothing-misc", "ingredients"], inventory.Categories!.Select(category => category.Id));
+        InventoryItemPresentation gold = Item(inventory, f.StackKey("gold-piece"));
+        Assert.Equal(("clothing-misc", true, (string?)null), (gold.Category, gold.Stackable, gold.DropRefusal));
+        InventoryItemPresentation dagger = Item(inventory, f.Key(1002));
+        Assert.Equal(("weapons-armor", false, (string?)null), (dagger.Category, dagger.Stackable, dagger.DropRefusal));
+        Assert.Equal(dagger.Weight / 4.0, dagger.WeightKilograms);
+        // The worn sword says why it cannot be dropped, so the screen need not decide it.
+        InventoryItemPresentation sword = Item(inventory, f.Key(1001));
+        Assert.NotEmpty(sword.EquippedSlots);
+        Assert.Equal("Unequip that item before dropping it.", sword.DropRefusal);
+    }
+
+    [Fact]
+    public void Equipment_slots_publish_the_group_and_name_the_screen_lays_them_out_by()
+    {
+        using Fixture f = new();
+        EquipmentSlotPresentation[] slots = f.Ui.Read().Slots;
+        Assert.Equal(f.Definitions.EquipmentSlots.Count, slots.Length);
+        Assert.Equal(("head", "armour", "Helm"), (slots[0].Id, slots[0].Group, slots[0].Label));
+        EquipmentSlotPresentation ring = Assert.Single(slots, slot => slot.Id == "ring1");
+        Assert.Equal(("accessories", "Second ring"), (ring.Group, ring.Label));
+        Assert.Equal("weapons", Assert.Single(slots, slot => slot.Id == "left-hand").Group);
+        // Armour, then clothing, then the hands, then the accessories.
+        string[] groups = [.. slots.Select(slot => slot.Group).Distinct()];
+        Assert.Equal(["armour", "clothing", "weapons", "accessories"], groups);
+    }
+
+    [Fact]
+    public void Sorting_lays_the_pack_out_by_tab_then_name_from_the_first_cell()
+    {
+        using Fixture f = new();
+        InventoryPresentation before = f.Ui.Read();
+        f.Ui.Move(new("inventory-move", before.Revision, f.Key(1002), 30));
+        f.Ui.Sort();
+        InventoryPresentation sorted = f.Ui.Read();
+        Assert.Equal("Pack sorted.", f.Ui.Message);
+        InventoryItemPresentation[] pack = [.. sorted.Items.Where(item => item.EquippedSlots.Length == 0).OrderBy(item => item.GridSlot)];
+        Assert.Equal(Enumerable.Range(0, pack.Length), pack.Select(item => item.GridSlot!.Value));
+        string[] order = [.. sorted.Categories!.Select(category => category.Id)];
+        Assert.Equal(pack.OrderBy(item => Array.IndexOf(order, item.Category)).ThenBy(item => item.Label, StringComparer.CurrentCultureIgnoreCase)
+            .Select(item => item.Key), pack.Select(item => item.Key));
+        Assert.Equal("weapons-armor", pack[0].Category);
+    }
+
+    [Fact]
+    public void The_sort_action_takes_no_arguments()
+    {
+        Assert.Equal(DaggerfallUiActionKind.InventorySort, DaggerfallUiAction.Parse("{\"action\":\"inventory-sort\"}"u8)?.Kind);
+        Assert.Null(DaggerfallUiAction.Parse("{\"action\":\"inventory-sort\",\"item\":\"x\"}"u8));
+    }
+
+    [Fact]
     public void Grid_swap_equip_replacement_and_unequip_keep_engine_items_and_layout_coherent()
     {
         using Fixture f = new();
