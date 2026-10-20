@@ -1,7 +1,20 @@
+/// How an authored kit image is drawn, as its author stated it in data/ui-authored-assets.json: CSS pixels
+/// per image pixel at UI scale 1, 9-slice insets (top, right, bottom, left) and a cursor hotspot (x, y), both in
+/// image pixels. A frame's CSS `border-image-slice` takes the insets as they are and its `border-image-width`
+/// is the insets times the scale.
+export interface UiArtDisplay {
+  readonly scale: number;
+  /// Four insets: top, right, bottom, left.
+  readonly slice: readonly number[] | null;
+  /// Two values: x, y.
+  readonly hotspot: readonly number[] | null;
+}
+
 /// The published UI art a snapshot carried, keyed by the media identity the pack owns.
 export interface UiArtImage {
   readonly id: string;
   readonly image: string;
+  readonly display?: UiArtDisplay;
 }
 
 export interface UiArt {
@@ -16,7 +29,22 @@ export type ArtRequestAction = {
 };
 
 const images = new Map<string, string>();
+const displays = new Map<string, UiArtDisplay>();
 let revision = '';
+
+const numbers = (value: unknown, count: number): number[] | null =>
+  Array.isArray(value) && value.length === count && value.every(entry => Number.isFinite(entry) && entry >= 0) ? value as number[] : null;
+
+function readDisplay(value: unknown): UiArtDisplay | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const block = value as { scale?: unknown; slice?: unknown; hotspot?: unknown };
+  if (typeof block.scale !== 'number' || !(block.scale > 0)) return null;
+  return {
+    scale: block.scale,
+    slice: numbers(block.slice, 4),
+    hotspot: numbers(block.hotspot, 2),
+  };
+}
 
 /// Adopts a published art block and returns the revision now held, so a caller can tell whether the
 /// snapshot brought art it did not have.
@@ -25,12 +53,19 @@ export function adopt(value: unknown): string {
   const block = value as { revision?: unknown; images?: unknown };
   if (typeof block.revision !== 'string' || !Array.isArray(block.images)) return revision;
   const next = new Map<string, string>();
+  const nextDisplays = new Map<string, UiArtDisplay>();
   for (const entry of block.images as readonly UiArtImage[]) {
-    if (typeof entry?.id === 'string' && typeof entry?.image === 'string' && entry.image.length > 0) next.set(entry.id, entry.image);
+    if (typeof entry?.id === 'string' && typeof entry?.image === 'string' && entry.image.length > 0) {
+      next.set(entry.id, entry.image);
+      const drawn = readDisplay(entry.display);
+      if (drawn !== null) nextDisplays.set(entry.id, drawn);
+    }
   }
 
   images.clear();
+  displays.clear();
   for (const [id, image] of next) images.set(id, image);
+  for (const [id, drawn] of nextDisplays) displays.set(id, drawn);
   revision = block.revision;
   return revision;
 }
@@ -43,6 +78,11 @@ export function heldRevision(): string {
 /// The data URL for one published media identity, or null when this session has not published it.
 export function image(id: string | null): string | null {
   return id === null ? null : images.get(id) ?? null;
+}
+
+/// How a published kit image is drawn, or null when the image is not authored kit art or not published.
+export function display(id: string | null): UiArtDisplay | null {
+  return id === null ? null : displays.get(id) ?? null;
 }
 
 const lastReportedMissing = new Map<string, string>();

@@ -166,7 +166,43 @@ public sealed record ClassicAuthoredUiAsset(
     string SourceLabel,
     byte[] PngBytes,
     string Generator,
-    string Prompt);
+    string Prompt,
+    ClassicAuthoredUiDisplay? Display = null);
+
+/// <summary>
+/// How the DOM draws one authored UI image, stated by its author beside the prompt: the CSS pixels one
+/// published pixel covers at UI scale 1, the 9-slice insets (top, right, bottom, left) and the cursor
+/// hotspot (x, y). Insets and hotspot are published pixels, which is why an asset that states them must be
+/// published unresampled.
+/// </summary>
+public sealed record ClassicAuthoredUiDisplay(double Scale, IReadOnlyList<int>? Slice = null, IReadOnlyList<int>? Hotspot = null)
+{
+    /// <summary>The largest CSS-pixel scale an author may state; past it a bounded asset would be drawn blurred.</summary>
+    public const double MaximumScale = 4;
+
+    /// <summary>Checks the values against each other; <paramref name="width"/> and <paramref name="height"/> are the published size when known.</summary>
+    public void Validate(string id, int? width = null, int? height = null)
+    {
+        if (!double.IsFinite(Scale) || Scale <= 0 || Scale > MaximumScale)
+        {
+            throw new InvalidOperationException($"Authored UI asset '{id}' states a display scale outside (0, {MaximumScale}].");
+        }
+
+        if (Slice is not null
+            && (Slice.Count != 4 || Slice.Any(inset => inset < 0)
+                || (width is int w && Slice[1] + Slice[3] >= w) || (height is int h && Slice[0] + Slice[2] >= h)))
+        {
+            throw new InvalidOperationException($"Authored UI asset '{id}' states 9-slice insets that are not four non-negative values leaving a centre.");
+        }
+
+        if (Hotspot is not null
+            && (Hotspot.Count != 2 || Hotspot.Any(value => value < 0)
+                || (width is int hw && Hotspot[0] >= hw) || (height is int hh && Hotspot[1] >= hh)))
+        {
+            throw new InvalidOperationException($"Authored UI asset '{id}' states a cursor hotspot outside the image.");
+        }
+    }
+}
 
 /// <summary>
 /// Portable bytes for the tracked authored-UI manifest. The normalizer retains
@@ -181,7 +217,8 @@ public sealed record ClassicAuthoredUiAssetManifest(
     string RelativePath,
     string SourceLabel,
     string Generator,
-    string Prompt);
+    string Prompt,
+    ClassicAuthoredUiDisplay? Display = null);
 
 /// <summary>Semantic actions in the classic dagger CIF action table.</summary>
 public enum ClassicDaggerWeaponAction
@@ -1713,6 +1750,19 @@ public sealed record Arena2ClassicMediaPublication(
             // tree carries something a snapshot can afford and the oversized plate stays outside it.
             DeterministicPngImage source = DeterministicPngReader.ReadRgba8(asset.PngBytes, asset.Id);
             DeterministicPngImage published = DeterministicImageResample.FitWithin(source, options.AuthoredUiMaximumDimension, asset.Id);
+            if (asset.Display is { } display)
+            {
+                // Insets and a hotspot are the author's published pixels: a resampled original would move
+                // every slice line, so it is refused rather than drawn with the wrong corners.
+                if (source != published && (display.Slice is not null || display.Hotspot is not null))
+                {
+                    throw new InvalidOperationException(
+                        $"Authored UI asset '{asset.Id}' states 9-slice insets or a hotspot but its original is {width}x{height}, past the {options.AuthoredUiMaximumDimension}-pixel publication bound; supply the original at its published size.");
+                }
+
+                display.Validate(asset.Id, published.Width, published.Height);
+            }
+
             byte[] bytes = source == published ? asset.PngBytes : DeterministicPngEncoder.EncodeRgba8(published.Width, published.Height, published.Rgba);
             if (bytes.LongLength > options.AuthoredUiMaximumArtifactBytes)
             {
@@ -1722,7 +1772,7 @@ public sealed record Arena2ClassicMediaPublication(
 
             RequireArtifactQuota(bytes, options, asset.Id);
             artifacts.Add(new(asset.Id, NormalizedMediaKind.UserInterface, asset.RelativePath, bytes, published.Width, published.Height, null, "image/png"));
-            metadata.Add(new(asset.Id, asset.RelativePath, asset.SourceLabel, asset.Generator, asset.Prompt));
+            metadata.Add(new(asset.Id, asset.RelativePath, asset.SourceLabel, asset.Generator, asset.Prompt, asset.Display));
         }
 
         manifests = metadata.ToArray();

@@ -14,6 +14,9 @@ export type LootAction =
 /** Stable DOM rows render C# values; a click only claims the selected item and revision. */
 import { cssUrl, image, reportMissingArt } from './art.js';
 
+/// The kit's stone surface, tiled behind the loot list until #10111 frames every panel from the kit.
+const LOOT_PANEL_ART = 'ui.stone.texture.v2';
+
 export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void): {
   update(value: LootProjection | null): void; refresh(): void; dispose(): void;
 } {
@@ -44,14 +47,14 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
     // The panel frame is published art like the inventory's; a session that cannot deliver it says
     // which identity is missing instead of showing an unaccounted fallback. The report fires only
     // when the missing set changes, so steady-state projections stay silent.
-    const frame = image('inventory.skin.panel-slate.v1');
+    const frame = image(LOOT_PANEL_ART);
     shell.style.setProperty('--loot-panel-art', frame === null ? 'none' : cssUrl(frame));
     if (frame === null) {
-      shell.setAttribute('data-art-missing', 'inventory.skin.panel-slate.v1');
+      shell.setAttribute('data-art-missing', LOOT_PANEL_ART);
     } else {
       shell.removeAttribute('data-art-missing');
     }
-    reportMissingArt('loot', frame === null ? ['inventory.skin.panel-slate.v1'] : []);
+    reportMissingArt('loot', frame === null ? [LOOT_PANEL_ART] : []);
 
     heading.textContent = value.title;
     status.textContent = value.message;

@@ -1191,6 +1191,26 @@ test('frame art awaits the first publication and reports unchanged missing sets 
   } finally { console.warn = warn; art.adopt({ revision: '', images: [] }); }
 });
 
+test('kit art keeps how each image is drawn and drops a malformed statement', () => {
+  try {
+    art.adopt({ revision: 'kit', images: [
+      { id: 'ui.stone.window.v2', image: 'data:image/png;base64,AA==', display: { scale: 0.5, slice: [64, 64, 64, 64], hotspot: null } },
+      { id: 'ui.cursor.grab.v2', image: 'data:image/png;base64,AA==', display: { scale: 0.5, slice: null, hotspot: [32, 32] } },
+      { id: 'ui.stone.bad.v2', image: 'data:image/png;base64,AA==', display: { scale: 0.5, slice: [1, 2, 3], hotspot: [-1, 0] } },
+      { id: 'ui.stone.unscaled.v2', image: 'data:image/png;base64,AA==', display: { scale: 0 } },
+      { id: 'screen.title', image: 'data:image/png;base64,AA==' },
+    ] });
+    assert.deepEqual(art.display('ui.stone.window.v2'), { scale: 0.5, slice: [64, 64, 64, 64], hotspot: null });
+    assert.deepEqual(art.display('ui.cursor.grab.v2'), { scale: 0.5, slice: null, hotspot: [32, 32] });
+    assert.deepEqual(art.display('ui.stone.bad.v2'), { scale: 0.5, slice: null, hotspot: null });
+    assert.equal(art.display('ui.stone.unscaled.v2'), null);
+    assert.equal(art.display('screen.title'), null);
+    assert.notEqual(art.image('screen.title'), null);
+    art.adopt({ revision: 'next', images: [] });
+    assert.equal(art.display('ui.stone.window.v2'), null);
+  } finally { art.adopt({ revision: '', images: [] }); }
+});
+
 test('pending level up shows permanent and live values and sends guarded semantic choices', () => {
   const f = fixture();
   try {

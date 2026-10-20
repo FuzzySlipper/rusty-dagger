@@ -11,9 +11,9 @@ export async function exercise({ page, url }) {
     const newImage = image('blue');
     const art = (revision, value) => ({ revision, images: [
       { id: 'screen.title', image: value },
-      { id: 'inventory.skin.panel-slate.v1', image: value },
-      { id: 'inventory.skin.titlebar-slate.v1', image: value },
-      { id: 'inventory.skin.grid-slot-slate.v1', image: value },
+      { id: 'ui.stone.texture.v2', image: value },
+      { id: 'ui.stone.title.v2', image: value },
+      { id: 'ui.stone.slot.v2', image: value },
     ] });
     const assert = (condition, message) => { if (!condition) throw new Error(message); };
 

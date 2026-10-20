@@ -36,13 +36,13 @@ internal sealed class DaggerfallUiArt
         "screen.start-menu",
         "screen.title",
         "window.character-sheet.chrome",
-        // The authored inventory skins are drawn by the DOM's inventory and loot panels. They are
-        // published at a bounded size rather than copied beside the UI, so the panel frame arrives
-        // through the same named read as every other artifact.
-        "inventory.skin.grid-slot-slate.v1",
-        "inventory.skin.panel-slate.v1",
-        "inventory.skin.titlebar-slate.v1",
     ];
+
+    /// <summary>
+    /// Where the publication puts the authored UI kit. Every artifact under it is delivered: the kit is the
+    /// skin every screen draws, and the inventory states which images it has, so no list is kept here.
+    /// </summary>
+    internal const string AuthoredPathSegment = "/media/ui/authored/";
 
     /// <summary>
     /// The largest slice one admitted read serves - the Engine refuses a larger request - so an
@@ -50,7 +50,7 @@ internal sealed class DaggerfallUiArt
     /// </summary>
     private const uint MaximumReadBytes = 1024 * 1024;
 
-    private DaggerfallUiArt(IReadOnlyList<(string Id, string Image)> images, IReadOnlyList<string> pickScreens)
+    private DaggerfallUiArt(IReadOnlyList<DaggerfallUiArtImage> images, IReadOnlyList<string> pickScreens)
     {
         // A new admitted image block invalidates retained DOM art, including across runtime restarts.
         // This token identifies the publication; it does not hash or verify the image bytes.
@@ -63,8 +63,8 @@ internal sealed class DaggerfallUiArt
     internal string Revision { get; }
     internal IReadOnlyList<string> PickScreens { get; }
 
-    /// <summary>Every resolved image as a data URL, ordered by media identity.</summary>
-    internal IReadOnlyList<(string Id, string Image)> Images { get; }
+    /// <summary>Every resolved image as a data URL, ordered by media identity, with how an authored one is drawn.</summary>
+    internal IReadOnlyList<DaggerfallUiArtImage> Images { get; }
 
     /// <summary>
     /// Reads the published UI art this session shows. <paramref name="itemIcons"/> are the inventory
@@ -89,8 +89,10 @@ internal sealed class DaggerfallUiArt
         string[] pickScreens = inventory.Where(entry => entry.Value.Slot == "pick").Select(entry => entry.Key).Order(StringComparer.Ordinal).ToArray();
         if (pickScreens.Length == 0 || !pickScreens.Contains("screen.pick.02", StringComparer.Ordinal))
             throw new InvalidOperationException("The published pick slot must supply screen.pick.02.");
-        List<(string Id, string Image)> images = [];
-        foreach (string id in AlwaysShown.Concat(pickScreens).Concat(itemIcons).Concat(portraits).Concat(panelArt ?? []).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        string[] authored = inventory.Where(entry => entry.Value.Path.Contains(AuthoredPathSegment, StringComparison.Ordinal))
+            .Select(entry => entry.Key).ToArray();
+        List<DaggerfallUiArtImage> images = [];
+        foreach (string id in AlwaysShown.Concat(authored).Concat(pickScreens).Concat(itemIcons).Concat(portraits).Concat(panelArt ?? []).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
             if (!inventory.TryGetValue(id, out InventoryEntry entry))
             {
@@ -98,7 +100,7 @@ internal sealed class DaggerfallUiArt
             }
 
             byte[] bytes = ReadArtifact(content, id, entry);
-            images.Add((id, $"data:image/png;base64,{Convert.ToBase64String(bytes)}"));
+            images.Add(new(id, $"data:image/png;base64,{Convert.ToBase64String(bytes)}", entry.Display));
         }
 
         return new DaggerfallUiArt(images, pickScreens);
@@ -130,7 +132,8 @@ internal sealed class DaggerfallUiArt
                     throw new InvalidOperationException($"The admitted content inventory states media '{mediaId}' without a usable path or length.");
                 }
 
-                if (!entries.TryAdd(mediaId, new InventoryEntry(path, byteLength, artifact.TryGetProperty("slot", out var slot) ? slot.GetString() : null)))
+                DaggerfallUiArtDisplay? display = artifact.TryGetProperty("display", out JsonElement drawn) && drawn.ValueKind != JsonValueKind.Null ? ReadDisplay(mediaId, drawn) : null;
+                if (!entries.TryAdd(mediaId, new InventoryEntry(path, byteLength, artifact.TryGetProperty("slot", out var slot) ? slot.GetString() : null, display)))
                 {
                     throw new InvalidOperationException($"The admitted content inventory names media '{mediaId}' twice.");
                 }
@@ -142,6 +145,27 @@ internal sealed class DaggerfallUiArt
         }
 
         return entries;
+    }
+
+    /// <summary>Reads how the publication says an authored image is drawn; a malformed statement names the artifact.</summary>
+    private static DaggerfallUiArtDisplay ReadDisplay(string mediaId, JsonElement drawn)
+    {
+        static int[]? Ints(JsonElement parent, string name, int count) =>
+            parent.TryGetProperty(name, out JsonElement values)
+                ? values.ValueKind == JsonValueKind.Array && values.GetArrayLength() == count
+                    ? values.EnumerateArray().Select(value => value.GetInt32()).ToArray()
+                    : throw new FormatException(name)
+                : null;
+        try
+        {
+            double scale = drawn.GetProperty("scale").GetDouble();
+            if (!double.IsFinite(scale) || scale <= 0) throw new FormatException("scale");
+            return new DaggerfallUiArtDisplay(scale, Ints(drawn, "slice", 4), Ints(drawn, "hotspot", 2));
+        }
+        catch (Exception exception) when (exception is FormatException or InvalidOperationException or KeyNotFoundException)
+        {
+            throw new InvalidOperationException($"The admitted content inventory states an unreadable display for media '{mediaId}': {exception.Message}", exception);
+        }
     }
 
     /// <summary>Reads one published artifact by the name the inventory states, and refuses a length that disagrees with it.</summary>
@@ -199,5 +223,14 @@ internal sealed class DaggerfallUiArt
         return bytes;
     }
 
-    private readonly record struct InventoryEntry(string Path, long ByteLength, string? Slot);
+    private readonly record struct InventoryEntry(string Path, long ByteLength, string? Slot, DaggerfallUiArtDisplay? Display);
 }
+
+/// <summary>One delivered image: its media identity, its bytes as a data URL, and how an authored image is drawn.</summary>
+internal sealed record DaggerfallUiArtImage(string Id, string Image, DaggerfallUiArtDisplay? Display = null);
+
+/// <summary>
+/// How the DOM draws an authored image, as its author stated it: CSS pixels per image pixel at UI scale 1,
+/// the 9-slice insets (top, right, bottom, left) and a cursor hotspot (x, y), both in image pixels.
+/// </summary>
+internal sealed record DaggerfallUiArtDisplay(double Scale, IReadOnlyList<int>? Slice, IReadOnlyList<int>? Hotspot);

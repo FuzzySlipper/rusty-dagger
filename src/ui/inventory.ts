@@ -745,9 +745,9 @@ function applyAuthoredArt(element: HTMLElement): void {
 
     return cssUrl(source);
   };
-  element.style.setProperty('--inventory-panel-art', art('inventory.skin.panel-slate.v1'));
-  element.style.setProperty('--inventory-title-art', art('inventory.skin.titlebar-slate.v1'));
-  element.style.setProperty('--inventory-slot-art', art('inventory.skin.grid-slot-slate.v1'));
+  element.style.setProperty('--inventory-panel-art', art('ui.stone.texture.v2'));
+  element.style.setProperty('--inventory-title-art', art('ui.stone.title.v2'));
+  element.style.setProperty('--inventory-slot-art', art('ui.stone.slot.v2'));
   if (missing.length === 0) {
     element.removeAttribute('data-art-missing');
   } else {

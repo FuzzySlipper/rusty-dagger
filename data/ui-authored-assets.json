@@ -1,25 +1,712 @@
 {
   "assets": [
     {
-      "id": "inventory.skin.panel-slate.v1",
-      "file": "inventory-skin-panel-slate-v1.png",
-      "sourceFile": "inventory-panel-slate-v1.png",
-      "generator": "gpt-image-1.5",
-      "prompt": "Create one original, seamless, tileable 2D fantasy inventory panel texture for a dark retro computer RPG. Square 1024x1024. Materials: charcoal slate stone, muted warm brass flecks, faint mossy green oxidation, subtle hand-painted pixel-art-era texture but not copied from any game. Low contrast so readable DOM text can sit above it. No frames, no UI controls, no text, no icons, no logos, no characters, no known game assets. Seamless edges in both directions."
+      "id": "ui.cursor.grab.v2",
+      "file": "ui-cursor-grab-v2.png",
+      "sourceFile": "ui-cursor-grab-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 64x64, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single fantasy RPG mouse cursor, a gauntleted hand of dark iron with bright steel highlights and a brown leather cuff, closed into a gripping fist as if holding something, seen from the back, bold readable silhouette with a light rim, centred, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5,
+        "hotspot": [
+          32,
+          32
+        ]
+      }
     },
     {
-      "id": "inventory.skin.titlebar-slate.v1",
-      "file": "inventory-titlebar-slate-v1.png",
-      "sourceFile": "inventory-titlebar-slate-v1.png",
-      "generator": "gpt-image-2",
-      "prompt": "Create a standalone wide dark retro fantasy RPG title-bar panel with no text, letters, icons, logos, or item art. Aged charcoal slate center, muted antique-brass edge bands, rivets, and slight moss-green oxidation; readable cream DOM heading text overlays the center. Original hand-painted pixel-art-era UI chrome, not copied from any game."
+      "id": "ui.cursor.normal.v2",
+      "file": "ui-cursor-normal-v2.png",
+      "sourceFile": "ui-cursor-normal-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 64x64, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single fantasy RPG mouse pointer, a polished brass arrowhead with a dark iron outline and a light rim, pointing diagonally up and to the left with the tip at the upper left, bold readable silhouette, centred, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5,
+        "hotspot": [
+          2,
+          2
+        ]
+      }
     },
     {
-      "id": "inventory.skin.grid-slot-slate.v1",
-      "file": "inventory-grid-slot-slate-v1.png",
-      "sourceFile": "inventory-grid-slot-slate-v1.png",
-      "generator": "gpt-image-2",
-      "prompt": "Create one standalone square empty inventory slot with no text, letters, icons, logos, or item art. Recessed charcoal slate interior, worn muted antique-brass bevel, corner rivets, and slight moss-green oxidation; readable DOM item name and quantity overlays it. Original hand-painted pixel-art-era UI chrome, not copied from any game."
+      "id": "ui.cursor.pointer.v2",
+      "file": "ui-cursor-pointer-v2.png",
+      "sourceFile": "ui-cursor-pointer-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 64x64, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single fantasy RPG mouse cursor, a gauntleted hand of dark iron with bright steel highlights and a brown leather cuff, the index finger pointing diagonally up and to the left with the fingertip at the upper left, bold readable silhouette with a light rim, centred, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5,
+        "hotspot": [
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "id": "ui.icon.activation.grab.v2",
+      "file": "ui-icon-activation-grab-v2.png",
+      "sourceFile": "ui-icon-activation-grab-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG action icons: a sneaking hand reaching for a coin purse, an open grasping hand, an eye with a magnifying lens, a speech bubble with two faces, a closed fist, an open door; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.activation.info.v2",
+      "file": "ui-icon-activation-info-v2.png",
+      "sourceFile": "ui-icon-activation-info-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG action icons: a sneaking hand reaching for a coin purse, an open grasping hand, an eye with a magnifying lens, a speech bubble with two faces, a closed fist, an open door; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.activation.steal.v2",
+      "file": "ui-icon-activation-steal-v2.png",
+      "sourceFile": "ui-icon-activation-steal-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG action icons: a sneaking hand reaching for a coin purse, an open grasping hand, an eye with a magnifying lens, a speech bubble with two faces, a closed fist, an open door; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.activation.talk.v2",
+      "file": "ui-icon-activation-talk-v2.png",
+      "sourceFile": "ui-icon-activation-talk-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG action icons: a sneaking hand reaching for a coin purse, an open grasping hand, an eye with a magnifying lens, a speech bubble with two faces, a closed fist, an open door; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.category.all.v2",
+      "file": "ui-icon-category-all-v2.png",
+      "sourceFile": "ui-icon-category-all-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG item category icons: a crossed sword and shield, a glowing magic staff with a crystal, a folded tunic and boots, a mortar and pestle with dried brown herbs and red berries, a small stack of gold coins, a bulging leather sack; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.category.clothing-misc.v2",
+      "file": "ui-icon-category-clothing-misc-v2.png",
+      "sourceFile": "ui-icon-category-clothing-misc-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG item category icons: a crossed sword and shield, a glowing magic staff with a crystal, a folded tunic and boots, a mortar and pestle with dried brown herbs and red berries, a small stack of gold coins, a bulging leather sack; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.category.gold.v2",
+      "file": "ui-icon-category-gold-v2.png",
+      "sourceFile": "ui-icon-category-gold-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG item category icons: a crossed sword and shield, a glowing magic staff with a crystal, a folded tunic and boots, a mortar and pestle with dried brown herbs and red berries, a small stack of gold coins, a bulging leather sack; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.category.ingredients.v2",
+      "file": "ui-icon-category-ingredients-v2.png",
+      "sourceFile": "ui-icon-category-ingredients-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG item category icons: a crossed sword and shield, a glowing magic staff with a crystal, a folded tunic and boots, a mortar and pestle with dried brown herbs and red berries, a small stack of gold coins, a bulging leather sack; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.category.magic-items.v2",
+      "file": "ui-icon-category-magic-items-v2.png",
+      "sourceFile": "ui-icon-category-magic-items-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG item category icons: a crossed sword and shield, a glowing magic staff with a crystal, a folded tunic and boots, a mortar and pestle with dried brown herbs and red berries, a small stack of gold coins, a bulging leather sack; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.category.weapons-armor.v2",
+      "file": "ui-icon-category-weapons-armor-v2.png",
+      "sourceFile": "ui-icon-category-weapons-armor-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG item category icons: a crossed sword and shield, a glowing magic staff with a crystal, a folded tunic and boots, a mortar and pestle with dried brown herbs and red berries, a small stack of gold coins, a bulging leather sack; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.amulet.v2",
+      "file": "ui-icon-equip-amulet-v2.png",
+      "sourceFile": "ui-icon-equip-amulet-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: an amulet on a chain, a bracelet, a ring, a mystic mark sigil, a faceted crystal, a pouch; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.arm.v2",
+      "file": "ui-icon-equip-arm-v2.png",
+      "sourceFile": "ui-icon-equip-arm-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: a knight's helmet, a shoulder pauldron, a cloak, a tunic shirt, a plate cuirass, a pair of gauntlet gloves; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.bracelet.v2",
+      "file": "ui-icon-equip-bracelet-v2.png",
+      "sourceFile": "ui-icon-equip-bracelet-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: an amulet on a chain, a bracelet, a ring, a mystic mark sigil, a faceted crystal, a pouch; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.bracer.v2",
+      "file": "ui-icon-equip-bracer-v2.png",
+      "sourceFile": "ui-icon-equip-bracer-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: a longsword, a round shield, a pair of plate greaves, a pair of trousers, a pair of boots, a vambrace bracer; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.chest-armor.v2",
+      "file": "ui-icon-equip-chest-armor-v2.png",
+      "sourceFile": "ui-icon-equip-chest-armor-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: a knight's helmet, a shoulder pauldron, a cloak, a tunic shirt, a plate cuirass, a pair of gauntlet gloves; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.chest-clothes.v2",
+      "file": "ui-icon-equip-chest-clothes-v2.png",
+      "sourceFile": "ui-icon-equip-chest-clothes-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: a knight's helmet, a shoulder pauldron, a cloak, a tunic shirt, a plate cuirass, a pair of gauntlet gloves; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.cloak.v2",
+      "file": "ui-icon-equip-cloak-v2.png",
+      "sourceFile": "ui-icon-equip-cloak-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: a knight's helmet, a shoulder pauldron, a cloak, a tunic shirt, a plate cuirass, a pair of gauntlet gloves; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.crystal.v2",
+      "file": "ui-icon-equip-crystal-v2.png",
+      "sourceFile": "ui-icon-equip-crystal-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: an amulet on a chain, a bracelet, a ring, a mystic mark sigil, a faceted crystal, a pouch; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.feet.v2",
+      "file": "ui-icon-equip-feet-v2.png",
+      "sourceFile": "ui-icon-equip-feet-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: a longsword, a round shield, a pair of plate greaves, a pair of trousers, a pair of boots, a vambrace bracer; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.gloves.v2",
+      "file": "ui-icon-equip-gloves-v2.png",
+      "sourceFile": "ui-icon-equip-gloves-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: a knight's helmet, a shoulder pauldron, a cloak, a tunic shirt, a plate cuirass, a pair of gauntlet gloves; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.head.v2",
+      "file": "ui-icon-equip-head-v2.png",
+      "sourceFile": "ui-icon-equip-head-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: a knight's helmet, a shoulder pauldron, a cloak, a tunic shirt, a plate cuirass, a pair of gauntlet gloves; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.legs-armor.v2",
+      "file": "ui-icon-equip-legs-armor-v2.png",
+      "sourceFile": "ui-icon-equip-legs-armor-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: a longsword, a round shield, a pair of plate greaves, a pair of trousers, a pair of boots, a vambrace bracer; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.legs-clothes.v2",
+      "file": "ui-icon-equip-legs-clothes-v2.png",
+      "sourceFile": "ui-icon-equip-legs-clothes-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: a longsword, a round shield, a pair of plate greaves, a pair of trousers, a pair of boots, a vambrace bracer; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.mark.v2",
+      "file": "ui-icon-equip-mark-v2.png",
+      "sourceFile": "ui-icon-equip-mark-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: an amulet on a chain, a bracelet, a ring, a mystic mark sigil, a faceted crystal, a pouch; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.ring.v2",
+      "file": "ui-icon-equip-ring-v2.png",
+      "sourceFile": "ui-icon-equip-ring-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: an amulet on a chain, a bracelet, a ring, a mystic mark sigil, a faceted crystal, a pouch; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.shield.v2",
+      "file": "ui-icon-equip-shield-v2.png",
+      "sourceFile": "ui-icon-equip-shield-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: a longsword, a round shield, a pair of plate greaves, a pair of trousers, a pair of boots, a vambrace bracer; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.equip.weapon.v2",
+      "file": "ui-icon-equip-weapon-v2.png",
+      "sourceFile": "ui-icon-equip-weapon-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 96x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy equipment slot silhouettes: a longsword, a round shield, a pair of plate greaves, a pair of trousers, a pair of boots, a vambrace bracer; each a flat pale bone-grey engraved silhouette with a faint darker outline and no other colour, bold simple readable shapes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.menu.character.v2",
+      "file": "ui-icon-menu-character-v2.png",
+      "sourceFile": "ui-icon-menu-character-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG menu icons: a leather backpack, a hooded adventurer's bust, an open spellbook with a glowing blue rune, a jewelled ring and amulet, a bound journal with a quill, a small notebook with a pencil; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.menu.inventory.v2",
+      "file": "ui-icon-menu-inventory-v2.png",
+      "sourceFile": "ui-icon-menu-inventory-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG menu icons: a leather backpack, a hooded adventurer's bust, an open spellbook with a glowing blue rune, a jewelled ring and amulet, a bound journal with a quill, a small notebook with a pencil; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.menu.journal.v2",
+      "file": "ui-icon-menu-journal-v2.png",
+      "sourceFile": "ui-icon-menu-journal-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG menu icons: a leather backpack, a hooded adventurer's bust, an open spellbook with a glowing blue rune, a jewelled ring and amulet, a bound journal with a quill, a small notebook with a pencil; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.menu.load.v2",
+      "file": "ui-icon-menu-load-v2.png",
+      "sourceFile": "ui-icon-menu-load-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG menu icons: a rolled parchment map, a bedroll by a campfire, a horse-drawn cart wheel and road sign, a wax-sealed scroll with a down arrow, an open scroll with an up arrow, a brass gear wheel; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.menu.magic-items.v2",
+      "file": "ui-icon-menu-magic-items-v2.png",
+      "sourceFile": "ui-icon-menu-magic-items-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG menu icons: a leather backpack, a hooded adventurer's bust, an open spellbook with a glowing blue rune, a jewelled ring and amulet, a bound journal with a quill, a small notebook with a pencil; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.menu.map.v2",
+      "file": "ui-icon-menu-map-v2.png",
+      "sourceFile": "ui-icon-menu-map-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG menu icons: a rolled parchment map, a bedroll by a campfire, a horse-drawn cart wheel and road sign, a wax-sealed scroll with a down arrow, an open scroll with an up arrow, a brass gear wheel; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.menu.notebook.v2",
+      "file": "ui-icon-menu-notebook-v2.png",
+      "sourceFile": "ui-icon-menu-notebook-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG menu icons: a leather backpack, a hooded adventurer's bust, an open spellbook with a glowing blue rune, a jewelled ring and amulet, a bound journal with a quill, a small notebook with a pencil; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.menu.rest.v2",
+      "file": "ui-icon-menu-rest-v2.png",
+      "sourceFile": "ui-icon-menu-rest-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG menu icons: a rolled parchment map, a bedroll by a campfire, a horse-drawn cart wheel and road sign, a wax-sealed scroll with a down arrow, an open scroll with an up arrow, a brass gear wheel; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.menu.save.v2",
+      "file": "ui-icon-menu-save-v2.png",
+      "sourceFile": "ui-icon-menu-save-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG menu icons: a rolled parchment map, a bedroll by a campfire, a horse-drawn cart wheel and road sign, a wax-sealed scroll with a down arrow, an open scroll with an up arrow, a brass gear wheel; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.menu.settings.v2",
+      "file": "ui-icon-menu-settings-v2.png",
+      "sourceFile": "ui-icon-menu-settings-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG menu icons: a rolled parchment map, a bedroll by a campfire, a horse-drawn cart wheel and road sign, a wax-sealed scroll with a down arrow, an open scroll with an up arrow, a brass gear wheel; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.menu.spells.v2",
+      "file": "ui-icon-menu-spells-v2.png",
+      "sourceFile": "ui-icon-menu-spells-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG menu icons: a leather backpack, a hooded adventurer's bust, an open spellbook with a glowing blue rune, a jewelled ring and amulet, a bound journal with a quill, a small notebook with a pencil; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.icon.menu.travel.v2",
+      "file": "ui-icon-menu-travel-v2.png",
+      "sourceFile": "ui-icon-menu-travel-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset sheet: six fantasy RPG menu icons: a rolled parchment map, a bedroll by a campfire, a horse-drawn cart wheel and road sign, a wax-sealed scroll with a down arrow, an open scroll with an up arrow, a brass gear wheel; each drawn in full natural colours with only small brass and stone accents, bold readable silhouettes, evenly spaced and well separated, two rows of three, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.parchment.texture.v2",
+      "file": "ui-parchment-texture-v2.png",
+      "sourceFile": "ui-parchment-texture-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 256x256, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a flat even seamless texture of aged cream parchment paper, very low contrast, soft fibres, no stains near the edges, no objects, no border, filling the whole frame edge to edge, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.parchment.window.v2",
+      "file": "ui-parchment-window-v2.png",
+      "sourceFile": "ui-parchment-window-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 256x256, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: an empty square fantasy RPG reading panel frame, straight-on front view, a border of carved dark oak with small darkened iron corner caps, identical straight uniform edges on all four sides, the inside is plain aged cream parchment, thin border, centred with margin, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          24,
+          24,
+          24,
+          24
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.button.disabled.v2",
+      "file": "ui-stone-button-disabled-v2.png",
+      "sourceFile": "ui-stone-button-disabled-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 256x86, disabled state derived, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single blank wide rectangular fantasy RPG menu button, straight-on front view, weathered grey stone button plate with a thin brass trim, bevelled edge, flat blank centre, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          18,
+          22,
+          18,
+          22
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.button.focus.v2",
+      "file": "ui-stone-button-focus-v2.png",
+      "sourceFile": "ui-stone-button-focus-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 256x86, focus state derived, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single blank wide rectangular fantasy RPG menu button, straight-on front view, weathered grey stone button plate with a thin brass trim, bevelled edge, flat blank centre, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          18,
+          22,
+          18,
+          22
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.button.pressed.v2",
+      "file": "ui-stone-button-pressed-v2.png",
+      "sourceFile": "ui-stone-button-pressed-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 256x86, pressed state derived, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single blank wide rectangular fantasy RPG menu button, straight-on front view, weathered grey stone button plate with a thin brass trim, bevelled edge, flat blank centre, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          18,
+          22,
+          18,
+          22
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.button.v2",
+      "file": "ui-stone-button-v2.png",
+      "sourceFile": "ui-stone-button-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 256x86, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single blank wide rectangular fantasy RPG menu button, straight-on front view, weathered grey stone button plate with a thin brass trim, bevelled edge, flat blank centre, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          18,
+          22,
+          18,
+          22
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.divider.v2",
+      "file": "ui-stone-divider-v2.png",
+      "sourceFile": "ui-stone-divider-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 256x32, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single thin horizontal divider bar, straight-on front view, a slim polished brass rod with a small ornate stone boss at its centre, very thin, centred and spanning the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          0,
+          20,
+          0,
+          20
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.panel.v2",
+      "file": "ui-stone-panel-v2.png",
+      "sourceFile": "ui-stone-panel-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 256x256, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single recessed square inset panel, straight-on front view, a thin bevelled weathered grey stone with polished brass fittings and rivets rim with small brass corner studs, flat plain dark slate interior, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          36,
+          36,
+          36,
+          36
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.scroll-thumb.v2",
+      "file": "ui-stone-scroll-thumb-v2.png",
+      "sourceFile": "ui-stone-scroll-thumb-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 48x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: two separate vertical scrollbar parts side by side, straight-on front view: on the left a long thin recessed dark slate groove with brass end caps, on the right a short thin polished brass slider handle with a stone grip, well separated, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          24,
+          0,
+          12,
+          0
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.scroll-track.v2",
+      "file": "ui-stone-scroll-track-v2.png",
+      "sourceFile": "ui-stone-scroll-track-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 48x256, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: two separate vertical scrollbar parts side by side, straight-on front view: on the left a long thin recessed dark slate groove with brass end caps, on the right a short thin polished brass slider handle with a stone grip, well separated, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          24,
+          0,
+          24,
+          0
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.slot.focus.v2",
+      "file": "ui-stone-slot-focus-v2.png",
+      "sourceFile": "ui-stone-slot-focus-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, focus state derived, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single empty square fantasy RPG inventory slot, straight-on front view, recessed dark slate socket with a weathered grey stone rim and tiny brass corner studs, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          20,
+          20,
+          20,
+          20
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.slot.invalid.v2",
+      "file": "ui-stone-slot-invalid-v2.png",
+      "sourceFile": "ui-stone-slot-invalid-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, invalid state derived, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single empty square fantasy RPG inventory slot, straight-on front view, recessed dark slate socket with a weathered grey stone rim and tiny brass corner studs, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          20,
+          20,
+          20,
+          20
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.slot.v2",
+      "file": "ui-stone-slot-v2.png",
+      "sourceFile": "ui-stone-slot-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 128x128, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single empty square fantasy RPG inventory slot, straight-on front view, recessed dark slate socket with a weathered grey stone rim and tiny brass corner studs, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          20,
+          20,
+          20,
+          20
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.tab.active.v2",
+      "file": "ui-stone-tab-active-v2.png",
+      "sourceFile": "ui-stone-tab-active-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 192x96, active state derived, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single blank fantasy RPG tab, straight-on front view, a weathered grey stone tab with rounded top corners and a thin brass trim along its top and sides, open flat bottom edge, flat blank centre, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          16,
+          24,
+          8,
+          24
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.tab.v2",
+      "file": "ui-stone-tab-v2.png",
+      "sourceFile": "ui-stone-tab-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 192x96, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single blank fantasy RPG tab, straight-on front view, a weathered grey stone tab with rounded top corners and a thin brass trim along its top and sides, open flat bottom edge, flat blank centre, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          16,
+          24,
+          8,
+          24
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.texture.v2",
+      "file": "ui-stone-texture-v2.png",
+      "sourceFile": "ui-stone-texture-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 2; keyed, fitted within 256x256, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a flat even seamless surface texture of smooth dark grey slate stone, very low contrast, fine subtle grain, no cracks, no objects, no border, filling the whole frame edge to edge, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.title.v2",
+      "file": "ui-stone-title-v2.png",
+      "sourceFile": "ui-stone-title-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 256x86, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single wide blank title bar plate, straight-on front view, polished brass plate with rivets and pointed ends set in weathered grey stone, flat blank centre, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          0,
+          48,
+          0,
+          48
+        ],
+        "scale": 0.5
+      }
+    },
+    {
+      "id": "ui.stone.window.v2",
+      "file": "ui-stone-window-v2.png",
+      "sourceFile": "ui-stone-window-v2.png",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 256x256, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: an empty square fantasy RPG window frame border, straight-on front view, weathered grey stone with polished brass fittings and rivets, ornate brass corner brackets, identical straight uniform edges on all four sides, no plate, no title bar, the inside is empty, thin border, centred with margin, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "display": {
+        "slice": [
+          36,
+          36,
+          36,
+          36
+        ],
+        "scale": 0.5
+      }
     }
   ]
 }

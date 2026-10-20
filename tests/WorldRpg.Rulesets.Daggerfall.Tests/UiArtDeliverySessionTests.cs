@@ -39,8 +39,8 @@ public sealed class UiArtDeliverySessionTests
         Dictionary<string, object?> images = Assert.IsType<object?[]>(art["images"])
             .Cast<Dictionary<string, object?>>()
             .ToDictionary(image => Assert.IsType<string>(image["id"]), image => (object?)Assert.IsType<string>(image["image"]), StringComparer.Ordinal);
-        // One artifact per identity the DOM draws: the mode screen, the chrome, the three authored
-        // inventory skins, every admitted item icon, the adult, faction and child portraits the
+        // One artifact per identity the DOM draws: the mode screen, the chrome, every image of the
+        // authored kit the inventory publishes, every admitted item icon, the adult, faction and child portraits the
         // quest escort HUD selects, and the head and body of each racial form (vampire, were-creature)
         // the HUD draws while it is held. Other paper-doll backgrounds and bodies stay with the sheet.
         string[] heads = [.. definitions.CharacterPresentation.Races.Values
@@ -54,7 +54,9 @@ public sealed class UiArtDeliverySessionTests
         string[] racialForms = [.. definitions.CharacterPresentation.RacialForms.Values
             .SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId }).Distinct(StringComparer.Ordinal)];
         string[] portraits = [.. heads, .. factionFaces, .. childFaces, .. racialForms];
-        Assert.Equal(10 + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length + DaggerfallTravelMap.MediaIds.Count, images.Count);
+        string[] kit = AuthoredKit(root);
+        Assert.Contains("ui.stone.window.v2", kit);
+        Assert.Equal(7 + kit.Length + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length + DaggerfallTravelMap.MediaIds.Count, images.Count);
         Assert.All(images.Values, image => Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(image), StringComparison.Ordinal));
 
         // The bytes are the published artifacts, read from admitted content by their content name.
@@ -90,10 +92,8 @@ public sealed class UiArtDeliverySessionTests
             "screen.prison",
             "screen.start-menu",
             "screen.title",
-            // The panel frames are published art now, not files staged beside the UI bundle.
-            "inventory.skin.grid-slot-slate.v1",
-            "inventory.skin.panel-slate.v1",
-            "inventory.skin.titlebar-slate.v1",
+            // The authored kit is published art, not files staged beside the UI bundle.
+            .. kit,
             .. inputs.ClassicPresentation.InventoryIcons.Values,
             .. portraits,
             // The travel map's world canvas and every region sheet it lays out.
@@ -173,7 +173,7 @@ public sealed class UiArtDeliverySessionTests
         // matching them cannot pass on an empty set.
         Assert.Contains("screen.prison", named);
         Assert.Contains("window.character-sheet.chrome", named);
-        Assert.Contains("inventory.skin.panel-slate.v1", named);
+        Assert.Contains("ui.stone.slot.v2", named);
 
         // No media file is named by the DOM: images are data the projection carries, never a path the
         // client stages beside itself.
@@ -330,9 +330,9 @@ public sealed class UiArtDeliverySessionTests
         byte[] skin = [9, 8, 7];
         byte[] titlebar = [6, 5, 4];
         byte[] slot = [3, 2, 1];
-        const string Skin = "worldrpg/media/ui/authored/inventory-skin-panel-slate-v1.png";
-        const string Titlebar = "worldrpg/media/ui/authored/inventory-titlebar-slate-v1.png";
-        const string Slot = "worldrpg/media/ui/authored/inventory-grid-slot-slate-v1.png";
+        const string Skin = "worldrpg/media/ui/authored/ui-stone-texture-v2.png";
+        const string Titlebar = "worldrpg/media/ui/authored/ui-stone-title-v2.png";
+        const string Slot = "worldrpg/media/ui/authored/ui-stone-slot-v2.png";
         content.Add(Screen, large);
         content.Add(Chrome, chrome);
         content.Add(Skin, skin);
@@ -356,9 +356,9 @@ public sealed class UiArtDeliverySessionTests
             ["artifacts"] = new JsonArray(
                 Entry("screen.death", Screen, large),
                 Entry("window.character-sheet.chrome", Chrome, chrome),
-                Entry("inventory.skin.panel-slate.v1", Skin, skin),
-                Entry("inventory.skin.titlebar-slate.v1", Titlebar, titlebar),
-                Entry("inventory.skin.grid-slot-slate.v1", Slot, slot),
+                Entry("ui.stone.texture.v2", Skin, skin),
+                Entry("ui.stone.title.v2", Titlebar, titlebar),
+                Entry("ui.stone.slot.v2", Slot, slot, new JsonObject { ["scale"] = 0.5, ["slice"] = new JsonArray(24, 24, 24, 24) }),
                 Entry("screen.character-generation", published["screen-character-generation"].Path, published["screen-character-generation"].Bytes),
                 Entry("screen.pick.02", published["screen-pick-02"].Path, published["screen-pick-02"].Bytes),
                 Entry("screen.prison", published["screen-prison"].Path, published["screen-prison"].Bytes),
@@ -368,16 +368,26 @@ public sealed class UiArtDeliverySessionTests
 
         DaggerfallUiArt art = DaggerfallUiArt.Read(content, []);
         Assert.Equal($"data:image/png;base64,{Convert.ToBase64String(large)}", art.Images.Single(image => image.Id == "screen.death").Image);
+        // Every authored image under the kit path is delivered without being named here, and carries how
+        // its author said it is drawn.
+        Assert.Equal(["ui.stone.slot.v2", "ui.stone.texture.v2", "ui.stone.title.v2"],
+            art.Images.Where(image => image.Id.StartsWith("ui.", StringComparison.Ordinal)).Select(image => image.Id));
+        DaggerfallUiArtDisplay drawn = Assert.IsType<DaggerfallUiArtDisplay>(art.Images.Single(image => image.Id == "ui.stone.slot.v2").Display);
+        Assert.Equal(0.5, drawn.Scale);
+        Assert.Equal([24, 24, 24, 24], drawn.Slice);
+        Assert.Null(drawn.Hotspot);
+        Assert.Null(art.Images.Single(image => image.Id == "ui.stone.title.v2").Display);
         Assert.Equal(2, content.Reads(Screen));
         Assert.Equal(1, content.Reads(Chrome));
         Assert.Equal(1, content.Reads(Skin));
 
-        static JsonObject Entry(string mediaId, string path, byte[] bytes) => new()
+        static JsonObject Entry(string mediaId, string path, byte[] bytes, JsonObject? display = null) => new()
         {
             ["path"] = path,
             ["byteLength"] = bytes.Length,
             ["sha256"] = Convert.ToHexStringLower(SHA256.HashData(bytes)),
             ["mediaId"] = mediaId,
+            ["display"] = display,
             ["slot"] = mediaId == "screen.pick.02" ? "pick" : null,
         };
     }
@@ -453,5 +463,15 @@ public sealed class UiArtDeliverySessionTests
             () => DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)));
         Assert.Contains("screen.death", failure.Message, StringComparison.Ordinal);
         Assert.Contains(DaggerfallUiArt.InventoryPath, failure.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>The authored kit identities the published inventory states, by the path the publication gives them.</summary>
+    private static string[] AuthoredKit(string root)
+    {
+        using JsonDocument inventory = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)));
+        return [.. inventory.RootElement.GetProperty("artifacts").EnumerateArray()
+            .Where(artifact => artifact.TryGetProperty("mediaId", out _)
+                && artifact.GetProperty("path").GetString()!.Contains(DaggerfallUiArt.AuthoredPathSegment, StringComparison.Ordinal))
+            .Select(artifact => artifact.GetProperty("mediaId").GetString()!)];
     }
 }

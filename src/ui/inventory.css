@@ -3,7 +3,7 @@
   --inventory-title-art: none;
   --inventory-slot-art: none;
   color: #f4e6bd;
-  background: #171813 var(--inventory-panel-art) center / 100% 100% no-repeat;
+  background: #171813 var(--inventory-panel-art) 0 0 / 8rem repeat;
   border: 1px solid #c5a45e;
   box-shadow: 0 12px 32px rgb(0 0 0 / .65), inset 0 0 0 2px rgb(22 18 10 / .65);
   font: .82rem Georgia, serif;
