@@ -11,13 +11,17 @@ public enum TextureSolidPalette
 }
 
 /// <summary>Source metadata for one texture record.</summary>
+/// <param name="XOffset">The record header's horizontal offset: where a classic screen draws the record.</param>
+/// <param name="YOffset">The record header's vertical offset.</param>
 public sealed record TextureRecordInfo(
     short Width,
     short Height,
     ushort Compression,
     ushort FrameCount,
     short ScaleX,
-    short ScaleY);
+    short ScaleY,
+    short XOffset = 0,
+    short YOffset = 0);
 
 /// <summary>One decoded, row-major, palette-indexed texture frame.</summary>
 public sealed record IndexedTextureFrame(
@@ -379,8 +383,8 @@ public sealed class TextureArchive
 
             CheckedLittleEndianReader record = new(ownedData, source);
             record.Seek(recordOffset);
-            record.ReadInt16();
-            record.ReadInt16();
+            short xOffset = record.ReadInt16();
+            short yOffset = record.ReadInt16();
             short width = record.ReadInt16();
             short height = record.ReadInt16();
             ushort compression = record.ReadUInt16();
@@ -409,7 +413,7 @@ public sealed class TextureArchive
                 throw record.Error($"texture record {ordinal} data offset overflows a 32-bit source position");
             }
 
-            records[ordinal] = new TextureRecord(recordOffset, dataOffset, new TextureRecordInfo(width, height, compression, frameCount, scaleX, scaleY));
+            records[ordinal] = new TextureRecord(recordOffset, dataOffset, new TextureRecordInfo(width, height, compression, frameCount, scaleX, scaleY, xOffset, yOffset));
         }
 
         return new TextureArchive(ownedData, source, records, null);

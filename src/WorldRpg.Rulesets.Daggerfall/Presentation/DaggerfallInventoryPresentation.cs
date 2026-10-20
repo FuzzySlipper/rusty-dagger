@@ -519,6 +519,9 @@ internal sealed class DaggerfallInventoryPresentation
             Stats: Stats(definition, metadata));
     }
 
+    /// <summary>The durable meaning of one equipped item, or null before item meaning is composed.</summary>
+    internal DaggerfallItemInstanceMetadata? EquippedMetadata(ulong entity) => Metadata(UniqueKey(entity), itemOwner);
+
     private DaggerfallItemInstanceMetadata? Metadata(string key, DaggerfallItemOwner? owner)
     {
         if (itemInstances is null) return null;

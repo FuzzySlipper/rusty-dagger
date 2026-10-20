@@ -378,7 +378,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       for (const control of shell.querySelectorAll<HTMLButtonElement>('[data-action="inventory"]')) control.disabled = inventorySuppressed;
       if (inventorySuppressed && activePanel === 'inventory') showHome();
       if (value.inventory) inventoryView.update(value.inventory);
-      inventoryView.updateIdentity(value.character && isCharacterProjection(value.character) ? value.character.identity : null);
+      inventoryView.updatePaperDoll(value.character && isCharacterProjection(value.character) ? value.character.paperDoll ?? null : null);
       propertyView.update(value.property ?? null);
       inventoryView.updateStorage(value.property?.storage ?? null);
       transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);

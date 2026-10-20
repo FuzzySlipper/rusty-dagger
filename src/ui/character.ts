@@ -123,6 +123,32 @@ export interface CharacterProjection {
   readonly creation?: CharacterCreation | null;
   readonly creationAvailable?: boolean;
   readonly levelUp?: CharacterLevelUp | null;
+  readonly paperDoll?: PaperDoll | null;
+}
+
+/** One image the paper doll draws, in source pixels from the doll's top-left corner. */
+export interface PaperDollLayer {
+  readonly kind: string;
+  readonly mediaId: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  /** The first and after-last image rows drawn, when only part of the image is. */
+  readonly clipTop: number | null;
+  readonly clipBottom: number | null;
+  /** Where this image is opaque, the doll clears what it drew beneath this layer. */
+  readonly mask: string | null;
+  readonly slot: string | null;
+}
+
+/** The player's paper doll as the ruleset composes it: the background, then every layer in draw order. */
+export interface PaperDoll {
+  readonly width: number;
+  readonly height: number;
+  readonly background: PaperDollLayer;
+  readonly layers: readonly PaperDollLayer[];
+  readonly unplaced: readonly string[];
 }
 
 import { heldRevision, image } from './art.js';

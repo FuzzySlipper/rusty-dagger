@@ -1,5 +1,5 @@
 import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
-import { adopt, heldRevision } from './art.js';
+import { adopt, adoptDemanded, heldDemandedRevision, heldRevision } from './art.js';
 import { mountChoices } from './choices.js';
 import { mountConfirm } from './confirm.js';
 import { mountDeath } from './death.js';
@@ -100,6 +100,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // revision it is missing, which is what a reload needs and what a republished artifact produces.
   let artRevision = heldRevision();
   let artCooldown = 0;
+  let demandedCooldown = 0;
   const redrawArt = (): void => {
     // The kit becomes the skin's custom properties once per art block; every primitive draws from them.
     applySkin();
@@ -128,6 +129,22 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       }
     } else {
       artCooldown = 0;
+    }
+
+    // The demanded block is adopted on top of the held art, so it only counts once that art is current.
+    if (value.uiArtDemanded && artRevision === value.uiArtRevision) {
+      const before = heldDemandedRevision();
+      if (adoptDemanded(value.uiArtDemanded) !== before) menu.refreshArt();
+    }
+    if (value.uiArtDemandedRevision && artRevision === value.uiArtRevision && value.uiArtDemandedRevision !== heldDemandedRevision()) {
+      if (demandedCooldown === 0) {
+        demandedCooldown = ART_REQUEST_INTERVAL;
+        send({ action: 'art-request', revision: value.uiArtDemandedRevision });
+      } else {
+        demandedCooldown--;
+      }
+    } else {
+      demandedCooldown = 0;
     }
 
     // Death outranks every other mode, so the screen the mode owns replaces the HUD rather than

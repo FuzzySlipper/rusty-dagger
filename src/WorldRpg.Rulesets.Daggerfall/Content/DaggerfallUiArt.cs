@@ -50,6 +50,22 @@ internal sealed class DaggerfallUiArt
     /// </summary>
     private const uint MaximumReadBytes = 1024 * 1024;
 
+    /// <summary>The paper doll's worn-item images, read only when the doll first draws one.</summary>
+    internal const string PaperDollInventoryPath = "worldrpg/media/character/paper-doll/paper-doll-inventory.json";
+
+    private readonly IContentService? _content;
+    private readonly Dictionary<string, InventoryEntry> _inventory = new(StringComparer.Ordinal);
+    private Dictionary<string, InventoryEntry>? _paperDoll;
+    private readonly HashSet<string> _delivered = new(StringComparer.Ordinal);
+    private readonly List<DaggerfallUiArtImage> _demanded = [];
+
+    private DaggerfallUiArt(IReadOnlyList<DaggerfallUiArtImage> images, IReadOnlyList<string> pickScreens, IContentService content, Dictionary<string, InventoryEntry> inventory)
+        : this(images, pickScreens)
+    {
+        _content = content;
+        _inventory = inventory;
+    }
+
     private DaggerfallUiArt(IReadOnlyList<DaggerfallUiArtImage> images, IReadOnlyList<string> pickScreens)
     {
         // A new admitted image block invalidates retained DOM art, including across runtime restarts.
@@ -57,6 +73,38 @@ internal sealed class DaggerfallUiArt
         Revision = Guid.NewGuid().ToString("N");
         Images = images;
         PickScreens = pickScreens;
+    }
+
+    /// <summary>
+    /// The images read on demand since the session began, in the order first drawn. The block grows and is
+    /// never trimmed, so a DOM that holds its revision holds every image a projection has named.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallUiArtImage> Demanded => _demanded;
+
+    /// <summary>The identity of the demanded block as it stands: the publication's revision and its size.</summary>
+    internal string DemandedRevision => $"{Revision}.{_demanded.Count}";
+
+    /// <summary>
+    /// Reads every named image that this art does not already deliver, from the published inventories.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">An identity no admitted inventory describes, named.</exception>
+    internal void Demand(IEnumerable<string> ids)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        foreach (string id in ids)
+        {
+            if (_delivered.Contains(id)) continue;
+            if (_content is null) throw new InvalidOperationException($"UI art '{id}' was demanded from art that reads no content.");
+            if (!_inventory.TryGetValue(id, out InventoryEntry entry))
+            {
+                _paperDoll ??= ReadInventory(_content, PaperDollInventoryPath);
+                if (!_paperDoll.TryGetValue(id, out entry))
+                    throw new InvalidOperationException($"Published UI art '{id}' is not described by the admitted content inventories.");
+            }
+
+            _demanded.Add(new(id, $"data:image/png;base64,{Convert.ToBase64String(ReadArtifact(_content, id, entry))}"));
+            _delivered.Add(id);
+        }
     }
 
     /// <summary>Publication-stable UI-art identity used by a reconnecting DOM to request the current image block.</summary>
@@ -83,6 +131,7 @@ internal sealed class DaggerfallUiArt
         ArgumentNullException.ThrowIfNull(itemIcons);
         Dictionary<string, InventoryEntry> inventory = ReadInventory(content, InventoryPath);
         string[] portraits = characterIcons?.Distinct(StringComparer.Ordinal).ToArray() ?? [];
+        // The character inventory also supplies the bodies the paper doll demands.
         if (portraits.Length > 0)
             foreach (var entry in ReadInventory(content, CharacterInventoryPath))
                 if (!inventory.TryAdd(entry.Key, entry.Value)) throw new InvalidOperationException($"Published UI art repeats media '{entry.Key}' across inventories.");
@@ -103,7 +152,9 @@ internal sealed class DaggerfallUiArt
             images.Add(new(id, $"data:image/png;base64,{Convert.ToBase64String(bytes)}", entry.Display));
         }
 
-        return new DaggerfallUiArt(images, pickScreens);
+        DaggerfallUiArt art = new(images, pickScreens, content, inventory);
+        art._delivered.UnionWith(images.Select(image => image.Id));
+        return art;
     }
 
     /// <summary>Reads the generated inventory by name and indexes it by the media identity it states.</summary>

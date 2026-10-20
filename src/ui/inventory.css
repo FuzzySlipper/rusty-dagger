@@ -7,7 +7,9 @@
   --equip-slot: 3.75rem;
   --accessory-slot: 3.25rem;
   --pack-cell: 4.5rem;
-  --doll-width: 14rem;
+  /* One source pixel of the doll: two CSS pixels at UI scale 1, so the doll stays at whole device pixels. */
+  --doll-pixel: .125rem;
+  --doll-width: calc(110 * var(--doll-pixel));
   color: #f4e6bd;
   font: .875rem Georgia, serif;
   padding: .5rem .75rem;
@@ -29,9 +31,9 @@
   position: relative;
   width: var(--doll-width);
 }
-.dagger-inventory-doll-background, .dagger-inventory-doll-layers { height: 100%; inset: 0; position: absolute; width: 100%; }
-.dagger-inventory-doll-background { image-rendering: pixelated; object-fit: cover; }
-.dagger-inventory-doll-layers img { image-rendering: pixelated; position: absolute; }
+.dagger-inventory-doll-background, .dagger-inventory-doll-layers, .dagger-inventory-doll-masked { height: 100%; inset: 0; position: absolute; width: 100%; }
+.dagger-inventory-doll img { image-rendering: pixelated; max-width: none; position: absolute; }
+.dagger-inventory-doll img[data-art-missing] { visibility: hidden; }
 .dagger-inventory-accessories { display: grid; gap: .375rem; grid-auto-columns: var(--accessory-slot); grid-auto-flow: column; grid-template-rows: repeat(2, var(--accessory-slot)); }
 
 /* The pack. */

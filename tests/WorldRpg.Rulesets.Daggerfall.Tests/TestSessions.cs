@@ -323,9 +323,18 @@ internal static class TestSessions
     }
 
     /// <summary>The published UI art group as admitted content: the inventory and the artifacts it names.</summary>
-    internal static IEnumerable<(string Path, byte[] Bytes)> PublishedUiArt(string root)
+    /// <remarks>
+    /// The paper doll's worn-item images are thousands of files, so the repository's group is read once per
+    /// test run and shared; a session reads only the ones it draws.
+    /// </remarks>
+    internal static IEnumerable<(string Path, byte[] Bytes)> PublishedUiArt(string root) =>
+        root == TestData.RepositoryRoot ? RepositoryUiArt.Value : ReadPublishedUiArt(root);
+
+    private static readonly Lazy<(string Path, byte[] Bytes)[]> RepositoryUiArt = new(() => [.. ReadPublishedUiArt(TestData.RepositoryRoot)]);
+
+    private static IEnumerable<(string Path, byte[] Bytes)> ReadPublishedUiArt(string root)
     {
-        foreach (string identity in new[] { DaggerfallUiArt.InventoryPath, DaggerfallUiArt.CharacterInventoryPath })
+        foreach (string identity in new[] { DaggerfallUiArt.InventoryPath, DaggerfallUiArt.CharacterInventoryPath, DaggerfallUiArt.PaperDollInventoryPath })
         {
             string inventoryPath = Path.Combine(root, "content", identity);
             byte[] inventory = File.ReadAllBytes(inventoryPath);

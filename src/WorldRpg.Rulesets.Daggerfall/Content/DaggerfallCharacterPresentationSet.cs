@@ -40,7 +40,24 @@ internal sealed record DaggerfallCharacterLayerDefinition(
     string MediaId,
     string SourceFile,
     string Palette,
-    string Consumer);
+    string Consumer)
+{
+    /// <summary>Where the paper doll draws a body or head; null for a background, which the doll's frame places.</summary>
+    internal DaggerfallPaperDollPlacement? Placement { get; init; }
+}
+
+/// <summary>Where one image sits within the paper doll, in source pixels from the doll's top-left corner.</summary>
+internal sealed record DaggerfallPaperDollPlacement(int X, int Y, int Width, int Height);
+
+/// <summary>The paper doll's size and where every background sits within it.</summary>
+/// <param name="BackgroundWidth">The background canvas's width, which every race and racial form shares.</param>
+internal sealed record DaggerfallPaperDollFrame(int Width, int Height, int BackgroundX, int BackgroundY, int BackgroundWidth, int BackgroundHeight);
+
+/// <summary>
+/// One worn-item texture record the doll draws: the image each dye draws with, where it goes, and the mask
+/// that clears what was drawn beneath it.
+/// </summary>
+internal sealed record DaggerfallPaperDollItemImage(int Archive, int Record, IReadOnlyDictionary<string, string> Dyes, DaggerfallPaperDollPlacement Placement, string? MaskMediaId);
 
 /// <summary>
 /// One race's published layers, resolved by gender and role rather than by position.
@@ -103,7 +120,11 @@ internal sealed record DaggerfallRaceWithoutMedia(string RaceId, int DonorRaceId
 /// carried with their reason rather than being absent, so a caller cannot mistake "no media" for
 /// "not looked up".
 /// </remarks>
-internal sealed record DaggerfallRacialFormMedia(string Id, string HeadMediaId, string BodyMediaId);
+internal sealed record DaggerfallRacialFormMedia(string Id, string HeadMediaId, string BodyMediaId)
+{
+    /// <summary>Where the paper doll draws the form's head.</summary>
+    internal DaggerfallPaperDollPlacement? HeadPlacement { get; init; }
+}
 
 internal sealed class DaggerfallCharacterPresentationSet(
     IReadOnlyDictionary<string, DaggerfallRaceLayers> races,
@@ -123,6 +144,13 @@ internal sealed class DaggerfallCharacterPresentationSet(
     internal IReadOnlyList<DaggerfallFactionFaceDefinition> FactionFaces { get; } = factionFaces;
     internal IReadOnlyDictionary<string, DaggerfallRacialFormMedia> RacialForms { get; init; } = new Dictionary<string, DaggerfallRacialFormMedia>();
     internal IReadOnlyList<DaggerfallFactionFaceDefinition> ChildFaces { get; init; } = [];
+
+    /// <summary>The doll every layer is placed in.</summary>
+    internal DaggerfallPaperDollFrame PaperDoll { get; init; } = new(110, 184, -8, -7, 125, 198);
+
+    /// <summary>The worn-item images the doll draws, by texture archive and record.</summary>
+    internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallPaperDollItemImage> PaperDollItems { get; init; } =
+        new Dictionary<(int Archive, int Record), DaggerfallPaperDollItemImage>();
 
     /// <summary>Every career the pack publishes a portrait for, by catalog career identity.</summary>
     internal IReadOnlyDictionary<string, DaggerfallCareerPortraitDefinition> Careers { get; } = careers;

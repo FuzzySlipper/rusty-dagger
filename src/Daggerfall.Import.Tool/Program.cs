@@ -17,6 +17,7 @@ internal static class Program
         ClassicMediaCommand.Command,
         SkyMediaCommand.Command,
         CharacterPresentationCommand.Command,
+        PaperDollMediaCommand.Command,
         CinematicMediaCommand.Command,
         // The imported payload's sections, the block document and the import records.
         CatalogsCommand.Command,
