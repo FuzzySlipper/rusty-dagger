@@ -191,7 +191,7 @@ public sealed class DaggerfallControlSettings
         }
         catch (JsonException exception)
         {
-            throw new ArgumentException("Persisted controls parse to no bindings.", nameof(json), exception);
+            throw new ArgumentException($"Persisted controls are not the current preference layout: {exception.Message}", nameof(json), exception);
         }
 
         if (parsed is null || parsed.Bindings is null)

@@ -474,7 +474,18 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         }
         catch (Exception error)
         {
-            ApplyDefaultPlayerPreferences(preferences, $"Saved player preferences are invalid; defaults are active: {error.Message}");
+            // Stored preferences the ruleset cannot read (an older build's layout, or damage) are reported once
+            // and then removed, so the next start begins from defaults rather than repeating the warning forever.
+            string diagnostic = $"Saved player preferences were invalid and have been discarded; defaults are active: {error.Message}";
+            try
+            {
+                _ = PlayerPreferences.Delete(_composition.Ruleset.Value, PersistenceRevisionGuard.Any, 0);
+            }
+            catch (Exception deleteError)
+            {
+                diagnostic = $"Saved player preferences are invalid; defaults are active, but the invalid preferences could not be removed: {error.Message} ({deleteError.Message})";
+            }
+            ApplyDefaultPlayerPreferences(preferences, diagnostic);
         }
     }
 
