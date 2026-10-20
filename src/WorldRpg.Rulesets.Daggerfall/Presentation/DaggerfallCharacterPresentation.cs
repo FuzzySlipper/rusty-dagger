@@ -39,7 +39,8 @@ internal sealed record CharacterSheetPresentation(
     DaggerfallCareerSkillGrant[]? GrantedSkills = null,
     DaggerfallCharacterCreationPresentation? Creation = null,
     DaggerfallLevelUpPresentation? LevelUp = null,
-    CharacterLegalStandingPresentation[]? LegalStandings = null);
+    CharacterLegalStandingPresentation[]? LegalStandings = null,
+    PaperDollPresentation? PaperDoll = null);
 
 /// <summary>One presentation layer a character is drawn from, by the identity a consumer resolves.</summary>
 /// <param name="Layer">The layer's role, as the publication names it.</param>
@@ -277,7 +278,22 @@ internal sealed class DaggerfallCharacterPresentation
             _character is null ? [] : [.. _character.GrantedSkills],
             _character?.ReadCreation(),
             _levelUps?.Read(),
-            LegalStandings());
+            LegalStandings(),
+            PaperDoll());
+    }
+
+    /// <summary>The player's paper doll, which needs the committed identity: an actor definition names no gender or face.</summary>
+    private PaperDollPresentation? PaperDoll()
+    {
+        if (_character is null) return null;
+        DaggerfallWornItem[] worn = [.. _equipment.Read().Assignments.Select(assignment =>
+        {
+            DaggerfallItemDefinition item = _definitions.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value));
+            string key = DaggerfallInventoryPresentation.UniqueKey(assignment.Item.EntityId);
+            return new DaggerfallWornItem(key, assignment.Slot.Value, item, _items?.EquippedMetadata(assignment.Item.EntityId),
+                () => _items?.DescribeItem(key, item.Id.Value, 1, equippedSlots: [assignment.Slot.Value]).Label ?? Label(item.Id.Value));
+        })];
+        return DaggerfallPaperDollPolicy.Compose(_definitions, _character.Identity, _character.RacialOverrides?.Current, worn);
     }
 
     /// <summary>Uses the composed inventory projection for equipment naming, identification, and condition.</summary>

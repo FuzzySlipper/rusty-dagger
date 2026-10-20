@@ -31,6 +31,7 @@ export type ArtRequestAction = {
 const images = new Map<string, string>();
 const displays = new Map<string, UiArtDisplay>();
 let revision = '';
+let demandedRevision = '';
 
 const numbers = (value: unknown, count: number): number[] | null =>
   Array.isArray(value) && value.length === count && value.every(entry => Number.isFinite(entry) && entry >= 0) ? value as number[] : null;
@@ -67,7 +68,28 @@ export function adopt(value: unknown): string {
   for (const [id, image] of next) images.set(id, image);
   for (const [id, drawn] of nextDisplays) displays.set(id, drawn);
   revision = block.revision;
+  // The demanded images were part of the map just replaced, so the DOM no longer holds them.
+  demandedRevision = '';
   return revision;
+}
+
+/// Adopts the block of images a projection demanded - art read on first use, such as the paper doll's worn
+/// items - into the held art, and returns the demanded revision now held. The block is cumulative, so
+/// adopting it never removes an image.
+export function adoptDemanded(value: unknown): string {
+  if (typeof value !== 'object' || value === null) return demandedRevision;
+  const block = value as { revision?: unknown; images?: unknown };
+  if (typeof block.revision !== 'string' || !Array.isArray(block.images)) return demandedRevision;
+  for (const entry of block.images as readonly UiArtImage[]) {
+    if (typeof entry?.id === 'string' && typeof entry?.image === 'string' && entry.image.length > 0) images.set(entry.id, entry.image);
+  }
+  demandedRevision = block.revision;
+  return demandedRevision;
+}
+
+/// The revision of the demanded images currently held, which is the empty string before any block arrives.
+export function heldDemandedRevision(): string {
+  return demandedRevision;
 }
 
 /// The revision of the art currently held, which is the empty string before any block arrives.

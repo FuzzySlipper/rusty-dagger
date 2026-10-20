@@ -43,7 +43,7 @@ public sealed class UiArtDeliverySessionTests
         // authored kit the inventory publishes, every admitted item icon, the adult, faction and child portraits the
         // quest escort HUD selects, the head and body of each racial form (vampire, were-creature)
         // the HUD draws while it is held, and each race's background, the inventory's paper-doll
-        // backdrop. The paper-doll bodies are not drawn yet and are not published.
+        // backdrop. The paper doll's bodies and worn items are read on demand and travel apart, below.
         string[] heads = [.. definitions.CharacterPresentation.Races.Values
             .SelectMany(race => race.Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head))
             .Select(layer => layer.MediaId).Distinct(StringComparer.Ordinal)];
@@ -103,6 +103,15 @@ public sealed class UiArtDeliverySessionTests
             .. DaggerfallTravelMap.MediaIds,
         ];
         Assert.Equal([.. expected.Order(StringComparer.Ordinal)], [.. images.Keys.Order(StringComparer.Ordinal)]);
+
+        // The paper doll's own art - the body, and whatever the player wears - is demanded by the character
+        // projection and travels as its own block, so the catalogue of worn-item images never does.
+        Dictionary<string, object?> doll = Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(hud["character"])["paperDoll"]);
+        Dictionary<string, object?> demanded = Assert.IsType<Dictionary<string, object?>>(hud["uiArtDemanded"]);
+        Assert.Equal(hud["uiArtDemandedRevision"], demanded["revision"]);
+        HashSet<string> delivered = [.. images.Keys, .. Assert.IsType<object?[]>(demanded["images"]).Cast<Dictionary<string, object?>>().Select(image => Assert.IsType<string>(image["id"]))];
+        Assert.All(Assert.IsType<object?[]>(doll["layers"]).Cast<Dictionary<string, object?>>().Prepend(Assert.IsType<Dictionary<string, object?>>(doll["background"])),
+            layer => Assert.Contains(Assert.IsType<string>(layer["mediaId"]), delivered));
 
         // The travel map's canvases arrive byte for byte from the published map artifacts.
         Assert.Equal(

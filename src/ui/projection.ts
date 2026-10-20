@@ -47,6 +47,9 @@ export interface DaggerHud {
   readonly loot?: LootProjection | null;
   readonly uiArtRevision?: string;
   readonly uiArt?: UiArt | null;
+  /** The images projections demanded since the session began; travels when it grew or was asked for. */
+  readonly uiArtDemandedRevision?: string;
+  readonly uiArtDemanded?: UiArt | null;
   readonly panelRequest?: PanelRequest | null;
   readonly saveSlots?: SaveSlotProjection;
   /** The games the entry screen offers while a new game can still choose one; absent or null otherwise. */

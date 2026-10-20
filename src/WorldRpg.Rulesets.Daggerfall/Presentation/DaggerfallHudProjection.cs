@@ -59,6 +59,19 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     /// <summary>Publishes the current UI art on the next snapshot because the DOM asked for it.</summary>
     internal void RequestArt() => _artPending = true;
 
+    /// <summary>
+    /// Publishes the art the DOM asked for by revision: the demanded block when that is the revision it lacks,
+    /// else everything.
+    /// </summary>
+    internal void RequestArt(string revision)
+    {
+        if (uiArt is not null && revision == uiArt.DemandedRevision) _demandedPending = true;
+        else _artPending = true;
+    }
+
+    private bool _demandedPending = true;
+    private int _demandedSent;
+
     internal void Publish(DaggerfallHudFrame frame)
     {
         ArgumentNullException.ThrowIfNull(frame);
@@ -233,6 +246,20 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             {
                 fields = [.. fields, ("uiArt", Art(builder, uiArt))];
                 _artPending = false;
+                _demandedPending = true;
+            }
+
+            // Art a projection draws from a catalog too large to send whole - the paper doll's worn items -
+            // is read when first drawn and travels as its own small block, again only when it grew or the
+            // DOM asked for it by the revision it lacks.
+            if (character?.PaperDoll is { } doll) uiArt.Demand(doll.MediaIds);
+            fields = [.. fields, ("uiArtDemandedRevision", builder.String(uiArt.DemandedRevision))];
+            if (_demandedPending || uiArt.Demanded.Count != _demandedSent)
+            {
+                fields = [.. fields, ("uiArtDemanded", builder.Object(("revision", builder.String(uiArt.DemandedRevision)),
+                    ("images", builder.Array(uiArt.Demanded.Select(image => builder.Object(("id", builder.String(image.Id)), ("image", builder.String(image.Image)))).ToArray()))))];
+                _demandedSent = uiArt.Demanded.Count;
+                _demandedPending = false;
             }
         }
 
@@ -702,7 +729,22 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("levelUp", !levelUpAvailable || value.LevelUp is null ? builder.Null() : LevelUp(builder, value.LevelUp)),
             // The media the sheet draws from, so a consumer resolves published identities rather than
             // reconstructing a race's file names. An actor that declares no race publishes none.
-            ("identity", identity));
+            ("identity", identity),
+            ("paperDoll", value.PaperDoll is null ? builder.Null() : PaperDoll(builder, value.PaperDoll)));
+    }
+
+    private static uint PaperDoll(UiValueBuilder builder, PaperDollPresentation doll)
+    {
+        uint Layer(PaperDollLayerPresentation layer) => builder.Object(
+            ("kind", builder.String(layer.Kind)), ("mediaId", builder.String(layer.MediaId)),
+            ("x", builder.Number(layer.X)), ("y", builder.Number(layer.Y)), ("width", builder.Number(layer.Width)), ("height", builder.Number(layer.Height)),
+            ("clipTop", layer.ClipTop is int top ? builder.Number(top) : builder.Null()),
+            ("clipBottom", layer.ClipBottom is int bottom ? builder.Number(bottom) : builder.Null()),
+            ("mask", layer.Mask is null ? builder.Null() : builder.String(layer.Mask)),
+            ("slot", layer.Slot is null ? builder.Null() : builder.String(layer.Slot)));
+        return builder.Object(("width", builder.Number(doll.Width)), ("height", builder.Number(doll.Height)),
+            ("background", Layer(doll.Background)), ("layers", builder.Array(doll.Layers.Select(Layer).ToArray())),
+            ("unplaced", builder.Array(doll.Unplaced.Select(builder.String).ToArray())));
     }
 
     private static uint LevelUp(UiValueBuilder builder, DaggerfallLevelUpPresentation levelUp) => builder.Object(

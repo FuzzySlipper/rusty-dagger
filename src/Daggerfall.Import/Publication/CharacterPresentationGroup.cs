@@ -100,6 +100,12 @@ public sealed class CharacterPresentationGroup
         CharacterMediaInventory characters = CharacterMediaInventory.Enumerate(sources, bound, CharacterMediaReferences.CharacterSheetConsumer, corpusLabel);
         DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(characters, suppliedPalettes, races, careers, pass.UnpublishableFiles, corpus);
         presentation.Validate(pass.PublishedMediaIds);
+        // The doll draws a body or head where its header puts it; one the header could not be read for would
+        // be drawn at a guess.
+        string[] unplaced = [.. presentation.Layers.Where(layer => layer.Layer != "background" && layer.Placement is null).Select(layer => layer.MediaId)
+            .Concat(presentation.RacialForms.Where(form => form.HeadPlacement is null).Select(form => form.HeadMediaId))];
+        if (unplaced.Length != 0)
+            throw new InvalidOperationException($"{unplaced.Length} paper-doll layer(s) have no placement read from their source header: {string.Join(", ", unplaced.Take(8))}.");
         return new(characters, pass, referenced, presentation, undocumented);
     }
 

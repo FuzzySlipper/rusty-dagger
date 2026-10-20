@@ -185,6 +185,84 @@ public sealed class DaggerfallCharacterPresentationTests
         Assert.Contains("Condition: 1/2 (50%)", identified.Details, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Paper_doll_draws_the_body_head_and_worn_items_placed_and_ordered_as_the_donor_draws_them()
+    {
+        using Fixture f = new();
+        DaggerfallCharacterState character = new(f.Definitions, f.Player.Stats, f.PlayerDefinition);
+        DaggerfallCharacterPresentation presentation = new(f.Definitions, character, f.PlayerDefinition, f.Equipment);
+        DaggerfallCharacterIdentity identity = character.Identity;
+        DaggerfallRaceLayers race = f.Definitions.CharacterPresentation.RequireRace(identity.RaceId);
+        DaggerfallCharacterLayerDefinition nude = race.Body(identity.Gender, clothed: false);
+        DaggerfallCharacterLayerDefinition clothed = race.Body(identity.Gender, clothed: true);
+        DaggerfallCharacterLayerDefinition head = race.Heads(identity.Gender).Single(layer => layer.HeadIndex == identity.FaceIndex);
+        int morphology = identity.RaceId switch { "argonian" => 0, "dark-elf" or "high-elf" or "wood-elf" => 1, "khajiit" => 3, _ => 2 };
+        int armor = (identity.Gender == DaggerfallCharacterGender.Female ? 245 : 249) + morphology;
+
+        // The player wears an iron cuirass and holds an iron longsword in the right hand.
+        PaperDollPresentation doll = Assert.IsType<PaperDollPresentation>(presentation.Read(f.Player, f.Progression).PaperDoll);
+        Assert.Equal((110, 184), (doll.Width, doll.Height));
+        Assert.Equal(new PaperDollLayerPresentation("background", race.Background.MediaId, -8, -7, 125, 198), doll.Background);
+        Assert.Collection(doll.Layers,
+            layer => Assert.Equal(new PaperDollLayerPresentation("body", nude.MediaId, nude.Placement!.X, nude.Placement.Y, nude.Placement.Width, nude.Placement.Height), layer),
+            // A cuirass covers the upper body, so only the clothed body's lower half - from the waist - is drawn.
+            layer => Assert.Equal((clothed.MediaId, 40, clothed.Placement!.Height), (layer.MediaId, layer.ClipTop!.Value, layer.ClipBottom!.Value)),
+            layer => Assert.Equal(("head", head.MediaId, head.Placement!.X, head.Placement.Y), (layer.Kind, layer.MediaId, layer.X, layer.Y)),
+            // The authored cuirass draws from its native template's record in its material's dye.
+            layer => Assert.Equal(("item", "chest-armor", f.Definitions.CharacterPresentation.PaperDollItems[(armor, 3)].Dyes["iron"]), (layer.Kind, layer.Slot, layer.MediaId)),
+            // A one-handed weapon in the right hand is drawn from the record after the template's.
+            layer => Assert.Equal(("item", "right-hand", "paper-doll.234.13.iron"), (layer.Kind, layer.Slot, layer.MediaId)));
+        Assert.Empty(doll.Unplaced);
+        Assert.Equal(f.Definitions.CharacterPresentation.PaperDollItems[(234, 13)].Placement,
+            new DaggerfallPaperDollPlacement(doll.Layers[^1].X, doll.Layers[^1].Y, doll.Layers[^1].Width, doll.Layers[^1].Height));
+
+        // Equipping a helm and moving the sword to the left hand change the doll: the helm (draw order 0) is
+        // the first item drawn, its mask clears what is beneath it, and the left hand draws the template's record.
+        WorldRpg.Kit.Inventory.UniqueInventoryItem sword = f.Equipment.Read().Assignments.Single(assignment => assignment.Slot.Value == "right-hand").Item;
+        f.Equipment.Unequip(sword);
+        f.Equipment.Equip(sword, [new SlotId("left-hand")]);
+        WorldRpg.Kit.Inventory.UniqueInventoryItem helm = f.Equipment.Materialize(new DurableIdentityReference(DurableIdentityKind.Item, 701), new InventoryItemId("template-107-iron"));
+        f.Equipment.Equip(helm, [new SlotId("head")]);
+        PaperDollPresentation equipped = presentation.Read(f.Player, f.Progression).PaperDoll!;
+        // The record decides the image; whether iron changes this helm's colours is the publication's to say.
+        Assert.Equal([f.Definitions.CharacterPresentation.PaperDollItems[(armor, 27)].Dyes["iron"], f.Definitions.CharacterPresentation.PaperDollItems[(armor, 3)].Dyes["iron"], "paper-doll.234.12.iron"],
+            equipped.Layers.Where(layer => layer.Kind == "item").Select(layer => layer.MediaId));
+        PaperDollLayerPresentation helmLayer = equipped.Layers.Single(layer => layer.Slot == "head");
+        Assert.Equal(f.Definitions.CharacterPresentation.PaperDollItems[(armor, 27)].MaskMediaId, helmLayer.Mask);
+        Assert.NotNull(helmLayer.Mask);
+        Assert.Contains(helmLayer.Mask!, equipped.MediaIds);
+
+        // With nothing worn the censor draws both halves of the clothed body.
+        foreach (WorldRpg.Kit.Inventory.UniqueInventoryItem worn in f.Equipment.Read().Assignments.Select(assignment => assignment.Item).Distinct().ToArray())
+            f.Equipment.Unequip(worn);
+        PaperDollPresentation bare = presentation.Read(f.Player, f.Progression).PaperDoll!;
+        Assert.Equal([(null, null), (0, 40), (40, clothed.Placement.Height), (null, null)],
+            bare.Layers.Select(layer => (layer.ClipTop, layer.ClipBottom)));
+    }
+
+    [Fact]
+    public void Paper_doll_draws_a_vampire_head_and_background_and_only_the_beast_background_while_transformed()
+    {
+        using Fixture f = new();
+        DaggerfallCharacterState character = new(f.Definitions, f.Player.Stats, f.PlayerDefinition);
+        DaggerfallCharacterIdentity identity = character.Identity;
+        string gender = identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male";
+        DaggerfallWornItem[] worn = [];
+
+        DaggerfallRacialFormMedia vampire = f.Definitions.CharacterPresentation.RacialForms[$"vampire.{identity.RaceId}.{gender}"];
+        PaperDollPresentation vampireDoll = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity,
+            new("vampirism", new DaggerfallRacialOverrideState(DaggerfallRacialKind.Vampire, false, 0, 0, Vampire: new(150, 0))), worn);
+        Assert.Equal(vampire.BodyMediaId, vampireDoll.Background.MediaId);
+        PaperDollLayerPresentation head = vampireDoll.Layers.Single(layer => layer.Kind == "head");
+        Assert.Equal((vampire.HeadMediaId, vampire.HeadPlacement!.X, vampire.HeadPlacement.Y), (head.MediaId, head.X, head.Y));
+
+        PaperDollPresentation beast = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity,
+            new("lycanthropy", new DaggerfallRacialOverrideState(DaggerfallRacialKind.Werewolf, true, 0, 0)), worn);
+        Assert.Equal(f.Definitions.CharacterPresentation.RacialForms["werewolf"].BodyMediaId, beast.Background.MediaId);
+        Assert.Equal((-8, -7), (beast.Background.X, beast.Background.Y));
+        Assert.Empty(beast.Layers);
+    }
+
     private static (long Current, long Maximum) Resource(CharacterSheetPresentation sheet, string id)
     {
         CharacterResourcePresentation resource = sheet.Resources.Single(value => value.Id == id);

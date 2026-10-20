@@ -596,7 +596,9 @@ test('equipment lays out by published group around the doll, the pack filters by
       },
       character: { name: 'Aubk-i', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [],
         identity: { race: 'breton', raceLabel: 'Breton', donorRaceId: 1, portrait: '', gender: 'male', faceIndex: 0, career: 'Mage', media: [],
-          selectedMedia: [{ layer: 'background', mediaId: 'character.background.breton' }] } },
+          selectedMedia: [{ layer: 'background', mediaId: 'character.background.breton' }] },
+        paperDoll: { width: 110, height: 184, unplaced: [], layers: [],
+          background: { kind: 'background', mediaId: 'character.background.breton', x: -8, y: -7, width: 125, height: 198, clipTop: null, clipBottom: null, mask: null, slot: null } } },
     });
     const slot = id => f.root.querySelector(`[data-inventory-equipment="${id}"]`);
     const columns = f.root.querySelectorAll('.dagger-inventory-slot-column');
@@ -605,8 +607,7 @@ test('equipment lays out by published group around the doll, the pack filters by
     assert.equal(slot('right-hand').classList.contains('starts-group'), true, 'The hands sit apart from the clothing.');
     assert.equal(slot('ring0').parentElement, f.root.querySelector('.dagger-inventory-accessories'));
     assert.equal(slot('head').dataset.tooltip, 'Helm: empty');
-    const doll = f.root.querySelector('.dagger-inventory-doll-background');
-    assert.equal(doll.hidden, false);
+    const doll = f.root.querySelector('.dagger-inventory-doll-background img');
     assert.equal(doll.src, 'data:image/png;base64,AA==');
     assert.match(f.root.querySelector('.dagger-inventory-load').textContent, /Load 10 \/ 50 kg/);
     assert.equal(f.root.querySelector('.dagger-inventory-gold').textContent, '120 gold');
@@ -620,6 +621,53 @@ test('equipment lays out by published group around the doll, the pack filters by
     assert.equal(f.root.querySelector('[data-inventory-item="unique:1"]').classList.contains('is-filtered-out'), false);
     f.root.querySelector('.dagger-inventory-sort').click();
     assert.deepEqual(f.actions.at(-1), { action: 'inventory-sort' });
+  } finally { art.adopt({ revision: '', images: [] }); f.dispose(); }
+});
+
+test('the paper doll draws the ruleset\'s placed layers in order, clips the censor halves, masks beneath a helm, and takes worn art on demand', () => {
+  const f = fixture();
+  try {
+    const layer = (kind, mediaId, x, y, width, height, extra = {}) => ({ kind, mediaId, x, y, width, height, clipTop: null, clipBottom: null, mask: null, slot: null, ...extra });
+    const png = 'data:image/png;base64,AA==';
+    const character = (layers) => ({ name: 'Aubk-i', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [],
+      paperDoll: { width: 110, height: 184, unplaced: [], background: layer('background', 'bg', -8, -7, 125, 198), layers } });
+    const bare = [
+      layer('body', 'body.nude', 22, 33, 69, 145),
+      layer('body', 'body.clothed', 22, 33, 69, 145, { clipTop: 0, clipBottom: 40 }),
+      layer('body', 'body.clothed', 22, 33, 69, 145, { clipTop: 40, clipBottom: 145 }),
+      layer('head', 'head', 46, 9, 20, 27),
+    ];
+    f.publish({ uiArtRevision: 'r1', uiArt: { revision: 'r1', images: [{ id: 'bg', image: png }, { id: 'head', image: png }] }, uiArtDemandedRevision: 'r1.0', inventory: { revision: '1', message: '', slots: [], items: [], categories: [] }, character: character(bare) });
+    const box = () => f.root.querySelector('.dagger-inventory-doll');
+    const background = box().querySelector('.dagger-inventory-doll-background img');
+    assert.equal(background.style.left, 'calc(-8 * var(--doll-pixel))', 'The background crop is the projection\'s, not a CSS fit.');
+    assert.equal(background.style.width, 'calc(125 * var(--doll-pixel))');
+    assert.equal(box().style.width, 'calc(110 * var(--doll-pixel))');
+    const drawn = () => [...box().querySelectorAll('.dagger-inventory-doll-layers img')].map(img => `${img.dataset.mediaId}${img.dataset.clip ? '@' + img.dataset.clip : ''}`);
+    assert.deepEqual(drawn(), ['body.nude', 'body.clothed@0-40', 'body.clothed@40-145', 'head']);
+    assert.equal(box().querySelector('[data-media-id="body.nude"]').dataset.artMissing, 'true', 'Art not yet delivered is held hidden.');
+    assert.equal(box().querySelector('[data-clip="0-40"]').style.clipPath, 'inset(calc(0 * var(--doll-pixel)) 0 calc(105 * var(--doll-pixel)) 0)');
+    assert.deepEqual(f.actions.at(-1), { action: 'art-request', revision: 'r1.0' }, 'A demanded block the DOM lacks is asked for by its revision.');
+
+    // Equipping a helm and a sword: the doll changes, the helm's mask clears what was drawn beneath it, and
+    // the worn art arrives as a demanded block on top of the held art.
+    const helm = layer('item', 'paper-doll.251.27', 30, 4, 49, 37, { mask: 'paper-doll.251.27.mask', slot: 'head' });
+    const sword = layer('item', 'paper-doll.234.12.iron', 33, 88, 47, 43, { slot: 'left-hand' });
+    f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.5', inventory: { revision: '2', message: '', slots: [], items: [], categories: [] },
+      uiArtDemanded: { revision: 'r1.5', images: ['body.nude', 'body.clothed', helm.mediaId, helm.mask, sword.mediaId].map(id => ({ id, image: png })) },
+      character: character([...bare, helm, sword]) });
+    assert.deepEqual(drawn(), ['body.nude', 'body.clothed@0-40', 'body.clothed@40-145', 'head', 'paper-doll.251.27', 'paper-doll.234.12.iron']);
+    const masked = box().querySelector('.dagger-inventory-doll-masked');
+    assert.equal(masked.dataset.mask, 'paper-doll.251.27.mask');
+    assert.deepEqual([...masked.querySelectorAll('img')].map(img => img.dataset.mediaId), ['body.nude', 'body.clothed', 'body.clothed', 'head'],
+      'The mask covers every layer drawn before the helm and nothing after it.');
+    assert.equal(masked.nextElementSibling.dataset.mediaId, 'paper-doll.251.27');
+    assert.equal(box().querySelector('[data-media-id="paper-doll.234.12.iron"]').src, png);
+    assert.equal(box().querySelector('[data-art-missing]'), null, 'Every demanded image is now held.');
+
+    // A transformed lycanthrope's doll is its background alone.
+    f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.5', inventory: { revision: '3', message: '', slots: [], items: [], categories: [] }, character: character([]) });
+    assert.deepEqual(drawn(), []);
   } finally { art.adopt({ revision: '', images: [] }); f.dispose(); }
 });
 

@@ -18,7 +18,47 @@ public sealed record DaggerfallCharacterLayer(
     string SourceFile,
     string Palette,
     MediaBinding Binding,
-    string Consumer);
+    string Consumer)
+{
+    /// <summary>
+    /// Where the paper doll draws a body or head canvas, within the doll; null for a background, which the
+    /// doll's frame places.
+    /// </summary>
+    public DaggerfallPaperDollPlacement? Placement { get; init; }
+}
+
+/// <summary>Where one canvas sits within the paper doll, in source pixels from the doll's top-left corner.</summary>
+public sealed record DaggerfallPaperDollPlacement(int X, int Y, int Width, int Height)
+{
+    /// <summary>
+    /// A canvas header's screen offset, made relative to the doll. The classic files store where the
+    /// inventory screen draws them, not where the doll does, and the donor's renderer subtracts its
+    /// <c>paperDollOrigin</c> to undo that.
+    /// </summary>
+    public static DaggerfallPaperDollPlacement FromScreenOffset(int xOffset, int yOffset, int width, int height) =>
+        new(xOffset - DaggerfallPaperDollFrame.ScreenOriginX, yOffset - DaggerfallPaperDollFrame.ScreenOriginY, width, height);
+}
+
+/// <summary>
+/// The paper doll's frame: the doll's size and where its background sits within it.
+/// </summary>
+/// <remarks>
+/// The donor's <c>PaperDoll</c> draws a 110x184 doll and crops its 125x198 background at (8, 7), which is
+/// the background placed at (-8, -7) in the doll; its <c>PaperDollRenderer</c> places every other canvas at
+/// its header offset less <c>paperDollOrigin</c> (200, 8). Every background - a race's, a vampire's, a
+/// transformed lycanthrope's - takes the same crop.
+/// </remarks>
+public sealed record DaggerfallPaperDollFrame(int Width, int Height, int BackgroundX, int BackgroundY, int BackgroundWidth, int BackgroundHeight)
+{
+    /// <summary>The screen position the classic files' header offsets are measured from.</summary>
+    public const int ScreenOriginX = 200;
+
+    /// <inheritdoc cref="ScreenOriginX"/>
+    public const int ScreenOriginY = 8;
+
+    /// <summary>The classic doll.</summary>
+    public static DaggerfallPaperDollFrame Classic { get; } = new(110, 184, -8, -7, 125, 198);
+}
 
 /// <summary>What the publication did with one supplied character file.</summary>
 public enum CharacterFileOutcome
@@ -85,7 +125,11 @@ public sealed record DaggerfallRaceWithoutMedia(string Race, int DonorRaceId, st
 /// <param name="Layers">Every published layer, ordered by race then layer.</param>
 /// <param name="RacesWithoutMedia">Races no supplied media draws.</param>
 /// <param name="Sources">Inventory identities this section was built from.</param>
-public sealed record DaggerfallRacialForm(string Id, string HeadMediaId, string BodyMediaId);
+public sealed record DaggerfallRacialForm(string Id, string HeadMediaId, string BodyMediaId)
+{
+    /// <summary>Where the paper doll draws the form's head, which a vampire's doll draws in place of the race's.</summary>
+    public DaggerfallPaperDollPlacement? HeadPlacement { get; init; }
+}
 
 public sealed record DaggerfallCharacterPresentation(
     IReadOnlyList<DaggerfallCharacterLayer> Layers,
@@ -98,6 +142,9 @@ public sealed record DaggerfallCharacterPresentation(
 {
     public IReadOnlyList<DaggerfallRacialForm> RacialForms { get; init; } = [];
     public IReadOnlyList<DaggerfallFactionFace> ChildFaces { get; init; } = [];
+
+    /// <summary>The doll every layer is placed in.</summary>
+    public DaggerfallPaperDollFrame PaperDoll { get; init; } = DaggerfallPaperDollFrame.Classic;
 
     /// <summary>
     /// Checks the section against the canvases the publication actually emitted.
@@ -242,6 +289,7 @@ public static class DaggerfallCharacterPresentationBuilder
             canvases.Add((System.IO.Path.GetFileName(reference.Path), reference.CanvasIndex), reference);
         }
 
+        PaperDollPlacements placements = new(sources);
         List<DaggerfallCharacterLayer> layers = [];
         List<DaggerfallRaceWithoutMedia> without = [];
         foreach (DaggerfallRaceKey race in races.OrderBy(race => race.DonorRaceId))
@@ -280,7 +328,10 @@ public static class DaggerfallCharacterPresentationBuilder
                     continue;
                 }
 
-                layers.Add(new DaggerfallCharacterLayer(race.Id, race.DonorRaceId, layer, canvas.MediaId, canvas.Path, canvas.Palette, canvas.Binding, ConsumerOf(canvas)));
+                layers.Add(new DaggerfallCharacterLayer(race.Id, race.DonorRaceId, layer, canvas.MediaId, canvas.Path, canvas.Palette, canvas.Binding, ConsumerOf(canvas))
+                {
+                    Placement = layer == "background" ? null : placements.Of(file, canvasIndex),
+                });
             }
         }
 
@@ -338,7 +389,7 @@ public static class DaggerfallCharacterPresentationBuilder
         {
             var head = set.Canvases.SingleOrDefault(value => System.IO.Path.GetFileName(value.Path) == headFile);
             var body = set.Canvases.SingleOrDefault(value => System.IO.Path.GetFileName(value.Path) == bodyFile);
-            if (head is not null && body is not null) racialForms.Add(new(id, head.MediaId, body.MediaId));
+            if (head is not null && body is not null) racialForms.Add(new(id, head.MediaId, body.MediaId) { HeadPlacement = placements.Of(headFile, head.CanvasIndex) });
         }
         var vampireBackground = set.Canvases.SingleOrDefault(value => System.IO.Path.GetFileName(value.Path) == "SCBG08I0.IMG");
         if (vampireBackground is not null)
@@ -347,7 +398,7 @@ public static class DaggerfallCharacterPresentationBuilder
             {
                 int index = race.DonorRaceId - 1 + (gender == "male" ? 8 : 0);
                 var head = set.Canvases.SingleOrDefault(value => System.IO.Path.GetFileName(value.Path) == "VAMP00I0.CIF" && value.CanvasIndex == index);
-                if (head is not null) racialForms.Add(new($"vampire.{race.Id}.{gender}", head.MediaId, vampireBackground.MediaId));
+                if (head is not null) racialForms.Add(new($"vampire.{race.Id}.{gender}", head.MediaId, vampireBackground.MediaId) { HeadPlacement = placements.Of("VAMP00I0.CIF", index) });
             }
         HashSet<string> referenced =
         [
@@ -391,5 +442,32 @@ public static class DaggerfallCharacterPresentationBuilder
             files,
             without,
             [inventory.Source, .. set.Unavailable.Select(entry => entry.Path).Order(StringComparer.Ordinal)]) { ChildFaces = childFaces, RacialForms = racialForms };
+    }
+}
+
+/// <summary>
+/// Reads a paper-doll canvas's header offset from the supplied file, once per file, and places it in the doll.
+/// </summary>
+/// <remarks>
+/// A placement is only stated from the bytes: without the corpus there is nothing to read the header from,
+/// and the layer then carries no placement rather than a guessed one.
+/// </remarks>
+internal sealed class PaperDollPlacements(IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? sources)
+{
+    private readonly Dictionary<string, Arena2CanvasSet> _read = new(StringComparer.OrdinalIgnoreCase);
+
+    internal DaggerfallPaperDollPlacement? Of(string file, int canvasIndex)
+    {
+        if (sources is null) return null;
+        if (!_read.TryGetValue(file, out Arena2CanvasSet? set))
+        {
+            ReadOnlyMemory<byte>? bytes = sources.FirstOrDefault(entry => string.Equals(System.IO.Path.GetFileName(entry.Key), file, StringComparison.OrdinalIgnoreCase)).Value;
+            if (bytes is not { Length: > 0 } found) return null;
+            _read[file] = set = Arena2CanvasReader.Read(found.Span, file);
+        }
+
+        if (canvasIndex < 0 || canvasIndex >= set.Canvases.Count) return null;
+        Arena2Canvas canvas = set.Canvases[canvasIndex];
+        return DaggerfallPaperDollPlacement.FromScreenOffset(canvas.XOffset, canvas.YOffset, canvas.Width, canvas.Height);
     }
 }

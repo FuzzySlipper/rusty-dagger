@@ -122,7 +122,7 @@ internal sealed partial class DaggerfallSession
                 break;
             // A reloaded DOM holds no art and asks for the revision it is missing; the projection
             // answers on its next snapshot rather than a second delivery channel existing.
-            case DaggerfallUiActionKind.ArtRequest: _hud.RequestArt(); break;
+            case DaggerfallUiActionKind.ArtRequest: _hud.RequestArt(action.Revision!); break;
             case DaggerfallUiActionKind.ActionDrivenTime: ChangePlayerTime(action.Enabled!.Value); break;
             case DaggerfallUiActionKind.ControlsLook:
             case DaggerfallUiActionKind.ControlsUiScale:

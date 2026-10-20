@@ -336,13 +336,20 @@ generated file Git would pick up):
   `--shared` naming the world media publication). Each carries only what is its own: the normalized
   document, spatial and resource artifacts, its geometry index and a dungeon sidecar that binds its
   material slots and names the product-wide entries it admits.
-- `content/worldrpg/media/**` — classic media, character media, music and cinematics
-  (`classic-media`, `character-presentation`, `music-media`, `cinematic-media`). The classic group
-  carries no audio; the world media publication and the site closures reference its images.
+- `content/worldrpg/media/**` — classic media, character media, the paper doll's worn-item images,
+  music and cinematics (`classic-media`, `character-presentation`, `paper-doll-media`, `music-media`,
+  `cinematic-media`). The classic group carries no audio; the world media publication and the site
+  closures reference its images. `paper-doll-media` writes `media/character/paper-doll/`: every
+  TEXTURE record a worn-item template reaches (by gender and body morphology, every variant, a cloak's
+  interior, a one-handed weapon's right-hand record) in every dye it can be drawn in, with mask index
+  0xFF transparent and a separate mask image where a record has one.
 - `content/worldrpg/payloads/daggerfall.imported.json` — the `daggerfall.imported` pack's payload:
   `catalogs`, `itemTemplateLedger`, `characterPresentation`, `locations`, `magic`, `mobiles`, `text`,
   `names`, `rumors`, `biographies`, `books`, `climate`, `politic`, `factions`, `terrain`,
-  `itemTemplates`, `questTables`, `questCatalog`, `questSources`, `cinematics` and `buildingNames`.
+  `itemTemplates`, `paperDoll`, `questTables`, `questCatalog`, `questSources`, `cinematics` and `buildingNames`.
+  `characterPresentation` places each body and head in the 110x184 paper doll (its header offset less
+  the donor's paper-doll origin) and states the doll's frame and background crop; `paperDoll` names
+  each worn-item record's image per dye, its placement and its mask.
   The `locations` section states each location's `climate` (the CLIMATE.PAK value at its own map pixel,
   as `MapsFile` reads a location's climate) and, for each dungeon, which block placement is the `start`
   block and its classic `textureTable` (DEC-11.dungeon-textures: the six wall/floor archives and the door

@@ -1,5 +1,5 @@
-import { image } from './art.js';
-import type { CharacterIdentity } from './character.js';
+import { heldDemandedRevision, heldRevision, image } from './art.js';
+import type { PaperDoll, PaperDollLayer } from './character.js';
 import { mountDrag, type Drag } from './drag.js';
 import type { NavigationSurface } from './navigation.js';
 import { redraw } from './redraw.js';
@@ -198,7 +198,7 @@ export function mountInventory(
   register?: (surface: NavigationSurface) => () => void,
 ): {
   update(value: InventoryProjection): void;
-  updateIdentity(identity: CharacterIdentity | null | undefined): void;
+  updatePaperDoll(doll: PaperDoll | null | undefined): void;
   updateStorage(value: PropertyStorage | null): void;
   refresh(): void;
   release(): boolean;
@@ -235,12 +235,9 @@ export function mountInventory(
   const doll = document.createElement('div');
   doll.className = 'dagger-inventory-doll';
   doll.setAttribute('aria-hidden', 'true');
-  const dollBackground = document.createElement('img');
+  const dollBackground = document.createElement('div');
   dollBackground.className = 'dagger-inventory-doll-background';
-  dollBackground.alt = '';
-  dollBackground.draggable = false;
-  dollBackground.hidden = true;
-  // The figure and the worn items draw here once the ruleset publishes them as placed layers.
+  // The figure and the worn items, as the ruleset places them.
   const dollLayers = document.createElement('div');
   dollLayers.className = 'dagger-inventory-doll-layers';
   doll.append(dollBackground, dollLayers);
@@ -735,6 +732,70 @@ export function mountInventory(
   shell.addEventListener('focusin', onTipOver);
   shell.addEventListener('focusout', onTipOut);
 
+  /** A length in the doll's source pixels; the doll draws each one as a whole number of device pixels at whole UI scales. */
+  const dollPixels = (value: number): string => `calc(${value} * var(--doll-pixel))`;
+  const placeLayer = (layer: PaperDollLayer): HTMLImageElement => {
+    const art = document.createElement('img');
+    art.alt = '';
+    art.draggable = false;
+    art.dataset.dollLayer = layer.kind;
+    art.dataset.mediaId = layer.mediaId;
+    if (layer.slot !== null) art.dataset.slot = layer.slot;
+    const source = image(layer.mediaId);
+    if (source === null) art.dataset.artMissing = 'true';
+    else art.src = source;
+    art.style.left = dollPixels(layer.x);
+    art.style.top = dollPixels(layer.y);
+    art.style.width = dollPixels(layer.width);
+    art.style.height = dollPixels(layer.height);
+    if (layer.clipTop !== null && layer.clipBottom !== null) {
+      art.style.clipPath = `inset(${dollPixels(layer.clipTop)} 0 ${dollPixels(layer.height - layer.clipBottom)} 0)`;
+      art.dataset.clip = `${layer.clipTop}-${layer.clipBottom}`;
+    }
+    return art;
+  };
+  const drawDoll = (value: PaperDoll | null): void => {
+    dollBackground.replaceChildren();
+    dollLayers.replaceChildren();
+    doll.classList.toggle('has-background', value !== null);
+    if (value === null) return;
+    doll.style.width = dollPixels(value.width);
+    doll.style.height = dollPixels(value.height);
+    dollBackground.append(placeLayer(value.background));
+    let drawn: HTMLElement = dollLayers;
+    for (const layer of value.layers) {
+      const mask = layer.mask === null ? null : image(layer.mask);
+      if (layer.mask !== null) {
+        // What is drawn so far, less the mask's opaque pixels: the mask placed where the layer is, excluded
+        // from a full cover.
+        const masked = document.createElement('div');
+        masked.className = 'dagger-inventory-doll-masked';
+        masked.dataset.mask = layer.mask;
+        masked.append(...drawn.childNodes);
+        if (mask === null) masked.dataset.artMissing = 'true';
+        else {
+          const style = masked.style;
+          const images = `url("${mask}"), linear-gradient(#000, #000)`;
+          const position = `${dollPixels(layer.x)} ${dollPixels(layer.y)}, 0 0`;
+          const size = `${dollPixels(layer.width)} ${dollPixels(layer.height)}, 100% 100%`;
+          style.setProperty('mask-image', images);
+          style.setProperty('mask-position', position);
+          style.setProperty('mask-size', size);
+          style.setProperty('mask-repeat', 'no-repeat');
+          style.setProperty('mask-composite', 'exclude');
+          style.setProperty('-webkit-mask-image', images);
+          style.setProperty('-webkit-mask-position', position);
+          style.setProperty('-webkit-mask-size', size);
+          style.setProperty('-webkit-mask-repeat', 'no-repeat');
+          style.setProperty('-webkit-mask-composite', 'xor');
+        }
+        drawn.append(masked);
+      }
+      drawn.append(placeLayer(layer));
+    }
+    doll.title = value.unplaced.length === 0 ? '' : `Not drawn: ${value.unplaced.join(', ')}`;
+  };
+
   return {
     update(value: InventoryProjection): void {
       if (disposed) return;
@@ -755,14 +816,15 @@ export function mountInventory(
       }
       render(value);
     },
-    /** The doll's backdrop: the race's background layer the character projection publishes. */
-    updateIdentity(identity): void {
+    /**
+     * The paper doll the character projection composes: the background, then each layer in draw order, every
+     * one placed in source pixels. A layer with a mask clears what was drawn beneath it, which is drawn as the
+     * layers so far wrapped in a CSS mask that excludes the mask's opaque pixels.
+     */
+    updatePaperDoll(value): void {
       if (disposed) return;
-      const background = identity?.selectedMedia.find(media => media.layer === 'background');
-      const source = background === undefined ? null : image(background.mediaId);
-      dollBackground.hidden = source === null;
-      doll.classList.toggle('has-background', source !== null);
-      if (source !== null && dollBackground.src !== source) dollBackground.src = source;
+      // Art for a layer can arrive after the doll that names it, so the held art is part of what is drawn.
+      redraw(doll, `${JSON.stringify(value ?? null)}|${heldRevision()}|${heldDemandedRevision()}`, () => drawDoll(value ?? null));
     },
     // Published art can arrive after the state that names it, and the revision check above would
     // otherwise leave the panel painted without it.

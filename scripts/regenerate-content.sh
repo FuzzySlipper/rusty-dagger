@@ -153,6 +153,7 @@ tool items --arena2 "$arena2" --pack "$imported" --inventory "$inventory" \
   --item-enums "$donor/Assets/Scripts/Game/Items/ItemEnums.cs" \
   --item-helper "$donor/Assets/Scripts/Game/Items/ItemHelper.cs" \
   --magic-templates "$donor/Assets/Resources/MagicItemTemplates.txt" --update
+tool paper-doll-media --arena2 "$arena2" --pack "$imported" --out content --group worldrpg --update
 tool quests --arena2 "$arena2" --quest-text "$donor/Assets/StreamingAssets/Quests" \
   --tables "$donor/Assets/StreamingAssets/Tables" --pack "$imported" --records "$records" --inventory "$inventory" --update
 tool videos --arena2 "$arena2" --pack "$imported" --inventory "$inventory" --update

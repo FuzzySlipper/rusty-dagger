@@ -364,7 +364,12 @@ internal static partial class DaggerfallBaseContent
             }
 
             donorRaceIds[raceId] = donorRaceId;
-            layers.Add(new DaggerfallCharacterLayerDefinition(kind, gender, headIndex, mediaId, sourceFile, palette, consumer));
+            DaggerfallPaperDollPlacement? placement = Placement(layer, "placement", $"Character presentation layer '{name}' for race '{raceId}'", diagnostics);
+            // The doll draws a body or head where the publication placed it; one without a placement has
+            // nowhere honest to be drawn.
+            if (kind != DaggerfallCharacterLayerKind.Background && placement is null)
+                diagnostics.Add($"Character presentation layer '{name}' for race '{raceId}' publishes no paper-doll placement.");
+            layers.Add(new DaggerfallCharacterLayerDefinition(kind, gender, headIndex, mediaId, sourceFile, palette, consumer) { Placement = placement });
         }
 
         Dictionary<string, DaggerfallRaceLayers> races = new(StringComparer.Ordinal);
@@ -418,7 +423,8 @@ internal static partial class DaggerfallBaseContent
         foreach (JsonElement form in Array(section, "racialForms", diagnostics))
         {
             string id = Text(form, "id", diagnostics);
-            if (!racialForms.TryAdd(id, new(id, Text(form, "headMediaId", diagnostics), Text(form, "bodyMediaId", diagnostics))))
+            if (!racialForms.TryAdd(id, new(id, Text(form, "headMediaId", diagnostics), Text(form, "bodyMediaId", diagnostics))
+                { HeadPlacement = Placement(form, "headPlacement", $"Racial form '{id}' head", diagnostics) }))
                 diagnostics.Add($"Duplicate racial form media '{id}'.");
         }
         List<DaggerfallFactionFaceDefinition> childFaces = [];
@@ -471,7 +477,59 @@ internal static partial class DaggerfallBaseContent
             careersWithout.Add(new DaggerfallCareerWithoutPortrait(Text(entry, "careerId", diagnostics), Text(entry, "reason", diagnostics)));
         }
 
-        return new DaggerfallCharacterPresentationSet(races, [.. faces.OrderBy(face => face.Index)], careers, careersWithout, without, files) { ChildFaces = childFaces, RacialForms = racialForms };
+        DaggerfallPaperDollFrame frame = new(110, 184, -8, -7, 125, 198);
+        if (section.TryGetProperty("paperDoll", out JsonElement dollFrame) && dollFrame.ValueKind == JsonValueKind.Object)
+            frame = new(Integer(dollFrame, "width", diagnostics), Integer(dollFrame, "height", diagnostics),
+                Integer(dollFrame, "backgroundX", diagnostics), Integer(dollFrame, "backgroundY", diagnostics),
+                Integer(dollFrame, "backgroundWidth", diagnostics), Integer(dollFrame, "backgroundHeight", diagnostics));
+        else
+            diagnostics.Add("Character presentation publishes no paperDoll frame.");
+
+        return new DaggerfallCharacterPresentationSet(races, [.. faces.OrderBy(face => face.Index)], careers, careersWithout, without, files)
+        { ChildFaces = childFaces, RacialForms = racialForms, PaperDoll = frame, PaperDollItems = ReadPaperDollItems(root, diagnostics) };
+    }
+
+    /// <summary>
+    /// Reads the worn-item images the doll draws, keyed by texture archive and record. A record that names
+    /// no image for a dye, or an image outside the doll's media, is reported where it loads.
+    /// </summary>
+    private static IReadOnlyDictionary<(int Archive, int Record), DaggerfallPaperDollItemImage> ReadPaperDollItems(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        Dictionary<(int Archive, int Record), DaggerfallPaperDollItemImage> items = [];
+        if (!root.TryGetProperty("paperDoll", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload must publish a paperDoll section.");
+            return items;
+        }
+
+        foreach (JsonElement item in Array(section, "items", diagnostics))
+        {
+            int archive = Integer(item, "archive", diagnostics), record = Integer(item, "record", diagnostics);
+            string subject = $"Paper-doll image {archive}/{record}";
+            Dictionary<string, string> dyes = new(StringComparer.Ordinal);
+            if (item.TryGetProperty("dyes", out JsonElement dyeMap) && dyeMap.ValueKind == JsonValueKind.Object)
+                foreach (JsonProperty dye in dyeMap.EnumerateObject())
+                    if (dye.Value.GetString() is { Length: > 0 } id && id.StartsWith("paper-doll.", StringComparison.Ordinal)) dyes[dye.Name] = id;
+                    else diagnostics.Add($"{subject} names no paper-doll image for dye '{dye.Name}'.");
+            if (dyes.Count == 0) diagnostics.Add($"{subject} names no image.");
+            string? mask = OptionalText(item, "maskMediaId", diagnostics);
+            DaggerfallPaperDollPlacement placement = new(Integer(item, "x", diagnostics), Integer(item, "y", diagnostics),
+                Integer(item, "width", diagnostics), Integer(item, "height", diagnostics));
+            if (!items.TryAdd((archive, record), new(archive, record, dyes, placement, mask)))
+                diagnostics.Add($"{subject} is published twice.");
+        }
+
+        return items;
+    }
+
+    /// <summary>An optional paper-doll placement; a present one must carry its position and a positive size.</summary>
+    private static DaggerfallPaperDollPlacement? Placement(JsonElement owner, string property, string subject, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!owner.TryGetProperty(property, out JsonElement value) || value.ValueKind == JsonValueKind.Null) return null;
+        DaggerfallPaperDollPlacement placement = new(Integer(value, "x", diagnostics), Integer(value, "y", diagnostics),
+            Integer(value, "width", diagnostics), Integer(value, "height", diagnostics));
+        if (placement.Width <= 0 || placement.Height <= 0) diagnostics.Add($"{subject} has an empty paper-doll placement.");
+        return placement;
     }
 
     /// <summary>
