@@ -38,6 +38,9 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
   donationAmount.limit(1, 2_147_483_647, 100);
   donation.append(donationAmount.element);
   const log = shell.querySelector<HTMLOListElement>('.dagger-dialogue-log')!;
+  // Which directory lists the player opened, kept while the conversation lasts.
+  const openCategories = new Set<string>();
+  let categoriesFor: string | null = null;
   const topics = shell.querySelector<HTMLElement>('.dagger-dialogue-topics')!;
   const training = shell.querySelector<HTMLElement>('.dagger-dialogue-training')!;
   const trainingSummary = shell.querySelector<HTMLElement>('.dagger-dialogue-training-summary')!;
@@ -172,6 +175,7 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
       tone.value = dialogue.tone;
       donation.hidden = !dialogue.topics.some(topic => topic.id === 'donate');
       recordExchange(dialogue);
+      if (dialogue.targetLabel !== categoriesFor) { openCategories.clear(); categoriesFor = dialogue.targetLabel; }
       redraw(topics, JSON.stringify([dialogue.revision, dialogue.topics, dialogue.topicGroups, dialogue.bankAvailable]), () => {
         const groups = dialogue.topicGroups ?? [{ id: 'services', label: 'Topics' }];
         topics.replaceChildren(...groups.flatMap(group => {
@@ -186,19 +190,40 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
           heading.textContent = group.label;
           const list = document.createElement('div');
           list.className = 'dagger-dialogue-topic-list';
-          list.append(...members.map(topic => {
+          const topicButton = (topic: typeof members[number]): HTMLButtonElement => {
             const control = button(topic.label);
             control.dataset.topic = topic.id;
             if (topic.key) control.dataset.key = topic.key;
             return control;
-          }));
+          };
+          list.append(...members.filter(topic => !topic.category).map(topicButton));
+          // A heading with lists (the directory's kinds of building, its people, the region) shows each
+          // as a closed, counted section, so a town's directory does not bury the rest of the conversation.
+          const categories = [...new Set(members.flatMap(topic => topic.category ? [topic.category] : []))];
+          const lists = categories.map(category => {
+            const entries = members.filter(topic => topic.category === category);
+            const details = document.createElement('details');
+            details.className = 'dagger-dialogue-topic-category';
+            details.dataset.topicCategory = category;
+            details.open = openCategories.has(`${group.id}/${category}`);
+            details.addEventListener('toggle', () => {
+              if (details.open) openCategories.add(`${group.id}/${category}`); else openCategories.delete(`${group.id}/${category}`);
+            });
+            const summary = document.createElement('summary');
+            summary.textContent = `${category} · ${entries.length}`;
+            const inner = document.createElement('div');
+            inner.className = 'dagger-dialogue-topic-list';
+            inner.append(...entries.map(topicButton));
+            details.append(summary, inner);
+            return details;
+          });
           if (bank) {
             const control = button('Bank services');
             control.dataset.bankOpen = 'true';
             control.addEventListener('click', () => send({ action: 'bank-open', revision: dialogue.revision }));
             list.append(control);
           }
-          section.append(heading, list);
+          section.append(heading, ...(list.childElementCount > 0 ? [list] : []), ...lists);
           return [section];
         }));
       });

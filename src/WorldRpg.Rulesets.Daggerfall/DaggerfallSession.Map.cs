@@ -84,38 +84,42 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>Builds the talk directory from the site/map/NPC owners already used by map and activation.</summary>
-    private IReadOnlyList<DaggerfallDialogueTopicOption> DialogueDirectory()
+    internal IReadOnlyList<DaggerfallDialogueTopicOption> DialogueDirectory()
     {
         DaggerfallSiteRecord? site = Site.ActiveSite;
         if (site is null) return [];
         List<DaggerfallDialogueTopicOption> entries = [];
+        List<(int Order, DaggerfallDialogueTopicOption Topic)> buildings = [];
         foreach (DaggerfallSiteBuildingSource source in Site.BuildingsAt(site.Id)
             .OrderBy(value => value.Id.BlockY).ThenBy(value => value.Id.BlockX).ThenBy(value => value.Id.Index))
         {
             DaggerfallSiteBuildingRecord building;
             try { building = Site.RequireBuilding(site.Id, source.Id); }
             catch (InvalidOperationException) { continue; }
-            if (string.IsNullOrWhiteSpace(building.Name)) continue;
+            // Only the kinds of building the directory lists: no houses, walls or other unnamed fabric.
+            if (string.IsNullOrWhiteSpace(building.Name)
+                || !DaggerfallDialogueTopicGroups.BuildingCategories.TryGetValue(building.BuildingType, out var category)) continue;
             string id = $"direction:building:{source.Id.BlockX}:{source.Id.BlockY}:{source.Id.Index}";
-            entries.Add(new(id, $"Where is {building.Name}?"));
+            buildings.Add((category.Order, new(id, $"Where is {building.Name}?", Category: category.Label)));
         }
+        entries.AddRange(buildings.OrderBy(entry => entry.Order).ThenBy(entry => entry.Topic.Label, StringComparer.Ordinal).Select(entry => entry.Topic));
 
         foreach (DaggerfallNpc npc in State.Npcs.All
             .Where(npc => _dialogue?.IsLiveTalkTarget(npc) == true)
             .OrderBy(npc => npc.DurableId))
         {
             string display = npc.DisplayName ?? npc.Role;
-            entries.Add(new($"direction:npc:{npc.DurableId}", $"Where is {display}?"));
+            entries.Add(new($"direction:npc:{npc.DurableId}", $"Where is {display}?", Category: DaggerfallDialogueTopicGroups.People));
         }
 
         foreach (DaggerfallSiteRecord place in Site.Records
             .Where(place => place.Id.Region == site.Id.Region && place.Id != site.Id)
             .OrderBy(place => place.Name, StringComparer.Ordinal).ThenBy(place => place.Id.Index))
-            entries.Add(new($"direction:site:{place.Id.Region}:{place.Id.Index}", $"Where is {place.Name}?"));
+            entries.Add(new($"direction:site:{place.Id.Region}:{place.Id.Index}", $"Where is {place.Name}?", Category: DaggerfallDialogueTopicGroups.Elsewhere));
         foreach (var (quest, resource) in State.Quests.DialogueResources())
         {
             string key = $"direction:quest:{Uri.EscapeDataString(quest.InstanceId)}:{Uri.EscapeDataString(resource.Symbol)}";
-            if (ResolveDialogueDirection(key) is { } destination) entries.Add(new(key, $"Where is {destination.Name}?"));
+            if (ResolveDialogueDirection(key) is { } destination) entries.Add(new(key, $"Where is {destination.Name}?", Category: DaggerfallDialogueTopicGroups.QuestPlaces));
         }
         return entries;
     }

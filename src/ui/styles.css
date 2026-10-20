@@ -120,6 +120,11 @@
 .dagger-dialogue-log p { margin: 0; }
 .dagger-dialogue-asked { font-style: italic; }
 .dagger-dialogue-topic-list { display: flex; flex-wrap: wrap; gap: .375rem; }
+/* The directory's lists (kinds of building, people, the region): closed and counted until opened. */
+.dagger-dialogue-topic-category { border-top: 1px solid rgb(107 74 36 / .35); margin-top: .375rem; padding-top: .375rem; }
+.dagger-dialogue-topic-category > summary { cursor: var(--dagger-cursor-pointer); font: 700 .78rem Georgia, serif; padding: .25rem 0; }
+.dagger-dialogue-topic-category > summary:focus-visible { outline: 2px solid #b8862b; outline-offset: 2px; }
+.dagger-dialogue-topic-category > .dagger-dialogue-topic-list { margin: .375rem 0 .25rem; max-height: 12rem; overflow-y: auto; }
 .dagger-dialogue-donation { align-items: center; display: flex; gap: .625rem; }
 .dagger-dialogue-donation[hidden] { display: none; }
 .dagger-dialogue section[aria-label] { margin-top: 1rem; }

@@ -2549,7 +2549,8 @@ test('the conversation groups its topics under the published headings, keeps a s
     const groups = [{ id: 'talk', label: 'Ask about' }, { id: 'quests', label: 'Your business' }, { id: 'places', label: 'Where is…' }, { id: 'services', label: 'Services' }];
     const dialogue = (revision, question, reply) => ({ revision, targetLabel: 'Hrolf', greeting: 'Well met.', tone: 'normal', question, reply, diagnostics: [],
       bankAvailable: true, topicGroups: groups, topics: [
-        { id: 'news', label: 'Any news?', group: 'talk' }, { id: 'directions', label: 'The Odd Blades', key: 'place.7', group: 'places' },
+        { id: 'news', label: 'Any news?', group: 'talk' }, { id: 'directions', label: 'The Odd Blades', key: 'place.7', group: 'places', category: 'Weaponsmiths' },
+        { id: 'directions', label: 'Where is Hrolf?', key: 'npc.3', group: 'places', category: 'People' },
         { id: 'donate', label: 'Donate gold', group: 'services' }] });
     const summoning = { revision: 'summon-1', provider: 'Hrolf', offerRevision: null, prince: null, message: null, diagnostics: [],
       quote: { key: 'azura', name: 'Azura', quest: 'Q0C00Y00', gold: 2000, eligible: true, reason: null } };
@@ -2557,7 +2558,12 @@ test('the conversation groups its topics under the published headings, keeps a s
     publish(dialogue('d-1', null, null));
     const sections = [...f.root.querySelectorAll('.dagger-dialogue-topic-group')];
     assert.deepEqual(sections.map(section => section.querySelector('h3').textContent), ['Ask about', 'Where is…', 'Services'], 'Empty groups are left out.');
-    assert.equal(sections[1].querySelector('[data-topic="directions"]').dataset.key, 'place.7');
+    // The directory's lists are closed, counted sections; an opened one stays open while the conversation lasts.
+    const lists = [...sections[1].querySelectorAll('.dagger-dialogue-topic-category')];
+    assert.deepEqual(lists.map(list => list.querySelector('summary').textContent), ['Weaponsmiths · 1', 'People · 1']);
+    assert.equal(lists.some(list => list.open), false);
+    assert.equal(lists[0].querySelector('[data-topic="directions"]').dataset.key, 'place.7');
+    lists[0].open = true; lists[0].dispatchEvent(new window.Event('toggle'));
     assert.ok(sections[2].querySelector('[data-bank-open]'), 'The bank sits with the services.');
     // Donation takes its amount from the stepper.
     f.root.querySelector('.dagger-dialogue-donation input').value = '50';
@@ -2568,6 +2574,8 @@ test('the conversation groups its topics under the published headings, keeps a s
     publish(dialogue('d-2', 'Any news?', 'They say the harbour flooded.'));
     publish(dialogue('d-2', 'Any news?', 'They say the harbour flooded.'));
     publish(dialogue('d-3', 'Where is The Odd Blades?', 'North of the temple.'));
+    assert.equal(f.root.querySelector('[data-topic-category="Weaponsmiths"]').open, true);
+    assert.equal(f.root.querySelector('[data-topic-category="People"]').open, false);
     const log = [...f.root.querySelectorAll('.dagger-dialogue-log li')];
     assert.deepEqual(log.map(entry => entry.querySelector('.dagger-dialogue-reply').textContent), ['They say the harbour flooded.', 'North of the temple.']);
     assert.equal(log[1].classList.contains('is-latest'), true);

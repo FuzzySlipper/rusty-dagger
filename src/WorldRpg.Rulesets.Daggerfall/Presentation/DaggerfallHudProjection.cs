@@ -405,7 +405,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("id", builder.String(topic.Id)),
             ("label", builder.String(topic.Label)),
             ("key", topic.Key is null ? builder.Null() : builder.String(topic.Key)),
-            ("group", builder.String(topic.Group)))).ToArray())),
+            ("group", builder.String(topic.Group)),
+            ("category", topic.Category is null ? builder.Null() : builder.String(topic.Category)))).ToArray())),
         ("topicGroups", builder.Array(DaggerfallDialogueTopicGroups.All.Select(group => builder.Object(
             ("id", builder.String(group.Id)), ("label", builder.String(group.Label)))).ToArray())),
         ("tavern", dialogue.Tavern is not { } tavern ? builder.Null() : builder.Object(

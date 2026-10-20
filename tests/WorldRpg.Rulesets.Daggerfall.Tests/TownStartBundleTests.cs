@@ -53,6 +53,16 @@ public sealed class TownStartBundleTests
         Assert.Empty(game.State.Quests.All);
         Assert.Equal(9, DaggerfallSavePayload.Read(game.CaptureSave()).Calendar.Hour);
 
+        // The town's "Where is" directory lists its shops, guilds, temples and taverns under their kinds, as the
+        // donor's does, and leaves out its walls and houses: Charing has many wall segments, none of them a topic.
+        IReadOnlyList<DaggerfallDialogueTopicOption> directory = game.DialogueDirectory();
+        DaggerfallDialogueTopicOption[] buildings = [.. directory.Where(topic => topic.Id.StartsWith("direction:building:", StringComparison.Ordinal))];
+        Assert.NotEmpty(buildings);
+        Assert.DoesNotContain(buildings, topic => topic.Label.Contains("City Wall", StringComparison.Ordinal));
+        Assert.All(buildings, topic => Assert.Contains(topic.Category, DaggerfallDialogueTopicGroups.BuildingCategories.Values.Select(category => category.Label)));
+        Assert.Contains(buildings, topic => topic.Category == "General stores");
+        Assert.All(directory.Except(buildings), topic => Assert.NotNull(topic.Category));
+
         // Facing the store's door with only it seen, an ordinary interaction enters during opening hours.
         DaggerfallDoorView door = game.Doors.Read(exterior.Doors.First(value => value.ExteriorBuilding == GeneralStore).Id);
         game.State.PlayerControl.MoveTo(door.Pose.Translation + Vector3.UnitZ);
