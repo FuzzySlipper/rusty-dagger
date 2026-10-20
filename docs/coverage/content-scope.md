@@ -307,7 +307,9 @@ The planning expansion is therefore finite and record-oriented:
 
 ## Generated and authored content
 
-Content converted from Bethesda's Daggerfall data is not committed and not redistributed. Git tracks
+The game's files, the media extracted from them and the bulk generated payloads are not committed
+and not redistributed; small derived facts (identifiers, names, numbers, short text, record JSON)
+in tests, fixtures and documents are fine (`AGENTS.md`). Git tracks
 only descriptors, hand-authored payloads, tuning and the importer's own inputs; everything derived
 from the operator's files is regenerated on each checkout by one command,
 `scripts/regenerate-content.sh`. It reads `local/arena2` (or `--arena2`/`DAGGER_ARENA2`), the

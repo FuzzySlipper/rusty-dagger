@@ -65,6 +65,15 @@ public sealed class HudSnapshotContractTests
         // The art revision is minted per session, so the shared file names a fixed one.
         string artRevision = Assert.IsType<string>(snapshot["uiArtRevision"]);
         Assert.False(string.IsNullOrEmpty(artRevision));
+        // Demanded art carries extracted game images; the fixture keeps each entry's identity and how
+        // it is drawn but never the image bytes, which stay out of Git.
+        if (snapshot.TryGetValue("uiArtDemanded", out object? demanded) && demanded is Dictionary<string, object?> demandedArt
+            && demandedArt.TryGetValue("images", out object? demandedImages) && demandedImages is object[] entries)
+            foreach (Dictionary<string, object?> entry in entries.Cast<Dictionary<string, object?>>())
+            {
+                Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(entry["image"]), StringComparison.Ordinal);
+                entry["image"] = "data:image/png;base64,";
+            }
         // Demanded art revisions name parts of that same revision, so every copy takes the fixed name.
         string published = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true })
             .Replace(artRevision, "session-art-revision", StringComparison.Ordinal) + "\n";

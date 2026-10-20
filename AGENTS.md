@@ -75,15 +75,24 @@ runtime assembly loading, reflection discovery, `Assembly.Load`, ambient
 plug-in ABI. Named explicitly composed Kit services and typed RuleEvents are
 encouraged where they make gameplay ownership and contribution discoverable.
 
-Converted Bethesda data is never committed. Git tracks only pack, bundle and
+Keep the game's own files and assets out of Git: never commit the Arena2
+directory, the music, or media extracted from them (images, sprites, textures,
+audio, video, including as base64 inside JSON). The bulk generated output is not
+committed either, because it is reproducible: Git tracks only pack, bundle and
 tuning descriptors, hand-authored payloads (the authored `daggerfall.base` and
 the site payloads), tuning payloads and the importer's inputs under `data/`.
 Everything derived from the operator's `local/arena2`, the donor checkout and
 `local/Sound` (the paths in `scripts/generated-content-paths.txt`, all ignored,
 including the `daggerfall.imported` payload) is rebuilt on checkout by one
-command, `scripts/regenerate-content.sh`. Never commit, hand-edit or copy an
-authored value into generated output; change the importer or the authored file.
-`docs/coverage/content-scope.md` names each section's owner.
+command, `scripts/regenerate-content.sh`.
+
+Small facts that trace back to the game are not sensitive. Identifiers, names,
+record and template numbers, counts, short text excerpts and JSON describing
+records may go in tests, fixtures, documents and authored files where they are
+needed; do not strip or block them merely because they came from Arena2. Never
+commit, hand-edit or copy an authored value into generated output; change the
+importer or the authored file. `docs/coverage/content-scope.md` names each
+section's owner.
 
 ## Kit, Daggerfall, and tuning rules
 
