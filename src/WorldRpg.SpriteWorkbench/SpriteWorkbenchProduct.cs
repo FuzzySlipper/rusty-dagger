@@ -466,7 +466,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
             ("id", builder.String(entry.Id)), ("label", builder.String(entry.Label)), ("kind", builder.String(entry.Kind.ToString())),
             ("provenance", builder.Object(("path", builder.String(entry.Closure.RelativePath)), ("digest", builder.String(entry.Closure.ContentDigest.Value)), ("byteLength", builder.Number(entry.Closure.ByteLength)),
                 ("dependsOnPaths", builder.Array(entry.Closure.DependsOnPaths.Select(value => builder.String(value)).ToArray())),
-                ("sources", builder.Array(entry.Closure.PublicationSources.Select(source => builder.Object(("path", builder.String(source.SourcePath)), ("digest", builder.String(source.ContentHash.Value)), ("byteLength", builder.Number(source.ByteLen)))).ToArray())))),
+                ("sources", builder.Array(publication.Catalog.PublicationSources.Select(source => builder.Object(("path", builder.String(source.SourcePath)), ("digest", builder.String(source.ContentHash.Value)), ("byteLength", builder.Number(source.ByteLen)))).ToArray())))),
             ("atlas", builder.Object(("url", builder.String("./atlas/" + entry.Closure.RelativePath)), ("width", builder.Number(entry.Atlas.Width)), ("height", builder.Number(entry.Atlas.Height)))),
             ("frames", builder.Array(frames)), ("states", builder.Array(states)), ("actions", builder.Array(actions)), ("availableSequences", builder.Array(sequences)),
             // These arrays are control affordances, unlike the complete inspection

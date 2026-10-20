@@ -27,13 +27,12 @@ public enum SpriteInspectionKind
     ClassicEffect,
 }
 
-/// <summary>Closure and provenance facts retained by the generated publication.</summary>
+/// <summary>Closure facts the generated publication retains for one sprite set's artifact.</summary>
 public sealed record SpriteInspectionClosure(
     string RelativePath,
     SpriteContentDigest ContentDigest,
     long ByteLength,
-    IReadOnlyList<string> DependsOnPaths,
-    IReadOnlyList<SpriteInspectionSource> PublicationSources);
+    IReadOnlyList<string> DependsOnPaths);
 
 /// <summary>One portable source fact the publication was generated from.</summary>
 public sealed record SpriteInspectionSource(string SourcePath, SpriteContentDigest ContentHash, long ByteLen);
@@ -91,8 +90,12 @@ public sealed record SpriteAuthoredValues(
     bool? Loop,
     IReadOnlyList<int>? Sequence);
 
-/// <summary>Stable, typed inspection catalog over a generated publication's sprite media.</summary>
-public sealed record SpriteInspectionCatalog(IReadOnlyList<SpriteInspectionEntry> Entries)
+/// <summary>
+/// Stable, typed inspection catalog over a generated publication's sprite media. The sources the
+/// publication was generated from are publication-wide provenance, so the catalog states them once
+/// rather than every entry repeating the whole list.
+/// </summary>
+public sealed record SpriteInspectionCatalog(IReadOnlyList<SpriteInspectionEntry> Entries, IReadOnlyList<SpriteInspectionSource> PublicationSources)
 {
     public SpriteInspectionEntry Require(string id) => Entries.SingleOrDefault(entry => StringComparer.Ordinal.Equals(entry.Id, id))
         ?? throw new InvalidOperationException($"Sprite set '{id}' is not present in this publication.");
@@ -109,6 +112,8 @@ public sealed record SpriteInspectionDocument(SpriteContentDigest AuthoringBasis
 /// <summary>Strict JSON for <see cref="SpriteInspectionDocument"/>.</summary>
 public static class SpriteInspectionDocumentSerializer
 {
+    // A bound on what the workbench reads into memory from a content file. The writer holds the same bound,
+    // so it never publishes a document the reader would then refuse to load.
     private const int MaximumDocumentBytes = 32 * 1024 * 1024;
     private static readonly JsonSerializerOptions Json = new()
     {
@@ -124,7 +129,7 @@ public static class SpriteInspectionDocumentSerializer
         byte[] bytes = [.. JsonSerializer.SerializeToUtf8Bytes(document, Json), (byte)'\n'];
         if (bytes.Length > MaximumDocumentBytes)
         {
-            throw new FormatException("The serialized sprite inspection document exceeds its byte quota.");
+            throw new FormatException($"The serialized sprite inspection document is {bytes.Length} bytes, over the {MaximumDocumentBytes}-byte bound a reader accepts, so no authoring tool could load it.");
         }
 
         return bytes;
@@ -161,6 +166,14 @@ public static class SpriteInspectionDocumentSerializer
             document.AuthoringBasisDigest.Validate();
             ArgumentNullException.ThrowIfNull(document.Catalog);
             ArgumentNullException.ThrowIfNull(document.Catalog.Entries);
+            ArgumentNullException.ThrowIfNull(document.Catalog.PublicationSources);
+            foreach (SpriteInspectionSource source in document.Catalog.PublicationSources)
+            {
+                ArgumentNullException.ThrowIfNull(source);
+                SpriteLogicalNames.RequirePath(source.SourcePath, nameof(source.SourcePath));
+                source.ContentHash.Validate();
+            }
+
             HashSet<string> ids = new(StringComparer.Ordinal);
             foreach (SpriteInspectionEntry entry in document.Catalog.Entries)
             {
@@ -191,13 +204,6 @@ public static class SpriteInspectionDocumentSerializer
         SpriteLogicalNames.RequirePath(entry.Closure.RelativePath, nameof(entry.Closure.RelativePath));
         entry.Closure.ContentDigest.Validate();
         ArgumentNullException.ThrowIfNull(entry.Closure.DependsOnPaths);
-        ArgumentNullException.ThrowIfNull(entry.Closure.PublicationSources);
-        foreach (SpriteInspectionSource source in entry.Closure.PublicationSources)
-        {
-            ArgumentNullException.ThrowIfNull(source);
-            SpriteLogicalNames.RequirePath(source.SourcePath, nameof(source.SourcePath));
-            source.ContentHash.Validate();
-        }
 
         ArgumentNullException.ThrowIfNull(entry.Atlas);
         ArgumentNullException.ThrowIfNull(entry.Frames);

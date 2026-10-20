@@ -160,10 +160,16 @@ public sealed class UiArtDeliverySessionTests
         List<string> unpublished = [];
         foreach (string path in sources)
         {
-            foreach (Match literal in Regex.Matches(File.ReadAllText(path), @"['""`](?<id>[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+)['""`]"))
+            // Comments are prose rather than names the DOM draws (`window.confirm` in a doc block), so only
+            // code is scanned; a block comment and a whole-line comment are the two shapes the client writes.
+            string code = Regex.Replace(File.ReadAllText(path), @"/\*[\s\S]*?\*/|^\s*//[^\n]*", "", RegexOptions.Multiline);
+            foreach (Match literal in Regex.Matches(code, @"['""`](?<id>[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+)['""`]"))
             {
                 string id = literal.Groups["id"].Value;
                 if (!families.Contains(id.Split('.')[0])) continue;
+                // A file the client stages beside itself (`inventory.css`) is a name with an extension, not a
+                // media identity; media files are rejected separately below.
+                if (Regex.IsMatch(id, @"\.(?:css|js|ts|json|html)$")) continue;
                 named.Add(id);
                 if (!published.Contains(id)) unpublished.Add($"{Path.GetFileName(path)}: {id}");
             }

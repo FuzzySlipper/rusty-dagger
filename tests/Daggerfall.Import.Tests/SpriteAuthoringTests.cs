@@ -21,7 +21,7 @@ public sealed class SpriteAuthoringTests
         Assert.Equal(SpriteInspectionKind.DungeonActor, actor.Kind);
         Assert.Equal("media/dungeon/actor.png", actor.Closure.RelativePath);
         Assert.Equal(fixture.ActorDigest.Value, actor.Closure.ContentDigest.Value);
-        Assert.Equal("arena2/test", Assert.Single(actor.Closure.PublicationSources).SourcePath);
+        Assert.Equal("arena2/test", Assert.Single(catalog.PublicationSources).SourcePath);
         Assert.Equal(8, actor.Frames.Count);
         Assert.Equal(0, actor.Frames[0].SourceRecord);
         Assert.Equal(0, actor.Frames[0].Orientation);
@@ -417,7 +417,7 @@ public sealed class SpriteAuthoringTests
         Assert.Equal(SpriteInspectionKind.DungeonActor, actor.Kind);
         Assert.Equal(new SpriteVector2(1F, 1F), actor.SourceWorldSize);
         Assert.Equal(new sbyte[] { 0, -1 }, Assert.Single(actor.Actions).SourceSequence!.Select(step => step.Value));
-        Assert.Equal("arena2/test", Assert.Single(actor.Closure.PublicationSources).SourcePath);
+        Assert.Equal("arena2/test", Assert.Single(read.Catalog.PublicationSources).SourcePath);
         // A tool validates overlays against the document exactly as against the publication.
         SpriteAuthoredOverlayDocument overlay = new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, read.AuthoringBasisDigest, [new("sprite.actor", DisplayName: "Rat")]);
         SpriteAuthoredOverlayStore.Validate(overlay, read.Catalog, read.AuthoringBasisDigest);
@@ -428,11 +428,11 @@ public sealed class SpriteAuthoringTests
             .Concat("x"u8.ToArray()).ToArray()));
         Assert.Throws<FormatException>(() => SpriteInspectionDocumentSerializer.Serialize(read with
         {
-            Catalog = new([.. read.Catalog.Entries, read.Catalog.Entries[0]]),
+            Catalog = read.Catalog with { Entries = [.. read.Catalog.Entries, read.Catalog.Entries[0]] },
         }));
         Assert.Throws<FormatException>(() => SpriteInspectionDocumentSerializer.Serialize(read with
         {
-            Catalog = new([actor with { Closure = actor.Closure with { RelativePath = "../outside.png" } }]),
+            Catalog = read.Catalog with { Entries = [actor with { Closure = actor.Closure with { RelativePath = "../outside.png" } }] },
         }));
     }
 

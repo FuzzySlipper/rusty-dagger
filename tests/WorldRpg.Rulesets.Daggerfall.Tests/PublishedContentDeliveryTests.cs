@@ -763,10 +763,10 @@ public sealed class PublishedContentDeliveryTests
 
         // The entry surface shows the character step while a draft is being edited, falling back to
         // title otherwise. Its displayed mode and selected artifact follow that same choice.
-        string consumer = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "src/ui/main.ts"));
+        string consumer = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "src/ui/entry.ts"));
         Assert.Contains("=== TITLE_MODE", consumer, StringComparison.Ordinal);
-        Assert.Contains("entryRoot.dataset.mode = creationMode ?? TITLE_MODE", consumer, StringComparison.Ordinal);
-        Assert.Contains("screenForMode(creationMode ?? TITLE_MODE)", consumer, StringComparison.Ordinal);
+        Assert.Contains("root.dataset.mode = mode ?? TITLE_MODE", consumer, StringComparison.Ordinal);
+        Assert.Contains("screenForMode(mode ?? TITLE_MODE)", consumer, StringComparison.Ordinal);
 
         // The action the entry screen sends is the one the product answers, and the wire is one word: a
         // rename on either side leaves the button that does nothing.

@@ -71,16 +71,17 @@ public static class SpriteInspectionCatalogBuilder
             ValidateMediaClosure(dungeon.Media, closure, "dungeon");
             ValidateMediaClosure(classic.Media, closure, "classic");
             List<SpriteInspectionEntry> entries = [];
-            AddDungeonBillboards(entries, dungeon, closure, publication.Sources);
-            AddDungeonActors(entries, dungeon, closure, publication.Sources);
-            AddClassicWeapon(entries, classic, closure, publication.Sources);
-            AddClassicEffects(entries, classic, closure, publication.Sources);
+            AddDungeonBillboards(entries, dungeon, closure);
+            AddDungeonActors(entries, dungeon, closure);
+            AddClassicWeapon(entries, classic, closure);
+            AddClassicEffects(entries, classic, closure);
             if (entries.Select(entry => entry.Id).Distinct(StringComparer.Ordinal).Count() != entries.Count)
             {
                 throw new InvalidOperationException("Sprite inspection entries must have unique media IDs.");
             }
 
-            return new(entries.OrderBy(entry => entry.Id, StringComparer.Ordinal).ToArray());
+            return new(entries.OrderBy(entry => entry.Id, StringComparer.Ordinal).ToArray(),
+                publication.Sources.OrderBy(source => source.Path, StringComparer.Ordinal).Select(source => new SpriteInspectionSource(source.Path, Digest(source.ContentDigest), source.ByteLength)).ToArray());
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NullReferenceException or OverflowException)
         {
@@ -91,8 +92,7 @@ public static class SpriteInspectionCatalogBuilder
     private static void AddDungeonBillboards(
         ICollection<SpriteInspectionEntry> entries,
         DungeonMediaManifestSidecar sidecar,
-        IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure,
-        IReadOnlyList<PublishedSource> sources)
+        IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure)
     {
         foreach (DungeonBillboardMediaManifest billboard in sidecar.Billboards.OrderBy(value => value.MediaId, StringComparer.Ordinal))
         {
@@ -101,7 +101,7 @@ public static class SpriteInspectionCatalogBuilder
                 descriptor.Id,
                 $"Billboard {billboard.SpriteResourceId}",
                 SpriteInspectionKind.DungeonBillboard,
-                ToClosure(descriptor, closure, sources),
+                ToClosure(descriptor, closure),
                 new(descriptor.AtlasWidth, descriptor.AtlasHeight),
                 Frames(descriptor, billboard.Frames),
                 [],
@@ -113,8 +113,7 @@ public static class SpriteInspectionCatalogBuilder
     private static void AddDungeonActors(
         ICollection<SpriteInspectionEntry> entries,
         DungeonMediaManifestSidecar sidecar,
-        IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure,
-        IReadOnlyList<PublishedSource> sources)
+        IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure)
     {
         foreach (DungeonActorMediaManifest actor in sidecar.Actors.OrderBy(value => value.MediaId, StringComparer.Ordinal))
         {
@@ -128,7 +127,7 @@ public static class SpriteInspectionCatalogBuilder
                 descriptor.Id,
                 $"Actor {actor.SourceName}",
                 SpriteInspectionKind.DungeonActor,
-                ToClosure(descriptor, closure, sources),
+                ToClosure(descriptor, closure),
                 new(descriptor.AtlasWidth, descriptor.AtlasHeight),
                 Frames(descriptor, layouts, includeSourceWorldSize: true),
                 states,
@@ -143,7 +142,7 @@ public static class SpriteInspectionCatalogBuilder
                     corpse.Id,
                     $"Corpse {actor.SourceName}",
                     SpriteInspectionKind.DungeonCorpse,
-                    ToClosure(corpse, closure, sources),
+                    ToClosure(corpse, closure),
                     new(corpse.AtlasWidth, corpse.AtlasHeight),
                     Frames(corpse, [actor.Corpse.Frame]),
                     [], [], Authored(corpse), GeneratedFrames(corpse, [actor.Corpse.Frame])));
@@ -154,8 +153,7 @@ public static class SpriteInspectionCatalogBuilder
     private static void AddClassicWeapon(
         ICollection<SpriteInspectionEntry> entries,
         ClassicMediaManifestSidecar sidecar,
-        IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure,
-        IReadOnlyList<PublishedSource> sources)
+        IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure)
     {
         if (sidecar.WeaponMedia.Count == 0)
         {
@@ -169,7 +167,7 @@ public static class SpriteInspectionCatalogBuilder
                 descriptor.Id,
                 $"Classic {descriptor.Id} weapon",
                 SpriteInspectionKind.ClassicWeapon,
-                ToClosure(descriptor, closure, sources),
+                ToClosure(descriptor, closure),
                 new(descriptor.AtlasWidth, descriptor.AtlasHeight),
                 Frames(descriptor, null), [],
                 weapon.Actions.OrderBy(action => action.Action).Select(action => new SpriteInspectionAction(
@@ -183,8 +181,7 @@ public static class SpriteInspectionCatalogBuilder
     private static void AddClassicEffects(
         ICollection<SpriteInspectionEntry> entries,
         ClassicMediaManifestSidecar sidecar,
-        IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure,
-        IReadOnlyList<PublishedSource> sources)
+        IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure)
     {
         foreach (IGrouping<string, ClassicEffectManifest> group in sidecar.Effects.GroupBy(effect => effect.MediaId, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal))
         {
@@ -193,7 +190,7 @@ public static class SpriteInspectionCatalogBuilder
                 descriptor.Id,
                 $"Classic effect {string.Join(", ", group.OrderBy(effect => effect.Effect).Select(effect => effect.Effect))}",
                 SpriteInspectionKind.ClassicEffect,
-                ToClosure(descriptor, closure, sources),
+                ToClosure(descriptor, closure),
                 new(descriptor.AtlasWidth, descriptor.AtlasHeight), Frames(descriptor, null), [],
                 group.OrderBy(effect => effect.Effect).Select(effect => new SpriteInspectionAction(
                     effect.Effect.ToString(), effect.Timing.FramesPerSecond, effect.Timing.Loop,
@@ -203,7 +200,7 @@ public static class SpriteInspectionCatalogBuilder
         }
     }
 
-    private static SpriteInspectionClosure ToClosure(NormalizedMediaDescriptor descriptor, IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure, IReadOnlyList<PublishedSource> sources)
+    private static SpriteInspectionClosure ToClosure(NormalizedMediaDescriptor descriptor, IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure)
     {
         if (!closure.TryGetValue(descriptor.RelativePath, out ImportPublicationManifestArtifact? artifact)
             || artifact.ContentHash != descriptor.ContentDigest || artifact.ByteLen != descriptor.ByteLength)
@@ -211,8 +208,7 @@ public static class SpriteInspectionCatalogBuilder
             throw new FormatException($"Sprite '{descriptor.Id}' does not agree with the publication closure.");
         }
 
-        return new(descriptor.RelativePath, Digest(descriptor.ContentDigest), descriptor.ByteLength, artifact.DependsOnPaths.ToArray(),
-            sources.OrderBy(source => source.Path, StringComparer.Ordinal).Select(source => new SpriteInspectionSource(source.Path, Digest(source.ContentDigest), source.ByteLength)).ToArray());
+        return new(descriptor.RelativePath, Digest(descriptor.ContentDigest), descriptor.ByteLength, artifact.DependsOnPaths.ToArray());
     }
 
     private static void ValidateMediaClosure(NormalizedMediaManifest media, IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure, string family)
