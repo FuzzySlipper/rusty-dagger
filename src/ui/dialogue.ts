@@ -248,6 +248,10 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
         row.append(label, level, control);
         return row;
       })));
+      // The browser focuses a modal's autofocus control when it opens: the first topic, not the tone
+      // choice, which would take the arrows.
+      for (const marked of window_.querySelectorAll('[autofocus]')) marked.removeAttribute('autofocus');
+      topics.querySelector('button, summary')?.setAttribute('autofocus', '');
       if (!window_.open) window_.showModal();
     },
   };
