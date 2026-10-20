@@ -295,7 +295,7 @@
 .dagger-spell-glyph { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 2rem; height: 2rem;
   background-repeat: no-repeat; image-rendering: pixelated; border: 1px solid #5b4d31; font: .7rem ui-monospace, monospace; color: #aa9c7a; }
 .dagger-spellbook-details { display: grid; gap: .5rem; padding: .75rem; }
-.dagger-spellbook-details h3 { align-items: center; display: flex; gap: .625rem; margin: 0; }
+.dagger-spellbook-details h3 { align-items: center; display: flex; font: 700 1.2rem Georgia, serif; gap: .625rem; margin: 0; }
 .dagger-spellbook-details h3 .dagger-spell-glyph { width: 3rem; height: 3rem; }
 .dagger-spellbook-details > p { color: #c9b78c; margin: 0; }
 .dagger-spellbook-commands { display: flex; flex-wrap: wrap; gap: .375rem; }
