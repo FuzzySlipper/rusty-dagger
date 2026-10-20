@@ -16,7 +16,11 @@ internal enum DaggerfallSkillTrainingDenial
     QuoteChanged,
 }
 
-internal sealed record DaggerfallSkillTrainingSkillView(string Id, int PermanentValue, int MaximumValue);
+internal sealed record DaggerfallSkillTrainingSkillView(string Id, int PermanentValue, int MaximumValue)
+{
+    /// <summary>Whether this trainer can raise the skill further: it is below the trainer's maximum.</summary>
+    internal bool Trainable => PermanentValue < MaximumValue;
+}
 
 internal sealed record DaggerfallSkillTrainingProviderView(
     DaggerfallServiceProvider Provider,

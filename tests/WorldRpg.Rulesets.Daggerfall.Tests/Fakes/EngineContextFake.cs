@@ -339,7 +339,7 @@ internal class EngineContextFake : DispatchProxy
         };
     }
 
-    private class UiServiceFake : DispatchProxy
+    internal class UiServiceFake : DispatchProxy
     {
         private EngineContextFake owner = null!;
         internal UiProjection? LastProjection { get; private set; }
@@ -360,7 +360,7 @@ internal class EngineContextFake : DispatchProxy
         private object? Publish(object?[]? arguments)
         {
             LastProjection = arguments is [UiProjection projection, ..] ? projection : null;
-            if (owner.RecordsPublishedHistory) History.Add(LastProjection is { } published ? Decode(published, published.Value.Root) : null);
+            if (owner.RecordsPublishedHistory) History.Add(LastProjection is { } published ? Decode(published.Value, published.Value.Root) : null);
             return null;
         }
 
@@ -371,11 +371,11 @@ internal class EngineContextFake : DispatchProxy
         internal string? Field(string key)
         {
             if (LastProjection is not { } projection) return null;
-            foreach (uint edge in Edges(projection, projection.Value.Root))
+            foreach (uint edge in Edges(projection.Value, projection.Value.Root))
             {
                 StructuredValueNode node = projection.Value.Nodes.Span[checked((int)edge)];
-                if (Key(projection, node) != key) continue;
-                return node.Kind == StructuredValueKind.String ? Text(projection, node) : null;
+                if (Key(projection.Value, node) != key) continue;
+                return node.Kind == StructuredValueKind.String ? Text(projection.Value, node) : null;
             }
 
             return null;
@@ -385,9 +385,9 @@ internal class EngineContextFake : DispatchProxy
         internal uint? Object(string key)
         {
             if (LastProjection is not { } projection) return null;
-            foreach (uint edge in Edges(projection, projection.Value.Root))
+            foreach (uint edge in Edges(projection.Value, projection.Value.Root))
             {
-                if (Key(projection, projection.Value.Nodes.Span[checked((int)edge)]) == key) return edge;
+                if (Key(projection.Value, projection.Value.Nodes.Span[checked((int)edge)]) == key) return edge;
             }
 
             return null;
@@ -397,12 +397,12 @@ internal class EngineContextFake : DispatchProxy
         internal string? ArrayItemField(string array, int index, string key)
         {
             if (LastProjection is not { } projection || Object(array) is not { } arrayIndex) return null;
-            List<uint> items = [.. Edges(projection, arrayIndex)];
+            List<uint> items = [.. Edges(projection.Value, arrayIndex)];
             if (index >= items.Count) return null;
-            foreach (uint edge in Edges(projection, items[index]))
+            foreach (uint edge in Edges(projection.Value, items[index]))
             {
                 StructuredValueNode node = projection.Value.Nodes.Span[checked((int)edge)];
-                if (Key(projection, node) == key && node.Kind == StructuredValueKind.String) return Text(projection, node);
+                if (Key(projection.Value, node) == key && node.Kind == StructuredValueKind.String) return Text(projection.Value, node);
             }
 
             return null;
@@ -412,21 +412,24 @@ internal class EngineContextFake : DispatchProxy
         internal string? Nested(string parent, string key)
         {
             if (LastProjection is not { } projection || Object(parent) is not { } parentIndex) return null;
-            foreach (uint edge in Edges(projection, parentIndex))
+            foreach (uint edge in Edges(projection.Value, parentIndex))
             {
                 StructuredValueNode node = projection.Value.Nodes.Span[checked((int)edge)];
-                if (Key(projection, node) == key && node.Kind == StructuredValueKind.String) return Text(projection, node);
+                if (Key(projection.Value, node) == key && node.Kind == StructuredValueKind.String) return Text(projection.Value, node);
             }
 
             return null;
         }
 
         /// <summary>The whole published value decoded into objects, arrays, strings and numbers.</summary>
-        internal object? Decoded() => LastProjection is { } projection ? Decode(projection, projection.Value.Root) : null;
+        internal object? Decoded() => LastProjection is { } projection ? Decode(projection.Value, projection.Value.Root) : null;
 
-        private static object? Decode(UiProjection projection, uint index)
+        /// <summary>A built value decoded the same way, for tests of one projection section.</summary>
+        internal static object? Decode(UiValue value) => Decode(value, value.Root);
+
+        private static object? Decode(UiValue projection, uint index)
         {
-            StructuredValueNode node = projection.Value.Nodes.Span[checked((int)index)];
+            StructuredValueNode node = projection.Nodes.Span[checked((int)index)];
             return node.Kind switch
             {
                 StructuredValueKind.Null => null,
@@ -435,24 +438,24 @@ internal class EngineContextFake : DispatchProxy
                 StructuredValueKind.Bool => node.BoolValue != 0,
                 StructuredValueKind.Array => Edges(projection, index).Select(edge => Decode(projection, edge)).ToArray(),
                 StructuredValueKind.Object => Edges(projection, index).ToDictionary(
-                    edge => Key(projection, projection.Value.Nodes.Span[checked((int)edge)]),
+                    edge => Key(projection, projection.Nodes.Span[checked((int)edge)]),
                     edge => Decode(projection, edge),
                     StringComparer.Ordinal),
                 _ => (object?)node.Kind,
             };
         }
 
-        private static IEnumerable<uint> Edges(UiProjection projection, uint index)
+        private static IEnumerable<uint> Edges(UiValue projection, uint index)
         {
-            StructuredValueNode node = projection.Value.Nodes.Span[checked((int)index)];
-            for (uint offset = 0; offset < node.ChildCount; offset++) yield return projection.Value.Edges.Span[checked((int)(node.FirstEdge + offset))];
+            StructuredValueNode node = projection.Nodes.Span[checked((int)index)];
+            for (uint offset = 0; offset < node.ChildCount; offset++) yield return projection.Edges.Span[checked((int)(node.FirstEdge + offset))];
         }
 
-        private static string Key(UiProjection projection, StructuredValueNode node) =>
-            System.Text.Encoding.UTF8.GetString(projection.Value.Utf8.Span[checked((int)node.KeyOffset)..checked((int)(node.KeyOffset + node.KeyLen))]);
+        private static string Key(UiValue projection, StructuredValueNode node) =>
+            System.Text.Encoding.UTF8.GetString(projection.Utf8.Span[checked((int)node.KeyOffset)..checked((int)(node.KeyOffset + node.KeyLen))]);
 
-        private static string Text(UiProjection projection, StructuredValueNode node) =>
-            System.Text.Encoding.UTF8.GetString(projection.Value.Utf8.Span[checked((int)node.TextOffset)..checked((int)(node.TextOffset + node.TextLen))]);
+        private static string Text(UiValue projection, StructuredValueNode node) =>
+            System.Text.Encoding.UTF8.GetString(projection.Utf8.Span[checked((int)node.TextOffset)..checked((int)(node.TextOffset + node.TextLen))]);
     }
 }
 

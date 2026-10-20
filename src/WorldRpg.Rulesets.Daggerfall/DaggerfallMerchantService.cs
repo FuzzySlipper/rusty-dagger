@@ -143,6 +143,8 @@ internal sealed record DaggerfallMerchantSave(
 /// </summary>
 internal sealed class DaggerfallMerchantService
 {
+    /// <summary>A purchase or sale totalling this many gold or more is confirmed before it is made.</summary>
+    internal const long LargeTradeGold = 500;
     internal const string MerchantContainerTypeName = "daggerfall.merchant-container";
     internal const string RepairContainerTypeName = "daggerfall.repair-custody";
     private const int OpenHour = 6;

@@ -17,7 +17,19 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal enum DaggerfallDialogueTone { Polite, Normal, Blunt }
 internal enum DaggerfallDialogueTopic { Directions, News, Work, QuestInfo, Donate, Cure, RankReview, Armor, House, Join, Teleport, Spymaster, RestoreAttributes }
 
-internal sealed record DaggerfallDialogueTopicOption(string Id, string Label, string? Key = null);
+/// <param name="Group">The heading the conversation lists the topic under (<see cref="DaggerfallDialogueTopicGroups"/>).</param>
+internal sealed record DaggerfallDialogueTopicOption(string Id, string Label, string? Key = null, string Group = DaggerfallDialogueTopicGroups.Services);
+
+/// <summary>The headings a conversation groups its topics under, in the order it shows them.</summary>
+internal static class DaggerfallDialogueTopicGroups
+{
+    internal const string Talk = "talk";
+    internal const string Places = "places";
+    internal const string Quests = "quests";
+    internal const string Services = "services";
+    internal static readonly (string Id, string Label)[] All =
+        [(Talk, "Ask about"), (Quests, "Your business"), (Places, "Where is…"), (Services, "Services")];
+}
 /// <param name="Known">Whether the map already discloses this destination; subject knowledge is resolved separately.</param>
 internal sealed record DaggerfallDialogueDestination(string Id, string Name, string Hint, bool Known = true)
 {
@@ -767,13 +779,14 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private void Publish(DaggerfallNpc npc, DaggerfallSiteRecord? site)
     {
         if (_current is not { } session) { _publish(null); return; }
-        List<DaggerfallDialogueTopicOption> topics = [new("directions", "Where is this place?"), new("news", "Any news?")];
+        const string Talk = DaggerfallDialogueTopicGroups.Talk;
+        List<DaggerfallDialogueTopicOption> topics = [new("directions", "Where is this place?", Group: Talk), new("news", "Any news?", Group: Talk)];
         if (npc.Services.Any(service => service is "quest" or "quests" or "quest-candidate") || _workAvailable(npc.DurableId))
-            topics.Add(new("work", "Do you know of any work?"));
+            topics.Add(new("work", "Do you know of any work?", Group: Talk));
         if (_directionDirectory is not null)
-            topics.AddRange(_directionDirectory());
+            topics.AddRange(_directionDirectory().Select(topic => topic with { Group = DaggerfallDialogueTopicGroups.Places }));
         foreach (DaggerfallQuestDialogueTopic topic in _questTopics(npc.DurableId))
-            topics.Add(new(topic.Id, topic.Label));
+            topics.Add(new(topic.Id, topic.Label, Group: DaggerfallDialogueTopicGroups.Quests));
         if (_templeService is not null && OffersTopic(npc, DaggerfallDialogueTopic.Donate))
             topics.Add(new("donate", "Donate gold"));
         if (_templeService is not null && OffersTopic(npc, DaggerfallDialogueTopic.Cure))

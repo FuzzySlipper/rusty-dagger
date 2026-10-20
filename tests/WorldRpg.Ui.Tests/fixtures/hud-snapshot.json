@@ -335,22 +335,44 @@
         {
           "id": "directions",
           "label": "Where is this place?",
-          "key": null
+          "key": null,
+          "group": "talk"
         },
         {
           "id": "news",
           "label": "Any news?",
-          "key": null
+          "key": null,
+          "group": "talk"
         },
         {
           "id": "direction:npc:1000000000017",
           "label": "Where is Morganna Hawkwing?",
-          "key": null
+          "key": null,
+          "group": "places"
         },
         {
           "id": "direction:site:17:180",
           "label": "Where is Hand-authored Waypoint?",
-          "key": null
+          "key": null,
+          "group": "places"
+        }
+      ],
+      "topicGroups": [
+        {
+          "id": "talk",
+          "label": "Ask about"
+        },
+        {
+          "id": "quests",
+          "label": "Your business"
+        },
+        {
+          "id": "places",
+          "label": "Where is\u2026"
+        },
+        {
+          "id": "services",
+          "label": "Services"
         }
       ],
       "tavern": null,

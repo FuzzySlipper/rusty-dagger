@@ -4,7 +4,7 @@ import { mountDrag, type Drag } from './drag.js';
 import type { NavigationSurface } from './navigation.js';
 import { redraw } from './redraw.js';
 import { createStepper, type Stepper } from './stepper.js';
-import { mountTransfer } from './transfer.js';
+import { inventoryTransferRow, mountTransfer } from './transfer.js';
 
 export interface InventoryProjection {
   readonly revision: string;
@@ -301,7 +301,7 @@ export function mountInventory(
   packSection.append(packHeader, actions.element, packPane, bankControls.element, storagePane);
   let storage: PropertyStorage | null = null;
   const storageTransfer = mountTransfer(storagePane, {
-    move(side, key, amount) {
+    command(side, key, _command, amount) {
       if (storage === null) return;
       claim({ action: side === 'source' ? 'property-take' : 'property-put', key: storage.key, item: key, revision: storage.revision, amount });
     },
@@ -310,9 +310,9 @@ export function mountInventory(
     if (storage === null || current === null) { storageTransfer.update(null); return; }
     const refusals = new Map(storage.storeRefusals.map(refusal => [refusal.item, refusal.reason]));
     storageTransfer.update({
-      source: { title: 'Stored here', empty: 'Nothing is stored here.', rows: storage.items.map(item => ({ item, command: 'Take' })) },
+      source: { title: 'Stored here', empty: 'Nothing is stored here.', rows: storage.items.map(item => inventoryTransferRow(item, 'Take')) },
       pack: { title: 'Your pack', empty: 'Your pack is empty.',
-        rows: current.items.map(item => ({ item, command: 'Store', refusal: refusals.get(item.key) ?? null })) },
+        rows: current.items.map(item => inventoryTransferRow(item, 'Store', refusals.get(item.key) ?? null)) },
       takeAll: null,
       encumbrance: current.encumbrance ?? null,
     });

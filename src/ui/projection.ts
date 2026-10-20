@@ -90,8 +90,13 @@ export interface SpellMakerSetting {
 }
 export interface SpellMakerOption { readonly value:number; readonly label:string; }
 export interface SpellMakerDraft { readonly name:string;readonly element:number;readonly rangeType:number;readonly icon:number;readonly effects:readonly SpellMakerSetting[]; }
+/** The ruleset's spellmaker bounds: the name's length, the icons, the effect slots and each field's maximum. */
+export interface SpellMakerLimits {
+  readonly nameLength:number;readonly icons:number;readonly effects:number;
+  readonly duration:number;readonly chance:number;readonly magnitude:number;readonly perLevels:number;
+}
 export interface SpellMakerProjection {
-  readonly revision:string;readonly provider:string;readonly draft:SpellMakerDraft;
+  readonly revision:string;readonly provider:string;readonly draft:SpellMakerDraft;readonly limits:SpellMakerLimits;
   readonly targets:readonly SpellMakerOption[];readonly elements:readonly SpellMakerOption[];
   readonly effects:readonly {readonly key:string;readonly name:string;readonly type:number;readonly subType:number;readonly school:string;
     readonly duration:boolean;readonly chance:boolean;readonly magnitude:boolean;readonly targets:number;readonly elements:number}[];
@@ -112,6 +117,8 @@ export interface ItemMakerProjection {
 }
 export interface PotionMakerProjection {
   readonly revision:string; readonly provider:string; readonly eligible:boolean;
+  /** How many ingredients one mix takes. */
+  readonly minimumIngredients:number; readonly maximumIngredients:number;
   readonly ingredients:readonly {readonly template:number;readonly name:string;readonly quantity:number}[];
   readonly recipes:readonly {readonly key:number;readonly name:string;readonly ingredients:readonly number[];readonly available:boolean}[];
 }
@@ -168,7 +175,9 @@ export interface DialogueProjection {
   readonly tone: string;
   readonly question: string | null;
   readonly reply: string | null;
-  readonly topics: readonly { readonly id: string; readonly label: string; readonly key?: string | null }[];
+  readonly topics: readonly { readonly id: string; readonly label: string; readonly key?: string | null; readonly group?: string }[];
+  /** The headings topics are listed under, in order. */
+  readonly topicGroups?: readonly { readonly id: string; readonly label: string }[];
   readonly tavern?: { readonly hungry: boolean; readonly menu: readonly { readonly id: string; readonly label: string; readonly price: number }[] } | null;
   readonly training?: {
     readonly providerFaction: number;
@@ -177,8 +186,12 @@ export interface DialogueProjection {
     readonly rank: number;
     readonly price: number;
     readonly durationSeconds: number;
+    /** The training's length in whole hours, as the ruleset rounds it. */
+    readonly durationHours: number;
     readonly cooldownReadySecond: number;
-    readonly skills: readonly { readonly id: string; readonly label: string; readonly permanentValue: number; readonly maximumValue: number }[];
+    readonly skills: readonly { readonly id: string; readonly label: string; readonly permanentValue: number; readonly maximumValue: number;
+      /** Whether this trainer can raise the skill further. */
+      readonly trainable: boolean }[];
   } | null;
   readonly diagnostics: readonly string[];
 }
@@ -188,6 +201,8 @@ export interface MerchantItemProjection {
   readonly definition: string;
   readonly label: string;
   readonly quantity: string | number;
+  /** The most of this row one trade moves: a stack's count, or one. */
+  readonly maximumQuantity: number;
   readonly unitPrice: string | number;
   readonly currentCondition: number;
   readonly maximumCondition: number;
@@ -214,6 +229,8 @@ export interface MerchantProjection {
   readonly repairAvailable: boolean;
   readonly identifyAvailable: boolean;
   readonly result: string;
+  /** A purchase or sale totalling this many gold or more is confirmed first. */
+  readonly largeTradeGold: number;
   readonly stock: readonly MerchantItemProjection[];
   readonly playerItems: readonly MerchantItemProjection[];
   readonly repairs: readonly { readonly requestId: string; readonly durableItemId: string | number; readonly definition: string; readonly dueMinute: number; readonly ready: boolean;

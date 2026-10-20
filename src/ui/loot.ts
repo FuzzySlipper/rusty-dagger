@@ -1,5 +1,5 @@
 import type { InventoryItem, InventoryProjection } from './inventory.js';
-import { mountTransfer } from './transfer.js';
+import { inventoryTransferRow, mountTransfer } from './transfer.js';
 
 export interface LootProjection {
   readonly container: string;
@@ -30,7 +30,7 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
   shell.append(heading);
   let current: LootProjection | null = null;
   const transfer = mountTransfer(shell, {
-    move(side, key, amount) {
+    command(side, key, _command, amount) {
       if (side === 'source' && current !== null)
         claim({ action: 'loot-take', container: current.container, revision: current.revision, item: key, amount });
     },
@@ -47,9 +47,9 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
     heading.textContent = current.title;
     status.textContent = current.message;
     transfer.update({
-      source: { title: 'Contents', empty: 'Nothing left to take.', rows: current.items.map(item => ({ item, command: 'Take' })) },
+      source: { title: 'Contents', empty: 'Nothing left to take.', rows: current.items.map(item => inventoryTransferRow(item, 'Take')) },
       pack: { title: 'Your pack', empty: 'Your pack is empty.',
-        rows: (pack?.items ?? []).filter(item => item.equippedSlots.length === 0).map(item => ({ item, command: null })) },
+        rows: (pack?.items ?? []).filter(item => item.equippedSlots.length === 0).map(item => inventoryTransferRow(item, null)) },
       takeAll: 'Take all',
       encumbrance: pack?.encumbrance ?? null,
     });

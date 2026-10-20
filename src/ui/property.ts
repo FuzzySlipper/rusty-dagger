@@ -1,3 +1,4 @@
+import type { ConfirmQuestion } from './confirm.js';
 import type { PropertyStorage } from './inventory.js';
 import { redraw } from './redraw.js';
 
@@ -12,13 +13,14 @@ export interface PropertyProjection {
 }
 type PropertyAction = { readonly action: 'property-buy' | 'property-sell' | 'property-enter'; readonly key: string };
 
-export function mountProperty(root: HTMLElement, claim: (action: PropertyAction) => void): {
+export function mountProperty(root: HTMLElement, claim: (action: PropertyAction) => void, ask: (question: ConfirmQuestion) => void): {
   update(value: PropertyProjection | null): void;
 } {
-  function button(label: string, enabled: boolean, action: PropertyAction): HTMLButtonElement {
+  // Buying and selling move a property's whole price, so each asks through the drawn confirm first.
+  function button(label: string, enabled: boolean, action: PropertyAction, confirm?: Omit<ConfirmQuestion, 'onAccept'>): HTMLButtonElement {
     const control = document.createElement('button');
     control.type = 'button'; control.textContent = label; control.disabled = !enabled;
-    control.addEventListener('click', () => claim(action));
+    control.addEventListener('click', () => confirm === undefined ? claim(action) : ask({ ...confirm, onAccept: () => claim(action) }));
     return control;
   }
   // Property redraws only when what it offers changes, so a focused Buy or Sell keeps focus.
@@ -35,9 +37,11 @@ export function mountProperty(root: HTMLElement, claim: (action: PropertyAction)
       const row = document.createElement('div');
       const name = document.createElement('span'); name.textContent = `${offer.name}${offer.owned ? ' · owned' : ''} · ${offer.price} gold`;
       row.append(name);
-      if (!offer.owned) row.append(button('Buy', offer.canBuy, { action: 'property-buy', key: offer.key }));
+      if (!offer.owned) row.append(button('Buy', offer.canBuy, { action: 'property-buy', key: offer.key },
+        { message: `Buy ${offer.name} for ${offer.price} gold?`, accept: 'Buy' }));
       else {
-        row.append(button(`Sell · ${offer.salePrice} gold`, offer.canSell, { action: 'property-sell', key: offer.key }));
+        row.append(button(`Sell · ${offer.salePrice} gold`, offer.canSell, { action: 'property-sell', key: offer.key },
+          { message: `Sell ${offer.name} for ${offer.salePrice} gold?`, accept: 'Sell' }));
         if (offer.enterable) row.append(button('Enter house', offer.canEnter, { action: 'property-enter', key: offer.key }));
       }
       root.append(row);

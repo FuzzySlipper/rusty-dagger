@@ -176,6 +176,16 @@ follow its shape.
   storage is the inventory's Storage tab, with Take and Store; the ruleset
   publishes the items the store refuses and why (`storeRefusals`).
 
+The other item and service screens follow the same shape. A shop is the transfer layout:
+the stock with Buy and Steal (set apart), the player's items with Sell, Repair and Identify,
+and a line total for the chosen amount. A trade at or over the ruleset's `largeTradeGold`
+and every theft ask through the drawn confirm; so do training, a paid summoning and
+buying or selling property. A conversation groups its topics under the ruleset's
+`topicGroups` and keeps a short log of what was asked and answered while it lasts. The
+spellmaker and potion maker draw every field from published limits (the spellmaker's
+`limits`, the potion maker's ingredient count), and rest and lodging durations are
+steppers bounded by the ruleset's maximums.
+
 The quantity stepper (`src/ui/stepper.ts`) is the shared bounded amount: −
 and + beside a number field, with its limits from the projection. The
 keyboard's and controller's left and right step it.
