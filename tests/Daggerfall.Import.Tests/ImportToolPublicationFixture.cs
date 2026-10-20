@@ -50,6 +50,14 @@ internal sealed partial class ImportToolFixture
                 foreach (var artifact in characters.Pass.Artifacts) result.Add(At("output/worldrpg/" + artifact.RelativePath), artifact.Bytes);
                 result.Add(At("output/worldrpg/" + CharacterMediaPublisher.IndexRelativePath), CharacterMediaPublisher.WriteIndex(characters.Pass, characters.References, "worldrpg"));
                 Section("characterPresentation", characters.Presentation); break;
+            case "paper-doll-media":
+                var dollArchives = PaperDollItemPublication.Archives.Where(number => File.Exists(Path.Combine(Arena2, $"TEXTURE.{number:000}")))
+                    .ToDictionary(number => number, number => (ReadOnlyMemory<byte>)Source($"TEXTURE.{number:000}"));
+                var doll = PaperDollItemPublication.Publish(dollArchives, PaletteDecoder.Decode(Source(CharacterMediaReferences.ArtPalette), $"arena2/{CharacterMediaReferences.ArtPalette}"),
+                    PaperDollItemPublication.ReadTemplates(System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Pack))!["itemTemplates"]!));
+                foreach (var artifact in doll.Artifacts) result.Add(At("output/worldrpg/" + artifact.RelativePath), artifact.Bytes);
+                result.Add(At("output/worldrpg/" + PaperDollItemPublication.IndexRelativePath), PaperDollItemPublication.WriteIndex(doll, "worldrpg"));
+                sections.Add("paperDoll", PaperDollItemPublication.Section(doll).ToJsonString(PublishedJson.Section)); break;
             case "cinematic-media":
                 var cinematicPack = Read<DaggerfallCinematicPack>(Pack, "cinematics");
                 var updated = cinematicPack.Cinematics.ToArray();
