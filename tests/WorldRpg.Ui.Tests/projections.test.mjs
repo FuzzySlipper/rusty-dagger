@@ -1087,6 +1087,38 @@ test('book page controls send the notebook revision current when they are presse
   } finally { f.dispose(); }
 });
 
+test('actions opened on a worn item from the Bank or Storage tab bring the pack back, so the bar is never invisible', () => {
+  const f = fixture();
+  try {
+    const sword = { key: 'unique:2', definition: 'sword', label: 'Sword', quantity: '1', weight: 1, value: 1, details: '', icon: null, condition: null,
+      identified: true, gridSlot: null, equippedSlots: ['right-hand'], compatibleSlots: ['right-hand'] };
+    const storage = { key: 'house/1', revision: '3', items: [], storeRefusals: [] };
+    f.publish({ inventory: { revision: '12:1', message: '', equipmentChange: null, categories: [], items: [sword],
+      slots: [{ id: 'right-hand', label: 'Right hand', itemKey: 'unique:2', group: 'weapons' }],
+      bank: { currentRegion: 17, currentRegionName: 'Daggerfall', currentBalance: '0', maximumNewLoan: '0', loan: null, accounts: [], actions: [] } },
+      property: { bankAvailable: true, offers: [], storage } });
+    f.root.querySelector('[data-action="inventory"]').click();
+    const bar = f.root.querySelector('.dagger-inventory-actions-bar');
+    const worn = f.root.querySelector('.dagger-inventory-equipment-section [data-inventory-item="unique:2"]');
+    for (const tab of ['bank', 'storage']) {
+      f.root.querySelector(`[data-inventory-tab="${tab}"]`).click();
+      assert.equal(f.root.querySelector('.dagger-inventory-pack').hidden, true);
+      worn.focus();
+      worn.click();
+      assert.equal(f.root.querySelector('[data-inventory-tab="all"]').getAttribute('aria-selected'), 'true', `From ${tab}, the pack comes back.`);
+      assert.equal(f.root.querySelector('.dagger-inventory-actions').hidden, false);
+      assert.equal(bar.closest('[hidden]'), null, 'The bar that takes navigation is on screen.');
+      assert.equal(document.activeElement.closest('.dagger-inventory-actions-bar'), bar);
+      f.pad('button-1');
+      assert.equal(bar.hidden, true);
+    }
+    // A bar left open while its row is hidden would hold navigation; switching tabs closes it instead.
+    worn.click();
+    f.root.querySelector('[data-inventory-tab="bank"]').click();
+    assert.equal(bar.hidden, true);
+  } finally { f.dispose(); }
+});
+
 test('an inventory action bar closes with its panel, so navigation belongs to what is visible', () => {
   const f = fixture();
   try {
