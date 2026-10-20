@@ -660,13 +660,17 @@ export function mountInventory(
         && !(event.target instanceof Element && event.target.closest<HTMLElement>('[data-inventory-item]')?.dataset.inventoryItem === key)) close();
     };
     document.addEventListener('pointerdown', onPointerDown, true);
-    const isOpen = (): boolean => key !== null && !shell.closest('[hidden]') && (shell.closest('dialog')?.open ?? true);
+    // Open only while the bar itself is on screen: hidden commands never take the navigation scope.
+    const isOpen = (): boolean => key !== null && !bar.closest('[hidden]') && (shell.closest('dialog')?.open ?? true);
     const unregister = register?.({ name: 'inventory-actions', root: bar, layer: 95, isOpen, back: close });
     disposers.push(() => { unregister?.(); document.removeEventListener('pointerdown', onPointerDown, true); });
 
     return {
       element,
       open(next) {
+        // The bar sits above the pack, so actions opened from the Bank or Storage tab (on a worn
+        // item beside it) bring the pack back first.
+        if (tab === BANK_TAB || tab === STORAGE_TAB) selectTab(ALL_TAB);
         if (drag.release() && current !== null) status.textContent = equipmentStatus(current);
         hideTip();
         key = next;
