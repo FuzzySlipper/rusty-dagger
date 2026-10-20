@@ -58,7 +58,10 @@ internal sealed record DaggerfallWornItem(string Key, string Slot, DaggerfallIte
 /// its vampire head and background; a transformed lycanthrope draws only its beast background. Which texture
 /// an item is drawn from follows <c>ItemBuilder</c> and <c>ItemHelper.GetItemImage</c>: armour by gender and
 /// body morphology, clothing by body morphology, a variant past the template's record, a cloak's variants one
-/// record later, and a one-handed weapon in the right hand from the next record.
+/// record later, and a one-handed weapon in the right hand from the next record. An artifact - an item whose
+/// magic template is not a regular one - is drawn instead from its own texture, as <c>SetArtifact</c> sets it
+/// with <c>ItemHelper.GetArtifactTextureIndices</c>: the artifact archive for the gender it was made for, at
+/// the record the artifact's place among the artifact templates names, undyed.
 /// </remarks>
 internal static class DaggerfallPaperDollPolicy
 {
@@ -67,6 +70,14 @@ internal static class DaggerfallPaperDollPolicy
 
     private const int FemaleArmorArchive = 245;
     private const int MaleArmorArchive = 249;
+    private const int FemaleArtifactArchive = 433;
+    private const int MaleArtifactArchive = 432;
+
+    /// <summary>The donor's <c>artifactTextureIndexMappings</c>: each artifact's record, by its place among the artifact templates.</summary>
+    private static readonly int[] ArtifactRecords = [12, 13, 10, 8, 19, 16, 25, 18, 21, 2, 24, 26, 0, 15, 3, 9, 23, 17, 7, 1, 22, 20, 5];
+
+    /// <summary>The dye the artifact archives publish their records under.</summary>
+    private const string UnchangedDye = "unchanged";
 
     /// <summary>The equipment slots past the jewellery, which the donor treats as worn on the body.</summary>
     private const int FirstBodySlot = 12;
@@ -135,7 +146,10 @@ internal static class DaggerfallPaperDollPolicy
             .OrderBy(entry => entry.Item2.DrawOrderOrEffect)
             .ThenBy(entry => Array.IndexOf(slotOrder, entry.Item.Slot)))
         {
-            if (Item(presentation, Archive(template, item, identity), Record(template, item), Dye(template, item)) is { } layer)
+            PaperDollLayerPresentation? drawnLayer = IsArtifact(definitions, item, out int? artifactRecord)
+                ? artifactRecord is int record ? Item(presentation, ArtifactArchive(item, identity), HandRecord(template, item, record), UnchangedDye) : null
+                : Item(presentation, Archive(template, item, identity), Record(template, item), Dye(template, item));
+            if (drawnLayer is { } layer)
                 layers.Add(layer with { Slot = item.Slot });
             else unplaced.Add(item.Label());
         }
@@ -187,13 +201,36 @@ internal static class DaggerfallPaperDollPolicy
         return template.PlayerTextureArchive + morphology;
     }
 
-    private static int Record(DaggerfallItemTemplateDefinition template, DaggerfallWornItem item)
-    {
-        int record = template.Variants > 0
+    private static int Record(DaggerfallItemTemplateDefinition template, DaggerfallWornItem item) =>
+        HandRecord(template, item, template.Variants > 0
             ? template.PlayerTextureRecord + (IsCloak(template) ? 1 : 0) + (item.Metadata?.Variant ?? 0)
-            : template.PlayerTextureRecord;
-        return template.Groups.Contains("Weapons", StringComparer.Ordinal) && template.IsOneHanded && item.Slot == "right-hand" ? record + 1 : record;
+            : template.PlayerTextureRecord);
+
+    /// <summary>A one-handed weapon in the right hand is drawn from the record after its own.</summary>
+    private static int HandRecord(DaggerfallItemTemplateDefinition template, DaggerfallWornItem item, int record) =>
+        template.Groups.Contains("Weapons", StringComparer.Ordinal) && template.IsOneHanded && item.Slot == "right-hand" ? record + 1 : record;
+
+    /// <summary>
+    /// Whether the item is an artifact, and the artifact record it is drawn from: its magic template's place
+    /// among the artifact templates - the magic templates that are not regular, in file order - or null when
+    /// the donor's table names no record for that place.
+    /// </summary>
+    private static bool IsArtifact(DaggerfallDefinitions definitions, DaggerfallWornItem item, out int? record)
+    {
+        record = null;
+        if (item.Metadata?.Enchantment is not { } key || !definitions.Magic.MagicItems.TryGetValue(key, out DaggerfallMagicItemDefinition? magic)
+            || magic.Type == 0)
+            return false;
+        int index = definitions.Magic.MagicItems.Values.Where(value => value.Type != 0).Count(value => value.Offset < magic.Offset);
+        record = index < ArtifactRecords.Length ? ArtifactRecords[index] : null;
+        return true;
     }
+
+    /// <summary>The artifact archive for the gender the item was made for, else the wearer's.</summary>
+    private static int ArtifactArchive(DaggerfallWornItem item, DaggerfallCharacterIdentity wearer) =>
+        (item.Metadata?.Gender ?? (wearer.Gender == DaggerfallCharacterGender.Female ? "female" : "male")) == "female"
+            ? FemaleArtifactArchive
+            : MaleArtifactArchive;
 
     /// <summary>The dye an item is drawn in: clothing's own dye, and a weapon's or armour's material.</summary>
     private static string Dye(DaggerfallItemTemplateDefinition template, DaggerfallWornItem item) =>

@@ -241,6 +241,44 @@ public sealed class DaggerfallCharacterPresentationTests
     }
 
     [Fact]
+    public void Paper_doll_draws_an_artifact_from_its_own_texture_for_the_gender_it_was_made_for()
+    {
+        using Fixture f = new();
+        DaggerfallCharacterIdentity identity = new DaggerfallCharacterState(f.Definitions, f.Player.Stats, f.PlayerDefinition).Identity;
+        DaggerfallItemDefinition Template(int index) => f.Definitions.TemplateItems.Values.First(item => item.Template?.Index == index);
+        DaggerfallWornItem Worn(string slot, int template, string? enchantment, string? gender = null) =>
+            new($"{slot}.{template}", slot, Template(template),
+                new DaggerfallItemInstanceMetadata(Template(template).Id.Value, "ebony", 0, 1, 1, true, false, null, null, enchantment, DaggerfallItemOwner.Player, Gender: gender),
+                () => $"{slot} item");
+        string Drawn(PaperDollPresentation doll, string slot) => doll.Layers.Single(layer => layer.Slot == slot).MediaId;
+        string Artifact(int archive, int record) => f.Definitions.CharacterPresentation.PaperDollItems[(archive, record)].Dyes["unchanged"];
+
+        // Lord's Mail (a cuirass) and the Ebony Blade (a katana) are the 16th and 23rd artifact templates, whose
+        // records the donor's table gives as 9 and 5; a one-handed weapon in the right hand takes the next record.
+        Assert.Equal("Lord's Mail", f.Definitions.Magic.MagicItems["magic-item.0051"].Name);
+        Assert.Equal("Ebony Blade", f.Definitions.Magic.MagicItems["magic-item.0058"].Name);
+        Assert.True(Template(121).Template!.IsOneHanded);
+        PaperDollPresentation doll = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity with { Gender = DaggerfallCharacterGender.Male }, null,
+            [Worn("chest-armor", 102, "magic-item.0051"), Worn("right-hand", 121, "magic-item.0058")]);
+        Assert.Equal(Artifact(432, 9), Drawn(doll, "chest-armor"));
+        Assert.Equal(Artifact(432, 6), Drawn(doll, "right-hand"));
+        Assert.Empty(doll.Unplaced);
+
+        // In the left hand the blade is its own record; mail made for a woman draws from the female archive.
+        doll = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity with { Gender = DaggerfallCharacterGender.Male }, null,
+            [Worn("chest-armor", 102, "magic-item.0051", gender: "female"), Worn("left-hand", 121, "magic-item.0058")]);
+        Assert.Equal(Artifact(433, 9), Drawn(doll, "chest-armor"));
+        Assert.Equal(Artifact(432, 5), Drawn(doll, "left-hand"));
+
+        // A regular magic item keeps its base template's texture in its material's dye.
+        string regular = f.Definitions.Magic.MagicItems.Values.First(magic => magic.Type == 0).Key;
+        doll = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity with { Gender = DaggerfallCharacterGender.Male }, null,
+            [Worn("left-hand", 121, regular)]);
+        Assert.Equal(f.Definitions.CharacterPresentation.PaperDollItems[(Template(121).Template!.PlayerTextureArchive, Template(121).Template!.PlayerTextureRecord)].Dyes["ebony"],
+            Drawn(doll, "left-hand"));
+    }
+
+    [Fact]
     public void Paper_doll_draws_a_vampire_head_and_background_and_only_the_beast_background_while_transformed()
     {
         using Fixture f = new();

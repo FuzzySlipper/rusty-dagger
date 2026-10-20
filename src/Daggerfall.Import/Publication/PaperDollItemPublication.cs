@@ -53,6 +53,13 @@ public sealed record PaperDollItemPass(IReadOnlyList<PaperDollItemImage> Images,
 /// drew beneath the item - hair around a helm. One record carries a wrong header offset, which the donor
 /// corrects and this does too.
 /// </para>
+/// <para>
+/// An artifact is drawn from its own texture rather than its base template's (<c>DaggerfallUnityItem.SetArtifact</c>
+/// with <c>ItemHelper.GetArtifactTextureIndices</c>): archive 432 for a male and 433 for a female, at a record
+/// each artifact names, with the next record for a one-handed artifact weapon in the right hand. Those
+/// records between them cover both archives, so both are published whole, undyed - an artifact keeps its
+/// colours - under the <see cref="UnchangedDye"/> name.
+/// </para>
 /// </remarks>
 public static class PaperDollItemPublication
 {
@@ -62,8 +69,14 @@ public static class PaperDollItemPublication
     /// <summary>The index's generator identity.</summary>
     public const string IndexGenerator = "daggerfall-import-tool paper-doll-media";
 
+    /// <summary>The male and female artifact archives, which are published whole.</summary>
+    public static readonly int[] ArtifactArchives = [432, 433];
+
     /// <summary>The texture archives the worn items are drawn from.</summary>
-    public static readonly int[] Archives = [234, 235, 236, 237, 238, 239, 240, 241, 242, 245, 246, 247, 248, 249, 250, 251, 252];
+    public static readonly int[] Archives = [234, 235, 236, 237, 238, 239, 240, 241, 242, 245, 246, 247, 248, 249, 250, 251, 252, .. ArtifactArchives];
+
+    /// <summary>The dye an artifact image is published under: the record as it is stored.</summary>
+    public const string UnchangedDye = "unchanged";
 
     private const int FemaleArmorArchive = 245;
     private const int MaleArmorArchive = 249;
@@ -160,15 +173,19 @@ public static class PaperDollItemPublication
         List<PaperDollItemImage> images = [];
         List<PaperDollArtifact> artifacts = [];
         List<string> sources = [];
-        foreach ((int number, IReadOnlySet<int> records) in reach.OrderBy(entry => entry.Key))
+        foreach ((int number, IReadOnlySet<int>? records) in reach.OrderBy(entry => entry.Key).Select(entry => (entry.Key, (IReadOnlySet<int>?)entry.Value))
+            .Concat(ArtifactArchives.Select(number => (number, (IReadOnlySet<int>?)null))))
         {
             string source = $"arena2/TEXTURE.{number:000}";
             if (!archives.TryGetValue(number, out ReadOnlyMemory<byte> bytes))
-                throw new InvalidOperationException($"The worn-item templates reach {source}, which the supplied corpus does not carry.");
+                throw new InvalidOperationException(records is null
+                    ? $"The artifacts are drawn from {source}, which the supplied corpus does not carry."
+                    : $"The worn-item templates reach {source}, which the supplied corpus does not carry.");
             sources.Add(source);
             TextureArchive archive = TextureArchive.Parse(bytes.Span, source);
             bool clothing = number is >= 235 and <= 242;
-            foreach (int record in records.Order())
+            bool artifactTexture = records is null;
+            foreach (int record in records?.Order() ?? Enumerable.Range(0, archive.RecordCount))
             {
                 if (record >= archive.RecordCount)
                     throw new InvalidOperationException($"A worn-item template reaches record {record} of {source}, which carries {archive.RecordCount}.");
@@ -182,7 +199,7 @@ public static class PaperDollItemPublication
                 string baseId = MediaId(number, record);
                 artifacts.Add(Emit(baseId, frame.Width, frame.Height, pixels, palette));
                 Dictionary<string, string> dyes = new(StringComparer.Ordinal);
-                IEnumerable<(string Dye, byte[]? Table)> swaps = clothing
+                IEnumerable<(string Dye, byte[]? Table)> swaps = artifactTexture ? new (string, byte[]?)[] { (UnchangedDye, null) } : clothing
                     ? ClothingDyes.Select(dye => (dye.Dye, (byte[]?)[.. Enumerable.Range(dye.Start, 16).Select(value => (byte)value)]))
                     : MetalDyes;
                 int dyeStart = clothing ? ClothingDyeStart : MetalDyeStart;

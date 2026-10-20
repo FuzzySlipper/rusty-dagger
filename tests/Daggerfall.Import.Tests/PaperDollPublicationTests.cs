@@ -52,7 +52,7 @@ public sealed class PaperDollPublicationTests
         Assert.Equal(new DaggerfallPaperDollFrame(110, 184, -8, -7, 125, 198), presentation.PaperDoll);
     }
 
-    [CorpusFact("ART_PAL.COL", "TEXTURE.234", "TEXTURE.237", "TEXTURE.251")]
+    [CorpusFact("ART_PAL.COL", "TEXTURE.234", "TEXTURE.237", "TEXTURE.251", "TEXTURE.432", "TEXTURE.433")]
     public void Publishes_each_reached_record_placed_dyed_and_masked_as_the_donor_draws_it()
     {
         Dictionary<int, ReadOnlyMemory<byte>> archives = PaperDollItemPublication.Archives.ToDictionary(number => number, number => Read($"TEXTURE.{number:000}"));
@@ -86,6 +86,17 @@ public sealed class PaperDollPublicationTests
         // Clothing's blue dye is the record as stored; red swaps the clothing range.
         Assert.Equal(PaperDollItemPublication.MediaId(237, 50), Image(237, 50).Dyes["blue"]);
         Assert.Equal(10, Image(237, 50).Dyes.Count);
+
+        // The artifact archives are published whole, whatever the templates reach, each record undyed.
+        foreach (int number in PaperDollItemPublication.ArtifactArchives)
+        {
+            int records = TextureArchive.Parse(archives[number].Span, $"arena2/TEXTURE.{number}").RecordCount;
+            Assert.Equal(Enumerable.Range(0, records), pass.Images.Where(image => image.Archive == number).Select(image => image.Record));
+            Assert.All(pass.Images.Where(image => image.Archive == number), image => Assert.Equal(
+                new Dictionary<string, string> { [PaperDollItemPublication.UnchangedDye] = PaperDollItemPublication.MediaId(number, image.Record) }, image.Dyes));
+        }
+        // The donor's artifact table names records up to 26.
+        Assert.True(TextureArchive.Parse(archives[432].Span, "arena2/TEXTURE.432").RecordCount > 26);
     }
 
     private static ReadOnlyMemory<byte> Read(string file) => File.ReadAllBytes(TestData.Corpus(file));
