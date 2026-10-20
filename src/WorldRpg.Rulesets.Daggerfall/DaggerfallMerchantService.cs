@@ -62,7 +62,21 @@ internal sealed record DaggerfallMerchantView(
     IReadOnlyList<DaggerfallMerchantItemView> Stock,
     IReadOnlyList<DaggerfallMerchantItemView> PlayerItems,
     IReadOnlyList<DaggerfallRepairView> Repairs,
-    string Result = "", bool CanShoplift = true);
+    string Result = "", bool CanShoplift = true)
+{
+    /// <summary>The ruleset's price for the amount the player last chose on a row, when it is for this revision.</summary>
+    internal DaggerfallMerchantQuoteView? Quote { get; init; }
+}
+
+/// <summary>
+/// The gold a chosen amount of one row costs or pays, by the same quote Buy and Sell charge. A stack's
+/// price is not its unit price times the amount: the trade formula rounds the whole line once.
+/// </summary>
+internal sealed record DaggerfallMerchantQuoteView(string Revision, string Item, bool Buying, ulong Amount, long Total)
+{
+    /// <summary>Whether the trade is large enough that the player confirms it first.</summary>
+    internal bool NeedsConfirmation => Total >= DaggerfallMerchantService.LargeTradeGold;
+}
 
 internal sealed record DaggerfallMerchantResult(bool Accepted, string Outcome, ulong PaidGold = 0);
 
@@ -285,7 +299,21 @@ internal sealed class DaggerfallMerchantService
         return Project(binding, result, dialogueRevision);
     }
 
-    internal DaggerfallMerchantResult Buy(DaggerfallMerchantProviderContext context, string revision, string itemKey, ulong quantity)
+    /// <summary>The total a trade of this many of a row costs (buying) or pays (selling), or null when it cannot be quoted.</summary>
+    internal long? TradeTotal(DaggerfallMerchantProviderContext context, string revision, string itemKey, bool buying, ulong quantity)
+    {
+        Binding binding = Ensure(context);
+        if (!RevisionMatches(binding, revision)) return null;
+        DaggerfallItemOwner owner = buying ? DaggerfallItemOwner.Merchant(binding.MerchantContainerId) : DaggerfallItemOwner.Player;
+        if (!TrySelection(owner, itemKey, quantity, out _, out DaggerfallTradeLine line)) return null;
+        return Quote(binding, buying ? DaggerfallTradeSide.BuyFromMerchant : DaggerfallTradeSide.SellToMerchant, line)?.Total;
+    }
+
+    /// <param name="confirmed">
+    /// Whether the player confirmed the trade. A trade of <see cref="LargeTradeGold"/> or more is refused unconfirmed,
+    /// so the confirmation does not rest on the screen's arithmetic.
+    /// </param>
+    internal DaggerfallMerchantResult Buy(DaggerfallMerchantProviderContext context, string revision, string itemKey, ulong quantity, bool confirmed = true)
     {
         var guildService = BuyGuildService(context.Provider.Service);
         var potionGuild = guildService is { } serviceId ? ConcreteGuildProvider(context, serviceId) : null;
@@ -300,6 +328,7 @@ internal sealed class DaggerfallMerchantService
             return Refused("InsufficientRank");
         DaggerfallTradeQuote? trade = Quote(binding, DaggerfallTradeSide.BuyFromMerchant, line);
         if (trade is null) return Refused("QuoteUnavailable");
+        if (!confirmed && trade.Total >= LargeTradeGold) return Refused("ConfirmationRequired");
         DaggerfallServiceRequest request = new(RequestId(binding, "buy", itemKey, revision), binding.Context.Provider);
         DaggerfallServiceEligibility eligibility = OpenEligibility;
         if (potionGuild is not null)
@@ -319,7 +348,7 @@ internal sealed class DaggerfallMerchantService
         return new(true, "Purchased", payment.PaidGold);
     }
 
-    internal DaggerfallMerchantResult Sell(DaggerfallMerchantProviderContext context, string revision, string itemKey, ulong quantity)
+    internal DaggerfallMerchantResult Sell(DaggerfallMerchantProviderContext context, string revision, string itemKey, ulong quantity, bool confirmed = true)
     {
         Binding binding = Ensure(context);
         if (!RevisionMatches(binding, revision)) return Refused("Stale");
@@ -328,6 +357,7 @@ internal sealed class DaggerfallMerchantService
         if (!CanSellToProvider(binding.Context, line.Metadata)) return Refused("ItemNotAccepted");
         DaggerfallTradeQuote? trade = Quote(binding, DaggerfallTradeSide.SellToMerchant, line);
         if (trade is null) return Refused("QuoteUnavailable");
+        if (!confirmed && trade.Total >= LargeTradeGold) return Refused("ConfirmationRequired");
         DaggerfallServiceItemReference item = line.Metadata.Owner == DaggerfallItemOwner.Player && selection.UniqueEntityId is ulong uniqueEntity
             ? new(_containers.GetDurableItemId(new EntityId(uniqueEntity)).Value, line.Definition.Id.Value, line.Metadata.CurrentCondition)
             : new(0, line.Definition.Id.Value, line.Metadata.CurrentCondition, selection.Stack!.Value, quantity);

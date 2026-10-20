@@ -91,3 +91,5 @@
 .dagger-character-rows > .dagger-character-fact-row dd { display: grid; gap: 2px; grid-column: auto; text-align: left; }
 .dagger-character-facts { color: #c3b48b; font-size: .68rem; font-weight: 400; }
 .dagger-character-fact-row.is-warning strong { color: #e3a58b; }
+/* A row with an explanation takes focus for its tooltip, as the skills do. */
+.dagger-character-explained:focus-visible { outline: 2px solid #f0c96a; outline-offset: 2px; }

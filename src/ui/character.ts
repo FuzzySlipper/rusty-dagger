@@ -10,6 +10,8 @@ export interface CharacterStat {
   readonly uses?: number;
   readonly usesNeeded?: number;
   readonly mastered?: boolean;
+  /** What the value means, from the ruleset, for its tooltip. */
+  readonly description?: string | null;
 }
 
 export interface CharacterResource {
@@ -17,6 +19,7 @@ export interface CharacterResource {
   readonly label: string;
   readonly current: number;
   readonly maximum: number;
+  readonly description?: string | null;
 }
 
 export interface CharacterProgression {
@@ -39,6 +42,7 @@ export interface CharacterAffiliation {
   readonly privileges?: readonly string[];
   /** The rank's title in this guild, from the ruleset; null outside a concrete guild. */
   readonly rankTitle?: string | null;
+  readonly description?: string | null;
 }
 
 /** The player's legal standing in one region; the label is the ruleset's own wording. */
@@ -50,6 +54,7 @@ export interface CharacterLegalStanding {
   readonly banished: boolean;
   readonly current: boolean;
   readonly label: string;
+  readonly description?: string | null;
 }
 
 interface GuildRankRequirement { readonly rank: number; readonly reputation: number; readonly highSkill: number; readonly lowSkill: number; }
@@ -242,17 +247,20 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         label: resource.label,
         value: `${format(resource.current)} / ${format(resource.maximum)}`,
         testid: `character-sheet-${resource.id}`,
+        tooltip: resource.description,
       })));
       renderRows(attributes.rows, value.attributes.map(stat => ({
         label: stat.label,
         value: stat.value === stat.permanent ? format(stat.value) : `${format(stat.value)} live / ${format(stat.permanent)} permanent`,
         testid: `character-sheet-attribute-${stat.id}`,
+        tooltip: stat.description,
       })));
       redraw(skills.rows, JSON.stringify([value.skills, value.skillGroups]), () => renderSkills(skills.rows, value.skills, value.skillGroups ?? []));
       renderRows(resistances.rows, (value.resistances ?? []).map(stat => ({
         label: stat.label,
         value: stat.value === stat.permanent ? format(stat.value) : `${format(stat.value)} live / ${format(stat.permanent)} permanent`,
         testid: `character-sheet-resistance-${stat.id}`,
+        tooltip: stat.description,
       })));
       // Each affiliation as a row: the faction and its rank, then the standing that decides the next one.
       factRows(affiliations.rows, (value.affiliations ?? []).map(affiliation => ({
@@ -263,6 +271,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
           ...(affiliation.daysUntilReview != null ? [`Review in ${format(affiliation.daysUntilReview)} days`] : []),
           ...(affiliation.privileges?.length ? [`Privileges: ${affiliation.privileges.join(', ')}`] : [])],
         testid: `character-sheet-affiliation-${affiliation.faction}`,
+        tooltip: affiliation.description,
       })));
       // Each region's standing as a row, the region the player is in marked, a banishment called out.
       factRows(legal.rows, (value.legalStandings ?? []).map(standing => ({
@@ -271,6 +280,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         facts: [`Reputation ${format(standing.reputation)}`, ...(standing.current ? ['Current region'] : []), ...(standing.banished ? ['Banished'] : [])],
         testid: `character-sheet-legal-${standing.region}`,
         warning: standing.banished,
+        tooltip: standing.description,
       })));
       renderRows(history.rows, (value.history?.biography ?? []).map((line, index) => ({
         label: `History ${format(index + 1)}`,
@@ -346,9 +356,18 @@ function overviewRow(label: string, value: string): HTMLElement {
   return row;
 }
 
-function renderRows(root: HTMLElement, values: readonly { readonly label: string; readonly value: string; readonly testid: string }[]): void {
+/** A row that explains itself: its tooltip on hover, and on focus for keys and the controller. */
+function explain(row: HTMLElement, tooltip: string | null | undefined): void {
+  if (!tooltip) return;
+  row.dataset.tooltip = tooltip;
+  row.tabIndex = 0;
+  row.classList.add('dagger-character-explained');
+}
+
+function renderRows(root: HTMLElement, values: readonly { readonly label: string; readonly value: string; readonly testid: string; readonly tooltip?: string | null }[]): void {
   root.replaceChildren(...values.map(value => {
     const row = document.createElement('div');
+    explain(row, value.tooltip);
     const term = document.createElement('dt');
     const definition = document.createElement('dd');
     term.textContent = value.label;
@@ -362,6 +381,7 @@ function renderRows(root: HTMLElement, values: readonly { readonly label: string
 function equipmentRow(item: CharacterEquipment): HTMLElement {
   const row = document.createElement('div');
   row.className = 'dagger-character-equipment';
+  explain(row, item.details);
   const label = document.createElement('dt');
   const slots = document.createElement('span');
   const details = document.createElement('dd');
@@ -428,8 +448,7 @@ function renderSkills(root: HTMLElement, skills: readonly CharacterStat[], group
       if (stat.usesNeeded !== undefined && stat.uses !== undefined) {
         const tip = stat.mastered ? `${stat.label} can rise no further by use.`
           : `${format(stat.uses)} of ${format(stat.usesNeeded)} uses toward the next rise.`;
-        row.dataset.tooltip = tip;
-        row.tabIndex = 0;
+        explain(row, tip);
         row.append(meter(stat.mastered ? 1 : stat.usesNeeded > 0 ? stat.uses / stat.usesNeeded : 0, stat.mastered ? 'Mastered' : `${format(stat.uses)} / ${format(stat.usesNeeded)}`));
       }
       sections.push(row);
@@ -441,9 +460,10 @@ function renderSkills(root: HTMLElement, skills: readonly CharacterStat[], group
 }
 
 /** Rows whose value has a line of supporting facts under it. */
-function factRows(root: HTMLElement, values: readonly { readonly label: string; readonly value: string; readonly facts: readonly string[]; readonly testid: string; readonly warning?: boolean }[]): void {
+function factRows(root: HTMLElement, values: readonly { readonly label: string; readonly value: string; readonly facts: readonly string[]; readonly testid: string; readonly warning?: boolean; readonly tooltip?: string | null }[]): void {
   root.replaceChildren(...values.map(value => {
     const row = document.createElement('div');
+    explain(row, value.tooltip);
     row.className = 'dagger-character-fact-row';
     row.classList.toggle('is-warning', value.warning === true);
     const term = document.createElement('dt');

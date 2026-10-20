@@ -43,7 +43,23 @@ internal sealed partial class DaggerfallSession
         if (context is null || State.Merchants.Read(context, dialogueRevision: _activationPresentation.View.Dialogue?.Revision) is not { } view) return null;
         // Each row draws the icon its item would draw in the pack.
         DaggerfallMerchantItemView WithIcon(DaggerfallMerchantItemView row) => row with { Icon = _inventoryUi.Icon(row.IconKey) };
-        return view with { Stock = [.. view.Stock.Select(WithIcon)], PlayerItems = [.. view.PlayerItems.Select(WithIcon)] };
+        return view with
+        {
+            Stock = [.. view.Stock.Select(WithIcon)], PlayerItems = [.. view.PlayerItems.Select(WithIcon)],
+            Quote = _merchantQuote is { } quote && quote.Revision == view.Revision ? quote : null,
+        };
+    }
+
+    private DaggerfallMerchantQuoteView? _merchantQuote;
+
+    /// <summary>Prices the amount the player chose on a row, so the screen shows and confirms what the trade will charge.</summary>
+    private void QuoteMerchantTrade(DaggerfallPlayerUiAction action)
+    {
+        bool buying = action.Key == "buy";
+        DaggerfallMerchantProviderContext? context = CurrentMerchantProvider(action.Revision, buying ? "buy" : "sell");
+        ulong amount = checked((ulong)action.Amount!.Value);
+        _merchantQuote = context is not null && State.Merchants.TradeTotal(context, action.Revision!, action.Item!, buying, amount) is long total
+            ? new(action.Revision!, action.Item!, buying, amount, total) : null;
     }
 
     internal void ChangeMerchant(DaggerfallPlayerUiAction action)
@@ -62,8 +78,8 @@ internal sealed partial class DaggerfallSession
             ? new(false, "ProviderUnavailable")
             : action.Kind switch
             {
-                DaggerfallUiActionKind.MerchantBuy => State.Merchants.Buy(context, action.Revision!, action.Item!, action.Amount ?? 1),
-                DaggerfallUiActionKind.MerchantSell => State.Merchants.Sell(context, action.Revision!, action.Item!, action.Amount ?? 1),
+                DaggerfallUiActionKind.MerchantBuy => State.Merchants.Buy(context, action.Revision!, action.Item!, action.Amount ?? 1, action.Confirm),
+                DaggerfallUiActionKind.MerchantSell => State.Merchants.Sell(context, action.Revision!, action.Item!, action.Amount ?? 1, action.Confirm),
                 DaggerfallUiActionKind.MerchantRepair => State.Merchants.RequestRepair(context, action.Revision!, action.Item!),
                 DaggerfallUiActionKind.MerchantCollectRepair => State.Merchants.CollectRepair(context, action.Revision!, action.Key!),
                 DaggerfallUiActionKind.MerchantIdentify => State.Merchants.Identify(context, action.Revision!, action.Item!),
@@ -95,6 +111,7 @@ internal sealed partial class DaggerfallSession
             "ItemUnavailable" => "That item is no longer available.",
             "ItemNotAccepted" => "This shop does not buy that kind of item.",
             "QuoteUnavailable" => "The merchant will not trade that item.",
+            "ConfirmationRequired" => "Confirm a trade that large first.",
             "AlreadyRepaired" => "That item does not need repairing.",
             "AlreadyIdentified" => "That item is already identified.",
             "RepairNotReady" => "That repair is not finished yet.",

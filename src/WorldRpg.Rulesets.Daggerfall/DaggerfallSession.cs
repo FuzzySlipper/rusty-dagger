@@ -835,7 +835,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Inventory: _inventoryUi.Read(),
             Property: ReadPropertyPresentation(),
             Loot: _lootUi.Read(),
-            Character: _characterUi.Read(State.Actors.Player, State.Progression),
+            Character: DaggerfallCharacterSheetText.Describe(_characterUi.Read(State.Actors.Player, State.Progression), _definitions, CurrentTextContext()),
             CharacterCreationAvailable: !_newGameInitialized,
             PanelRequest: LatestPanelRequest,
             SaveSlots: _saveSlots,

@@ -1610,6 +1610,39 @@ test('character sheet groups skills by career group with their uses toward the n
   } finally { f.dispose(); }
 });
 
+test('every character-sheet value explains itself through the drawn tooltip, on hover and on focus', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'playing', character: {
+      name: 'Aubk-i', skills: [], progression: { level: 1, experience: 0 }, grantedSkills: [], creationAvailable: false,
+      attributes: [{ id: 'strength', label: 'Strength', value: 45, permanent: 45, description: 'Strength governs encumbrance and weapon damage.' }],
+      resources: [{ id: 'health', label: 'Health', current: 31, maximum: 31, description: 'You die when your health reaches zero.' }],
+      resistances: [{ id: 'resistance-fire', label: 'Resistance Fire', value: 0, permanent: 0, description: 'How well you resist fire spells and effects.' }],
+      affiliations: [{ faction: 'Mages Guild', guildGroup: 'Guild', rank: 1, reputation: 6, recognition: 3, description: 'You are Apprentice of Mages Guild.' }],
+      legalStandings: [{ region: 17, regionName: 'Daggerfall', reputation: 4, standing: 'respected', banished: false, current: true, label: 'Daggerfall: respected',
+        description: 'Your legal reputation in Daggerfall is 4.' }],
+      equipment: [{ label: 'Iron Dagger', slots: ['Right Hand'], details: 'Iron Dagger · 1 - 5 points of damage' }],
+    } });
+    f.root.querySelector('[data-action="character"]').click();
+    const tip = () => f.root.querySelector('.dagger-tooltip');
+    for (const [testid, text] of [['character-sheet-attribute-strength', /Strength governs/], ['character-sheet-health', /health reaches zero/],
+      ['character-sheet-resistance-resistance-fire', /resist fire/], ['character-sheet-affiliation-Mages Guild', /Apprentice/],
+      ['character-sheet-legal-17', /legal reputation in Daggerfall/]]) {
+      const row = f.root.querySelector(`[data-testid="${testid}"]`).parentElement;
+      assert.equal(row.tabIndex, 0, `${testid} takes focus`);
+      row.dispatchEvent(new window.Event('pointerover', { bubbles: true }));
+      assert.equal(tip().hidden, false); assert.match(tip().textContent, text);
+      row.dispatchEvent(new window.Event('pointerout', { bubbles: true }));
+      row.focus();
+      assert.match(tip().textContent, text, `${testid} explains itself on focus`);
+      row.blur();
+    }
+    const worn = [...f.root.querySelectorAll('.dagger-character-equipment')][0];
+    worn.dispatchEvent(new window.Event('pointerover', { bubbles: true }));
+    assert.match(tip().textContent, /1 - 5 points of damage/);
+  } finally { f.dispose(); }
+});
+
 test('custom class editor sends typed skills traits and exposes eligibility reasons', () => {
   const f = fixture();
   try {
@@ -2649,28 +2682,43 @@ test('the shop is the transfer layout: line totals, confirms for large trades an
     const quantity = stockRow.querySelector('.dagger-stepper input');
     assert.equal(quantity.max, '100', 'The bound is the projected maximum.');
     assert.equal(stockRow.querySelector('.dagger-transfer-total').textContent, '7 gold');
-    quantity.value = '3';
-    quantity.dispatchEvent(new window.Event('change', { bubbles: true }));
-    assert.equal(stockRow.querySelector('.dagger-transfer-total').textContent, '21 gold', 'The line total follows the amount.');
+    // More than one asks the ruleset for the whole line's price: the trade formula rounds the line once, so the
+    // unit price times the amount is not what it costs. The total waits for that quote.
+    const choose = amount => { quantity.value = String(amount); quantity.dispatchEvent(new window.Event('change', { bubbles: true })); };
+    const quoted = (amount, total) => f.publish({ activation: { mode: 'talk', dialogue: dialogue({ ...baseMerchant,
+      quote: { item: 'stack:shop.arrows', side: 'buy', amount, total, confirm: total >= 500 } }) } });
+    choose(3);
+    assert.deepEqual(f.actions.at(-1), { action: 'merchant-quote', revision: 'merchant-1', item: 'stack:shop.arrows', key: 'buy', amount: 3 });
+    assert.equal(stockRow.querySelector('.dagger-transfer-total').textContent, '… gold');
+    quoted(3, 20);
+    assert.equal(stockRow.querySelector('.dagger-transfer-total').textContent, '20 gold', 'The line total is the ruleset quote.');
+    assert.equal(stockRow.querySelector('.dagger-stepper input').value, '3', 'The chosen amount survives the quote arriving.');
     // A small purchase goes straight through.
     stockRow.querySelector('[data-transfer-command="merchant-buy"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'merchant-buy', revision: 'merchant-1', item: 'stack:shop.arrows', amount: 3 });
-    // A purchase at or over the ruleset's large-trade amount asks first, and No buys nothing.
-    quantity.value = '80';
-    quantity.dispatchEvent(new window.Event('change', { bubbles: true }));
+    // 72 × 7 is 504 by the unit price, but the line quotes 499: no confirmation, as the ruleset says.
+    choose(72); quoted(72, 499);
+    stockRow.querySelector('[data-transfer-command="merchant-buy"]').click();
+    assert.equal(f.root.querySelector('.dagger-confirm')?.open ?? false, false);
+    assert.deepEqual(f.actions.at(-1), { action: 'merchant-buy', revision: 'merchant-1', item: 'stack:shop.arrows', amount: 72 });
+    // 71 × 7 is 497, but the line quotes 500: at the large-trade amount it asks first, naming the real total.
+    choose(71);
     const count = f.actions.length;
     stockRow.querySelector('[data-transfer-command="merchant-buy"]').click();
-    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Buy 80 × Arrows for 560 gold\?/);
+    assert.deepEqual(f.actions.at(-1), { action: 'merchant-quote', revision: 'merchant-1', item: 'stack:shop.arrows', key: 'buy', amount: 71 },
+      'A trade chosen before its quote waits for it.');
+    quoted(71, 500);
+    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Buy 71 × Arrows for 500 gold\?/);
     f.answer(false);
-    assert.equal(f.actions.length, count);
+    assert.equal(f.actions.filter(action => action.action === 'merchant-buy').length, 2, 'No buys nothing.');
     stockRow.querySelector('[data-transfer-command="merchant-buy"]').click();
     f.answer(true);
-    assert.deepEqual(f.actions.at(-1), { action: 'merchant-buy', revision: 'merchant-1', item: 'stack:shop.arrows', amount: 80 });
+    assert.deepEqual(f.actions.at(-1), { action: 'merchant-buy', revision: 'merchant-1', item: 'stack:shop.arrows', amount: 71, confirm: true });
+    assert.ok(f.actions.length > count);
     // Stealing is set apart and always asks.
     const steal = stockRow.querySelector('[data-transfer-command="merchant-shoplift"]');
     assert.equal(steal.classList.contains('is-danger'), true);
-    quantity.value = '1';
-    quantity.dispatchEvent(new window.Event('change', { bubbles: true }));
+    choose(1);
     steal.click();
     assert.match(f.root.querySelector('.dagger-confirm').textContent, /Steal Arrows\? If you are caught, it is a crime\./);
     f.answer(true);
