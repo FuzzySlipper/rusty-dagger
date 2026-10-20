@@ -25,7 +25,7 @@ export interface ConfirmPrompt {
 
 export function mountConfirm(host: HTMLElement): ConfirmPrompt {
   const dialog = document.createElement('dialog');
-  dialog.className = 'dagger-confirm';
+  dialog.className = 'dagger-confirm dagger-frame';
   dialog.setAttribute('aria-labelledby', 'dagger-confirm-message');
   const message = document.createElement('p');
   message.id = 'dagger-confirm-message';

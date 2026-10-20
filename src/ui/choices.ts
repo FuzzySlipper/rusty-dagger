@@ -24,7 +24,7 @@ export function mountChoices(shell: HTMLElement, before: HTMLElement, send: Send
   // A spell that asks the caster to choose shows its choice as a centred panel over the world.
   const service = (name: string, label: string): HTMLElement => {
     const section = document.createElement('section');
-    section.className = `dagger-spell-service dagger-${name}`; section.hidden = true;
+    section.className = `dagger-spell-service dagger-frame dagger-${name}`; section.hidden = true;
     section.setAttribute('role', 'dialog'); section.setAttribute('aria-label', label);
     before.before(section);
     return section;
@@ -46,7 +46,7 @@ export function mountChoices(shell: HTMLElement, before: HTMLElement, send: Send
     const prisonArt = caseView.phase === 'prison' ? image('screen.prison') : null;
     legal.style.backgroundImage = prisonArt === null ? '' : cssUrl(prisonArt);
     redraw(legal, JSON.stringify(caseView), () => {
-      const card = document.createElement('div'); card.className = 'dagger-legal-card';
+      const card = document.createElement('div'); card.className = 'dagger-legal-card dagger-frame';
       const charges = document.createElement('p'); charges.textContent = `Charges: ${caseView.charges.join(', ')}`;
       const message = document.createElement('p'); message.textContent = caseView.message;
       card.append(heading(caseView.title), charges, message);

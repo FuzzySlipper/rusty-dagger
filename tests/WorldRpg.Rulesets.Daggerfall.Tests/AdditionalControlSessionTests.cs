@@ -71,6 +71,42 @@ public sealed class AdditionalControlSessionTests
     }
 
     [Fact]
+    public void The_interface_scale_is_a_bounded_persisted_preference_that_reset_keeps()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture();
+        ProductInputEvent Action(string json) => Input(InputEventKind.DirectDigital) with { ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(), PayloadData = System.Text.Encoding.UTF8.GetBytes(json) };
+
+        f.Session.Update(new ProductUpdate(OuterUpdate(100), [Action("{\"action\":\"controls-ui-scale\",\"scale\":1.5}")]));
+        string saved = Assert.IsType<string>(f.Session.TakePlayerPreferencesSave());
+        Assert.Equal(1.5f, DaggerfallControlSettings.Parse(saved).UiScale);
+        using var resumed = new SanguineRoseSessionTests.Fixture();
+        resumed.Session.ApplyPlayerPreferences(saved);
+        Assert.Equal(saved, resumed.Session.CapturePlayerPreferences());
+
+        // Off the steps or out of bounds is refused and changes nothing.
+        f.Session.Update(new ProductUpdate(OuterUpdate(101), [Action("{\"action\":\"controls-ui-scale\",\"scale\":1.3}")]));
+        f.Session.Update(new ProductUpdate(OuterUpdate(102), [Action("{\"action\":\"controls-ui-scale\",\"scale\":3.25}")]));
+        Assert.Null(f.Session.TakePlayerPreferencesSave());
+        Assert.Equal(1.5f, DaggerfallControlSettings.Parse(f.Session.CapturePlayerPreferences()).UiScale);
+
+        // Resetting the controls keeps the scale; no scale is automatic.
+        f.Session.Update(new ProductUpdate(OuterUpdate(103), [Action("{\"action\":\"controls-reset\"}")]));
+        Assert.Equal(1.5f, DaggerfallControlSettings.Parse(Assert.IsType<string>(f.Session.TakePlayerPreferencesSave())).UiScale);
+        f.Session.Update(new ProductUpdate(OuterUpdate(104), [Action("{\"action\":\"controls-ui-scale\"}")]));
+        Assert.Null(DaggerfallControlSettings.Parse(Assert.IsType<string>(f.Session.TakePlayerPreferencesSave())).UiScale);
+    }
+
+    [Fact]
+    public void A_persisted_interface_scale_off_its_steps_is_refused_by_name()
+    {
+        string saved = new DaggerfallControlSettings().Serialize().Replace("\"uiScale\":null", "\"uiScale\":1.1", StringComparison.Ordinal);
+        Assert.Contains("\"uiScale\":1.1", saved, StringComparison.Ordinal);
+        ArgumentOutOfRangeException failure = Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallControlSettings.Parse(saved));
+        Assert.Contains("interface scale", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Look_preferences_are_saved_then_applied_to_pointer_input_after_reload()
     {
         using var f = new SanguineRoseSessionTests.Fixture();

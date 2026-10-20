@@ -42,7 +42,7 @@ export function mountQuestJournal(root: HTMLElement): {
   tabs.className = 'dagger-quest-journal-tabs';
   tabs.setAttribute('role', 'tablist');
   const body = document.createElement('div');
-  body.className = 'dagger-quest-journal-page';
+  body.className = 'dagger-quest-journal-page dagger-frame'; body.dataset.skin = 'parchment';
   shell.append(tabs, body);
   root.prepend(shell);
 

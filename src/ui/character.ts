@@ -148,7 +148,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
   const chromeArt = image('window.character-sheet.chrome');
   if (chromeArt !== null) chrome.src = chromeArt;
   const heading = document.createElement('header');
-  heading.className = 'dagger-character-title';
+  heading.className = 'dagger-character-title dagger-frame-title';
   const eyebrow = document.createElement('p');
   eyebrow.textContent = 'Live player profile';
   const title = document.createElement('h2');
@@ -291,7 +291,7 @@ export function isCharacterProjection(value: unknown): value is CharacterProject
 
 function section(title: string): { readonly element: HTMLElement; readonly rows: HTMLElement; readonly heading: HTMLElement } {
   const element = document.createElement('section');
-  element.className = 'dagger-character-section';
+  element.className = 'dagger-character-section dagger-panel';
   const heading = document.createElement('h3');
   heading.textContent = title;
   const rows = document.createElement('dl');
@@ -639,7 +639,7 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
 }
 
 function panel(title: string, kind: string, ...children: HTMLElement[]): HTMLElement {
-  const element = document.createElement('section'); element.className = `dagger-creation-panel dagger-creation-${kind}`;
+  const element = document.createElement('section'); element.className = `dagger-creation-panel dagger-panel dagger-creation-${kind}`;
   const heading = document.createElement('h3'); heading.textContent = title; element.append(heading, ...children); return element;
 }
 

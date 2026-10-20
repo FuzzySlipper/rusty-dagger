@@ -47,6 +47,7 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     if (creating) onCreationOpens();
     (creating ? root : creationHome).append(creation);
     creation.classList.toggle('dagger-entry-creation', creating);
+    creation.classList.toggle('dagger-frame', creating);
     begin.hidden = creating;
     create.hidden = creating;
     bundle.hidden = creating || bundles === null || bundles.options.length < 2;

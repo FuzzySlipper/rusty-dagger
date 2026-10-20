@@ -59,6 +59,8 @@ export interface MenuHost {
   readonly isDead: () => boolean;
   /** Registers a surface a panel opens over the menu, such as a context menu. */
   readonly register: (surface: NavigationSurface) => () => void;
+  /** The interface scale in use, which Settings shows beside the player's choice. */
+  readonly uiScale: () => number;
 }
 
 export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
@@ -430,7 +432,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
         }
         if (!magicItemsRoot.childElementCount) magicItemsRoot.textContent = 'No usable magic items or potions.';
       });
-      if (value.controls) controlsView.update(value.controls);
+      if (value.controls) controlsView.update(value.controls, host.uiScale());
       if (value.activation) activationMode.value = value.activation.mode;
       // The selector lives in the menu, which the product reports as modal, so it serves both.
       activationMode.disabled = value.mode !== 'playing' && value.mode !== 'modal';

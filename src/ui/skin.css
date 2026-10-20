@@ -1,0 +1,223 @@
+/*
+ * The skin: every game-UI primitive drawn from the authored kit (`src/ui/skin.ts` publishes it as
+ * custom properties on the root). A primitive whose image is absent keeps the plain look below, so
+ * missing art is reported, never blank. Screens lay out; they do not set frame, button or slot art.
+ *
+ * Vocabulary (docs/game-ui.md, "Skin"):
+ *   .dagger-frame                      stone window with the stone ground behind its content
+ *   .dagger-frame[data-skin=parchment] parchment reading surface, dark ink, stone controls
+ *   .dagger-frame-title                brass title plate
+ *   .dagger-panel                      recessed stone panel inside a frame
+ *   .dagger-divider                    brass divider rule
+ *   button (game UI)                   stone button: hover and focus, pressed, disabled
+ *   [role=tab]                         stone tab: aria-selected is active
+ *   .dagger-slot                       stone slot: focus, drop target, invalid target
+ *   [data-icon]                        a kit icon before the label
+ */
+
+:root {
+  --ink: #f2e3ba;
+  --ink-dim: #b9ae8c;
+  --ink-dark: #35210f;
+  --brass: #d4b56b;
+  --brass-bright: #f4d983;
+  --ground: #151712;
+  --plate: #312817;
+}
+
+/* Form controls take the page's font instead of the browser's fixed-pixel default, so the interface
+   scale (the root font size) reaches them too. Zero specificity: any screen rule wins. */
+:where(.dagger-hud) :where(button, input, select, textarea, output) { font-family: inherit; font-size: .85rem; }
+
+/* Frame: the stone window, its art drawn with border-image at the kit's own insets. */
+.dagger-frame {
+  border: 1px solid var(--brass);
+  border-width: var(--skin-stone-window-width, 1px);
+  border-image: var(--skin-stone-window) var(--skin-stone-window-slice) / var(--skin-stone-window-width) stretch;
+  background: var(--ground) var(--skin-stone-texture, none) 0 0 / var(--skin-stone-texture-size, auto) repeat;
+  color: var(--ink);
+  box-shadow: 0 .75rem 2.75rem rgb(0 0 0 / .7);
+}
+
+/* Parchment: a reading surface. The frame art carries its page, so it fills; text takes dark ink. */
+.dagger-frame[data-skin="parchment"] {
+  border-width: var(--skin-parchment-window-width, 1px);
+  border-image: var(--skin-parchment-window) var(--skin-parchment-window-slice) fill / var(--skin-parchment-window-width) stretch;
+  background: #e8d9b5 var(--skin-parchment-texture, none) 0 0 / var(--skin-parchment-texture-size, auto) repeat;
+  color: var(--ink-dark);
+  text-shadow: none;
+}
+.dagger-frame[data-skin="parchment"] :is(h1, h2, h3, h4, strong, dt) { color: #2a170a; }
+.dagger-frame[data-skin="parchment"] :is(p, li, dd, span, label, small) { color: inherit; }
+
+/* Title plate: brass, its pointed ends kept, the middle stretched to the title. */
+.dagger-frame-title {
+  display: block;
+  min-height: 1.8rem;
+  margin: 0 auto .75rem;
+  padding: .25rem 1rem;
+  border: 1px solid var(--brass);
+  border-width: var(--skin-stone-title-width, 1px);
+  border-image: var(--skin-stone-title) var(--skin-stone-title-slice) fill / var(--skin-stone-title-width) stretch;
+  background: rgb(48 39 24 / .93);
+  color: #fff3cf;
+  font-size: 1.1rem;
+  letter-spacing: .06em;
+  line-height: 1.3;
+  text-align: center;
+  text-shadow: 0 .0625rem .125rem #000;
+  text-transform: uppercase;
+}
+[data-skin] .dagger-frame-title { background: transparent; }
+
+/* Panel: a recessed stone inset for a group inside a frame. */
+.dagger-panel {
+  border: 1px solid #7d6c45;
+  border-width: var(--skin-stone-panel-width, 1px);
+  border-image: var(--skin-stone-panel) var(--skin-stone-panel-slice) fill / var(--skin-stone-panel-width) stretch;
+  background: rgb(12 13 10 / .78);
+}
+[data-skin] .dagger-panel { background: transparent; }
+
+/* Divider: a brass rule. */
+.dagger-divider {
+  height: .55rem;
+  margin: .6rem 0;
+  border: 0;
+  border-top: 1px solid rgb(197 164 94 / .45);
+  border-image: var(--skin-stone-divider) var(--skin-stone-divider-slice) fill / var(--skin-stone-divider-width) stretch;
+}
+
+/* Buttons: every game-UI button is the stone button unless it is a slot, a tab, a map marker or a menu
+   entry, which have their own primitives. Hover and keyboard or controller focus light it; pressed
+   sinks it; disabled dims it. Focus also keeps an outline, so it is visible on any ground. */
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-context-menu button, .dagger-travel-map-layer > *, .dagger-inventory-overflow-item) {
+  border: 1px solid var(--brass);
+  border-width: var(--skin-stone-button-width, 1px);
+  border-image: var(--skin-stone-button) var(--skin-stone-button-slice) fill / var(--skin-stone-button-width) stretch;
+  background: var(--skin-button-face, var(--plate));
+  color: #f7e7bd;
+  text-shadow: 0 .0625rem .125rem #000;
+  cursor: var(--dagger-cursor-pointer);
+  pointer-events: auto;
+}
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-context-menu button, .dagger-travel-map-layer > *, .dagger-inventory-overflow-item):is(:hover, :focus-visible):not(:disabled) {
+  border-image-source: var(--skin-stone-button-focus, none);
+  background: var(--skin-button-face, #594521);
+}
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-context-menu button, .dagger-travel-map-layer > *, .dagger-inventory-overflow-item):active:not(:disabled),
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-context-menu button, .dagger-travel-map-layer > *, .dagger-inventory-overflow-item)[aria-pressed="true"] {
+  border-image-source: var(--skin-stone-button-pressed, none);
+  background: var(--skin-button-face, #5a4520);
+}
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-context-menu button, .dagger-travel-map-layer > *, .dagger-inventory-overflow-item):disabled {
+  border-image-source: var(--skin-stone-button-disabled, none);
+  color: #a39a85;
+  cursor: default;
+  opacity: .8;
+}
+
+/* Tabs: a row of stone tabs; the selected one is lit. */
+.dagger-hud [role="tab"] {
+  padding: .45rem 1rem .3rem;
+  border: 1px solid #7d6c45;
+  border-width: var(--skin-stone-tab-width, 1px);
+  border-image: var(--skin-stone-tab) var(--skin-stone-tab-slice) fill / var(--skin-stone-tab-width) stretch;
+  background: var(--skin-button-face, var(--plate));
+  color: #e9dbb3;
+  cursor: var(--dagger-cursor-pointer);
+}
+.dagger-hud [role="tab"][aria-selected="true"] {
+  border-image-source: var(--skin-stone-tab-active, none);
+  border-color: var(--brass-bright);
+  color: #fff3cf;
+}
+
+/* Slots: stone sockets; focus and a valid drop target are lit, an invalid target is marked red. */
+.dagger-hud .dagger-slot {
+  border: 1px solid #897445;
+  border-width: var(--skin-stone-slot-width, 1px);
+  border-image: var(--skin-stone-slot) var(--skin-stone-slot-slice) fill / var(--skin-stone-slot-width) stretch;
+  background: var(--skin-slot-face, #25261f);
+  color: var(--ink);
+  cursor: var(--dagger-cursor-pointer);
+}
+.dagger-hud .dagger-slot:is(:focus-visible, .is-selected, .is-drop-target) { border-image-source: var(--skin-stone-slot-focus, none); border-color: #ffe99a; }
+.dagger-hud .dagger-slot.is-drop-invalid { border-image-source: var(--skin-stone-slot-invalid, none); border-color: #c0392b; }
+
+/* Focus is always visible for keyboard and controller, over the kit's own focus art. */
+.dagger-hud :is(button, [role="tab"], input, select, textarea, [tabindex]):focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
+.dagger-hud.controller-navigation :focus { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
+
+/* Scrollbars inside game surfaces: a slate groove with a brass handle. */
+.dagger-hud * { scrollbar-color: #b08c4a #14130f; }
+.dagger-hud ::-webkit-scrollbar { width: .75rem; height: .75rem; }
+.dagger-hud ::-webkit-scrollbar-track {
+  background: #14130f;
+  border-style: solid;
+  border-width: var(--skin-stone-scroll-track-width, 0);
+  border-image: var(--skin-stone-scroll-track) var(--skin-stone-scroll-track-slice) fill / var(--skin-stone-scroll-track-width) stretch;
+}
+.dagger-hud ::-webkit-scrollbar-thumb {
+  background: #b08c4a;
+  border-style: solid;
+  border-width: var(--skin-stone-scroll-thumb-width, 0);
+  border-image: var(--skin-stone-scroll-thumb) var(--skin-stone-scroll-thumb-slice) fill / var(--skin-stone-scroll-thumb-width) stretch;
+}
+[data-skin] .dagger-hud ::-webkit-scrollbar-thumb { background: transparent; }
+
+/* Icons: a kit icon before a control's label, chosen by the control's semantic hook. */
+.dagger-hud [data-icon]::before {
+  content: "";
+  display: inline-block;
+  width: 1.5em;
+  height: 1.5em;
+  margin-right: .5em;
+  vertical-align: middle;
+  background: var(--icon, none) center / contain no-repeat;
+}
+:root:not([data-skin]) [data-icon]::before { display: none; }
+[data-icon="inventory"] { --icon: var(--skin-icon-menu-inventory); }
+[data-icon="character"] { --icon: var(--skin-icon-menu-character); }
+[data-icon="spells"] { --icon: var(--skin-icon-menu-spells); }
+[data-icon="magic-items"] { --icon: var(--skin-icon-menu-magic-items); }
+[data-icon="journal"] { --icon: var(--skin-icon-menu-journal); }
+[data-icon="notebook"] { --icon: var(--skin-icon-menu-notebook); }
+[data-icon="map"] { --icon: var(--skin-icon-menu-map); }
+[data-icon="rest"] { --icon: var(--skin-icon-menu-rest); }
+[data-icon="travel"] { --icon: var(--skin-icon-menu-travel); }
+[data-icon="save"] { --icon: var(--skin-icon-menu-save); }
+[data-icon="load"] { --icon: var(--skin-icon-menu-load); }
+[data-icon="settings"] { --icon: var(--skin-icon-menu-settings); }
+[data-icon="steal"] { --icon: var(--skin-icon-activation-steal); }
+[data-icon="grab"] { --icon: var(--skin-icon-activation-grab); }
+[data-icon="info"] { --icon: var(--skin-icon-activation-info); }
+[data-icon="talk"] { --icon: var(--skin-icon-activation-talk); }
+
+/* An empty equipment slot shows the silhouette of what it holds, above the slot art's filled centre. */
+.dagger-inventory-equipment-slot:not([data-inventory-item])::after {
+  content: "";
+  position: absolute;
+  inset: 22% 18% 8%;
+  background: var(--equip, none) center / contain no-repeat;
+  opacity: .5;
+  pointer-events: none;
+}
+[data-skin] .dagger-inventory-equipment-slot:not([data-inventory-item]) .dagger-inventory-empty-mark { display: none; }
+[data-inventory-equipment="head"] { --equip: var(--skin-icon-equip-head); }
+[data-inventory-equipment$="-arm"] { --equip: var(--skin-icon-equip-arm); }
+[data-inventory-equipment^="cloak"] { --equip: var(--skin-icon-equip-cloak); }
+[data-inventory-equipment="chest-clothes"] { --equip: var(--skin-icon-equip-chest-clothes); }
+[data-inventory-equipment="chest-armor"] { --equip: var(--skin-icon-equip-chest-armor); }
+[data-inventory-equipment="gloves"] { --equip: var(--skin-icon-equip-gloves); }
+[data-inventory-equipment="right-hand"] { --equip: var(--skin-icon-equip-weapon); }
+[data-inventory-equipment="left-hand"] { --equip: var(--skin-icon-equip-shield); }
+[data-inventory-equipment="legs-armor"] { --equip: var(--skin-icon-equip-legs-armor); }
+[data-inventory-equipment="legs-clothes"] { --equip: var(--skin-icon-equip-legs-clothes); }
+[data-inventory-equipment="feet"] { --equip: var(--skin-icon-equip-feet); }
+[data-inventory-equipment^="bracer"] { --equip: var(--skin-icon-equip-bracer); }
+[data-inventory-equipment^="amulet"] { --equip: var(--skin-icon-equip-amulet); }
+[data-inventory-equipment^="bracelet"] { --equip: var(--skin-icon-equip-bracelet); }
+[data-inventory-equipment^="ring"] { --equip: var(--skin-icon-equip-ring); }
+[data-inventory-equipment^="mark"] { --equip: var(--skin-icon-equip-mark); }
+[data-inventory-equipment^="crystal"] { --equip: var(--skin-icon-equip-crystal); }

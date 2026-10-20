@@ -12,10 +12,7 @@ export type LootAction =
   | { readonly action: 'loot-close'; readonly container: string };
 
 /** Stable DOM rows render C# values; a click only claims the selected item and revision. */
-import { cssUrl, image, reportMissingArt } from './art.js';
-
-/// The kit's stone surface, tiled behind the loot list until #10111 frames every panel from the kit.
-const LOOT_PANEL_ART = 'ui.stone.texture.v2';
+import { image } from './art.js';
 
 export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void): {
   update(value: LootProjection | null): void; refresh(): void; dispose(): void;
@@ -42,19 +39,8 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
   };
   shell.addEventListener('click', onClick);
   const render = (value: LootProjection | null): void => {
-    // A hidden panel has no frame to paint and nothing to diagnose: return before touching art.
+    // The frame and its buttons are the skin's (skin.css), so a hidden panel has nothing to paint.
     if (value === null) { current = null; return; }
-    // The panel frame is published art like the inventory's; a session that cannot deliver it says
-    // which identity is missing instead of showing an unaccounted fallback. The report fires only
-    // when the missing set changes, so steady-state projections stay silent.
-    const frame = image(LOOT_PANEL_ART);
-    shell.style.setProperty('--loot-panel-art', frame === null ? 'none' : cssUrl(frame));
-    if (frame === null) {
-      shell.setAttribute('data-art-missing', LOOT_PANEL_ART);
-    } else {
-      shell.removeAttribute('data-art-missing');
-    }
-    reportMissingArt('loot', frame === null ? [LOOT_PANEL_ART] : []);
 
     heading.textContent = value.title;
     status.textContent = value.message;

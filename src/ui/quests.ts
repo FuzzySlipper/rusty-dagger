@@ -17,7 +17,7 @@ export function renderQuestMessages(root: HTMLElement, value: QuestPresentation 
   };
   if (value.offer) {
     const offer = value.offer;
-    const article = document.createElement('article'); article.className = 'dagger-quest-message';
+    const article = document.createElement('article'); article.className = 'dagger-quest-message dagger-frame'; article.dataset.skin = 'parchment';
     const title = document.createElement('strong'); title.textContent = 'Quest offer';
     const text = document.createElement('p'); text.textContent = offer.text; article.append(title, text);
     for (const [label, confirm] of [['Accept', true], ['Decline', false]] as const) {
@@ -77,7 +77,7 @@ export function renderQuestMessages(root: HTMLElement, value: QuestPresentation 
   if (value.pending) {
     const message = value.pending;
     const prompt = document.createElement('article');
-    prompt.className = 'dagger-quest-message dagger-quest-prompt';
+    prompt.className = 'dagger-quest-message dagger-quest-prompt dagger-frame'; prompt.dataset.skin = 'parchment';
     const text = document.createElement('p');
     text.textContent = message.text;
     prompt.append(text);

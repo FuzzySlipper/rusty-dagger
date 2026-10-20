@@ -180,6 +180,11 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("diagnostic", builder.String(controlDiagnostic ?? "")),
             ("lookSensitivity", builder.Number(controlSettings.LookSensitivity)),
             ("invertVertical", builder.Boolean(controlSettings.InvertVertical)),
+            ("uiScale", controlSettings.UiScale is float uiScale ? builder.Number(uiScale) : builder.Null()),
+            ("uiScaleRange", builder.Object(
+                ("minimum", builder.Number(DaggerfallControlSettings.MinimumUiScale)),
+                ("maximum", builder.Number(DaggerfallControlSettings.MaximumUiScale)),
+                ("step", builder.Number(DaggerfallControlSettings.UiScaleStep)))),
             ("bindings", builder.Array(DaggerfallControlSettings.Catalog.Select(action => builder.Object(
                 ("id", builder.String(action.Id)), ("category", builder.String(action.Category)),
                 ("keys", builder.Array(controlSettings.KeysFor(action.Id).Select(builder.String).ToArray())),

@@ -123,6 +123,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.ArtRequest: _hud.RequestArt(); break;
             case DaggerfallUiActionKind.ActionDrivenTime: ChangePlayerTime(action.Enabled!.Value); break;
             case DaggerfallUiActionKind.ControlsLook:
+            case DaggerfallUiActionKind.ControlsUiScale:
             case DaggerfallUiActionKind.ControlsRebind:
             case DaggerfallUiActionKind.ControlsReset: ChangeControls(action); break;
             case DaggerfallUiActionKind.CharacterClassQuestions:
