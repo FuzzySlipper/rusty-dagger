@@ -321,9 +321,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("enterable", builder.Boolean(offer.Enterable)))).ToArray())),
         ("storage", property.Storage is not { } storage ? builder.Null() : builder.Object(
             ("key", builder.String(storage.Key)), ("revision", builder.String(storage.Revision)),
-            ("items", builder.Array(storage.Items.Select(item => builder.Object(
-                ("key", builder.String(item.Key)), ("definition", builder.String(item.Definition)),
-                ("label", builder.String(item.Label)), ("quantity", builder.String(item.Quantity)))).ToArray())))));
+            ("items", builder.Array(storage.Items.Select(item => Item(builder, item)).ToArray())),
+            ("storeRefusals", builder.Array(storage.StoreRefusals.Select(refusal => builder.Object(
+                ("item", builder.String(refusal.Item)), ("reason", builder.String(refusal.Reason)))).ToArray())))));
 
     private static uint Transport(UiValueBuilder builder, DaggerfallTransportPresentation transport) => builder.Object(
         ("mode", builder.String(transport.Mode.ToString().ToLowerInvariant())),
@@ -606,7 +606,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("defaulted", builder.Boolean(loan.Defaulted))) : builder.Null()),
                 ("accounts", builder.Array(bank.Accounts.Select(account => builder.Object(
                     ("region", builder.Number(account.Region)), ("regionName", builder.String(account.RegionName)),
-                    ("gold", builder.String(account.Gold)))).ToArray()))) : builder.Null()),
+                    ("gold", builder.String(account.Gold)))).ToArray())),
+                ("actions", builder.Array((bank.Actions ?? []).Select(action => builder.Object(
+                    ("action", builder.String(action.Action)), ("label", builder.String(action.Label)),
+                    ("available", builder.Boolean(action.Available)), ("takesAmount", builder.Boolean(action.TakesAmount)),
+                    ("minimum", builder.Number(action.Minimum)), ("maximum", builder.Number(action.Maximum)),
+                    ("refusal", action.Refusal is null ? builder.Null() : builder.String(action.Refusal)))).ToArray()))) : builder.Null()),
             ("equipmentChange", value.EquipmentChange is { } change ? builder.Object(
                 ("cue", builder.String(change.Cue)), ("rightHandDelayMilliseconds", builder.Number(change.RightHandDelayMilliseconds)),
                 ("leftHandDelayMilliseconds", builder.Number(change.LeftHandDelayMilliseconds))) : builder.Null()),

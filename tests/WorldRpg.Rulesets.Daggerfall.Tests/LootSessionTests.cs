@@ -15,6 +15,7 @@ using WorldRpg.Kit.Facts;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Kit.World;
+using WorldRpg.Rulesets.Daggerfall.Banking;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -497,6 +498,118 @@ public sealed class LootSessionTests
         Assert.Equal(checked((ulong)session.State.Encumbrance.Read().MaximumClassicUnits), session.State.Inventory.Read().Stacks.Single(stack => stack.Id == playerCoins).Quantity);
         Assert.Equal(1UL, session.State.Containers.Read(corpse.Owner).Stacks.Single(stack => stack.Id == corpseCoins).Quantity);
         Assert.Contains("Cannot take", Assert.IsType<LootPresentation>(session.OpenLoot).Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Take_all_moves_every_row_whole_and_stops_at_the_first_refusal(bool atCapacity)
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
+        session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
+        AimActivationAt(session, 2000);
+        CorpseContainer corpse = session.Corpses[2000];
+        session.State.Containers.Seed(corpse.Owner, [
+            new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.all.a")),
+            new InventoryContainerSeed(new InventoryItemId("gold-piece"), 7, Stack: InventoryStackId.Parse("test.all.b"))]);
+        RegisterCorpseStack(session, definitions, 2000, "test.all.a");
+        RegisterCorpseStack(session, definitions, 2000, "test.all.b");
+        if (atCapacity)
+        {
+            InventoryStackId playerCoins = InventoryStackId.Parse("test.all.player");
+            session.State.Inventory.Grant(new(new InventoryItemId("gold-piece"), playerCoins, checked((ulong)session.State.Encumbrance.Read().MaximumClassicUnits)));
+            session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player, session.State.Inventory.Read().Stacks.Single(stack => stack.Id == playerCoins), definitions.RequireItem(new DaggerfallItemId("gold-piece")));
+        }
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        void Ui(string json, ulong step) => session.Update(new ProductUpdate(OuterUpdate(step), [Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes(json),
+        }]));
+        static ulong Gold(IEnumerable<InventoryItemPresentation> items) => items.Where(item => item.Definition == "gold-piece")
+            .Select(item => ulong.Parse(item.Quantity, CultureInfo.InvariantCulture)).Aggregate(0UL, (a, b) => a + b);
+
+        Ui("{\"action\":\"loot\"}", 1);
+        session.ApplyProductMode(ProductMode.Modal);
+        LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
+        ulong corpseBefore = Gold(opened.Items);
+        Assert.True(corpseBefore >= 12);
+        ulong carriedBefore = session.State.Currency.Read().Gold;
+
+        // A stale revision moves nothing.
+        Ui(JsonSerializer.Serialize(new { action = "loot-take-all", container = opened.Container, revision = "stale" }), 2);
+        Assert.Equal(corpseBefore, Gold(Assert.IsType<LootPresentation>(session.OpenLoot).Items));
+
+        Ui(JsonSerializer.Serialize(new { action = "loot-take-all", container = opened.Container, revision = opened.Revision }), 3);
+        LootPresentation after = Assert.IsType<LootPresentation>(session.OpenLoot);
+        if (atCapacity)
+        {
+            // The first row is refused, so nothing moves and the reason is the take's own.
+            Assert.Equal(corpseBefore, Gold(after.Items));
+            Assert.Contains("Cannot take", after.Message, StringComparison.Ordinal);
+            return;
+        }
+        Assert.True(after.Empty);
+        Assert.Equal(carriedBefore + corpseBefore, session.State.Currency.Read().Gold);
+        Assert.Equal($"Took all {opened.Items.Length} items.", after.Message);
+        Assert.Equal(ProductMode.Modal, session.Mode);
+    }
+
+    [Fact]
+    public void The_bank_publishes_each_operation_with_the_amounts_its_owners_allow_now()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
+        int region = session.Site.Region!.Value;
+        DaggerfallNpcSite bankerSite = new(region, session.Site.ActiveSite!.Name, string.Empty);
+        long bankerId = session.State.Npcs.RegisterStable(DaggerfallNpcKind.Static, "test.session.banker.limits",
+            bankerSite, new DaggerfallNpcAppearance("Breton", "Male", 0, 0, 0, 0), "banker", ["banking"]);
+        Assert.True(session.TryOpenBank(new DaggerfallServiceProvider(bankerId, bankerSite, "banking")));
+        InventoryStackId coins = InventoryStackId.Parse("test.bank.limits.coins");
+        session.State.Inventory.Grant(new(new InventoryItemId("template-276"), coins, 200));
+        session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player, session.State.Inventory.Read().Stacks.Single(stack => stack.Id == coins), definitions.RequireItem(new DaggerfallItemId("template-276")));
+        DaggerfallBankActionPresentation Offered(string action) =>
+            Assert.Single(session.ReadInventoryPresentation().Bank!.Actions!, offered => offered.Action == action);
+        ulong carried = session.State.Currency.Read().Gold;
+
+        // An empty account: deposit up to what is carried, nothing to withdraw, and no loan to repay.
+        Assert.Equal((true, 1L, (long)carried), (Offered("currency-deposit-gold").Available, Offered("currency-deposit-gold").Minimum, Offered("currency-deposit-gold").Maximum));
+        Assert.Equal((false, "This account holds no gold."), (Offered("currency-withdraw-gold").Available, Offered("currency-withdraw-gold").Refusal));
+        Assert.False(Offered("currency-withdraw-letter").Available);
+        Assert.Equal((false, false), (Offered("currency-deposit-letters").Available, Offered("currency-deposit-letters").TakesAmount));
+        Assert.Equal("You hold no loan here.", Offered("bank-loan-repay-account").Refusal);
+        DaggerfallBankActionPresentation lend = Offered("bank-loan-issue");
+        Assert.Equal((true, (long)DaggerfallLoanPolicy.MinimumPrincipal, DaggerfallLoanPolicy.CalculateMaxBankLoan(session.State.Progression.Level)),
+            (lend.Available, lend.Minimum, lend.Maximum));
+
+        session.State.Bank.DepositGold(region, 200);
+        // 200 gold pays for a letter of 199 and its one-gold commission, not one of 200.
+        Assert.Equal((100L, 199L), (Offered("currency-withdraw-letter").Minimum, Offered("currency-withdraw-letter").Maximum));
+        Assert.Equal(200L, Offered("currency-withdraw-gold").Maximum);
+        Assert.Equal(200L, Offered("bank-transfer").Maximum);
+        Assert.Equal(DaggerfallBankTransactionResult.Applied, session.State.Bank.WithdrawLetter(region, 199).Result);
+        Assert.Equal(0UL, session.State.Bank.BalanceForRegion(region));
+        Assert.True(Offered("currency-deposit-letters").Available);
     }
 
     [Fact]

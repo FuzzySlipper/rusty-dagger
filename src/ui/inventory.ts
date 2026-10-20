@@ -3,7 +3,8 @@ import type { CharacterIdentity } from './character.js';
 import { mountDrag, type Drag } from './drag.js';
 import type { NavigationSurface } from './navigation.js';
 import { redraw } from './redraw.js';
-import { createStepper } from './stepper.js';
+import { createStepper, type Stepper } from './stepper.js';
+import { mountTransfer } from './transfer.js';
 
 export interface InventoryProjection {
   readonly revision: string;
@@ -40,7 +41,30 @@ export interface BankAccount {
   readonly gold: string;
 }
 
+/** One bank operation as the ruleset offers it now, with its amount bounds and why it is closed. */
+export interface BankAction {
+  readonly action: BankActionName;
+  readonly label: string;
+  readonly available: boolean;
+  readonly takesAmount: boolean;
+  readonly minimum: number;
+  readonly maximum: number;
+  readonly refusal: string | null;
+}
+
+export type BankActionName = 'currency-deposit-gold' | 'currency-withdraw-gold' | 'currency-deposit-letters' | 'currency-withdraw-letter'
+  | 'bank-transfer' | 'bank-loan-issue' | 'bank-loan-repay-account' | 'bank-loan-repay-carried';
+
+/** An owned property's storage while the player is inside it, as the ruleset publishes it. */
+export interface PropertyStorage {
+  readonly key: string;
+  readonly revision: string;
+  readonly items: readonly InventoryItem[];
+  readonly storeRefusals: readonly { readonly item: string; readonly reason: string }[];
+}
+
 export interface BankProjection {
+  readonly actions?: readonly BankAction[];
   readonly currentRegion: number;
   readonly currentRegionName: string;
   readonly currentBalance: string;
@@ -124,6 +148,12 @@ export type InventoryAction = {
 } | {
   readonly action: 'inventory-sort';
 } | {
+  readonly action: 'property-put' | 'property-take';
+  readonly key: string;
+  readonly item: string;
+  readonly revision: string;
+  readonly amount: number;
+} | {
   readonly action: 'currency-deposit-gold' | 'currency-withdraw-gold' | 'currency-withdraw-letter';
   readonly amount: number;
 } | {
@@ -145,6 +175,7 @@ const LEFT_GROUPS = new Set(['armour']);
 const RIGHT_GROUPS = new Set(['clothing', 'weapons']);
 const ALL_TAB = 'all';
 const BANK_TAB = 'bank';
+const STORAGE_TAB = 'storage';
 
 /**
  * The inventory: equipment around a paper doll, and the pack as a grid of slots with category tabs.
@@ -162,6 +193,7 @@ export function mountInventory(
 ): {
   update(value: InventoryProjection): void;
   updateIdentity(identity: CharacterIdentity | null | undefined): void;
+  updateStorage(value: PropertyStorage | null): void;
   refresh(): void;
   release(): boolean;
   openActions(): boolean;
@@ -258,9 +290,30 @@ export function mountInventory(
     hint('controller', 'A: item actions · B: back · LB / RB: panels'));
   packFooter.append(hints, sort);
   packPane.append(grid, overflow, packFooter);
-  const bankControls = createBankControls();
+  const bankControls = createBankControls(claim);
   bankControls.element.hidden = true;
-  packSection.append(packHeader, actions.element, packPane, bankControls.element);
+  const storagePane = document.createElement('div');
+  storagePane.className = 'dagger-inventory-storage';
+  storagePane.hidden = true;
+  packSection.append(packHeader, actions.element, packPane, bankControls.element, storagePane);
+  let storage: PropertyStorage | null = null;
+  const storageTransfer = mountTransfer(storagePane, {
+    move(side, key, amount) {
+      if (storage === null) return;
+      claim({ action: side === 'source' ? 'property-take' : 'property-put', key: storage.key, item: key, revision: storage.revision, amount });
+    },
+  });
+  const renderStorage = (): void => {
+    if (storage === null || current === null) { storageTransfer.update(null); return; }
+    const refusals = new Map(storage.storeRefusals.map(refusal => [refusal.item, refusal.reason]));
+    storageTransfer.update({
+      source: { title: 'Stored here', empty: 'Nothing is stored here.', rows: storage.items.map(item => ({ item, command: 'Take' })) },
+      pack: { title: 'Your pack', empty: 'Your pack is empty.',
+        rows: current.items.map(item => ({ item, command: 'Store', refusal: refusals.get(item.key) ?? null })) },
+      takeAll: null,
+      encumbrance: current.encumbrance ?? null,
+    });
+  };
 
   const tip = document.createElement('div');
   tip.className = 'dagger-inventory-tip';
@@ -337,6 +390,7 @@ export function mountInventory(
     renderPurse(value);
     renderTabs(value);
     bankControls.render(value.bank ?? null);
+    renderStorage();
     const byKey = new Map(value.items.map(item => [item.key, item]));
     const byGrid = new Map(value.items.flatMap(item => item.gridSlot === null || item.gridSlot < 0 || item.gridSlot >= GRID_SLOT_COUNT
       ? [] : [[item.gridSlot, item] as const]));
@@ -388,6 +442,7 @@ export function mountInventory(
 
   const renderTabs = (value: InventoryProjection): void => {
     const entries: readonly InventoryCategory[] = [{ id: ALL_TAB, label: 'All' }, ...(value.categories ?? []),
+      ...(storage !== null ? [{ id: STORAGE_TAB, label: 'Storage' }] : []),
       ...(value.bank ? [{ id: BANK_TAB, label: 'Bank' }] : [])];
     if (!entries.some(entry => entry.id === tab)) tab = ALL_TAB;
     redraw(tabs, JSON.stringify([entries, tab]), () => {
@@ -415,8 +470,10 @@ export function mountInventory(
   /** A category tab dims the items outside it; every item keeps its place in the pack. */
   const applyFilter = (): void => {
     const banking = tab === BANK_TAB;
-    packPane.hidden = banking;
+    packPane.hidden = banking || tab === STORAGE_TAB;
+    actions.element.hidden = packPane.hidden;
     bankControls.element.hidden = !banking;
+    storagePane.hidden = tab !== STORAGE_TAB;
     for (const button of [...gridButtons, ...overflow.querySelectorAll<HTMLButtonElement>('button')]) {
       const item = itemFor(button.dataset.inventoryItem);
       button.classList.toggle('is-filtered-out', item !== undefined && tab !== ALL_TAB && item.category !== tab);
@@ -661,22 +718,6 @@ export function mountInventory(
     if (button === null || button.disabled) return;
     if (button.dataset.inventoryTab !== undefined) { selectTab(button.dataset.inventoryTab); return; }
     if (button === sort) { claim({ action: 'inventory-sort' }); return; }
-    const bankAction = button.dataset.bankAction;
-    if (bankAction === undefined) return;
-    const parsedAmount = Number(bankControls.amount.value);
-    if (bankAction === 'currency-deposit-letters') {
-      claim({ action: bankAction });
-    } else if (Number.isSafeInteger(parsedAmount) && parsedAmount > 0 && parsedAmount <= 2_147_483_647) {
-      if (bankAction === 'bank-transfer') {
-        const destination = Number(bankControls.destination.value);
-        if (Number.isInteger(destination) && destination >= 0 && destination < 62)
-          claim({ action: bankAction, amount: parsedAmount, destination });
-      } else if (bankAction === 'currency-deposit-gold' || bankAction === 'currency-withdraw-gold'
-        || bankAction === 'currency-withdraw-letter' || bankAction === 'bank-loan-issue'
-        || bankAction === 'bank-loan-repay-account' || bankAction === 'bank-loan-repay-carried') {
-        claim({ action: bankAction, amount: parsedAmount });
-      }
-    }
   };
 
   shell.addEventListener('click', onClick);
@@ -722,6 +763,16 @@ export function mountInventory(
     refresh(): void {
       if (disposed || current === null) return;
       render(current);
+      storageTransfer.refresh();
+    },
+    /** The owned property's storage while the player is inside it; it becomes the Storage tab. */
+    updateStorage(value: PropertyStorage | null): void {
+      if (disposed) return;
+      storage = value;
+      if (current === null) return;
+      renderTabs(current);
+      applyFilter();
+      renderStorage();
     },
     /** Close the action bar, or release a held or dragged item; returns whether there was one, so Back does that first. */
     release(): boolean {
@@ -739,6 +790,7 @@ export function mountInventory(
       if (disposed) return;
       disposed = true;
       drag.dispose();
+      storageTransfer.dispose();
       for (const dispose of disposers) dispose();
       shell.removeEventListener('pointerdown', onPointerDown, true);
       shell.removeEventListener('click', onClickCapture, true);
@@ -822,12 +874,11 @@ function line(className: string, text: string): HTMLElement {
   return element;
 }
 
-function createBankControls(): {
-  readonly element: HTMLElement;
-  readonly amount: HTMLInputElement;
-  readonly destination: HTMLSelectElement;
-  render(value: BankProjection | null): void;
-} {
+/**
+ * The bank tab: the accounts, the loan, and one row per operation the ruleset publishes, each with
+ * its own amount bounded by the published limits and the reason it is closed when it is.
+ */
+function createBankControls(claim: (action: InventoryAction) => void): { readonly element: HTMLElement; render(value: BankProjection | null): void } {
   const section = document.createElement('section');
   section.className = 'dagger-bank dagger-panel';
   section.setAttribute('aria-label', 'Regional bank');
@@ -835,55 +886,40 @@ function createBankControls(): {
   heading.textContent = 'Regional bank';
   const active = document.createElement('p');
   active.className = 'dagger-bank-active';
+  const loan = document.createElement('p');
+  loan.className = 'dagger-bank-loan';
+  const operations = document.createElement('div');
+  operations.className = 'dagger-bank-operations';
   const balances = document.createElement('ul');
   balances.className = 'dagger-bank-balances';
   balances.setAttribute('aria-label', 'Regional account balances');
-  const loan = document.createElement('p');
-  loan.className = 'dagger-bank-loan';
-  const amount = document.createElement('input');
-  amount.type = 'number';
-  amount.min = '1';
-  amount.max = '2147483647';
-  amount.step = '1';
-  amount.value = '100';
-  amount.setAttribute('aria-label', 'Bank transaction amount');
-  const destination = document.createElement('select');
-  destination.setAttribute('aria-label', 'Transfer destination region');
-  const controls = document.createElement('div');
-  controls.className = 'dagger-bank-actions';
-  const actions: readonly [string, string][] = [
-    ['currency-deposit-gold', 'Deposit gold'],
-    ['currency-withdraw-gold', 'Withdraw gold'],
-    ['currency-deposit-letters', 'Deposit all letters'],
-    ['currency-withdraw-letter', 'Withdraw letter'],
-    ['bank-transfer', 'Transfer to region'],
-    ['bank-loan-issue', 'Borrow into this account'],
-    ['bank-loan-repay-account', 'Repay from this account'],
-    ['bank-loan-repay-carried', 'Repay with carried currency, then account'],
-  ];
-  for (const [action, label] of actions) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.dataset.bankAction = action;
-    button.textContent = label;
-    controls.append(button);
-  }
-  section.append(heading, active, loan, balances, amount, destination, controls);
+  section.append(heading, active, loan, operations, balances);
+  const amounts = new Map<string, Stepper>();
+  let destination: HTMLSelectElement | null = null;
+  let shown: BankProjection | null = null;
+
+  operations.addEventListener('click', event => {
+    const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-bank-action]') : null;
+    const offered = shown?.actions?.find(action => action.action === button?.dataset.bankAction);
+    if (button === null || button.disabled || offered === undefined || !offered.available) return;
+    const amount = amounts.get(offered.action)?.value() ?? 0;
+    if (offered.action === 'currency-deposit-letters') claim({ action: offered.action });
+    else if (offered.action === 'bank-transfer') {
+      if (destination !== null && destination.value !== '') claim({ action: offered.action, amount, destination: Number(destination.value) });
+    } else claim({ action: offered.action, amount });
+  });
 
   return {
     element: section,
-    amount,
-    destination,
     render(value): void {
-      const enabled = value !== null;
-      amount.disabled = !enabled;
-      for (const button of Array.from(controls.querySelectorAll<HTMLButtonElement>('button'))) button.disabled = !enabled;
+      shown = value;
       if (value === null) {
         active.textContent = '';
         loan.textContent = '';
         balances.replaceChildren();
-        destination.replaceChildren();
-        destination.disabled = true;
+        operations.replaceChildren();
+        amounts.clear();
+        destination = null;
         return;
       }
       active.textContent = `${value.currentRegionName}: ${value.currentBalance} gold`;
@@ -892,17 +928,57 @@ function createBankControls(): {
         : value.loan.defaulted
           ? `Defaulted loan: ${value.loan.remaining} gold remains.`
           : `Loan of ${value.loan.principal} gold: ${value.loan.remaining} gold remains; ${value.loan.daysRemaining} days until due.`;
-      balances.replaceChildren(...value.accounts.map((account) => {
+      const accounts = value.accounts.filter(account => account.region !== value.currentRegion);
+      redraw(operations, JSON.stringify([value.actions ?? [], accounts.map(account => [account.region, account.regionName])]), () => {
+        const priorDestination = destination?.value ?? null;
+        amounts.clear();
+        destination = null;
+        operations.replaceChildren(...(value.actions ?? []).map(offered => {
+          const row = document.createElement('div');
+          row.className = 'dagger-bank-operation';
+          row.dataset.bankOperation = offered.action;
+          const label = document.createElement('span');
+          label.className = 'dagger-bank-operation-label';
+          label.textContent = offered.label;
+          row.append(label);
+          if (offered.action === 'bank-transfer') {
+            const select = document.createElement('select');
+            select.setAttribute('aria-label', 'Transfer destination region');
+            select.append(...accounts.map(account => new Option(account.regionName, String(account.region))));
+            if (priorDestination !== null && accounts.some(account => String(account.region) === priorDestination)) select.value = priorDestination;
+            select.disabled = !offered.available;
+            destination = select;
+            row.append(select);
+          }
+          if (offered.takesAmount) {
+            const stepper = createStepper(`${offered.label}: amount`);
+            stepper.limit(offered.minimum, Math.max(offered.minimum, offered.maximum), offered.minimum);
+            stepper.input.disabled = !offered.available;
+            amounts.set(offered.action, stepper);
+            row.append(stepper.element);
+          }
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.dataset.bankAction = offered.action;
+          button.textContent = offered.takesAmount ? 'Confirm' : 'Deposit';
+          button.setAttribute('aria-label', offered.label);
+          button.disabled = !offered.available;
+          row.append(button);
+          if (offered.refusal) {
+            const reason = document.createElement('p');
+            reason.className = 'dagger-bank-refusal';
+            reason.textContent = offered.refusal;
+            row.append(reason);
+          }
+          return row;
+        }));
+      });
+      balances.replaceChildren(...value.accounts.filter(account => account.gold !== '0' || account.region === value.currentRegion).map((account) => {
         const row = document.createElement('li');
         row.textContent = `${account.regionName}: ${account.gold} gold`;
         if (account.region === value.currentRegion) row.className = 'is-current';
         return row;
       }));
-      const prior = destination.value;
-      destination.replaceChildren(...value.accounts.filter((account) => account.region !== value.currentRegion)
-        .map((account) => new Option(account.regionName, String(account.region))));
-      if (Array.from(destination.options).some((option) => option.value === prior)) destination.value = prior;
-      destination.disabled = destination.options.length === 0;
     },
   };
 }

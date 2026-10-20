@@ -177,7 +177,6 @@ const UNREAD_HUD_FIELDS = new Map([
   ['hud.activation.dialogue.training.providerFaction', UNREAD_INTERNAL],
   ['hud.activation.dialogue.training.membershipFaction', UNREAD_INTERNAL],
   ['hud.activation.dialogue.training.cooldownReadySecond', UNREAD_INTERNAL],
-  ['hud.property.storage.items[].definition', UNREAD_INTERNAL],
   ['hud.travel.quote.minutes', UNREAD_TRAVEL_INPUTS],
   ['hud.travel.quote.distance', UNREAD_TRAVEL_INPUTS],
   ['hud.travel.quote.options.hasHorse', UNREAD_TRAVEL_INPUTS],

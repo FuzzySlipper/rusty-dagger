@@ -164,7 +164,17 @@ follow its shape.
   in it and Cancel, Escape or Back close it and return focus to the item.
 - **Drag.** Items drag between pack cells and equipment slots, and Move holds
   one for pick and place.
-- **The bank** is its own tab while a bank serves the player.
+- **The bank** is its own tab while a bank serves the player. The ruleset
+  publishes each operation (`bank.actions`) with whether it is available now,
+  the bounds of its amount and why it is closed; each row has its own amount
+  stepper held to those bounds.
+- **Containers** use the two-pane transfer layout (`src/ui/transfer.ts`): the
+  container on one side, the player's pack on the other, each row with its
+  facts, a quantity stepper for a stack and the command that moves it. Loot
+  and corpses offer Take and Take All (`loot-take-all`, which the ruleset
+  applies row by row and stops at the first refusal). An owned property's
+  storage is the inventory's Storage tab, with Take and Store; the ruleset
+  publishes the items the store refuses and why (`storeRefusals`).
 
 The quantity stepper (`src/ui/stepper.ts`) is the shared bounded amount: −
 and + beside a number field, with its limits from the projection. The

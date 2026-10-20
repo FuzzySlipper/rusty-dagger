@@ -39,7 +39,7 @@ internal enum DaggerfallUiActionKind
     NotebookPage, NotebookAdd, NotebookEdit, NotebookRemove, NotebookMove,
     CurrencyDepositGold, CurrencyWithdrawGold, CurrencyDepositLetters, CurrencyWithdrawLetter, BankTransfer,
     BankOpen, BankLoanIssue, BankLoanRepayAccount, BankLoanRepayCarried,
-    LootClose, LootTake,
+    LootClose, LootTake, LootTakeAll,
     SaveGame, LoadGame, SaveSlots, SaveSlot, LoadSlot, DeleteSlot, BundleSelect,
     DeathNewGame, DeathLoadGame, DeathQuit,
 }
@@ -249,6 +249,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.BankLoanRepayCarried, "bank-loan-repay-carried", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LootClose, "loot-close", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LootTake, "loot-take", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.LootTakeAll, "loot-take-all", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.SaveGame, "save-game", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LoadGame, "load-game", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.SaveSlots, "save-slots", DaggerfallUiPhases.Live),
@@ -463,6 +464,9 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "revision", "item", "amount"])
                     && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && amount is not null
                     ? new(action, revision, item, Amount: amount) : null;
+            if (action == "loot-take-all")
+                return fields.SetEquals(["action", "revision", "container"]) && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(container)
+                    ? new(action, revision, Container: container) : null;
             if (action == "loot-take")
             {
                 bool shape = fields.SetEquals(["action", "revision", "item", "container"])

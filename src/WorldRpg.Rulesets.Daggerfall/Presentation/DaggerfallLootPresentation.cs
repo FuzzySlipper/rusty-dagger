@@ -63,7 +63,7 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         _ground = null;
         if (prepared is null) { Message = "No eligible loot within reach. Aim at a nearby corpse."; return null; }
         _opening++;
-        Message = prepared.IsEmpty ? "Empty. This container remains open until Exit." : "Choose an item to take. Stack buttons take one unit.";
+        Message = prepared.IsEmpty ? "Empty. This container remains open until Exit." : "Choose an item to take, or take everything.";
         return prepared.IsEmpty ? prepared : null;
     }
 
@@ -75,7 +75,7 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         _ground = null;
         if (prepared is null) { Message = "That loot is no longer available."; return null; }
         _opening++;
-        Message = prepared.IsEmpty ? "Empty. This container remains open until Exit." : "Choose an item to take. Stack buttons take one unit.";
+        Message = prepared.IsEmpty ? "Empty. This container remains open until Exit." : "Choose an item to take, or take everything.";
         return prepared.IsEmpty ? prepared : null;
     }
 
@@ -172,6 +172,13 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
             ExpectedWorldRevision = contents.StoreRevision,
             Facts = [new LootAwardedFact(prepared.ActorId, item.Definition, quantity, prepared.Corpse.OriginatingSequence)],
         };
+    }
+
+    /// <summary>States how a Take All ended: everything taken, or how far it got and the reason it stopped.</summary>
+    internal void CompleteAll(int taken, bool emptied)
+    {
+        if (emptied) { Message = taken == 1 ? "Took the only item." : $"Took all {taken} items."; return; }
+        Message = taken == 0 ? Message : $"Took {taken} item{(taken == 1 ? "" : "s")}. {Message}";
     }
 
     internal void Complete(CorpseLootCommitResult result)

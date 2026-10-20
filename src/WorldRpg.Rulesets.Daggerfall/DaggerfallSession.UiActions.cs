@@ -1,3 +1,4 @@
+using System.Globalization;
 using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Controls;
@@ -222,6 +223,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.BankLoanRepayCarried: ChangeLoan(action); break;
             case DaggerfallUiActionKind.LootClose: _lootUi.Close(action.Container); break;
             case DaggerfallUiActionKind.LootTake: TakeLoot(action); break;
+            case DaggerfallUiActionKind.LootTakeAll: TakeAllLoot(action); break;
             // Quick save and quick load follow the Host's slot naming; the menu's slot actions name
             // their own slots. All of them use the same catalog owner.
             case DaggerfallUiActionKind.SaveGame: _saveSlotRequest = new(SaveSlotOperation.QuickSave); break;
@@ -239,11 +241,38 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
+    /// Takes every row of the shown container through the ordinary take, each whole and against the
+    /// container's current revision, and stops at the first one refused (too heavy, out of reach), so
+    /// what was taken stays taken and the refusal is reported. It reports once, not once per row.
+    /// </summary>
+    private void TakeAllLoot(DaggerfallPlayerUiAction action)
+    {
+        LootPresentation? shown = _lootUi.Read();
+        if (shown is null || shown.Container != action.Container || shown.Revision != action.Revision)
+        {
+            Presentation.SetOutcome("Loot changed. Choose the item again.");
+            return;
+        }
+        int taken = 0;
+        foreach (string key in shown.Items.Select(item => item.Key).ToArray())
+        {
+            LootPresentation? current = _lootUi.Read();
+            if (current?.Items.SingleOrDefault(item => item.Key == key) is not { } row) continue;
+            TakeLoot(new DaggerfallPlayerUiAction("loot-take", current.Revision, key, Container: current.Container,
+                Amount: ulong.Parse(row.Quantity, CultureInfo.InvariantCulture)), report: false);
+            if (_lootUi.Read()?.Items.Any(item => item.Key == key) ?? false) break;
+            taken++;
+        }
+        _lootUi.CompleteAll(taken, _lootUi.Read()?.Empty ?? true);
+        Presentation.SetOutcome(_lootUi.Message);
+    }
+
+    /// <summary>
     /// A valid take applies at once: the transfer commits, its completed-change facts deliver at the
     /// update's boundary even while the modal holds the world, and the published presentation already
     /// reflects the result. A refused take (a stale revision, a closed container) states its reason too.
     /// </summary>
-    private void TakeLoot(DaggerfallPlayerUiAction action)
+    private void TakeLoot(DaggerfallPlayerUiAction action, bool report = true)
     {
         if (_lootUi.PrepareGroundTake(action) is { } groundTake)
         {
@@ -251,7 +280,7 @@ internal sealed partial class DaggerfallSession
                 groundTake.Selection.UniqueEntityId is ulong entity ? State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(new(entity)).Value) : null))
             {
                 _lootUi.CompleteGround(false, "You cannot carry any more.");
-                Presentation.SetOutcome(_lootUi.Message);
+                if (report) Presentation.SetOutcome(_lootUi.Message);
                 return;
             }
             try
@@ -267,7 +296,7 @@ internal sealed partial class DaggerfallSession
             {
                 _lootUi.CompleteGround(false, "That item cannot be taken.");
             }
-            Presentation.SetOutcome(_lootUi.Message);
+            if (report) Presentation.SetOutcome(_lootUi.Message);
             return;
         }
         if (_lootUi.PrepareTake(action, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl)) is { } take)
@@ -277,6 +306,6 @@ internal sealed partial class DaggerfallSession
             if (result == CorpseLootCommitResult.Committed && questItem is not null) State.Quests.ItemClicked(questItem);
             _lootUi.Complete(result);
         }
-        Presentation.SetOutcome(_lootUi.Message);
+        if (report) Presentation.SetOutcome(_lootUi.Message);
     }
 }

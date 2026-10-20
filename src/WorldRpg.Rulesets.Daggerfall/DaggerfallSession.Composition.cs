@@ -509,7 +509,7 @@ internal sealed partial class DaggerfallSession
                     PermanentPlayerClanFactionId: State.RacialOverrides.Current?.State.Vampire?.Clan, CurrentProfile: _sites.ActiveProfile,
                     Interior: _sites.Projection.Inputs.InteriorBuilding),
                 State.Npcs.SetDisplayName, questPlaces));
-            _inventoryUi.UseBank(State.Bank, ActiveBankRegion);
+            _inventoryUi.UseBank(State.Bank, ActiveBankRegion, () => State.Bank.DepositableGold(State.Wagon, TransportAccess()));
             _inventoryUi.UseLoans(State.Loans, () => _time.Calendar, () => State.Progression.Level);
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,
                 entity => State.Actors.Entities.IdentityOf(new Rusty.Engine.Entities.EntityId(entity)).Value);

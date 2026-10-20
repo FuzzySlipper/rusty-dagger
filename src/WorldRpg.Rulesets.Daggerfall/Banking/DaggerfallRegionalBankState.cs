@@ -117,6 +117,20 @@ internal sealed class DaggerfallRegionalBankState
         return Outcome(DaggerfallBankTransactionKind.DepositGold, DaggerfallBankTransactionResult.Applied, null, region, amount, value);
     }
 
+    /// <summary>
+    /// The gold a deposit can reach: what the player carries, plus the gold in the wagon when the
+    /// wagon is accessible here, which <see cref="DepositGold(int, long, DaggerfallWagonStorage?, DaggerfallTransportAccessContext?)"/> draws on for a shortfall.
+    /// </summary>
+    internal ulong DepositableGold(DaggerfallWagonStorage? wagon, DaggerfallTransportAccessContext? accessContext)
+    {
+        ulong carried = _currency.Read().Gold;
+        if (wagon is null || accessContext is not DaggerfallTransportAccessContext context
+            || !wagon.CanAccess(_inventory.Read(), context) || wagon.Read() is not InventoryView stored) return carried;
+        ulong wagonGold = stored.Stacks.Where(stack => IsGoldDefinition(stack.Definition.Value))
+            .Aggregate(0UL, (total, stack) => total > ulong.MaxValue - stack.Quantity ? ulong.MaxValue : total + stack.Quantity);
+        return carried > ulong.MaxValue - wagonGold ? ulong.MaxValue : carried + wagonGold;
+    }
+
     internal DaggerfallBankTransactionOutcome WithdrawGold(int region, long amount)
     {
         if (!DaggerfallRegionalBankPolicy.IsValidRegion(region))

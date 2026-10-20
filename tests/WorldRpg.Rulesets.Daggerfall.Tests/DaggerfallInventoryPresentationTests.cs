@@ -98,10 +98,12 @@ public sealed class DaggerfallInventoryPresentationTests
     }
 
     [Fact]
-    public void The_sort_action_takes_no_arguments()
+    public void The_sort_and_take_all_actions_have_their_exact_shapes()
     {
         Assert.Equal(DaggerfallUiActionKind.InventorySort, DaggerfallUiAction.Parse("{\"action\":\"inventory-sort\"}"u8)?.Kind);
         Assert.Null(DaggerfallUiAction.Parse("{\"action\":\"inventory-sort\",\"item\":\"x\"}"u8));
+        Assert.Equal(DaggerfallUiActionKind.LootTakeAll, DaggerfallUiAction.Parse("{\"action\":\"loot-take-all\",\"container\":\"c\",\"revision\":\"r\"}"u8)?.Kind);
+        Assert.Null(DaggerfallUiAction.Parse("{\"action\":\"loot-take-all\",\"container\":\"c\"}"u8));
     }
 
     [Fact]

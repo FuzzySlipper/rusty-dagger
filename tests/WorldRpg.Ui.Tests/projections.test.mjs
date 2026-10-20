@@ -618,13 +618,20 @@ test('equipment lays out by published group around the doll, the pack filters by
   } finally { art.adopt({ revision: '', images: [] }); f.dispose(); }
 });
 
-test('the bank is its own tab of the inventory while a bank serves the player', () => {
+test('the bank is its own tab, and each operation keeps to the amounts and eligibility the ruleset publishes', () => {
   const f = fixture();
   try {
+    const action = (name, label, overrides) => ({ action: name, label, available: true, takesAmount: true, minimum: 1, maximum: 500, refusal: null, ...overrides });
     f.publish({ inventory: {
       revision: '11:1', message: '', equipmentChange: null, slots: [], items: [], categories: [],
       bank: { currentRegion: 17, currentRegionName: 'Daggerfall', currentBalance: '500', maximumNewLoan: '1000', loan: null,
-        accounts: [{ region: 17, regionName: 'Daggerfall', gold: '500' }, { region: 20, regionName: 'Glenpoint', gold: '0' }] },
+        accounts: [{ region: 17, regionName: 'Daggerfall', gold: '500' }, { region: 20, regionName: 'Glenpoint', gold: '0' }],
+        actions: [
+          action('currency-deposit-gold', 'Deposit gold', { available: false, minimum: 0, maximum: 0, refusal: 'You carry no gold to deposit.' }),
+          action('currency-withdraw-gold', 'Withdraw gold'),
+          action('currency-deposit-letters', 'Deposit all letters of credit', { takesAmount: false, minimum: 0, maximum: 0 }),
+          action('bank-transfer', 'Transfer to another region'),
+        ] },
     } });
     const bankTab = f.root.querySelector('[data-inventory-tab="bank"]');
     assert.ok(bankTab);
@@ -634,12 +641,26 @@ test('the bank is its own tab of the inventory while a bank serves the player', 
     assert.equal(bank.hidden, false);
     assert.equal(f.root.querySelector('.dagger-inventory-pack').hidden, true);
     assert.match(bank.textContent, /Daggerfall: 500 gold/);
-    bank.querySelector('[aria-label="Bank transaction amount"]').value = '50';
-    bank.querySelector('[data-bank-action="currency-deposit-gold"]').click();
-    assert.deepEqual(f.actions.at(-1), { action: 'currency-deposit-gold', amount: 50 });
-    bank.querySelector('[data-bank-action="bank-transfer"]').click();
+    const row = name => bank.querySelector(`[data-bank-operation="${name}"]`);
+    // A closed operation says why, and its own amount and button are disabled.
+    assert.equal(row('currency-deposit-gold').querySelector('[data-bank-action]').disabled, true);
+    assert.equal(row('currency-deposit-gold').querySelector('.dagger-bank-refusal').textContent, 'You carry no gold to deposit.');
+    // Each operation has its own amount, bounded by the published limits.
+    const withdraw = row('currency-withdraw-gold').querySelector('.dagger-stepper input');
+    assert.equal(withdraw.max, '500');
+    withdraw.value = '900';
+    withdraw.dispatchEvent(new window.Event('change', { bubbles: true }));
+    assert.equal(withdraw.value, '500', 'An amount past the published bound is brought back to it.');
+    row('currency-withdraw-gold').querySelector('[data-bank-action]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'currency-withdraw-gold', amount: 500 });
+    const transfer = row('bank-transfer').querySelector('.dagger-stepper input');
+    transfer.value = '50';
+    transfer.dispatchEvent(new window.Event('change', { bubbles: true }));
+    assert.deepEqual([...row('bank-transfer').querySelectorAll('option')].map(option => option.textContent), ['Glenpoint']);
+    row('bank-transfer').querySelector('[data-bank-action]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'bank-transfer', amount: 50, destination: 20 });
-    bank.querySelector('[data-bank-action="currency-deposit-letters"]').click();
+    assert.equal(row('currency-deposit-letters').querySelector('.dagger-stepper'), null, 'An operation without an amount has no stepper.');
+    row('currency-deposit-letters').querySelector('[data-bank-action]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'currency-deposit-letters' });
     // Leaving the bank takes its tab away and shows the pack again.
     f.publish({ inventory: { revision: '11:2', message: '', equipmentChange: null, slots: [], items: [], categories: [], bank: null } });
@@ -1310,20 +1331,37 @@ test('quick start sends the draft identity and career without background fields,
   } finally { f.dispose(); }
 });
 
-test('loot takes a chosen part of a row the ruleset marks as a stack, and a whole unique item', () => {
+test('loot sits beside the pack: Take moves a chosen part of a stack or a whole item, and Take All takes everything', () => {
   const f = fixture();
   try {
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
       condition: null, identified: true, gridSlot: null, equippedSlots: [], compatibleSlots: [], ...overrides });
-    f.publish({ mode: 'modal', loot: { container: '2000:1', revision: '3', title: 'Rat — loot', message: '',
-      items: [row('stack:5', { label: 'Arrows', quantity: '12', stackable: true }), row('unique:9', { label: 'Dagger' })] } });
-    const quantity = f.root.querySelector('[data-loot-quantity="stack:5"]');
-    assert.equal(quantity.hidden, false);
-    assert.equal(f.root.querySelector('[data-loot-quantity="unique:9"]').hidden, true, 'A unique item is taken whole.');
+    f.publish({ mode: 'modal',
+      inventory: { revision: '1', message: '', equipmentChange: null, slots: [], items: [row('stack:gold', { label: 'Gold', quantity: '25', stackable: true, gridSlot: 0 })],
+        encumbrance: { currentClassicUnits: 4000, maximumClassicUnits: 20000, canMove: true, currentKilograms: 10, maximumKilograms: 50 } },
+      loot: { container: '2000:1', revision: '3', title: 'Rat — loot', message: 'Choose an item to take, or take everything.',
+        items: [row('stack:5', { label: 'Arrows', quantity: '12', stackable: true, weightKilograms: 1.2, value: 12 }), row('unique:9', { label: 'Dagger' })] } });
+    const panel = f.root.querySelector('.dagger-loot');
+    const source = panel.querySelector('[data-transfer-side="source"]');
+    const pack = panel.querySelector('[data-transfer-side="pack"]');
+    assert.match(pack.textContent, /Gold × 25/, 'The pack pane shows what the player carries.');
+    assert.equal(pack.querySelector('button'), null, 'Nothing is put into a corpse.');
+    assert.match(panel.querySelector('.dagger-transfer-load').textContent, /Load 10 \/ 50 kg/);
+    assert.match(source.querySelector('[data-transfer-item="stack:5"]').textContent, /1\.2 kg · 12 gold/);
+    const quantity = source.querySelector('[data-transfer-item="stack:5"] .dagger-stepper input');
+    assert.equal(quantity.max, '12');
+    assert.equal(source.querySelector('[data-transfer-item="unique:9"] .dagger-stepper'), null, 'A unique item is taken whole.');
     quantity.value = '4';
-    f.root.querySelector('[data-loot-item="stack:5"]').click();
+    quantity.dispatchEvent(new window.Event('change', { bubbles: true }));
+    source.querySelector('[data-transfer-key="stack:5"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'loot-take', container: '2000:1', revision: '3', item: 'stack:5', amount: 4 });
-    assert.equal(f.root.querySelector('[data-loot-item="unique:9"]').textContent, 'Take');
+    source.querySelector('[data-transfer-key="unique:9"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'loot-take', container: '2000:1', revision: '3', item: 'unique:9', amount: 1 });
+    panel.querySelector('.dagger-transfer-take-all').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'loot-take-all', container: '2000:1', revision: '3' });
+    f.publish({ mode: 'modal', loot: { container: '2000:1', revision: '4', title: 'Rat — loot', message: 'Took all 2 items.', items: [] } });
+    assert.equal(panel.querySelector('.dagger-transfer-take-all').disabled, true);
+    assert.match(source.textContent, /Nothing left to take/);
   } finally { f.dispose(); }
 });
 
@@ -2300,26 +2338,40 @@ test('spell seller and spellbook use confirmed semantic changes and source setti
 });
 
 
-test('property projection sends live ownership and store actions through the inventory panel', () => {
+test('property offers stay in the inventory panel, and its storage is a Storage tab on the transfer layout', () => {
   const f = fixture();
   try {
-    const item = { key: 'stack:coins', definition: 'gold-piece', label: 'Gold', quantity: '4', weight: 0, value: 1,
-      details: '', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] };
-    f.publish({ inventory: { revision: 'ui-revision', message: '', equipmentChange: null, items: [item], slots: [] },
+    const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 0, value: 1, details: '', icon: null,
+      condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
+    f.publish({ inventory: { revision: 'ui-revision', message: '', equipmentChange: null, slots: [],
+        items: [row('stack:coins', { label: 'Gold', quantity: '4', stackable: true }), row('unique:3', { label: 'Sword', equippedSlots: ['right-hand'], gridSlot: null })] },
       property: { bankAvailable: true, offers: [{ key: 'ship/small', name: 'Small ship', price: '100000', salePrice: '85000',
         owned: false, canBuy: true, canSell: false, canEnter: false, enterable: false }], storage: { key: 'house/17/4/A.RMB/0/0/1', revision: '12',
-          items: [{ key: 'stack:stored', definition: 'gold-piece', label: 'Gold piece', quantity: '2' }] } } });
+          items: [row('stack:stored', { label: 'Gold piece', quantity: '2', stackable: true })],
+          storeRefusals: [{ item: 'unique:3', reason: 'Unequip that item before storing it.' }] } } });
     f.root.querySelector('[data-action="inventory"]').click();
-    const controls = [...f.root.querySelectorAll('.dagger-property-root button')];
-    controls.find(button => button.textContent === 'Buy').click();
+    [...f.root.querySelectorAll('.dagger-property-root button')].find(button => button.textContent === 'Buy').click();
     assert.deepEqual(f.actions.at(-1), { action: 'property-buy', key: 'ship/small' });
-    controls.find(button => button.textContent.startsWith('Store')).click();
-    assert.deepEqual(f.actions.at(-1), { action: 'property-put', key: 'house/17/4/A.RMB/0/0/1', item: 'stack:coins', revision: '12', amount: 4 });
-    assert.ok(controls.some(button => button.textContent === 'Take 2 Gold piece'));
-    controls.find(button => button.textContent.startsWith('Take')).click();
+    f.root.querySelector('[data-inventory-tab="storage"]').click();
+    const storage = f.root.querySelector('.dagger-inventory-storage');
+    assert.equal(storage.hidden, false);
+    assert.equal(f.root.querySelector('.dagger-inventory-pack').hidden, true);
+    const stored = storage.querySelector('[data-transfer-side="source"]');
+    const pack = storage.querySelector('[data-transfer-side="pack"]');
+    // A part of a carried stack is stored; the worn sword says why it is not offered.
+    const amount = pack.querySelector('[data-transfer-item="stack:coins"] .dagger-stepper input');
+    amount.value = '3';
+    amount.dispatchEvent(new window.Event('change', { bubbles: true }));
+    pack.querySelector('[data-transfer-key="stack:coins"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'property-put', key: 'house/17/4/A.RMB/0/0/1', item: 'stack:coins', revision: '12', amount: 3 });
+    assert.equal(pack.querySelector('[data-transfer-key="unique:3"]').disabled, true);
+    assert.match(pack.querySelector('[data-transfer-item="unique:3"]').textContent, /Unequip that item before storing it\./);
+    stored.querySelector('[data-transfer-key="stack:stored"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'property-take', key: 'house/17/4/A.RMB/0/0/1', item: 'stack:stored', revision: '12', amount: 2 });
     f.publish({ property: { bankAvailable: false, offers: [], storage: null } });
     assert.equal(f.root.querySelector('.dagger-property-root').hidden, true);
+    assert.equal(f.root.querySelector('[data-inventory-tab="storage"]'), null);
+    assert.equal(f.root.querySelector('.dagger-inventory-pack').hidden, false);
   } finally { f.dispose(); }
 });
 

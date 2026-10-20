@@ -379,7 +379,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       if (inventorySuppressed && activePanel === 'inventory') showHome();
       if (value.inventory) inventoryView.update(value.inventory);
       inventoryView.updateIdentity(value.character && isCharacterProjection(value.character) ? value.character.identity : null);
-      propertyView.update(value.property ?? null, value.inventory);
+      propertyView.update(value.property ?? null);
+      inventoryView.updateStorage(value.property?.storage ?? null);
       transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);
       mapView.update(isMapProjection(value.map) ? value.map : null);
       travelView.update(isTravelProjection(value.travel) ? value.travel : null);
@@ -401,7 +402,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
         runAction(panelRequest.panel);
       }
       currentLoot = value.loot ?? null;
-      lootView.update(currentLoot);
+      lootView.update(currentLoot, value.inventory ?? null);
       if (currentLoot && currentLoot.container !== lastLootContainer) {
         lastLootContainer = currentLoot.container;
         showPanel('loot');

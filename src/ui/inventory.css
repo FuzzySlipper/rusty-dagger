@@ -137,19 +137,23 @@
 .dagger-inventory-tip-condition .dagger-inventory-condition-bar { flex: 0 0 5rem; }
 .dagger-inventory-tip-condition.is-broken { color: #8a2a1c; }
 
-/* The bank tab. */
+/* The bank tab: one row per operation the ruleset publishes, each with its own bounded amount. */
 .dagger-bank { display: grid; gap: .5rem; padding: .75rem; }
 .dagger-bank[hidden] { display: none; }
 .dagger-bank h3 { color: #e4c676; font: 700 .75rem ui-monospace, monospace; letter-spacing: .09em; margin: 0; text-transform: uppercase; }
 .dagger-bank p { margin: 0; }
-.dagger-bank-active { color: #f3df9c; font: 700 .8rem ui-monospace, monospace; }
-.dagger-bank-balances { background: rgb(12 13 10 / .74); border: 1px solid #7d6c45; display: grid; gap: 2px .5rem; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 0; max-height: 10rem; overflow-y: auto; padding: .375rem; }
+.dagger-bank-active { color: #f3df9c; font: 700 .85rem ui-monospace, monospace; }
+.dagger-bank-operations { display: grid; gap: .25rem; }
+.dagger-bank-operation { align-items: center; border-bottom: 1px solid rgb(197 164 94 / .25); display: grid; gap: .25rem .75rem; grid-template-columns: minmax(12rem, 1fr) auto auto auto; padding: .3rem 0; }
+.dagger-bank-operation-label { color: #f4e6bd; }
+.dagger-bank-operation select { background: #302817; border: 1px solid #a88b4f; color: #f4e6bd; font: .8rem ui-monospace, monospace; padding: .3rem; }
+.dagger-bank-operation > button { font: .8rem Georgia, serif; min-width: 5.5rem; padding: .375rem .75rem; }
+.dagger-bank-operation :disabled { cursor: default; opacity: .5; }
+.dagger-bank-refusal { color: #f0b48c; font: italic .75rem Georgia, serif; grid-column: 1 / -1; }
+.dagger-bank-balances { background: rgb(12 13 10 / .74); border: 1px solid #7d6c45; display: grid; gap: 2px .5rem; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 0; max-height: 8rem; overflow-y: auto; padding: .375rem; }
 .dagger-bank-balances li { color: #c3b48b; font: .7rem ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dagger-bank-balances li.is-current { color: #fff0a7; font-weight: 700; }
-.dagger-bank > input, .dagger-bank > select { background: #302817; border: 1px solid #a88b4f; color: #f4e6bd; font: .8rem ui-monospace, monospace; padding: .375rem; }
-.dagger-bank-actions { display: grid; gap: .375rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.dagger-bank-actions button { font: .75rem Georgia, serif; min-width: 0; padding: .375rem .25rem; }
-.dagger-bank-actions :disabled, .dagger-bank > :disabled { cursor: default; opacity: .5; }
+.dagger-inventory-storage[hidden] { display: none; }
 
 /* Narrow windows stack the equipment above the pack and let the pack's cells shrink. */
 @media (max-width: 78rem) {
