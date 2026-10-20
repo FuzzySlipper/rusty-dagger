@@ -342,7 +342,8 @@ generated file Git would pick up):
   closures reference its images. `paper-doll-media` writes `media/character/paper-doll/`: every
   TEXTURE record a worn-item template reaches (by gender and body morphology, every variant, a cloak's
   interior, a one-handed weapon's right-hand record) in every dye it can be drawn in, with mask index
-  0xFF transparent and a separate mask image where a record has one.
+  0xFF transparent and a separate mask image where a record has one, plus every record of the male and
+  female artifact archives (TEXTURE.432/433), undyed, which artifacts are drawn from.
 - `content/worldrpg/payloads/daggerfall.imported.json` — the `daggerfall.imported` pack's payload:
   `catalogs`, `itemTemplateLedger`, `characterPresentation`, `locations`, `magic`, `mobiles`, `text`,
   `names`, `rumors`, `biographies`, `books`, `climate`, `politic`, `factions`, `terrain`,
