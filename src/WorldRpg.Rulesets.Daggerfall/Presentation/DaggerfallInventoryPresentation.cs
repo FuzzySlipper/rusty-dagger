@@ -11,12 +11,17 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed record InventoryItemPresentation(string Key, string Definition, string Label, string Quantity, int Weight, int Value,
     string Details, string? Icon, int? GridSlot, string[] EquippedSlots, string[] CompatibleSlots,
     ItemConditionPresentation? Condition = null, bool Identified = true, bool CanUse = false, bool CanEquip = false, string? EquipRefusal = null, bool CanUseMagic = false,
-    string Category = DaggerfallInventoryPresentation.OtherCategory, bool Stackable = false, string? DropRefusal = null)
+    string Category = DaggerfallInventoryPresentation.OtherCategory, bool Stackable = false, string? DropRefusal = null,
+    ItemStatPresentation[]? Stats = null, ItemComparisonPresentation? Comparison = null)
 {
     /// <summary>The weight in kilograms; <see cref="Weight"/> is in the template's quarter-kilogram units.</summary>
     internal double WeightKilograms => Weight * (double)DaggerfallEncumbrancePolicy.TemplateWeightToClassicUnits / DaggerfallEncumbrance.ClassicUnitsPerKilogram;
 }
 internal sealed record ItemConditionPresentation(int Current, int Maximum, int Percentage, bool Broken);
+/// <summary>One fighting figure of an item (its damage or its armour), with a score where higher is better.</summary>
+internal sealed record ItemStatPresentation(string Label, string Text, double Score);
+/// <summary>The equipped item a carried one would be compared with, and its figures.</summary>
+internal sealed record ItemComparisonPresentation(string Item, string Label, string Slot, ItemStatPresentation[] Stats);
 /// <summary>One equipment slot, with the group the screen lays it out in: armour, clothing, weapons or accessories.</summary>
 internal sealed record EquipmentSlotPresentation(string Id, string Label, string? ItemKey, string Group = "accessories");
 /// <summary>One tab of the pack: the category an item row names, and its player-facing name.</summary>
@@ -170,12 +175,49 @@ internal sealed class DaggerfallInventoryPresentation
             .OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
         moves.ReconcileLayout();
         int? region = bank is not null && currentRegion is not null ? currentRegion() : null;
-        return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}:{MetadataRevision}:{bank?.Revision}:{region}", items.Select(item =>
-            DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? moves.GridPosition(item.Key) : null, item.Slots)).ToArray(),
+        InventoryItemPresentation[] rows = Compare([.. items.Select(item =>
+            DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? moves.GridPosition(item.Key) : null, item.Slots))]);
+        return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}:{MetadataRevision}:{bank?.Revision}:{region}", rows,
             definitions.EquipmentSlots.Values.OrderBy(slot => SlotOrder(slot.Id.Value)).Select(slot => SlotPresentation(slot.Id.Value,
                 equipped.TryGet(new EquipmentSlotId(slot.Id.Value), out UniqueInventoryItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), Message,
             LastEquipmentChange is { } change ? new(change.Cue.ToString().ToLowerInvariant(), change.Timing.RightHandMilliseconds, change.Timing.LeftHandMilliseconds) : null,
             encumbrance?.Read(), currency?.Read(), ReadBank(), PackCategories);
+    }
+
+    /// <summary>
+    /// Gives each carried, unworn item with fighting figures the figures of what it would be
+    /// compared with: the item worn in the first slot that takes it and holds something.
+    /// </summary>
+    private InventoryItemPresentation[] Compare(InventoryItemPresentation[] rows)
+    {
+        Dictionary<string, InventoryItemPresentation> worn = [];
+        foreach (InventoryItemPresentation row in rows)
+            foreach (string slot in row.EquippedSlots) worn.TryAdd(slot, row);
+        return [.. rows.Select(row =>
+        {
+            if (row.EquippedSlots.Length != 0 || row.Stats is not { Length: > 0 }) return row;
+            string? slot = definitions.EquipmentSlots.Keys.Select(id => id.Value).OrderBy(SlotOrder)
+                .FirstOrDefault(id => row.CompatibleSlots.Contains(id) && worn.ContainsKey(id));
+            if (slot is null) return row;
+            InventoryItemPresentation equipped = worn[slot];
+            return row with { Comparison = new(equipped.Key, equipped.Label, SlotPresentation(slot, equipped.Key).Label, equipped.Stats ?? []) };
+        })];
+    }
+
+    /// <summary>An item's fighting figures: a weapon's damage with its material's modifier, armour's or a shield's rating.</summary>
+    private ItemStatPresentation[] Stats(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata)
+    {
+        string? material = metadata?.Material ?? definition.Weapon?.Material ?? definition.Armor?.Material;
+        if (definition.Weapon is { } weapon)
+        {
+            int modifier = DaggerfallFormulaPolicy.WeaponMaterialDamageModifier(material, DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers);
+            int low = weapon.MinimumDamage + modifier, high = weapon.MaximumDamage + modifier;
+            return [new("Damage", $"{low}–{high}", (low + high) / 2d)];
+        }
+        if (definition.Shield is { } shield) return [new("Armour", shield.Armor.ToString(CultureInfo.InvariantCulture), shield.Armor)];
+        if (definition.Armor is not null && material is not null && definitions.ArmorValuesByMaterial.TryGetValue(material, out int rating))
+            return [new("Armour", rating.ToString(CultureInfo.InvariantCulture), rating)];
+        return [];
     }
 
     /// <summary>
@@ -473,7 +515,8 @@ internal sealed class DaggerfallInventoryPresentation
             CanEquip: carried && equipRefusal is null, EquipRefusal: equipRefusal,
             CanUseMagic: carried && metadata is not null && (metadata.HasEnchantment || metadata.PotionRecipeKey is not null)
                 && itemUse?.CanUse(itemId, metadata) == true,
-            Category: Category(definition, metadata), Stackable: key.StartsWith("stack:", StringComparison.Ordinal), DropRefusal: dropRefusal);
+            Category: Category(definition, metadata), Stackable: key.StartsWith("stack:", StringComparison.Ordinal), DropRefusal: dropRefusal,
+            Stats: Stats(definition, metadata));
     }
 
     private DaggerfallItemInstanceMetadata? Metadata(string key, DaggerfallItemOwner? owner)

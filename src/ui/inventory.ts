@@ -109,7 +109,13 @@ export interface InventoryItem {
   readonly stackable?: boolean;
   /** The ruleset's reason this item cannot be dropped, when it cannot. */
   readonly dropRefusal?: string | null;
+  /** Its fighting figures (damage, armour), each with a score where higher is better. */
+  readonly stats?: readonly ItemStat[];
+  /** The worn item it would be compared with, when one is worn where it goes. */
+  readonly comparison?: { readonly item: string; readonly label: string; readonly slot: string; readonly stats: readonly ItemStat[] } | null;
 }
+
+export interface ItemStat { readonly label: string; readonly text: string; readonly score: number }
 
 export interface ItemCondition {
   readonly current: number;
@@ -843,6 +849,7 @@ function itemTooltip(item: InventoryItem, slotLabel: (id: string) => string): HT
     facts.append(dt, dd);
   };
   if (item.stackable) fact('Quantity', item.quantity);
+  for (const stat of item.stats ?? []) fact(stat.label, stat.text);
   fact('Weight', item.weightKilograms === undefined ? formatNumber(item.weight) : `${formatNumber(item.weightKilograms)} kg`);
   fact('Value', `${formatNumber(item.value)} gold`);
   if (item.equippedSlots.length > 0) fact('Worn', item.equippedSlots.map(slotLabel).join(', '));
@@ -861,6 +868,23 @@ function itemTooltip(item: InventoryItem, slotLabel: (id: string) => string): HT
     condition.classList.toggle('is-broken', item.condition.broken);
     condition.append(bar, text);
     parts.push(condition);
+  }
+  // Against what is worn where it goes: each shared figure with whether this one is better or worse.
+  if (item.comparison) {
+    const comparison = document.createElement('div');
+    comparison.className = 'dagger-inventory-tip-comparison';
+    const heading = document.createElement('p');
+    heading.textContent = `Worn (${item.comparison.slot}): ${item.comparison.label}`;
+    comparison.append(heading);
+    for (const worn of item.comparison.stats) {
+      const mine = item.stats?.find(stat => stat.label === worn.label);
+      const row = document.createElement('p');
+      const difference = mine === undefined ? 0 : Math.sign(mine.score - worn.score);
+      row.className = difference > 0 ? 'is-better' : difference < 0 ? 'is-worse' : 'is-same';
+      row.textContent = `${worn.label} ${worn.text}${mine === undefined ? '' : difference > 0 ? ' · this is better' : difference < 0 ? ' · this is worse' : ' · the same'}`;
+      comparison.append(row);
+    }
+    parts.push(comparison);
   }
   // Why a piece of equipment cannot be worn; an item no slot takes says nothing.
   if (item.equippedSlots.length === 0 && item.compatibleSlots.length > 0 && item.canEquip !== true && item.equipRefusal) parts.push(line('dagger-inventory-tip-warning', item.equipRefusal));

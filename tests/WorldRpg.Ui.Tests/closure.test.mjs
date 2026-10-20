@@ -145,6 +145,7 @@ const UNREAD_TRAVEL_INPUTS = 'The quote shows the ruleset-worded journey, its co
  */
 const UNREAD_HUD_FIELDS = new Map([
   ['hud.detectors[].contacts[].items[].definition', UNREAD_INTERNAL],
+  ['hud.inventory.items[].comparison.item', UNREAD_INTERNAL],
   ['hud.calendar.dayName', UNREAD_WORDED_TIME],
   ['hud.calendar.day', UNREAD_WORDED_TIME],
   ['hud.calendar.monthName', UNREAD_WORDED_TIME],
