@@ -33,6 +33,13 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   const bundle = document.createElement('label'); bundle.className = 'dagger-entry-bundle'; bundle.textContent = 'Game ';
   const bundleSelect = document.createElement('select'); bundleSelect.dataset.testid = 'entry-bundle'; bundle.append(bundleSelect); root.append(bundle);
   bundleSelect.addEventListener('change', () => send({ action: 'bundle-select', key: bundleSelect.value }));
+  // The game choice and the two buttons stack in one column at the foot of the screen, so the
+  // choice can never cover a button however tall the skin draws them.
+  const actions = document.createElement('div'); actions.className = 'dagger-entry-actions';
+  const buttons = document.createElement('div'); buttons.className = 'dagger-entry-buttons';
+  buttons.append(begin, create);
+  actions.append(bundle, buttons);
+  root.append(actions);
 
   let title = false;
   let mode: string | null = null;
