@@ -301,9 +301,13 @@ public sealed class DaggerfallInventoryPresentationTests
         using Fixture f = new(enforceItemCondition: true, resolveItemValues: true);
         f.Ui.UseItemCondition(new(f.Definitions, f.ItemInstances!, f.Moves));
         var row = f.Ui.Read().Items.Single(item => item.Key == f.Key(1001));
-        Assert.Contains("points of damage", row.Details);
-        Assert.Contains("Condition:", row.Details);
-        Assert.Contains("kilograms", row.Details);
+        // TEXT.RSC 1001 closes each line with a justify token, which the donor's label reads as a line end.
+        string[] lines = row.Details.Split('\n');
+        Assert.Equal(4, lines.Length);
+        Assert.EndsWith("points of damage", lines[1]);
+        Assert.StartsWith("Condition:", lines[2]);
+        Assert.StartsWith("Weight:", lines[3]);
+        Assert.EndsWith("kilograms", lines[3]);
         Assert.DoesNotContain("%", row.Details);
     }
 
