@@ -101,7 +101,8 @@
   cursor: var(--dagger-cursor-pointer);
   pointer-events: auto;
 }
-.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):is(:hover, :focus-visible):not(:disabled) {
+.dagger-hud:not(.keyed-navigation) button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):hover:not(:disabled),
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):focus-visible:not(:disabled) {
   border-image-source: var(--skin-stone-button-focus, none);
   background: var(--skin-button-face, #594521);
 }

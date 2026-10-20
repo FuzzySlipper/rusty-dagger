@@ -2543,6 +2543,24 @@ test('live banking dialogue emits bank-open with its actual revision', () => {
   } finally { f.dispose(); }
 });
 
+test('a conversation opens on its first topic, and keys hide the hover highlight until the pointer moves', () => {
+  const f = fixture();
+  try {
+    f.publish({ activation: { mode: 'talk', dialogue: { revision: 'd-1', targetLabel: 'Hrolf', greeting: 'Well met.', tone: 'normal', question: null, reply: null,
+      diagnostics: [], topics: [{ id: 'news', label: 'Any news?', group: 'talk' }], topicGroups: [{ id: 'talk', label: 'Ask about' }] } } });
+    assert.equal(document.activeElement.dataset.topic, 'news', 'The tone choice would take the arrows.');
+    const hud = f.root.querySelector('.dagger-hud') ?? f.root;
+    document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown', bubbles: true, cancelable: true }));
+    assert.equal(hud.classList.contains('keyed-navigation'), true);
+    document.dispatchEvent(new window.MouseEvent('pointermove', { bubbles: true, movementX: 0, movementY: 0 }));
+    assert.equal(hud.classList.contains('keyed-navigation'), true, 'A pointer event without movement is not the player moving the mouse.');
+    const moved = new window.MouseEvent('pointermove', { bubbles: true });
+    Object.defineProperty(moved, 'movementX', { value: 4 });
+    document.dispatchEvent(moved);
+    assert.equal(hud.classList.contains('keyed-navigation'), false);
+  } finally { f.dispose(); }
+});
+
 test('the conversation groups its topics under the published headings, keeps a short log, and summoning pays only after the confirm', () => {
   const f = fixture();
   try {
