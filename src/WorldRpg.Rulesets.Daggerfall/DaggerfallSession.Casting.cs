@@ -30,7 +30,10 @@ internal sealed partial class DaggerfallSession
         State.Character.KnownSpells.Select(key =>
         {
             int? cost = Casting.AvailableSpellCost(State.Actors.Player.DurableId, key);
-            return new DaggerfallKnownSpellView(key, State.Character.IsGrantedSpell(key) ? _definitions.Magic.Spells[key].Name.TrimStart('!') : _definitions.Magic.Spells[key].Name, cost ?? 0, cost is not null);
+            DaggerfallSpellDefinition spell = _definitions.Magic.Spells[key];
+            string school = spell.Effects.Count == 0 ? string.Empty : _definitions.Magic.RequireEffectCost(spell.Effects[0]).School;
+            return new DaggerfallKnownSpellView(key, State.Character.IsGrantedSpell(key) ? spell.Name.TrimStart('!') : spell.Name, cost ?? 0, cost is not null,
+                Math.Clamp(spell.Icon, 0, DaggerfallSpellConstruction.IconCount - 1), school);
         }).ToArray(),
         Casting.ReadyFor(State.Actors.Player.DurableId) is { Source: DaggerfallCastSource.Spell or DaggerfallCastSource.DungeonAction } ready ? ready.SpellKey : null,
         _spellResult, ReadSpellSale(), ReadSpellInformation(), ReadSpellMaker(), ReadPotionMaker(), ReadItemMaker(), ReadSummoning());
@@ -227,6 +230,8 @@ internal sealed partial class DaggerfallSession
         && float.IsFinite(value.Z) && value.LengthSquared() > .000001f;
 }
 
-internal sealed record DaggerfallKnownSpellView(string Key, string Name, int Cost, bool CanCast = true);
+/// <param name="Icon">The spell's index in the classic spell icon atlas.</param>
+/// <param name="School">The school of the spell's first effect, which the spellbook's tabs group by.</param>
+internal sealed record DaggerfallKnownSpellView(string Key, string Name, int Cost, bool CanCast = true, int Icon = 0, string School = "");
 internal sealed record DaggerfallSpellbookView(DaggerfallKnownSpellView[] Available, string? Ready, string Result,
     DaggerfallSpellSaleView? Sale = null, DaggerfallSpellInformation? Information = null, DaggerfallSpellMakerView? Maker = null, DaggerfallPotionMakerView? PotionMaker = null, DaggerfallItemMakerView? ItemMaker = null, DaggerfallSummoningView? Summoning = null);

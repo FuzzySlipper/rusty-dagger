@@ -55,7 +55,14 @@ internal sealed record DaggerfallTeleportAnchor(
     }
 }
 
-internal sealed record DaggerfallTeleportView(string Revision, bool AnchorSet);
+/// <summary>The teleport choice: set the anchor here, or recall to it once one is set.</summary>
+internal sealed record DaggerfallTeleportView(string Revision, bool AnchorSet)
+{
+    internal IReadOnlyList<DaggerfallTeleportOption> Options =>
+        [new("anchor", "Set anchor", true), new("recall", "Recall to anchor", AnchorSet)];
+}
+
+internal sealed record DaggerfallTeleportOption(string Id, string Label, bool Available);
 
 internal sealed partial class DaggerfallSession
 {

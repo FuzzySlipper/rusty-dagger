@@ -102,7 +102,11 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("options",builder.Array(identify.Options.Select(option=>builder.Object(("id",builder.String(option.Id)),("label",builder.String(option.Label)))).ToArray())))),
             ("spells",frame.Spells is null ? builder.Null() : builder.Object(
                 ("available",builder.Array(frame.Spells.Available.Select(spell=>builder.Object(("key",builder.String(spell.Key)),
-                    ("name",builder.String(spell.Name)),("cost",builder.Number(spell.Cost)),("canCast",builder.Boolean(spell.CanCast)))).ToArray())),
+                    ("name",builder.String(spell.Name)),("cost",builder.Number(spell.Cost)),("canCast",builder.Boolean(spell.CanCast)),
+                    ("icon",builder.Number(spell.Icon)),("school",builder.String(spell.School)))).ToArray())),
+                ("icons",SpellIcons(builder)),
+                ("schools",builder.Array(DaggerfallSpellConstruction.Schools.Select(school=>builder.Object(
+                    ("id",builder.String(school.Id)),("label",builder.String(school.Label)))).ToArray())),
                 ("ready",frame.Spells.Ready is null ? builder.Null() : builder.String(frame.Spells.Ready)),
                 ("result",builder.String(frame.Spells.Result)),
                 ("sale", frame.Spells.Sale is not { } sale ? builder.Null() : builder.Object(
@@ -211,7 +215,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         if (notebook is not null) fields = [.. fields, ("notebook", Notebook(builder, notebook))];
         if (frame.CreateItem is { } createItem) fields = [.. fields, ("createItem", builder.Object(("revision", builder.String(createItem.Revision)),
             ("options", builder.Array(createItem.Options.Select(option => builder.Object(("id", builder.String(option.Id)), ("label", builder.String(option.Label)))).ToArray()))))];
-        if (frame.Teleport is { } teleport) fields = [.. fields, ("teleport", builder.Object(("revision", builder.String(teleport.Revision)), ("anchorSet", builder.Boolean(teleport.AnchorSet))))];
+        if (frame.Teleport is { } teleport) fields = [.. fields, ("teleport", builder.Object(("revision", builder.String(teleport.Revision)),
+            ("options", builder.Array(teleport.Options.Select(option => builder.Object(("id", builder.String(option.Id)),
+                ("label", builder.String(option.Label)), ("available", builder.Boolean(option.Available)))).ToArray()))))];
         if (frame.Property is { } property) fields = [.. fields, ("property", Property(builder, property))];
         if (transport is not null) fields = [.. fields, ("transport", Transport(builder, transport))];
         fields = [.. fields, ("dungeonText", dungeonText is null ? builder.Null() : builder.Object(
@@ -430,8 +436,15 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     private static uint Options(UiValueBuilder builder, IReadOnlyList<string> labels) =>
         builder.Array(labels.Select((label, value) => builder.Object(("value", builder.Number(value)), ("label", builder.String(label)))).ToArray());
 
+    /// <summary>Where the spell icons are drawn from: the classic atlas, its row length and its icon count.</summary>
+    private static uint SpellIcons(UiValueBuilder builder) => builder.Object(
+        ("media", builder.String(DaggerfallSpellConstruction.IconAtlasMedia)),
+        ("columns", builder.Number(DaggerfallSpellConstruction.IconAtlasColumns)),
+        ("count", builder.Number(DaggerfallSpellConstruction.IconCount)));
+
     internal static uint SpellMaker(UiValueBuilder builder, DaggerfallSpellMakerView maker) => builder.Object(
         ("revision", builder.String(maker.Revision)), ("provider", builder.String(maker.Provider)),
+        ("icons", SpellIcons(builder)),
         ("limits", builder.Object(("nameLength", builder.Number(DaggerfallSpellConstruction.MaximumNameLength)),
             ("icons", builder.Number(DaggerfallSpellConstruction.IconCount)), ("effects", builder.Number(DaggerfallSpellConstruction.MaximumEffects)),
             ("duration", builder.Number(DaggerfallSpellConstruction.MaximumDuration)), ("chance", builder.Number(DaggerfallSpellConstruction.MaximumChance)),
@@ -689,6 +702,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("title", builder.String(value.Title)), ("items", builder.Array(value.Items.Select(item => Item(builder, item)).ToArray())),
         ("message", builder.String(value.Message)));
 
+    private static readonly (string Id, string Label)[] SkillGroups =
+        [("primary", "Primary skills"), ("major", "Major skills"), ("minor", "Minor skills"), ("miscellaneous", "Miscellaneous skills")];
+
     private static uint Character(UiValueBuilder builder, CharacterSheetPresentation value, bool creationAvailable, bool levelUpAvailable)
     {
         uint Stat(CharacterStatPresentation stat) => builder.Object(("id", builder.String(stat.Id)),
@@ -700,7 +716,14 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         uint identity = value.Identity is null ? builder.Null() : Identity(builder, value.Identity);
         return builder.Object(("name", builder.String(value.Name)),
             ("attributes", builder.Array(value.Attributes.Select(Stat).ToArray())),
-            ("skills", builder.Array(value.Skills.Select(Stat).ToArray())),
+            // Each skill with its career group and uses toward the next rise, and the groups in the order the sheet shows them.
+            ("skills", builder.Array(value.Skills.Select(skill => skill.Progress is not { } progress ? Stat(skill) : builder.Object(
+                ("id", builder.String(skill.Id)), ("label", builder.String(skill.Label)), ("value", builder.Number(skill.Value)),
+                ("permanent", builder.Number(skill.Permanent)), ("group", builder.String(progress.Group)),
+                ("uses", builder.Number(progress.Uses)), ("usesNeeded", builder.Number(progress.UsesNeeded)),
+                ("mastered", builder.Boolean(progress.Mastered)))).ToArray())),
+            ("skillGroups", builder.Array(SkillGroups.Select(group => builder.Object(
+                ("id", builder.String(group.Id)), ("label", builder.String(group.Label)))).ToArray())),
             ("resources", builder.Array(value.Resources.Select(resource => builder.Object(
                 ("id", builder.String(resource.Id)), ("label", builder.String(resource.Label)),
                 ("current", builder.Number(resource.Current)), ("maximum", builder.Number(resource.Maximum)))).ToArray())),

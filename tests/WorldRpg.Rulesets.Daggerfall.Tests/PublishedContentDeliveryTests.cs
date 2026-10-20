@@ -80,8 +80,8 @@ public sealed class PublishedContentDeliveryTests
         // bodies nor a catalog of them. Product-wide sky resources have their own manifest and group below.
         Assert.DoesNotContain(GeneratedContentFiles(content), path => path.StartsWith("worldrpg/media/audio/", StringComparison.Ordinal));
         // Includes one TEXTURE.205 inventory icon for each of the 20 classic potion recipes and the 60
-        // images of the authored UI kit.
-        Assert.Equal(224, listed.Count);
+        // images of the authored UI kit, and the spell icon atlas.
+        Assert.Equal(225, listed.Count);
 
         // The score is published by its own command into its own group, so it carries its own generated
         // index and the classic index above does not account for it.
@@ -485,7 +485,7 @@ public sealed class PublishedContentDeliveryTests
         // sky group is validated above and does not belong in this count. The 20 classic potion recipes
         // each publish their TEXTURE.205 inventory icon.
         Assert.DoesNotContain(identified.Keys, id => id.StartsWith("audio.", StringComparison.Ordinal));
-        Assert.Equal(224, identified.Count);
+        Assert.Equal(225, identified.Count);
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
@@ -536,7 +536,7 @@ public sealed class PublishedContentDeliveryTests
         DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(content, inputs.ClassicPresentation);
         DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(content, castle.ClassicPresentation);
 
-        Assert.Equal(224, media.Paths.Count);
+        Assert.Equal(225, media.Paths.Count);
         JsonElement inventory = JsonDocument.Parse(content.ReadBytes(DaggerfallUiArt.InventoryPath).ToArray()).RootElement;
         Dictionary<string, string> published = inventory.GetProperty("artifacts").EnumerateArray()
             .Where(artifact => artifact.TryGetProperty("mediaId", out _))
@@ -629,7 +629,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(
             [
                 "bank", "book", "characterGeneration", "characterSheet", "death", "guild", "hudChrome", "hudVitalFatigue",
-                "hudVitalHealth", "hudVitalMagicka", "inventory", "merchant", "pick", "prison", "rest", "startMenu", "title",
+                "hudVitalHealth", "hudVitalMagicka", "inventory", "merchant", "pick", "prison", "rest", "spellIcons", "startMenu", "title",
             ],
             slots.Keys.OrderBy(name => name, StringComparer.Ordinal));
 

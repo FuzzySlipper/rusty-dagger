@@ -186,6 +186,18 @@ spellmaker and potion maker draw every field from published limits (the spellmak
 `limits`, the potion maker's ingredient count), and rest and lodging durations are
 steppers bounded by the ruleset's maximums.
 
+The spellbook puts school tabs (the ruleset's `schools`) over the known spells, each row its
+icon, name and cost; choosing a row describes the spell beside the list, with Set active,
+Cast, Move up and down, and Forget (confirmed). Spell icons are cells of one atlas the
+ruleset names (`icons`: its media, row length and count), drawn by `src/ui/spell-icon.ts`
+for the spellbook and the spellmaker alike, and the recast and abort keys are read from the
+bound controls. Magic items list each usable item with its icon, charges (its condition)
+and description. The character sheet groups skills under the ruleset's `skillGroups`, each
+with a bar of its uses toward the next rise; affiliations and legal standing are rows with
+their supporting facts; worn equipment shows its wear and whether it is identified. The
+spell choices (create item, identify, teleport, dispel) draw every option, and whether it
+is open, from the ruleset, and each takes Escape or Back as its Cancel.
+
 The quantity stepper (`src/ui/stepper.ts`) is the shared bounded amount: −
 and + beside a number field, with its limits from the projection. The
 keyboard's and controller's left and right step it.

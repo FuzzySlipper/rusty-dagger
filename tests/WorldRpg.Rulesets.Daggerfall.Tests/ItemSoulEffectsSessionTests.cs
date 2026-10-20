@@ -2,7 +2,9 @@ using System.Text.Json;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using Rusty.Engine;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -91,6 +93,19 @@ public sealed class ItemSoulEffectsSessionTests
         public void Hit(TryHitEvent hit) { hit.Hit = true; hit.Chance = 100; hit.Roll = 1; }
         public void Damage(DamageEvent damage) { damage.Damage = 1000; }
     }
+    [Fact]
+    public void Cancelling_create_item_makes_nothing_and_moves_to_the_next_pending_choice()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
+        Create(s, "first"); Create(s, "second");
+        s.CancelCreateItem("stale");
+        Assert.Equal("first", s.CreateItemView!.Revision);
+        s.Update(new ProductUpdate(OuterUpdate(3), [Ui(JsonSerializer.Serialize(new { action = "create-item-cancel", revision = "first" }))]));
+        Assert.Equal("Create Item cancelled.", s.Presentation.LastOutcome);
+        Assert.Equal("second", s.CreateItemView!.Revision);
+        Assert.DoesNotContain(s.State.ItemInstances.UniqueItems, value => value.Value.Conjuration is not null);
+    }
+
     [Fact]
     public void Real_casting_pays_once_and_keeps_each_mandatory_selection_in_the_current_save()
     {

@@ -111,3 +111,13 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
     dispose(): void { root.removeEventListener('mousedown', pointer); root.replaceChildren(); },
   };
 }
+
+/** A bound key as the player reads it: `KeyQ` is Q, `Digit1` is 1 and `ShiftLeft` is Left Shift. */
+export function keyLabel(code: string): string {
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit\d$/.test(code)) return code.slice(5);
+  if (code === 'Primary') return 'Left click';
+  const side = /^(Shift|Control|Alt|Meta)(Left|Right)$/.exec(code);
+  if (side) return `${side[2]} ${side[1] === 'Control' ? 'Ctrl' : side[1]}`;
+  return code;
+}

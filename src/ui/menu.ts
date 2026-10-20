@@ -1,4 +1,5 @@
 import { mountLiveDebugPanel, type LiveDebugPanelMount } from '@rusty-engine/live-debug';
+import { image } from './art.js';
 import { mountCharacter, isCharacterProjection } from './character.js';
 import type { ConfirmQuestion } from './confirm.js';
 import { mountControls } from './controls.js';
@@ -372,7 +373,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     },
     captureKey(event) { if (activePanel === 'settings') controlsView.captureKey(event); },
     update(value, dead, spellbook, diagnosticText) {
-      renderSpells(spellsRoot, spellbook);
+      renderSpells(spellsRoot, spellbook, value.controls, send);
       inventorySuppressed = value.character?.identity?.racialOverride?.suppressInventory === true;
       for (const control of shell.querySelectorAll<HTMLButtonElement>('[data-action="inventory"]')) control.disabled = inventorySuppressed;
       if (inventorySuppressed && activePanel === 'inventory') showHome();
@@ -421,17 +422,35 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       })));
       const magic = value.inventory?.items.filter(item => item.canUseMagic) ?? [];
       const inventoryRevision = value.inventory?.revision;
-      redraw(magicItemsRoot, JSON.stringify([inventoryRevision, magic]), () => {
-        magicItemsRoot.replaceChildren();
+      // Each usable magic item or potion as one row: its icon, name, remaining charges (its condition)
+      // and description. Choosing a row uses it and closes the menu, as the classic list does.
+      redraw(magicItemsRoot, JSON.stringify([inventoryRevision, magic, magic.map(item => image(item.icon) !== null)]), () => {
+        const list = document.createElement('ul'); list.className = 'dagger-magic-item-list';
         for (const item of magic) {
-          const control = button(item.label);
+          const entry = document.createElement('li');
+          const control = document.createElement('button'); control.type = 'button'; control.className = 'dagger-magic-item';
+          control.dataset.magicItem = item.key; control.setAttribute('aria-label', `Use ${item.label}`);
+          const picture = document.createElement('span'); picture.className = 'dagger-slot dagger-magic-item-icon';
+          const source = image(item.icon);
+          if (source !== null) { const icon = document.createElement('img'); icon.src = source; icon.alt = ''; icon.draggable = false; picture.append(icon); }
+          const text = document.createElement('span'); text.className = 'dagger-magic-item-text';
+          const name = document.createElement('strong'); name.textContent = item.label;
+          const charges = document.createElement('span'); charges.className = 'dagger-magic-item-charges';
+          charges.textContent = item.condition === null || item.condition.maximum <= 1 ? (item.stackable ? `× ${item.quantity}` : '')
+            : item.condition.broken ? 'No charges left' : `Charges ${item.condition.current} / ${item.condition.maximum}`;
+          // The description's first line repeats the name, so the row shows what follows it.
+          const description = document.createElement('span'); description.className = 'dagger-magic-item-details';
+          description.textContent = item.details.split('\n').slice(1).filter(line => line.trim() !== '').join(' · ');
+          text.append(name, charges, description);
+          control.append(picture, text);
           control.addEventListener('click', () => {
             send({ action: 'inventory-use', revision: inventoryRevision, item: item.key });
             closeMenu();
           });
-          magicItemsRoot.append(control);
+          entry.append(control); list.append(entry);
         }
-        if (!magicItemsRoot.childElementCount) magicItemsRoot.textContent = 'No usable magic items or potions.';
+        if (magic.length === 0) { const empty = document.createElement('p'); empty.textContent = 'No usable magic items or potions.'; magicItemsRoot.replaceChildren(empty); }
+        else magicItemsRoot.replaceChildren(list);
       });
       if (value.controls) controlsView.update(value.controls, host.uiScale());
       if (value.activation) activationMode.value = value.activation.mode;

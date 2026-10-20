@@ -17,13 +17,13 @@ public sealed class Arena2ClassicMediaPublicationTests
         Arena2ClassicMediaPublication first = Arena2ClassicMediaPublication.Create(inputs);
         Arena2ClassicMediaPublication second = Arena2ClassicMediaPublication.Create(inputs);
 
-        // Five service screens and their donor companions are thirteen more artifacts and resources:
-        // naming an image admits it.
-        Assert.Equal(97 + first.Audio.Count, first.Artifacts.Count);
+        // Five service screens and their donor companions are thirteen more artifacts and resources, and
+        // the spell icon atlas one more: naming an image admits it.
+        Assert.Equal(98 + first.Audio.Count, first.Artifacts.Count);
         Assert.Equal(first.Artifacts.Count, first.MediaManifest.Resources.Count);
         Assert.Empty(first.MapMedia);
-        // Thirteen more admitted source files, because those images are read as well as named.
-        Assert.Equal(53, first.Sources.Count);
+        // Fourteen more admitted source files, because those images are read as well as named.
+        Assert.Equal(54, first.Sources.Count);
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath).OrderBy(path => path, StringComparer.Ordinal), first.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath), second.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.All(first.Artifacts.Zip(second.Artifacts), pair => Assert.Equal(pair.First.Bytes.ToArray(), pair.Second.Bytes.ToArray()));
@@ -101,7 +101,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal(DaggerfallSoundNames.ForName("EnemyOrcAttack"), DaggerfallSoundNames.ForName("EnemyOrcShamanAttack"));
 // Six windows, one mode screen, and the service panels the donor windows read, each part of a
         // screen the donor composes from several images published under its own media identity.
-        Assert.Equal(25, first.UiImages.Count);
+        Assert.Equal(26, first.UiImages.Count);
         Assert.Equal(51, first.InventoryIcons.Count);
         Assert.Equal(15, first.InventoryIcons.Single(icon => icon.ItemId == "potion.4975678").SourceRecordOrdinal);
         Assert.Equal(240, first.Font.Glyphs.Count);
@@ -230,7 +230,7 @@ public sealed class Arena2ClassicMediaPublicationTests
                 ClassicUiSlot.HudChrome, ClassicUiSlot.HudVitalHealth, ClassicUiSlot.HudVitalFatigue,
                 ClassicUiSlot.HudVitalMagicka, ClassicUiSlot.Inventory, ClassicUiSlot.CharacterSheet,
                 ClassicUiSlot.Book, ClassicUiSlot.Rest, ClassicUiSlot.Merchant, ClassicUiSlot.Guild,
-                ClassicUiSlot.Bank, ClassicUiSlot.Death,
+                ClassicUiSlot.Bank, ClassicUiSlot.Death, ClassicUiSlot.SpellIcons,
                 ClassicUiSlot.CharacterGeneration, ClassicUiSlot.Pick, ClassicUiSlot.StartMenu, ClassicUiSlot.Prison, ClassicUiSlot.Title,
             ],
             first.UiImages.Select(image => image.Slot).Distinct().OrderBy(slot => slot));
@@ -502,12 +502,12 @@ public sealed class Arena2ClassicMediaPublicationTests
             Read(arena2, "CHGN00I0.IMG"), Read(arena2, "PICK02I0.IMG"), Read(arena2, "PICK03I0.IMG"), Read(arena2, "PRIS00I0.IMG"), Read(arena2, "TITL00I0.IMG"),
             Read(arena2, "BOOK00I0.IMG"), Read(arena2, "REST00I0.IMG"), Read(arena2, "SHOP00I0.IMG"), Read(arena2, "GILD00I0.IMG"), Read(arena2, "BANK00I0.IMG"),
             Read(arena2, "REST01I0.IMG"), Read(arena2, "REST02I0.IMG"), Read(arena2, "INVE08I0.IMG"), Read(arena2, "INVE10I0.IMG"), Read(arena2, "INVE11I0.IMG"),
-            Read(arena2, "INVE12I0.IMG"), Read(arena2, "INVE14I0.IMG"), Read(arena2, "GILD01I0.IMG"),
+            Read(arena2, "INVE12I0.IMG"), Read(arena2, "INVE14I0.IMG"), Read(arena2, "GILD01I0.IMG"), Read(arena2, "ICON00I0.IMG"),
             Read(arena2, "TEXTURE.207"), Read(arena2, "TEXTURE.216"), Read(arena2, "TEXTURE.234"), Read(arena2, "TEXTURE.245"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), Read(arena2, "FONT0000.FNT"), Read(arena2, "FONT0001.FNT"), Read(arena2, "FONT0002.FNT"), Read(arena2, "FONT0004.FNT"), ReadCorpusMapMedia(arena2), Read(arena2, "FMAP_PAL.COL"), Read(arena2, "MAP.PAL"), [], Read(arena2, "TEXTURE.205")));
 
         Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
-        Assert.Equal(96 + 68 + publication.Audio.Count, publication.Artifacts.Count);
-        Assert.Equal(51 + 70 + 2, publication.Sources.Count);
+        Assert.Equal(97 + 68 + publication.Audio.Count, publication.Artifacts.Count);
+        Assert.Equal(52 + 70 + 2, publication.Sources.Count);
         AssertPng(Artifact(publication, "media/combat/weapon-dagger-steel-atlas.png"), 3840, 600);
         Assert.All(publication.Audio, clip => Assert.Equal(11_025U, clip.SampleRate));
         // All twelve archives decode: the two spares and the werecreature form carry the same
@@ -640,6 +640,8 @@ public sealed class Arena2ClassicMediaPublicationTests
         CreateHeaderedImage(14),
         CreateHeaderedImage(15),
         CreateHeaderedImage(16),
+        // The spell icon atlas: a headerless 320x64 canvas of 16-pixel icons.
+        new byte[320 * 64],
         CreateTextureArchive(17),
         CreateTextureArchive(2),
         CreateTextureArchive(27),

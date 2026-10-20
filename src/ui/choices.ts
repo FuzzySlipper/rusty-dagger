@@ -6,12 +6,12 @@ import { redraw } from './redraw.js';
 /**
  * The choices the product asks the player to make over the world: a court's verdict and a spell
  * that needs a target (create item, identify, teleport, dispel). Each is a centred dialog; the
- * court and create item need an answer, and the others take Escape and Back as their Cancel.
+ * court needs an answer, and the spell choices take Escape and Back as their Cancel. Every option,
+ * and whether it is open, comes from the ruleset.
  */
 export interface Choices {
   readonly legal: HTMLElement;
-  readonly createItem: HTMLElement;
-  /** The spell choices that have a Cancel. */
+  /** The spell choices, each with a Cancel. */
   readonly cancellable: readonly HTMLElement[];
   update(value: DaggerHud): void;
   refreshArt(): void;
@@ -60,7 +60,7 @@ export function mountChoices(shell: HTMLElement, before: HTMLElement, send: Send
   };
 
   return {
-    legal, createItem, cancellable: [identify, teleport, dispel],
+    legal, cancellable: [createItem, identify, teleport, dispel],
     update(value) {
       last = value;
       drawLegal(value.legal ?? null);
@@ -75,6 +75,7 @@ export function mountChoices(shell: HTMLElement, before: HTMLElement, send: Send
           control.addEventListener('click', () => send({ action: 'create-item-select', revision: createChoice.revision, key: option.id }));
           createItem.append(control);
         }
+        createItem.append(cancel(() => send({ action: 'create-item-cancel', revision: createChoice.revision })));
       });
       const identifyChoice = value.identify ?? null;
       identify.hidden = identifyChoice === null;
@@ -85,7 +86,7 @@ export function mountChoices(shell: HTMLElement, before: HTMLElement, send: Send
           ? { action: 'identify-select', revision: identifyChoice.revision, key }
           : { action: 'identify-cancel', revision: identifyChoice.revision });
         identify.append(heading(`Identify (${identifyChoice.cost} magicka per selection)`));
-        for (const option of [...identifyChoice.options, ...(identifyChoice.options.length ? [{ id: 'all', label: 'All unidentified items' }] : [])]) {
+        for (const option of identifyChoice.options) {
           const control = button(option.label); control.addEventListener('click', () => choose(option.id)); identify.append(control);
         }
         identify.append(cancel(() => choose()));
@@ -97,9 +98,11 @@ export function mountChoices(shell: HTMLElement, before: HTMLElement, send: Send
         if (teleportChoice === null) return;
         const choose = (key: string): void => send({ action: 'teleport-select', revision: teleportChoice.revision, key });
         teleport.append(heading('Teleport'));
-        const anchor = button('Set anchor'); anchor.addEventListener('click', () => choose('anchor'));
-        const recall = button('Recall to anchor'); recall.disabled = !teleportChoice.anchorSet; recall.addEventListener('click', () => choose('recall'));
-        teleport.append(anchor, recall, cancel(() => choose('cancel')));
+        for (const option of teleportChoice.options) {
+          const control = button(option.label); control.disabled = !option.available; control.addEventListener('click', () => choose(option.id));
+          teleport.append(control);
+        }
+        teleport.append(cancel(() => choose('cancel')));
       });
       const dispelChoice = value.dispel ?? null;
       dispel.hidden = dispelChoice === null;

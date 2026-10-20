@@ -54,14 +54,14 @@ public sealed class SocialMagicSessionTests
     {
         using Fixture f=new();var s=f.Session;Fund(s);var first=Stock(s);var second=Stock(s);
         Assert.Equal(DaggerfallCastOutcome.Applied,Cast(s,Spell(40,-1,chance),1));
-        var view=s.IdentifyView!;Assert.Equal(2,view.Options.Count);Assert.True(view.Cost>=5);
+        var view=s.IdentifyView!;Assert.Equal(3,view.Options.Count);Assert.Equal(new DaggerfallIdentifyOption("all","All unidentified items"),view.Options[^1]);Assert.True(view.Cost>=5);
         var save=s.CaptureSave();using var restored=f.Restore(save);Assert.Equal(view.Revision,restored.IdentifyView!.Revision);Assert.Equal(view.Cost,restored.IdentifyView.Cost);Assert.Equal(view.Options,restored.IdentifyView.Options);
         double before=Magicka(restored).Current;
         restored.ChooseIdentify("stale","all");Assert.Equal(before,Magicka(restored).Current);
         f.Submit(restored,new{action="identify-select",revision=view.Revision,key="all"});Assert.Equal(before-view.Cost,Magicka(restored).Current);
         Assert.Equal(succeeds,restored.State.ItemInstances.RequireUnique(Id(s,first)).Identified);
         Assert.Equal(succeeds,restored.State.ItemInstances.RequireUnique(Id(s,second)).Identified);
-        Assert.Equal(succeeds?0:2,restored.IdentifyView!.Options.Count);
+        Assert.Equal(succeeds?0:3,restored.IdentifyView!.Options.Count);
         Assert.Equal(1,DaggerfallSavePayload.Read(restored.CaptureSave()).PendingIdentify!.Attempts);
         using var again=f.Restore(restored.CaptureSave());Assert.Equal(succeeds,again.State.ItemInstances.RequireUnique(Id(s,first)).Identified);
         again.ChooseIdentify(view.Revision,null);Assert.Null(again.IdentifyView);

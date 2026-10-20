@@ -39,6 +39,13 @@ internal enum DaggerfallSkillUseCadence { PerAcceptedOperation, PerGameMinute }
 /// <summary>The current classic skill-sum progress toward the next committed player level.</summary>
 internal sealed record DaggerfallLevelProgress(int CurrentSkillSum, int NextLevelSkillSum, bool PendingLevelUp);
 
+/// <summary>One skill's place in advancement: its career group and its uses toward the next rise.</summary>
+/// <param name="Group">primary, major, minor or miscellaneous, as the career assigns it.</param>
+/// <param name="Uses">The tally the next check reads, already scaled by reflexes.</param>
+/// <param name="UsesNeeded">The tally at which the next check raises the skill.</param>
+/// <param name="Mastered">Whether the skill can rise no further by use.</param>
+internal sealed record DaggerfallSkillProgress(string Group, int Uses, int UsesNeeded, bool Mastered);
+
 /// <summary>Typed classic attribution: fixed amount, admission outcome, and only the cadence required by its source.</summary>
 internal sealed record DaggerfallSkillUsePolicy(
     DaggerfallSkillUseReason Reason,
@@ -148,6 +155,23 @@ internal sealed class DaggerfallSkillUseReactions
     {
         int next = DaggerfallFormulaPolicy.ClassicLevelSkillSumThreshold(_startingLevelUpSkillSum, checked(_progression.Level + 1));
         return new DaggerfallLevelProgress(CurrentLevelUpSkillSum, next, PendingLevelUp);
+    }
+
+    /// <summary>
+    /// Reads where a skill stands in advancement, by the same tally, threshold and cap the periodic
+    /// check applies, so the sheet shows the progress that check will act on.
+    /// </summary>
+    internal DaggerfallSkillProgress ReadSkillProgress(string skill)
+    {
+        DaggerfallStatId id = RequireSkill(skill);
+        DaggerfallCareerDefinition career = Career;
+        string group = career.PrimarySkills.Contains(skill) ? "primary" : career.MajorSkills.Contains(skill) ? "major"
+            : career.MinorSkills.Contains(skill) ? "minor" : "miscellaneous";
+        int permanent = Permanent(id);
+        int needed = DaggerfallFormulaPolicy.CalculateSkillUsesForAdvancement(permanent,
+            DaggerfallFormulaPolicy.SkillAdvancementMultiplier(skill), career.AdvancementMultiplier, _progression.Level);
+        return new DaggerfallSkillProgress(group, ScaleUsesForReflexes(_progression.SkillUses.GetValueOrDefault(skill)), needed,
+            permanent >= MaximumSkillValue || (permanent >= MasteryProtectionStartsAt && AlreadyMasteredPrimarySkill()));
     }
 
     /// <summary>Reads a current permanent player skill through the progression owner's vocabulary.</summary>

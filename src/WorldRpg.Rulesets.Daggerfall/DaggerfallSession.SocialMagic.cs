@@ -25,10 +25,17 @@ internal sealed partial class DaggerfallSession
         && (metadata.MaximumCondition == 0 || metadata.CurrentCondition > 0)
         && State.Inventory.Read().UniqueItems.Any(item => State.Inventory.GetDurableItemId(item.Entity).Value == source);
 
+    /// <summary>The identify choice: each unidentified magic item, then one choice for all of them (key <c>all</c>) when there are any.</summary>
     internal DaggerfallIdentifyView? IdentifyView => CurrentIdentifyRequest is { } request
-        ? new(request.Instance,request.Cost,IdentifyCandidates().Select(item=>new DaggerfallIdentifyOption(
+        ? new(request.Instance,request.Cost,IdentifyOptions()) : null;
+
+    private DaggerfallIdentifyOption[] IdentifyOptions()
+    {
+        DaggerfallIdentifyOption[] items=[.. IdentifyCandidates().Select(item=>new DaggerfallIdentifyOption(
             State.Inventory.GetDurableItemId(item.Entity).Value.ToString(CultureInfo.InvariantCulture),
-            _inventoryUi.DescribeItem($"unique:{item.Entity.Value}",item.Definition.Value,1,owner:DaggerfallItemOwner.Player).Label)).ToArray()) : null;
+            _inventoryUi.DescribeItem($"unique:{item.Entity.Value}",item.Definition.Value,1,owner:DaggerfallItemOwner.Player).Label))];
+        return items.Length==0 ? items : [.. items,new("all","All unidentified items")];
+    }
 
     private UniqueInventoryItem[] IdentifyCandidates()=>State.Inventory.Read().UniqueItems
         .Where(item=>State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(item.Entity).Value)
