@@ -33,7 +33,12 @@ internal sealed record DaggerfallMerchantItemView(
     bool CanBuy,
     bool CanSell,
     ulong? RepairCost = null,
-    ulong? IdentifyCost = null);
+    ulong? IdentifyCost = null,
+    string IconKey = "")
+{
+    /// <summary>The published icon, resolved from <see cref="IconKey"/> by the inventory presentation.</summary>
+    internal string? Icon { get; init; }
+}
 
 internal sealed record DaggerfallRepairView(
     string RequestId,
@@ -607,7 +612,8 @@ internal sealed class DaggerfallMerchantService
                 new(definition, metadata, 1));
             rows.Add(new("stack:" + stack.Id.Value, definition.Id.Value, ItemLabel(definition, metadata), stack.Quantity, price,
                 metadata.CurrentCondition, metadata.MaximumCondition, metadata.Identified, metadata.Stolen,
-                buying, !buying && CanSellToProvider(binding.Context, metadata)));
+                buying, !buying && CanSellToProvider(binding.Context, metadata),
+                IconKey: Presentation.DaggerfallInventoryPresentation.IconKey(definition, metadata)));
         }
         foreach (EngineUniqueInventoryItem item in inventory.UniqueItems.OrderBy(value => value.Entity.Value))
         {
@@ -619,7 +625,7 @@ internal sealed class DaggerfallMerchantService
             rows.Add(new("unique:" + id, definition.Id.Value, ItemLabel(definition, metadata), 1, price,
                 metadata.CurrentCondition, metadata.MaximumCondition, metadata.Identified, metadata.Stolen,
                 buying, !buying && CanSellToProvider(binding.Context, metadata),
-                Repair(definition, metadata), Identify(definition, metadata)));
+                Repair(definition, metadata), Identify(definition, metadata), Presentation.DaggerfallInventoryPresentation.IconKey(definition, metadata)));
         }
         return [.. rows];
     }

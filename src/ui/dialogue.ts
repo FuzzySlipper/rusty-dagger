@@ -302,7 +302,7 @@ function mountShop(root: HTMLElement, send: Send, ask: (question: ConfirmQuestio
       seller && item.maximumCondition > 0 && item.currentCondition < item.maximumCondition
         ? `condition ${item.currentCondition}/${item.maximumCondition}` : null,
       item.identified ? null : 'unidentified', item.stolen ? 'stolen' : null].filter((part): part is string => part !== null).join(' · ');
-    return { key: item.key, label: item.label, icon: null, quantity: item.maximumQuantity > 1 ? String(item.quantity) : null,
+    return { key: item.key, label: item.label, icon: item.icon ?? null, quantity: item.maximumQuantity > 1 ? String(item.quantity) : null,
       maximumQuantity: item.maximumQuantity, facts, unitPrice: commands.some(command => command.takesAmount) ? unit : undefined, commands };
   };
 
