@@ -132,6 +132,10 @@
 .dagger-inventory-tip dl { display: grid; gap: .1rem .6rem; grid-template-columns: auto 1fr; margin: 0; }
 .dagger-inventory-tip dt { color: #6b4a24; }
 .dagger-inventory-tip dd { margin: 0; }
+.dagger-inventory-tip-comparison { border-top: 1px solid rgb(107 74 36 / .4); display: grid; gap: .1rem; padding-top: .3rem; }
+.dagger-inventory-tip-comparison > p:first-child { color: #6b4a24; }
+.dagger-inventory-tip-comparison .is-better { color: #2f6a1f; }
+.dagger-inventory-tip-comparison .is-worse { color: #8a2a1c; }
 .dagger-inventory-tip-warning { color: #8a2a1c; font-style: italic; }
 .dagger-inventory-tip-condition { align-items: center; display: flex; gap: .5rem; }
 .dagger-inventory-tip-condition .dagger-inventory-condition-bar { flex: 0 0 5rem; }

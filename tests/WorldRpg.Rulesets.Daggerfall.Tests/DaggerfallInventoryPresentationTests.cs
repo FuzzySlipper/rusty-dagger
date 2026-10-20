@@ -66,6 +66,27 @@ public sealed class DaggerfallInventoryPresentationTests
     }
 
     [Fact]
+    public void A_carried_weapon_publishes_its_damage_and_the_worn_weapon_it_would_replace()
+    {
+        using Fixture f = new();
+        InventoryPresentation inventory = f.Ui.Read();
+        InventoryItemPresentation sword = Item(inventory, f.Key(1001));
+        InventoryItemPresentation dagger = Item(inventory, f.Key(1002));
+        DaggerfallWeaponDefinition daggerWeapon = f.Definitions.RequireItem(new DaggerfallItemId("iron-dagger")).Weapon!;
+        ItemStatPresentation damage = Assert.Single(dagger.Stats!);
+        Assert.Equal("Damage", damage.Label);
+        Assert.Equal((daggerWeapon.MinimumDamage + daggerWeapon.MaximumDamage) / 2d
+            + DaggerfallFormulaPolicy.WeaponMaterialDamageModifier("iron", DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers), damage.Score);
+        // The sword is worn in the right hand, so the dagger is compared with it; the worn sword itself carries no comparison.
+        ItemComparisonPresentation comparison = Assert.IsType<ItemComparisonPresentation>(dagger.Comparison);
+        Assert.Equal((sword.Key, sword.Label, "Right hand"), (comparison.Item, comparison.Label, comparison.Slot));
+        Assert.Equal(sword.Stats, comparison.Stats);
+        Assert.Null(sword.Comparison);
+        Assert.Null(Item(inventory, f.StackKey("gold-piece")).Comparison);
+        Assert.Empty(Item(inventory, f.StackKey("gold-piece")).Stats!);
+    }
+
+    [Fact]
     public void Equipment_slots_publish_the_group_and_name_the_screen_lays_them_out_by()
     {
         using Fixture f = new();

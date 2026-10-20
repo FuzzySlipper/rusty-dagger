@@ -635,7 +635,14 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("canUse", builder.Boolean(item.CanUse)), ("canUseMagic", builder.Boolean(item.CanUseMagic)), ("canEquip", builder.Boolean(item.CanEquip)),
         ("equipRefusal", item.EquipRefusal is null ? builder.Null() : builder.String(item.EquipRefusal)),
         ("category", builder.String(item.Category)), ("stackable", builder.Boolean(item.Stackable)),
-        ("dropRefusal", item.DropRefusal is null ? builder.Null() : builder.String(item.DropRefusal)));
+        ("dropRefusal", item.DropRefusal is null ? builder.Null() : builder.String(item.DropRefusal)),
+        ("stats", builder.Array((item.Stats ?? []).Select(stat => Stat(builder, stat)).ToArray())),
+        ("comparison", item.Comparison is not { } comparison ? builder.Null() : builder.Object(
+            ("item", builder.String(comparison.Item)), ("label", builder.String(comparison.Label)), ("slot", builder.String(comparison.Slot)),
+            ("stats", builder.Array(comparison.Stats.Select(stat => Stat(builder, stat)).ToArray())))));
+
+    private static uint Stat(UiValueBuilder builder, ItemStatPresentation stat) => builder.Object(
+        ("label", builder.String(stat.Label)), ("text", builder.String(stat.Text)), ("score", builder.Number(stat.Score)));
 
     private static uint Loot(UiValueBuilder builder, LootPresentation value) => builder.Object(
         ("container", builder.String(value.Container)), ("revision", builder.String(value.Revision)),

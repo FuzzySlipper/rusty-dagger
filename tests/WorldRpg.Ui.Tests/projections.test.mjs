@@ -291,7 +291,9 @@ test('an item tooltip shows published labels and values without internal templat
       revision: '1', message: '', equipmentChange: null, slots: [],
       items: [{ key: 'unique:7', definition: 'template-116-steel', label: 'Steel Broadsword', quantity: '1', weight: 12, weightKilograms: 3, value: 25,
         details: 'A steel blade.', icon: null, condition: { current: 30, maximum: 60, percentage: 50, broken: false }, identified: false,
-        gridSlot: 0, equippedSlots: [], compatibleSlots: ['right-hand'], canEquip: false, equipRefusal: 'Your class cannot use long blade weapons.' }],
+        gridSlot: 0, equippedSlots: [], compatibleSlots: ['right-hand'], canEquip: false, equipRefusal: 'Your class cannot use long blade weapons.',
+        stats: [{ label: 'Damage', text: '2–16', score: 9 }],
+        comparison: { item: 'unique:3', label: 'Iron Dagger', slot: 'Right hand', stats: [{ label: 'Damage', text: '1–6', score: 3.5 }] } }],
     } });
     const item = f.root.querySelector('[data-inventory-item="unique:7"]');
     item.dispatchEvent(new window.Event('focusin', { bubbles: true }));
@@ -302,6 +304,9 @@ test('an item tooltip shows published labels and values without internal templat
     assert.match(tip.textContent, /Weight3 kg/);
     assert.match(tip.textContent, /Value25 gold/);
     assert.match(tip.textContent, /Condition 30 \/ 60/);
+    assert.match(tip.textContent, /Damage2–16/);
+    assert.match(tip.textContent, /Worn \(Right hand\): Iron Dagger/);
+    assert.equal(tip.querySelector('.dagger-inventory-tip-comparison .is-better').textContent, 'Damage 1–6 · this is better');
     assert.match(tip.textContent, /Your class cannot use long blade weapons\./);
     assert.doesNotMatch(tip.textContent, /template-|unique:7/);
     assert.equal(f.root.querySelector('.dagger-inventory-details'), null, 'There is no details panel; the tooltip is the item view.');
