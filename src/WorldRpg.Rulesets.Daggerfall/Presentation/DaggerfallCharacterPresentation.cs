@@ -11,8 +11,15 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>Read-only player-sheet projection from the current Mechanics, progression, and equipment state.</summary>
 /// <param name="Progress">For a skill, its career group and uses toward the next rise; null for other stats.</param>
-internal sealed record CharacterStatPresentation(string Id, string Label, long Value, long Permanent, DaggerfallSkillProgress? Progress = null);
-internal sealed record CharacterResourcePresentation(string Id, string Label, long Current, long Maximum);
+internal sealed record CharacterStatPresentation(string Id, string Label, long Value, long Permanent, DaggerfallSkillProgress? Progress = null)
+{
+    /// <summary>What the value means, for its tooltip.</summary>
+    internal string? Description { get; init; }
+}
+internal sealed record CharacterResourcePresentation(string Id, string Label, long Current, long Maximum)
+{
+    internal string? Description { get; init; }
+}
 internal sealed record CharacterProgressionPresentation(int Level, int Experience, int? SkillProgress = null, int? NextLevelSkillProgress = null, bool PendingLevelUp = false);
 internal sealed record CharacterEquipmentPresentation(string Label, string[] Slots, string Details, ItemConditionPresentation? Condition = null, bool Identified = true);
 internal sealed record CharacterGuildRequirementPresentation(int Rank, int Reputation, int HighSkill, int LowSkill);
@@ -21,10 +28,16 @@ internal sealed record CharacterAffiliationPresentation(string Faction, string G
     CharacterGuildRequirementPresentation? NextRequirement = null,
     int? DaysUntilReview = null,
     string[]? Privileges = null,
-    string? RankTitle = null);
+    string? RankTitle = null)
+{
+    internal string? Description { get; init; }
+}
 /// <summary>The player's legal standing in one region, worded as the donor's %ltn macro words it.</summary>
 internal sealed record CharacterLegalStandingPresentation(int Region, string RegionName, int Reputation, string Standing, bool Banished,
-    bool Current, string Label);
+    bool Current, string Label)
+{
+    internal string? Description { get; init; }
+}
 internal sealed record CharacterHistoryPresentation(string[] Biography);
 internal sealed record CharacterSheetPresentation(
     string Name,

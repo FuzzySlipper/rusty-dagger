@@ -53,6 +53,15 @@ public sealed class TownStartBundleTests
         Assert.Empty(game.State.Quests.All);
         Assert.Equal(9, DaggerfallSavePayload.Read(game.CaptureSave()).Calendar.Hour);
 
+        // The sheet explains its values: an attribute in the donor's own words, resolved for this player.
+        product.Update(new ProductUpdate(OuterUpdate(2), []));
+        Dictionary<string, object?> sheet = Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(engine.Published())["character"]);
+        Dictionary<string, object?> strength = Assert.IsType<object[]>(sheet["attributes"]).Cast<Dictionary<string, object?>>().Single(stat => (string)stat["id"]! == "strength");
+        string description = Assert.IsType<string>(strength["description"]);
+        Assert.StartsWith("Strength governs encumbrance", description, StringComparison.Ordinal);
+        Assert.DoesNotContain("%", description, StringComparison.Ordinal);
+        Assert.All(Assert.IsType<object[]>(sheet["resources"]).Cast<Dictionary<string, object?>>(), resource => Assert.IsType<string>(resource["description"]));
+
         // The town's "Where is" directory lists its shops, guilds, temples and taverns under their kinds, as the
         // donor's does, and leaves out its walls and houses: Charing has many wall segments, none of them a topic.
         IReadOnlyList<DaggerfallDialogueTopicOption> directory = game.DialogueDirectory();

@@ -169,6 +169,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.MerchantCollectRepair:
             case DaggerfallUiActionKind.MerchantIdentify:
             case DaggerfallUiActionKind.MerchantShoplift: ChangeMerchant(action); break;
+            case DaggerfallUiActionKind.MerchantQuote: QuoteMerchantTrade(action); break;
             case DaggerfallUiActionKind.TransportSelect:
             case DaggerfallUiActionKind.TransportToggle:
             case DaggerfallUiActionKind.TransportLeaveShip:

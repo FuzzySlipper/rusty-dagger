@@ -1249,55 +1249,64 @@
         "id": "strength",
         "label": "Strength",
         "value": 42,
-        "permanent": 42
+        "permanent": 42,
+        "description": "Strength governs encumbrance, weapon damage and the ease of increasing strength-related skills. With your strength of 42, you are considered about average -2 modifier is factored into your hand-to-hand / weapon damage. 63 kilograms is your maximum encumbrance."
       },
       {
         "id": "intelligence",
         "label": "Intelligence",
         "value": 60,
-        "permanent": 60
+        "permanent": 60,
+        "description": "Intelligence governs total magic potential and the ease of increasing intelligence-related skills. With your intelligence of 60, you are considered fairly clever. 100 out of 120 spell points are available for casting."
       },
       {
         "id": "willpower",
         "label": "Willpower",
         "value": 65,
-        "permanent": 65
+        "permanent": 65,
+        "description": "Willpower governs resistance to spell effects and the ease of increasing willpower-related skills. With your willpower of 65, you are considered confident. \u002B6 modifier is factored into your magical resistance."
       },
       {
         "id": "agility",
         "label": "Agility",
         "value": 45,
-        "permanent": 45
+        "permanent": 45,
+        "description": "Agility governs ability to hit a target, to avoid getting hit, and the ease of increasing agility-related skills. With your agility of 45, you are considered about average\r. -1 modifier is factored into your combat odds."
       },
       {
         "id": "endurance",
         "label": "Endurance",
         "value": 45,
-        "permanent": 45
+        "permanent": 45,
+        "description": "Endurance governs hit points, healing rate, resistance to poisons and diseases, and fatigue. With your endurance of 45, you are considered about average. -1 modifier is factored into the number of hit points you gain each level. -1 modifier is factored into your healing rate."
       },
       {
         "id": "personality",
         "label": "Personality",
         "value": 50,
-        "permanent": 50
+        "permanent": 50,
+        "description": "Personality governs the ease of increasing personality-related skills. With your personality of 50, you are considered interesting."
       },
       {
         "id": "speed",
         "label": "Speed",
         "value": 43,
-        "permanent": 43
+        "permanent": 43,
+        "description": "Speed governs movement rate, missile reloading time, and all speed-related skills. With your speed of 43, you are considered about average."
       },
       {
         "id": "luck",
         "label": "Luck",
         "value": 50,
-        "permanent": 50
+        "permanent": 50,
+        "description": "Luck is a powerful modifier to any action you take. There are no skills in which luck is the primary attribute, but your odds of succeeding in any skill trial is modified by your luck. With your luck of 50, you are considered fairly lucky."
       },
       {
         "id": "reflexes",
         "label": "Reflexes",
         "value": 2,
-        "permanent": 2
+        "permanent": 2,
+        "description": null
       }
     ],
     "skills": [
@@ -1675,19 +1684,22 @@
         "id": "health",
         "label": "Health",
         "current": 31,
-        "maximum": 31
+        "maximum": 31,
+        "description": "You die when your health reaches zero. Rest, healing spells and potions restore it."
       },
       {
         "id": "stamina",
         "label": "Stamina",
         "current": 87,
-        "maximum": 87
+        "maximum": 87,
+        "description": "Fatigue. Running, jumping and fighting spend it, and resting restores it; when it runs out you collapse."
       },
       {
         "id": "magicka",
         "label": "Magicka",
         "current": 100,
-        "maximum": 120
+        "maximum": 120,
+        "description": "Spell points. Casting a spell spends its cost, and resting restores them."
       }
     ],
     "progression": {
@@ -1732,43 +1744,50 @@
         "id": "resistance-fire",
         "label": "Resistance Fire",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "description": "How well you resist fire spells and effects. Higher resists more often."
       },
       {
         "id": "resistance-frost",
         "label": "Resistance Frost",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "description": "How well you resist frost spells and effects. Higher resists more often."
       },
       {
         "id": "resistance-disease-or-poison",
         "label": "Resistance Disease Or Poison",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "description": "How well you resist disease or poison spells and effects. Higher resists more often."
       },
       {
         "id": "resistance-shock",
         "label": "Resistance Shock",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "description": "How well you resist shock spells and effects. Higher resists more often."
       },
       {
         "id": "resistance-magic",
         "label": "Resistance Magic",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "description": "How well you resist magic spells and effects. Higher resists more often."
       },
       {
         "id": "immunity-paralysis",
         "label": "Immunity Paralysis",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "description": "You are not immune to paralysis."
       },
       {
         "id": "immunity-disease",
         "label": "Immunity Disease",
         "value": 0,
-        "permanent": 0
+        "permanent": 0,
+        "description": "You are not immune to disease."
       }
     ],
     "affiliations": [],
@@ -1780,7 +1799,8 @@
         "standing": "a common citizen",
         "banished": false,
         "current": true,
-        "label": "Daggerfall: a common citizen"
+        "label": "Daggerfall: a common citizen",
+        "description": "Your legal reputation in Daggerfall is 0, so its people know you as a common citizen. Crimes there lower it."
       }
     ],
     "history": null,

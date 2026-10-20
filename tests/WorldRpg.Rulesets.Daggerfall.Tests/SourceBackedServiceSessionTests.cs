@@ -160,6 +160,45 @@ public sealed class SourceBackedServiceSessionTests
     }
 
     [Fact]
+    public void A_merchant_quote_is_what_the_trade_charges_and_a_large_trade_waits_for_confirmation()
+    {
+        using SourceBackedServiceSessionFixture fixture = SourceBackedServiceSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.MerchantProvider.Profile);
+        session.AdvanceElapsedTime(6 * 60 * 60);
+        DaggerfallItemFactory factory = new(TestPayload.Definitions, RandomMinimum.Create());
+        factory.Materialize(factory.Create(new("Weapons", "source.consumer.test.arrows", DaggerfallItemOwner.Player,
+            Quantity: 97, TemplateIndex: 131)), session.State.Inventory, session.State.ItemInstances,
+            InventoryStackId.Parse("source.consumer.test.arrows"));
+        OpenSourceNpc(session, SourceNpc(session, fixture.MerchantProvider.Placement.Id));
+        DaggerfallMerchantView Merchant() => Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
+
+        // Selling part of a stack: the quote for the chosen amount is exactly what the sale pays. The trade
+        // formula rounds the whole line once, so it need not be the one-item price times the amount.
+        DaggerfallMerchantItemView arrows = Assert.Single(Merchant().PlayerItems, value => value.Key == "stack:source.consumer.test.arrows");
+        Assert.True(arrows.CanSell);
+        SubmitUi(session, 4, $"{{\"action\":\"merchant-quote\",\"revision\":\"{Escape(Merchant().Revision)}\",\"item\":\"{Escape(arrows.Key)}\",\"key\":\"sell\",\"amount\":89}}");
+        DaggerfallMerchantQuoteView quote = Assert.IsType<DaggerfallMerchantQuoteView>(Merchant().Quote);
+        Assert.Equal((arrows.Key, false, 89UL), (quote.Item, quote.Buying, quote.Amount));
+        ulong before = session.State.Currency.Read().Gold;
+        SubmitUi(session, 5, $"{{\"action\":\"merchant-sell\",\"revision\":\"{Escape(Merchant().Revision)}\",\"item\":\"{Escape(arrows.Key)}\",\"amount\":89}}");
+        Assert.Equal($"Sold for {quote.Total} gold.", session.Presentation.LastOutcome);
+        Assert.Equal(before + checked((ulong)quote.Total), session.State.Currency.Read().Gold);
+
+        // A trade at or over the large-trade amount is refused unconfirmed, whatever the screen showed, and
+        // goes through once confirmed.
+        DaggerfallMerchantItemView book = Merchant().Stock.First(value => value.CanBuy && value.UnitPrice >= DaggerfallMerchantService.LargeTradeGold);
+        AddGold(session, checked(book.UnitPrice + 10));
+        ulong gold = session.State.Currency.Read().Gold;
+        string buy = $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(Merchant().Revision)}\",\"item\":\"{Escape(book.Key)}\",\"amount\":1";
+        SubmitUi(session, 6, buy + "}");
+        Assert.Equal("Confirm a trade that large first.", session.Presentation.LastOutcome);
+        Assert.Equal(gold, session.State.Currency.Read().Gold);
+        SubmitUi(session, 7, buy + ",\"confirm\":true}");
+        Assert.Equal($"Bought for {book.UnitPrice} gold.", session.Presentation.LastOutcome);
+        Assert.Equal(gold - book.UnitPrice, session.State.Currency.Read().Gold);
+    }
+
+    [Fact]
     public void Source_merchant_uses_building_quality_for_buy_sell_payment_and_reload()
     {
         using SourceBackedServiceSessionFixture fixture = SourceBackedServiceSessionFixture.Create();
@@ -180,7 +219,8 @@ public sealed class SourceBackedServiceSessionTests
 
         AddGold(session, checked(stock.UnitPrice * 2 + 1_000));
         ulong goldBeforeBuy = session.State.Currency.Read().Gold;
-        string buyAction = $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(merchant.Revision)}\",\"item\":\"{Escape(stock.Key)}\",\"amount\":1}}";
+        // The confirmation a trade this large needs is given, as the screen asks for it.
+        string buyAction = $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(merchant.Revision)}\",\"item\":\"{Escape(stock.Key)}\",\"amount\":1,\"confirm\":true}}";
         SubmitUi(session, 4, buyAction);
 
         Assert.Equal($"Bought for {stock.UnitPrice} gold.", session.Presentation.LastOutcome);
@@ -217,7 +257,7 @@ public sealed class SourceBackedServiceSessionTests
         Assert.True(session.State.Currency.TrySpendGold(carriedGold, []));
         DaggerfallMerchantItemView unaffordable = afterSell.Stock.First(value => value.CanBuy && value.UnitPrice > 0);
         DaggerfallMerchantView noFunds = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
-        SubmitUi(session, 9, $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(noFunds.Revision)}\",\"item\":\"{Escape(unaffordable.Key)}\",\"amount\":1}}");
+        SubmitUi(session, 9, $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(noFunds.Revision)}\",\"item\":\"{Escape(unaffordable.Key)}\",\"amount\":1,\"confirm\":true}}");
         Assert.Equal("You do not have enough gold.", session.Presentation.LastOutcome);
         Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(session, "mercantile"));
 

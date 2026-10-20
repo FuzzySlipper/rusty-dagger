@@ -29,8 +29,11 @@ export interface TransferRow {
   readonly maximumQuantity: number;
   /** Weight, value, wear and the like, as one line of player-facing text. */
   readonly facts: string;
-  /** A unit price in gold; the row then shows the total for the chosen amount. */
-  readonly unitPrice?: number;
+  /**
+   * The gold the chosen amount costs or pays, or null while the ruleset is still pricing it. A priced row
+   * shows this total; it is the ruleset's quote, never the unit price times the amount.
+   */
+  readonly price?: (amount: number) => number | null;
   /** Why the row's commands are closed, when they are. */
   readonly refusal?: string | null;
   readonly commands: readonly TransferCommand[];
@@ -67,7 +70,9 @@ export function inventoryTransferRow(item: InventoryItem, command: string | null
 export function mountTransfer(root: HTMLElement, handlers: {
   command(side: TransferSideName, key: string, command: string, amount: number): void;
   takeAll?(): void;
-}): { update(view: TransferView | null): void; refresh(): void; dispose(): void } {
+  /** The player chose a new amount on a row. */
+  amount?(side: TransferSideName, key: string, amount: number): void;
+}): { update(view: TransferView | null): void; refresh(): void; refreshTotals(): void; dispose(): void } {
   const element = document.createElement('div');
   element.className = 'dagger-transfer';
   const header = document.createElement('div');
@@ -88,12 +93,16 @@ export function mountTransfer(root: HTMLElement, handlers: {
   root.append(element);
 
   const steppers = new Map<string, Stepper>();
+  // The amounts the player chose, kept while their rows are redrawn.
+  const chosen = new Map<string, number>();
+  const totals = new Map<string, () => void>();
   let current: TransferView | null = null;
 
   const draw = (side: ReturnType<typeof pane>, name: TransferSideName, value: TransferSide): void => {
     side.title.textContent = value.title;
     redraw(side.list, JSON.stringify([value, value.rows.map(row => image(row.icon) !== null)]), () => {
       for (const key of [...steppers.keys()]) if (key.startsWith(`${name}:`)) steppers.delete(key);
+      for (const key of [...totals.keys()]) if (key.startsWith(`${name}:`)) totals.delete(key);
       side.list.replaceChildren(...(value.rows.length === 0 ? [emptyRow(value.empty)] : value.rows.map(row => {
         const entry = document.createElement('li');
         entry.className = 'dagger-transfer-row';
@@ -126,16 +135,30 @@ export function mountTransfer(root: HTMLElement, handlers: {
         let stepper: Stepper | null = null;
         if (row.maximumQuantity > 1 && row.commands.some(command => command.takesAmount)) {
           stepper = createStepper(`Quantity of ${row.label}`);
-          stepper.limit(1, row.maximumQuantity, row.unitPrice === undefined ? row.maximumQuantity : 1);
-          steppers.set(`${name}:${row.key}`, stepper);
+          const id = `${name}:${row.key}`;
+          stepper.limit(1, row.maximumQuantity, chosen.get(id) ?? (row.price === undefined ? row.maximumQuantity : 1));
+          steppers.set(id, stepper);
+          const picked = stepper;
+          const report = (): void => {
+            if (chosen.get(id) === picked.value()) return;
+            chosen.set(id, picked.value());
+            handlers.amount?.(name, row.key, picked.value());
+          };
+          picked.input.addEventListener('input', report);
+          picked.input.addEventListener('change', report);
           amounts.append(stepper.element);
         }
-        if (row.unitPrice !== undefined) {
+        if (row.price !== undefined) {
           const total = document.createElement('span');
           total.className = 'dagger-transfer-total';
-          const show = (): void => { total.textContent = `${formatNumber(row.unitPrice! * (stepper?.value() ?? 1))} gold`; };
+          const price = row.price;
+          const show = (): void => {
+            const value = price(stepper?.value() ?? 1);
+            total.textContent = value === null ? '… gold' : `${formatNumber(value)} gold`;
+          };
           stepper?.input.addEventListener('input', show);
           stepper?.input.addEventListener('change', show);
+          totals.set(`${name}:${row.key}`, show);
           show();
           amounts.append(total);
         }
@@ -197,6 +220,8 @@ export function mountTransfer(root: HTMLElement, handlers: {
     update: render,
     // Rows keep their icons, so art that arrives later repaints the rows already shown.
     refresh() { if (current !== null) render(current); },
+    // A quote that arrives after its amount was chosen repaints the totals without redrawing the rows.
+    refreshTotals() { for (const show of totals.values()) show(); },
     dispose() { element.removeEventListener('click', onClick); element.remove(); },
   };
 }

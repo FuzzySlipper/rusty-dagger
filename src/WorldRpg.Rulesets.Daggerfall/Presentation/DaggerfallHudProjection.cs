@@ -505,6 +505,11 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("identifyAvailable", builder.Boolean(merchant.CanIdentify)),
         ("result", builder.String(merchant.Result)),
         ("largeTradeGold", builder.Number(DaggerfallMerchantService.LargeTradeGold)),
+        // The ruleset's price for the amount last chosen on a row: the line total and whether it asks first.
+        ("quote", merchant.Quote is not { } quote ? builder.Null() : builder.Object(
+            ("item", builder.String(quote.Item)), ("side", builder.String(quote.Buying ? "buy" : "sell")),
+            ("amount", builder.Number(quote.Amount)), ("total", builder.Number(quote.Total)),
+            ("confirm", builder.Boolean(quote.NeedsConfirmation)))),
         ("stock", builder.Array(merchant.Stock.Select(item => MerchantItem(builder, item, false, false)).ToArray())),
         ("playerItems", builder.Array(merchant.PlayerItems.Select(item => MerchantItem(builder, item,
             merchant.CanRepair && item.RepairCost is not null, merchant.CanIdentify && item.IdentifyCost is not null)).ToArray())),
@@ -709,8 +714,10 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
 
     private static uint Character(UiValueBuilder builder, CharacterSheetPresentation value, bool creationAvailable, bool levelUpAvailable)
     {
+        uint Description(string? text) => text is null ? builder.Null() : builder.String(text);
         uint Stat(CharacterStatPresentation stat) => builder.Object(("id", builder.String(stat.Id)),
-            ("label", builder.String(stat.Label)), ("value", builder.Number(stat.Value)), ("permanent", builder.Number(stat.Permanent)));
+            ("label", builder.String(stat.Label)), ("value", builder.Number(stat.Value)), ("permanent", builder.Number(stat.Permanent)),
+            ("description", Description(stat.Description)));
         uint Requirement(CharacterGuildRequirementPresentation? rank) => rank is null ? builder.Null() : builder.Object(
             ("rank", builder.Number(rank.Rank)), ("reputation", builder.Number(rank.Reputation)),
             ("highSkill", builder.Number(rank.HighSkill)), ("lowSkill", builder.Number(rank.LowSkill)));
@@ -728,7 +735,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("id", builder.String(group.Id)), ("label", builder.String(group.Label)))).ToArray())),
             ("resources", builder.Array(value.Resources.Select(resource => builder.Object(
                 ("id", builder.String(resource.Id)), ("label", builder.String(resource.Label)),
-                ("current", builder.Number(resource.Current)), ("maximum", builder.Number(resource.Maximum)))).ToArray())),
+                ("current", builder.Number(resource.Current)), ("maximum", builder.Number(resource.Maximum)),
+                ("description", Description(resource.Description)))).ToArray())),
             ("progression", builder.Object(("level", builder.Number(value.Progression.Level)), ("experience", builder.Number(value.Progression.Experience)),
                 ("skillProgress", value.Progression.SkillProgress is int progress ? builder.Number(progress) : builder.Null()),
                 ("nextLevelSkillProgress", value.Progression.NextLevelSkillProgress is int next ? builder.Number(next) : builder.Null()),
@@ -747,12 +755,13 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("nextRequirement", Requirement(affiliation.NextRequirement)),
                 ("daysUntilReview", affiliation.DaysUntilReview is int days ? builder.Number(days) : builder.Null()),
                 ("privileges", builder.Array((affiliation.Privileges ?? []).Select(builder.String).ToArray())),
-                ("rankTitle", affiliation.RankTitle is null ? builder.Null() : builder.String(affiliation.RankTitle)))).ToArray())),
+                ("rankTitle", affiliation.RankTitle is null ? builder.Null() : builder.String(affiliation.RankTitle)),
+                ("description", Description(affiliation.Description)))).ToArray())),
             ("legalStandings", builder.Array((value.LegalStandings ?? []).Select(standing => builder.Object(
                 ("region", builder.Number(standing.Region)), ("regionName", builder.String(standing.RegionName)),
                 ("reputation", builder.Number(standing.Reputation)), ("standing", builder.String(standing.Standing)),
                 ("banished", builder.Boolean(standing.Banished)), ("current", builder.Boolean(standing.Current)),
-                ("label", builder.String(standing.Label)))).ToArray())),
+                ("label", builder.String(standing.Label)), ("description", Description(standing.Description)))).ToArray())),
             ("history", value.History is null ? builder.Null() : builder.Object(("biography", builder.Array(value.History.Biography.Select(builder.String).ToArray())))),
             ("grantedSkills", builder.Array((value.GrantedSkills ?? []).Select(skill => builder.Object(
                 ("id", builder.String(skill.SkillId)), ("tier", builder.String(skill.Tier.ToString().ToLowerInvariant())),

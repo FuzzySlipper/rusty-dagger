@@ -96,7 +96,7 @@ public sealed class GuildDialogueSessionTests
         AddGold(session);
         view = session.ReadCurrentMerchant()!;
         var item = view.Stock.First(value => value.Key.StartsWith("unique:", StringComparison.Ordinal));
-        Submit(session, new { action = "merchant-buy", revision = view.Revision, item = item.Key, amount = 1 });
+        Submit(session, new { action = "merchant-buy", revision = view.Revision, item = item.Key, amount = 1, confirm = true });
         Assert.Contains(session.State.Inventory.Read().UniqueItems, value => value.Definition.Value == item.Definition);
         using var restored = fixture.Restore(session.CaptureSave());
         Assert.Contains(restored.State.Inventory.Read().UniqueItems, value => value.Definition.Value == item.Definition);
@@ -158,7 +158,7 @@ public sealed class GuildDialogueSessionTests
                 Assert.True(view.CanBuy);
                 // Mages sell gems alongside magic items at their shared merchant.
                 var gem = view.Stock.First(value => value.Definition == "template-274");
-                Submit(session, new { action = "merchant-buy", revision = view.Revision, item = gem.Key, amount = 1 });
+                Submit(session, new { action = "merchant-buy", revision = view.Revision, item = gem.Key, amount = 1, confirm = true });
                 Assert.Contains(session.State.Inventory.Read().UniqueItems, value => value.Definition.Value == "template-274");
             }
             else
@@ -175,7 +175,7 @@ public sealed class GuildDialogueSessionTests
                 ulong gold = session.State.Currency.Read().Gold;
                 if (gold > 0) Assert.True(session.State.Currency.TrySpendCarried(gold));
                 Assert.Equal(0UL, session.State.Currency.Read().Gold);
-                Submit(session, new { action = "merchant-sell", revision = view.Revision, item = "unique:" + id.Value, amount = 1 });
+                Submit(session, new { action = "merchant-sell", revision = view.Revision, item = "unique:" + id.Value, amount = 1, confirm = true });
                 Assert.True(session.State.Currency.Read().Gold > 0, session.Presentation.LastOutcome);
             }
         }

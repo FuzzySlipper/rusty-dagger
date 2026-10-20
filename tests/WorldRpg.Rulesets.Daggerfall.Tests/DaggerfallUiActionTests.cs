@@ -205,6 +205,10 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"merchant-identify\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"unique:1002\"}", true)]
     [InlineData("{\"action\":\"merchant-collect-repair\",\"revision\":\"dialogue.1|stock.2\",\"key\":\"merchant:repair:1\"}", true)]
     [InlineData("{\"action\":\"merchant-buy\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"unique:1002\",\"amount\":2}", false)]
+    [InlineData("{\"action\":\"merchant-buy\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"stack:gold\",\"amount\":90,\"confirm\":true}", true)]
+    [InlineData("{\"action\":\"merchant-shoplift\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"stack:gem\",\"amount\":1,\"confirm\":true}", false)]
+    [InlineData("{\"action\":\"merchant-quote\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"stack:gold\",\"key\":\"buy\",\"amount\":90}", true)]
+    [InlineData("{\"action\":\"merchant-quote\",\"revision\":\"dialogue.1|stock.2\",\"item\":\"stack:gold\",\"key\":\"steal\",\"amount\":90}", false)]
     [InlineData("{\"action\":\"merchant-repair\",\"revision\":\"dialogue.1|stock.2\"}", false)]
     [InlineData("{\"action\":\"merchant-collect-repair\",\"revision\":\"dialogue.1|stock.2\"}", false)]
     public void Merchant_actions_admit_only_typed_provider_payloads(string json, bool accepted) =>

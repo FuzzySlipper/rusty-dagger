@@ -240,6 +240,8 @@ export interface MerchantProjection {
   readonly result: string;
   /** A purchase or sale totalling this many gold or more is confirmed first. */
   readonly largeTradeGold: number;
+  /** The ruleset's price for the amount last chosen on a row, and whether that trade asks first. */
+  readonly quote?: { readonly item: string; readonly side: 'buy' | 'sell'; readonly amount: number; readonly total: number; readonly confirm: boolean } | null;
   readonly stock: readonly MerchantItemProjection[];
   readonly playerItems: readonly MerchantItemProjection[];
   readonly repairs: readonly { readonly requestId: string; readonly durableItemId: string | number; readonly definition: string; readonly dueMinute: number; readonly ready: boolean;

@@ -5,7 +5,7 @@ import type { DaggerHud, DialogueProjection, MerchantItemProjection, MerchantPro
 import { redraw } from './redraw.js';
 import { renderSpellSales, spellAction } from './spells.js';
 import { createStepper } from './stepper.js';
-import { formatNumber, mountTransfer, type TransferRow } from './transfer.js';
+import { formatNumber, mountTransfer, type TransferRow, type TransferSideName } from './transfer.js';
 
 /**
  * A conversation and the services a person offers in it: topics and tone, training, food and
@@ -272,26 +272,46 @@ function mountShop(root: HTMLElement, send: Send, ask: (question: ConfirmQuestio
   repairs.className = 'dagger-shop-repairs';
   let current: MerchantProjection | null = null;
   // Buying, selling and stealing move an amount; repair and identify act on the whole item.
-  const claim = (action: string, item: MerchantItemProjection, amount: number): void => {
+  const claim = (action: string, item: MerchantItemProjection, amount: number, confirm = false): void => {
     if (current === null) return;
     send(action === 'merchant-repair' || action === 'merchant-identify'
       ? { action, revision: current.revision, item: item.key }
-      : { action, revision: current.revision, item: item.key, amount });
+      : { action, revision: current.revision, item: item.key, amount, ...(confirm ? { confirm: true } : {}) });
+  };
+  const sideOf = (side: TransferSideName): 'buy' | 'sell' => side === 'source' ? 'buy' : 'sell';
+  // The ruleset's price for an amount: one item is the row's own quote; more waits for the ruleset to
+  // quote the whole line, which the trade formula rounds once rather than per item.
+  const priceOf = (side: TransferSideName, item: MerchantItemProjection, amount: number): number | null => {
+    if (amount === 1) return Number(item.unitPrice);
+    const quote = current?.quote;
+    return quote && quote.item === item.key && quote.side === sideOf(side) && quote.amount === amount ? quote.total : null;
+  };
+  const quoteFor = (side: TransferSideName, key: string, amount: number): void => {
+    if (current !== null && amount > 1) send({ action: 'merchant-quote', revision: current.revision, item: key, key: sideOf(side), amount });
+  };
+  // A trade chosen before its quote arrived waits for it, so the confirmation always names the real total.
+  let waiting: { side: TransferSideName; key: string; command: string; amount: number } | null = null;
+  const trade = (side: TransferSideName, key: string, command: string, amount: number): void => {
+    const merchant = current;
+    const item = merchant === null ? undefined : (side === 'source' ? merchant.stock : merchant.playerItems).find(row => row.key === key);
+    if (merchant === null || item === undefined) return;
+    const what = amount > 1 ? `${amount} × ${item.label}` : item.label;
+    if (command === 'merchant-shoplift') {
+      ask({ message: `Steal ${what}? If you are caught, it is a crime.`, accept: 'Steal', onAccept: () => claim(command, item, amount) });
+      return;
+    }
+    if (command !== 'merchant-buy' && command !== 'merchant-sell') { claim(command, item, amount); return; }
+    const total = priceOf(side, item, amount);
+    if (total === null) { waiting = { side, key, command, amount }; quoteFor(side, key, amount); return; }
+    // One item is priced by its row; a quoted line says itself whether it asks first.
+    if (amount === 1 ? total >= merchant.largeTradeGold : merchant.quote?.confirm === true) {
+      ask({ message: `${command === 'merchant-buy' ? 'Buy' : 'Sell'} ${what} for ${formatNumber(total)} gold?`,
+        accept: command === 'merchant-buy' ? 'Buy' : 'Sell', onAccept: () => claim(command, item, amount, true) });
+    } else claim(command, item, amount);
   };
   const transfer = mountTransfer(root, {
-    command(side, key, command, amount) {
-      const merchant = current;
-      const item = merchant === null ? undefined : (side === 'source' ? merchant.stock : merchant.playerItems).find(row => row.key === key);
-      if (merchant === null || item === undefined) return;
-      const total = Number(item.unitPrice) * amount;
-      const what = amount > 1 ? `${amount} × ${item.label}` : item.label;
-      if (command === 'merchant-shoplift') {
-        ask({ message: `Steal ${what}? If you are caught, it is a crime.`, accept: 'Steal', onAccept: () => claim(command, item, amount) });
-      } else if ((command === 'merchant-buy' || command === 'merchant-sell') && total >= merchant.largeTradeGold) {
-        ask({ message: `${command === 'merchant-buy' ? 'Buy' : 'Sell'} ${what} for ${formatNumber(total)} gold?`,
-          accept: command === 'merchant-buy' ? 'Buy' : 'Sell', onAccept: () => claim(command, item, amount) });
-      } else claim(command, item, amount);
-    },
+    command(side, key, command, amount) { waiting = null; trade(side, key, command, amount); },
+    amount(side, key, amount) { quoteFor(side, key, amount); },
   });
   root.prepend(heading, purse);
   root.append(result, repairs);
@@ -307,7 +327,8 @@ function mountShop(root: HTMLElement, send: Send, ask: (question: ConfirmQuestio
         ? `condition ${item.currentCondition}/${item.maximumCondition}` : null,
       item.identified ? null : 'unidentified', item.stolen ? 'stolen' : null].filter((part): part is string => part !== null).join(' · ');
     return { key: item.key, label: item.label, icon: item.icon ?? null, quantity: item.maximumQuantity > 1 ? String(item.quantity) : null,
-      maximumQuantity: item.maximumQuantity, facts, unitPrice: commands.some(command => command.takesAmount) ? unit : undefined, commands };
+      maximumQuantity: item.maximumQuantity, facts, commands,
+      price: commands.some(command => command.takesAmount && command.id !== 'merchant-shoplift') ? amount => priceOf(seller ? 'pack' : 'source', item, amount) : undefined };
   };
 
   return {
@@ -331,6 +352,12 @@ function mountShop(root: HTMLElement, send: Send, ask: (question: ConfirmQuestio
           ], true)) : [] },
         takeAll: null,
       });
+      transfer.refreshTotals();
+      const pending = waiting;
+      if (pending !== null && value.quote && value.quote.item === pending.key && value.quote.amount === pending.amount) {
+        waiting = null;
+        trade(pending.side, pending.key, pending.command, pending.amount);
+      }
       redraw(repairs, JSON.stringify(value.repairAvailable ? value.repairs : []), () => {
         repairs.replaceChildren();
         if (!value.repairAvailable || value.repairs.length === 0) return;

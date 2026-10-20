@@ -26,7 +26,7 @@ internal enum DaggerfallUiActionKind
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel, CharacterQuickStart,
     CharacterLevelAllocate, CharacterLevelCommit,
     ActivationMode, Attack, Loot, Menu,
-    DialogueTone, DialogueTopic, DialogueClose, TavernBuy, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift,
+    DialogueTone, DialogueTopic, DialogueClose, TavernBuy, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift, MerchantQuote,
     LegalChoice, CreateItemSelect, CreateItemCancel, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
     TransportSelect, TransportToggle, TransportLeaveShip, TransportBoardShip,
     PropertyBuy, PropertySell, PropertyEnter, PropertyPut, PropertyTake,
@@ -200,6 +200,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.MerchantCollectRepair, "merchant-collect-repair", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.MerchantIdentify, "merchant-identify", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.MerchantShoplift, "merchant-shoplift", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.MerchantQuote, "merchant-quote", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportSelect, "transport-select", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportToggle, "transport-toggle", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportBoardShip, "transport-board-ship", DaggerfallUiPhases.Interaction),
@@ -665,13 +666,21 @@ internal static class DaggerfallUiAction
                     ? new(action, Revision: revision, Key: key, Amount: amount, Confirm: confirm) : null;
             if (action is "merchant-buy" or "merchant-sell" or "merchant-shoplift")
             {
+                // Buying and selling may carry the player's confirmation of a large trade.
+                bool confirmable = action != "merchant-shoplift";
                 bool shape = fields.SetEquals(["action", "revision", "item"])
-                    || fields.SetEquals(["action", "revision", "item", "amount"]);
+                    || fields.SetEquals(["action", "revision", "item", "amount"])
+                    || confirmable && (fields.SetEquals(["action", "revision", "item", "confirm"])
+                        || fields.SetEquals(["action", "revision", "item", "amount", "confirm"]));
                 return shape && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
                     && (amount is null or > 0)
                     && (!item.StartsWith("unique:", StringComparison.Ordinal) || (amount is null or 1))
-                    ? new(action, Revision: revision, Item: item, Amount: amount) : null;
+                    ? new(action, Revision: revision, Item: item, Amount: amount, Confirm: confirm) : null;
             }
+            if (action == "merchant-quote")
+                return fields.SetEquals(["action", "revision", "item", "key", "amount"])
+                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && key is "buy" or "sell" && amount is > 0
+                    ? new(action, Revision: revision, Item: item, Key: key, Amount: amount) : null;
             if (action is "merchant-repair" or "merchant-identify")
                 return fields.SetEquals(["action", "revision", "item"])
                     && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
