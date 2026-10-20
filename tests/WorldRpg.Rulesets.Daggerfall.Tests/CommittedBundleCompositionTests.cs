@@ -8,6 +8,7 @@ using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Variants;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -16,6 +17,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class CommittedBundleCompositionTests
 {
     private const string SiteRole = "daggerfall.site";
+    private const string NewGameStartRole = "daggerfall.new-game-start";
 
     /// <summary>Every game bundle committed under the content root, by id.</summary>
     public static TheoryData<string> CommittedBundles()
@@ -32,7 +34,8 @@ public sealed class CommittedBundleCompositionTests
     /// <summary>
     /// A committed bundle is only real if the ruleset can start a game from it: this resolves each one,
     /// admits every pack it selects through the real readers, creates the session through the compiled
-    /// ruleset and takes one admitted update. The session starts at the site the authored new-game definition names.
+    /// ruleset and takes one admitted update. The session starts at the site the authored new-game definition, or the
+    /// bundle's new-game start pack, names.
     /// </summary>
     [Theory]
     [MemberData(nameof(CommittedBundles))]
@@ -40,12 +43,21 @@ public sealed class CommittedBundleCompositionTests
     {
         string root = TestData.RepositoryRoot;
         ResolvedGameComposition composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId(bundleId), CompiledVariants).RequireComposition();
-        ContentPack firstSite = composition.ContentPacks.First(pack => pack.Role.Value == SiteRole);
-        DaggerfallSiteProfile start = DaggerfallSiteContent.Read(FullContent(root), firstSite.Payload, TestPayload.Definitions);
+        // A bundle's new-game start pack, when it selects one, names its start site over the base definition.
+        string startPack = composition.ContentPacks.SingleOrDefault(pack => pack.Role.Value == NewGameStartRole) is { } startOverride
+            ? JsonDocument.Parse(startOverride.Payload).RootElement.GetProperty("startSite").GetString()!
+            : TestPayload.Definitions.NewGame.StartSitePack;
+        ContentPack startSite = composition.ContentPacks.Single(pack => pack.Id.Value == startPack && pack.Role.Value == SiteRole);
+        DaggerfallSiteProfile start = DaggerfallSiteContent.Read(FullContent(root), startSite.Payload, TestPayload.Definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, start);
+        // An exterior start streams the assembled exteriors around it.
+        if (start.Site is { } site && start.ProfileKey == DaggerfallWorldProfileIds.Exterior(site))
+            foreach (DaggerfallSiteProfile near in new AssembledWorld().NearbyExteriors(site)) AssembledWorldRun.Admit(content, near);
         SpatialFake spatial = SpatialFake.Create(start.SpatialArtifact.Sha256, releases);
+        // The player stays put: one step must not stream in neighbouring exterior cells the fake does not carry.
+        spatial.KeepPosition = true;
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         // The product compiles every Daggerfall rules variant, as the Host's built-in catalog does.

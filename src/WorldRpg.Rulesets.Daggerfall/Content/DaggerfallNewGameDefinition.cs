@@ -1,5 +1,6 @@
 using System.Text.Json;
 using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -14,6 +15,9 @@ internal sealed record DaggerfallNewGameDefinition(int Gold, int SpellbookTempla
 
     /// <summary>The quest sources a new game starts (the donor's tutorial and introduction), when admitted.</summary>
     internal string[] Quests { get; init; } = [];
+
+    /// <summary>The hour of the first day a new game begins at; the corpus calendar starts at midnight.</summary>
+    internal int StartHour { get; init; }
 }
 
 internal static partial class DaggerfallBaseContent
@@ -82,5 +86,38 @@ internal static partial class DaggerfallBaseContent
         return new(gold, Template("spellbookTemplate", "MiscItems"), Template("maleShirtTemplate", "MensClothing", "chest-clothes"), Template("malePantsTemplate", "MensClothing", "legs-clothes"),
             Template("femaleShirtTemplate", "WomensClothing", "chest-clothes"), Template("femalePantsTemplate", "WomensClothing", "legs-clothes"), careers,
             Items(section, "customItems"), Spells(section, "customMagicSpells")) { StartSitePack = startSite, Quests = quests };
+    }
+
+    /// <summary>
+    /// A new-game start pack's payload over the base new-game definition: it names its own start site,
+    /// starting gold, opening quests and optionally the hour play begins, and keeps every career loadout
+    /// and starting gear field.
+    /// </summary>
+    internal static DaggerfallNewGameDefinition ReadNewGameStart(ReadOnlyMemory<byte> payload, DaggerfallNewGameDefinition baseline, string packId)
+    {
+        DaggerfallContentDiagnostics diagnostics = new();
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(payload);
+            JsonElement root = Object(document.RootElement, packId, diagnostics);
+            diagnostics.ThrowIfAny();
+            RejectDuplicateProperties(root, packId, diagnostics);
+            if (Text(root, "ruleset", diagnostics) != DaggerfallRuleset.Identity.Value) diagnostics.Add($"New-game start pack '{packId}' must identify ruleset 'daggerfall'.");
+            string startSite = Text(root, "startSite", diagnostics);
+            if (string.IsNullOrWhiteSpace(startSite)) diagnostics.Add($"New-game start pack '{packId}' names no start site content pack.");
+            int gold = Integer(root, "gold", diagnostics);
+            if (gold < 0) diagnostics.Add($"New-game start pack '{packId}' cannot start with negative gold.");
+            string[] quests = [.. Array(root, "quests", diagnostics).Select(value => value.GetString() ?? string.Empty)];
+            if (quests.Any(string.IsNullOrWhiteSpace) || quests.Distinct(StringComparer.Ordinal).Count() != quests.Length)
+                diagnostics.Add($"New-game start pack '{packId}' must name distinct quest sources.");
+            int startHour = OptionalInteger(root, "startHour", diagnostics) ?? baseline.StartHour;
+            if (startHour is < 0 or >= DaggerfallCalendar.HoursPerDay) diagnostics.Add($"New-game start pack '{packId}' names start hour {startHour}, outside the day.");
+            diagnostics.ThrowIfAny();
+            return baseline with { Gold = gold, StartSitePack = startSite, Quests = quests, StartHour = startHour };
+        }
+        catch (JsonException error)
+        {
+            throw new InvalidOperationException($"New-game start pack '{packId}' is not valid JSON: {error.Message}", error);
+        }
     }
 }

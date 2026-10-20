@@ -135,7 +135,7 @@ internal sealed partial class DaggerfallSession
             _time = new DaggerfallWorldTime(
                 saved?.Calendar is { } restored
                     ? new DaggerfallCalendar(restored.Year, restored.Month, restored.Day, restored.Hour, restored.Minute, restored.Second)
-                    : DaggerfallCalendar.Start,
+                    : DaggerfallCalendar.Start with { Hour = definitions.NewGame.StartHour },
                 saved?.Calendar?.RemainderSeconds ?? 0d,
                 tuning.Time.GameSecondsPerRealSecond);
             _weather = new DaggerfallWeatherState(_random, tuning.Weather, _time.Calendar, saved?.Weather);

@@ -27,6 +27,11 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
     internal static readonly ContentPackRoleId NamedQuestCorpusRole = new("daggerfall.named-quest-corpus");
     /// <summary>The Fighters Guild receipt: the whole active guild group in catalog order, without categories.</summary>
     internal static readonly ContentPackRoleId FightersGuildQuestCorpusRole = new("daggerfall.fighters-guild-quest-corpus");
+    /// <summary>
+    /// An optional pack that starts a new game elsewhere than the base pack's new-game definition: its own
+    /// start site, starting gold and opening quests. A bundle selects at most one.
+    /// </summary>
+    internal static readonly ContentPackRoleId NewGameStartRole = new("daggerfall.new-game-start");
 
     /// <summary>Creates the ordinary product ruleset, compiling no rules variants, with its admitted cinematic playback enabled.</summary>
     public DaggerfallRuleset() : this([]) { }
@@ -98,11 +103,17 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             foreach (ContentPack pack in selected.ContentPacks)
             {
                 if (pack.Role != BaseRole && pack.Role != ImportedRole && pack.Role != BlocksRole && pack.Role != SiteRole
-                    && pack.Role != QuestCorpusRole && pack.Role != FightersGuildQuestCorpusRole && pack.Role != NamedQuestCorpusRole)
+                    && pack.Role != QuestCorpusRole && pack.Role != FightersGuildQuestCorpusRole && pack.Role != NamedQuestCorpusRole
+                    && pack.Role != NewGameStartRole)
                     throw new InvalidOperationException($"Content pack '{pack.Id.Value}' declares role '{pack.Role.Value}', which the Daggerfall ruleset does not interpret.");
             }
             DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
                 RequireSingle(selected, roles, BaseRole).Payload, RequireSingle(selected, roles, ImportedRole).Payload);
+            ContentPack[] startPacks = [.. roles[NewGameStartRole]];
+            if (startPacks.Length > 1)
+                throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects {startPacks.Length} '{NewGameStartRole.Value}' content packs; a new game starts in one place.");
+            if (startPacks.Length == 1)
+                definitions = definitions.WithNewGame(DaggerfallBaseContent.ReadNewGameStart(startPacks[0].Payload, definitions.NewGame, startPacks[0].Id.Value));
             DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(RequireSingle(selected, roles, BlocksRole).Payload);
             blocks.AdmitLocations(definitions.Locations);
             ContentPack[] sitePacks = [.. roles[SiteRole]];

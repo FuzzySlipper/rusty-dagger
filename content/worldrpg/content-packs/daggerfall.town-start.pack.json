@@ -1,0 +1,12 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.town-start",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.new-game-start",
+  "dependencies": [
+    { "id": "daggerfall.base" },
+    { "id": "daggerfall.charing-exterior" }
+  ],
+  "description": "Developer start: a new game begins in Charing's streets at nine in the morning with gold for its shops, trainers and inn, and no opening quests.",
+  "payload": "worldrpg/payloads/daggerfall.town-start.json"
+}
