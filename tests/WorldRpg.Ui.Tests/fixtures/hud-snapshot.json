@@ -367,25 +367,29 @@
           "id": "directions",
           "label": "Where is this place?",
           "key": null,
-          "group": "talk"
+          "group": "talk",
+          "category": null
         },
         {
           "id": "news",
           "label": "Any news?",
           "key": null,
-          "group": "talk"
+          "group": "talk",
+          "category": null
         },
         {
           "id": "direction:npc:1000000000017",
           "label": "Where is Morganna Hawkwing?",
           "key": null,
-          "group": "places"
+          "group": "places",
+          "category": "People"
         },
         {
           "id": "direction:site:17:180",
           "label": "Where is Hand-authored Waypoint?",
           "key": null,
-          "group": "places"
+          "group": "places",
+          "category": "Elsewhere in the region"
         }
       ],
       "topicGroups": [

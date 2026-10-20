@@ -44,7 +44,7 @@ export interface Navigation {
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
-export const FOCUSABLE = 'button:not(:disabled),select:not(:disabled),input:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]';
+export const FOCUSABLE = 'button:not(:disabled),select:not(:disabled),input:not(:disabled),textarea:not(:disabled),a[href],summary,[tabindex="0"]';
 
 /** The Engine's normalized controller identities, read in the standard gamepad layout. */
 export const CONTROLLER = Object.freeze({

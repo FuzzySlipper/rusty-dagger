@@ -182,7 +182,7 @@ export interface DialogueProjection {
   readonly tone: string;
   readonly question: string | null;
   readonly reply: string | null;
-  readonly topics: readonly { readonly id: string; readonly label: string; readonly key?: string | null; readonly group?: string }[];
+  readonly topics: readonly { readonly id: string; readonly label: string; readonly key?: string | null; readonly group?: string; readonly category?: string | null }[];
   /** The headings topics are listed under, in order. */
   readonly topicGroups?: readonly { readonly id: string; readonly label: string }[];
   readonly tavern?: { readonly hungry: boolean; readonly menu: readonly { readonly id: string; readonly label: string; readonly price: number }[] } | null;

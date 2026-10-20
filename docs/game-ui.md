@@ -181,7 +181,9 @@ the stock with Buy and Steal (set apart), the player's items with Sell, Repair a
 and a line total for the chosen amount. A trade at or over the ruleset's `largeTradeGold`
 and every theft ask through the drawn confirm; so do training, a paid summoning and
 buying or selling property. A conversation groups its topics under the ruleset's
-`topicGroups` and keeps a short log of what was asked and answered while it lasts. The
+`topicGroups` and keeps a short log of what was asked and answered while it lasts; the
+"Where is" directory's lists (each topic's `category`: the kinds of building the donor lists, the
+people, the region) are closed, counted sections until the player opens one. The
 spellmaker and potion maker draw every field from published limits (the spellmaker's
 `limits`, the potion maker's ingredient count), and rest and lodging durations are
 steppers bounded by the ruleset's maximums.
