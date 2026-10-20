@@ -207,6 +207,8 @@ export interface MerchantItemProjection {
   readonly key: string;
   readonly definition: string;
   readonly label: string;
+  /** The item's published icon, as the pack draws it; null when it has none. */
+  readonly icon?: string | null;
   readonly quantity: string | number;
   /** The most of this row one trade moves: a stack's count, or one. */
   readonly maximumQuantity: number;

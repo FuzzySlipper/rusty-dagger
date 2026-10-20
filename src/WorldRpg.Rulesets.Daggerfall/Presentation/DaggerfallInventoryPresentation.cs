@@ -487,6 +487,13 @@ internal sealed class DaggerfallInventoryPresentation
         }
     }
 
+    /// <summary>Which published icon an item draws: a potion its recipe's, everything else its definition's.</summary>
+    internal static string IconKey(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata) =>
+        definition.Template?.Index == 83 && metadata?.PotionRecipeKey is int recipe ? $"potion.{recipe}" : definition.Id.Value;
+
+    /// <summary>The published icon for an <see cref="IconKey"/>, or null when the item has none.</summary>
+    internal string? Icon(string iconKey) => icons.GetValueOrDefault(iconKey);
+
     internal InventoryItemPresentation DescribeItem(string key, string itemId, ulong quantity, int? gridSlot = null, string[]? equippedSlots = null,
         DaggerfallItemOwner? owner = null)
     {
@@ -518,7 +525,7 @@ internal sealed class DaggerfallInventoryPresentation
             : equippedSlots is { Length: > 0 } ? "Unequip that item before dropping it."
             : metadata is not null ? canDropQuestItem?.Invoke(metadata) : null;
         return new InventoryItemPresentation(key, itemId, display.Label, quantity.ToString(CultureInfo.InvariantCulture),
-            metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), details, icons.GetValueOrDefault(definition.Template?.Index == 83 && metadata?.PotionRecipeKey is int recipe ? $"potion.{recipe}" : itemId), gridSlot, equippedSlots ?? [],
+            metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), details, icons.GetValueOrDefault(IconKey(definition, metadata)), gridSlot, equippedSlots ?? [],
             definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray(),
             display.Condition, display.Identified,
             CanUse: carried && metadata is not null && itemUse?.CanUse(itemId, metadata) == true,

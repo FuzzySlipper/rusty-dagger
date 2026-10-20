@@ -2599,7 +2599,7 @@ test('the conversation groups its topics under the published headings, keeps a s
 test('the shop is the transfer layout: line totals, confirms for large trades and theft, and service-only rows', () => {
   const f = fixture();
   try {
-    const stack = { key: 'stack:shop.arrows', definition: 'template-131', label: 'Arrows', quantity: '100', maximumQuantity: 100, unitPrice: '7',
+    const stack = { key: 'stack:shop.arrows', definition: 'template-131', label: 'Arrows', icon: 'item.arrows', quantity: '100', maximumQuantity: 100, unitPrice: '7',
       currentCondition: 10, maximumCondition: 10, identified: true, stolen: false, canBuy: true, canSell: false };
     const player = { key: 'unique:17', definition: 'template-113', label: 'Worn sword', quantity: 1, maximumQuantity: 1, unitPrice: 20,
       currentCondition: 3, maximumCondition: 10, identified: false, stolen: false, canBuy: false, canSell: false };
@@ -2607,11 +2607,13 @@ test('the shop is the transfer layout: line totals, confirms for large trades an
       question: null, reply: null, topics: [], diagnostics: [], merchant });
     const baseMerchant = { revision: 'merchant-1', provider: 'Guild officer', quality: 10, gold: '100', buyAvailable: true,
       sellAvailable: false, repairAvailable: false, identifyAvailable: false, result: '', largeTradeGold: 500, stock: [stack], playerItems: [], repairs: [] };
-    f.publish({ activation: { mode: 'talk', dialogue: dialogue(baseMerchant) } });
+    const png = 'data:image/png;base64,AA==';
+    f.publish({ uiArtRevision: 'r1', uiArt: { revision: 'r1', images: [{ id: 'item.arrows', image: png }] }, activation: { mode: 'talk', dialogue: dialogue(baseMerchant) } });
 
     const shop = f.root.querySelector('.dagger-dialogue-merchant');
     const stockRow = shop.querySelector('[data-transfer-side="source"] [data-transfer-item="stack:shop.arrows"]');
     assert.match(stockRow.textContent, /7 gold each/);
+    assert.equal(stockRow.querySelector('.dagger-transfer-icon img').src, png, 'A shop row draws the icon its item draws in the pack.');
     const quantity = stockRow.querySelector('.dagger-stepper input');
     assert.equal(quantity.max, '100', 'The bound is the projected maximum.');
     assert.equal(stockRow.querySelector('.dagger-transfer-total').textContent, '7 gold');

@@ -521,6 +521,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("key", builder.String(item.Key)),
         ("definition", builder.String(item.Definition)),
         ("label", builder.String(item.Label)),
+        ("icon", item.Icon is null ? builder.Null() : builder.String(item.Icon)),
         ("quantity", builder.String(item.Quantity.ToString(CultureInfo.InvariantCulture))),
         ("maximumQuantity", builder.Number(item.Key.StartsWith("stack:", StringComparison.Ordinal) ? checked((long)item.Quantity) : 1)),
         ("unitPrice", builder.String(item.UnitPrice.ToString(CultureInfo.InvariantCulture))),

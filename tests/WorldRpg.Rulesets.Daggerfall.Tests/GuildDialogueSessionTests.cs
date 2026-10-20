@@ -91,6 +91,8 @@ public sealed class GuildDialogueSessionTests
         Assert.False(view.CanShoplift);
         Assert.NotEmpty(view.Stock);
         Assert.All(view.Stock, item => Assert.True(item.Identified));
+        // Each stock row names the icon its item would draw in the pack (generated magic items have none yet).
+        Assert.All(view.Stock, item => Assert.False(string.IsNullOrEmpty(item.IconKey)));
         AddGold(session);
         view = session.ReadCurrentMerchant()!;
         var item = view.Stock.First(value => value.Key.StartsWith("unique:", StringComparison.Ordinal));

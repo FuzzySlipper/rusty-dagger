@@ -40,7 +40,10 @@ internal sealed partial class DaggerfallSession
     internal DaggerfallMerchantView? ReadCurrentMerchant()
     {
         DaggerfallMerchantProviderContext? context = CurrentMerchantProvider();
-        return context is null ? null : State.Merchants.Read(context, dialogueRevision: _activationPresentation.View.Dialogue?.Revision);
+        if (context is null || State.Merchants.Read(context, dialogueRevision: _activationPresentation.View.Dialogue?.Revision) is not { } view) return null;
+        // Each row draws the icon its item would draw in the pack.
+        DaggerfallMerchantItemView WithIcon(DaggerfallMerchantItemView row) => row with { Icon = _inventoryUi.Icon(row.IconKey) };
+        return view with { Stock = [.. view.Stock.Select(WithIcon)], PlayerItems = [.. view.PlayerItems.Select(WithIcon)] };
     }
 
     internal void ChangeMerchant(DaggerfallPlayerUiAction action)
