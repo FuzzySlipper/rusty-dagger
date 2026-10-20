@@ -852,7 +852,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
 
     private static uint Identity(UiValueBuilder builder, CharacterIdentityPresentation identity) => builder.Object(
         ("race", builder.String(identity.Race)), ("raceLabel", builder.String(identity.Race.Length == 0 ? "" : DaggerfallCharacterPresentation.Label(identity.Race))), ("donorRaceId", builder.Number(identity.DonorRaceId)), ("portrait", builder.String(identity.Portrait)),
-        ("gender", builder.String(identity.Gender)), ("faceIndex", builder.Number(identity.FaceIndex)), ("career", builder.String(identity.Career)),
+        ("gender", builder.String(identity.Gender)), ("faceIndex", builder.Number(identity.FaceIndex)), ("career", builder.String(identity.Career)), ("careerLabel", builder.String(identity.CareerLabel)),
         ("racialOverride", identity.RacialOverride is not { } racial ? builder.Null() : builder.Object(
             ("name", builder.String(racial.Name)), ("vampireClan", identity.VampireClan is null ? builder.Null() : builder.String(identity.VampireClan)), ("beastForm", builder.Boolean(racial.State.BeastForm)),
             ("suppressInventory", builder.Boolean(racial.SuppressInventory)))),

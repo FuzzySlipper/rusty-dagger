@@ -2780,7 +2780,7 @@ test('racial form projection closes and suppresses inventory until human form re
   const f = fixture();
   try {
     const character = { name: 'Aubk-i', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [],
-      identity: { race: 'breton', raceLabel: 'Breton', donorRaceId: 1, portrait: '', gender: 'female', faceIndex: 0, career: 'mage', media: [], selectedMedia: [],
+      identity: { race: 'breton', raceLabel: 'Breton', donorRaceId: 1, portrait: '', gender: 'female', faceIndex: 0, career: 'class00', careerLabel: 'Mage', media: [], selectedMedia: [],
         racialOverride: { name: 'Werewolf', beastForm: true, suppressInventory: true } } };
     f.root.querySelector('[data-action="inventory"]').click();
     character.identity.selectedMedia = [{layer:'background',mediaId:'beast.body'},{layer:'head',mediaId:'beast.head'}];
@@ -2789,6 +2789,7 @@ test('racial form projection closes and suppresses inventory until human form re
     assert.deepEqual([...f.root.querySelectorAll('.dagger-character-art img')].map(img=>img.dataset.mediaId), ['beast.body','beast.head']);
     assert.equal(f.root.querySelector('[data-action="inventory"]').disabled, true);
     assert.match(f.root.querySelector('.dagger-character-overview').textContent, /Werewolf · Beast form/);
+    assert.match(f.root.querySelector('.dagger-character-overview').textContent, /CareerMage/, 'The sheet names the career, not its id.');
     assert.equal(f.root.querySelector('.dagger-menu').classList.contains('has-inventory'), false);
     character.identity.racialOverride.beastForm = false;
     character.identity.racialOverride.suppressInventory = false;

@@ -73,6 +73,8 @@ export interface CharacterIdentity {
   readonly gender: string;
   readonly faceIndex: number;
   readonly career: string;
+  /** The career's name as the player knows it, a custom class by its own name. */
+  readonly careerLabel?: string;
   readonly media: readonly CharacterMedia[];
   readonly selectedMedia: readonly CharacterMedia[];
 }
@@ -232,7 +234,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         ...(value.progression.nextLevelSkillProgress == null || value.progression.skillProgress == null ? [] : [
           overviewRow('Level progress', `${format(value.progression.skillProgress)} / ${format(value.progression.nextLevelSkillProgress)} skill total${value.progression.pendingLevelUp === true ? ' · Level up ready' : ''}`),
         ]),
-        ...(value.identity ? [overviewRow('Race', value.identity.raceLabel), overviewRow('Career', value.identity.career),
+        ...(value.identity ? [overviewRow('Race', value.identity.raceLabel), overviewRow('Career', value.identity.careerLabel || value.identity.career),
           ...(value.identity.racialOverride ? [overviewRow('Form', `${value.identity.racialOverride.name} · ${value.identity.racialOverride.vampireClan ?? (value.identity.racialOverride.beastForm ? 'Beast form' : 'Human form')}`)] : []),
           overviewRow('Face', `${value.identity.gender} ${format(value.identity.faceIndex + 1)}`)] : []),
       );
