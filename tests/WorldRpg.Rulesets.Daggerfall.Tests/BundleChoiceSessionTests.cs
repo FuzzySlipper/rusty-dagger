@@ -27,10 +27,11 @@ public sealed class BundleChoiceSessionTests
         product.Start();
         DaggerfallSession classic = ruleset.RequireSession();
 
-        // The entry screen offers both committed games by their authored titles.
+        // The entry screen offers every committed game by its authored title.
         Assert.Equal("daggerfall.classic", engine.PublishedNested("bundles", "current"));
         Assert.Equal("Classic Daggerfall", Option(engine, 0));
         Assert.Equal("Contact + mitigation", Option(engine, 1));
+        Assert.Equal("Developer: Charing town start", Option(engine, 2));
 
         product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"daggerfall.contact"}""")]));
 

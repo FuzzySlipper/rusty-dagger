@@ -309,7 +309,16 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal DaggerfallCinematicSet Cinematics { get; } = cinematics;
 
     internal DaggerfallVocabulary Vocabulary { get; } = vocabulary;
-    internal DaggerfallNewGameDefinition NewGame { get; init; } = null!;
+    private DaggerfallNewGameDefinition _newGame = null!;
+    internal DaggerfallNewGameDefinition NewGame { get => _newGame; init => _newGame = value; }
+
+    /// <summary>These definitions with another new-game definition and every other section shared.</summary>
+    internal DaggerfallDefinitions WithNewGame(DaggerfallNewGameDefinition newGame)
+    {
+        var replaced = (DaggerfallDefinitions)MemberwiseClone();
+        replaced._newGame = newGame;
+        return replaced;
+    }
 
     /// <summary>
     /// Journal titles authored over a quest source's own display name, keyed by quest name, where the

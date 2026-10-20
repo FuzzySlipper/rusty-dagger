@@ -12,7 +12,7 @@ source file receives a planning disposition in the table below or in the compani
 [source manifest](../../data/content-source-manifest.csv); archive-internal record dispositions
 are assigned by the relevant import/publication tasks. “All content” is not a disposition.
 
-The authored `daggerfall.base` payload owns the `newGame` starting-loadout section: playable-career weapons and spell keys, custom-class starting items, gender-specific clothing, spellbook and gold. These values resolve through the normalized item and spell catalogs; session construction consumes them once. The selected bundle owns the start site.
+The authored `daggerfall.base` payload owns the `newGame` starting-loadout section: playable-career weapons and spell keys, custom-class starting items, gender-specific clothing, spellbook and gold. These values resolve through the normalized item and spell catalogs; session construction consumes them once. The selected bundle owns the start site; a bundle may also select one `daggerfall.new-game-start` pack, which replaces only the start site, starting gold, opening quests and start hour (the developer `daggerfall.town-start` bundle uses it to begin in Charing).
 
 Site packs may declare `world.variant` and `world.variantOf` (the base profile's
 logical publication path) for a named location scenery variant. A selected bundle

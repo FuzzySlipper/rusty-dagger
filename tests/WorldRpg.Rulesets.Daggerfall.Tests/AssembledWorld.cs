@@ -113,6 +113,15 @@ internal sealed class AssembledWorld
     /// <summary>A save restored over the real Engine services of <paramref name="engine"/>, as loading it in the running product does.</summary>
     internal AssembledWorldRun Restore(IEngineContext engine, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, RulesetSavePayload save) =>
         new(this, engine, files, save);
+
+    /// <summary>Every assembled exterior an exterior window centred on <paramref name="site"/> streams, a step across its map pixel's edge included.</summary>
+    internal IEnumerable<DaggerfallSiteProfile> NearbyExteriors(DaggerfallSiteId site)
+    {
+        DaggerfallSiteRecord centre = Definitions.Locations.Records.Single(record => record.Id == site);
+        foreach (DaggerfallSiteRecord near in Definitions.Locations.Records.Where(record => record.Exterior is not null
+            && Math.Abs(record.Exterior.MapPixelX - centre.MapPixelX) <= 4 && Math.Abs(record.Exterior.MapPixelY - centre.MapPixelY) <= 4))
+            if (Profiles.TryGet(DaggerfallWorldProfileIds.Exterior(near.Id), out DaggerfallSiteProfile exterior)) yield return exterior;
+    }
 }
 
 /// <summary>One session over content admitting every place the journey and its window reach.</summary>
@@ -217,10 +226,7 @@ internal sealed class AssembledWorldRun : IDisposable
     {
         foreach (DaggerfallSiteId site in new[] { AssembledWorld.PrivateersHold, destination }.Distinct())
         {
-            DaggerfallSiteRecord centre = world.Definitions.Locations.Records.Single(record => record.Id == site);
-            foreach (DaggerfallSiteRecord near in world.Definitions.Locations.Records.Where(record => record.Exterior is not null
-                && Math.Abs(record.Exterior.MapPixelX - centre.MapPixelX) <= 4 && Math.Abs(record.Exterior.MapPixelY - centre.MapPixelY) <= 4))
-                if (world.Profiles.TryGet(DaggerfallWorldProfileIds.Exterior(near.Id), out DaggerfallSiteProfile exterior)) yield return exterior;
+            foreach (DaggerfallSiteProfile exterior in world.NearbyExteriors(site)) yield return exterior;
             if (world.Profiles.TryGet(DaggerfallWorldProfileIds.Dungeon(site), out DaggerfallSiteProfile dungeon)) yield return dungeon;
         }
         if (building is { } entered) yield return world.Profiles.Require(DaggerfallWorldProfileIds.Interior(destination, entered));
@@ -390,7 +396,8 @@ internal sealed class AssembledWorldRun : IDisposable
 
     public void Dispose() => Session.Dispose();
 
-    private static void Admit(ContentFake content, DaggerfallSiteProfile profile)
+    /// <summary>Admits a profile's content, terrain textures included, to a scripted content service.</summary>
+    internal static void Admit(ContentFake content, DaggerfallSiteProfile profile)
     {
         PopulateContent(content, profile);
         foreach (NormalizedTerrainTexture texture in profile.TerrainTextures.Values) content.Add(texture.TexturePath, texture.TextureSha256);

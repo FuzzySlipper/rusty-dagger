@@ -153,7 +153,11 @@ The title screen's **Game** selector chooses the game bundle a new run starts
 under (classic Daggerfall, or a rules variant such as contact + mitigation),
 and the choice is remembered for the next start. A save loads only under the
 game it was made in. Character creation's **Quick start** begins a new game at
-once from the draft's choices.
+once from the draft's choices. For playing and capturing town services, the
+developer game **Developer: Charing town start** begins in Charing's streets at
+nine in the morning with 5000 gold and no opening quests; its
+`daggerfall.new-game-start` pack overrides only the base pack's start site, gold,
+quests and start hour.
 
 Without the generated content, staging the product stops with a message naming
 the script. See [third-party notices](THIRD_PARTY_NOTICES.md) for what is and is
