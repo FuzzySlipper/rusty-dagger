@@ -119,6 +119,17 @@ public sealed class DaggerfallInventoryPresentationTests
     }
 
     [Fact]
+    public void An_equip_cue_belongs_to_the_action_that_made_it_and_a_later_action_clears_it()
+    {
+        using Fixture f = new();
+        InventoryPresentation before = f.Ui.Read();
+        f.Ui.Move(new("inventory-move", before.Revision, f.Key(1002), TargetEquipment: "right-hand"));
+        Assert.Equal("equip", f.Ui.Read().EquipmentChange?.Cue);
+        f.Ui.Sort();
+        Assert.Null(f.Ui.Read().EquipmentChange);
+    }
+
+    [Fact]
     public void The_sort_and_take_all_actions_have_their_exact_shapes()
     {
         Assert.Equal(DaggerfallUiActionKind.InventorySort, DaggerfallUiAction.Parse("{\"action\":\"inventory-sort\"}"u8)?.Kind);

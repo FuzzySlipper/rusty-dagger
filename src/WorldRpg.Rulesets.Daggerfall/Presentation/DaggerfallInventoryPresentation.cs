@@ -72,6 +72,10 @@ internal sealed class DaggerfallInventoryPresentation
     { canDropQuestItem = canDrop; questItemDropped = dropped; }
     internal event Action<DaggerfallReadableBook>? BookOpened;
     internal string Message { get; private set; } = "Drag items between the grid and compatible equipment slots.";
+    /// <summary>
+    /// The equipment change the last inventory action completed, if it made one. Every action clears
+    /// it first, so a later drop or use is never reported with an earlier equip's cue.
+    /// </summary>
     internal DaggerfallEquipmentChange? LastEquipmentChange { get; private set; }
     internal ulong MetadataRevision => itemInstances?.Revision ?? 0;
 
@@ -142,6 +146,7 @@ internal sealed class DaggerfallInventoryPresentation
     internal void ReportBankTransaction(DaggerfallBankTransactionOutcome outcome)
     {
         ArgumentNullException.ThrowIfNull(outcome);
+        LastEquipmentChange = null;
         string detail = outcome.Result switch
         {
             DaggerfallBankTransactionResult.Applied => AppliedBankMessage(outcome),
@@ -273,6 +278,7 @@ internal sealed class DaggerfallInventoryPresentation
     /// <summary>Lays the pack out by tab, then by name, from the first cell.</summary>
     internal void Sort()
     {
+        LastEquipmentChange = null;
         InventoryPresentation current = Read();
         string[] order = [.. current.Items.Where(item => item.EquippedSlots.Length == 0)
             .OrderBy(item => Array.FindIndex(PackCategories, category => category.Id == item.Category))
@@ -386,6 +392,7 @@ internal sealed class DaggerfallInventoryPresentation
     /// </summary>
     internal void Move(DaggerfallPlayerUiAction action)
     {
+        LastEquipmentChange = null;
         InventoryPresentation before = Read();
         InventoryItemPresentation? row = action.Item is null ? null : before.Items.SingleOrDefault(item => item.Key == action.Item);
         if (row is null) { Message = "That item is no longer in your inventory."; return; }
@@ -420,6 +427,7 @@ internal sealed class DaggerfallInventoryPresentation
     /// <summary>Publishes the authoritative current description for a still-contained inventory row.</summary>
     internal void Inspect(DaggerfallPlayerUiAction action)
     {
+        LastEquipmentChange = null;
         InventoryPresentation current = Read();
         InventoryItemPresentation? row = action.Item is null ? null : current.Items.SingleOrDefault(item => item.Key == action.Item);
         if (row is null) { Message = "That item is no longer in your inventory."; return; }
@@ -429,6 +437,7 @@ internal sealed class DaggerfallInventoryPresentation
     /// <summary>Routes a current item through a named domain operation; rejected or deferred use conserves it.</summary>
     internal void Use(DaggerfallPlayerUiAction action)
     {
+        LastEquipmentChange = null;
         if (itemUse is null) throw new InvalidOperationException("Inventory item use is not composed.");
         InventoryPresentation current = Read();
         if (action.Revision != current.Revision) { Message = "Inventory changed. Choose the item again."; return; }
@@ -442,6 +451,7 @@ internal sealed class DaggerfallInventoryPresentation
     /// <summary>Drops one explicit current stack quantity or one unequipped unique item into a durable ground pile.</summary>
     internal void Drop(DaggerfallPlayerUiAction action)
     {
+        LastEquipmentChange = null;
         if (ground is null || groundPosition is null) throw new InvalidOperationException("Inventory ground drops are not composed.");
         InventoryPresentation current = Read();
         if (action.Revision != current.Revision) { Message = "Inventory changed. Choose the item again."; return; }
