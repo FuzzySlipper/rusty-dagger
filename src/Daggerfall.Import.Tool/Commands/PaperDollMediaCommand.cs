@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Publication;
 
@@ -47,7 +46,7 @@ internal static class PaperDollMediaCommand
         PayloadFiles.WriteFile(indexFile, PaperDollItemPublication.WriteIndex(pass, args["--group"]));
         PayloadFiles.WriteSections(packFile, new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["paperDoll"] = PaperDollItemPublication.Section(pass).ToJsonString(new JsonSerializerOptions { WriteIndented = true }),
+            ["paperDoll"] = PaperDollItemPublication.Section(pass).ToJsonString(PublishedJson.Section),
         });
         return 0;
     }
