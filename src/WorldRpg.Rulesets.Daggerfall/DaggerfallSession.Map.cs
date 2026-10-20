@@ -129,7 +129,7 @@ internal sealed partial class DaggerfallSession
     /// answers reveal the destination through the existing durable discovery owner; building answers
     /// select the existing transient map marker so the next map projection shows the disclosed target.
     /// </summary>
-    private DaggerfallDialogueDestination? ResolveDialogueDirection(string? target)
+    internal DaggerfallDialogueDestination? ResolveDialogueDirection(string? target)
     {
         DaggerfallSiteRecord? active = Site.ActiveSite;
         if (active is null || string.IsNullOrWhiteSpace(target)) return null;
@@ -145,7 +145,8 @@ internal sealed partial class DaggerfallSession
             if (parts.Length != 3 || !int.TryParse(parts[0], out int blockX)
                 || !int.TryParse(parts[1], out int blockY) || !int.TryParse(parts[2], out int index)) return null;
             DaggerfallSiteBuildingId id = new(blockX, blockY, index);
-            if (_activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return null;
+            // Asked outdoors or inside one of the town's buildings; a dungeon has no streets to point along.
+            if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon) return null;
             try
             {
                 DaggerfallSiteBuildingRecord building = Site.RequireBuilding(active.Id, id);
@@ -284,9 +285,14 @@ internal sealed partial class DaggerfallSession
 
     private string BuildingHint(DaggerfallSiteId site, DaggerfallSiteBuildingId building)
     {
-        if (State.PlayerControl.Position is not WorldPoint player) return "here";
-        WorldPoint target = DaggerfallMapProjection.BuildingPosition(Site, site, building);
-        return CardinalHint(target, _sites.ExteriorSitePosition(player));
+        // Inside a building the directions start at its door on the map, as the donor's do from the
+        // player's map position, since the interior's own coordinates are not the town's.
+        WorldPoint? start = _activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior
+            && DaggerfallWorldProfileIds.TryParse(_activeProfileKey.LogicalId, out _, out DaggerfallSiteBuildingId? inside) && inside is { } here
+                ? DaggerfallMapProjection.BuildingPosition(Site, site, here)
+            : State.PlayerControl.Position is WorldPoint player ? _sites.ExteriorSitePosition(player) : null;
+        if (start is not { } origin) return "here";
+        return CardinalHint(DaggerfallMapProjection.BuildingPosition(Site, site, building), origin);
     }
 
     private static string CardinalHint(WorldPoint target, WorldPoint start)
