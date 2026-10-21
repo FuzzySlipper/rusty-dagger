@@ -277,7 +277,10 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
     if (event.button !== 0 || !current) return;
     const from = { x: event.clientX, y: event.clientY, centerX, centerZ };
     dragged = false;
-    followPress(svg, event, {
+    // Capture goes to what was pressed: a point keeps its own release and click, so a press that does
+    // not travel still chooses it, while one that does pans the map from it.
+    const pressed = event.target instanceof Element ? event.target.closest('.dagger-map-point') ?? svg : svg;
+    followPress(pressed, event, {
       start() { dragged = true; view.classList.add('is-dragging'); },
       move(moved) {
         const [x0, y0] = diagramPoint(from.x, from.y), [x1, y1] = diagramPoint(moved.clientX, moved.clientY);

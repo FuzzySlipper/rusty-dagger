@@ -396,7 +396,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // not a modal; everything else - including the entry screen's own action, which the product
         // answers before this runs - is dropped and the presentation still publishes so the player
         // can see the mode they are in.
-        _lastInputDevice = InputDevice(input) ?? _lastInputDevice;
+        _lastInputDevice = InputDevice(input, Math.Min(_tuning.ControllerInput.MovementDeadzone, _tuning.ControllerInput.LookDeadzone)) ?? _lastInputDevice;
         Cinematics?.Poll();
         _openingCinematics.Poll();
         // The donor ends a playing video on any key or button press (DaggerfallVidPlayerWindow,
@@ -822,14 +822,20 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The device the player last pressed something on, so the HUD names its bindings for it.</summary>
     private string _lastInputDevice = "keyboard";
 
-    private static string? InputDevice(ReadOnlySpan<ProductInputEvent> input)
+    /// <summary>
+    /// The device this update's input came from, or null when it carries none: a pad button or a stick
+    /// moved past the controller deadzone (so idle drift never switches it), or a key, a mouse button or
+    /// mouse look. The latest such event wins.
+    /// </summary>
+    private static string? InputDevice(ReadOnlySpan<ProductInputEvent> input, float deadzone)
     {
         string? device = null;
         foreach (ProductInputEvent value in input)
         {
-            if (value.Edge != InputEdge.Pressed) continue;
-            if (value.Kind == InputEventKind.ControllerButton) device = "controller";
-            else if (value.Kind is InputEventKind.Key or InputEventKind.PointerButton) device = "keyboard";
+            if (value.Kind == InputEventKind.ControllerButton && value.Edge == InputEdge.Pressed) device = "controller";
+            else if (value.Kind == InputEventKind.ControllerAxis && MathF.Abs(value.X) > deadzone) device = "controller";
+            else if (value.Kind is InputEventKind.Key or InputEventKind.PointerButton && value.Edge == InputEdge.Pressed) device = "keyboard";
+            else if (value.Kind == InputEventKind.PointerDelta && (value.X != 0 || value.Y != 0)) device = "keyboard";
         }
         return device;
     }
@@ -975,8 +981,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         if (_mode != ProductMode.Playing || _interactions.HoldsWorldOpen || _activation is null) return null;
         if (_activation.FocusedTarget(State.Actors.Player.Actor.Entity, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl))
             is not { } target) return null;
-        return new(DaggerfallHudText.PromptAction(_activation.Mode, target.Kind),
-            string.IsNullOrWhiteSpace(target.Label) ? DaggerfallHudText.TargetName(target.Kind) : target.Label);
+        // The owner of what is aimed at words what use would do from its own state; where use would do
+        // nothing (a door in Talk mode, a person in Bash), there is no prompt to promise it.
+        if (_activation.PromptAction(target) is not { } action) return null;
+        return new(action, string.IsNullOrWhiteSpace(target.Label) ? DaggerfallHudText.TargetName(target.Kind) : target.Label);
     }
 
     /// <summary>The name of the item a player effect comes from, for the active-effect status row.</summary>

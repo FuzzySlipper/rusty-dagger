@@ -2571,6 +2571,43 @@ test('dungeon map notes are added at the player, edited and removed through the 
   } finally { f.dispose(); }
 });
 
+test('a stationary click on a city map point chooses it under pointer capture, and a pan from it does not', () => {
+  const f = fixture();
+  // Pointer capture as a browser does it: after a press captures, the release and click go to the captor.
+  let captured = null;
+  const proto = window.Element.prototype;
+  const saved = [proto.setPointerCapture, proto.hasPointerCapture, proto.releasePointerCapture];
+  proto.setPointerCapture = function () { captured = this; };
+  proto.hasPointerCapture = function () { return captured === this; };
+  proto.releasePointerCapture = function () { if (captured === this) captured = null; };
+  try {
+    const map = { id: '17/45', name: 'Charing', kind: 'city', region: 17, location: 45, player: { x: 0, y: 0, z: 0, yaw: 0 }, areas: [],
+      labels: [{ id: '0/0/3', name: 'The Odd Tome', x: 1, y: 0, z: 2, selected: false }] };
+    f.publish({ map }); f.root.querySelector('[data-action="map"]').click();
+    const svg = f.root.querySelector('.dagger-map-diagram');
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 320, height: 320, right: 320, bottom: 320 });
+    const point = f.root.querySelector('[data-label-id="0/0/3"]');
+    const at = (target, type, x, y, buttons) => target.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true, button: 0, buttons, clientX: x, clientY: y }));
+    const choices = () => f.actions.filter(action => action.action === 'map-building').length;
+    // Press and release in place: the release and click reach the point the press captured on.
+    at(point, 'pointerdown', 100, 100, 1);
+    const captor = captured;
+    assert.equal(captor, point);
+    at(captor, 'pointerup', 100, 100, 0); at(captor, 'click', 100, 100, 0);
+    assert.equal(choices(), 1);
+    assert.deepEqual(f.actions.filter(action => action.action === 'map-building').at(-1), { action: 'map-building', region: 17, destination: 45, item: '0/0/3' });
+    // A press on the point that travels pans the map, and its trailing click chooses nothing.
+    const group = svg.querySelector(':scope > g');
+    const before = group.getAttribute('transform');
+    at(point, 'pointerdown', 100, 100, 1);
+    at(captured, 'pointermove', 160, 120, 1);
+    const target = captured;
+    at(target, 'pointerup', 160, 120, 0); at(target, 'click', 160, 120, 0);
+    assert.notEqual(group.getAttribute('transform'), before);
+    assert.equal(choices(), 1);
+  } finally { [proto.setPointerCapture, proto.hasPointerCapture, proto.releasePointerCapture] = saved; f.dispose(); }
+});
+
 test('city map selection sends the actual location and placed building identity to the shared owner', () => {
   const f = fixture();
   try {

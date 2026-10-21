@@ -883,6 +883,28 @@ internal sealed partial class DaggerfallSession
             }
         }
 
+        /// <summary>
+        /// What ActivateDoor would do now, read without doing it: examine in Information mode, nothing in
+        /// Talk, pick a locked lock in Steal, bash in Bash, and otherwise enter a building's entrance or
+        /// open a shut dungeon door and close an open one.
+        /// </summary>
+        public string? PromptAction(DaggerfallActivationSelection selection)
+        {
+            DaggerfallRdbDoorId id = _identities.Single(pair => pair.Value == selection.Target.Identity).Key;
+            DaggerfallDoorView door = _doors.Read(id);
+            bool building = _doors.ExteriorBuildingOf(id) is not null;
+            bool open = door.Motion is DaggerfallDoorMotion.Open or DaggerfallDoorMotion.Opening;
+            return selection.Mode switch
+            {
+                DaggerfallActivationMode.Info => "Examine",
+                DaggerfallActivationMode.Talk => null,
+                DaggerfallActivationMode.Steal when door.IsLocked => "Pick the lock of",
+                DaggerfallActivationMode.Bash => "Bash",
+                _ when building => "Enter",
+                _ => open ? "Close" : "Open",
+            };
+        }
+
         public DaggerfallActivationOutcome ActivateDoor(DaggerfallActivationSelection selection)
         {
             DaggerfallRdbDoorId id = _identities.Single(pair => pair.Value == selection.Target.Identity).Key;

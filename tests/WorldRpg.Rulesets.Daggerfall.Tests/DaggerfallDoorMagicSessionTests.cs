@@ -165,6 +165,29 @@ public sealed class DaggerfallDoorMagicSessionTests
         Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(invalid)));
     }
 
+    [Fact]
+    public void The_hud_prompt_reads_what_using_the_door_would_do_from_its_state_and_the_mode()
+    {
+        using Fixture f = new(); var s = f.Session;
+        string? Prompt()
+        {
+            f.Aim(s, f.Door.Id);
+            var hud = Assert.IsType<Dictionary<string, object?>>(f.Published.Published());
+            return hud["prompt"] is Dictionary<string, object?> prompt ? Assert.IsType<string>(prompt["action"]) : null;
+        }
+        Assert.Equal("Open", Prompt());
+        // An open door would be closed by use, so the prompt says so.
+        s.Doors.Open(f.Door.Id, DaggerfallDoorOperationSource.Player); s.Doors.Advance(2);
+        Assert.Equal("Close", Prompt());
+        // A door does not answer talk, so Talk mode promises nothing.
+        f.Mode(s, "talk");
+        Assert.Null(Prompt());
+        f.Mode(s, "info");
+        Assert.Equal("Examine", Prompt());
+        f.Mode(s, "bash");
+        Assert.Equal("Bash", Prompt());
+    }
+
     private sealed class Fixture : IDisposable
     {
         internal DaggerfallSession Session { get; }
@@ -172,6 +195,8 @@ public sealed class DaggerfallDoorMagicSessionTests
         internal DaggerfallSiteProfile Destination { get; }
         internal DaggerfallDoorView Door { get; }
         internal SpatialFake Spatial { get; private set; } = null!;
+        /// <summary>The engine whose UI service holds what the session last published.</summary>
+        internal EngineContextFake Published { get; private set; } = null!;
         internal ulong Step;
         private readonly bool _maximumRandom;
         internal Fixture(bool maximumRandom = false)
@@ -190,7 +215,7 @@ public sealed class DaggerfallDoorMagicSessionTests
             Spatial = SpatialFake.Create(Composition.StartSite.SpatialArtifact.Sha256, releases); Spatial.KeepPosition = true;
             var perception = PerceptionFake.Create(); perception.Responder = request => Receipt(request.Targets.Span.ToArray()
                 .Select(target => new PerceptionPair(1, target.Entity, 1, 1, PerceptionPairKind.Visible, 1)).ToArray());
-            return EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), perception.Service,
+            return Published = EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), perception.Service,
                 random: maximumRandom ? RandomMaximum.Create() : RandomMinimum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload payload, bool maximumRandom = false) => DaggerfallSession.Restore(Engine(maximumRandom).Context, Composition, payload);
@@ -203,6 +228,14 @@ public sealed class DaggerfallDoorMagicSessionTests
         }
         internal void Mode(DaggerfallSession s, string mode) => s.Update(new ProductUpdate(OuterUpdate(++Step), [Input(InputEventKind.DirectDigital) with
             { ValueKind = InputValueKind.ProductPayload, PayloadContract = "dagger.ui.action.v1"u8.ToArray(), PayloadData = Encoding.UTF8.GetBytes("{\"action\":\"activation-mode\",\"mode\":\"" + mode + "\"}") }]));
+        /// <summary>Faces the door from in front of it and lets one update publish, without using it.</summary>
+        internal void Aim(DaggerfallSession s, DaggerfallRdbDoorId id)
+        {
+            var door = s.Doors.Read(id); s.State.PlayerControl.MoveTo(door.Pose.Translation + Vector3.UnitZ); s.State.PlayerControl.YawRadians = 0; s.State.PlayerControl.PitchRadians = 0;
+            Spatial.FloorHit = request => request.Direction.Y < -.5 ? default : new SpatialHit { Present = true, Kind = SpatialHitKind.Entity,
+                Entity = door.Entity.Value, Point = door.Pose.Translation, Distance = 1 };
+            s.Update(new ProductUpdate(OuterUpdate(++Step), []));
+        }
         internal void Interact(DaggerfallSession s, DaggerfallRdbDoorId id)
         {
             var door = s.Doors.Read(id); s.State.PlayerControl.MoveTo(door.Pose.Translation + Vector3.UnitZ); s.State.PlayerControl.YawRadians = 0; s.State.PlayerControl.PitchRadians = 0;

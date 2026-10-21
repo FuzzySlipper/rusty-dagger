@@ -5,6 +5,7 @@ using Rusty.Engine.Interaction;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Targeting;
 using WorldRpg.Kit.World;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 
@@ -47,6 +48,11 @@ internal interface IDaggerfallDoorActivationOwner
 {
     IEnumerable<DaggerfallActivationTarget> DoorTargets();
     DaggerfallActivationOutcome ActivateDoor(DaggerfallActivationSelection selection);
+    /// <summary>
+    /// What activating this door would do now, from its own state (open or shut, locked, a building's
+    /// entrance), for the HUD's prompt; null when use would do nothing. It changes nothing.
+    /// </summary>
+    string? PromptAction(DaggerfallActivationSelection selection) => DaggerfallHudText.PromptAction(selection.Mode, DaggerfallActivationTargetKind.Door);
 }
 
 internal interface IDaggerfallPortalActivationOwner
@@ -106,6 +112,13 @@ internal sealed class DaggerfallActivationContributions(
         if (_item is not null) foreach (DaggerfallActivationTarget target in _item.ItemTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Item);
     }
 
+    /// <summary>What activating the selected target would do, worded by its owner; null when use would do nothing.</summary>
+    internal string? PromptAction(DaggerfallActivationSelection selection) => selection.Target.Kind switch
+    {
+        DaggerfallActivationTargetKind.Door => _door?.PromptAction(selection),
+        _ => DaggerfallHudText.PromptAction(selection.Mode, selection.Target.Kind),
+    };
+
     internal DaggerfallActivationOutcome Activate(DaggerfallActivationSelection selection) => selection.Target.Kind switch
     {
         DaggerfallActivationTargetKind.Corpse => _corpse.ActivateCorpse(selection),
@@ -152,6 +165,9 @@ internal sealed class DaggerfallActivationModule(InteractionTargetingService tar
             if (target.QueryIdentity == selected.Id) return target;
         return null;
     }
+
+    /// <summary>What use would do to the target, worded by the owner of its kind in the current mode.</summary>
+    internal string? PromptAction(DaggerfallActivationTarget target) => _contributions.PromptAction(new(Mode, target));
 
     internal WorldInteraction CreateInspection(EntityId player, PlayerControlState control, LookReceipt look) =>
         _targeting.CreateInspection(player, control.Position ?? throw new InvalidOperationException("Interaction inspection requires a player position."), look.Forward,
