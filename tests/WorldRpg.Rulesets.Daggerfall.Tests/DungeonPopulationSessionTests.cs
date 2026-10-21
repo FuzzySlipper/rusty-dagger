@@ -61,7 +61,8 @@ public sealed class DungeonPopulationSessionTests
         var entity = session.State.Actors.Entities.Resolve(new(DurableIdentityKind.Container, checked((ulong)treasure.Id)));
         perception.Responder = request => request.Observers.ToArray().Any(observer => observer.Entity == 1)
             ? Receipt(new PerceptionPair(1, checked((ulong)treasure.Id), 1, 1, PerceptionPairKind.Visible, 1)) : Receipt();
-        session.State.PlayerControl.MoveTo(position + Vector3.UnitZ);
+        // The player stands beside the pile: their centre is above the floor the pile rests on.
+        session.State.PlayerControl.MoveTo(position + Vector3.UnitZ + Vector3.UnitY * .9F);
         session.State.PlayerControl.YawRadians = 0;
         spatial.FloorHit = request => request.Direction.Y < -.5 ? default
             : new SpatialHit { Present = true, Kind = SpatialHitKind.Entity, Entity = entity.Value, Point = position, Distance = 1 };
