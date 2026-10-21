@@ -83,7 +83,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const surfaces = [
     navigation.register({ name: 'confirm', root: confirmPrompt.dialog, layer: 100, isOpen: confirmPrompt.open, back: confirmPrompt.cancel }),
     navigation.register({ name: 'menu', root: menu.dialog, layer: 90, isOpen: () => menu.dialog.open,
-      back: menu.back, panel: menu.stepPanel }),
+      back: menu.back, panel: menu.stepPanel, page: menu.page, pageHint: menu.pageHint }),
     navigation.register({ name: 'summoning-offer', root: dialogue.summoningOffer, layer: 80, isOpen: () => dialogue.summoningOffer.open }),
     navigation.register({ name: 'legal', root: choices.legal, layer: 70, isOpen: () => !choices.legal.hidden }),
     navigation.register({ name: 'quests', root: quests, layer: 60, isOpen: () => questAnswerRequired && !dead }),

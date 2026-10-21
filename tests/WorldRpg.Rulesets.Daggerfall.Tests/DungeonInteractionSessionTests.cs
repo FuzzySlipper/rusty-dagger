@@ -630,7 +630,7 @@ public sealed class DungeonInteractionSessionTests
             void Submit(object action, ulong step) => session.Update(new ProductUpdate(OuterUpdate(step), [Ui(JsonSerializer.Serialize(action))]));
 
             Submit(new { action = "inventory-use", revision = engine.PublishedNested("inventory", "revision"), item = $"stack:{stack.Value}" }, 2);
-            Assert.Equal("journal", engine.PublishedNested("panelRequest", "panel"));
+            Assert.Equal("book", engine.PublishedNested("panelRequest", "panel"));
             Assert.Equal(1UL, session.State.Inventory.Read().Stacks.Single(item => item.Id == stack).Quantity);
             Submit(new { action = "notebook-add", revision = engine.PublishedNested("notebook", "revision"), text = "Remember this passage." }, 3);
             saved = DaggerfallSavePayload.Read(session.CaptureSave());

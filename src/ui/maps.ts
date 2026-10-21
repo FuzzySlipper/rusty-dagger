@@ -1,3 +1,6 @@
+import { DRAG_START_PIXELS } from './drag.js';
+import { BACK_EVENT, DIRECTION_EVENT, type Direction } from './navigation.js';
+
 /** A top-down diagram of admitted map data. Controls own presentation only. */
 export interface MapProjection {
   readonly id: string; readonly name: string; readonly kind: 'city' | 'dungeon' | 'interior';
@@ -7,6 +10,10 @@ export interface MapProjection {
   readonly labels: readonly { readonly id: string; readonly name: string; readonly x: number; readonly y: number; readonly z: number; readonly selected: boolean; readonly note?: boolean }[];
   /** Whether this map keeps player notes; a note is placed at the player's position. */
   readonly canAddNote?: boolean;
+  /** The compass word for the way the player faces. */
+  readonly facing?: string;
+  /** The area categories this map draws, with the legend's words for each. */
+  readonly legend?: readonly { readonly category: string; readonly label: string }[];
 }
 export type MapAction =
   | { readonly action: 'map-building'; readonly region: number; readonly destination: number; readonly item: string }
@@ -24,24 +31,55 @@ export function isMapProjection(value: unknown): value is MapProjection {
 }
 const ns = 'http://www.w3.org/2000/svg';
 // Presentation colours for the semantic area categories the ruleset publishes.
-const areaColours: Record<string, string> = { door: '#c49b55', room: '#718694', surface: '#718694', tavern: '#d99845', guild: '#9879b8' };
+const areaColours: Record<string, string> = { door: '#c49b55', room: '#718694', surface: '#5f7a69', tavern: '#d99845', guild: '#9879b8', shop: '#b8705a', common: '#697f94' };
+const colour = (category: string): string => areaColours[category] ?? areaColours.common!;
+/** The diagram's half-width in its own units; the view box is twice this square. */
+const HALF = 160;
+/** How far one pan step moves, in diagram units. */
+const PAN_STEP = 24;
+const ZOOM_STEP = 1.5;
+const MIN_ZOOM = .01, MAX_ZOOM = 100;
 function svgElement(name: string, attributes: Record<string, string>): SVGElement {
   const element = document.createElementNS(ns, name);
   for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
   return element;
 }
-export function mountMap(root: HTMLElement, send: (action: MapAction) => void, travel: () => void): { update(value: MapProjection | null): void; dispose(): void } {
+const PLAYER_ARROW = 'M 0 -6 L 4 5 L 0 2 L -4 5 Z';
+
+/**
+ * The local map: a pannable, zoomable diagram of what the player has explored, with a legend, named
+ * points and the player's arrow.
+ *
+ * The mouse drags it to pan (pointer events with capture, as every drag in game UI) and the wheel
+ * zooms about the cursor. Keyboard and controller pan it from the diagram itself: accepting the
+ * focused diagram starts panning, the directions then move the view, the triggers or Page Up and Down
+ * zoom, and accepting again or Back stops. Points stay focusable as controls of their own.
+ */
+export function mountMap(root: HTMLElement, send: (action: MapAction) => void, travel: () => void): {
+  update(value: MapProjection | null): void;
+  /** The triggers or Page Up and Down: zoom out (-1) or in (1). */
+  zoom(direction: -1 | 1): void;
+  dispose(): void;
+} {
   const shell = document.createElement('section'); shell.className = 'dagger-map';
   const heading = document.createElement('h2');
   const controls = document.createElement('div'); controls.className = 'dagger-map-controls';
-  const status = document.createElement('p'); status.setAttribute('role', 'status');
+  const status = document.createElement('p'); status.className = 'dagger-map-status'; status.setAttribute('role', 'status');
   const levelLabel = document.createElement('label'); levelLabel.textContent = 'Height slice (metres) ';
   const level = document.createElement('input'); level.type = 'number'; level.step = '0.5'; level.className = 'dagger-map-level';
   const allLabel = document.createElement('label'); allLabel.textContent = 'All levels ';
   const all = document.createElement('input'); all.type = 'checkbox'; all.checked = true; allLabel.append(all); levelLabel.append(level);
-  const svg = svgElement('svg', { viewBox: '-160 -160 320 320', role: 'img', 'aria-label': 'Explored map and current player position' });
+  const namesLabel = document.createElement('label'); namesLabel.textContent = 'All names ';
+  const names = document.createElement('input'); names.type = 'checkbox'; names.className = 'dagger-map-names'; namesLabel.append(names);
+  // The diagram is one control: focus it to pan with keys or a pad; its points are controls inside it.
+  const view = document.createElement('div'); view.className = 'dagger-map-view'; view.tabIndex = 0;
+  view.setAttribute('role', 'group');
+  const svg = svgElement('svg', { viewBox: `${-HALF} ${-HALF} ${HALF * 2} ${HALF * 2}`, role: 'img', 'aria-label': 'Explored map and current player position' });
   svg.classList.add('dagger-map-diagram');
   const viewport = svgElement('g', {}); svg.append(viewport);
+  const hint = document.createElement('p'); hint.className = 'dagger-map-hint';
+  view.append(svg, hint);
+  const legend = document.createElement('ul'); legend.className = 'dagger-map-legend'; legend.setAttribute('aria-label', 'Map legend');
   const buildings = document.createElement('div'); buildings.className = 'dagger-map-buildings';
   const target = document.createElement('p'); target.className = 'dagger-map-target';
   const noteForm = document.createElement('form'); noteForm.className = 'dagger-map-note';
@@ -57,33 +95,82 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
   });
   let drawn = '';
   let current: MapProjection | null = null, identity = '', centerX = 0, centerZ = 0, zoom = 1, rotation = 0, playerUp = false;
+  let panning = false;
+  const angle = (): number => playerUp && current ? -current.player.yaw * 180 / Math.PI : rotation;
+  /** A move on screen, in diagram units, as a move over the map: undo the view's rotation and zoom. */
+  const toWorld = (dx: number, dy: number): [number, number] => {
+    const radians = -angle() * Math.PI / 180;
+    return [(dx * Math.cos(radians) - dy * Math.sin(radians)) / zoom, (dx * Math.sin(radians) + dy * Math.cos(radians)) / zoom];
+  };
+  const showAll = (): boolean => current?.kind === 'city' || all.checked;
+  const describe = (value: MapProjection): string => {
+    const kind = value.kind === 'city' ? 'City' : value.kind === 'interior' ? 'Explored interior' : 'Explored dungeon';
+    const offset = Math.round((Number(level.value) - value.player.y) * 2) / 2;
+    const levels = value.kind === 'city' ? null : showAll() ? 'all levels'
+      : offset === 0 ? 'your level' : `${Math.abs(offset)} m ${offset > 0 ? 'above' : 'below'} you`;
+    return [kind, levels, value.facing ? `facing ${value.facing}` : null].filter(Boolean).join(' · ');
+  };
+  /** Place the view and keep every mark upright and the same size on screen whatever the zoom and turn. */
+  const applyView = (): void => {
+    if (!current) return;
+    const turn = angle();
+    viewport.setAttribute('transform', `scale(${zoom}) rotate(${turn}) translate(${-centerX} ${-centerZ})`);
+    for (const mark of viewport.querySelectorAll('[data-mark]')) mark.setAttribute('transform', `rotate(${-turn}) scale(${1 / zoom})`);
+    viewport.querySelector('[data-player]')?.setAttribute('transform',
+      `translate(${current.player.x} ${current.player.z}) rotate(${current.player.yaw * 180 / Math.PI}) scale(${1.6 / zoom})`);
+    status.textContent = describe(current);
+  };
+  const point = (label: MapProjection['labels'][number]): SVGElement => {
+    const group = svgElement('g', { class: 'dagger-map-point', transform: `translate(${label.x} ${label.z})`, 'data-label-id': label.id });
+    if (label.selected) group.classList.add('is-selected');
+    if (label.note) group.classList.add('is-note');
+    const mark = svgElement('g', { 'data-mark': 'true' });
+    const dot = svgElement('circle', { r: '3.2' });
+    const text = svgElement('text', { x: '6', y: '4', class: 'dagger-map-name' });
+    text.textContent = label.name;
+    mark.append(dot, text); group.append(mark);
+    return group;
+  };
   function draw(): void {
+    // A point or building the player had focused keeps focus through the rebuild, as when choosing it
+    // republishes the map with it selected.
+    const focused = document.activeElement instanceof Element && shell.contains(document.activeElement) ? document.activeElement : null;
+    const key = focused?.getAttribute('data-label-id') ?? focused?.getAttribute('data-building') ?? null;
+    const inDiagram = focused !== null && viewport.contains(focused);
+    build();
+    if (key === null) return;
+    const attribute = inDiagram ? 'data-label-id' : 'data-building';
+    const again = Array.from((inDiagram ? viewport : buildings).querySelectorAll<HTMLElement | SVGElement>(`[${attribute}]`))
+      .find(element => element.getAttribute(attribute) === key);
+    again?.focus({ preventScroll: true });
+  }
+  function build(): void {
     drawn = '';
-    viewport.replaceChildren(); buildings.replaceChildren();
+    viewport.replaceChildren(); buildings.replaceChildren(); legend.replaceChildren();
     if (!current) { status.textContent = 'No map is available in this interior.'; return; }
     const value = current;
-    const angle = playerUp ? -value.player.yaw * 180 / Math.PI : rotation;
-    viewport.setAttribute('transform', `scale(${zoom}) rotate(${angle}) translate(${-centerX} ${-centerZ})`);
-    const slice = Number(level.value), showAll = value.kind === 'city' || all.checked;
+    const slice = Number(level.value), every = showAll();
     for (const area of value.areas) {
-      if (!showAll && (area.minY > slice || area.maxY < slice)) continue;
-      const rect = svgElement('rect', { x: String(area.minX), y: String(area.minZ), width: String(Math.max(.1, area.maxX - area.minX)), height: String(Math.max(.1, area.maxZ - area.minZ)), 'data-id': area.id, 'data-kind': String(area.kind), fill: areaColours[area.category] ?? (value.kind === 'dungeon' ? '#718694' : '#697f94') });
+      if (!every && (area.minY > slice || area.maxY < slice)) continue;
+      const rect = svgElement('rect', { x: String(area.minX), y: String(area.minZ), width: String(Math.max(.1, area.maxX - area.minX)), height: String(Math.max(.1, area.maxZ - area.minZ)), 'data-id': area.id, 'data-kind': String(area.kind), 'data-category': area.category, fill: colour(area.category) });
       viewport.append(rect);
     }
     for (const label of value.labels) {
-      if (!showAll && Math.abs(label.y - slice) > 1) continue;
-      const point = svgElement('circle', { cx: String(label.x), cy: String(label.z), r: String(3 / zoom), fill: label.selected ? '#ffe077' : '#d5e2e7', 'data-label-id': label.id });
-      point.setAttribute('data-tooltip', label.name); viewport.append(point);
+      if (!every && Math.abs(label.y - slice) > 1) continue;
+      const mark = point(label);
+      viewport.append(mark);
       if (value.kind === 'city' && value.region !== null && value.location !== null) {
         const button = document.createElement('button'); button.type = 'button'; button.textContent = label.name; button.dataset.building = label.id;
         button.setAttribute('aria-pressed', String(label.selected));
         const region = value.region, destination = value.location;
-        button.addEventListener('click', () => send({ action: 'map-building', region, destination, item: label.id }));
-        point.setAttribute('role', 'button'); point.setAttribute('tabindex', '0'); point.setAttribute('aria-label', label.name);
         const select = (): void => send({ action: 'map-building', region, destination, item: label.id });
-        point.addEventListener('click', select); point.addEventListener('keydown', event => { if (event instanceof KeyboardEvent && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); select(); } });
+        button.addEventListener('click', select);
+        mark.setAttribute('role', 'button'); mark.setAttribute('tabindex', '0'); mark.setAttribute('aria-label', `${label.name}: show directions`);
+        mark.addEventListener('click', () => { if (!dragged) select(); });
+        mark.addEventListener('keydown', event => { if (event instanceof KeyboardEvent && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); select(); } });
         buildings.append(button);
       } else {
+        mark.setAttribute('tabindex', '0'); mark.setAttribute('aria-label', label.note ? `Your note: ${label.name}` : label.name);
         const text = document.createElement('p'); text.textContent = label.name;
         if (label.note) {
           text.dataset.note = label.id;
@@ -106,46 +193,146 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
         buildings.append(text);
       }
     }
-    const player = svgElement('path', { d: 'M 0 -6 L 4 5 L 0 2 L -4 5 Z', fill: '#73ff98', transform: `translate(${value.player.x} ${value.player.z}) rotate(${value.player.yaw * 180 / Math.PI}) scale(${1 / zoom})`, 'data-player': 'true' });
-    viewport.append(player);
-    status.textContent = `${value.kind === 'city' ? 'City' : value.kind === 'interior' ? 'Explored interior' : 'Explored dungeon'} · ${showAll ? 'all levels' : `height ${slice} m`} · player ${value.player.x.toFixed(1)}, ${value.player.y.toFixed(1)}, ${value.player.z.toFixed(1)} m`;
-    drawn = JSON.stringify([value.id, value.kind, value.areas, value.labels, value.region, value.location]);
-    target.textContent = value.labels.find(label => label.selected)?.name ? `Directions target: ${value.labels.find(label => label.selected)!.name}` : '';
+    viewport.append(svgElement('path', { d: PLAYER_ARROW, 'data-player': 'true', class: 'dagger-map-player' }));
+    // The legend names what this map draws: the ruleset's area categories, then the marks.
+    const entry = (swatch: string, text: string, style?: string): HTMLLIElement => {
+      const item = document.createElement('li');
+      const key = document.createElement('span'); key.className = `dagger-map-key dagger-map-key-${swatch}`;
+      if (style) key.style.background = style;
+      item.append(key, text);
+      return item;
+    };
+    legend.append(...(value.legend ?? []).map(row => entry('area', row.label, colour(row.category))), entry('player', 'You'));
+    if (value.labels.some(label => !label.note)) legend.append(entry('point', value.kind === 'city' ? 'Known building' : 'Marker'));
+    if (value.labels.some(label => label.selected)) legend.append(entry('selected', 'Directions target'));
+    if (value.labels.some(label => label.note)) legend.append(entry('note', 'Your note'));
+    drawn = JSON.stringify([value.id, value.kind, value.areas, value.labels, value.region, value.location, value.legend]);
+    const chosen = value.labels.find(label => label.selected)?.name;
+    target.textContent = chosen ? `Directions target: ${chosen}` : '';
+    applyView();
   }
+
+  const setPanning = (on: boolean): void => {
+    panning = on;
+    view.classList.toggle('is-panning', on);
+    view.setAttribute('aria-pressed', String(on));
+    view.setAttribute('aria-label', on ? 'Map view, panning' : 'Map view');
+    hint.textContent = on ? 'Directions pan · triggers or Page Up and Down zoom · accept or Back to stop'
+      : 'Drag to pan · wheel to zoom · accept to pan with keys or a controller';
+  };
+  setPanning(false);
+  const pan = (direction: Direction): void => {
+    const [dx, dy] = direction === 'left' ? [-PAN_STEP, 0] : direction === 'right' ? [PAN_STEP, 0] : direction === 'up' ? [0, -PAN_STEP] : [0, PAN_STEP];
+    const [wx, wz] = toWorld(dx, dy);
+    centerX += wx; centerZ += wz; applyView();
+  };
+  /** Zoom by a factor, keeping the map under a diagram point (the centre by default) where it is. */
+  const zoomBy = (factor: number, sx = 0, sy = 0): void => {
+    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
+    if (next === zoom) return;
+    const [ax, az] = toWorld(sx, sy);
+    const atX = centerX + ax, atZ = centerZ + az;
+    zoom = next;
+    const [bx, bz] = toWorld(sx, sy);
+    centerX = atX - bx; centerZ = atZ - bz;
+    applyView();
+  };
+  view.addEventListener(DIRECTION_EVENT, event => {
+    if (!panning || document.activeElement !== view) return;
+    event.preventDefault();
+    pan((event as CustomEvent<Direction>).detail);
+  });
+  view.addEventListener(BACK_EVENT, event => {
+    if (!panning || document.activeElement !== view) return;
+    event.preventDefault();
+    setPanning(false);
+  });
+  // A controller's accept clicks the focused control; a mouse click on the diagram is not a request to pan.
+  view.addEventListener('click', event => { if (event.target === view && event.detail === 0) setPanning(!panning); });
+  view.addEventListener('keydown', event => {
+    if (event.target !== view) return;
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setPanning(!panning); }
+    else if (event.key === '+' || event.key === '=') { event.preventDefault(); zoomBy(ZOOM_STEP); }
+    else if (event.key === '-' || event.key === '_') { event.preventDefault(); zoomBy(1 / ZOOM_STEP); }
+  });
+  view.addEventListener('blur', () => setPanning(false));
+
+  /** A client point as a point of the diagram's view box. */
+  const diagramPoint = (clientX: number, clientY: number): [number, number] => {
+    const rect = svg.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return [0, 0];
+    const size = Math.min(rect.width, rect.height);
+    return [(clientX - rect.left - rect.width / 2) * HALF * 2 / size, (clientY - rect.top - rect.height / 2) * HALF * 2 / size];
+  };
+  svg.addEventListener('wheel', event => {
+    if (!current) return;
+    event.preventDefault();
+    const [sx, sy] = diagramPoint(event.clientX, event.clientY);
+    zoomBy(event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP, sx, sy);
+  }, { passive: false });
+  // Dragging pans with pointer events and capture; a press that does not travel stays a click on a point.
+  let press: { pointer: number; x: number; y: number; centerX: number; centerZ: number } | null = null;
+  let dragged = false;
+  svg.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || !current) return;
+    press = { pointer: event.pointerId, x: event.clientX, y: event.clientY, centerX, centerZ };
+    dragged = false;
+  });
+  svg.addEventListener('pointermove', event => {
+    if (press === null || event.pointerId !== press.pointer) return;
+    const [x0, y0] = diagramPoint(press.x, press.y), [x1, y1] = diagramPoint(event.clientX, event.clientY);
+    if (!dragged) {
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) < DRAG_START_PIXELS) return;
+      dragged = true;
+      svg.setPointerCapture?.(event.pointerId);
+      view.classList.add('is-dragging');
+    }
+    const [wx, wz] = toWorld(x1 - x0, y1 - y0);
+    centerX = press.centerX - wx; centerZ = press.centerZ - wz;
+    applyView();
+  });
+  const endPress = (): void => {
+    press = null;
+    view.classList.remove('is-dragging');
+    // The click that ends a drag arrives after this; it is the drag's, not a choice of a point.
+    if (dragged) setTimeout(() => { dragged = false; }, 0);
+  };
+  svg.addEventListener('pointerup', endPress);
+  svg.addEventListener('pointercancel', endPress);
+  svg.addEventListener('lostpointercapture', endPress);
+
   const button = (label: string, action: () => void): void => {
     const element = document.createElement('button'); element.type = 'button'; element.textContent = label;
     element.addEventListener('click', () => { action(); draw(); }); controls.append(element);
   };
-  button('Pan left', () => { centerX -= 20 / zoom; }); button('Pan right', () => { centerX += 20 / zoom; });
-  button('Pan north', () => { centerZ -= 20 / zoom; }); button('Pan south', () => { centerZ += 20 / zoom; });
-  button('Zoom in', () => { zoom = Math.min(100, zoom * 1.5); }); button('Zoom out', () => { zoom = Math.max(.01, zoom / 1.5); });
+  button('Zoom in', () => { zoom = Math.min(MAX_ZOOM, zoom * ZOOM_STEP); }); button('Zoom out', () => { zoom = Math.max(MIN_ZOOM, zoom / ZOOM_STEP); });
   button('Rotate left', () => { playerUp = false; rotation -= 45; }); button('Rotate right', () => { playerUp = false; rotation += 45; });
   button('North up', () => { playerUp = false; rotation = 0; }); button('Player up', () => { playerUp = true; });
-  button('Center player', () => { if (current) { centerX = current.player.x; centerZ = current.player.z; level.value = String(current.player.y); } });
+  button('Center on me', () => { if (current) { centerX = current.player.x; centerZ = current.player.z; level.value = String(current.player.y); } });
   button('Level up', () => { all.checked = false; level.value = String(Number(level.value) + .5); });
   button('Level down', () => { all.checked = false; level.value = String(Number(level.value) - .5); });
   button('Travel destinations', travel);
   level.addEventListener('change', () => { all.checked = false; draw(); }); all.addEventListener('change', draw);
-  controls.append(levelLabel, allLabel); shell.append(heading, controls, status, svg, target, noteForm, buildings); root.append(shell);
+  names.addEventListener('change', () => view.classList.toggle('shows-names', names.checked));
+  controls.append(levelLabel, allLabel, namesLabel);
+  shell.append(heading, status, view, legend, controls, target, noteForm, buildings); root.append(shell);
   return {
     update(value): void {
-      current = value; controls.hidden = buildings.hidden = value === null; svg.style.display = value === null ? 'none' : ''; heading.textContent = value ? `${value.name} map` : 'Map';
+      current = value; controls.hidden = buildings.hidden = legend.hidden = value === null; view.hidden = value === null;
+      heading.textContent = value ? `${value.name} map` : 'Map';
       if (value && identity !== `${value.kind}:${value.id}`) {
         identity = `${value.kind}:${value.id}`; centerX = value.player.x; centerZ = value.player.z; rotation = 0; playerUp = false; all.checked = true; level.value = String(value.player.y);
         const extent = Math.max(40, ...value.areas.flatMap(area => [Math.abs(area.minX - centerX), Math.abs(area.maxX - centerX), Math.abs(area.minZ - centerZ), Math.abs(area.maxZ - centerZ)]));
-        zoom = Math.max(.01, 140 / extent);
+        zoom = Math.max(MIN_ZOOM, 140 / extent);
       }
+      if (value === null) setPanning(false);
       noteForm.hidden = value?.canAddNote !== true;
       levelLabel.hidden = value?.kind === 'city' || !value; allLabel.hidden = value?.kind === 'city' || !value;
-      const signature = value ? JSON.stringify([value.id, value.kind, value.areas, value.labels, value.region, value.location]) : '';
-      if (value && drawn === signature) {
-        const angle = playerUp ? -value.player.yaw * 180 / Math.PI : rotation;
-        viewport.setAttribute('transform', `scale(${zoom}) rotate(${angle}) translate(${-centerX} ${-centerZ})`);
-        viewport.querySelector('[data-player]')?.setAttribute('transform', `translate(${value.player.x} ${value.player.z}) rotate(${value.player.yaw * 180 / Math.PI}) scale(${1 / zoom})`);
-        const showAll = value.kind === 'city' || all.checked;
-        status.textContent = `${value.kind === 'city' ? 'City' : value.kind === 'interior' ? 'Explored interior' : 'Explored dungeon'} · ${showAll ? 'all levels' : `height ${level.value} m`} · player ${value.player.x.toFixed(1)}, ${value.player.y.toFixed(1)}, ${value.player.z.toFixed(1)} m`;
-      } else draw();
+      const signature = value ? JSON.stringify([value.id, value.kind, value.areas, value.labels, value.region, value.location, value.legend]) : '';
+      if (value && drawn === signature) applyView();
+      else draw();
     },
+    zoom(direction): void { if (current) zoomBy(direction > 0 ? ZOOM_STEP : 1 / ZOOM_STEP); },
     dispose(): void { shell.remove(); },
   };
 }

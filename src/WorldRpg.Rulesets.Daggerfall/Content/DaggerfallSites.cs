@@ -306,6 +306,16 @@ internal static class DaggerfallSiteKinds
         _ => "other",
     };
 
+    /// <summary>The travel map legend's words for a dot family <see cref="MapCategory"/> names.</summary>
+    internal static string MapCategoryLabel(string category) => category switch
+    {
+        "dungeon" => "Dungeons",
+        "home" => "Homes",
+        "temple" => "Temples",
+        "town" => "Towns",
+        _ => "Other places",
+    };
+
     /// <summary>The kinds the map table's five-bit type field can name.</summary>
     internal const int PublishedCount = (int)DaggerfallSiteKind.HomeYourShips + 1;
 

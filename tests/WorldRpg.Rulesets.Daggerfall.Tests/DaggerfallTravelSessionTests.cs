@@ -41,6 +41,21 @@ public sealed class DaggerfallTravelSessionTests
     }
 
     [Fact]
+    public void A_quote_publishes_the_route_it_measured_in_world_map_pixels()
+    {
+        using Fixture fixture = new();
+        var quote = fixture.Preview(inn: false);
+        var snapshot = Assert.IsType<Dictionary<string, object?>>(fixture.Engine.Published());
+        var travel = Assert.IsType<Dictionary<string, object?>>(snapshot["travel"]);
+        var route = Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(travel["quote"])["route"]);
+        Assert.Equal(quote.Origin.X, Convert.ToInt32(route["fromX"]));
+        Assert.Equal(quote.Origin.Y, Convert.ToInt32(route["fromY"]));
+        Assert.Equal(quote.Destination.MapPixel.X, Convert.ToInt32(route["toX"]));
+        Assert.Equal(quote.Destination.MapPixel.Y, Convert.ToInt32(route["toY"]));
+        Assert.Equal(quote.Destination.Id.Region, Convert.ToInt32(route["region"]));
+    }
+
+    [Fact]
     public void A_place_named_by_the_search_comes_before_the_places_of_a_region_it_names()
     {
         using Fixture fixture = new();

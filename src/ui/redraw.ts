@@ -23,9 +23,12 @@ export function redraw(root: Element, signature: string, build: () => void): boo
   build();
   if (key === null) return true;
   const candidates = Array.from(root.querySelectorAll<HTMLElement>(focused!.tagName));
-  const same = candidates.find(candidate => identity(candidate) === key);
-  // The same control if it is still there, otherwise whatever now sits where it was.
-  const target = same ?? candidates[Math.min(index, candidates.length - 1)] ?? null;
+  // A control that became disabled cannot hold focus, as Next on a book's last page.
+  const usable = (candidate: HTMLElement): boolean => !(candidate as HTMLButtonElement).disabled;
+  const same = candidates.find(candidate => identity(candidate) === key && usable(candidate));
+  // The same control if it is still there, otherwise the nearest usable one to where it was.
+  const at = Math.min(index, candidates.length - 1);
+  const target = same ?? candidates.slice(at).find(usable) ?? candidates.slice(0, at).reverse().find(usable) ?? null;
   target?.focus({ preventScroll: true });
   return true;
 }

@@ -1071,7 +1071,8 @@
           "right": 359,
           "bottom": 266
         },
-        "destinations": []
+        "destinations": [],
+        "legend": []
       }
     },
     "message": null,

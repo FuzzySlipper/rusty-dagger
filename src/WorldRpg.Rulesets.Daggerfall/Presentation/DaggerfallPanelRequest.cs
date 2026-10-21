@@ -18,6 +18,10 @@ internal static class DaggerfallPanel
     internal const string Character = "character";
     internal const string Travel = "transport";
     internal const string Journal = "journal";
+    /// <summary>The journal opened on the player's own notes.</summary>
+    internal const string Notebook = "notebook";
+    /// <summary>The journal opened on the book being read.</summary>
+    internal const string Book = "book";
 
     /// <summary>The menu toggle the DOM's own Escape key performs.</summary>
     internal const string Menu = "menu";

@@ -74,6 +74,16 @@ public sealed class DaggerfallMapPresentationTests
         Assert.Equal(saved.DiscoveredPlacementIds, discovery.Capture().DiscoveredPlacementIds);
     }
 
+    [Theory]
+    [InlineData(0f, "north")]
+    [InlineData(MathF.PI / 2, "east")]
+    [InlineData(MathF.PI, "south")]
+    [InlineData(-MathF.PI / 2, "west")]
+    [InlineData(-MathF.PI / 4, "north-west")]
+    [InlineData(MathF.PI * 2 + 0.1f, "north")]
+    public void Facing_reads_the_yaw_clockwise_from_north(float yaw, string expected) =>
+        Assert.Equal(expected, DaggerfallMapProjection.Compass(yaw));
+
     [Fact]
     public void City_map_uses_real_placed_ids_source_footprints_and_building_names()
     {

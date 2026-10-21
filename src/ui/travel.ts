@@ -1,4 +1,6 @@
 import { image, reportMissingArt } from './art.js';
+import type { ConfirmQuestion } from './confirm.js';
+import { BACK_EVENT } from './navigation.js';
 
 export interface TravelDestinationProjection {
   readonly region: number;
@@ -11,6 +13,8 @@ export interface TravelDestinationProjection {
 export interface TravelQuoteProjection {
   readonly identity: string;
   readonly destination: string;
+  /** The route the quote measured, in world-map pixels. */
+  readonly route?: { readonly fromX: number; readonly fromY: number; readonly toX: number; readonly toY: number; readonly region: number };
   readonly minutes: number;
   readonly duration: string;
   readonly distance: number;
@@ -70,6 +74,8 @@ export interface TravelMapProjection {
     readonly pages: number;
     readonly art: TravelMapImageProjection;
     readonly destinations: readonly TravelMapDestinationProjection[];
+    /** The dot families this sheet draws, with the legend's words for each. */
+    readonly legend?: readonly { readonly category: string; readonly label: string }[];
   } | null;
 }
 
@@ -120,22 +126,35 @@ function isTravelMap(value: unknown): value is TravelMapProjection {
 }
 
 /** Where a world-map pixel falls on a published image, as percentages of its width and height. */
+function percent(frame: TravelMapImageProjection, x: number, y: number): [number, number] {
+  return [(x - frame.left) / (frame.right - frame.left) * 100, (y - frame.top) / (frame.bottom - frame.top) * 100];
+}
+
 function place(element: HTMLElement, frame: TravelMapImageProjection, x: number, y: number): boolean {
-  const left = (x - frame.left) / (frame.right - frame.left) * 100;
-  const top = (y - frame.top) / (frame.bottom - frame.top) * 100;
+  const [left, top] = percent(frame, x, y);
   element.style.left = `${left}%`;
   element.style.top = `${top}%`;
   return left >= 0 && left <= 100 && top >= 0 && top <= 100;
 }
 
+const SVG = 'http://www.w3.org/2000/svg';
+
 /**
  * The travel map: the world overview with the regions it offers and, once a region is open, that
  * region's published sheet with a dot for each discovered destination the ruleset places on it.
- * Choosing a dot asks the ruleset for the same route preview the destination list does.
+ * Choosing a dot asks the ruleset for the same route preview the destination list does, and the
+ * route the quote measured is drawn from the player to it.
+ *
+ * Every marker is a button, so arrows and a pad move between them by position. The focused or
+ * hovered marker's name shows beside it and in the readout under the map, the chosen destination
+ * keeps its name shown, and Back from a sheet returns to the world.
  */
-function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: number, index: number) => void): {
+function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: number, index: number, keyed: boolean) => void): {
   readonly element: HTMLElement;
-  update(map: TravelMapProjection | null, selected: string): void;
+  update(map: TravelMapProjection | null, selected: string, route: TravelQuoteProjection['route'] | null): void;
+  /** Turn to the previous or next sheet of the open region; false when it has only one. */
+  turn(direction: -1 | 1): boolean;
+  hasSheets(): boolean;
   close(): void;
 } {
   const element = document.createElement('div');
@@ -149,7 +168,6 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
   world.type = 'button';
   world.className = 'dagger-travel-map-world';
   world.textContent = 'World map';
-  world.addEventListener('click', () => claim({ action: 'travel-map', open: true }));
   const previous = document.createElement('button');
   previous.type = 'button';
   previous.className = 'dagger-travel-map-previous';
@@ -173,24 +191,77 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
   canvas.className = 'dagger-travel-map-canvas';
   const picture = document.createElement('img');
   picture.alt = '';
+  // The route sits between the art and the markers, in the canvas's own percentages.
+  const routeLayer = document.createElementNS(SVG, 'svg');
+  routeLayer.setAttribute('class', 'dagger-travel-map-route');
+  routeLayer.setAttribute('viewBox', '0 0 100 100');
+  routeLayer.setAttribute('preserveAspectRatio', 'none');
+  routeLayer.setAttribute('aria-hidden', 'true');
   const layer = document.createElement('div');
   layer.className = 'dagger-travel-map-layer';
-  canvas.append(picture, layer);
-  element.append(toolbar, canvas);
+  canvas.append(picture, routeLayer, layer);
+  const readout = document.createElement('p');
+  readout.className = 'dagger-travel-map-readout';
+  const legend = document.createElement('ul');
+  legend.className = 'dagger-travel-map-legend';
+  legend.setAttribute('aria-label', 'Map legend');
+  element.append(toolbar, canvas, readout, legend);
 
   let current: TravelMapProjection | null = null;
   let drawn = '';
+  let resting = '';
+  // The marker that takes focus after the next redraw, when focus was on the map: a region going back
+  // to the world, or the sheet's first dot opening it.
+  let regionLeft: number | null = null;
+  const showName = (marker: HTMLElement | null): void => { readout.textContent = marker?.dataset.label ?? resting; };
+  layer.addEventListener('focusin', event => showName((event.target as HTMLElement).closest<HTMLElement>('[data-label]')));
+  layer.addEventListener('pointerover', event => showName((event.target as HTMLElement).closest<HTMLElement>('[data-label]')));
+  layer.addEventListener('pointerleave', () => showName(layer.contains(document.activeElement) ? document.activeElement as HTMLElement : null));
+  layer.addEventListener('focusout', () => showName(null));
+  const openWorld = (): void => {
+    regionLeft = current?.sheet?.region ?? null;
+    claim({ action: 'travel-map', open: true });
+  };
+  world.addEventListener('click', openWorld);
+  // Back from a sheet's markers is a step out to the world, as the World map button is.
+  layer.addEventListener(BACK_EVENT, event => {
+    if (!current?.sheet) return;
+    event.preventDefault();
+    openWorld();
+  });
   toggle.addEventListener('click', () => claim({ action: 'travel-map', open: current === null }));
-  const turn = (step: number): void => {
+  const turn = (step: number): boolean => {
     const sheet = current?.sheet;
-    if (!sheet || sheet.pages < 2) return;
+    if (!sheet || sheet.pages < 2) return false;
     claim({ action: 'travel-map', open: true, region: sheet.region, page: (sheet.page + step + sheet.pages) % sheet.pages });
+    return true;
   };
   previous.addEventListener('click', () => turn(-1));
   next.addEventListener('click', () => turn(1));
 
+  const key = (swatch: string, text: string, category?: string): HTMLLIElement => {
+    const item = document.createElement('li');
+    const mark = document.createElement('span');
+    mark.className = `dagger-travel-map-key dagger-travel-map-key-${swatch}`;
+    if (category) mark.dataset.category = category;
+    item.append(mark, text);
+    return item;
+  };
+  const drawRoute = (frame: TravelMapImageProjection, route: TravelQuoteProjection['route'] | null): void => {
+    routeLayer.replaceChildren();
+    if (!route) return;
+    const [x1, y1] = percent(frame, route.fromX, route.fromY);
+    const [x2, y2] = percent(frame, route.toX, route.toY);
+    const line = document.createElementNS(SVG, 'line');
+    for (const [name, value] of [['x1', x1], ['y1', y1], ['x2', x2], ['y2', y2]] as const) line.setAttribute(name, String(value));
+    line.setAttribute('vector-effect', 'non-scaling-stroke');
+    routeLayer.append(line);
+  };
+
   return {
     element,
+    turn,
+    hasSheets: () => (current?.sheet?.pages ?? 0) > 1,
     close(): void {
       // Only an open map rides the snapshot, so a closed one needs no word; a repeated hide before the
       // ruleset answers sends nothing more.
@@ -198,18 +269,23 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
       current = null;
       claim({ action: 'travel-map', open: false });
     },
-    update(map, selected): void {
+    update(map, selected, route): void {
+      // Read where focus is before anything is hidden: hiding the World button would drop it.
+      const focusWasHere = layer.contains(document.activeElement) || document.activeElement === world;
+      const focusedKey = layer.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.key ?? null : null;
       current = map;
       toggle.textContent = map ? 'Close map' : 'Open travel map';
-      canvas.hidden = regionPicker.hidden = map === null;
+      canvas.hidden = regionPicker.hidden = readout.hidden = legend.hidden = map === null;
       world.hidden = !map?.sheet;
       previous.hidden = next.hidden = !map?.sheet || map.sheet.pages < 2;
-      // A snapshot arrives every update; the dots are rebuilt only when what they show changes.
-      const signature = map === null ? '' : `${JSON.stringify(map)}|${selected}|${image(map.sheet?.art.image ?? map.world.image) === null}`;
+      // A snapshot arrives every update; the markers are rebuilt only when what they show changes.
+      const signature = map === null ? '' : `${JSON.stringify(map)}|${selected}|${JSON.stringify(route)}|${image(map.sheet?.art.image ?? map.world.image) === null}`;
       if (signature === drawn) return;
       drawn = signature;
       layer.replaceChildren();
-      if (!map) { caption.textContent = ''; picture.removeAttribute('src'); regionPicker.replaceChildren(); return; }
+      routeLayer.replaceChildren();
+      legend.replaceChildren();
+      if (!map) { caption.textContent = ''; readout.textContent = resting = ''; picture.removeAttribute('src'); regionPicker.replaceChildren(); return; }
       const overview = document.createElement('option');
       overview.value = '';
       overview.textContent = 'Whole world';
@@ -226,6 +302,8 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
       else { picture.removeAttribute('src'); canvas.dataset.artMissing = frame.image; }
       reportMissingArt('Travel map', source ? [] : [frame.image]);
       canvas.style.aspectRatio = `${frame.width} / ${frame.height}`;
+      // The route is drawn on the world and on the sheet of the region it ends in.
+      drawRoute(frame, route && (!map.sheet || map.sheet.region === route.region) ? route : null);
       if (map.player) {
         const marker = document.createElement('span');
         marker.className = 'dagger-travel-map-player';
@@ -233,42 +311,72 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
         marker.setAttribute('aria-label', 'You are here');
         if (place(marker, frame, map.player.x, map.player.y)) layer.append(marker);
       }
+      legend.append(key('player', 'You are here'));
+      if (route) legend.append(key('route', 'Route'));
       const sheet = map.sheet;
+      let focusTarget: HTMLElement | null = null;
       if (!sheet) {
         caption.textContent = 'Choose a region.';
+        resting = 'Choose a region to see its known places.';
+        legend.append(key('region', 'Region'));
         for (const region of map.regions) {
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'dagger-travel-map-region';
           button.dataset.region = String(region.region);
-          button.setAttribute('aria-label', region.name);
-          button.dataset.tooltip = `${region.name}: ${region.discovered} known ${region.discovered === 1 ? 'destination' : 'destinations'}`;
+          button.dataset.key = `region:${region.region}`;
+          button.dataset.label = `${region.name}: ${region.discovered} known ${region.discovered === 1 ? 'place' : 'places'}`;
+          button.setAttribute('aria-label', button.dataset.label);
           button.addEventListener('click', () => claim({ action: 'travel-map', open: true, region: region.region, page: 0 }));
           if (place(button, frame, region.x, region.y)) layer.append(button);
+          if (region.region === regionLeft) focusTarget = button;
         }
-        return;
+      } else {
+        caption.textContent = sheet.pages > 1 ? `${sheet.name}, sheet ${sheet.page + 1} of ${sheet.pages}` : sheet.name;
+        if (sheet.destinations.length === 0) caption.textContent += ': no known destinations here';
+        resting = sheet.destinations.length === 0 ? 'No known places on this sheet.' : 'Choose a place to see the route.';
+        for (const row of sheet.legend ?? []) legend.append(key('dot', row.label, row.category));
+        for (const destination of sheet.destinations) {
+          const dot = document.createElement('button');
+          dot.type = 'button';
+          dot.className = 'dagger-travel-map-dot';
+          dot.dataset.category = destination.category;
+          dot.dataset.region = String(sheet.region);
+          dot.dataset.index = String(destination.index);
+          dot.dataset.key = `${sheet.region}:${destination.index}`;
+          dot.dataset.label = `${destination.name} (${destination.kind})`;
+          dot.setAttribute('aria-label', dot.dataset.label);
+          if (dot.dataset.key === selected) {
+            dot.setAttribute('aria-pressed', 'true');
+            resting = dot.dataset.label;
+          }
+          // A click with no pointer (Enter, Space or a pad's accept) is a keyed choice.
+          dot.addEventListener('click', event => choose(sheet.region, destination.index, event.detail === 0));
+          if (place(dot, frame, destination.x, destination.y)) {
+            layer.append(dot);
+            if (focusTarget === null || dot.dataset.key === selected) focusTarget = dot;
+          }
+        }
       }
-      caption.textContent = sheet.pages > 1 ? `${sheet.name}, sheet ${sheet.page + 1} of ${sheet.pages}` : sheet.name;
-      if (sheet.destinations.length === 0) caption.textContent += ': no known destinations here';
-      for (const destination of sheet.destinations) {
-        const dot = document.createElement('button');
-        dot.type = 'button';
-        dot.className = 'dagger-travel-map-dot';
-        dot.dataset.category = destination.category;
-        dot.dataset.region = String(sheet.region);
-        dot.dataset.index = String(destination.index);
-        dot.dataset.tooltip = `${destination.name} (${destination.kind})`;
-        dot.setAttribute('aria-label', dot.dataset.tooltip);
-        if (`${sheet.region}:${destination.index}` === selected) dot.setAttribute('aria-pressed', 'true');
-        dot.addEventListener('click', () => choose(sheet.region, destination.index));
-        if (place(dot, frame, destination.x, destination.y)) layer.append(dot);
+      // Focus that was on the map stays on it: the same marker, else the region just left or the
+      // chosen place, else the first marker.
+      if (focusWasHere) {
+        const same = focusedKey === null ? null : Array.from(layer.querySelectorAll<HTMLElement>('[data-key]')).find(marker => marker.dataset.key === focusedKey) ?? null;
+        const target = same ?? focusTarget ?? (sheet ? world : null);
+        target?.focus({ preventScroll: true });
       }
+      regionLeft = null;
+      showName(layer.contains(document.activeElement) ? document.activeElement as HTMLElement : null);
     },
   };
 }
 
-export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => void): {
+export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => void, ask: (question: ConfirmQuestion) => void): {
   update(value: TravelProjection | null): void;
+  /** The triggers or Page Up and Down: the open region's previous or next sheet. */
+  page(direction: -1 | 1): void;
+  /** What turning a page does now, or null. */
+  pageHint(): string | null;
   /** The travel workflow is no longer shown: an open travel map is closed so it stops being published. */
   hide(): void;
   dispose(): void;
@@ -284,9 +392,18 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
   search.placeholder = 'Search places or regions';
   search.setAttribute('aria-label', 'Search destinations');
   const searchButton = document.createElement('button');
-  searchButton.type = 'button';
+  searchButton.type = 'submit';
   searchButton.textContent = 'Search';
-  searchButton.addEventListener('click', () => claim({ action: 'travel-search', text: search.value }));
+  // A form, so Enter in the box searches as the button does.
+  const searchForm = document.createElement('form');
+  searchForm.className = 'dagger-travel-search';
+  searchForm.append(search, searchButton);
+  searchForm.addEventListener('submit', event => {
+    event.preventDefault();
+    // A new search hands the choice back to the list, whose first result it then selects.
+    selectedOnMap = false;
+    claim({ action: 'travel-search', text: search.value });
+  });
   const destination = document.createElement('select');
   destination.setAttribute('aria-label', 'Destination');
   const cautious = checkbox('Cautious travel', true);
@@ -314,10 +431,22 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
   let submittedIdentity: string | null = null;
   let quotedDestination = '';
   const accept = document.createElement('button'); accept.type = 'button'; accept.className = 'dagger-travel-accept'; accept.textContent = 'Begin journey'; accept.disabled = true;
+  // A journey spends gold and days, so it is asked about first, naming what the quote says it costs.
   accept.addEventListener('click', () => {
     if (selectionChanged || !current?.executionAvailable || !current.quote) return;
-    const quote = current.quote; submittedIdentity = quote.identity; accept.disabled = true; current = null;
-    claim({ action: 'travel-accept', key: quote.identity, amount: quote.totalCost });
+    const quote = current.quote;
+    const teleport = current.guildTeleport === true;
+    const cost = quote.totalCost === 0 ? 'at no cost' : `for ${quote.totalCost} gold`;
+    ask({
+      message: teleport ? `Teleport to ${quote.destination} ${cost}?` : `Travel to ${quote.destination}? About ${quote.duration}, ${cost}.`,
+      accept: teleport ? 'Teleport' : 'Travel',
+      onAccept: () => {
+        // The quote answered for may have been replaced while the question was open.
+        if (selectionChanged || current?.quote?.identity !== quote.identity || !current.executionAvailable) return;
+        submittedIdentity = quote.identity; accept.disabled = true; current = null;
+        claim({ action: 'travel-accept', key: quote.identity, amount: quote.totalCost });
+      },
+    });
   });
   const selectionMoved = (): void => {
     const quote = current?.quote;
@@ -330,7 +459,11 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
     const [region, index] = selectedKey.split(':').map(Number);
     if (Number.isInteger(region) && Number.isInteger(index)) requestPreview(region, index);
   });
-  const map = mountTravelMap(claim, (region, index) => {
+  // A place chosen by keys or a pad sends focus on to Begin journey once its quote arrives, so the
+  // player does not have to step back out through every place on the sheet; a mouse leaves focus be.
+  let goOnQuote = false;
+  const map = mountTravelMap(claim, (region, index, keyed) => {
+    goOnQuote = keyed;
     selectedKey = `${region}:${index}`;
     selectedOnMap = true;
     destination.value = selectedKey;
@@ -342,8 +475,20 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
   const result = document.createElement('p');
   result.setAttribute('role', 'status');
   result.setAttribute('aria-live', 'polite');
-  shell.append(heading, map.element, search, searchButton, destination, cautious.label, inn.label, ship.label, preview, accept, result, lastResult);
-  root.append(shell);
+  // The route controls in rows: find a place, choose it, how to go, then preview and go.
+  const choose = document.createElement('div');
+  choose.className = 'dagger-travel-choose';
+  destination.classList.add('dagger-travel-destination');
+  const options = document.createElement('div');
+  options.className = 'dagger-travel-options';
+  options.append(cautious.label, inn.label, ship.label);
+  const go = document.createElement('div');
+  go.className = 'dagger-travel-go';
+  go.append(preview, accept);
+  choose.append(searchForm, destination, options, go);
+  shell.append(heading, map.element, choose, result, lastResult);
+  // Choosing where to go is what the panel is for, so it comes before the transport settings.
+  root.prepend(shell);
 
   let lastIdentity: string | null = null;
   return {
@@ -366,7 +511,7 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
       destination.value = selectedKey;
       if (destination.value !== selectedKey) destination.selectedIndex = -1;
       preview.disabled = selectedKey === '';
-      map.update(value?.map ?? null, selectedKey);
+      map.update(value?.map ?? null, selectedKey, value?.quote?.route ?? null);
       const quote = value?.quote;
       if (quote) {
         if (quote.identity !== lastIdentity) {
@@ -376,6 +521,8 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
           inn.input.checked = quote.options.inn;
           ship.input.checked = quote.options.ship;
           lastIdentity = quote.identity;
+          if (goOnQuote && value?.executionAvailable && quote.identity !== submittedIdentity) queueMicrotask(() => { if (!accept.disabled) accept.focus(); });
+          goOnQuote = false;
         }
         result.textContent = `${quote.destination}: about ${quote.duration} before any arrival-time adjustment, `
           + `${quote.totalCost} gold (${quote.innCost} inn, ${quote.shipCost} ship). `
@@ -392,6 +539,8 @@ export function mountTravel(root: HTMLElement, claim: (action: TravelAction) => 
       lastResult.textContent = value?.lastResult?.message ?? '';
     },
     hide(): void { map.close(); },
+    page(direction): void { map.turn(direction); },
+    pageHint(): string | null { return map.hasSheets() ? 'Sheets' : null; },
     dispose(): void { shell.remove(); },
   };
 }
