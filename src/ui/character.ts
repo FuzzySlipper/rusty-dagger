@@ -703,6 +703,10 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   // Only the editor below redraws by signature; any other content clears it, so returning to the
   // editor always builds it afresh.
   if (!value?.editing || value.classQuiz) invalidate(root);
+  // Leaving the class questions (answered or abandoned) lands on the career they chose, not on the
+  // first control of the rebuilt editor.
+  const leavingQuiz = root.dataset.classQuiz === 'open' && !value?.classQuiz;
+  if (value?.classQuiz) root.dataset.classQuiz = 'open'; else delete root.dataset.classQuiz;
   if (value === null) { root.replaceChildren(); return; }
   if (!available) { root.replaceChildren(); return; }
   const begin = document.createElement('button'); begin.type = 'button'; begin.textContent = 'Edit character';
@@ -740,6 +744,8 @@ function renderCreation(root: HTMLElement, value: CharacterCreation | null, avai
   // name, the commit-blocking reasons and Quick start's rule update in place, so typing is never cut off.
   const shape = JSON.stringify({ ...value, current: { ...value.current, name: null }, blocked: null, quickStartBlocked: null });
   redraw(root, shape, () => buildCreation(root, value, send));
+  if (leavingQuiz) (root.querySelector<HTMLButtonElement>('[data-cycler="Career"] button:not(:disabled)')
+    ?? root.querySelector<HTMLButtonElement>('[data-testid="character-class-questions"]'))?.focus();
   const name = root.querySelector<HTMLInputElement>('[data-testid="character-name"]');
   if (name && document.activeElement !== name && !name.dataset.pending) name.value = value.current.name;
   const blocked = value.blocked ?? [];
