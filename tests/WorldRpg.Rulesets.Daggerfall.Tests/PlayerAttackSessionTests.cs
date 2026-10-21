@@ -431,7 +431,8 @@ public sealed class PlayerAttackSessionTests
 
         TargetingEvidence evidence = Assert.IsType<TargetingEvidence>(session.LastMeleeTargeting);
         Assert.Equal(2000, evidence.SelectedTargetId);
-        Assert.Equal(perception.Requests.Last(), evidence.Request);
+        // The evidence is a query the Engine was actually sent; the HUD's interaction prompt asks its own afterwards.
+        Assert.Contains(evidence.Request, perception.Requests);
         Assert.True(perception.Requests.Count > 1);
         Assert.Equal((ulong)1, evidence.Request.Observers.Span[0].Entity);
         Assert.Equal(2.25d, evidence.Request.Observers.Span[0].MaximumDistance);
