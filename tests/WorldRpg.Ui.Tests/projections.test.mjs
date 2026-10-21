@@ -348,18 +348,33 @@ test('inventory renders the ruleset-owned completed equip cue without claiming a
   } finally { f.dispose(); }
 });
 
-test('the quick-load key in play asks in the drawn confirm before the product loads', () => {
+test('the quick-load key in play asks over the game menu, which holds the world, and declining returns to play', () => {
   const f = fixture();
   try {
     f.publish({ mode: 'playing' });
+    const menu = f.root.querySelector('.dagger-menu');
+    const confirm = f.root.querySelector('.dagger-confirm');
     f.publish({ mode: 'playing', panelRequest: { panel: 'quick-load', revision: '1' } });
-    assert.equal(f.root.querySelector('.dagger-confirm').open, true);
-    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Load your quick save\? Progress since then is lost\./);
-    f.answer(false);
+    // The question opens the menu, which reports itself open: the product holds the world and the
+    // interface takes input, as for any menu screen.
+    assert.equal(menu.open, true);
+    assert.deepEqual(f.actions.filter(action => action.action === 'menu').at(-1), { action: 'menu', open: true });
+    assert.equal(confirm.open, true);
+    assert.match(confirm.textContent, /Load your quick save\? Progress since then is lost\./);
+    // The controller's Back declines: nothing loads, and play resumes.
+    f.pad('button-1');
+    assert.equal(confirm.open, false);
+    assert.equal(menu.open, false);
+    assert.deepEqual(f.actions.filter(action => action.action === 'menu').at(-1), { action: 'menu', open: false });
     assert.equal(f.actions.some(action => action.action === 'load-game'), false);
+    // Accepting loads; the menu closes once the loaded game is playing.
     f.publish({ mode: 'playing', panelRequest: { panel: 'quick-load', revision: '2' } });
+    f.publish({ mode: 'modal', panelRequest: { panel: 'quick-load', revision: '2' } });
     f.answer(true);
     assert.deepEqual(f.actions.at(-1), { action: 'load-game' });
+    assert.equal(menu.open, true);
+    f.publish({ mode: 'playing', lastOutcome: 'Game loaded.' });
+    assert.equal(menu.open, false);
   } finally { f.dispose(); }
 });
 
@@ -1629,6 +1644,38 @@ test('character sheet groups skills by career group with their uses toward the n
     assert.equal(blade.querySelector('[role="meter"]').getAttribute('aria-valuenow'), '25');
     assert.equal(f.root.querySelector('[data-testid="character-sheet-skill-archery"]').parentElement.dataset.tooltip, 'Archery can rise no further by use.');
     assert.match(f.root.querySelector('[data-testid="character-sheet-legal-17"]').textContent, /Daggerfall: respected.*Reputation 4.*Current region/);
+  } finally { f.dispose(); }
+});
+
+test('a focused character-sheet row keeps focus through unchanged and changed snapshots', () => {
+  const f = fixture();
+  try {
+    const character = (health, strength, reputation, condition) => ({ name: 'Aubk-i', skills: [], progression: { level: 1, experience: 0 }, grantedSkills: [], creationAvailable: false,
+      resources: [{ id: 'health', label: 'Health', current: health, maximum: 31, description: 'Health.' }],
+      attributes: [{ id: 'strength', label: 'Strength', value: strength, permanent: strength, description: 'Strength.' }],
+      resistances: [{ id: 'resistance-fire', label: 'Resistance Fire', value: 0, permanent: 0, description: 'Fire.' }],
+      affiliations: [{ faction: 'Mages Guild', guildGroup: 'Guild', rank: 1, reputation, recognition: 3, description: `Reputation ${reputation}.` }],
+      legalStandings: [{ region: 17, regionName: 'Daggerfall', reputation, standing: 'respected', banished: false, current: true, label: 'Daggerfall: respected', description: 'Law.' }],
+      equipment: [{ label: 'Iron Dagger', slots: ['Right Hand'], details: `Iron Dagger · condition ${condition}`, condition: { current: condition, maximum: 100, percentage: condition, broken: false } }] });
+    f.publish({ mode: 'playing', character: character(31, 45, 6, 90) });
+    f.root.querySelector('[data-action="character"]').click();
+    const rowOf = testid => f.root.querySelector(`[data-testid="${testid}"]`).parentElement;
+    const targets = [() => rowOf('character-sheet-attribute-strength'), () => rowOf('character-sheet-health'),
+      () => rowOf('character-sheet-resistance-resistance-fire'), () => rowOf('character-sheet-affiliation-Mages Guild'),
+      () => rowOf('character-sheet-legal-17'), () => f.root.querySelector('.dagger-character-equipment')];
+    let step = 0;
+    for (const target of targets) {
+      f.publish({ mode: 'playing', character: character(31, 45, 6, 90) });
+      target().focus();
+      const held = target();
+      // An unchanged snapshot leaves the very same row focused.
+      f.publish({ mode: 'playing', character: character(31, 45, 6, 90) });
+      assert.equal(document.activeElement, held, `row kind ${step} keeps focus through a repeated snapshot`);
+      // A changed one rebuilds the rows, and focus returns to the same row.
+      f.publish({ mode: 'playing', character: character(30, 46, 7, 80) });
+      assert.equal(document.activeElement.dataset.row, held.dataset.row, `row kind ${step} keeps focus when its values change`);
+      step++;
+    }
   } finally { f.dispose(); }
 });
 

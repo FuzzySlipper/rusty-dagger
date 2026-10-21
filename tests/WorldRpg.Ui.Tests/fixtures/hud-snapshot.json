@@ -1495,7 +1495,7 @@
         "label": "Reflexes",
         "value": 2,
         "permanent": 2,
-        "description": null
+        "description": "Your reflexes are average, chosen when you made your character. They set how quickly the world reacts to you, and your skills learn from use at 100% of the average rate."
       }
     ],
     "skills": [

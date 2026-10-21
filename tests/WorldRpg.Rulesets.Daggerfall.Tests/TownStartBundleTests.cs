@@ -60,6 +60,8 @@ public sealed class TownStartBundleTests
         string description = Assert.IsType<string>(strength["description"]);
         Assert.StartsWith("Strength governs encumbrance", description, StringComparison.Ordinal);
         Assert.DoesNotContain("%", description, StringComparison.Ordinal);
+        // Every attribute explains itself, Reflexes included, which has no classic text record.
+        Assert.All(Assert.IsType<object[]>(sheet["attributes"]).Cast<Dictionary<string, object?>>(), stat => Assert.IsType<string>(stat["description"]));
         Assert.All(Assert.IsType<object[]>(sheet["resources"]).Cast<Dictionary<string, object?>>(), resource => Assert.IsType<string>(resource["description"]));
 
         // The town's "Where is" directory lists its shops, guilds, temples and taverns under their kinds, as the

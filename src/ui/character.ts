@@ -287,7 +287,8 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         value: line,
         testid: `character-sheet-history-${index}`,
       })));
-      equipment.rows.replaceChildren(...value.equipment.map(item => equipmentRow(item)));
+      keepRows(equipment.rows, value.equipment.map((item, index) => ({ ...item, testid: `${index}:${item.label}` })),
+        () => value.equipment.map((item, index) => { const row = equipmentRow(item); row.dataset.row = `${index}:${item.label}`; return row; }));
       renderRows(career.rows, (value.grantedSkills ?? []).map(skill => ({
         label: skill.label,
         value: skill.tierLabel,
@@ -364,9 +365,24 @@ function explain(row: HTMLElement, tooltip: string | null | undefined): void {
   row.classList.add('dagger-character-explained');
 }
 
+/**
+ * Rebuilds a section's rows only when what they show changed, and then puts focus back on the row with the
+ * same key, so a snapshot that arrives while the player reads a tooltip neither moves nor drops their place.
+ */
+function keepRows(root: HTMLElement, rows: readonly { readonly testid: string }[], build: () => HTMLElement[]): void {
+  const signature = JSON.stringify(rows);
+  if (root.dataset.rows === signature) return;
+  root.dataset.rows = signature;
+  const focused = document.activeElement instanceof HTMLElement && root.contains(document.activeElement)
+    ? document.activeElement.closest<HTMLElement>('[data-row]')?.dataset.row ?? null : null;
+  root.replaceChildren(...build());
+  if (focused !== null) [...root.querySelectorAll<HTMLElement>('[data-row]')].find(row => row.dataset.row === focused)?.focus({ preventScroll: true });
+}
+
 function renderRows(root: HTMLElement, values: readonly { readonly label: string; readonly value: string; readonly testid: string; readonly tooltip?: string | null }[]): void {
-  root.replaceChildren(...values.map(value => {
+  keepRows(root, values, () => values.map(value => {
     const row = document.createElement('div');
+    row.dataset.row = value.testid;
     explain(row, value.tooltip);
     const term = document.createElement('dt');
     const definition = document.createElement('dd');
@@ -461,8 +477,9 @@ function renderSkills(root: HTMLElement, skills: readonly CharacterStat[], group
 
 /** Rows whose value has a line of supporting facts under it. */
 function factRows(root: HTMLElement, values: readonly { readonly label: string; readonly value: string; readonly facts: readonly string[]; readonly testid: string; readonly warning?: boolean; readonly tooltip?: string | null }[]): void {
-  root.replaceChildren(...values.map(value => {
+  keepRows(root, values, () => values.map(value => {
     const row = document.createElement('div');
+    row.dataset.row = value.testid;
     explain(row, value.tooltip);
     row.className = 'dagger-character-fact-row';
     row.classList.toggle('is-warning', value.warning === true);
