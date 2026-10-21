@@ -1439,7 +1439,7 @@ test('title character choices are projected and committed through semantic actio
     f.root.querySelector('[data-testid="character-begin"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'character-begin' });
     const creation = (name, blocked) => ({ mode: 'title', character: { ...sheet, creation: {
-      editing: true, mode: 'character-pick', current: { name, race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
+      editing: true, mode: 'character-pick', classQuestionsAvailable: true, current: { name, race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
       races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }, { id: 'nord', label: 'Nord', available: true, restriction: null },
         { id: 'argonian', label: 'Argonian', available: false, restriction: 'No complete character media is published.' }],
       careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }],
@@ -1471,6 +1471,13 @@ test('title character choices are projected and committed through semantic actio
     assert.equal(commit.disabled, false);
     commit.click();
     assert.deepEqual(f.actions.at(-1), { action: 'character-commit', name: 'Aubk-i', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '', attributeAllocations: 'strength:2', skillAllocations: '' });
+    // The shoulder buttons cross the long form a part at a time.
+    f.pad('button-5');
+    assert.ok(f.root.querySelector('.dagger-creation-class').contains(document.activeElement), 'RB jumps to the class.');
+    f.pad('button-5');
+    assert.ok(f.root.querySelector('.dagger-creation-background').contains(document.activeElement), 'RB again jumps to the background.');
+    f.pad('button-4'); f.pad('button-4');
+    assert.ok(f.root.querySelector('.dagger-creation-identity').contains(document.activeElement), 'LB steps back to the identity.');
     // The ✎ beside the name opens the letter picker, so a pad can type it.
     f.root.querySelector('.dagger-creation-name-row .dagger-letter-picker-open').click();
     const picker = f.root.querySelector('.dagger-letter-picker');
@@ -2218,6 +2225,11 @@ test('active effects render as a structured list and a playing cinematic offers 
       remaining: '1 hour remaining', detail: 'Shield. From Iron Longsword. 1 hour remaining.' }], cinematic: { source: 'ANIM0000.VID', skipLabel: 'Skip' }, inputDevice: 'controller' });
     assert.equal(skip.querySelector('kbd').textContent, 'A');
     assert.match(skip.textContent, /Skip$/);
+    // A pad press skips it too, even while the UI holds the controller.
+    const beforePad = f.actions.length;
+    f.pad('button-0');
+    assert.equal(f.actions.length, beforePad + 1);
+    assert.deepEqual(f.actions.at(-1), { action: 'cinematic-skip' });
     skip.click();
     assert.deepEqual(f.actions.at(-1), { action: 'cinematic-skip' });
     // The shell draws the video above the UI, so any key press skips it and goes no further.

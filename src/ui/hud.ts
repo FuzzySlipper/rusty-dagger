@@ -16,6 +16,8 @@ import { spellIcon } from './spell-icon.js';
  */
 export interface Hud {
   cinematicPlaying(): boolean;
+  /** Skip the playing cinematic, as a controller's press does while the UI holds the pad. */
+  skipCinematic(): void;
   update(value: DaggerHud): void;
   dispose(): void;
 }
@@ -90,6 +92,7 @@ export function mountHud(shell: HTMLElement, send: Send): Hud {
 
   return {
     cinematicPlaying: () => cinematicPlaying,
+    skipCinematic: () => { if (cinematicPlaying) skip(); },
     update(value) {
       title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'
         : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
