@@ -180,6 +180,26 @@ test('loot offers only its panel Exit, which closes the projected container', ()
   } finally { f.dispose(); }
 });
 
+test('loot from play closes back to play, and a container whose name repeats after a load opens again', () => {
+  const f = fixture();
+  try {
+    const loot = container => ({ container, revision: 'r1', title: 'Dropped items — loot', empty: false, message: '', items: [] });
+    const dialog = f.root.querySelector('.dagger-menu');
+    f.publish({ mode: 'modal', loot: loot('ground:1:1') });
+    assert.equal(dialog.open, true);
+    assert.equal(f.root.querySelector('.dagger-loot-root').hidden, false);
+    // Taking the last item ends the container: the player returns to play, not to the game menu.
+    f.publish({ mode: 'playing', loot: null });
+    assert.equal(dialog.open, false);
+    // A loaded game counts its openings afresh, so the first opening repeats the name shown before the load.
+    f.publish({ mode: 'modal', loot: loot('ground:1:1') });
+    assert.equal(dialog.open, true, 'The repeated container opens its panel.');
+    // Back from loot opened in play returns to play.
+    f.pad('button-1');
+    assert.equal(dialog.open, false);
+  } finally { f.dispose(); }
+});
+
 test('quest message text keeps its line breaks but not the spaces classic text used to centre a line', async () => {
   const css = await readFile(new URL('../../src/ui/styles.css', import.meta.url), 'utf8');
   const rule = /\.dagger-quest-message p \{([^}]*)\}/.exec(css)?.[1];

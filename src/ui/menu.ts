@@ -134,6 +134,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const lootView = mountLoot(lootRoot, send);
   let currentLoot: LootProjection | null = null;
   let lastLootContainer: string | null = null;
+  // Loot opened from play (aiming at a container) closes back to play, not to the game menu.
+  let lootFromPlay = false;
   const closeLoot = (): void => { if (currentLoot) send({ action: 'loot-close', container: currentLoot.container }); };
   const saveSlotsRoot = shell.querySelector<HTMLElement>('.dagger-save-slots')!;
   const saveSlotsDiagnostic = shell.querySelector<HTMLElement>('.dagger-save-slots-diagnostic')!;
@@ -399,7 +401,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     dismiss,
     back(source) {
       if (activePanel === 'inventory' && inventoryView.release()) return;
-      if (source === 'escape') closeMenu(); else dismiss();
+      if (source === 'escape' || (activePanel === 'loot' && lootFromPlay)) closeMenu(); else dismiss();
     },
     runAction,
     contextMenu() { if (activePanel === 'inventory') inventoryView.openActions(); },
@@ -467,8 +469,14 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       lootView.update(currentLoot, value.inventory ?? null);
       if (currentLoot && currentLoot.container !== lastLootContainer) {
         lastLootContainer = currentLoot.container;
+        lootFromPlay = !menu.open;
         showPanel('loot');
-      } else if (!currentLoot && activePanel === 'loot') showHome();
+      } else if (!currentLoot) {
+        // A closed container is forgotten, so the next opening shows even when its name repeats (a loaded
+        // game counts its openings afresh).
+        lastLootContainer = null;
+        if (activePanel === 'loot') { if (lootFromPlay) closeMenu(); else showHome(); }
+      }
       // Death outranks every other mode: the menu closes under the death screen.
       if (dead && menu.open) closeMenu();
       // The open menu holds the world, so the product reports modal until a requested load replaces the
