@@ -487,6 +487,7 @@
   background: rgb(0 0 0 / .45); border: 1px solid var(--brass); white-space: pre; overflow: hidden; }
 .dagger-letter-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr)); gap: .25rem; }
 .dagger-letter-picker-grid button { padding: .375rem 0; font: 700 .9rem ui-monospace, monospace; }
+.dagger-letter-picker-grid button[aria-label="Space"] { grid-column: span 2; }
 .dagger-letter-picker-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: .75rem; }
 .dagger-letter-picker-open { padding: .25rem .5rem; }
 .dagger-creation-name-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .25rem; }
