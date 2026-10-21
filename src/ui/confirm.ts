@@ -11,6 +11,8 @@ export interface ConfirmQuestion {
   /** The accepting button's words, naming what it does ("Buy", "Forget"). */
   readonly accept: string;
   readonly onAccept: () => void;
+  /** What declining does beyond closing the question, as closing a menu opened to ask it. */
+  readonly onCancel?: () => void;
 }
 
 export interface ConfirmPrompt {
@@ -43,11 +45,14 @@ export function mountConfirm(host: HTMLElement): ConfirmPrompt {
   host.append(dialog);
 
   let pending: (() => void) | null = null;
+
+  let declined: (() => void) | null = null;
   let owner: HTMLDialogElement | null = null;
   let returnFocus: HTMLElement | null = null;
   const finish = (accepted: boolean): void => {
-    const run = accepted ? pending : null;
+    const run = accepted ? pending : declined;
     pending = null;
+    declined = null;
     owner = null;
     if (dialog.open) dialog.close();
     if (returnFocus?.isConnected) returnFocus.focus();
@@ -64,6 +69,7 @@ export function mountConfirm(host: HTMLElement): ConfirmPrompt {
       returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       owner = returnFocus?.closest('dialog') ?? null;
       pending = question.onAccept;
+      declined = question.onCancel ?? null;
       message.textContent = question.message;
       accept.textContent = question.accept;
       if (!dialog.open) dialog.showModal();

@@ -219,6 +219,16 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     showHome();
     reportMenu(true);
   };
+  // Quick load asks over the game menu, so the question holds the world and takes the interface's input
+  // like any menu screen; the key in play opens the menu to ask, and declining returns to play.
+  const askQuickLoad = (): void => {
+    const openedToAsk = !menu.open;
+    if (openedToAsk) openMenu();
+    home.querySelector<HTMLButtonElement>('[data-action="quick-load"]')?.focus();
+    ask({ message: 'Load your quick save? Progress since then is lost.', accept: 'Load',
+      onAccept: () => { send({ action: 'load-game' }); loadRequested = true; },
+      onCancel: () => { if (openedToAsk && menu.open) closeMenu(); } });
+  };
   const dismiss = (): void => {
     if (host.isDead()) return;
     if (activePanel !== null) showHome();
@@ -309,8 +319,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     // Quick save and quick load are the product's own actions over the Host's quick-save slot; a
     // successful quick load replaces the session, so the menu that asked closes the way a slot load does.
     else if (action === 'quick-save') send({ action: 'save-game' });
-    else if (action === 'quick-load') ask({ message: 'Load your quick save? Progress since then is lost.', accept: 'Load',
-      onAccept: () => { send({ action: 'load-game' }); loadRequested = true; } });
+    else if (action === 'quick-load') askQuickLoad();
     else if (action === 'load-game') showSaveSlots('load');
     else if (action === 'magic-items' || action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
   };

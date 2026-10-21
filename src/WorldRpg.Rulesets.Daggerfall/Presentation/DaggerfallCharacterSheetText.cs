@@ -19,7 +19,7 @@ internal static class DaggerfallCharacterSheetText
     /// <summary>Adds each value's explanation to a sheet read for the player.</summary>
     internal static CharacterSheetPresentation Describe(CharacterSheetPresentation sheet, DaggerfallDefinitions definitions, DaggerfallTextContext context) => sheet with
     {
-        Attributes = [.. sheet.Attributes.Select(stat => stat with { Description = Attribute(definitions, context, stat.Id) })],
+        Attributes = [.. sheet.Attributes.Select(stat => stat with { Description = stat.Id == "reflexes" ? Reflexes(stat) : Attribute(definitions, context, stat.Id) })],
         Resources = [.. sheet.Resources.Select(resource => resource with { Description = Resource(resource) })],
         Resistances = [.. sheet.Resistances.Select(stat => stat with { Description = Resistance(stat) })],
         Affiliations = [.. sheet.Affiliations.Select(affiliation => affiliation with { Description = Affiliation(affiliation) })],
@@ -33,6 +33,19 @@ internal static class DaggerfallCharacterSheetText
         // The record opens with the attribute's name in capitals, which the row already shows.
         string[] lines = [.. text.Split('\n').Select(line => line.Trim()).Where(line => line.Length > 0)];
         return string.Join(' ', lines.Skip(lines.Length > 1 ? 1 : 0));
+    }
+
+    /// <summary>
+    /// Reflexes has no TEXT.RSC description, so the sheet says what it is and what it changes, from the same
+    /// rate play applies to skill use.
+    /// </summary>
+    private static string Reflexes(CharacterStatPresentation stat)
+    {
+        int reflexes = checked((int)stat.Value);
+        string rating = reflexes switch { 0 => "very high", 1 => "high", 2 => "average", 3 => "low", _ => "very low" };
+        int learning = Policies.DaggerfallFormulaPolicy.ReflexesSkillUseScaleMilli(reflexes) / 10;
+        return $"Your reflexes are {rating}, chosen when you made your character. They set how quickly the world reacts to you, "
+            + $"and your skills learn from use at {learning.ToString(CultureInfo.InvariantCulture)}% of the average rate.";
     }
 
     private static string? Resource(CharacterResourcePresentation resource) => resource.Id switch
