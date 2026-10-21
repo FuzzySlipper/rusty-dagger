@@ -3934,6 +3934,11 @@ test('arrow navigation moves to a control that begins past the focus before a ne
     rects.set(tab, [805, 1000, 105, 60]); rects.set(row, [845, 943, 45, 40]); rects.set(back, [928, 1000, 185, 60]);
     tab.focus(); press('ArrowRight');
     assert.equal(document.activeElement, back);
+    // As the merchant drew a full-width row (row) above an item's Buy (tab) and Steal (back): down enters
+    // the item's row at its first control, never at Steal because it sits nearer the wide row's middle.
+    rects.set(row, [402, 714, 1100, 34]); rects.set(tab, [766, 888, 72, 44]); rects.set(back, [856, 888, 72, 44]);
+    row.focus(); press('ArrowDown');
+    assert.equal(document.activeElement, tab);
   } finally {
     window.HTMLElement.prototype.getBoundingClientRect = original;
     window.Element.prototype.getClientRects = originalRects;
