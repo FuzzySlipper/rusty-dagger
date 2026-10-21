@@ -7,6 +7,9 @@
 * { box-sizing: border-box; }
 
 .dagger-hud {
+  /* The shell's body text is a fixed 16px; the HUD follows the interface scale, which sets the root size,
+     so text left at its default size scales at 4K like everything sized in rem. */
+  font-size: 1rem;
   position: fixed;
   inset: 0;
   z-index: 2;
@@ -196,28 +199,31 @@
 .dagger-menu.has-character { width: min(70rem, calc(100vw - 2rem)); }
 
 .dagger-menu.has-journal { width: min(70rem, calc(100vw - 2rem)); }
-.dagger-notebook { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, .8fr); gap: 1.25rem; }
+.dagger-menu:is(.has-map, .has-transport) { width: min(64rem, calc(100vw - 2rem)); }
+.dagger-journal { display: grid; gap: .625rem; }
+.dagger-journal-tabs { display: flex; flex-wrap: wrap; gap: .375rem; }
+.dagger-journal-panel { display: grid; align-content: start; gap: .75rem; min-height: min(50vh, 28rem); }
 .dagger-book-reader, .dagger-user-notes { display: grid; align-content: start; gap: .625rem; }
+.dagger-book-reader { max-width: 46rem; }
 .dagger-book-reader h2, .dagger-user-notes h2, .dagger-book-reader h3 { margin: 0; }
 .dagger-book-author { color: #b9ae8c; font-style: italic; margin: 0; }
 .dagger-book-page { white-space: pre-wrap; min-height: 10rem; margin: 0; line-height: 1.55; }
 .dagger-book-controls, .dagger-note-list li { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 .dagger-book-controls span { margin-inline: auto; color: #b9ae8c; }
 .dagger-note-add { display: grid; gap: .5rem; }
+.dagger-note-add button { justify-self: start; }
 .dagger-note-add textarea, .dagger-note-list textarea { min-height: 4rem; width: 100%; resize: vertical; }
 .dagger-note-list { display: grid; gap: .75rem; padding-left: 1.5rem; margin: 0; }
 .dagger-note-list li { align-items: start; }
 .dagger-note-list textarea { flex-basis: 100%; }
-.dagger-quest-journal { display: grid; gap: .625rem; margin-bottom: 1.25rem; }
-.dagger-quest-journal-tabs { display: flex; gap: .5rem; }
-.dagger-quest-journal-page { display: grid; gap: .875rem; max-height: 24rem; overflow-y: auto; }
+.dagger-quest-journal-page { display: grid; align-content: start; gap: 1.125rem; padding: 1rem 1.25rem; max-height: min(60vh, 36rem); overflow-y: auto; }
 .dagger-quest-journal-group h3 { margin: 0 0 .25rem; }
 .dagger-quest-journal-deadline, .dagger-quest-journal-status { color: #b9ae8c; margin: 0 0 .375rem; }
-.dagger-quest-journal-entries { display: grid; gap: .5rem; margin: 0; padding-left: 1.5rem; white-space: pre-wrap; line-height: 1.5; }
-
-@media (max-width: 44rem) {
-  .dagger-notebook { grid-template-columns: 1fr; }
-}
+.dagger-quest-journal-status[data-succeeded="true"] { color: #b9d48c; }
+.dagger-quest-journal-entries { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; white-space: pre-line; line-height: 1.5; }
+.dagger-quest-journal-entries li { padding: .25rem .5rem; border-left: 3px solid transparent; scroll-margin: .75rem; }
+.dagger-quest-journal-entries li:focus { outline: none; border-left-color: #8a5a1c; background: rgb(138 90 28 / .12); }
+.dagger-book-reader { padding: 1rem 1.25rem; }
 
 .dagger-menu.has-debug { width: min(64rem, calc(100vw - 2rem)); }
 .dagger-debug-root { color: #e2cf96; min-height: 18rem; }
@@ -225,12 +231,38 @@
 /* Gamepad-driven programmatic focus must be visible without a prior keyboard event. */
 .dagger-hud.controller-navigation :focus { outline: 2px solid #f4d983; outline-offset: 2px; }
 
+.dagger-map { display: grid; gap: .5rem; }
+.dagger-map h2 { margin: 0; }
+.dagger-map-status { margin: 0; color: #dfc987; }
+.dagger-map-view { position: relative; display: grid; cursor: grab; touch-action: none; }
+.dagger-map-view.is-dragging { cursor: grabbing; }
+.dagger-map-view.is-panning .dagger-map-diagram { border-color: #ffe077; box-shadow: 0 0 0 2px rgb(255 224 119 / .4); }
 .dagger-map-diagram { width: 100%; height: min(60vh, 37.5rem); background: #17232b; border: 1px solid #87969f; }
-.dagger-map-controls, .dagger-map-buildings { display: flex; flex-wrap: wrap; gap: .4rem; }
+.dagger-map-hint { margin: .25rem 0 0; font-size: .8rem; color: #b9ae8c; }
+.dagger-map-player { fill: #73ff98; stroke: #0d2416; stroke-width: 1; }
+.dagger-map-point circle { fill: #d5e2e7; stroke: #17232b; stroke-width: 1; }
+.dagger-map-point.is-note circle { fill: #8fd0ff; }
+.dagger-map-point.is-selected circle { fill: #ffe077; }
+.dagger-map-point:focus { outline: none; }
+.dagger-map-point:focus circle { stroke: #ffe077; stroke-width: 2.5; }
+.dagger-map-name { display: none; font: 600 11px system-ui, sans-serif; fill: #f6ead0; stroke: #10171c; stroke-width: 3px; paint-order: stroke; pointer-events: none; }
+.dagger-map-point:is(:hover, :focus, .is-selected, .is-note) .dagger-map-name, .dagger-map-view.shows-names .dagger-map-name { display: inline; }
+.dagger-map-legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; list-style: none; margin: 0; padding: 0; font-size: .85rem; }
+.dagger-map-legend li { display: inline-flex; align-items: center; gap: .375rem; }
+.dagger-map-key { display: inline-block; width: .875rem; height: .875rem; border: 1px solid rgb(0 0 0 / .6); }
+.dagger-map-key-player { background: #73ff98; clip-path: polygon(50% 0, 100% 100%, 50% 75%, 0 100%); border: 0; }
+.dagger-map-key-point, .dagger-map-key-selected, .dagger-map-key-note { border-radius: 50%; background: #d5e2e7; }
+.dagger-map-key-selected { background: #ffe077; }
+.dagger-map-key-note { background: #8fd0ff; }
+.dagger-map-controls, .dagger-map-buildings { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.dagger-map-controls label { display: inline-flex; gap: .375rem; align-items: center; font-size: .8rem; color: #dfc987; }
+.dagger-map-controls input[type="number"] { width: 4.5rem; }
 .dagger-map-buildings { max-height: 12rem; overflow: auto; }
 .dagger-map-buildings button[aria-pressed="true"] { outline: 2px solid #ffe077; }
 .dagger-map-diagram [role="button"] { cursor: var(--dagger-cursor-pointer); }
 .dagger-map-note-edit { display: inline-flex; gap: .3rem; margin-left: .4rem; }
+.dagger-map-target { margin: 0; }
+.dagger-map-target:empty { display: none; }
 
 .dagger-entry-bundle { padding: .375rem .75rem; color: #f6ddb0; background: #171713; border: 1px solid #c6a05a; }
 .dagger-entry-bundle select { font: inherit; color: #f6ddb0; background: #080c0a; border: 1px solid #c6a05a; cursor: var(--dagger-cursor-pointer); }
@@ -262,18 +294,45 @@
 .dagger-travel-map { display: grid; gap: .375rem; margin-bottom: .5rem; }
 .dagger-travel-map-toolbar { display: flex; flex-wrap: wrap; gap: .375rem; align-items: center; }
 .dagger-travel-map-caption { color: #dfc987; font-size: .85rem; }
-.dagger-travel-map-canvas { position: relative; width: 100%; max-width: 40rem; background: #10100c; border: 1px solid #a88b4f; }
+.dagger-travel-map-canvas { position: relative; width: 100%; max-width: 48rem; background: #10100c; border: 1px solid #a88b4f; }
 .dagger-travel-map-canvas[data-art-missing] { border-style: dashed; min-height: 8rem; }
 .dagger-travel-map-canvas > img { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+/* The route is clipped to the map, so a journey that starts off this sheet enters it at the edge. */
+.dagger-travel-map-route { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+.dagger-travel-map-route line { stroke: #fff0a7; stroke-width: 2; stroke-dasharray: 6 4; filter: drop-shadow(0 0 1px #000); }
 .dagger-travel-map-layer { position: absolute; inset: 0; }
 .dagger-travel-map-layer > * { position: absolute; transform: translate(-50%, -50%); padding: 0; cursor: var(--dagger-cursor-pointer); }
-.dagger-travel-map-region { width: .75rem; height: .75rem; border-radius: 50%; border: 2px solid #fff0a7; background: #6d2b14; }
-.dagger-travel-map-dot { width: .4375rem; height: .4375rem; border: 1px solid rgb(0 0 0 / .5); background: #e3b490; }
-.dagger-travel-map-dot[data-category="dungeon"] { background: #d7772b; }
-.dagger-travel-map-dot[data-category="home"] { background: #9b696a; }
-.dagger-travel-map-dot[data-category="temple"] { background: #b0cdff; }
-.dagger-travel-map-dot[aria-pressed="true"], .dagger-travel-map-layer > button:focus-visible { outline: 2px solid #fff0a7; outline-offset: 1px; }
-.dagger-travel-map-player { width: .5625rem; height: .5625rem; border: 2px solid #a3270f; border-radius: 50%; pointer-events: none; cursor: default; }
+.dagger-travel-map-region { width: .875rem; height: .875rem; border-radius: 50%; border: 2px solid #fff0a7; background: #6d2b14; }
+.dagger-travel-map-dot { width: .5625rem; height: .5625rem; border: 1px solid rgb(0 0 0 / .6); background: #e3b490; }
+:is(.dagger-travel-map-dot, .dagger-travel-map-key-dot)[data-category="dungeon"] { background: #d7772b; }
+:is(.dagger-travel-map-dot, .dagger-travel-map-key-dot)[data-category="home"] { background: #9b696a; }
+:is(.dagger-travel-map-dot, .dagger-travel-map-key-dot)[data-category="temple"] { background: #b0cdff; }
+:is(.dagger-travel-map-dot, .dagger-travel-map-key-dot)[data-category="town"] { background: #e3b490; }
+.dagger-travel-map-dot[aria-pressed="true"], .dagger-travel-map-layer > button:focus-visible { outline: 2px solid #fff0a7; outline-offset: 1px; z-index: 1; }
+/* The name of the marker in focus, under the pointer or chosen shows beside it, not only on hover. */
+.dagger-travel-map-layer > button::after { content: attr(data-label); position: absolute; left: calc(100% + .375rem); top: 50%; transform: translateY(-50%);
+  display: none; white-space: nowrap; padding: .0625rem .375rem; font: 600 .75rem system-ui, sans-serif; color: #fff0d0; background: rgb(8 8 6 / .85); border: 1px solid #a88b4f; pointer-events: none; }
+.dagger-travel-map-layer > button:is(:focus-visible, [aria-pressed="true"])::after,
+.dagger-hud:not(.keyed-navigation) .dagger-travel-map-layer > button:hover::after,
+.dagger-hud.controller-navigation .dagger-travel-map-layer > button:focus::after { display: block; }
+.dagger-travel-map-layer > button:is(:focus-visible, :hover) { z-index: 2; }
+.dagger-travel-map-player { width: .625rem; height: .625rem; border: 2px solid #a3270f; border-radius: 50%; pointer-events: none; cursor: default; box-shadow: 0 0 0 1px #fff0a7; }
+.dagger-travel-map-readout { margin: 0; min-height: 1.4em; color: #f6ddb0; }
+.dagger-travel-map-legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; list-style: none; margin: 0; padding: 0; font-size: .85rem; }
+.dagger-travel-map-legend li { display: inline-flex; align-items: center; gap: .375rem; }
+.dagger-travel-map-key { display: inline-block; width: .625rem; height: .625rem; border: 1px solid rgb(0 0 0 / .6); background: #e3b490; }
+.dagger-travel-map-key-player { border: 2px solid #a3270f; border-radius: 50%; background: transparent; box-shadow: 0 0 0 1px #fff0a7; }
+.dagger-travel-map-key-region { border: 2px solid #fff0a7; border-radius: 50%; background: #6d2b14; }
+.dagger-travel-map-key-route { width: 1.25rem; height: 0; border: 0; border-top: 2px dashed #fff0a7; background: none; }
+.dagger-travel { display: grid; gap: .5rem; margin-bottom: 1rem; }
+.dagger-travel-choose { display: grid; gap: .5rem; max-width: 48rem; }
+.dagger-travel-search { display: flex; gap: .375rem; }
+.dagger-travel-search input { flex: 1; min-width: 0; }
+.dagger-travel-destination { width: 100%; }
+.dagger-travel-options, .dagger-travel-go { display: flex; flex-wrap: wrap; gap: .375rem 1.25rem; align-items: center; }
+.dagger-travel-go { gap: .5rem; }
+.dagger-travel-options label { display: inline-flex; gap: .375rem; align-items: center; font-size: .85rem; color: #dfc987; }
+.dagger-travel > p { margin: 0; }
 
 .dagger-outcome { list-style: none; padding: 0; max-width: min(43.75rem, calc(100vw - 3rem)); }
 .dagger-outcome li { margin-top: .25rem; text-shadow: 0 1px .1875rem #000; }

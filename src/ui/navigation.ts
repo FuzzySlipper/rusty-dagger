@@ -8,7 +8,12 @@ import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
  * focus scope. Inside it the controller's directions and the keyboard's arrows move focus to the
  * nearest control in that direction, so lists and slot grids both work with no surface keeping a
  * controller table of its own. Accept presses the focused control, Back and Escape go to the
- * surface, and the shoulder buttons step a surface's panels.
+ * surface, the shoulder buttons step a surface's panels, and the triggers (or Page Up and Page
+ * Down) turn the pages of whatever the surface shows, as a book or a list of quests.
+ *
+ * A control that uses the directions itself, as a map the player pans, claims them: navigation
+ * first offers each direction to the focused control as a cancellable `dagger-direction` event, and
+ * Back as a cancellable `dagger-back` event, and moves focus or steps back only when nothing claimed it.
  *
  * A focused `<select>` or number field takes left and right as a change of its value, so a
  * controller can operate the choices and amounts game UI still draws with native controls.
@@ -27,6 +32,10 @@ export interface NavigationSurface {
   back?(source: 'escape' | 'controller'): void;
   /** The shoulder buttons: step to the previous or next panel. */
   panel?(direction: -1 | 1): void;
+  /** The triggers, or Page Up and Page Down: turn a page of what the surface shows. */
+  page?(direction: -1 | 1): void;
+  /** What turning a page does here now ("Pages", "Zoom"), or null when it does nothing. */
+  pageHint?(): string | null;
   /** The control that takes focus when the surface opens, when its first control is not it. */
   initialFocus?(): HTMLElement | null;
 }
@@ -49,13 +58,27 @@ export const FOCUSABLE = 'button:not(:disabled),select:not(:disabled),input:not(
 /** The Engine's normalized controller identities, read in the standard gamepad layout. */
 export const CONTROLLER = Object.freeze({
   accept: 'button-0', back: 'button-1', menu: 'button-9',
-  previousPanel: 'button-4', nextPanel: 'button-5',
+  previousPanel: 'button-4', nextPanel: 'button-5', previousPage: 'button-6', nextPage: 'button-7',
   up: 'button-12', down: 'button-13', left: 'button-14', right: 'button-15',
   horizontalAxis: 'axis-0', verticalAxis: 'axis-1', axisThreshold: 0.55,
 });
 
 const ARROWS: Readonly<Record<string, Direction>> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
 const TEXT_ENTRY = 'input:not([type="number"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),textarea,[contenteditable="true"]';
+
+/** The event a focused control receives before a direction moves focus away from it. */
+export const DIRECTION_EVENT = 'dagger-direction';
+/** The event a focused control receives before Back leaves its surface. */
+export const BACK_EVENT = 'dagger-back';
+
+/** Offer a direction (or Back) to the focused control; true when it claimed it. */
+function claimed(name: string, detail?: Direction): boolean {
+  const active = document.activeElement;
+  if (!(active instanceof Element)) return false;
+  // The event is made by the element's own window, as a document hosted in another realm needs.
+  const Event = active.ownerDocument.defaultView?.CustomEvent ?? CustomEvent;
+  return !active.dispatchEvent(new Event(name, { detail, bubbles: true, cancelable: true }));
+}
 
 export interface NavigationOptions {
   /** Escape or Back with no surface open: the product's play-time Escape. */
@@ -81,9 +104,10 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
   const drawHints = (): void => {
     const top = topmost();
     if (top === null) { hints.remove(); return; }
+    const page = top.pageHint?.() ?? null;
     const parts = device === 'controller'
-      ? [['A', 'Select'], ...(top.back ? [['B', 'Back']] : []), ...(top.panel ? [['LB / RB', 'Panels']] : [])]
-      : [['Enter', 'Select'], ...(top.back ? [['Esc', 'Back']] : []), ['Tab', 'Next']];
+      ? [['A', 'Select'], ...(top.back ? [['B', 'Back']] : []), ...(top.panel ? [['LB / RB', 'Panels']] : []), ...(page ? [['LT / RT', page]] : [])]
+      : [['Enter', 'Select'], ...(top.back ? [['Esc', 'Back']] : []), ['Tab', 'Next'], ...(page ? [['PgUp / PgDn', page]] : [])];
     const text = parts.map(([key, label]) => `${key} ${label}`).join(' · ');
     if (hints.textContent !== text) hints.replaceChildren(...parts.flatMap(([key, label], index) => {
       const glyph = document.createElement('kbd'); glyph.textContent = key!;
@@ -147,16 +171,23 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
     const target = event.target instanceof HTMLElement ? event.target : null;
     if (!target) return;
     for (const surface of surfaces) if (surface.root.contains(target)) lastFocus.set(surface, target);
+    // What the page keys do can follow focus, as from a journal's quests to its book.
+    drawHints();
   };
 
   const move = (direction: Direction): void => {
     const scope = topmost()?.root;
     if (!scope) return;
+    if (scope.contains(document.activeElement) && claimed(DIRECTION_EVENT, direction)) return;
     const items = focusables(scope);
     if (items.length === 0) return;
     const active = document.activeElement instanceof HTMLElement && scope.contains(document.activeElement) ? document.activeElement : null;
     if (!active) { items[direction === 'up' || direction === 'left' ? items.length - 1 : 0]?.focus(); return; }
-    (nearest(active, items, direction) ?? active).focus();
+    let next = nearest(active, items, direction);
+    // Entering a row of tabs from outside it lands on the tab that is shown, not the nearest one.
+    const tablist = next?.matches('[role="tab"]') ? next.closest('[role="tablist"]') : null;
+    if (tablist && !tablist.contains(active)) next = tablist.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') ?? next;
+    (next ?? active).focus();
   };
 
   /** A focused choice or amount takes left and right as a change of its value. */
@@ -185,6 +216,7 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
 
   const back = (source: 'escape' | 'controller'): void => {
     const top = topmost();
+    if (top?.root.contains(document.activeElement) && claimed(BACK_EVENT)) return;
     if (top) top.back?.(source);
     else options.onPlayEscape?.();
   };
@@ -213,6 +245,11 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
       return;
     }
     if (event.ctrlKey || event.altKey || event.metaKey || target?.closest(`${TEXT_ENTRY},select`)) return;
+    if ((event.code === 'PageUp' || event.code === 'PageDown') && top.page && top.pageHint?.()) {
+      event.preventDefault();
+      top.page(event.code === 'PageUp' ? -1 : 1);
+      return;
+    }
     const direction = ARROWS[event.code];
     if (direction === undefined || !top.root.contains(target)) return;
     if ((direction === 'left' || direction === 'right') && target?.matches('input[type="number"],input[type="range"]')) return;
@@ -231,6 +268,8 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
     } else if (button === CONTROLLER.back && top) back('controller');
     else if ((button === CONTROLLER.previousPanel || button === CONTROLLER.nextPanel) && top?.panel)
       top.panel(button === CONTROLLER.previousPanel ? -1 : 1);
+    else if ((button === CONTROLLER.previousPage || button === CONTROLLER.nextPage) && top?.page && top.pageHint?.())
+      top.page(button === CONTROLLER.previousPage ? -1 : 1);
     else if (top && (button === CONTROLLER.up || button === CONTROLLER.down)) move(button === CONTROLLER.up ? 'up' : 'down');
     else if (top && (button === CONTROLLER.left || button === CONTROLLER.right)) {
       if (!adjust(button === CONTROLLER.left ? -1 : 1)) move(button === CONTROLLER.left ? 'left' : 'right');

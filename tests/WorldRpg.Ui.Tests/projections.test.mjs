@@ -1204,6 +1204,15 @@ test('book reader and notebook render product state and send revision-guarded se
     assert.deepEqual(f.actions.at(-1), { action: 'notebook-edit', revision: '9', note: 'note:1', text: 'Edited note.' });
     first.querySelectorAll('button')[3].click();
     assert.deepEqual(f.actions.at(-1), { action: 'notebook-move', revision: '9', note: 'note:1', destination: 1 });
+    // Removing a note loses its text, so it asks first; declining sends nothing.
+    const sent = f.actions.length;
+    first.querySelectorAll('button')[1].click();
+    assert.match(f.root.querySelector('#dagger-confirm-message').textContent, /Remove note 1\?/);
+    f.answer(false);
+    assert.equal(f.actions.length, sent);
+    first.querySelectorAll('button')[1].click();
+    f.answer(true);
+    assert.deepEqual(f.actions.at(-1), { action: 'notebook-remove', revision: '9', note: 'note:1' });
   } finally { f.dispose(); }
 });
 
@@ -1223,8 +1232,16 @@ test('quest journal shows active quests grouped by title and deadline, and a fin
     };
     f.publish({ quests: { deliveries: [], journal, pending: null, escortFaces: [] } });
     f.root.querySelector('[data-action="journal"]').click();
-    const page = f.root.querySelector('.dagger-quest-journal-page');
+    const page = f.root.querySelector('#dagger-journal-panel-active .dagger-quest-journal-page');
     const groups = [...page.querySelectorAll('.dagger-quest-journal-group')];
+    // Each tab names its panel, and each panel the tab that shows it; the counts are the published lists'.
+    const tab = id => f.root.querySelector(`[data-journal-page="${id}"]`);
+    assert.equal(tab('active').getAttribute('aria-controls'), 'dagger-journal-panel-active');
+    assert.equal(f.root.querySelector('#dagger-journal-panel-active').getAttribute('role'), 'tabpanel');
+    assert.equal(f.root.querySelector('#dagger-journal-panel-active').getAttribute('aria-labelledby'), tab('active').id);
+    assert.deepEqual(['active', 'finished'].map(id => tab(id).textContent), ['Quests (2)', 'Finished (1)']);
+    // Every entry takes focus, so a long journal scrolls by keys and a pad.
+    assert.ok([...page.querySelectorAll('li')].every(item => item.tabIndex === 0));
     assert.deepEqual(groups.map(group => group.querySelector('h3').textContent), ['Timed errand', 'Quest']);
     assert.equal(groups[0].querySelector('.dagger-quest-journal-deadline').textContent, journal.active[0].deadline);
     assert.equal(groups[1].querySelector('.dagger-quest-journal-deadline'), null);
@@ -1233,9 +1250,20 @@ test('quest journal shows active quests grouped by title and deadline, and a fin
     // Journal entries belong to the journal panel, not the transient quest message stack.
     assert.equal(f.root.querySelector('.dagger-quests').textContent.includes('Speak to the smith.'), false);
 
+    // The triggers step from quest to quest, and a snapshot that changes nothing keeps the place.
+    page.querySelector('li').focus();
+    f.pad('button-7');
+    assert.equal(document.activeElement.textContent, 'Speak to the smith.');
+    f.publish({ quests: { deliveries: [], journal, pending: null, escortFaces: [] } });
+    assert.equal(document.activeElement.textContent, 'Speak to the smith.');
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'PageUp', bubbles: true, cancelable: true }));
+    assert.equal(document.activeElement.textContent, 'Bring the ring within 2 days.');
+
     f.root.querySelector('[data-journal-page="finished"]').click();
     assert.equal(f.root.querySelector('[data-journal-page="finished"]').getAttribute('aria-selected'), 'true');
-    const finished = page.querySelector('.dagger-quest-journal-group');
+    assert.equal(f.root.querySelector('#dagger-journal-panel-active').hidden, true);
+    const finishedPage = f.root.querySelector('#dagger-journal-panel-finished .dagger-quest-journal-page');
+    const finished = finishedPage.querySelector('.dagger-quest-journal-group');
     assert.equal(finished.dataset.questInstance, 'short');
     assert.equal(finished.querySelector('h3').textContent, 'Short errand');
     assert.equal(finished.querySelector('.dagger-quest-journal-status').textContent, 'Ended on Fredas the 4th of Hearthfire, 3E405');
@@ -1243,7 +1271,34 @@ test('quest journal shows active quests grouped by title and deadline, and a fin
 
     // The selected page survives a fresh projection; an empty page says so.
     f.publish({ quests: { deliveries: [], journal: { active: journal.active, finished: [] }, pending: null, escortFaces: [] } });
-    assert.equal(page.querySelector('.dagger-quest-journal-empty').textContent, 'No finished quests.');
+    assert.equal(finishedPage.querySelector('.dagger-quest-journal-empty').textContent, 'No finished quests.');
+    // Tabs follow focus: reaching one with the arrows shows its page.
+    tab('active').focus();
+    assert.equal(tab('active').getAttribute('aria-selected'), 'true');
+    assert.equal(f.root.querySelector('#dagger-journal-panel-finished').hidden, true);
+  } finally { f.dispose(); }
+});
+
+test('the notebook key and an opened book open the journal on their own page, and a book turns by the triggers', () => {
+  const f = fixture();
+  try {
+    const book = { id: 59, title: 'A retained book', author: 'An author', page: 0, pageCount: 3, text: 'First page.' };
+    f.publish({ notebook: { revision: '4', book: null, notes: [{ id: 'note:1', text: 'Mine.' }] }, panelRequest: { panel: 'notebook', revision: '1' } });
+    assert.equal(f.root.querySelector('.dagger-menu').open, true);
+    assert.equal(f.root.querySelector('[data-journal-page="notes"]').getAttribute('aria-selected'), 'true');
+    assert.equal(f.root.querySelector('[data-journal-page="notes"]').textContent, 'Notes (1)');
+    assert.equal(f.root.querySelector('#dagger-journal-panel-notes').hidden, false);
+    f.publish({ notebook: { revision: '5', book, notes: [] }, panelRequest: { panel: 'book', revision: '2' } });
+    assert.equal(f.root.querySelector('[data-journal-page="book"]').getAttribute('aria-selected'), 'true');
+    assert.equal(f.root.querySelector('[data-testid="book-reader-title"]').textContent, 'A retained book');
+    assert.match(f.root.querySelector('.dagger-input-hints').textContent, /Pages/);
+    f.pad('button-7');
+    assert.deepEqual(f.actions.at(-1), { action: 'notebook-page', revision: '5', page: 1 });
+    f.pad('button-6');
+    // The first page has no page before it.
+    assert.equal(f.actions.filter(action => action.action === 'notebook-page').length, 1);
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'PageDown', bubbles: true, cancelable: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'notebook-page', revision: '5', page: 1 });
   } finally { f.dispose(); }
 });
 
@@ -2192,7 +2247,7 @@ test('travel accepts only the current quote and shows actual paid arrival or int
   const f = fixture();
   try {
     const root = document.createElement('div'); f.root.append(root);
-    const actions = []; const view = mountTravel(root, action => actions.push(action));
+    const actions = []; const asked = []; const view = mountTravel(root, action => actions.push(action), question => { asked.push(question.message); question.onAccept(); });
     const quote = { identity: 'live-quote', destination: 'Charing', minutes: 120, duration: '2 hours', distance: 2, oceanPixels: 0,
       innCost: 5, shipCost: 0, totalCost: 5, canAfford: true,
       options: { cautious: true, inn: true, ship: false, hasHorse: false, hasCart: false, hasShip: false, availableGold: '50', availableGoldPieces: '50' } };
@@ -2202,6 +2257,7 @@ test('travel accepts only the current quote and shows actual paid arrival or int
     assert.equal(root.querySelector('option').textContent, 'Charing · Town · Daggerfall');
     assert.match(root.querySelector('[role="status"]').textContent, /^Charing: about 2 hours before any arrival-time adjustment, 5 gold/);
     root.querySelector('.dagger-travel-accept').click();
+    assert.deepEqual(asked, ['Travel to Charing? About 2 hours, for 5 gold.']);
     assert.deepEqual(actions.at(-1), { action: 'travel-accept', key: 'live-quote', amount: 5 });
     root.querySelector('.dagger-travel-accept').click();
     assert.equal(actions.length, 1);
@@ -2234,7 +2290,7 @@ test('travel map draws the published world and region art from the projected map
     const sheetImage = 'data:image/png;base64,c2hlZXQ=';
     art.adopt({ revision: 'travel-map-art', images: [{ id: published.world.image, image: worldImage }, { id: published.sheet.art.image, image: sheetImage }] });
     const root = document.createElement('div'); f.root.append(root);
-    const actions = []; const view = mountTravel(root, action => actions.push(action));
+    const actions = []; const asked = []; const view = mountTravel(root, action => actions.push(action), question => { asked.push(question.message); question.onAccept(); });
     const value = { destinations: [], quote: null, executionAvailable: false, message: null, lastResult: null, map: null };
     const percent = element => [parseFloat(element.style.left), parseFloat(element.style.top)];
     const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} is not ${expected}`);
@@ -2256,7 +2312,11 @@ test('travel map draws the published world and region art from the projected map
     const [left, top] = percent(regions[0]);
     near(left, (first.x - world.world.left) / (world.world.right - world.world.left) * 100);
     near(top, (first.y - world.world.top) / (world.world.bottom - world.world.top) * 100);
-    assert.match(regions[0].dataset.tooltip, new RegExp(`^${first.name}: ${first.discovered} known`));
+    assert.match(regions[0].dataset.label, new RegExp(`^${first.name}: ${first.discovered} known`));
+    assert.match(root.querySelector('.dagger-travel-map-legend').textContent, /You are here.*Region/);
+    // A focused marker's name shows in the readout as well as beside it, not only on hover.
+    regions[0].dispatchEvent(new window.FocusEvent('focusin', { bubbles: true }));
+    assert.equal(root.querySelector('.dagger-travel-map-readout').textContent, regions[0].dataset.label);
     assert.ok(root.querySelector('.dagger-travel-map-player'));
     const picker = root.querySelector('.dagger-travel-map-regions');
     assert.equal(picker.options.length, world.regions.length + 1);
@@ -2272,8 +2332,14 @@ test('travel map draws the published world and region art from the projected map
       { index: 5, name: 'Hand-drawn Hamlet', kind: 'Town', category: 'town', x: frame.left + 70, y: frame.top + 52 },
       { index: 9, name: 'Hand-drawn Keep', kind: 'Dungeon', category: 'dungeon', x: frame.left + 200, y: frame.top + 100 },
     ];
-    const open = { ...published, sheet: { ...published.sheet, destinations } };
+    const legend = [{ category: 'town', label: 'Towns' }, { category: 'dungeon', label: 'Dungeons' }];
+    const open = { ...published, sheet: { ...published.sheet, destinations, legend } };
+    // Focus on a region it opens follows onto the sheet's first place.
+    regions[0].focus();
     view.update({ ...value, map: open });
+    assert.equal(document.activeElement, root.querySelector('.dagger-travel-map-dot'));
+    assert.deepEqual([...root.querySelectorAll('.dagger-travel-map-legend .dagger-travel-map-key-dot')].map(key => key.dataset.category), ['town', 'dungeon']);
+    assert.match(root.querySelector('.dagger-travel-map-legend').textContent, /Towns.*Dungeons/);
     assert.equal(root.querySelector('.dagger-travel-map-canvas img').src, sheetImage);
     assert.equal(root.querySelector('.dagger-travel-map-canvas').style.aspectRatio, `${frame.width} / ${frame.height}`);
     assert.equal(picker.value, String(published.sheet.region));
@@ -2283,7 +2349,7 @@ test('travel map draws the published world and region art from the projected map
     const dots = root.querySelectorAll('.dagger-travel-map-dot');
     assert.equal(dots.length, 2);
     assert.deepEqual([dots[0].dataset.category, dots[1].dataset.category], ['town', 'dungeon']);
-    assert.equal(dots[0].dataset.tooltip, 'Hand-drawn Hamlet (Town)');
+    assert.equal(dots[0].dataset.label, 'Hand-drawn Hamlet (Town)');
     assert.equal(dots[0].getAttribute('aria-label'), 'Hand-drawn Hamlet (Town)');
     const [dotLeft, dotTop] = percent(dots[0]);
     near(dotLeft, 70 / (frame.right - frame.left) * 100);
@@ -2293,11 +2359,30 @@ test('travel map draws the published world and region art from the projected map
     dots[1].click();
     assert.deepEqual(actions.at(-1), { action: 'travel-preview', region: published.sheet.region, destination: 9,
       cautious: true, inn: false, ship: false });
-    const quote = { identity: 'map-quote', destination: 'Hand-drawn Keep', minutes: 60, duration: '1 hour', distance: 3, oceanPixels: 0,
+    const route = { fromX: frame.left + 70, fromY: frame.top + 52, toX: frame.left + 200, toY: frame.top + 100, region: published.sheet.region };
+    const quote = { identity: 'map-quote', destination: 'Hand-drawn Keep', route, minutes: 60, duration: '1 hour', distance: 3, oceanPixels: 0,
       innCost: 0, shipCost: 0, totalCost: 4, canAfford: true,
       options: { cautious: true, inn: false, ship: false, hasHorse: false, hasCart: false, hasShip: false, availableGold: '9', availableGoldPieces: '9' } };
+    dots[1].focus();
     view.update({ ...value, map: open, quote, executionAvailable: true });
     assert.equal(root.querySelector('.dagger-travel-map-dot[data-index="9"]').getAttribute('aria-pressed'), 'true');
+    // The chosen place keeps focus through the redraw, and its name rests in the readout.
+    assert.equal(document.activeElement, root.querySelector('.dagger-travel-map-dot[data-index="9"]'));
+    assert.equal(root.querySelector('.dagger-travel-map-readout').textContent, 'Hand-drawn Keep (Dungeon)');
+    // The quoted route is drawn from where it starts to the chosen place, in the sheet's percentages.
+    const line = root.querySelector('.dagger-travel-map-route line');
+    near(Number(line.getAttribute('x1')), 70 / (frame.right - frame.left) * 100);
+    near(Number(line.getAttribute('y2')), 100 / (frame.bottom - frame.top) * 100);
+    assert.match(root.querySelector('.dagger-travel-map-legend').textContent, /Route/);
+    // The place was chosen with no pointer (as Enter or a pad's accept clicks), so once its quote is in,
+    // focus goes on to Begin journey rather than leaving the player to step out through every place.
+    await Promise.resolve();
+    assert.equal(document.activeElement, root.querySelector('.dagger-travel-accept'));
+    // Back from a place on the sheet is a step out to the world, not out of the panel.
+    const back = new window.CustomEvent('dagger-back', { bubbles: true, cancelable: true });
+    root.querySelector('.dagger-travel-map-dot[data-index="9"]').dispatchEvent(back);
+    assert.equal(back.defaultPrevented, true);
+    assert.deepEqual(actions.at(-1), { action: 'travel-map', open: true });
     root.querySelector('.dagger-travel-accept').click();
     assert.deepEqual(actions.at(-1), { action: 'travel-accept', key: 'map-quote', amount: 4 });
     root.querySelector('.dagger-travel-map-world').click();
@@ -2323,6 +2408,8 @@ test('hiding the travel panel closes an open travel map so its sheet stops being
     f.publish({ travel });
     f.root.querySelector('[data-action="transport"]').click();
     assert.equal(f.root.querySelector('.dagger-travel-map-canvas').hidden, false);
+    // Travel opens on choosing where to go, not on its Back button.
+    assert.equal(document.activeElement, f.root.querySelector('.dagger-travel-map-toggle'));
     assert.equal(closes(), 0);
     // Leaving the panel for the menu home closes the map once, even before the ruleset answers.
     f.root.querySelector('[data-action="back"]').click();
@@ -2348,7 +2435,7 @@ test('changing travel options disables acceptance until a fresh quote arrives, i
   const f = fixture();
   try {
     const root = document.createElement('div'); f.root.append(root);
-    const actions = []; const view = mountTravel(root, action => actions.push(action));
+    const actions = []; const asked = []; const view = mountTravel(root, action => actions.push(action), question => { asked.push(question.message); question.onAccept(); });
     const quote = { identity: 'old', destination: 'Known', minutes: 60, duration: '1 hour', distance: 1, oceanPixels: 0, innCost: 0, shipCost: 0, totalCost: 0, canAfford: true,
       options: { cautious: true, inn: false, ship: false } };
     const value = { destinations: [{ region: 0, index: 1, name: 'Known', kind: 'Town', regionName: 'Alik\'r Desert' }], quote, executionAvailable: true, message: null, lastResult: null };
@@ -2372,7 +2459,7 @@ for (const kind of ['dungeon', 'interior']) test(`${kind} map controls change on
   const f = fixture();
   try {
     const map = { id: 'privateers', name: "Privateer's Hold", kind, region: null, location: null,
-      player: { x: 1, y: 2, z: 3, yaw: .5 }, labels: [],
+      player: { x: 1, y: 2, z: 3, yaw: .5 }, labels: [], facing: 'north-east', legend: [{ category: 'room', label: 'Room' }],
       areas: [{ id: 'known-room', minX: 0, minZ: 0, maxX: 10, maxZ: 10, minY: 1, maxY: 3, kind: 1, category: 'room' },
         { id: 'known-upper', minX: 0, minZ: 0, maxX: 10, maxZ: 10, minY: 4, maxY: 6, kind: 1, category: 'room' }] };
     f.publish({ map }); f.root.querySelector('[data-action="map"]').click();
@@ -2380,7 +2467,43 @@ for (const kind of ['dungeon', 'interior']) test(`${kind} map controls change on
     const group = f.root.querySelector('.dagger-map-diagram > g');
     const initial = group.getAttribute('transform'); const count = f.actions.length;
     const press = label => Array.from(f.root.querySelectorAll('.dagger-map-controls button')).find(button => button.textContent === label).click();
-    press('Pan right'); assert.notEqual(group.getAttribute('transform'), initial);
+    // Accepting the focused diagram starts panning: the pad's directions then move the view, not focus.
+    const view = f.root.querySelector('.dagger-map-view');
+    view.focus();
+    f.pad('button-15');
+    assert.equal(group.getAttribute('transform'), initial, 'Before panning starts, a direction moves focus.');
+    view.focus();
+    f.pad('button-0');
+    assert.equal(view.getAttribute('aria-pressed'), 'true');
+    f.pad('button-15');
+    assert.equal(document.activeElement, view);
+    const panned = group.getAttribute('transform');
+    assert.notEqual(panned, initial);
+    // The triggers zoom, and Back stops panning without leaving the panel.
+    f.pad('button-7');
+    assert.notEqual(group.getAttribute('transform'), panned);
+    f.pad('button-1');
+    assert.equal(view.getAttribute('aria-pressed'), 'false');
+    assert.equal(f.root.querySelector('.dagger-menu').open, true);
+    // The keyboard does the same, and the wheel zooms.
+    view.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    const before = group.getAttribute('transform');
+    view.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown', key: 'ArrowDown', bubbles: true, cancelable: true }));
+    assert.notEqual(group.getAttribute('transform'), before);
+    const zoomed = group.getAttribute('transform');
+    f.root.querySelector('.dagger-map-diagram').dispatchEvent(new window.WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true }));
+    assert.notEqual(group.getAttribute('transform'), zoomed);
+    // A pointer drag pans under capture.
+    const svg = f.root.querySelector('.dagger-map-diagram');
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 320, height: 320, right: 320, bottom: 320 });
+    const dragFrom = group.getAttribute('transform');
+    const pointer = (type, x, y) => svg.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y }));
+    pointer('pointerdown', 100, 100); pointer('pointermove', 140, 100); pointer('pointerup', 140, 100);
+    assert.notEqual(group.getAttribute('transform'), dragFrom);
+    // The status names the view in words, with no raw coordinates.
+    assert.match(f.root.querySelector('.dagger-map-status').textContent, /^Explored (dungeon|interior) · all levels · facing north-east$/);
+    assert.doesNotMatch(f.root.querySelector('.dagger-map-status').textContent, /\d/);
+    assert.deepEqual([...f.root.querySelectorAll('.dagger-map-legend li')].map(item => item.textContent), ['Room', 'You']);
     press('Zoom in'); press('Rotate right'); press('Level up');
     assert.equal(group.querySelectorAll('rect').length, 1);
     assert.equal(group.querySelector('rect').dataset.id, 'known-room');
@@ -3146,7 +3269,7 @@ test('guild teleport hides travel options and confirms a zero-cost destination o
   const f = fixture();
   try {
     const root = document.createElement('div'); f.root.append(root);
-    const actions = []; const view = mountTravel(root, action => actions.push(action));
+    const actions = []; const asked = []; const view = mountTravel(root, action => actions.push(action), question => { asked.push(question.message); question.onAccept(); });
     view.update({ guildTeleport: true, destinations: [{ region: 17, index: 3, name: 'Charing', kind: 'Town', regionName: 'Daggerfall' }],
       map: null, quote: { identity: 'guild-destination', destination: 'Charing', minutes: 0, duration: '0 minutes', distance: 0, oceanPixels: 0,
         innCost: 0, shipCost: 0, totalCost: 0, canAfford: true,
@@ -3158,6 +3281,7 @@ test('guild teleport hides travel options and confirms a zero-cost destination o
     root.querySelector('.dagger-travel-accept').click();
     root.querySelector('.dagger-travel-accept').click();
     assert.deepEqual(actions, [{ action: 'travel-accept', key: 'guild-destination', amount: 0 }]);
+    assert.deepEqual(asked, ['Teleport to Charing at no cost?']);
     view.dispose();
   } finally { f.dispose(); }
 });
@@ -3208,7 +3332,7 @@ test('ship option refreshes the quote and explains routes without sea passage', 
   const f = fixture();
   try {
     const root = document.createElement('div'); f.root.append(root);
-    const actions = []; const view = mountTravel(root, action => actions.push(action));
+    const actions = []; const asked = []; const view = mountTravel(root, action => actions.push(action), question => { asked.push(question.message); question.onAccept(); });
     const quote = { identity: 'land', destination: 'Charing', duration: '2 hours', oceanPixels: 0,
       innCost: 0, shipCost: 0, totalCost: 0, canAfford: true, options: { cautious: true, inn: false, ship: false } };
     const value = { destinations: [{ region: 17, index: 3, name: 'Charing', kind: 'Town', regionName: 'Daggerfall' }],

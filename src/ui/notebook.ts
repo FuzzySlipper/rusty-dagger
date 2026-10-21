@@ -1,3 +1,4 @@
+import type { ConfirmQuestion } from './confirm.js';
 import { redraw } from './redraw.js';
 export interface BookReaderProjection {
   readonly id: number;
@@ -26,40 +27,57 @@ export type NotebookAction =
   | { readonly action: 'notebook-remove'; readonly revision: string; readonly note: string }
   | { readonly action: 'notebook-move'; readonly revision: string; readonly note: string; readonly destination: number };
 
-/** Renders product-projected book pages and notes; every edit remains a guarded semantic request. */
-export function mountNotebook(root: HTMLElement, claim: (action: NotebookAction) => void): {
-  update(value: NotebookProjection): void; dispose(): void;
+/**
+ * Renders product-projected book pages and notes into the two places the journal gives them; every
+ * edit remains a guarded semantic request, and removing a note asks first.
+ */
+export function mountNotebook(readerRoot: HTMLElement, notesRoot: HTMLElement, claim: (action: NotebookAction) => void,
+  ask: (question: ConfirmQuestion) => void): {
+  update(value: NotebookProjection): void;
+  /** Turn the open book's page; false when there is no page that way. */
+  turn(direction: -1 | 1): boolean;
+  dispose(): void;
 } {
-  const shell = document.createElement('section');
-  shell.className = 'dagger-notebook';
-  shell.setAttribute('aria-label', 'Book reader and notebook');
   const reader = document.createElement('section');
   reader.className = 'dagger-book-reader dagger-frame'; reader.dataset.skin = 'parchment';
   const notes = document.createElement('section');
   notes.className = 'dagger-user-notes';
-  shell.append(reader, notes);
-  root.append(shell);
+  readerRoot.append(reader);
+  notesRoot.append(notes);
 
   let disposed = false;
+  let latest: NotebookProjection | null = null;
 
   const render = (value: NotebookProjection): void => {
     // The reader redraws only for a new page, so Previous and Next keep focus as the player turns pages.
-    redraw(reader, JSON.stringify([value.revision, value.book]), () => renderReader(reader, value, claim));
-    renderNotes(notes, value, claim);
+    redraw(reader, JSON.stringify([value.book]), () => renderReader(reader, value, claim, () => latest?.revision ?? value.revision));
+    // The page buttons send the revision current when they are pressed, not the one they were drawn with.
+    renderNotes(notes, value, claim, ask, () => latest?.revision ?? value.revision);
   };
 
   return {
     update(value: NotebookProjection): void {
-      if (!disposed) render(value);
+      if (disposed) return;
+      latest = value;
+      render(value);
+    },
+    turn(direction): boolean {
+      const book = latest?.book;
+      if (!latest || !book) return false;
+      const page = book.page + direction;
+      if (page < 0 || page >= book.pageCount) return false;
+      claim({ action: 'notebook-page', revision: latest.revision, page });
+      return true;
     },
     dispose(): void {
       disposed = true;
-      shell.remove();
+      reader.remove();
+      notes.remove();
     },
   };
 }
 
-function renderReader(reader: HTMLElement, value: NotebookProjection, claim: (action: NotebookAction) => void): void {
+function renderReader(reader: HTMLElement, value: NotebookProjection, claim: (action: NotebookAction) => void, revision: () => string): void {
   const book = value.book;
   reader.replaceChildren();
   const heading = document.createElement('h2');
@@ -86,18 +104,19 @@ function renderReader(reader: HTMLElement, value: NotebookProjection, claim: (ac
   const previous = document.createElement('button');
   previous.type = 'button'; previous.textContent = 'Previous page'; previous.disabled = book.page === 0;
   previous.dataset.testid = 'book-reader-previous';
-  previous.addEventListener('click', () => claim({ action: 'notebook-page', revision: value.revision, page: book.page - 1 }));
+  previous.addEventListener('click', () => claim({ action: 'notebook-page', revision: revision(), page: book.page - 1 }));
   const location = document.createElement('span');
   location.textContent = `Page ${book.page + 1} of ${book.pageCount}`;
   const next = document.createElement('button');
   next.type = 'button'; next.textContent = 'Next page'; next.disabled = book.page + 1 >= book.pageCount;
   next.dataset.testid = 'book-reader-next';
-  next.addEventListener('click', () => claim({ action: 'notebook-page', revision: value.revision, page: book.page + 1 }));
+  next.addEventListener('click', () => claim({ action: 'notebook-page', revision: revision(), page: book.page + 1 }));
   controls.append(previous, location, next);
   reader.append(title, author, page, controls);
 }
 
-function renderNotes(notes: HTMLElement, value: NotebookProjection, claim: (action: NotebookAction) => void): void {
+function renderNotes(notes: HTMLElement, value: NotebookProjection, claim: (action: NotebookAction) => void,
+  ask: (question: ConfirmQuestion) => void, revision: () => string): void {
   // Reconcile the note list by its durable note id. Product projections arrive for unrelated
   // changes too, and replacing the subtree on every one would discard an in-progress edit and
   // the browser's focus/caret state before the player can submit it.
@@ -166,7 +185,8 @@ function renderNotes(notes: HTMLElement, value: NotebookProjection, claim: (acti
       const text = edit.value.trim();
       if (text) claim({ action: 'notebook-edit', revision: value.revision, note: note.id, text });
     };
-    remove.onclick = () => claim({ action: 'notebook-remove', revision: value.revision, note: note.id });
+    remove.onclick = () => ask({ message: `Remove note ${index + 1}? Its text is lost.`, accept: 'Remove',
+      onAccept: () => claim({ action: 'notebook-remove', revision: revision(), note: note.id }) });
     up.disabled = index === 0;
     up.onclick = () => claim({ action: 'notebook-move', revision: value.revision, note: note.id, destination: index - 1 });
     down.disabled = index + 1 >= value.notes.length;

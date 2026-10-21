@@ -16,7 +16,7 @@ public sealed class AdditionalControlSessionTests
     [InlineData("rest", "rest")]
     [InlineData("transport", "transport")]
     [InlineData("logbook", "journal")]
-    [InlineData("notebook", "journal")]
+    [InlineData("notebook", "notebook")]
     [InlineData("travel-map", "transport")]
     [InlineData("use-magic-item", "magic-items")]
     public void Mapped_shortcuts_request_the_existing_panels(string intent, string panel)

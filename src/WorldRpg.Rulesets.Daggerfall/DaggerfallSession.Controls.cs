@@ -106,8 +106,8 @@ internal sealed partial class DaggerfallSession
             case "spell": RequestPanel("spells"); break;
             case "rest": RequestPanel("rest"); break;
             case "transport": RequestPanel(DaggerfallPanel.Travel); break;
-            case "logbook":
-            case "notebook": RequestPanel(DaggerfallPanel.Journal); break;
+            case "logbook": RequestPanel(DaggerfallPanel.Journal); break;
+            case "notebook": RequestPanel(DaggerfallPanel.Notebook); break;
             case "travel-map": ChangeTravelMap(new("travel-map", Open: true)); RequestPanel(DaggerfallPanel.Travel); break;
             case "use-magic-item": RequestPanel("magic-items"); break;
             case "abort-spell": ChangeSpell(new("spell-unready")); break;

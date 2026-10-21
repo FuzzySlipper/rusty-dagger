@@ -104,6 +104,31 @@ internal static class DaggerfallMapProjection
         return new(point.X + building.BlockX * size, point.Y, point.Z - building.BlockY * size);
     }
 
+    private static readonly string[] CompassWords = ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"];
+
+    /// <summary>
+    /// The compass word for a bearing in radians, clockwise from north (map up, world -Z), the way the
+    /// player's yaw and a direction hint both read it.
+    /// </summary>
+    internal static string Compass(float radians)
+    {
+        float turn = MathF.PI * 2;
+        float bearing = ((radians % turn) + turn) % turn;
+        return CompassWords[(int)MathF.Round(bearing / (MathF.PI / 4)) % 8];
+    }
+
+    /// <summary>The legend's words for each area category the map colours.</summary>
+    internal static string CategoryLabel(string category) => category switch
+    {
+        "room" => "Room",
+        "door" => "Doorway",
+        "surface" => "Explored ground",
+        "guild" => "Guild hall",
+        "shop" => "Shop",
+        "tavern" => "Tavern",
+        _ => "Building",
+    };
+
     internal static uint Wire(UiValueBuilder builder, DaggerfallMapPresentation map) => builder.Object(
         ("id", builder.String(map.Id)), ("name", builder.String(map.Name)), ("kind", builder.String(map.Kind)),
         ("region", map.Region is int region ? builder.Number(region) : builder.Null()),
@@ -116,5 +141,9 @@ internal static class DaggerfallMapProjection
         ("labels", builder.Array(map.Labels.Select(label => builder.Object(("id", builder.String(label.Id)), ("name", builder.String(label.Name)),
             ("x", builder.Number(label.X)), ("y", builder.Number(label.Y)), ("z", builder.Number(label.Z)), ("selected", builder.Boolean(label.Selected)),
             ("note", builder.Boolean(label.Note)))).ToArray())),
-        ("canAddNote", builder.Boolean(map.CanAddNote)));
+        ("canAddNote", builder.Boolean(map.CanAddNote)),
+        ("facing", builder.String(Compass(map.Yaw))),
+        // The legend names only the categories this map draws, in the order they first appear.
+        ("legend", builder.Array(map.Areas.Select(area => area.Category).Distinct(StringComparer.Ordinal).Select(category => builder.Object(
+            ("category", builder.String(category)), ("label", builder.String(CategoryLabel(category))))).ToArray())));
 }

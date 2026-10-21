@@ -325,7 +325,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("kind", builder.String(DaggerfallSiteKinds.Label(destination.Kind))),
                     ("category", builder.String(DaggerfallSiteKinds.MapCategory(destination.Kind))),
                     ("x", builder.Number(destination.MapPixel.X)),
-                    ("y", builder.Number(destination.MapPixel.Y)))).ToArray())))));
+                    ("y", builder.Number(destination.MapPixel.Y)))).ToArray())),
+                // The legend names the dot families this sheet draws, in the order they first appear.
+                ("legend", builder.Array(sheet.Destinations.Select(destination => DaggerfallSiteKinds.MapCategory(destination.Kind))
+                    .Distinct(StringComparer.Ordinal).Select(category => builder.Object(
+                        ("category", builder.String(category)),
+                        ("label", builder.String(DaggerfallSiteKinds.MapCategoryLabel(category))))).ToArray())))));
     }
 
     private static uint Travel(UiValueBuilder builder, DaggerfallTravelPresentation travel) => builder.Object(
@@ -346,6 +351,11 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("quote", travel.Quote is null ? builder.Null() : builder.Object(
             ("identity", builder.String(travel.Quote.Identity)),
             ("destination", builder.String(travel.Quote.Destination.Name)),
+            // The route the quote measures, in world-map pixels, so the map can draw it.
+            ("route", builder.Object(
+                ("fromX", builder.Number(travel.Quote.Origin.X)), ("fromY", builder.Number(travel.Quote.Origin.Y)),
+                ("toX", builder.Number(travel.Quote.Destination.MapPixel.X)), ("toY", builder.Number(travel.Quote.Destination.MapPixel.Y)),
+                ("region", builder.Number(travel.Quote.Destination.Id.Region)))),
             ("minutes", builder.Number(travel.Quote.TravelMinutes)),
             ("duration", builder.String(DaggerfallCalendar.DescribeDuration(checked((long)travel.Quote.TravelMinutes * DaggerfallCalendar.SecondsPerMinute)))),
             ("distance", builder.Number(travel.Quote.DistanceMapPixels)),

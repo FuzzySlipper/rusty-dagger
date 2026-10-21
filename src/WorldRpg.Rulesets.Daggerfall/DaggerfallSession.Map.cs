@@ -297,9 +297,7 @@ internal sealed partial class DaggerfallSession
 
     private static string CardinalHint(WorldPoint target, WorldPoint start)
     {
-        string[] directions = ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"];
-        float angle = MathF.Atan2(target.X - start.X, start.Z - target.Z);
-        int octant = ((int)MathF.Round(angle / (MathF.PI / 4)) + 8) % 8;
-        return MathF.Abs(target.X - start.X) < 1 && MathF.Abs(target.Z - start.Z) < 1 ? "here" : directions[octant];
+        return MathF.Abs(target.X - start.X) < 1 && MathF.Abs(target.Z - start.Z) < 1
+            ? "here" : DaggerfallMapProjection.Compass(MathF.Atan2(target.X - start.X, start.Z - target.Z));
     }
 }
