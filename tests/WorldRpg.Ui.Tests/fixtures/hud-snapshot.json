@@ -2103,6 +2103,20 @@
       "editing": false,
       "mode": null,
       "classQuestionsAvailable": true,
+      "blocked": [
+        "Roll a background."
+      ],
+      "quickStartBlocked": null,
+      "genders": [
+        {
+          "id": "male",
+          "label": "Male"
+        },
+        {
+          "id": "female",
+          "label": "Female"
+        }
+      ],
       "classQuiz": null,
       "current": {
         "name": "Nameless",

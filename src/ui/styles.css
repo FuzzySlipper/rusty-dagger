@@ -37,8 +37,9 @@
 .dagger-death-panel { position: absolute; z-index: 2; bottom: 10%; width: min(32rem, calc(100vw - 2rem)); padding: 1.2rem; display: grid; gap: .8rem; }
 .dagger-death-panel h1 { margin: 0; font-size: 1.5rem; }
 .dagger-death-message { min-height: 1.3em; color: #f6ddb0; }
-.dagger-death-load { display: grid; gap: .35rem; color: #b9ae8c; font: .78rem ui-monospace, monospace; }
-.dagger-death-load select { padding: .55rem; color: #f7e7bd; background: #151712; border: 1px solid #aa9c7a; font: inherit; }
+.dagger-death-load { display: grid; gap: .35rem; }
+.dagger-death-load h2 { margin: 0; color: var(--ink-dim); font: 700 .75rem ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; }
+.dagger-death-load-slots { max-height: 14rem; overflow-y: auto; }
 .dagger-death-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
 .dagger-death-actions button { padding: .65rem 1rem; font: 700 .8rem ui-monospace, monospace; }
 
@@ -242,8 +243,8 @@
 .dagger-map-target { margin: 0; }
 .dagger-map-target:empty { display: none; }
 
-.dagger-entry-bundle { padding: .375rem .75rem; color: #f6ddb0; background: #171713; border: 1px solid #c6a05a; }
-.dagger-entry-bundle select { font: inherit; color: #f6ddb0; background: #080c0a; border: 1px solid #c6a05a; cursor: var(--dagger-cursor-pointer); }
+.dagger-entry-bundle { display: flex; gap: .625rem; align-items: center; padding: .375rem .75rem; color: #f6ddb0; background: rgb(10 10 8 / .85); border: 1px solid var(--brass); }
+.dagger-entry-bundle .dagger-cycler { min-width: 18rem; }
 .dagger-entry-creation { position: absolute; inset: 4% 10% 10%; overflow: auto; padding: 1.25rem; }
 .dagger-entry-parts { position: absolute; right: 0; bottom: 0; display: flex; pointer-events: none; }
 .dagger-entry-parts img { image-rendering: pixelated; }
@@ -257,7 +258,8 @@
 .dagger-escort-faces { display: flex; gap: .5rem; }
 .dagger-escort-faces img { width: 3rem; height: 3rem; object-fit: contain; image-rendering: pixelated; }
 
-.dagger-entry-outcome { margin: 0; max-width: min(48rem, 90vw); padding: .5rem; color: #f6ddb0; background: #080c0a; }
+/* What a title choice came to (a load that failed, a game that could not start), on a stone plate. */
+.dagger-entry-outcome { margin: 0; max-width: min(48rem, 90vw); padding: .5rem .875rem; color: var(--ink); background: rgb(10 10 8 / .85); border: 1px solid var(--brass); border-left-width: .25rem; font-size: .9rem; }
 .dagger-entry-outcome:empty { display: none; }
 
 .dagger-character-art { display: flex; align-items: flex-start; gap: 1rem; }
@@ -384,7 +386,7 @@
 .dagger-controls-volume output { font: 700 .8rem ui-monospace, monospace; text-align: right; }
 
 /* Saved games: one row per slot, the chosen one outlined. */
-.dagger-save-slots-list { display: grid; gap: .375rem; list-style: none; margin: .5rem 0; max-height: 50vh; overflow-y: auto; padding: 0; }
+.dagger-save-slots-list, .dagger-death-load-slots { display: grid; gap: .375rem; list-style: none; margin: .5rem 0; max-height: 50vh; overflow-y: auto; padding: 0; }
 .dagger-save-slot { display: grid; gap: .125rem; text-align: left; width: 100%; }
 .dagger-save-slot strong { font: 700 .85rem ui-monospace, monospace; }
 .dagger-save-slot-who, .dagger-save-slot-when { color: #c9b78c; font: .72rem ui-monospace, monospace; }
@@ -469,3 +471,24 @@
 .dagger-weapon-state, .dagger-activation-indicator::before, .dagger-vital-label, .dagger-title span { color: #cbbd95; }
 /* The detectors are drawn as compass marks; this list is what a screen reader reads. */
 .dagger-detectors { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* The cycler: ‹ value › stepping through a published choice; both steps take focus. */
+.dagger-cycler { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .25rem; align-items: center; min-width: 0; }
+.dagger-cycler-step { min-width: 2rem; padding: .25rem .5rem; font-size: 1rem; line-height: 1; }
+.dagger-cycler-value { min-width: 0; padding: .25rem .5rem; text-align: center; color: var(--ink); background: rgb(0 0 0 / .35); border: 1px solid rgb(212 181 107 / .4);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; }
+
+/* The letter picker: how a controller types. */
+.dagger-letter-picker { padding: 1rem 1.25rem; width: min(34rem, calc(100vw - 2rem)); color: var(--ink); }
+.dagger-letter-picker::backdrop { background: rgb(0 0 0 / .55); }
+.dagger-letter-picker-title { margin: 0 0 .5rem; font-size: 1.1rem; }
+.dagger-letter-picker-text { display: block; min-height: 1.6em; margin-bottom: .75rem; padding: .375rem .625rem; font: 600 1.1rem ui-monospace, monospace;
+  background: rgb(0 0 0 / .45); border: 1px solid var(--brass); white-space: pre; overflow: hidden; }
+.dagger-letter-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr)); gap: .25rem; }
+.dagger-letter-picker-grid button { padding: .375rem 0; font: 700 .9rem ui-monospace, monospace; }
+.dagger-letter-picker-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: .75rem; }
+.dagger-letter-picker-open { padding: .25rem .5rem; }
+.dagger-creation-name-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .25rem; }
+.dagger-creation-question { display: grid; gap: .25rem; }
+.dagger-creation-question p { margin: 0; font-size: .85rem; }
+.dagger-dungeon-text-answer label { display: inline-flex; gap: .375rem; align-items: center; }

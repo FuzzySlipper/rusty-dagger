@@ -87,6 +87,8 @@ export interface NavigationOptions {
   readonly onButton?: (button: string) => void;
   /** Takes a controller press before navigation does, as the controls screen does while it captures a button. */
   readonly captureButton?: (button: string) => boolean;
+  /** The controller's accept on a text field: a pad cannot type, so this opens a way to (the letter picker). */
+  readonly editText?: (field: HTMLInputElement | HTMLTextAreaElement) => void;
 }
 
 export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiContext, options: NavigationOptions = {}): Navigation {
@@ -263,7 +265,11 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
     if (button === CONTROLLER.accept && top) {
       const active = document.activeElement instanceof HTMLElement && top.root.contains(document.activeElement) ? document.activeElement : null;
       if (!active || !active.matches(FOCUSABLE)) { move('down'); return; }
-      if (active instanceof HTMLSelectElement || active.matches(TEXT_ENTRY)) return;
+      if (active instanceof HTMLSelectElement) return;
+      if (active.matches(TEXT_ENTRY)) {
+        if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) options.editText?.(active);
+        return;
+      }
       active.click();
     } else if (button === CONTROLLER.back && top) back('controller');
     else if ((button === CONTROLLER.previousPanel || button === CONTROLLER.nextPanel) && top?.panel)

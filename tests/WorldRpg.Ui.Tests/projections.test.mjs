@@ -106,11 +106,13 @@ test('death projection renders semantic choices, selected save slots, and suppre
     // The ruleset's message is the screen's one heading; it is not repeated beneath itself.
     assert.equal(f.root.querySelector('#dagger-death-title').textContent, 'You have died.');
     assert.equal([...root.querySelectorAll('*')].filter(node => node.children.length === 0 && node.textContent === 'You have died.').length, 1);
-    assert.equal(f.root.querySelector('.dagger-death-load-slot').options.length, 2);
-
-    const select = f.root.querySelector('.dagger-death-load-slot');
-    select.value = 'slot-1';
-    select.dispatchEvent(new window.Event('change', { bubbles: true }));
+    // The saved games are listed as the menu lists them; Load waits until one is chosen.
+    const slots = [...f.root.querySelectorAll('.dagger-death-load-slots [data-save-slot]')];
+    assert.deepEqual(slots.map(slot => slot.dataset.saveSlot), ['slot-1']);
+    assert.match(slots[0].textContent, /Before the dungeon/);
+    assert.equal(f.root.querySelector('.dagger-death-load-button').disabled, true);
+    slots[0].click();
+    assert.equal(f.root.querySelector('.dagger-death-load-slots [data-save-slot="slot-1"]').getAttribute('aria-pressed'), 'true');
     f.root.querySelector('.dagger-death-load-button').click();
     assert.deepEqual(f.actions.at(-1), { action: 'death-load-game', key: 'slot-1' });
 
@@ -947,7 +949,7 @@ test('a controller reaches the dialogue: directions move focus, accept presses, 
   } finally { f.dispose(); }
 });
 
-test('a controller changes a choice with left and right, so it can load from the death screen', () => {
+test('a controller chooses a saved game and loads it from the death screen', () => {
   const f = fixture();
   try {
     const choices = ['death-new-game', 'death-load-game', 'death-quit'].map((action, index) => ({ action, id: String(index), label: action, available: true }));
@@ -957,10 +959,11 @@ test('a controller changes a choice with left and right, so it can load from the
     const root = f.root.querySelector('.dagger-death');
     assert.ok(root.contains(document.activeElement), 'Focus moves into the death screen when it appears.');
     assert.doesNotMatch(root.querySelector('.dagger-input-hints').textContent, /Back/, 'A required answer offers no Back.');
-    const select = f.root.querySelector('.dagger-death-load-slot');
-    select.focus();
-    f.pad('button-15');
-    assert.equal(select.value, 'slot-1');
+    // Focus starts on the first of death's choices.
+    assert.equal(document.activeElement, f.root.querySelector('.dagger-death-new'));
+    f.root.querySelector('.dagger-death-load-slots [data-save-slot="slot-1"]').focus();
+    f.pad('button-0');
+    assert.equal(f.root.querySelector('.dagger-death-load-slots [data-save-slot="slot-1"]').getAttribute('aria-pressed'), 'true');
     f.pad('button-1');
     assert.equal(root.hidden, false, 'Back leaves a required answer alone.');
     f.root.querySelector('.dagger-death-load-button').focus();
@@ -1404,12 +1407,16 @@ test('the title screen offers the games the product publishes and sends the one 
     f.publish({ mode: 'title', bundles: { current: 'daggerfall.classic', options: [
       { id: 'daggerfall.classic', title: 'Classic Daggerfall' }, { id: 'daggerfall.contact', title: 'Contact + mitigation' }] } });
     assert.equal(select().parentElement.hidden, false);
-    assert.deepEqual([...select().options].map(option => [option.value, option.textContent]),
-      [['daggerfall.classic', 'Classic Daggerfall'], ['daggerfall.contact', 'Contact + mitigation']]);
-    assert.equal(select().value, 'daggerfall.classic');
-    select().value = 'daggerfall.contact';
-    select().dispatchEvent(new window.Event('change', { bubbles: true }));
+    // The game is a cycler a pad can step: it shows the current game's title and steps to the next.
+    const cycler = select().querySelector('[data-cycler="Game"]');
+    assert.equal(cycler.dataset.value, 'daggerfall.classic');
+    assert.equal(cycler.querySelector('output').textContent, 'Classic Daggerfall');
+    cycler.querySelector('[aria-label="Next game"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'bundle-select', key: 'daggerfall.contact' });
+    // The ruleset's answer is what shows.
+    f.publish({ mode: 'title', bundles: { current: 'daggerfall.contact', options: [
+      { id: 'daggerfall.classic', title: 'Classic Daggerfall' }, { id: 'daggerfall.contact', title: 'Contact + mitigation' }] } });
+    assert.equal(select().querySelector('[data-cycler="Game"] output').textContent, 'Contact + mitigation');
 
     // One game is no choice, and a game that has begun offers none.
     f.publish({ mode: 'title', bundles: { current: 'daggerfall.classic', options: [{ id: 'daggerfall.classic', title: 'Classic Daggerfall' }] } });
@@ -1422,40 +1429,59 @@ test('the title screen offers the games the product publishes and sends the one 
 test('title character choices are projected and committed through semantic actions', () => {
   const f = fixture();
   try {
-    f.publish({ mode: 'title', character: {
-      name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [],
-      creationAvailable: true,
-      creation: {
-        editing: false, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
-        races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }],
-        careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }],
-        faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
-      },
-    } });
+    const sheet = { name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true };
+    f.publish({ mode: 'title', character: { ...sheet, creation: {
+      editing: false, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
+      races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }],
+      careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }],
+      faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
+    } } });
     f.root.querySelector('[data-testid="character-begin"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'character-begin' });
-    f.publish({ mode: 'title', character: {
-      name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [],
-      creationAvailable: true,
-      creation: {
-        editing: true, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
-        races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }],
-        faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
-        background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 2, remainingAttributePoints: 0, primarySkillPoints: 0, majorSkillPoints: 0, minorSkillPoints: 0,
-          questions: [], attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 2, value: 52, maximum: 100, canAllocate: false }],
-          skills: [], startingGrants: [], unsupportedEffects: [] },
-      },
-    } });
-    // Every dropdown is labelled, and the controls refuse a commit until the draft is complete.
+    const creation = (name, blocked) => ({ mode: 'title', character: { ...sheet, creation: {
+      editing: true, mode: 'character-pick', current: { name, race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
+      races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }, { id: 'nord', label: 'Nord', available: true, restriction: null },
+        { id: 'argonian', label: 'Argonian', available: false, restriction: 'No complete character media is published.' }],
+      careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }],
+      faces: [{ index: 0, mediaId: 'character.head.male.00.0' }, { index: 1, mediaId: 'character.head.male.00.1' }], reflexes: [{ value: 2, label: 'Average' }],
+      genders: [{ id: 'male', label: 'Male' }, { id: 'female', label: 'Female' }], blocked, quickStartBlocked: null,
+      background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 2, remainingAttributePoints: 0, primarySkillPoints: 0, majorSkillPoints: 0, minorSkillPoints: 0,
+        questions: [], attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 2, value: 52, maximum: 100, canAllocate: false }],
+        skills: [], startingGrants: [], unsupportedEffects: [] },
+    } } });
+    f.publish(creation('', ['Enter a name.']));
+    // Every choice is labelled, and the ruleset's reasons hold the commit until the draft is complete.
     for (const label of ['Name', 'Race', 'Gender', 'Face', 'Reflexes', 'Career']) assert.ok([...f.root.querySelectorAll('label')].some(item => item.firstChild?.textContent === label), label);
-    const name = f.root.querySelector('[aria-label="Character name"]'); const commit = f.root.querySelector('[data-testid="character-commit"]');
-    name.value = ''; name.dispatchEvent(new window.Event('input', { bubbles: true }));
+    const commit = f.root.querySelector('[data-testid="character-commit"]');
     assert.equal(commit.disabled, true);
     assert.match(f.root.querySelector('[data-testid="character-commit-blocked"]').textContent, /Enter a name/);
-    name.value = 'Aubk-i'; name.dispatchEvent(new window.Event('input', { bubbles: true }));
+    // Choices are cyclers a pad can step: the next race skips the one the ruleset marks unavailable, and is sent at once.
+    f.root.querySelector('[aria-label="Next race"]').click();
+    assert.equal(f.root.querySelector('[data-cycler="Race"]').dataset.value, 'nord');
+    assert.equal(f.actions.at(-1).race, 'nord');
+    f.root.querySelector('[aria-label="Next race"]').click();
+    assert.equal(f.root.querySelector('[data-cycler="Race"]').dataset.value, 'breton');
+    // The name is sent as it changes; the ruleset's answer unblocks the commit without rebuilding the field.
+    const name = f.root.querySelector('[aria-label="Character name"]');
+    name.focus(); name.value = 'Aubk-i'; name.dispatchEvent(new window.Event('change', { bubbles: true }));
+    assert.equal(f.actions.at(-1).name, 'Aubk-i');
+    f.publish(creation('Aubk-i', []));
+    assert.equal(f.root.querySelector('[aria-label="Character name"]'), name);
+    assert.equal(document.activeElement, name);
     assert.equal(commit.disabled, false);
     commit.click();
     assert.deepEqual(f.actions.at(-1), { action: 'character-commit', name: 'Aubk-i', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '', attributeAllocations: 'strength:2', skillAllocations: '' });
+    // The ✎ beside the name opens the letter picker, so a pad can type it.
+    f.root.querySelector('.dagger-creation-name-row .dagger-letter-picker-open').click();
+    const picker = f.root.querySelector('.dagger-letter-picker');
+    assert.equal(picker.open, true);
+    // It edits what is there: delete a letter, then one more capitalised after the hyphen as a new word.
+    picker.querySelector('[aria-label="Delete the last letter"]').click();
+    picker.querySelector('[aria-label="Letter K"]').click();
+    picker.querySelector('[aria-label="Done"]').click();
+    assert.equal(picker.open, false);
+    assert.equal(name.value, 'Aubk-K');
+    assert.equal(f.actions.at(-1).name, 'Aubk-K');
   } finally { f.dispose(); }
 });
 
@@ -1477,65 +1503,67 @@ test('played characters do not expose character creation controls', () => {
   } finally { f.dispose(); }
 });
 
-test('title creation renders normalized questions and sends the selected background allocation', () => {
+test('title creation renders normalized questions and sends each allocation for the ruleset to bound', () => {
   const f = fixture();
   try {
-    f.publish({ mode: 'title', character: {
+    const draft = (strength, remaining, canAllocate) => ({ mode: 'title', character: {
       name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true,
-      creation: { editing: true, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
+      creation: { editing: true, mode: 'character-pick', current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
         races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }], faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
-        background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 6, remainingAttributePoints: 4, primarySkillPoints: 5, majorSkillPoints: 6, minorSkillPoints: 6,
+        genders: [{ id: 'male', label: 'Male' }, { id: 'female', label: 'Female' }], blocked: remaining > 0 ? [`Spend ${remaining} more bonus points.`, 'Spend 5 more primary skill points.'] : ['Spend 5 more primary skill points.'], quickStartBlocked: null,
+        background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 6, remainingAttributePoints: remaining, primarySkillPoints: 5, majorSkillPoints: 6, minorSkillPoints: 6,
           questions: [{ number: 1, text: 'Where did you study?', selectedLetter: 'a', answers: [{ letter: 'a', text: 'At home.' }, { letter: 'b', text: 'At court.' }] }],
-          attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 2, value: 52, maximum: 100, canAllocate: true }],
+          attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: strength, value: 50 + strength, maximum: 100, canAllocate }],
           skills: [{ id: 'medical', label: 'Medical', tier: 'primary', rolled: 28, allocated: 1, biographyBonus: 0, value: 29, canAllocate: true }],
           startingGrants: [{ itemId: 'template-113-iron', label: 'Longsword', templateIndex: 113, quantity: 1, sourceEffect: 'IT 3 0 0' }], unsupportedEffects: ['The source retains this fatigue background effect without a gameplay consequence.'] },
       },
     } });
+    f.publish(draft(2, 4, true));
     assert.match(f.root.querySelector('[data-testid="character-biography"]').textContent, /readable biography/);
     assert.equal(f.root.querySelector('[data-testid="character-starting-grants"]').textContent, 'Starting grants: 1 × Longsword.');
     assert.match(f.root.querySelector('[data-testid="character-background-unsupported-effects"]').textContent, /fatigue background effect/);
-    const pools = f.root.querySelector('[data-testid="character-allocation-pools"]');
-    const commit = f.root.querySelector('[data-testid="character-commit"]');
     const add = label => f.root.querySelector(`[aria-label="Add a point to ${label}"]`);
-    const remove = label => f.root.querySelector(`[aria-label="Remove a point from ${label}"]`);
-    assert.equal(pools.textContent, '4 of 6 bonus points left');
-    assert.equal(commit.disabled, true);
+    // What is left and whether a point can go to a row are the ruleset's.
+    assert.equal(f.root.querySelector('[data-testid="character-allocation-pools"]').textContent, '4 bonus points left');
+    assert.match(f.root.querySelector('h4[data-tier="primary"]').textContent, /5 points left/);
+    assert.equal(f.root.querySelector('[data-testid="character-commit"]').disabled, true);
     assert.match(f.root.querySelector('[data-testid="character-commit-blocked"]').textContent, /Spend 4 more bonus points\. Spend 5 more primary skill points\./);
-    const actionsBeforeSteps = f.actions.length;
-    for (let step = 0; step < 6; step++) add('Strength').click();
-    // The pool holds four more points: the steps past it are refused by the control itself.
+    // A step is sent at once, with the whole draft.
+    add('Strength').focus();
+    add('Strength').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-update', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:a', attributeAllocations: 'strength:3', skillAllocations: 'medical:1' });
+    // The ruleset's answer redraws the row and keeps focus on the step; when the pool is spent the step is refused.
+    f.publish(draft(6, 0, false));
     assert.equal(f.root.querySelector('[aria-label="Attributes strength"]').textContent, '+6');
     assert.equal(add('Strength').disabled, true);
-    assert.equal(pools.textContent, '0 of 6 bonus points left');
-    remove('Strength').click(); add('Strength').click();
-    for (let step = 0; step < 7; step++) add('Medical').click();
-    assert.equal(f.root.querySelector('[aria-label="Skills medical"]').textContent, '+6');
-    assert.equal(add('Medical').disabled, true);
-    assert.match(f.root.querySelector('h4[data-tier="primary"]').textContent, /0 of 6 points left/);
-    assert.equal(commit.disabled, true, 'The major and minor pools remain unspent.');
-    assert.equal(f.actions.length, actionsBeforeSteps, 'Draft counters do not submit gameplay changes.');
-    f.root.querySelector('[aria-label="Background question 1"]').value = 'b';
-    f.root.querySelector('[aria-label="Background question 1"]').dispatchEvent(new window.Event('change', { bubbles: true }));
-    assert.deepEqual(f.actions.at(-1), { action: 'character-update', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:b', attributeAllocations: 'strength:6', skillAllocations: 'medical:6' });
+    assert.equal(f.root.querySelector('[data-testid="character-allocation-pools"]').textContent, '0 bonus points left');
+    assert.equal(document.activeElement, f.root.querySelector('[aria-label="Remove a point from Strength"]'), 'Focus moves to the nearest step still usable.');
+    f.root.querySelector('[aria-label="Next background question 1"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'character-update', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:b', attributeAllocations: 'strength:6', skillAllocations: 'medical:1' });
     f.root.querySelector('[data-testid="character-background-reroll"]').click();
-    assert.deepEqual(f.actions.at(-1), { action: 'character-background-reroll', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:b', attributeAllocations: 'strength:6', skillAllocations: 'medical:6' });
+    assert.equal(f.actions.at(-1).action, 'character-background-reroll');
   } finally { f.dispose(); }
 });
 
-test('quick start sends the draft identity and career without background fields, even with points unspent', () => {
+test('quick start sends the draft identity and career without background fields, as the ruleset allows', () => {
   const f = fixture();
   try {
-    f.publish({ mode: 'title', character: {
+    const publish = quickStartBlocked => f.publish({ mode: 'title', character: {
       name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true,
       creation: { editing: true, current: { name: '', race: 'breton', gender: 'female', faceIndex: 0, reflexes: 2, career: 'class00' },
         races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }], faces: [{ index: 0, mediaId: 'character.head.female.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
+        genders: [{ id: 'male', label: 'Male' }, { id: 'female', label: 'Female' }], blocked: ['Enter a name.', 'Roll a background.'], quickStartBlocked,
         background: null },
     } });
+    publish(null);
     const quickStart = f.root.querySelector('[data-testid="character-quick-start"]');
     assert.equal(quickStart.disabled, false);
     assert.equal(f.root.querySelector('[data-testid="character-commit"]').disabled, true, 'An ordinary commit still needs a name and a background.');
     quickStart.click();
     assert.deepEqual(f.actions.at(-1), { action: 'character-quick-start', name: '', race: 'breton', gender: 'female', faceIndex: 0, reflexes: 2, career: 'class00' });
+    publish('Choose each trained skill once.');
+    assert.equal(quickStart.disabled, true);
+    assert.equal(quickStart.dataset.tooltip, 'Choose each trained skill once.');
   } finally { f.dispose(); }
 });
 
@@ -1784,31 +1812,39 @@ test('custom class editor sends typed skills traits and exposes eligibility reas
       creation: {
         editing: true, current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'custom' },
         races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'custom', label: 'Custom class', available: true, restriction: null }],
-        faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }],
+        faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }], genders: [{ id: 'male', label: 'Male' }, { id: 'female', label: 'Female' }], blocked: ['Choose each trained skill once.'], quickStartBlocked: 'Choose each trained skill once.',
         custom: { name: 'Nightblade', primarySkills: ['mysticism', 'alteration', 'thaumaturgy'], majorSkills: ['illusion', 'destruction', 'restoration'], minorSkills: ['medical', 'short-blade', 'blunt-weapon', 'dragonish', 'daedric', 'dodging'], hitPointsPerLevel: 12,
           advantages: [{ id: 'increased-magery', target: '1.5' }], disadvantages: [{ id: 'forbidden-material', target: 'steel' }], eligibility: ['Choose each trained skill once.'],
-          skills: [['mysticism', 'Mysticism'], ['alteration', 'Alteration'], ['thaumaturgy', 'Thaumaturgy'], ['illusion', 'Illusion'], ['destruction', 'Destruction'], ['restoration', 'Restoration'], ['medical', 'Medical'], ['short-blade', 'Short Blade'], ['blunt-weapon', 'Blunt Weapon'], ['dragonish', 'Dragonish'], ['daedric', 'Daedric'], ['dodging', 'Dodging']].map(([id, label]) => ({ id, label })), supportedAdvantages: ['increased-magery:1.5', 'acute-hearing', 'regenerate-health:immersed'], supportedDisadvantages: ['forbidden-material:steel', 'damage:sunlight', 'inability-to-regen'] },
+          skills: [['mysticism', 'Mysticism'], ['alteration', 'Alteration'], ['thaumaturgy', 'Thaumaturgy'], ['illusion', 'Illusion'], ['destruction', 'Destruction'], ['restoration', 'Restoration'], ['medical', 'Medical'], ['short-blade', 'Short Blade'], ['blunt-weapon', 'Blunt Weapon'], ['dragonish', 'Dragonish'], ['daedric', 'Daedric'], ['dodging', 'Dodging']].map(([id, label]) => ({ id, label })),
+          advantageOptions: [{ id: 'increased-magery:1.5', label: 'Increased magery (1.5)' }, { id: 'acute-hearing', label: 'Acute hearing' }, { id: 'regenerate-health:immersed', label: 'Regenerate health (immersed)' }],
+          disadvantageOptions: [{ id: 'forbidden-material:steel', label: 'Forbidden material (steel)' }, { id: 'damage:sunlight', label: 'Damage (sunlight)' }],
+          hitPointsPerLevelRange: { minimum: 4, maximum: 30, default: 8 }, skillCounts: { primary: 3, major: 3, minor: 6 }, traitSlots: 7 },
       },
     } };
     f.publish(snapshot);
     assert.equal(f.root.querySelector('[data-testid="character-custom-class"]').hidden, false);
     assert.match(f.root.querySelector('[data-testid="character-custom-eligibility"]').textContent, /Choose each trained skill once/);
-    // The skill choices read as the ruleset names them while their values stay skill ids.
-    const minorSkill = f.root.querySelector('[aria-label="Minor skills 2"]');
-    assert.equal(minorSkill.value, 'short-blade');
-    assert.equal(minorSkill.selectedOptions[0].textContent, 'Short Blade');
-    assert.ok(![...minorSkill.options].some(option => option.textContent.includes('-')), 'no option shows a raw skill id');
+    // The counts, the HP bounds and the trait names are the ruleset's.
+    assert.equal(f.root.querySelectorAll('[data-cycler^="Minor skills "]').length, 6);
+    assert.equal(f.root.querySelectorAll('[data-cycler^="Advantages "]').length, 7);
+    const hp = f.root.querySelector('[aria-label="Hit points per level"]');
+    assert.equal(hp.min, '4'); assert.equal(hp.max, '30'); assert.equal(hp.value, '12');
+    const minorSkill = f.root.querySelector('[data-cycler="Minor skills 2"]');
+    assert.equal(minorSkill.dataset.value, 'short-blade');
+    assert.equal(minorSkill.querySelector('output').textContent, 'Short Blade');
+    assert.equal(f.root.querySelector('[data-cycler="Advantages 1"] output').textContent, 'Increased magery (1.5)');
     // A custom-class choice is sent as it changes, so the eligibility shown is always the ruleset's.
-    minorSkill.dispatchEvent(new window.Event('change', { bubbles: true }));
+    f.root.querySelector('[aria-label="Next minor skills 2"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'character-update', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'custom',
-      primarySkills: 'mysticism,alteration,thaumaturgy', majorSkills: 'illusion,destruction,restoration', minorSkills: 'medical,short-blade,blunt-weapon,dragonish,daedric,dodging', hitPointsPerLevel: 12, advantages: 'increased-magery:1.5', disadvantages: 'forbidden-material:steel' });
-    assert.equal(f.root.querySelectorAll('[aria-label^="Advantages "]').length, 7);
-    f.root.querySelector('[aria-label="Advantages 2"]').value = 'regenerate-health:immersed';
-    f.root.querySelector('[aria-label="Disadvantages 2"]').value = 'damage:sunlight';
-    f.root.querySelector('[aria-label="Disadvantages 2"]').dispatchEvent(new window.Event('change', { bubbles: true }));
+      primarySkills: 'mysticism,alteration,thaumaturgy', majorSkills: 'illusion,destruction,restoration', minorSkills: 'medical,blunt-weapon,blunt-weapon,dragonish,daedric,dodging', hitPointsPerLevel: 12, advantages: 'increased-magery:1.5', disadvantages: 'forbidden-material:steel' });
+    f.root.querySelector('[aria-label="Previous advantages 2"]').click();
     assert.equal(f.actions.at(-1).advantages, 'increased-magery:1.5,regenerate-health:immersed');
-    assert.equal(f.actions.at(-1).disadvantages, 'forbidden-material:steel,damage:sunlight');
-
+    f.root.querySelector('[aria-label="Next disadvantages 2"]').click();
+    assert.equal(f.actions.at(-1).disadvantages, 'forbidden-material:steel,forbidden-material:steel');
+    // HP per level steps within the ruleset's bounds and is sent.
+    f.root.querySelector('[aria-label="More: Hit points per level"]').click();
+    assert.equal(f.actions.at(-1).hitPointsPerLevel, 13);
+    assert.equal(f.root.querySelector('[data-testid="character-quick-start"]').disabled, true);
   } finally { f.dispose(); }
 });
 
@@ -2108,6 +2144,59 @@ test('the snapshot the C# projection publishes is a HUD the UI renders, dialogue
   } finally { f.dispose(); }
 });
 
+test('a riddle opens on its answer, and a pad answers it with the letter picker', () => {
+  const f = fixture();
+  try {
+    f.publish({ dungeonText: { actionId: 'door-7', kind: 'ShowTextWithInput', text: 'What walks on four legs at dawn?', revision: '3', requiresAnswer: true } });
+    const panel = f.root.querySelector('.dagger-dungeon-text');
+    assert.equal(panel.hidden, false);
+    const answer = panel.querySelector('.dagger-dungeon-text-answer input');
+    assert.equal(document.activeElement, answer, 'Focus starts on the answer.');
+    // A pad's accept on the answer opens the letter picker; Done writes the answer, which is sent as typed.
+    f.pad('button-0');
+    const picker = f.root.querySelector('.dagger-letter-picker');
+    assert.equal(picker.open, true);
+    for (const letter of 'MAN') picker.querySelector(`[aria-label="Letter ${letter}"]`).click();
+    picker.querySelector('[aria-label="Done"]').click();
+    assert.equal(answer.value, 'Man');
+    assert.equal(document.activeElement, answer, 'Focus returns to the answer.');
+    panel.querySelector('.dagger-dungeon-text-answer').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'dungeon-text-answer', revision: '3', item: 'door-7', text: 'Man' });
+    // Back cancels the picker without writing.
+    panel.querySelector('.dagger-letter-picker-open').click();
+    picker.querySelector('[aria-label="Letter X"]').click();
+    f.pad('button-1');
+    assert.equal(picker.open, false);
+    assert.equal(answer.value, 'Man');
+  } finally { f.dispose(); }
+});
+
+test('quest letters and popups are read on parchment and an offer is answered as a confirmation is', () => {
+  const f = fixture();
+  try {
+    const letter = { entryId: 'quest-message:1', instance: 'quest:1', message: 1011, delivery: 'letter', heading: 'A letter', text: 'Come at once.', signoff: null, promptId: null, options: [], diagnostics: [] };
+    f.publish({ quests: { deliveries: [letter], journal: { active: [], finished: [] }, pending: null,
+      offer: { instance: 'quest:2', text: 'Will you help?', diagnostics: [] } } });
+    const read = f.root.querySelector('.dagger-quest-letter');
+    assert.ok(read.classList.contains('dagger-frame'));
+    assert.equal(read.dataset.skin, 'parchment');
+    const offer = [...f.root.querySelectorAll('.dagger-quest-message')].find(article => article.textContent.includes('Will you help?'));
+    assert.ok(offer.querySelector('.dagger-confirm-choices .dagger-confirm-accept'));
+    offer.querySelector('.dagger-confirm-cancel').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'quest-offer-answer', questInstance: 'quest:2', confirm: false });
+  } finally { f.dispose(); }
+});
+
+test('the title offers no game menu button', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'title' });
+    assert.equal(f.root.querySelector('.dagger-menu-toggle').hidden, true);
+    f.publish({ mode: 'playing' });
+    assert.equal(f.root.querySelector('.dagger-menu-toggle').hidden, false);
+  } finally { f.dispose(); }
+});
+
 test('active effects render as a structured list and a playing cinematic offers its skip action', () => {
   const f = fixture();
   try {
@@ -2123,6 +2212,12 @@ test('active effects render as a structured list and a playing cinematic offers 
     assert.match(row.textContent, /From Iron Longsword\. 1 hour remaining\./);
     const skip = f.root.querySelector('.dagger-cinematic-skip');
     assert.equal(skip.hidden, false);
+    // The hint names what skips on the device in use.
+    assert.equal(skip.querySelector('kbd').textContent, 'Any key');
+    f.publish({ effects: [{ id: 'effect.7', name: 'Shield', spell: 'Ward', source: 'Iron Longsword', remainingSeconds: 3600,
+      remaining: '1 hour remaining', detail: 'Shield. From Iron Longsword. 1 hour remaining.' }], cinematic: { source: 'ANIM0000.VID', skipLabel: 'Skip' }, inputDevice: 'controller' });
+    assert.equal(skip.querySelector('kbd').textContent, 'A');
+    assert.match(skip.textContent, /Skip$/);
     skip.click();
     assert.deepEqual(f.actions.at(-1), { action: 'cinematic-skip' });
     // The shell draws the video above the UI, so any key press skips it and goes no further.
@@ -2647,7 +2742,7 @@ test('character draft screens consume the published mode art and every pick part
     images.push({ id: 'screen.pick.background', image: images[2].image });
     const art = { revision: 'character-screen-fixture', images };
     const character = { name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true };
-    const creation = { editing: true, mode: 'character-pick', classQuestionsAvailable: true, classQuiz: null,
+    const creation = { editing: true, mode: 'character-pick', classQuestionsAvailable: true, classQuiz: null, blocked: ['Enter a name.', 'Roll a background.'],
       current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
       races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }],
       faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }] };

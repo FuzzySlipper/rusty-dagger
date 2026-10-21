@@ -90,6 +90,32 @@ public sealed class StoryQuestSessionTests
         Assert.Contains(session.State.Quests.All, quest => quest.SourceFile == "S0000008.txt");
     }
 
+    [Fact]
+    public void A_controller_button_skips_a_playing_cinematic_as_a_key_does()
+    {
+        var media = new DaggerfallCinematicPresentationTests.Harness();
+        using var fixture = SourceBackedGuildBankSessionFixture.Create(configure: composition => composition with { CinematicContent = media.Content });
+        fixture.Random = SummonRandom.Create();
+        var recorder = VideoRecorder.Create(); fixture.Video = recorder.Service;
+        using var game = fixture.Start(fixture.ExteriorProfile);
+        game.State.Quests.Start(new("ending", "S0000016.txt", "S0000016", DaggerfallQuestLifecycle.Active, null, [], []));
+        game.State.Variables.WriteGlobal("FinishedMantellanCrux", true);
+        game.State.Variables.WriteGlobal("UnderkingGotTotem", true);
+        var saved = game.State.Quests.Capture();
+        game.State.Quests.Restore(saved with { Instances = [saved.Instances.Single() with
+        {
+            Tasks = saved.Instances.Single().Tasks.Select(task => task.Kind == DaggerfallQuestTaskKind.Headless || task.Symbol == "s.01"
+                ? task with { IsDropped = true } : task.Symbol == "delay" ? task with { IsSet = true } : task).ToArray(),
+        }] });
+        using var session = fixture.Restore(game.CaptureSave());
+        QuestDiseaseTests.Advance(session);
+        Assert.Equal("ANIM0003.VID", session.Cinematics!.ActiveSource);
+        // The video draws above the page, so the press reaches the product, which ends the video on any button.
+        session.Update(new Rusty.Engine.ProductUpdate(TestSessions.OuterUpdate(50_000),
+            [TestSessions.PadButton(Rusty.Engine.ControllerButton.Button0, Rusty.Engine.InputEdge.Pressed)]));
+        Assert.NotEqual("ANIM0003.VID", session.Cinematics.ActiveSource);
+    }
+
     [Theory]
     [InlineData("Gothryd", 14, false)]
     [InlineData("Brisienna", 10, true)]

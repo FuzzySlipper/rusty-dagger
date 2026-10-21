@@ -41,7 +41,7 @@ const SHELL_MARKUP = `
       <div class="dagger-death-fade" aria-hidden="true"></div>
       <section class="dagger-death-panel dagger-frame">
         <h1 class="dagger-death-message" id="dagger-death-title"></h1>
-        <label class="dagger-death-load">Load saved game <select class="dagger-death-load-slot"><option value="">Choose a saved game</option></select></label>
+        <section class="dagger-death-load" aria-label="Load saved game"><h2>Load saved game</h2><ol class="dagger-death-load-slots"></ol></section>
         <div class="dagger-death-actions">
           <button class="dagger-death-new" type="button">New game</button>
           <button class="dagger-death-load-button" type="button">Load game</button>

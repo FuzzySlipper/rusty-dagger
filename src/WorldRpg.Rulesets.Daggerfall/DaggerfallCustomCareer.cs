@@ -45,7 +45,10 @@ internal sealed record DaggerfallCustomCareerPresentation(
 internal static class DaggerfallCustomCareerPolicy
 {
     internal const string CareerId = "custom";
-    private const int MinimumHp = 4, MaximumHp = 30, DefaultHp = 8, MinimumDifficulty = -12, MaximumDifficulty = 40;
+    internal const int MinimumHp = 4, MaximumHp = 30, DefaultHp = 8;
+    private const int MinimumDifficulty = -12, MaximumDifficulty = 40;
+    /// <summary>How many skills a custom class trains in each tier, and how many traits of each kind it may take.</summary>
+    internal const int PrimarySkillCount = 3, MajorSkillCount = 3, MinorSkillCount = 6, TraitSlots = 7;
     private static readonly HashSet<string> Advantages = new(StringComparer.Ordinal)
     {
         "acute-hearing", "adrenaline-rush", "athleticism", "bonus-to-hit", "expertise", "immunity", "increased-magery", "resistance",
@@ -79,6 +82,15 @@ internal static class DaggerfallCustomCareerPolicy
 
     internal static IReadOnlyList<string> SupportedAdvantages => Advantages.Order(StringComparer.Ordinal).ToArray();
     internal static IReadOnlyList<string> SupportedDisadvantages => Disadvantages.Order(StringComparer.Ordinal).ToArray();
+
+    /// <summary>A trait option (<c>id</c> or <c>id:target</c>) as the player reads it: "Bonus to hit (daedra)".</summary>
+    internal static string TraitLabel(string option)
+    {
+        string[] parts = option.Split(':', 2);
+        string name = parts[0].Replace('-', ' ');
+        name = name.Length == 0 ? name : char.ToUpperInvariant(name[0]) + name[1..];
+        return parts.Length == 2 ? $"{name} ({parts[1].Replace('-', ' ')})" : name;
+    }
 
     internal static string[] Options(IReadOnlyList<string> traits) => traits.SelectMany(id => TraitTargets.TryGetValue(id, out var targets)
         ? targets.Select(target => $"{id}:{target}") : [id]).ToArray();
@@ -163,7 +175,8 @@ internal static class DaggerfallCustomCareerPolicy
     {
         List<string> errors = [];
         if (string.IsNullOrWhiteSpace(choices.Name)) errors.Add("A custom class needs a name.");
-        if (choices.PrimarySkills.Length != 3 || choices.MajorSkills.Length != 3 || choices.MinorSkills.Length != 6) errors.Add("Choose exactly 3 primary, 3 major, and 6 minor skills.");
+        if (choices.PrimarySkills.Length != PrimarySkillCount || choices.MajorSkills.Length != MajorSkillCount || choices.MinorSkills.Length != MinorSkillCount)
+            errors.Add($"Choose exactly {PrimarySkillCount} primary, {MajorSkillCount} major, and {MinorSkillCount} minor skills.");
         string[] skills = [.. choices.PrimarySkills, .. choices.MajorSkills, .. choices.MinorSkills];
         if (skills.Distinct(StringComparer.Ordinal).Count() != skills.Length) errors.Add("Each trained skill may appear only once.");
         HashSet<string> knownSkills = definitions.Catalogs.Skills.Select(skill => skill.Id).ToHashSet(StringComparer.Ordinal);
@@ -186,7 +199,7 @@ internal static class DaggerfallCustomCareerPolicy
     private static void ValidateTraits(IEnumerable<DaggerfallCustomCareerTrait> traits, HashSet<string> supported, string role, List<string> errors)
     {
         DaggerfallCustomCareerTrait[] all = traits.ToArray();
-        if (all.Length > 7) errors.Add($"A custom class supports at most 7 {role}s.");
+        if (all.Length > TraitSlots) errors.Add($"A custom class supports at most {TraitSlots} {role}s.");
         foreach (DaggerfallCustomCareerTrait trait in all)
         {
             if (!supported.Contains(trait.Id)) errors.Add($"'{trait.Id}' is not a supported {role}.");

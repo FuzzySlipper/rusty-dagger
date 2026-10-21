@@ -229,9 +229,26 @@ internal sealed partial class DaggerfallCharacterState
             ? new(draft, [.. DaggerfallCustomCareerPolicy.Validate(_definitions, draft)], [.. _definitions.Catalogs.Skills.Select(skill => skill.Id)], DaggerfallCustomCareerPolicy.Options(DaggerfallCustomCareerPolicy.SupportedAdvantages), DaggerfallCustomCareerPolicy.Options(DaggerfallCustomCareerPolicy.SupportedDisadvantages))
             : null;
         DaggerfallCharacterBackgroundPresentation? background = current.Background is { } backgroundDraft && (Pending is not null || _background is not null)
-            ? DaggerfallCharacterBackgroundPolicy.Present(_definitions, CurrentCareer(current), current.ToIdentity(), backgroundDraft) : null;
+            ? DaggerfallCharacterBackgroundPolicy.Present(_definitions, PresentedCareer(current), current.ToIdentity(), backgroundDraft) : null;
+        // What stops the draft committing, in the player's words, so the screen never decides it.
+        List<string> blocked = [];
+        if (string.IsNullOrWhiteSpace(current.Name)) blocked.Add("Enter a name.");
+        if (background is null) blocked.Add("Roll a background.");
+        else
+        {
+            static string Points(int count, string what) => $"Spend {count} more {what} {(count == 1 ? "point" : "points")}.";
+            if (background.RemainingAttributePoints > 0) blocked.Add(Points(background.RemainingAttributePoints, "bonus"));
+            if (background.PrimarySkillPoints > 0) blocked.Add(Points(background.PrimarySkillPoints, "primary skill"));
+            if (background.MajorSkillPoints > 0) blocked.Add(Points(background.MajorSkillPoints, "major skill"));
+            if (background.MinorSkillPoints > 0) blocked.Add(Points(background.MinorSkillPoints, "minor skill"));
+        }
+        bool customDraft = current.CareerId == DaggerfallCustomCareerPolicy.CareerId;
+        if (customDraft && custom is not null) blocked.AddRange(custom.Eligibility);
+        // Quick start completes the background itself, so only an ineligible custom class stops it.
+        string? quickStartBlocked = customDraft && custom is { Eligibility.Length: > 0 } ? string.Join(" ", custom.Eligibility) : null;
         return new DaggerfallCharacterCreationPresentation(Pending is not null, current, races, careers, faces, reflexes, custom, background, CreationMode, ReadClassQuiz(), _definitions.Catalogs.ClassQuestionnaire is not null,
-            Pending is null && _background is not null ? NewGameSummary() : null);
+            Pending is null && _background is not null ? NewGameSummary() : null)
+        { Blocked = [.. blocked], QuickStartBlocked = quickStartBlocked };
     }
 
     internal void BeginChoices() { _classQuestions = null; Pending = DaggerfallCharacterCreationChoices.From(Identity) with { Background = _background }; }
@@ -398,6 +415,17 @@ internal sealed partial class DaggerfallCharacterState
         ? DaggerfallCustomCareerPolicy.Compile(_definitions, choices.CustomCareer ?? throw new ArgumentException("Custom class fields are incomplete."), Career).Career
         : _definitions.Catalogs.RequireCareer(choices.CareerId);
 
+    /// <summary>
+    /// The career a draft's background is shown against. A custom class the player is still editing can
+    /// be ineligible for a moment (a skill chosen twice, too many traits); its background is then shown
+    /// against the class it would start from, while the eligibility reasons say what to fix, rather than
+    /// the draft failing to present at all.
+    /// </summary>
+    private DaggerfallCareerDefinition PresentedCareer(DaggerfallCharacterCreationChoices choices) =>
+        choices.CareerId == DaggerfallCustomCareerPolicy.CareerId && choices.CustomCareer is { } custom
+            && DaggerfallCustomCareerPolicy.Validate(_definitions, custom).Count != 0
+            ? Career : CurrentCareer(choices);
+
     private int NextBackgroundRollSequence() => _backgroundRollSequence = checked(_backgroundRollSequence + 1);
 
     private static DaggerfallCustomCareerChoices ToChoices(DaggerfallCustomCareerDefinition custom) => new(
@@ -413,7 +441,13 @@ internal sealed record DaggerfallCharacterFaceChoice(int Index, string MediaId);
 internal sealed record DaggerfallCharacterReflexChoice(int Value, string Label);
 internal sealed record DaggerfallCharacterCreationPresentation(bool Editing, DaggerfallCharacterCreationChoices Current,
     DaggerfallCharacterChoice[] Races, DaggerfallCharacterChoice[] Careers, DaggerfallCharacterFaceChoice[] Faces, DaggerfallCharacterReflexChoice[] Reflexes,
-    DaggerfallCustomCareerPresentation? Custom = null, DaggerfallCharacterBackgroundPresentation? Background = null, string? Mode = null, DaggerfallClassQuizPresentation? ClassQuiz = null, bool ClassQuestionsAvailable = false, string[]? Summary = null);
+    DaggerfallCustomCareerPresentation? Custom = null, DaggerfallCharacterBackgroundPresentation? Background = null, string? Mode = null, DaggerfallClassQuizPresentation? ClassQuiz = null, bool ClassQuestionsAvailable = false, string[]? Summary = null)
+{
+    /// <summary>What stops the draft committing, in the player's words; empty when it can commit.</summary>
+    internal string[] Blocked { get; init; } = [];
+    /// <summary>Why Quick start cannot begin from these choices, or null when it can.</summary>
+    internal string? QuickStartBlocked { get; init; }
+}
 
 /// <summary>Current-schema durable identity. Definition keys are resolved before a session is built.</summary>
 internal sealed record DaggerfallCharacterSave(

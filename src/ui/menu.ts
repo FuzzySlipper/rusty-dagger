@@ -444,7 +444,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       // The open menu holds the world, so the product reports modal until a requested load replaces the
       // session; a failed load leaves the old session, still modal, and the menu shows why.
       if (loadRequested && menu.open && value.mode === 'playing') closeMenu();
-      menuToggle.hidden = dead;
+      // The title and character creation have no game menu, so they offer no button for one.
+      menuToggle.hidden = dead || value.mode === 'title';
       actionDrivenTime = value.timeControl?.enabled ?? false;
       const timeToggle = menu.querySelector<HTMLButtonElement>('[data-action="action-driven-time"]')!;
       timeToggle.setAttribute('aria-pressed', String(actionDrivenTime));

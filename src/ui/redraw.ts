@@ -26,9 +26,12 @@ export function redraw(root: Element, signature: string, build: () => void): boo
   // A control that became disabled cannot hold focus, as Next on a book's last page.
   const usable = (candidate: HTMLElement): boolean => !(candidate as HTMLButtonElement).disabled;
   const same = candidates.find(candidate => identity(candidate) === key && usable(candidate));
-  // The same control if it is still there, otherwise the nearest usable one to where it was.
+  // The same control if it is still there, otherwise the nearest usable one to where it was, looking
+  // back before forward (a disabled + gives way to the − beside it).
   const at = Math.min(index, candidates.length - 1);
-  const target = same ?? candidates.slice(at).find(usable) ?? candidates.slice(0, at).reverse().find(usable) ?? null;
+  let target = same ?? null;
+  for (let distance = 0; target === null && distance < candidates.length; distance++)
+    target = [candidates[at - distance], candidates[at + distance]].find(candidate => candidate !== undefined && usable(candidate)) ?? null;
   target?.focus({ preventScroll: true });
   return true;
 }
