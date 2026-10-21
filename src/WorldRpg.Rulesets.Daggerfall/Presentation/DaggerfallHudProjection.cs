@@ -864,13 +864,26 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("disadvantages", Traits(builder, custom.Current.Disadvantages)),
         ("eligibility", builder.Array(custom.Eligibility.Select(builder.String).ToArray())),
         ("skills", builder.Array(custom.Skills.Select(skill => builder.Object(("id", builder.String(skill)), ("label", builder.String(DaggerfallCharacterPresentation.Label(skill))))).ToArray())),
-        ("supportedAdvantages", builder.Array(custom.SupportedAdvantages.Select(builder.String).ToArray())),
-        ("supportedDisadvantages", builder.Array(custom.SupportedDisadvantages.Select(builder.String).ToArray())));
+        ("advantageOptions", TraitOptions(builder, custom.SupportedAdvantages)),
+        ("disadvantageOptions", TraitOptions(builder, custom.SupportedDisadvantages)),
+        ("hitPointsPerLevelRange", builder.Object(("minimum", builder.Number(DaggerfallCustomCareerPolicy.MinimumHp)),
+            ("maximum", builder.Number(DaggerfallCustomCareerPolicy.MaximumHp)), ("default", builder.Number(DaggerfallCustomCareerPolicy.DefaultHp)))),
+        ("skillCounts", builder.Object(("primary", builder.Number(DaggerfallCustomCareerPolicy.PrimarySkillCount)),
+            ("major", builder.Number(DaggerfallCustomCareerPolicy.MajorSkillCount)), ("minor", builder.Number(DaggerfallCustomCareerPolicy.MinorSkillCount)))),
+        ("traitSlots", builder.Number(DaggerfallCustomCareerPolicy.TraitSlots)));
+
+    private static uint TraitOptions(UiValueBuilder builder, IEnumerable<string> options) => builder.Array(options.Select(option => builder.Object(
+        ("id", builder.String(option)), ("label", builder.String(DaggerfallCustomCareerPolicy.TraitLabel(option))))).ToArray());
 
     private static uint Creation(UiValueBuilder builder, DaggerfallCharacterCreationPresentation creation) => builder.Object(
         ("editing", builder.Boolean(creation.Editing)),
         ("mode", creation.Mode is null ? builder.Null() : builder.String(creation.Mode)),
         ("classQuestionsAvailable", builder.Boolean(creation.ClassQuestionsAvailable)),
+        ("blocked", builder.Array(creation.Blocked.Select(builder.String).ToArray())),
+        ("quickStartBlocked", creation.QuickStartBlocked is null ? builder.Null() : builder.String(creation.QuickStartBlocked)),
+        ("genders", builder.Array(Enum.GetValues<DaggerfallCharacterGender>().Select(gender => builder.Object(
+            ("id", builder.String(gender == DaggerfallCharacterGender.Female ? "female" : "male")),
+            ("label", builder.String(gender == DaggerfallCharacterGender.Female ? "Female" : "Male")))).ToArray())),
         ("classQuiz", creation.ClassQuiz is null ? builder.Null() : ClassQuiz(builder, creation.ClassQuiz)),
         ("current", builder.Object(("name", builder.String(creation.Current.Name)), ("race", builder.String(creation.Current.RaceId)),
             ("gender", builder.String(creation.Current.Gender == DaggerfallCharacterGender.Female ? "female" : "male")), ("faceIndex", builder.Number(creation.Current.FaceIndex)),

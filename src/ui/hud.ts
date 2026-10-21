@@ -223,7 +223,10 @@ export function mountHud(shell: HTMLElement, send: Send): Hud {
       const cinematic = value.cinematic ?? null;
       cinematicPlaying = cinematic !== null;
       cinematicSkip.hidden = cinematic === null;
-      cinematicSkip.textContent = cinematic?.skipLabel ?? 'Skip';
+      // The hint names what skips on the device in use: a pad's A, or any key or click.
+      const skipKey = document.createElement('kbd');
+      skipKey.textContent = value.inputDevice === 'controller' ? 'A' : 'Any key';
+      redraw(cinematicSkip, `${cinematic?.skipLabel ?? ''}|${skipKey.textContent}`, () => cinematicSkip.replaceChildren(skipKey, ` ${cinematic?.skipLabel ?? 'Skip'}`));
       redraw(status, JSON.stringify(value.slots ?? []), () => status.replaceChildren(...(value.slots ?? []).map(row => {
         const item = document.createElement('p');
         const label = document.createElement('strong');

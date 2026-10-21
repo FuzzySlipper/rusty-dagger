@@ -8,6 +8,7 @@ import { mountDungeonText } from './dungeon-text.js';
 import { mountEntry } from './entry.js';
 import { sender } from './host.js';
 import { mountHud } from './hud.js';
+import { EDIT_TEXT_EVENT, mountLetterPicker } from './letter-picker.js';
 import { mountInteraction } from './interaction.js';
 import { mountMenu } from './menu.js';
 import { mountNavigation } from './navigation.js';
@@ -55,6 +56,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const navigation = mountNavigation(shell, context, {
     onPlayEscape: () => { if (!dead && !entry.isTitle()) menu.open(); },
     captureButton: button => menu.captureButton(button),
+    editText: field => picker.edit(field),
     onButton: button => {
       if (!menu.dialog.open || confirmPrompt.open()) return;
       if (button === MENU_SHORTCUTS.menu) menu.dismiss();
@@ -63,6 +65,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       else if (button === MENU_SHORTCUTS.contextMenu) menu.contextMenu();
     },
   });
+  // How a pad types: the letter picker edits any text field, asked by navigation or by a field's ✎ button.
+  const picker = mountLetterPicker(shell, surface => navigation.register(surface));
+  const onEditText = (event: Event): void => {
+    const detail = (event as CustomEvent<{ field: HTMLInputElement | HTMLTextAreaElement; label: string }>).detail;
+    picker.edit(detail.field, detail.label);
+  };
+  shell.addEventListener(EDIT_TEXT_EVENT, onEditText);
   const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
   const choices = mountChoices(shell, quests, send);
   const death = mountDeath(shell, send);
@@ -90,8 +99,10 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     navigation.register({ name: 'dialogue', root: dialogue.window, layer: 50, isOpen: () => dialogue.window.open, back: dialogue.close }),
     ...choices.cancellable.map(service => navigation.register({ name: service.getAttribute('aria-label')!, root: service, layer: 45,
       isOpen: () => !service.hidden, back: () => service.querySelector<HTMLButtonElement>('[data-escape]:not(:disabled)')?.click() })),
-    navigation.register({ name: 'dungeon-text', root: dungeonText.root, layer: 40, isOpen: () => !dungeonText.root.hidden, back: dungeonText.close }),
-    navigation.register({ name: 'death', root: death.root, layer: 20, isOpen: () => !death.root.hidden }),
+    navigation.register({ name: 'dungeon-text', root: dungeonText.root, layer: 40, isOpen: () => !dungeonText.root.hidden, back: dungeonText.close,
+      initialFocus: dungeonText.initialFocus }),
+    navigation.register({ name: 'death', root: death.root, layer: 20, isOpen: () => !death.root.hidden,
+      initialFocus: () => death.root.querySelector<HTMLElement>('.dagger-death-actions button:not(:disabled)') }),
     navigation.register({ name: 'title', root: entry.root, layer: 10, isOpen: () => !entry.root.hidden }),
   ];
 

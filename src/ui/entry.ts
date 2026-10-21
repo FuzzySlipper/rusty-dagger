@@ -1,6 +1,7 @@
 import { fitPixelArt, image } from './art.js';
 import { button, type Send } from './host.js';
 import { isBundles, isSaveSlots, type BundleProjection, type DaggerHud, type SaveSlotEntry } from './projection.js';
+import { createCycler, type Cycler } from './cycler.js';
 import { invalidate, redraw } from './redraw.js';
 import { BEGIN_ACTION, TITLE_MODE, screenForMode } from './screens.js';
 import { slotRow } from './slots.js';
@@ -31,9 +32,12 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   create.className = 'dagger-entry-create'; create.dataset.testid = 'entry-create-character'; root.append(create);
   create.addEventListener('click', () => send({ action: 'character-begin' }));
   // The game a new run starts under: offered only when there is a choice, and only before creation opens.
-  const bundle = document.createElement('label'); bundle.className = 'dagger-entry-bundle'; bundle.textContent = 'Game ';
-  const bundleSelect = document.createElement('select'); bundleSelect.dataset.testid = 'entry-bundle'; bundle.append(bundleSelect); root.append(bundle);
-  bundleSelect.addEventListener('change', () => send({ action: 'bundle-select', key: bundleSelect.value }));
+  // A cycler rather than a native select, so a pad steps it as easily as the mouse does.
+  const bundle = document.createElement('div'); bundle.className = 'dagger-entry-bundle';
+  const bundleLabel = document.createElement('span'); bundleLabel.textContent = 'Game';
+  const bundleChoice = document.createElement('div'); bundleChoice.dataset.testid = 'entry-bundle';
+  bundle.append(bundleLabel, bundleChoice); root.append(bundle);
+  let bundleCycler: Cycler | null = null;
   // The game choice and the two buttons stack in one column at the foot of the screen, so the
   // choice can never cover a button however tall the skin draws them.
   const actions = document.createElement('div'); actions.className = 'dagger-entry-actions';
@@ -82,11 +86,14 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     if (load.hidden) { saved.hidden = true; load.setAttribute('aria-expanded', 'false'); }
     redraw(saved, JSON.stringify(slots), () => saved.replaceChildren(...slots.map(entry => slotRow(entry, false))));
     bundle.hidden = creating || bundles === null || bundles.options.length < 2;
-    if (bundles !== null && document.activeElement !== bundleSelect) {
+    if (bundles !== null) {
       const current = bundles;
-      redraw(bundleSelect, JSON.stringify(current.options), () =>
-        bundleSelect.replaceChildren(...current.options.map(option => new Option(option.title, option.id))));
-      bundleSelect.value = current.current;
+      redraw(bundleChoice, JSON.stringify(current.options), () => {
+        bundleCycler = createCycler('Game', current.options.map(option => ({ id: option.id, label: option.title })), current.current,
+          id => send({ action: 'bundle-select', key: id }));
+        bundleChoice.replaceChildren(bundleCycler.element);
+      });
+      bundleCycler?.set(current.current);
     }
     const primary = screenForMode(mode ?? TITLE_MODE)!;
     const art = image(primary);

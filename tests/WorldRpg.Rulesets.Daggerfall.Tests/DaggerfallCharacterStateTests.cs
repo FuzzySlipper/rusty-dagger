@@ -24,6 +24,38 @@ public sealed class DaggerfallCharacterStateTests
     }
 
     [Fact]
+    public void The_creation_projection_says_what_stops_a_commit_and_whether_quick_start_can_begin()
+    {
+        DaggerfallCharacterState character = Create(out DaggerfallDefinitions definitions, out _);
+        character.BeginChoices(RandomMinimum.Create());
+        character.ReplacePending(character.Pending! with { Name = " " });
+        DaggerfallCharacterCreationPresentation draft = character.ReadCreation();
+        DaggerfallCharacterBackgroundPresentation background = Assert.IsType<DaggerfallCharacterBackgroundPresentation>(draft.Background);
+        Assert.Contains("Enter a name.", draft.Blocked);
+        // Unspent pools are named with what is left of them, as the ruleset counts it.
+        Assert.Contains($"Spend {background.RemainingAttributePoints} more bonus points.", draft.Blocked);
+        Assert.Contains($"Spend {background.PrimarySkillPoints} more primary skill points.", draft.Blocked);
+        // Quick start completes the background itself, so a preset class can always begin.
+        Assert.Null(draft.QuickStartBlocked);
+
+        // A custom class whose draft is ineligible blocks both, with the ruleset's own reasons.
+        DaggerfallCustomCareerChoices custom = DaggerfallCustomCareerChoices.Default(definitions, definitions.Catalogs.RequireCareer("class00"));
+        character.ReplacePending(character.Pending! with { Name = "Aubk-i", CareerId = DaggerfallCustomCareerPolicy.CareerId, CustomCareer = custom with { HitPointsPerLevel = 99 } });
+        DaggerfallCharacterCreationPresentation invalid = character.ReadCreation();
+        Assert.DoesNotContain("Enter a name.", invalid.Blocked);
+        Assert.Contains(invalid.Blocked, reason => reason.StartsWith("Hit points per level must be from 4 to 30", StringComparison.Ordinal));
+        Assert.NotNull(invalid.QuickStartBlocked);
+        Assert.Contains("Hit points per level", invalid.QuickStartBlocked);
+    }
+
+    [Theory]
+    [InlineData("bonus-to-hit:daedra", "Bonus to hit (daedra)")]
+    [InlineData("acute-hearing", "Acute hearing")]
+    [InlineData("damage:holy-places", "Damage (holy places)")]
+    public void Custom_class_traits_read_as_names(string option, string label) =>
+        Assert.Equal(label, DaggerfallCustomCareerPolicy.TraitLabel(option));
+
+    [Fact]
     public void Character_action_requires_one_complete_typed_choice()
     {
         DaggerfallPlayerUiAction? action = DaggerfallUiAction.Parse("""{"action":"character-commit","name":"Aubk-i","race":"khajiit","gender":"female","faceIndex":3,"reflexes":1,"career":"class08"}"""u8);

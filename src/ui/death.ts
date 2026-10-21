@@ -1,7 +1,9 @@
 import { fitPixelArt, image } from './art.js';
 import type { Send } from './host.js';
 import { isDeathProjection, type DeathProjection, type SaveSlotProjection } from './projection.js';
+import { redraw } from './redraw.js';
 import { screenForMode } from './screens.js';
+import { slotRow } from './slots.js';
 
 /**
  * The death screen the dead mode owns. It replaces the HUD rather than joining it; its choices,
@@ -19,14 +21,21 @@ export function mountDeath(shell: HTMLElement, send: Send): Death {
   const screen = shell.querySelector<HTMLImageElement>('.dagger-death-screen')!;
   fitPixelArt(screen, root);
   const message = shell.querySelector<HTMLElement>('.dagger-death-message')!;
-  const loadSlot = shell.querySelector<HTMLSelectElement>('.dagger-death-load-slot')!;
+  // The saved games, as the menu lists them (character, place, date, play time); choosing one selects it.
+  const slotList = shell.querySelector<HTMLOListElement>('.dagger-death-load-slots')!;
+  let chosenSlot: string | null = null;
   const newGame = shell.querySelector<HTMLButtonElement>('.dagger-death-new')!;
   const load = shell.querySelector<HTMLButtonElement>('.dagger-death-load-button')!;
   const quit = shell.querySelector<HTMLButtonElement>('.dagger-death-quit')!;
   newGame.addEventListener('click', () => send({ action: 'death-new-game' }));
-  load.addEventListener('click', () => { if (loadSlot.value) send({ action: 'death-load-game', key: loadSlot.value }); });
+  load.addEventListener('click', () => { if (chosenSlot) send({ action: 'death-load-game', key: chosenSlot }); });
   quit.addEventListener('click', () => send({ action: 'death-quit' }));
-  loadSlot.addEventListener('change', () => { load.disabled = loadSlot.value.length === 0; });
+  slotList.addEventListener('click', event => {
+    const slot = (event.target as Element).closest<HTMLButtonElement>('[data-save-slot]');
+    if (!slot || slot.disabled) return;
+    chosenSlot = slot.dataset.saveSlot || null;
+    draw();
+  });
 
   let dead = false;
   let current: DeathProjection | null = null;
@@ -52,13 +61,16 @@ export function mountDeath(shell: HTMLElement, send: Send): Death {
     quit.textContent = quitChoice?.label ?? 'Quit to title';
     newGame.disabled = selected !== null || newChoice?.available !== true;
     quit.disabled = selected !== null || quitChoice?.available !== true;
-    const selectedSlot = loadSlot.value;
-    loadSlot.replaceChildren(new Option('Choose a saved game', ''));
-    for (const entry of slots.entries) loadSlot.add(new Option(entry.label, entry.key));
-    loadSlot.value = slots.entries.some(entry => entry.key === selectedSlot) ? selectedSlot : '';
+    if (chosenSlot !== null && !slots.entries.some(entry => entry.key === chosenSlot)) chosenSlot = null;
     const loadAvailable = loadChoice?.available === true;
-    loadSlot.disabled = selected !== null || !loadAvailable;
-    load.disabled = selected !== null || !loadAvailable || loadSlot.value.length === 0;
+    const locked = selected !== null || !loadAvailable;
+    redraw(slotList, JSON.stringify([slots.entries, chosenSlot, locked]), () => slotList.replaceChildren(...slots.entries.map(entry => {
+      const row = slotRow(entry, entry.key === chosenSlot);
+      row.querySelector('button')!.disabled = locked;
+      return row;
+    })));
+    slotList.closest('section')!.hidden = slots.entries.length === 0;
+    load.disabled = locked || chosenSlot === null;
     const art = image(death?.screen || screenForMode('dead')!);
     if (art !== null) screen.src = art;
   };

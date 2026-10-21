@@ -20,11 +20,15 @@ export function renderQuestMessages(root: HTMLElement, value: QuestPresentation 
     const article = document.createElement('article'); article.className = 'dagger-quest-message dagger-frame'; article.dataset.skin = 'parchment';
     const title = document.createElement('strong'); title.textContent = 'Quest offer';
     const text = document.createElement('p'); text.textContent = offer.text; article.append(title, text);
+    // An offer is a question answered as the confirmation answers one: accept, or decline.
+    const answers = document.createElement('div'); answers.className = 'dagger-confirm-choices';
     for (const [label, confirm] of [['Accept', true], ['Decline', false]] as const) {
       const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
+      button.className = confirm ? 'dagger-confirm-accept' : 'dagger-confirm-cancel';
       button.addEventListener('click', () => claim({ action: 'quest-offer-answer', questInstance: offer.instance, confirm }));
-      article.append(button);
+      answers.append(button);
     }
+    article.append(answers);
     keep(`offer:${offer.instance}`, offer, article);
   }
   if (value.escortFaces?.length) {
@@ -42,7 +46,9 @@ export function renderQuestMessages(root: HTMLElement, value: QuestPresentation 
   }
   const add = (message: QuestMessageProjection, heading: string, deliveries: readonly QuestMessageProjection[]): void => {
     const article = document.createElement('article');
-    article.className = `dagger-quest-message dagger-quest-${message.delivery}`;
+    // Every quest message is read on parchment, as the classic popups and letters are.
+    article.className = `dagger-quest-message dagger-quest-${message.delivery} dagger-frame`;
+    article.dataset.skin = 'parchment';
     const title = document.createElement('strong');
     title.textContent = heading;
     const text = document.createElement('p');
