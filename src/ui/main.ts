@@ -55,7 +55,11 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // Escape with no surface open is Escape in play: it opens the menu, except where there is none.
   const navigation = mountNavigation(shell, context, {
     onPlayEscape: () => { if (!dead && !entry.isTitle()) menu.open(); },
-    captureButton: button => menu.captureButton(button),
+    // While a cinematic plays the shell draws it above the page; any pad press skips it, as any key does.
+    captureButton: button => {
+      if (hud.cinematicPlaying()) { hud.skipCinematic(); return true; }
+      return menu.captureButton(button);
+    },
     editText: field => picker.edit(field),
     onButton: button => {
       if (!menu.dialog.open || confirmPrompt.open()) return;
@@ -103,7 +107,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       initialFocus: dungeonText.initialFocus }),
     navigation.register({ name: 'death', root: death.root, layer: 20, isOpen: () => !death.root.hidden,
       initialFocus: () => death.root.querySelector<HTMLElement>('.dagger-death-actions button:not(:disabled)') }),
-    navigation.register({ name: 'title', root: entry.root, layer: 10, isOpen: () => !entry.root.hidden }),
+    navigation.register({ name: 'title', root: entry.root, layer: 10, isOpen: () => !entry.root.hidden, panel: entry.stepPanel }),
   ];
 
   // The published art arrives inside a snapshot: bytes the session read from admitted content, keyed

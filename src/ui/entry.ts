@@ -17,6 +17,12 @@ export interface Entry {
   isTitle(): boolean;
   update(value: DaggerHud): void;
   refreshArt(): void;
+  /**
+   * The shoulder buttons while creating a character: focus jumps to the first control of the
+   * previous or next part (identity, class, background, attributes, skills, the commit row), so a pad
+   * crosses the long form in a few presses.
+   */
+  stepPanel(direction: -1 | 1): void;
 }
 
 export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement, onCreationOpens: () => void): Entry {
@@ -127,5 +133,18 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
       draw();
     },
     refreshArt() { invalidate(parts); draw(); },
+    stepPanel(direction) {
+      if (mode === null) return;
+      const parts = Array.from(creation.querySelectorAll<HTMLElement>('.dagger-creation-panel, .dagger-creation-actions'))
+        .filter(part => !part.closest('[hidden]'));
+      const first = (part: HTMLElement): HTMLElement | null => part.querySelector<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]');
+      if (parts.length === 0) return;
+      const at = parts.findIndex(part => part.contains(document.activeElement));
+      for (let step = 1; step <= parts.length; step++) {
+        const part = parts[((at < 0 ? (direction > 0 ? -1 : 0) : at) + direction * step + parts.length * step) % parts.length]!;
+        const target = first(part);
+        if (target) { target.focus(); target.scrollIntoView?.({ block: 'nearest' }); return; }
+      }
+    },
   };
 }
