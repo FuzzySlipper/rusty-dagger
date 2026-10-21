@@ -224,24 +224,30 @@ async function press(selector, what, attempts = 120) {
 }
 
 // Begin with no character opens character creation. The smoke spends every point the rolled
-// background offers through the steppers, which refuse a point no pool holds, until none will take
-// another; Commit opens only once every pool is spent.
+// background offers through the steppers, one at a time: each point goes to the ruleset, which answers
+// with the draft the steppers redraw from, and a stepper refuses a point no pool holds. Commit opens
+// only once every pool is spent.
 await press('button.dagger-entry-begin', 'Begin');
 await waitFor('[data-testid="character-commit"]', 'character creation', 120, { enabled: false });
-const { result: spent } = await cdp('Runtime.evaluate', {
-  returnByValue: true,
-  expression: `(() => {
-    for (let step = 0; step < 200; step++) {
-      const add = document.querySelector('[data-testid="character-background"] button[aria-label^="Add a point to "]:not(:disabled)');
-      if (!add) break;
+let spent = null;
+for (let step = 0; step < 400; step++) {
+  const { result } = await cdp('Runtime.evaluate', {
+    returnByValue: true,
+    expression: `(() => {
+      const commit = document.querySelector('[data-testid="character-commit"]');
+      if (commit && !commit.disabled) return 'ready';
+      const add = document.querySelector('button[aria-label^="Add a point to "]:not(:disabled)');
+      if (!add) return 'character creation still refuses the commit: '
+        + (document.querySelector('[data-testid="character-commit-blocked"]')?.textContent ?? 'no reason shown');
       add.click();
-    }
-    const commit = document.querySelector('[data-testid="character-commit"]');
-    return commit && !commit.disabled ? null
-      : 'character creation still refuses the commit: ' + (document.querySelector('[data-testid="character-commit-blocked"]')?.textContent ?? 'no reason shown');
-  })()`,
-});
-if (spent.value) fail(spent.value);
+      return 'spent';
+    })()`,
+  });
+  spent = result.value;
+  if (spent !== 'spent') break;
+  await sleep(40);
+}
+if (spent !== 'ready') fail(spent ?? 'character creation never answered');
 await press('[data-testid="character-commit"]', 'Commit character');
 await press('[data-testid="new-game-launch"]', 'Begin new game');
 const pressed = Date.now();
