@@ -70,7 +70,7 @@ public sealed class PlayerInputSystem
     private Vector2 _observedPlanarIntent;
     private PlayerControlTuning _tuning;
     private PlayerControlBindings _controls;
-    private readonly ControllerInputTuning? _controller;
+    private ControllerInputTuning? _controller;
     private InputActionBinding[] _bindings;
     public PlayerInputSystem(PlayerControlTuning tuning, PlayerControlBindings controls, IEnumerable<InputActionBinding>? bindings = null, ControllerInputTuning? controller = null)
     {
@@ -284,6 +284,17 @@ public sealed class PlayerInputSystem
     /// trigger buttons alongside that press edge, so the edge is what an action reads and no
     /// binding has to know whether its button is analog.
     /// </summary>
+    /// <summary>
+    /// Replaces which semantic action each controller button raises, as a player's rebinding does; the sticks,
+    /// deadzones and sensitivities stay the authored tuning.
+    /// </summary>
+    public void RebindControllerActions(IReadOnlyList<ControllerActionBinding> actions)
+    {
+        ArgumentNullException.ThrowIfNull(actions);
+        if (_controller is null) throw new InvalidOperationException("This input system has no controller tuning to rebind.");
+        _controller = (_controller with { Actions = [.. actions] }).Validate();
+    }
+
     private void ApplyControllerButton(ProductInputEvent input, HashSet<ControllerButton> buttons, HashSet<InputActionId> actions)
     {
         if (input.Edge == InputEdge.Released)

@@ -44,6 +44,9 @@ internal sealed partial class DaggerfallSession
             Forward = Key("move.forward"), Backward = Key("move.backward"),
             Left = Key("move.left"), Right = Key("move.right"),
         }, DaggerfallInput.Bindings);
+        if (_tuning.ControllerInput is { } pad) _input.RebindControllerActions(settings.ControllerActions(pad.Actions));
+        foreach ((string bus, _) in DaggerfallControlSettings.SoundBuses)
+            _engine.Audio.SetBusVolume(new AudioBusVolumeRequest(SoundBus(bus), settings.Volume(bus)));
         _input.ClearHeldInput();
         _locomotion.Rebind(settings);
 
@@ -52,17 +55,33 @@ internal sealed partial class DaggerfallSession
             .FirstOrDefault(value => value != KeyboardControl.None);
     }
 
+    private static AudioBus SoundBus(string bus) => bus switch
+    {
+        "music" => AudioBus.Music, "ambient" => AudioBus.Ambient, "effects" => AudioBus.Sfx, "interface" => AudioBus.Ui,
+        _ => throw new ArgumentOutOfRangeException(nameof(bus), bus, "No sound bus carries this id."),
+    };
+
+    /// <summary>The authored pad layout the player's controller bindings start from.</summary>
+    internal IReadOnlyList<ControllerActionBinding> PadActions => _tuning.ControllerInput?.Actions ?? [];
+
     private void ChangeControls(DaggerfallPlayerUiAction action)
     {
         try
         {
             DaggerfallControlSettings candidate = action.Kind == DaggerfallUiActionKind.ControlsReset
                 ? new() : DaggerfallControlSettings.Parse(_controlSettings.Serialize());
-            // Resetting the controls keeps the interface scale: it is a display choice, not a binding.
-            if (action.Kind == DaggerfallUiActionKind.ControlsReset) candidate.SetUiScale(_controlSettings.UiScale);
+            // Resetting the controls keeps the interface scale and the sound levels: they are not bindings.
+            if (action.Kind == DaggerfallUiActionKind.ControlsReset)
+            {
+                candidate.SetUiScale(_controlSettings.UiScale);
+                foreach ((string bus, _) in DaggerfallControlSettings.SoundBuses) candidate.SetVolume(bus, _controlSettings.Volume(bus));
+            }
             if (action.Kind == DaggerfallUiActionKind.ControlsLook) candidate.SetLook(action.Sensitivity!.Value, action.Invert!.Value);
             else if (action.Kind == DaggerfallUiActionKind.ControlsRebind) candidate.Rebind(action.Item!, [action.Key!], action.Confirm);
+            else if (action.Kind == DaggerfallUiActionKind.ControlsRebindButton)
+                candidate.RebindButton(action.Item!, checked((int)action.Amount!.Value), PadActions, action.Confirm);
             else if (action.Kind == DaggerfallUiActionKind.ControlsUiScale) candidate.SetUiScale(action.Scale);
+            else if (action.Kind == DaggerfallUiActionKind.ControlsVolume) candidate.SetVolume(action.Item!, action.Scale!.Value);
             ApplyControlSettings(candidate);
             _preferencesToSave = candidate.Serialize();
             _controlDiagnostic = "Control settings applied.";

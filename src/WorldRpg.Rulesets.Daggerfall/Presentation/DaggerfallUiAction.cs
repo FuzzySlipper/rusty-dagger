@@ -21,7 +21,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
 internal enum DaggerfallUiActionKind
 {
     Begin, CinematicSkip, MapNoteAdd, MapNoteEdit, MapNoteRemove, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellSwap, SpellSort, SpellMakerDraft, SpellMakerBuy, PotionMix, ItemMakerDraft, ItemMakerBuy, DaedraSummon, DaedraAnswer,
-    ControlsRebind, ControlsReset, ControlsLook, ControlsUiScale, ActionDrivenTime,
+    ControlsRebind, ControlsRebindButton, ControlsVolume, ControlsReset, ControlsLook, ControlsUiScale, ActionDrivenTime,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel, CharacterQuickStart,
     CharacterLevelAllocate, CharacterLevelCommit,
@@ -144,6 +144,8 @@ internal static class DaggerfallUiAction
         // its admitted image while gameplay and menu actions remain suppressed.
         new(DaggerfallUiActionKind.ArtRequest, "art-request", DaggerfallUiPhases.Live | DaggerfallUiPhases.Dead),
         new(DaggerfallUiActionKind.ControlsRebind, "controls-rebind", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.ControlsRebindButton, "controls-rebind-button", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.ControlsVolume, "controls-volume", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsLook, "controls-look", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsUiScale, "controls-ui-scale", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ActionDrivenTime, "action-driven-time", DaggerfallUiPhases.Live),
@@ -522,6 +524,13 @@ internal static class DaggerfallUiAction
                 return fields.IsSubsetOf(["action", "item", "key", "confirm"])
                     && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(key)
                     ? new(action, Item: item, Key: key, Confirm: confirm) : null;
+            if (action == "controls-volume")
+                return fields.SetEquals(["action", "item", "scale"]) && !string.IsNullOrWhiteSpace(item) && scale.HasValue
+                    ? new(action, Item: item, Scale: scale) : null;
+            if (action == "controls-rebind-button")
+                return fields.IsSubsetOf(["action", "item", "amount", "confirm"]) && fields.IsSupersetOf(["action", "item", "amount"])
+                    && !string.IsNullOrWhiteSpace(item) && amount is >= 0
+                    ? new(action, Item: item, Amount: amount, Confirm: confirm) : null;
             if (action == "controls-reset") return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "map-open") return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
             if (action == "map-building") return fields.SetEquals(["action", "region", "destination", "item"])

@@ -1,5 +1,6 @@
 using Rusty.Engine;
 using System.Text;
+using WorldRpg.Kit.Controls;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -59,8 +60,108 @@ public sealed class DaggerfallControlSettings
         new("abort-spell", ["KeyE"], "magic"),
     ];
 
+    /// <summary>What the controls screen calls each action, in the player's words.</summary>
+    public static readonly IReadOnlyDictionary<string, string> Labels = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["move.forward"] = "Move forward", ["move.backward"] = "Move backward", ["move.left"] = "Strafe left", ["move.right"] = "Strafe right",
+        ["run"] = "Run", ["crouch"] = "Crouch", ["jump"] = "Jump", ["attack"] = "Attack", ["interact"] = "Activate",
+        ["toggle-weapon"] = "Ready or sheathe weapon", ["inventory"] = "Inventory", ["character"] = "Character sheet", ["menu"] = "Game menu",
+        ["spell"] = "Spellbook", ["rest"] = "Rest", ["map"] = "Map", ["transport"] = "Travel and transport",
+        ["activation.steal"] = "Steal mode", ["activation.grab"] = "Grab mode", ["activation.info"] = "Information mode", ["activation.talk"] = "Talk mode",
+        ["quick-save"] = "Quick save", ["quick-load"] = "Quick load", ["logbook"] = "Logbook", ["notebook"] = "Notebook",
+        ["travel-map"] = "Travel map", ["use-magic-item"] = "Use magic item", ["recast"] = "Recast last spell", ["abort-spell"] = "Abort spell",
+    };
+
+    /// <summary>The categories in the order the controls screen groups them, with their headings.</summary>
+    public static readonly IReadOnlyList<(string Id, string Label)> Categories =
+    [
+        ("movement", "Movement"), ("combat", "Combat and activation"), ("activation", "Activation modes"), ("magic", "Magic"),
+        ("interface", "Interface"), ("maps", "Maps"), ("transport", "Travel"), ("rest", "Rest"), ("saves", "Saved games"),
+    ];
+
+    /// <summary>Why a binding cannot be changed, or null when it can.</summary>
+    public static string? FixedReason(string action) => action == MenuAction ? "Escape always opens the game menu, so it is never lost." : null;
+
+    /// <summary>Why an action takes no controller button, or null when it can.</summary>
+    public static string? ButtonFixedReason(string action) =>
+        action == MenuAction ? "The menu keeps its own controller button."
+        : IsDirection(action) ? "Moving uses the left stick."
+        : IsControllerBindable(action) ? null : "This action is on the keyboard only for now.";
+
     private const string MenuAction = "menu";
     private readonly Dictionary<string, List<string>> _bindings;
+
+    /// <summary>The controller's buttons are numbered 0 to 15 in the standard layout the shell delivers.</summary>
+    public const int ControllerButtonCount = 16;
+
+    /// <summary>The Engine's positional buttons by number.</summary>
+    private static readonly ControllerButton[] Buttons =
+    [
+        ControllerButton.Button0, ControllerButton.Button1, ControllerButton.Button2, ControllerButton.Button3,
+        ControllerButton.Button4, ControllerButton.Button5, ControllerButton.Button6, ControllerButton.Button7,
+        ControllerButton.Button8, ControllerButton.Button9, ControllerButton.Button10, ControllerButton.Button11,
+        ControllerButton.Button12, ControllerButton.Button13, ControllerButton.Button14, ControllerButton.Button15,
+    ];
+
+    private static int Number(ControllerButton button) => Array.IndexOf(Buttons, button);
+
+    /// <summary>
+    /// The player's controller bindings, action to button numbers, or null for the authored pad layout.
+    /// The four directions ride the stick and the menu keeps its authored button, so neither is in the map.
+    /// </summary>
+    private Dictionary<string, List<int>>? _controller;
+
+    /// <summary>The semantic input action a catalog action raises; the pad binds these.</summary>
+    public static InputActionId InputAction(string action) => new("daggerfall." + action);
+
+    /// <summary>
+    /// Whether a catalog action can be put on a controller button: the actions the input system raises, but not the
+    /// menu, which keeps its button. Moving rides the left stick, and running, crouching and jumping are read
+    /// from their keys by locomotion, so a button for them would do nothing.
+    /// </summary>
+    public static bool IsControllerBindable(string action) =>
+        action != MenuAction && DaggerfallInput.Bindings.Any(binding => binding.Action == InputAction(action));
+
+    private static bool IsDirection(string action) => action.StartsWith("move.", StringComparison.Ordinal);
+
+    /// <summary>The pad bindings in force: the player's when they rebound any, otherwise the authored layout.</summary>
+    public IReadOnlyList<ControllerActionBinding> ControllerActions(IReadOnlyList<ControllerActionBinding> authored)
+    {
+        ArgumentNullException.ThrowIfNull(authored);
+        if (_controller is null) return authored;
+        return [.. authored.Where(binding => binding.Action == InputAction(MenuAction)),
+            .. _controller.SelectMany(entry => entry.Value.Select(button => new ControllerActionBinding(Buttons[button], InputAction(entry.Key))))];
+    }
+
+    /// <summary>The controller buttons each catalog action answers to under the given authored layout.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<int>> ControllerButtons(IReadOnlyList<ControllerActionBinding> authored) =>
+        Catalog.ToDictionary(action => action.Id, action => (IReadOnlyList<int>)[.. ControllerActions(authored)
+            .Where(binding => binding.Action == InputAction(action.Id)).Select(binding => Number(binding.Button)).Order()], StringComparer.Ordinal);
+
+    /// <summary>
+    /// Puts one action on one controller button: refuses the menu's button and a button another action holds,
+    /// naming it, unless the caller swaps them, when that action takes the rebound action's old buttons.
+    /// </summary>
+    public void RebindButton(string action, int button, IReadOnlyList<ControllerActionBinding> authored, bool swap = false)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(action);
+        if (!IsControllerBindable(action))
+            throw new ArgumentOutOfRangeException(nameof(action), action, action == MenuAction
+                ? "The menu always answers its own controller button and cannot be rebound."
+                : ButtonFixedReason(action) ?? "This action takes no controller button.");
+        if (button is < 0 or >= ControllerButtonCount)
+            throw new ArgumentOutOfRangeException(nameof(button), button, $"Controller buttons are numbered 0 to {ControllerButtonCount - 1}.");
+        if (authored.Any(binding => binding.Action == InputAction(MenuAction) && Number(binding.Button) == button))
+            throw new InvalidOperationException("That button always opens the menu; choose another.");
+        Dictionary<string, List<int>> map = Catalog.Where(candidate => IsControllerBindable(candidate.Id))
+            .ToDictionary(candidate => candidate.Id, candidate => ControllerButtons(authored)[candidate.Id].ToList(), StringComparer.Ordinal);
+        string? holder = map.FirstOrDefault(entry => entry.Key != action && entry.Value.Contains(button)).Key;
+        if (holder is not null && !swap)
+            throw new InvalidOperationException($"Controller button {button} already answers '{holder}'; swap them explicitly or choose another button.");
+        if (holder is not null) map[holder] = [.. map[holder].Where(value => value != button), .. map[action]];
+        map[action] = [button];
+        _controller = map;
+    }
 
     /// <summary>Creates default settings.</summary>
     public DaggerfallControlSettings() => _bindings = CreateDefaultBindings();
@@ -100,6 +201,32 @@ public sealed class DaggerfallControlSettings
         UiScale = scale;
     }
 
+    /// <summary>The sound buses the player sets levels for, in the order the settings show them, with their names.</summary>
+    public static readonly IReadOnlyList<(string Id, string Label)> SoundBuses =
+        [("music", "Music"), ("ambient", "Ambience"), ("effects", "Sound effects"), ("interface", "Interface sounds")];
+
+    /// <summary>The step a sound level moves in; levels run from silent (0) to full (1).</summary>
+    public const float VolumeStep = 0.05f;
+
+    private Dictionary<string, float>? _volumes;
+
+    /// <summary>The level of one sound bus, full unless the player lowered it.</summary>
+    public float Volume(string bus)
+    {
+        if (!SoundBuses.Any(candidate => candidate.Id == bus)) throw new ArgumentOutOfRangeException(nameof(bus), bus, "No sound bus carries this id.");
+        return _volumes?.GetValueOrDefault(bus, 1f) ?? 1f;
+    }
+
+    /// <summary>Sets one sound bus's level, from 0 (silent) to 1 (full) in steps of <see cref="VolumeStep"/>.</summary>
+    public void SetVolume(string bus, float level)
+    {
+        _ = Volume(bus);
+        if (!float.IsFinite(level) || level < 0 || level > 1 || MathF.Abs(level / VolumeStep - MathF.Round(level / VolumeStep)) > 1e-3f)
+            throw new ArgumentOutOfRangeException(nameof(level), level, $"A sound level is 0 to 1 in steps of {VolumeStep:0.##}.");
+        _volumes ??= new(StringComparer.Ordinal);
+        _volumes[bus] = MathF.Round(level / VolumeStep) * VolumeStep;
+    }
+
     /// <summary>Changes the player look preferences without changing authored tuning.</summary>
     public void SetLook(float sensitivity, bool invertVertical)
     {
@@ -113,6 +240,8 @@ public sealed class DaggerfallControlSettings
         SetLook(preferences.LookSensitivity, preferences.InvertVertical);
         ActionDrivenTime = preferences.ActionDrivenTime;
         SetUiScale(preferences.UiScale);
+        _controller = preferences.Controller?.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.Ordinal);
+        foreach ((string bus, float level) in preferences.Volumes ?? []) SetVolume(bus, level);
     }
 
     /// <summary>The controls one action answers to.</summary>
@@ -175,10 +304,11 @@ public sealed class DaggerfallControlSettings
     }
 
     /// <summary>Restores every default.</summary>
-    public void Reset() { ReplaceBindings(CreateDefaultBindings()); SetLook(1, DaggerfallTuning.Defaults.PlayerControl.InvertVertical); }
+    /// <remarks>Sound levels are not controls and survive a controls reset, as the interface scale does.</remarks>
+    public void Reset() { ReplaceBindings(CreateDefaultBindings()); _controller = null; SetLook(1, DaggerfallTuning.Defaults.PlayerControl.InvertVertical); }
 
     /// <summary>Serializes the bindings for the settings holder.</summary>
-    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
+    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale, _controller, _volumes), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
 
     /// <summary>Parses a complete persisted binding set after validating every action and control.</summary>
     public static DaggerfallControlSettings Parse(string json)
@@ -200,6 +330,7 @@ public sealed class DaggerfallControlSettings
         }
 
         ValidateBindings(parsed.Bindings, nameof(json));
+        if (parsed.Controller is { } controller) ValidateController(controller, nameof(json));
         return new DaggerfallControlSettings(parsed);
     }
 
@@ -256,6 +387,23 @@ public sealed class DaggerfallControlSettings
                 {
                     throw new ArgumentException($"Key '{key}' is assigned to both '{holders[key]}' and '{action.Id}'.", parameterName);
                 }
+            }
+        }
+    }
+
+    private static void ValidateController(IReadOnlyDictionary<string, List<int>> controller, string parameterName)
+    {
+        HashSet<int> held = [];
+        foreach ((string action, List<int> buttons) in controller)
+        {
+            if (!IsControllerBindable(action))
+                throw new ArgumentException($"Persisted controller bindings name '{action}', which takes no controller button.", parameterName);
+            foreach (int button in buttons ?? throw new ArgumentException($"Action '{action}' has null controller buttons.", parameterName))
+            {
+                if (button is < 0 or >= ControllerButtonCount)
+                    throw new ArgumentException($"Controller button {button} is not one the shell delivers.", parameterName);
+                if (!held.Add(button))
+                    throw new ArgumentException($"Controller button {button} is bound to more than one action.", parameterName);
             }
         }
     }
@@ -325,7 +473,9 @@ internal sealed record DaggerfallControlPreferences(
     [property: JsonRequired] float LookSensitivity,
     [property: JsonRequired] bool InvertVertical,
     bool ActionDrivenTime = false,
-    float? UiScale = null);
+    float? UiScale = null,
+    Dictionary<string, List<int>>? Controller = null,
+    Dictionary<string, float>? Volumes = null);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(DaggerfallControlPreferences))]

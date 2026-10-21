@@ -54,6 +54,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // Escape with no surface open is Escape in play: it opens the menu, except where there is none.
   const navigation = mountNavigation(shell, context, {
     onPlayEscape: () => { if (!dead && !entry.isTitle()) menu.open(); },
+    captureButton: button => menu.captureButton(button),
     onButton: button => {
       if (!menu.dialog.open || confirmPrompt.open()) return;
       if (button === MENU_SHORTCUTS.menu) menu.dismiss();

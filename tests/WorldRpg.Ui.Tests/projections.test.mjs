@@ -1734,31 +1734,67 @@ test('save slots list, name new saves, and demand explicit overwrite and deletio
   } finally { f.dispose(); }
 });
 
-test('control settings capture, explicit swap, cancel and reset use semantic actions', () => {
+test('controls are grouped and named, and a key, a mouse button and a controller button rebind with swap, cancel and reset', () => {
   const f = fixture();
   try {
-    f.publish({ controls: { diagnostic: '', bindings: [
-      { id: 'move.forward', category: 'movement', keys: ['KeyW'], fixed: false },
-      { id: 'menu', category: 'interface', keys: ['Escape'], fixed: true },
+    f.publish({ controls: { diagnostic: '', categories: [{ id: 'movement', label: 'Movement' }, { id: 'interface', label: 'Interface' }], bindings: [
+      { id: 'move.forward', category: 'movement', label: 'Move forward', keys: ['KeyW'], fixed: false, fixedReason: null, buttons: [], buttonFixedReason: 'Moving uses the left stick.' },
+      { id: 'inventory', category: 'interface', label: 'Inventory', keys: ['KeyI'], fixed: false, fixedReason: null, buttons: [8], buttonFixedReason: null },
+      { id: 'menu', category: 'interface', label: 'Game menu', keys: ['Escape'], fixed: true, fixedReason: 'Escape always opens the game menu, so it is never lost.', buttons: [9], buttonFixedReason: 'The menu keeps its own controller button.' },
     ] } });
     f.root.querySelector('[data-action="settings"]').click();
     const settings = f.root.querySelector('.dagger-controls-root');
     assert.equal(settings.hidden, false);
-    const rebind = [...settings.querySelectorAll('button')].find(button => button.textContent === 'Rebind');
-    rebind.click();
+    // Grouped under the ruleset's headings, in the player's words, keys and buttons named.
+    assert.deepEqual([...settings.querySelectorAll('.dagger-controls-category h3')].map(heading => heading.textContent), ['Movement', 'Interface']);
+    const inventory = settings.querySelector('[data-binding="inventory"]');
+    assert.match(inventory.textContent, /Inventory.*I.*View/);
+    const menu = settings.querySelector('[data-binding="menu"]');
+    assert.equal(menu.querySelector('[data-rebind-key]').disabled, true);
+    assert.match(menu.querySelector('.dagger-controls-reason').textContent, /Escape always opens the game menu/);
+    assert.equal(settings.querySelector('[data-rebind-button="move.forward"]').disabled, true);
+
+    // A key.
+    const changeKey = settings.querySelector('[data-rebind-key="move.forward"]');
+    changeKey.click();
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyQ', bubbles: true, cancelable: true }));
     assert.deepEqual(f.actions.at(-1), { action: 'controls-rebind', item: 'move.forward', key: 'KeyQ', confirm: false });
+    // A mouse button, on the pad the capture offers: the middle button is the Engine's Middle.
+    changeKey.click();
+    const pad = settings.querySelector('.dagger-controls-mouse-pad');
+    assert.equal(pad.hidden, false);
+    pad.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, button: 1 }));
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-rebind', item: 'move.forward', key: 'Middle', confirm: false });
+    // A swap is explicit.
     settings.querySelector('[aria-label="Swap conflicting binding"]').checked = true;
-    rebind.click();
+    changeKey.click();
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS', bubbles: true, cancelable: true }));
     assert.equal(f.actions.at(-1).confirm, true);
+    settings.querySelector('[aria-label="Swap conflicting binding"]').checked = false;
+    // A controller button, pressed on the controller; navigation does not act on it meanwhile.
+    settings.querySelector('[data-rebind-button="inventory"]').click();
+    assert.match(settings.textContent, /Press a controller button for Inventory\. Menu cancels\./);
+    f.pad('button-4');
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-rebind-button', item: 'inventory', amount: 4, confirm: false });
+    assert.equal(settings.hidden, false, 'The press was the binding, not a menu step.');
+    // Menu cancels a controller capture; Escape cancels a key capture.
     const count = f.actions.length;
-    rebind.click();
+    settings.querySelector('[data-rebind-button="inventory"]').click();
+    f.pad('button-9');
+    changeKey.click();
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
     assert.equal(f.actions.length, count);
     assert.equal(settings.hidden, false);
     [...settings.querySelectorAll('button')].find(button => button.textContent === 'Reset controls').click();
     assert.deepEqual(f.actions.at(-1), { action: 'controls-reset' });
+
+    // Sound: each bus steps by the ruleset's volume step and sends the level.
+    f.publish({ controls: { diagnostic: '', bindings: [], volumes: [{ id: 'music', label: 'Music', level: 0.5 }], volumeStep: 0.05 } });
+    const music = settings.querySelector('[data-volume="music"]');
+    assert.equal(music.querySelector('output').textContent, '50%');
+    music.querySelector('[data-stepper="down"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-volume', item: 'music', scale: 0.45 });
+    assert.equal(music.querySelector('output').textContent, '45%');
   } finally { f.dispose(); }
 });
 

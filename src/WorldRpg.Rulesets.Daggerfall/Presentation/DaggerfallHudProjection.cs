@@ -72,6 +72,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     private bool _demandedPending = true;
     private int _demandedSent;
 
+    /// <summary>The authored pad layout, against which the controls screen reads each action's controller buttons.</summary>
+    internal IReadOnlyList<WorldRpg.Kit.Controls.ControllerActionBinding> PadActions { get; init; } = [];
+
     internal void Publish(DaggerfallHudFrame frame)
     {
         ArgumentNullException.ThrowIfNull(frame);
@@ -193,6 +196,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("ruleset", builder.String(slot.Ruleset)))).ToArray())),
                 ("diagnostic", saveSlotDiagnostic is null ? builder.Null() : builder.String(saveSlotDiagnostic)))),
         ];
+        IReadOnlyDictionary<string, IReadOnlyList<int>> controllerButtons = controlSettings?.ControllerButtons(PadActions)
+            ?? new Dictionary<string, IReadOnlyList<int>>();
         if (controlSettings is not null) fields = [.. fields, ("controls", builder.Object(
             ("diagnostic", builder.String(controlDiagnostic ?? "")),
             ("lookSensitivity", builder.Number(controlSettings.LookSensitivity)),
@@ -202,10 +207,19 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("minimum", builder.Number(DaggerfallControlSettings.MinimumUiScale)),
                 ("maximum", builder.Number(DaggerfallControlSettings.MaximumUiScale)),
                 ("step", builder.Number(DaggerfallControlSettings.UiScaleStep)))),
+            ("volumes", builder.Array(DaggerfallControlSettings.SoundBuses.Select(bus => builder.Object(
+                ("id", builder.String(bus.Id)), ("label", builder.String(bus.Label)), ("level", builder.Number(controlSettings.Volume(bus.Id))))).ToArray())),
+            ("volumeStep", builder.Number(DaggerfallControlSettings.VolumeStep)),
+            ("categories", builder.Array(DaggerfallControlSettings.Categories.Select(category => builder.Object(
+                ("id", builder.String(category.Id)), ("label", builder.String(category.Label)))).ToArray())),
             ("bindings", builder.Array(DaggerfallControlSettings.Catalog.Select(action => builder.Object(
                 ("id", builder.String(action.Id)), ("category", builder.String(action.Category)),
+                ("label", builder.String(DaggerfallControlSettings.Labels[action.Id])),
                 ("keys", builder.Array(controlSettings.KeysFor(action.Id).Select(builder.String).ToArray())),
-                ("fixed", builder.Boolean(action.Id == "menu")))).ToArray()))))];
+                ("fixed", builder.Boolean(DaggerfallControlSettings.FixedReason(action.Id) is not null)),
+                ("fixedReason", DaggerfallControlSettings.FixedReason(action.Id) is { } reason ? builder.String(reason) : builder.Null()),
+                ("buttons", builder.Array(controllerButtons[action.Id].Select(button => builder.Number(button)).ToArray())),
+                ("buttonFixedReason", DaggerfallControlSettings.ButtonFixedReason(action.Id) is { } padReason ? builder.String(padReason) : builder.Null()))).ToArray()))))];
         if (activation is not null) fields = [.. fields, ("activation", builder.Object(
             ("mode", builder.String(activation.Mode)),
             ("message", builder.String(activation.Message)),
