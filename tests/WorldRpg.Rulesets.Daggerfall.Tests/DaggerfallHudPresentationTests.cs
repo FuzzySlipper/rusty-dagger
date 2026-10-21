@@ -61,5 +61,14 @@ public sealed class DaggerfallHudPresentationTests
         Assert.Equal("controller", hud["inputDevice"]);
         session.Update(new ProductUpdate(OuterUpdate(4), [Input(InputEventKind.Key, InputEdge.Pressed, KeyboardControl.KeyQ)]));
         Assert.Equal("keyboard", Assert.IsType<Dictionary<string, object?>>(f.Engine.Published())["inputDevice"]);
+        // A stick moved past the deadzone switches to the pad with no button pressed; drift inside it does not.
+        string Device() => Assert.IsType<string>(Assert.IsType<Dictionary<string, object?>>(f.Engine.Published())["inputDevice"]);
+        session.Update(new ProductUpdate(OuterUpdate(5), [Input(InputEventKind.ControllerAxis, x: .05F) with { ControllerAxis = ControllerAxis.Axis0 }]));
+        Assert.Equal("keyboard", Device());
+        session.Update(new ProductUpdate(OuterUpdate(6), [Input(InputEventKind.ControllerAxis, x: .8F) with { ControllerAxis = ControllerAxis.Axis0 }]));
+        Assert.Equal("controller", Device());
+        // Mouse look switches back with no key or button pressed.
+        session.Update(new ProductUpdate(OuterUpdate(7), [Input(InputEventKind.PointerDelta, x: 4F, y: 1F)]));
+        Assert.Equal("keyboard", Device());
     }
 }
