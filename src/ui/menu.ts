@@ -283,7 +283,9 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       ? lootRoot.querySelector<HTMLButtonElement>('[data-transfer-move]:not(:disabled)') ?? lootRoot.querySelector<HTMLButtonElement>('.dagger-transfer-take-all:not(:disabled)')
       : action === 'inventory' ? inventoryRoot.querySelector<HTMLButtonElement>('.dagger-inventory-grid [data-inventory-item], .dagger-inventory-grid button')
       // Travel opens on choosing where to go: the chosen place on an open map, else the map's own button.
-      : action === 'transport' ? transportRoot.querySelector<HTMLButtonElement>('.dagger-travel-map-dot[aria-pressed="true"], .dagger-travel-map-toggle') : null;
+      : action === 'transport' ? transportRoot.querySelector<HTMLButtonElement>('.dagger-travel-map-dot[aria-pressed="true"], .dagger-travel-map-toggle')
+      // Rest opens on its first action that can be taken, with its hours just above it.
+      : action === 'rest' ? restRoot.querySelector<HTMLButtonElement>('[data-rest-mode]:not(:disabled)') : null;
     if (content !== null) { content.focus(); return; }
     if (action === 'character') {
       menuTitle.focus({ preventScroll: true });

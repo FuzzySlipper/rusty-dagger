@@ -245,6 +245,7 @@ test('rest panel sends semantic durations bounded by the ruleset and shows the e
     f.root.querySelector('[data-action="rest"]:not([data-rest-mode])').click();
     const panel = f.root.querySelector('.dagger-rest-root');
     assert.equal(panel.hidden, false);
+    assert.equal(document.activeElement, panel.querySelector('[data-rest-mode="timed"]'), 'Rest opens on its first action, not on Back.');
     const hours = panel.querySelector('.dagger-rest-hours');
     assert.equal(hours.max, '99');
     hours.value = '2'; hours.dispatchEvent(new window.Event('change', { bubbles: true }));
