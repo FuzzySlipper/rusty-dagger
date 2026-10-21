@@ -45,7 +45,8 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   const saved = document.createElement('ol'); saved.className = 'dagger-entry-saves dagger-save-slots-list dagger-frame'; saved.hidden = true;
   saved.setAttribute('aria-label', 'Saved games');
   buttons.append(resume, begin, create, load);
-  actions.append(saved, bundle, buttons);
+  // The outcome of a choice sits above the controls, so a long one never covers them.
+  actions.append(outcome, saved, bundle, buttons);
   root.append(actions);
   let slots: readonly SaveSlotEntry[] = [];
   let listed = false;

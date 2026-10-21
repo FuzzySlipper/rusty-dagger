@@ -39,15 +39,17 @@ public sealed class AdditionalControlSessionTests
         Assert.Equal(mode, f.Session.ActivationView.Mode);
     }
 
-    [Theory]
-    [InlineData("quick-save", SaveSlotOperation.QuickSave)]
-    [InlineData("quick-load", SaveSlotOperation.QuickLoad)]
-    public void Quick_slots_use_the_existing_host_request(string intent, SaveSlotOperation operation)
+    [Fact]
+    public void Quick_save_uses_the_host_request_and_quick_load_asks_the_screen_to_confirm_first()
     {
         using var f = new SanguineRoseSessionTests.Fixture();
-        Press(f.Session, intent);
-        Assert.Equal(operation, f.Session.TakeSaveSlotRequest()!.Operation);
+        Press(f.Session, "quick-save");
+        Assert.Equal(SaveSlotOperation.QuickSave, f.Session.TakeSaveSlotRequest()!.Operation);
         Assert.Null(f.Session.TakeSaveSlotRequest());
+        // Quick load would discard progress, so the key asks the screen, whose confirm then sends the load.
+        Press(f.Session, "quick-load");
+        Assert.Null(f.Session.TakeSaveSlotRequest());
+        Assert.Equal("quick-load", f.Session.LatestPanelRequest?.Panel);
     }
 
     [Fact]

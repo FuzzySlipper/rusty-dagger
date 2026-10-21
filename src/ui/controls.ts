@@ -50,7 +50,7 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
   const swapLabel = document.createElement('label');
   const swap = document.createElement('input'); swap.type = 'checkbox'; swap.setAttribute('aria-label', 'Swap conflicting binding');
   swapLabel.append(swap, ' Swap with the conflicting action');
-  const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel key capture'; cancel.hidden = true;
+  const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.hidden = true;
   const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = 'Reset controls';
   let capture: { readonly action: string; readonly label: string; readonly kind: 'key' | 'button' } | null = null;
   // While a key is being captured, a click on this pad binds that mouse button.
@@ -58,7 +58,12 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
   mousePad.textContent = 'Or click here with the mouse button to use'; mousePad.hidden = true;
   let lastBindings = '';
   let diagnostic = '';
-  const endCapture = (): void => { capture = null; cancel.hidden = true; mousePad.hidden = true; status.textContent = diagnostic; };
+  // Ending a capture puts focus back on the Change that began it, so the player keeps their place in the list.
+  const endCapture = (): void => {
+    const ended = capture;
+    capture = null; cancel.hidden = true; mousePad.hidden = true; status.textContent = diagnostic;
+    if (ended) rows.querySelector<HTMLElement>(ended.kind === 'key' ? `[data-rebind-key="${ended.action}"]` : `[data-rebind-button="${ended.action}"]`)?.focus({ preventScroll: false });
+  };
   cancel.addEventListener('click', endCapture);
   reset.addEventListener('click', () => { endCapture(); claim({ action: 'controls-reset' }); });
   const sensitivity = document.createElement('input'); sensitivity.type = 'number'; sensitivity.min = '0.1'; sensitivity.max = '10'; sensitivity.step = '0.1';
