@@ -1742,6 +1742,7 @@ test('save slots list each game with its details, name new saves, and confirm ov
     assert.match(slot.textContent, /played 1 h 15 min/);
     assert.equal(f.root.querySelector('[data-save-slot=""]').getAttribute('aria-pressed'), 'true');
     const label = f.root.querySelector('.dagger-save-slots-label');
+    assert.equal(label.value, 'Saved game 2', 'A new save starts with a suggested name a controller can accept.');
     label.value = 'After the dungeon';
     click('save-slot');
     assert.deepEqual(f.actions.at(-1), { action: 'save-slot', label: 'After the dungeon', confirm: false });
