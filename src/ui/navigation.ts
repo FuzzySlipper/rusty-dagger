@@ -362,9 +362,12 @@ function nearest(from: HTMLElement, items: readonly HTMLElement[], direction: Di
     const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
     const along = direction === 'up' ? oy - y : direction === 'down' ? y - oy : direction === 'left' ? ox - x : x - ox;
     if (along <= 1) continue;
-    // Across is measured to the control's edge, so a wide row the origin sits over counts as in line.
+    // Across is the gap between the two controls' spans, nothing when they overlap: a wide row the
+    // focus sits over counts as in line, and from a wide control every control under it does, so the
+    // first of them (in document order) is where a row is entered rather than whichever sits under
+    // the wide control's middle.
     const across = direction === 'up' || direction === 'down'
-      ? Math.max(0, rect.left - ox, ox - rect.right) : Math.max(0, rect.top - oy, oy - rect.bottom);
+      ? Math.max(0, rect.left - origin.right, origin.left - rect.right) : Math.max(0, rect.top - origin.bottom, origin.top - rect.bottom);
     const score = along + across * 3;
     if (score < bestScore) { bestScore = score; best = item; }
     // Clear of the origin: it begins past the origin's edge in the direction (a pixel of border aside).
