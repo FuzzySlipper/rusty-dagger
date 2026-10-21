@@ -113,6 +113,7 @@ export function letterPickerButton(field: HTMLInputElement | HTMLTextAreaElement
   button.textContent = '✎';
   button.setAttribute('aria-label', label);
   button.dataset.tooltip = label;
-  button.addEventListener('click', () => requestTextEdit(button, field, label));
+  // The picker is titled by the field it edits ("Character name"), not by this button.
+  button.addEventListener('click', () => requestTextEdit(button, field, field.getAttribute('aria-label') ?? label));
   return button;
 }
