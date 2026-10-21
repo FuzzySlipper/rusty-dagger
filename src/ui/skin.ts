@@ -98,7 +98,13 @@ export function applySkin(target: HTMLElement = document.documentElement, ids: I
   applied.clear();
   for (const [property, value] of next) { target.style.setProperty(property, value); applied.add(property); }
   target.toggleAttribute('data-skin', next.size > 0);
-  reportMissingArt('skin', SKIN_IMAGES.filter(id => image(id) === null));
+  // The equipment silhouettes this art block holds: an empty slot drops its plain marker only for these,
+  // so a slot whose silhouette is missing still shows what it holds.
+  const silhouettes = ICONS.filter(id => id.startsWith('ui.icon.equip.') && image(id) !== null)
+    .map(id => id.slice('ui.icon.equip.'.length).replace(/\.v\d+$/, ''));
+  if (silhouettes.length > 0) target.dataset.skinEquip = silhouettes.join(' ');
+  else delete target.dataset.skinEquip;
+  reportMissingArt('skin', kitIds().filter(id => image(id) === null));
 }
 
 /** The kit identities this session holds: the primitives plus every icon the art block carries. */
