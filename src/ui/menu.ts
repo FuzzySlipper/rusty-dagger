@@ -279,13 +279,16 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     menuTitle.textContent = PANEL_TITLES[action] ?? (saveSlotMode === 'save' ? 'Save game' : 'Load game');
     if (restorePanelFocus(action)) return;
     // An item screen opens on its content: the first thing to take, or the first item in the pack.
-    const content = action === 'loot'
+    const content: HTMLElement | null = action === 'loot'
       ? lootRoot.querySelector<HTMLButtonElement>('[data-transfer-move]:not(:disabled)') ?? lootRoot.querySelector<HTMLButtonElement>('.dagger-transfer-take-all:not(:disabled)')
       : action === 'inventory' ? inventoryRoot.querySelector<HTMLButtonElement>('.dagger-inventory-grid [data-inventory-item], .dagger-inventory-grid button')
       // Travel opens on choosing where to go: the chosen place on an open map, else the map's own button.
       : action === 'transport' ? transportRoot.querySelector<HTMLButtonElement>('.dagger-travel-map-dot[aria-pressed="true"], .dagger-travel-map-toggle')
       // Rest opens on its first action that can be taken, with its hours just above it.
-      : action === 'rest' ? restRoot.querySelector<HTMLButtonElement>('[data-rest-mode]:not(:disabled)') : null;
+      : action === 'rest' ? restRoot.querySelector<HTMLButtonElement>('[data-rest-mode]:not(:disabled)')
+      // The journal opens on the first entry of the page it shows, or on that page's tab when it is empty.
+      : action === 'journal' ? notebookRoot.querySelector<HTMLElement>('[role="tabpanel"]:not([hidden]) li[tabindex]')
+        ?? notebookRoot.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') : null;
     if (content !== null) { content.focus(); return; }
     if (action === 'character') {
       menuTitle.focus({ preventScroll: true });

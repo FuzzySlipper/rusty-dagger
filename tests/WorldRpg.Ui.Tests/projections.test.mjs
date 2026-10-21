@@ -1253,6 +1253,7 @@ test('quest journal shows active quests grouped by title and deadline, and a fin
     f.root.querySelector('[data-action="journal"]').click();
     const page = f.root.querySelector('#dagger-journal-panel-active .dagger-quest-journal-page');
     const groups = [...page.querySelectorAll('.dagger-quest-journal-group')];
+    assert.equal(document.activeElement, page.querySelector('li[tabindex]'), 'The journal opens on its first entry, not on Back.');
     // Each tab names its panel, and each panel the tab that shows it; the counts are the published lists'.
     const tab = id => f.root.querySelector(`[data-journal-page="${id}"]`);
     assert.equal(tab('active').getAttribute('aria-controls'), 'dagger-journal-panel-active');
