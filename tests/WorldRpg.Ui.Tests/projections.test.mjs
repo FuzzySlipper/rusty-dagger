@@ -1413,10 +1413,19 @@ test('the title screen offers the games the product publishes and sends the one 
     assert.equal(cycler.querySelector('output').textContent, 'Classic Daggerfall');
     cycler.querySelector('[aria-label="Next game"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'bundle-select', key: 'daggerfall.contact' });
-    // The ruleset's answer is what shows.
+    // Choosing restarts the session behind the title, which hides the choice for a moment; the step
+    // the player pressed takes focus again when it returns, so a second press steps again.
+    cycler.querySelector('[aria-label="Next game"]').focus();
+    f.publish({ mode: 'title', bundles: null });
     f.publish({ mode: 'title', bundles: { current: 'daggerfall.contact', options: [
       { id: 'daggerfall.classic', title: 'Classic Daggerfall' }, { id: 'daggerfall.contact', title: 'Contact + mitigation' }] } });
     assert.equal(select().querySelector('[data-cycler="Game"] output').textContent, 'Contact + mitigation');
+    assert.equal(document.activeElement, select().querySelector('[aria-label="Next game"]'));
+    // Moving away is not undone by the next snapshot.
+    f.root.querySelector('[data-testid="entry-create-character"]').focus();
+    f.publish({ mode: 'title', bundles: { current: 'daggerfall.contact', options: [
+      { id: 'daggerfall.classic', title: 'Classic Daggerfall' }, { id: 'daggerfall.contact', title: 'Contact + mitigation' }] } });
+    assert.equal(document.activeElement, f.root.querySelector('[data-testid="entry-create-character"]'));
 
     // One game is no choice, and a game that has begun offers none.
     f.publish({ mode: 'title', bundles: { current: 'daggerfall.classic', options: [{ id: 'daggerfall.classic', title: 'Classic Daggerfall' }] } });
