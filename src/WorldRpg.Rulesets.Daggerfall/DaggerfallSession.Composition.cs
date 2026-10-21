@@ -608,6 +608,7 @@ internal sealed partial class DaggerfallSession
             _pendingCreateItem = saved?.PendingCreateItem;
             _pendingDispel = saved?.PendingDispel;
             _pendingTeleport = saved?.PendingTeleport;
+            _playSeconds = saved?.PlaySeconds ?? 0;
             _teleportAnchor = saved?.TeleportAnchor;
             _pendingIdentify = saved?.PendingIdentify;
             State.Character.SpellForgotten+=key=>
@@ -624,6 +625,7 @@ internal sealed partial class DaggerfallSession
             _persistence.PendingCreateItem = () => _pendingCreateItem;
             _persistence.PendingDispel = () => _pendingDispel;
             _persistence.PendingTeleport = () => _pendingTeleport;
+            _persistence.PlaySeconds = () => _playSeconds;
             _persistence.TeleportAnchor = () => _teleportAnchor;
             _persistence.PendingIdentify = () => CurrentIdentifyRequest;
             _roster.BanishedActors.UnionWith(saved?.BanishedActors ?? []);

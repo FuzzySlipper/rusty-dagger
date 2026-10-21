@@ -268,8 +268,15 @@ export interface QuestPresentation {
   readonly pending: QuestMessageProjection | null;
 }
 
+/** One saved game as the slot list shows it; the description is the ruleset's, absent for a slot written without one. */
+export interface SaveSlotEntry {
+  readonly key: string; readonly label: string; readonly savedAtUtc: string; readonly ruleset: string;
+  readonly character?: string | null; readonly level?: number | null; readonly location?: string | null;
+  readonly worldTime?: string | null; readonly playSeconds?: number | null;
+}
+
 export interface SaveSlotProjection {
-  readonly entries: readonly { readonly key: string; readonly label: string; readonly savedAtUtc: string; readonly ruleset: string }[];
+  readonly entries: readonly SaveSlotEntry[];
   readonly diagnostic: string | null;
 }
 

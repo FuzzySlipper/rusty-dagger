@@ -11,7 +11,8 @@ namespace WorldRpg.Host;
 /// <param name="SavedAtUtc">When the slot was written.</param>
 /// <param name="Ruleset">The ruleset the save belongs to.</param>
 /// <param name="Revision">The slot's monotonic revision.</param>
-public sealed record WorldRpgSaveSlotEntry(string Key, string Label, DateTime SavedAtUtc, string Ruleset, ulong Revision);
+/// <param name="Description">What the ruleset said about the game when it was saved.</param>
+public sealed record WorldRpgSaveSlotEntry(string Key, string Label, DateTime SavedAtUtc, string Ruleset, ulong Revision, SaveDescription? Description = null);
 
 /// <summary>Why a slot load did not produce a session.</summary>
 /// <param name="Kind">missing, incompatible, corrupt or selection.</param>
@@ -70,7 +71,8 @@ public sealed class WorldRpgSaveSlots : IDisposable
     /// Saves into a named slot. The public guard applies to that slot's monotonic revision while
     /// the catalog's Engine revision protects unrelated slots from a lost concurrent update.
     /// </summary>
-    public WorldRpgSaveSlotEntry SaveSlot(string key, string label, GameSaveEnvelope value, PersistenceRevisionGuard guard = PersistenceRevisionGuard.Any, ulong expectedRevision = 0)
+    public WorldRpgSaveSlotEntry SaveSlot(string key, string label, GameSaveEnvelope value, PersistenceRevisionGuard guard = PersistenceRevisionGuard.Any, ulong expectedRevision = 0,
+        SaveDescription? description = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
@@ -94,7 +96,8 @@ public sealed class WorldRpgSaveSlots : IDisposable
             DateTime.UtcNow,
             value.Payload.Ruleset.Value,
             revision,
-            [.. value.Variants.Select(variant => variant.Value)]);
+            [.. value.Variants.Select(variant => variant.Value)],
+            description);
         snapshot.Entries.RemoveAll(entry => string.Equals(entry.Key, key, StringComparison.Ordinal));
         snapshot.Entries.Add(saved);
         WriteCatalog(snapshot);
@@ -335,10 +338,11 @@ public sealed class WorldRpgSaveSlots : IDisposable
 /// <paramref name="Variants"/> are the rules variants the game ran under; a slot written before any
 /// variant existed has none, which is what it ran under.
 /// </summary>
-internal sealed record WorldRpgPersistedSaveSlot(string Key, string Label, DateTime SavedAtUtc, string Ruleset, ulong Revision, string[]? Variants = null)
+internal sealed record WorldRpgPersistedSaveSlot(string Key, string Label, DateTime SavedAtUtc, string Ruleset, ulong Revision, string[]? Variants = null,
+    SaveDescription? Description = null)
 {
     internal IReadOnlyList<string> SavedVariants => Variants ?? [];
-    internal WorldRpgSaveSlotEntry ToEntry() => new(Key, Label, SavedAtUtc, Ruleset, Revision);
+    internal WorldRpgSaveSlotEntry ToEntry() => new(Key, Label, SavedAtUtc, Ruleset, Revision, Description);
 }
 
 /// <summary>Corrupt current-state product save data rejected before a session is created.</summary>

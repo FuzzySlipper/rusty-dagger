@@ -1,8 +1,9 @@
 import { fitPixelArt, image } from './art.js';
 import { button, type Send } from './host.js';
-import { isBundles, type BundleProjection, type DaggerHud } from './projection.js';
+import { isBundles, isSaveSlots, type BundleProjection, type DaggerHud, type SaveSlotEntry } from './projection.js';
 import { invalidate, redraw } from './redraw.js';
 import { BEGIN_ACTION, TITLE_MODE, screenForMode } from './screens.js';
+import { slotRow } from './slots.js';
 
 /**
  * The title screen and the character-creation screens the title mode owns. The mode decides which
@@ -37,9 +38,27 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   // choice can never cover a button however tall the skin draws them.
   const actions = document.createElement('div'); actions.className = 'dagger-entry-actions';
   const buttons = document.createElement('div'); buttons.className = 'dagger-entry-buttons';
-  buttons.append(begin, create);
-  actions.append(bundle, buttons);
+  // Continue loads the newest saved game; Load lists them all. Both show only when there are saves.
+  const resume = button('Continue'); resume.className = 'dagger-entry-continue'; resume.dataset.testid = 'entry-continue';
+  const load = button('Load'); load.className = 'dagger-entry-load'; load.dataset.testid = 'entry-load';
+  load.setAttribute('aria-expanded', 'false');
+  const saved = document.createElement('ol'); saved.className = 'dagger-entry-saves dagger-save-slots-list dagger-frame'; saved.hidden = true;
+  saved.setAttribute('aria-label', 'Saved games');
+  buttons.append(resume, begin, create, load);
+  actions.append(saved, bundle, buttons);
   root.append(actions);
+  let slots: readonly SaveSlotEntry[] = [];
+  let listed = false;
+  resume.addEventListener('click', () => { const newest = slots[0]; if (newest) send({ action: 'load-slot', key: newest.key }); });
+  load.addEventListener('click', () => {
+    saved.hidden = !saved.hidden;
+    load.setAttribute('aria-expanded', String(!saved.hidden));
+    if (!saved.hidden) saved.querySelector<HTMLButtonElement>('button')?.focus();
+  });
+  saved.addEventListener('click', event => {
+    const chosen = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-save-slot]');
+    if (chosen?.dataset.saveSlot) send({ action: 'load-slot', key: chosen.dataset.saveSlot });
+  });
 
   let title = false;
   let mode: string | null = null;
@@ -57,6 +76,10 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     creation.classList.toggle('dagger-frame', creating);
     begin.hidden = creating;
     create.hidden = creating;
+    resume.hidden = creating || slots.length === 0;
+    load.hidden = creating || slots.length === 0;
+    if (load.hidden) { saved.hidden = true; load.setAttribute('aria-expanded', 'false'); }
+    redraw(saved, JSON.stringify(slots), () => saved.replaceChildren(...slots.map(entry => slotRow(entry, false))));
     bundle.hidden = creating || bundles === null || bundles.options.length < 2;
     if (bundles !== null && document.activeElement !== bundleSelect) {
       const current = bundles;
@@ -81,7 +104,13 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     root,
     isTitle: () => title,
     update(value) {
+      const wasTitle = title;
       title = value.mode === TITLE_MODE;
+      // The title asks for the saved games each time it appears, so Continue names the newest.
+      if (title && !wasTitle) { listed = false; }
+      if (title && !listed) { listed = true; send({ action: 'save-slots' }); }
+      // The Host lists newest first.
+      if (isSaveSlots(value.saveSlots)) slots = value.saveSlots.entries;
       mode = title && value.character?.creationAvailable && value.character.creation ? value.character.creation.editing
         ? value.character.creation.mode ?? null : value.character.creation.summary ? 'character-pick' : null : null;
       pickScreens = value.pickScreens ?? [];

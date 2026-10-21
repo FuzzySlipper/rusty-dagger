@@ -28,6 +28,8 @@ public sealed class WorldRpgProductSaveLoadTests
         Assert.Contains("Before the dungeon", session.Outcome, StringComparison.Ordinal);
         SaveSlotSummary first = Assert.Single(session.SaveSlots);
         Assert.Equal("slot-1", first.Key);
+        // The slot keeps what the ruleset said about the game when it was saved.
+        Assert.Equal(new SaveDescription("Hero 11", 11, "Test town", "Day one", 660d), first.Description);
 
         session.SaveValue = 22;
         session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "After the dungeon"));
@@ -44,6 +46,7 @@ public sealed class WorldRpgProductSaveLoadTests
         session.ArmSlotRequest(new(SaveSlotOperation.Save, first.Key, "Revisited dungeon", Confirm: true));
         product.Update(Update(4));
         Assert.Equal("Revisited dungeon", Assert.Single(session.SaveSlots, value => value.Key == first.Key).Label);
+        Assert.Equal("Hero 33", Assert.Single(session.SaveSlots, value => value.Key == first.Key).Description?.Character);
 
         session.ArmSlotRequest(new(SaveSlotOperation.Load, second.Key));
         product.Update(Update(5));
@@ -406,8 +409,11 @@ public sealed class WorldRpgProductSaveLoadTests
         }
     }
 
-    private sealed class LoadTestSession : ISaveableGameSession, ISaveRequestingGameSession, IModeAwareGameSession, IPlayerPreferencesSession, IGameBundleChoiceSession
+    private sealed class LoadTestSession : ISaveableGameSession, ISaveRequestingGameSession, IModeAwareGameSession, IPlayerPreferencesSession, IGameBundleChoiceSession, ISaveDescribingGameSession
     {
+        /// <summary>Describes the game by its save value, so a test can tell which description a slot kept.</summary>
+        public SaveDescription DescribeSave() => new($"Hero {SaveValue}", SaveValue, "Test town", "Day one", SaveValue * 60d);
+
         private SaveSlotRequest? _saveSlotRequest;
         private GameBundleId? _bundleRequest;
 
