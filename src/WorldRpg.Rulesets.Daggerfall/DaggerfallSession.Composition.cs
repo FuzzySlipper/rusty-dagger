@@ -677,7 +677,6 @@ internal sealed partial class DaggerfallSession
             partiallyConstructed.Add(_hud);
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments, RestoreDungeonText);
-            ReconcilePropertyContainers();
             foreach (var spell in definitions.Magic.Spells.Values.Where(spell => spell.IsCustom))
                 if (Casting.AvailableSpellCost(actors.Player.DurableId, spell.Key) is null)
                     throw new ArgumentException($"Custom spell '{spell.Key}' contains an unavailable compiled construction effect or combination.");
@@ -685,6 +684,9 @@ internal sealed partial class DaggerfallSession
             ExpireConjuredItems();
             _roster.MaterializeStaticNpcs(inputs);
             _sites.AdmitInitialResidency(saved?.ExteriorResidency, saved?.ExteriorLocationResidency);
+            // Treasure and dungeon enemies are placed on the floor under their markers, so the site's
+            // collision must be admitted first: before it, a ground probe meets nothing and they float.
+            ReconcilePropertyContainers();
             // A new game arrives at its start site's start like any other arrival; a restore resumes its saved pose.
             if (restore is null) _sites.StandArrivingPlayer();
             // Registry positions are profile coordinates; project NPCs and the civilian population
