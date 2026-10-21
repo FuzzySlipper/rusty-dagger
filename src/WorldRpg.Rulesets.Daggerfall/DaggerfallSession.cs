@@ -362,6 +362,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             AdvanceMusic();
         }
         UpdatePlayerTime(update.Facts);
+        // Play time counts the time the world runs in play; menus, the title and held moments do not.
+        if (_mode == ProductMode.Playing && update.Facts.LifecycleState == ProductLifecycleState.Running
+            && double.IsFinite(update.Facts.FixedDeltaSeconds) && update.Facts.FixedDeltaSeconds > 0)
+            _playSeconds += update.Facts.FixedDeltaSeconds * update.Facts.AdmittedStepCount;
         bool ambientPlaying = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen && Cinematics?.ActiveSource is null
             && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null
             && update.Facts.LifecycleState == ProductLifecycleState.Running
@@ -523,6 +527,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     private SaveSlotRequest? _saveSlotRequest;
     private IReadOnlyList<SaveSlotSummary> _saveSlots = [];
+    private double _playSeconds;
     private string? _saveSlotDiagnostic;
 
     /// <summary>Takes a structured named-slot action for the Host to perform.</summary>

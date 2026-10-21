@@ -14,6 +14,7 @@ import { diagnosticRows, formatRestHours, isRestProjection, isSaveSlots, type Da
 import { mountProperty } from './property.js';
 import { createStepper } from './stepper.js';
 import { redraw } from './redraw.js';
+import { newSlotRow, slotRow } from './slots.js';
 import type { NavigationSurface } from './navigation.js';
 import { renderSpells, spellAction } from './spells.js';
 import { isTransportProjection, mountTransport } from './transport.js';
@@ -133,14 +134,14 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const saveSlotsRoot = shell.querySelector<HTMLElement>('.dagger-save-slots')!;
   const saveSlotsDiagnostic = shell.querySelector<HTMLElement>('.dagger-save-slots-diagnostic')!;
   const saveSlotsLabel = shell.querySelector<HTMLInputElement>('.dagger-save-slots-label')!;
-  const saveSlotsSelect = shell.querySelector<HTMLSelectElement>('.dagger-save-slots-select')!;
+  const saveSlotsList = shell.querySelector<HTMLOListElement>('.dagger-save-slots-list')!;
+  // The chosen slot; in save mode null is a new slot.
+  let selectedSlot: string | null = null;
   const saveSlotSave = shell.querySelector<HTMLButtonElement>('[data-action="save-slot"]')!;
   const saveSlotLoad = shell.querySelector<HTMLButtonElement>('[data-action="load-slot"]')!;
   const saveSlotDelete = shell.querySelector<HTMLButtonElement>('[data-action="delete-slot"]')!;
   let saveSlots: SaveSlotProjection = { entries: [], diagnostic: null };
   let saveSlotMode: 'save' | 'load' = 'save';
-  let saveConfirm = false;
-  let deleteConfirm = false;
   // A load asked for from the menu: a successful one replaces the session, which starts in play, so
   // the menu that asked closes rather than stay open over a world that is running again.
   let loadRequested = false;
@@ -265,32 +266,30 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     } else panel.querySelector<HTMLButtonElement>(':scope > [data-action="back"]')!.focus();
   };
   const redrawSaveSlots = (): void => {
-    const selected = saveSlotsSelect.value;
-    redraw(saveSlotsSelect, JSON.stringify(saveSlots.entries), () => {
-      saveSlotsSelect.replaceChildren(new Option('New slot', ''));
-      for (const entry of saveSlots.entries) {
-        const savedAt = Number.isNaN(Date.parse(entry.savedAtUtc)) ? '' : ` · ${new Date(entry.savedAtUtc).toLocaleString()}`;
-        saveSlotsSelect.add(new Option(`${entry.label}${savedAt}`, entry.key));
-      }
+    if (selectedSlot !== null && !saveSlots.entries.some(entry => entry.key === selectedSlot)) selectedSlot = null;
+    if (saveSlotMode === 'load' && selectedSlot === null) selectedSlot = saveSlots.entries[0]?.key ?? null;
+    redraw(saveSlotsList, JSON.stringify([saveSlots.entries, saveSlotMode, selectedSlot]), () => {
+      const rows = saveSlots.entries.map(entry => slotRow(entry, entry.key === selectedSlot));
+      // Saving can always start a new slot.
+      if (saveSlotMode === 'save') rows.unshift(newSlotRow(selectedSlot === null));
+      saveSlotsList.replaceChildren(...rows);
     });
-    saveSlotsSelect.value = saveSlots.entries.some(entry => entry.key === selected) ? selected : '';
-    const selectedEntry = saveSlots.entries.find(entry => entry.key === saveSlotsSelect.value);
+    const selectedEntry = saveSlots.entries.find(entry => entry.key === selectedSlot);
     if (selectedEntry && !saveSlotsLabel.value) saveSlotsLabel.value = selectedEntry.label;
-    saveSlotsDiagnostic.textContent = saveSlots.diagnostic ?? (saveSlots.entries.length === 0 ? 'No saved games yet.' : 'Choose a saved game or name a new one.');
+    saveSlotsDiagnostic.textContent = saveSlots.diagnostic ?? (saveSlots.entries.length === 0
+      ? (saveSlotMode === 'save' ? 'No saved games yet. Name your first one.' : 'No saved games yet.')
+      : saveSlotMode === 'save' ? 'Choose a slot to overwrite, or a new slot.' : 'Choose a saved game.');
     saveSlotSave.hidden = saveSlotMode !== 'save';
     saveSlotLoad.hidden = saveSlotMode !== 'load';
     saveSlotDelete.hidden = saveSlotMode !== 'load';
     saveSlotsLabel.closest('label')!.hidden = saveSlotMode !== 'save';
-    saveSlotSave.textContent = saveConfirm ? 'Confirm overwrite' : 'Save';
-    saveSlotDelete.textContent = deleteConfirm ? 'Confirm delete' : 'Delete selected';
-    const hasSelection = saveSlotsSelect.value.length > 0;
-    saveSlotLoad.disabled = !hasSelection;
-    saveSlotDelete.disabled = !hasSelection;
+    saveSlotSave.textContent = selectedEntry ? 'Overwrite' : 'Save';
+    saveSlotLoad.disabled = selectedEntry === undefined;
+    saveSlotDelete.disabled = selectedEntry === undefined;
   };
   const showSaveSlots = (mode: 'save' | 'load'): void => {
     saveSlotMode = mode;
-    saveConfirm = false;
-    deleteConfirm = false;
+    selectedSlot = null;
     redrawSaveSlots();
     showPanel('save-slots');
     send({ action: 'save-slots' });
@@ -307,7 +306,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     // Quick save and quick load are the product's own actions over the Host's quick-save slot; a
     // successful quick load replaces the session, so the menu that asked closes the way a slot load does.
     else if (action === 'quick-save') send({ action: 'save-game' });
-    else if (action === 'quick-load') { send({ action: 'load-game' }); loadRequested = true; }
+    else if (action === 'quick-load') ask({ message: 'Load your quick save? Progress since then is lost.', accept: 'Load',
+      onAccept: () => { send({ action: 'load-game' }); loadRequested = true; } });
     else if (action === 'load-game') showSaveSlots('load');
     else if (action === 'magic-items' || action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
   };
@@ -317,39 +317,40 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     const action = control?.dataset.action;
     if (control && spellAction(control, send, ask, closeMenu)) return;
     if (action === 'rest' && control?.dataset.restMode) { submitRest(control.dataset.restMode); return; }
+    if (control?.dataset.saveSlot !== undefined) {
+      selectedSlot = control.dataset.saveSlot || null;
+      const chosen = saveSlots.entries.find(entry => entry.key === selectedSlot);
+      if (saveSlotMode === 'save') saveSlotsLabel.value = chosen?.label ?? '';
+      redrawSaveSlots();
+      return;
+    }
     if (action === 'save-slot') {
-      const key = saveSlotsSelect.value || undefined;
+      const key = selectedSlot ?? undefined;
       const label = saveSlotsLabel.value.trim();
       if (!label) {
         saveSlotsDiagnostic.textContent = 'Name the save slot before saving.';
         saveSlotsLabel.focus();
         return;
       }
-      if (key && !saveConfirm) { saveConfirm = true; redrawSaveSlots(); return; }
-      send({ action: 'save-slot', key, label, confirm: saveConfirm });
-      saveConfirm = false;
+      const replaced = saveSlots.entries.find(entry => entry.key === key);
+      if (replaced) ask({ message: `Overwrite "${replaced.label}" with the game as it is now?`, accept: 'Overwrite',
+        onAccept: () => send({ action: 'save-slot', key, label, confirm: true }) });
+      else send({ action: 'save-slot', label, confirm: false });
       return;
     }
-    if (action === 'load-slot' && saveSlotsSelect.value) {
-      send({ action: 'load-slot', key: saveSlotsSelect.value });
-      loadRequested = true;
+    const chosen = saveSlots.entries.find(entry => entry.key === selectedSlot);
+    if (action === 'load-slot' && chosen) {
+      ask({ message: `Load "${chosen.label}"? Progress since your last save is lost.`, accept: 'Load',
+        onAccept: () => { send({ action: 'load-slot', key: chosen.key }); loadRequested = true; } });
       return;
     }
-    if (action === 'delete-slot' && saveSlotsSelect.value) {
-      if (!deleteConfirm) { deleteConfirm = true; redrawSaveSlots(); return; }
-      send({ action: 'delete-slot', key: saveSlotsSelect.value, confirm: true });
-      deleteConfirm = false;
+    if (action === 'delete-slot' && chosen) {
+      ask({ message: `Delete "${chosen.label}"? It cannot be recovered.`, accept: 'Delete',
+        onAccept: () => send({ action: 'delete-slot', key: chosen.key, confirm: true }) });
       return;
     }
     runAction(action);
   };
-  saveSlotsSelect.addEventListener('change', () => {
-    saveConfirm = false;
-    deleteConfirm = false;
-    const selected = saveSlots.entries.find(entry => entry.key === saveSlotsSelect.value);
-    if (selected) saveSlotsLabel.value = selected.label;
-    redrawSaveSlots();
-  });
   const onCancel = (event: Event): void => event.preventDefault();
   const onToggle = (): void => runAction('menu');
   menu.addEventListener('cancel', onCancel);
@@ -485,7 +486,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       menu.removeEventListener('cancel', onCancel);
       menu.removeEventListener('click', onClick);
       menuToggle.removeEventListener('click', onToggle);
-      saveSlotsSelect.replaceChildren();
+      saveSlotsList.replaceChildren();
       if (menu.open) menu.close();
     },
   };
@@ -496,3 +497,4 @@ const PANEL_TITLES: Partial<Record<Panel, string>> = {
   inventory: 'Inventory & equipment', character: 'Character', map: 'Map', transport: 'Travel & transport', rest: 'Rest & loiter',
   journal: 'Journal & notes', loot: 'Loot', debug: 'Engine debug console',
 };
+

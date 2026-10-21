@@ -113,7 +113,7 @@ const SHELL_MARKUP = `
       <section class="dagger-save-slots" hidden aria-label="Save slots">
         <p class="dagger-save-slots-diagnostic" role="status"></p>
         <label>Save name <input class="dagger-save-slots-label" maxlength="120" autocomplete="off"></label>
-        <label>Selected slot <select class="dagger-save-slots-select"><option value="">New slot</option></select></label>
+        <ol class="dagger-save-slots-list" aria-label="Saved games"></ol>
         <div class="dagger-save-slots-actions">
           <button data-action="save-slot">Save</button>
           <button data-action="load-slot">Load selected</button>

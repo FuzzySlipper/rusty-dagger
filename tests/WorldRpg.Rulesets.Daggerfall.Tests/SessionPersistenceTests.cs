@@ -78,6 +78,46 @@ public sealed class SessionPersistenceTests
     }
 
     [Fact]
+    public void A_save_describes_the_character_place_date_and_play_time_and_play_time_survives_restore()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        RulesetSavePayload payload;
+        SaveDescription described;
+        using (DaggerfallSession original = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
+        {
+            original.ApplyProductMode(ProductMode.Playing);
+            Assert.Equal(0d, original.DescribeSave().PlaySeconds);
+            for (ulong step = 1; step <= 3; step++) original.Update(new ProductUpdate(OuterUpdate(step), []));
+            described = original.DescribeSave();
+            Assert.True(described.PlaySeconds > 0, "Play advances while the world runs.");
+            Assert.Equal(original.State.Character.Identity.Name, described.Character);
+            Assert.Equal(original.State.Progression.Level, described.Level);
+            Assert.Equal(original.Site.ActiveSite?.Name, described.Location);
+            Assert.False(string.IsNullOrWhiteSpace(described.WorldTime));
+            // The menu holds play time as it holds the world.
+            original.ApplyProductMode(ProductMode.Modal);
+            original.Update(new ProductUpdate(OuterUpdate(4), []));
+            Assert.Equal(described.PlaySeconds, original.DescribeSave().PlaySeconds);
+            payload = original.CaptureSave();
+        }
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+        using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
+        Assert.Equal(described.PlaySeconds, restored.DescribeSave().PlaySeconds);
+    }
+
+    [Fact]
     public void A_sheathed_weapon_stays_sheathed_across_save_restore()
     {
         string root = TestData.RepositoryRoot;

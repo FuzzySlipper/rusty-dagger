@@ -688,7 +688,8 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             key = request.Key;
         }
 
-        WorldRpgSaveSlotEntry entry = SaveSlots.SaveSlot(key, request.Label.Trim(), new GameSaveEnvelope(saveable.CaptureSave(), _compositionIdentity.Variants));
+        WorldRpgSaveSlotEntry entry = SaveSlots.SaveSlot(key, request.Label.Trim(), new GameSaveEnvelope(saveable.CaptureSave(), _compositionIdentity.Variants),
+            description: (saveable as ISaveDescribingGameSession)?.DescribeSave());
         requesting.ReportSaveOutcome($"Saved '{entry.Label}' (revision {entry.Revision}).");
         RefreshSaveSlots(requesting);
     }
@@ -703,7 +704,8 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        _ = SaveSlots.SaveSlot(QuickSaveKey, QuickSaveLabel, new GameSaveEnvelope(saveable.CaptureSave(), _compositionIdentity.Variants));
+        _ = SaveSlots.SaveSlot(QuickSaveKey, QuickSaveLabel, new GameSaveEnvelope(saveable.CaptureSave(), _compositionIdentity.Variants),
+            description: (saveable as ISaveDescribingGameSession)?.DescribeSave());
         requesting.ReportSaveOutcome("Quick saved.");
         RefreshSaveSlots(requesting);
     }
@@ -751,7 +753,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         try
         {
             session.ReportSaveSlots(
-                SaveSlots.List().Select(entry => new SaveSlotSummary(entry.Key, entry.Label, entry.SavedAtUtc, entry.Ruleset)).ToArray(),
+                SaveSlots.List().Select(entry => new SaveSlotSummary(entry.Key, entry.Label, entry.SavedAtUtc, entry.Ruleset, entry.Description)).ToArray(),
                 null);
         }
         catch (WorldRpgSaveFormatException error)

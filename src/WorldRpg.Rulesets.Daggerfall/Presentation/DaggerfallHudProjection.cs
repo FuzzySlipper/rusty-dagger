@@ -193,6 +193,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("key", builder.String(slot.Key)),
                     ("label", builder.String(slot.Label)),
                     ("savedAtUtc", builder.String(slot.SavedAtUtc.ToString("O", CultureInfo.InvariantCulture))),
+                    // What the game was when saved, as the ruleset described it; absent for a slot written without it.
+                    ("character", slot.Description?.Character is { } character ? builder.String(character) : builder.Null()),
+                    ("level", slot.Description?.Level is int level ? builder.Number(level) : builder.Null()),
+                    ("location", slot.Description?.Location is { } location ? builder.String(location) : builder.Null()),
+                    ("worldTime", slot.Description?.WorldTime is { } worldTime ? builder.String(worldTime) : builder.Null()),
+                    ("playSeconds", slot.Description is { } described ? builder.Number(described.PlaySeconds) : builder.Null()),
                     ("ruleset", builder.String(slot.Ruleset)))).ToArray())),
                 ("diagnostic", saveSlotDiagnostic is null ? builder.Null() : builder.String(saveSlotDiagnostic)))),
         ];

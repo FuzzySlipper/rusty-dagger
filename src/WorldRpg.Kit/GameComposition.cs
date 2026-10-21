@@ -599,7 +599,21 @@ public enum SaveSlotOperation
 public sealed record SaveSlotRequest(SaveSlotOperation Operation, string? Key = null, string? Label = null, bool Confirm = false);
 
 /// <summary>Host-owned metadata a ruleset may project without opening a save payload.</summary>
-public sealed record SaveSlotSummary(string Key, string Label, DateTime SavedAtUtc, string Ruleset);
+/// <param name="Description">What the ruleset said about the game when it was saved, if it says anything.</param>
+public sealed record SaveSlotSummary(string Key, string Label, DateTime SavedAtUtc, string Ruleset, SaveDescription? Description = null);
+
+/// <summary>
+/// What a save slot list shows about a saved game without opening it: the character, their level, where
+/// they were, the world's date and time, and how long the game has been played. Each is the ruleset's own
+/// wording; any it has no meaning for stays null.
+/// </summary>
+public sealed record SaveDescription(string? Character, int? Level, string? Location, string? WorldTime, double PlaySeconds);
+
+/// <summary>Optional session seam: describes the game for the slot a save is written to.</summary>
+public interface ISaveDescribingGameSession : IGameSession
+{
+    SaveDescription DescribeSave();
+}
 
 
 /// <summary>Opaque current-state save bytes plus the compiled ruleset that interprets them.</summary>

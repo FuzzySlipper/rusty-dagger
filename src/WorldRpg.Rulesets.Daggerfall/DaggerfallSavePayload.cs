@@ -65,6 +65,8 @@ internal sealed record DaggerfallSavePayload(
     [JsonRequired]
     public DaggerfallDispelRequest? PendingDispel { get; init; }
     [JsonRequired] public string? PendingTeleport { get; init; }
+    /// <summary>The real seconds the player has spent in play, which the save slot list shows.</summary>
+    [JsonRequired] public double PlaySeconds { get; init; }
     [JsonRequired] public DaggerfallTeleportAnchor? TeleportAnchor { get; init; }
     [JsonRequired] public DaggerfallIdentifyRequest? PendingIdentify { get; init; }
     [JsonRequired] public DaggerfallCreateItemRequest? PendingCreateItem { get; init; }
@@ -818,6 +820,7 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(Player);
         PendingDispel?.Validate();
         if (PendingTeleport is not null && string.IsNullOrWhiteSpace(PendingTeleport)) throw new ArgumentException("Saved teleport choice requires its paid cast identity.");
+        if (!double.IsFinite(PlaySeconds) || PlaySeconds < 0) throw new ArgumentException("Saved play time must be a finite, non-negative number of seconds.");
         TeleportAnchor?.Validate();
         PendingIdentify?.Validate();
         PendingCreateItem?.Validate();

@@ -355,7 +355,14 @@ test('quick save and quick load send the product actions over the Host quick-sav
     f.root.querySelector('.dagger-menu-toggle').click();
     f.root.querySelector('[data-action="quick-save"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'save-game' });
+    // Quick load discards progress, so it asks first; No loads nothing.
+    const count = f.actions.length;
     f.root.querySelector('[data-action="quick-load"]').click();
+    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Load your quick save\? Progress since then is lost\./);
+    f.answer(false);
+    assert.equal(f.actions.length, count);
+    f.root.querySelector('[data-action="quick-load"]').click();
+    f.answer(true);
     assert.deepEqual(f.actions.at(-1), { action: 'load-game' });
     const menu = f.root.querySelector('.dagger-menu');
     assert.equal(menu.open, true);
@@ -1701,36 +1708,72 @@ test('the HUD title names the site the session projects rather than a fixed labe
   } finally { f.dispose(); }
 });
 
-test('save slots list, name new saves, and demand explicit overwrite and deletion confirmation', () => {
+test('save slots list each game with its details, name new saves, and confirm overwrite, load and delete in the drawn confirm', () => {
   const f = fixture();
   try {
     const menu = f.root.querySelector('.dagger-menu');
     const click = action => f.root.querySelector(`[data-action="${action}"]`).click();
-    f.publish({ saveSlots: { entries: [{ key: 'slot-1', label: 'Before the dungeon', savedAtUtc: '2026-09-22T00:00:00.0000000Z', ruleset: 'daggerfall' }], diagnostic: null } });
+    f.publish({ saveSlots: { entries: [{ key: 'slot-1', label: 'Before the dungeon', savedAtUtc: '2026-09-22T00:00:00.0000000Z', ruleset: 'daggerfall',
+      character: 'Aubk-i', level: 3, location: 'Daggerfall', worldTime: 'Morndas the 4th of Hearthfire, 3E405, 14:10', playSeconds: 4500 }], diagnostic: null } });
     f.root.querySelector('.dagger-menu-toggle').click();
     assert.equal(menu.open, true);
     click('save-game');
     assert.deepEqual(f.actions.at(-1), { action: 'save-slots' });
-    const select = f.root.querySelector('.dagger-save-slots-select');
+    // Each slot shows who, where, the world's date and the time played; saving starts on a new slot.
+    const slot = f.root.querySelector('[data-save-slot="slot-1"]');
+    assert.match(slot.textContent, /Before the dungeon/);
+    assert.match(slot.textContent, /Aubk-i · level 3 · Daggerfall/);
+    assert.match(slot.textContent, /Morndas the 4th of Hearthfire, 3E405, 14:10/);
+    assert.match(slot.textContent, /played 1 h 15 min/);
+    assert.equal(f.root.querySelector('[data-save-slot=""]').getAttribute('aria-pressed'), 'true');
     const label = f.root.querySelector('.dagger-save-slots-label');
     label.value = 'After the dungeon';
     click('save-slot');
-    assert.deepEqual(f.actions.at(-1), { action: 'save-slot', key: undefined, label: 'After the dungeon', confirm: false });
-    select.value = 'slot-1';
-    select.dispatchEvent(new window.Event('change'));
+    assert.deepEqual(f.actions.at(-1), { action: 'save-slot', label: 'After the dungeon', confirm: false });
+    // Overwriting asks in the drawn confirm.
+    f.root.querySelector('[data-save-slot="slot-1"]').click();
+    assert.equal(label.value, 'Before the dungeon');
+    assert.equal(f.root.querySelector('[data-action="save-slot"]').textContent, 'Overwrite');
     const beforeConfirm = f.actions.length;
     click('save-slot');
+    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Overwrite "Before the dungeon"/);
+    f.answer(false);
     assert.equal(f.actions.length, beforeConfirm);
-    assert.equal(f.root.querySelector('[data-action="save-slot"]').textContent, 'Confirm overwrite');
     click('save-slot');
+    f.answer(true);
     assert.deepEqual(f.actions.at(-1), { action: 'save-slot', key: 'slot-1', label: 'Before the dungeon', confirm: true });
+    // Loading picks the newest slot; delete asks first.
     click('back');
     click('load-game');
+    assert.equal(f.root.querySelector('[data-save-slot="slot-1"]').getAttribute('aria-pressed'), 'true');
     click('delete-slot');
-    assert.equal(f.actions.at(-1).action, 'save-slots');
-    assert.equal(f.root.querySelector('[data-action="delete-slot"]').textContent, 'Confirm delete');
-    click('delete-slot');
+    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Delete "Before the dungeon"\? It cannot be recovered\./);
+    f.answer(true);
     assert.deepEqual(f.actions.at(-1), { action: 'delete-slot', key: 'slot-1', confirm: true });
+  } finally { f.dispose(); }
+});
+
+test('the title asks for saved games and offers Continue for the newest and Load for any, only when there are saves', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'title' });
+    assert.deepEqual(f.actions.at(-1), { action: 'save-slots' }, 'The title lists the saves when it appears.');
+    const resume = f.root.querySelector('[data-testid="entry-continue"]');
+    const load = f.root.querySelector('[data-testid="entry-load"]');
+    assert.equal(resume.hidden, true); assert.equal(load.hidden, true);
+    const entries = [
+      { key: 'quicksave', label: 'Quick save', savedAtUtc: '2026-10-20T10:00:00Z', ruleset: 'daggerfall', character: 'Aubk-i', level: 2, location: 'Charing', worldTime: null, playSeconds: 600 },
+      { key: 'slot-1', label: 'Before the dungeon', savedAtUtc: '2026-10-19T10:00:00Z', ruleset: 'daggerfall' }];
+    f.publish({ mode: 'title', saveSlots: { entries, diagnostic: null } });
+    assert.equal(resume.hidden, false); assert.equal(load.hidden, false);
+    resume.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'load-slot', key: 'quicksave' });
+    load.click();
+    const list = f.root.querySelector('.dagger-entry-saves');
+    assert.equal(list.hidden, false);
+    assert.match(list.textContent, /Aubk-i · level 2 · Charing/);
+    list.querySelector('[data-save-slot="slot-1"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'load-slot', key: 'slot-1' });
   } finally { f.dispose(); }
 });
 
@@ -2000,14 +2043,15 @@ test('a load from the menu closes the menu once the loaded session is playing, a
     f.root.querySelector('.dagger-menu-toggle').click();
     f.publish({ mode: 'modal', saveSlots });
     click('load-game');
-    const select = f.root.querySelector('.dagger-save-slots-select');
-    select.value = 'slot-1';
-    select.dispatchEvent(new window.Event('change'));
+    f.root.querySelector('[data-save-slot="slot-1"]').click();
     click('load-slot');
+    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Load "Before the dungeon"\? Progress since your last save is lost\./);
+    f.answer(true);
     assert.deepEqual(f.actions.at(-1), { action: 'load-slot', key: 'slot-1' });
     f.publish({ mode: 'modal', saveSlots, lastOutcome: 'Load failed: the save is unreadable.' });
     assert.equal(menu.open, true);
     click('load-slot');
+    f.answer(true);
     f.publish({ mode: 'playing', saveSlots, lastOutcome: 'Game loaded.' });
     assert.equal(menu.open, false);
     assert.deepEqual(f.actions.at(-1), { action: 'menu', open: false });
