@@ -287,9 +287,12 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     saveSlotLoad.disabled = selectedEntry === undefined;
     saveSlotDelete.disabled = selectedEntry === undefined;
   };
+  // A new save starts with a suggested name, so a controller, which cannot type, can save at once.
+  const suggestedName = (): string => `Saved game ${saveSlots.entries.length + 1}`;
   const showSaveSlots = (mode: 'save' | 'load'): void => {
     saveSlotMode = mode;
     selectedSlot = null;
+    if (mode === 'save') saveSlotsLabel.value = suggestedName();
     redrawSaveSlots();
     showPanel('save-slots');
     send({ action: 'save-slots' });
@@ -320,7 +323,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     if (control?.dataset.saveSlot !== undefined) {
       selectedSlot = control.dataset.saveSlot || null;
       const chosen = saveSlots.entries.find(entry => entry.key === selectedSlot);
-      if (saveSlotMode === 'save') saveSlotsLabel.value = chosen?.label ?? '';
+      if (saveSlotMode === 'save') saveSlotsLabel.value = chosen?.label ?? suggestedName();
       redrawSaveSlots();
       return;
     }
