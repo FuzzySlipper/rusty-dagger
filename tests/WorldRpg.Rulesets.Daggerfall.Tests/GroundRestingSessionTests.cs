@@ -81,7 +81,7 @@ public sealed class GroundRestingSessionTests
         internal EngineContextFake Engine { get; }
         internal DaggerfallSession Session { get; }
 
-        /// <summary>The floor height every downward probe meets once set; none before.</summary>
+        /// <summary>The floor height every downward probe meets once set (and the site's collision is admitted); none before.</summary>
         internal float? FloorY { get; set; }
 
         internal Fixture(float? floorBelowProbe = null)
@@ -90,7 +90,8 @@ public sealed class GroundRestingSessionTests
             PopulateContent(content, Inputs);
             spatial = SpatialFake.Create(Inputs.SpatialArtifact.Sha256, releases);
             spatial.KeepPosition = true;
-            spatial.FloorHit = request => request.Direction.Y >= -.5F ? default
+            // As in the Engine, a probe meets the floor only once the site's collision has been admitted.
+            spatial.FloorHit = request => request.Direction.Y >= -.5F || !spatial.ContentResidencyRequests.Any(admission => admission.Admitted.Length > 0) ? default
                 : floorBelowProbe is float below ? new SpatialHit { Present = true, Point = request.Origin - Vector3.UnitY * below, Normal = Vector3.UnitY }
                 : FloorY is float floor ? new SpatialHit { Present = true, Point = request.Origin with { Y = floor }, Normal = Vector3.UnitY }
                 : default;
