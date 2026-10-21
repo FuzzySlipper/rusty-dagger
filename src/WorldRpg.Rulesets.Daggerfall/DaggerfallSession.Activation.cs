@@ -885,8 +885,9 @@ internal sealed partial class DaggerfallSession
 
         /// <summary>
         /// What ActivateDoor would do now, read without doing it: examine in Information mode, nothing in
-        /// Talk, pick a locked lock in Steal, bash in Bash, and otherwise enter a building's entrance or
-        /// open a shut dungeon door and close an open one.
+        /// Talk, pick a locked lock in Steal (an unlocked building is entered, an unlocked dungeon door is
+        /// left as it is), bash in Bash, and otherwise enter a building's entrance or open a shut dungeon
+        /// door and close an open one.
         /// </summary>
         public string? PromptAction(DaggerfallActivationSelection selection)
         {
@@ -899,6 +900,9 @@ internal sealed partial class DaggerfallSession
                 DaggerfallActivationMode.Info => "Examine",
                 DaggerfallActivationMode.Talk => null,
                 DaggerfallActivationMode.Steal when door.IsLocked => "Pick the lock of",
+                // An unlocked building's entrance lets a thief straight in; an unlocked dungeon door has
+                // no lock to pick and Steal neither opens nor closes it, so nothing is promised.
+                DaggerfallActivationMode.Steal => building ? "Enter" : null,
                 DaggerfallActivationMode.Bash => "Bash",
                 _ when building => "Enter",
                 _ => open ? "Close" : "Open",

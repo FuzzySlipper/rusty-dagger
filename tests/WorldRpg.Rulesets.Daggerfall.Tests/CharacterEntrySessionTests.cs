@@ -9,6 +9,68 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class CharacterEntrySessionTests
 {
+    private static DaggerfallSession OpenCreation()
+    {
+        var inputs = ReadInputs(TestData.RepositoryRoot);
+        List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, inputs);
+        var session = DaggerfallSession.StartNew(EngineContextFake.Create(content,
+            SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases)).Context,
+            new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+        session.ApplyProductMode(ProductMode.Title);
+        session.OpenCharacterCreation();
+        return session;
+    }
+
+    [Fact]
+    public void A_cleared_name_reaches_the_draft_and_the_projection_holds_the_commit_until_it_is_typed()
+    {
+        using var session = OpenCreation();
+        var character = session.State.Character;
+        string Update(string name) => JsonSerializer.Serialize(new { action = "character-update", name, race = "breton", gender = "male", faceIndex = 0, reflexes = 2, career = "class00" });
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui(Update(""))]));
+        Assert.Equal("Character choices updated.", session.Presentation.LastOutcome);
+        Assert.Equal("", character.Pending!.Name);
+        Assert.Contains("Enter a name.", character.ReadCreation().Blocked);
+        session.Update(new ProductUpdate(OuterUpdate(2), [Ui(Update("Aubk-i"))]));
+        Assert.DoesNotContain("Enter a name.", character.ReadCreation().Blocked);
+        // A commit still needs the name: an empty one is refused before it reaches the character.
+        session.Update(new ProductUpdate(OuterUpdate(3), [Ui(Update("").Replace("character-update", "character-commit", StringComparison.Ordinal))]));
+        Assert.False(session.HasCommittedCharacter);
+    }
+
+    [Fact]
+    public void A_custom_class_with_a_skill_twice_reaches_the_draft_and_blocks_commit_and_quick_start_until_fixed()
+    {
+        using var session = OpenCreation();
+        var character = session.State.Character;
+        var custom = DaggerfallCustomCareerChoices.Default(TestPayload.Definitions, character.Career) with { Name = "Twice Trained" };
+        string Update(string[] minor) => JsonSerializer.Serialize(new
+        {
+            action = "character-update", name = custom.Name, race = "breton", gender = "male", faceIndex = 0, reflexes = 2, career = "custom",
+            primarySkills = string.Join(',', custom.PrimarySkills), majorSkills = string.Join(',', custom.MajorSkills),
+            minorSkills = string.Join(',', minor), hitPointsPerLevel = custom.HitPointsPerLevel, advantages = "", disadvantages = "",
+        });
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui(Update(custom.MinorSkills))]));
+        var valid = character.Pending!.Background!.RollSequence;
+        Assert.Null(character.ReadCreation().QuickStartBlocked);
+        // The first minor skill made the same as the first primary: the draft keeps it as drawn.
+        string[] twice = [custom.PrimarySkills[0], .. custom.MinorSkills.Skip(1)];
+        session.Update(new ProductUpdate(OuterUpdate(2), [Ui(Update(twice))]));
+        Assert.Equal("Character choices updated.", session.Presentation.LastOutcome);
+        Assert.Equal(twice, character.Pending!.CustomCareer!.MinorSkills);
+        DaggerfallCharacterCreationPresentation invalid = character.ReadCreation();
+        Assert.Contains("Each trained skill may appear only once.", invalid.Custom!.Eligibility);
+        Assert.Contains("Each trained skill may appear only once.", invalid.Blocked);
+        Assert.NotNull(invalid.QuickStartBlocked);
+        Assert.Equal(valid, character.Pending!.Background!.RollSequence);
+        // Fixing it clears the reasons.
+        session.Update(new ProductUpdate(OuterUpdate(3), [Ui(Update(custom.MinorSkills))]));
+        DaggerfallCharacterCreationPresentation fixedDraft = character.ReadCreation();
+        Assert.Empty(fixedDraft.Custom!.Eligibility);
+        Assert.DoesNotContain("Each trained skill may appear only once.", fixedDraft.Blocked);
+        Assert.Null(fixedDraft.QuickStartBlocked);
+    }
+
     [Fact]
     public void Switching_to_custom_career_replaces_old_background_before_allocating_and_committing()
     {
