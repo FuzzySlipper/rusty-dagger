@@ -197,6 +197,13 @@ public sealed class DaggerfallDoorMagicSessionTests
         Assert.Null(Prompt());
         f.Interact(s, f.Door.Id);
         Assert.Equal(DaggerfallDoorMotion.Closed, s.Doors.Read(f.Door.Id).Motion);
+        // A locked door is a lock to pick for a thief, and ordinary use only reports it, so it promises nothing.
+        s.Doors.Lock(f.Door.Id, DaggerfallDoorOperationSource.Spell, 15);
+        Assert.Equal("Pick the lock of", Prompt());
+        f.Mode(s, "grab");
+        Assert.Null(Prompt());
+        f.Interact(s, f.Door.Id);
+        Assert.Equal(DaggerfallDoorMotion.Closed, s.Doors.Read(f.Door.Id).Motion);
     }
 
     private sealed class Fixture : IDisposable
