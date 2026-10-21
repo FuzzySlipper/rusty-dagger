@@ -323,11 +323,28 @@ internal sealed partial class DaggerfallCharacterState
     internal bool BackgroundCareerChanged(DaggerfallCharacterCreationChoices choices)
     {
         if (Pending is not { } previous) return false;
-        var before = CurrentCareer(previous);
-        var after = CurrentCareer(choices);
-        return before.Id != after.Id || !before.PrimarySkills.SequenceEqual(after.PrimarySkills)
-            || !before.MajorSkills.SequenceEqual(after.MajorSkills) || !before.MinorSkills.SequenceEqual(after.MinorSkills);
+        var before = SkillLayout(previous);
+        var after = SkillLayout(choices);
+        return before.Id != after.Id || !before.Primary.SequenceEqual(after.Primary)
+            || !before.Major.SequenceEqual(after.Major) || !before.Minor.SequenceEqual(after.Minor);
     }
+
+    /// <summary>
+    /// The career and skill tiers a draft's background is rolled for, read without compiling a custom
+    /// class, so a custom draft the player is still fixing compares like any other.
+    /// </summary>
+    private (string Id, IReadOnlyList<string> Primary, IReadOnlyList<string> Major, IReadOnlyList<string> Minor) SkillLayout(DaggerfallCharacterCreationChoices choices)
+    {
+        if (choices.CareerId == DaggerfallCustomCareerPolicy.CareerId && choices.CustomCareer is { } custom)
+            return (choices.CareerId, custom.PrimarySkills, custom.MajorSkills, custom.MinorSkills);
+        DaggerfallCareerDefinition career = CurrentCareer(choices);
+        return (career.Id, career.PrimarySkills, career.MajorSkills, career.MinorSkills);
+    }
+
+    /// <summary>Whether the draft names a custom class it could not yet start with (a skill twice, too many traits).</summary>
+    internal bool HasIneligibleCustomClass(DaggerfallCharacterCreationChoices choices) =>
+        choices.CareerId == DaggerfallCustomCareerPolicy.CareerId && choices.CustomCareer is { } custom
+        && DaggerfallCustomCareerPolicy.Validate(_definitions, custom).Count != 0;
 
     internal DaggerfallCharacterCreationChoices WithFreshBackground(DaggerfallCharacterCreationChoices choices, Rusty.Engine.IRandomService random) =>
         choices with { Background = DaggerfallCharacterBackgroundPolicy.Roll(_definitions, CurrentCareer(choices), choices.ToIdentity(), random, NextBackgroundRollSequence()) };
@@ -343,9 +360,14 @@ internal sealed partial class DaggerfallCharacterState
     {
         ArgumentNullException.ThrowIfNull(choices);
         Pending = choices;
+        if (choices.CareerId == DaggerfallCustomCareerPolicy.CareerId && choices.CustomCareer is { } custom && !HasIneligibleCustomClass(choices))
+            _lastEligibleCustom = custom;
     }
 
-    internal void CancelChoices() { Pending = null; _classQuestions = null; }
+    /// <summary>The draft's custom class as it last stood eligible: the tiers its background was rolled for.</summary>
+    private DaggerfallCustomCareerChoices? _lastEligibleCustom;
+
+    internal void CancelChoices() { Pending = null; _classQuestions = null; _lastEligibleCustom = null; }
 
     internal DaggerfallCharacterBackgroundSave? CommitChoices(bool replaceCommitted = false)
     {
@@ -368,6 +390,7 @@ internal sealed partial class DaggerfallCharacterState
         bool firstBackgroundCommit = _background is null && background is not null;
         _background = replaceCommitted ? background : _background ?? background;
         Pending = null;
+        _lastEligibleCustom = null;
         ApplyCareerBases();
         _careerCommitted?.Invoke();
         return firstBackgroundCommit ? background : null;
@@ -417,14 +440,15 @@ internal sealed partial class DaggerfallCharacterState
 
     /// <summary>
     /// The career a draft's background is shown against. A custom class the player is still editing can
-    /// be ineligible for a moment (a skill chosen twice, too many traits); its background is then shown
-    /// against the class it would start from, while the eligibility reasons say what to fix, rather than
-    /// the draft failing to present at all.
+    /// be ineligible for a moment (a skill chosen twice, too many traits); its background, rolled for the
+    /// class as it last stood eligible, is then shown against that class while the eligibility reasons say
+    /// what to fix, rather than the draft failing to present at all.
     /// </summary>
     private DaggerfallCareerDefinition PresentedCareer(DaggerfallCharacterCreationChoices choices) =>
-        choices.CareerId == DaggerfallCustomCareerPolicy.CareerId && choices.CustomCareer is { } custom
-            && DaggerfallCustomCareerPolicy.Validate(_definitions, custom).Count != 0
-            ? Career : CurrentCareer(choices);
+        !HasIneligibleCustomClass(choices) ? CurrentCareer(choices)
+        : _lastEligibleCustom is { } eligible ? DaggerfallCustomCareerPolicy.Compile(_definitions, eligible, Career).Career
+        : _customCareer is { } stored ? DaggerfallCustomCareerPolicy.Compile(_definitions, ToChoices(stored), Career).Career
+        : Career;
 
     private int NextBackgroundRollSequence() => _backgroundRollSequence = checked(_backgroundRollSequence + 1);
 

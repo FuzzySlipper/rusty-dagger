@@ -579,8 +579,10 @@ internal static class DaggerfallUiAction
                     : ["action", "name", "race", "gender", "faceIndex", "reflexes", "career"];
                 bool background = fields.Contains("backgroundAnswers") || fields.Contains("attributeAllocations") || fields.Contains("skillAllocations");
                 if (background) required.UnionWith(["backgroundAnswers", "attributeAllocations", "skillAllocations"]);
+                // A draft may hold an empty name while the player is typing one; only the commit needs it.
+                bool named = action == "character-commit" ? !string.IsNullOrWhiteSpace(name) : name is not null;
                 return fields.SetEquals(required)
-                    && !string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(race)
+                    && named && !string.IsNullOrWhiteSpace(race)
                     && !string.IsNullOrWhiteSpace(gender) && !string.IsNullOrWhiteSpace(career)
                     && faceIndex is not null && reflexes is not null
                     ? new(action, Name: name, Race: race, Gender: gender, FaceIndex: faceIndex, Reflexes: reflexes, Career: career,

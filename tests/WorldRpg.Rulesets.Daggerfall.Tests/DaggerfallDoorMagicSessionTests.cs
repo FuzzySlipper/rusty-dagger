@@ -186,6 +186,17 @@ public sealed class DaggerfallDoorMagicSessionTests
         Assert.Equal("Examine", Prompt());
         f.Mode(s, "bash");
         Assert.Equal("Bash", Prompt());
+        // Steal on an unlocked dungeon door neither opens nor closes it, open or shut, so nothing is
+        // promised; using it leaves the door as it was.
+        f.Mode(s, "steal");
+        Assert.Null(Prompt());
+        var before = s.Doors.Read(f.Door.Id).Motion;
+        f.Interact(s, f.Door.Id);
+        Assert.Equal(before, s.Doors.Read(f.Door.Id).Motion);
+        s.Doors.Close(f.Door.Id, DaggerfallDoorOperationSource.Player); s.Doors.Advance(2);
+        Assert.Null(Prompt());
+        f.Interact(s, f.Door.Id);
+        Assert.Equal(DaggerfallDoorMotion.Closed, s.Doors.Read(f.Door.Id).Motion);
     }
 
     private sealed class Fixture : IDisposable
