@@ -101,7 +101,8 @@ internal sealed partial class DaggerfallSession
         switch (id)
         {
             case "quick-save": _saveSlotRequest = new(WorldRpg.Kit.SaveSlotOperation.QuickSave); break;
-            case "quick-load": _saveSlotRequest = new(WorldRpg.Kit.SaveSlotOperation.QuickLoad); break;
+            // Quick load discards progress, so the key asks the screen to confirm it, as the menu's button does.
+            case "quick-load": RequestPanel("quick-load"); break;
             case "spell": RequestPanel("spells"); break;
             case "rest": RequestPanel("rest"); break;
             case "transport": RequestPanel(DaggerfallPanel.Travel); break;

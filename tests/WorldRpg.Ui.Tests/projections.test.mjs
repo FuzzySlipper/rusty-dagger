@@ -348,6 +348,21 @@ test('inventory renders the ruleset-owned completed equip cue without claiming a
   } finally { f.dispose(); }
 });
 
+test('the quick-load key in play asks in the drawn confirm before the product loads', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'playing' });
+    f.publish({ mode: 'playing', panelRequest: { panel: 'quick-load', revision: '1' } });
+    assert.equal(f.root.querySelector('.dagger-confirm').open, true);
+    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Load your quick save\? Progress since then is lost\./);
+    f.answer(false);
+    assert.equal(f.actions.some(action => action.action === 'load-game'), false);
+    f.publish({ mode: 'playing', panelRequest: { panel: 'quick-load', revision: '2' } });
+    f.answer(true);
+    assert.deepEqual(f.actions.at(-1), { action: 'load-game' });
+  } finally { f.dispose(); }
+});
+
 test('quick save and quick load send the product actions over the Host quick-save slot', () => {
   const f = fixture();
   try {

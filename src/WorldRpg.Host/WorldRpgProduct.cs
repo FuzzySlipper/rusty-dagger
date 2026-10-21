@@ -736,6 +736,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
+        string label = SaveSlots.List().FirstOrDefault(entry => string.Equals(entry.Key, request.Key, StringComparison.Ordinal))?.Label ?? request.Key;
         if (!SaveSlots.DeleteSlot(request.Key))
         {
             requesting.ReportSaveOutcome("The selected save slot no longer exists.");
@@ -743,7 +744,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        requesting.ReportSaveOutcome($"Deleted save slot '{request.Key}'.");
+        requesting.ReportSaveOutcome($"Deleted '{label}'.");
         RefreshSaveSlots(requesting);
     }
 
