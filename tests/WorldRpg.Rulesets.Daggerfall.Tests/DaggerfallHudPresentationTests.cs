@@ -22,6 +22,13 @@ public sealed class DaggerfallHudPresentationTests
     public void The_prompt_names_what_use_does_in_each_mode(string mode, string kind, string action) =>
         Assert.Equal(action, DaggerfallHudText.PromptAction(Enum.Parse<DaggerfallActivationMode>(mode), Enum.Parse<DaggerfallActivationTargetKind>(kind)));
 
+    [Theory]
+    [InlineData(24, false, true)]
+    [InlineData(25, false, false)]
+    [InlineData(80, true, true)]
+    public void An_item_is_marked_badly_worn_below_a_quarter_or_when_broken(int percentage, bool broken, bool low) =>
+        Assert.Equal(low, new ItemConditionPresentation(percentage, 100, percentage, broken).Low);
+
     [Fact]
     public void Mode_names_cover_every_activation_mode_and_distances_read_in_whole_metres()
     {

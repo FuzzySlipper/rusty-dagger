@@ -142,6 +142,7 @@
 .dagger-inventory-tip-condition { align-items: center; display: flex; gap: .5rem; }
 .dagger-inventory-tip-condition .dagger-inventory-condition-bar { flex: 0 0 5rem; }
 .dagger-inventory-tip-condition.is-broken { color: #8a2a1c; }
+.dagger-inventory-tip-condition.is-low:not(.is-broken) { color: #9a5a1c; }
 
 /* The bank tab: one row per operation the ruleset publishes, each with its own bounded amount. */
 .dagger-bank { display: grid; gap: .5rem; padding: .75rem; }

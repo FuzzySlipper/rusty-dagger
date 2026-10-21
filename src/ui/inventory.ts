@@ -122,6 +122,8 @@ export interface ItemCondition {
   readonly maximum: number;
   readonly percentage: number;
   readonly broken: boolean;
+  /** Broken or badly worn, as the ruleset marks it. */
+  readonly low?: boolean;
 }
 
 export interface EquipmentSlot {
@@ -937,6 +939,7 @@ function itemTooltip(item: InventoryItem, slotLabel: (id: string) => string): HT
     const text = document.createElement('span');
     text.textContent = item.condition.broken ? 'Broken' : `Condition ${item.condition.current} / ${item.condition.maximum}`;
     condition.classList.toggle('is-broken', item.condition.broken);
+    condition.classList.toggle('is-low', item.condition.low === true);
     condition.append(bar, text);
     parts.push(condition);
   }
