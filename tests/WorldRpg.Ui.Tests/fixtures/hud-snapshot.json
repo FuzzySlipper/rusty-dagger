@@ -112,238 +112,427 @@
       "maximum": 3,
       "step": 0.25
     },
+    "volumes": [
+      {
+        "id": "music",
+        "label": "Music",
+        "level": 1
+      },
+      {
+        "id": "ambient",
+        "label": "Ambience",
+        "level": 1
+      },
+      {
+        "id": "effects",
+        "label": "Sound effects",
+        "level": 1
+      },
+      {
+        "id": "interface",
+        "label": "Interface sounds",
+        "level": 1
+      }
+    ],
+    "volumeStep": 0.05000000074505806,
+    "categories": [
+      {
+        "id": "movement",
+        "label": "Movement"
+      },
+      {
+        "id": "combat",
+        "label": "Combat and activation"
+      },
+      {
+        "id": "activation",
+        "label": "Activation modes"
+      },
+      {
+        "id": "magic",
+        "label": "Magic"
+      },
+      {
+        "id": "interface",
+        "label": "Interface"
+      },
+      {
+        "id": "maps",
+        "label": "Maps"
+      },
+      {
+        "id": "transport",
+        "label": "Travel"
+      },
+      {
+        "id": "rest",
+        "label": "Rest"
+      },
+      {
+        "id": "saves",
+        "label": "Saved games"
+      }
+    ],
     "bindings": [
       {
         "id": "move.forward",
         "category": "movement",
+        "label": "Move forward",
         "keys": [
           "KeyW"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": "Moving uses the left stick."
       },
       {
         "id": "move.backward",
         "category": "movement",
+        "label": "Move backward",
         "keys": [
           "KeyS"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": "Moving uses the left stick."
       },
       {
         "id": "move.left",
         "category": "movement",
+        "label": "Strafe left",
         "keys": [
           "KeyA"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": "Moving uses the left stick."
       },
       {
         "id": "move.right",
         "category": "movement",
+        "label": "Strafe right",
         "keys": [
           "KeyD"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": "Moving uses the left stick."
       },
       {
         "id": "run",
         "category": "movement",
+        "label": "Run",
         "keys": [
           "ShiftLeft"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": "This action is on the keyboard only for now."
       },
       {
         "id": "crouch",
         "category": "movement",
+        "label": "Crouch",
         "keys": [
           "ControlLeft"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": "This action is on the keyboard only for now."
       },
       {
         "id": "jump",
         "category": "movement",
+        "label": "Jump",
         "keys": [
           "Space"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": "This action is on the keyboard only for now."
       },
       {
         "id": "attack",
         "category": "combat",
+        "label": "Attack",
         "keys": [
           "Primary"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [
+          0
+        ],
+        "buttonFixedReason": null
       },
       {
         "id": "interact",
         "category": "combat",
+        "label": "Activate",
         "keys": [
           "KeyF"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [
+          1
+        ],
+        "buttonFixedReason": null
       },
       {
         "id": "toggle-weapon",
         "category": "combat",
+        "label": "Ready or sheathe weapon",
         "keys": [
           "KeyZ"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [
+          2
+        ],
+        "buttonFixedReason": null
       },
       {
         "id": "inventory",
         "category": "interface",
+        "label": "Inventory",
         "keys": [
           "KeyI"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [
+          8
+        ],
+        "buttonFixedReason": null
       },
       {
         "id": "character",
         "category": "interface",
+        "label": "Character sheet",
         "keys": [
           "KeyC"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [
+          3
+        ],
+        "buttonFixedReason": null
       },
       {
         "id": "menu",
         "category": "interface",
+        "label": "Game menu",
         "keys": [
           "Escape"
         ],
-        "fixed": true
+        "fixed": true,
+        "fixedReason": "Escape always opens the game menu, so it is never lost.",
+        "buttons": [
+          9
+        ],
+        "buttonFixedReason": "The menu keeps its own controller button."
       },
       {
         "id": "spell",
         "category": "magic",
+        "label": "Spellbook",
         "keys": [
           "KeyP"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "rest",
         "category": "rest",
+        "label": "Rest",
         "keys": [
           "KeyR"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "map",
         "category": "maps",
+        "label": "Map",
         "keys": [
           "KeyM"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "transport",
         "category": "transport",
+        "label": "Travel and transport",
         "keys": [
           "KeyT"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "activation.steal",
         "category": "activation",
+        "label": "Steal mode",
         "keys": [
           "Digit1"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "activation.grab",
         "category": "activation",
+        "label": "Grab mode",
         "keys": [
           "Digit2"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "activation.info",
         "category": "activation",
+        "label": "Information mode",
         "keys": [
           "Digit3"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "activation.talk",
         "category": "activation",
+        "label": "Talk mode",
         "keys": [
           "Digit4"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "quick-save",
         "category": "saves",
+        "label": "Quick save",
         "keys": [
           "Digit9"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "quick-load",
         "category": "saves",
+        "label": "Quick load",
         "keys": [
           "Digit0"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "logbook",
         "category": "interface",
+        "label": "Logbook",
         "keys": [
           "KeyL"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "notebook",
         "category": "interface",
+        "label": "Notebook",
         "keys": [
           "KeyN"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "travel-map",
         "category": "maps",
+        "label": "Travel map",
         "keys": [
           "KeyV"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "use-magic-item",
         "category": "magic",
+        "label": "Use magic item",
         "keys": [
           "KeyU"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "recast",
         "category": "magic",
+        "label": "Recast last spell",
         "keys": [
           "KeyQ"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       },
       {
         "id": "abort-spell",
         "category": "magic",
+        "label": "Abort spell",
         "keys": [
           "KeyE"
         ],
-        "fixed": false
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [],
+        "buttonFixedReason": null
       }
     ]
   },

@@ -11,6 +11,36 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallControlSettingsTests
 {
     [Fact]
+    public void Controller_buttons_rebind_with_conflicts_named_swaps_explicit_and_the_menu_and_movement_kept()
+    {
+        IReadOnlyList<WorldRpg.Kit.Controls.ControllerActionBinding> pad = DaggerfallTuning.Defaults.ControllerInput!.Actions;
+        DaggerfallControlSettings settings = new();
+        Assert.Equal([0], settings.ControllerButtons(pad)["attack"]);
+        Assert.Equal([8], settings.ControllerButtons(pad)["inventory"]);
+        // A free button: the action moves there.
+        settings.RebindButton("spell", 5, pad);
+        Assert.Equal([5], settings.ControllerButtons(pad)["spell"]);
+        // A held button is refused naming its holder, unless swapped; the holder then takes the old buttons.
+        InvalidOperationException held = Assert.Throws<InvalidOperationException>(() => settings.RebindButton("inventory", 0, pad));
+        Assert.Contains("'attack'", held.Message, StringComparison.Ordinal);
+        settings.RebindButton("inventory", 0, pad, swap: true);
+        Assert.Equal([0], settings.ControllerButtons(pad)["inventory"]);
+        Assert.Equal([8], settings.ControllerButtons(pad)["attack"]);
+        // The menu keeps its button, and movement rides the stick.
+        Assert.Throws<InvalidOperationException>(() => settings.RebindButton("rest", 9, pad));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.RebindButton("jump", 3, pad));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.RebindButton("menu", 3, pad));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.RebindButton("move.forward", 3, pad));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.RebindButton("rest", 16, pad));
+        // The choice persists, and reset returns the authored layout.
+        DaggerfallControlSettings restored = DaggerfallControlSettings.Parse(settings.Serialize());
+        Assert.Equal([0], restored.ControllerButtons(pad)["inventory"]);
+        Assert.Contains(restored.ControllerActions(pad), binding => binding.Action == DaggerfallControlSettings.InputAction("menu") && binding.Button == ControllerButton.Button9);
+        restored.Reset();
+        Assert.Equal([8], restored.ControllerButtons(pad)["inventory"]);
+    }
+
+    [Fact]
     public void Preferences_written_in_an_older_layout_are_refused_naming_what_is_missing_and_current_ones_round_trip()
     {
         // An earlier build stored the bindings as a bare action map, without the bindings wrapper or the look settings.

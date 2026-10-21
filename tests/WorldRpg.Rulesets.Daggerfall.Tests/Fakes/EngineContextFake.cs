@@ -16,6 +16,7 @@ internal class EngineContextFake : DispatchProxy
         .ToArray();
     /// <summary>The retained audio voices started so far, in order.</summary>
     internal IReadOnlyList<AudioEmitRequest> EmittedAudio => ((AudioServiceFake)(object)audio).Emits;
+    internal IReadOnlyDictionary<AudioBus, float> BusVolumes => ((AudioServiceFake)(object)audio).BusVolumes;
     internal IReadOnlyList<string> StartedAudioVoices => ((AudioServiceFake)(object)audio).StartedVoices;
     /// <summary>How many of those voices the product released.</summary>
     internal int ReleasedAudioVoices => ((AudioServiceFake)(object)audio).ReleasedVoices;
@@ -278,8 +279,12 @@ internal class EngineContextFake : DispatchProxy
             nameof(IAudioService.CreateVoice) => CreateVoice(),
             nameof(IAudioService.ControlVoice) => null,
             nameof(IAudioService.UpdateVoice) => null,
+            nameof(IAudioService.SetBusVolume) => SetBusVolume((AudioBusVolumeRequest)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
+
+        internal Dictionary<AudioBus, float> BusVolumes { get; } = [];
+        private object? SetBusVolume(AudioBusVolumeRequest request) { BusVolumes[request.Bus] = request.Volume; return null; }
 
         private AudioSignalHandle Emit(AudioEmitRequest request)
         {

@@ -62,6 +62,8 @@ export interface NavigationOptions {
   readonly onPlayEscape?: () => void;
   /** A controller button no surface claimed, for surface-independent shortcuts. */
   readonly onButton?: (button: string) => void;
+  /** Takes a controller press before navigation does, as the controls screen does while it captures a button. */
+  readonly captureButton?: (button: string) => boolean;
 }
 
 export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiContext, options: NavigationOptions = {}): Navigation {
@@ -219,6 +221,7 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
   };
 
   const press = (button: string): void => {
+    if (options.captureButton?.(button)) return;
     const top = topmost();
     if (button === CONTROLLER.accept && top) {
       const active = document.activeElement instanceof HTMLElement && top.root.contains(document.activeElement) ? document.activeElement : null;

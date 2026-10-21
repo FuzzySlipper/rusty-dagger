@@ -48,6 +48,8 @@ export interface GameMenu {
   stepPanel(direction: -1 | 1): void;
   /** Key capture for rebinding, which runs before navigation takes Escape and the arrows. */
   captureKey(event: KeyboardEvent): void;
+  /** A controller press the controls screen takes while it captures a button. */
+  captureButton(button: string): boolean;
   update(value: DaggerHud, dead: boolean, spellbook: SpellbookProjection | null, textDiagnostics: readonly string[]): void;
   refreshArt(): void;
   dispose(): void;
@@ -372,6 +374,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       runAction(STEPPED_PANELS[(from + direction + STEPPED_PANELS.length) % STEPPED_PANELS.length]!);
     },
     captureKey(event) { if (activePanel === 'settings') controlsView.captureKey(event); },
+    captureButton(button) { return activePanel === 'settings' && controlsView.captureButton(button); },
     update(value, dead, spellbook, diagnosticText) {
       renderSpells(spellsRoot, spellbook, value.controls, send);
       inventorySuppressed = value.character?.identity?.racialOverride?.suppressInventory === true;

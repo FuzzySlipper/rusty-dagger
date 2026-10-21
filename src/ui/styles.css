@@ -87,11 +87,20 @@
 
 
 .dagger-menu-toggle { position: absolute; top: 1.375rem; right: 1.5rem; }
-.dagger-menu-toggle, .dagger-menu-home > button, .dagger-menu-panel > button { padding: .2rem 1.125rem; font: 700 .8rem ui-monospace, monospace; pointer-events: auto; }
+.dagger-menu-toggle, .dagger-menu-home button, .dagger-menu-panel > button { padding: .2rem 1.125rem; font: 700 .8rem ui-monospace, monospace; pointer-events: auto; }
 .dagger-menu { width: min(42rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow: auto; padding: 1.5rem; pointer-events: auto; }
 .dagger-menu::backdrop { background: rgb(0 0 0 / .65); }
 .dagger-menu h1 { margin: 0 0 1.25rem; font-size: 1.5rem; }
-.dagger-menu-home { display: grid; gap: .375rem; }
+.dagger-menu-home { display: grid; gap: .625rem; }
+/* The menu's actions in groups: character and world, saved games, settings. */
+.dagger-menu-group { border-top: 1px solid rgb(212 181 107 / .35); display: grid; gap: .375rem; padding-top: .625rem; }
+.dagger-menu-group p { margin: 0; }
+.dagger-menu-field { align-items: center; display: flex; gap: .625rem; font: 700 .8rem ui-monospace, monospace; }
+/* Developer tools are diagnostic UI, set apart and plain: no kit skin, closed by default. */
+.dagger-menu-developer { border: 1px dashed #6f7a80; color: #b8c2c8; font: .75rem ui-monospace, monospace; padding: .375rem .625rem; }
+.dagger-menu-developer > summary { cursor: var(--dagger-cursor-pointer); }
+.dagger-menu-developer p { margin: .375rem 0; }
+.dagger-hud .dagger-menu-developer button { background: #1d2326; border: 1px solid #6f7a80; border-image: none; color: #d8e0e4; margin: .125rem .375rem .125rem 0; padding: .25rem .625rem; }
 .dagger-menu p { font-size: .9rem; line-height: 1.5; }
 .dagger-menu .dagger-composition { position: static; max-width: none; margin-bottom: 1.125rem; }
 .dagger-menu [hidden] { display: none; }
@@ -328,3 +337,20 @@
 .dagger-magic-item-charges { color: #f0c96a; font: .78rem ui-monospace, monospace; }
 .dagger-magic-item-charges:empty, .dagger-magic-item-details:empty { display: none; }
 .dagger-magic-item-details { color: #c9b78c; font-size: .85rem; }
+
+/* Controls: each category's actions as rows, the keys and controller buttons as chips. */
+.dagger-controls-bindings { display: grid; gap: .875rem; margin: .75rem 0; }
+.dagger-controls-category h3 { border-bottom: 1px solid rgb(212 181 107 / .35); font: 700 .75rem ui-monospace, monospace; letter-spacing: .08em; margin: 0 0 .375rem; padding-bottom: .25rem; text-transform: uppercase; }
+.dagger-controls-row { align-items: center; display: grid; gap: .25rem .5rem; grid-template-columns: minmax(8rem, 1.4fr) minmax(4rem, .8fr) auto minmax(4rem, .9fr) auto; padding: .1875rem 0; }
+.dagger-controls-name { font: 700 .8rem ui-monospace, monospace; }
+.dagger-controls-keys, .dagger-controls-buttons { display: flex; flex-wrap: wrap; gap: .25rem; }
+.dagger-controls-row kbd { background: #0d0f0c; border: 1px solid #7d6c45; color: #f2e3ba; font: .75rem ui-monospace, monospace; padding: .0625rem .375rem; }
+.dagger-controls-row kbd.is-pad { border-color: #6f8a9a; color: #d8e8f0; }
+.dagger-controls-row button { font: 700 .72rem ui-monospace, monospace; padding: .25rem .625rem; }
+.dagger-controls-reason { color: #aa9c7a; font-size: .7rem; grid-column: 1 / -1; }
+.dagger-controls-mouse-pad { display: block; margin: .5rem 0; min-height: 3rem; width: 100%; }
+.dagger-controls-mouse-pad[hidden] { display: none; }
+@media (max-width: 52rem) { .dagger-controls-row { grid-template-columns: 1fr auto; } }
+.dagger-controls-sound h3 { font: 700 .75rem ui-monospace, monospace; letter-spacing: .08em; margin: .75rem 0 .375rem; text-transform: uppercase; }
+.dagger-controls-volume { align-items: center; display: grid; gap: .5rem; grid-template-columns: minmax(8rem, 1fr) auto 3.5rem; padding: .125rem 0; }
+.dagger-controls-volume output { font: 700 .8rem ui-monospace, monospace; text-align: right; }

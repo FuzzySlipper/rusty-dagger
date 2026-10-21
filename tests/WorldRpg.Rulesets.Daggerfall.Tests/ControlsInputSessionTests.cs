@@ -204,12 +204,34 @@ public sealed class ControlsInputSessionTests
             Press(ControllerButton.Button0, 4);
             Assert.Equal("menu", engine.PublishedNested("panelRequest", "panel"));
             Assert.Equal("3", engine.PublishedNested("panelRequest", "revision"));
+
+            // The player moves the pack to the left shoulder: that button opens it, the old one no longer does,
+            // and the choice is in the preferences the host persists.
+            session.Update(new ProductUpdate(OuterUpdate(5), [Ui("{\"action\":\"controls-rebind-button\",\"item\":\"inventory\",\"amount\":4}")]));
+            Press(ControllerButton.Button8, 6);
+            Assert.Equal("3", engine.PublishedNested("panelRequest", "revision"));
+            Press(ControllerButton.Button4, 7);
+            Assert.Equal("inventory", engine.PublishedNested("panelRequest", "panel"));
+            Assert.Equal("4", engine.PublishedNested("panelRequest", "revision"));
+            Assert.Contains("\"controller\":{", session.CapturePlayerPreferences(), StringComparison.Ordinal);
+            // A shortcut action answers a pad button the same way.
+            session.Update(new ProductUpdate(OuterUpdate(8), [Ui("{\"action\":\"controls-rebind-button\",\"item\":\"spell\",\"amount\":5}")]));
+            Press(ControllerButton.Button5, 9);
+            Assert.Equal("spells", engine.PublishedNested("panelRequest", "panel"));
+
+            // Sound levels apply to the Engine's buses at once and persist with the controls.
+            Assert.Equal(1f, engine.BusVolumes[AudioBus.Music]);
+            session.Update(new ProductUpdate(OuterUpdate(10), [Ui("{\"action\":\"controls-volume\",\"item\":\"music\",\"scale\":0.35}")]));
+            Assert.Equal(0.35f, engine.BusVolumes[AudioBus.Music], 3);
+            Assert.Equal(0.35f, DaggerfallControlSettings.Parse(session.CapturePlayerPreferences()).Volume("music"), 3);
+            session.Update(new ProductUpdate(OuterUpdate(11), [Ui("{\"action\":\"controls-volume\",\"item\":\"music\",\"scale\":0.33}")]));
+            Assert.Equal(0.35f, engine.BusVolumes[AudioBus.Music], 3);
         }
 
         // The panel names are the DOM's own menu actions, so a request opens the panel that the menu's
         // button of the same name opens. There is no DOM harness in this repository, so the agreement
         // is pinned where the DOM spells it: as the data-action of a button in the DOM's own source.
-        Assert.Equal(["inventory", "character", "menu"], requested);
+        Assert.Equal(["inventory", "character", "menu", "inventory", "spells"], requested);
         string dom = File.ReadAllText(Path.Combine(root, "src/ui/shell.ts"));
         Assert.All(requested, panel => Assert.Contains($"data-action=\"{panel}\"", dom, StringComparison.Ordinal));
     }

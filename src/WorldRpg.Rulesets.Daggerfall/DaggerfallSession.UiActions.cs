@@ -128,6 +128,8 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.ControlsLook:
             case DaggerfallUiActionKind.ControlsUiScale:
             case DaggerfallUiActionKind.ControlsRebind:
+            case DaggerfallUiActionKind.ControlsRebindButton:
+            case DaggerfallUiActionKind.ControlsVolume:
             case DaggerfallUiActionKind.ControlsReset: ChangeControls(action); break;
             case DaggerfallUiActionKind.CharacterClassQuestions:
             case DaggerfallUiActionKind.CharacterClassAnswer:

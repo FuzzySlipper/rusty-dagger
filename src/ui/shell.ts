@@ -54,26 +54,36 @@ const SHELL_MARKUP = `
       <h1 id="dagger-menu-title" class="dagger-frame-title" tabindex="-1">Game menu</h1>
       <div class="dagger-menu-home">
         <button data-action="resume" autofocus>Return to game</button>
-        <button data-action="inventory" data-icon="inventory">Inventory &amp; equipment · I</button>
-        <button data-action="character" data-icon="character">Character · C</button>
-        <button data-action="spells" data-icon="spells">Spells</button>
-        <button data-action="magic-items" data-icon="magic-items">Magic items · U</button>
-        <button data-action="map" data-icon="map">Map</button>
-        <button data-action="transport" data-icon="travel">Travel &amp; transport</button>
-        <button data-action="rest" data-icon="rest">Rest &amp; loiter</button>
-        <button data-action="journal" data-icon="journal">Journal &amp; notes</button>
-        <button data-action="loot">Activate aimed target · F</button>
-        <label>Activation mode <select class="dagger-activation-mode"><option value="grab">Grab</option><option value="info">Information</option><option value="talk">Talk</option><option value="steal">Steal / Lockpick</option><option value="bash">Bash</option></select></label>
-        <button data-action="save-game" data-icon="save">Save game</button>
-        <button data-action="load-game" data-icon="load">Load game</button>
-        <button data-action="quick-save">Quick save</button>
-        <button data-action="quick-load">Quick load</button>
-        <button data-action="debug">Engine debug console</button>
-        <button data-action="diagnostics">Composition diagnostics</button>
-        <button data-action="settings" data-icon="settings">Control settings</button>
-        <button data-action="action-driven-time" aria-pressed="false">Action-driven time: Off</button>
-        <p>Action-driven time pauses while you are idle or looking around. Movement and actions advance the world; swings and jumps finish before it pauses.</p>
-        <p>The world pauses while this menu is open.</p>
+        <section class="dagger-menu-group" aria-label="Character and world">
+          <button data-action="inventory" data-icon="inventory">Inventory &amp; equipment · I</button>
+          <button data-action="character" data-icon="character">Character · C</button>
+          <button data-action="spells" data-icon="spells">Spells</button>
+          <button data-action="magic-items" data-icon="magic-items">Magic items · U</button>
+          <button data-action="map" data-icon="map">Map</button>
+          <button data-action="transport" data-icon="travel">Travel &amp; transport</button>
+          <button data-action="rest" data-icon="rest">Rest &amp; loiter</button>
+          <button data-action="journal" data-icon="journal">Journal &amp; notes</button>
+          <button data-action="loot" data-icon="grab">Activate aimed target · F</button>
+          <label class="dagger-menu-field">Activation mode <select class="dagger-activation-mode"><option value="grab">Grab</option><option value="info">Information</option><option value="talk">Talk</option><option value="steal">Steal / Lockpick</option><option value="bash">Bash</option></select></label>
+        </section>
+        <section class="dagger-menu-group" aria-label="Saved games">
+          <button data-action="save-game" data-icon="save">Save game</button>
+          <button data-action="load-game" data-icon="load">Load game</button>
+          <button data-action="quick-save" data-icon="save">Quick save</button>
+          <button data-action="quick-load" data-icon="load">Quick load</button>
+        </section>
+        <section class="dagger-menu-group" aria-label="Settings">
+          <button data-action="settings" data-icon="settings">Settings &amp; controls</button>
+          <button data-action="action-driven-time" aria-pressed="false">Action-driven time: Off</button>
+          <p>Action-driven time pauses while you are idle or looking around. Movement and actions advance the world; swings and jumps finish before it pauses.</p>
+          <p>The world pauses while this menu is open.</p>
+        </section>
+        <details class="dagger-menu-developer">
+          <summary>Developer tools</summary>
+          <p>Diagnostics for developers, not part of the game.</p>
+          <button data-action="debug">Engine debug console</button>
+          <button data-action="diagnostics">Composition diagnostics</button>
+        </details>
       </div>
       <div class="dagger-menu-panel" hidden>
       <section class="dagger-composition" aria-label="Resolved composition diagnostics">

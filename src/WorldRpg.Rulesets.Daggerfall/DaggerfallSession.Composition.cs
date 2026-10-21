@@ -667,7 +667,11 @@ internal sealed partial class DaggerfallSession
                     .Concat(_definitions.CharacterPresentation.FactionFaces.Select(face => face.MediaId))
                     .Concat(_definitions.CharacterPresentation.ChildFaces.Select(face => face.MediaId))
                     .Concat(_definitions.CharacterPresentation.RacialForms.Values.SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId })),
-                    DaggerfallTravelMap.MediaIds));
+                    DaggerfallTravelMap.MediaIds))
+            {
+                // The controls screen shows each action's controller buttons against the authored pad layout.
+                PadActions = tuning.ControllerInput?.Actions ?? [],
+            };
             partiallyConstructed.Add(_hud);
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments, RestoreDungeonText);
