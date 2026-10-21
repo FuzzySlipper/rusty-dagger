@@ -210,7 +210,26 @@
   opacity: .5;
   pointer-events: none;
 }
-[data-skin] .dagger-inventory-equipment-slot:not([data-inventory-item]) .dagger-inventory-empty-mark { display: none; }
+/* The plain marker gives way only to a silhouette the art block holds (applySkin lists them in data-skin-equip). */
+:is(
+  [data-skin-equip~="head"] [data-inventory-equipment="head"],
+  [data-skin-equip~="arm"] [data-inventory-equipment$="-arm"],
+  [data-skin-equip~="cloak"] [data-inventory-equipment^="cloak"],
+  [data-skin-equip~="chest-clothes"] [data-inventory-equipment="chest-clothes"],
+  [data-skin-equip~="chest-armor"] [data-inventory-equipment="chest-armor"],
+  [data-skin-equip~="gloves"] [data-inventory-equipment="gloves"],
+  [data-skin-equip~="weapon"] [data-inventory-equipment="right-hand"],
+  [data-skin-equip~="shield"] [data-inventory-equipment="left-hand"],
+  [data-skin-equip~="legs-armor"] [data-inventory-equipment="legs-armor"],
+  [data-skin-equip~="legs-clothes"] [data-inventory-equipment="legs-clothes"],
+  [data-skin-equip~="feet"] [data-inventory-equipment="feet"],
+  [data-skin-equip~="bracer"] [data-inventory-equipment^="bracer"],
+  [data-skin-equip~="amulet"] [data-inventory-equipment^="amulet"],
+  [data-skin-equip~="bracelet"] [data-inventory-equipment^="bracelet"],
+  [data-skin-equip~="ring"] [data-inventory-equipment^="ring"],
+  [data-skin-equip~="mark"] [data-inventory-equipment^="mark"],
+  [data-skin-equip~="crystal"] [data-inventory-equipment^="crystal"]
+):not([data-inventory-item]) .dagger-inventory-empty-mark { display: none; }
 [data-inventory-equipment="head"] { --equip: var(--skin-icon-equip-head); }
 [data-inventory-equipment$="-arm"] { --equip: var(--skin-icon-equip-arm); }
 [data-inventory-equipment^="cloak"] { --equip: var(--skin-icon-equip-cloak); }

@@ -55,7 +55,6 @@ export function mountDrag<S>(options: DragOptions<S>): Drag<S> {
   const { root } = options;
   const document_ = root.ownerDocument;
   let held: S | null = null;
-  let press: { readonly element: HTMLElement; readonly source: S; readonly pointer: number; readonly x: number; readonly y: number } | null = null;
   let dragging = false;
   let ghost: HTMLElement | null = null;
   let suppressClick = false;
@@ -88,26 +87,19 @@ export function mountDrag<S>(options: DragOptions<S>): Drag<S> {
     options.drop(source, target);
   };
 
+  // The press in progress, followed by the shared press lifecycle; cancelling it ends it as a cancel.
+  let press: { readonly element: HTMLElement; readonly source: S; readonly cancel: () => void } | null = null;
   const endDrag = (): void => {
-    const element = press?.element ?? null;
-    press = null;
     const wasDragging = dragging;
+    press = null;
     dragging = false;
     ghost?.remove();
     ghost = null;
     root.classList.remove('is-dragging');
     hover(null);
-    if (element !== null && element.hasPointerCapture?.(lastPointer)) element.releasePointerCapture(lastPointer);
-    element?.removeEventListener('pointermove', onPointerMove);
-    element?.removeEventListener('pointerup', onPointerUp);
-    element?.removeEventListener('pointercancel', cancelDrag);
-    element?.removeEventListener('lostpointercapture', onLostCapture);
     if (wasDragging) { held = null; mark(); options.onEnd?.(); }
   };
-  let lastPointer = -1;
-  const cancelDrag = (): void => { if (press !== null) endDrag(); };
-  // Capture is released on the way out of a completed drop too; only a loss mid-drag cancels.
-  const onLostCapture = (): void => { if (press !== null) endDrag(); };
+  const cancelDrag = (): void => { press?.cancel(); };
 
   const onPointerDown = (event: PointerEvent): void => {
     if (event.button !== 0 || press !== null) return;
@@ -115,44 +107,33 @@ export function mountDrag<S>(options: DragOptions<S>): Drag<S> {
     if (element === null || !root.contains(element)) return;
     const source = options.source(element);
     if (source === null) return;
-    press = { element, source, pointer: event.pointerId, x: event.clientX, y: event.clientY };
-    lastPointer = event.pointerId;
-    element.setPointerCapture?.(event.pointerId);
-    element.addEventListener('pointermove', onPointerMove);
-    element.addEventListener('pointerup', onPointerUp);
-    element.addEventListener('pointercancel', cancelDrag);
-    element.addEventListener('lostpointercapture', onLostCapture);
-  };
-  const onPointerMove = (event: PointerEvent): void => {
-    if (press === null || event.pointerId !== press.pointer) return;
-    if (!dragging) {
-      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) <= DRAG_START_PIXELS) return;
-      dragging = true;
-      hold(press.source);
-      root.classList.add('is-dragging');
-      ghost = createGhost(press.element, options.label?.(press.element) ?? press.element.textContent?.trim() ?? '');
-      // Inside the open modal that holds the source: a modal dialog draws in the top layer, above anything outside it.
-      (root.closest('dialog[open]') ?? document_.body).append(ghost);
-    }
-    event.preventDefault();
-    if (ghost !== null) ghost.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`;
-    hover(targetAt(event.clientX, event.clientY));
-  };
-  const onPointerUp = (event: PointerEvent): void => {
-    if (press === null || event.pointerId !== press.pointer) return;
-    if (dragging) {
-      const target = targetAt(event.clientX, event.clientY);
-      const source = held;
-      // The release that ends a drag is not also a click on whatever lies under it.
-      suppressClick = true;
-      endDrag();
-      if (source !== null && target !== null) {
-        if (options.accepts(source, target)) options.drop(source, target);
-        else options.onRefused?.(source, target);
-      }
-      return;
-    }
-    endDrag();
+    const cancel = followPress(element, event, {
+      start() {
+        dragging = true;
+        hold(source);
+        root.classList.add('is-dragging');
+        ghost = createGhost(element, options.label?.(element) ?? element.textContent?.trim() ?? '');
+        // Inside the open modal that holds the source: a modal dialog draws in the top layer, above anything outside it.
+        (root.closest('dialog[open]') ?? document_.body).append(ghost);
+      },
+      move(moved) {
+        moved.preventDefault();
+        if (ghost !== null) ghost.style.transform = `translate(${moved.clientX}px, ${moved.clientY}px)`;
+        hover(targetAt(moved.clientX, moved.clientY));
+      },
+      end(released, dragged) {
+        const target = released && dragged ? targetAt(released.clientX, released.clientY) : null;
+        const holding = held;
+        // The release that ends a drag is not also a click on whatever lies under it.
+        if (released && dragged) suppressClick = true;
+        endDrag();
+        if (holding !== null && target !== null) {
+          if (options.accepts(holding, target)) options.drop(holding, target);
+          else options.onRefused?.(holding, target);
+        }
+      },
+    });
+    press = { element, source, cancel };
   };
   // A click, Enter or a controller's accept: on a source it holds it, on a target it places what is held.
   const onClick = (event: MouseEvent): void => {
@@ -169,19 +150,16 @@ export function mountDrag<S>(options: DragOptions<S>): Drag<S> {
   };
   // Nothing under the owner starts a native drag session, whatever the element.
   const onNativeDrag = (event: DragEvent): void => event.preventDefault();
-  const onBlur = (): void => cancelDrag();
-
   root.addEventListener('pointerdown', onPointerDown);
   root.addEventListener('click', onClick, true);
   root.addEventListener('dragstart', onNativeDrag);
-  document_.defaultView?.addEventListener('blur', onBlur);
 
   return {
     held: () => held,
     dragging: () => dragging,
     hold,
     release() {
-      if (press !== null && dragging) { endDrag(); return true; }
+      if (press !== null && dragging) { cancelDrag(); return true; }
       if (held === null) return false;
       held = null;
       mark();
@@ -193,9 +171,64 @@ export function mountDrag<S>(options: DragOptions<S>): Drag<S> {
       root.removeEventListener('pointerdown', onPointerDown);
       root.removeEventListener('click', onClick, true);
       root.removeEventListener('dragstart', onNativeDrag);
-      document_.defaultView?.removeEventListener('blur', onBlur);
     },
   };
+}
+
+export interface PressHandlers {
+  /** The press has travelled past {@link DRAG_START_PIXELS}: from now on it is a drag. */
+  start?(event: PointerEvent): void;
+  /** The pointer moved during a drag (only after `start`). */
+  move?(event: PointerEvent): void;
+  /**
+   * The press is over: released (with the release event) or cancelled (null) by `pointercancel`, a
+   * lost capture, the window losing focus or the returned cancel. `dragged` says whether it was a drag.
+   */
+  end(released: PointerEvent | null, dragged: boolean): void;
+}
+
+/**
+ * The one pointer-press lifecycle every in-game drag follows (rusty-engine `docs/csharp-product-style.md`,
+ * "Drag and drop"): the pointer is captured on press, so the release arrives wherever it happens; a
+ * press becomes a drag only once it travels; and release, `pointercancel`, a lost capture or the window
+ * losing focus all end it, so no press outlives its button. Returns a cancel.
+ */
+export function followPress(element: Element, down: PointerEvent, handlers: PressHandlers): () => void {
+  const pointer = down.pointerId;
+  const window_ = element.ownerDocument.defaultView;
+  let dragging = false;
+  let done = false;
+  const finish = (released: PointerEvent | null): void => {
+    if (done) return;
+    done = true;
+    element.removeEventListener('pointermove', onMove as EventListener);
+    element.removeEventListener('pointerup', onUp as EventListener);
+    element.removeEventListener('pointercancel', onCancel);
+    element.removeEventListener('lostpointercapture', onCancel);
+    window_?.removeEventListener('blur', onCancel);
+    if (element.hasPointerCapture?.(pointer)) element.releasePointerCapture(pointer);
+    handlers.end(released, dragging);
+  };
+  const onMove = (event: PointerEvent): void => {
+    if (event.pointerId !== pointer) return;
+    // A move with no button held is a press whose release went unseen: it is over, not a drag.
+    if (down.buttons !== 0 && event.buttons === 0) { finish(null); return; }
+    if (!dragging) {
+      if (Math.hypot(event.clientX - down.clientX, event.clientY - down.clientY) <= DRAG_START_PIXELS) return;
+      dragging = true;
+      handlers.start?.(event);
+    }
+    handlers.move?.(event);
+  };
+  const onUp = (event: PointerEvent): void => { if (event.pointerId === pointer) finish(event); };
+  const onCancel = (): void => finish(null);
+  element.setPointerCapture?.(pointer);
+  element.addEventListener('pointermove', onMove as EventListener);
+  element.addEventListener('pointerup', onUp as EventListener);
+  element.addEventListener('pointercancel', onCancel);
+  element.addEventListener('lostpointercapture', onCancel);
+  window_?.addEventListener('blur', onCancel);
+  return () => finish(null);
 }
 
 /** The ghost: the source's picture when it has one, otherwise its name, never empty. */

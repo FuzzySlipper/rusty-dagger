@@ -1,4 +1,4 @@
-import { DRAG_START_PIXELS } from './drag.js';
+import { followPress } from './drag.js';
 import { BACK_EVENT, DIRECTION_EVENT, type Direction } from './navigation.js';
 
 /** A top-down diagram of admitted map data. Controls own presentation only. */
@@ -270,36 +270,28 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
     const [sx, sy] = diagramPoint(event.clientX, event.clientY);
     zoomBy(event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP, sx, sy);
   }, { passive: false });
-  // Dragging pans with pointer events and capture; a press that does not travel stays a click on a point.
-  let press: { pointer: number; x: number; y: number; centerX: number; centerZ: number } | null = null;
+  // Dragging pans through the shared press lifecycle (capture on press; release, cancel, a lost capture
+  // or the window losing focus end it); a press that does not travel stays a click on a point.
   let dragged = false;
   svg.addEventListener('pointerdown', event => {
     if (event.button !== 0 || !current) return;
-    press = { pointer: event.pointerId, x: event.clientX, y: event.clientY, centerX, centerZ };
+    const from = { x: event.clientX, y: event.clientY, centerX, centerZ };
     dragged = false;
+    followPress(svg, event, {
+      start() { dragged = true; view.classList.add('is-dragging'); },
+      move(moved) {
+        const [x0, y0] = diagramPoint(from.x, from.y), [x1, y1] = diagramPoint(moved.clientX, moved.clientY);
+        const [wx, wz] = toWorld(x1 - x0, y1 - y0);
+        centerX = from.centerX - wx; centerZ = from.centerZ - wz;
+        applyView();
+      },
+      end(_released, wasDrag) {
+        view.classList.remove('is-dragging');
+        // The click that ends a drag arrives after this; it is the drag's, not a choice of a point.
+        if (wasDrag) setTimeout(() => { dragged = false; }, 0);
+      },
+    });
   });
-  svg.addEventListener('pointermove', event => {
-    if (press === null || event.pointerId !== press.pointer) return;
-    const [x0, y0] = diagramPoint(press.x, press.y), [x1, y1] = diagramPoint(event.clientX, event.clientY);
-    if (!dragged) {
-      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) < DRAG_START_PIXELS) return;
-      dragged = true;
-      svg.setPointerCapture?.(event.pointerId);
-      view.classList.add('is-dragging');
-    }
-    const [wx, wz] = toWorld(x1 - x0, y1 - y0);
-    centerX = press.centerX - wx; centerZ = press.centerZ - wz;
-    applyView();
-  });
-  const endPress = (): void => {
-    press = null;
-    view.classList.remove('is-dragging');
-    // The click that ends a drag arrives after this; it is the drag's, not a choice of a point.
-    if (dragged) setTimeout(() => { dragged = false; }, 0);
-  };
-  svg.addEventListener('pointerup', endPress);
-  svg.addEventListener('pointercancel', endPress);
-  svg.addEventListener('lostpointercapture', endPress);
 
   const button = (label: string, action: () => void): void => {
     const element = document.createElement('button'); element.type = 'button'; element.textContent = label;

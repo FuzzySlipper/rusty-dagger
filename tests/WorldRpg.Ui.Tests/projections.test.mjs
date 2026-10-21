@@ -2500,6 +2500,19 @@ for (const kind of ['dungeon', 'interior']) test(`${kind} map controls change on
     const pointer = (type, x, y) => svg.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y }));
     pointer('pointerdown', 100, 100); pointer('pointermove', 140, 100); pointer('pointerup', 140, 100);
     assert.notEqual(group.getAttribute('transform'), dragFrom);
+    // A press whose release the map never saw (let go outside it before moving far) is over: later
+    // movement with no button held does not pan. Nor does a press the window lost focus during.
+    const held = (type, x, y, buttons) => svg.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true, button: 0, buttons, clientX: x, clientY: y }));
+    const settled = group.getAttribute('transform');
+    held('pointerdown', 100, 100, 1); held('pointermove', 103, 100, 1);
+    held('pointermove', 160, 120, 0); held('pointermove', 200, 150, 0);
+    assert.equal(group.getAttribute('transform'), settled, 'An unpressed move after a missed release does not pan.');
+    held('pointerdown', 100, 100, 1); window.dispatchEvent(new window.Event('blur'));
+    held('pointermove', 160, 120, 1); held('pointerup', 160, 120, 0);
+    assert.equal(group.getAttribute('transform'), settled, 'Losing window focus ends the press.');
+    // An ordinary drag still pans afterwards.
+    held('pointerdown', 100, 100, 1); held('pointermove', 150, 100, 1); held('pointerup', 150, 100, 0);
+    assert.notEqual(group.getAttribute('transform'), settled);
     // The status names the view in words, with no raw coordinates.
     assert.match(f.root.querySelector('.dagger-map-status').textContent, /^Explored (dungeon|interior) · all levels · facing north-east$/);
     assert.doesNotMatch(f.root.querySelector('.dagger-map-status').textContent, /\d/);
@@ -3380,6 +3393,41 @@ test('HUD projects the timed message stack, breath and activation mode without l
   } finally { f.dispose(); }
 });
 
+
+test('a missing equipment silhouette is reported and its slot keeps the plain marker', async () => {
+  const f = fixture();
+  const warnings = [];
+  const warn = console.warn;
+  console.warn = message => warnings.push(message);
+  // The shipped rule that hides an empty slot's marker, read from skin.css; JSDOM does not cascade the
+  // skin's sheet, so the test asks which markers its selector reaches.
+  const sheet = await readFile(new URL('../../src/ui/skin.css', import.meta.url), 'utf8');
+  const start = sheet.indexOf('*/', sheet.indexOf('/* The plain marker gives way')) + 2;
+  const hides = sheet.slice(start, sheet.indexOf('{', start)).trim();
+  try {
+    // Every primitive and icon the kit declares, except the head silhouette.
+    const images = [...skin.SKIN_IMAGES, ...skin.ICONS].filter(id => id !== 'ui.icon.equip.head.v2')
+      .map(id => ({ id, image: pngHeader(64, 64), display: { scale: 0.5, slice: null, hotspot: null } }));
+    f.publish({ uiArt: { revision: 'kit-no-head', images } });
+    assert.deepEqual(warnings.filter(message => message.startsWith('skin ')).length, 1);
+    assert.match(warnings.find(message => message.startsWith('skin ')), /ui\.icon\.equip\.head\.v2/);
+    assert.equal(document.documentElement.style.getPropertyValue('--skin-icon-equip-head'), '');
+    const slot = equipment => {
+      const button = document.createElement('button');
+      button.className = 'dagger-inventory-equipment-slot';
+      button.dataset.inventoryEquipment = equipment;
+      const mark = document.createElement('span');
+      mark.className = 'dagger-inventory-empty-mark';
+      button.append(mark);
+      f.root.append(button);
+      return mark;
+    };
+    const head = slot('head'), feet = slot('feet');
+    // The head slot has no silhouette, so it keeps its plain marker; the feet slot gives way to its silhouette.
+    assert.equal(head.matches(hides), false);
+    assert.equal(feet.matches(hides), true);
+  } finally { console.warn = warn; f.dispose(); art.adopt({ revision: '', images: [] }); skin.applySkin(); document.documentElement.removeAttribute('style'); }
+});
 
 test('the skin publishes the kit as custom properties and reports the primitives it lacks', () => {
   const f = fixture();

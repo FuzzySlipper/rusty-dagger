@@ -129,6 +129,12 @@ then accepting an empty target places it, and Back or Escape releases it
 before doing anything else. Accepting another source holds that one instead;
 a drag moves onto a filled slot.
 
+A press that is not an item drag, such as panning the local map, uses the
+same lifecycle through `followPress` in `drag.ts`. It captures on press,
+becomes a drag past the same threshold, and ends on release,
+`pointercancel`, a lost capture, window `blur`, or a move with no button
+held. So no press outlives its button.
+
 Drag is never the only way to do something. Every move is also a command in
 the surface. The inventory is the worked example; see below.
 
