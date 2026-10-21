@@ -895,15 +895,20 @@ internal sealed partial class DaggerfallSession
             DaggerfallDoorView door = _doors.Read(id);
             bool building = _doors.ExteriorBuildingOf(id) is not null;
             bool open = door.Motion is DaggerfallDoorMotion.Open or DaggerfallDoorMotion.Opening;
+            // A building's entrance takes its lock from the building's entry rule when used (a shop
+            // locked after hours), so the prompt reads that rule rather than the lock the door last had.
+            bool locked = _buildingDoor(id)?.Entry.Unlocked is bool unlocked ? !unlocked : door.IsLocked;
             return selection.Mode switch
             {
                 DaggerfallActivationMode.Info => "Examine",
                 DaggerfallActivationMode.Talk => null,
-                DaggerfallActivationMode.Steal when door.IsLocked => "Pick the lock of",
+                DaggerfallActivationMode.Steal when locked => "Pick the lock of",
                 // An unlocked building's entrance lets a thief straight in; an unlocked dungeon door has
                 // no lock to pick and Steal neither opens nor closes it, so nothing is promised.
                 DaggerfallActivationMode.Steal => building ? "Enter" : null,
                 DaggerfallActivationMode.Bash => "Bash",
+                // Ordinary use reports a lock rather than passing it, so a locked door promises nothing.
+                _ when locked => null,
                 _ when building => "Enter",
                 _ => open ? "Close" : "Open",
             };
