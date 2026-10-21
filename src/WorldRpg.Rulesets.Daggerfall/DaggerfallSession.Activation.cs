@@ -802,7 +802,10 @@ internal sealed partial class DaggerfallSession
             foreach (DaggerfallGroundContainer container in targets().OrderBy(value => value.Id))
                 yield return new(DaggerfallActivationTargetKind.Container,
                     new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)container.Id)), container.Owner,
-                    checked((ulong)container.Id), interactionPoint(container), Precedence: 5);
+                    checked((ulong)container.Id), interactionPoint(container), Precedence: 5,
+                    // A pile rests on the floor, so its point lies on that surface; seen along the surface
+                    // the floor itself would hide it. Furniture is reached at its own interaction points.
+                    SurfaceNormal: container.PropertyPlacement is null ? Vector3.UnitY : null);
         }
 
         public DaggerfallActivationOutcome ActivateContainer(DaggerfallActivationSelection selection)
