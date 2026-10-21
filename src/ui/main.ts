@@ -64,8 +64,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     onButton: button => {
       if (!menu.dialog.open || confirmPrompt.open()) return;
       if (button === MENU_SHORTCUTS.menu) menu.dismiss();
-      else if (button === MENU_SHORTCUTS.inventory) menu.runAction('inventory');
-      else if (button === MENU_SHORTCUTS.character) menu.runAction('character');
+      else if (button === MENU_SHORTCUTS.inventory) menu.togglePanel('inventory');
+      else if (button === MENU_SHORTCUTS.character) menu.togglePanel('character');
       else if (button === MENU_SHORTCUTS.contextMenu) menu.contextMenu();
     },
   });
