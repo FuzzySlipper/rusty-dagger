@@ -396,6 +396,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // not a modal; everything else - including the entry screen's own action, which the product
         // answers before this runs - is dropped and the presentation still publishes so the player
         // can see the mode they are in.
+        _lastInputDevice = InputDevice(input) ?? _lastInputDevice;
         Cinematics?.Poll();
         _openingCinematics.Poll();
         // The donor ends a playing video on any key or button press (DaggerfallVidPlayerWindow,
@@ -818,6 +819,21 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _outcomes.React(fact);
     }
 
+    /// <summary>The device the player last pressed something on, so the HUD names its bindings for it.</summary>
+    private string _lastInputDevice = "keyboard";
+
+    private static string? InputDevice(ReadOnlySpan<ProductInputEvent> input)
+    {
+        string? device = null;
+        foreach (ProductInputEvent value in input)
+        {
+            if (value.Edge != InputEdge.Pressed) continue;
+            if (value.Kind == InputEventKind.ControllerButton) device = "controller";
+            else if (value.Kind is InputEventKind.Key or InputEventKind.PointerButton) device = "keyboard";
+        }
+        return device;
+    }
+
     private static bool PressesAnyKey(ReadOnlySpan<ProductInputEvent> input)
     {
         foreach (ProductInputEvent value in input)
@@ -836,8 +852,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         _appearance.RetireUnavailableMagic(State.Actors, State.ItemInstances.ContainsUnique);
+        InventoryPresentation inventory = _inventoryUi.Read();
         _hud.Publish(new DaggerfallHudFrame(State.Actors.Player, Presentation, _mode, State.PlayerControl, Slots,
-            Inventory: _inventoryUi.Read(),
+            Inventory: inventory,
             Property: ReadPropertyPresentation(),
             Loot: _lootUi.Read(),
             Character: DaggerfallCharacterSheetText.Describe(_characterUi.Read(State.Actors.Player, State.Progression), _definitions, CurrentTextContext()),
@@ -866,7 +883,13 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Effects: ReadActiveEffects(),
             CinematicSource: Cinematics?.ActiveSource,
             Map: _mapOpen ? ReadMapPresentation() : null, Legal: LegalView, CreateItem: CreateItemView, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors())
-        { ActionDrivenTime = ActionDrivenPlay, TimeHeld = PlayerTimeHeld });
+        {
+            ActionDrivenTime = ActionDrivenPlay, TimeHeld = PlayerTimeHeld,
+            Weapon = new DaggerfallWeaponView(State.WeaponDrawn,
+                inventory.Items.FirstOrDefault(item => item.EquippedSlots.Contains("right-hand"))?.Label ?? "Bare hands"),
+            Prompt = ReadInteractionPrompt(),
+            InputDevice = _lastInputDevice,
+        });
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         Vector3 facing = ActorHeading.Forward(State.PlayerControl.YawRadians);
         Vector3? candlePosition = !State.Actors.Player.IsDefeated && State.PlayerControl.Position is { } playerPosition
@@ -941,6 +964,19 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         if (_authoredEntityIds.Contains(entityId))
             throw new InvalidOperationException($"Unique item identity {entityId} is authored content and cannot be removed.");
         _uniqueItems.Remove(new DurableIdentityReference(DurableIdentityKind.Item, entityId));
+    }
+
+    /// <summary>
+    /// What ordinary use would do to the target the player aims at, named for the HUD's prompt; null
+    /// outside play or when nothing usable is aimed at.
+    /// </summary>
+    private DaggerfallInteractionPromptView? ReadInteractionPrompt()
+    {
+        if (_mode != ProductMode.Playing || _interactions.HoldsWorldOpen || _activation is null) return null;
+        if (_activation.FocusedTarget(State.Actors.Player.Actor.Entity, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl))
+            is not { } target) return null;
+        return new(DaggerfallHudText.PromptAction(_activation.Mode, target.Kind),
+            string.IsNullOrWhiteSpace(target.Label) ? DaggerfallHudText.TargetName(target.Kind) : target.Label);
     }
 
     /// <summary>The name of the item a player effect comes from, for the active-effect status row.</summary>

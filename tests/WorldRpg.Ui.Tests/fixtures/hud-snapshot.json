@@ -90,9 +90,16 @@
   },
   "view": {
     "yawRadians": 3.1415927410125732,
-    "pitchRadians": 0,
-    "interaction": "aiming"
+    "interaction": "aiming",
+    "heading": "south"
   },
+  "weapon": {
+    "drawn": true,
+    "name": "Iron Longsword",
+    "state": "Drawn"
+  },
+  "inputDevice": "keyboard",
+  "prompt": null,
   "slots": [],
   "effects": [],
   "panelRequest": null,
@@ -538,6 +545,29 @@
   },
   "activation": {
     "mode": "grab",
+    "label": "Grab",
+    "modes": [
+      {
+        "id": "grab",
+        "label": "Grab"
+      },
+      {
+        "id": "info",
+        "label": "Information"
+      },
+      {
+        "id": "talk",
+        "label": "Talk"
+      },
+      {
+        "id": "steal",
+        "label": "Steal / Lockpick"
+      },
+      {
+        "id": "bash",
+        "label": "Bash"
+      }
+    ],
     "message": "Interaction mode: grab.",
     "applied": false,
     "dialogue": {

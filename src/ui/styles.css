@@ -21,31 +21,9 @@
 .dagger-title { position: absolute; left: 1.5rem; top: 1.375rem; display: grid; gap: .25rem; }
 .dagger-title span { color: #b9ae8c; font: 700 .7rem ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
 .dagger-title strong { font-size: 1.15rem; }
-.dagger-view { position: absolute; left: 1.5rem; top: 5.75rem; margin: 0; color: #b9ae8c; font: .75rem ui-monospace, monospace; }
 .dagger-title .dagger-calendar { text-transform: none; letter-spacing: 0; font-weight: 400; }
-.dagger-effects { position: absolute; right: 1.5rem; top: 4.5rem; max-width: 20rem; margin: 0; padding: .5rem .75rem; background: rgba(12, 10, 8, .7); font-size: .8rem; }
-.dagger-effects h2 { margin: 0 0 .25rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: #b9ae8c; }
-.dagger-effects ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
 .dagger-cinematic-skip { pointer-events: auto; position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 50; }
-.dagger-reticle { left: 50%; position: absolute; top: 48%; transform: translate(-50%, -50%); color: #eadc9e; font: 2rem ui-monospace, monospace; }
 
-.dagger-vitals {
-  bottom: 0;
-  left: 0;
-  right: 0;
-  margin: 0;
-  padding: 1.25rem 10.625rem 1.375rem 1.5rem;
-  position: absolute;
-  display: flex;
-  gap: .875rem;
-  flex-wrap: wrap;
-  background: linear-gradient(transparent, rgba(2, 4, 4, .95) 34%);
-}
-
-.dagger-vitals p { min-width: 8.25rem; margin: 0; display: grid; gap: .1875rem; border-left: .1875rem solid #c6a05a; padding-left: .5625rem; }
-.dagger-vitals span { color: #aa9c7a; font-size: .7rem; text-transform: uppercase; }
-.dagger-vitals strong { font: 700 .95rem ui-monospace, monospace; }
-.dagger-outcome { bottom: 4.375rem; left: 1.5rem; min-height: 1.3em; margin: 0; position: absolute; color: #f6ddb0; }
 
 /* Death outranks the HUD: the published screen the mode owns covers it. The fade is a DOM-owned
    presentation effect driven by the ruleset's semantic effect value, so the screen does not merely
@@ -334,16 +312,6 @@
 .dagger-travel-options label { display: inline-flex; gap: .375rem; align-items: center; font-size: .85rem; color: #dfc987; }
 .dagger-travel > p { margin: 0; }
 
-.dagger-outcome { list-style: none; padding: 0; max-width: min(43.75rem, calc(100vw - 3rem)); }
-.dagger-outcome li { margin-top: .25rem; text-shadow: 0 1px .1875rem #000; }
-.dagger-breath { position: absolute; right: 1.5rem; bottom: 6.25rem; display: grid; gap: .25rem; color: #b9e5f7; }
-.dagger-breath[hidden] { display: none; }
-.dagger-breath meter { width: 7.5rem; accent-color: #66b8e3; }
-.dagger-breath.low { color: #ff8d77; }
-/* The activation mode sits with the vitals rather than under the reticle, where it would cover the target. */
-.dagger-activation-indicator { position: absolute; right: 1.5rem; bottom: 1.375rem; display: grid; gap: .1875rem; min-width: 6.875rem; border-left: .1875rem solid #c6a05a; padding-left: .5625rem; color: #f6ddb0; font: 700 .95rem ui-monospace, monospace; }
-.dagger-activation-indicator::before { content: "Activate"; color: #aa9c7a; font: .7rem system-ui, sans-serif; text-transform: uppercase; }
-.dagger-activation-indicator:empty, .dagger-activation-indicator[hidden] { display: none; }
 
 /* Spellbook: school tabs over the known spells, each row its icon, name and cost, beside the chosen spell. */
 .dagger-spellbook-toolbar { align-items: center; display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 .625rem; }
@@ -432,3 +400,72 @@
 .dagger-controls-root label input[type="checkbox"] { margin-right: .375rem; }
 /* A level steps in fixed amounts, so the stepper shows the percentage beside it rather than its step count. */
 .dagger-controls-volume .dagger-stepper input { display: none; }
+
+/* The HUD: the compass top centre, vitals and messages bottom left, what is held ready bottom right,
+   effects and status at the sides. Nothing sits over the world's centre except the reticle and, just
+   below it, the prompt for what it is aimed at. Sizes are in rem, so the integer UI scale keeps the
+   layout at 1080p, 1440p and 4K. */
+.dagger-hud > [hidden], .dagger-loadout > [hidden], .dagger-compass [hidden] { display: none !important; }
+.dagger-reticle { position: absolute; left: 50%; top: 50%; width: 1.25rem; height: 1.25rem; transform: translate(-50%, -50%);
+  background: linear-gradient(#eadc9e, #eadc9e) center / 2px 100% no-repeat, linear-gradient(#eadc9e, #eadc9e) center / 100% 2px no-repeat;
+  -webkit-mask: radial-gradient(circle, transparent 0 .2rem, #000 .21rem); mask: radial-gradient(circle, transparent 0 .2rem, #000 .21rem);
+  filter: drop-shadow(0 0 1px #000); opacity: .85; }
+.dagger-prompt { position: absolute; left: 50%; top: calc(50% + 2.25rem); transform: translateX(-50%); margin: 0; display: flex; gap: .5rem; align-items: center;
+  padding: .25rem .625rem; white-space: nowrap; font-size: .9rem; color: #f6ddb0; background: rgb(8 8 6 / .72); border: 1px solid rgb(212 181 107 / .55); }
+.dagger-prompt kbd { padding: 0 .375rem; border: 1px solid var(--brass); background: var(--plate); color: var(--brass-bright); font: 700 .8rem ui-monospace, monospace; }
+
+.dagger-compass { position: absolute; left: 50%; top: 1rem; transform: translateX(-50%); width: 26rem; height: 2.25rem; overflow: hidden;
+  background: linear-gradient(rgb(10 10 8 / .78), rgb(10 10 8 / .55)); border-bottom: 2px solid var(--brass);
+  -webkit-mask: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+.dagger-compass::after { content: ""; position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); border: .375rem solid transparent; border-bottom-color: var(--brass-bright); }
+.dagger-compass-strip > *, .dagger-compass-contacts > * { position: absolute; transform: translateX(-50%); }
+.dagger-compass-wind { top: .375rem; color: var(--ink-dim); font: 700 .75rem ui-monospace, monospace; }
+.dagger-compass-wind.is-cardinal { color: var(--brass-bright); font-size: .95rem; top: .25rem; }
+.dagger-compass-tick { bottom: 0; width: 1px; height: .5rem; background: rgb(212 181 107 / .6); }
+.dagger-compass-contact { bottom: .375rem; width: .5rem; height: .5rem; border-radius: 50%; background: #e3b490; box-shadow: 0 0 0 1px #000; }
+.dagger-compass-contact[data-detector="enemy"] { background: #e05a45; }
+.dagger-compass-contact[data-detector="magic"] { background: #9d8cf0; }
+.dagger-compass-contact[data-detector="treasure"] { background: #f0cf5a; }
+.dagger-compass-contact > span { position: absolute; bottom: .625rem; left: 50%; transform: translateX(-50%); white-space: nowrap; font: .65rem system-ui, sans-serif; color: var(--ink); }
+.dagger-view { position: absolute; left: 50%; top: 3.375rem; transform: translateX(-50%); margin: 0; color: var(--ink-dim); font: .75rem ui-monospace, monospace; white-space: nowrap; }
+
+.dagger-vitals { position: absolute; left: 1.5rem; bottom: 1.25rem; margin: 0; display: grid; gap: .375rem; width: 15rem; }
+.dagger-vital { margin: 0; display: grid; grid-template-columns: 4.75rem 1fr auto; gap: .5rem; align-items: center; }
+.dagger-vital-label { color: var(--ink-dim); font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; }
+.dagger-vital strong { font: 700 .8rem ui-monospace, monospace; min-width: 4.5rem; text-align: right; }
+.dagger-bar { position: relative; display: block; height: .5rem; background: rgb(0 0 0 / .65); border: 1px solid rgb(212 181 107 / .55); overflow: hidden; }
+.dagger-bar > span { position: absolute; inset: 0 auto 0 0; background: var(--bar, #c6a05a); transition: width .15s linear; }
+.dagger-vital[data-vital="health"] { --bar: #b8322a; }
+.dagger-vital[data-vital="stamina"] { --bar: #3f8f3a; }
+.dagger-vital[data-vital="magicka"] { --bar: #3a6cc8; }
+.dagger-outcome { position: absolute; left: 1.5rem; bottom: 6.25rem; margin: 0; padding: 0; list-style: none; display: grid; gap: .25rem;
+  max-width: min(43.75rem, calc(100vw - 3rem)); color: #f6ddb0; }
+.dagger-outcome li { text-shadow: 0 1px .1875rem #000; }
+.dagger-breath { position: absolute; left: 50%; bottom: 5.5rem; transform: translateX(-50%); display: grid; grid-template-columns: auto 10rem auto; gap: .5rem; align-items: center; color: #b9e5f7; font-size: .8rem; }
+.dagger-breath .dagger-bar { --bar: #66b8e3; }
+.dagger-breath.low { color: #ff8d77; }
+.dagger-breath.low .dagger-bar { --bar: #ff8d77; }
+
+.dagger-loadout { position: absolute; right: 1.5rem; bottom: 1.25rem; display: grid; gap: .375rem; justify-items: end; text-align: right; }
+.dagger-loadout p, .dagger-activation-indicator { margin: 0; display: flex; gap: .5rem; align-items: center; }
+.dagger-ready-spell .dagger-spell-glyph { width: 1.75rem; height: 1.75rem; border: 1px solid var(--brass); image-rendering: pixelated; }
+.dagger-ready-spell-name { font-size: .85rem; }
+.dagger-weapon-state, .dagger-activation-indicator::before { color: var(--ink-dim); font: .7rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: .06em; }
+.dagger-weapon-name { font-size: .9rem; }
+.dagger-weapon.is-sheathed .dagger-weapon-name { color: var(--ink-dim); font-weight: 400; }
+.dagger-activation-indicator { color: #f6ddb0; font: 700 .9rem ui-monospace, monospace; }
+.dagger-activation-indicator::before { content: "Activate"; }
+.dagger-activation-indicator:empty { display: none; }
+
+.dagger-effects { position: absolute; right: 1.5rem; top: 4.5rem; max-width: 20rem; margin: 0; padding: .5rem .75rem; background: rgb(10 10 8 / .72); border-left: 2px solid var(--brass); font-size: .8rem; }
+.dagger-effects h2 { margin: 0 0 .25rem; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-dim); }
+.dagger-effects ul { margin: 0; padding: 0; list-style: none; display: grid; gap: .125rem; }
+.dagger-status { position: absolute; left: 1.5rem; top: 5.5rem; display: grid; gap: .125rem; max-width: 22rem; font-size: .8rem; }
+.dagger-status p { margin: 0; }
+.dagger-status strong { color: var(--brass-bright); font-weight: 600; }
+/* A soft dark backing keeps the corner readouts legible over bright walls and sky. */
+.dagger-title, .dagger-vitals, .dagger-loadout { padding: .375rem .625rem; margin: -.375rem -.625rem;
+  background: radial-gradient(ellipse at center, rgb(6 6 4 / .62), rgb(6 6 4 / .38) 70%, transparent); border-radius: .5rem; }
+.dagger-weapon-state, .dagger-activation-indicator::before, .dagger-vital-label, .dagger-title span { color: #cbbd95; }
+/* The detectors are drawn as compass marks; this list is what a screen reader reads. */
+.dagger-detectors { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

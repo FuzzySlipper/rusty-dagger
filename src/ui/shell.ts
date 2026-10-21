@@ -22,14 +22,20 @@ export function mountShell(root: HTMLElement): { shell: HTMLElement; dispose(): 
 
 const SHELL_MARKUP = `
     <div class="dagger-title"><span class="dagger-site"></span><strong>Exploring</strong><span class="dagger-calendar" aria-live="off"></span></div>
-    <div class="dagger-reticle" aria-hidden="true">+</div>
-    <section class="dagger-vitals" aria-live="polite">
-    </section>
+    <div class="dagger-compass" aria-hidden="true"><div class="dagger-compass-strip"></div><div class="dagger-compass-contacts"></div></div>
+    <p class="dagger-view" aria-live="off"></p>
+    <div class="dagger-reticle" aria-hidden="true"></div>
+    <p class="dagger-prompt" aria-live="polite" hidden><kbd></kbd><span></span></p>
+    <section class="dagger-vitals" aria-label="Vitals"></section>
     <ol class="dagger-outcome" role="status" aria-label="Recent messages"><li>Awaiting projection…</li></ol>
-    <label class="dagger-breath" hidden>Breath <meter min="0" max="1" value="1"></meter><span></span></label>
-    <span class="dagger-activation-indicator" aria-live="polite"></span>
+    <div class="dagger-breath" hidden><span class="dagger-breath-label">Breath</span><span class="dagger-bar"><span></span></span><strong></strong></div>
+    <section class="dagger-loadout" aria-label="Ready">
+      <p class="dagger-ready-spell" hidden><span class="dagger-ready-spell-icon"></span><span class="dagger-ready-spell-name"></span></p>
+      <p class="dagger-weapon" hidden><span class="dagger-weapon-state"></span><strong class="dagger-weapon-name"></strong></p>
+      <span class="dagger-activation-indicator" aria-live="polite"></span>
+    </section>
     <section class="dagger-quests" aria-live="polite"></section>
-    <p class="dagger-view" aria-live="polite"></p><section class="dagger-detectors" aria-label="Detected nearby objects"></section><section class="dagger-status"></section><section class="dagger-effects" aria-label="Active effects" hidden><h2>Active effects</h2><ul></ul></section><button class="dagger-cinematic-skip" type="button" hidden>Skip</button>
+    <section class="dagger-detectors" aria-label="Detected nearby"></section><section class="dagger-status"></section><section class="dagger-effects" aria-label="Active effects" hidden><h2>Active effects</h2><ul></ul></section><button class="dagger-cinematic-skip" type="button" hidden>Skip</button>
     <div class="dagger-death" role="alertdialog" aria-labelledby="dagger-death-title" hidden>
       <img class="dagger-death-screen" alt="You have died.">
       <div class="dagger-death-fade" aria-hidden="true"></div>
@@ -64,7 +70,7 @@ const SHELL_MARKUP = `
           <button data-action="rest" data-icon="rest">Rest &amp; loiter</button>
           <button data-action="journal" data-icon="journal">Journal &amp; notes</button>
           <button data-action="loot" data-icon="grab">Activate aimed target · F</button>
-          <label class="dagger-menu-field">Activation mode <select class="dagger-activation-mode"><option value="grab">Grab</option><option value="info">Information</option><option value="talk">Talk</option><option value="steal">Steal / Lockpick</option><option value="bash">Bash</option></select></label>
+          <label class="dagger-menu-field">Activation mode <select class="dagger-activation-mode"></select></label>
         </section>
         <section class="dagger-menu-group" aria-label="Saved games">
           <button data-action="save-game" data-icon="save">Save game</button>

@@ -18,8 +18,10 @@ export interface UiAction { readonly action: string; readonly [field: string]: s
 export interface BundleProjection { readonly current: string; readonly options: readonly { readonly id: string; readonly title: string }[]; }
 
 export interface DaggerHud {
-  readonly detectors?: readonly { readonly source: string; readonly kind: string; readonly contacts: readonly {
+  /** Detect spells' contacts: each bearing is clockwise from north, as the view's yaw reads. */
+  readonly detectors?: readonly { readonly source: string; readonly kind: string; readonly label?: string; readonly contacts: readonly {
     readonly kind: string; readonly id: string; readonly label: string; readonly distance: number; readonly bearingRadians: number;
+    readonly distanceLabel?: string; readonly direction?: string;
     readonly items: readonly { readonly id: string; readonly definition: string; readonly quantity: number }[];
   }[] }[];
   readonly spells?: SpellbookProjection | null;
@@ -57,14 +59,22 @@ export interface DaggerHud {
   readonly bundles?: BundleProjection | null;
   readonly controls?: ControlsProjection;
   readonly timeControl?: { readonly enabled: boolean; readonly held: boolean };
-  readonly activation?: { readonly mode: string; readonly message: string; readonly applied: boolean; readonly dialogue?: DialogueProjection | null };
+  readonly activation?: { readonly mode: string; readonly label?: string; readonly modes?: readonly { readonly id: string; readonly label: string }[];
+    readonly message: string; readonly applied: boolean; readonly dialogue?: DialogueProjection | null };
+  /** The weapon the player holds, drawn or sheathed. */
+  readonly weapon?: { readonly drawn: boolean; readonly name: string; readonly state: string } | null;
+  /** What use would do to the target the player aims at; null when nothing usable is aimed at. */
+  readonly prompt?: { readonly action: string; readonly target: string } | null;
+  /** The device the player last pressed on, whose bindings the HUD names. */
+  readonly inputDevice?: 'keyboard' | 'controller';
   readonly transport?: TransportProjection | null;
   readonly property?: PropertyProjection | null;
   readonly travel?: TravelProjection | null;
   readonly map?: MapProjection | null;
   readonly quests?: QuestPresentation;
   readonly notebook?: NotebookProjection;
-  readonly view?: { readonly yawRadians: number; readonly pitchRadians: number; readonly interaction: string };
+  /** The look the camera uses; `heading` is the ruleset's compass word for the yaw. */
+  readonly view?: { readonly yawRadians: number; readonly interaction: string; readonly heading?: string };
   readonly slots?: readonly { readonly owner: string; readonly id: string; readonly label: string; readonly detail: string; readonly order: number }[];
   readonly dungeonText?: { readonly actionId: string; readonly kind: string; readonly text: string; readonly revision: string; readonly requiresAnswer: boolean } | null;
   readonly death?: DeathProjection | null;
@@ -424,12 +434,6 @@ export function isDeathProjection(value: unknown): value is DeathProjection {
       && 'available' in choice && typeof choice.available === 'boolean');
 }
 
-export function viewSummary(view: NonNullable<DaggerHud['view']>): string {
-  const direction = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west']
-    [Math.round((((view.yawRadians % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8]!;
-  const pitch = view.pitchRadians > 0.35 ? 'looking up' : view.pitchRadians < -0.35 ? 'looking down' : 'level';
-  return `Facing ${direction} · ${pitch}`;
-}
 
 export function isResourceRow(value: unknown): value is DaggerHud['resources'][number] {
   return typeof value === 'object' && value !== null

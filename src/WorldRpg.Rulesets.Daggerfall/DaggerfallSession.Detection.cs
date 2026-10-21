@@ -48,7 +48,8 @@ internal sealed partial class DaggerfallSession
         return NearbyContacts(DaggerfallActorIdentity.PlayerEntityId, origin.ToVector(), positions, _tuning.Detection.MaximumDistance, true)
             .OrderBy(pair => pair.Value).ThenBy(pair => pair.Key).Select(pair => new DaggerfallDetectionFact(
                 kind == DaggerfallDetection.Treasure ? "container" : "actor", pair.Key.ToString(CultureInfo.InvariantCulture), pair.Value,
-                Math.Atan2(positions[pair.Key].X - origin.X, positions[pair.Key].Z - origin.Z), items.GetValueOrDefault(pair.Key) ?? [])
+                // Clockwise from north (world -Z), as the player's yaw reads.
+                Math.Atan2(positions[pair.Key].X - origin.X, origin.Z - positions[pair.Key].Z), items.GetValueOrDefault(pair.Key) ?? [])
             {
                 Label = kind == DaggerfallDetection.Treasure ? "Treasure"
                     : _roster.Definitions.TryGetValue(pair.Key, out var detected) ? WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallInventoryPresentation.Label(detected.Id.Value) : "Someone",

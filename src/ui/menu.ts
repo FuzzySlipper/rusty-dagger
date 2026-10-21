@@ -485,6 +485,11 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
         else magicItemsRoot.replaceChildren(list);
       });
       if (value.controls) controlsView.update(value.controls, host.uiScale());
+      // The modes and their names are the ruleset's, so the menu's choice and the HUD's indicator agree.
+      const modes = value.activation?.modes ?? [];
+      if (modes.length > 0) redraw(activationMode, JSON.stringify(modes), () => activationMode.replaceChildren(...modes.map(mode => {
+        const option = document.createElement('option'); option.value = mode.id; option.textContent = mode.label; return option;
+      })));
       if (value.activation) activationMode.value = value.activation.mode;
       // The selector lives in the menu, which the product reports as modal, so it serves both.
       activationMode.disabled = value.mode !== 'playing' && value.mode !== 'modal';
