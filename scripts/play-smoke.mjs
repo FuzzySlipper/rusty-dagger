@@ -239,13 +239,21 @@ for (let step = 0; step < 400; step++) {
       const add = document.querySelector('button[aria-label^="Add a point to "]:not(:disabled)');
       if (!add) return 'character creation still refuses the commit: '
         + (document.querySelector('[data-testid="character-commit-blocked"]')?.textContent ?? 'no reason shown');
+      const before = document.querySelector('[data-testid="character-commit-blocked"]')?.textContent ?? '';
       add.click();
-      return 'spent';
+      return 'spent:' + before;
     })()`,
   });
   spent = result.value;
-  if (spent !== 'spent') break;
-  await sleep(40);
+  if (!spent?.startsWith('spent:')) break;
+  // The answer has arrived once the reasons the commit is refused for change.
+  const before = spent.slice('spent:'.length);
+  for (let wait = 0; wait < 50; wait++) {
+    await sleep(20);
+    const { result: now } = await cdp('Runtime.evaluate', { returnByValue: true,
+      expression: `document.querySelector('[data-testid="character-commit-blocked"]')?.textContent ?? ''` });
+    if (now.value !== before) break;
+  }
 }
 if (spent !== 'ready') fail(spent ?? 'character creation never answered');
 await press('[data-testid="character-commit"]', 'Commit character');
