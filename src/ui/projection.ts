@@ -190,6 +190,8 @@ export interface DialogueProjection {
   readonly targetLabel: string;
   readonly greeting: string;
   readonly tone: string;
+  /** The tones a conversation can take, with their names. */
+  readonly tones?: readonly { readonly id: string; readonly label: string }[];
   readonly question: string | null;
   readonly reply: string | null;
   readonly topics: readonly { readonly id: string; readonly label: string; readonly key?: string | null; readonly group?: string; readonly category?: string | null }[];

@@ -124,6 +124,21 @@ test('death projection renders semantic choices, selected save slots, and suppre
   } finally { f.dispose(); }
 });
 
+test('the conversation tone offers the tones the ruleset publishes and sends the one chosen', () => {
+  const f = fixture();
+  try {
+    const dialogue = { revision: 'dialogue-9', targetLabel: 'A merchant', greeting: 'Well met.', tone: 'normal',
+      tones: [{ id: 'polite', label: 'Polite' }, { id: 'normal', label: 'Normal' }, { id: 'blunt', label: 'Blunt' }],
+      question: null, reply: null, topics: [], diagnostics: [] };
+    f.publish({ mode: 'modal', activation: { mode: 'talk', message: '', applied: true, dialogue } });
+    const tone = f.root.querySelector('.dagger-dialogue-tone');
+    assert.deepEqual([...tone.options].map(option => [option.value, option.textContent]), [['polite', 'Polite'], ['normal', 'Normal'], ['blunt', 'Blunt']]);
+    assert.equal(tone.value, 'normal');
+    tone.value = 'blunt'; tone.dispatchEvent(new window.Event('change', { bubbles: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'dialogue-tone', revision: 'dialogue-9', tone: 'blunt' });
+  } finally { f.dispose(); }
+});
+
 test('death closes retained dialogue and exposes a real fade consumer', () => {
   const f = fixture();
   try {
