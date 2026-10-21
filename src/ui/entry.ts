@@ -44,6 +44,9 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   const bundleChoice = document.createElement('div'); bundleChoice.dataset.testid = 'entry-bundle';
   bundle.append(bundleLabel, bundleChoice); root.append(bundle);
   let bundleCycler: Cycler | null = null;
+  // Choosing a game restarts the session behind the title, which hides the choice for a moment; the
+  // step the player was pressing takes focus again when it returns, so a second press steps again.
+  let bundleStep: string | null = null;
   // The game choice and the two buttons stack in one column at the foot of the screen, so the
   // choice can never cover a button however tall the skin draws them.
   const actions = document.createElement('div'); actions.className = 'dagger-entry-actions';
@@ -91,7 +94,9 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     load.hidden = creating || slots.length === 0;
     if (load.hidden) { saved.hidden = true; load.setAttribute('aria-expanded', 'false'); }
     redraw(saved, JSON.stringify(slots), () => saved.replaceChildren(...slots.map(entry => slotRow(entry, false))));
-    bundle.hidden = creating || bundles === null || bundles.options.length < 2;
+    const hideBundle = creating || bundles === null || bundles.options.length < 2;
+    if (hideBundle && !bundle.hidden && bundle.contains(document.activeElement)) bundleStep = document.activeElement?.getAttribute('aria-label') ?? null;
+    bundle.hidden = hideBundle;
     if (bundles !== null) {
       const current = bundles;
       redraw(bundleChoice, JSON.stringify(current.options), () => {
@@ -101,6 +106,12 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
       });
       bundleCycler?.set(current.current);
     }
+    if (!bundle.hidden && bundleStep !== null) {
+      const step = Array.from(bundle.querySelectorAll<HTMLButtonElement>('button')).find(button => button.getAttribute('aria-label') === bundleStep);
+      step?.focus();
+      bundleStep = null;
+    }
+    if (creating) bundleStep = null;
     const primary = screenForMode(mode ?? TITLE_MODE)!;
     const art = image(primary);
     if (art !== null) screen.src = art;
