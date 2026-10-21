@@ -1346,15 +1346,24 @@ test('mode screens follow projection and a mode without a backdrop hides both', 
   } finally { f.dispose(); }
 });
 
-test('view is cleared when the product no longer supplies it', () => {
+test('the compass slides with the published yaw, names the ruleset heading and clears without a view', () => {
   const f = fixture();
   try {
-    f.publish({ view: { yawRadians: 0, pitchRadians: 0, interaction: 'aiming' } });
-    assert.equal(f.root.querySelector('.dagger-view').textContent, 'Facing north · level');
-    f.publish({ view: { yawRadians: Math.PI / 2, pitchRadians: 0.5, interaction: 'aiming' } });
-    assert.equal(f.root.querySelector('.dagger-view').textContent, 'Facing east · looking up');
+    f.publish({ view: { yawRadians: 0, interaction: 'aiming', heading: 'north' } });
+    assert.equal(f.root.querySelector('.dagger-view').textContent, 'Facing north');
+    const wind = letter => [...f.root.querySelectorAll('.dagger-compass-wind')].find(mark => mark.textContent === letter);
+    // Facing north, N is at the centre, E a quarter turn right at the edge, S behind and hidden.
+    assert.equal(wind('N').style.left, '50%');
+    assert.equal(wind('E').style.left, '100%');
+    assert.equal(wind('S').hidden, true);
+    f.publish({ view: { yawRadians: Math.PI / 2, interaction: 'aiming', heading: 'east' } });
+    assert.equal(f.root.querySelector('.dagger-view').textContent, 'Facing east');
+    assert.equal(wind('E').style.left, '50%');
+    assert.equal(wind('N').style.left, '0%');
+    assert.equal(wind('W').hidden, true);
     f.publish();
     assert.equal(f.root.querySelector('.dagger-view').textContent, '');
+    assert.equal(f.root.querySelector('.dagger-compass').hidden, true);
   } finally { f.dispose(); }
 });
 
@@ -1962,13 +1971,17 @@ test('controls are grouped and named, and a key, a mouse button and a controller
 test('activation selection follows product mode and emits only semantic mode changes', () => {
   const f = fixture();
   try {
-    f.publish({ activation: { mode: 'info', message: 'Information', applied: false } });
+    const modes = [{ id: 'grab', label: 'Grab' }, { id: 'info', label: 'Information' }, { id: 'talk', label: 'Talk' },
+      { id: 'steal', label: 'Steal / Lockpick' }, { id: 'bash', label: 'Bash' }];
+    f.publish({ activation: { mode: 'info', label: 'Information', modes, message: 'Information', applied: false } });
     const select = f.root.querySelector('.dagger-activation-mode');
+    // The menu's choices are the ruleset's modes and names.
+    assert.deepEqual([...select.options].map(option => option.textContent), modes.map(mode => mode.label));
     assert.equal(select.value, 'info');
     select.value = 'bash';
     select.dispatchEvent(new window.Event('change', { bubbles: true }));
     assert.deepEqual(f.actions.at(-1), { action: 'activation-mode', mode: 'bash' });
-    f.publish({ activation: { mode: 'grab', message: '', applied: false } });
+    f.publish({ activation: { mode: 'grab', label: 'Grab', modes, message: '', applied: false } });
     assert.equal(select.value, 'grab');
     // The menu that holds the selector is a modal mode, where the choice still applies.
     f.publish({ mode: 'modal' });
@@ -2676,19 +2689,32 @@ test('dispel choice renders published bundles and sends current select and cance
 });
 
 
-test('detectors render only resolved contacts and clear retired sources without scanning', () => {
+test('detected contacts are compass marks at their bearings, the nearest named, and read as a list', () => {
   const f = fixture();
   try {
-    f.publish({ detectors: [{ source: 'cast.2', kind: 'magic', contacts: [{ kind: 'actor', id: '2000', label: 'Imp', distance: 4.5, bearingRadians: Math.PI / 2, items: [] }] },
-      { source: 'cast.3', kind: 'treasure', contacts: [] }] });
-    const panel = f.root.querySelector('.dagger-detectors');
-    assert.equal(panel.hidden, false);
-    assert.equal(panel.children.length, 2);
-    assert.match(panel.textContent, /Detect magic: Imp, 4.5 m, bearing 90°/);
-    assert.match(panel.textContent, /Detect treasure: none nearby/);
+    const imp = { kind: 'actor', id: '2000', label: 'Imp', distance: 4.5, bearingRadians: Math.PI / 4, distanceLabel: '5 m', direction: 'north-east', items: [] };
+    const rat = { kind: 'actor', id: '2001', label: 'Rat', distance: 20, bearingRadians: Math.PI, distanceLabel: '20 m', direction: 'south', items: [] };
+    f.publish({ view: { yawRadians: 0, interaction: 'aiming', heading: 'north' },
+      detectors: [{ source: 'cast.2', kind: 'magic', label: 'Detect magic', contacts: [imp, rat] },
+        { source: 'cast.3', kind: 'treasure', label: 'Detect treasure', contacts: [] }] });
+    const marks = [...f.root.querySelectorAll('.dagger-compass-contact')];
+    assert.deepEqual(marks.map(mark => mark.dataset.contact), ['2000', '2001']);
+    // The imp is an eighth of a turn right of north; the rat is behind and out of view.
+    assert.equal(marks[0].style.left, '75%');
+    assert.equal(marks[0].dataset.detector, 'magic');
+    assert.equal(marks[0].textContent, 'Imp · 5 m');
+    assert.equal(marks[1].hidden, true);
+    // Turning to face the rat brings it to the centre.
+    f.publish({ view: { yawRadians: Math.PI, interaction: 'aiming', heading: 'south' },
+      detectors: [{ source: 'cast.2', kind: 'magic', label: 'Detect magic', contacts: [imp, rat] }, { source: 'cast.3', kind: 'treasure', label: 'Detect treasure', contacts: [] }] });
+    assert.equal(f.root.querySelector('[data-contact="2001"]').style.left, '50%');
+    const list = f.root.querySelector('.dagger-detectors');
+    assert.equal(list.hidden, false);
+    assert.match(list.textContent, /Detect magic: Imp, 5 m north-east; Rat, 20 m south/);
+    assert.match(list.textContent, /Detect treasure: none nearby/);
     f.publish({ detectors: [] });
-    assert.equal(panel.hidden, true);
-    assert.equal(panel.children.length, 0);
+    assert.equal(list.hidden, true);
+    assert.equal(f.root.querySelectorAll('.dagger-compass-contact').length, 0);
     assert.equal(f.actions.length, 0);
   } finally { f.dispose(); }
 });
@@ -3376,20 +3402,73 @@ test('HUD projects the timed message stack, breath and activation mode without l
   const f = fixture();
   try {
     f.publish({ messages: ['Door unlocked.', 'Your skill improved.'], lastOutcome: 'Your skill improved.',
-      breath: { current: 8, maximum: 30, low: true }, activation: { mode: 'steal', message: '', applied: true } });
+      breath: { current: 8, maximum: 32, low: true }, activation: { mode: 'steal', label: 'Steal / Lockpick', message: '', applied: true } });
     assert.deepEqual([...f.root.querySelectorAll('.dagger-outcome li')].map(line => line.textContent), ['Door unlocked.', 'Your skill improved.']);
-    assert.equal(f.root.querySelector('.dagger-breath').hidden, false);
-    assert.equal(f.root.querySelector('.dagger-breath meter').value, 8);
-    assert.equal(f.root.querySelector('.dagger-breath meter').max, 30);
-    assert.equal(f.root.querySelector('.dagger-breath').classList.contains('low'), true);
+    const breath = f.root.querySelector('.dagger-breath');
+    assert.equal(breath.hidden, false);
+    assert.equal(breath.querySelector('.dagger-bar span').style.width, '25%');
+    assert.equal(breath.querySelector('.dagger-bar').getAttribute('aria-valuenow'), '8');
+    assert.equal(breath.querySelector('strong').textContent, '8 / 32');
+    assert.equal(breath.classList.contains('low'), true);
+    // The indicator shows the ruleset's name for the mode.
     assert.equal(f.root.querySelector('.dagger-activation-indicator').textContent, 'Steal / Lockpick');
     f.publish({ messages: ['Your skill improved.'], lastOutcome: 'Your skill improved.', breath: null,
-      activation: { mode: 'talk', message: '', applied: true } });
+      activation: { mode: 'talk', label: 'Talk', message: '', applied: true } });
     assert.deepEqual([...f.root.querySelectorAll('.dagger-outcome li')].map(line => line.textContent), ['Your skill improved.']);
-    assert.equal(f.root.querySelector('.dagger-breath').hidden, true);
+    assert.equal(breath.hidden, true);
     assert.equal(f.root.querySelector('.dagger-activation-indicator').textContent, 'Talk');
     f.publish({ messages: [] });
     assert.equal(f.root.querySelectorAll('.dagger-outcome li').length, 0);
+  } finally { f.dispose(); }
+});
+
+test('vitals are bars of the published amounts, and the loadout shows the readied spell and the weapon drawn or sheathed', () => {
+  const f = fixture();
+  try {
+    const spells = { available: [{ key: 'spell.023', name: "Troll's Blood", cost: 12, icon: 3, school: 'restoration' }], ready: 'spell.023', result: '',
+      icons: { media: 'spell.icons', columns: 20, count: 69 } };
+    f.publish({ resources: [{ id: 'health', label: 'Health', current: 15, maximum: 60 }, { id: 'magicka', label: 'Magicka', current: 0, maximum: 0 }],
+      spells, weapon: { drawn: true, name: 'Steel Longsword', state: 'Drawn' } });
+    const health = f.root.querySelector('[data-vital="health"]');
+    assert.equal(health.querySelector('.dagger-bar span').style.width, '25%');
+    assert.equal(health.querySelector('[data-resource="health"]').textContent, '15 / 60');
+    assert.equal(health.querySelector('.dagger-bar').getAttribute('aria-label'), 'Health');
+    assert.equal(f.root.querySelector('[data-vital="magicka"] .dagger-bar span').style.width, '0%');
+    assert.equal(f.root.querySelector('.dagger-ready-spell').hidden, false);
+    assert.equal(f.root.querySelector('.dagger-ready-spell-name').textContent, "Troll's Blood");
+    assert.ok(f.root.querySelector('.dagger-ready-spell-icon .dagger-spell-glyph'));
+    const weapon = f.root.querySelector('.dagger-weapon');
+    assert.equal(weapon.hidden, false);
+    assert.equal(weapon.textContent, 'DrawnSteel Longsword');
+    assert.equal(weapon.classList.contains('is-sheathed'), false);
+    // Z sheathes it: the projection says so and the HUD shows it.
+    f.publish({ spells: { ...spells, ready: null }, weapon: { drawn: false, name: 'Steel Longsword', state: 'Sheathed' } });
+    assert.equal(weapon.classList.contains('is-sheathed'), true);
+    assert.equal(weapon.querySelector('.dagger-weapon-state').textContent, 'Sheathed');
+    assert.equal(f.root.querySelector('.dagger-ready-spell').hidden, true);
+    // None of it shows outside play.
+    f.publish({ mode: 'modal', weapon: { drawn: true, name: 'Steel Longsword', state: 'Drawn' } });
+    assert.equal(weapon.hidden, true);
+  } finally { f.dispose(); }
+});
+
+test('the prompt names what use does to the aimed target and the use binding for the device in use', () => {
+  const f = fixture();
+  try {
+    const controls = { diagnostic: '', bindings: [{ id: 'interact', category: 'combat', label: 'Use', keys: ['KeyF'], fixed: false, buttons: [1] }] };
+    f.publish({ controls, prompt: { action: 'Talk to', target: 'Agrynak Wickfield' }, inputDevice: 'keyboard' });
+    const prompt = f.root.querySelector('.dagger-prompt');
+    assert.equal(prompt.hidden, false);
+    assert.equal(prompt.querySelector('kbd').textContent, 'F');
+    assert.equal(prompt.querySelector('span').textContent, 'Talk to Agrynak Wickfield');
+    f.publish({ controls, prompt: { action: 'Open', target: 'the door' }, inputDevice: 'controller' });
+    assert.equal(prompt.querySelector('kbd').textContent, 'B');
+    assert.equal(prompt.dataset.device, 'controller');
+    assert.equal(prompt.querySelector('span').textContent, 'Open the door');
+    f.publish({ controls, prompt: null });
+    assert.equal(prompt.hidden, true);
+    // The HUD takes no focus in play: nothing in the prompt, compass or loadout can hold it.
+    assert.equal(f.root.querySelectorAll('.dagger-prompt :is(button, [tabindex]), .dagger-compass :is(button, [tabindex]), .dagger-loadout :is(button, [tabindex])').length, 0);
   } finally { f.dispose(); }
 });
 

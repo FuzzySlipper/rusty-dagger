@@ -140,6 +140,19 @@ internal sealed class DaggerfallActivationModule(InteractionTargetingService tar
     internal WorldInteractionReadout? Inspect(EntityId player, PlayerControlState control, LookReceipt look) =>
         control.Position is WorldPoint ? CreateInspection(player, control, look).Inspect() : null;
 
+    /// <summary>
+    /// The target ordinary use would act on now: the Engine's preview of what focus would select, so no
+    /// focus is acquired and nothing activates. The HUD names it in the interaction prompt.
+    /// </summary>
+    internal DaggerfallActivationTarget? FocusedTarget(EntityId player, PlayerControlState control, LookReceipt look)
+    {
+        if (control.Position is not WorldPoint) return null;
+        if (CreateInspection(player, control, look).Preview(0).Selected is not { } selected) return null;
+        foreach (DaggerfallActivationTarget target in _contributions.Targets(Mode))
+            if (target.QueryIdentity == selected.Id) return target;
+        return null;
+    }
+
     internal WorldInteraction CreateInspection(EntityId player, PlayerControlState control, LookReceipt look) =>
         _targeting.CreateInspection(player, control.Position ?? throw new InvalidOperationException("Interaction inspection requires a player position."), look.Forward,
             _reach.MaximumDistance, _reach.MinimumFacingCosine,

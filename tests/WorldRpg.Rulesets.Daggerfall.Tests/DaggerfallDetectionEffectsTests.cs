@@ -44,6 +44,7 @@ public sealed class DaggerfallDetectionEffectsTests
         s.State.PlayerControl.MoveTo(new Vector3(10, 0, 10));
         long near = s.SpawnActor("rat", new(new(12, 0, 10), 0));
         long boundary = s.SpawnActor("rat", new(new(24, 0, 10), 0));
+        long north = s.SpawnActor("rat", new(new(10, 0, 7), 0));
         Cast(s, Setting(0, 20)); Cast(s, Setting(1, 20));
         Assert.DoesNotContain(s.ReadDetectors().Single(v => v.Kind == "magic").Contacts, v => v.Id == near.ToString());
         Conceal(s, near); Conceal(s, boundary);
@@ -52,6 +53,8 @@ public sealed class DaggerfallDetectionEffectsTests
         Assert.Equal(2, magic.Distance); Assert.Equal(Math.PI / 2, magic.BearingRadians);
         Assert.DoesNotContain(views.SelectMany(v => v.Contacts), v => v.Id == boundary.ToString());
         Assert.Contains(views.Single(v => v.Kind == "enemy").Contacts, v => v.Id == near.ToString());
+        // Bearings read clockwise from north (world -Z), as the player's yaw and the compass do.
+        Assert.Equal(0, Assert.Single(views.Single(v => v.Kind == "enemy").Contacts, v => v.Id == north.ToString()).BearingRadians, 6);
         Assert.All(f.Perception.Requests, request => Assert.Equal(14, request.Observers.Span[0].MaximumDistance));
         // Occluded is deliberately used by the Engine fake: classic detection ignores line of sight.
         s.State.Effects.CancelSource("test.conceal");

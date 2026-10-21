@@ -44,6 +44,12 @@ internal sealed record DaggerfallHudFrame(
 {
     internal bool ActionDrivenTime { get; init; }
     internal bool TimeHeld { get; init; }
+    /// <summary>The weapon the player holds, drawn or sheathed.</summary>
+    internal DaggerfallWeaponView? Weapon { get; init; }
+    /// <summary>What use would do to the aimed target, while playing.</summary>
+    internal DaggerfallInteractionPromptView? Prompt { get; init; }
+    /// <summary>The device the player last pressed on ("keyboard" or "controller"), whose bindings the HUD names.</summary>
+    internal string InputDevice { get; init; } = "keyboard";
 }
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
@@ -93,11 +99,16 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("choices", builder.Array(legal.Choices.Select(choice => builder.Object(("id", builder.String(choice.Id)), ("label", builder.String(choice.Label)))).ToArray())))),
             ("dispel", dispel is null ? builder.Null() : builder.Object(("revision", builder.String(dispel.Revision)),
                 ("options", builder.Array(dispel.Options.Select(option => builder.Object(("id", builder.String(option.Id)), ("label", builder.String(option.Label)))).ToArray())))),
+            // Detected contacts are marks on the compass: each bearing is clockwise from north like the
+            // view's yaw, with the distance and direction worded here.
             ("detectors", builder.Array((detectors ?? []).Select(source => builder.Object(
                 ("source", builder.String(source.Source)), ("kind", builder.String(source.Kind)),
+                ("label", builder.String(DaggerfallHudText.DetectorLabel(source.Kind))),
                 ("contacts", builder.Array(source.Contacts.Select(contact => builder.Object(
                     ("kind", builder.String(contact.Kind)), ("id", builder.String(contact.Id)), ("label", builder.String(contact.Label)),
                     ("distance", builder.Number(contact.Distance)), ("bearingRadians", builder.Number(contact.BearingRadians)),
+                    ("distanceLabel", builder.String(DaggerfallHudText.Distance(contact.Distance))),
+                    ("direction", builder.String(DaggerfallMapProjection.Compass((float)contact.BearingRadians))),
                     ("items", builder.Array(contact.Items.Select(item => builder.Object(("id", builder.String(item.Id)),
                         ("definition", builder.String(item.Definition)), ("quantity", builder.Number(checked((long)item.Quantity))))).ToArray())))).ToArray())))).ToArray())),
             ("identify", frame.Identify is not { } identify ? builder.Null() : builder.Object(
@@ -153,11 +164,17 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("monthName", builder.String(date.MonthName)), ("year", builder.Number(date.Year)),
                 ("hour", builder.Number(date.Hour)), ("minute", builder.Number(date.Minute)),
                 ("date", builder.String(date.DescribeDate())), ("time", builder.String(date.DescribeTime())))),
-            // Compass and crosshair read the same authoritative look the camera does.
+            // The compass reads the same authoritative yaw the camera does, with the ruleset's word for it.
             ("view", builder.Object(
                 ("yawRadians", builder.Number(controls.YawRadians)),
-                ("pitchRadians", builder.Number(controls.PitchRadians)),
-                ("interaction", builder.String(mode == ProductMode.Modal ? "modal" : mode == ProductMode.Playing ? "aiming" : "held")))),
+                ("interaction", builder.String(mode == ProductMode.Modal ? "modal" : mode == ProductMode.Playing ? "aiming" : "held")),
+                ("heading", builder.String(DaggerfallMapProjection.Compass(controls.YawRadians))))),
+            ("weapon", frame.Weapon is not { } weapon ? builder.Null() : builder.Object(
+                ("drawn", builder.Boolean(weapon.Drawn)), ("name", builder.String(weapon.Name)),
+                ("state", builder.String(DaggerfallHudText.WeaponState(weapon))))),
+            ("inputDevice", builder.String(frame.InputDevice)),
+            ("prompt", frame.Prompt is not { } prompt ? builder.Null() : builder.Object(
+                ("action", builder.String(prompt.Action)), ("target", builder.String(prompt.Target)))),
             // Status rows come from the owners that publish them rather than from this projection
             // guessing what an effect, an escort or a quest wants to say.
             ("slots", builder.Array(slots.Read().Select(slot => builder.Object(
@@ -228,6 +245,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("buttonFixedReason", DaggerfallControlSettings.ButtonFixedReason(action.Id) is { } padReason ? builder.String(padReason) : builder.Null()))).ToArray()))))];
         if (activation is not null) fields = [.. fields, ("activation", builder.Object(
             ("mode", builder.String(activation.Mode)),
+            ("label", builder.String(DaggerfallHudText.ModeLabel(activation.Mode))),
+            ("modes", builder.Array(DaggerfallHudText.ActivationModes.Select(row => builder.Object(
+                ("id", builder.String(row.Id)), ("label", builder.String(row.Label)))).ToArray())),
             ("message", builder.String(activation.Message)),
             ("applied", builder.Boolean(activation.Applied)),
             ("dialogue", activation.Dialogue is null ? builder.Null() : Dialogue(builder, activation.Dialogue))))];
