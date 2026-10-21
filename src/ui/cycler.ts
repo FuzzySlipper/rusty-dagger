@@ -7,8 +7,6 @@
  * Unavailable options are skipped (their restriction is the ruleset's reason, shown when the current
  * one is unavailable). The cycler only steps; the owner sends the change.
  */
-import { DIRECTION_EVENT, type Direction } from './navigation.js';
-
 export interface CyclerOption { readonly id: string; readonly label: string; readonly available?: boolean; readonly restriction?: string | null }
 
 export interface Cycler {
@@ -62,15 +60,6 @@ export function createCycler(label: string, options: readonly CyclerOption[], cu
   };
   previous.addEventListener('click', () => step(-1));
   next.addEventListener('click', () => step(1));
-  // Right from ‹ is the same cycler's ›, and left from › its ‹, however wide the value between them:
-  // a control nearer and only slightly off the line would otherwise win the move.
-  element.addEventListener(DIRECTION_EVENT, event => {
-    const direction = (event as CustomEvent<Direction>).detail;
-    const to = event.target === previous && direction === 'right' ? next : event.target === next && direction === 'left' ? previous : null;
-    if (!to || to.disabled) return;
-    event.preventDefault();
-    to.focus();
-  });
   draw();
   return {
     element,

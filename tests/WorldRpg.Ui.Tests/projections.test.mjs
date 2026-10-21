@@ -2839,13 +2839,6 @@ test('character draft screens consume the published mode art and every pick part
     // Leaving the questions lands on the career they chose, not on the name at the top of the editor.
     const career = entry.querySelector('[data-cycler="Career"]');
     assert.equal(career.contains(document.activeElement), true);
-    // Right from the career's ‹ is its own ›, which the cycler claims before a nearer control can win.
-    const Direction = document.defaultView.CustomEvent;
-    const previousCareer = career.querySelector('[aria-label="Previous career"]');
-    previousCareer.focus();
-    assert.equal(previousCareer.dispatchEvent(new Direction('dagger-direction', { detail: 'right', bubbles: true, cancelable: true })), false);
-    assert.equal(document.activeElement, career.querySelector('[aria-label="Next career"]'));
-    assert.equal(document.activeElement.dispatchEvent(new Direction('dagger-direction', { detail: 'down', bubbles: true, cancelable: true })), true);
     // Without a rolled background the commit is refused by the control, which says why.
     assert.equal(entry.querySelector('[data-testid="character-commit"]').disabled, true);
     assert.match(entry.querySelector('[data-testid="character-commit-blocked"]').textContent, /Roll a background/);
@@ -3885,6 +3878,42 @@ test('arrow navigation treats a wide row the focus sits over as in line, ahead o
     back.focus();
     back.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowUp', bubbles: true, cancelable: true }));
     assert.equal(document.activeElement, row);
+  } finally {
+    window.HTMLElement.prototype.getBoundingClientRect = original;
+    window.Element.prototype.getClientRects = originalRects;
+    f.dispose();
+  }
+});
+
+test('arrow navigation moves to a control that begins past the focus before a nearer one it overlaps or that sits just off the line', () => {
+  const f = fixture();
+  const original = window.HTMLElement.prototype.getBoundingClientRect;
+  const originalRects = window.Element.prototype.getClientRects;
+  try {
+    f.publish({ spells: { available: [{ key: 'a', name: 'Alpha', cost: 8 }], ready: null, result: '' } });
+    f.root.querySelector('[data-action="spells"]').click();
+    const book = f.root.querySelector('.dagger-spells-root');
+    const row = book.querySelector('[data-action="spell-select"]');
+    const tab = book.querySelector('[data-spell-school="all"]');
+    const back = [...f.root.querySelectorAll('.dagger-menu button')].find(button => button.textContent === 'Back to menu');
+    // As the window drew a cycler: its ‹ (tab) at the left, its › (back) at the far right of the same
+    // line, and a wide button (row) just below whose centre is nearer than the ›.
+    const rects = new Map([[tab, [990, 160, 45, 40]], [back, [1607, 160, 45, 40]], [row, [990, 212, 662, 36]]]);
+    window.HTMLElement.prototype.getBoundingClientRect = function () {
+      const [left, top, width, height] = this === document.documentElement ? [0, 0, 1920, 1080] : rects.get(this) ?? [-9999, -9999, 0, 0];
+      return { left, top, width, height, right: left + width, bottom: top + height, x: left, y: top };
+    };
+    window.Element.prototype.getClientRects = function () { return rects.has(this) ? [this.getBoundingClientRect()] : []; };
+    const press = code => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true }));
+    tab.focus(); press('ArrowRight');
+    assert.equal(document.activeElement, back, 'Right reaches the control beside the focus, not the wide one below.');
+    press('ArrowLeft');
+    assert.equal(document.activeElement, tab);
+    // As the title drew Begin (tab) with the game cycler's ‹ (row) above and overlapping it, and Create
+    // character (back) beside it: right goes beside, never up to the control Begin overlaps.
+    rects.set(tab, [805, 1000, 105, 60]); rects.set(row, [845, 943, 45, 40]); rects.set(back, [928, 1000, 185, 60]);
+    tab.focus(); press('ArrowRight');
+    assert.equal(document.activeElement, back);
   } finally {
     window.HTMLElement.prototype.getBoundingClientRect = original;
     window.Element.prototype.getClientRects = originalRects;

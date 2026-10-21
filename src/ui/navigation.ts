@@ -341,8 +341,10 @@ function hasLayout(): boolean {
 /**
  * The control nearest `from` in a direction: the closest centre ahead of it, with distance across
  * the direction (to the control's nearer edge) weighted so a control in line wins over a nearer
- * one off to the side. With no
- * layout, up and left are the previous control in document order and down and right the next.
+ * one off to the side. A control that begins past the focused one's edge is preferred to one that
+ * only has its centre ahead, so a wide control just below never takes "right" from the one beside
+ * the focus, nor a small one the focus overlaps. With no layout, up and left are the previous
+ * control in document order and down and right the next.
  */
 function nearest(from: HTMLElement, items: readonly HTMLElement[], direction: Direction): HTMLElement | null {
   const index = items.indexOf(from);
@@ -352,8 +354,8 @@ function nearest(from: HTMLElement, items: readonly HTMLElement[], direction: Di
   }
   const origin = from.getBoundingClientRect();
   const ox = origin.left + origin.width / 2, oy = origin.top + origin.height / 2;
-  let best: HTMLElement | null = null;
-  let bestScore = Infinity;
+  let best: HTMLElement | null = null, bestClear: HTMLElement | null = null;
+  let bestScore = Infinity, bestClearScore = Infinity;
   for (const item of items) {
     if (item === from) continue;
     const rect = item.getBoundingClientRect();
@@ -365,7 +367,12 @@ function nearest(from: HTMLElement, items: readonly HTMLElement[], direction: Di
       ? Math.max(0, rect.left - ox, ox - rect.right) : Math.max(0, rect.top - oy, oy - rect.bottom);
     const score = along + across * 3;
     if (score < bestScore) { bestScore = score; best = item; }
+    // Clear of the origin: it begins past the origin's edge in the direction (a pixel of border aside).
+    const clear = direction === 'up' ? rect.bottom <= origin.top + 1 : direction === 'down' ? rect.top >= origin.bottom - 1
+      : direction === 'left' ? rect.right <= origin.left + 1 : rect.left >= origin.right - 1;
+    if (clear && score < bestClearScore) { bestClearScore = score; bestClear = item; }
   }
+  if (bestClear) return bestClear;
   if (best) return best;
   // Past the last control in a direction, a vertical list wraps the way the old menu cycling did.
   if (direction === 'up' || direction === 'down') return items[(index + (direction === 'up' ? -1 : 1) + items.length) % items.length] ?? null;
