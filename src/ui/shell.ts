@@ -135,7 +135,7 @@ const SHELL_MARKUP = `
       <h2 id="dagger-dialogue-title" class="dagger-dialogue-target dagger-frame-title"></h2>
       <div class="dagger-dialogue-head">
         <p class="dagger-dialogue-greeting" aria-live="polite"></p>
-        <label>Tone <select class="dagger-dialogue-tone"><option value="polite">Polite</option><option value="normal">Normal</option><option value="blunt">Blunt</option></select></label>
+        <label>Tone <select class="dagger-dialogue-tone"></select></label>
       </div>
       <ol class="dagger-dialogue-log" aria-label="Conversation" aria-live="polite"></ol>
       <div class="dagger-dialogue-topics"></div>

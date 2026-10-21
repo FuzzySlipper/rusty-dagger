@@ -88,17 +88,29 @@ cursor registers with `navigation.register` in `main.ts`:
   question the product needs answered (death, title, a court, a summoning
   offer, a quest prompt), and neither press acts on it or on what it was asked
   over.
-- `panel(direction)`: the shoulder buttons, which step the menu's panels.
+- `panel(direction)`: the shoulder buttons, which step the menu's panels (and
+  the parts of character creation on the title).
+- `page(direction)` with `pageHint()`: the triggers, or Page Up and Page
+  Down, turn what the surface shows (a journal's quests, a book's pages, the
+  local map's zoom, the travel map's sheets). The hint names what they do
+  there, and is absent when they do nothing.
 
-A focused `<select>`, number or range field takes the controller's left and
-right as a change of value, so native choices and amounts work from a pad.
-Hints at the foot of the topmost surface name the keys or buttons of the
-device in use for what that surface accepts.
+A control that uses the directions itself claims them: navigation first
+offers each direction to the focused control as a cancellable
+`dagger-direction` event, and Back as `dagger-back`, and moves focus or steps
+back only when nothing claimed it. The local map's panning mode and the travel
+map's sheets use this. Moving into a row of tabs lands on the tab shown, and
+tabs follow focus.
+
+A focused number or range field takes the controller's left and right as a
+change of value. A pad cannot type, so the controller's accept on a text field
+opens the letter picker (below). Hints at the foot of the topmost surface name
+the keys or buttons of the device in use for what that surface accepts.
 
 Controller buttons follow the standard layout the Engine normalizes: A
 (`button-0`) accepts, B (`button-1`) backs out, the D-pad (`button-12`–`15`)
 and the left stick (`axis-0`, `axis-1`) move, LB and RB (`button-4`, `5`)
-step panels. With the menu open, Start (`button-9`) steps out as Back does,
+step panels, LT and RT (`button-6`, `7`) turn pages. With the menu open, Start (`button-9`) steps out as Back does,
 Select (`button-8`) opens the inventory, Y (`button-3`) the character, and X
 (`button-2`) the actions of the focused item.
 
@@ -210,6 +222,29 @@ The quantity stepper (`src/ui/stepper.ts`) is the shared bounded amount: −
 and + beside a number field, with its limits from the projection. The
 keyboard's and controller's left and right step it.
 
+## The other screens
+
+- **Journal** (`journal.ts`): Quests, Finished, Notes and Book are tabs over
+  their panels. Each quest entry takes focus, and up and down scroll an entry
+  taller than its page. The notebook key and an opened book open the journal on
+  their own tab.
+- **Local map** (`maps.ts`): dragging pans (through `followPress`) and the
+  wheel zooms about the cursor. Accepting the focused diagram starts panning
+  with the directions. The legend and the facing come from the projection.
+- **Travel** (`travel.ts`): the travel map names the focused or hovered marker
+  beside it and in a readout, draws the quoted route, and keeps focus on the map
+  as it redraws. A journey asks through the drawn confirm.
+- **HUD** (`hud.ts`): bars for vitals and breath; a compass strip with the
+  ruleset's heading and the Detect spells' contacts as marks; the readied spell,
+  the weapon drawn or sheathed and the activation mode; and a prompt naming what
+  use would do to the aimed target, worded by that target's owner, with the use
+  binding of the device in use. It takes no focus in play.
+- **Title, creation and death** (`entry.ts`, `character.ts`, `death.ts`): the
+  title's game choice is a cycler. Creation sends every change at once and draws
+  the ruleset's answer, including what blocks the commit and whether Quick start
+  can begin. Death lists the saved games as the menu does and takes focus when it
+  appears. A pad press, like any key, skips a cinematic.
+
 ## Controls
 
 - **Modals** are `<dialog>` with `showModal()`. Every confirmation asks
@@ -223,16 +258,26 @@ keyboard's and controller's left and right step it.
   surface's own drawn commands (the inventory's action bar), which register
   with navigation above the surface.
 - **Lists** scroll with the wheel and follow controller focus.
-- **Choices** are `<select>` or focusable options. The window draws a
-  `<select>` popup for the mouse, and navigation changes its value with left
-  and right for a controller.
+- **Choices** are cyclers (`src/ui/cycler.ts`): ‹ value › with both steps
+  focusable buttons, stepping through the options the projection publishes and
+  skipping unavailable ones. A pad steps them with accept as easily as the
+  mouse clicks them. Character creation, the title's game choice and the
+  custom-class fields use them. The remaining native `<select>`s (the crafting
+  fields, travel's region and destination, the activation mode, the dialogue
+  tone) draw the window's own popup for the mouse, and navigation changes their
+  value with left and right for a controller.
 - **Numbers** are bounded by limits the projection publishes, so an invalid
   value cannot be entered and a controller steps them with left and right. A
   confirm step is never the first place a constraint appears.
 - **Redraws keep focus.** A snapshot arrives every update. A surface rebuilds
   its controls through `redraw` (`src/ui/redraw.ts`), which skips content that
   did not change and, after a real rebuild, focuses the same control again.
-- **Text entry** uses `<input>` and `<textarea>`.
+- **Text entry** uses `<input>` and `<textarea>`. For a pad, the letter
+  picker (`src/ui/letter-picker.ts`) edits any text field: a modal grid of
+  letters with Delete, Done and Cancel that writes back into the field as typing
+  does. It opens from a ✎ button beside the field (`letterPickerButton`) or from
+  the controller's accept on the focused field. The character name and a
+  riddle's answer use it.
 - Everything stays in the one page: no `window.open`, `target="_blank"`,
   native file or colour pickers.
 
@@ -275,8 +320,8 @@ no picture.
 
 **Cursors** are CSS image cursors from the kit
 (`image-set(url(...) 2x) x y, fallback`) with the kit's hotspot; text
-fields keep the text caret. The desktop window draws only the fallback
-until the Engine maps image cursors (#10104).
+fields keep the text caret. The desktop window draws them, as a browser tab
+does.
 
 ## Skin
 

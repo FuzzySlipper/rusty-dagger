@@ -449,6 +449,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("greeting", builder.String(dialogue.Greeting)),
         ("comprehendLanguagesBonus", builder.Number(dialogue.ComprehendLanguagesBonus)),
         ("tone", builder.String(dialogue.Tone)),
+        // The tones a conversation can take, with their names, so the screen keeps no list of its own.
+        ("tones", builder.Array(Enum.GetValues<DaggerfallDialogueTone>().Select(tone => builder.Object(
+            ("id", builder.String(tone.ToString().ToLowerInvariant())), ("label", builder.String(tone.ToString())))).ToArray())),
         ("question", dialogue.Question is null ? builder.Null() : builder.String(dialogue.Question)),
         ("reply", dialogue.Reply is null ? builder.Null() : builder.String(dialogue.Reply)),
         ("topics", builder.Array(dialogue.Topics.Select(topic => builder.Object(

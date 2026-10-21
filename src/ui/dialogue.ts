@@ -172,6 +172,8 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
       }
       target.textContent = dialogue.targetLabel + (dialogue.questContacts?.length ? ' — quest contact' : '');
       greeting.textContent = dialogue.greeting + (dialogue.comprehendLanguagesBonus ? ` Language comprehension: +${dialogue.comprehendLanguagesBonus}.` : '');
+      const tones = dialogue.tones ?? [];
+      redraw(tone, JSON.stringify(tones), () => tone.replaceChildren(...tones.map(row => new Option(row.label, row.id))));
       tone.value = dialogue.tone;
       donation.hidden = !dialogue.topics.some(topic => topic.id === 'donate');
       recordExchange(dialogue);
