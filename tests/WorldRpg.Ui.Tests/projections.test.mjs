@@ -1585,6 +1585,12 @@ test('title creation renders normalized questions and sends each allocation for 
     add('Strength').focus();
     add('Strength').click();
     assert.deepEqual(f.actions.at(-1), { action: 'character-update', name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00', backgroundAnswers: '1:a', attributeAllocations: 'strength:3', skillAllocations: 'medical:1' });
+    // A second press before the ruleset answers asks from the published draft too, so a step it refuses
+    // is never carried into the next one.
+    add('Strength').click();
+    assert.equal(f.actions.at(-1).attributeAllocations, 'strength:3');
+    f.root.querySelector('[aria-label="Add a point to Medical"]').click();
+    assert.deepEqual([f.actions.at(-1).attributeAllocations, f.actions.at(-1).skillAllocations], ['strength:2', 'medical:2']);
     // The ruleset's answer redraws the row and keeps focus on the step; when the pool is spent the step is refused.
     f.publish(draft(6, 0, false));
     assert.equal(f.root.querySelector('[aria-label="Attributes strength"]').textContent, '+6');

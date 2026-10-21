@@ -887,16 +887,22 @@ function backgroundEditor(value: CharacterBackground | null, live: () => void): 
   if (value.startingGrants.length !== 0) { const grants = document.createElement('p'); grants.dataset.testid = 'character-starting-grants'; grants.textContent = `Starting grants: ${value.startingGrants.map(grant => `${grant.quantity} × ${grant.label}`).join(', ')}.`; story.push(grants); }
   if (value.unsupportedEffects.length !== 0) { const unsupported = document.createElement('p'); unsupported.dataset.testid = 'character-background-unsupported-effects'; unsupported.textContent = `Recorded effects: ${value.unsupportedEffects.join(' ')}`; story.push(unsupported); }
 
-  const attributeAllocations = new Map(value.attributes.map(attribute => [attribute.id, attribute.allocated]));
-  const skillAllocations = new Map(value.skills.map(skill => [skill.id, skill.allocated]));
-  const step = (allocations: Map<string, number>, id: string, delta: number): void => {
-    allocations.set(id, Math.max(0, (allocations.get(id) ?? 0) + delta));
-    live();
+  // The allocations are the ruleset's draft as published. A step asks for that draft with one point
+  // moved and keeps nothing itself: a step the ruleset refuses (two pressed before it answered) leaves
+  // the draft as it was, and the next step starts from it again rather than from the refused one.
+  const attributeAllocations: ReadonlyMap<string, number> = new Map(value.attributes.map(attribute => [attribute.id, attribute.allocated]));
+  const skillAllocations: ReadonlyMap<string, number> = new Map(value.skills.map(skill => [skill.id, skill.allocated]));
+  let asked: Partial<Record<'attributeAllocations' | 'skillAllocations', string>> = {};
+  const step = (field: 'attributeAllocations' | 'skillAllocations', allocations: ReadonlyMap<string, number>, id: string, delta: number): void => {
+    const next = new Map(allocations);
+    next.set(id, Math.max(0, (next.get(id) ?? 0) + delta));
+    asked = { [field]: encode(next) };
+    try { live(); } finally { asked = {}; }
   };
   const pools = document.createElement('p'); pools.className = 'dagger-creation-pool'; pools.dataset.testid = 'character-allocation-pools'; pools.setAttribute('aria-live', 'polite');
   pools.textContent = `${value.remainingAttributePoints} bonus ${value.remainingAttributePoints === 1 ? 'point' : 'points'} left`;
   const attributes = value.attributes.map(attribute => stepper('Attributes', attribute.id, attribute.label, attribute.allocated, attribute.value, attribute.canAllocate,
-    delta => step(attributeAllocations, attribute.id, delta)));
+    delta => step('attributeAllocations', attributeAllocations, attribute.id, delta)));
   const remaining: Readonly<Record<string, number>> = { primary: value.primarySkillPoints, major: value.majorSkillPoints, minor: value.minorSkillPoints };
   const skillElements = SKILL_TIERS.flatMap(([tier, label]) => {
     const rows = value.skills.filter(skill => skill.tier === tier);
@@ -904,16 +910,17 @@ function backgroundEditor(value: CharacterBackground | null, live: () => void): 
     const heading = document.createElement('h4'); heading.dataset.tier = tier;
     const left = remaining[tier] ?? 0;
     heading.textContent = `${label} skills · ${left} ${left === 1 ? 'point' : 'points'} left`;
-    return [heading, ...rows.map(skill => stepper('Skills', skill.id, skill.label, skill.allocated, skill.value, skill.canAllocate, delta => step(skillAllocations, skill.id, delta)))];
+    return [heading, ...rows.map(skill => stepper('Skills', skill.id, skill.label, skill.allocated, skill.value, skill.canAllocate, delta => step('skillAllocations', skillAllocations, skill.id, delta)))];
   });
-  const encode = (allocations: Map<string, number>): string => [...allocations].filter(([, points]) => points !== 0).map(([id, points]) => `${id}:${points}`).join(',');
+  function encode(allocations: ReadonlyMap<string, number>): string { return [...allocations].filter(([, points]) => points !== 0).map(([id, points]) => `${id}:${points}`).join(','); }
   return {
     story,
     attributes: [pools, ...attributes],
     skills: skillElements,
     values: () => ({
       backgroundAnswers: questions.map(question => `${question.question}:${question.input.value()}`).join(','),
-      attributeAllocations: encode(attributeAllocations), skillAllocations: encode(skillAllocations),
+      attributeAllocations: asked.attributeAllocations ?? encode(attributeAllocations),
+      skillAllocations: asked.skillAllocations ?? encode(skillAllocations),
     }),
   };
 }
