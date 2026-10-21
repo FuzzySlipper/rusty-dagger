@@ -2806,7 +2806,8 @@ test('character draft screens consume the published mode art and every pick part
     const character = { name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true };
     const creation = { editing: true, mode: 'character-pick', classQuestionsAvailable: true, classQuiz: null, blocked: ['Enter a name.', 'Roll a background.'],
       current: { name: 'Nameless', race: 'breton', gender: 'male', faceIndex: 0, reflexes: 2, career: 'class00' },
-      races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }], careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }],
+      races: [{ id: 'breton', label: 'Breton', available: true, restriction: null }],
+      careers: [{ id: 'class00', label: 'Mage', available: true, restriction: null }, { id: 'class01', label: 'Spellsword', available: true, restriction: null }],
       faces: [{ index: 0, mediaId: 'character.head.male.00.0' }], reflexes: [{ value: 2, label: 'Average' }] };
     const entry = f.root.querySelector('.dagger-entry');
     f.publish({ mode: 'title', character: { ...character, creation: { ...creation, editing: false, mode: null } }, uiArt: art, uiArtRevision: art.revision });
@@ -2833,6 +2834,16 @@ test('character draft screens consume the published mode art and every pick part
     assert.deepEqual(f.actions.at(-1), { action: 'character-class-back' });
     f.publish({ mode: 'title', character: { ...character, creation }, pickScreens: ['screen.pick.02'] });
     assert.equal(entry.dataset.mode, 'character-pick');
+    // Leaving the questions lands on the career they chose, not on the name at the top of the editor.
+    const career = entry.querySelector('[data-cycler="Career"]');
+    assert.equal(career.contains(document.activeElement), true);
+    // Right from the career's ‹ is its own ›, which the cycler claims before a nearer control can win.
+    const Direction = document.defaultView.CustomEvent;
+    const previousCareer = career.querySelector('[aria-label="Previous career"]');
+    previousCareer.focus();
+    assert.equal(previousCareer.dispatchEvent(new Direction('dagger-direction', { detail: 'right', bubbles: true, cancelable: true })), false);
+    assert.equal(document.activeElement, career.querySelector('[aria-label="Next career"]'));
+    assert.equal(document.activeElement.dispatchEvent(new Direction('dagger-direction', { detail: 'down', bubbles: true, cancelable: true })), true);
     // Without a rolled background the commit is refused by the control, which says why.
     assert.equal(entry.querySelector('[data-testid="character-commit"]').disabled, true);
     assert.match(entry.querySelector('[data-testid="character-commit-blocked"]').textContent, /Roll a background/);
