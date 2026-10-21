@@ -1142,7 +1142,8 @@
           "current": 1,
           "maximum": 1,
           "percentage": 100,
-          "broken": false
+          "broken": false,
+          "low": false
         },
         "identified": true,
         "gridSlot": 0,
@@ -1172,7 +1173,8 @@
           "current": 800,
           "maximum": 800,
           "percentage": 100,
-          "broken": false
+          "broken": false,
+          "low": false
         },
         "identified": true,
         "gridSlot": null,
@@ -1213,7 +1215,8 @@
           "current": 50,
           "maximum": 50,
           "percentage": 100,
-          "broken": false
+          "broken": false,
+          "low": false
         },
         "identified": true,
         "gridSlot": 1,
@@ -1263,7 +1266,8 @@
           "current": 4096,
           "maximum": 4096,
           "percentage": 100,
-          "broken": false
+          "broken": false,
+          "low": false
         },
         "identified": true,
         "gridSlot": null,
@@ -1940,7 +1944,8 @@
           "current": 4096,
           "maximum": 4096,
           "percentage": 100,
-          "broken": false
+          "broken": false,
+          "low": false
         },
         "identified": true
       },
@@ -1954,7 +1959,8 @@
           "current": 800,
           "maximum": 800,
           "percentage": 100,
-          "broken": false
+          "broken": false,
+          "low": false
         },
         "identified": true
       }

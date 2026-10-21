@@ -17,7 +17,14 @@ internal sealed record InventoryItemPresentation(string Key, string Definition, 
     /// <summary>The weight in kilograms; <see cref="Weight"/> is in the template's quarter-kilogram units.</summary>
     internal double WeightKilograms => Weight * (double)DaggerfallEncumbrancePolicy.TemplateWeightToClassicUnits / DaggerfallEncumbrance.ClassicUnitsPerKilogram;
 }
-internal sealed record ItemConditionPresentation(int Current, int Maximum, int Percentage, bool Broken);
+internal sealed record ItemConditionPresentation(int Current, int Maximum, int Percentage, bool Broken)
+{
+    /// <summary>The share of its condition below which an item is shown as badly worn.</summary>
+    internal const int LowPercentage = 25;
+
+    /// <summary>Whether the item is broken or badly worn, so the screens mark it.</summary>
+    internal bool Low => Broken || Percentage < LowPercentage;
+}
 /// <summary>One fighting figure of an item (its damage or its armour), with a score where higher is better.</summary>
 internal sealed record ItemStatPresentation(string Label, string Text, double Score);
 /// <summary>The equipped item a carried one would be compared with, and its figures.</summary>

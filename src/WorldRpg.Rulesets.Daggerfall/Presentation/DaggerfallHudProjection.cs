@@ -737,7 +737,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("details", builder.String(item.Details)), ("icon", item.Icon is null ? builder.Null() : builder.String(item.Icon)),
         ("condition", item.Condition is { } condition ? builder.Object(("current", builder.Number(condition.Current)),
             ("maximum", builder.Number(condition.Maximum)), ("percentage", builder.Number(condition.Percentage)),
-            ("broken", builder.Boolean(condition.Broken))) : builder.Null()),
+            ("broken", builder.Boolean(condition.Broken)), ("low", builder.Boolean(condition.Low))) : builder.Null()),
         ("identified", builder.Boolean(item.Identified)),
         ("gridSlot", item.GridSlot is int slot ? builder.Number(slot) : builder.Null()),
         ("equippedSlots", builder.Array(item.EquippedSlots.Select(builder.String).ToArray())),
@@ -794,7 +794,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("equipment", builder.Array(value.Equipment.Select(item => builder.Object(("label", builder.String(item.Label)),
                 ("slots", builder.Array(item.Slots.Select(builder.String).ToArray())), ("details", builder.String(item.Details)),
                 ("condition", item.Condition is null ? builder.Null() : builder.Object(("current", builder.Number(item.Condition.Current)),
-                    ("maximum", builder.Number(item.Condition.Maximum)), ("percentage", builder.Number(item.Condition.Percentage)), ("broken", builder.Boolean(item.Condition.Broken)))),
+                    ("maximum", builder.Number(item.Condition.Maximum)), ("percentage", builder.Number(item.Condition.Percentage)), ("broken", builder.Boolean(item.Condition.Broken)),
+                    ("low", builder.Boolean(item.Condition.Low)))),
                 ("identified", builder.Boolean(item.Identified)))).ToArray())),
             ("resistances", builder.Array(value.Resistances.Select(Stat).ToArray())),
             ("affiliations", builder.Array(value.Affiliations.Select(affiliation => builder.Object(

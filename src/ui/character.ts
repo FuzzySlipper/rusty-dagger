@@ -65,7 +65,7 @@ export interface CharacterEquipment {
   readonly label: string;
   readonly slots: readonly string[];
   readonly details: string;
-  readonly condition?: { readonly current: number; readonly maximum: number; readonly percentage: number; readonly broken: boolean; } | null;
+  readonly condition?: { readonly current: number; readonly maximum: number; readonly percentage: number; readonly broken: boolean; readonly low?: boolean } | null;
   readonly identified?: boolean;
 }
 
@@ -424,7 +424,7 @@ function equipmentRow(item: CharacterEquipment): HTMLElement {
   // Wear as a bar, so a nearly broken piece reads at a glance; the ruleset's wording stays below it.
   if (item.condition && item.condition.maximum > 1) {
     const wear = meter(item.condition.broken ? 0 : item.condition.percentage / 100, item.condition.broken ? 'Broken' : `Condition ${format(item.condition.percentage)}%`);
-    wear.classList.toggle('is-low', item.condition.broken || item.condition.percentage < 25);
+    wear.classList.toggle('is-low', item.condition.low === true);
     row.append(wear);
   }
   row.append(details);
