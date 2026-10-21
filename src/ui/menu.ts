@@ -52,6 +52,8 @@ export interface GameMenu {
   pageHint(): string | null;
   /** Key capture for rebinding, which runs before navigation takes Escape and the arrows. */
   captureKey(event: KeyboardEvent): void;
+  /** A panel's hotkey or pad shortcut: show it, or close the menu when it is already shown. */
+  togglePanel(action: string): void;
   /** A controller press the controls screen takes while it captures a button. */
   captureButton(button: string): boolean;
   update(value: DaggerHud, dead: boolean, spellbook: SpellbookProjection | null, textDiagnostics: readonly string[]): void;
@@ -202,6 +204,14 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     home.querySelector<HTMLButtonElement>(`[data-action="${returnAction}"]`)?.focus();
   };
   const reportMenu = (open: boolean): void => send({ action: 'menu', open });
+  // The bound keys of the actions that open a panel, from the published controls.
+  let panelBindings: { readonly panel: string; readonly keys: readonly string[] }[] = [];
+  /** Show a panel, or close the menu when that panel is already the one shown. */
+  const togglePanel = (action: string): void => {
+    const shown = HOTKEY_PANELS[action] ?? action;
+    if (menu.open && activePanel === shown) closeMenu();
+    else runAction(action);
+  };
   const closeMenu = (): void => {
     inventoryView.closeActions();
     reportMap(false);
@@ -402,10 +412,25 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       return activePanel === 'journal' ? journalView.pageHint() : activePanel === 'map' && isMapProjection(lastMap) ? 'Zoom'
         : activePanel === 'transport' ? travelView.pageHint() : null;
     },
-    captureKey(event) { if (activePanel === 'settings') controlsView.captureKey(event); },
+    captureKey(event) {
+      if (activePanel === 'settings' && controlsView.captureKey(event)) return;
+      // While the menu is open the page holds the keyboard, so the panel hotkeys reach the game here: the
+      // bound key shows its panel, and closes the menu when that panel is already shown (which re-locks).
+      if (!menu.open || event.repeat || event.ctrlKey || event.altKey || event.metaKey || host.isDead()) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest('input:not([type="number"]):not([type="range"]):not([type="checkbox"]),textarea,select,[contenteditable="true"]')) return;
+      const binding = panelBindings.find(row => row.keys.includes(event.code));
+      if (!binding) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      togglePanel(binding.panel);
+    },
+    togglePanel,
     captureButton(button) { return activePanel === 'settings' && controlsView.captureButton(button); },
     update(value, dead, spellbook, diagnosticText) {
       renderSpells(spellsRoot, spellbook, value.controls, send);
+      panelBindings = (value.controls?.bindings ?? []).filter(row => HOTKEY_ACTIONS[row.id] !== undefined)
+        .map(row => ({ panel: HOTKEY_ACTIONS[row.id]!, keys: row.keys }));
       inventorySuppressed = value.character?.identity?.racialOverride?.suppressInventory === true;
       for (const control of shell.querySelectorAll<HTMLButtonElement>('[data-action="inventory"]')) control.disabled = inventorySuppressed;
       if (inventorySuppressed && activePanel === 'inventory') showHome();
@@ -524,6 +549,14 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     },
   };
 }
+
+/** The control bindings that open a panel, and the menu action each runs. */
+const HOTKEY_ACTIONS: Readonly<Record<string, string>> = {
+  inventory: 'inventory', character: 'character', spell: 'spells', rest: 'rest', map: 'map', transport: 'transport',
+  logbook: 'journal', notebook: 'notebook', 'travel-map': 'transport', 'use-magic-item': 'magic-items',
+};
+/** Menu actions that show another panel than their own name. */
+const HOTKEY_PANELS: Readonly<Record<string, string>> = { notebook: 'journal', book: 'journal' };
 
 const PANEL_TITLES: Partial<Record<Panel, string>> = {
   'magic-items': 'Use magic item', spells: 'Known spells', settings: 'Control settings', diagnostics: 'Composition diagnostics',

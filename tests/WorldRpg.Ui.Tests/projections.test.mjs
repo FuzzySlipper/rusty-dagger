@@ -2218,6 +2218,32 @@ test('quest letters and popups are read on parchment and an offer is answered as
   } finally { f.dispose(); }
 });
 
+test('a panel hotkey closes its own panel back to play, and switches to another panel, while the menu holds the keyboard', () => {
+  const f = fixture();
+  try {
+    const controls = { diagnostic: '', bindings: [
+      { id: 'inventory', category: 'interface', label: 'Inventory', keys: ['KeyI'], fixed: false, buttons: [8] },
+      { id: 'character', category: 'interface', label: 'Character', keys: ['KeyC'], fixed: false, buttons: [3] }] };
+    f.publish({ controls, panelRequest: { panel: 'inventory', revision: '1' } });
+    const menu = f.root.querySelector('.dagger-menu');
+    assert.equal(menu.open, true);
+    assert.equal(f.root.querySelector('.dagger-inventory-root').hidden, false);
+    const key = code => document.dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true }));
+    // The character key switches panels; the inventory key, pressed over the inventory, closes the menu.
+    key('KeyC');
+    assert.equal(f.root.querySelector('.dagger-character-root').hidden, false);
+    key('KeyC');
+    assert.equal(menu.open, false);
+    // Closing returns to play and asks for gameplay focus, which re-takes pointer lock.
+    assert.ok(f.focuses.length > 0);
+    // The pad's Select toggles the inventory the same way.
+    f.publish({ controls, panelRequest: { panel: 'inventory', revision: '2' } });
+    assert.equal(menu.open, true);
+    f.pad('button-8');
+    assert.equal(menu.open, false);
+  } finally { f.dispose(); }
+});
+
 test('the title offers no game menu button', () => {
   const f = fixture();
   try {
