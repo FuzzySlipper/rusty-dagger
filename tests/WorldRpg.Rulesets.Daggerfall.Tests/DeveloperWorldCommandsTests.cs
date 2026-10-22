@@ -96,6 +96,20 @@ public sealed class DeveloperWorldCommandsTests
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(Charing), session.Sites.ActiveProfile);
         Assert.Equal("Charing", Json(arrived).GetProperty("place").GetString());
 
+        // A closed door is collision movement meets, though the admitted scene does not hold it: a spot it
+        // fills is refused unless forced.
+        DaggerfallDoorView door = session.Doors.All.First(value => session.Doors.ExteriorBuildingOf(value.Id) == TempleOfKynareth);
+        run.Spatial.OverlapHit = request => request.Entities.ToArray().Any(collider => collider.Entity == door.Entity.Value)
+            ? default(SpatialHit) with { Present = true, Converged = true, Kind = SpatialHitKind.Entity, Entity = door.Entity.Value }
+            : default;
+        Vector3 outside = Position(session), doorway = door.Pose.Translation;
+        DebugCommandResult blocked = session.Teleport(doorway.X, doorway.Y, doorway.Z, force: false);
+        Assert.False(blocked.Succeeded);
+        Assert.Contains("overlap", blocked.Message, StringComparison.Ordinal);
+        Assert.Equal(outside, Position(session));
+        Assert.True(session.Teleport(doorway.X, doorway.Y, doorway.Z, force: true).Succeeded);
+        run.Spatial.OverlapHit = _ => default;
+
         // world.find names the building and how to enter it before it is entered.
         JsonElement found = Json(session.Find("training"));
         JsonElement temple = found.GetProperty("buildings").EnumerateArray().Single(value => value.GetProperty("id").GetString() == TempleOfKynareth.ToString());
@@ -122,6 +136,17 @@ public sealed class DeveloperWorldCommandsTests
         DaggerfallActivationTarget target = Assert.Single(session.Dialogue.NpcTargets(), value => value.Identity.Value == checked((ulong)trainer.DurableId));
         Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);
         Assert.Contains(session.ActivationView.Dialogue!.Services, service => service.Id == DaggerfallPersonServices.Training);
+
+        // While the conversation holds the world, movement is refused and nothing moves; the conversation stays open.
+        Vector3 talking = Position(session);
+        DebugCommandResult held = session.Teleport(talking.X + 1, talking.Y, talking.Z, force: true);
+        Assert.False(held.Succeeded);
+        Assert.Contains("Dialogue", held.Message, StringComparison.Ordinal);
+        Assert.False(session.Travel("Charing").Succeeded);
+        Assert.False(session.GoTo($"Actor:{trainer.DurableId}").Succeeded);
+        Assert.Equal(talking, Position(session));
+        Assert.NotNull(session.ActivationView.Dialogue);
+        session.Dialogue.Close();
 
         // Unknown and ambiguous names are refused with what was found.
         Assert.False(session.GoTo("Nobody Of That Name").Succeeded);
