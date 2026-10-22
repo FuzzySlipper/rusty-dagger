@@ -122,8 +122,23 @@ internal sealed partial class DaggerfallSession
         var config = _spatial.CurrentController;
         float height = State.PlayerControl.Motion.Stance == CharacterStance.Crouched ? config.Shape.CrouchedHeight : config.Shape.StandingHeight;
         Vector3 feet = (State.PlayerControl.Position ?? throw new InvalidOperationException("Spatial inspection requires a player position.")).ToVector() - Vector3.UnitY * (height * .5f);
-        return DebugCommandResult.Success(PlaytestTraversal.Probe(_engine.Spatial, _spatial.Session,
-            feet, height, config.Surface.MaximumStepHeight, (float)distance, ReadOnlyMemory<SpatialEntityCollider>.Empty));
+        string probe = PlaytestTraversal.Probe(_engine.Spatial, _spatial.Session,
+            feet, height, config.Surface.MaximumStepHeight, (float)distance, SpatialMovementSystem.SpatialColliders(LiveCollision()));
+        PublishProbeOverlay(probe);
+        return DebugCommandResult.Success(probe);
+    }
+
+    public DebugCommandResult ReadSpatialClearance(double x, double y, double z)
+    {
+        if (!double.IsFinite(x) || !double.IsFinite(y) || !double.IsFinite(z))
+            return DebugCommandResult.Failure(DebugCommandStatus.InvalidArguments, "Clearance target must be finite.");
+        var config = _spatial.CurrentController;
+        Vector3 center = (State.PlayerControl.Position ?? throw new InvalidOperationException("Spatial inspection requires a player position.")).ToVector();
+        float height = State.PlayerControl.Motion.Stance == CharacterStance.Crouched ? config.Shape.CrouchedHeight : config.Shape.StandingHeight;
+        string clearance = SpatialClearanceSnapshot.Capture(_engine.Spatial, _spatial.Session, center, new((float)x, (float)y, (float)z),
+            height, config, SpatialMovementSystem.SpatialColliders(LiveCollision()));
+        PublishProbeOverlay(clearance);
+        return DebugCommandResult.Success(clearance);
     }
 
     public DebugCommandResult ReadJumpPlan(double x, double y, double z)

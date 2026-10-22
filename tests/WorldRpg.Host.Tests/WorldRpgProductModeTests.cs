@@ -516,6 +516,7 @@ public sealed class WorldRpgProductModeTests
         public DebugCommandResult ReadSpatialGrid(int radius, int verticalRadius, double cellSize) => ReadPlaytestObservation();
         public DebugCommandResult ReadSpatialProbe(double distance) => ReadPlaytestObservation();
         public DebugCommandResult ReadJumpPlan(double x, double y, double z) => ReadPlaytestObservation();
+        public DebugCommandResult ReadSpatialClearance(double x, double y, double z) => ReadPlaytestObservation();
         public InteractionSceneSnapshot ReadInteraction() => new(
             new InteractionQuery(Vector3.Zero, Vector3.UnitZ, 1, 1, 2, 2, 1, 1),
             ReadOnlyMemory<InteractionCandidate>.Empty, _identity.ToString(), "inspect");

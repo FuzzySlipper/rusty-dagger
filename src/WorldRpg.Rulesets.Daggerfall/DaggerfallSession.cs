@@ -911,6 +911,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],
             _tuning.Camera.EyeHeight, State.Effects.PerceptionFor, ReadNpcViews(), ReadDungeonSpellFlights(), State.Npcs.IsGameplayActive);
+        PublishDebugOverlays();
     }
 
     /// <summary>The carried inventory as the HUD publishes it, eligibility included.</summary>

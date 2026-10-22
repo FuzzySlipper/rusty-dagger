@@ -1,4 +1,3 @@
-import { mountLiveDebugPanel, type LiveDebugPanelMount } from '@rusty-engine/live-debug';
 import { image } from './art.js';
 import { mountCharacter, isCharacterProjection } from './character.js';
 import type { ConfirmQuestion } from './confirm.js';
@@ -19,7 +18,7 @@ import { renderSpells, spellAction } from './spells.js';
 import { isTransportProjection, mountTransport } from './transport.js';
 import { mountTravel, isTravelProjection } from './travel.js';
 
-type Panel = 'spells' | 'magic-items' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'debug' | 'save-slots' | 'settings';
+type Panel = 'spells' | 'magic-items' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'save-slots' | 'settings';
 
 /** The panels the shoulder buttons step through, in the home list's order. */
 const STEPPED_PANELS = ['inventory', 'character', 'spells', 'magic-items', 'map', 'transport', 'rest', 'journal'] as const;
@@ -69,6 +68,8 @@ export interface MenuHost {
   readonly isDead: () => boolean;
   /** Registers a surface a panel opens over the menu, such as a context menu. */
   readonly register: (surface: NavigationSurface) => () => void;
+  /** Opens the developer tools, which dock beside play rather than inside the menu. */
+  readonly openDeveloper: () => void;
   /** The interface scale in use, which Settings shows beside the player's choice. */
   readonly uiScale: () => number;
 }
@@ -157,22 +158,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   let activePanel: Panel | null = null;
   let lastMap: unknown = null;
 
-  const debugRoot = shell.querySelector<HTMLElement>('.dagger-debug-root')!;
-  let debugPanel: LiveDebugPanelMount | null = null;
-  const closeDebug = (): void => { debugPanel?.dispose(); debugPanel = null; debugRoot.replaceChildren(); };
-  const openDebug = (): void => {
-    closeDebug();
-    const container = document.createElement('div');
-    debugRoot.append(container);
-    void mountLiveDebugPanel(container, { enabled: true, presentation: 'inline' }).then(mount => {
-      if (!container.isConnected || activePanel !== 'debug') { mount.dispose(); return; }
-      debugPanel = mount;
-      container.querySelector<HTMLInputElement>('input')?.focus();
-    }).catch(error => {
-      if (container.isConnected) container.textContent = `Debug console unavailable: ${error instanceof Error ? error.message : String(error)}`;
-    });
-  };
-
   // Each panel remembers the control that last held focus, so reopening it (from home or by the
   // shoulder buttons) puts the player back where they were rather than on its Back button.
   const panelFocus = new Map<Panel, HTMLElement>();
@@ -195,7 +180,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     controlsView.cancel();
     const previous = activePanel;
     if (previous === 'transport') travelView.hide();
-    if (previous === 'debug') closeDebug();
     if (previous === 'loot') closeLoot();
     activePanel = null;
     menu.classList.remove('has-inventory', 'has-character', 'has-spells', 'has-map', 'has-transport', 'has-rest', 'has-journal', 'has-loot', 'has-debug');
@@ -220,7 +204,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     travelView.hide();
     controlsView.cancel();
     if (activePanel === 'loot') closeLoot();
-    closeDebug();
     activePanel = null;
     loadRequested = false;
     menu.close();
@@ -255,7 +238,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     if (!menu.open) openMenu();
     inventoryView.closeActions();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
-    if (activePanel === 'debug') closeDebug();
     reportMap(action === 'map');
     if (action !== 'transport') travelView.hide();
     activePanel = action;
@@ -273,10 +255,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     lootRoot.hidden = action !== 'loot';
     saveSlotsRoot.hidden = action !== 'save-slots';
     controlsRoot.hidden = action !== 'settings';
-    debugRoot.hidden = action !== 'debug';
-    if (action === 'debug') openDebug();
     shell.querySelector<HTMLButtonElement>('[data-action="loot-exit"]')!.hidden = action !== 'loot';
-    for (const name of ['inventory', 'character', 'spells', 'map', 'transport', 'rest', 'journal', 'loot', 'debug'] as const)
+    for (const name of ['inventory', 'character', 'spells', 'map', 'transport', 'rest', 'journal', 'loot'] as const)
       menu.classList.toggle(`has-${name}`, action === name);
     menuTitle.textContent = PANEL_TITLES[action] ?? (saveSlotMode === 'save' ? 'Save game' : 'Load game');
     if (restorePanelFocus(action)) return;
@@ -345,7 +325,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     else if (action === 'load-game') showSaveSlots('load');
     // The notebook key and an opened book ask for the journal on their own page.
     else if (action === 'notebook' || action === 'book') { showPanel('journal'); journalView.select(action === 'book' ? 'book' : 'notes'); }
-    else if (action === 'magic-items' || action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'debug') showPanel(action);
+    else if (action === 'magic-items' || action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal') showPanel(action);
+    else if (action === 'debug') { closeMenu(); host.openDeveloper(); }
   };
   const onClick = (event: MouseEvent): void => {
     const control = (event.target as HTMLElement).closest<HTMLButtonElement>('button');
@@ -544,7 +525,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     },
     dispose() {
       reportMap(false);
-      closeDebug();
       controlsView.dispose();
       inventoryView.dispose();
       transportView.dispose();
@@ -574,6 +554,6 @@ const HOTKEY_PANELS: Readonly<Record<string, string>> = { notebook: 'journal', b
 const PANEL_TITLES: Partial<Record<Panel, string>> = {
   'magic-items': 'Use magic item', spells: 'Known spells', settings: 'Control settings', diagnostics: 'Composition diagnostics',
   inventory: 'Inventory & equipment', character: 'Character', map: 'Map', transport: 'Travel & transport', rest: 'Rest & loiter',
-  journal: 'Journal & notes', loot: 'Loot', debug: 'Engine debug console',
+  journal: 'Journal & notes', loot: 'Loot',
 };
 
