@@ -106,12 +106,14 @@ internal sealed partial class DaggerfallSession
     /// How well a destination answers a search: its exact name, then a name starting with the term, then a name
     /// containing it, then a region that names it; null when nothing does. The order within a rank is the catalog's.
     /// </summary>
-    private int? SearchRank(DaggerfallTravelDestination destination, string term)
+    private int? SearchRank(DaggerfallTravelDestination destination, string term) => PlaceRank(destination.Name, destination.Id.Region, term);
+
+    private int? PlaceRank(string name, int region, string term)
     {
-        if (destination.Name.Equals(term, StringComparison.OrdinalIgnoreCase)) return 0;
-        if (destination.Name.StartsWith(term, StringComparison.OrdinalIgnoreCase)) return 1;
-        if (destination.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) return 2;
-        return DaggerfallRegionNames.Name(_definitions.BuildingNames.RegionNames, destination.Id.Region)
+        if (name.Equals(term, StringComparison.OrdinalIgnoreCase)) return 0;
+        if (name.StartsWith(term, StringComparison.OrdinalIgnoreCase)) return 1;
+        if (name.Contains(term, StringComparison.OrdinalIgnoreCase)) return 2;
+        return DaggerfallRegionNames.Name(_definitions.BuildingNames.RegionNames, region)
             .Contains(term, StringComparison.OrdinalIgnoreCase) ? 3 : null;
     }
 

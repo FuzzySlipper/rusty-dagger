@@ -113,9 +113,7 @@ internal sealed partial class DaggerfallSession
             return new(true, "Read the greeting before entering.");
         bool trespass = !owned && closed && interior.BuildingType is >= 0 and <= 23;
         var witnesses = !owned && (forced || trespass) ? QueryCrimeWitnesses() : DaggerfallCrimeWitnessEvidence.NotQueried;
-        DaggerfallSiteAnchor landing = DaggerfallBuildingArrival.Landing(inside,
-            _sites.LocalToProfile(_doors.Read(door).Pose.Translation), _spatial.CurrentController.Shape);
-        if (!_sites.TryEnterBuilding(destination, landing))
+        if (!_sites.TryEnterBuilding(destination, BuildingLanding(inside, door)))
             return new(false, "The building entrance cannot be used.");
         if (!owned && (forced || trespass))
         {
@@ -130,6 +128,10 @@ internal sealed partial class DaggerfallSession
         }
         return new(true, "You pass through the building entrance.");
     }
+
+    /// <summary>Where entering through an exterior door lands inside its building.</summary>
+    private DaggerfallSiteAnchor BuildingLanding(DaggerfallSiteProfile inside, DaggerfallRdbDoorId door) =>
+        DaggerfallBuildingArrival.Landing(inside, _sites.LocalToProfile(_doors.Read(door).Pose.Translation), _spatial.CurrentController.Shape);
 
     /// <summary>The placed building an exterior door enters, when the active site's record carries it.</summary>
     private bool TryExteriorBuilding(DaggerfallRdbDoorId door, out DaggerfallSiteId site, out DaggerfallSiteBuildingSource building)

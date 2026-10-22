@@ -1,3 +1,4 @@
+using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -70,6 +71,15 @@ internal sealed partial class DaggerfallSession
     private DaggerfallTeleportAnchor? _teleportAnchor;
     internal DaggerfallTeleportView? TeleportView => _pendingTeleport is { } request ? new(request, _teleportAnchor is not null) : null;
 
+    /// <summary>
+    /// A scene-local point in the active profile's own frame, as <see cref="DaggerfallSiteLifecycle.TryRelocatePlayer"/>
+    /// takes it. Exterior profiles author poses in the site's local frame; LocalToProfile is the map-global projection
+    /// used by live population and map reads, so feeding it back to a relocation resolves an impossible exterior cell.
+    /// </summary>
+    private Vector3 ProfilePosition(WorldPoint local) => _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
+        ? _sites.ExteriorSitePosition(local).ToVector()
+        : _sites.LocalToProfile(local.ToVector());
+
     internal void ChooseTeleport(string revision, string choice)
     {
         if (_pendingTeleport != revision) { Presentation.SetOutcome("Teleport choice is no longer current."); return; }
@@ -78,13 +88,7 @@ internal sealed partial class DaggerfallSession
         if (choice == "anchor")
         {
             var player = State.PlayerControl;
-            WorldPoint playerPosition = player.Position!.Value;
-            // Exterior profiles author poses in the site's local frame. LocalToProfile is the
-            // map-global projection used by live population and map reads, so feeding it back to
-            // TryRelocatePlayer makes recall resolve an impossible exterior cell.
-            var position = _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
-                ? _sites.ExteriorSitePosition(playerPosition).ToVector()
-                : _sites.LocalToProfile(playerPosition.ToVector());
+            var position = ProfilePosition(player.Position!.Value);
             var returned = _site.ReturnPose;
             _teleportAnchor = new(DaggerfallWorldProfileKeySave.Capture(_activeProfileKey),
                 new(position.X, position.Y, position.Z, player.YawRadians, player.PitchRadians),
