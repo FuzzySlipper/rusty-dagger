@@ -35,6 +35,11 @@ function pngHeader(width, height) {
 }
 after(() => rm(output, { recursive: true, force: true }));
 
+/** A person who offers only talk, as the ruleset publishes one: the conversation opens straight on Talk. */
+const TALK = Object.freeze({ services: [{ id: 'talk', label: 'Talk' }], opensOn: 'talk' });
+/** A person who offers talk and the given services: contact opens on the chooser. */
+const offering = (...services) => ({ services: [{ id: 'talk', label: 'Talk' }, ...services.map(([id, label]) => ({ id, label }))], opensOn: 'services' });
+
 function fixture() {
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' });
   for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLDialogElement', 'HTMLSelectElement', 'HTMLInputElement', 'Event', 'KeyboardEvent', 'MouseEvent', 'Option', 'MutationObserver']) {
@@ -66,8 +71,15 @@ function fixture() {
     dialog.querySelector(accept ? '.dagger-confirm-accept' : '.dagger-confirm-cancel').click();
     assert.equal(dialog.open, false);
   };
+  // Open one of a person's services from the chooser, as a click on it does, and check it is the page shown.
+  const openService = (id) => {
+    const back = root.querySelector('.dagger-dialogue-back');
+    if (!back.hidden) back.click();
+    root.querySelector(`.dagger-dialogue-service-list [data-service="${id}"]`).click();
+    assert.equal(root.querySelector(`.dagger-dialogue-page[data-page="${id}"]`).hidden, false, `The ${id} page is shown.`);
+  };
   return {
-    root, actions, modes, focuses, scales, answer,
+    root, actions, modes, focuses, scales, answer, openService,
     pad(button) {
       observe?.({ context: 'interface', fact: { kind: 'controller-button', button, edge: 'pressed' } });
       observe?.({ context: 'interface', fact: { kind: 'controller-button', button, edge: 'released' } });
@@ -127,7 +139,7 @@ test('death projection renders semantic choices, selected save slots, and suppre
 test('the conversation tone offers the tones the ruleset publishes and sends the one chosen', () => {
   const f = fixture();
   try {
-    const dialogue = { revision: 'dialogue-9', targetLabel: 'A merchant', greeting: 'Well met.', tone: 'normal',
+    const dialogue = { ...TALK, revision: 'dialogue-9', targetLabel: 'A merchant', greeting: 'Well met.', tone: 'normal',
       tones: [{ id: 'polite', label: 'Polite' }, { id: 'normal', label: 'Normal' }, { id: 'blunt', label: 'Blunt' }],
       question: null, reply: null, topics: [], diagnostics: [] };
     f.publish({ mode: 'modal', activation: { mode: 'talk', message: '', applied: true, dialogue } });
@@ -143,7 +155,7 @@ test('death closes retained dialogue and exposes a real fade consumer', () => {
   const f = fixture();
   try {
     const dialogue = {
-      revision: 'dialogue-4', targetLabel: 'A guard', greeting: 'Halt.', tone: 'normal',
+      ...TALK, revision: 'dialogue-4', targetLabel: 'A guard', greeting: 'Halt.', tone: 'normal',
       question: 'Who goes there?', reply: null, topics: [{ id: 'name', label: 'Ask name' }], diagnostics: [],
     };
     f.publish({ mode: 'playing', activation: { mode: 'talk', message: '', applied: true, dialogue } });
@@ -845,7 +857,7 @@ test('Escape backs out of the innermost surface and opens the menu only from pla
     const menu = f.root.querySelector('.dagger-menu');
     const escape = () => document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
     const empty = { deliveries: [], journal: { active: [], finished: [] }, pending: null };
-    const dialogue = { revision: 'talk-3', targetLabel: 'A guard', greeting: 'Halt.', tone: 'normal', question: null, reply: null, topics: [], diagnostics: [] };
+    const dialogue = { ...TALK, revision: 'talk-3', targetLabel: 'A guard', greeting: 'Halt.', tone: 'normal', question: null, reply: null, topics: [], diagnostics: [] };
 
     // A conversation ends; the game menu does not open over it.
     f.publish({ activation: { mode: 'talk', message: '', applied: true, dialogue } });
@@ -957,7 +969,7 @@ test('the spell choices are centred dialogs, and game UI explains itself with dr
 test('a controller reaches the dialogue: directions move focus, accept presses, Back ends the conversation', () => {
   const f = fixture();
   try {
-    const dialogue = { revision: 'talk-5', targetLabel: 'A smith', greeting: 'Well met.', tone: 'normal', question: null, reply: null,
+    const dialogue = { ...TALK, revision: 'talk-5', targetLabel: 'A smith', greeting: 'Well met.', tone: 'normal', question: null, reply: null,
       topics: [{ id: 'news', label: 'News' }, { id: 'work', label: 'Work' }], diagnostics: [] };
     f.publish({ activation: { mode: 'talk', message: '', applied: true, dialogue } });
     const window_ = f.root.querySelector('.dagger-dialogue');
@@ -1070,7 +1082,7 @@ test('a snapshot that arrives every update keeps the focused control, and a chan
 
     // The menu is modal; close it before talking, as play would.
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
-    const dialogue = topics => ({ revision: 'talk-1', targetLabel: 'A smith', greeting: 'Hello.', tone: 'normal', question: null, reply: null, topics, diagnostics: [] });
+    const dialogue = topics => ({ ...TALK, revision: 'talk-1', targetLabel: 'A smith', greeting: 'Hello.', tone: 'normal', question: null, reply: null, topics, diagnostics: [] });
     f.publish({ activation: { mode: 'talk', message: '', applied: true, dialogue: dialogue([{ id: 'news', label: 'News' }, { id: 'work', label: 'Work' }]) } });
     const work = f.root.querySelector('.dagger-dialogue-topics [data-topic="work"]');
     work.focus();
@@ -3031,7 +3043,8 @@ test('spell seller and spellbook use confirmed semantic changes and source setti
         {key:'spell.002',name:'Cure',castingCost:12,price:48,known:false},
         {key:'spell.023',name:'Heal',castingCost:15,price:60,known:true}]},
       information:{key:'spell.023',name:'Heal',target:'Self',element:'Magic',details:['restoration: magnitude 1–10.']}};
-    f.publish({spells,activation:{mode:'talk',message:'',applied:true,dialogue:{revision:'seller-1',targetLabel:'Mage',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
+    f.publish({spells,activation:{mode:'talk',message:'',applied:true,dialogue:{...offering(['spells','Buy spells']),revision:'seller-1',targetLabel:'Mage',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
+    f.openService('spells');
     const sales=f.root.querySelector('.dagger-dialogue-spells');
     assert.equal(sales.querySelector('[data-action="spell-buy"][data-spell="spell.023"]').disabled,true);
     const buy=sales.querySelector('[data-action="spell-buy"][data-spell="spell.002"]');
@@ -3097,7 +3110,7 @@ test('property offers stay in the inventory panel, and its storage is a Storage 
 test('live banking dialogue emits bank-open with its actual revision', () => {
   const f = fixture();
   try {
-    const dialogue = { revision: 'bank-7', targetLabel: 'Bank teller', greeting: 'Welcome', tone: 'normal',
+    const dialogue = { ...TALK, revision: 'bank-7', targetLabel: 'Bank teller', greeting: 'Welcome', tone: 'normal',
       topics: [], diagnostics: [], bankAvailable: true };
     f.publish({ activation: { mode: 'talk', dialogue } });
     f.root.querySelector('[data-bank-open]').click();
@@ -3110,7 +3123,7 @@ test('live banking dialogue emits bank-open with its actual revision', () => {
 test('arrows step over the topics of a closed directory list to the next list', () => {
   const f = fixture();
   try {
-    f.publish({ activation: { mode: 'talk', dialogue: { revision: 'd-1', targetLabel: 'Hrolf', greeting: 'Well met.', tone: 'normal', question: null, reply: null,
+    f.publish({ activation: { mode: 'talk', dialogue: { ...TALK, revision: 'd-1', targetLabel: 'Hrolf', greeting: 'Well met.', tone: 'normal', question: null, reply: null,
       diagnostics: [], topicGroups: [{ id: 'places', label: 'Where is…' }], topics: [
         { id: 'direction:building:1', label: 'Where is The Gem?', group: 'places', category: 'Gem stores' },
         { id: 'direction:building:2', label: 'Where is The Store?', group: 'places', category: 'General stores' }] } } });
@@ -3124,7 +3137,7 @@ test('arrows step over the topics of a closed directory list to the next list', 
 test('a conversation opens on its first topic, and keys hide the hover highlight until the pointer moves', () => {
   const f = fixture();
   try {
-    f.publish({ activation: { mode: 'talk', dialogue: { revision: 'd-1', targetLabel: 'Hrolf', greeting: 'Well met.', tone: 'normal', question: null, reply: null,
+    f.publish({ activation: { mode: 'talk', dialogue: { ...TALK, revision: 'd-1', targetLabel: 'Hrolf', greeting: 'Well met.', tone: 'normal', question: null, reply: null,
       diagnostics: [], topics: [{ id: 'news', label: 'Any news?', group: 'talk' }], topicGroups: [{ id: 'talk', label: 'Ask about' }] } } });
     assert.equal(document.activeElement.dataset.topic, 'news', 'The tone choice would take the arrows.');
     const hud = f.root.querySelector('.dagger-hud') ?? f.root;
@@ -3143,7 +3156,7 @@ test('the conversation groups its topics under the published headings, keeps a s
   const f = fixture();
   try {
     const groups = [{ id: 'talk', label: 'Ask about' }, { id: 'quests', label: 'Your business' }, { id: 'places', label: 'Where is…' }, { id: 'services', label: 'Services' }];
-    const dialogue = (revision, question, reply) => ({ revision, targetLabel: 'Hrolf', greeting: 'Well met.', tone: 'normal', question, reply, diagnostics: [],
+    const dialogue = (revision, question, reply) => ({ ...offering(['summoning', 'Summon a Daedra']), revision, targetLabel: 'Hrolf', greeting: 'Well met.', tone: 'normal', question, reply, diagnostics: [],
       bankAvailable: true, topicGroups: groups, topics: [
         { id: 'news', label: 'Any news?', group: 'talk' }, { id: 'directions', label: 'The Odd Blades', key: 'place.7', group: 'places', category: 'Weaponsmiths' },
         { id: 'directions', label: 'Where is Hrolf?', key: 'npc.3', group: 'places', category: 'People' },
@@ -3152,6 +3165,7 @@ test('the conversation groups its topics under the published headings, keeps a s
       quote: { key: 'azura', name: 'Azura', quest: 'Q0C00Y00', gold: 2000, eligible: true, reason: null } };
     const publish = (value) => f.publish({ activation: { mode: 'talk', dialogue: value }, spells: { available: [], ready: null, result: '', summoning } });
     publish(dialogue('d-1', null, null));
+    f.openService('talk');
     const sections = [...f.root.querySelectorAll('.dagger-dialogue-topic-group')];
     assert.deepEqual(sections.map(section => section.querySelector('h3').textContent), ['Ask about', 'Where is…', 'Services'], 'Empty groups are left out.');
     // The directory's lists are closed, counted sections; an opened one stays open while the conversation lasts.
@@ -3176,6 +3190,7 @@ test('the conversation groups its topics under the published headings, keeps a s
     assert.deepEqual(log.map(entry => entry.querySelector('.dagger-dialogue-reply').textContent), ['They say the harbour flooded.', 'North of the temple.']);
     assert.equal(log[1].classList.contains('is-latest'), true);
     // Summoning pays only through the confirm, which names the loss on failure.
+    f.openService('summoning');
     const pay = [...f.root.querySelectorAll('.dagger-dialogue-summoning button')].find(button => button.textContent === 'Pay and summon');
     const count = f.actions.length;
     pay.click();
@@ -3192,6 +3207,91 @@ test('the conversation groups its topics under the published headings, keeps a s
   } finally { f.dispose(); }
 });
 
+test('a person screen: the chooser lists the published services, each page draws only its own, and Back steps page, chooser, closed', () => {
+  const f = fixture();
+  try {
+    const item = { key: 'stack:shop.arrows', definition: 'template-131', label: 'Arrows', quantity: '10', maximumQuantity: 10, unitPrice: '7',
+      currentCondition: 10, maximumCondition: 10, identified: true, stolen: false, canBuy: true, canSell: false };
+    const merchant = { revision: 'shop-1', provider: 'Smith', quality: 10, gold: '100', buyAvailable: true, sellAvailable: true,
+      repairAvailable: false, identifyAvailable: false, result: '', largeTradeGold: 500, stock: [item], playerItems: [], repairs: [] };
+    const training = { providerFaction: 1, membershipFaction: 1, member: true, rank: 0, price: 100, durationSeconds: 3600, durationHours: 1,
+      cooldownReadySecond: 0, skills: [{ id: 'medical', label: 'Medical', permanentValue: 10, maximumValue: 50, trainable: true }] };
+    const dialogue = { ...offering(['trade', 'Buy and sell'], ['training', 'Training']), revision: 'person-1', targetLabel: 'Hrolf',
+      greeting: 'Well met.', tone: 'normal', question: null, reply: null, diagnostics: [],
+      topics: [{ id: 'news', label: 'Any news?' }], merchant, training };
+    f.publish({ activation: { mode: 'talk', message: '', applied: true, dialogue } });
+    const window_ = f.root.querySelector('.dagger-dialogue');
+    const shown = () => [...f.root.querySelectorAll('.dagger-dialogue-page')].filter(page => !page.hidden).map(page => page.dataset.page);
+    const page = id => f.root.querySelector(`.dagger-dialogue-page[data-page="${id}"]`);
+    const close = f.root.querySelector('.dagger-dialogue-close');
+    const back = f.root.querySelector('.dagger-dialogue-back');
+
+    // Contact opens on the chooser, which lists exactly the services published, in order and by their names.
+    assert.equal(window_.open, true);
+    assert.deepEqual(shown(), ['services']);
+    const choices = [...f.root.querySelectorAll('.dagger-dialogue-service-list button')];
+    assert.deepEqual(choices.map(choice => [choice.dataset.service, choice.textContent]), [['talk', 'Talk'], ['trade', 'Buy and sell'], ['training', 'Training']]);
+    assert.equal(document.activeElement, choices[0], 'The chooser opens on its first service.');
+    assert.equal(back.hidden, true);
+
+    // Trade is the transfer layout on a page of its own, and opens on its content rather than a button that leaves.
+    choices[1].click();
+    assert.deepEqual(shown(), ['trade']);
+    assert.equal(window_.dataset.page, 'trade');
+    assert.ok(page('trade').querySelector('.dagger-transfer [data-transfer-item="stack:shop.arrows"]'), 'Trade draws the shared transfer layout.');
+    assert.ok(page('trade').contains(document.activeElement), 'The trade page opens on its content.');
+    assert.notEqual(document.activeElement, close);
+    assert.equal(back.hidden, false);
+    const tabs = [...f.root.querySelectorAll('.dagger-dialogue-tabs [role="tab"]')];
+    assert.deepEqual(tabs.map(tab => tab.getAttribute('aria-selected')), ['false', 'true', 'false']);
+
+    // The shoulder buttons step between the services, wrapping; each page draws only its own service.
+    f.pad('button-5');
+    assert.deepEqual(shown(), ['training']);
+    assert.equal(document.activeElement, page('training').querySelector('[data-training-skill="medical"]'));
+    f.pad('button-5');
+    assert.deepEqual(shown(), ['talk']);
+    assert.equal(document.activeElement, page('talk').querySelector('[data-topic="news"]'), 'Talk opens on its first topic, not the tone choice.');
+    f.pad('button-4');
+    assert.deepEqual(shown(), ['training']);
+
+    // Back steps from a page to the chooser, on the service just left, and from the chooser ends the conversation.
+    f.pad('button-1');
+    assert.deepEqual(shown(), ['services']);
+    assert.equal(document.activeElement.dataset.service, 'training');
+    assert.equal(f.actions.length, 0, 'Stepping back to the chooser sends nothing.');
+    f.pad('button-1');
+    assert.deepEqual(f.actions.at(-1), { action: 'dialogue-close', revision: 'person-1' });
+
+    // Escape does the same, and Back to services is the pointer's way out of a page.
+    f.root.querySelector('.dagger-dialogue-service-list [data-service="talk"]').click();
+    const escape = () => document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    escape();
+    assert.deepEqual(shown(), ['services']);
+    f.openService('trade');
+    back.click();
+    assert.deepEqual(shown(), ['services']);
+    const sent = f.actions.length;
+    escape();
+    assert.equal(f.actions.length, sent + 1);
+    assert.deepEqual(f.actions.at(-1), { action: 'dialogue-close', revision: 'person-1' });
+
+    // A person who offers only talk opens straight on it, with no chooser to step back to: Back ends the conversation.
+    f.publish({ activation: { mode: 'talk', dialogue: null } });
+    assert.equal(window_.open, false);
+    f.publish({ activation: { mode: 'talk', message: '', applied: true, dialogue: { ...TALK, revision: 'person-2', targetLabel: 'A townsperson',
+      greeting: 'Hello.', tone: 'normal', question: null, reply: null, diagnostics: [], topics: [{ id: 'news', label: 'Any news?' }] } } });
+    assert.deepEqual(shown(), ['talk']);
+    assert.equal(f.root.querySelector('.dagger-dialogue-tabs').hidden, true);
+    assert.equal(back.hidden, true);
+    assert.equal(document.activeElement, page('talk').querySelector('[data-topic="news"]'));
+    f.pad('button-5');
+    assert.deepEqual(shown(), ['talk'], 'With one service the shoulder buttons have nothing to step to.');
+    f.pad('button-1');
+    assert.deepEqual(f.actions.at(-1), { action: 'dialogue-close', revision: 'person-2' });
+  } finally { f.dispose(); }
+});
+
 test('the shop is the transfer layout: line totals, confirms for large trades and theft, and service-only rows', () => {
   const f = fixture();
   try {
@@ -3199,12 +3299,13 @@ test('the shop is the transfer layout: line totals, confirms for large trades an
       currentCondition: 10, maximumCondition: 10, identified: true, stolen: false, canBuy: true, canSell: false };
     const player = { key: 'unique:17', definition: 'template-113', label: 'Worn sword', quantity: 1, maximumQuantity: 1, unitPrice: 20,
       currentCondition: 3, maximumCondition: 10, identified: false, stolen: false, canBuy: false, canSell: false };
-    const dialogue = (merchant) => ({ revision: 'merchant-1', targetLabel: 'Guild officer', greeting: 'Welcome.', tone: 'normal',
+    const dialogue = (merchant) => ({ ...offering(['trade', 'Buy']), revision: 'merchant-1', targetLabel: 'Guild officer', greeting: 'Welcome.', tone: 'normal',
       question: null, reply: null, topics: [], diagnostics: [], merchant });
     const baseMerchant = { revision: 'merchant-1', provider: 'Guild officer', quality: 10, gold: '100', buyAvailable: true,
       sellAvailable: false, repairAvailable: false, identifyAvailable: false, result: '', largeTradeGold: 500, stock: [stack], playerItems: [], repairs: [] };
     const png = 'data:image/png;base64,AA==';
     f.publish({ uiArtRevision: 'r1', uiArt: { revision: 'r1', images: [{ id: 'item.arrows', image: png }] }, activation: { mode: 'talk', dialogue: dialogue(baseMerchant) } });
+    f.openService('trade');
 
     const shop = f.root.querySelector('.dagger-dialogue-merchant');
     const stockRow = shop.querySelector('[data-transfer-side="source"] [data-transfer-item="stack:shop.arrows"]');
@@ -3305,8 +3406,8 @@ test('spellmaker draws its fields from the published limits, picks an icon, keep
     const maker={revision:'maker-1',provider:'Mage',targets,elements,limits,effects:[{key:'free-action',name:'Free action',type:26,subType:-1,school:'restoration',duration:true,chance:false,magnitude:false,targets:31,elements:16}],
       draft:{name:'Freedom',element:4,rangeType:0,icon:68,effects:[settings]},quote:{key:'draft-2',gold:300,spellPoints:15,eligible:true,reason:null}};
     const publish=()=>f.publish({spells:{available:[],ready:null,result:'',maker},activation:{mode:'talk',message:'',applied:true,
-      dialogue:{revision:'maker-1',targetLabel:'Mage',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
-    publish();const root=f.root.querySelector('.dagger-dialogue-spellmaker');
+      dialogue:{...offering(['spell-maker','Make spells']),revision:'maker-1',targetLabel:'Mage',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
+    publish();f.openService('spell-maker');const root=f.root.querySelector('.dagger-dialogue-spellmaker');
     assert.match(root.textContent,/300 gold · 15 magicka/);
     const buy=[...root.querySelectorAll('button')].find(b=>b.textContent==='Buy constructed spell');
     buy.click();f.answer(false);assert.equal(f.actions.some(a=>a.action==='spellmaker-buy'),false);
@@ -3423,8 +3524,8 @@ test('potion maker selects an owned recipe or an ingredient experiment through t
       ingredients:[{template:62,name:'Aloe',quantity:2},{template:31,name:'Petals',quantity:1}],
       recipes:[{key:1,name:'Test recipe',ingredients:[62,31],available:true}]};
     const publish=()=>f.publish({spells:{available:[],ready:null,result:'',potionMaker},activation:{mode:'talk',message:'',applied:true,
-      dialogue:{revision:'mix-1',targetLabel:'Apothecary',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
-    publish();const root=f.root.querySelector('.dagger-dialogue-potionmaker');const recipe=root.querySelector('select');
+      dialogue:{...offering(['potion-maker','Make potions']),revision:'mix-1',targetLabel:'Apothecary',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
+    publish();f.openService('potion-maker');const root=f.root.querySelector('.dagger-dialogue-potionmaker');const recipe=root.querySelector('select');
     recipe.value='1';recipe.dispatchEvent(new window.Event('change'));
     const aloe=root.querySelector('[aria-label="Aloe"]');assert.equal(aloe.value,'1');publish();assert.equal(root.querySelector('[aria-label="Aloe"]'),aloe);
     root.querySelector('form').dispatchEvent(new window.Event('submit',{cancelable:true}));
@@ -3444,8 +3545,8 @@ test('item maker edits named settings, shows forced payloads, and confirms the q
     const itemMaker={revision:'enchant-1',provider:'Enchanter',eligible:true,items:[{key:'stack:rubies',name:'Ruby',capacity:1800,quantity:3}],settings:[setting],
       draft:{item:'stack:rubies',name:'Ghost ruby',settings:[setting.key]},quote:{key:'draft-1',capacity:1800,power:-300,gold:1000,eligible:true,reason:null,payloads:[setting,{key:'forced',name:'Feather Weight',cost:100,forced:[]}]}};
     const publish=()=>f.publish({spells:{available:[],ready:null,result:'',itemMaker},activation:{mode:'talk',message:'',applied:true,
-      dialogue:{revision:'enchant-1',targetLabel:'Enchanter',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
-    publish();const root=f.root.querySelector('.dagger-dialogue-itemmaker');assert.match(root.textContent,/-300\/1800 power · 1000 gold/);assert.match(root.textContent,/Feather Weight/);
+      dialogue:{...offering(['item-maker','Make magic items']),revision:'enchant-1',targetLabel:'Enchanter',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
+    publish();f.openService('item-maker');const root=f.root.querySelector('.dagger-dialogue-itemmaker');assert.match(root.textContent,/-300\/1800 power · 1000 gold/);assert.match(root.textContent,/Feather Weight/);
     const buy=[...root.querySelectorAll('button')].find(b=>b.textContent==='Enchant item');buy.click();f.answer(false);assert.equal(f.actions.length,0);
     buy.click();f.answer(true);assert.deepEqual(f.actions.at(-1),{action:'itemmaker-buy',revision:'enchant-1',key:'draft-1',amount:1000,confirm:true});
     const name=root.querySelector('[name="enchanted-name"]');name.value='Changed';name.dispatchEvent(new window.Event('input',{bubbles:true}));assert.equal(buy.disabled,true);
@@ -3518,7 +3619,7 @@ test('guild topics keep their semantic action and confirmation key', () => {
   try {
     for (const [id, key, label] of [['join', null, 'Join guild'], ['join', 'yes', 'Yes, join'], ['join', 'no', 'No'], ['teleport', null, 'Guild teleportation'], ['spymaster', null, 'Consult spymaster']]) {
       f.publish({ activation: { mode: 'talk', modes: [], target: null, message: '', dialogue: {
-        revision: 'guild-1', targetLabel: 'Guild provider', greeting: 'Welcome', tone: 'normal', question: '', reply: '', diagnostics: [],
+        ...TALK, revision: 'guild-1', targetLabel: 'Guild provider', greeting: 'Welcome', tone: 'normal', question: '', reply: '', diagnostics: [],
         topics: [{ id, key, label }], questContacts: [] } } });
       f.root.querySelector('.dagger-dialogue-topics button').click();
       assert.equal(f.actions.at(-1).action, 'dialogue-topic');
@@ -3855,7 +3956,7 @@ test('magic-item shortcut lists only eligible carried items and uses the current
 test('training asks through the drawn confirm with the ruleset price and hours; a changed offer pays nothing; tavern sends its quoted item', () => {
   const f = fixture();
   try {
-    const dialogue = { revision: 'trainer-1', targetLabel: 'Trainer', greeting: 'Welcome', tone: 'normal',
+    const dialogue = { ...offering(['training', 'Training'], ['tavern', 'Food and drink']), revision: 'trainer-1', targetLabel: 'Trainer', greeting: 'Welcome', tone: 'normal',
       question: null, reply: null, topics: [], diagnostics: [],
       training: { providerFaction: 1, membershipFaction: 1, member: true, rank: 0, price: 100, durationSeconds: 10800, durationHours: 3,
         cooldownReadySecond: 0, skills: [{ id: 'medical', label: 'Medical', permanentValue: 10, maximumValue: 50, trainable: true },
@@ -3863,6 +3964,7 @@ test('training asks through the drawn confirm with the ruleset price and hours; 
       tavern: { hungry: true, menu: [{ id: 'wine', label: 'Wine', price: 3 }] } };
     const publish = () => f.publish({ mode: 'playing', activation: { mode: 'talk', message: '', applied: true, dialogue } });
     publish();
+    f.openService('training');
     assert.equal(f.root.querySelector('[data-training-skill="archery"]').disabled, true, 'The ruleset says this skill is mastered here.');
     assert.match(f.root.querySelector('.dagger-dialogue-training-summary').textContent, /100 gold for 3 hours/);
     f.root.querySelector('[data-training-skill="medical"]').click();
@@ -3876,6 +3978,7 @@ test('training asks through the drawn confirm with the ruleset price and hours; 
     assert.deepEqual(f.actions.pop(), { action: 'training-commit', revision: 'trainer-1', key: 'medical', amount: 100, confirm: true });
     f.root.querySelector('[data-training-skill="medical"]').click(); dialogue.revision = 'trainer-2'; publish();
     f.answer(true); assert.equal(f.actions.length, 0, 'An offer that changed while asked pays nothing.');
+    f.openService('tavern');
     f.root.querySelector('[data-tavern-item]').click();
     assert.deepEqual(f.actions.pop(), { action: 'tavern-buy', revision: 'trainer-2', key: 'wine', amount: 3 });
     dialogue.tavern.hungry = false; publish(); assert.equal(f.root.querySelector('[data-tavern-item]').disabled, true);

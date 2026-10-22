@@ -184,6 +184,10 @@ export interface DeathProjection {
 export interface DialogueProjection {
   readonly questContacts?: readonly { readonly instance: string; readonly symbol: string }[];
   readonly bankAvailable?: boolean;
+  /** What the person offers, in the chooser's order with its names; talk is always first. */
+  readonly services: readonly { readonly id: string; readonly label: string }[];
+  /** The page contact opens on: talk for a person who offers nothing else, otherwise the chooser ('services'). */
+  readonly opensOn: 'talk' | 'services';
   readonly merchant?: MerchantProjection | null;
   readonly comprehendLanguagesBonus?: number;
   readonly revision: string;

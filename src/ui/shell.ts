@@ -133,24 +133,51 @@ const SHELL_MARKUP = `
     </dialog>
     <dialog class="dagger-dialogue dagger-frame" data-skin="parchment" aria-labelledby="dagger-dialogue-title">
       <h2 id="dagger-dialogue-title" class="dagger-dialogue-target dagger-frame-title"></h2>
-      <div class="dagger-dialogue-head">
-        <p class="dagger-dialogue-greeting" aria-live="polite"></p>
-        <label>Tone <select class="dagger-dialogue-tone"></select></label>
+      <div class="dagger-dialogue-tabs" role="tablist" aria-label="Services" hidden></div>
+      <div class="dagger-dialogue-body">
+        <div class="dagger-dialogue-page dagger-dialogue-chooser" data-page="services" role="tabpanel" aria-label="Services" hidden>
+          <div class="dagger-dialogue-service-list"></div>
+        </div>
+        <div class="dagger-dialogue-page" data-page="talk" role="tabpanel" aria-label="Talk" hidden>
+          <div class="dagger-dialogue-head">
+            <p class="dagger-dialogue-greeting" aria-live="polite"></p>
+            <label>Tone <select class="dagger-dialogue-tone"></select></label>
+          </div>
+          <ol class="dagger-dialogue-log" aria-label="Conversation" aria-live="polite"></ol>
+          <div class="dagger-dialogue-topics"></div>
+          <div class="dagger-dialogue-donation" hidden><span>Donation</span></div>
+        </div>
+        <div class="dagger-dialogue-page" data-page="trade" role="tabpanel" aria-label="Trade" hidden>
+          <section class="dagger-dialogue-merchant" aria-label="Merchant services"></section>
+        </div>
+        <div class="dagger-dialogue-page" data-page="training" role="tabpanel" aria-label="Training" hidden>
+          <section class="dagger-dialogue-training" aria-label="Skill training">
+            <h3>Training</h3>
+            <p class="dagger-dialogue-training-summary"></p>
+            <div class="dagger-dialogue-training-skills"></div>
+          </section>
+        </div>
+        <div class="dagger-dialogue-page" data-page="tavern" role="tabpanel" aria-label="Food and drink" hidden>
+          <section class="dagger-dialogue-tavern" aria-label="Tavern food and drink"></section>
+        </div>
+        <div class="dagger-dialogue-page" data-page="spells" role="tabpanel" aria-label="Spells for sale" hidden>
+          <section class="dagger-dialogue-spells" aria-label="Spells for sale"></section>
+        </div>
+        <div class="dagger-dialogue-page" data-page="item-maker" role="tabpanel" aria-label="Item enchanting" hidden>
+          <section class="dagger-dialogue-itemmaker" aria-label="Item enchanting"></section>
+        </div>
+        <div class="dagger-dialogue-page" data-page="potion-maker" role="tabpanel" aria-label="Potion making" hidden>
+          <section class="dagger-dialogue-potionmaker" aria-label="Potion making"></section>
+        </div>
+        <div class="dagger-dialogue-page" data-page="spell-maker" role="tabpanel" aria-label="Spell construction" hidden>
+          <section class="dagger-dialogue-spellmaker" aria-label="Spell construction"></section>
+        </div>
+        <div class="dagger-dialogue-page" data-page="summoning" role="tabpanel" aria-label="Daedric summoning" hidden>
+          <section class="dagger-dialogue-summoning" aria-label="Daedric summoning"></section>
+        </div>
       </div>
-      <ol class="dagger-dialogue-log" aria-label="Conversation" aria-live="polite"></ol>
-      <div class="dagger-dialogue-topics"></div>
-      <div class="dagger-dialogue-donation" hidden><span>Donation</span></div>
-      <section class="dagger-dialogue-training" aria-label="Skill training" hidden>
-        <h3>Training</h3>
-        <p class="dagger-dialogue-training-summary"></p>
-        <div class="dagger-dialogue-training-skills"></div>
-      </section>
-      <section class="dagger-dialogue-tavern" aria-label="Tavern food and drink"></section>
-      <section class="dagger-dialogue-merchant" aria-label="Merchant services"></section>
-      <section class="dagger-dialogue-spells" aria-label="Spells for sale"></section>
-      <section class="dagger-dialogue-summoning" aria-label="Daedric summoning"></section>
-      <section class="dagger-dialogue-itemmaker" aria-label="Item enchanting"></section>
-      <section class="dagger-dialogue-potionmaker" aria-label="Potion making"></section>
-      <section class="dagger-dialogue-spellmaker" aria-label="Spell construction"></section>
-      <button class="dagger-dialogue-close" type="button">End conversation</button>
+      <div class="dagger-dialogue-footer">
+        <button class="dagger-dialogue-back" type="button" hidden>Back to services</button>
+        <button class="dagger-dialogue-close" type="button">End conversation</button>
+      </div>
     </dialog><dialog class="dagger-daedric-offer dagger-frame" aria-label="Daedric quest offer"></dialog>`;

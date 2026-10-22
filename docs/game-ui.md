@@ -89,7 +89,7 @@ cursor registers with `navigation.register` in `main.ts`:
   offer, a quest prompt), and neither press acts on it or on what it was asked
   over.
 - `panel(direction)`: the shoulder buttons, which step the menu's panels (and
-  the parts of character creation on the title).
+  the parts of character creation on the title, and a person's service pages).
 - `page(direction)` with `pageHint()`: the triggers, or Page Up and Page
   Down, turn what the surface shows (a journal's quests, a book's pages, the
   local map's zoom, the travel map's sheets). The hint names what they do
@@ -194,17 +194,13 @@ follow its shape.
   storage is the inventory's Storage tab, with Take and Store; the ruleset
   publishes the items the store refuses and why (`storeRefusals`).
 
-The other item and service screens follow the same shape. A shop is the transfer layout:
-the stock with Buy and Steal (set apart), the player's items with Sell, Repair and Identify,
-and a line total for the chosen amount. A trade at or over the ruleset's `largeTradeGold`
-and every theft ask through the drawn confirm; so do training, a paid summoning and
-buying or selling property. A conversation groups its topics under the ruleset's
-`topicGroups` and keeps a short log of what was asked and answered while it lasts; the
-"Where is" directory's lists (each topic's `category`: the kinds of building the donor lists, the
-people, the region) are closed, counted sections until the player opens one. The
-spellmaker and potion maker draw every field from published limits (the spellmaker's
-`limits`, the potion maker's ingredient count), and rest and lodging durations are
-steppers bounded by the ruleset's maximums.
+The other item and service screens follow the same shape; a person's services are
+described under the person screen below. A trade at or over the ruleset's
+`largeTradeGold` and every theft ask through the drawn confirm; so do training, a
+paid summoning and buying or selling property. The spellmaker and potion maker draw
+every field from published limits (the spellmaker's `limits`, the potion maker's
+ingredient count), and rest and lodging durations are steppers bounded by the
+ruleset's maximums.
 
 The spellbook puts school tabs (the ruleset's `schools`) over the known spells, each row its
 icon, name and cost; choosing a row describes the spell beside the list, with Set active,
@@ -221,6 +217,34 @@ is open, from the ruleset, and each takes Escape or Back as its Cancel.
 The quantity stepper (`src/ui/stepper.ts`) is the shared bounded amount: −
 and + beside a number field, with its limits from the projection. The
 keyboard's and controller's left and right step it.
+
+## The person screen
+
+Talking to a person (`dialogue.ts`) opens one page at a time. The ruleset publishes
+the person's `services` in order, each with its id and name, and `opensOn`: `talk`
+for a person who offers nothing else, otherwise `services`, a chooser that lists
+them as the donor's service window does. Each service has its own page:
+
+- **Talk:** the greeting, tone, conversation log and topics, with the bank and
+  temple donation among the services topics. The topics are grouped under the
+  ruleset's `topicGroups`, and the log keeps what was asked and answered while the
+  conversation lasts. The "Where is" directory's lists (each topic's `category`:
+  the kinds of building the donor lists, the people, the region) are closed,
+  counted sections until the player opens one.
+- **Trade:** the transfer layout at the page's full height, named for what the
+  provider deals in ("Buy, sell and repair", "Identify"). The stock has Buy and
+  Steal (set apart); the player's items have Sell, Repair and Identify, with a line
+  total for the chosen amount.
+- **Training, food and drink, spells for sale, and the item, potion and spell
+  makers** each have a page. A summoner's page quotes the summoning, and an offer
+  opens as its own dialog above it.
+
+Back or Escape steps from a page to the chooser, on the service just left. From
+the chooser, or from a talk-only person's Talk, it ends the conversation. LB and RB
+step between the pages, and the tab row over a page does the same for the
+pointer. Each page opens on its content: Talk on its first topic, the others on
+their first control. The page shown is all the DOM keeps; the services, their
+names and order, prices, eligibility and refusals are the ruleset's.
 
 ## The other screens
 

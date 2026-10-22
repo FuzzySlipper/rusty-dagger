@@ -575,6 +575,13 @@
       "targetLabel": "Morganna Hawkwing",
       "questContacts": [],
       "bankAvailable": false,
+      "services": [
+        {
+          "id": "talk",
+          "label": "Talk"
+        }
+      ],
+      "opensOn": "talk",
       "merchant": null,
       "greeting": "How can I help you, stranger?",
       "comprehendLanguagesBonus": 0,
