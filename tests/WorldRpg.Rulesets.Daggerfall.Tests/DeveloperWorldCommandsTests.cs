@@ -28,8 +28,18 @@ public sealed class DeveloperWorldCommandsTests
         using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold);
         DaggerfallSession session = run.Session;
         Vector3 start = Position(session);
+        // With nothing below, a spot is refused unless forced: an interior is a box in empty space.
+        DebugCommandResult floorless = session.Teleport(start.X + 3, start.Y - 1, start.Z - 2, force: false);
+        Assert.False(floorless.Succeeded);
+        Assert.Contains("no floor", floorless.Message, StringComparison.Ordinal);
+        Assert.Equal(start, Position(session));
+        // From here on the fake world is level ground at the player's starting floor.
+        float ground = Json(session.Where()).GetProperty("feet").GetProperty("y").GetSingle();
+        run.Spatial.FloorHit = request => request.Direction.Y < -.99f && request.Origin.Y > ground
+            ? default(SpatialHit) with { Present = true, Converged = true, Point = request.Origin with { Y = ground }, Normal = Vector3.UnitY }
+            : default;
 
-        DebugCommandResult moved = session.Teleport(start.X + 3, start.Y - 1, start.Z - 2, force: false);
+        DebugCommandResult moved = session.Teleport(start.X + 3, ground, start.Z - 2, force: false);
         Assert.True(moved.Succeeded, moved.Message);
         Assert.Equal(new Vector2(start.X + 3, start.Z - 2), Planar(Position(session)), new PlanarComparer());
         Assert.Equal(session.Sites.ActiveProfile.LogicalId, Json(moved).GetProperty("profile").GetString());
@@ -56,6 +66,12 @@ public sealed class DeveloperWorldCommandsTests
         here = Position(session);
         Assert.True(session.Forward(2).Succeeded);
         Assert.Equal(new Vector2(here.X, here.Z - 2), Planar(Position(session)), new PlanarComparer());
+
+        // Repeated moves keep the body standing on the same ground: the feet given are its floor, not its centre.
+        float height = Position(session).Y;
+        Assert.True(session.Move(1, 0, 0).Succeeded);
+        Assert.True(session.Move(1, 0, 0).Succeeded);
+        Assert.Equal(height, Position(session).Y, .01f);
 
         // The saved game holds the moved player.
         Vector3 saved = Position(session);
