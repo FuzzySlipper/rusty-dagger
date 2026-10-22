@@ -40,7 +40,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         if (!force && BodyOverlap(feet) is { Present: true })
             return Refused($"The body would overlap collision at ({Format(feet)}); world.teleport-force places it anyway. "
                 + SpatialClearanceSnapshot.Capture(_engine.Spatial, _spatial.Session, PlayerCentre(), feet + Vector3.UnitY * FloorClearance,
-                    _spatial.CurrentController.Shape.StandingHeight, _spatial.CurrentController, ReadOnlyMemory<SpatialEntityCollider>.Empty));
+                    _spatial.CurrentController.Shape.StandingHeight, _spatial.CurrentController, SpatialMovementSystem.SpatialColliders(LiveCollision())));
         return Land(feet, State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians, "developer-teleport");
     }
 
@@ -81,7 +81,6 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         if (_activation?.InspectTargets().Where(target => target.Entity == entrance.Entity)
             .Select(target => (DaggerfallActivationTarget?)target).FirstOrDefault() is { } doorTarget)
             _ = StandWithinReach(doorTarget, out _);
-        _dialogue?.Close();
         if (!_sites.TryEnterBuilding(inside!.ProfileKey, BuildingLanding(inside, entrance.Id)))
             return Refused($"{BuildingLabel(site, id)} could not be entered.");
         return Where();
@@ -176,13 +175,27 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         });
     }
 
-    /// <summary>Why the player cannot be moved now, or null.</summary>
+    /// <summary>
+    /// Why the player cannot be moved now, or null. A gameplay screen or question that holds the world (a conversation,
+    /// loot, dungeon text, a pending offer or court) is answered first; the game menu, where the developer console
+    /// lives, is not one of them.
+    /// </summary>
     private string? DeveloperMoveRefusal()
     {
         if (_mode == ProductMode.Title) return "No game is running.";
         if (State.Actors.Player.IsDefeated) return "The player is dead.";
-        return State.PlayerControl.Position is null ? "The player has no position." : null;
+        if (State.PlayerControl.Position is null) return "The player has no position.";
+        DaggerfallInteractionScreen[] open = [.. Enum.GetValues<DaggerfallInteractionScreen>()
+            .Where(screen => screen != DaggerfallInteractionScreen.Menu && _interactions.IsOpen(screen))];
+        if (open.Length > 0) return $"Close the open {string.Join(", ", open)} first.";
+        if (Summoning.PendingOffer || State.Quests.PendingOffer is not null) return "Answer the pending offer first.";
+        if (LegalModalOpen) return "Answer the court first.";
+        if (_pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null) return "Answer the pending spell choice first.";
+        return _openingCinematics.IsActive || Cinematics?.ActiveSource is not null ? "A cinematic is playing." : null;
     }
+
+    /// <summary>The collision movement meets now: the admitted scene plus the live doors and supports.</summary>
+    private CharacterStepEnvironment LiveCollision() => _sites.CharacterEnvironment(State.PlayerControl.Motion);
 
     private static DebugCommandResult Refused(string reason) => DebugCommandResult.Failure(DebugCommandStatus.Failed, reason);
 
@@ -200,9 +213,8 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     {
         var shape = _spatial.CurrentController.Shape;
         float halfHeight = shape.StandingHeight * .5F;
-        return _engine.Spatial.OverlapCapsule(new SpatialCapsuleQueryRequest(_spatial.Session,
-            feet + Vector3.UnitY * (halfHeight + FloorClearance), Math.Max(0, halfHeight - shape.Radius), shape.Radius,
-            Vector3.Zero, 0, new(1, uint.MaxValue), ReadOnlyMemory<SpatialEntityCollider>.Empty, ReadOnlyMemory<ulong>.Empty));
+        return _spatial.OverlapCapsule(feet + Vector3.UnitY * (halfHeight + FloorClearance), Math.Max(0, halfHeight - shape.Radius), shape.Radius,
+            ReadOnlyMemory<SpatialEntityCollider>.Empty, LiveCollision());
     }
 
     /// <summary>
@@ -212,7 +224,6 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     /// </summary>
     private DebugCommandResult Land(Vector3 feet, float yaw, float pitch, string anchor)
     {
-        _dialogue?.Close();
         CloseTravelMap();
         Vector3 centre = feet + Vector3.UnitY * ((_spatial.CurrentController.Shape.StandingHeight * .5F) + FloorClearance);
         Vector3 position = ProfilePosition(new WorldPoint(centre.X, centre.Y, centre.Z));
@@ -224,7 +235,6 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     /// <summary>Arrives at a place's exterior as guild teleport does: its keyed landing, with no time or cost.</summary>
     private bool ArriveAt(DaggerfallSiteProfile exterior)
     {
-        _dialogue?.Close();
         CloseTravelMap();
         return _sites.TryRelocatePlayer(exterior.ProfileKey, ArrivalLanding(exterior, null, $"developer:{exterior.ProfileKey.LogicalId}"));
     }
@@ -316,7 +326,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
             if (BodyOverlap(feet) is { Present: true } || FloorBelow(feet + Vector3.UnitY) is null) continue;
             Vector3 from = feet + Vector3.UnitY * eye, line = aim - from;
             float length = line.Length();
-            SpatialHit blocked = _spatial.CastRay(from, line / length, length);
+            SpatialHit blocked = _spatial.CastRay(from, line / length, length, LiveCollision());
             if (blocked.Present && Vector3.Distance(blocked.Point, aim) > .4F) continue;
             Vector3 facing = point - feet;
             Land(feet, ActorHeading.Yaw(facing), MathF.Atan2(aim.Y - from.Y, new Vector2(line.X, line.Z).Length()), $"developer-goto:{TargetId(target)}");
@@ -330,7 +340,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     /// <summary>The floor height below a point, within three metres, or null.</summary>
     private float? FloorBelow(Vector3 from)
     {
-        SpatialHit floor = _spatial.CastRay(from, -Vector3.UnitY, 3F);
+        SpatialHit floor = _spatial.CastRay(from, -Vector3.UnitY, 3F, LiveCollision());
         return floor.Present && !floor.StartSolid && floor.Normal.Y > 0 ? floor.Point.Y : null;
     }
 

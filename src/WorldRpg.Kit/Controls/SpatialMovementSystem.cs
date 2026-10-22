@@ -559,7 +559,11 @@ public sealed class SpatialMovementSystem : IDisposable
         }
     }
 
-    private static ReadOnlyMemory<SpatialEntityCollider> SpatialColliders(CharacterStepEnvironment? environment)
+    /// <summary>
+    /// An environment's call-local obstacles (doors, moving supports) as Engine entity colliders, for a caller's own
+    /// Engine query, such as a clearance snapshot, that must see what movement sees.
+    /// </summary>
+    public static ReadOnlyMemory<SpatialEntityCollider> SpatialColliders(CharacterStepEnvironment? environment)
     {
         if (environment is not { } selected || selected.Obstacles.IsEmpty)
             return ReadOnlyMemory<SpatialEntityCollider>.Empty;
