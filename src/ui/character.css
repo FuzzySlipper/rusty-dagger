@@ -34,7 +34,7 @@
 }
 
 /* Character creation: one panel per concern, the steppers bounded by the ruleset's pools. */
-.dagger-creation { display: grid; gap: .75rem; grid-template-areas: "identity class" "background background" "attributes skills" "actions actions"; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dagger-creation { display: grid; gap: .75rem; grid-template-areas: "identity class" "background background" "attributes skills"; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .dagger-creation-panel { display: grid; gap: .5rem; align-content: start; min-width: 0; padding: .625rem .75rem; }
 .dagger-creation-panel[hidden] { display: none; }
 .dagger-creation-panel h3 { color: #f5df9d; font: 700 .72rem ui-monospace, monospace; letter-spacing: .09em; margin: 0 0 2px; text-transform: uppercase; }
@@ -60,12 +60,12 @@
 .dagger-creation-stepper-label { font: .86rem Georgia, serif; }
 .dagger-creation-stepper output { color: #e6cc84; font: .78rem ui-monospace, monospace; text-align: center; }
 .dagger-creation-stepper-total { font: 600 .82rem ui-monospace, monospace; text-align: right; }
-.dagger-creation-actions { align-items: center; display: flex; gap: .625rem; grid-area: actions; justify-content: flex-end; }
+.dagger-creation-actions { align-items: center; display: flex; gap: .625rem; justify-content: flex-end; }
 .dagger-creation-blocked { color: #e0b070; flex: 1; margin: 0; }
 .dagger-creation fieldset { border: 1px solid rgb(125 108 69 / .45); display: grid; gap: .25rem; margin: 0; padding: .375rem .5rem; }
 
 @media (max-width: 52rem) {
-  .dagger-creation { grid-template-areas: "identity" "class" "background" "attributes" "skills" "actions"; grid-template-columns: 1fr; }
+  .dagger-creation { grid-template-areas: "identity" "class" "background" "attributes" "skills"; grid-template-columns: 1fr; }
 }
 .dagger-creation fieldset[hidden] { display: none; }
 .dagger-creation-questions { display: grid; gap: .5rem .875rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
