@@ -818,7 +818,7 @@ function buildCreation(root: HTMLElement, value: CharacterCreation, send?: (acti
     typing = window.setTimeout(() => { delete name.dataset.pending; live(); }, 300);
   });
   name.addEventListener('change', () => { clearTimeout(typing); delete name.dataset.pending; live(); });
-  const commit = document.createElement('button'); commit.type = 'button'; commit.textContent = 'Commit character'; commit.dataset.testid = 'character-commit';
+  const commit = document.createElement('button'); commit.type = 'button'; commit.textContent = 'Start'; commit.dataset.testid = 'character-commit';
   commit.addEventListener('click', () => send?.(action('character-commit')));
   const blocked = document.createElement('p'); blocked.className = 'dagger-creation-blocked'; blocked.dataset.testid = 'character-commit-blocked'; blocked.setAttribute('aria-live', 'polite');
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.dataset.testid = 'character-cancel'; cancel.addEventListener('click', () => send?.({ action: 'character-cancel' }));
@@ -839,10 +839,11 @@ function buildCreation(root: HTMLElement, value: CharacterCreation, send?: (acti
   const quickStart = document.createElement('button'); quickStart.type = 'button'; quickStart.textContent = 'Quick start';
   quickStart.dataset.testid = 'character-quick-start';
   quickStart.addEventListener('click', () => send?.(action('character-quick-start')));
+  // The commit row sits outside the scrolling choices, so Start and what still blocks it are always in view.
   const actions = document.createElement('footer'); actions.className = 'dagger-creation-actions'; actions.append(blocked, cancel, quickStart, commit);
   const layout = document.createElement('section'); layout.className = 'dagger-creation'; layout.dataset.testid = 'character-background';
-  layout.append(identity, classPanel, backgroundPanel, attributesPanel, skillsPanel, actions);
-  root.replaceChildren(layout);
+  layout.append(identity, classPanel, backgroundPanel, attributesPanel, skillsPanel);
+  root.replaceChildren(layout, actions);
 }
 
 function panel(title: string, kind: string, ...children: HTMLElement[]): HTMLElement {

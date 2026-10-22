@@ -256,7 +256,7 @@ for (let step = 0; step < 400; step++) {
   }
 }
 if (spent !== 'ready') fail(spent ?? 'character creation never answered');
-await press('[data-testid="character-commit"]', 'Commit character');
+await press('[data-testid="character-commit"]', 'Start');
 await press('[data-testid="new-game-launch"]', 'Begin new game');
 const pressed = Date.now();
 

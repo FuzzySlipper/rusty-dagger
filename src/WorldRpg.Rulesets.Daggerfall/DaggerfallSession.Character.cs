@@ -32,7 +32,7 @@ internal sealed partial class DaggerfallSession
                 case DaggerfallUiActionKind.CharacterClassAnswer:
                     State.Character.AnswerClassQuestion(action.Question ?? throw new ArgumentException("Class question is incomplete."),
                         action.Answer ?? throw new ArgumentException("Class answer is incomplete."), _random);
-                    Presentation.SetOutcome(State.Character.CreationMode == "character-pick" ? "Recommended career selected; review and commit character choices." : "Class answer accepted.");
+                    Presentation.SetOutcome(State.Character.CreationMode == "character-pick" ? "Recommended career selected; review your choices, then Start." : "Class answer accepted.");
                     break;
                 case DaggerfallUiActionKind.CharacterClassBack:
                     State.Character.BackToClassPick();

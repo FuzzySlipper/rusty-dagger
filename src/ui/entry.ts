@@ -89,6 +89,8 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     creation.classList.toggle('dagger-entry-creation', creating);
     creation.classList.toggle('dagger-frame', creating);
     begin.hidden = creating;
+    // While creating, what blocks Start is shown beside it; the title's outcome plate stays for title choices.
+    outcome.hidden = creating;
     create.hidden = creating;
     resume.hidden = creating || slots.length === 0;
     load.hidden = creating || slots.length === 0;

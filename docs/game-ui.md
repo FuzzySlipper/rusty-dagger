@@ -241,8 +241,9 @@ keyboard's and controller's left and right step it.
   binding of the device in use. It takes no focus in play.
 - **Title, creation and death** (`entry.ts`, `character.ts`, `death.ts`): the
   title's game choice is a cycler. Creation sends every change at once and draws
-  the ruleset's answer, including what blocks the commit and whether Quick start
-  can begin. Death lists the saved games as the menu does and takes focus when it
+  the ruleset's answer, including what blocks Start and whether Quick start can
+  begin. The choices scroll inside their frame; Cancel, Quick start, Start and
+  the reasons Start is refused stand below it, always in view. Death lists the saved games as the menu does and takes focus when it
   appears. A pad press, like any key, skips a cinematic.
 
 ## Controls
