@@ -851,6 +851,26 @@ test('Escape toggles the menu from any panel, and a pointer lock lost in play op
   } finally { delete document.pointerLockElement; f.dispose(); }
 });
 
+test('a conversation opening under pointer lock does not open the menu when the host releases the lock inside showModal', () => {
+  const f = fixture();
+  const showModal = window.HTMLDialogElement.prototype.showModal;
+  try {
+    f.publish({});
+    let locked = f.root;
+    Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => locked });
+    document.dispatchEvent(new window.Event('pointerlockchange'));
+    // The window's host releases the lock when a modal takes focus from the world, before the page has re-decided its mode.
+    window.HTMLDialogElement.prototype.showModal = function () {
+      this.open = true;
+      if (locked) { locked = null; document.dispatchEvent(new window.Event('pointerlockchange')); }
+    };
+    f.publish({ activation: { mode: 'talk', message: '', applied: true, dialogue: { ...TALK, revision: 'talk-1', targetLabel: 'A townsperson',
+      greeting: 'Hello.', tone: 'normal', question: null, reply: null, topics: [{ id: 'news', label: 'Any news?' }], diagnostics: [] } } });
+    assert.equal(f.root.querySelector('.dagger-dialogue').open, true);
+    assert.equal(f.root.querySelector('.dagger-menu').open, false, 'The lock went to the conversation, not to a request for the menu.');
+  } finally { window.HTMLDialogElement.prototype.showModal = showModal; delete document.pointerLockElement; f.dispose(); }
+});
+
 test('Escape backs out of the innermost surface and opens the menu only from play', () => {
   const f = fixture();
   try {

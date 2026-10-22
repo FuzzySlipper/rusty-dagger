@@ -37,8 +37,9 @@ export function mountInteraction(context: RustyApplicationUiContext, options: In
   let projectionNeedsCursor = false;
   let mode: 'interface' | 'gameplay' | null = null;
 
+  const wanted = (): boolean => projectionNeedsCursor || [...predicates].some(predicate => predicate());
   const sync = (focus = false): void => {
-    const next = projectionNeedsCursor || [...predicates].some(predicate => predicate()) ? 'interface' : 'gameplay';
+    const next = wanted() ? 'interface' : 'gameplay';
     const resuming = next === 'gameplay' && mode === 'interface';
     if (next !== mode) { mode = next; context.ui.setInteractionMode(next); }
     if (next === 'gameplay' && (focus || resuming)) context.ui.focusGameplay();
@@ -47,7 +48,10 @@ export function mountInteraction(context: RustyApplicationUiContext, options: In
   let pointerWasLocked = document.pointerLockElement !== null;
   const onPointerLockChange = (): void => {
     const locked = document.pointerLockElement !== null;
-    if (pointerWasLocked && !locked && mode === 'gameplay') options.onLockLostInPlay?.();
+    // A surface opening takes focus from the world, and the host releases the lock inside that call,
+    // before the mode is re-decided: a lock lost to a surface that already needs the cursor (a
+    // conversation's modal opening) is not the player asking for the menu.
+    if (pointerWasLocked && !locked && mode === 'gameplay' && !wanted()) options.onLockLostInPlay?.();
     pointerWasLocked = locked;
   };
   const onBlur = (): void => { for (const listener of blurListeners) listener(); };
