@@ -138,7 +138,12 @@ internal sealed partial class DaggerfallSession
         // A custom class the player is still fixing (a skill chosen twice, a trait too many) is kept as
         // drawn, so its eligibility reasons describe it; its background waits, unchanged, until the class
         // can be compiled again, since the tiers it would be rolled and spent against do not yet exist.
-        if (State.Character.HasIneligibleCustomClass(selected)) return selected;
+        // Its biography's people still follow the race, as they do for any draft, so the draft stays one
+        // its presentation can describe.
+        if (State.Character.HasIneligibleCustomClass(selected))
+            return currentBackground is not null && currentBackground.People.RaceId != identity.RaceId
+                ? selected with { Background = currentBackground with { People = DaggerfallBiographyPeople.Roll(_definitions, identity.RaceId, _random, currentBackground.RollSequence) } }
+                : selected;
         // The visible allocation fields belonged to the previous career. Publish fresh matching
         // rolls before accepting allocations for a different class or custom skill tier layout.
         if (currentBackground is not null && State.Character.BackgroundCareerChanged(selected)

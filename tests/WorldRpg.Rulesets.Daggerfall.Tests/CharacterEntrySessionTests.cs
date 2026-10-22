@@ -72,6 +72,35 @@ public sealed class CharacterEntrySessionTests
     }
 
     [Fact]
+    public void Changing_race_while_a_custom_class_is_ineligible_keeps_the_draft_readable_and_fixable()
+    {
+        using var session = OpenCreation();
+        var character = session.State.Character;
+        var custom = DaggerfallCustomCareerChoices.Default(TestPayload.Definitions, character.Career) with { Name = "Twice Trained" };
+        string Update(string race, string[] minor) => JsonSerializer.Serialize(new
+        {
+            action = "character-update", name = custom.Name, race, gender = "male", faceIndex = 0, reflexes = 2, career = "custom",
+            primarySkills = string.Join(',', custom.PrimarySkills), majorSkills = string.Join(',', custom.MajorSkills),
+            minorSkills = string.Join(',', minor), hitPointsPerLevel = custom.HitPointsPerLevel, advantages = "", disadvantages = "",
+        });
+        string[] twice = [custom.PrimarySkills[0], .. custom.MinorSkills.Skip(1)];
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui(Update("breton", custom.MinorSkills))]));
+        session.Update(new ProductUpdate(OuterUpdate(2), [Ui(Update("breton", twice))]));
+        // The race changes while the class is still ineligible: the biography's people follow it, so the
+        // draft is still one the screen can draw, with its reasons.
+        session.Update(new ProductUpdate(OuterUpdate(3), [Ui(Update("nord", twice))]));
+        Assert.Equal("nord", character.Pending!.RaceId);
+        Assert.Equal("nord", character.Pending!.Background!.People.RaceId);
+        DaggerfallCharacterCreationPresentation invalid = character.ReadCreation();
+        Assert.Contains("Each trained skill may appear only once.", invalid.Blocked);
+        // Correcting the class afterwards is accepted for the new race.
+        session.Update(new ProductUpdate(OuterUpdate(4), [Ui(Update("nord", custom.MinorSkills))]));
+        Assert.Equal("Character choices updated.", session.Presentation.LastOutcome);
+        Assert.Empty(character.ReadCreation().Custom!.Eligibility);
+        Assert.Equal("nord", character.Pending!.Background!.People.RaceId);
+    }
+
+    [Fact]
     public void Switching_to_custom_career_replaces_old_background_before_allocating_and_committing()
     {
         var inputs = ReadInputs(TestData.RepositoryRoot);
