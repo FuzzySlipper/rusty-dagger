@@ -27,7 +27,9 @@ panel modules); `main.ts` only mounts them and routes each snapshot.
 **Diagnostic UI** is for developers and agents: the diagnostics and debug
 panels, tuning and test controls. It may use any browser feature and may be
 exercised only in a browser. It is kept apart in the page and visibly marked
-as diagnostic, so its needs never shape a game surface.
+as diagnostic, so its needs never shape a game surface. Dagger's developer tools
+(`developer.ts`, [adaptive playtesting](playtesting.md#developer-tools)) mount beside
+the game's shell, not inside it.
 
 ## Ownership
 

@@ -113,6 +113,13 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
                 (radius, verticalRadius, cellSize) => World().ReadSpatialGrid(radius, verticalRadius, cellSize),
                 distance => World().ReadSpatialProbe(distance),
                 (x, y, z) => World().ReadJumpPlan(x, y, z)));
+            registrar.Register(new SpatialClearanceDebugModule((x, y, z) => World().ReadSpatialClearance(x, y, z)));
+        }
+        if (_session is IDeveloperInspectionSession)
+        {
+            IDeveloperInspectionSession Inspection() => (IDeveloperInspectionSession)_session;
+            registrar.Register(new DeveloperInspectionDebugModule(Inspection));
+            registrar.Register(new InspectionTargetsDebugModule(_context.Engine.Graphics, () => Inspection().InspectionTargets()));
         }
         if (_session is IDeveloperWorldSession)
             registrar.Register(new DeveloperWorldDebugModule(() => (IDeveloperWorldSession)_session));

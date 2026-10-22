@@ -114,12 +114,52 @@ For example, to reach the Temple of Kynareth's trainer from anywhere:
 `world.enter Charing "Temple of Kynareth"`, then `world.find training`, then
 `world.goto Actor:<id>`.
 
+## Developer tools
+
+The **`** key in play, or the game menu's **Developer tools**, opens the Engine's
+developer shell docked beside play. It opens only when the host runs with
+`--live-debug`; otherwise a note says so. It is diagnostic UI: it lives outside the
+game's shell and skin, holds the cursor while open, and gives play its input back
+when closed. Its tabs:
+
+- **Dagger:**
+  - **Time:** Pause and Resume switch the Engine's held time
+    (`engine.time.mode manual` / `realtime`). Step advances it by 0.1 s or 1 s
+    (`engine.time.advance`).
+  - **Free camera:** flies the Engine's observer (`engine.renderer.camera`) from the
+    player's eye with W/S/A/D, R/F (up/down), Q/E (turn) and T/G (look), or the
+    buttons. The player never moves. Turning it off, or closing the tools, gives the
+    camera back.
+  - **Overlays:** a checkbox per set. A ruleset set is built only while it is on
+    (`world.overlay-on` / `world.overlay-off`) and drawn by
+    `engine.inspect.overlay show set NAME`.
+- **Console, View, Scene, Metrics:** the Engine's own panels. The View pane frames
+  the inspection targets `player`, `dialogue` (the person spoken to) and `door` (the
+  nearest door or portal).
+
+| Overlay set | What it draws (within 60 m) |
+|---|---|
+| `interaction` | The activation query's ray, and each target's point, reach sphere and focus reason (green Ready, red Occluded or OutOfReach, grey otherwise). |
+| `people` | Each loaded person's height, facing, name, role and services. |
+| `doors` | Door and portal points and outward normals, locks, and whether a building's entry rule opens it now. |
+| `actors` | Creatures' melee reach, hearing radius (hostile), behaviour state and next navigation waypoint. |
+| `markers` | The profile's dungeon enemy and treasure markers, quest markers, anchors and street population. |
+| `player` | The standing capsule, the height a step clears, and the floor below (red when there is none). |
+| `probe` | The last `spatial.probe` rays or `spatial.clearance` body, from the console. |
+| `inspect.targets` | The inspection targets' markers. |
+
+Collision shapes aren't drawn yet: that waits on the Engine's collision overlay
+(rusty-engine #10288).
+
 ## Implementation ownership
 
 `WorldRpgProduct` implements `IDebugCommandModuleSource` and registers the shared
 Engine module with current-session delegates. The developer commands are Kit's
 `DeveloperWorldDebugModule` over the session's `IDeveloperWorldSession`; Dagger
-resolves places, buildings and targets. Kit defines the optional session
+resolves places, buildings and targets. The overlay sets are Kit's
+`DeveloperInspectionDebugModule` over `IDeveloperInspectionSession`, with the
+Engine's `InspectionTargetsDebugModule` and `SpatialClearanceDebugModule`; Dagger
+builds each set from its owners at presentation. The panel is `src/ui/developer.ts`. Kit defines the optional session
 interface and read-only targeting mechanisms. Dagger supplies live ruleset facts,
 control mappings, hostility, equipment and animation policy. Crew owns bounded
 input, time coordination and capture. Querying does not activate targets, spend

@@ -139,8 +139,9 @@ internal sealed class AssembledWorldRun : IDisposable
         Spatial = SpatialFake.Create(world.Source.SpatialArtifact.Sha256, releases);
         // The player stays where a test places them, so a door is used from where they stood.
         Spatial.KeepPosition = true;
+        Appearance = new AppearanceFake(releases);
         EngineContextFake engine = EngineContextFake.Create(content, Spatial.Service,
-            new AppearanceFake(releases), _perception.Service, random: LodgingRandom.Create());
+            Appearance, _perception.Service, random: LodgingRandom.Create());
         DaggerfallSessionComposition composition = new(world.Definitions, world.Source, DaggerfallTuning.Defaults, world.Identity)
             { Profiles = world.Profiles, Sky = world.Sky, Blocks = world.Blocks };
         Session = save is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, save);
@@ -239,6 +240,8 @@ internal sealed class AssembledWorldRun : IDisposable
 
     /// <summary>The scripted spatial service, absent from a run over a real Engine.</summary>
     internal SpatialFake Spatial { get; } = null!;
+    /// <summary>The scripted graphics of a run over fakes: what it published, overlay sets included.</summary>
+    internal AppearanceFake Appearance { get; } = null!;
 
     /// <summary>One admitted update with no input.</summary>
     internal void Step() => Session.Update(new ProductUpdate(OuterUpdate(++_step), []));

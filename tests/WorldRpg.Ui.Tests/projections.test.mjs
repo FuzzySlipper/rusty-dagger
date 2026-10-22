@@ -19,11 +19,36 @@ for (const file of await readdir(new URL('../../src/ui/', import.meta.url))) {
   }).outputText.replaceAll("'@rusty-engine/live-debug'", "'./debug-stub.js'");
   await writeFile(join(output, file.replace(/\.ts$/, '.js')), compiled);
 }
-await writeFile(join(output, 'debug-stub.js'), 'export async function mountLiveDebugPanel() { return { dispose() {} }; }');
+// The Engine's live-debug package stands in as a scripted host: a transport whose catalog answers only when a test
+// says live-debug is on, recording every command, and a developer shell that records its options and open state.
+await writeFile(join(output, 'debug-stub.js'), `
+export const developer = { liveDebug: false, commands: [], answers: {}, shells: [] };
+export function createLiveDebugHttpTransport() {
+  return {
+    async catalog() { if (!developer.liveDebug) throw new Error('no live-debug host'); return { commands: [] }; },
+    async execute(command) {
+      developer.commands.push(command);
+      const answer = Object.entries(developer.answers).find(([prefix]) => command.startsWith(prefix));
+      return { succeeded: true, message: answer ? answer[1] : 'ok' };
+    },
+  };
+}
+export function mountDeveloperShell(host, options) {
+  const shell = { options, isOpen: false, opens: 0,
+    async open() { shell.isOpen = true; shell.opens++; },
+    close() { if (!shell.isOpen) return; shell.isOpen = false; options.onClose?.(); },
+    async toggle() { if (shell.isOpen) shell.close(); else await shell.open(); },
+    dispose() { shell.close(); } };
+  developer.shells.push(shell);
+  return shell;
+}
+`);
 const { mountProductUi } = await import(pathToFileURL(join(output, 'main.js')));
 const art = await import(pathToFileURL(join(output, 'art.js')));
 const skin = await import(pathToFileURL(join(output, 'skin.js')));
 const uiScale = await import(pathToFileURL(join(output, 'scale.js')));
+const { developer } = await import(pathToFileURL(join(output, 'debug-stub.js')));
+const developerTools = await import(pathToFileURL(join(output, 'developer.js')));
 
 /** A PNG data URL whose header states `width` x `height`: enough for the skin, which reads only the header. */
 function pngHeader(width, height) {
@@ -869,6 +894,96 @@ test('a conversation opening under pointer lock does not open the menu when the 
     assert.equal(f.root.querySelector('.dagger-dialogue').open, true);
     assert.equal(f.root.querySelector('.dagger-menu').open, false, 'The lock went to the conversation, not to a request for the menu.');
   } finally { window.HTMLDialogElement.prototype.showModal = showModal; delete document.pointerLockElement; f.dispose(); }
+});
+
+test('the developer key opens the developer tools only when the host serves live-debug, and closing them gives play its input back', async () => {
+  const f = fixture();
+  const key = () => document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Backquote', bubbles: true, cancelable: true }));
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+  try {
+    f.publish({ mode: 'playing' });
+    developer.liveDebug = false; developer.shells.length = 0;
+    key(); await settle();
+    assert.equal(developer.shells.length, 0, 'Without live-debug no shell is mounted.');
+    const note = f.root.querySelector('.dagger-developer-note');
+    assert.equal(note.hidden, false);
+    assert.match(note.textContent, /--live-debug/);
+    assert.equal(f.root.querySelector('.dagger-developer').contains(f.root.querySelector('.dagger-hud')), false, 'The tools live outside the game shell.');
+
+    developer.liveDebug = true;
+    key(); await settle();
+    const shell = developer.shells.at(-1);
+    assert.equal(shell.isOpen, true);
+    assert.equal(note.hidden, true);
+    assert.deepEqual(shell.options.panels.map(panel => panel.kind), ['product', 'console', 'view', 'scene', 'metrics']);
+    assert.equal(shell.options.panels[0].title, 'Dagger');
+    assert.equal(f.modes.at(-1), 'interface', 'The open tools hold the cursor, so play stops taking input.');
+
+    // Closing (the key again, or the shell's own Close) gives gameplay its input back at once.
+    const focusesBefore = f.focuses.length;
+    key(); await settle();
+    assert.equal(shell.isOpen, false);
+    assert.equal(f.modes.at(-1), 'gameplay');
+    assert.ok(f.focuses.length > focusesBefore, 'Gameplay focus is taken back without a click.');
+
+    // The menu's Developer tools entry closes the menu and opens the tools beside play.
+    const menu = f.root.querySelector('.dagger-menu');
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    assert.equal(menu.open, true);
+    f.root.querySelector('[data-action="debug"]').click(); await settle();
+    assert.equal(menu.open, false);
+    assert.equal(developer.shells.at(-1).isOpen, true);
+    developer.shells.at(-1).close();
+  } finally { developer.liveDebug = false; f.dispose(); }
+});
+
+test('the Dagger developer panel pauses and steps held time, flies the observer camera and turns overlay sets on through debug commands', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLInputElement', 'KeyboardEvent', 'Event']) globalThis[key] = dom.window[key];
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+  developer.liveDebug = true; developer.commands.length = 0; developer.shells.length = 0;
+  developer.answers = {
+    'world.overlays': JSON.stringify({ sets: [{ name: 'people', on: false }, { name: 'player', on: true }] }),
+    'playtest.observe': JSON.stringify({ player: { viewpoint: { x: 1, y: 2, z: 3 }, yawDegrees: 0, pitchDegrees: 0 } }),
+  };
+  const root = document.getElementById('root');
+  const tools = developerTools.mountDeveloperTools(root, { viewport: { anchor: () => () => {} } }, { onChange() {} });
+  try {
+    await tools.toggle();
+    const element = document.createElement('div');
+    root.append(element);
+    const panel = developer.shells.at(-1).options.panels[0].mount(element);
+    await settle();
+    const button = label => [...element.querySelectorAll('button')].find(control => control.textContent.startsWith(label));
+
+    button('Pause').click(); button('Step 0.1 s').click(); button('Resume').click(); await settle();
+    assert.deepEqual(developer.commands.filter(command => command.startsWith('engine.time')),
+      ['engine.time.mode manual', 'engine.time.advance 100', 'engine.time.mode realtime']);
+
+    // The ruleset's sets are listed with their state, beside the Engine's own; a box builds and shows a set.
+    assert.deepEqual([...element.querySelectorAll('[data-overlay]')].map(box => [box.dataset.overlay, box.checked]),
+      [['people', false], ['player', true], ['probe', false], ['inspect.targets', false]]);
+    const people = element.querySelector('[data-overlay="people"]');
+    people.checked = true; people.dispatchEvent(new window.Event('change')); await settle();
+    assert.deepEqual(developer.commands.slice(-2), ['world.overlay-on people', 'engine.inspect.overlay show set people']);
+    people.checked = false; people.dispatchEvent(new window.Event('change')); await settle();
+    assert.deepEqual(developer.commands.slice(-2), ['world.overlay-off people', 'engine.inspect.overlay hide set people']);
+    const targets = element.querySelector('[data-overlay="inspect.targets"]');
+    targets.checked = true; targets.dispatchEvent(new window.Event('change')); await settle();
+    assert.deepEqual(developer.commands.slice(-2), ['inspect.targets', 'engine.inspect.overlay show set inspect.targets']);
+
+    // The free camera starts at the player's eye and flies by key; the player never moves.
+    button('Free camera').click(); await settle(); await settle();
+    assert.equal(developer.commands.at(-1), 'engine.renderer.camera 1 2 3 0 0');
+    element.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', bubbles: true, cancelable: true })); await settle();
+    assert.equal(developer.commands.at(-1), 'engine.renderer.camera 1 2 2.5 0 0');
+    element.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyR', bubbles: true, cancelable: true })); await settle();
+    assert.equal(developer.commands.at(-1), 'engine.renderer.camera 1 2.5 2.5 0 0');
+    assert.equal(developer.commands.some(command => command.startsWith('world.') && !command.startsWith('world.overlay')), false);
+    // Closing the panel hands the camera back to the player.
+    panel.dispose(); await settle();
+    assert.equal(developer.commands.at(-1), 'engine.renderer.camera none');
+  } finally { tools.dispose(); developer.liveDebug = false; developer.answers = {}; }
 });
 
 test('Escape backs out of the innermost surface and opens the menu only from play', () => {

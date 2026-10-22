@@ -20,6 +20,7 @@ public interface IPlaytestWorldInspectionSession
     DebugCommandResult ReadSpatialGrid(int radius, int verticalRadius, double cellSize);
     DebugCommandResult ReadSpatialProbe(double distance);
     DebugCommandResult ReadJumpPlan(double x, double y, double z);
+    DebugCommandResult ReadSpatialClearance(double x, double y, double z);
 }
 
 /// <summary>Read-only scene adapter that follows the current session for Engine's standard debug module.</summary>

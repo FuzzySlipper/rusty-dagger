@@ -3,6 +3,7 @@ import { adopt, adoptDemanded, heldDemandedRevision, heldRevision } from './art.
 import { mountChoices } from './choices.js';
 import { mountConfirm } from './confirm.js';
 import { mountDeath } from './death.js';
+import { DEVELOPER_KEY, mountDeveloperTools } from './developer.js';
 import { mountDialogue } from './dialogue.js';
 import { mountDungeonText } from './dungeon-text.js';
 import { mountEntry } from './entry.js';
@@ -49,8 +50,18 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
 
   // A playing cinematic takes any key or press first, so the HUD listens before navigation does.
   const hud = mountHud(shell, send);
-  // Key capture for rebinding runs before navigation, which would otherwise take Escape and the arrows.
-  const onKeyDown = (event: KeyboardEvent): void => menu.captureKey(event);
+  // Key capture for rebinding runs before navigation, which would otherwise take Escape and the arrows. The developer
+  // key opens the developer tools from play, outside every game surface; a text field keeps the character.
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.code === DEVELOPER_KEY && !event.repeat && !menu.dialog.open
+      && !(event.target instanceof Element && event.target.matches('input, textarea, [contenteditable="true"]'))) {
+      event.preventDefault();
+      event.stopPropagation();
+      void developer.toggle();
+      return;
+    }
+    menu.captureKey(event);
+  };
   document.addEventListener('keydown', onKeyDown, true);
   // Escape with no surface open is Escape in play: it opens the menu, except where there is none.
   const navigation = mountNavigation(shell, context, {
@@ -81,14 +92,17 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const death = mountDeath(shell, send);
   const dungeonText = mountDungeonText(shell, send);
   const scale = mountScale(context);
-  const menu = mountMenu(shell, { send, ask, sync, isDead: () => dead, register: surface => navigation.register(surface), uiScale: scale.current });
+  // Diagnostic UI, mounted beside the game's shell so the game's skin and modal surfaces never shape it.
+  const developer = mountDeveloperTools(root, context, { onChange: () => sync(true) });
+  const menu = mountMenu(shell, { send, ask, sync, isDead: () => dead, register: surface => navigation.register(surface), uiScale: scale.current,
+    openDeveloper: () => { if (!developer.isOpen()) void developer.toggle(); } });
   const entry = mountEntry(shell, send, menu.creation, () => { if (menu.dialog.open) menu.dialog.close(); });
   const dialogue = mountDialogue(shell, send, ask);
 
   // A pointer lock the world held, lost in play, is the player asking for the menu: the browser and
   // the desktop shell spend Escape on releasing the lock, so this is what Escape does in play.
   const interaction = mountInteraction(context, { onLockLostInPlay: () => { if (!menu.dialog.open && !dead && !entry.isTitle()) menu.open(); } });
-  interaction.needsCursor(() => menu.dialog.open || dialogue.window.open || dialogue.summoningOffer.open);
+  interaction.needsCursor(() => menu.dialog.open || dialogue.window.open || dialogue.summoningOffer.open || developer.isOpen());
   // The surfaces that take the cursor, topmost first. Escape and Back go to the topmost: from any menu
   // panel Escape closes the whole menu while Back steps out one panel. A question the product needs
   // answered (a summoning offer, a court, a quest prompt, the death and title screens) has no back, so
@@ -205,6 +219,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     unsubscribe();
     hud.dispose();
     menu.dispose();
+    developer.dispose();
     document.removeEventListener('keydown', onKeyDown, true);
     disposeShell();
   } };

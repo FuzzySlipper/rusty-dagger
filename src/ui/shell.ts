@@ -87,7 +87,7 @@ const SHELL_MARKUP = `
         <details class="dagger-menu-developer">
           <summary>Developer tools</summary>
           <p>Diagnostics for developers, not part of the game.</p>
-          <button data-action="debug">Engine debug console</button>
+          <button data-action="debug">Developer tools</button>
           <button data-action="diagnostics">Composition diagnostics</button>
         </details>
       </div>
@@ -126,7 +126,6 @@ const SHELL_MARKUP = `
           <button data-action="delete-slot">Delete selected</button>
         </div>
       </section>
-      <div class="dagger-debug-root" data-rusty-ui-interactive hidden></div>
       <button data-action="loot-exit" hidden>Exit loot</button>
       <button data-action="back">Back to menu</button>
       </div>
