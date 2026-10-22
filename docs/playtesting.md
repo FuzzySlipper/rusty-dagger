@@ -101,10 +101,10 @@ report them; names with spaces are quoted.
 | Command | What it does |
 |---|---|
 | `world.where` | Current place, site, profile, building, feet and centre, facing, and the nearest targets with their ids. |
-| `world.teleport X Y Z` | Stands the player on feet `X Y Z` in the current scene. A spot the standing body would overlap is refused with the Engine's clearance facts. |
-| `world.teleport-force X Y Z` | The same, placed even where the body overlaps collision. |
-| `world.move DX DY DZ` | Moves by an offset from the current feet, refusing an occupied spot. |
-| `world.forward METRES` | Moves along the facing on the ground plane, refusing an occupied spot. |
+| `world.teleport X Y Z` | Stands the player on feet `X Y Z` in the current scene. A spot with no floor within three metres below is refused (an interior is a box in empty space), and so is one the standing body would overlap, with the Engine's clearance facts. |
+| `world.teleport-force X Y Z` | The same, placed even with no floor or where the body overlaps collision. |
+| `world.move DX DY DZ` | Moves by an offset from the current feet, refusing a spot as `world.teleport` does. |
+| `world.forward METRES` | Moves along the facing on the ground plane, refusing a spot as `world.teleport` does. |
 | `world.travel PLACE` | Lands at a map place, named (ranked as the travel search ranks: exact, prefix, contains, region) or as `region/index`. It lands as guild teleport does, with no time, cost or encounter. Several matches are listed with their ids. |
 | `world.enter PLACE BUILDING` | Travels there if needed, stands at the building's door, and lands inside as the door would, without its greeting, hours or trespass. The building is named or given as `block-x/block-y/index`. Leaving returns to the doorstep. |
 | `world.find SERVICE` | The people of the current place offering a service (`training`, `food-drink`, `buy-spells`, `shop`, …): those loaded now with their target ids, and those placed in its buildings, each with the `world.enter` line that reaches it. |

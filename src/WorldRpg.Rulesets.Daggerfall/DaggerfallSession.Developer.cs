@@ -34,6 +34,9 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         if (!double.IsFinite(x) || !double.IsFinite(y) || !double.IsFinite(z))
             return DebugCommandResult.Failure(DebugCommandStatus.InvalidArguments, "A teleport target must be finite.");
         Vector3 feet = new((float)x, (float)y, (float)z);
+        // An interior is a box in empty space and a dungeon has gaps: a spot with nothing to stand on is refused too.
+        if (!force && FloorBelow(feet + Vector3.UnitY) is null)
+            return Refused($"There is no floor within three metres below ({Format(feet)}); world.teleport-force places the player there anyway.");
         if (!force && BodyOverlap(feet) is { Present: true })
             return Refused($"The body would overlap collision at ({Format(feet)}); world.teleport-force places it anyway. "
                 + SpatialClearanceSnapshot.Capture(_engine.Spatial, _spatial.Session, PlayerCentre(), feet + Vector3.UnitY * FloorClearance,
@@ -202,12 +205,17 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
             Vector3.Zero, 0, new(1, uint.MaxValue), ReadOnlyMemory<SpatialEntityCollider>.Empty, ReadOnlyMemory<ulong>.Empty));
     }
 
-    /// <summary>Lands the player on scene-local feet in the active profile through the one relocation owner.</summary>
+    /// <summary>
+    /// Lands the player on scene-local feet in the active profile through the one relocation owner. The body's centre
+    /// is placed over the feet, so the movement owner's standing settles it onto that floor and keeps the height asked
+    /// for where there is none.
+    /// </summary>
     private DebugCommandResult Land(Vector3 feet, float yaw, float pitch, string anchor)
     {
         _dialogue?.Close();
         CloseTravelMap();
-        Vector3 position = ProfilePosition(new WorldPoint(feet.X, feet.Y, feet.Z));
+        Vector3 centre = feet + Vector3.UnitY * ((_spatial.CurrentController.Shape.StandingHeight * .5F) + FloorClearance);
+        Vector3 position = ProfilePosition(new WorldPoint(centre.X, centre.Y, centre.Z));
         if (!_sites.TryRelocatePlayer(_activeProfileKey, new(anchor, new(position.X, position.Y, position.Z), yaw, pitch)))
             return Refused("The relocation was refused.");
         return Where();
