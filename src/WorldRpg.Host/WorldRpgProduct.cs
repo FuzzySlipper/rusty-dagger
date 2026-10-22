@@ -114,6 +114,8 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
                 distance => World().ReadSpatialProbe(distance),
                 (x, y, z) => World().ReadJumpPlan(x, y, z)));
         }
+        if (_session is IDeveloperWorldSession)
+            registrar.Register(new DeveloperWorldDebugModule(() => (IDeveloperWorldSession)_session));
     }
 
     /// <summary>The mode the product runs its session under.</summary>

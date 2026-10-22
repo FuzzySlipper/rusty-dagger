@@ -89,10 +89,37 @@ last use step across receipts. These are practical freshness hints, not proof of
 exact timing or deterministic replay. Engine time only advances forward; there
 is no rewind, second simulation clock, or scripted combat-roll prediction.
 
+## Developer commands
+
+Developer movement for playtests and manual checks. These are live-debug commands
+only (the in-game **Engine debug console**, `rusty-live-debug`, or a playtest's
+debug execution); no game surface offers them. Each lands the player through the
+same site and movement owners ordinary play uses, so the next save holds the
+result. Positions are scene-local, as `navigation.targets` and `playtest.observe`
+report them; names with spaces are quoted.
+
+| Command | What it does |
+|---|---|
+| `world.where` | Current place, site, profile, building, feet and centre, facing, and the nearest targets with their ids. |
+| `world.teleport X Y Z` | Stands the player on feet `X Y Z` in the current scene. A spot the standing body would overlap is refused with the Engine's clearance facts. |
+| `world.teleport-force X Y Z` | The same, placed even where the body overlaps collision. |
+| `world.move DX DY DZ` | Moves by an offset from the current feet, refusing an occupied spot. |
+| `world.forward METRES` | Moves along the facing on the ground plane, refusing an occupied spot. |
+| `world.travel PLACE` | Lands at a map place, named (ranked as the travel search ranks: exact, prefix, contains, region) or as `region/index`. It lands as guild teleport does, with no time, cost or encounter. Several matches are listed with their ids. |
+| `world.enter PLACE BUILDING` | Travels there if needed, stands at the building's door, and lands inside as the door would, without its greeting, hours or trespass. The building is named or given as `block-x/block-y/index`. Leaving returns to the doorstep. |
+| `world.find SERVICE` | The people of the current place offering a service (`training`, `food-drink`, `buy-spells`, `shop`, …): those loaded now with their target ids, and those placed in its buildings, each with the `world.enter` line that reaches it. |
+| `world.goto TARGET` | Stands within reach of a loaded person, door or container, facing it. The target is a `navigation.targets` id or label. A door or portal is approached from its outside; other targets from the side nearest the player. The spot must fit the body, have floor below, and have a clear line from the eye to the target. |
+
+For example, to reach the Temple of Kynareth's trainer from anywhere:
+`world.enter Charing "Temple of Kynareth"`, then `world.find training`, then
+`world.goto Actor:<id>`.
+
 ## Implementation ownership
 
 `WorldRpgProduct` implements `IDebugCommandModuleSource` and registers the shared
-Engine module with current-session delegates. Kit defines the optional session
+Engine module with current-session delegates. The developer commands are Kit's
+`DeveloperWorldDebugModule` over the session's `IDeveloperWorldSession`; Dagger
+resolves places, buildings and targets. Kit defines the optional session
 interface and read-only targeting mechanisms. Dagger supplies live ruleset facts,
 control mappings, hostility, equipment and animation policy. Crew owns bounded
 input, time coordination and capture. Querying does not activate targets, spend

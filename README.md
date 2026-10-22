@@ -221,6 +221,9 @@ with `scripts/regenerate-content.sh --sprite-authoring authoring`, which passes 
 
 The **Engine debug console** menu entry mounts the upstream console. Start the
 host with `--live-debug` (the repository development service already does).
+The console also takes the developer movement commands (`world.travel`,
+`world.enter`, `world.goto`, `world.teleport`, …) listed in
+[adaptive playtesting](docs/playtesting.md#developer-commands).
 Escape closes the console to the menu, then returns to gameplay.
 
 In the game, **Escape** opens the menu; Escape in a submenu returns to the menu
