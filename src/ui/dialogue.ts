@@ -1,6 +1,7 @@
 import type { ConfirmQuestion } from './confirm.js';
 import { renderItemMaker, renderPotionMaker, renderSpellMaker, renderSummoning } from './crafting.js';
 import { button, type Send } from './host.js';
+import { FOCUSABLE } from './navigation.js';
 import type { DaggerHud, DialogueProjection, MerchantItemProjection, MerchantProjection, SpellbookProjection } from './projection.js';
 import { redraw } from './redraw.js';
 import { renderSpellSales, spellAction } from './spells.js';
@@ -8,8 +9,13 @@ import { createStepper } from './stepper.js';
 import { formatNumber, mountTransfer, type TransferRow, type TransferSideName } from './transfer.js';
 
 /**
- * A conversation and the services a person offers in it: topics and tone, training, food and
- * drink, a shop, spells for sale, item, potion and spell making, Daedric summoning and the bank.
+ * A person screen: the services a person offers, each on its own page. The ruleset publishes the
+ * services in order with their names and the page contact opens on: talk for a person who offers
+ * nothing else, otherwise the chooser that lists them. Talk holds the topics and tone, the bank and
+ * temple donation; trade, training, food and drink, spells for sale, item, potion and spell making
+ * and Daedric summoning each have a page. Back steps from a page to the chooser and from the
+ * chooser (or a talk-only person's talk) ends the conversation; the shoulder buttons step between
+ * the pages. Which page is shown is all this keeps: what each page offers is the ruleset's.
  * A summoning offer opens as its own dialog above the conversation and needs an answer.
  *
  * The conversation keeps a short log of what was asked and answered while it lasts; the topics
@@ -22,11 +28,19 @@ export interface Dialogue {
   readonly summoningOffer: HTMLDialogElement;
   /** End the conversation, as its close button does. */
   close(): void;
+  /** Escape or Back: from a service page to the chooser, otherwise end the conversation. */
+  back(): void;
+  /** The shoulder buttons: the previous or next service page. */
+  panel(direction: -1 | 1): void;
+  /** The control the shown page opens on. */
+  initialFocus(): HTMLElement | null;
   update(value: DaggerHud, dead: boolean, spellbook: SpellbookProjection | null): void;
 }
 
 /** How many exchanges the conversation log keeps. */
 const LOG_LENGTH = 8;
+/** The chooser page's name, as the ruleset publishes it for a person who offers more than talk. */
+const CHOOSER = 'services';
 
 export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: ConfirmQuestion) => void): Dialogue {
   const window_ = shell.querySelector<HTMLDialogElement>('.dagger-dialogue')!;
@@ -42,7 +56,6 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
   const openCategories = new Set<string>();
   let categoriesFor: string | null = null;
   const topics = shell.querySelector<HTMLElement>('.dagger-dialogue-topics')!;
-  const training = shell.querySelector<HTMLElement>('.dagger-dialogue-training')!;
   const trainingSummary = shell.querySelector<HTMLElement>('.dagger-dialogue-training-summary')!;
   const trainingSkills = shell.querySelector<HTMLElement>('.dagger-dialogue-training-skills')!;
   const tavernRoot = shell.querySelector<HTMLElement>('.dagger-dialogue-tavern')!;
@@ -53,12 +66,50 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
   const itemMaker = shell.querySelector<HTMLElement>('.dagger-dialogue-itemmaker')!;
   const potionMaker = shell.querySelector<HTMLElement>('.dagger-dialogue-potionmaker')!;
   const spellMaker = shell.querySelector<HTMLElement>('.dagger-dialogue-spellmaker')!;
+  const tabs = shell.querySelector<HTMLElement>('.dagger-dialogue-tabs')!;
+  const serviceList = shell.querySelector<HTMLElement>('.dagger-dialogue-service-list')!;
+  const pages = Array.from(shell.querySelectorAll<HTMLElement>('.dagger-dialogue-page'));
+  const backButton = shell.querySelector<HTMLButtonElement>('.dagger-dialogue-back')!;
+  const closeButton = shell.querySelector<HTMLButtonElement>('.dagger-dialogue-close')!;
 
   let dead = false;
   let current: DialogueProjection | null = null;
   // The log is what this conversation has shown, kept only while it lasts; the ruleset publishes the latest exchange.
   let exchanges: { question: string; reply: string }[] = [];
   let conversation: string | null = null;
+  // The page shown and the services it steps between: presentation only, reset for each conversation.
+  let page: string | null = null;
+  let services: DialogueProjection['services'] = [];
+
+  // The control a page opens on: its content, never the tone choice that would take the arrows or the
+  // buttons that leave it. Talk opens on its first topic.
+  const pageFocus = (): HTMLElement | null => {
+    const shown = pages.find(element => element.dataset.page === page);
+    if (!shown) return null;
+    const usable = (element: HTMLElement): boolean => !element.closest('[hidden]') && !element.closest('details:not([open]) > :not(summary)');
+    const preferred = page === 'talk' ? Array.from(topics.querySelectorAll<HTMLElement>('button, summary')).find(usable) : undefined;
+    return preferred ?? Array.from(shown.querySelectorAll<HTMLElement>(FOCUSABLE)).find(usable) ?? null;
+  };
+  const showPage = (next: string, focus: boolean, from?: string): void => {
+    page = next;
+    window_.dataset.page = next;
+    for (const element of pages) element.hidden = element.dataset.page !== next;
+    const chooser = services.length > 1;
+    tabs.hidden = !chooser || next === CHOOSER;
+    backButton.hidden = !chooser || next === CHOOSER;
+    for (const tab of tabs.querySelectorAll<HTMLElement>('[role="tab"]')) tab.setAttribute('aria-selected', String(tab.dataset.service === next));
+    if (!focus) return;
+    // Back to the chooser lands on the service just left; a service page lands on its content.
+    const target = next === CHOOSER && from ? Array.from(serviceList.querySelectorAll<HTMLElement>('[data-service]')).find(control => control.dataset.service === from) : pageFocus();
+    (target ?? (backButton.hidden ? closeButton : backButton)).focus();
+  };
+  const choose = (event: Event): void => {
+    const control = (event.target as HTMLElement).closest<HTMLElement>('[data-service]');
+    if (!dead && control?.dataset.service && services.some(service => service.id === control.dataset.service)) showPage(control.dataset.service, true);
+  };
+  serviceList.addEventListener('click', choose);
+  tabs.addEventListener('click', choose);
+  backButton.addEventListener('click', () => { if (page !== null && page !== CHOOSER) showPage(CHOOSER, true, page); });
 
   tavernRoot.addEventListener('click', event => {
     const control = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-tavern-item]');
@@ -94,8 +145,12 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
     });
   });
   const close = (): void => { if (!dead && current) send({ action: 'dialogue-close', revision: current.revision }); };
-  shell.querySelector<HTMLButtonElement>('.dagger-dialogue-close')!.addEventListener('click', close);
-  window_.addEventListener('cancel', event => { event.preventDefault(); close(); });
+  closeButton.addEventListener('click', close);
+  const back = (): void => {
+    if (page !== null && page !== CHOOSER && services.length > 1) showPage(CHOOSER, true, page);
+    else close();
+  };
+  window_.addEventListener('cancel', event => { event.preventDefault(); back(); });
   summoningOffer.addEventListener('cancel', event => event.preventDefault());
   spellSales.addEventListener('click', event => {
     const control = (event.target as HTMLElement).closest<HTMLButtonElement>('button');
@@ -136,6 +191,14 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
     window: window_,
     summoningOffer,
     close,
+    back,
+    panel(direction) {
+      if (dead || services.length < 2) return;
+      const index = services.findIndex(service => service.id === page);
+      const next = index < 0 ? (direction > 0 ? 0 : services.length - 1) : (index + direction + services.length) % services.length;
+      showPage(services[next]!.id, true);
+    },
+    initialFocus: pageFocus,
     update(value, isDead, spellbook) {
       dead = isDead;
       renderSpellSales(spellSales, spellbook);
@@ -167,9 +230,22 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
       if (dialogue === null) {
         conversation = null;
         exchanges = [];
+        page = null;
+        services = [];
         if (window_.open) window_.close();
         return;
       }
+      const fresh = !window_.open || conversation !== dialogue.targetLabel;
+      services = dialogue.services;
+      redraw(serviceList, JSON.stringify(services), () => {
+        serviceList.replaceChildren(...services.map(service => { const control = button(service.label); control.dataset.service = service.id; return control; }));
+        tabs.replaceChildren(...services.map(service => {
+          const control = button(service.label);
+          control.setAttribute('role', 'tab');
+          control.dataset.service = service.id;
+          return control;
+        }));
+      });
       target.textContent = dialogue.targetLabel + (dialogue.questContacts?.length ? ' — quest contact' : '');
       greeting.textContent = dialogue.greeting + (dialogue.comprehendLanguagesBonus ? ` Language comprehension: +${dialogue.comprehendLanguagesBonus}.` : '');
       const tones = dialogue.tones ?? [];
@@ -230,7 +306,6 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
         }));
       });
       const offerTraining = dialogue.training ?? null;
-      training.hidden = offerTraining === null;
       if (offerTraining) {
         const hours = offerTraining.durationHours;
         trainingSummary.textContent = `${offerTraining.price} gold for ${hours} hour${hours === 1 ? '' : 's'}${offerTraining.member ? ' (member rate)' : ''}.`;
@@ -250,11 +325,15 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
         row.append(label, level, control);
         return row;
       })));
-      // The browser focuses a modal's autofocus control when it opens: the first topic, not the tone
-      // choice, which would take the arrows.
-      for (const marked of window_.querySelectorAll('[autofocus]')) marked.removeAttribute('autofocus');
-      topics.querySelector('button, summary')?.setAttribute('autofocus', '');
-      if (!window_.open) window_.showModal();
+      // A conversation opens where the ruleset says; a page whose service is no longer offered goes back
+      // to where the conversation opened.
+      const opening = !window_.open;
+      const start = dialogue.opensOn === 'talk' ? 'talk' : CHOOSER;
+      const keep = !fresh && page !== null && (page === CHOOSER ? services.length > 1 : services.some(service => service.id === page));
+      showPage(keep ? page! : start, false);
+      if (opening) window_.showModal();
+      // The browser focused the modal's first control; a conversation's first page opens on its content instead.
+      if (fresh) showPage(start, true);
     },
   };
 }

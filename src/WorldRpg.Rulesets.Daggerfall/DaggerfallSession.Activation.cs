@@ -205,14 +205,26 @@ internal sealed partial class DaggerfallSession
     internal InteractionTargetingEvidence? LastActivationTargeting => _activation?.LastEvidence;
     internal DaggerfallActivationView ActivationView => _activationPresentation.View with
     {
-        Dialogue = _activationPresentation.View.Dialogue is { } dialogue ? dialogue with
+        Dialogue = _activationPresentation.View.Dialogue is { } dialogue ? WithServices(dialogue with
         {
             BankAvailable = CurrentBankServiceAvailable(),
             ComprehendLanguagesBonus = State.Effects.PerceptionFor(DaggerfallActorIdentity.PlayerEntityId).ComprehendLanguagesBonus,
             Training = CurrentTrainingProvider(dialogue.Revision),
             Tavern = CurrentTavern(dialogue.Revision),
             Merchant = ReadCurrentMerchant(),
-        } : null,
+        }) : null,
+    };
+
+    // The chooser lists a service exactly when the view its page draws is published: the dialogue's own
+    // trade, training and tavern, and the spellbook's sale, makers and summoning for this person.
+    private DaggerfallDialogueView WithServices(DaggerfallDialogueView dialogue) => dialogue with
+    {
+        Services = DaggerfallPersonServices.For(dialogue.Merchant, dialogue.Training is not null, dialogue.Tavern is not null,
+            ReadSpellSale() is not null,
+            CurrentSpellProvider(service: "make-magic-items") is not null,
+            CurrentSpellProvider(service: "make-potions") is not null,
+            CurrentSpellProvider(service: "make-spells") is not null,
+            CurrentSummoner() is not null),
     };
     internal DaggerfallDialogueService Dialogue => _dialogue ?? throw new InvalidOperationException("The session has no dialogue owner.");
 

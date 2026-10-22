@@ -47,6 +47,26 @@ public sealed class DialogueServicesProjectionTests
     }
 
     [Fact]
+    public void A_person_with_several_services_publishes_them_in_the_choosers_order_and_opens_on_the_chooser()
+    {
+        DaggerfallMerchantView identifier = new("shop-2", "Mage", 10, 120, false, false, false, true, [], [], []);
+        IReadOnlyList<DaggerfallPersonService> services = DaggerfallPersonServices.For(identifier, training: true, tavern: false,
+            spells: true, itemMaker: true, potionMaker: false, spellMaker: true, summoning: true);
+        DaggerfallDialogueView view = new("d-2", "Guild mage", "Welcome.", "normal", null, null, [], []) { Services = services };
+
+        Dictionary<string, object?> dialogue = Built(builder => DaggerfallHudProjection.Dialogue(builder, view));
+
+        Assert.Equal([("talk", "Talk"), ("trade", "Identify"), ("training", "Training"), ("spells", "Buy spells"),
+            ("item-maker", "Make magic items"), ("spell-maker", "Make spells"), ("summoning", "Summon a Daedra")],
+            Rows(dialogue["services"]).Select(row => ((string)row["id"]!, (string)row["label"]!)));
+        Assert.Equal("services", dialogue["opensOn"]);
+        // A provider that deals in nothing has no trade page to offer, and a person with only talk opens on it.
+        DaggerfallMerchantView closed = identifier with { CanIdentify = false };
+        Assert.Equal(["talk"], DaggerfallPersonServices.For(closed, false, false, false, false, false, false, false).Select(service => service.Id));
+        Assert.Equal("talk", Built(builder => DaggerfallHudProjection.Dialogue(builder, view with { Services = DaggerfallPersonServices.TalkOnly }))["opensOn"]);
+    }
+
+    [Fact]
     public void The_makers_publish_the_limits_their_rules_enforce()
     {
         DaggerfallSpellMakerView spell = new("maker-1", "Mage", [], new("Freedom", 4, 0, 0, []), null);

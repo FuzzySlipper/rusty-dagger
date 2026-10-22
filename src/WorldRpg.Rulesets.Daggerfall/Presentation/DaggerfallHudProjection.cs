@@ -445,6 +445,10 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("questContacts", builder.Array(dialogue.QuestContacts.Select(contact => builder.Object(
             ("instance", builder.String(contact.InstanceId)), ("symbol", builder.String(contact.Symbol)))).ToArray())),
         ("bankAvailable", builder.Boolean(dialogue.BankAvailable)),
+        // The person screen's chooser: each service with its name, in order, and the page contact opens on.
+        ("services", builder.Array(dialogue.Services.Select(service => builder.Object(
+            ("id", builder.String(service.Id)), ("label", builder.String(service.Label)))).ToArray())),
+        ("opensOn", builder.String(dialogue.OpensOn)),
         ("merchant", dialogue.Merchant is null ? builder.Null() : Merchant(builder, dialogue.Merchant)),
         ("greeting", builder.String(dialogue.Greeting)),
         ("comprehendLanguagesBonus", builder.Number(dialogue.ComprehendLanguagesBonus)),
