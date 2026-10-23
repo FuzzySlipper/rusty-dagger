@@ -25,7 +25,8 @@ await writeFile(join(output, 'debug-stub.js'), `
 export const developer = { liveDebug: false, commands: [], answers: {}, shells: [] };
 export function createLiveDebugHttpTransport() {
   return {
-    async catalog() { if (!developer.liveDebug) throw new Error('no live-debug host'); return { commands: [] }; },
+    // As the Engine's HTTP transport answers: a host without live-debug resolves an unavailable catalog.
+    async catalog() { return developer.liveDebug ? { available: true, commands: [] } : { available: false, commands: [] }; },
     async execute(command) {
       developer.commands.push(command);
       const answer = Object.entries(developer.answers).find(([prefix]) => command.startsWith(prefix));
@@ -905,6 +906,7 @@ test('the developer key opens the developer tools only when the host serves live
     developer.liveDebug = false; developer.shells.length = 0;
     key(); await settle();
     assert.equal(developer.shells.length, 0, 'Without live-debug no shell is mounted.');
+    assert.equal(f.modes.at(-1), 'gameplay', 'Gameplay keeps its input.');
     const note = f.root.querySelector('.dagger-developer-note');
     assert.equal(note.hidden, false);
     assert.match(note.textContent, /--live-debug/);
@@ -917,6 +919,9 @@ test('the developer key opens the developer tools only when the host serves live
     assert.equal(note.hidden, true);
     assert.deepEqual(shell.options.panels.map(panel => panel.kind), ['product', 'console', 'view', 'scene', 'metrics']);
     assert.equal(shell.options.panels[0].title, 'Dagger');
+    // The view pane opens on the player and keeps its own valid framings.
+    assert.equal(shell.options.panels[2].options.subject, 'target player');
+    assert.equal(shell.options.panels[2].options.framings, undefined);
     assert.equal(f.modes.at(-1), 'interface', 'The open tools hold the cursor, so play stops taking input.');
 
     // Closing (the key again, or the shell's own Close) gives gameplay its input back at once.

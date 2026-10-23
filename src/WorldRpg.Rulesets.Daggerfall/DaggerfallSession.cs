@@ -947,6 +947,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _facts.Deliver(React);
     }
     internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEnemyBehavior => _enemyBehavior.LastEvidence;
+    internal DaggerfallEnemyBehaviorModule EnemyBehavior => _enemyBehavior;
     internal IReadOnlyDictionary<long, DaggerfallEnemySpellEvidence> LastEnemySpell => _enemyMagic.LastEvidence;
     internal LootPresentation? OpenLoot => _lootUi.Read();
 
