@@ -970,6 +970,35 @@ test('the loading screen takes focus and holds every key and pad press until the
   } finally { developer.liveDebug = false; f.dispose(); }
 });
 
+test('a loading screen over an open menu holds the menu shortcuts of the pad and the keys, so the menu is as it was when loading ends', () => {
+  const f = fixture();
+  const key = code => document.dispatchEvent(new KeyboardEvent('keydown', { code, key: code, bubbles: true, cancelable: true }));
+  try {
+    // A load or a journey starts from the menu: it is open when the screen goes up.
+    f.publish({ mode: 'playing' });
+    key('Escape');
+    const menu = f.root.querySelector('.dagger-menu');
+    assert.equal(menu.open, true);
+    f.loading({ title: 'Loading the saved game', label: 'Restoring the saved world', step: 0, steps: 2, fraction: 0 });
+    const screen = f.root.querySelector('.dagger-loading');
+    const panel = menu.className;
+    const sent = f.actions.length;
+
+    // Start closes the menu, Select and Y open its panels, X its context menu, A and B act in it: none reaches it.
+    for (const button of ['button-9', 'button-8', 'button-3', 'button-2', 'button-0', 'button-1', 'button-4', 'button-5', 'button-13']) f.pad(button);
+    for (const code of ['Escape', 'KeyI', 'Tab', 'ArrowDown']) key(code);
+    assert.equal(screen.open, true);
+    assert.equal(menu.open, true, 'The menu under the screen stays open.');
+    assert.equal(menu.className, panel, 'It shows the same panel.');
+    assert.equal(f.actions.length, sent, 'No action reaches the product while it loads.');
+    assert.equal(document.activeElement, screen);
+
+    f.loading(null);
+    assert.equal(screen.open, false);
+    assert.equal(menu.open, true);
+  } finally { f.dispose(); }
+});
+
 test('the developer key opens the developer tools only when the host serves live-debug, and closing them gives play its input back', async () => {
   const f = fixture();
   const key = () => document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Backquote', bubbles: true, cancelable: true }));

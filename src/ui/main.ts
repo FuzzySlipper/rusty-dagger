@@ -76,6 +76,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     onPlayEscape: () => { if (!dead && !entry.isTitle()) menu.open(); },
     // While a cinematic plays the shell draws it above the page; any pad press skips it, as any key does.
     captureButton: button => {
+      // While the product loads, no pad press reaches a surface under the screen (the menu's shortcuts included).
+      if (loading.open()) return true;
       if (hud.cinematicPlaying()) { hud.skipCinematic(); return true; }
       return menu.captureButton(button);
     },
