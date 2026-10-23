@@ -79,8 +79,9 @@ internal sealed class AssembledWorld
     /// A new game in Privateer's Hold, walked out through its exit onto its assembled exterior: with no
     /// entrance to return through, the player lands in front of the island's dungeon entrance.
     /// </summary>
-    internal AssembledWorldRun Start(DaggerfallSiteId destination, DaggerfallSiteBuildingId? building = null, bool loadingScreen = false) =>
-        LeaveHold(new(this, (RulesetSavePayload?)null, destination, building, loadingScreen));
+    internal AssembledWorldRun Start(DaggerfallSiteId destination, DaggerfallSiteBuildingId? building = null, bool loadingScreen = false,
+        IRandomService? random = null) =>
+        LeaveHold(new(this, (RulesetSavePayload?)null, destination, building, loadingScreen, random));
 
     /// <summary>
     /// <see cref="Start(DaggerfallSiteId, DaggerfallSiteBuildingId?)"/> over the real Engine content, spatial, graphics and
@@ -134,7 +135,7 @@ internal sealed class AssembledWorldRun : IDisposable
     private ulong _step;
 
     internal AssembledWorldRun(AssembledWorld world, RulesetSavePayload? save, DaggerfallSiteId destination, DaggerfallSiteBuildingId? building,
-        bool loadingScreen = false)
+        bool loadingScreen = false, IRandomService? random = null)
     {
         _world = world;
         List<string> releases = [];
@@ -144,7 +145,7 @@ internal sealed class AssembledWorldRun : IDisposable
         Spatial.KeepPosition = true;
         Appearance = new AppearanceFake(releases);
         EngineContextFake engine = EngineContextFake.Create(content, Spatial.Service,
-            Appearance, _perception.Service, random: LodgingRandom.Create());
+            Appearance, _perception.Service, random: random ?? LodgingRandom.Create());
         // A run with a loading screen stages the player's slow world changes on it, as the host's does.
         Loading = loadingScreen ? new LoadingScreen(() => Session?.PublishLoading()) : null;
         Scripted = engine;
@@ -402,6 +403,11 @@ internal sealed class AssembledWorldRun : IDisposable
         Assert.Null(Session.ReadTravelPresentation().Message);
         Submit(new { action = "travel-accept", key = quote.Identity, amount = quote.TotalCost });
     }
+
+    /// <summary>Every observer sees every target it asks about, as creatures beside the player in open ground do.</summary>
+    internal void SeeEverything() =>
+        _perception.Responder = request => Receipt([.. request.Observers.ToArray().SelectMany(observer => request.Targets.ToArray()
+            .Select(target => new PerceptionPair(observer.Entity, target.Entity, 1d, 1d, PerceptionPairKind.Visible, 1d)))]);
 
     /// <summary>Uses the target at a live position, returning where the player stood (in the active frame's profile coordinates when outside).</summary>
     internal WorldPoint Use(Vector3 target, EntityId entity)

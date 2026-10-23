@@ -1,4 +1,8 @@
+using System.Numerics;
+using Rusty.Engine;
 using Rusty.Engine.Entities;
+using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Travel;
@@ -53,6 +57,47 @@ public sealed class LoadingScreenSessionTests
     }
 
     [Fact]
+    public void An_entrance_taken_while_an_enemy_hit_is_pending_is_still_staged_on_the_loading_screen()
+    {
+        // Every draw comes up lowest, so the rat's swing lands.
+        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold, loadingScreen: true, random: LowRandom.Create());
+        DaggerfallSession session = run.Session;
+        LoadingScreen loading = run.Loading!;
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey dungeon = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
+        (DaggerfallSitePortal entrance, _, EntityId entity) = Assert.Single(session.Sites.Projection.Portals.All,
+            portal => portal.Portal.DestinationLogicalProfile == dungeon.LogicalId);
+
+        // A rat beside the doorway swings at the player. Its hit has not landed when the player uses the door, so the
+        // use is deferred to the end of the update, after the hit's frame had its chance.
+        Vector3 standing = entrance.Position.ToVector() + entrance.Normal!.Value;
+        session.State.PlayerControl.MoveTo(standing);
+        Vector3 side = Vector3.Normalize(Vector3.Cross(entrance.Normal.Value, Vector3.UnitY));
+        session.SpawnActor("rat", new(WorldPoint.From(standing + side), 0));
+        long player = session.State.Actors.Player.DurableId;
+        run.SeeEverything();
+        bool Pending() => session.Sites.Appearances.Any(appearance => appearance.HasPendingEnemyHitTarget(player));
+        for (int swing = 0; swing < 40 && !Pending(); swing++)
+        {
+            session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1000, clamp: true);
+            // Let the last swing finish, then give the next time to start; a hit's swing plays without reaching
+            // its hit frame, so the hit stays pending.
+            run.Appearance.AdvanceReceiptForAll = TestSessions.CompletedMarker(1);
+            run.Step();
+            run.Appearance.AdvanceReceiptForAll = TestSessions.Reading(1, 0);
+            for (int step = 0; step < 30 && !Pending(); step++) run.Step();
+        }
+        Assert.True(Pending(), "The rat's hit on the player is pending.");
+
+        run.Use(entrance, entity);
+        Assert.Equal(new LoadingState("Entering Privateer's Hold", "Reading Privateer's Hold", 0, 2, 0d), loading.Current);
+        Assert.Equal(island, session.Sites.ActiveProfile);
+        Assert.Equal("Reading Privateer's Hold", run.PublishedLoading()!["label"]);
+        run.FinishLoading();
+        Assert.Equal(dungeon, session.Sites.ActiveProfile);
+    }
+
+    [Fact]
     public void A_journey_is_acknowledged_before_it_is_made_and_arrives_on_the_updates_after()
     {
         AssembledWorld world = Shared.Value;
@@ -81,5 +126,18 @@ public sealed class LoadingScreenSessionTests
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
         run.Step();
         Assert.Null(loading.Current);
+    }
+
+    /// <summary>The Engine's random service drawing every value at its lowest, keyed and classic alike.</summary>
+    private class LowRandom : System.Reflection.DispatchProxy
+    {
+        internal static IRandomService Create() => System.Reflection.DispatchProxy.Create<IRandomService, LowRandom>();
+
+        protected override object? Invoke(System.Reflection.MethodInfo? method, object?[]? arguments) => method?.Name switch
+        {
+            nameof(IRandomService.DrawKeyed) => new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum),
+            nameof(IRandomService.DrawLcg15) => new Lcg15Receipt(unchecked(((Lcg15Request)arguments![0]!).State * 1103515245u + 12345u), 0),
+            _ => throw new NotSupportedException(method?.Name),
+        };
     }
 }

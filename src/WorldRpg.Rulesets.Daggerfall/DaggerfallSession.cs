@@ -332,21 +332,27 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     public ProductUpdateResult Update(ProductUpdate update)
     {
-        // An exception that escapes here faults the lifecycle; the Engine reports it with its full
-        // text and stack, and a resume continues this same session, so nothing is torn down on the way
-        // out. Session resources are released by Dispose.
-        foreach (var appearance in _sites.Appearances) appearance.BeginAdmittedUpdate();
-        _enemyBehavior.BeginAdmittedUpdate();
-        // Slow work the player asks for in this update is acknowledged now and staged on the loading screen.
+        // Slow work the player asks for anywhere in this update (an act deferred behind an enemy hit included)
+        // is acknowledged now and staged on the loading screen; this update's own publication carries it.
         _inAdmittedUpdate = true;
         try
         {
-            Update(update.Facts, update.Input);
+            return AdmittedUpdate(update);
         }
         finally
         {
             _inAdmittedUpdate = false;
         }
+    }
+
+    private ProductUpdateResult AdmittedUpdate(ProductUpdate update)
+    {
+        // An exception that escapes here faults the lifecycle; the Engine reports it with its full
+        // text and stack, and a resume continues this same session, so nothing is torn down on the way
+        // out. Session resources are released by Dispose.
+        foreach (var appearance in _sites.Appearances) appearance.BeginAdmittedUpdate();
+        _enemyBehavior.BeginAdmittedUpdate();
+        Update(update.Facts, update.Input);
         // Sprite playback consumes the Engine-bound outer update identity.  It
         // must not run for each private catch-up simulation step above, and it
         // must not run while the world is holding still.
