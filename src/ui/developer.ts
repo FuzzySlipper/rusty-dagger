@@ -156,6 +156,38 @@ function mountDaggerPanel(element: HTMLElement, transport: LiveDebugTransport): 
   };
   element.addEventListener('keydown', onKey);
 
+  // Collision: the Engine draws the Spatial sessions' retained collision around the observer (or the player's camera)
+  // and lists what it drew; nothing is read while it is off.
+  const collision = section('Collision');
+  const drawCollision = document.createElement('input');
+  drawCollision.type = 'checkbox';
+  drawCollision.dataset.collision = '';
+  const radius = document.createElement('input');
+  radius.type = 'number';
+  radius.min = '1';
+  radius.max = '64';
+  radius.value = '12';
+  radius.setAttribute('aria-label', 'Collision radius in metres');
+  const show = (): Promise<string | null> => run(drawCollision.checked
+    ? `engine.inspect.overlay show collision ${Number(radius.value) || 12}` : 'engine.inspect.overlay hide collision');
+  drawCollision.addEventListener('change', () => void show().then(answer => { if (answer === null) drawCollision.checked = !drawCollision.checked; }));
+  radius.addEventListener('change', () => { if (drawCollision.checked) void show(); });
+  // Collision outlives the panel, as the overlay sets do: it opens showing what the Engine draws now.
+  void run('engine.inspect.overlay').then(answer => {
+    const drawn = answer === null ? null : (JSON.parse(answer) as { collision?: { radius?: number } | null }).collision;
+    if (drawn) { drawCollision.checked = true; radius.value = String(drawn.radius ?? 12); }
+  });
+  const toggleLabel = document.createElement('label');
+  toggleLabel.append(drawCollision, ' draw collision within ', radius, ' m');
+  collision.append(toggleLabel);
+  control(collision, 'List colliders here', () => void run(`engine.inspect.collision ${Number(radius.value) || 12}`).then(answer => {
+    if (answer === null) return;
+    const read = JSON.parse(answer) as { lines: number; omitted: number;
+      colliders: readonly { kind: string; content?: string; instance?: number | string; lines: number }[] };
+    status.textContent = [`${read.colliders.length} colliders, ${read.lines} lines${read.omitted ? `, ${read.omitted} omitted` : ''}:`,
+      ...read.colliders.map(collider => `${collider.kind} ${collider.content ?? `instance ${collider.instance ?? '?'}`} · ${collider.lines} lines`)].join('\n');
+  }));
+
   // Overlays: the ruleset's sets are built only while on; the Engine draws whichever are shown.
   const overlays = section('Overlays');
   const list = document.createElement('div');

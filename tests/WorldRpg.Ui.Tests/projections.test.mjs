@@ -950,6 +950,10 @@ test('the Dagger developer panel pauses and steps held time, flies the observer 
   developer.answers = {
     'world.overlays': JSON.stringify({ sets: [{ name: 'people', on: false }, { name: 'player', on: true }] }),
     'playtest.observe': JSON.stringify({ player: { viewpoint: { x: 1, y: 2, z: 3 }, yawDegrees: 0, pitchDegrees: 0 } }),
+    'engine.inspect.overlay': JSON.stringify({ on: true, collision: { radius: 8 }, sets: [] }),
+    'engine.inspect.collision': JSON.stringify({ lines: 177, omitted: 0, colliders: [
+      { kind: 'static-mesh', content: 'worldrpg/imports/charing/exterior/spatial/charing/exterior/collision-navigation.rspatial', instance: 1, lines: 177 },
+      { kind: 'character', lines: 12 }] }),
   };
   const root = document.getElementById('root');
   const tools = developerTools.mountDeveloperTools(root, { viewport: { anchor: () => () => {} } }, { onChange() {} });
@@ -976,6 +980,21 @@ test('the Dagger developer panel pauses and steps held time, flies the observer 
     const targets = element.querySelector('[data-overlay="inspect.targets"]');
     targets.checked = true; targets.dispatchEvent(new window.Event('change')); await settle();
     assert.deepEqual(developer.commands.slice(-2), ['inspect.targets', 'engine.inspect.overlay show set inspect.targets']);
+
+    // Collision opens as the Engine draws it now (8 m), turns off and on at a chosen radius, and lists what it drew.
+    const collision = element.querySelector('[data-collision]');
+    const radius = element.querySelector('input[aria-label="Collision radius in metres"]');
+    assert.equal(collision.checked, true);
+    assert.equal(radius.value, '8');
+    collision.checked = false; collision.dispatchEvent(new window.Event('change')); await settle();
+    assert.equal(developer.commands.at(-1), 'engine.inspect.overlay hide collision');
+    radius.value = '20'; collision.checked = true; collision.dispatchEvent(new window.Event('change')); await settle();
+    assert.equal(developer.commands.at(-1), 'engine.inspect.overlay show collision 20');
+    radius.value = '30'; radius.dispatchEvent(new window.Event('change')); await settle();
+    assert.equal(developer.commands.at(-1), 'engine.inspect.overlay show collision 30');
+    button('List colliders here').click(); await settle();
+    assert.equal(developer.commands.at(-1), 'engine.inspect.collision 30');
+    assert.match(element.querySelector('.dagger-developer-status').textContent, /2 colliders, 177 lines:\nstatic-mesh worldrpg\/imports\/charing\/exterior.*\ncharacter instance \?/s);
 
     // The free camera starts at the player's eye and flies by key; the player never moves.
     button('Free camera').click(); await settle(); await settle();

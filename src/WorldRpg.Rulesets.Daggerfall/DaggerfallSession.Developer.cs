@@ -189,6 +189,8 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
             .Where(screen => screen != DaggerfallInteractionScreen.Menu && _interactions.IsOpen(screen))];
         if (open.Length > 0) return $"Close the open {string.Join(", ", open)} first.";
         if (Summoning.PendingOffer || State.Quests.PendingOffer is not null) return "Answer the pending offer first.";
+        // A quest's question (the tutorial's Yes/No, a prompt) holds as it holds a rest.
+        if (State.Quests.Messages.Pending is not null) return "Answer the quest's question first.";
         if (LegalModalOpen) return "Answer the court first.";
         if (_pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null) return "Answer the pending spell choice first.";
         return _openingCinematics.IsActive || Cinematics?.ActiveSource is not null ? "A cinematic is playing." : null;

@@ -130,6 +130,8 @@ when closed. Its tabs:
     player's eye with W/S/A/D, R/F (up/down), Q/E (turn) and T/G (look), or the
     buttons. The player never moves. Turning it off, or closing the tools, gives the
     camera back.
+  - **Collision:** draws the Engine's collision wires at a radius, and lists the
+    colliders it drew (below).
   - **Overlays:** a checkbox per set. A ruleset set is built only while it is on
     (`world.overlay-on` / `world.overlay-off`) and drawn by
     `engine.inspect.overlay show set NAME`.
@@ -148,8 +150,15 @@ when closed. Its tabs:
 | `probe` | The last `spatial.probe` rays or `spatial.clearance` body, from the console. |
 | `inspect.targets` | The inspection targets' markers. |
 
-Collision shapes aren't drawn yet: that waits on the Engine's collision overlay
-(rusty-engine #10288).
+**Collision** in the Dagger panel draws the Engine's retained collision as wires
+within a radius of the observer, or of the player's camera without one
+(`engine.inspect.overlay show collision RADIUS`; colours and limits in the Engine's
+`docs/playtest-inspection.md`). **List colliders here** shows what it drew
+(`engine.inspect.collision RADIUS`): each collider's kind and content artifact. A
+place's whole exterior, or a whole interior, is one artifact (for example
+`charing/exterior/collision-navigation.rspatial`), so the list names the place,
+not a building. The drawing stays on after the tools close, as overlay sets do, and
+the panel opens showing what the Engine draws.
 
 ## Implementation ownership
 
