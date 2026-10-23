@@ -185,7 +185,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.TravelPreview: ChangeTravel(action); break;
             case DaggerfallUiActionKind.TravelMap: ChangeTravelMap(action); break;
             case DaggerfallUiActionKind.TravelAccept:
-                if (!elapsedSubmitted) { elapsedSubmitted = true; _ = ExecuteTravel(action.Key!, action.Amount!.Value); }
+                if (!elapsedSubmitted) { elapsedSubmitted = true; AcceptTravel(action.Key!, action.Amount!.Value); }
                 break;
             // One rest per input slice: explicit elapsed time is applied once.
             case DaggerfallUiActionKind.LodgingQuote:

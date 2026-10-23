@@ -1,5 +1,6 @@
 using Rusty.Engine;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -52,4 +53,7 @@ internal sealed record DaggerfallSessionComposition(
 
     /// <summary>The classic block records building names are admitted from; null admits none.</summary>
     internal DaggerfallBlocksSnapshot? Blocks { get; init; }
+
+    /// <summary>The host's loading screen, where slow world changes accepted in an update are staged; null runs them at once.</summary>
+    internal LoadingScreen? Loading { get; init; }
 }

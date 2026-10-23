@@ -11,6 +11,7 @@ import { sender } from './host.js';
 import { mountHud } from './hud.js';
 import { EDIT_TEXT_EVENT, mountLetterPicker } from './letter-picker.js';
 import { mountInteraction } from './interaction.js';
+import { mountLoading } from './loading.js';
 import { mountMenu } from './menu.js';
 import { mountNavigation } from './navigation.js';
 import { mountScale } from './scale.js';
@@ -50,9 +51,16 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
 
   // A playing cinematic takes any key or press first, so the HUD listens before navigation does.
   const hud = mountHud(shell, send);
+  const loading = mountLoading(shell);
   // Key capture for rebinding runs before navigation, which would otherwise take Escape and the arrows. The developer
   // key opens the developer tools from play, outside every game surface; a text field keeps the character.
   const onKeyDown = (event: KeyboardEvent): void => {
+    // While the product loads, no key reaches a surface under the screen or opens anything over it.
+    if (loading.open()) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
     if (event.code === DEVELOPER_KEY && !event.repeat && !menu.dialog.open
       && !(event.target instanceof Element && event.target.matches('input, textarea, [contenteditable="true"]'))) {
       event.preventDefault();
@@ -102,12 +110,14 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // A pointer lock the world held, lost in play, is the player asking for the menu: the browser and
   // the desktop shell spend Escape on releasing the lock, so this is what Escape does in play.
   const interaction = mountInteraction(context, { onLockLostInPlay: () => { if (!menu.dialog.open && !dead && !entry.isTitle()) menu.open(); } });
-  interaction.needsCursor(() => menu.dialog.open || dialogue.window.open || dialogue.summoningOffer.open || developer.isOpen());
+  interaction.needsCursor(() => loading.open() || menu.dialog.open || dialogue.window.open || dialogue.summoningOffer.open || developer.isOpen());
   // The surfaces that take the cursor, topmost first. Escape and Back go to the topmost: from any menu
   // panel Escape closes the whole menu while Back steps out one panel. A question the product needs
   // answered (a summoning offer, a court, a quest prompt, the death and title screens) has no back, so
   // neither press acts on it or on what it was asked over; a spell choice takes its Cancel.
   const surfaces = [
+    // The loading screen sits above everything and has no back: the product closes it when the work is done.
+    navigation.register({ name: 'loading', root: loading.dialog, layer: 110, isOpen: loading.open, initialFocus: loading.initialFocus }),
     navigation.register({ name: 'confirm', root: confirmPrompt.dialog, layer: 100, isOpen: confirmPrompt.open, back: confirmPrompt.cancel }),
     navigation.register({ name: 'menu', root: menu.dialog, layer: 90, isOpen: () => menu.dialog.open,
       back: menu.back, panel: menu.stepPanel, page: menu.page, pageHint: menu.pageHint }),
@@ -143,6 +153,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const unsubscribe = context.projection?.subscribe((projection) => {
     if (projection?.contract !== 'dagger.ui.snapshot.v1' || !isHud(projection.value)) return;
     const value = projection.value;
+    const wasLoading = loading.open();
+    loading.update(value.loading ?? null);
     const adopted = value.uiArt ? adopt(value.uiArt) : '';
     if (adopted.length > 0 && adopted !== artRevision) {
       artRevision = adopted;
@@ -207,7 +219,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       || Boolean(value.dungeonText || value.legal || value.createItem || value.identify || value.teleport || value.dispel));
     // A question outlives nothing it was asked over: death, or the menu or dialogue closing, answers no.
     if (dead) confirmPrompt.cancel(); else confirmPrompt.dropIfOwnerClosed();
-    sync();
+    // Play resumes where loading ends: the world takes focus (and the pointer) back without a click.
+    sync(wasLoading && !loading.open());
   }) ?? (() => {});
 
   return { dispose: () => {

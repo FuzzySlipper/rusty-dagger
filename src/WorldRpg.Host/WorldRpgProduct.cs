@@ -2,7 +2,9 @@ using Rusty.Engine;
 using Rusty.Engine.Debugging;
 using Rusty.Engine.Persistence;
 using Rusty.Engine.Interaction;
+using System.Runtime.ExceptionServices;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Presentation;
 
 namespace WorldRpg.Host;
 
@@ -43,6 +45,9 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     private WorldRpgSaveSlots? _saveSlots;
     private ProductStateStore<string>? _playerPreferences;
     private IGameSession _session;
+    // The one loading screen, kept across session replacement: slow work the Host or its session accepts is
+    // acknowledged on it at once and run one phase per admitted update.
+    private readonly LoadingScreen _loading;
     private ResolvedCompositionIdentity _compositionIdentity;
     private bool _started;
     private bool _shutdown;
@@ -80,7 +85,10 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         _composition = composition;
         _ruleset = selected;
         _compositionIdentity = composition.Identity;
-        _session = selected.CreateSession(new GameSessionContext(context.Engine, composition));
+        // Each change of the loading screen is published by whichever session is current then: a new game or a
+        // load replaces the session part-way through its work.
+        _loading = new LoadingScreen(() => (_session as ILoadingScreenSession)?.PublishLoading());
+        _session = selected.CreateSession(SessionContext(composition));
         try
         {
             ApplyPlayerPreferences(_session);
@@ -94,6 +102,9 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             throw;
         }
     }
+
+    /// <summary>The context every session is created in: the Engine, its composition and the Host's loading screen.</summary>
+    private GameSessionContext SessionContext(ResolvedGameComposition composition) => new(_context.Engine, composition, _loading);
 
     public void RegisterDebugCommands(IDebugCommandModuleRegistrar registrar)
     {
@@ -127,6 +138,9 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
     /// <summary>The mode the product runs its session under.</summary>
     public ProductMode Mode => _mode;
+
+    /// <summary>What the loading screen shows while staged slow work runs, or null when nothing is loading.</summary>
+    public LoadingState? Loading => _loading.Current;
 
     /// <summary>
     /// Recent mode decisions, oldest first and capped at <see cref="ModeHistoryLimit"/>. The
@@ -208,13 +222,32 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             choosing.ReportBundleOutcome($"The game '{requested.Value}' is not available.");
             return;
         }
-        (ResolvedGameComposition composition, IGameRuleset selected) = ResolveSelection(_context, _explicitRuleset, requested);
-        IGameSession replacement = selected.CreateSession(new GameSessionContext(_context.Engine, composition));
+        string title = BundleOptions().First(option => option.Id == requested).Title;
+        (ResolvedGameComposition Composition, IGameRuleset Selected, IGameSession Session)? opened = null;
+        // Composing the chosen game builds its whole session, so the choice is acknowledged on the loading screen
+        // and the game is read and opened on the updates after. A game that cannot open leaves this one running.
+        _loading.Start($"Opening {title}", [
+            new($"Reading {title}", () =>
+            {
+                (ResolvedGameComposition composition, IGameRuleset selected) = ResolveSelection(_context, _explicitRuleset, requested);
+                opened = (composition, selected, selected.CreateSession(SessionContext(composition)));
+            }),
+            new("Opening the title", () => AdoptBundle(requested, opened!.Value)),
+        ], error =>
+        {
+            opened?.Session.Dispose();
+            choosing.ReportBundleOutcome($"The game '{title}' could not be opened: {error.Message}");
+        });
+    }
+
+    /// <summary>Makes the chosen game's opened session the running one and remembers the choice.</summary>
+    private void AdoptBundle(GameBundleId requested, (ResolvedGameComposition Composition, IGameRuleset Selected, IGameSession Session) opened)
+    {
         (ResolvedGameComposition previousComposition, IGameRuleset previousRuleset, ResolvedCompositionIdentity previousIdentity) = (_composition, _ruleset, _compositionIdentity);
-        (_composition, _ruleset, _compositionIdentity) = (composition, selected, composition.Identity);
+        (_composition, _ruleset, _compositionIdentity) = (opened.Composition, opened.Selected, opened.Composition.Identity);
         try
         {
-            ReplaceSession(replacement, ProductMode.Title, $"the entry screen chose the game '{requested.Value}'");
+            ReplaceSession(opened.Session, ProductMode.Title, $"the entry screen chose the game '{requested.Value}'");
         }
         catch
         {
@@ -278,24 +311,74 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         if (_mode != ProductMode.Title)
             return Apply(ProductMode.Playing, "the entry screen asked for ordinary play", closesEntryScreen: true);
 
-        if (_session is ICharacterCreationSession { RequiresCharacterInitialization: true } creation)
+        ProductModeChange? began = null;
+        if (NewGamePhases(change => began = change) is { } phases)
         {
-            // A new game begins with a character; asking before there is one opens its creation.
-            if (!creation.HasCommittedCharacter)
-            {
-                creation.OpenCharacterCreation();
-                return Record(new(_mode, _mode, ProductModeChangeOutcome.AlreadyInMode, "the entry screen opened character creation"));
-            }
             try
             {
-                ReplaceSession(creation.CreateNewGame(), ProductMode.Title, "the product initialized the committed character");
+                LoadingScreen.RunNow(phases);
             }
             catch (ArgumentException error)
             {
                 return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, error.Message));
             }
+            return began!;
         }
 
+        // A new game begins with a character; asking before there is one opens its creation.
+        if (_session is ICharacterCreationSession { RequiresCharacterInitialization: true } creation)
+        {
+            creation.OpenCharacterCreation();
+            return Record(new(_mode, _mode, ProductModeChangeOutcome.AlreadyInMode, "the entry screen opened character creation"));
+        }
+        return StartEntry();
+    }
+
+    /// <summary>
+    /// The entry screen's Begin as it arrives in an update: a new game is slow (its whole world is built), so it
+    /// is acknowledged on the loading screen and built on the updates after; any other Begin is decided now.
+    /// </summary>
+    private void BeginFromEntryScreen()
+    {
+        if (NewGamePhases(_ => { }) is not { } phases)
+        {
+            Begin();
+            return;
+        }
+        _loading.Start("Starting a new game", phases, error =>
+        {
+            // A character the ruleset cannot begin is refused, as a direct Begin refuses it; anything else
+            // faults the update as it did before the work was staged.
+            if (error is not ArgumentException) ExceptionDispatchInfo.Throw(error);
+            Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, error.Message));
+        });
+    }
+
+    /// <summary>
+    /// The new game a committed character begins, as the loading screen's phases: the ruleset builds the world
+    /// and its loadout, then the Host adopts it and starts the opening sequence. Null when Begin has no new game
+    /// to build (not at the title, or no committed character yet).
+    /// </summary>
+    private IReadOnlyList<LoadingPhase>? NewGamePhases(Action<ProductModeChange> began)
+    {
+        if (_mode != ProductMode.Title
+            || _session is not ICharacterCreationSession { RequiresCharacterInitialization: true, HasCommittedCharacter: true } creation)
+            return null;
+        IGameSession? created = null;
+        return
+        [
+            new("Building the world", () => created = creation.CreateNewGame()),
+            new("Entering the world", () =>
+            {
+                ReplaceSession(created!, ProductMode.Title, "the product initialized the committed character");
+                began(StartEntry());
+            }),
+        ];
+    }
+
+    /// <summary>Starts the entry screen's opening sequence, or goes straight to play when the session has none.</summary>
+    private ProductModeChange StartEntry()
+    {
         if (_session is not IEntryScreenStartupSession startup)
             return Apply(ProductMode.Playing, "the entry screen asked for ordinary play", closesEntryScreen: true);
 
@@ -352,7 +435,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        IGameSession replacement = _ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition));
+        IGameSession replacement = _ruleset.CreateSession(SessionContext(_composition));
         ReplaceSession(replacement, replacement is ICharacterCreationSession ? ProductMode.Title : ProductMode.Playing,
             "the product replaced its session");
         _started = true;
@@ -376,7 +459,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        ReplaceSession(_ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition)),
+        ReplaceSession(_ruleset.CreateSession(SessionContext(_composition)),
             ProductMode.Title, "the product quit to the title");
     }
 
@@ -428,6 +511,8 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         // A modal or a death still forwards the update, because the presentation that shows them
         // has to keep publishing; the session decides what the mode means for its own world.
         if (!_started || _shutdown || _mode == ProductMode.Paused) return ProductUpdateResult.None;
+        // Staged slow work takes the whole update: the session neither steps nor reads input until it is done.
+        if (_loading.Advance()) return ProductUpdateResult.None;
         bool begin = _mode == ProductMode.Title
             && _session is IEntryScreenSession entry
             && entry.RequestsBegin(update.Input);
@@ -449,7 +534,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         // action is. Applying the mode first would put the session into ordinary play in time to act on
         // the very slice that only asked for play, and to report the request it cannot interpret as an
         // unrecognized action. The transition publishes the presentation it changed.
-        if (begin) Begin();
+        if (begin) BeginFromEntryScreen();
         if (_mode == ProductMode.Title
             && _session is IEntryScreenStartupSession startup
             && startup.TakeEntryReadyForPlay())
@@ -807,17 +892,18 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        IGameSession replacement;
-        try
-        {
-            replacement = saveable.CreateSession(new GameSessionContext(_context.Engine, _composition), envelope.Payload);
-        }
-        catch (Exception error)
-        {
-            requesting.ReportSaveOutcome($"Load failed: {error.Message}");
-            return;
-        }
+        // Restoring builds the saved world, so the request is acknowledged on the loading screen and the save is
+        // restored and adopted on the updates after. A save that fails to restore leaves this game running and says why.
+        IGameSession? restored = null;
+        _loading.Start("Loading the saved game", [
+            new("Restoring the saved world", () => restored = saveable.CreateSession(SessionContext(_composition), envelope.Payload)),
+            new("Entering the world", () => AdoptLoadedGame(requesting, restored!)),
+        ], error => requesting.ReportSaveOutcome($"Load failed: {error.Message}"));
+    }
 
+    /// <summary>Makes a restored session the running one; a replacement that cannot be adopted is discarded and reported.</summary>
+    private void AdoptLoadedGame(ISaveRequestingGameSession requesting, IGameSession replacement)
+    {
         IGameSession previous = _session;
         try
         {

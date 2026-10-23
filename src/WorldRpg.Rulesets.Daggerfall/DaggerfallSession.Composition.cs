@@ -95,6 +95,7 @@ internal sealed partial class DaggerfallSession
         {
             _engine = engine;
             _composition = composition;
+            _loading = composition.Loading;
             _newGameInitialized = saved is not null;
             _tuning = tuning;
             // The score's clips are named by the site's cue list and carried by the product-wide music

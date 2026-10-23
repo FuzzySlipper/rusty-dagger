@@ -89,6 +89,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             Music = admitted.Music,
             Blocks = admitted.Blocks,
             Seams = DaggerfallSeamSelection.From(context.Composition.Variants, _variants),
+            Loading = context.Loading,
         };
 
     private DaggerfallAdmittedContent Admit(ResolvedGameComposition composition) =>

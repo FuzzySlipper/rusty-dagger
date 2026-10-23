@@ -3,6 +3,7 @@ using Rusty.Engine;
 using Rusty.Engine.Persistence;
 using WorldRpg.Host;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Presentation;
 using Xunit;
 
 namespace WorldRpg.Host.Tests;
@@ -50,6 +51,7 @@ public sealed class WorldRpgProductSaveLoadTests
 
         session.ArmSlotRequest(new(SaveSlotOperation.Load, second.Key));
         product.Update(Update(5));
+        FinishLoading(product, 5);
         LoadTestSession restored = Assert.IsType<LoadTestSession>(ruleset.Replacement);
         Assert.Equal((byte)22, restored.SaveValue);
         Assert.Contains("loaded", restored.Outcome, StringComparison.OrdinalIgnoreCase);
@@ -80,6 +82,7 @@ public sealed class WorldRpgProductSaveLoadTests
             product.Update(Update(1));
             session.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
             product.Update(Update(2));
+            FinishLoading(product, 2);
             Assert.Equal((byte)44, Assert.IsType<LoadTestSession>(ruleset.Replacement).SaveValue);
         }
 
@@ -89,6 +92,7 @@ public sealed class WorldRpgProductSaveLoadTests
             product.Start();
             reordered.RequireCurrent().ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
             product.Update(Update(1));
+            FinishLoading(product, 1);
             Assert.Equal((byte)44, Assert.IsType<LoadTestSession>(reordered.Replacement).SaveValue);
         }
 
@@ -136,6 +140,7 @@ public sealed class WorldRpgProductSaveLoadTests
 
         session.ArmSlotRequest(new(SaveSlotOperation.QuickLoad));
         product.Update(Update(5));
+        FinishLoading(product, 5);
         LoadTestSession restored = Assert.IsType<LoadTestSession>(ruleset.Replacement);
         Assert.Equal((byte)22, restored.SaveValue);
         Assert.Equal("quick", quick.Key);
@@ -196,6 +201,7 @@ public sealed class WorldRpgProductSaveLoadTests
         product.Update(Update(2));
         restarted.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
         product.Update(Update(3));
+        FinishLoading(product, 3);
         LoadTestSession loaded = Assert.IsType<LoadTestSession>(ruleset.Replacement);
         Assert.Equal("look:inverted", loaded.ActivePreferences);
         Assert.Equal("look:inverted", loaded.PreferencesAtInitialPublication);
@@ -245,6 +251,99 @@ public sealed class WorldRpgProductSaveLoadTests
     }
 
     [Fact]
+    public void A_load_is_acknowledged_on_the_loading_screen_in_the_accepting_update_and_restored_on_the_updates_after()
+    {
+        InMemoryPersistenceService persistence = new();
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+        LoadTestSession session = ruleset.RequireCurrent();
+        session.SaveValue = 7;
+        session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Before"));
+        product.Update(Update(1));
+        int sessionUpdates = session.Updates;
+
+        // The accepting update shows the screen and restores nothing yet.
+        session.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
+        product.Update(Update(2));
+        Assert.Equal(new LoadingState("Loading the saved game", "Restoring the saved world", 0, 2, 0d), product.Loading);
+        Assert.Null(ruleset.Replacement);
+
+        // The next update restores the save; the session it replaces neither steps nor reads input meanwhile.
+        product.Update(Update(3));
+        Assert.NotNull(ruleset.Replacement);
+        Assert.Same(session, ruleset.Current);
+        Assert.False(session.Disposed);
+        Assert.Equal(new LoadingState("Loading the saved game", "Entering the world", 1, 2, .5d), product.Loading);
+
+        // Then it is adopted, and the screen stays up, full, for the update that draws it.
+        product.Update(Update(4));
+        Assert.True(session.Disposed);
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        Assert.Equal(new LoadingState("Loading the saved game", "Entering the world", 2, 2, 1d), product.Loading);
+        Assert.Equal(sessionUpdates + 1, session.Updates);
+        Assert.Equal(0, ruleset.Replacement!.Updates);
+
+        // The next update clears the screen and is the restored game's own.
+        product.Update(Update(5));
+        Assert.Null(product.Loading);
+        Assert.Equal(1, ruleset.Replacement.Updates);
+        Assert.Equal((byte)7, ruleset.Replacement.SaveValue);
+    }
+
+    [Fact]
+    public void A_load_that_fails_to_restore_clears_the_screen_and_leaves_the_game_it_came_from_running_with_the_reason()
+    {
+        InMemoryPersistenceService persistence = new();
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+        product.Begin();
+        LoadTestSession session = ruleset.RequireCurrent();
+        session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Before"));
+        product.Update(Update(1));
+
+        ruleset.RestoreFailure = "the saved world names a missing site";
+        session.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
+        product.Update(Update(2));
+        Assert.NotNull(product.Loading);
+        product.Update(Update(3));
+        Assert.Null(product.Loading);
+        Assert.Same(session, ruleset.Current);
+        Assert.False(session.Disposed);
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        Assert.Equal("Load failed: the saved world names a missing site", session.Outcome);
+    }
+
+    [Fact]
+    public void Choosing_a_game_is_acknowledged_on_the_loading_screen_and_a_game_that_cannot_open_leaves_the_title_running()
+    {
+        InMemoryPersistenceService persistence = new();
+        LoadTestRuleset ruleset = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
+        using WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+        LoadTestSession title = ruleset.RequireCurrent();
+
+        ruleset.CreateFailure = "the game's content could not be read";
+        title.ArmBundleRequest(new GameBundleId("test.variants"));
+        product.Update(Update(1));
+        Assert.Equal(new LoadingState("Opening test.variants", "Reading test.variants", 0, 2, 0d), product.Loading);
+        Assert.Same(title, ruleset.RequireCurrent());
+        product.Update(Update(2));
+        Assert.Null(product.Loading);
+        Assert.Same(title, ruleset.RequireCurrent());
+        Assert.False(title.Disposed);
+        Assert.Equal("The game 'test.variants' could not be opened: the game's content could not be read", title.BundleOutcome);
+
+        ruleset.CreateFailure = null;
+        title.ArmBundleRequest(new GameBundleId("test.variants"));
+        product.Update(Update(3));
+        FinishLoading(product, 4);
+        Assert.NotSame(title, ruleset.RequireCurrent());
+        Assert.Equal(new GameBundleId("test.variants"), ruleset.RequireCurrent().Bundles!.Current);
+    }
+
+    [Fact]
     public void A_load_whose_previous_session_fails_disposal_keeps_the_current_session_and_reports()
     {
         InMemoryPersistenceService persistence = new();
@@ -258,6 +357,7 @@ public sealed class WorldRpgProductSaveLoadTests
         previous.ThrowOnDispose = true;
         previous.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
         ProductUpdateResult result = product.Update(Update(2));
+        FinishLoading(product, 2);
 
         Assert.Equal(ProductUpdateResult.None, result);
         Assert.Same(previous, ruleset.Current);
@@ -286,6 +386,7 @@ public sealed class WorldRpgProductSaveLoadTests
 
             title.ArmBundleRequest(new GameBundleId("test.variants"));
             product.Update(Update(1));
+            FinishLoading(product, 1);
 
             LoadTestSession switched = ruleset.RequireCurrent();
             Assert.NotSame(title, switched);
@@ -307,6 +408,7 @@ public sealed class WorldRpgProductSaveLoadTests
             // The remembered game loads its own save: the variant sets agree.
             title.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
             product.Update(Update(1));
+            FinishLoading(product, 1);
             Assert.NotNull(restarted.Replacement);
         }
     }
@@ -344,6 +446,7 @@ public sealed class WorldRpgProductSaveLoadTests
             product.Start();
             withVariants.RequireCurrent().ArmBundleRequest(new GameBundleId("test.variants"));
             product.Update(Update(1));
+            FinishLoading(product, 1);
         }
 
         LoadTestRuleset withoutVariants = new();
@@ -356,6 +459,13 @@ public sealed class WorldRpgProductSaveLoadTests
 
     private static ProductUpdate Update(ulong step) =>
         new(new ProductUpdateFacts(ProductLifecycleState.Running, step, step, step, step, 60, 1, 0, 1d / 60d), ReadOnlySpan<ProductInputEvent>.Empty);
+
+    /// <summary>Gives the product the updates its loading screen runs a load or a game change on, until it is done.</summary>
+    private static void FinishLoading(WorldRpgProduct product, ulong step)
+    {
+        for (int update = 0; update < 8 && product.Loading is not null; update++) product.Update(Update(step));
+        Assert.Null(product.Loading);
+    }
 
     private static ProductCreateContext Context(IPersistenceService persistence) =>
         new(Engine(persistence), Content(), EmptyInput());
@@ -393,10 +503,19 @@ public sealed class WorldRpgProductSaveLoadTests
 
         internal LoadTestSession? Replacement { get; private set; }
 
-        public IGameSession CreateSession(GameSessionContext context) => Track(new LoadTestSession());
+        /// <summary>Why the next fresh session cannot be created, or null when it can.</summary>
+        internal string? CreateFailure { get; set; }
 
-        public IGameSession CreateSession(GameSessionContext context, RulesetSavePayload saved) =>
-            Track(new LoadTestSession { SaveValue = saved.Bytes.Span[0] }, replacement: true);
+        /// <summary>Why the next save cannot be restored, or null when it can.</summary>
+        internal string? RestoreFailure { get; set; }
+
+        public IGameSession CreateSession(GameSessionContext context) => CreateFailure is { } failure
+            ? throw new InvalidOperationException(failure)
+            : Track(new LoadTestSession());
+
+        public IGameSession CreateSession(GameSessionContext context, RulesetSavePayload saved) => RestoreFailure is { } failure
+            ? throw new InvalidOperationException(failure)
+            : Track(new LoadTestSession { SaveValue = saved.Bytes.Span[0] }, replacement: true);
 
         internal LoadTestSession RequireCurrent() =>
             Current ?? throw new InvalidOperationException("The ruleset did not create a session.");
@@ -479,7 +598,14 @@ public sealed class WorldRpgProductSaveLoadTests
 
         public void ReportPlayerPreferencesOutcome(string message) => PlayerPreferencesOutcome = message;
 
-        public ProductUpdateResult Update(ProductUpdate update) => ProductUpdateResult.None;
+        /// <summary>The updates the Host gave this session.</summary>
+        internal int Updates { get; private set; }
+
+        public ProductUpdateResult Update(ProductUpdate update)
+        {
+            Updates++;
+            return ProductUpdateResult.None;
+        }
 
         public RulesetSavePayload CaptureSave() => new(new RulesetId("test"), [SaveValue]);
 

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Rusty.Engine;
+using WorldRpg.Kit.Presentation;
 
 namespace WorldRpg.Kit;
 
@@ -394,13 +395,28 @@ public static class GameCompositionResolver
         IReadOnlyList<RulesVariantId> Variants, string Title);
 }
 
-public sealed class GameSessionContext(IEngineContext engine, ResolvedGameComposition composition)
+public sealed class GameSessionContext(IEngineContext engine, ResolvedGameComposition composition, LoadingScreen? loading = null)
 {
     public IEngineContext Engine { get; } = engine ?? throw new ArgumentNullException(nameof(engine));
     public ResolvedGameComposition Composition { get; } = composition ?? throw new ArgumentNullException(nameof(composition));
     public ResolvedCompositionIdentity CompositionIdentity => Composition.Identity;
+
+    /// <summary>
+    /// The host's loading screen, on which a session stages its own slow work (a journey, a site change) when
+    /// it accepts one inside an admitted update. Null when the host shows none; the work then runs at once.
+    /// </summary>
+    public LoadingScreen? Loading { get; } = loading;
 }
 public interface IGameRuleset { RulesetId Id { get; } IGameSession CreateSession(GameSessionContext context); }
+
+/// <summary>
+/// Optional seam for a session whose projection carries the host's <see cref="LoadingScreen"/>: while staged work
+/// runs the session does not update, so the host asks it to publish each change of the screen.
+/// </summary>
+public interface ILoadingScreenSession
+{
+    void PublishLoading();
+}
 /// <summary>
 /// Optional ruleset seam publishing the manifests of the rules variants it compiles, so a bundle's
 /// variant selection resolves against exactly what this ruleset can build.
