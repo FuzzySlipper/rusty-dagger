@@ -68,6 +68,30 @@ public sealed class DeveloperInspectionTests
     }
 
     [Fact]
+    public void The_actors_set_draws_a_creatures_live_senses_and_the_target_it_pursues()
+    {
+        using AssembledWorldRun run = InTheTemple(out DaggerfallSession session);
+        Vector3 here = session.State.PlayerControl.Position!.Value.ToVector();
+        long rat = session.SpawnActor("rat", new(new WorldRpg.Kit.Controls.WorldPoint(here.X + 2, here.Y, here.Z), 0));
+        for (int step = 0; step < 3; step++) run.Step();
+        Assert.True(session.SetDebugOverlay(DaggerfallSession.ActorsOverlaySet, on: true));
+        run.Appearance.OverlaySets.Clear();
+        run.Step();
+        OverlayItem[] items = run.Appearance.OverlaySets.Last(request => request.Name == DaggerfallSession.ActorsOverlaySet).Items.ToArray();
+
+        // The senses the perception policy judged the rat with: sight within the query's reach, and hearing.
+        var senses = session.EnemyBehavior.LastSenses[rat];
+        float[] spheres = [.. items.Where(item => item.Shape == OverlayShape.WireSphere).Select(item => item.Size)];
+        Assert.Contains((float)Math.Min(senses.SightRadius + senses.SightModifier, session.EnemyBehavior.DetectionDistance), spheres);
+        Assert.Contains((float)(senses.HearingRadius + senses.HearingModifier), spheres);
+        // The line to what it pursues (the player) and the label naming it.
+        Vector3 player = session.State.PlayerControl.Position!.Value.ToVector();
+        Assert.Contains(items, item => item.Shape == OverlayShape.Segment && Vector3.Distance(item.B, player) < .01f);
+        Assert.Contains(items, item => item.Shape == OverlayShape.Label && item.Text.StartsWith("rat · ", StringComparison.Ordinal)
+            && item.Text.Contains($"→ {session.State.Actors.Player.DurableId}", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Probe_and_clearance_queries_draw_their_answer_and_inspection_targets_name_the_player_the_door_and_the_person_spoken_to()
     {
         using AssembledWorldRun run = InTheTemple(out DaggerfallSession session);

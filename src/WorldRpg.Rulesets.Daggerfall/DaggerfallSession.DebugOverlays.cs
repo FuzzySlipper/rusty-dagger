@@ -145,7 +145,12 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
         }
     }
 
-    /// <summary>Creatures: their behaviour state, melee reach and hearing, and where navigation sends them next.</summary>
+    /// <summary>
+    /// Creatures, from their last behaviour decision: melee reach; the sight and hearing radii the perception policy judged
+    /// them with (the source's radius plus its modifier, sight bounded by the query's detection distance); a line to the
+    /// target they pursued, red when the policy detected it, orange when only seen or heard, grey otherwise; and where
+    /// navigation sends them next.
+    /// </summary>
     private void ActorsOverlay(List<OverlayItem> items, WorldPoint player)
     {
         HashSet<long> people = [.. State.Npcs.All.Select(npc => npc.DurableId)];
@@ -155,14 +160,34 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
                 || player.HorizontalDistanceTo(actor.Position) > OverlayRadius) continue;
             Vector3 centre = State.Kit.Targeting.AimPoint(actor);
             string label = _roster.Definitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition) ? definition.Id.Value : "actor";
-            bool hostile = definition is not null && IsHostileActor(actor.DurableId, definition);
-            Color color = hostile ? Ink.Hostile : Ink.People;
-            string state = _enemyBehavior.LastEvidence.TryGetValue(actor.DurableId, out EnemyBehaviorEvidence? behavior) ? behavior.State.ToString() : "no decision";
+            Color color = definition is not null && IsHostileActor(actor.DurableId, definition) ? Ink.Hostile : Ink.People;
             items.Add(OverlayItem.WireSphere(OverlayPlace.World, centre, (float)(_combat.ReachOf(actor.DurableId) ?? 0), color));
-            if (hostile) items.Add(OverlayItem.WireSphere(OverlayPlace.World, centre, (float)DaggerfallPerceptionQueryDefaults.HearingRadius, Ink.Senses));
-            if (behavior?.Navigation is { NextWaypoint: Vector3 next })
-                items.Add(OverlayItem.Segment(OverlayPlace.World, actor.Position.ToVector(), next, color, onTop: true));
-            items.Add(OverlayItem.Label(OverlayPlace.World, centre + Vector3.UnitY, $"{label} · {state}", color, onTop: true));
+            if (_enemyBehavior.LastSenses.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionSource? senses))
+            {
+                items.Add(OverlayItem.WireSphere(OverlayPlace.World, centre,
+                    (float)Math.Min(senses.SightRadius + senses.SightModifier, _enemyBehavior.DetectionDistance), Ink.Senses));
+                items.Add(OverlayItem.WireSphere(OverlayPlace.World, centre, (float)(senses.HearingRadius + senses.HearingModifier), Ink.Senses));
+            }
+            if (!_enemyBehavior.LastEvidence.TryGetValue(actor.DurableId, out EnemyBehaviorEvidence? behavior))
+            {
+                items.Add(OverlayItem.Label(OverlayPlace.World, centre + Vector3.UnitY, $"{label} · no decision", color, onTop: true));
+                continue;
+            }
+            string sensed = "";
+            if (behavior.Target is { } target)
+            {
+                DaggerfallEnemyPerceptionDecision? perception = _enemyBehavior.LastPerception.GetValueOrDefault(actor.DurableId);
+                Color line = perception is { Detected: true } ? Ink.Hostile : perception is { InSight: true } or { InEarshot: true } ? Ink.Senses with { A = 1F } : Ink.Unfocused;
+                // The player's body is the movement owner's, so a line to the player ends at its centre.
+                Vector3 at = target.DurableId == State.Actors.Player.DurableId ? State.PlayerControl.Position!.Value.ToVector()
+                    : State.Actors.TryGet(target.DurableId, out ActorState? pursued) ? State.Kit.Targeting.AimPoint(pursued) : target.Position.ToVector();
+                items.Add(OverlayItem.Segment(OverlayPlace.World, centre, at, line, onTop: true));
+                sensed = perception is null ? $" → {target.DurableId}"
+                    : $" → {target.DurableId}{(perception.InSight ? " seen" : "")}{(perception.InEarshot ? " heard" : "")}{(perception.Detected ? " detected" : "")}";
+            }
+            if (behavior.Navigation is { NextWaypoint: Vector3 next })
+                items.Add(OverlayItem.Segment(OverlayPlace.World, actor.Position.ToVector(), next, color));
+            items.Add(OverlayItem.Label(OverlayPlace.World, centre + Vector3.UnitY, $"{label} · {behavior.State}{sensed}", color, onTop: true));
         }
     }
 

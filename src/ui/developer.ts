@@ -45,8 +45,9 @@ export function mountDeveloperTools(root: HTMLElement, context: Pick<RustyApplic
     panels: [
       { kind: 'product', title: 'Dagger', mount: element => mountDaggerPanel(element, transport) },
       { kind: 'console' },
-      { kind: 'view', title: 'View', options: { viewport: context.viewport, transport, subject: 'camera',
-        framings: ['camera', 'target player', 'target dialogue', 'target door'] } },
+      // The pane lists the product's inspection targets (player, dialogue, door) in its own subject choice and frames
+      // the chosen one with its default framings; it opens on the player.
+      { kind: 'view', title: 'View', options: { viewport: context.viewport, transport, subject: 'target player' } },
       { kind: 'scene' },
       { kind: 'metrics' },
     ],
@@ -56,10 +57,13 @@ export function mountDeveloperTools(root: HTMLElement, context: Pick<RustyApplic
     isOpen: () => shell?.isOpen === true,
     async toggle() {
       if (shell?.isOpen) { shell.close(); return; }
-      // The tools need the host's live-debug: without it there is nothing to talk to, so nothing opens.
-      try { await transport.catalog(); }
-      catch (error) {
-        note.textContent = `Developer tools need the host started with --live-debug (${error instanceof Error ? error.message : String(error)}).`;
+      // The tools need the host's live-debug: without it there is nothing to talk to, so nothing opens. A host
+      // without it answers that its catalog is unavailable; one that cannot be reached at all refuses.
+      const refusal = await transport.catalog()
+        .then(catalog => catalog.available ? null : 'the host serves no live-debug catalog')
+        .catch((error: unknown) => error instanceof Error ? error.message : String(error));
+      if (refusal !== null) {
+        note.textContent = `Developer tools need the host started with --live-debug (${refusal}).`;
         note.hidden = false;
         return;
       }

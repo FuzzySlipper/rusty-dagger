@@ -100,6 +100,11 @@ internal sealed class DaggerfallEnemyBehaviorModule
 
     internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEvidence { get; private set; } = new Dictionary<long, EnemyBehaviorEvidence>();
     internal IReadOnlyDictionary<long, DaggerfallEnemyPerceptionDecision> LastPerception { get; private set; } = new Dictionary<long, DaggerfallEnemyPerceptionDecision>();
+    /// <summary>The senses each creature's last perception decision was judged with: its sight and hearing radii and modifiers.</summary>
+    internal IReadOnlyDictionary<long, DaggerfallEnemyPerceptionSource> LastSenses => _lastSources;
+    /// <summary>How far the perception query looks for a creature's target; the policy decides within it.</summary>
+    internal double DetectionDistance => _pursuitTuning.DetectionDistance;
+    private readonly Dictionary<long, DaggerfallEnemyPerceptionSource> _lastSources = [];
 
     /// <summary>Attaches the compiled spell decision to this module's existing actor update.</summary>
     internal void BindEnemyMagic(Func<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float, bool> decide,
@@ -212,6 +217,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
             actor.Pursuit.ForgetTarget();
         }
         _lastDecisions.Clear();
+        _lastSources.Clear();
         _lastTargetDistances.Clear();
         LastPerception = new Dictionary<long, DaggerfallEnemyPerceptionDecision>();
     }
@@ -235,6 +241,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 actor.Pursuit.TransitionTo(actor.IsDefeated ? PursuitState.Dead : PursuitState.Idle);
                 _combat.InterruptPendingAttack(actor.DurableId, generation);
                 _lastDecisions.Remove(actor.DurableId);
+                _lastSources.Remove(actor.DurableId);
                 continue;
             }
             if (!actor.IsDefeated && _controlRestrictions(actor.DurableId).Movement)
@@ -242,6 +249,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 var restrictedPrevious = actor.Pursuit.TransitionTo(PursuitState.Idle);
                 _combat.InterruptPendingAttack(actor.DurableId, generation);
                 _lastDecisions.Remove(actor.DurableId);
+                _lastSources.Remove(actor.DurableId);
                 _lastTargetDistances.Remove(actor.DurableId);
                 if (restrictedPrevious != PursuitState.Idle)
                     facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, ToDaggerState(restrictedPrevious), EnemyBehaviorState.Idle, generation, simulationStep));
@@ -257,6 +265,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 PursuitState previousState = actor.Pursuit.TransitionTo(desired);
                 _combat.InterruptPendingAttack(actor.DurableId, generation);
                 _lastDecisions.Remove(actor.DurableId);
+                _lastSources.Remove(actor.DurableId);
                 _lastTargetDistances.Remove(actor.DurableId);
                 if (previousState != desired)
                     facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, ToDaggerState(previousState), ToDaggerState(desired), generation, simulationStep));
@@ -290,7 +299,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
             {
                 facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, previous, current, generation, simulationStep));
             }
-            evidence.Add(actor.DurableId, new EnemyBehaviorEvidence(actor.DurableId, current, pursuit.Visibility, pursuit.Navigation));
+            evidence.Add(actor.DurableId, new EnemyBehaviorEvidence(actor.DurableId, current, pursuit.Visibility, pursuit.Navigation) { Target = target });
             double targetRateOfApproach = 0d;
             PerceptionPair? observed = pursuit.Visibility?.Pairs.ToArray()
                 .Where(pair => pair.Observer == checked((ulong)actor.DurableId)
@@ -333,7 +342,10 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 }
             }
             if (actor.IsDefeated)
+            {
                 _lastDecisions.Remove(actor.DurableId);
+                _lastSources.Remove(actor.DurableId);
+            }
             else if (_lastDecisions.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionDecision? decision))
                 perceptions[actor.DurableId] = decision;
         }
@@ -377,11 +389,13 @@ internal sealed class DaggerfallEnemyBehaviorModule
         if (!_actors.TryGet(actorId, out ActorState actor))
         {
             _lastDecisions.Remove(actorId);
+            _lastSources.Remove(actorId);
             return receipt;
         }
         if (actor.IsDefeated)
         {
             _lastDecisions.Remove(actorId);
+            _lastSources.Remove(actorId);
             return receipt;
         }
         // The player's stealth/language policy does not reinterpret an ally's enemy visibility.
@@ -401,6 +415,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         DaggerfallEnemyPerceptionDecision decision = DaggerfallPerceptionPolicy.Evaluate(memory, pair,
             source, context, context.RollPercent);
         _lastDecisions[actorId] = decision;
+        _lastSources[actorId] = source;
         foreach (DaggerfallSkillUse use in decision.SkillUses)
             _recordSkillUse(use);
 
@@ -438,4 +453,8 @@ internal sealed class DaggerfallEnemyBehaviorModule
 internal enum EnemyBehaviorState { Idle, Chase, Retreat, Strafe, Attack, Blocked, Search, TargetLost, Unloaded, Dead }
 
 /// <summary>Copied Engine receipts used to explain one enemy's most recent ruleset decision.</summary>
-internal sealed record EnemyBehaviorEvidence(long ActorId, EnemyBehaviorState State, PerceptionReadoutResult? Visibility, NavigationStepResult? Navigation);
+internal sealed record EnemyBehaviorEvidence(long ActorId, EnemyBehaviorState State, PerceptionReadoutResult? Visibility, NavigationStepResult? Navigation)
+{
+    /// <summary>Who the creature pursued in this decision: the player, an ally's foe, or none.</summary>
+    internal PursuitTarget? Target { get; init; }
+}
