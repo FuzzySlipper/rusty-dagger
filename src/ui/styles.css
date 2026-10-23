@@ -163,6 +163,18 @@
 .dagger-confirm-choices { display: flex; gap: .6rem; justify-content: flex-end; }
 .dagger-confirm button { padding: .55rem 1rem; font: 700 .8rem ui-monospace, monospace; }
 
+/* The loading screen: a frame over a dark backdrop, its title plate, the bar and the phase now running. A bar
+   without a measured share is a band that moves rather than a percentage. It takes no input, so it names none. */
+.dagger-loading { width: min(30rem, calc(100vw - 2rem)); padding: 1.4rem 1.6rem 1.2rem; text-align: center; outline: none; }
+.dagger-loading::backdrop { background: rgb(0 0 0 / .82); }
+.dagger-loading-bar { position: relative; height: 1.1rem; margin: .4rem 0 .8rem; overflow: hidden; }
+.dagger-loading-fill { width: 0; height: 100%; background: linear-gradient(var(--brass-bright), var(--brass)); transition: width .25s ease-out; }
+.dagger-loading-bar.is-indeterminate .dagger-loading-fill { width: 35%; animation: dagger-loading-band 1.4s ease-in-out infinite; }
+@keyframes dagger-loading-band { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+@media (prefers-reduced-motion: reduce) { .dagger-loading-bar.is-indeterminate .dagger-loading-fill { width: 100%; opacity: .55; animation: none; } }
+.dagger-loading-label { margin: 0; color: var(--ink-dim); font: .85rem Georgia, serif; }
+.dagger-loading .dagger-input-hints { display: none; }
+
 /* The controls of the device in use, at the foot of the surface that has the cursor. */
 .dagger-input-hints { margin: .8rem 0 0; color: #cab882; font: .72rem ui-monospace, monospace; pointer-events: none; }
 .dagger-input-hints kbd { padding: 0 .3rem; border: 1px solid #8a7444; border-radius: 2px; color: #f2e3ba; font: inherit; }

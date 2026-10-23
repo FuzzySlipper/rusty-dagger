@@ -166,7 +166,18 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>Accepts the live quote once; all elapsed consequences use the session's single calendar.</summary>
-    internal DaggerfallTravelResult? ExecuteTravel(string expectedQuote, ulong expectedCost)
+    internal DaggerfallTravelResult? ExecuteTravel(string expectedQuote, ulong expectedCost) =>
+        Depart(expectedQuote, expectedCost) is { } journey ? Arrive(journey) : null;
+
+    /// <summary>A paid journey on the road: its days have passed (or been cut short) and its arrival is still to come.</summary>
+    private sealed record DaggerfallJourney(DaggerfallTravelQuote Quote, DaggerfallSiteProfile Destination, long Started,
+        DaggerfallTravelMapPixel Departure, DaggerfallTravelOutcome Outcome);
+
+    /// <summary>
+    /// Pays for the live quote and spends the journey's days on the road. Null when the journey was refused, or when
+    /// a guild teleport (which has no road) already arrived; otherwise the journey that <see cref="Arrive"/> ends.
+    /// </summary>
+    private DaggerfallJourney? Depart(string expectedQuote, ulong expectedCost)
     {
         DaggerfallTravelQuote? quote = CurrentTravelQuote();
         DaggerfallSiteProfile? destination = null;
@@ -206,6 +217,7 @@ internal sealed partial class DaggerfallSession
         long started = _time.Calendar.ToAbsoluteSeconds();
         State.Travel.Begin(State.Transport.ShipReturnProfile?.Site ?? origin.Site, quote, started);
         DaggerfallTravelOutcome outcome = DaggerfallTravelOutcome.Stopped;
+        DaggerfallTravelMapPixel departure = default;
         try
         {
             if (quote.Options.SpeedCautious)
@@ -213,9 +225,25 @@ internal sealed partial class DaggerfallSession
                 (_, bool noRegen) = RestCharacterTraits();
                 DaggerfallRestRecoveryModule.RecoverForCautiousTravel(State.Actors.Player.Stats, noRegen);
             }
-            DaggerfallTravelMapPixel departure = QuestTravelOrigin();
+            departure = QuestTravelOrigin();
             outcome = AdvanceTravelTime(quote.TravelSeconds, origin);
-            if (outcome == DaggerfallTravelOutcome.Arrived && !_sites.TryRelocatePlayer(destination!.ProfileKey,
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException)
+        {
+            outcome = DaggerfallTravelOutcome.Unavailable;
+            _travelMessage = null;
+        }
+        return new(quote, destination!, started, departure, outcome);
+    }
+
+    /// <summary>Ends a journey: on arrival the player is placed at the destination; either way its result is recorded.</summary>
+    private DaggerfallTravelResult Arrive(DaggerfallJourney journey)
+    {
+        (DaggerfallTravelQuote quote, DaggerfallSiteProfile destination, long started, DaggerfallTravelMapPixel departure,
+            DaggerfallTravelOutcome outcome) = journey;
+        try
+        {
+            if (outcome == DaggerfallTravelOutcome.Arrived && !_sites.TryRelocatePlayer(destination.ProfileKey,
                     ArrivalLanding(destination, departure, $"travel:{quote.Identity}:{started}")))
                 outcome = DaggerfallTravelOutcome.Unavailable;
             if (outcome == DaggerfallTravelOutcome.Arrived)

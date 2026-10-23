@@ -248,6 +248,40 @@ pointer. Each page opens on its content: Talk on its first topic, the others on
 their first control. The page shown is all the DOM keeps; the services, their
 names and order, prices, eligibility and refusals are the ruleset's.
 
+## The loading screen
+
+Slow work the player starts is acknowledged on a loading screen (`loading.ts`)
+instead of a frozen frame. The slow cases are:
+
+- beginning a new game;
+- loading a save or quick load;
+- choosing another game at the title;
+- a journey;
+- an entrance into a building or a dungeon.
+
+The Kit's `LoadingScreen` stages the work. The Host owns the one screen across
+session replacement, and a session given it through `GameSessionContext.Loading`
+stages its own journeys and entrances on it. The update that accepts the request
+publishes the screen and runs nothing slow. Each later update runs one labelled
+phase, such as reading the destination, the days on the road, or entering. The
+session neither steps nor reads input meanwhile. After the last phase the screen
+stays up for one more update, so the first frame of the loaded world is drawn
+before play shows. A phase that throws clears the screen, and the work's own
+failure report says why ("Load failed: …"); the player stays where they were.
+
+The state travels in the session's snapshot as `loading`: title, phase label,
+step, steps and `fraction`. The fraction is the share of phases finished. Work of
+one phase measures nothing, so its fraction is null and the bar is a moving band
+with the phase label, never a made-up percentage.
+
+The screen is a modal dialog above every surface, kit-skinned (frame, title plate,
+panel bar). It holds focus and the cursor, and every key and pad press, Escape
+included, is dropped until it closes. When it closes, play takes focus and the
+pointer back without a click.
+
+A direct Host call (`Begin()`, a launcher, a test) or a developer command has no
+update to acknowledge in, so it runs the same phases at once.
+
 ## The other screens
 
 - **Journal** (`journal.ts`): Quests, Finished, Notes and Book are tabs over

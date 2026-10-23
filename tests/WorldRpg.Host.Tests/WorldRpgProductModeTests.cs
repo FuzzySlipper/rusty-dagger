@@ -7,6 +7,7 @@ using Rusty.Engine.Persistence;
 using Rusty.Engine.Interaction;
 using WorldRpg.Host;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Presentation;
 using Xunit;
 
 namespace WorldRpg.Host.Tests;
@@ -130,6 +131,59 @@ public sealed class WorldRpgProductModeTests
 
         Assert.Equal(ProductMode.Title, product.Mode);
         Assert.Equal(1, ruleset.StartupRequests);
+    }
+
+    [Fact]
+    public void A_new_game_begun_at_the_entry_screen_is_acknowledged_on_the_loading_screen_and_built_on_the_updates_after()
+    {
+        ModeRecordingRuleset ruleset = new() { CommittedCharacter = true };
+        using WorldRpgProduct product = Product(ruleset);
+        product.Start();
+
+        // The update that asks shows the screen and builds nothing.
+        product.Update(Semantic("{\"action\":\"begin\"}"));
+        Assert.Equal(new LoadingState("Starting a new game", "Building the world", 0, 2, 0d), product.Loading);
+        Assert.Equal(0, ruleset.NewGames);
+        int updates = ruleset.Updates;
+
+        // The next builds the world; the one after adopts it and starts its opening sequence.
+        product.Update(Update(2));
+        Assert.Equal(1, ruleset.NewGames);
+        Assert.Equal(0, ruleset.StartupRequests);
+        Assert.Equal(new LoadingState("Starting a new game", "Entering the world", 1, 2, .5d), product.Loading);
+        product.Update(Update(3));
+        Assert.True(ruleset.Replaced!.Disposed);
+        Assert.Equal(1, ruleset.StartupRequests);
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        Assert.Equal(1d, product.Loading!.Fraction);
+        Assert.Equal(updates, ruleset.Updates);
+
+        // The screen clears on the update after, which is the new game's first.
+        product.Update(Update(4));
+        Assert.Null(product.Loading);
+        Assert.Equal(updates + 1, ruleset.Updates);
+    }
+
+    [Fact]
+    public void A_new_game_the_ruleset_cannot_build_clears_the_loading_screen_and_stays_at_the_entry_screen()
+    {
+        ModeRecordingRuleset ruleset = new() { CommittedCharacter = true, NewGameFailure = "Starting clothing could not be equipped." };
+        using WorldRpgProduct product = Product(ruleset);
+        product.Start();
+
+        product.Update(Semantic("{\"action\":\"begin\"}"));
+        product.Update(Update(2));
+        Assert.Null(product.Loading);
+        Assert.Equal(ProductMode.Title, product.Mode);
+        Assert.Equal(ProductModeChangeOutcome.Refused, product.ModeHistory[^1].Outcome);
+        Assert.Equal("Starting clothing could not be equipped.", product.ModeHistory[^1].Reason);
+        Assert.Equal(0, ruleset.StartupRequests);
+
+        // A direct Begin is the same new game, run at once: a launcher or test has no update to acknowledge in.
+        ruleset.NewGameFailure = null;
+        Assert.Equal(ProductMode.Playing, product.Begin().To);
+        Assert.Equal(1, ruleset.NewGames);
+        Assert.Null(product.Loading);
     }
 
     [Fact]
@@ -459,6 +513,23 @@ public sealed class WorldRpgProductModeTests
 
         internal int EntryCompletions { get; private set; }
 
+        /// <summary>Whether the entry screen holds a committed character, so Begin builds a new game from it.</summary>
+        internal bool CommittedCharacter { get; set; }
+
+        /// <summary>Why building the new game fails, or null when it succeeds.</summary>
+        internal string? NewGameFailure { get; set; }
+
+        internal int NewGames { get; private set; }
+
+        internal ModeRecordingSession CreateNewGame()
+        {
+            if (NewGameFailure is { } failure) throw new ArgumentException(failure);
+            NewGames++;
+            Replaced = _current;
+            _current = new ModeRecordingSession(this);
+            return _current;
+        }
+
         internal ModeRecordingSession? Replaced { get; private set; }
 
         internal ProductMode? LastApplied => _current?.LastApplied;
@@ -471,7 +542,7 @@ public sealed class WorldRpgProductModeTests
             FirstComposition ??= context.Composition;
             if (Created > 1) ReplacedComposition = context.Composition;
             Replaced = _current;
-            _current = new ModeRecordingSession(this);
+            _current = CommittedCharacter ? new CreationSession(this) : new ModeRecordingSession(this);
             return _current;
         }
 
@@ -504,7 +575,17 @@ public sealed class WorldRpgProductModeTests
         }
     }
 
-    private sealed class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, IPlaytestGameSession, IPlaytestWorldInspectionSession, IWorldInteractionScene
+    /// <summary>An entry screen holding a committed character: Begin builds the new game from it.</summary>
+    private sealed class CreationSession(ModeRecordingRuleset owner) : ModeRecordingSession(owner), ICharacterCreationSession
+    {
+        private readonly ModeRecordingRuleset _ruleset = owner;
+        public bool RequiresCharacterInitialization => true;
+        public bool HasCommittedCharacter => true;
+        public void OpenCharacterCreation() { }
+        public IGameSession CreateNewGame() => _ruleset.CreateNewGame();
+    }
+
+    private class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, IPlaytestGameSession, IPlaytestWorldInspectionSession, IWorldInteractionScene
     {
         private readonly int _identity = owner.Created;
         public IReadOnlyList<string> PlaytestActions => ["attack"];

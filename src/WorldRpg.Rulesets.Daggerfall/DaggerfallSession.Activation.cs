@@ -76,7 +76,7 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts, CorpseSightPoint),
                 _doorActivation = new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic, EnterExteriorBuilding, ExteriorBuildingDoor, ExteriorBuildingName, DescribeLockDifficulty, DiscoverExteriorBuilding),
                 new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination,
-                    (destination, portal) => TryTransitionTo(destination, portal.ArrivalAnchor)),
+                    EnterPortal),
                 new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyInteractionPoint, OpenPropertyLoot),
                 npc: new DaggerfallCrimeActivationOwner(_dialogue, State.Actors, IsPickpocketTarget, PickpocketActor, IsLawGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
                     id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id))));
@@ -84,7 +84,7 @@ internal sealed partial class DaggerfallSession
 
     private DaggerfallWorldProfileKey ResolvePortalDestination(string logicalProfile) =>
         (_sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted."))
-            .RequireLogicalProfile(logicalProfile).ProfileKey;
+            .RequireLogicalKey(logicalProfile);
 
     private DaggerfallActivationOutcome? EnterExteriorBuilding(DaggerfallRdbDoorId door, DaggerfallActivationMode? forceMode) =>
         EnterExteriorBuilding(door, forceMode, skipGreeting: false);
@@ -113,20 +113,35 @@ internal sealed partial class DaggerfallSession
             return new(true, "Read the greeting before entering.");
         bool trespass = !owned && closed && interior.BuildingType is >= 0 and <= 23;
         var witnesses = !owned && (forced || trespass) ? QueryCrimeWitnesses() : DaggerfallCrimeWitnessEvidence.NotQueried;
-        if (!_sites.TryEnterBuilding(destination, BuildingLanding(inside, door)))
-            return new(false, "The building entrance cannot be used.");
-        if (!owned && (forced || trespass))
+        DaggerfallSiteAnchor landing = BuildingLanding(inside, door);
+        if (StagesSlowWork)
         {
-            string operation = $"entry:{State.Crime.Attempts.Count + 1}";
-            long minute = MinuteIndex(_time.Calendar);
-            State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
-                owner, region, minute, DaggerfallCrimeAttemptOutcome.EntryAccepted, witnesses));
-            ReportCrime(new(operation, forced ? DaggerfallCrimeKind.BreakingAndEntering : DaggerfallCrimeKind.Trespassing,
-                DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId, owner, region, minute,
-                DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None,
-                Reported: forceMode == DaggerfallActivationMode.Bash && CrimeRoll(operation, "noticed", 0, 99) < 10));
+            // The interior is already read (its rules decided the entry), so admitting it is the one slow phase.
+            string place = ExteriorBuildingName(door) ?? "the building";
+            StageWorldChange($"Entering {place}", [new($"Entering {place}", () =>
+            {
+                if (!_sites.TryEnterBuilding(destination, landing)) Presentation.SetOutcome("The building entrance cannot be used.");
+                else if (!owned && (forced || trespass)) ReportEntryCrime(owner, region, forceMode, witnesses);
+            })], error => error.Message);
+            return new(true, "You pass through the building entrance.");
         }
+        if (!_sites.TryEnterBuilding(destination, landing))
+            return new(false, "The building entrance cannot be used.");
+        if (!owned && (forced || trespass)) ReportEntryCrime(owner, region, forceMode, witnesses);
         return new(true, "You pass through the building entrance.");
+    }
+
+    /// <summary>Records and reports breaking into or trespassing in a building the player has just entered.</summary>
+    private void ReportEntryCrime(long owner, int region, DaggerfallActivationMode? forceMode, DaggerfallCrimeWitnessEvidence witnesses)
+    {
+        string operation = $"entry:{State.Crime.Attempts.Count + 1}";
+        long minute = MinuteIndex(_time.Calendar);
+        State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
+            owner, region, minute, DaggerfallCrimeAttemptOutcome.EntryAccepted, witnesses));
+        ReportCrime(new(operation, forceMode is not null ? DaggerfallCrimeKind.BreakingAndEntering : DaggerfallCrimeKind.Trespassing,
+            DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId, owner, region, minute,
+            DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None,
+            Reported: forceMode == DaggerfallActivationMode.Bash && CrimeRoll(operation, "noticed", 0, 99) < 10));
     }
 
     /// <summary>Where entering through an exterior door lands inside its building.</summary>

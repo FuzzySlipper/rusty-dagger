@@ -59,6 +59,8 @@ export interface DaggerHud {
   readonly bundles?: BundleProjection | null;
   readonly controls?: ControlsProjection;
   readonly timeControl?: { readonly enabled: boolean; readonly held: boolean };
+  /** The host's loading screen while slow work runs (`loading.ts`), or null. */
+  readonly loading?: unknown;
   readonly activation?: { readonly mode: string; readonly label?: string; readonly modes?: readonly { readonly id: string; readonly label: string }[];
     readonly message: string; readonly applied: boolean; readonly dialogue?: DialogueProjection | null };
   /** The weapon the player holds, drawn or sheathed. */

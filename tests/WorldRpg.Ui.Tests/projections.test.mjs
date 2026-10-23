@@ -119,6 +119,8 @@ function fixture() {
       } });
     },
     receive(value) { receive({ contract: 'dagger.ui.snapshot.v1', value }); },
+    /** A snapshot in play carrying the host's loading screen: a state shows it, null clears it. */
+    loading(state) { this.publish({ mode: 'playing', loading: state }); },
     dispose() { mounted.dispose(); dom.window.close(); },
   };
 }
@@ -895,6 +897,77 @@ test('a conversation opening under pointer lock does not open the menu when the 
     assert.equal(f.root.querySelector('.dagger-dialogue').open, true);
     assert.equal(f.root.querySelector('.dagger-menu').open, false, 'The lock went to the conversation, not to a request for the menu.');
   } finally { window.HTMLDialogElement.prototype.showModal = showModal; delete document.pointerLockElement; f.dispose(); }
+});
+
+test('the loading screen draws its title, phase and bar, measured or moving, and closes when the work is done', () => {
+  const f = fixture();
+  try {
+    f.publish({ mode: 'playing' });
+    const screen = f.root.querySelector('.dagger-loading');
+    const bar = screen.querySelector('[role="progressbar"]');
+    assert.equal(screen.open, false);
+
+    // A journey of two measured phases: the screen opens on the first at an empty bar.
+    f.loading({ title: 'Travelling to Daggerfall', label: 'Reading Daggerfall', step: 0, steps: 2, fraction: 0 });
+    assert.equal(screen.open, true);
+    assert.equal(screen.querySelector('#dagger-loading-title').textContent, 'Travelling to Daggerfall');
+    assert.equal(screen.querySelector('.dagger-loading-label').textContent, 'Reading Daggerfall');
+    assert.equal(bar.classList.contains('is-indeterminate'), false);
+    assert.equal(bar.getAttribute('aria-valuenow'), '0');
+    assert.equal(bar.querySelector('.dagger-loading-fill').style.width, '0%');
+    // The bar advances with the phases.
+    f.loading({ title: 'Travelling to Daggerfall', label: 'Travelling to Daggerfall', step: 1, steps: 2, fraction: 0.5 });
+    assert.equal(screen.querySelector('.dagger-loading-label').textContent, 'Travelling to Daggerfall');
+    assert.equal(bar.getAttribute('aria-valuenow'), '50');
+    assert.equal(bar.getAttribute('aria-valuetext'), 'Travelling to Daggerfall, step 2 of 2');
+    assert.equal(bar.querySelector('.dagger-loading-fill').style.width, '50%');
+
+    // Work that measures nothing shows a moving bar with its phase, never a made-up percentage.
+    f.loading({ title: 'Entering the Temple of Kynareth', label: 'Entering the Temple of Kynareth', step: 0, steps: 1, fraction: null });
+    assert.equal(bar.classList.contains('is-indeterminate'), true);
+    assert.equal(bar.hasAttribute('aria-valuenow'), false);
+    assert.equal(bar.getAttribute('aria-valuetext'), 'Entering the Temple of Kynareth');
+    assert.equal(bar.querySelector('.dagger-loading-fill').style.width, '');
+
+    f.loading(null);
+    assert.equal(screen.open, false);
+  } finally { f.dispose(); }
+});
+
+test('the loading screen takes focus and holds every key and pad press until the work is done, then play takes its input back', async () => {
+  const f = fixture();
+  const key = code => document.dispatchEvent(new KeyboardEvent('keydown', { code, key: code, bubbles: true, cancelable: true }));
+  try {
+    developer.liveDebug = true; developer.shells.length = 0;
+    f.publish({ mode: 'playing' });
+    assert.equal(f.modes.at(-1), 'gameplay');
+    f.loading({ title: 'Entering Privateer\'s Hold', label: 'Reading Privateer\'s Hold', step: 0, steps: 2, fraction: 0 });
+    const screen = f.root.querySelector('.dagger-loading');
+    assert.equal(f.modes.at(-1), 'interface', 'The screen holds the cursor, so play takes no input under it.');
+    assert.equal(document.activeElement, screen, 'Focus rests on the screen, which has no controls.');
+
+    // Nothing under the screen or over it answers: not the menu, not the developer tools, not the pad.
+    const sent = f.actions.length;
+    for (const code of ['Escape', 'Backquote', 'Enter', 'KeyI']) key(code);
+    for (const button of ['button-0', 'button-1', 'button-9', 'button-8']) f.pad(button);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(f.root.querySelector('.dagger-menu').open, false);
+    assert.equal(developer.shells.length, 0);
+    assert.equal(f.actions.length, sent, 'No action reaches the product while it loads.');
+    assert.equal(screen.open, true);
+    assert.equal(document.activeElement, screen);
+    // Escape cannot dismiss the work.
+    const cancel = new window.Event('cancel', { cancelable: true });
+    screen.dispatchEvent(cancel);
+    assert.equal(cancel.defaultPrevented, true);
+
+    // The work ends: play takes focus (and the pointer) back without a click.
+    const focusesBefore = f.focuses.length;
+    f.loading(null);
+    assert.equal(screen.open, false);
+    assert.equal(f.modes.at(-1), 'gameplay');
+    assert.ok(f.focuses.length > focusesBefore, 'Gameplay focus is taken back at once.');
+  } finally { developer.liveDebug = false; f.dispose(); }
 });
 
 test('the developer key opens the developer tools only when the host serves live-debug, and closing them gives play its input back', async () => {

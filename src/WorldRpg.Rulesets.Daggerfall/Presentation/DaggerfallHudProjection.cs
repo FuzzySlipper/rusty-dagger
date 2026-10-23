@@ -50,6 +50,8 @@ internal sealed record DaggerfallHudFrame(
     internal DaggerfallInteractionPromptView? Prompt { get; init; }
     /// <summary>The device the player last pressed on ("keyboard" or "controller"), whose bindings the HUD names.</summary>
     internal string InputDevice { get; init; } = "keyboard";
+    /// <summary>The host's loading screen, whose state the snapshot carries; null when the host shows none.</summary>
+    internal LoadingScreen? Loading { get; init; }
 }
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
@@ -91,6 +93,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
         [
+            ("loading", frame.Loading?.Write(builder) ?? builder.Null()),
             ("timeControl", builder.Object(("enabled", builder.Boolean(frame.ActionDrivenTime)), ("held", builder.Boolean(frame.TimeHeld)))),
             ("legal", frame.Legal is not { } legal ? builder.Null() : builder.Object(
                 ("revision", builder.String(legal.Revision)), ("phase", builder.String(legal.Phase)),

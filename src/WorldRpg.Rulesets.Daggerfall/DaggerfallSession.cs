@@ -337,7 +337,16 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // out. Session resources are released by Dispose.
         foreach (var appearance in _sites.Appearances) appearance.BeginAdmittedUpdate();
         _enemyBehavior.BeginAdmittedUpdate();
-        Update(update.Facts, update.Input);
+        // Slow work the player asks for in this update is acknowledged now and staged on the loading screen.
+        _inAdmittedUpdate = true;
+        try
+        {
+            Update(update.Facts, update.Input);
+        }
+        finally
+        {
+            _inAdmittedUpdate = false;
+        }
         // Sprite playback consumes the Engine-bound outer update identity.  It
         // must not run for each private catch-up simulation step above, and it
         // must not run while the world is holding still.
@@ -895,6 +904,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
                 inventory.Items.FirstOrDefault(item => item.EquippedSlots.Contains("right-hand"))?.Label ?? "Bare hands"),
             Prompt = ReadInteractionPrompt(),
             InputDevice = _lastInputDevice,
+            Loading = _loading,
         });
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         Vector3 facing = ActorHeading.Forward(State.PlayerControl.YawRadians);

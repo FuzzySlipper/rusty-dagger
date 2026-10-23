@@ -180,6 +180,19 @@ internal sealed partial class DaggerfallSiteProfiles
         return _catalog.TryAuthoredLogicalId(logicalId, out key) && TryGet(key, out profile);
     }
 
+    /// <summary>
+    /// The profile key a logical id names, without resolving the profile: an entrance decides where it leads before
+    /// the (slow) read of the place itself.
+    /// </summary>
+    internal DaggerfallWorldProfileKey RequireLogicalKey(string logicalId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(logicalId);
+        if ((DaggerfallWorldProfileIds.TryParse(logicalId, out DaggerfallWorldProfileKey key) || _catalog.TryAuthoredLogicalId(logicalId, out key))
+            && Contains(key))
+            return key;
+        throw new InvalidOperationException($"No world profile is published or assembled for logical id '{logicalId}'.");
+    }
+
     internal DaggerfallSiteProfile RequireLogicalProfile(string logicalId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(logicalId);

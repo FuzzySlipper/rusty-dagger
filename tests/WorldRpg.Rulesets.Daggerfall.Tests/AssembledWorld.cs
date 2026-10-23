@@ -6,6 +6,7 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Travel;
@@ -78,8 +79,8 @@ internal sealed class AssembledWorld
     /// A new game in Privateer's Hold, walked out through its exit onto its assembled exterior: with no
     /// entrance to return through, the player lands in front of the island's dungeon entrance.
     /// </summary>
-    internal AssembledWorldRun Start(DaggerfallSiteId destination, DaggerfallSiteBuildingId? building = null) =>
-        LeaveHold(new(this, (RulesetSavePayload?)null, destination, building));
+    internal AssembledWorldRun Start(DaggerfallSiteId destination, DaggerfallSiteBuildingId? building = null, bool loadingScreen = false) =>
+        LeaveHold(new(this, (RulesetSavePayload?)null, destination, building, loadingScreen));
 
     /// <summary>
     /// <see cref="Start(DaggerfallSiteId, DaggerfallSiteBuildingId?)"/> over the real Engine content, spatial, graphics and
@@ -97,6 +98,7 @@ internal sealed class AssembledWorld
     {
         (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) exit = Assert.Single(run.Session.Sites.Projection.Portals.All);
         run.Use(exit.Portal, exit.Entity);
+        run.FinishLoading();
         DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(PrivateersHold);
         Assert.Equal(island, run.Session.Sites.ActiveProfile);
         DaggerfallSiteAnchor landing = Profiles.Require(island).RequireAnchor(DaggerfallLocationAssembly.DungeonEntranceAnchor);
@@ -131,7 +133,8 @@ internal sealed class AssembledWorldRun : IDisposable
     private readonly AssembledWorld _world;
     private ulong _step;
 
-    internal AssembledWorldRun(AssembledWorld world, RulesetSavePayload? save, DaggerfallSiteId destination, DaggerfallSiteBuildingId? building)
+    internal AssembledWorldRun(AssembledWorld world, RulesetSavePayload? save, DaggerfallSiteId destination, DaggerfallSiteBuildingId? building,
+        bool loadingScreen = false)
     {
         _world = world;
         List<string> releases = [];
@@ -142,9 +145,29 @@ internal sealed class AssembledWorldRun : IDisposable
         Appearance = new AppearanceFake(releases);
         EngineContextFake engine = EngineContextFake.Create(content, Spatial.Service,
             Appearance, _perception.Service, random: LodgingRandom.Create());
+        // A run with a loading screen stages the player's slow world changes on it, as the host's does.
+        Loading = loadingScreen ? new LoadingScreen(() => Session?.PublishLoading()) : null;
+        Scripted = engine;
         DaggerfallSessionComposition composition = new(world.Definitions, world.Source, DaggerfallTuning.Defaults, world.Identity)
-            { Profiles = world.Profiles, Sky = world.Sky, Blocks = world.Blocks };
+            { Profiles = world.Profiles, Sky = world.Sky, Blocks = world.Blocks, Loading = Loading };
         Session = save is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, save);
+    }
+
+    /// <summary>The scripted Engine context of a run over fakes: what the session published.</summary>
+    internal EngineContextFake? Scripted { get; }
+
+    /// <summary>The <c>loading</c> field of the session's last snapshot, decoded; null when it showed no loading screen.</summary>
+    internal IReadOnlyDictionary<string, object?>? PublishedLoading() =>
+        (IReadOnlyDictionary<string, object?>?)((IReadOnlyDictionary<string, object?>)Scripted!.Published()!)["loading"];
+
+    /// <summary>The loading screen this run's session stages slow work on, or null when it runs that work at once.</summary>
+    internal LoadingScreen? Loading { get; }
+
+    /// <summary>Gives staged work the updates it runs on, as the host does, until the loading screen clears.</summary>
+    internal void FinishLoading()
+    {
+        for (int update = 0; update < 8 && Loading is { IsLoading: true }; update++) Step();
+        Assert.False(Loading?.IsLoading ?? false);
     }
 
     /// <summary>A new game over a real Engine's content, spatial, graphics and world origin; only perception stays scripted.</summary>
@@ -244,7 +267,12 @@ internal sealed class AssembledWorldRun : IDisposable
     internal AppearanceFake Appearance { get; } = null!;
 
     /// <summary>One admitted update with no input.</summary>
-    internal void Step() => Session.Update(new ProductUpdate(OuterUpdate(++_step), []));
+    internal void Step()
+    {
+        // While work is staged the host gives the update to the loading screen, not the session.
+        if (Loading?.Advance() == true) return;
+        Session.Update(new ProductUpdate(OuterUpdate(++_step), []));
+    }
 
     /// <summary>Changes the activation mode as the mode buttons do.</summary>
     internal void SetMode(string mode) => Submit(new { action = "activation-mode", mode });
@@ -351,20 +379,28 @@ internal sealed class AssembledWorldRun : IDisposable
     /// <summary>Pays for and makes the journey through the travel window, arriving.</summary>
     internal void Travel(DaggerfallSiteRecord destination)
     {
+        AcceptJourney(destination);
+        FinishLoading();
+        Assert.Equal(DaggerfallTravelOutcome.Arrived, Session.State.Travel.LastResult!.Outcome);
+        // The purse's leftover coins weigh far more than the traveller can carry; taken back, they walk on arrival.
+        ulong left = Session.State.Inventory.Read().Stacks.Single(value => value.Id == JourneyGold).Quantity;
+        Session.State.Inventory.Consume(new(JourneyGold, left));
+        Session.State.ItemInstances.RemoveStack(DaggerfallItemOwner.Player, JourneyGold);
+    }
+
+    private static readonly InventoryStackId JourneyGold = InventoryStackId.Parse("journey.gold");
+
+    /// <summary>Discovers the destination, carries the fare, and accepts the journey's quote in the travel window.</summary>
+    internal void AcceptJourney(DaggerfallSiteRecord destination)
+    {
         Session.Site.Discover(destination.Id);
         DaggerfallItemDefinition gold = _world.Definitions.RequireItem(new DaggerfallItemId("gold-piece"));
-        InventoryStackId stack = InventoryStackId.Parse("journey.gold");
-        Session.State.Inventory.Grant(new(new InventoryItemId(gold.Id.Value), stack, 100_000));
-        Session.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Player, stack, DaggerfallItemInstanceMetadata.Default(gold, DaggerfallItemOwner.Player));
+        Session.State.Inventory.Grant(new(new InventoryItemId(gold.Id.Value), JourneyGold, 100_000));
+        Session.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Player, JourneyGold, DaggerfallItemInstanceMetadata.Default(gold, DaggerfallItemOwner.Player));
         Submit(new { action = "travel-preview", region = destination.Region, destination = destination.Index, cautious = false, inn = true, ship = false });
         DaggerfallTravelQuote quote = Session.ReadTravelPresentation().Quote ?? throw new InvalidOperationException(Session.ReadTravelPresentation().Message);
         Assert.Null(Session.ReadTravelPresentation().Message);
         Submit(new { action = "travel-accept", key = quote.Identity, amount = quote.TotalCost });
-        Assert.Equal(DaggerfallTravelOutcome.Arrived, Session.State.Travel.LastResult!.Outcome);
-        // The purse's leftover coins weigh far more than the traveller can carry; taken back, they walk on arrival.
-        ulong left = Session.State.Inventory.Read().Stacks.Single(value => value.Id == stack).Quantity;
-        Session.State.Inventory.Consume(new(stack, left));
-        Session.State.ItemInstances.RemoveStack(DaggerfallItemOwner.Player, stack);
     }
 
     /// <summary>Uses the target at a live position, returning where the player stood (in the active frame's profile coordinates when outside).</summary>
