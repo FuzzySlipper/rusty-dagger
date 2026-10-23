@@ -195,6 +195,10 @@ public sealed class DaggerfallRestSessionTests
         Assert.NotNull(session.State.Quests.Messages.Pending);
         Assert.Equal(DaggerfallRestInterruption.Stopped, session.RestView.Interruption);
         Assert.Contains("pending quest message", session.RestView.Message);
+        // The question holds developer movement as it holds the rest: nothing moves until it is answered.
+        Vector3 waiting = session.State.PlayerControl.Position!.Value.ToVector();
+        Assert.Equal("Answer the quest's question first.", session.Teleport(waiting.X + 2, waiting.Y, waiting.Z, force: true).Message);
+        Assert.Equal(waiting, session.State.PlayerControl.Position!.Value.ToVector());
         long pausedAt = CalendarSeconds(DaggerfallSavePayload.Read(session.CaptureSave()).Calendar);
         session.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":8}")]));
         Assert.Equal(pausedAt, CalendarSeconds(DaggerfallSavePayload.Read(session.CaptureSave()).Calendar));
