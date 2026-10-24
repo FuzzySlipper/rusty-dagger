@@ -7,7 +7,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class FightersQuestCorpusCommand
 {
     public static ToolCommand Command { get; } = new("fighters-quest-corpus",
-        [Options.Pack, Options.Records, CommandOption.Required("--out", "PAYLOAD.json")], Run);
+        [Options.Pack, Options.Records, CommandOption.Staged("--out", "PAYLOAD.json", $"{ImportLayout.Payloads}/daggerfall.quests.fighters.json")], Run);
 
     private static int Run(CommandArguments args)
     {

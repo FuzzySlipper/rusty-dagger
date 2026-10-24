@@ -6,8 +6,8 @@ namespace Daggerfall.Import.Tool;
 /// <summary>Reads the tracked authored UI input through its two explicit paths.</summary>
 internal static class AuthoredUi
 {
-    public static readonly CommandOption Manifest = CommandOption.Required("--ui-authored-assets", "FILE");
-    public static readonly CommandOption Originals = CommandOption.Required("--ui-original", "DIR");
+    public static readonly CommandOption Manifest = CommandOption.Staged("--ui-authored-assets", "FILE", "data/ui-authored-assets.json");
+    public static readonly CommandOption Originals = CommandOption.Staged("--ui-original", "DIR", "data/ui-original");
 
     /// <summary>
     /// The classic media profile the authored UI manifest and its originals describe; when neither option is

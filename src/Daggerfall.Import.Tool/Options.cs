@@ -6,12 +6,13 @@ namespace Daggerfall.Import.Tool;
 internal static class Options
 {
     public static readonly CommandOption Arena2 = CommandOption.Required("--arena2", "SOURCE_DIR");
-    public static readonly CommandOption Pack = CommandOption.Required("--pack", "IMPORTED.json");
-    public static readonly CommandOption Authored = CommandOption.Required("--authored", "BASE.json");
-    public static readonly CommandOption Inventory = CommandOption.Required("--inventory", "CSV");
-    public static readonly CommandOption Records = CommandOption.Required("--records", "RECORDS.json");
-    public static readonly CommandOption ContentRoot = CommandOption.Required("--out", "CONTENT_ROOT");
-    public static readonly CommandOption Group = CommandOption.Required("--group", "NAME");
+    // Each staged option defaults to what `import` gives it, so a command rerun alone updates the staging tree.
+    public static readonly CommandOption Pack = CommandOption.Staged("--pack", "IMPORTED.json", ImportLayout.ImportedPayload);
+    public static readonly CommandOption Authored = CommandOption.Staged("--authored", "BASE.json", "content/worldrpg/payloads/daggerfall.base.json");
+    public static readonly CommandOption Inventory = CommandOption.Staged("--inventory", "CSV", ImportLayout.Inventory);
+    public static readonly CommandOption Records = CommandOption.Staged("--records", "RECORDS.json", ImportLayout.ImportRecords);
+    public static readonly CommandOption ContentRoot = CommandOption.Staged("--out", "CONTENT_ROOT", ImportLayout.Staging);
+    public static readonly CommandOption Group = CommandOption.Staged("--group", "NAME", "worldrpg");
     public static readonly CommandOption Update = CommandOption.Switch("--update");
 
     /// <summary>

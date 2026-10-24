@@ -112,7 +112,6 @@ internal static class ImportCommand
             if (status != 0) throw new InvalidOperationException($"step '{step.Label}' failed with exit status {status}; nothing was packed.");
         }
 
-        DataContainers.WriteDescriptor(ImportLayout.Staging);
         DataContainers.Pack(args.Switch("--compress"));
         if (args.Switch("--publish-loose")) PublishLoose();
         Console.WriteLine($"import: finished in {(Environment.TickCount64 - started) / 1000}s");
@@ -129,26 +128,22 @@ internal static class ImportCommand
         string Donor(string path) => $"{inputs.Donor}/{path}";
         const string staging = ImportLayout.Staging;
         const string records = ImportLayout.Records;
-        // The imported payload holds every base section the commands derive; the daggerfall.imported pack
-        // carries it beside the authored daggerfall.base pack.
-        const string imported = $"{staging}/worldrpg/payloads/daggerfall.imported.json";
-        // The complete block document is an importer record (geometry reads its use sites); the daggerfall.blocks
-        // pack carries building fields, map positions, and compact automap footprints the runtime reads.
-        const string blocks = $"{records}/daggerfall.blocks.json";
-        const string buildings = $"{staging}/worldrpg/payloads/daggerfall.blocks.json";
-        // Importer records nothing at runtime reads: the mesh inventory and the original quest-source selections.
-        const string importRecords = $"{records}/daggerfall.import-records.json";
-        const string worldMedia = $"{staging}/worldrpg/imports/shared";
-        const string classicGroup = $"{staging}/worldrpg";
-        string? musicManifest = inputs.Music is null ? null : $"{ImportLayout.MusicPublication}/worldrpg/media/music/manifest.json";
+        const string imported = ImportLayout.ImportedPayload;
+        const string blocks = ImportLayout.BlockDocument;
+        const string buildings = ImportLayout.BuildingsPayload;
+        const string importRecords = ImportLayout.ImportRecords;
+        const string worldMedia = ImportLayout.WorldMedia;
+        const string classicGroup = ImportLayout.ClassicGroup;
+        string? musicManifest = inputs.Music is null ? null : ImportLayout.MusicManifest;
         List<Step> steps = [];
         void Add(string label, params string[] arguments) => steps.Add(new(label, arguments));
 
-        // 1. Product-wide media. The site closures name the music cues the music publication writes.
+        // 1. Product-wide media. The music container's tracks are staged by the naming scheme, and the
+        //    transitional cue publication the site closures still name is written from those staged tracks.
         if (inputs.Music is { } music)
         {
-            Add("music-media", "music-media", "--out", ImportLayout.MusicPublication, "--sound", music, "--update");
             Add("music-tracks", "music-tracks", "--music", music, "--out", ImportLayout.MusicTracks);
+            Add("music-media", "music-media", "--out", ImportLayout.MusicPublication, "--sound", ImportLayout.MusicTracks, "--update");
         }
 
         Add("classic-media", "classic-media", "--arena2", arena2, "--out", staging, "--group", "worldrpg",
@@ -195,8 +190,8 @@ internal static class ImportCommand
 
         // 3. Quest corpus payloads, read from the quest sections and the original-source selections above.
         Add("fighters-quest-corpus", "fighters-quest-corpus", "--pack", imported, "--records", importRecords,
-            "--out", $"{staging}/worldrpg/payloads/daggerfall.quests.fighters.json");
-        Add("classic-quest-corpora", "classic-quest-corpora", "--pack", imported, "--records", importRecords, "--out", $"{staging}/worldrpg/payloads");
+            "--out", $"{ImportLayout.Payloads}/daggerfall.quests.fighters.json");
+        Add("classic-quest-corpora", "classic-quest-corpora", "--pack", imported, "--records", importRecords, "--out", ImportLayout.Payloads);
 
         // 4. The product-wide world media every site closure references: every mesh, material texture, billboard
         //    and actor atlas, terrain texture, the classic sidecar and its audio clips, published once.
@@ -209,7 +204,7 @@ internal static class ImportCommand
         //    places, normalized in its own frame, its static meshes placing the world media publication's meshes.
         string[] variants = inputs.BlockVariants is null ? [] : ["--variants", inputs.BlockVariants];
         Add("world-blocks", ["world-blocks", "--arena2", arena2, "--pack", imported, "--shared", worldMedia, "--inventory", Inventory,
-            "--out", $"{staging}/worldrpg/imports/world-blocks", "--source-manifest", $"{records}/world-blocks.sources.json", .. variants]);
+            "--out", ImportLayout.WorldBlocks, "--source-manifest", $"{records}/world-blocks.sources.json", .. variants]);
 
         // 6. Site closures. Each writes only what is its own: every body and shared sidecar entry is referenced
         //    from the world media publication above. Its source manifest goes to the import records.

@@ -7,17 +7,17 @@ namespace Daggerfall.Import.Tool.Commands;
 /// the import records.
 /// </summary>
 /// <remarks>
-/// The product sees the repository's tracked <c>content/</c> with the import's generated content over it, so a
-/// generated root (<c>--content</c>, the import's staging tree) is read over <c>content/</c>: a file it
-/// holds replaces the repository's file at the same path. Without one the repository's <c>content/</c> is read
-/// alone, as a loose generated tree leaves it. Every artifact is reported by its repository path
-/// (<c>content/worldrpg/...</c>, <c>import-records/...</c>) wherever it was read from.
+/// The product sees the repository's tracked <c>content/</c> with the import's generated content over it, so the
+/// generated root (<c>--content</c>, by default the import's staging tree) is read over <c>content/</c>: a file
+/// it holds replaces the repository's file at the same path. A loose generated tree is read by naming
+/// <c>content</c> itself, with <c>--import-records import-records</c>. Every artifact is reported by its
+/// repository path (<c>content/worldrpg/...</c>, <c>import-records/...</c>) wherever it was read from.
 /// </remarks>
 internal static class SourceCoverageCommand
 {
     internal static ToolCommand Command { get; } = new("source-coverage", [Options.Arena2, Options.Inventory,
-        CommandOption.Required("--repository", "DIR"), CommandOption.Required("--output", "FILE"),
-        CommandOption.Optional("--content", "GENERATED_CONTENT_ROOT"), CommandOption.Optional("--import-records", "DIR")], Run);
+        CommandOption.Staged("--repository", "DIR", "."), CommandOption.Staged("--output", "FILE", $"{ImportLayout.Records}/source-coverage.json"),
+        CommandOption.Staged("--content", "GENERATED_CONTENT_ROOT", ImportLayout.Staging), CommandOption.Staged("--import-records", "DIR", ImportLayout.Records)], Run);
     private static int Run(CommandArguments args)
     {
         string repository = Path.GetFullPath(args["--repository"]);
@@ -28,9 +28,8 @@ internal static class SourceCoverageCommand
                 throw new InvalidOperationException($"The source inventory omits required family CNT-{number:D3}.");
         string output = Path.GetFullPath(args["--output"]);
         Dictionary<string, string> content = Artifacts(Path.Combine(repository, "content"), "worldrpg");
-        if (args.Optional("--content") is { } generated)
-            foreach ((string path, string file) in Artifacts(Path.GetFullPath(generated), "worldrpg")) content[path] = file;
-        string records = Path.GetFullPath(args.Optional("--import-records") ?? Path.Combine(repository, "import-records"));
+        foreach ((string path, string file) in Artifacts(Path.GetFullPath(args["--content"]), "worldrpg")) content[path] = file;
+        string records = Path.GetFullPath(args["--import-records"]);
         SourceCoverageArtifact[] artifacts = [
             .. content.Select(pair => new SourceCoverageArtifact("content/" + pair.Key, pair.Value)),
             .. Artifacts(records, "").Select(pair => new SourceCoverageArtifact("import-records/" + pair.Key, pair.Value))];

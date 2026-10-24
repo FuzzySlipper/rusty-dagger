@@ -14,7 +14,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class MusicTracksCommand
 {
     public static ToolCommand Command { get; } = new("music-tracks",
-        [CommandOption.Required("--music", "SOURCE_DIR"), CommandOption.Required("--out", "TRACKS_DIR")], Run);
+        [CommandOption.Required("--music", "SOURCE_DIR"), CommandOption.Staged("--out", "TRACKS_DIR", ImportLayout.MusicTracks)], Run);
 
     private static int Run(CommandArguments args)
     {

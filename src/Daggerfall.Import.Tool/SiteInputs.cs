@@ -13,8 +13,8 @@ internal static class SiteInputs
     public static readonly CommandOption Output = CommandOption.Required("--out", "OUTPUT_DIR");
     public static readonly CommandOption SourceManifest = CommandOption.Required("--source-manifest", "FILE");
     public static readonly CommandOption MusicManifest = CommandOption.Optional("--music-manifest", "MANIFEST.json");
-    public static readonly CommandOption Shared = CommandOption.Required("--shared", "WORLD_MEDIA_DIR");
-    public static readonly CommandOption ClassicGroup = CommandOption.Required("--classic-group", "CLASSIC_GROUP_DIR");
+    public static readonly CommandOption Shared = CommandOption.Staged("--shared", "WORLD_MEDIA_DIR", ImportLayout.WorldMedia);
+    public static readonly CommandOption ClassicGroup = CommandOption.Staged("--classic-group", "CLASSIC_GROUP_DIR", ImportLayout.ClassicGroup);
 
     /// <summary>The options every site closure takes, before its own.</summary>
     public static IReadOnlyList<CommandOption> Common =>
@@ -65,14 +65,21 @@ internal static class SiteInputs
     }
 
     /// <summary>
-    /// The cue list a site publication records, from the manifest the music publication wrote. A site names
+    /// The cue list a site publication records, from the manifest the music publication wrote (by default the
+    /// one the import staged, when the command runs in the repository root and it exists). A site names
     /// the cues the product may open there, and the bytes live in the product-wide music publication. A
     /// caller that supplied no manifest gets no cues and is told so: the site then composes without a score,
     /// which is a supported state, and quietly naming cues nobody published would move the failure to the
     /// product's admission of a site it cannot play.
     /// </summary>
-    private static IReadOnlyList<ClassicMusicRecord> MusicRecords(string? manifestPath)
+    internal static IReadOnlyList<ClassicMusicRecord> MusicRecords(string? manifestPath)
     {
+        // A command rerun by hand in the repository root names the cues the import staged, as the import did.
+        if (manifestPath is null && File.Exists(ImportLayout.Inventory) && File.Exists(ImportLayout.MusicManifest))
+        {
+            manifestPath = ImportLayout.MusicManifest;
+        }
+
         if (manifestPath is null)
         {
             Console.WriteLine("music: no --music-manifest was supplied, so this publication names no cue and the product plays no score here.");

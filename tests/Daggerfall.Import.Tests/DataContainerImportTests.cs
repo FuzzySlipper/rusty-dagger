@@ -130,10 +130,80 @@ public sealed class DataContainerImportTests : IDisposable
         // Each step writes into the staging tree or the records, never into the repository's content.
         Assert.All(steps.SelectMany(step => step.Arguments).Where(argument => argument.StartsWith("content/", StringComparison.Ordinal)),
             argument => Assert.Equal("content/worldrpg/payloads/daggerfall.base.json", argument));
-        Assert.Equal(["music-media", "music-tracks", "classic-media"], steps.Take(3).Select(step => step.Label));
+        Assert.Equal(["music-tracks", "music-media", "classic-media"], steps.Take(3).Select(step => step.Label));
+        Assert.Equal(ImportLayout.MusicTracks, steps[1].Arguments[steps[1].Arguments.ToList().IndexOf("--sound") + 1]);
         Assert.Equal("source-coverage", steps[^1].Label);
         Assert.Contains("--music-manifest", steps.Single(step => step.Label == "charing-exterior").Arguments);
         Assert.Contains("variants.json", steps.Single(step => step.Label == "world-blocks").Arguments);
+    }
+
+    [Fact]
+    public void A_command_rerun_without_its_staged_options_reads_and_writes_what_the_import_does()
+    {
+        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(new("local/arena2", "/donor", "local/Sound", null, null), root);
+
+        int staged = 0;
+        foreach (ImportCommand.Step step in steps)
+        {
+            ToolCommand command = Program.Commands[step.Arguments[0]];
+            for (int index = 1; index < step.Arguments.Count - 1; index++)
+            {
+                if (command.Options.FirstOrDefault(option => option.Name == step.Arguments[index]) is not { Default: { } path } option) continue;
+                Assert.True(path == step.Arguments[index + 1], $"step '{step.Label}' passes {option.Name} '{step.Arguments[index + 1]}', but the command defaults it to '{path}'");
+                staged++;
+            }
+        }
+
+        Assert.True(staged > 50, $"only {staged} staged options were checked");
+        Assert.Equal(ImportLayout.ImportedPayload, Program.Commands["locations"].Options.Single(option => option.Name == "--pack").Default);
+    }
+
+    [Fact]
+    public void A_staged_default_outside_the_repository_root_is_refused_with_the_usage()
+    {
+        ToolCommand corpora = Program.Commands["classic-quest-corpora"];
+
+        ArgumentException refusal = Assert.Throws<ArgumentException>(() => corpora.Invoke(["classic-quest-corpora"]));
+
+        Assert.Contains($"--pack defaults to '{ImportLayout.ImportedPayload}' in the repository root", refusal.Message, StringComparison.Ordinal);
+        Assert.Contains(corpora.Usage, refusal.Message, StringComparison.Ordinal);
+        Assert.Contains($"[--pack IMPORTED.json (default {ImportLayout.ImportedPayload})]", corpora.Usage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_music_folder_of_other_formats_stages_its_tracks_and_publishes_a_cue_manifest_naming_none()
+    {
+        string music = Directory.CreateDirectory(Path.Combine(root, "Sound")).FullName;
+        File.WriteAllBytes(Path.Combine(music, "song_dungeon.mp3"), [1, 2, 3]);
+        File.WriteAllBytes(Path.Combine(music, "SONG_04.FLAC"), [4, 5]);
+        string tracks = Path.Combine(root, "tracks");
+        string publication = Path.Combine(root, "music-publication");
+
+        // The import's own sequence: stage the tracks, then publish the transitional cues from the staged tracks.
+        Assert.Equal(0, Program.Commands["music-tracks"].Invoke(["music-tracks", "--music", music, "--out", tracks]));
+        Assert.Equal(0, Program.Commands["music-media"].Invoke(["music-media", "--out", publication, "--sound", tracks, "--update"]));
+
+        Assert.Equal(["song_04.flac", "song_dungeon.mp3"], Directory.EnumerateFiles(tracks).Select(Path.GetFileName).Order(StringComparer.Ordinal));
+        string manifest = Path.Combine(publication, ClassicMusicPublication.Group, ClassicMusicPublication.ManifestRelativePath);
+        Assert.Empty(ClassicMusicPublication.Read(File.ReadAllBytes(manifest)).Cues);
+        // The world media and site commands read that manifest and name no cue.
+        Assert.Empty(SiteInputs.MusicRecords(manifest));
+    }
+
+    [Fact]
+    public void An_upper_case_ogg_recording_is_published_as_its_cue_once_staged()
+    {
+        string music = Directory.CreateDirectory(Path.Combine(root, "Sound")).FullName;
+        File.WriteAllBytes(Path.Combine(music, "SONG_DUNGEON.OGG"), [1, 2, 3]);
+        string tracks = Path.Combine(root, "tracks");
+        string publication = Path.Combine(root, "music-publication");
+
+        Program.Commands["music-tracks"].Invoke(["music-tracks", "--music", music, "--out", tracks]);
+        Program.Commands["music-media"].Invoke(["music-media", "--out", publication, "--sound", tracks, "--update"]);
+
+        ClassicMusicRecord cue = Assert.Single(ClassicMusicPublication.Read(File.ReadAllBytes(
+            Path.Combine(publication, ClassicMusicPublication.Group, ClassicMusicPublication.ManifestRelativePath))).Cues);
+        Assert.Equal("song_dungeon", cue.Track);
     }
 
     [Fact]
@@ -203,18 +273,34 @@ public sealed class DataContainerImportTests : IDisposable
         byte[] mesh = [.. Enumerable.Range(0, 4096).Select(index => (byte)(index % 7))];
         Write(staging, "worldrpg/imports/shared/meshes/a.rstatmsh", mesh);
         Write(staging, "worldrpg/payloads/daggerfall.imported.json", "{\"locations\":{}}"u8);
+        foreach (JsonObject pack in DataContainers.DerivedPacks()) Write(staging, (string)pack["payload"]!, "{}"u8);
+        DataContainers.WriteDescriptor(staging);
+        string tracks = Path.Combine(root, "tracks");
+        Write(tracks, "song_dungeon.ogg", [9, 9, 9]);
+        DataContainers.WriteMusicDescriptor(tracks);
         string container = Path.Combine(root, "local", "daggerfall-data.rpak");
+        string music = Path.Combine(root, "local", "music.rpak");
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
 
         DataContainers.PackOne(host, staging, container, compress: true);
+        DataContainers.PackOne(host, tracks, music, compress: false);
 
         host.Call(engine =>
         {
             using ProductContentBundle opened = ProductContentBundle.OpenContainer(engine.Content, container);
-            Assert.Equal(["worldrpg/imports/shared/meshes/a.rstatmsh", "worldrpg/payloads/daggerfall.imported.json"],
-                opened.Entries.ToArray().Select(entry => entry.Path).Order(StringComparer.Ordinal));
+            Assert.Contains("worldrpg/imports/shared/meshes/a.rstatmsh", opened.Entries.ToArray().Select(entry => entry.Path));
             Assert.Equal(mesh, opened.ReadBytes("worldrpg/imports/shared/meshes/a.rstatmsh").ToArray());
             using ContentReference reference = engine.Content.ResolveReference(new ContentResolveRequest("worldrpg/imports/shared/meshes/a.rstatmsh", Digest(mesh)));
+            JsonNode data = JsonNode.Parse(opened.ReadText(ImportLayout.DescriptorPath))!;
+            Assert.Equal(ImporterBuild.Revision, (string)data["importerRevision"]!);
+            Assert.Equal(DataContainers.DerivedPacks().Count, data["contentPacks"]!.AsArray().Count);
+
+            using ProductContentBundle score = ProductContentBundle.OpenContainer(engine.Content, music);
+            Assert.Equal(["song_dungeon.ogg", ImportLayout.DescriptorPath], score.Entries.ToArray().Select(entry => entry.Path).Order(StringComparer.Ordinal));
+            JsonNode described = JsonNode.Parse(score.ReadText(ImportLayout.DescriptorPath))!;
+            Assert.Equal(DataContainers.DescriptorKind, (string)described["kind"]!);
+            Assert.Equal(ImporterBuild.Revision, (string)described["importerRevision"]!);
+            Assert.Empty(described["contentPacks"]!.AsArray());
         });
     }
 
@@ -245,6 +331,13 @@ public sealed class DataContainerImportTests : IDisposable
 
             JsonNode descriptor = JsonNode.Parse(opened.ReadText(ImportLayout.DescriptorPath))!;
             Assert.All(descriptor["contentPacks"]!.AsArray(), pack => Assert.Contains((string)pack!["payload"]!, entries.Keys));
+
+            string music = Path.Combine(TestData.RepositoryRoot, ImportLayout.MusicContainer);
+            if (!File.Exists(music)) return;
+            using ProductContentBundle score = ProductContentBundle.OpenContainer(engine.Content, music);
+            Assert.Equal(DataContainers.DescriptorKind, (string)JsonNode.Parse(score.ReadText(ImportLayout.DescriptorPath))!["kind"]!);
+            Assert.All(score.Entries.ToArray().Where(entry => entry.Path != ImportLayout.DescriptorPath),
+                entry => Assert.Contains(Path.GetFileNameWithoutExtension(entry.Path), ClassicMusicTracks.All));
         });
     }
 

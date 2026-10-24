@@ -117,10 +117,13 @@ internal sealed partial class ImportToolFixture : IDisposable
             ["--authoring"] = name == "sprite-overlay-write" ? At("writer-authoring") : At("authoring"),
             ["--overlay"] = "sprites/test.json", ["--input"] = OverlayFile, ["--id"] = Sprites.Catalog.Entries.First().Id,
             ["--shared"] = Shared, ["--classic-group"] = ClassicGroup,
+            // Coverage reads the repository's generated tree over its content, with its import records.
+            ["--content"] = Repo("content"), ["--import-records"] = Repo("import-records"),
         };
         if (name == "internal-strings") values["--label"] = PublishedSourcePath.Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv");
         List<string> args = [name];
-        foreach (var option in global::Daggerfall.Import.Tool.Program.Commands[name].Options.Where(option => option.IsRequired))
+        // A staged option is passed too: its default is the repository's staging tree, which these private roots replace.
+        foreach (var option in global::Daggerfall.Import.Tool.Program.Commands[name].Options.Where(option => option.IsRequired || option.Default is not null))
             args.AddRange([option.Name, values[option.Name]]);
         // Exercise nonempty source sets and all real artifact writers, rather than no-op success paths.
         if (name == "music-media") args.AddRange(["--sound", Repo("local/Sound"), "--require-all"]);
