@@ -442,9 +442,5 @@ internal sealed class AssembledWorldRun : IDisposable
     public void Dispose() => Session.Dispose();
 
     /// <summary>Admits a profile's content, terrain textures included, to a scripted content service.</summary>
-    internal static void Admit(ContentFake content, DaggerfallSiteProfile profile)
-    {
-        PopulateContent(content, profile);
-        foreach (NormalizedTerrainTexture texture in profile.TerrainTextures.Values) content.Add(texture.TexturePath, texture.TextureSha256);
-    }
+    internal static void Admit(ContentFake content, DaggerfallSiteProfile profile) => PopulateContent(content, profile);
 }

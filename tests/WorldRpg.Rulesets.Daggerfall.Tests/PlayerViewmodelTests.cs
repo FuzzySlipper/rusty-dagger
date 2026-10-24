@@ -22,6 +22,7 @@ public sealed class PlayerViewmodelTests
     {
         List<string> releases = [];
         var content = MediaContent(releases); content.Add("weapon/dagger.png", Hash);
+        content.Add("audio/hit.wav", Hash); content.Add("audio/vampire.wav", Hash);
         var appearance = new AppearanceFake(releases);
         var audio = AudioRecorder.Create();
         using var presentation = new DaggerfallSiteAppearance(content, appearance,

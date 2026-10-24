@@ -67,7 +67,7 @@ internal sealed class ContentFake : IContentService
     public ContentReference ResolveReference(ContentResolveRequest request)
     {
         ResolveCalls++;
-        if (!values.TryGetValue(request.Path, out ContentSha256 known) || known != request.Sha256) throw new InvalidOperationException("Unexpected content reference.");
+        if (!values.TryGetValue(request.Path, out ContentSha256 known) || known != request.Sha256) throw new InvalidOperationException($"Unexpected content reference '{request.Path}'{(values.ContainsKey(request.Path) ? " with another digest" : "")}.");
         ulong value = nextHandle++;
         references.Add(value, new KeyValuePair<string, ContentSha256>(request.Path, known));
         return TestContentReferences.Named(new ContentReference(new ContentReferenceHandle(value), () => releases.Add("content")), request.Path);

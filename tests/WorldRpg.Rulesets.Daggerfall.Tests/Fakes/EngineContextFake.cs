@@ -24,6 +24,9 @@ internal class EngineContextFake : DispatchProxy
     /// <summary>How many clips the product opened from content, which is how a cue really resolved.</summary>
     internal int ReleasedContentClips => ((AudioServiceFake)(object)audio).ReleasedContentClips;
     internal int OpenedContentClips => ((AudioServiceFake)(object)audio).OpenedContentClips;
+    /// <summary>How many score clips the product opened and released: the clips below the music root.</summary>
+    internal int OpenedMusicClips => ((AudioServiceFake)(object)audio).OpenedMusicClips;
+    internal int ReleasedMusicClips => ((AudioServiceFake)(object)audio).ReleasedMusicClips;
     internal IReadOnlyList<Color> BackgroundColors => ((CameraServiceFake)(object)camera).BackgroundColors;
 
     /// <summary>Read one named field of the last published projection, or null when none was.</summary>
@@ -268,11 +271,13 @@ internal class EngineContextFake : DispatchProxy
         /// <summary>How many clips the product opened from content, which is how a cue really resolves.</summary>
         internal int OpenedContentClips { get; private set; }
         internal int ReleasedContentClips { get; private set; }
+        internal int OpenedMusicClips { get; private set; }
+        internal int ReleasedMusicClips { get; private set; }
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
         {
             nameof(IAudioService.OpenClip) => OpenClip(),
-            nameof(IAudioService.OpenClipFromContent) => OpenClipFromContent(),
+            nameof(IAudioService.OpenClipFromContent) => OpenClipFromContent((AudioClipFromContentRequest)arguments![0]!),
             nameof(IAudioService.Emit) => Emit((AudioEmitRequest)arguments![0]!),
             nameof(IAudioService.RetireOneShot) => Retire((AudioSignalHandle)arguments![0]!),
             nameof(IAudioService.ReadRealization) => new AudioRealizationResult(RealizationFacts.ToArray(), 0),
@@ -296,10 +301,16 @@ internal class EngineContextFake : DispatchProxy
 
         private AudioClip OpenClip() => new(new AudioClipHandle(1), static () => { });
 
-        private AudioClip OpenClipFromContent()
+        private AudioClip OpenClipFromContent(AudioClipFromContentRequest request)
         {
+            bool music = TestContentReferences.PathOf(request.Content)?.StartsWith(WorldRpg.Rulesets.Daggerfall.Content.DaggerfallMusicBundle.LogicalRoot + "/", StringComparison.Ordinal) == true;
             OpenedContentClips++;
-            return new AudioClip(new AudioClipHandle(1), () => ReleasedContentClips++);
+            if (music) OpenedMusicClips++;
+            return new AudioClip(new AudioClipHandle(1), () =>
+            {
+                ReleasedContentClips++;
+                if (music) ReleasedMusicClips++;
+            });
         }
 
         private AudioVoice CreateVoice()

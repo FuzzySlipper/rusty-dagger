@@ -29,7 +29,7 @@ public sealed class ExteriorOriginSessionTests
         DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
         Dictionary<string, ReadOnlyMemory<byte>> files = PublishedUiArt(root)
             .ToDictionary(entry => entry.Path, entry => (ReadOnlyMemory<byte>)entry.Bytes);
-        files[exterior.SpatialArtifact.Path] = File.ReadAllBytes(Path.Combine(root, "content", exterior.SpatialArtifact.Path));
+        foreach ((string path, ReadOnlyMemory<byte> bytes) in PresentedFiles(root, exterior)) files[path] = bytes;
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
         host.Call(engine =>
         {
