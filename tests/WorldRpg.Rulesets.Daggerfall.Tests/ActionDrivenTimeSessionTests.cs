@@ -130,6 +130,7 @@ public sealed class ActionDrivenTimeSessionTests
         product.Update(new ProductUpdate(held, [Ui("""{"action":"save-game"}""")]));
         DaggerfallSession saved = ruleset.RequireSession();
         product.Update(new ProductUpdate(held, [Ui("""{"action":"load-game"}""")]));
+        FinishLoading(product, held);
         Assert.NotSame(saved, ruleset.RequireSession());
         Assert.True(ruleset.RequireSession().ActionDrivenPlay);
         product.Update(new ProductUpdate(held, []));

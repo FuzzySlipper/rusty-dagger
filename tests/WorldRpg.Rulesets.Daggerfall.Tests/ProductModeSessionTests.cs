@@ -135,6 +135,7 @@ public sealed class ProductModeSessionTests
         product.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"character-begin\"}")]));
         product.Update(new ProductUpdate(OuterUpdate(2), [Ui(NewGameSessionTests.CommitPayload())]));
         product.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"begin\"}")]));
+        FinishLoading(product, 3);
         Assert.Equal(ProductMode.Title, product.Mode);
         Assert.Single(video.Played);
         Assert.Equal(0, spatial.StepCalls);

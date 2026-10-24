@@ -36,6 +36,7 @@ public sealed class CharacterQuickStartTests
         }
 
         product.Update(new ProductUpdate(OuterUpdate(2), [Ui(QuickStart)]));
+        FinishLoading(product, 2);
 
         DaggerfallSession game = ruleset.RequireSession();
         Assert.NotSame(title, game);

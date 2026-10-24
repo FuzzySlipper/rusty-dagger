@@ -48,6 +48,7 @@ public sealed class ContactVariantAcceptanceTests
             product.Update(new ProductUpdate(OuterUpdate(3), []));
             Assert.Contains("Saved 'Contact run'", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
             product.Update(new ProductUpdate(OuterUpdate(4), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-1\"}")]));
+            FinishLoading(product, 4);
             DaggerfallSession loaded = ruleset.RequireSession();
             Assert.NotSame(game, loaded);
             Assert.Equal(11, loaded.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);

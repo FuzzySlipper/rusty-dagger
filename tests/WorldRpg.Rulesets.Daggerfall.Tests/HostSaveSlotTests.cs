@@ -50,6 +50,7 @@ public sealed class HostSaveSlotTests
         Assert.Contains("No save is indexed under 'missing'.", engine.PublishedField("lastOutcome"));
 
         product.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-archer\"}")]));
+        FinishLoading(product, 2);
         var restored = ruleset.RequireSession();
         Assert.NotSame(title, restored);
         Assert.Equal(ProductMode.Playing, product.Mode);
@@ -235,8 +236,11 @@ public sealed class HostSaveSlotTests
         Assert.Contains("Saved 'Revisited dungeon'", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
 
         // Loading the selected second slot replaces the session with its own earlier state rather
-        // than the overwritten first slot.
+        // than the overwritten first slot. The restored world takes a step as the loading screen
+        // clears, so the spatial answer holds still for the position read.
+        spatial.KeepPosition = true;
         product.Update(new ProductUpdate(OuterUpdate(11), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-2\"}")]));
+        FinishLoading(product, 11);
         DaggerfallSession restored = ruleset.RequireSession();
         Assert.NotSame(session, restored);
         Assert.Equal(secondPosition, PlayerPos(restored));

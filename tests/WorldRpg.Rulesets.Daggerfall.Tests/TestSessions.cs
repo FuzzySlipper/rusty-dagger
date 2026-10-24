@@ -9,6 +9,7 @@ using System.Xml.Linq;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Host;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
@@ -583,6 +584,20 @@ internal static class TestSessions
     }
 
     internal static ProductUpdateFacts OuterUpdate(ulong simulationStep) => new(ProductLifecycleState.Running, 1, 1, simulationStep, simulationStep, 60, 1, 0, 1d / 60d);
+
+    /// <summary>
+    /// Runs the product's loading screen to its end. The update that accepts a new game, a load or a game
+    /// change only shows the screen; each later update runs one phase, and the update after the last clears
+    /// the screen and reaches the session as usual. Every update carries <paramref name="facts"/>.
+    /// </summary>
+    internal static void FinishLoading(WorldRpgProduct product, ProductUpdateFacts facts)
+    {
+        Assert.NotNull(product.Loading);
+        for (int update = 0; update < 8 && product.Loading is not null; update++) product.Update(new ProductUpdate(facts, []));
+        Assert.Null(product.Loading);
+    }
+
+    internal static void FinishLoading(WorldRpgProduct product, ulong step) => FinishLoading(product, OuterUpdate(step));
 
     /// <summary>One advanced sprite frame whose authored damage frame was crossed.</summary>
     /// <summary>A playback receipt that completes without crossing a marker, which is what clears a swing.</summary>

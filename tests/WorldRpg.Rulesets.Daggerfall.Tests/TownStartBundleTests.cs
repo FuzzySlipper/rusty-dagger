@@ -44,6 +44,7 @@ public sealed class TownStartBundleTests
         Assert.Equal(Bundle, engine.PublishedNested("bundles", "current"));
 
         product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"character-quick-start","name":"","race":"breton","gender":"male","faceIndex":0,"reflexes":2,"career":"class16"}""")]));
+        FinishLoading(product, 1);
         DaggerfallSession game = ruleset.RequireSession();
         Assert.NotEqual(ProductMode.Title, product.Mode);
         Assert.Equal(exterior.ProfileKey, game.Sites.ActiveProfile);
@@ -90,6 +91,7 @@ public sealed class TownStartBundleTests
         var greeting = game.DungeonTextProjection!;
         game.Update(new ProductUpdate(OuterUpdate(3), [Ui(System.Text.Json.JsonSerializer.Serialize(new
             { action = "dungeon-text-close", item = greeting.ActionId, revision = greeting.Revision.ToString() }))]));
+        FinishLoading(product, 4);
         Assert.Equal(DaggerfallWorldProfileIds.Interior(exterior.ProfileKey.Site, GeneralStore), game.Sites.ActiveProfile);
         Assert.Empty(game.State.Crime.Incidents);
 
