@@ -312,12 +312,22 @@ and not redistributed; small derived facts (identifiers, names, numbers, short t
 in tests, fixtures and documents are fine (`AGENTS.md`). Git tracks
 only descriptors, hand-authored payloads, tuning and the importer's own inputs; everything derived
 from the operator's files is regenerated on each checkout by one command,
-`scripts/regenerate-content.sh`. It reads `local/arena2` (or `--arena2`/`DAGGER_ARENA2`), the
-Daggerfall Unity checkout (`--donor`/`DAGGER_DONOR_ROOT`), the song folder `local/Sound`
-(`--sound`) and FFmpeg, checks that each is present before writing anything, removes the generated
-files, and runs the import tool's commands in their dependency order: music and classic media, the
-imported payload's sections with the block document and the import records, the quest corpus
-payloads, the product-wide world media publication, the per-block world publication, then the site closures. Two runs at the same importer source and FFmpeg build write
+`scripts/regenerate-content.sh`. The work is the import tool's `import` command, which runs on Linux and
+Windows without bash. It reads `local/arena2` (or `--arena2`/`DAGGER_ARENA2`), the
+Daggerfall Unity checkout (`--donor`/`DAGGER_DONOR_ROOT`), an optional music folder (`--music`; the script
+passes `local/Sound`, or `--sound`) and FFmpeg, names every input that is absent before writing anything,
+clears its staging tree, and runs the import tool's commands in their dependency order: music and classic
+media, the imported payload's sections with the block document and the import records, the quest corpus
+payloads, the product-wide world media publication, the per-block world publication, the site closures,
+then the source coverage. It writes into `local/import/staging/` (at the content-root-relative paths the
+product names) and `local/import/records/`, describes the run in `worldrpg/data-container.json` (the
+importer revision, a hash over the importer's sources and `data/`, and the derived packs' descriptors), and
+packs `local/daggerfall-data.rpak` from the staging tree and, with music, `local/music.rpak`: one
+recording per track at its root, named `<track>.<ext>` by the classic track identifier, in any format the
+Engine's audio opens. `--only STEP,...` reruns named steps over the existing staging tree and repacks, and
+`pack` repacks after a command was run by hand. Until the product opens the containers, the script adds
+`--publish-loose`, which copies the staged run into `content/` and `import-records/`. Two runs at the same
+importer source and FFmpeg build write
 identical bytes. A clone that has not run it builds and runs the content-free suites, but staging
 the product (`rusty dev`, `rusty build`, `StageRustyEngineCoreClrProduct`) stops with a message
 naming the script, `scripts/verify.sh` skips the ruleset suite and staging with the reason printed,

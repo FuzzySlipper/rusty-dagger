@@ -74,7 +74,7 @@ public sealed record ClassicMusicSource(ClassicMusicCue Cue, byte[] Bytes);
 /// <summary>One music publication: the artifacts to write, the manifest, and what could not be published.</summary>
 /// <param name="Artifacts">The clip artifacts and the manifest artifact, in the group the tool writes.</param>
 /// <param name="Manifest">The published cue set.</param>
-/// <param name="Warnings">Cues that were not published, and cues whose source length differs from the catalogue's record.</param>
+/// <param name="Warnings">Cues that were not published.</param>
 public sealed record ClassicMusicPublicationResult(
     IReadOnlyList<ImportPublicationArtifact> Artifacts,
     ClassicMusicManifest Manifest,
@@ -150,14 +150,6 @@ public static class ClassicMusicPublication
             {
                 warnings.Add($"music cue '{cue.MediaId}' is not published: the supplied folder does not carry '{cue.SourceFile}'.");
                 continue;
-            }
-
-            if (bytes.Length != cue.SourceBytes)
-            {
-                // The catalogue records the operator source file's measured length.
-                // A folder carrying a different encode of the same song is published as it is, with both
-                // values reported, because refusing would stop every later cue over a container difference.
-                warnings.Add($"music cue '{cue.MediaId}' source '{cue.SourceFile}' carries {bytes.Length} bytes where the catalogue records {cue.SourceBytes}.");
             }
 
             ContentDigest digest = ContentDigest.Compute(bytes);
