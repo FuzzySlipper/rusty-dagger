@@ -34,6 +34,7 @@ public sealed class BundleChoiceSessionTests
         Assert.Equal("Developer: Charing town start", Option(engine, 2));
 
         product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"daggerfall.contact"}""")]));
+        FinishLoading(product, 1);
 
         DaggerfallSession contact = ruleset.RequireSession();
         Assert.NotSame(classic, contact);
@@ -41,6 +42,7 @@ public sealed class BundleChoiceSessionTests
         Assert.Equal("daggerfall.contact", engine.PublishedNested("bundles", "current"));
 
         product.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"character-quick-start","name":"","race":"breton","gender":"male","faceIndex":0,"reflexes":2,"career":"class16"}""")]));
+        FinishLoading(product, 2);
         DaggerfallSession game = ruleset.RequireSession();
         Assert.NotEqual(ProductMode.Title, product.Mode);
         // A game begun from the title no longer offers a choice of game.
@@ -71,6 +73,7 @@ public sealed class BundleChoiceSessionTests
         {
             product.Start();
             product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"daggerfall.contact"}""")]));
+            FinishLoading(product, 1);
             Assert.Equal("daggerfall.contact", first.PublishedNested("bundles", "current"));
         }
 
