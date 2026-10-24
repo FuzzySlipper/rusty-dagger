@@ -32,10 +32,37 @@ internal static class ImportLayout
     /// <summary>The music container's files: one recording per track at the root, by the naming scheme.</summary>
     public const string MusicTracks = "local/import/music";
 
+    /// <summary>The imported payload: every base section the commands derive.</summary>
+    public const string ImportedPayload = $"{Staging}/worldrpg/payloads/daggerfall.imported.json";
+
+    /// <summary>The directory the quest corpus payloads are written into.</summary>
+    public const string Payloads = $"{Staging}/worldrpg/payloads";
+
+    /// <summary>The block payload the runtime reads: building fields, map positions and automap footprints.</summary>
+    public const string BuildingsPayload = $"{Staging}/worldrpg/payloads/daggerfall.blocks.json";
+
+    /// <summary>The complete block document, an importer record whose use sites geometry reads.</summary>
+    public const string BlockDocument = $"{Records}/daggerfall.blocks.json";
+
+    /// <summary>The importer records nothing at runtime reads: the mesh inventory and the original quest-source selections.</summary>
+    public const string ImportRecords = $"{Records}/daggerfall.import-records.json";
+
+    /// <summary>The classic media group the classic, sky, character and paper-doll media are written into.</summary>
+    public const string ClassicGroup = $"{Staging}/worldrpg";
+
+    /// <summary>The product-wide world media publication every site closure references.</summary>
+    public const string WorldMedia = $"{Staging}/worldrpg/imports/shared";
+
+    /// <summary>The per-block world publication.</summary>
+    public const string WorldBlocks = $"{Staging}/worldrpg/imports/world-blocks";
+
+    /// <summary>The music cue manifest the site closures name their cues from, while they still do.</summary>
+    public const string MusicManifest = $"{MusicPublication}/worldrpg/media/music/manifest.json";
+
     public const string DataContainer = "local/daggerfall-data.rpak";
     public const string MusicContainer = "local/music.rpak";
 
-    /// <summary>The data container's own description, at its content-root-relative path.</summary>
+    /// <summary>Each container's own description, at its container-relative path.</summary>
     public const string DescriptorPath = "worldrpg/data-container.json";
 
     /// <summary>The tracked file that marks the repository root the import works in.</summary>
@@ -105,23 +132,42 @@ internal static class DataContainers
         string[] absent = [.. packs.Select(pack => (string)pack["payload"]!).Where(payload => !File.Exists(Path.Combine(staging, payload)))];
         if (absent.Length != 0)
             throw new InvalidOperationException($"The staging tree lacks the derived payloads [{string.Join(", ", absent)}]; run the import before packing.");
+        Describe(staging, packs);
+        Console.WriteLine($"data container: importer revision {ImporterBuild.Revision}, {packs.Count} derived content packs described");
+    }
+
+    /// <summary>
+    /// Writes the music container's description beside its tracks: the importer revision that staged them, and
+    /// no content packs, since the tracks are read by name rather than through a pack. A music container packed
+    /// from recordings by other means carries only the tracks and is read the same way.
+    /// </summary>
+    internal static void WriteMusicDescriptor(string tracks)
+    {
+        Describe(tracks, []);
+        Console.WriteLine($"music container: importer revision {ImporterBuild.Revision} described");
+    }
+
+    private static void Describe(string root, IReadOnlyList<JsonObject> packs)
+    {
         JsonObject descriptor = new()
         {
             ["kind"] = DescriptorKind,
             ["importerRevision"] = ImporterBuild.Revision,
             ["contentPacks"] = new JsonArray([.. packs]),
         };
-        PayloadFiles.WriteFile(Path.Combine(staging, ImportLayout.DescriptorPath),
+        PayloadFiles.WriteFile(Path.Combine(root, ImportLayout.DescriptorPath),
             JsonSerializer.SerializeToUtf8Bytes(descriptor, new JsonSerializerOptions { WriteIndented = true }));
-        Console.WriteLine($"data container: importer revision {ImporterBuild.Revision}, {packs.Count} derived content packs described");
     }
 
     /// <summary>
-    /// Packs the data container from the staging tree, and the music container from its tracks when they were
-    /// staged, then opens each through the Engine and checks that it carries exactly the staged files.
+    /// Describes and packs the data container from the staging tree, and the music container from its tracks
+    /// when they were staged, then opens each through the Engine and checks that it carries exactly the staged
+    /// files.
     /// </summary>
     internal static void Pack(bool compress)
     {
+        WriteDescriptor(ImportLayout.Staging);
+        if (Directory.Exists(ImportLayout.MusicTracks)) WriteMusicDescriptor(ImportLayout.MusicTracks);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
         PackOne(host, ImportLayout.Staging, ImportLayout.DataContainer, compress);
         if (Directory.Exists(ImportLayout.MusicTracks))

@@ -18,7 +18,8 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class WorldBlocksCommand
 {
     public static ToolCommand Command { get; } = new("world-blocks",
-        [Options.Arena2, Options.Pack, SiteInputs.Shared, SiteInputs.Output, Options.Inventory, SiteInputs.SourceManifest, CommandOption.Optional("--variants", "FILE")], Run);
+        [Options.Arena2, Options.Pack, SiteInputs.Shared, CommandOption.Staged(SiteInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldBlocks), Options.Inventory,
+            CommandOption.Staged(SiteInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-blocks.sources.json"), CommandOption.Optional("--variants", "FILE")], Run);
 
     private static int Run(CommandArguments args)
     {

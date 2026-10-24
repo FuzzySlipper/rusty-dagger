@@ -324,8 +324,10 @@ product names) and `local/import/records/`, describes the run in `worldrpg/data-
 importer revision, a hash over the importer's sources and `data/`, and the derived packs' descriptors), and
 packs `local/daggerfall-data.rpak` from the staging tree and, with music, `local/music.rpak`: one
 recording per track at its root, named `<track>.<ext>` by the classic track identifier, in any format the
-Engine's audio opens. `--only STEP,...` reruns named steps over the existing staging tree and repacks, and
-`pack` repacks after a command was run by hand. Until the product opens the containers, the script adds
+Engine's audio opens, beside its own `worldrpg/data-container.json` (the importer revision, no packs).
+`--only STEP,...` reruns named steps over the existing staging tree and repacks. Each command's staging and
+record options default to the paths the import gives them, so a command run alone from the repository root
+(`locations --arena2 local/arena2 --update`) updates the staging tree, and `pack` repacks it. Until the product opens the containers, the script adds
 `--publish-loose`, which copies the staged run into `content/` and `import-records/`. Two runs at the same
 importer source and FFmpeg build write
 identical bytes. A clone that has not run it builds and runs the content-free suites, but staging

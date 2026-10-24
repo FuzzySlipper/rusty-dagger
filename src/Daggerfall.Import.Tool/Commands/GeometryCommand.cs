@@ -18,7 +18,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class GeometryCommand
 {
     public static ToolCommand Command { get; } = new("geometry",
-        [Options.Arena2, CommandOption.Required("--blocks", "BLOCKS.json"), Options.Records, Options.Inventory, Options.Update], Run);
+        [Options.Arena2, CommandOption.Staged("--blocks", "BLOCKS.json", ImportLayout.BlockDocument), Options.Records, Options.Inventory, Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {

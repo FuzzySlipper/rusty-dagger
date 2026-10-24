@@ -79,7 +79,7 @@ internal static class Program
 
             return command.Invoke(args);
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or FormatException or JsonException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or FormatException or JsonException or Rusty.Engine.EngineCallException)
         {
             Console.Error.WriteLine($"daggerfall-import-tool: {exception.Message}");
             return 1;

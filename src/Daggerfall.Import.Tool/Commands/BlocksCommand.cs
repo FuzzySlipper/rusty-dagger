@@ -16,7 +16,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class BlocksCommand
 {
     public static ToolCommand Command { get; } = new("blocks",
-        [Options.Arena2, CommandOption.Required("--document", "BLOCKS.json"), CommandOption.Required("--buildings", "PAYLOAD.json"), Options.Inventory, Options.Update], Run);
+        [Options.Arena2, CommandOption.Staged("--document", "BLOCKS.json", ImportLayout.BlockDocument), CommandOption.Staged("--buildings", "PAYLOAD.json", ImportLayout.BuildingsPayload), Options.Inventory, Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {

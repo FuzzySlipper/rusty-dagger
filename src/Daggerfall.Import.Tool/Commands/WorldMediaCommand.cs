@@ -16,8 +16,8 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class WorldMediaCommand
 {
     public static ToolCommand Command { get; } = new("world-media",
-        [Options.Arena2, SiteInputs.Output, AuthoredUi.Manifest, AuthoredUi.Originals, Options.Inventory, Options.Pack,
-            SiteInputs.SourceManifest, SiteInputs.MusicManifest, SiteInputs.ClassicGroup], Run);
+        [Options.Arena2, CommandOption.Staged(SiteInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldMedia), AuthoredUi.Manifest, AuthoredUi.Originals, Options.Inventory, Options.Pack,
+            CommandOption.Staged(SiteInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-media.sources.json"), SiteInputs.MusicManifest, SiteInputs.ClassicGroup], Run);
 
     private static int Run(CommandArguments args)
     {

@@ -10,7 +10,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class ClassicQuestCorporaCommand
 {
     public static ToolCommand Command { get; } = new("classic-quest-corpora",
-        [Options.Pack, Options.Records, CommandOption.Required("--out", "DIRECTORY")], Run);
+        [Options.Pack, Options.Records, CommandOption.Staged("--out", "DIRECTORY", ImportLayout.Payloads)], Run);
 
     private static int Run(CommandArguments args)
     {
