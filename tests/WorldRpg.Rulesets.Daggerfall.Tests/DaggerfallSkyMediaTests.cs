@@ -15,7 +15,7 @@ public sealed class DaggerfallSkyMediaTests
     public void Selection_uses_complete_climate_weather_season_night_and_mirrored_time_resources()
     {
         var fixture = Fixture();
-        var media = DaggerfallSkyMedia.Read(fixture.Content);
+        var media = DaggerfallSkyMedia.Read(new DaggerfallData(fixture.Content));
         var summer = new DaggerfallCalendar(405,5,0,12,0,0);
         Assert.Equal("sky-2-32", media.Select(226, summer, DaggerfallWeatherKind.Sunny, 0).First);
         Assert.Equal("sky-13-32", media.Select(224, summer, DaggerfallWeatherKind.Thunder, 1).First);
@@ -38,13 +38,13 @@ public sealed class DaggerfallSkyMediaTests
         var fixture = Fixture();
         var node = JsonNode.Parse(fixture.Manifest)!;
         node["selections"]!.AsArray().RemoveAt(0);
-        Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(fixture.WithManifest(node)));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(new DaggerfallData(fixture.WithManifest(node))));
         node = JsonNode.Parse(fixture.Manifest)!;
         node["nightResources"]!.AsArray().RemoveAt(0);
-        Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(fixture.WithManifest(node)));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(new DaggerfallData(fixture.WithManifest(node))));
         node = JsonNode.Parse(fixture.Manifest)!;
         node["resources"]![0]!["contentHash"] = new string('0',64);
-        Assert.Contains("digest", Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(fixture.WithManifest(node))).Message);
+        Assert.Contains("digest", Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(new DaggerfallData(fixture.WithManifest(node)))).Message);
     }
 
     internal static SkyFixture Fixture()

@@ -57,12 +57,12 @@ public sealed class DaggerfallDungeonActionModelContentTests
         [
             new ProductContentFile(Encoding.UTF8.GetBytes(visualPath), visual),
         ];
-        AdmittedFiles files = AdmittedFiles.From(new ProductContent(contentFiles));
+        AdmittedFiles files = AdmittedFiles.From(new DaggerfallData(new ProductContent(contentFiles)));
         Dictionary<string, ContentSha256> artifacts = new(StringComparer.Ordinal) { [visualPath] = hash };
         NormalizedMaterial[] materials = [new(7, "worldrpg/materials/stone.png", hash, "material/stone")];
         DaggerfallContentDiagnostics diagnostics = new();
         // The fixture closure carries its own visual; content without the world media publication reads as none.
-        using DaggerfallWorldMedia product = DaggerfallWorldMedia.Read(new ProductContent(contentFiles));
+        using DaggerfallWorldMedia product = DaggerfallWorldMedia.Read(new DaggerfallData(new ProductContent(contentFiles)));
 
         DaggerfallDungeonActionModelDefinition model = Assert.Single(DaggerfallSiteContent.ReadNormalizedActionModels(
             normalized,
@@ -94,7 +94,7 @@ public sealed class DaggerfallDungeonActionModelContentTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = GeneratedContent(root);
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(content,
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(content),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
         using JsonDocument normalized = JsonDocument.Parse(File.ReadAllBytes(
             Path.Combine(root, "content/worldrpg/imports/privateers-hold/normalized.json")));

@@ -13,18 +13,18 @@ internal sealed class DaggerfallSkyMedia
     internal const string BundleId = "daggerfall.sky";
     internal const string LogicalRoot = "worldrpg/media/sky/resources";
     internal const string ManifestPath = "worldrpg/media/sky/manifest.json";
-    private readonly ProductContent _content;
+    private readonly DaggerfallData _content;
     private readonly IReadOnlyDictionary<string, DaggerfallSkyResource> _resources;
     private readonly IReadOnlyDictionary<(int Sky, int Frame), string> _frames;
     private readonly IReadOnlyDictionary<int, string> _nights;
     private readonly IReadOnlyDictionary<bool, string> _particles;
     private readonly float[][] _curve;
 
-    private DaggerfallSkyMedia(ProductContent content, Dictionary<string, DaggerfallSkyResource> resources,
+    private DaggerfallSkyMedia(DaggerfallData content, Dictionary<string, DaggerfallSkyResource> resources,
         Dictionary<(int, int), string> frames, Dictionary<int, string> nights, Dictionary<bool, string> particles, float[][] curve)
     { _content = content; _resources = resources; _frames = frames; _nights = nights; _particles = particles; _curve = curve; }
 
-    internal static DaggerfallSkyMedia Read(ProductContent content)
+    internal static DaggerfallSkyMedia Read(DaggerfallData content)
     {
         using var document = JsonDocument.Parse(content.ReadBytes(ManifestPath));
         JsonElement root = document.RootElement;
@@ -78,7 +78,7 @@ internal sealed class DaggerfallSkyMedia
             || curve.Any(knot => knot.Any(value => !float.IsFinite(value)) || knot[0] is < 0 or > 1 || knot[1] is < 0 or > 1)
             || curve.Zip(curve.Skip(1)).Any(pair => pair.First[0] >= pair.Second[0]))
             throw new InvalidOperationException("Sky publication does not close over all climate frames, night backgrounds, precipitation sprites and frame curve.");
-        using var bundle = content.OpenBundle(BundleId);
+        using DaggerfallDataRoot bundle = content.Open(LogicalRoot);
         Dictionary<string, ContentReferenceInfo> entries = bundle.Entries.ToArray().ToDictionary(entry => entry.Path, StringComparer.Ordinal);
         foreach (var resource in resources.Values)
             if (!entries.TryGetValue(resource.RelativePath, out var entry) || entry.Sha256 != resource.Hash || entry.ByteLength != resource.ByteLength)
@@ -132,7 +132,7 @@ internal sealed class DaggerfallSkyMedia
     internal RenderResource Open(IGraphicsService graphics, string id)
     {
         DaggerfallSkyResource resource = _resources[id];
-        using var bundle = _content.OpenBundle(BundleId);
+        using DaggerfallDataRoot bundle = _content.Open(LogicalRoot);
         using var reference = bundle.OpenReference(resource.RelativePath);
         return graphics.OpenResourceFromContent(new(reference, TextureFilter.Linear, TextureWrap.Clamp, TextureColorSpace.Srgb)).Handle;
     }

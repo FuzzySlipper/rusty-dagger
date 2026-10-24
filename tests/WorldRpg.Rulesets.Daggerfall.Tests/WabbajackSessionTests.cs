@@ -143,7 +143,7 @@ public sealed class WabbajackSessionTests
         f.Session.ResolveExplicitMelee(new(1, dynamic, 1, 10000, .125));
         var first = f.Session.State.Actors.Get(f.Target).Pose;
         var second = f.Session.State.Actors.Get(dynamic).Pose;
-        var destination = DaggerfallSiteContent.Read(FullContent(TestData.RepositoryRoot),
+        var destination = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)),
             File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
         var profiles = new DaggerfallSiteProfiles([f.Inputs, destination]);
         f.Session.AdmitSiteProfiles(profiles);
@@ -205,7 +205,7 @@ public sealed class WabbajackSessionTests
         {
             List<string> releases = [];
             ContentFake content = new(releases); PopulateContent(content, Inputs);
-            var castle = DaggerfallSiteContent.Read(FullContent(TestData.RepositoryRoot),
+            var castle = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)),
                 File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
             PopulateContent(content, castle);
             if (additional is not null) PopulateContent(content, additional);

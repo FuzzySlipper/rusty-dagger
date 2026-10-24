@@ -29,8 +29,8 @@ internal sealed record DaggerfallSessionComposition(
 
     internal DaggerfallSkyMedia? Sky { get; init; }
 
-    /// <summary>The published content the opening cinematics play from; null composes no cinematics.</summary>
-    internal ProductContent? CinematicContent { get; init; }
+    /// <summary>The derived content the composition reads; the cinematics play from it, and null composes none.</summary>
+    internal DaggerfallData? Data { get; init; }
 
     /// <summary>Whether admitted cinematic video plays; a composition choice, never inferred from absent content.</summary>
     internal bool VideosEnabled { get; init; } = true;

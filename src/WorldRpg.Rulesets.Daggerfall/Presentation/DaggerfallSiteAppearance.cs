@@ -236,13 +236,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 visual.MediaId == "visual.missile.arrow");
             if (arrow is not null)
             {
-                arrowAppearance = appearance.CreateStaticMeshFromContent(
-                    new StaticMeshContentAppearanceRequest(arrow.Path, worldAppearance.Tint));
+                arrowAppearance = appearance.CreateStaticMesh(content, arrow.Path, arrow.Sha256, worldAppearance.Tint);
                 List<MeshMaterialBinding> bindings = [];
                 foreach (DaggerfallMissileTextureBinding texture in arrow.Textures)
                 {
-                    RenderResourceInfo resource = appearance.OpenResource(new RenderResourceRequest(
-                        texture.TexturePath, TextureFilter.Nearest, TextureWrap.Repeat));
+                    RenderResourceInfo resource = appearance.OpenTexture(content, texture.TexturePath, texture.TextureSha256, TextureFilter.Nearest, TextureWrap.Repeat);
                     ownedResources.Add(resource.Handle);
                     Material material = appearance.CreateMaterial(new MaterialRequest(
                         new Color(1F, 1F, 1F, 1F), resource.Handle, 1F,
@@ -264,7 +262,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             groundContainerSprite = inputs.GroundContainerSprite;
             if (groundContainerSprite is { } groundSprite)
             {
-                RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(groundSprite.TexturePath));
+                RenderResourceInfo texture = appearance.OpenTexture(content, groundSprite.TexturePath, groundSprite.TextureSha256);
                 ownedResources.Add(texture.Handle);
                 SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(groundSprite.AtlasWidth, groundSprite.AtlasHeight,
                     groundSprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
@@ -278,7 +276,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 // this appearance and released with it rather than discarded after the emit. Callers
                 // that explicitly supply eager audio retain that composition; the composed product
                 // supplies its bundle owner and opens a clip only when the matching cue is emitted.
-                if (audio is not null && audioBundle is null) audioClips.Add(clip.Id, audio.OpenClip(new AudioClipRequest(clip.Path)));
+                if (audio is not null && audioBundle is null) audioClips.Add(clip.Id, audio.OpenClip(content, clip.Path, clip.Sha256));
             }
         }
         catch { Dispose(); throw; }
@@ -885,8 +883,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             throw new ArgumentException("Door visuals require the selected door runtime.", nameof(doors));
         foreach (NormalizedMaterial material in inputs.Materials)
         {
-            RenderResourceInfo texture = appearance.OpenResource(
-                new RenderResourceRequest(material.TexturePath, TextureFilter.Nearest, TextureWrap.Repeat));
+            RenderResourceInfo texture = appearance.OpenTexture(content, material.TexturePath, material.TextureSha256, TextureFilter.Nearest, TextureWrap.Repeat);
             locationResources.Add(texture.Handle);
             Material created = appearance.CreateMaterial(new MaterialRequest(
                 new Color(1F, 1F, 1F, 1F), texture.Handle, 1F,
@@ -899,7 +896,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 RenderResource Variant(ContentArtifact? variant)
                 {
                     if (variant is null) return texture.Handle;
-                    var resource = appearance.OpenResource(new(variant.Path, TextureFilter.Nearest, TextureWrap.Repeat));
+                    var resource = appearance.OpenTexture(content, variant.Path, variant.Sha256, TextureFilter.Nearest, TextureWrap.Repeat);
                     locationResources.Add(resource.Handle);
                     return resource.Handle;
                 }
@@ -911,7 +908,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         for (int index = 0; index < inputs.Geometry.Meshes.Count; index++)
         {
             DaggerfallSiteMesh mesh = inputs.Geometry.Meshes[index];
-            Appearance created = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(mesh.Path, worldAppearance.Tint));
+            Appearance created = appearance.CreateStaticMesh(content, mesh.Path, mesh.Sha256, worldAppearance.Tint);
             world.Add((created, mesh.Pose, index));
             // A published closure's combined mesh is drawn with every material at its own slot; an assembled
             // block model binds each of its slots to the profile slot its (climate-swapped) texture has.
@@ -930,8 +927,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (door.Visual is null && inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior) continue;
             DaggerfallDoorVisual visual = door.Visual
                 ?? throw new InvalidOperationException($"Selected RDB door '{door.Id}' has no normalized visual.");
-            Appearance created = appearance.CreateStaticMeshFromContent(
-                new StaticMeshContentAppearanceRequest(visual.Path, worldAppearance.Tint));
+            Appearance created = appearance.CreateStaticMesh(content, visual.Path, visual.Sha256, worldAppearance.Tint);
             appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, visual.Materials
                 .Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
                     ? new MeshMaterialBinding(binding.MeshSlot, material)
@@ -947,8 +943,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (dungeonMotion is null) return;
         foreach ((DaggerfallDungeonActionModelDefinition model, _) in dungeonMotion.Visuals)
         {
-            Appearance created = appearance.CreateStaticMeshFromContent(
-                new StaticMeshContentAppearanceRequest(model.Visual.Path, worldAppearance.Tint));
+            Appearance created = appearance.CreateStaticMesh(content, model.Visual.Path, model.Visual.Sha256, worldAppearance.Tint);
             try
             {
                 appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, model.Visual.Materials
@@ -971,7 +966,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// <summary>A static mesh appearance drawing a visual with the location's materials at its slots.</summary>
     private Appearance StaticVisual(DaggerfallDoorVisual visual, string owner)
     {
-        Appearance created = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(visual.Path, worldAppearance.Tint));
+        Appearance created = appearance.CreateStaticMesh(content, visual.Path, visual.Sha256, worldAppearance.Tint);
         try
         {
             appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, visual.Materials
@@ -1049,7 +1044,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
 
     private void AdmitClassicTexture(ContentArtifact artifact)
     {
-        RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(artifact.Path));
+        RenderResourceInfo texture = appearance.OpenTexture(content, artifact.Path, artifact.Sha256);
         ownedResources.Add(texture.Handle);
         if (!classicTextures.TryAdd(artifact.Path, texture))
             throw new InvalidOperationException($"Classic presentation repeats normalized texture path '{artifact.Path}'.");
@@ -1133,7 +1128,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
 
     private (SpriteAtlas Atlas, Appearance Appearance) CreateSprite(IContentService content, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null)
     {
-        RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(sprite.TexturePath));
+        RenderResourceInfo texture = appearance.OpenTexture(content, sprite.TexturePath, sprite.TextureSha256);
         ownedResources.Add(texture.Handle);
         SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth, sprite.AtlasHeight,
             sprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height, frame.DisplaySize)).ToArray());

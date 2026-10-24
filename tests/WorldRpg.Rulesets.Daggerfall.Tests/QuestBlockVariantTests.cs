@@ -95,9 +95,9 @@ public sealed class QuestBlockVariantTests
     {
         string root = TestData.RepositoryRoot;
         ProductContent mediaContent = FullContent(root);
-        var media = DaggerfallWorldMedia.Read(mediaContent);
-        var product = new Lazy<DaggerfallProductMedia>(() => DaggerfallSiteContent.ReadProductMedia(mediaContent, media, definitions));
-        var meshes = new Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>>(() => DaggerfallLocationAssembly.ReadMeshIndex(mediaContent, media));
+        var media = DaggerfallWorldMedia.Read(new DaggerfallData(mediaContent));
+        var product = new Lazy<DaggerfallProductMedia>(() => DaggerfallSiteContent.ReadProductMedia(new DaggerfallData(mediaContent), media, definitions));
+        var meshes = new Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>>(() => DaggerfallLocationAssembly.ReadMeshIndex(new DaggerfallData(mediaContent), media));
         string directory = Path.Combine(root, "content", DaggerfallWorldBlocks.Root);
         var index = JsonNode.Parse(File.ReadAllBytes(Path.Combine(directory, "blocks.json")))!.AsObject();
         var variants = new JsonArray();
@@ -125,7 +125,7 @@ public sealed class QuestBlockVariantTests
             }
         index["variants"] = variants;
         service.Add(DaggerfallWorldBlocks.BundleId, "blocks.json", Encoding.UTF8.GetBytes(index.ToJsonString()));
-        var assembly = new DaggerfallLocationAssembly(definitions, new DaggerfallWorldBlocks(new ProductContent(Array.Empty<ProductContentFile>(), service)), () => product.Value, () => meshes.Value);
+        var assembly = new DaggerfallLocationAssembly(definitions, new DaggerfallWorldBlocks(new DaggerfallData(new ProductContent(Array.Empty<ProductContentFile>(), service))), () => product.Value, () => meshes.Value);
         return DaggerfallSiteProfiles.Resolve(authored.Select(DaggerfallAuthoredSite.Of), assembly, null);
     }
 

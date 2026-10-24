@@ -264,7 +264,7 @@ public sealed class DaggerfallHitConsequencesTests
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         var hold = TestSessions.ReadInputs(root);
-        var castle = DaggerfallSiteContent.Read(TestSessions.FullContent(root),
+        var castle = DaggerfallSiteContent.Read(new DaggerfallData(TestSessions.FullContent(root)),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);

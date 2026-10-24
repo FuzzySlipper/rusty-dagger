@@ -81,7 +81,7 @@ public sealed class DaggerfallWeatherSessionTests
         var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
         var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
         var mediaFixture = DaggerfallSkyMediaTests.Fixture();
-        var media = DaggerfallSkyMedia.Read(mediaFixture.Content);
+        var media = DaggerfallSkyMedia.Read(new DaggerfallData(mediaFixture.Content));
         var rainOdds = Enumerable.Range(0,24).Select(_ => new[]{0,0,0,0,100,0,0}).ToArray();
         var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = rainOdds}};
         var composition = new DaggerfallSessionComposition(definitions, exterior, tuning)

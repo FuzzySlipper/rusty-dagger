@@ -20,7 +20,7 @@ public sealed class DaggerfallWorldBlocksTests
     {
         ProductContent content = StagedContent(TestData.RepositoryRoot, out BundleContentFake bundles);
         Assert.False(content.TryReadFile($"{DaggerfallWorldBlocks.Root}/{DaggerfallWorldBlocks.IndexPath}", out _));
-        DaggerfallWorldBlocks blocks = new(content);
+        DaggerfallWorldBlocks blocks = new(new DaggerfallData(content));
         Assert.False(blocks.IndexRead);
         Assert.Empty(bundles.OpenedBundles);
 
@@ -61,7 +61,7 @@ public sealed class DaggerfallWorldBlocksTests
         Assert.NotEmpty(rdb.RandomEnemies);
 
         // While the bundle is open, a block's collision artifact resolves by the content path and digest it states.
-        using (ProductContentBundle open = blocks.Open())
+        using (DaggerfallDataRoot open = blocks.Open())
         using (ContentReference reference = bundles.ResolveReference(new ContentResolveRequest(armorer.Spatial.ContentPath, armorer.Spatial.Sha256)))
             Assert.Equal(armorer.Spatial.Sha256, bundles.ReadReferenceInfo(reference).Span[0].Sha256);
     }
@@ -77,7 +77,7 @@ public sealed class DaggerfallWorldBlocksTests
         service.Add(DaggerfallWorldBlocks.BundleId, "rdb/b0000000-rdb.json", Encoding.UTF8.GetBytes("""
             {"key":"rdb/b0000000-rdb","kind":"rdb","sourceKey":"B0000000.RDB","buildingIndex":null,"models":[{"id":"model/b0000000-rdb/0"}],"doors":[],"buildings":[],"randomEnemies":[]}
             """));
-        DaggerfallWorldBlocks blocks = new(new ProductContent(Array.Empty<ProductContentFile>(), service));
+        DaggerfallWorldBlocks blocks = new(new DaggerfallData(new ProductContent(Array.Empty<ProductContentFile>(), service)));
 
         DaggerfallContentException missing = Assert.Throws<DaggerfallContentException>(() =>
             blocks.Read([new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.Rdb, "B0000099.RDB")]));

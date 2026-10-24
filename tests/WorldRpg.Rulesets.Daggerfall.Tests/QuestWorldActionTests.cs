@@ -139,7 +139,7 @@ public sealed class QuestWorldActionTests
         var original = ReadInputs(root);
         payload["world"]!["variant"] = "authored";
         payload["world"]!["variantOf"] = original.ProfileKey.LogicalId;
-        var variant = DaggerfallSiteContent.Read(ImportContent(root), System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions);
+        var variant = DaggerfallSiteContent.Read(new DaggerfallData(ImportContent(root)), System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions);
         var catalog = new DaggerfallSiteProfiles([original, variant]);
         var session = catalog.ForSession([new(original.Site!.Value.Region, original.Site.Value.Index, "authored")]);
         Assert.Equal("authored", session.Require(original.ProfileKey).VariantName);

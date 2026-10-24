@@ -70,7 +70,7 @@ internal sealed class ContentFake : IContentService
         if (!values.TryGetValue(request.Path, out ContentSha256 known) || known != request.Sha256) throw new InvalidOperationException("Unexpected content reference.");
         ulong value = nextHandle++;
         references.Add(value, new KeyValuePair<string, ContentSha256>(request.Path, known));
-        return new ContentReference(new ContentReferenceHandle(value), () => releases.Add("content"));
+        return TestContentReferences.Named(new ContentReference(new ContentReferenceHandle(value), () => releases.Add("content")), request.Path);
     }
 
     /// <summary>How many admitted reads this fake served for one path, which shows how it was chunked.</summary>
@@ -134,8 +134,10 @@ internal sealed class BundleContentFake : IContentService
     {
         internal byte[] Read() => bytes ?? TestContentFiles.ReadUncached(diskPath!);
 
+        private (ContentSha256 Digest, ulong Length)? measured;
+
         internal (ContentSha256 Digest, ulong Length) Identity() => bytes is not null
-            ? (Digest(bytes), checked((ulong)bytes.Length))
+            ? measured ??= (Digest(bytes), checked((ulong)bytes.Length))
             : DiskDigests.GetOrAdd(diskPath!, path =>
             {
                 using FileStream stream = File.OpenRead(path);
@@ -149,6 +151,10 @@ internal sealed class BundleContentFake : IContentService
     }
 
     private readonly Dictionary<string, Dictionary<string, BundleFile>> files = new(StringComparer.Ordinal);
+    /// <summary>The eager snapshot's files, which resolve by content path and digest as the Engine's loose catalog does.</summary>
+    private readonly Dictionary<string, BundleFile> eager = new(StringComparer.Ordinal);
+    /// <summary>The bundle name the eager snapshot's references carry; no declared bundle has an empty id.</summary>
+    private const string EagerSnapshot = "";
     private readonly Dictionary<string, string> roots = new(StringComparer.Ordinal);
     private readonly Dictionary<ulong, string> openedBundles = [];
     private readonly Dictionary<ulong, (string Bundle, string Path)> references = [];
@@ -164,6 +170,9 @@ internal sealed class BundleContentFake : IContentService
     internal List<(string Bundle, string Path)> ReadFiles { get; } = [];
 
     internal void Add(string bundle, string path, byte[] bytes) => Files(bundle).Add(path, new(bytes, null));
+
+    /// <summary>Declares a file of the eager snapshot, so a presentation owner can resolve it by its path and digest.</summary>
+    internal void AddEager(string path, byte[] bytes) => eager[path] = new(bytes, null);
 
     /// <summary>Declares a bundle file read from the checkout only when the product uses it.</summary>
     internal void AddFile(string bundle, string path, string diskPath) => Files(bundle).Add(path, new(null, diskPath));
@@ -215,8 +224,11 @@ internal sealed class BundleContentFake : IContentService
     {
         ulong handle = nextHandle++;
         references.Add(handle, (bundle, path));
-        return new(new ContentReferenceHandle(handle), () => references.Remove(handle));
+        string contentPath = bundle == EagerSnapshot ? path : roots.TryGetValue(bundle, out string? root) ? $"{root}/{path}" : path;
+        return TestContentReferences.Named(new(new ContentReferenceHandle(handle), () => references.Remove(handle)), contentPath);
     }
+
+    private BundleFile FileAt(string bundle, string path) => bundle == EagerSnapshot ? eager[path] : files[bundle][path];
 
     public ContentReference AdmitReference(ContentAdmissionRequest request) =>
         throw new NotSupportedException($"This fake serves bundle files, so generated reference '{request.Path}' cannot be admitted.");
@@ -226,6 +238,12 @@ internal sealed class BundleContentFake : IContentService
     /// <summary>Resolves a content path inside an open bundle with a known root, checking its digest as the Engine does.</summary>
     public ContentReference ResolveReference(ContentResolveRequest request)
     {
+        if (eager.TryGetValue(request.Path, out BundleFile? snapshot))
+        {
+            if (snapshot.Identity().Digest != request.Sha256) throw new InvalidOperationException($"Test content file '{request.Path}' has another digest.");
+            return Reference(EagerSnapshot, request.Path);
+        }
+
         foreach (string bundle in openedBundles.Values.Distinct(StringComparer.Ordinal))
         {
             if (!roots.TryGetValue(bundle, out string? root) || !request.Path.StartsWith(root + "/", StringComparison.Ordinal)) continue;
@@ -242,15 +260,15 @@ internal sealed class BundleContentFake : IContentService
     public ReadOnlyMemory<ContentReferenceInfo> ReadReferenceInfo(ContentReference reference)
     {
         (string bundle, string path) = references[reference.Handle.Value];
-        (ContentSha256 digest, ulong length) = files[bundle][path].Identity();
+        (ContentSha256 digest, ulong length) = FileAt(bundle, path).Identity();
         return new[] { new ContentReferenceInfo(path, digest, length) };
     }
 
     public ReadOnlyMemory<byte> ReadBytes(ContentReadBytesRequest request)
     {
         (string bundle, string path) = references[request.Reference.Handle.Value];
-        ReadFiles.Add((bundle, path));
-        byte[] body = files[bundle][path].Read();
+        if (bundle != EagerSnapshot) ReadFiles.Add((bundle, path));
+        byte[] body = FileAt(bundle, path).Read();
         if (request.Offset > (ulong)body.Length) throw new InvalidOperationException($"Read of '{path}' starts past its bytes.");
         int available = checked((int)Math.Min(request.MaxBytes, (ulong)body.Length - request.Offset));
         return body.AsMemory(checked((int)request.Offset), available);

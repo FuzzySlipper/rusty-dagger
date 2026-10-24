@@ -584,7 +584,7 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile[] sites = [.. resolved.ContentPacks
             .Where(pack => pack.Role == new ContentPackRoleId(SiteRole))
-            .Select(pack => DaggerfallSiteContent.Read(content, pack.Payload, definitions))];
+            .Select(pack => DaggerfallSiteContent.Read(new DaggerfallData(content), pack.Payload, definitions))];
         DaggerfallSiteProfiles profiles = new(sites);
         DaggerfallSiteProfile population = sites
             .Where(profile => profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && profile.Population.Count > 0)

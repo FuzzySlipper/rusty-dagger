@@ -87,7 +87,7 @@ internal sealed class DaggerfallWorldMedia : IDisposable
     /// as an empty instance, so a site that carries everything it names still reads; one that references the
     /// publication then reports each missing reference by name.
     /// </summary>
-    internal static DaggerfallWorldMedia Read(ProductContent content)
+    internal static DaggerfallWorldMedia Read(DaggerfallData content)
     {
         ArgumentNullException.ThrowIfNull(content);
         AdmittedFiles files = AdmittedFiles.From(content);

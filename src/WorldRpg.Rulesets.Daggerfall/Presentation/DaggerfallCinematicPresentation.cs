@@ -6,12 +6,12 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed record DaggerfallCinematicResult(string Source, VideoRealizationFactKind Kind, string? Failure);
 
 /// <summary>Ruleset narrative media selection over the Engine-owned playback and content lifetime.</summary>
-internal sealed class DaggerfallCinematicPresentation(IEngineContext engine, ProductContent content,
+internal sealed class DaggerfallCinematicPresentation(IEngineContext engine, DaggerfallData content,
     DaggerfallCinematicSet catalog) : IDisposable
 {
     internal const string BundleId = "daggerfall.cinematics";
     /// <summary>The logical content root the Host stages as this bundle; artifact paths name files below it.</summary>
-    internal const string Root = "worldrpg/media/cinematics/";
+    internal const string Root = "worldrpg/media/cinematics";
     private (string Source, VideoPlaybackHandle Handle)? _active;
     private ulong _lastFact;
     private ulong _lostFacts;
@@ -26,8 +26,8 @@ internal sealed class DaggerfallCinematicPresentation(IEngineContext engine, Pro
             ?? throw new InvalidOperationException($"Cinematic '{sourceFile}' has source provenance but no accepted packaged artifact.");
         Stop();
         _lostFacts = engine.Video.ReadRealization().EvictedFactCount;
-        using ProductContentBundle bundle = content.OpenBundle(BundleId);
-        using ContentReference reference = bundle.OpenReference(artifact.Path[Root.Length..]);
+        using DaggerfallDataRoot bundle = content.Open(Root);
+        using ContentReference reference = bundle.OpenReference(artifact.Path[(Root.Length + 1)..]);
         VideoPlaybackHandle handle = engine.Video.PlayFromContent(new PlayVideoFromContentRequest(reference));
         _active = (source.FileName, handle);
         LastResult = null;

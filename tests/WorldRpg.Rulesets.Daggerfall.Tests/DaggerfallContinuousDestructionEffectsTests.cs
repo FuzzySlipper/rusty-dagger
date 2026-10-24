@@ -182,7 +182,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     public void A_player_payload_survives_unloading_its_casters_site_and_resumes_its_saved_round(int subtype,string name,int perRound)
     {
         var source=ReadInputs(TestData.RepositoryRoot);
-        var destination=DaggerfallSiteContent.Read(FullContent(TestData.RepositoryRoot),
+        var destination=DaggerfallSiteContent.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)),
             File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot,"content/worldrpg/payloads/daggerfall.castle-necromoghan.json")),TestPayload.Definitions);
         var composition=new DaggerfallSessionComposition(TestPayload.Definitions,source,DaggerfallTuning.Defaults)
             {Profiles=new([source,destination])};

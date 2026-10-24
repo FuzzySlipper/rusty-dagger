@@ -15,6 +15,7 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -85,11 +86,11 @@ internal static class TestSessions
     internal static DaggerfallSiteProfile ReadInputs(string root)
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        return DaggerfallSiteContent.Read(ImportContent(root), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        return DaggerfallSiteContent.Read(new DaggerfallData(ImportContent(root)), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
     }
 
     internal static DaggerfallSiteProfile ReadProfile(string root, ProductContent content, DaggerfallDefinitions definitions, string payload) =>
-        DaggerfallSiteContent.Read(content, TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads", payload)), definitions);
+        DaggerfallSiteContent.Read(new DaggerfallData(content), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads", payload)), definitions);
 
     internal static void RegisterCorpseStack(DaggerfallSession session, DaggerfallDefinitions definitions, long actorId, string stackId)
     {
@@ -190,7 +191,9 @@ internal static class TestSessions
             (string Root, string Bundle) bundle = declared.FirstOrDefault(value => relative.StartsWith(value.Root + "/", StringComparison.Ordinal));
             if (string.IsNullOrEmpty(bundle.Root))
             {
-                eager.Add(new ProductContentFile(Encoding.UTF8.GetBytes(relative), TestContentFiles.Read(file)));
+                byte[] bytes = TestContentFiles.Read(file);
+                eager.Add(new ProductContentFile(Encoding.UTF8.GetBytes(relative), bytes));
+                bundles.AddEager(relative, bytes);
                 continue;
             }
 
@@ -317,6 +320,28 @@ internal static class TestSessions
         foreach (NormalizedAudioClip clip in inputs.Audio) content.Add(clip.Path, clip.Sha256);
         foreach (NormalizedClassicEffect effect in inputs.ClassicPresentation.Effects) content.Add(effect.TexturePath, effect.TextureSha256);
         foreach (NormalizedClassicWeapon weapon in inputs.ClassicPresentation.Weapons.Values) content.Add(weapon.TexturePath, weapon.TextureSha256);
+        // The rest the appearance opens by path and digest: missile visuals, doors, action models, city gates,
+        // decorations, the ground pile and the exterior terrain.
+        foreach (DaggerfallMissileVisual visual in inputs.ClassicPresentation.WorldVisuals)
+        {
+            content.Add(visual.Path, visual.Sha256);
+            foreach (DaggerfallMissileTextureBinding texture in visual.Textures) content.Add(texture.TexturePath, texture.TextureSha256);
+        }
+        foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
+            if (door.Visual is { } visual) content.Add(visual.Path, visual.Sha256);
+        foreach (DaggerfallDungeonActionModelDefinition model in inputs.DungeonActionModels) content.Add(model.Visual.Path, model.Visual.Sha256);
+        foreach (DaggerfallCityGateDefinition gate in inputs.CityGates)
+        {
+            content.Add(gate.Open.Visual.Path, gate.Open.Visual.Sha256);
+            content.Add(gate.Closed.Visual.Path, gate.Closed.Visual.Sha256);
+        }
+        foreach (DaggerfallSiteDecoration decoration in inputs.Decorations)
+        {
+            content.Add(decoration.Summer.TexturePath, decoration.Summer.TextureSha256);
+            content.Add(decoration.Winter.TexturePath, decoration.Winter.TextureSha256);
+        }
+        if (inputs.GroundContainerSprite is { } ground) content.Add(ground.TexturePath, ground.TextureSha256);
+        foreach (NormalizedTerrainTexture texture in inputs.TerrainTextures.Values) content.Add(texture.TexturePath, texture.TextureSha256);
         // The session resolves the DOM's art by media identity through the published group inventory,
         // so this fake serves the real group: its generated inventory and every artifact it describes.
         foreach ((string path, byte[] bytes) in PublishedUiArt(TestData.RepositoryRoot)) content.Add(path, bytes);

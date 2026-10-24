@@ -10,8 +10,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaedricSummoningTests
 {
     internal static DaggerfallDisabledQuestSelection Selection() => DaggerfallDisabledQuestSelection.From(
-        DaggerfallClassicQuestCorpusContent.Read(new ProductContent(Array.Empty<ProductContentFile>()),
-            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.quests.disabled.json")), TestPayload.Definitions));
+        DaggerfallClassicQuestCorpusContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.quests.disabled.json")), TestPayload.Definitions));
 
     [Fact]
     public void All_sixteen_published_summoning_quests_are_runnable_and_missing_script_is_unavailable()

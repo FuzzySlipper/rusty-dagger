@@ -136,6 +136,43 @@ public sealed class ArchitectureLawTests
         Assert.All(concreteReferences, name => Assert.EndsWith("Rulesets.cs", name, StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// The Daggerfall ruleset reaches the content the import tool derives without naming where it is staged:
+    /// a reader goes through <c>DaggerfallData</c>, the one owner that knows which roots are Engine bundles,
+    /// and a renderer or audio owner hands the Engine a reference it resolved by path and digest. The
+    /// path-based Engine opens see only the eager snapshot, so a call to one would stop working once the
+    /// content is served from anywhere else.
+    /// </summary>
+    [Fact]
+    public void Daggerfall_ruleset_opens_derived_content_by_reference_and_through_one_owner()
+    {
+        (string Label, string Pattern)[] pathOpens =
+        [
+            ("path-based static mesh", @"\b(Create|Replace)StaticMeshFromContent\s*\("),
+            ("path-based render resource", @"\bRenderResourceRequest\b"),
+            ("path-based audio clip", @"\bAudioClipRequest\b"),
+            ("path-based video", @"\bPlayVideoRequest\b"),
+        ];
+        (string Label, string Pattern, string Owner)[] ownedOpens =
+        [
+            ("bundle opened outside DaggerfallData", @"\.OpenBundle\s*\(", "DaggerfallData.cs"),
+            // The UI art still reads its inventories and images by path through the Engine content service.
+            ("content opened by bare path", @"\bContentOpenRequest\b", "DaggerfallUiArt.cs"),
+        ];
+
+        foreach (string project in new[] { "WorldRpg.Rulesets.Daggerfall", "WorldRpg.Rulesets.Daggerfall.Variants" })
+        {
+            foreach (string file in SourceFiles(SourceDirectory(project)))
+            {
+                string source = ExecutableText(File.ReadAllText(file));
+                AssertNoForbiddenPatterns(file, source, pathOpens);
+                AssertNoForbiddenPatterns(file, source, ownedOpens
+                    .Where(open => !string.Equals(Path.GetFileName(file), open.Owner, StringComparison.Ordinal))
+                    .Select(open => (open.Label, open.Pattern)));
+            }
+        }
+    }
+
     [Fact]
     public void Active_runtime_projects_reject_implicit_runtime_authorities()
     {

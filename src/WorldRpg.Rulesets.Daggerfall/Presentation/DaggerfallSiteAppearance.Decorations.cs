@@ -35,7 +35,7 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         if (!decorationAtlases.TryGetValue(sprite.TexturePath, out var atlas))
         {
-            var resource = appearance.OpenResource(new(sprite.TexturePath));
+            var resource = appearance.OpenTexture(content, sprite.TexturePath, sprite.TextureSha256);
             decorationResources.Add(resource.Handle);
             var frames = SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth, sprite.AtlasHeight,
                 sprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y,

@@ -12,21 +12,21 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>Checks the audio bodies are an Engine bundle while catalog metadata remains eager.</summary>
 public sealed class DaggerfallAudioBundleTests
 {
-    // The bundle a site payload declares for the clips under its publication root.
-    private const string SiteBundle = "daggerfall.privateers-hold-audio";
-    private const string SiteRoot = "worldrpg/imports/privateers-hold/media/audio/clips/";
+    // The product-wide world audio every site's sidecar names, staged as one bundle.
+    private const string SiteBundle = DaggerfallWorldMedia.AudioBundleId;
+    private const string SiteRoot = DaggerfallWorldMedia.AudioRoot + "/";
 
     [Fact]
     public void Opens_the_exact_named_audio_resource_without_admitting_its_body_to_the_snapshot()
     {
         const string mediaId = "swing";
-        const string contentPath = "worldrpg/imports/privateers-hold/media/audio/clips/audio-melee-dagger-swing.wav";
+        const string contentPath = SiteRoot + "audio-melee-dagger-swing.wav";
         const string bundlePath = "audio-melee-dagger-swing.wav";
         BundleContentFake contentService = BundleContentFake.Create(bundlePath);
         ProductContent content = new(
             new ProductContentFile[] { new(Encoding.UTF8.GetBytes("worldrpg/media/classic-media-inventory.json"), "inventory"u8.ToArray()) },
             contentService.Service);
-        DaggerfallAudioBundle audio = new(content, SiteBundle, SiteRoot, [new NormalizedAudioClip(mediaId, contentPath, default)]);
+        DaggerfallAudioBundle audio = new(new DaggerfallData(content), DaggerfallWorldMedia.AudioRoot, [new NormalizedAudioClip(mediaId, contentPath, default)]);
         AudioFake engineAudio = AudioFake.Create();
 
         // Metadata discovery does not make the WAV one of ProductContent's eager files. The pair hands the
@@ -48,7 +48,7 @@ public sealed class DaggerfallAudioBundleTests
     {
         BundleContentFake contentService = BundleContentFake.Create("audio-melee-dagger-swing.wav");
         ProductContent content = new(Array.Empty<ProductContentFile>(), contentService.Service);
-        DaggerfallAudioBundle audio = new(content, SiteBundle, SiteRoot, [new NormalizedAudioClip("audio.melee.dagger.swing", "worldrpg/imports/privateers-hold/media/audio/clips/audio-melee-dagger-swing.wav", default)]);
+        DaggerfallAudioBundle audio = new(new DaggerfallData(content), DaggerfallWorldMedia.AudioRoot, [new NormalizedAudioClip("audio.melee.dagger.swing", SiteRoot + "audio-melee-dagger-swing.wav", default)]);
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => audio.OpenClip(AudioFake.Create().Service, "audio.no-such-clip"));
 
@@ -60,14 +60,14 @@ public sealed class DaggerfallAudioBundleTests
     public void Composed_appearance_defers_audio_until_its_first_cue_then_reuses_and_releases_the_clip()
     {
         const string mediaId = "swing";
-        const string contentPath = "worldrpg/imports/privateers-hold/media/audio/clips/audio-melee-dagger-swing.wav";
+        const string contentPath = SiteRoot + "audio-melee-dagger-swing.wav";
         const string bundlePath = "audio-melee-dagger-swing.wav";
         BundleContentFake contentService = BundleContentFake.Create(bundlePath);
         ProductContent content = new(Array.Empty<ProductContentFile>(), contentService.Service);
-        DaggerfallAudioBundle audioBundle = new(content, SiteBundle, SiteRoot,
+        DaggerfallAudioBundle audioBundle = new(new DaggerfallData(content), DaggerfallWorldMedia.AudioRoot,
         [
             new NormalizedAudioClip(mediaId, contentPath, default),
-            new NormalizedAudioClip("hit1", "worldrpg/imports/privateers-hold/media/audio/clips/audio-melee-hit-1.wav", default),
+            new NormalizedAudioClip("hit1", SiteRoot + "audio-melee-hit-1.wav", default),
         ]);
         AudioFake audio = AudioFake.Create();
         IGraphicsService graphics = GraphicsFake.Create();
@@ -82,7 +82,7 @@ public sealed class DaggerfallAudioBundleTests
             mobileSprites: null,
             [
                 new NormalizedAudioClip(mediaId, contentPath, default),
-                new NormalizedAudioClip("hit1", "worldrpg/imports/privateers-hold/media/audio/clips/audio-melee-hit-1.wav", default),
+                new NormalizedAudioClip("hit1", SiteRoot + "audio-melee-hit-1.wav", default),
             ]);
 
         DaggerfallSiteAppearance appearance = new(contentService.Service, graphics, inputs, audio.Service, audioBundle: audioBundle);
@@ -123,7 +123,7 @@ public sealed class DaggerfallAudioBundleTests
         var clips = new[] { new NormalizedAudioClip(expected, SiteRoot + path, default),
             new NormalizedAudioClip("sound.3", SiteRoot + path, default),
             new NormalizedAudioClip("hit1", SiteRoot + path, default) };
-        var bundle = new DaggerfallAudioBundle(new ProductContent(Array.Empty<ProductContentFile>(), content.Service), SiteBundle, SiteRoot, clips);
+        var bundle = new DaggerfallAudioBundle(new DaggerfallData(new ProductContent(Array.Empty<ProductContentFile>(), content.Service)), DaggerfallWorldMedia.AudioRoot, clips);
         var audio = AudioFake.Create();
         var inputs = new DaggerfallSiteProfile(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
             DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/hold.json", default, 1), new ContentArtifact("mesh/hold.json", default)),
@@ -176,6 +176,8 @@ public sealed class DaggerfallAudioBundleTests
             nameof(IContentService.ReadBundleFiles) => (ReadOnlyMemory<ContentReferenceInfo>)new[] { new ContentReferenceInfo(bundlePath, default, 1) },
             nameof(IContentService.OpenBundleReference) => OpenReference((ContentBundleReferenceRequest)arguments![0]!),
             nameof(IContentService.ReadBytes) => ReadBytes(),
+            // The site's own mesh, which the appearance opens by path and digest; these tests read no body of it.
+            nameof(IContentService.ResolveReference) => new ContentReference(new ContentReferenceHandle(2), static () => { }),
             _ => throw new NotSupportedException(method?.Name),
         };
 
@@ -237,7 +239,7 @@ public sealed class DaggerfallAudioBundleTests
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
         {
-            nameof(IGraphicsService.CreateStaticMeshFromContent) => new Appearance(new AppearanceHandle(1), static () => { }),
+            nameof(IGraphicsService.CreateStaticMeshFromContentReference) => new Appearance(new AppearanceHandle(1), static () => { }),
             nameof(IGraphicsService.UpdateStaticMeshMaterials) or nameof(IGraphicsService.PublishSnapshot) => null,
             _ => throw new NotSupportedException(method?.Name),
         };

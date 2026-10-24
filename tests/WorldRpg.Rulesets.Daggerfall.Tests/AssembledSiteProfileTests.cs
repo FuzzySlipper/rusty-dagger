@@ -22,14 +22,14 @@ public sealed class AssembledSiteProfileTests
     private static readonly Lazy<(ProductContent Content, DaggerfallLocationAssembly Assembly)> Fixture = new(() =>
     {
         ProductContent content = FullContent(TestData.RepositoryRoot);
-        DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(content);
-        Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(content, media, TestPayload.Definitions));
-        Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(content, media));
-        return (content, new DaggerfallLocationAssembly(TestPayload.Definitions, new DaggerfallWorldBlocks(content), () => product.Value, () => meshes.Value));
+        DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(new DaggerfallData(content));
+        Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(new DaggerfallData(content), media, TestPayload.Definitions));
+        Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(new DaggerfallData(content), media));
+        return (content, new DaggerfallLocationAssembly(TestPayload.Definitions, new DaggerfallWorldBlocks(new DaggerfallData(content)), () => product.Value, () => meshes.Value));
     });
 
     private static DaggerfallSiteProfile Published(string payload) =>
-        DaggerfallSiteContent.Read(Fixture.Value.Content, TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads", payload)), TestPayload.Definitions);
+        DaggerfallSiteContent.Read(new DaggerfallData(Fixture.Value.Content), TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads", payload)), TestPayload.Definitions);
 
     private static JsonElement Normalized(string closure) =>
         JsonDocument.Parse(TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports", closure, "normalized.json"))).RootElement.GetProperty("world");

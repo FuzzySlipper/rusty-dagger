@@ -1783,7 +1783,7 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallExteriorEnvironment environment = _exteriorEnvironment ??= new(_random);
         environment.Reconcile(residency.ResidentCells, ActiveOrigin(residency), surfaceFactory, exteriors, _definitions.Grids);
         DaggerfallExteriorTerrainAppearance appearance =
-            _exteriorTerrainAppearance ??= new DaggerfallExteriorTerrainAppearance(_engine.Graphics, Projection.Inputs);
+            _exteriorTerrainAppearance ??= new DaggerfallExteriorTerrainAppearance(_engine.Content, _engine.Graphics, Projection.Inputs);
         appearance.ConfigureProfile(Projection.Inputs);
         Projection.Appearance.SetSnapshotSupplement(AppendExteriorFacts, CompleteExteriorSnapshot);
         appearance.Reconcile(residency.ResidentCells, ActiveOrigin(residency), surfaceFactory, environment);

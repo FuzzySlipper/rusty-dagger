@@ -67,7 +67,7 @@ public sealed class SiteAppearanceLifecycleTests
         AppearanceFact[] snapshot = Assert.Single(graphics.Snapshots);
         Assert.Equal(snapshot.Length, snapshot.Select(fact => fact.ObjectId).Distinct().Count());
         // The world mesh, each door, each dungeon action model, and the ranged-flight arrow.
-        Assert.Equal(1 + inputs.Doors.Count + inputs.DungeonActionModels.Count + 1, graphics.StaticMeshContentRequests.Count);
+        Assert.Equal(1 + inputs.Doors.Count + inputs.DungeonActionModels.Count + 1, graphics.StaticMeshPaths.Count);
         foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
             Assert.Contains(snapshot, fact => fact.Transform.Translation == door.Position);
     }
@@ -172,7 +172,7 @@ public sealed class SiteAppearanceLifecycleTests
         using ActorsState actors = EmptyActors();
         using (DaggerfallSiteAppearance presentation = new(content, appearance, inputs))
         {
-            Assert.Equal(["geometry/mesh-1.rstatmsh", "geometry/mesh-2.rstatmsh"], appearance.StaticMeshContentRequests.Select(request => request.Path));
+            Assert.Equal(["geometry/mesh-1.rstatmsh", "geometry/mesh-2.rstatmsh"], appearance.StaticMeshPaths);
             Assert.Equal([0u, 1u, 0u], appearance.StaticMeshBindings.Select(binding => binding.MaterialSlot));
             presentation.Publish(actors);
             AppearanceFact[] snapshot = appearance.Snapshots.Last();
@@ -368,7 +368,7 @@ public sealed class SiteAppearanceLifecycleTests
             Viewmodel = weapon.Viewmodel,
         };
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
-        int constructionResourceRequests = appearance.OpenResourceRequests.Count;
+        int constructionResourceRequests = appearance.OpenedResourcePaths.Count;
         appearance.RejectLateResourceOpen = true;
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
         SpritePlayback actorPlayback = Visual(presentation).Playback!;
@@ -384,9 +384,9 @@ public sealed class SiteAppearanceLifecycleTests
         presentation.CompleteAdmittedUpdate();
         presentation.BeginAdmittedUpdate();
 
-        Assert.Equal(constructionResourceRequests, appearance.OpenResourceRequests.Count);
+        Assert.Equal(constructionResourceRequests, appearance.OpenedResourcePaths.Count);
         Assert.Contains(actorPlayback.Handle, appearance.DisposedPlaybackHandles);
-        Assert.Empty(appearance.OpenResourceRequests.Skip(constructionResourceRequests));
+        Assert.Empty(appearance.OpenedResourcePaths.Skip(constructionResourceRequests));
     }
 
     [Fact]

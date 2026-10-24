@@ -82,7 +82,7 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(root)),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -130,7 +130,7 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(root)),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -165,7 +165,7 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(root)),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -195,7 +195,7 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(root)),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -237,7 +237,7 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(root)),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -294,7 +294,7 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(FullContent(root),
+        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(root)),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);

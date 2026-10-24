@@ -124,13 +124,13 @@ internal sealed partial class DaggerfallLocationAssembly
     /// Reads the world media publication's mesh index: each mesh artifact with its digest and the material
     /// its slots draw.
     /// </summary>
-    internal static IReadOnlyDictionary<string, DaggerfallWorldMesh> ReadMeshIndex(ProductContent content, DaggerfallWorldMedia product)
+    internal static IReadOnlyDictionary<string, DaggerfallWorldMesh> ReadMeshIndex(DaggerfallData content, DaggerfallWorldMedia product)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(product);
         const string indexPath = DaggerfallWorldMedia.Root + "/geometry/index.json";
         DaggerfallContentDiagnostics diagnostics = new();
-        if (!content.TryReadFile(indexPath, out ProductContentFile file))
+        if (!content.TryReadFile(indexPath, out ReadOnlyMemory<byte> index))
         {
             diagnostics.Add($"The world media publication carries no mesh index '{indexPath}'.");
             throw diagnostics.Exception();
@@ -139,7 +139,7 @@ internal sealed partial class DaggerfallLocationAssembly
         Dictionary<string, DaggerfallWorldMesh> meshes = new(StringComparer.Ordinal);
         try
         {
-            using JsonDocument document = JsonDocument.Parse(file.Bytes);
+            using JsonDocument document = JsonDocument.Parse(index);
             foreach (JsonElement mesh in DaggerfallBaseContent.Array(document.RootElement, "meshes", diagnostics))
             {
                 string id = DaggerfallBaseContent.Text(mesh, "artifactId", diagnostics);

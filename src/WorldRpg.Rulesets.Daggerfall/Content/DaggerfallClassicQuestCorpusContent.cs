@@ -17,10 +17,10 @@ internal static class DaggerfallClassicQuestCorpusContent
     /// <summary>A catalog entry reachable only through an explicit Daedric summoning identity.</summary>
     internal const string SummonOnly = "summonOnly";
 
-    internal static IReadOnlyList<DaggerfallClassicQuestCorpusReceipt> Read(ProductContent content, ReadOnlyMemory<byte> payload,
+    internal static IReadOnlyList<DaggerfallClassicQuestCorpusReceipt> Read(ReadOnlyMemory<byte> payload,
         DaggerfallDefinitions definitions)
     {
-        ArgumentNullException.ThrowIfNull(content); ArgumentNullException.ThrowIfNull(definitions);
+        ArgumentNullException.ThrowIfNull(definitions);
         using JsonDocument document = JsonDocument.Parse(payload);
         string corpusId = document.RootElement.GetProperty("id").GetString() is { Length: > 0 } id && !string.IsNullOrWhiteSpace(id)
             ? id : throw new DaggerfallContentException(["Classic quest corpus does not identify itself."]);
