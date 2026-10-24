@@ -9,8 +9,11 @@
     <AnalysisLevel>latest</AnalysisLevel>
     <Deterministic>true</Deterministic>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- The tool packs and opens the data containers with the Engine's own content services, run in process. -->
+    <RustyEngineToolHost>true</RustyEngineToolHost>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Rusty.Engine" Version="[$(RustyEnginePackageVersion)]" />
     <ProjectReference Include="../Daggerfall.Import/Daggerfall.Import.csproj" />
     <InternalsVisibleTo Include="Daggerfall.Import.Tests" />
   </ItemGroup>

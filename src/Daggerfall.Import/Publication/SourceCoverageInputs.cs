@@ -2,22 +2,32 @@ using System.Text.Json;
 
 namespace Daggerfall.Import.Publication;
 
+/// <summary>One artifact the coverage reads: the label it is reported under and the file holding it.</summary>
+public sealed record SourceCoverageArtifact(string Label, string File);
+
 public sealed record SourceCoverageInputs(IReadOnlyList<SourceCoverageConsumer> Consumers,
     IReadOnlyList<SourceCoverageQuestHandoff> Quests, IReadOnlyList<SourceCoverageUnsupported> Unsupported);
 
 /// <summary>Reads existing producer citations and ledgers; patterns remain context, not proof of individual records.</summary>
 public static class SourceCoverageInputReader
 {
+    /// <summary>Reads artifacts labelled by their path relative to a repository root.</summary>
     public static SourceCoverageInputs Read(string repositoryRoot, IEnumerable<string> artifactFiles,
-        IReadOnlyList<SourceInventoryRow> inventory)
+        IReadOnlyList<SourceInventoryRow> inventory) =>
+        Read(artifactFiles.Select(file => new SourceCoverageArtifact(Path.GetRelativePath(repositoryRoot, file).Replace('\\', '/'), file)), inventory);
+
+    /// <summary>
+    /// Reads artifacts by the label each is reported under; a label below <c>import-records/</c> is an offline
+    /// record rather than runtime content.
+    /// </summary>
+    public static SourceCoverageInputs Read(IEnumerable<SourceCoverageArtifact> artifacts, IReadOnlyList<SourceInventoryRow> inventory)
     {
         List<SourceCoverageConsumer> consumers = [];
         List<SourceCoverageQuestHandoff> quests = [];
         List<SourceCoverageUnsupported> unsupported = [];
         Dictionary<string, List<string>> corpora = new(StringComparer.Ordinal);
-        foreach (string file in artifactFiles.Order(StringComparer.Ordinal))
+        foreach ((string artifact, string file) in artifacts.OrderBy(value => value.Label, StringComparer.Ordinal))
         {
-            string artifact = Path.GetRelativePath(repositoryRoot, file).Replace('\\', '/');
             bool offline = artifact.StartsWith("import-records/", StringComparison.Ordinal);
             using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(file));
             JsonElement root = document.RootElement;

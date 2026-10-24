@@ -40,7 +40,7 @@ public sealed class ClassicMusicPublicationTests
     }
 
     [Fact]
-    public void A_source_whose_length_differs_from_the_catalogues_record_is_published_with_both_lengths_reported()
+    public void Any_recording_of_a_track_is_published_as_it_is_without_a_pinned_length()
     {
         ClassicMusicCue cue = ClassicMusicCatalogue.All[0];
         byte[] replacement = "a shorter encode of the same donor song"u8.ToArray();
@@ -50,9 +50,7 @@ public sealed class ClassicMusicPublicationTests
         ClassicMusicRecord record = Assert.Single(publication.Manifest.Cues);
         Assert.Equal(replacement.Length, record.ByteLength);
         Assert.Equal(replacement, publication.Artifacts.Single(artifact => artifact.RelativePath == $"media/music/clips/{cue.SourceFile}").Bytes.ToArray());
-        string warning = Assert.Single(publication.Warnings);
-        Assert.Contains(cue.MediaId, warning, StringComparison.Ordinal);
-        Assert.Contains($"carries {replacement.Length} bytes where the catalogue records {cue.SourceBytes}", warning, StringComparison.Ordinal);
+        Assert.Empty(publication.Warnings);
     }
 
     [Fact]
@@ -114,13 +112,13 @@ public sealed class ClassicMusicPublicationTests
     public void Publication_storage_is_independent_of_live_clip_count_and_bytes()
     {
         ClassicMusicCue[] tooMany = [.. Enumerable.Range(0, 70)
-            .Select(index => new ClassicMusicCue($"music.synthetic.{index}", $"synthetic-{index}.ogg", "dungeon", 1))];
+            .Select(index => new ClassicMusicCue($"music.synthetic.{index}", $"synthetic-{index}.ogg", "dungeon"))];
         ClassicMusicSource[] sources = [.. tooMany.Select(cue => new ClassicMusicSource(cue, [7]))];
 
         Assert.Equal(70, ClassicMusicPublication.Create(tooMany, sources).Manifest.Cues.Count);
 
         int large = 33 * 1024 * 1024;
-        ClassicMusicCue cue = new("music.large", "large.ogg", "dungeon", large);
+        ClassicMusicCue cue = new("music.large", "large.ogg", "dungeon");
         Assert.Single(ClassicMusicPublication.Create([cue], [new ClassicMusicSource(cue, new byte[large])]).Manifest.Cues);
     }
 

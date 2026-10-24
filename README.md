@@ -142,6 +142,11 @@ an importer change:
 scripts/regenerate-content.sh
 ```
 
+The script runs the import tool's `import` command, which also packs the converted
+data into `local/daggerfall-data.rpak` and the music into `local/music.rpak`; on a
+machine without bash, run that command directly (`dotnet run --project
+src/Daggerfall.Import.Tool -- import --music local/Sound`).
+
 Ordinary edit-run development is CoreCLR through the pinned runtime:
 
 ```bash

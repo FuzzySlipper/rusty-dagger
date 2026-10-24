@@ -1,0 +1,71 @@
+<Project>
+  <!-- The importer revision: one SHA-256 over the importer's tracked inputs, so a build of the same importer
+       source and data names the same revision on any machine, with or without a Git checkout, and any edit to
+       them names another. The import tool records it in the data container it packs; a project that must say
+       whether that container is current imports this file and compares it with the same value.
+
+       A project sets ImporterRevisionNamespace and ImporterRevisionClass (and ImporterRevisionModifier when the
+       class is not public) and declares the partial class; this target adds the constant
+       `StampedRevision` to it. The hash covers every file under src/Daggerfall.Import, src/Daggerfall.Import.Tool,
+       src/WorldRpg.SpriteAuthoring and data, except build output, by path and content with CRLF read as LF, so
+       a Windows checkout of the same commit names the same revision. The generated file is rewritten only when
+       the value changes, so an unchanged revision does not recompile. -->
+  <UsingTask TaskName="ComputeImporterRevision" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Root ParameterType="System.String" Required="true" />
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <Revision ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Using Namespace="System.Security.Cryptography" />
+      <Using Namespace="System.Text" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        // Inline tasks compile against .NET Standard, so the digest and relative-path helpers are spelled out.
+        string root = Path.GetFullPath(Root).TrimEnd('/', '\\') + "/";
+        Func<byte[], string> hex = bytes => BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();
+        var lines = new StringBuilder();
+        using (SHA256 sha = SHA256.Create())
+        {
+            foreach (var entry in Files.Select(item => Path.GetFullPath(item.ItemSpec)).Distinct(StringComparer.Ordinal)
+                         .Select(full => new { Relative = full.Replace('\\', '/').Substring(root.Length), Full = full })
+                         .OrderBy(entry => entry.Relative, StringComparer.Ordinal))
+            {
+                byte[] bytes = File.ReadAllBytes(entry.Full);
+                var normalized = new MemoryStream(bytes.Length);
+                for (int index = 0; index < bytes.Length; index++)
+                {
+                    if (bytes[index] == (byte)'\r' && index + 1 < bytes.Length && bytes[index + 1] == (byte)'\n') continue;
+                    normalized.WriteByte(bytes[index]);
+                }
+                lines.Append(entry.Relative).Append('\0').Append(hex(sha.ComputeHash(normalized.ToArray()))).Append('\n');
+            }
+            Revision = hex(sha.ComputeHash(Encoding.UTF8.GetBytes(lines.ToString())));
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="StampImporterRevision" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_ImporterRepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../..'))</_ImporterRepositoryRoot>
+      <_ImporterRevisionFile>$(IntermediateOutputPath)ImporterRevision.g.cs</_ImporterRevisionFile>
+      <ImporterRevisionModifier Condition="'$(ImporterRevisionModifier)' == ''">public</ImporterRevisionModifier>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/src/Daggerfall.Import/**;$(_ImporterRepositoryRoot)/src/Daggerfall.Import.Tool/**;$(_ImporterRepositoryRoot)/src/WorldRpg.SpriteAuthoring/**;$(_ImporterRepositoryRoot)/data/**"
+                              Exclude="$(_ImporterRepositoryRoot)/src/*/bin/**;$(_ImporterRepositoryRoot)/src/*/obj/**" />
+    </ItemGroup>
+    <ComputeImporterRevision Root="$(_ImporterRepositoryRoot)" Files="@(_ImporterRevisionInput)">
+      <Output TaskParameter="Revision" PropertyName="_ImporterRevision" />
+    </ComputeImporterRevision>
+    <WriteLinesToFile File="$(_ImporterRevisionFile)" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Lines="// &lt;auto-generated/&gt;;namespace $(ImporterRevisionNamespace)%3B;$(ImporterRevisionModifier) static partial class $(ImporterRevisionClass) { private const string StampedRevision = &quot;$(_ImporterRevision)&quot;%3B }" />
+    <ItemGroup>
+      <Compile Include="$(_ImporterRevisionFile)" />
+      <FileWrites Include="$(_ImporterRevisionFile)" />
+    </ItemGroup>
+  </Target>
+</Project>

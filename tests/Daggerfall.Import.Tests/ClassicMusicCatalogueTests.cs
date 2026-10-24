@@ -11,7 +11,6 @@ public sealed class ClassicMusicCatalogueTests
         // Compressed admission is what lets a cue be the donor's own file: the import carries the source
         // bytes rather than a downsampled rewrite of them.
         Assert.All(ClassicMusicCatalogue.All, cue => Assert.EndsWith(".ogg", cue.SourceFile, StringComparison.Ordinal));
-        Assert.All(ClassicMusicCatalogue.All, cue => Assert.True(cue.SourceBytes > 0, $"{cue.MediaId} has no source length."));
         Assert.All(ClassicMusicCatalogue.All, cue => Assert.Equal("music.", cue.MediaId[..6]));
         Assert.All(ClassicMusicCatalogue.All, cue => Assert.False(string.IsNullOrWhiteSpace(cue.Context)));
         Assert.Equal(ClassicMusicCatalogue.All.Count,
