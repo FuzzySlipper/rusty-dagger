@@ -41,7 +41,7 @@ public sealed class DaggerfallMusicSessionTests
         Assert.Single(engine.StartedAudioVoices);
         // The voice is a clip the resolver opened from content, which is the path a substituted or
         // pre-baked clip could not take.
-        Assert.Equal(1, engine.OpenedContentClips);
+        Assert.Equal(1, engine.OpenedMusicClips);
         // A cue change is the one completed change a score has to report: nothing on screen names the track.
         Assert.Equal(["daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'."], engine.PublishedDiagnostics);
         // The same world in the next admitted update keeps that one loop: no second voice, no release.
@@ -177,11 +177,11 @@ public sealed class DaggerfallMusicSessionTests
         session.Update(Update());
         Assert.Equal(context, session.MusicContext());
         Assert.Equal(track, session.MusicTrack);
-        Assert.Equal(2, fixture.OpenedContentClips);
-        Assert.Equal(1, fixture.ReleasedContentClips);
+        Assert.Equal(2, fixture.OpenedMusicClips);
+        Assert.Equal(1, fixture.ReleasedMusicClips);
         Assert.Equal(1, fixture.ReleasedAudioVoices);
         session.Dispose();
-        Assert.Equal(fixture.OpenedContentClips, fixture.ReleasedContentClips);
+        Assert.Equal(fixture.OpenedMusicClips, fixture.ReleasedMusicClips);
     }
 
     [Theory]
@@ -204,11 +204,11 @@ public sealed class DaggerfallMusicSessionTests
         session.Update(Update());
         Assert.Equal(DaggerfallMusicContext.Rain, session.MusicContext());
         Assert.Equal(rain, session.MusicTrack);
-        Assert.Equal(1, fixture.ReleasedContentClips);
+        Assert.Equal(1, fixture.ReleasedMusicClips);
         session.AdvanceElapsedTime(12 * 60 * 60);
         session.Update(Update());
         Assert.Equal(night, session.MusicTrack);
-        Assert.Equal(2, fixture.ReleasedContentClips);
+        Assert.Equal(2, fixture.ReleasedMusicClips);
     }
 
     [Fact]
@@ -242,9 +242,9 @@ public sealed class DaggerfallMusicSessionTests
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 2, 60, 1, 0, 1d / 60d), []));
         Assert.Equal(1, session.State.Progression.SkillUses["long-blade"]);
         Assert.Equal("song_dungeon", session.MusicTrack);
-        Assert.Equal(1, engine.OpenedContentClips);
+        Assert.Equal(1, engine.OpenedMusicClips);
         Assert.Single(engine.PublishedDiagnostics, value => value.Contains("cue.started"));
-        Assert.Equal(0, engine.ReleasedContentClips);
+        Assert.Equal(0, engine.ReleasedMusicClips);
     }
 
     private static DaggerfallSiteProfile AssembleTavern(ProductContent content, DaggerfallDefinitions definitions)

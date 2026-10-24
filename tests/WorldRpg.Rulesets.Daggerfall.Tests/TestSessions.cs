@@ -298,53 +298,67 @@ internal static class TestSessions
 
     internal static void PopulateContent(ContentFake content, DaggerfallSiteProfile inputs)
     {
-        foreach (DaggerfallSiteSpatialPart part in inputs.Geometry.Spatial) content.Add(part.Path, part.Sha256);
-        foreach (DaggerfallSiteMesh mesh in inputs.Geometry.Meshes) content.Add(mesh.Path, mesh.Sha256);
-        foreach (NormalizedMaterial material in inputs.Materials)
-        {
-            content.Add(material.TexturePath, material.TextureSha256);
-            if (material.WinterTexture is { } winter) content.Add(winter.Path, winter.Sha256);
-            if (material.RainTexture is { } rain) content.Add(rain.Path, rain.Sha256);
-        }
-        foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values.Concat(inputs.MobileSprites.Values))
-        {
-            AddSprite(sprite);
-            if (sprite.Female is { } female) AddSprite(female);
-        }
-        void AddSprite(NormalizedActorSprite sprite)
-        {
-            content.Add(sprite.TexturePath, sprite.TextureSha256);
-            if (sprite.Corpse is { } corpse) content.Add(corpse.TexturePath, corpse.TextureSha256);
-        }
-        foreach (var sprite in inputs.BillboardSprites.Values) content.Add(sprite.TexturePath, sprite.TextureSha256);
-        foreach (NormalizedAudioClip clip in inputs.Audio) content.Add(clip.Path, clip.Sha256);
-        foreach (NormalizedClassicEffect effect in inputs.ClassicPresentation.Effects) content.Add(effect.TexturePath, effect.TextureSha256);
-        foreach (NormalizedClassicWeapon weapon in inputs.ClassicPresentation.Weapons.Values) content.Add(weapon.TexturePath, weapon.TextureSha256);
-        // The rest the appearance opens by path and digest: missile visuals, doors, action models, city gates,
-        // decorations, the ground pile and the exterior terrain.
-        foreach (DaggerfallMissileVisual visual in inputs.ClassicPresentation.WorldVisuals)
-        {
-            content.Add(visual.Path, visual.Sha256);
-            foreach (DaggerfallMissileTextureBinding texture in visual.Textures) content.Add(texture.TexturePath, texture.TextureSha256);
-        }
-        foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
-            if (door.Visual is { } visual) content.Add(visual.Path, visual.Sha256);
-        foreach (DaggerfallDungeonActionModelDefinition model in inputs.DungeonActionModels) content.Add(model.Visual.Path, model.Visual.Sha256);
-        foreach (DaggerfallCityGateDefinition gate in inputs.CityGates)
-        {
-            content.Add(gate.Open.Visual.Path, gate.Open.Visual.Sha256);
-            content.Add(gate.Closed.Visual.Path, gate.Closed.Visual.Sha256);
-        }
-        foreach (DaggerfallSiteDecoration decoration in inputs.Decorations)
-        {
-            content.Add(decoration.Summer.TexturePath, decoration.Summer.TextureSha256);
-            content.Add(decoration.Winter.TexturePath, decoration.Winter.TextureSha256);
-        }
-        if (inputs.GroundContainerSprite is { } ground) content.Add(ground.TexturePath, ground.TextureSha256);
-        foreach (NormalizedTerrainTexture texture in inputs.TerrainTextures.Values) content.Add(texture.TexturePath, texture.TextureSha256);
+        foreach ((string path, ContentSha256 sha256) in PresentedArtifacts(inputs)) content.Add(path, sha256);
         // The session resolves the DOM's art by media identity through the published group inventory,
         // so this fake serves the real group: its generated inventory and every artifact it describes.
         foreach ((string path, byte[] bytes) in PublishedUiArt(TestData.RepositoryRoot)) content.Add(path, bytes);
+    }
+
+    /// <summary>
+    /// The published files a session at this profile resolves by path and digest, read from the checkout, for a
+    /// real Engine host to admit beside the UI art.
+    /// </summary>
+    internal static IEnumerable<KeyValuePair<string, ReadOnlyMemory<byte>>> PresentedFiles(string root, DaggerfallSiteProfile inputs) =>
+        PresentedArtifacts(inputs).Select(artifact => artifact.Path).Distinct(StringComparer.Ordinal)
+            .Select(path => KeyValuePair.Create(path, (ReadOnlyMemory<byte>)TestContentFiles.Read(Path.Combine(root, "content", path))));
+
+    /// <summary>
+    /// Every artifact a session at this profile resolves by path and digest: its collision and meshes, and
+    /// everything its appearance opens - materials, sprites, billboards, eager audio, the classic presentation,
+    /// missile visuals, doors, action models, city gates, decorations, the ground pile and the exterior terrain.
+    /// </summary>
+    internal static IEnumerable<(string Path, ContentSha256 Sha256)> PresentedArtifacts(DaggerfallSiteProfile inputs)
+    {
+        foreach (DaggerfallSiteSpatialPart part in inputs.Geometry.Spatial) yield return (part.Path, part.Sha256);
+        foreach (DaggerfallSiteMesh mesh in inputs.Geometry.Meshes) yield return (mesh.Path, mesh.Sha256);
+        foreach (NormalizedMaterial material in inputs.Materials)
+        {
+            yield return (material.TexturePath, material.TextureSha256);
+            if (material.WinterTexture is { } winter) yield return (winter.Path, winter.Sha256);
+            if (material.RainTexture is { } rain) yield return (rain.Path, rain.Sha256);
+        }
+        foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values.Concat(inputs.MobileSprites.Values))
+        {
+            foreach (NormalizedActorSprite variant in sprite.Female is { } female ? [sprite, female] : new[] { sprite })
+            {
+                yield return (variant.TexturePath, variant.TextureSha256);
+                if (variant.Corpse is { } corpse) yield return (corpse.TexturePath, corpse.TextureSha256);
+            }
+        }
+        foreach (NormalizedBillboardSprite sprite in inputs.BillboardSprites.Values) yield return (sprite.TexturePath, sprite.TextureSha256);
+        foreach (NormalizedAudioClip clip in inputs.Audio) yield return (clip.Path, clip.Sha256);
+        foreach (NormalizedClassicEffect effect in inputs.ClassicPresentation.Effects) yield return (effect.TexturePath, effect.TextureSha256);
+        foreach (NormalizedClassicWeapon weapon in inputs.ClassicPresentation.Weapons.Values) yield return (weapon.TexturePath, weapon.TextureSha256);
+        foreach (DaggerfallMissileVisual visual in inputs.ClassicPresentation.WorldVisuals)
+        {
+            yield return (visual.Path, visual.Sha256);
+            foreach (DaggerfallMissileTextureBinding texture in visual.Textures) yield return (texture.TexturePath, texture.TextureSha256);
+        }
+        foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
+            if (door.Visual is { } visual) yield return (visual.Path, visual.Sha256);
+        foreach (DaggerfallDungeonActionModelDefinition model in inputs.DungeonActionModels) yield return (model.Visual.Path, model.Visual.Sha256);
+        foreach (DaggerfallCityGateDefinition gate in inputs.CityGates)
+        {
+            yield return (gate.Open.Visual.Path, gate.Open.Visual.Sha256);
+            yield return (gate.Closed.Visual.Path, gate.Closed.Visual.Sha256);
+        }
+        foreach (DaggerfallSiteDecoration decoration in inputs.Decorations)
+        {
+            yield return (decoration.Summer.TexturePath, decoration.Summer.TextureSha256);
+            yield return (decoration.Winter.TexturePath, decoration.Winter.TextureSha256);
+        }
+        if (inputs.GroundContainerSprite is { } ground) yield return (ground.TexturePath, ground.TextureSha256);
+        foreach (NormalizedTerrainTexture texture in inputs.TerrainTextures.Values) yield return (texture.TexturePath, texture.TextureSha256);
     }
 
     /// <summary>The published UI art group as admitted content: the inventory and the artifacts it names.</summary>

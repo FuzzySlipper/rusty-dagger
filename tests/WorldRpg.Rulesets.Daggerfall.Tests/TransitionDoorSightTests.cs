@@ -30,7 +30,7 @@ public sealed class TransitionDoorSightTests
         DaggerfallSiteProfile hold = ReadInputs(root);
         Dictionary<string, ReadOnlyMemory<byte>> files = PublishedUiArt(root)
             .ToDictionary(entry => entry.Path, entry => (ReadOnlyMemory<byte>)entry.Bytes);
-        files[hold.SpatialArtifact.Path] = File.ReadAllBytes(Path.Combine(root, "content", hold.SpatialArtifact.Path));
+        foreach ((string path, ReadOnlyMemory<byte> bytes) in PresentedFiles(root, hold)) files[path] = bytes;
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
         host.Call(engine =>
         {
