@@ -267,6 +267,15 @@ committed. `scripts/regenerate-content.sh` rebuilds every derived file (under `c
 [content scope](docs/coverage/content-scope.md) lists what is generated and what is authored.
 Preserve the authored assets, attribution, and provenance when adapting content.
 
+## Acknowledgements
+
+Rusty Dagger stands on the work of the [Daggerfall Unity](https://github.com/Interkarma/daggerfall-unity)
+project (Daggerfall Workshop and its contributors). Its years of reverse-engineering of the
+classic file formats, formulas and behaviour are the reference this project's importer and
+ruleset are checked against, and several import tables and playlists come from it. It is used
+under the MIT licence; see [third-party notices](THIRD_PARTY_NOTICES.md). *The Elder Scrolls II:
+Daggerfall* is Bethesda Softworks' game, and its data is supplied by the player.
+
 ## Guidance and proof
 
 Repository-specific instructions are in `AGENTS.md`. For setup, compilation,
