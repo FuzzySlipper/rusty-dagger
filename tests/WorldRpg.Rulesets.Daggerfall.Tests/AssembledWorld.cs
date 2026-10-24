@@ -45,10 +45,10 @@ internal sealed class AssembledWorld
         string root = TestData.RepositoryRoot;
         Source = ReadInputs(root);
         ProductContent full = FullContent(root);
-        DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(full);
-        Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(full, media, Definitions));
-        Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(full, media));
-        WorldBlocks = new DaggerfallWorldBlocks(full);
+        DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(new DaggerfallData(full));
+        Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(new DaggerfallData(full), media, Definitions));
+        Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(new DaggerfallData(full), media));
+        WorldBlocks = new DaggerfallWorldBlocks(new DaggerfallData(full));
         DaggerfallLocationAssembly assembly = new(Definitions, WorldBlocks, () => product.Value, () => meshes.Value);
         Profiles = DaggerfallSiteProfiles.Resolve([DaggerfallAuthoredSite.Of(Source)], assembly, null);
         ResolvedGameComposition composition = GameCompositionResolver.Resolve(full, new GameBundleId("daggerfall.classic")).RequireComposition();
@@ -57,7 +57,7 @@ internal sealed class AssembledWorld
         PublishedKeys = composition.ContentPacks.Where(pack => pack.Role == DaggerfallRuleset.SiteRole)
             .Select(pack => DaggerfallSiteContent.ReadHeader(pack.Payload, pack.Id.Value))
             .Where(header => header.VariantName is null).Select(header => header.Key).ToHashSet();
-        Sky = DaggerfallSkyMedia.Read(full);
+        Sky = DaggerfallSkyMedia.Read(new DaggerfallData(full));
         Blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json")));
     }
 
@@ -184,7 +184,7 @@ internal sealed class AssembledWorldRun : IDisposable
                 files[DaggerfallSkyMedia.ManifestPath]) },
             EngineBundleContent.Create(real.Content, DaggerfallSkyMedia.BundleId, DaggerfallSkyMedia.LogicalRoot, files));
         DaggerfallSessionComposition composition = new(world.Definitions, world.Source, DaggerfallTuning.Defaults, world.Identity)
-            { Profiles = world.Profiles, Sky = DaggerfallSkyMedia.Read(sky), Blocks = world.Blocks };
+            { Profiles = world.Profiles, Sky = DaggerfallSkyMedia.Read(new DaggerfallData(sky)), Blocks = world.Blocks };
         Session = save is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, save);
         Engine = engine;
     }

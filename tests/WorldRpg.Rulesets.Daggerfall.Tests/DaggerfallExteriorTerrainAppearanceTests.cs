@@ -21,7 +21,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
     public void Reconcile_builds_normals_mesh_groups_and_stable_cell_facts()
     {
         GraphicsDouble graphics = new();
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics);
+        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics);
         DaggerfallExteriorWorldOrigin origin = new(10, 20, new Vector3(2F, 3F, 4F));
 
         appearance.Reconcile(
@@ -51,7 +51,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
     public void Origin_reprojection_reuses_retained_visual_resources()
     {
         GraphicsDouble graphics = new();
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics);
+        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics);
         DaggerfallExteriorCellId cell = new(10, 20);
 
         appearance.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), Surface);
@@ -74,7 +74,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
     public void Retired_resources_are_released_only_after_the_replacement_snapshot_is_accepted()
     {
         GraphicsDouble graphics = new();
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics);
+        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics);
         DaggerfallExteriorCellId cell = new(10, 20);
         appearance.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), Surface);
         AppearanceFact terrain = Assert.Single(appearance.BuildFacts());
@@ -102,7 +102,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
     public void Failed_addition_keeps_the_previous_visual_set_and_releases_staged_resources()
     {
         GraphicsDouble graphics = new();
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics);
+        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics);
         DaggerfallExteriorCellId retainedCell = new(10, 20);
         appearance.Reconcile([retainedCell], DaggerfallExteriorWorldOrigin.At(retainedCell), Surface);
         AppearanceFact retained = Assert.Single(appearance.BuildFacts());
@@ -137,7 +137,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
             {
                 [(302, 0)] = new("texture/terrain.png", TestSessions.Hash),
             });
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics, profile);
+        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics, graphics.Admit(profile));
         DaggerfallTerrainSurface environmentSurface = new(cell.X, cell.Y,
             Enumerable.Range(0, 129 * 129).Select(index => new Vector3(index % 129, 0F, index / 129)).ToArray(),
             [new Triangle(0, 130, 1)], new float[129 * 129]);
@@ -193,7 +193,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
                     [new NormalizedAtlasFrame(7, 0, 0, 16, 32)], 7, new Vector2(.5F, 0F), new Vector2(record, 2F * record));
         DaggerfallSiteProfile profile = new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, [],
             new Dictionary<long, NormalizedActorSprite>(), billboardSprites: billboards, terrainTextures: textures);
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics, profile);
+        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics, graphics.Admit(profile));
         int dimension = DaggerfallTerrainSurfaceBuilder.SampleDimension;
         DaggerfallTerrainSurface surface = new(cell.X, cell.Y,
             Enumerable.Range(0, dimension * dimension).Select(index => new Vector3(index % dimension, 100F, index / dimension)).ToArray(),
@@ -305,7 +305,24 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
         public void PublishChanges(AppearanceChangesRequest request) => throw new NotSupportedException();
         public void PublishOverlaySet(OverlaySetRequest request) => throw new NotSupportedException("This test double does not publish overlays.");
-        public RenderResourceInfo OpenResourceFromContent(RenderResourceContentRequest request) => throw new NotSupportedException();
+        public RenderResourceInfo OpenResourceFromContent(RenderResourceContentRequest request)
+        {
+            ulong handle = _nextHandle++;
+            _resources[handle] = Content.ReadReferenceInfo(request.Content).Span[0].Path;
+            return new(new RenderResource(new RenderResourceHandle(handle), () => Releases.Add("resource")), default, 0);
+        }
+
+        /// <summary>The content the appearance resolves its textures through, by the path and digest a profile records.</summary>
+        internal ContentFake Content { get; } = new([]);
+
+        /// <summary>Admits a profile's terrain textures and billboards to <see cref="Content"/>.</summary>
+        internal DaggerfallSiteProfile Admit(DaggerfallSiteProfile profile)
+        {
+            foreach (NormalizedTerrainTexture texture in profile.TerrainTextures.Values) Content.Add(texture.TexturePath, texture.TextureSha256);
+            foreach (NormalizedBillboardSprite sprite in profile.BillboardSprites.Values) Content.Add(sprite.TexturePath, sprite.TextureSha256);
+            return profile;
+        }
+
         public Appearance CreateStaticMeshFromContentReference(StaticMeshContentReferenceRequest request) => throw new NotSupportedException();
 
         public Material CreateMaterial(MaterialRequest request) => new(

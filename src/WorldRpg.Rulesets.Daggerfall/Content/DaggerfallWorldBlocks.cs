@@ -121,13 +121,13 @@ internal sealed partial class DaggerfallWorldBlocks
     /// <summary>The block index's bundle-relative path.</summary>
     internal const string IndexPath = "blocks.json";
 
-    private readonly ProductContent _content;
+    private readonly DaggerfallData _content;
     private readonly object _gate = new();
     private IReadOnlyDictionary<DaggerfallWorldBlockKey, IndexEntry>? _index;
 
     private sealed record IndexEntry(string Key, string Document, string? Spatial);
 
-    internal DaggerfallWorldBlocks(ProductContent content) => _content = content ?? throw new ArgumentNullException(nameof(content));
+    internal DaggerfallWorldBlocks(DaggerfallData content) => _content = content ?? throw new ArgumentNullException(nameof(content));
 
     /// <summary>The content path a bundle-relative path names, as the Engine resolves it while the bundle is open.</summary>
     internal static string ContentPath(string relativePath) => $"{Root}/{relativePath}";
@@ -139,9 +139,9 @@ internal sealed partial class DaggerfallWorldBlocks
     /// Opens the bundle for one Engine admission that resolves block artifacts by their content path. The
     /// caller disposes it once the admission has read them.
     /// </summary>
-    internal ProductContentBundle Open()
+    internal DaggerfallDataRoot Open()
     {
-        try { return _content.OpenBundle(BundleId); }
+        try { return _content.Open(Root); }
         catch (Exception exception) when (exception is FileNotFoundException or KeyNotFoundException or EngineCallException or InvalidOperationException)
         {
             throw new InvalidOperationException(
@@ -155,7 +155,7 @@ internal sealed partial class DaggerfallWorldBlocks
         // Once read, the index answers without opening the bundle again: residency and quest selection ask per profile.
         lock (_gate)
             if (_index is not null) return _index.ContainsKey(key);
-        using ProductContentBundle bundle = Open();
+        using DaggerfallDataRoot bundle = Open();
         return RequireIndex(bundle).ContainsKey(key);
     }
 
@@ -167,7 +167,7 @@ internal sealed partial class DaggerfallWorldBlocks
     {
         ArgumentNullException.ThrowIfNull(keys);
         DaggerfallWorldBlockKey[] requested = [.. keys.Distinct()];
-        using ProductContentBundle bundle = Open();
+        using DaggerfallDataRoot bundle = Open();
         IReadOnlyDictionary<DaggerfallWorldBlockKey, IndexEntry> index = RequireIndex(bundle);
         DaggerfallContentDiagnostics diagnostics = new();
         Dictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> documents = [];
@@ -197,7 +197,7 @@ internal sealed partial class DaggerfallWorldBlocks
         return documents;
     }
 
-    private IReadOnlyDictionary<DaggerfallWorldBlockKey, IndexEntry> RequireIndex(ProductContentBundle bundle)
+    private IReadOnlyDictionary<DaggerfallWorldBlockKey, IndexEntry> RequireIndex(DaggerfallDataRoot bundle)
     {
         lock (_gate)
         {

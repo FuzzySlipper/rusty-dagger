@@ -80,8 +80,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
         {
             Profiles = admitted.Profiles,
             Audio = admitted.Audio,
-            Sky = DaggerfallSkyMedia.Read(admitted.Content),
-            CinematicContent = admitted.Content,
+            Sky = DaggerfallSkyMedia.Read(admitted.Data),
+            Data = admitted.Data,
             VideosEnabled = _videosEnabled,
             QuestAdmission = new DaggerfallQuestRuntimeAdmission(admitted.QuestReceipts),
             NewGameQuests = admitted.Definitions.NewGame.Quests,
@@ -108,6 +108,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
                     && pack.Role != NewGameStartRole)
                     throw new InvalidOperationException($"Content pack '{pack.Id.Value}' declares role '{pack.Role.Value}', which the Daggerfall ruleset does not interpret.");
             }
+            DaggerfallData data = new(selected.Content);
             DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
                 RequireSingle(selected, roles, BaseRole).Payload, RequireSingle(selected, roles, ImportedRole).Payload);
             ContentPack[] startPacks = [.. roles[NewGameStartRole]];
@@ -125,10 +126,10 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             DaggerfallSitePayloadHeader[] headers = [.. sitePacks.Select(pack => DaggerfallSiteContent.ReadHeader(pack.Payload, pack.Id.Value))];
             // Every site closure and assembly references the one product-wide world media publication, read
             // once for all of them, when the first one needs it.
-            Lazy<DaggerfallWorldMedia> worldMedia = new(() => DaggerfallWorldMedia.Read(selected.Content));
-            Lazy<DaggerfallProductMedia> productMedia = new(() => DaggerfallSiteContent.ReadProductMedia(selected.Content, worldMedia.Value, definitions));
-            Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(selected.Content, worldMedia.Value));
-            DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(selected.Content), () => productMedia.Value, () => meshes.Value);
+            Lazy<DaggerfallWorldMedia> worldMedia = new(() => DaggerfallWorldMedia.Read(data));
+            Lazy<DaggerfallProductMedia> productMedia = new(() => DaggerfallSiteContent.ReadProductMedia(data, worldMedia.Value, definitions));
+            Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(data, worldMedia.Value));
+            DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(data), () => productMedia.Value, () => meshes.Value);
             // Every resolved profile names its classic images and music cues against the published manifests,
             // and an interior names its building against the block catalog: each is joined when the profile is
             // resolved, before a transition touches the source, so the publication it disagrees with is named.
@@ -136,14 +137,14 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             HashSet<IReadOnlyList<NormalizedMusicCue>> joinedMusic = new(ReferenceEqualityComparer.Instance);
             void Join(DaggerfallSiteProfile site)
             {
-                if (joinedPresentations.Add(site.ClassicPresentation)) _ = DaggerfallPublishedClassicMedia.Read(selected.Content, site.ClassicPresentation);
-                if (joinedMusic.Add(site.Music)) _ = DaggerfallMusicBundle.Admit(selected.Content, site.Music);
+                if (joinedPresentations.Add(site.ClassicPresentation)) _ = DaggerfallPublishedClassicMedia.Read(data, site.ClassicPresentation);
+                if (joinedMusic.Add(site.Music)) _ = DaggerfallMusicBundle.Admit(data, site.Music);
                 site.InteriorBuilding?.ValidateAgainst(blocks);
             }
 
             DaggerfallSiteProfiles profiles = DaggerfallSiteProfiles.Resolve(
                 sitePacks.Zip(headers, (pack, header) => new DaggerfallAuthoredSite(header,
-                    () => DaggerfallSiteContent.Read(selected.Content, pack.Payload, definitions, worldMedia.Value))),
+                    () => DaggerfallSiteContent.Read(data, pack.Payload, definitions, worldMedia.Value))),
                 assembly, Join);
             // The authored new-game definition names the site a new game starts at; pack order in the
             // bundle carries no meaning, so adding or reordering sites cannot move the start.
@@ -158,9 +159,9 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             if (inputs.ClassicPresentation.Viewmodel is null || inputs.ClassicPresentation.UnarmedVisual is null)
                 throw new InvalidOperationException($"New-game start site '{startPack}' publishes no classic viewmodel selection for the session.");
             IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> fightersGuildQuests =
-                [.. roles[FightersGuildQuestCorpusRole].SelectMany(pack => DaggerfallFightersGuildQuestCorpusContent.Read(selected.Content, pack.Payload, definitions))];
+                [.. roles[FightersGuildQuestCorpusRole].SelectMany(pack => DaggerfallFightersGuildQuestCorpusContent.Read(pack.Payload, definitions))];
             DaggerfallClassicQuestCorpusReceipt[] classicCorpus =
-                [.. roles[QuestCorpusRole].SelectMany(pack => DaggerfallClassicQuestCorpusContent.Read(selected.Content, pack.Payload, definitions))];
+                [.. roles[QuestCorpusRole].SelectMany(pack => DaggerfallClassicQuestCorpusContent.Read(pack.Payload, definitions))];
             DaggerfallDisabledQuestSelection disabledQuestSelection = DaggerfallDisabledQuestSelection.From(classicCorpus);
             IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> classicQuestReceipts =
             [
@@ -174,10 +175,10 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             string[] missingNewGameQuests = [.. definitions.NewGame.Quests.Where(file => !questReceipts.Any(receipt => receipt.SourceFile == file))];
             if (missingNewGameQuests.Length != 0)
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' admits no quest source for the new-game quests {string.Join(", ", missingNewGameQuests.Select(file => $"'{file}'"))}.");
-            DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(selected.Content, inputs.ClassicPresentation);
-            DaggerfallMusicBundle? music = DaggerfallMusicBundle.Admit(selected.Content, inputs.Music);
+            DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(data, inputs.ClassicPresentation);
+            DaggerfallMusicBundle? music = DaggerfallMusicBundle.Admit(data, inputs.Music);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
-            return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, questReceipts, disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(selected.Content, profiles), selected.Content, music);
+            return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, questReceipts, disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(data, profiles), data, music);
         });
 
     /// <summary>The one pack a bundle must select for a role every session reads exactly once.</summary>
@@ -199,6 +200,6 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
         DaggerfallTuning Tuning,
         DaggerfallPublishedClassicMedia ClassicMedia,
         DaggerfallSiteAudioBundles Audio,
-        Rusty.Engine.ProductContent Content,
+        DaggerfallData Data,
         DaggerfallMusicBundle? Music);
 }

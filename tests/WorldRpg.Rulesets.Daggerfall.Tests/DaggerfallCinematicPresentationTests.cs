@@ -156,7 +156,7 @@ public sealed class DaggerfallCinematicPresentationTests
             Video = video;
             Content = new ProductContent(Array.Empty<ProductContentFile>(), content);
             Catalog = catalog;
-            Presentation = new(engine, Content, Catalog);
+            Presentation = new(engine, new DaggerfallData(Content), Catalog);
         }
 
         private ContentBundle OpenBundle(ContentBundleOpenRequest request)

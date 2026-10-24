@@ -77,7 +77,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
-            GeneratedContent(root),
+            new DaggerfallData(GeneratedContent(root)),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")),
             definitions);
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
@@ -181,7 +181,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
         });
 
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
-            GeneratedContent(root),
+            new DaggerfallData(GeneratedContent(root)),
             Encoding.UTF8.GetBytes(payload.ToJsonString()),
             definitions);
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
@@ -201,7 +201,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = GeneratedContent(root);
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(content,
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(content),
             File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
         return (root, inputs);
     }

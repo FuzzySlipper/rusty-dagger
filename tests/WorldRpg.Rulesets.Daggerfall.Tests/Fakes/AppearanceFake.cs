@@ -10,9 +10,9 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     public void PublishOverlaySet(OverlaySetRequest request) => OverlaySets.Add(request);
     /// <summary>Every overlay set published, in order; an empty one removes its set.</summary>
     internal List<OverlaySetRequest> OverlaySets { get; } = [];
-    internal List<RenderResourceRequest> OpenResourceRequests { get; } = [];
     internal List<TerrainLayerMaterialRequest> TerrainLayerMaterialRequests { get; } = [];
-    internal List<StaticMeshContentAppearanceRequest> StaticMeshContentRequests { get; } = [];
+    /// <summary>The content path each created static mesh's reference names, in order; null for a reference no content fake issued.</summary>
+    internal List<string?> StaticMeshPaths { get; } = [];
     internal Dictionary<string, Appearance> StaticMeshByPath { get; } = new(StringComparer.Ordinal);
     internal List<MeshMaterialBinding> StaticMeshBindings { get; } = [];
     internal List<StaticMeshMaterialFactorsRequest> StaticMeshFactorUpdates { get; } = [];
@@ -49,19 +49,19 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     private ulong nextHandle = 1;
     private readonly Dictionary<ulong, ulong> liveLightIds = [];
 
-    public RenderResourceInfo OpenResource(RenderResourceRequest request)
-    {
-        if (RejectLateResourceOpen) throw new InvalidOperationException("Render resource selection is sealed after product creation.");
-        OpenResourceRequests.Add(request);
-        return new(OwnResource(checked((ulong)OpenResourceRequests.Count)), default, 0);
-    }
+    // The ruleset opens published textures and meshes by content reference, wherever the Engine stages them.
+    public RenderResourceInfo OpenResource(RenderResourceRequest request) =>
+        throw new NotSupportedException($"The ruleset opens published textures by content reference, not by the path '{request.Path}'.");
     public RenderResourceInfo OpenResourceFromContent(RenderResourceContentRequest request)
     {
         if (RejectLateResourceOpen) throw new InvalidOperationException("Render resource selection is sealed after product creation.");
         OpenResourceContentRequests.Add(request);
+        OpenedResourcePaths.Add(TestContentReferences.PathOf(request.Content));
         return new(OwnResource(checked((ulong)OpenResourceContentRequests.Count)), default, 0);
     }
     internal List<RenderResourceContentRequest> OpenResourceContentRequests { get; } = [];
+    /// <summary>The content path each opened resource's reference names, in order; null for a reference no content fake issued.</summary>
+    internal List<string?> OpenedResourcePaths { get; } = [];
 
     /// <summary>Counts how many opened render resources the caller released.</summary>
     internal int ReleasedResources { get; private set; }
@@ -91,14 +91,16 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     public MeshPartition PartitionMesh(MeshPartitionRequest request) => throw new NotSupportedException();
     public MeshPartitionReadout ReadMeshPartition(MeshPartition partition) => throw new NotSupportedException();
     public MeshResource TakeMeshPartitionPart(MeshPartitionPartRequest request) => throw new NotSupportedException();
-    public Appearance CreateStaticMeshFromContent(StaticMeshContentAppearanceRequest request)
+    public Appearance CreateStaticMeshFromContent(StaticMeshContentAppearanceRequest request) =>
+        throw new NotSupportedException($"The ruleset creates published meshes by content reference, not by the path '{request.Path}'.");
+    public Appearance CreateStaticMeshFromContentReference(StaticMeshContentReferenceRequest request)
     {
-        StaticMeshContentRequests.Add(request);
+        string? path = TestContentReferences.PathOf(request.Content);
+        StaticMeshPaths.Add(path);
         Appearance value = CreateAppearance();
-        StaticMeshByPath[request.Path] = value;
+        if (path is not null) StaticMeshByPath[path] = value;
         return value;
     }
-    public Appearance CreateStaticMeshFromContentReference(StaticMeshContentReferenceRequest request) => CreateAppearance();
     public Appearance ReplaceStaticMesh(Appearance appearance, StaticMeshAppearanceRequest request) => CreateAppearance();
     public Appearance ReplaceStaticMeshFromContent(Appearance appearance, StaticMeshContentAppearanceRequest request) => CreateAppearance();
     public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest request) => StaticMeshBindings.AddRange(request.Bindings.ToArray());

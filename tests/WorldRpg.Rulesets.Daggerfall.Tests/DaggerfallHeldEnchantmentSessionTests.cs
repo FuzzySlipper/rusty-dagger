@@ -36,7 +36,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile inputs = ExteriorContentAt(source, source.ProfileKey.Site,
             "held-enchantment-rest");
-        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(FullContent(root));
+        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(new DaggerfallData(FullContent(root)));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);

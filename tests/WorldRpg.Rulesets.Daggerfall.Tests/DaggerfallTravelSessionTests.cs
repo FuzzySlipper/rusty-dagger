@@ -607,7 +607,7 @@ public sealed class DaggerfallTravelSessionTests
             Spatial = SpatialFake.Create(Origin.SpatialArtifact.Sha256, releases);
             var engine = Engine = EngineContextFake.Create(content, Spatial.Service,
                 new AppearanceFake(releases), random: encounter ? TravelEncounterRandom.CreateEncounter() : LodgingRandom.Create());
-            DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(FullContent(TestData.RepositoryRoot));
+            DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)));
             DaggerfallSessionComposition composition = new(definitions, Origin, DaggerfallTuning.Defaults, Inputs.Value.Identity)
                 { Profiles = profiles, Effects = effects, Sky = sky };
             return save is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, save);

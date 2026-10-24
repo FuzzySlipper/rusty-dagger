@@ -16,7 +16,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>Reads one authored site pack's scenario facts and normalized world closure; no project entity names participate in runtime selection.</summary>
 internal static partial class DaggerfallSiteContent
 {
-    internal static DaggerfallSiteProfile Read(ProductContent content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
+    internal static DaggerfallSiteProfile Read(DaggerfallData content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
     {
         using DaggerfallWorldMedia product = DaggerfallWorldMedia.Read(content);
         return Read(content, payload, definitions, product);
@@ -26,7 +26,7 @@ internal static partial class DaggerfallSiteContent
     /// Reads one site pack against the product-wide world media its closure references, which the caller
     /// reads once for every site it admits.
     /// </summary>
-    internal static DaggerfallSiteProfile Read(ProductContent content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions, DaggerfallWorldMedia product)
+    internal static DaggerfallSiteProfile Read(DaggerfallData content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions, DaggerfallWorldMedia product)
     {
         ArgumentNullException.ThrowIfNull(product);
         DaggerfallContentDiagnostics diagnostics = new();
@@ -70,7 +70,7 @@ internal static partial class DaggerfallSiteContent
         }
     }
 
-    private static DaggerfallSiteProfile ReadNormalizedClosure(ProductContent content, AdmittedFiles files, JsonElement root, ScenarioStart start, DaggerfallDefinitions definitions, DaggerfallWorldMedia product, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallSiteProfile ReadNormalizedClosure(DaggerfallData content, AdmittedFiles files, JsonElement root, ScenarioStart start, DaggerfallDefinitions definitions, DaggerfallWorldMedia product, DaggerfallContentDiagnostics diagnostics)
     {
         JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics);
         string publicationRoot = DaggerfallBaseContent.Text(world, "publicationRoot", diagnostics);
@@ -262,7 +262,7 @@ internal static partial class DaggerfallSiteContent
     /// classic sidecar's audio, music and classic presentation. A location assembled from its blocks admits
     /// the whole publication, as a site closure admits the entries it selects; it is read once and shared.
     /// </summary>
-    internal static DaggerfallProductMedia ReadProductMedia(ProductContent content, DaggerfallWorldMedia product, DaggerfallDefinitions definitions)
+    internal static DaggerfallProductMedia ReadProductMedia(DaggerfallData content, DaggerfallWorldMedia product, DaggerfallDefinitions definitions)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(product);
@@ -2642,12 +2642,12 @@ internal sealed record DaggerfallProductMedia(
 
 internal sealed class AdmittedFiles
 {
-    private readonly ProductContent _content;
-    private AdmittedFiles(ProductContent content) => _content = content;
-    internal static AdmittedFiles From(ProductContent content) => new(content ?? throw new ArgumentNullException(nameof(content)));
+    private readonly DaggerfallData _content;
+    private AdmittedFiles(DaggerfallData content) => _content = content;
+    internal static AdmittedFiles From(DaggerfallData content) => new(content ?? throw new ArgumentNullException(nameof(content)));
     internal bool ContainsExactlyOne(string path) => _content.TryReadFile(path, out _);
-    internal ReadOnlyMemory<byte> GetExactlyOne(string path) => _content.TryReadFile(path, out ProductContentFile file)
-        ? file.Bytes
+    internal ReadOnlyMemory<byte> GetExactlyOne(string path) => _content.TryReadFile(path, out ReadOnlyMemory<byte> bytes)
+        ? bytes
         : throw new DaggerfallContentException([$"Required admitted file '{path}' is missing; the site cannot be loaded without it."]);
 }
 

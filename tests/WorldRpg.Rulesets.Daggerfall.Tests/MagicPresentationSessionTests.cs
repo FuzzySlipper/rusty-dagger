@@ -132,7 +132,7 @@ public sealed class MagicPresentationSessionTests
             foreach(var clip in site.Audio)
                 bundles.Add(DaggerfallWorldMedia.AudioBundleId,clip.Path[prefix.Length..],File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot,"content",clip.Path)));
             ProductContent content=new(Array.Empty<ProductContentFile>(),bundles);
-            composition=composition with { Audio=new DaggerfallSiteAudioBundles(content,new DaggerfallSiteProfiles([site])) };
+            composition=composition with { Audio=new DaggerfallSiteAudioBundles(new DaggerfallData(content),new DaggerfallSiteProfiles([site])) };
             Engine=CreateEngine();Session=DaggerfallSession.StartNew(Engine.Context,composition);
         }
         private EngineContextFake CreateEngine(){List<string> releases=[];ContentFake c=new(releases);PopulateContent(c,composition.StartSite);return EngineContextFake.Create(c,SpatialFake.Create(composition.StartSite.SpatialArtifact.Sha256,releases).Service,new AppearanceFake(releases),PerceptionFake.Create().Service,random:RandomMaximum.Create());}

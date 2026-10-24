@@ -28,7 +28,7 @@ internal class AudioRecorder : DispatchProxy
 
     protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
     {
-        nameof(IAudioService.OpenClip) => new AudioClip(new AudioClipHandle(nextHandle++), () => ReleasedClips++),
+        nameof(IAudioService.OpenClip) or nameof(IAudioService.OpenClipFromContent) => new AudioClip(new AudioClipHandle(nextHandle++), () => ReleasedClips++),
         nameof(IAudioService.Emit) => Emit((AudioEmitRequest)arguments![0]!),
         nameof(IAudioService.RetireOneShot) => Retire((AudioSignalHandle)arguments![0]!),
         nameof(IAudioService.ReadRealization) => new AudioRealizationResult(RealizationFacts.ToArray(), 0),

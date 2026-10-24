@@ -23,7 +23,6 @@ public sealed class DaggerfallMusicBundleTests
             project,
             StringComparison.Ordinal);
         // The manifest is read eagerly, so it may not live inside the bundle root that stages lazily.
-        Assert.Equal(DaggerfallMusicBundle.LogicalRoot + "/", DaggerfallMusicBundle.ContentRoot, StringComparer.Ordinal);
         Assert.Equal("worldrpg/media/music/manifest.json", DaggerfallMusicBundle.ManifestPath);
         Assert.DoesNotContain(DaggerfallMusicBundle.LogicalRoot, DaggerfallMusicBundle.ManifestPath, StringComparison.Ordinal);
     }
@@ -33,7 +32,7 @@ public sealed class DaggerfallMusicBundleTests
     {
         ProductContent content = new(Array.Empty<ProductContentFile>());
 
-        Assert.Null(DaggerfallMusicBundle.Admit(content, []));
+        Assert.Null(DaggerfallMusicBundle.Admit(new DaggerfallData(content), []));
     }
 
     [Fact]
@@ -44,7 +43,7 @@ public sealed class DaggerfallMusicBundleTests
         MusicContentFake contentService = MusicContentFake.Create("song_dungeon.ogg", "song_gday___d.ogg");
         ProductContent content = Content(Manifest([dungeon, sunny]), contentService.Service);
 
-        DaggerfallMusicBundle? admitted = DaggerfallMusicBundle.Admit(content, [SiteCue(dungeon), SiteCue(sunny)]);
+        DaggerfallMusicBundle? admitted = DaggerfallMusicBundle.Admit(new DaggerfallData(content), [SiteCue(dungeon), SiteCue(sunny)]);
 
         DaggerfallMusicBundle music = Assert.IsType<DaggerfallMusicBundle>(admitted);
         Assert.Equal(["song_dungeon", "song_gday___d"], music.Tracks);
@@ -66,15 +65,15 @@ public sealed class DaggerfallMusicBundleTests
         PublishedCue sunny = MusicCue("music.sunny", "song_gday___d", "sunny", "song_gday___d.ogg", 3472545);
         ProductContent content = Content(Manifest([dungeon, sunny]));
 
-        InvalidOperationException length = Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(content, [SiteCue(dungeon with { ByteLength = dungeon.ByteLength + 1 })]));
+        InvalidOperationException length = Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(content), [SiteCue(dungeon with { ByteLength = dungeon.ByteLength + 1 })]));
         Assert.Contains(dungeon.MediaId, length.Message, StringComparison.Ordinal);
-        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(content, [SiteCue(dungeon with { Digest = Digest("another-encode") })]));
-        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(content, [SiteCue(dungeon with { Track = "song_other" })]));
-        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(content, [SiteCue(dungeon with { Context = "sunny" })]));
-        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(content, [SiteCue(dungeon with { File = "song_other.ogg" })]));
-        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(content, [SiteCue(dungeon with { MimeType = "audio/mpeg" })]));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(content), [SiteCue(dungeon with { Digest = Digest("another-encode") })]));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(content), [SiteCue(dungeon with { Track = "song_other" })]));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(content), [SiteCue(dungeon with { Context = "sunny" })]));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(content), [SiteCue(dungeon with { File = "song_other.ogg" })]));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(content), [SiteCue(dungeon with { MimeType = "audio/mpeg" })]));
         // Every other field agrees with the carried cue, so only the unnamed media identity can refuse this one.
-        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(content, [SiteCue(dungeon with { MediaId = "music.dungeon.alt", Digest = dungeon.Digest })]));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(content), [SiteCue(dungeon with { MediaId = "music.dungeon.alt", Digest = dungeon.Digest })]));
     }
 
     [Fact]
@@ -83,16 +82,16 @@ public sealed class DaggerfallMusicBundleTests
         PublishedCue dungeon = MusicCue("music.dungeon", "song_dungeon", "dungeon", "song_dungeon.ogg", 5985696);
         NormalizedMusicCue siteCue = SiteCue(dungeon);
 
-        InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new ProductContent(Array.Empty<ProductContentFile>()), [siteCue]));
+        InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(new ProductContent(Array.Empty<ProductContentFile>())), [siteCue]));
         Assert.Contains("worldrpg/media/music/manifest.json", missing.Message, StringComparison.Ordinal);
-        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(Content(Manifest([dungeon], "someone-elses-tool")), [siteCue]));
-        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(Content(JsonSerializer.SerializeToUtf8Bytes(new { generator = DaggerfallMusicBundle.ManifestGenerator })), [siteCue]));
-        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(Content("not json"u8.ToArray()), [siteCue]));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(Content(Manifest([dungeon], "someone-elses-tool"))), [siteCue]));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(Content(JsonSerializer.SerializeToUtf8Bytes(new { generator = DaggerfallMusicBundle.ManifestGenerator }))), [siteCue]));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(Content("not json"u8.ToArray())), [siteCue]));
 
         // The site names the same container the manifest does: the manifest's own cue is the thing
         // refused here, not the site's agreement with it.
         InvalidOperationException container = Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(
-            Content(Manifest([dungeon with { MimeType = "audio/mpeg" }])),
+            new DaggerfallData(Content(Manifest([dungeon with { MimeType = "audio/mpeg" }]))),
             [SiteCue(dungeon with { MimeType = "audio/mpeg" })]));
         Assert.Contains("audio/mpeg", container.Message, StringComparison.Ordinal);
     }
@@ -106,18 +105,18 @@ public sealed class DaggerfallMusicBundleTests
         // A member the record does not declare, and a member stated twice, are mistakes rather than
         // fields to ignore: this reader is the only one a hand-written content pack can reach.
         byte[] unknown = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(Manifest([dungeon])).Replace("\"context\"", "\"contexts\"", StringComparison.Ordinal));
-        Assert.Contains("contexts", Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(Content(unknown), [site])).Message, StringComparison.Ordinal);
+        Assert.Contains("contexts", Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(Content(unknown)), [site])).Message, StringComparison.Ordinal);
 
         byte[] repeated = JsonSerializer.SerializeToUtf8Bytes(new
         {
             generator = "daggerfall-import-tool music-media",
             cues = new[] { new { mediaId = dungeon.MediaId, track = dungeon.Track, context = dungeon.Context, file = dungeon.File, mimeType = dungeon.MimeType, byteLength = dungeon.ByteLength, contentDigest = dungeon.Digest, extra = 1 } },
         });
-        Assert.Contains("extra", Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(Content(repeated), [site])).Message, StringComparison.Ordinal);
+        Assert.Contains("extra", Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(Content(repeated)), [site])).Message, StringComparison.Ordinal);
 
         // The shape failures name the manifest rather than surfacing a raw cast error.
         byte[] wrongGeneratorType = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(Manifest([dungeon])).Replace("\"generator\":\"daggerfall-import-tool music-media\"", "\"generator\":42", StringComparison.Ordinal));
-        Assert.Contains("manifest", Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(Content(wrongGeneratorType), [site])).Message, StringComparison.Ordinal);
+        Assert.Contains("manifest", Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(Content(wrongGeneratorType)), [site])).Message, StringComparison.Ordinal);
 
         // A cue that is not a record is the manifest's shape failing, not a framework cast error.
         string[] notRecords =
@@ -130,7 +129,7 @@ public sealed class DaggerfallMusicBundleTests
         foreach (string payload in notRecords)
         {
             byte[] malformed = Encoding.UTF8.GetBytes(payload);
-            Assert.Contains("manifest", Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(Content(malformed), [site])).Message, StringComparison.Ordinal);
+            Assert.Contains("manifest", Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(Content(malformed)), [site])).Message, StringComparison.Ordinal);
         }
 
         // The same member stated twice is refused rather than answered by whichever copy the parser kept.
@@ -139,10 +138,10 @@ public sealed class DaggerfallMusicBundleTests
             "\",\"mediaId\":\"" + dungeon.MediaId + "\",\"track\":\"" + dungeon.Track + "\",\"context\":\"" + dungeon.Context +
             "\",\"file\":\"" + dungeon.File + "\",\"mimeType\":\"" + dungeon.MimeType + "\",\"byteLength\":" + dungeon.ByteLength +
             ",\"contentDigest\":\"" + dungeon.Digest + "\"}]}");
-        Assert.Contains("twice", Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(Content(duplicated), [site])).Message, StringComparison.Ordinal);
+        Assert.Contains("twice", Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(Content(duplicated)), [site])).Message, StringComparison.Ordinal);
 
         byte[] traversing = Manifest([dungeon with { File = "../song_dungeon.ogg" }]);
-        Assert.Contains("does not carry", Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(Content(traversing), [SiteCue(dungeon with { File = "../song_dungeon.ogg" })])).Message, StringComparison.Ordinal);
+        Assert.Contains("does not carry", Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Admit(new DaggerfallData(Content(traversing)), [SiteCue(dungeon with { File = "../song_dungeon.ogg" })])).Message, StringComparison.Ordinal);
     }
 
     /// <summary>

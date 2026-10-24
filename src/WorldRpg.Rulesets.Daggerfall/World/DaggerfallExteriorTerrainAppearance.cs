@@ -14,6 +14,7 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// </summary>
 internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
 {
+    private readonly IContentService _content;
     private readonly IGraphicsService _graphics;
     private readonly Material _material;
     private readonly Dictionary<DaggerfallExteriorCellId, TerrainVisual> _visuals = [];
@@ -31,8 +32,9 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     /// Creates a neutral untextured terrain material. A later Daggerfall presentation owner can
     /// provide authored material policy without changing the retained mesh or collision contract.
     /// </summary>
-    internal DaggerfallExteriorTerrainAppearance(IGraphicsService graphics, DaggerfallSiteProfile? profile = null)
+    internal DaggerfallExteriorTerrainAppearance(IContentService content, IGraphicsService graphics, DaggerfallSiteProfile? profile = null)
     {
+        _content = content ?? throw new ArgumentNullException(nameof(content));
         _graphics = graphics ?? throw new ArgumentNullException(nameof(graphics));
         _profile = profile;
         _material = _graphics.CreateMaterial(new MaterialRequest(
@@ -472,8 +474,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         Material? material = null;
         try
         {
-            resource = _graphics.OpenResource(new RenderResourceRequest(
-                texture.TexturePath, TextureFilter.Nearest, TextureWrap.Repeat)).Handle;
+            resource = _graphics.OpenTexture(_content, texture.TexturePath, texture.TextureSha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
             material = _graphics.CreateMaterial(new MaterialRequest(
                 new Color(1F, 1F, 1F, 1F), resource, 1F,
                 new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false));
@@ -563,8 +564,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         SpriteAtlas? atlas = null;
         try
         {
-            resource = _graphics.OpenResource(new RenderResourceRequest(
-                sprite.TexturePath, TextureFilter.Nearest, TextureWrap.Clamp)).Handle;
+            resource = _graphics.OpenTexture(_content, sprite.TexturePath, sprite.TextureSha256).Handle;
             SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(
                 sprite.AtlasWidth,
                 sprite.AtlasHeight,

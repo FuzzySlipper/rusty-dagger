@@ -343,7 +343,7 @@ public sealed class DaggerfallPopulationSessionTests
     }
 
     private static int PopulationTextureOpens(AppearanceFake appearance) =>
-        appearance.OpenResourceRequests.Count(request => request.Path == "sprite/population.png");
+        appearance.OpenedResourcePaths.Count(path => path == "sprite/population.png");
 
     private sealed class ResidentPopulationFixture : IDisposable
     {

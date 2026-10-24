@@ -22,9 +22,6 @@ internal sealed class DaggerfallMusicBundle
     /// <summary>The bundle's root inside the content store, which holds the clips and not the manifest.</summary>
     internal const string LogicalRoot = "worldrpg/media/music/clips";
 
-    /// <summary>The bundle root as a path prefix, for the audio owner's own check.</summary>
-    internal const string ContentRoot = LogicalRoot + "/";
-
     /// <summary>The published cue set: the artifact ledger both the sites and the product read.</summary>
     internal const string ManifestPath = "worldrpg/media/music/manifest.json";
 
@@ -63,7 +60,7 @@ internal sealed class DaggerfallMusicBundle
     /// <summary>
     /// Admits the cues a site names against the published music manifest, or nothing when it names none.
     /// </summary>
-    internal static DaggerfallMusicBundle? Admit(ProductContent content, IReadOnlyList<NormalizedMusicCue> cues)
+    internal static DaggerfallMusicBundle? Admit(DaggerfallData content, IReadOnlyList<NormalizedMusicCue> cues)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(cues);
@@ -105,7 +102,7 @@ internal sealed class DaggerfallMusicBundle
         return new DaggerfallMusicBundle(DaggerfallAudioBundle.ForMusic(content, cues), new ReadOnlyDictionary<string, string>(mediaIdByTrack));
     }
 
-    private static IReadOnlyDictionary<string, ManifestCue> ReadManifest(ProductContent content)
+    private static IReadOnlyDictionary<string, ManifestCue> ReadManifest(DaggerfallData content)
     {
         byte[] bytes;
         try

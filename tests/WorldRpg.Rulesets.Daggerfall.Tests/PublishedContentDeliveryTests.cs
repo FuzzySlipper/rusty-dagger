@@ -525,16 +525,16 @@ public sealed class PublishedContentDeliveryTests
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
             content.ReadBytes("worldrpg/payloads/daggerfall.base.json"), content.ReadBytes("worldrpg/payloads/daggerfall.imported.json"));
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
-            content,
+            new DaggerfallData(content),
             content.ReadBytes("worldrpg/payloads/daggerfall.privateers-hold.json"),
             definitions);
         DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(
-            content,
+            new DaggerfallData(content),
             content.ReadBytes("worldrpg/payloads/daggerfall.castle-necromoghan.json"),
             definitions);
 
-        DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(content, inputs.ClassicPresentation);
-        DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(content, castle.ClassicPresentation);
+        DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(new DaggerfallData(content), inputs.ClassicPresentation);
+        DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(new DaggerfallData(content), castle.ClassicPresentation);
 
         Assert.Equal(225, media.Paths.Count);
         JsonElement inventory = JsonDocument.Parse(content.ReadBytes(DaggerfallUiArt.InventoryPath).ToArray()).RootElement;

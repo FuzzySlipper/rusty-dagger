@@ -26,7 +26,7 @@ public sealed class DaggerfallMusicSessionTests
         // The site's own classic sidecar names the cues it admits; the bytes live in the product-wide
         // music bundle. A site that named none would compose with no score, which the last fact covers.
         Assert.NotEmpty(inputs.Music);
-        DaggerfallMusicBundle bundle = DaggerfallMusicBundle.Admit(content, inputs.Music)
+        DaggerfallMusicBundle bundle = DaggerfallMusicBundle.Admit(new DaggerfallData(content), inputs.Music)
             ?? throw new InvalidOperationException("The regenerated Privateer's Hold sidecar carries no admitted music cue.");
         List<string> releases = [];
         ContentFake contentService = new(releases);
@@ -70,7 +70,7 @@ public sealed class DaggerfallMusicSessionTests
             [new DaggerfallAmbientZone("fixture-castle", DaggerfallAmbientZoneKind.Castle, start - System.Numerics.Vector3.One * 4, start + System.Numerics.Vector3.One * 4)]);
         var fixture = MusicEngine(inputs);
         using var session = DaggerfallSession.StartNew(fixture.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) {
-            Music = DaggerfallMusicBundle.Admit(FullContent(root), inputs.Music) });
+            Music = DaggerfallMusicBundle.Admit(new DaggerfallData(FullContent(root)), inputs.Music) });
 
         session.Update(Update());
         // Donor SongManager: IsPlayerInsideDungeonCastle selects CastleSongs over the dungeon list.
@@ -90,7 +90,7 @@ public sealed class DaggerfallMusicSessionTests
         ProductContent content = FullContent(root);
         DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallSiteProfile castle = ReadProfile(root, content, definitions, "daggerfall.castle-necromoghan.json");
-        DaggerfallMusicBundle bundle = DaggerfallMusicBundle.Admit(content, inputs.Music)
+        DaggerfallMusicBundle bundle = DaggerfallMusicBundle.Admit(new DaggerfallData(content), inputs.Music)
             ?? throw new InvalidOperationException("The regenerated Privateer's Hold sidecar carries no admitted music cue.");
         List<string> releases = [];
         ContentFake contentService = new(releases);
@@ -137,7 +137,7 @@ public sealed class DaggerfallMusicSessionTests
         DaggerfallSiteProfile inputs = ReadInputs(root);
         // A publication without music is a supported state, not a failure: the join answers nothing and
         // the ordinary session runs with no score rather than a substituted track.
-        Assert.Null(DaggerfallMusicBundle.Admit(content, []));
+        Assert.Null(DaggerfallMusicBundle.Admit(new DaggerfallData(content), []));
         List<string> releases = [];
         ContentFake contentService = new(releases);
         PopulateContent(contentService, inputs);
@@ -169,7 +169,7 @@ public sealed class DaggerfallMusicSessionTests
         var fixture = MusicEngine(exterior, interior);
         using var session = DaggerfallSession.StartNew(fixture.Context,
             new(definitions, exterior, DaggerfallTuning.Defaults) {
-                Music = DaggerfallMusicBundle.Admit(content, exterior.Music), Profiles = new([exterior, interior]),
+                Music = DaggerfallMusicBundle.Admit(new DaggerfallData(content), exterior.Music), Profiles = new([exterior, interior]),
                 Blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json"))) });
         session.Update(Update());
         Assert.Equal(DaggerfallMusicContext.Night, session.MusicContext());
@@ -196,8 +196,8 @@ public sealed class DaggerfallMusicSessionTests
         var tuning = MusicTuning(root, alternate) with { Weather = DaggerfallWeatherTuning.Classic with {
             Odds = Enumerable.Range(0,24).Select(_ => new[]{0,0,0,0,100,0,0}).ToArray() } };
         using var session = DaggerfallSession.StartNew(fixture.Context,
-            new(TestPayload.Definitions, inputs, tuning) { Music = DaggerfallMusicBundle.Admit(content, inputs.Music),
-                Sky = DaggerfallSkyMedia.Read(DaggerfallSkyMediaTests.Fixture().Content) });
+            new(TestPayload.Definitions, inputs, tuning) { Music = DaggerfallMusicBundle.Admit(new DaggerfallData(content), inputs.Music),
+                Sky = DaggerfallSkyMedia.Read(new DaggerfallData(DaggerfallSkyMediaTests.Fixture().Content)) });
         session.Update(Update());
         Assert.Equal(night, session.MusicTrack);
         session.AdvanceElapsedTime(12 * 60 * 60);
@@ -215,7 +215,7 @@ public sealed class DaggerfallMusicSessionTests
     public void Every_environment_playlist_has_published_music_in_both_variants()
     {
         var content = FullContent(TestData.RepositoryRoot);
-        var bundle = DaggerfallMusicBundle.Admit(content, ReadInputs(TestData.RepositoryRoot).Music)!;
+        var bundle = DaggerfallMusicBundle.Admit(new DaggerfallData(content), ReadInputs(TestData.RepositoryRoot).Music)!;
         foreach (var context in Enum.GetValues<DaggerfallMusicContext>().Except([DaggerfallMusicContext.Combat, DaggerfallMusicContext.Menu]))
             foreach (bool alternate in new[]{false,true})
                 Assert.Contains(DaggerfallMusicDirector.PlaylistFor(context, alternate), bundle.CanPlay);
@@ -225,7 +225,7 @@ public sealed class DaggerfallMusicSessionTests
     public void An_admitted_combat_hit_keeps_the_environmental_song()
     {
         var inputs = ReadInputs(TestData.RepositoryRoot);
-        var bundle = DaggerfallMusicBundle.Admit(FullContent(TestData.RepositoryRoot), inputs.Music);
+        var bundle = DaggerfallMusicBundle.Admit(new DaggerfallData(FullContent(TestData.RepositoryRoot)), inputs.Music);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -249,10 +249,10 @@ public sealed class DaggerfallMusicSessionTests
 
     private static DaggerfallSiteProfile AssembleTavern(ProductContent content, DaggerfallDefinitions definitions)
     {
-        var media = DaggerfallWorldMedia.Read(content);
-        var product = DaggerfallSiteContent.ReadProductMedia(content, media, definitions);
-        var meshes = DaggerfallLocationAssembly.ReadMeshIndex(content, media);
-        var assembly = new DaggerfallLocationAssembly(definitions, new DaggerfallWorldBlocks(content), () => product, () => meshes);
+        var media = DaggerfallWorldMedia.Read(new DaggerfallData(content));
+        var product = DaggerfallSiteContent.ReadProductMedia(new DaggerfallData(content), media, definitions);
+        var meshes = DaggerfallLocationAssembly.ReadMeshIndex(new DaggerfallData(content), media);
+        var assembly = new DaggerfallLocationAssembly(definitions, new DaggerfallWorldBlocks(new DaggerfallData(content)), () => product, () => meshes);
         var city = definitions.Locations.Records.Single(site => site.Id == new DaggerfallSiteId(17, 4));
         var tavern = city.Exterior!.Buildings.First(pair => pair.Value.Source.BuildingType == 15).Key;
         return assembly.Assemble(DaggerfallWorldProfileIds.Interior(city.Id, tavern));

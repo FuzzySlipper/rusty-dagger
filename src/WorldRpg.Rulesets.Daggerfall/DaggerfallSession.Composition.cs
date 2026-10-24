@@ -108,7 +108,7 @@ internal sealed partial class DaggerfallSession
             _definitions = definitions;
             _dungeonText = new DaggerfallDungeonTextActions(new DaggerfallTextResolver(definitions.Text));
             _encounters = new DaggerfallEncounterRuntime(definitions, _random);
-            Cinematics = composition.CinematicContent is null ? null : new DaggerfallCinematicPresentation(engine, composition.CinematicContent, definitions.Cinematics);
+            Cinematics = composition.Data is null ? null : new DaggerfallCinematicPresentation(engine, composition.Data, definitions.Cinematics);
             if (Cinematics is not null) partiallyConstructed.Add(Cinematics);
             _openingCinematics = new DaggerfallOpeningCinematics(Cinematics, composition.VideosEnabled);
             // Owners are built in dependency order, each from the owners it reads; the named state is

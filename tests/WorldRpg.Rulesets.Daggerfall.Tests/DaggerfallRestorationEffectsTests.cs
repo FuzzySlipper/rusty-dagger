@@ -210,7 +210,7 @@ public sealed class DaggerfallRestorationEffectsTests
     public void Regeneration_on_the_live_player_survives_a_casters_site_unload_and_current_save()
     {
         var source = ReadInputs(TestData.RepositoryRoot);
-        var destination = DaggerfallSiteContent.Read(FullContent(TestData.RepositoryRoot),
+        var destination = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)),
             File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot,"content/worldrpg/payloads/daggerfall.castle-necromoghan.json")),TestPayload.Definitions);
         var composition = new DaggerfallSessionComposition(TestPayload.Definitions,source,DaggerfallTuning.Defaults)
             { Profiles = new([source,destination]) };

@@ -22,7 +22,7 @@ internal sealed class DaggerfallPublishedClassicMedia
     /// <summary>Public content path for each admitted classic media identity.</summary>
     internal IReadOnlyDictionary<string, string> Paths { get; }
 
-    internal static DaggerfallPublishedClassicMedia Read(ProductContent content, NormalizedClassicPresentation presentation)
+    internal static DaggerfallPublishedClassicMedia Read(DaggerfallData content, NormalizedClassicPresentation presentation)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(presentation);

@@ -48,7 +48,7 @@ public sealed class CommittedBundleCompositionTests
             ? JsonDocument.Parse(startOverride.Payload).RootElement.GetProperty("startSite").GetString()!
             : TestPayload.Definitions.NewGame.StartSitePack;
         ContentPack startSite = composition.ContentPacks.Single(pack => pack.Id.Value == startPack && pack.Role.Value == SiteRole);
-        DaggerfallSiteProfile start = DaggerfallSiteContent.Read(FullContent(root), startSite.Payload, TestPayload.Definitions);
+        DaggerfallSiteProfile start = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(root)), startSite.Payload, TestPayload.Definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, start);
@@ -129,7 +129,7 @@ public sealed class CommittedBundleCompositionTests
         List<string> missingClips = [];
         foreach (ContentPack pack in composition.ContentPacks.Where(pack => pack.Role.Value == SiteRole))
         {
-            DaggerfallSiteProfile site = DaggerfallSiteContent.Read(content, pack.Payload, TestPayload.Definitions);
+            DaggerfallSiteProfile site = DaggerfallSiteContent.Read(new DaggerfallData(content), pack.Payload, TestPayload.Definitions);
             string clips = DaggerfallWorldMedia.AudioRoot;
             Assert.NotEmpty(site.Audio);
             missingClips.AddRange(site.Audio
@@ -216,8 +216,7 @@ public sealed class CommittedBundleCompositionTests
         JsonObject payload = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.mages.json")))!.AsObject();
         payload["id"] = "a-corpus-no-code-names";
 
-        IReadOnlyList<DaggerfallClassicQuestCorpusReceipt> receipts = DaggerfallClassicQuestCorpusContent.Read(
-            new ProductContent(Array.Empty<ProductContentFile>()), Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions);
+        IReadOnlyList<DaggerfallClassicQuestCorpusReceipt> receipts = DaggerfallClassicQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions);
 
         Assert.NotEmpty(receipts);
         Assert.All(receipts, receipt => Assert.True(receipt.IsOrdinaryOffer));

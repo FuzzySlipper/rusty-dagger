@@ -23,7 +23,10 @@ public sealed class ActorSpritePresentationTests
         List<string> releases = []; var graphics = new AppearanceFake(releases); var source = MediaInputs();
         var profile = new DaggerfallSiteProfile(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook,
             [new NormalizedMaterial(0, "summer.png", Hash) { WinterTexture = new("winter.png", Hash) }], source.ActorSprites);
-        using var presentation = new DaggerfallSiteAppearance(MediaContent(releases), graphics, profile);
+        ContentFake content = MediaContent(releases);
+        content.Add("summer.png", Hash);
+        content.Add("winter.png", Hash);
+        using var presentation = new DaggerfallSiteAppearance(content, graphics, profile);
         presentation.SetExteriorSeason(World.DaggerfallExteriorSeason.Winter);
         var winter = Assert.Single(graphics.MaterialUpdates);
         presentation.SetExteriorSeason(World.DaggerfallExteriorSeason.Winter);
@@ -31,7 +34,7 @@ public sealed class ActorSpritePresentationTests
         presentation.SetExteriorSeason(World.DaggerfallExteriorSeason.Summer);
         Assert.Equal(2, graphics.MaterialUpdates.Count);
         Assert.NotEqual(winter.Replacement, graphics.MaterialUpdates[1].Replacement);
-        Assert.Contains(graphics.OpenResourceRequests, resource => resource.Path == "winter.png");
+        Assert.Contains("winter.png", graphics.OpenedResourcePaths);
     }
 
     [Fact]
@@ -68,7 +71,7 @@ public sealed class ActorSpritePresentationTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         string scenario = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
-        DaggerfallSiteProfile ratInputs = DaggerfallSiteContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario), definitions);
+        DaggerfallSiteProfile ratInputs = DaggerfallSiteContent.Read(new DaggerfallData(ImportContent(root)), Encoding.UTF8.GetBytes(scenario), definitions);
         NormalizedActorSprite rat = SpriteFor(ratInputs, "rat");
         Assert.Equal("ratIdle", rat.PreferredRestState);
 

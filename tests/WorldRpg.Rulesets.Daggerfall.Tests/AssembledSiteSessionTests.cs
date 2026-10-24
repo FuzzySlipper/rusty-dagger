@@ -63,10 +63,10 @@ public sealed class AssembledSiteSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent full = FullContent(root);
-        DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(full);
-        Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(full, media, definitions));
-        Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(full, media));
-        DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(full), () => product.Value, () => meshes.Value);
+        DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(new DaggerfallData(full));
+        Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(new DaggerfallData(full), media, definitions));
+        Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(new DaggerfallData(full), media));
+        DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(new DaggerfallData(full)), () => product.Value, () => meshes.Value);
         DaggerfallSiteProfiles profiles = DaggerfallSiteProfiles.Resolve([DaggerfallAuthoredSite.Of(source)], assembly, null);
         DaggerfallWorldProfileKey interior = UnpublishedCharingInterior(profiles);
         DaggerfallWorldProfileKey dungeon = definitions.Locations.Records

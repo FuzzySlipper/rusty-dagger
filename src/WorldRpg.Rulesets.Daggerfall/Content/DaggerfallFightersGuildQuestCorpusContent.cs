@@ -6,9 +6,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>Admits the published Fighters Guild receipt and assesses it with the actual task compiler.</summary>
 internal static class DaggerfallFightersGuildQuestCorpusContent
 {
-    internal static IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> Read(ProductContent content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
+    internal static IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> Read(ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
     {
-        ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(definitions);
         using JsonDocument document = JsonDocument.Parse(payload);
         JsonElement quests = document.RootElement.GetProperty("quests");

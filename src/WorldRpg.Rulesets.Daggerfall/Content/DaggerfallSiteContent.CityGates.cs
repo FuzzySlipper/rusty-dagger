@@ -6,7 +6,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 internal static partial class DaggerfallSiteContent
 {
-    private static IReadOnlyList<DaggerfallCityGateDefinition> ReadCityGates(ProductContent content,
+    private static IReadOnlyList<DaggerfallCityGateDefinition> ReadCityGates(DaggerfallData content,
         ReadOnlyMemory<byte> normalized, DaggerfallWorldMedia product, DaggerfallClosureArtifacts artifacts,
         ref IReadOnlyList<NormalizedMaterial> materials, DaggerfallContentDiagnostics diagnostics)
     {
