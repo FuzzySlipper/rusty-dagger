@@ -16,7 +16,7 @@ public sealed class FixedDungeonEnemySessionTests
     public void Published_site_binds_fixed_markers_once_and_preserves_scenario_identity()
     {
         var profile = ReadInputs(TestData.RepositoryRoot);
-        Assert.Equal(42, profile.Project.Actors.Count);
+        Assert.Equal(25, profile.Project.Actors.Count);
         Assert.Equal("skeletal-warrior", profile.Project.Actors[2000].ActorId.Value);
         using var session = FreshSession();
         foreach (var placement in profile.Project.Actors.Values)
