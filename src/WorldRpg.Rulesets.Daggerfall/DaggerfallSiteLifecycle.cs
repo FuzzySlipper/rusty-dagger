@@ -105,6 +105,8 @@ internal sealed class DaggerfallSiteLifecycle
     // once that collision is live.
     private bool _deferringCollision;
     private bool _arrivalStandPending;
+    // An arrival whose ground the Engine refused: the world is held until its window is admitted again and stood on.
+    private bool _arrivalGroundRefused;
     // The Engine composes placed artifacts on the local frame current when the first one was placed,
     // and moves that grid with every origin commit. A new game first places at origin zero; a restore
     // commits the saved origin before placing anything, so placements are expressed against this.
@@ -482,8 +484,8 @@ internal sealed class DaggerfallSiteLifecycle
 
     /// <summary>
     /// How far the collision a <see cref="DeferCollision"/> change handed off has come; once it is live, stands the
-    /// arriving player on it and reports done. A refused batch fails the arrival: the Engine kept none of it, and
-    /// the next window update admits those cells again at once.
+    /// arriving player on it and reports done. A refused batch fails the arrival: the Engine kept none of it, so
+    /// the arrival waits, still to be stood, while <see cref="RecoverArrivalGround"/> admits the window again.
     /// </summary>
     internal LoadingProgress AwaitArrivalCollision()
     {
@@ -491,7 +493,7 @@ internal sealed class DaggerfallSiteLifecycle
         switch (admission.State)
         {
             case DaggerfallExteriorAdmissionState.Refused:
-                _arrivalStandPending = false;
+                _arrivalGroundRefused = true;
                 throw new DaggerfallArrivalCollisionRefusedException();
             case DaggerfallExteriorAdmissionState.Baking:
                 return admission.Fraction is { } fraction ? LoadingProgress.Measured(fraction) : LoadingProgress.Unmeasured;
@@ -502,6 +504,29 @@ internal sealed class DaggerfallSiteLifecycle
             StandArrivingPlayer();
         }
         return LoadingProgress.Finished;
+    }
+
+    /// <summary>
+    /// Brings back the ground of an arrival whose collision the Engine refused, one admitted update at a time; true
+    /// when there is nothing to recover. Until then the world must not run: nothing holds the player or anyone else
+    /// up. Each call reads the window's batch, hands the Engine the window again off the update once that batch is
+    /// refused, and stands the arrival once it is live.
+    /// </summary>
+    internal bool RecoverArrivalGround()
+    {
+        if (!_arrivalGroundRefused) return true;
+        if (_exteriorResidency is not { AwaitsBatch: true } && ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior)
+            DeferCollision(() => _ = UpdateExteriorResidency());
+        try
+        {
+            if (!AwaitArrivalCollision().Done) return false;
+        }
+        catch (DaggerfallArrivalCollisionRefusedException)
+        {
+            return false;
+        }
+        _arrivalGroundRefused = false;
+        return true;
     }
 
     /// <summary>
@@ -1993,4 +2018,4 @@ internal sealed class DaggerfallSiteLifecycle
 /// Engine kept none of the batch and its host log names why; the window admits those cells again on the next update.
 /// </summary>
 internal sealed class DaggerfallArrivalCollisionRefusedException()
-    : InvalidOperationException("The ground here could not be made solid: the Engine refused its collision, and its log says why.");
+    : InvalidOperationException("The ground here could not be made solid: the Engine refused its collision, and its log says why. The world waits while it is made again.");
