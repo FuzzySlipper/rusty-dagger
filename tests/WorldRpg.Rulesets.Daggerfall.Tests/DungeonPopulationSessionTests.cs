@@ -16,6 +16,29 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DungeonPopulationSessionTests
 {
+    [Fact]
+    public void Classic_start_gives_each_enemy_marker_one_population_actor_beside_the_fixed_authored_actors()
+    {
+        DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
+        Assert.NotEmpty(inputs.DungeonPopulation.Enemies);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+
+        long[] actors = [.. session.DefinitionsByActor.Keys.Where(id => id != 1)];
+        Assert.Equal(inputs.DungeonPopulation.Enemies.Count + inputs.Project.Actors.Count, actors.Length);
+        // The authored placements are the source's fixed enemies; a population marker is never also an authored actor.
+        Assert.All(inputs.Project.Actors.Values, actor => Assert.DoesNotContain(inputs.DungeonPopulation.Enemies,
+            marker => Math.Abs(marker.Position.X - actor.Position.X) < .01 && Math.Abs(marker.Position.Z - actor.Position.Z) < .01));
+        var footprints = actors.Select(id => session.State.Actors.Get(id).Position)
+            .Select(position => (X: Math.Round(position.X, 2), Z: Math.Round(position.Z, 2))).ToArray();
+        Assert.Equal(footprints.Length, footprints.Distinct().Count());
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
