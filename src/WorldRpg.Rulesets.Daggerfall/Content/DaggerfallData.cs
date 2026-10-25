@@ -31,6 +31,7 @@ internal sealed class DaggerfallData
     private readonly ProductContent _content;
     private readonly ProductContentBundle? _data;
     private readonly Dictionary<string, ContentReferenceInfo[]> _roots = new(StringComparer.Ordinal);
+    private HashSet<string>? _entries;
 
     /// <summary>Reads the product's content and, when it was opened, the data container.</summary>
     internal DaggerfallData(ProductContent content, ProductContentBundle? data)
@@ -61,6 +62,17 @@ internal sealed class DaggerfallData
 
         bytes = default;
         return false;
+    }
+
+    /// <summary>Whether a file is at this exact path, without reading it.</summary>
+    internal bool Contains(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        if (_content.TryReadFile(path, out _)) return true;
+        if (_data is null) return false;
+        HashSet<string> entries;
+        lock (_roots) entries = _entries ??= [.. _data.Entries.ToArray().Select(entry => entry.Path)];
+        return entries.Contains(path);
     }
 
     /// <summary>Reads a required file, or throws <see cref="FileNotFoundException"/> naming its path and where it was looked for.</summary>

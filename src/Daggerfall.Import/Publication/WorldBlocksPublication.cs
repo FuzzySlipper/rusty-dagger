@@ -28,11 +28,17 @@ public static class Arena2WorldBlocksPublication
     /// <param name="locations">The catalog's locations, which name every block a location places.</param>
     /// <param name="meshPublication">The world media publication's content root, whose meshes the models name.</param>
     /// <param name="progress">Told how far the publication has come, for a long run.</param>
+    /// <param name="catalog">
+    /// The block building catalog the runtime joins each location's buildings and city maps to. Every building slot
+    /// of a placed RMB block is a building of each location that places it, so a slot or map the catalog does not
+    /// publish is refused here, once, rather than checked over every location's detail when a game starts.
+    /// </param>
     public static WorldBlocksPublication Create(
         DungeonLogicalSourceSet sources,
         DaggerfallLocations locations,
         string meshPublication,
-        Action<string>? progress = null)
+        Action<string>? progress = null,
+        DaggerfallBlockBuildingSet? catalog = null)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(locations);
@@ -49,9 +55,19 @@ public static class Arena2WorldBlocksPublication
             .Order(StringComparer.Ordinal)];
         List<WorldBlockNormalization> normalized = [];
         int interiors = 0;
+        HashSet<(string Block, int Index)> catalogued = [.. catalog?.Buildings.Select(building => (building.Block, building.Index)) ?? []];
+        HashSet<string> mapped = [.. catalog?.Maps.Select(map => map.Block) ?? []];
         foreach ((string sourceKey, int ordinal) in rmb.Select((key, ordinal) => (key, ordinal)))
         {
             RmbBlockContent content = normalizer.ReadRmb(sourceKey);
+            if (catalog is not null)
+            {
+                if (mapped.Count != 0 && !mapped.Contains(sourceKey))
+                    throw new InvalidOperationException($"Locations place RMB block '{sourceKey}', which the block catalog publishes no city map of.");
+                if (content.Summary.Buildings.FirstOrDefault(slot => !catalogued.Contains((sourceKey, slot.Index))) is { } missing)
+                    throw new InvalidOperationException($"Locations place RMB block '{sourceKey}', whose building {missing.Index} the block catalog does not publish.");
+            }
+
             normalized.Add(normalizer.RmbExterior(content));
             for (int building = 0; building < content.Summary.Buildings.Count; building++)
             {

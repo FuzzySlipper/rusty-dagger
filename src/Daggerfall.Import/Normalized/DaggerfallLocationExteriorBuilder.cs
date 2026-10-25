@@ -148,6 +148,7 @@ internal sealed class DaggerfallLocationExteriorBuilder
             Buildings = buildings,
             GroundTiles = groundTiles,
             BuildingReferences = [.. layout.Buildings.Select(building => new DaggerfallLocationBuildingReference(building.LocationId, building.Sector) { BuildingType = building.BuildingType })],
+            BuildingTypes = [.. layout.Buildings.Select(building => building.BuildingType).Distinct().Order()],
             PortTownAndUnknown = layout.PortTownAndUnknown,
             MissingCityBuildings = missingCityBuildings,
         };

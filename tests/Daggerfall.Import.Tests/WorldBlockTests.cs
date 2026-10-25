@@ -591,6 +591,32 @@ public sealed class WorldBlockTests
         BsaArchive.Parse(sources.Require("ARCH3D.BSA").Bytes.Span, sources.Require("ARCH3D.BSA").Label),
         PakDecoder.Decode(sources.Require("CLIMATE.PAK").Bytes.Span, sources.Require("CLIMATE.PAK").Label));
 
+    [CorpusFact("BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT")]
+    public void A_placed_block_whose_building_slot_or_city_map_the_block_catalog_lacks_is_refused()
+    {
+        // Every building slot of a placed RMB block is a building of each location placing it, so the block building
+        // catalog the runtime joins locations to must carry them all, and the block's city map, or the import stops.
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
+        DaggerfallBlockBuildingSet catalog = DaggerfallBlockBuildingSet.From(DaggerfallBlocksBuilder.Build(
+            File.ReadAllBytes(Path.Combine(TestData.CorpusRoot, "BLOCKS.BSA")), PublishedSourcePath.Arena2("BLOCKS.BSA"), inventory));
+        HashSet<string> mapped = [.. catalog.Maps.Select(map => map.Block)];
+        string block = catalog.Buildings.Select(building => building.Block).First(mapped.Contains);
+        DaggerfallLocations locations = new([new DaggerfallLocationMap(0, 0, "Fixture", 1, 128 * 300, 128 * 200, 0, 8, true)
+        {
+            Exterior = new DaggerfallLocationExterior(1, 300, 299, 1, 1, 'A', 56, 56, false, 2, new DaggerfallLocationTerrainRect(54, 73, 54, 73),
+                [new DaggerfallLocationExteriorBlock(block, 0, 0)]),
+        }], [], [], [], [], []);
+        DaggerfallBlockBuildingFields slot = catalog.Buildings.First(building => building.Block == block);
+
+        DaggerfallBlockBuildingSet withoutSlot = catalog with { Buildings = [.. catalog.Buildings.Where(building => building != slot)] };
+        Assert.Contains($"'{block}', whose building {slot.Index} the block catalog does not publish",
+            Assert.Throws<InvalidOperationException>(() => Arena2WorldBlocksPublication.Create(Sources(), locations, "world-media", catalog: withoutSlot)).Message);
+        DaggerfallBlockBuildingSet withoutMap = catalog with { Maps = [.. catalog.Maps.Where(map => map.Block != block)] };
+        Assert.Contains($"'{block}', which the block catalog publishes no city map of",
+            Assert.Throws<InvalidOperationException>(() => Arena2WorldBlocksPublication.Create(Sources(), locations, "world-media", catalog: withoutMap)).Message);
+        Assert.NotEmpty(Arena2WorldBlocksPublication.Create(Sources(), locations, "world-media", catalog: catalog).Plan.Artifacts);
+    }
+
     private static DungeonLogicalSourceSet Sources(bool textures = true) => new(Directory.EnumerateFiles(TestData.CorpusRoot)
         .Where(path => Path.GetFileName(path) is "MAPS.BSA" or "BLOCKS.BSA" or "ARCH3D.BSA" or "CLIMATE.PAK" or "FACTION.TXT" or "FLATS.CFG" or "PAL.PAL"
             || textures && Path.GetFileName(path).StartsWith("TEXTURE.", StringComparison.Ordinal))

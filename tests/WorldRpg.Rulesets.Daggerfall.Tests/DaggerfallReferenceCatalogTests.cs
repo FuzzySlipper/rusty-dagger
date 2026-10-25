@@ -71,7 +71,7 @@ public sealed class DaggerfallReferenceCatalogTests
             .RequireComposition();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
             composition.RequireContentPack(new ContentPackId("daggerfall.base")).Payload,
-            composition.RequireContentPack(new ContentPackId("daggerfall.imported")).Payload);
+            composition.RequireContentPack(new ContentPackId("daggerfall.imported")).Payload, DaggerfallData.For(composition));
         Assert.Equal(19, definitions.Catalogs.Careers.Count);
 
         ResolvedGameComposition broken = TestSessions
@@ -79,7 +79,7 @@ public sealed class DaggerfallReferenceCatalogTests
             .RequireComposition();
         ReadOnlyMemory<byte> authoredPayload = broken.RequireContentPack(new ContentPackId("daggerfall.base")).Payload;
         ReadOnlyMemory<byte> brokenPayload = broken.RequireContentPack(new ContentPackId("daggerfall.imported")).Payload;
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => { DaggerfallBaseContent.Read(authoredPayload, brokenPayload); });
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => { DaggerfallBaseContent.Read(authoredPayload, brokenPayload, DaggerfallData.For(broken)); });
         Assert.Contains("not-a-skill", error.Message, StringComparison.Ordinal);
     }
 

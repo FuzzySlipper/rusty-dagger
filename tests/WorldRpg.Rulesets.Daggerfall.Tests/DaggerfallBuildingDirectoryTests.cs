@@ -56,22 +56,17 @@ public sealed class DaggerfallBuildingDirectoryTests
     }
 
     [Fact]
-    public void Content_admission_rejects_unpublished_source_slots_before_they_can_grant_building_meaning()
+    public void Content_admission_rejects_a_placed_block_with_no_published_city_map()
     {
-        DaggerfallSiteRecord site = TestPayload.Definitions.Locations.Records.First(site => site.Exterior!.Buildings.Count > 0);
-        DaggerfallSiteBuildingSource building = site.Exterior!.Buildings.Values.First();
-        DaggerfallSiteBuildingSource invalid = building with { Source = building.Source with { Id = new("ABSENT.RMB", 255) } };
-        DaggerfallSiteRecord broken = site with { Exterior = site.Exterior with
-        {
-            Buildings = new Dictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> { [invalid.Id] = invalid },
-        } };
+        // That each placed block's building slots are published is the import's check (its world-blocks step);
+        // the block every location places is in the catalog the game starts with, so admission checks its map.
+        DaggerfallSiteRecord site = TestPayload.Definitions.Locations.Records.First(site => site.Exterior is { Blocks.Count: > 0 });
+        DaggerfallSiteRecord broken = site with { Exterior = site.Exterior! with { Blocks = [new("ABSENT.RMB", 0, 0)] } };
         DaggerfallLocationSet locations = TestPayload.Definitions.Locations with { Records = [broken] };
         DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
         string error = Assert.Throws<InvalidOperationException>(() => blocks.AdmitLocations(locations)).Message;
         Assert.Contains(site.Id.ToString(), error);
-        Assert.Contains(invalid.Id.ToString(), error);
-        Assert.Contains("ABSENT.RMB:255", error);
-        // Specialization intentionally changes faction, quality and seed; only the source identity joins.
+        Assert.Contains("ABSENT.RMB", error);
         blocks.AdmitLocations(TestPayload.Definitions.Locations);
     }
 

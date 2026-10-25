@@ -35,7 +35,10 @@ public sealed record DaggerfallTerrainPrefixByte(int Index, IReadOnlyList<int> V
 /// <param name="Width">The heightmap width.</param>
 /// <param name="Height">The heightmap height.</param>
 /// <param name="Heightmap">The heightmap rows in order, each tiling the full width.</param>
-/// <param name="Samples">The 25 elevation samples of every cell in row-major cell order, base-64.</param>
+/// <param name="Samples">
+/// The content-root-relative file the 25 elevation samples of every cell are published in, as raw bytes in
+/// row-major cell order (<see cref="SampleBytes"/>), so a reader maps them rather than decoding them from text.
+/// </param>
 /// <param name="CellCount">How many cells the samples carry.</param>
 /// <param name="CellBase">The source offset of the first cell record.</param>
 /// <param name="CellStride">The source stride between cell records.</param>
@@ -53,6 +56,13 @@ public sealed record DaggerfallTerrain(
     IReadOnlyList<DaggerfallTerrainPrefixByte> Prefix,
     string DataSection)
 {
+    /// <summary>Where the samples are published, below the content root.</summary>
+    public const string SamplesPath = "worldrpg/terrain/samples.bin";
+
+    /// <summary>The samples themselves, which <see cref="Samples"/> names the file of; not part of the section.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public byte[] SampleBytes { get; init; } = [];
+
     public void Validate()
     {
         ArgumentNullException.ThrowIfNull(Source);
@@ -83,6 +93,12 @@ public sealed record DaggerfallTerrain(
             throw new InvalidOperationException("Terrain carries no samples or no data section.");
         }
 
+        // A section read back carries the samples' file, not their bytes; one built from the source carries both.
+        if (SampleBytes.Length != 0 && SampleBytes.Length != checked(CellCount * WoodsReader.CellSamples))
+        {
+            throw new InvalidOperationException($"Terrain carries {SampleBytes.Length} sample bytes for {CellCount} cells of {WoodsReader.CellSamples}.");
+        }
+
         if (Prefix.Count != WoodsReader.CellPrefixBytes)
         {
             throw new InvalidOperationException($"Terrain describes {Prefix.Count} prefix bytes for a {WoodsReader.CellPrefixBytes}-byte prefix.");
@@ -99,7 +115,7 @@ public sealed record DaggerfallTerrain(
 
 /// <summary>
 /// Builds the normalized wilderness terrain from the classic file. The heightmap tiles rows the
-/// way the grids do; the cell samples travel as one base-64 span because run-length encoding
+/// way the grids do; the cell samples travel as one raw file because run-length encoding
 /// cannot compress them. The 22 prefix bytes no reader consumes stay bytes in the source, not in
 /// the contract: the contract publishes their value domains with the verification behind them,
 /// and republishes the samples the donor actually reads. Seasonal interpretation reads the
@@ -167,12 +183,15 @@ public static class DaggerfallTerrainBuilder
             WoodsReader.MapWidth,
             WoodsReader.MapHeight,
             rows,
-            Convert.ToBase64String(samples),
+            DaggerfallTerrain.SamplesPath,
             woods.Cells.Count,
             offsets[0],
             WoodsReader.CellBytes,
             prefix,
-            Convert.ToBase64String(woods.DataSection));
+            Convert.ToBase64String(woods.DataSection))
+        {
+            SampleBytes = samples,
+        };
         terrain.Validate();
         return terrain;
     }

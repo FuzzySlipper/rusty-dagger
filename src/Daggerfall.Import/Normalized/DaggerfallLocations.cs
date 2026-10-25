@@ -158,6 +158,12 @@ public sealed record DaggerfallLocations(
     IReadOnlyList<DaggerfallRegionProvenance> Regions,
     IReadOnlyList<string> Sources)
 {
+    /// <summary>
+    /// The content-root-relative directory each exterior location's detail record and ground file are published
+    /// under (<see cref="DaggerfallLocationDetails"/>), so a reader reads a location's detail only when it needs it.
+    /// </summary>
+    public string Details { get; init; } = DaggerfallLocationDetails.Root;
+
     public void Validate()
     {
         // A location whose region or name is missing would resolve to nothing, and a dungeon whose

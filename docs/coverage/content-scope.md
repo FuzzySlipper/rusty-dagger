@@ -330,6 +330,16 @@ record options default to the paths the import gives them, so a command run alon
 (`locations --arena2 local/arena2 --update`) updates the staging tree, and `pack` repacks it. Two runs at the
 same importer source and FFmpeg build write identical bytes.
 
+The imported payload's `locations` section is the location catalog every location is asked for: identity,
+map pixel, kind, name, climate, exterior footprint and blocks, and the building types its MAPPITEM references
+name. Each exterior location's buildings and building references are a record of its own at
+`worldrpg/locations/<region>/<index>.json`, and its 128-by-128 ground grid the raw bytes beside it at
+`<index>.ground`; the terrain's cell samples are the raw file `worldrpg/terrain/samples.bin` the `terrain`
+section names. The ruleset reads a location's detail when the location is first used and the samples when a
+terrain surface first needs them, and checks only that each is in the container when a game is composed. That
+every building slot and city map of a placed RMB block is in the block catalog is checked by the import's
+`world-blocks` step.
+
 The product opens both containers beside itself (`local/` under `rusty dev`, the directory of
 `product.rpak` in a release) and resolves the derived packs over them. Without the data container, with a
 damaged one, or (in a release) with one another importer revision wrote, the entry screen states the

@@ -142,18 +142,60 @@ internal sealed record DaggerfallSiteExterior(
     int MinY,
     int MaxY)
 {
+    private readonly IReadOnlyList<DaggerfallSiteBuildingReference>? _buildingReferences;
+    private readonly IReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource>? _buildings;
+    private readonly DaggerfallGroundTileGrid? _groundTiles;
+    private readonly IReadOnlyList<int>? _buildingTypes;
+
     internal int? SourceLocationId { get; init; }
     internal IReadOnlyList<DaggerfallSiteBlock> Blocks { get; init; } = [];
+    internal int PortTownAndUnknown { get; init; }
+
+    /// <summary>
+    /// Where the published location's detail is read from: its buildings, building references and ground tiles
+    /// are read from the data container the first time one of them is asked for, not when the location catalog is
+    /// read. Null for an exterior built whole, whose fields are the values it was given.
+    /// </summary>
+    internal DaggerfallSiteDetailSource? Detail { get; init; }
+
     /// <summary>
     /// Compact row-major FLD facts. The reader keeps only non-sentinel source tiles in this typed
-    /// grid, including authored record zero, so the full location catalog does not retain one
-    /// 16-KiB array (or thousands of tile objects) per location. Contains distinguishes an absent
-    /// generated terrain tile from an authored record-zero tile.
+    /// grid, including authored record zero, so a location does not retain one 16-KiB array (or
+    /// thousands of tile objects). Contains distinguishes an absent generated terrain tile from an
+    /// authored record-zero tile.
     /// </summary>
-    internal DaggerfallGroundTileGrid GroundTiles { get; init; } = DaggerfallGroundTileGrid.Empty;
-    internal IReadOnlyList<DaggerfallSiteBuildingReference> BuildingReferences { get; init; } = [];
-    internal int PortTownAndUnknown { get; init; }
-    internal IReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> Buildings { get; init; } = new Dictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource>();
+    internal DaggerfallGroundTileGrid GroundTiles
+    {
+        get => _groundTiles ?? Detail?.ReadGround() ?? DaggerfallGroundTileGrid.Empty;
+        init => _groundTiles = value;
+    }
+
+    /// <summary>The location's MAPPITEM building references; giving them also gives <see cref="BuildingTypes"/>, which follows them.</summary>
+    internal IReadOnlyList<DaggerfallSiteBuildingReference> BuildingReferences
+    {
+        get => _buildingReferences ?? Detail?.Read().BuildingReferences ?? [];
+        init
+        {
+            _buildingReferences = value;
+            _buildingTypes = null;
+        }
+    }
+
+    internal IReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> Buildings
+    {
+        get => _buildings ?? Detail?.Read().Buildings ?? DaggerfallSiteDetail.Empty.Buildings;
+        init => _buildings = value;
+    }
+
+    /// <summary>
+    /// The distinct building types the location's MAPPITEM references name, which the quest place header filter
+    /// asks of every candidate: the location index states them, so asking does not read the location's detail.
+    /// </summary>
+    internal IReadOnlyList<int> BuildingTypes
+    {
+        get => _buildingTypes ?? [.. BuildingReferences.Select(reference => reference.BuildingType).OfType<int>().Distinct().Order()];
+        init => _buildingTypes = value;
+    }
 }
 
 /// <summary>

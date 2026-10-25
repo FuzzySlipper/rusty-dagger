@@ -147,7 +147,7 @@ internal static class ImportCommand
             "--authored", Authored, "--pack", imported, "--update");
         Add("character-presentation", "character-presentation", "--arena2", arena2, "--inventory", Inventory, "--pack", imported,
             "--out", staging, "--group", "worldrpg", "--update");
-        Add("locations", "locations", "--arena2", arena2, "--pack", imported, "--update");
+        Add("locations", "locations", "--arena2", arena2, "--pack", imported, "--out", staging, "--update");
         Add("magic-catalog", "magic-catalog", "--arena2", arena2, "--pack", imported,
             "--donor-formulas", Donor("Assets/Scripts/Game/Formulas/FormulaHelper.cs"), "--update");
         Add("mobile-catalog", "mobile-catalog", "--donor", Donor("Assets/Scripts/Utility/EnemyBasics.cs"), "--authored", Authored,
@@ -162,7 +162,7 @@ internal static class ImportCommand
         Add("climate", "climate", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
         Add("factions", "factions", "--arena2", arena2, "--pack", imported, "--inventory", Inventory,
             "--flat-captions", Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv"), "--update");
-        Add("terrain", "terrain", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
+        Add("terrain", "terrain", "--arena2", arena2, "--pack", imported, "--out", staging, "--inventory", Inventory, "--update");
         Add("items", "items", "--arena2", arena2, "--pack", imported, "--inventory", Inventory,
             "--item-templates", Donor("Assets/Resources/ItemTemplates.txt"),
             "--item-enums", Donor("Assets/Scripts/Game/Items/ItemEnums.cs"),
@@ -191,7 +191,7 @@ internal static class ImportCommand
         // 5. The per-block world publication: every RMB exterior, building interior and RDB block a location
         //    places, normalized in its own frame, its static meshes placing the world media publication's meshes.
         string[] variants = inputs.BlockVariants is null ? [] : ["--variants", inputs.BlockVariants];
-        Add("world-blocks", ["world-blocks", "--arena2", arena2, "--pack", imported, "--shared", worldMedia, "--inventory", Inventory,
+        Add("world-blocks", ["world-blocks", "--arena2", arena2, "--pack", imported, "--buildings", buildings, "--shared", worldMedia, "--inventory", Inventory,
             "--out", ImportLayout.WorldBlocks, "--source-manifest", $"{records}/world-blocks.sources.json", .. variants]);
 
         // 6. Site closures. Each writes only what is its own: every body and shared sidecar entry is referenced
