@@ -10,7 +10,7 @@ public sealed record UnreadableMediaFamily(string Family, string Kind, IReadOnly
 
 /// <summary>
 /// The generated index a product-wide media group publishes beside its artifacts: the classic, character
-/// and music groups each write one, in this one shape, so one reader resolves any group.
+/// and paper-doll groups each write one, in this one shape, so one reader resolves any group.
 /// </summary>
 /// <remarks>
 /// Every entry names an artifact by its content-relative path with its byte length and digest, so a

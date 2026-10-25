@@ -267,7 +267,7 @@ public sealed class EnemyCombatSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = ReadInputs(root);
-        ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+        ResolvedCompositionIdentity composition = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         List<string> releases = [];
         DaggerfallSavePayload saved;
         using (DaggerfallSession original = VisibleEnemySession(releases).Session)

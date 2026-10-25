@@ -21,7 +21,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
 
         foreach ((string id, int count) in expected)
         {
-            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = [.. DaggerfallClassicQuestCorpusContent.Read(File.ReadAllBytes(Path.Combine(root, $"content/worldrpg/payloads/daggerfall.quests.{id}.json")), definitions).Select(receipt => receipt.Runtime)];
+            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = [.. DaggerfallClassicQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, $"content/worldrpg/payloads/daggerfall.quests.{id}.json")), definitions).Select(receipt => receipt.Runtime)];
             Assert.Equal(count, receipts.Count);
             Assert.All(receipts.Where(receipt => receipt.Runnable), receipt => Assert.Empty(receipt.Diagnostics));
             Assert.All(receipts.Where(receipt => !receipt.Runnable), receipt => Assert.NotEmpty(receipt.Diagnostics));
@@ -33,7 +33,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        JsonObject payload = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.temples.json")))!.AsObject();
+        JsonObject payload = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.temples.json")))!.AsObject();
         payload["categories"]![0]!["catalogGroup"] = "MagesGuild";
 
         DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallClassicQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), definitions));
@@ -46,7 +46,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        JsonObject payload = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.temples.json")))!.AsObject();
+        JsonObject payload = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.temples.json")))!.AsObject();
         JsonArray categories = payload["categories"]!.AsArray();
         categories.RemoveAt(1);
         JsonArray quests = payload["quests"]!.AsArray();
@@ -63,8 +63,8 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> vampire = [.. DaggerfallClassicQuestCorpusContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.merchants-vampires.json")), definitions).Select(receipt => receipt.Runtime)];
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> nobility = [.. DaggerfallClassicQuestCorpusContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.nobility.json")), definitions).Select(receipt => receipt.Runtime)];
+        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> vampire = [.. DaggerfallClassicQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.merchants-vampires.json")), definitions).Select(receipt => receipt.Runtime)];
+        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> nobility = [.. DaggerfallClassicQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.nobility.json")), definitions).Select(receipt => receipt.Runtime)];
 
         Assert.Equal(10, vampire.Count(receipt => receipt.Name.StartsWith("P", StringComparison.Ordinal)));
         Assert.All(vampire, receipt => Assert.True(receipt.Runnable, string.Join("; ", receipt.Diagnostics)));

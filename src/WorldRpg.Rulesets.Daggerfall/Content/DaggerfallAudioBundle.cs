@@ -44,30 +44,15 @@ internal sealed class DaggerfallAudioBundle
     }
 
     /// <summary>
-    /// Constructs a site's audio through the one product-wide world media bundle: every site's sidecar names
+    /// Constructs a site's audio through the one product-wide world media publication: every site's sidecar names
     /// clips the world media publication carries once, so the site contributes the cue mapping and the
-    /// bodies stay in that bundle.
+    /// bodies stay in that publication.
     /// </summary>
     internal static DaggerfallAudioBundle ForProfile(DaggerfallData content, DaggerfallSiteProfile profile)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(profile);
         return new DaggerfallAudioBundle(content, DaggerfallWorldMedia.AudioRoot, profile.Audio);
-    }
-
-    /// <summary>Constructs the one music bundle every site's cues are opened through.</summary>
-    /// <remarks>
-    /// The score is the same donor songs in every world, so it is staged once rather than copied into each
-    /// site's bundle. A site contributes the cue list it admits; the artifacts stay here.
-    /// </remarks>
-    internal static DaggerfallAudioBundle ForMusic(DaggerfallData content, IReadOnlyList<NormalizedMusicCue> cues)
-    {
-        ArgumentNullException.ThrowIfNull(content);
-        ArgumentNullException.ThrowIfNull(cues);
-        return new DaggerfallAudioBundle(
-            content,
-            DaggerfallMusicBundle.LogicalRoot,
-            cues.Select(cue => new NormalizedAudioClip(cue.MediaId, $"{DaggerfallMusicBundle.LogicalRoot}/{cue.File}", cue.Sha256)));
     }
 
     /// <summary>Opens the exact resource published for a named audio identity.</summary>

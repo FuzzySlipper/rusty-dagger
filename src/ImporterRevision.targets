@@ -50,7 +50,7 @@
 
   <Target Name="StampImporterRevision" BeforeTargets="CoreCompile">
     <PropertyGroup>
-      <_ImporterRepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../..'))</_ImporterRepositoryRoot>
+      <_ImporterRepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</_ImporterRepositoryRoot>
       <_ImporterRevisionFile>$(IntermediateOutputPath)ImporterRevision.g.cs</_ImporterRevisionFile>
       <ImporterRevisionModifier Condition="'$(ImporterRevisionModifier)' == ''">public</ImporterRevisionModifier>
     </PropertyGroup>

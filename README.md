@@ -135,17 +135,20 @@ The game content is not in the repository: it is converted from your own copy of
 Daggerfall. Supply the game's `ARENA2` directory as `local/arena2` and the song
 folder as `local/Sound` (a link is fine; `local/` is ignored), have a Daggerfall
 Unity checkout (default `/home/research/daggerfall-unity`, or `DAGGER_DONOR_ROOT`)
-and FFmpeg on `PATH`, then generate the content once per checkout, and again after
-an importer change:
+and FFmpeg on `PATH`, then import the content once per checkout, and again after
+an importer change (the entry screen says when the data is stale):
 
 ```bash
-scripts/regenerate-content.sh
+dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound
 ```
 
-The script runs the import tool's `import` command, which also packs the converted
-data into `local/daggerfall-data.rpak` and the music into `local/music.rpak`; on a
-machine without bash, run that command directly (`dotnet run --project
-src/Daggerfall.Import.Tool -- import --music local/Sound`).
+It runs on Linux and Windows, checks every input before writing anything, and packs
+the converted data into `local/daggerfall-data.rpak` and the music into
+`local/music.rpak` (one recording per classic track, `<track>.<ext>`, in any format
+the Engine plays; `--music` is optional). The product opens both beside itself:
+from `local/` under `rusty dev`, beside `product.rpak` in a release. To work on the
+importer, rerun one command (its staging paths are the defaults) or `import --only
+STEP`, then `pack`.
 
 Ordinary edit-run development is CoreCLR through the pinned runtime:
 
@@ -220,9 +223,9 @@ RUSTY_WORKBENCH_PORT=4176 RUSTY_WORKBENCH_OVERLAY=sprites/rats.json bash src/scr
 The tool shows the Engine preview alongside atlas/frame inspection, a draggable
 pivot, directional review, frame rectangles, and resource/per-animation timing.
 Apply updates the preview; Save persists the typed overlay; Discard restores the
-saved preview. Reopening applies saved edits. Import regeneration consumes them
-with `scripts/regenerate-content.sh --sprite-authoring authoring`, which passes each site's
-`sprites/SITE.json` to the import `write` command; generated media stays separate from authored files.
+saved preview. Reopening applies saved edits. The import consumes them with
+`import --sprite-authoring authoring`, which passes each site's `sprites/SITE.json` to
+its `write` step; generated media stays separate from authored files.
 
 The **Engine debug console** menu entry mounts the upstream console. Start the
 host with `--live-debug` (the repository development service already does).
@@ -267,9 +270,10 @@ policy; the former Rust workspace, TypeScript gameplay evaluator, and encounter
 demonstration topology are not present as fallback paths.
 
 Daggerfall/Arena2 source data remains operator-supplied, and nothing converted from it is
-committed. `scripts/regenerate-content.sh` rebuilds every derived file (under `content/` and
-`import-records/`, all ignored by Git) from `local/arena2`, the donor checkout and `local/Sound`;
-[content scope](docs/coverage/content-scope.md) lists what is generated and what is authored.
+committed. The import command rebuilds every derived file into the containers and records
+under `local/` (ignored by Git) from `local/arena2`, the donor checkout and a music folder;
+`content/` holds only tracked files. [Content scope](docs/coverage/content-scope.md) lists
+what is generated and what is authored.
 Preserve the authored assets, attribution, and provenance when adapting content.
 
 ## Acknowledgements
@@ -304,8 +308,8 @@ complete), and stages the CoreCLR product. Options:
 
 There is no hosted CI: most suites read the operator's Arena2 corpus and the content
 generated from it, which a clean runner does not have, so the recorded local run is the
-gate's record. Without the generated content the script says so, skips the ruleset suite and
-product staging with the reason printed, and refuses `--play` and `--aot`.
+gate's record. Without the data container the script says so, skips the ruleset suite with the
+reason printed, and refuses `--play`.
 
 To regenerate only the staged Product, use:
 

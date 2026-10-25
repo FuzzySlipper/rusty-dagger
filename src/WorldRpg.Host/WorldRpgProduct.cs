@@ -34,8 +34,11 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     private const string BundleChoiceKey = "selected";
 
     private readonly ProductCreateContext _context;
-    private ResolvedGameComposition _composition;
-    private IGameRuleset _ruleset;
+    // The containers installed beside the product, opened once at create and kept for the product's life.
+    private readonly IReadOnlyList<InstalledContent> _installed;
+    // The game composed now; null while the product runs the unavailable screen and no game can be played.
+    private ResolvedGameComposition? _composition;
+    private IGameRuleset? _ruleset;
     // The ruleset a caller composed explicitly, which every offered bundle must use; null selects built-ins.
     private readonly IGameRuleset? _explicitRuleset;
     private IReadOnlyList<GameBundleSummary>? _bundleOptions;
@@ -48,10 +51,15 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     // The one loading screen, kept across session replacement: slow work the Host or its session accepts is
     // acknowledged on it at once and run one phase per admitted update.
     private readonly LoadingScreen _loading;
-    private ResolvedCompositionIdentity _compositionIdentity;
+    private ResolvedCompositionIdentity? _compositionIdentity;
     private bool _started;
     private bool _shutdown;
     private ProductMode _mode = ProductMode.Playing;
+
+    private ResolvedGameComposition Composition => _composition ?? throw NoGame();
+    private IGameRuleset Ruleset => _ruleset ?? throw NoGame();
+    private ResolvedCompositionIdentity CompositionIdentity => _compositionIdentity ?? throw NoGame();
+    private static InvalidOperationException NoGame() => new("No game is composed: the product shows why its content cannot be played.");
 
     private ProductStateStore<string> PlayerPreferences => _playerPreferences ??= new ProductStateStore<string>(
         _context.Engine,
@@ -79,15 +87,50 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         ArgumentNullException.ThrowIfNull(context);
         _context = context;
         _explicitRuleset = ruleset;
-        // The bundle the player last chose starts the product when it still composes; otherwise the
-        // default does, and the entry screen says why the remembered one was set aside.
-        (ResolvedGameComposition composition, IGameRuleset selected) = RememberedSelection() ?? ResolveSelection(context, ruleset, bundle);
-        _composition = composition;
-        _ruleset = selected;
-        _compositionIdentity = composition.Identity;
         // Each change of the loading screen is published by whichever session is current then: a new game or a
         // load replaces the session part-way through its work.
         _loading = new LoadingScreen(() => (_session as ILoadingScreenSession)?.PublishLoading());
+        // The containers the ruleset's games read are opened before any game is composed, so a pack they carry
+        // resolves like one of the product's own and a container that cannot be read is named on the entry screen.
+        IInstalledContentRuleset? installedRuleset = InstalledContentRuleset(ruleset);
+        (_installed, List<string> problems) = OpenInstalled(context, installedRuleset);
+        (ResolvedGameComposition, IGameRuleset)? selection = null;
+        try
+        {
+            // The bundle the player last chose starts the product when it still composes; otherwise the
+            // default does, and the entry screen says why the remembered one was set aside.
+            selection = RememberedSelection() ?? ResolveSelection(context, ruleset, bundle, _installed);
+        }
+        catch (InvalidOperationException error) when (installedRuleset is not null)
+        {
+            // A container that could not be opened already names why nothing composes; otherwise the
+            // composition's own findings do.
+            if (problems.Count == 0) problems.Add($"No game can be composed: {error.Message} {NextStep(installedRuleset.InstalledContent.First(requirement => requirement.Required))}");
+        }
+
+        if (installedRuleset is not null && selection is not null)
+            foreach (InstalledContent installed in _installed)
+                if (installedRuleset.CheckInstalledContent(installed) is { } stale)
+                {
+                    InstalledContentRequirement requirement = installedRuleset.InstalledContent.First(candidate => candidate.Name == installed.Name);
+                    // Under the development loop the importer and the product are built from the same tree, so
+                    // stale data is a warning to import again and play continues; a release refuses it.
+                    if (HostBuild.DevelopmentLoop) _bundleNotice = $"{stale} Play continues under the development loop. {NextStep(requirement)}";
+                    else problems.Add($"{stale} {NextStep(requirement)}");
+                }
+
+        if (problems.Count != 0 && installedRuleset is not null)
+        {
+            _session = installedRuleset.CreateUnavailableSession(new GameUnavailableContext(context.Engine, problems));
+            try { _session.PublishInitial(); }
+            catch { _session.Dispose(); DisposeInstalled(); throw; }
+            return;
+        }
+
+        (ResolvedGameComposition composition, IGameRuleset selected) = selection ?? throw new InvalidOperationException("No game was composed.");
+        _composition = composition;
+        _ruleset = selected;
+        _compositionIdentity = composition.Identity;
         _session = selected.CreateSession(SessionContext(composition));
         try
         {
@@ -99,8 +142,51 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         catch
         {
             _session.Dispose();
+            DisposeInstalled();
             throw;
         }
+    }
+
+    /// <summary>The ruleset seam that names the containers to open: the explicit ruleset's, or the built-in rulesets'.</summary>
+    private static IInstalledContentRuleset? InstalledContentRuleset(IGameRuleset? ruleset) =>
+        ruleset is null ? BuiltInRulesets.InstalledContent : ruleset as IInstalledContentRuleset;
+
+    /// <summary>
+    /// Opens every container the ruleset reads, beside the product: the problems are the required containers
+    /// that are absent or cannot be read, each with the step that produces it. An optional container that is
+    /// absent is left out; one that is present but unreadable is a problem, since it was meant to be read.
+    /// </summary>
+    private static (IReadOnlyList<InstalledContent> Installed, List<string> Problems) OpenInstalled(ProductCreateContext context, IInstalledContentRuleset? ruleset)
+    {
+        List<InstalledContent> installed = [];
+        List<string> problems = [];
+        foreach (InstalledContentRequirement requirement in ruleset?.InstalledContent ?? [])
+        {
+            try
+            {
+                installed.Add(new InstalledContent(requirement.Name, context.Content.OpenContainer(requirement.Name)));
+            }
+            catch (EngineCallException error)
+            {
+                bool absent = error.Diagnostics.ToArray().Any(diagnostic => diagnostic.Code == "PRODUCT_SOURCE_IO");
+                if (absent && !requirement.Required) continue;
+                problems.Add(absent
+                    ? $"{Capitalized(requirement.Title)} is not imported ({error.Message}). {NextStep(requirement)}"
+                    : $"{Capitalized(requirement.Title)} ({requirement.Name}) cannot be read, so it is damaged or incomplete: {error.Message}. Import it again. {NextStep(requirement)}");
+            }
+        }
+
+        return (installed, problems);
+
+        static string Capitalized(string text) => text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];
+    }
+
+    /// <summary>What produces a container, worded for where the product runs.</summary>
+    private static string NextStep(InstalledContentRequirement requirement) => HostBuild.DevelopmentLoop ? requirement.DevelopmentStep : requirement.ReleaseStep;
+
+    private void DisposeInstalled()
+    {
+        foreach (InstalledContent installed in _installed) installed.Container.Dispose();
     }
 
     /// <summary>The context every session is created in: the Engine, its composition and the Host's loading screen.</summary>
@@ -166,7 +252,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         if (string.IsNullOrWhiteSpace(remembered)) return null;
         try
         {
-            return ResolveSelection(_context, _explicitRuleset, new GameBundleId(remembered));
+            return ResolveSelection(_context, _explicitRuleset, new GameBundleId(remembered), _installed);
         }
         catch (Exception error) when (error is InvalidOperationException or ArgumentException)
         {
@@ -181,7 +267,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// </summary>
     private IReadOnlyList<GameBundleSummary> BundleOptions() => _bundleOptions ??= [.. GameCompositionResolver.ListBundles(_context.Content)
         .Where(option => _explicitRuleset is null ? BuiltInRulesets.Composes(option.Ruleset) : option.Ruleset == _explicitRuleset.Id)
-        .Where(option => GameCompositionResolver.Resolve(_context.Content, option.Id, CompiledVariants(_explicitRuleset)).IsResolved)];
+        .Where(option => GameCompositionResolver.Resolve(_context.Content, option.Id, CompiledVariants(_explicitRuleset), _installed).IsResolved)];
 
     private static IReadOnlyList<RulesVariantManifest> CompiledVariants(IGameRuleset? ruleset) => ruleset is null ? BuiltInRulesets.VariantManifests
         : ruleset is IRulesVariantCatalog catalog ? catalog.CompiledVariants : [];
@@ -190,7 +276,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     private void OfferBundles(IGameSession session)
     {
         if (session is not IGameBundleChoiceSession choosing) return;
-        choosing.ReportBundles(new GameBundleChoices(_composition.Bundle.Id, BundleOptions()));
+        choosing.ReportBundles(new GameBundleChoices(Composition.Bundle.Id, BundleOptions()));
     }
 
     /// <summary>
@@ -216,7 +302,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             choosing.ReportBundleOutcome("The game can be changed only from the title screen.");
             return;
         }
-        if (requested == _composition.Bundle.Id) return;
+        if (requested == Composition.Bundle.Id) return;
         if (!BundleOptions().Any(option => option.Id == requested))
         {
             choosing.ReportBundleOutcome($"The game '{requested.Value}' is not available.");
@@ -229,7 +315,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         _loading.Start($"Opening {title}", [
             new($"Reading {title}", () =>
             {
-                (ResolvedGameComposition composition, IGameRuleset selected) = ResolveSelection(_context, _explicitRuleset, requested);
+                (ResolvedGameComposition composition, IGameRuleset selected) = ResolveSelection(_context, _explicitRuleset, requested, _installed);
                 opened = (composition, selected, selected.CreateSession(SessionContext(composition)));
             }),
             new("Opening the title", () => AdoptBundle(requested, opened!.Value)),
@@ -243,7 +329,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// <summary>Makes the chosen game's opened session the running one and remembers the choice.</summary>
     private void AdoptBundle(GameBundleId requested, (ResolvedGameComposition Composition, IGameRuleset Selected, IGameSession Session) opened)
     {
-        (ResolvedGameComposition previousComposition, IGameRuleset previousRuleset, ResolvedCompositionIdentity previousIdentity) = (_composition, _ruleset, _compositionIdentity);
+        (ResolvedGameComposition? previousComposition, IGameRuleset? previousRuleset, ResolvedCompositionIdentity? previousIdentity) = (_composition, _ruleset, _compositionIdentity);
         (_composition, _ruleset, _compositionIdentity) = (opened.Composition, opened.Selected, opened.Composition.Identity);
         try
         {
@@ -266,9 +352,10 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         }
     }
 
-    private static (ResolvedGameComposition Composition, IGameRuleset Selected) ResolveSelection(ProductCreateContext context, IGameRuleset? ruleset, GameBundleId bundle)
+    private static (ResolvedGameComposition Composition, IGameRuleset Selected) ResolveSelection(ProductCreateContext context, IGameRuleset? ruleset, GameBundleId bundle,
+        IReadOnlyList<InstalledContent> installed)
     {
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(context.Content, bundle, CompiledVariants(ruleset)).RequireComposition();
+        ResolvedGameComposition composition = GameCompositionResolver.Resolve(context.Content, bundle, CompiledVariants(ruleset), installed).RequireComposition();
         IGameRuleset selected = ruleset ?? BuiltInRulesets.Resolve(composition.Ruleset);
         if (selected.Id != composition.Ruleset)
             throw new InvalidOperationException($"Selected ruleset '{selected.Id.Value}' does not match bundle ruleset '{composition.Ruleset.Value}'.");
@@ -435,7 +522,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        IGameSession replacement = _ruleset.CreateSession(SessionContext(_composition));
+        IGameSession replacement = Ruleset.CreateSession(SessionContext(Composition));
         ReplaceSession(replacement, replacement is ICharacterCreationSession ? ProductMode.Title : ProductMode.Playing,
             "the product replaced its session");
         _started = true;
@@ -459,7 +546,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        ReplaceSession(_ruleset.CreateSession(SessionContext(_composition)),
+        ReplaceSession(Ruleset.CreateSession(SessionContext(Composition)),
             ProductMode.Title, "the product quit to the title");
     }
 
@@ -500,6 +587,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         _saveSlots?.Dispose();
         _playerPreferences?.Dispose();
         _bundleChoice?.Dispose();
+        DisposeInstalled();
         _shutdown = true;
     }
 
@@ -561,7 +649,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
         try
         {
-            ProductStateLoad<string> loaded = PlayerPreferences.Load(_composition.Ruleset.Value);
+            ProductStateLoad<string> loaded = PlayerPreferences.Load(Composition.Ruleset.Value);
             if (loaded.Present && loaded.State is null)
                 throw new InvalidOperationException("The stored player-preference value is null.");
             preferences.ApplyPlayerPreferences(loaded.Present ? loaded.State : null);
@@ -573,7 +661,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             string diagnostic = $"Saved player preferences were invalid and have been discarded; defaults are active: {error.Message}";
             try
             {
-                _ = PlayerPreferences.Delete(_composition.Ruleset.Value, PersistenceRevisionGuard.Any, 0);
+                _ = PlayerPreferences.Delete(Composition.Ruleset.Value, PersistenceRevisionGuard.Any, 0);
             }
             catch (Exception deleteError)
             {
@@ -614,7 +702,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         if (serialized is null) return;
         try
         {
-            PersistenceSaveReceipt receipt = PlayerPreferences.Save(_composition.Ruleset.Value, serialized, PersistenceRevisionGuard.Any);
+            PersistenceSaveReceipt receipt = PlayerPreferences.Save(Composition.Ruleset.Value, serialized, PersistenceRevisionGuard.Any);
             if (receipt.Outcome != PersistenceSaveOutcome.Saved)
             {
                 preferences.ReportPlayerPreferencesOutcome($"Player preferences are active but were not saved: persistence returned {receipt.Outcome}.");
@@ -782,7 +870,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             key = request.Key;
         }
 
-        WorldRpgSaveSlotEntry entry = SaveSlots.SaveSlot(key, request.Label.Trim(), new GameSaveEnvelope(saveable.CaptureSave(), _compositionIdentity.Variants),
+        WorldRpgSaveSlotEntry entry = SaveSlots.SaveSlot(key, request.Label.Trim(), new GameSaveEnvelope(saveable.CaptureSave(), CompositionIdentity.Variants),
             description: (saveable as ISaveDescribingGameSession)?.DescribeSave());
         requesting.ReportSaveOutcome($"Saved '{entry.Label}' (revision {entry.Revision}).");
         RefreshSaveSlots(requesting);
@@ -798,7 +886,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        _ = SaveSlots.SaveSlot(QuickSaveKey, QuickSaveLabel, new GameSaveEnvelope(saveable.CaptureSave(), _compositionIdentity.Variants),
+        _ = SaveSlots.SaveSlot(QuickSaveKey, QuickSaveLabel, new GameSaveEnvelope(saveable.CaptureSave(), CompositionIdentity.Variants),
             description: (saveable as ISaveDescribingGameSession)?.DescribeSave());
         requesting.ReportSaveOutcome("Quick saved.");
         RefreshSaveSlots(requesting);
@@ -806,7 +894,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
     private void LoadNamedSlot(ISaveRequestingGameSession requesting, string key)
     {
-        (GameSaveEnvelope? envelope, WorldRpgSlotLoadDiagnostic? diagnostic) = SaveSlots.LoadSlot(key, _composition.Ruleset.Value, _compositionIdentity.Variants);
+        (GameSaveEnvelope? envelope, WorldRpgSlotLoadDiagnostic? diagnostic) = SaveSlots.LoadSlot(key, Composition.Ruleset.Value, CompositionIdentity.Variants);
         if (diagnostic is not null)
         {
             requesting.ReportSaveOutcome($"Load failed: {diagnostic.Message}");
@@ -875,12 +963,12 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
     private void LoadSavedGame(ISaveRequestingGameSession requesting, GameSaveEnvelope envelope)
     {
-        if (envelope.Payload.Ruleset != _composition.Ruleset)
+        if (envelope.Payload.Ruleset != Composition.Ruleset)
         {
             requesting.ReportSaveOutcome("Load failed: the saved game is for a different ruleset.");
             return;
         }
-        if (!SameVariants(envelope.Variants, _compositionIdentity.Variants))
+        if (!SameVariants(envelope.Variants, CompositionIdentity.Variants))
         {
             requesting.ReportSaveOutcome("Load failed: the saved game ran under different rules variants.");
             return;
@@ -896,7 +984,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         // restored and adopted on the updates after. A save that fails to restore leaves this game running and says why.
         IGameSession? restored = null;
         _loading.Start("Loading the saved game", [
-            new("Restoring the saved world", () => restored = saveable.CreateSession(SessionContext(_composition), envelope.Payload)),
+            new("Restoring the saved world", () => restored = saveable.CreateSession(SessionContext(Composition), envelope.Payload)),
             new("Entering the world", () => AdoptLoadedGame(requesting, restored!)),
         ], error => requesting.ReportSaveOutcome($"Load failed: {error.Message}"));
     }

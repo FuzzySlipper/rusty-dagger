@@ -16,7 +16,6 @@ internal static class Program
         ImportCommand.Command,
         PackCommand.Command,
         // Product-wide media.
-        MusicMediaCommand.Command,
         MusicTracksCommand.Command,
         ClassicMediaCommand.Command,
         SkyMediaCommand.Command,

@@ -16,4 +16,11 @@
       <ExcludeAssets Condition="'$(RustyEngineUseSourceDevelopment)' == 'true'">compile;runtime</ExcludeAssets>
     </PackageReference>
   </ItemGroup>
+  <!-- The importer revision the data container must record to be current for this build. -->
+  <PropertyGroup>
+    <ImporterRevisionNamespace>WorldRpg.Rulesets.Daggerfall.Content</ImporterRevisionNamespace>
+    <ImporterRevisionClass>DaggerfallImporterRevision</ImporterRevisionClass>
+    <ImporterRevisionModifier>internal</ImporterRevisionModifier>
+  </PropertyGroup>
+  <Import Project="../ImporterRevision.targets" />
 </Project>

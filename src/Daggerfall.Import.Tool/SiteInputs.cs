@@ -1,5 +1,4 @@
 using System.Globalization;
-using Daggerfall.Import.Audio;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Publication;
 
@@ -12,7 +11,6 @@ internal static class SiteInputs
     public static readonly CommandOption Location = CommandOption.Required("--location", "NAME");
     public static readonly CommandOption Output = CommandOption.Required("--out", "OUTPUT_DIR");
     public static readonly CommandOption SourceManifest = CommandOption.Required("--source-manifest", "FILE");
-    public static readonly CommandOption MusicManifest = CommandOption.Optional("--music-manifest", "MANIFEST.json");
     public static readonly CommandOption Shared = CommandOption.Staged("--shared", "WORLD_MEDIA_DIR", ImportLayout.WorldMedia);
     public static readonly CommandOption ClassicGroup = CommandOption.Staged("--classic-group", "CLASSIC_GROUP_DIR", ImportLayout.ClassicGroup);
 
@@ -20,14 +18,16 @@ internal static class SiteInputs
     public static IReadOnlyList<CommandOption> Common =>
     [
         Options.Arena2, Output, Region, Location, AuthoredUi.Manifest, AuthoredUi.Originals,
-        Options.Inventory, Options.Pack, SourceManifest, MusicManifest, Shared, ClassicGroup,
+        Options.Inventory, Options.Pack, SourceManifest, Shared, ClassicGroup,
     ];
 
     /// <summary>
     /// The product-wide media a site closure references: the world media publication the world-media command
-    /// wrote and the classic media group the classic-media command wrote.
+    /// wrote, the classic media group the classic-media command wrote, and the tracked authored UI art the
+    /// group lists.
     /// </summary>
-    public static ProductWorldMedia ProductMedia(CommandArguments args) => ProductWorldMedia.Read(args[Shared.Name], args[ClassicGroup.Name]);
+    public static ProductWorldMedia ProductMedia(CommandArguments args) =>
+        ProductWorldMedia.Read(args[Shared.Name], args[ClassicGroup.Name], args[AuthoredUi.Originals.Name]);
 
     /// <summary>
     /// The site closure as it is written: what is its own, with every shared body, entry and classic sidecar
@@ -50,45 +50,17 @@ internal static class SiteInputs
 
     /// <summary>
     /// What the site publishes beyond its spatial selection: the actors the imported mobile catalog says the
-    /// runtime may spawn, the authored UI art, the music cues and any dungeon sprite overlays.
+    /// runtime may spawn, the authored UI art and any dungeon sprite overlays.
     /// </summary>
     public static Arena2SiteMedia Media(CommandArguments args, Arena2ClassicMediaProfile classicMedia, IReadOnlyList<AuthoredMediaOverlay>? dungeonOverlays = null)
     {
         string imported = PayloadFiles.ReadGeneratedText(args[Options.Pack.Name]);
-        return new(Arena2SitePublication.RuntimeActorResources(imported), classicMedia,
-            MusicRecords(args.Optional(MusicManifest.Name)), dungeonOverlays ?? [])
+        return new(Arena2SitePublication.RuntimeActorResources(imported), classicMedia, dungeonOverlays ?? [])
         {
             RuntimeNpcResources = Arena2SitePublication.RuntimeNpcResources(imported),
             RuntimeNatureResources = Arena2SitePublication.RuntimeNatureResources(),
             RuntimeTerrainResources = Arena2SitePublication.RuntimeTerrainResources(),
         };
-    }
-
-    /// <summary>
-    /// The cue list a site publication records, from the manifest the music publication wrote (by default the
-    /// one the import staged, when the command runs in the repository root and it exists). A site names
-    /// the cues the product may open there, and the bytes live in the product-wide music publication. A
-    /// caller that supplied no manifest gets no cues and is told so: the site then composes without a score,
-    /// which is a supported state, and quietly naming cues nobody published would move the failure to the
-    /// product's admission of a site it cannot play.
-    /// </summary>
-    internal static IReadOnlyList<ClassicMusicRecord> MusicRecords(string? manifestPath)
-    {
-        // A command rerun by hand in the repository root names the cues the import staged, as the import did.
-        if (manifestPath is null && File.Exists(ImportLayout.Inventory) && File.Exists(ImportLayout.MusicManifest))
-        {
-            manifestPath = ImportLayout.MusicManifest;
-        }
-
-        if (manifestPath is null)
-        {
-            Console.WriteLine("music: no --music-manifest was supplied, so this publication names no cue and the product plays no score here.");
-            return [];
-        }
-
-        ClassicMusicManifest manifest = ClassicMusicPublication.Read(File.ReadAllBytes(manifestPath));
-        Console.WriteLine($"music: {manifest.Cues.Count} published cues admitted from {manifestPath}, {manifest.Cues.Sum(cue => cue.ByteLength)} bytes carried by '{ClassicMusicPublication.BundleId}'");
-        return manifest.Cues;
     }
 
     /// <summary>

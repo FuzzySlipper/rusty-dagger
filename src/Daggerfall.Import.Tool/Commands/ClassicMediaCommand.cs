@@ -22,8 +22,9 @@ internal static class ClassicMediaCommand
         // group is part of the path, so a consumer holds one name for an artifact and the inventory uses it.
         string outRoot = Path.Combine(args["--out"], group);
         Console.WriteLine($"group: {group} under {args["--out"]}");
-        // The authored UI art is part of the same group the DOM reads, so its identity, bytes and inventory
-        // entry come from the one publication rather than a copy staged beside the UI.
+        // The authored UI art is part of the same group the DOM reads, so its identity, digest and inventory
+        // entry come from the one publication. Its bytes are the tracked originals the product carries, so
+        // they are listed and not written.
         ClassicMediaGroup media = ClassicMediaGroup.Create(Arena2SiteSources.ForClassicMedia(arena2).ClassicMediaInputs, AuthoredUi.Profile(args, required: false));
         DaggerfallSoundCatalog catalog = media.SoundCatalog;
         int admitted = catalog.Clips.Count(clip => clip.Disposition == DaggerfallSoundClipDisposition.Admitted);
@@ -32,11 +33,12 @@ internal static class ClassicMediaCommand
         Console.WriteLine($"sound catalog: {catalog.Clips.Count} clips, {admitted} admitted, {readable} readable with no consumer, {catalog.Clips.Count - admitted - readable} unsupported");
         if (!args.Switch("--update")) return Options.ReportOnly("these artifacts");
 
-        PayloadFiles.WriteArtifacts(outRoot, media.Artifacts);
+        IReadOnlyList<ImportPublicationArtifact> generated = media.GeneratedArtifacts;
+        PayloadFiles.WriteArtifacts(outRoot, generated);
         PayloadFiles.WriteFile(
             Path.Combine(outRoot, ClassicMediaGroup.InventoryRelativePath.Replace('/', Path.DirectorySeparatorChar)),
             media.WriteInventory(group, Directory.EnumerateFiles(arena2).Select(path => Path.GetFileName(path))));
-        Console.WriteLine($"content: {media.Artifacts.Count} artifacts and their inventory written under {outRoot}");
+        Console.WriteLine($"content: {generated.Count} artifacts and their inventory written under {outRoot}; {media.Artifacts.Count - generated.Count} authored UI images listed from the tracked originals");
         return 0;
     }
 }

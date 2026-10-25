@@ -210,8 +210,8 @@ public sealed class DaggerfallRestorationEffectsTests
     public void Regeneration_on_the_live_player_survives_a_casters_site_unload_and_current_save()
     {
         var source = ReadInputs(TestData.RepositoryRoot);
-        var destination = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)),
-            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot,"content/worldrpg/payloads/daggerfall.castle-necromoghan.json")),TestPayload.Definitions);
+        var destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
+            TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot,"content/worldrpg/payloads/daggerfall.castle-necromoghan.json")),TestPayload.Definitions);
         var composition = new DaggerfallSessionComposition(TestPayload.Definitions,source,DaggerfallTuning.Defaults)
             { Profiles = new([source,destination]) };
         List<string> releases = []; ContentFake content = new(releases); PopulateContent(content,source); PopulateContent(content,destination);
@@ -255,7 +255,7 @@ public sealed class DaggerfallRestorationEffectsTests
         var costs = TestPayload.Definitions.Magic.EffectCosts.ToDictionary();
         if (spell.Effects.Any(effect => effect.Type == 26))
         {
-            var row = Arena2MagicEffectCostTable.Read(File.ReadAllText(TestData.Donor(Arena2MagicEffectCostTable.DonorSourcePath))).Resolve(26,-1);
+            var row = Arena2MagicEffectCostTable.Read(TestContentFiles.ReadText(TestData.Donor(Arena2MagicEffectCostTable.DonorSourcePath))).Resolve(26,-1);
             costs[(26,-1)] = new(row.Type,row.SubType,row.SettingsType,row.School,row.Coefficients[0],row.Coefficients[1],row.Coefficients[2],row.Coefficients[3]);
         }
         var catalog = TestPayload.Definitions.Magic with { Spells = new Dictionary<string,DaggerfallSpellDefinition> { [spell.Key] = spell }, EffectCosts = costs };

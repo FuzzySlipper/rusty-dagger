@@ -8,8 +8,8 @@ namespace Daggerfall.Import.Tool;
 /// The payload files the import commands read and write. The authored base payload
 /// (<c>daggerfall.base</c>) is tracked and hand-edited; a command reads the sections it needs from it
 /// and never writes it. The imported payload (<c>daggerfall.imported</c>) and the import records are
-/// generated: <c>scripts/regenerate-content.sh</c> removes them and the commands rebuild them section by
-/// section, so the first command to write one creates it.
+/// generated: a full <c>import</c> clears the staging tree and the records and the commands rebuild them
+/// section by section, so the first command to write one creates it.
 /// </summary>
 internal static class PayloadFiles
 {

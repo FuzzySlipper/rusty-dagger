@@ -15,7 +15,7 @@ public sealed class DaggerfallSkyMediaTests
     public void Selection_uses_complete_climate_weather_season_night_and_mirrored_time_resources()
     {
         var fixture = Fixture();
-        var media = DaggerfallSkyMedia.Read(new DaggerfallData(fixture.Content));
+        var media = DaggerfallSkyMedia.Read(TestSessions.Data(fixture.Content));
         var summer = new DaggerfallCalendar(405,5,0,12,0,0);
         Assert.Equal("sky-2-32", media.Select(226, summer, DaggerfallWeatherKind.Sunny, 0).First);
         Assert.Equal("sky-13-32", media.Select(224, summer, DaggerfallWeatherKind.Thunder, 1).First);
@@ -26,7 +26,7 @@ public sealed class DaggerfallSkyMediaTests
         Assert.Equal("particle-snow", media.Particle(true));
         var graphics = new AppearanceFake([]);
         using var resource = media.Open(graphics, "sky-13-32");
-        Assert.Equal((DaggerfallSkyMedia.BundleId, "sky-13-32.png"), fixture.Service.OpenedReferences.Single());
+        Assert.Equal((DaggerfallData.DataContainerName, DaggerfallSkyMedia.LogicalRoot + "/sky-13-32.png"), fixture.Service.OpenedReferences.Single());
         Assert.Single(graphics.OpenResourceContentRequests);
         Assert.Equal(TextureWrap.Clamp, graphics.OpenResourceContentRequests[0].Wrap);
         Assert.Equal(new Color(.1f,.2f,.3f,1), media.ClearColor(media.Select(226, summer, DaggerfallWeatherKind.Sunny,0)));
@@ -38,24 +38,25 @@ public sealed class DaggerfallSkyMediaTests
         var fixture = Fixture();
         var node = JsonNode.Parse(fixture.Manifest)!;
         node["selections"]!.AsArray().RemoveAt(0);
-        Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(new DaggerfallData(fixture.WithManifest(node))));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(TestSessions.Data(fixture.WithManifest(node))));
         node = JsonNode.Parse(fixture.Manifest)!;
         node["nightResources"]!.AsArray().RemoveAt(0);
-        Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(new DaggerfallData(fixture.WithManifest(node))));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(TestSessions.Data(fixture.WithManifest(node))));
         node = JsonNode.Parse(fixture.Manifest)!;
         node["resources"]![0]!["contentHash"] = new string('0',64);
-        Assert.Contains("digest", Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(new DaggerfallData(fixture.WithManifest(node)))).Message);
+        Assert.Contains("digest", Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(TestSessions.Data(fixture.WithManifest(node)))).Message);
     }
 
     internal static SkyFixture Fixture()
     {
         var service = new BundleContentFake();
+        service.Container(DaggerfallData.DataContainerName);
         byte[] body = [1];
         string digest = Convert.ToHexString(SHA256.HashData(body)).ToLowerInvariant();
         var resources = new List<object>(); var selections = new List<object>(); var nights = new List<object>(); var particles = new List<object>();
         object Resource(string id, int width, int height, int? night = null, string? kind = null)
         {
-            service.Add(DaggerfallSkyMedia.BundleId, id + ".png", body);
+            service.Add(DaggerfallData.DataContainerName, DaggerfallSkyMedia.LogicalRoot + "/" + id + ".png", body);
             return new {id, relativePath="media/sky/resources/"+id+".png", contentHash=digest, byteLength=1,
                 width,height,nightIndex=night,kind,clearColor=new[]{.1f,.2f,.3f}};
         }

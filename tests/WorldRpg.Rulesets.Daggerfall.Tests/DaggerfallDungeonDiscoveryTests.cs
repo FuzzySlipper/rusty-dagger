@@ -17,7 +17,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
     {
         (string root, DaggerfallSiteProfile inputs) = ReadPrivateersHold();
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
-        using JsonDocument normalized = JsonDocument.Parse(File.ReadAllBytes(
+        using JsonDocument normalized = JsonDocument.Parse(TestContentFiles.ReadCopy(
             Path.Combine(root, "content/worldrpg/imports/privateers-hold/normalized.json")));
         JsonElement world = normalized.RootElement.GetProperty("world");
         JsonElement sourcePlacements = world.GetProperty("geometryPlacements");
@@ -77,11 +77,11 @@ public sealed class DaggerfallDungeonDiscoveryTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
-            new DaggerfallData(GeneratedContent(root)),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")),
+            TestSessions.Data(GeneratedContent(root)),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")),
             definitions);
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
-        using JsonDocument normalized = JsonDocument.Parse(File.ReadAllBytes(
+        using JsonDocument normalized = JsonDocument.Parse(TestContentFiles.ReadCopy(
             Path.Combine(root, "content/worldrpg/imports/castle-necromoghan/normalized.json")));
         JsonElement sourcePlacements = normalized.RootElement.GetProperty("world").GetProperty("geometryPlacements");
 
@@ -170,7 +170,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        JsonObject payload = JsonNode.Parse(File.ReadAllBytes(
+        JsonObject payload = JsonNode.Parse(TestContentFiles.ReadCopy(
             Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!.AsObject();
         payload["world"]!["transitions"] = new JsonArray(new JsonObject
         {
@@ -181,7 +181,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
         });
 
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
-            new DaggerfallData(GeneratedContent(root)),
+            TestSessions.Data(GeneratedContent(root)),
             Encoding.UTF8.GetBytes(payload.ToJsonString()),
             definitions);
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
@@ -201,18 +201,18 @@ public sealed class DaggerfallDungeonDiscoveryTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = GeneratedContent(root);
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(content),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(content),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
         return (root, inputs);
     }
 
     private static ProductContent GeneratedContent(string root)
     {
         string contentRoot = Path.Combine(root, "content");
-        ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports"), "*", SearchOption.AllDirectories)
+        ProductContentFile[] files = TestContentFiles.AllFiles(Path.Combine(contentRoot, "worldrpg/imports"))
             .Select(path => new ProductContentFile(
                 Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')),
-                File.ReadAllBytes(path)))
+                TestContentFiles.ReadCopy(path)))
             .Concat(ClassicGroupFiles(root))
             .ToArray();
         return new ProductContent(files);

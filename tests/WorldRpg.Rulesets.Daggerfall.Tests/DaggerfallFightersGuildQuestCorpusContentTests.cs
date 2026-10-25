@@ -12,7 +12,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")), definitions);
+        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")), definitions);
 
         Assert.Equal(20, receipts.Count);
         Assert.Equal(
@@ -30,7 +30,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")), definitions);
+        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")), definitions);
         Assert.All(receipts, receipt => Assert.True(receipt.Runnable));
         // Exercise rejection with an explicitly denied receipt; the retained corpus now runs.
         DaggerfallFightersGuildQuestRuntimeReceipt blocked = receipts[0] with
@@ -54,7 +54,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        JsonObject payload = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")))!.AsObject();
+        JsonObject payload = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")))!.AsObject();
         JsonArray quests = payload["quests"]!.AsArray();
         quests[1]!["name"] = quests[0]!["name"]!.GetValue<string>();
 

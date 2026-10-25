@@ -11,8 +11,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// resolves that path here when the site does not carry it.
 /// </summary>
 /// <remarks>
-/// The eager content snapshot holds every body except the audio clips, which the Engine serves through the
-/// one bundle the Host declares at <see cref="AudioRoot"/>. The dungeon sidecar is held as one parsed
+/// Every body is read from the data container when first needed; the audio clips below
+/// <see cref="AudioRoot"/> are opened as Engine references when a cue first plays. The dungeon sidecar is held as one parsed
 /// document while the selected sites are read, so each site resolves the entries it admits by identity
 /// without reparsing it; dispose the instance once the sites are read.
 /// </remarks>
@@ -21,8 +21,6 @@ internal sealed class DaggerfallWorldMedia : IDisposable
     /// <summary>The world media publication's content root.</summary>
     internal const string Root = "worldrpg/imports/shared";
 
-    /// <summary>The bundle the Engine stages the shared audio clips into.</summary>
-    internal const string AudioBundleId = "daggerfall.world-audio";
 
     /// <summary>The audio bundle's root inside the content store.</summary>
     internal const string AudioRoot = Root + "/media/audio/clips";

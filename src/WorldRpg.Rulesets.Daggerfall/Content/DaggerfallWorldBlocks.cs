@@ -105,15 +105,12 @@ internal sealed class DaggerfallWorldBlockDocument
 }
 
 /// <summary>
-/// The per-block world publication, served lazily through the one content bundle the Host declares for
-/// it. Nothing is read at composition: the index is read the first time a location needs a block, and
-/// each block document only when a location that places it is assembled. The bundle is opened for each
-/// read and closed again, so the Engine keeps no block bodies once the documents are interpreted.
+/// The per-block world publication, read lazily from its root in the data container. Nothing is read at
+/// composition: the index is read the first time a location needs a block, and each block document only
+/// when a location that places it is assembled, so no block body is held once the documents are interpreted.
 /// </summary>
 internal sealed partial class DaggerfallWorldBlocks
 {
-    /// <summary>The bundle the Host stages the per-block publication as.</summary>
-    internal const string BundleId = "daggerfall.world-blocks";
 
     /// <summary>The bundle's root inside the content store.</summary>
     internal const string Root = "worldrpg/imports/world-blocks";
@@ -145,7 +142,7 @@ internal sealed partial class DaggerfallWorldBlocks
         catch (Exception exception) when (exception is FileNotFoundException or KeyNotFoundException or EngineCallException or InvalidOperationException)
         {
             throw new InvalidOperationException(
-                $"The per-block world publication (bundle '{BundleId}' at '{Root}') is not staged: {exception.Message} Run scripts/regenerate-content.sh and restage.", exception);
+                $"The per-block world publication ('{Root}' in {_content.Source}) cannot be read: {exception.Message}", exception);
         }
     }
 
@@ -186,7 +183,7 @@ internal sealed partial class DaggerfallWorldBlocks
             try { bytes = bundle.ReadBytes(entry.Document); }
             catch (Exception exception) when (exception is FileNotFoundException or EngineCallException)
             {
-                diagnostics.Add($"Block document '{entry.Document}' of {key} cannot be read from bundle '{BundleId}': {exception.Message}");
+                diagnostics.Add($"Block document '{entry.Document}' of {key} cannot be read from '{Root}' in {_content.Source}: {exception.Message}");
                 continue;
             }
 
@@ -230,7 +227,7 @@ internal sealed partial class DaggerfallWorldBlocks
             }
             catch (Exception exception) when (exception is JsonException or FileNotFoundException or EngineCallException)
             {
-                diagnostics.Add($"The world block index '{IndexPath}' in bundle '{BundleId}' cannot be read: {exception.Message}");
+                diagnostics.Add($"The world block index '{IndexPath}' in '{Root}' cannot be read: {exception.Message}");
             }
 
             diagnostics.ThrowIfAny();

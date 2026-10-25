@@ -322,7 +322,7 @@ public sealed class CareerPassiveSessionTests
         var context = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service,
             new AppearanceFake(releases), random: RandomMaximum.Create()).Context;
         DaggerfallSessionComposition composition = new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults)
-        { Sky = profile?.ProfileKey.Kind == DaggerfallWorldProfileKind.Exterior ? DaggerfallSkyMedia.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot))) : null };
+        { Sky = profile?.ProfileKey.Kind == DaggerfallWorldProfileKind.Exterior ? DaggerfallSkyMedia.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot))) : null };
         return save is null ? DaggerfallSession.StartNew(context, composition) : DaggerfallSession.Restore(context, composition, save);
     }
 }

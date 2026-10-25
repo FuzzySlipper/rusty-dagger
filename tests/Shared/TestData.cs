@@ -24,17 +24,25 @@ internal static class TestData
 
     public static string Donor(string relative) => Path.Combine(DonorRoot, relative);
 
-    /// <summary>The one command that writes the generated content from the operator's Arena2 files.</summary>
-    public const string RegenerationCommand = "scripts/regenerate-content.sh";
+    /// <summary>The one command that converts the operator's Arena2 files into the data containers and records.</summary>
+    public const string RegenerationCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound";
 
-    private static readonly Lazy<string?> GeneratedContentGap = new(FindGeneratedContentGap);
+    /// <summary>The data container a real import packed.</summary>
+    public static string DataContainer => Path.Combine(RepositoryRoot, "local", "daggerfall-data.rpak");
+
+    /// <summary>The import records a real import wrote beside the containers; nothing at runtime reads them.</summary>
+    public static string ImportRecords => Path.Combine(RepositoryRoot, "local", "import", "records");
 
     /// <summary>
-    /// Why a test reading generated content cannot run, or null when every generated path is present.
-    /// The paths are the ones <c>scripts/generated-content-paths.txt</c> lists, the same list the
-    /// regeneration script removes and rewrites and <c>.gitignore</c> keeps out of the repository.
+    /// Why a test reading generated content cannot run, or null when a real import's data container and import
+    /// records are both present.
     /// </summary>
-    internal static string? MissingGeneratedContent() => GeneratedContentGap.Value;
+    internal static string? MissingGeneratedContent()
+    {
+        string[] missing = [.. new[] { DataContainer, ImportRecords }.Where(path => !File.Exists(path) && !Directory.Exists(path))
+            .Select(path => Path.GetRelativePath(RepositoryRoot, path))];
+        return missing.Length == 0 ? null : $"generated content is absent ({string.Join(", ", missing)}); run `{RegenerationCommand}` with local/arena2 supplied.";
+    }
 
     /// <summary>Why a test needing these corpus entries cannot run, or null when they are all present.</summary>
     internal static string? MissingCorpus(string[] entries) => Missing("Arena2 corpus", CorpusRoot, CorpusVariable, entries);
@@ -50,27 +58,6 @@ internal static class TestData
         return missing.Length == 0
             ? null
             : $"{label} at {root} lacks {string.Join(", ", missing)}; set {variable} to relocate it.";
-    }
-
-    private static string? FindGeneratedContentGap()
-    {
-        string list = Path.Combine(RepositoryRoot, "scripts", "generated-content-paths.txt");
-        List<string> missing = [];
-        foreach (string line in File.ReadLines(list))
-        {
-            string entry = line.Trim();
-            if (entry.Length == 0 || entry.StartsWith('#')) continue;
-            string relative = entry.TrimStart('/');
-            string path = Path.Combine(RepositoryRoot, relative.TrimEnd('/'));
-            bool present = relative.Contains('*', StringComparison.Ordinal)
-                ? Directory.Exists(Path.GetDirectoryName(path)) && Directory.EnumerateFileSystemEntries(Path.GetDirectoryName(path)!, Path.GetFileName(path)).Any()
-                : relative.EndsWith('/') ? Directory.Exists(path) : File.Exists(path);
-            if (!present) missing.Add(relative);
-        }
-
-        return missing.Count == 0
-            ? null
-            : $"generated content is absent ({string.Join(", ", missing)}); run {RegenerationCommand} with local/arena2 supplied.";
     }
 
     private static string? Configured(string variable) =>

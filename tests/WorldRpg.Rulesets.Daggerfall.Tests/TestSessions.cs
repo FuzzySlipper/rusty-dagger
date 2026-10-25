@@ -87,11 +87,11 @@ internal static class TestSessions
     internal static DaggerfallSiteProfile ReadInputs(string root)
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        return DaggerfallSiteContent.Read(new DaggerfallData(ImportContent(root)), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        return DaggerfallSiteContent.Read(Data(ImportContent(root)), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
     }
 
     internal static DaggerfallSiteProfile ReadProfile(string root, ProductContent content, DaggerfallDefinitions definitions, string payload) =>
-        DaggerfallSiteContent.Read(new DaggerfallData(content), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads", payload)), definitions);
+        DaggerfallSiteContent.Read(Data(content), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads", payload)), definitions);
 
     internal static void RegisterCorpseStack(DaggerfallSession session, DaggerfallDefinitions definitions, long actorId, string stackId)
     {
@@ -146,61 +146,85 @@ internal static class TestSessions
             .Select(root => root.TrimEnd('/'))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
-        // Every site's clips are staged once, as the world media publication's audio bundle, and the per-block
-        // world publication is its own bundle; the full form also stages the score and the sky as their own bundles.
-        List<(string Root, string Bundle)> audioBundles = [SharedAudioBundle, WorldBlocksBundle];
-        if (selectedRoots.Length == 0)
-        {
-            audioBundles.Add(("worldrpg/media/music/clips", "daggerfall.music"));
-            audioBundles.Add(("worldrpg/media/sky/resources", "daggerfall.sky"));
-        }
-
         // The selected-closure form omits unrelated closures but keeps the product-wide media every
-        // selected closure references.
-        return ContentWithBundles(root, audioBundles.ToArray(), out _,
-            selectedRoots.Length == 0 ? selectedRoots : [.. selectedRoots, DaggerfallWorldMedia.Root, .. ClassicGroupArtifacts(root)]);
+        // selected closure references; only the full form installs the score.
+        return ContentWithContainers(root, out _,
+            selectedRoots.Length == 0 ? selectedRoots : [.. selectedRoots, DaggerfallWorldMedia.Root, DaggerfallWorldBlocks.Root, .. ClassicGroupArtifacts(root)]);
     }
 
     /// <summary>
-    /// The content the SDK stages for the Host: every bundle the Host project declares is served lazily
-    /// as that bundle, the cinematics included, and every other file sits in the eager snapshot.
+    /// The content the product runs with: the tracked <c>content/</c> tree it stages, and the data and music
+    /// containers a real import packed, installed beside it as the Host opens them.
     /// </summary>
-    internal static ProductContent StagedContent(string root, out BundleContentFake bundles)
+    internal static ProductContent StagedContent(string root, out BundleContentFake bundles) => ContentWithContainers(root, out bundles);
+
+    /// <summary>The full content with one root left out of the data container, as an import that lacks it would pack it.</summary>
+    internal static ProductContent FullContentWithout(string root, string missingRoot) => ContentWithContainers(root, out _, excludedRoot: missingRoot);
+
+    /// <summary>The derived content a test reads through the containers its content installs, as a composition does.</summary>
+    internal static DaggerfallData Data(ProductContent content) => new(content, TryOpen(content, DaggerfallData.DataContainerName));
+
+    /// <summary>The derived content a content fake holds the bodies of, as product content a session reads by path.</summary>
+    internal static DaggerfallData DataOf(ContentFake fake) => new(new ProductContent(fake.Paths
+        .Where(path => fake.Body(path) is not null)
+        .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(path), fake.Body(path)!)).ToArray()), null);
+
+    /// <summary>Resolves a bundle over the content and the containers it installs, as the Host does.</summary>
+    internal static GameCompositionResolution Resolve(ProductContent content, GameBundleId bundle, IReadOnlyList<RulesVariantManifest>? compiledVariants = null) =>
+        GameCompositionResolver.Resolve(content, bundle, compiledVariants ?? [], Installed(content));
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ProductContent, IReadOnlyList<InstalledContent>> InstalledByContent = [];
+
+    /// <summary>The containers a test's content installs, each opened once for that content as the Host opens them once.</summary>
+    internal static IReadOnlyList<InstalledContent> Installed(ProductContent content) => InstalledByContent.GetValue(content, static value =>
     {
-        (string Root, string Bundle)[] declared = [.. XDocument.Load(Path.Combine(root, "src/WorldRpg.Host/WorldRpg.Host.csproj"))
-            .Descendants("RustyEngineContentBundle")
-            .Select(item => (item.Attribute("Root")!.Value, item.Attribute("Include")!.Value))];
-        return ContentWithBundles(root, declared, out bundles);
+        List<InstalledContent> installed = [];
+        foreach (string name in new[] { DaggerfallData.DataContainerName, DaggerfallMusicBundle.ContainerName })
+            if (TryOpen(value, name) is { } container) installed.Add(new InstalledContent(name, container));
+        return installed;
+    });
+
+    /// <summary>A container the content installs, or null when it installs none of that name (or has no Engine service to open one).</summary>
+    private static ProductContentBundle? TryOpen(ProductContent content, string name)
+    {
+        try { return content.OpenContainer(name); }
+        catch (Exception exception) when (exception is EngineCallException or FileNotFoundException or NotSupportedException or InvalidOperationException) { return null; }
     }
 
-    private static ProductContent ContentWithBundles(string root, (string Root, string Bundle)[] declared,
-        out BundleContentFake bundles, IReadOnlyCollection<string>? selectedPublicationRoots = null)
+    private static ProductContent ContentWithContainers(string root, out BundleContentFake bundles, IReadOnlyCollection<string>? selectedPublicationRoots = null,
+        string? excludedRoot = null)
     {
         string contentRoot = Path.Combine(root, "content");
         bundles = new();
         List<ProductContentFile> eager = [];
-
-        foreach (string file in TestContentFiles.AllFiles(Path.Combine(contentRoot, "worldrpg")))
+        // The tracked tree is the product's own content, staged whole.
+        foreach (string file in Directory.GetFiles(Path.Combine(contentRoot, "worldrpg"), "*", SearchOption.AllDirectories))
         {
             string relative = Path.GetRelativePath(contentRoot, file).Replace(Path.DirectorySeparatorChar, '/');
-            if (selectedPublicationRoots is { Count: > 0 }
-                && !selectedPublicationRoots.Any(selected =>
-                    relative.StartsWith(selected + "/", StringComparison.Ordinal)
-                    || string.Equals(relative, selected, StringComparison.Ordinal))
-                && !IsGlobalContentMetadata(relative))
-                continue;
-            (string Root, string Bundle) bundle = declared.FirstOrDefault(value => relative.StartsWith(value.Root + "/", StringComparison.Ordinal));
-            if (string.IsNullOrEmpty(bundle.Root))
-            {
-                byte[] bytes = TestContentFiles.Read(file);
-                eager.Add(new ProductContentFile(Encoding.UTF8.GetBytes(relative), bytes));
-                bundles.AddEager(relative, bytes);
-                continue;
-            }
+            byte[] bytes = TestContentFiles.Read(file);
+            eager.Add(new ProductContentFile(Encoding.UTF8.GetBytes(relative), bytes));
+            bundles.AddEager(relative, bytes);
+        }
 
-            // A bundle file is read when the product uses it, as the Engine reads a staged bundle.
-            bundles.Root(bundle.Bundle, bundle.Root);
-            bundles.AddFile(bundle.Bundle, relative[(bundle.Root.Length + 1)..], file);
+        // The data container a real import packed, installed beside the product; each body is read when the
+        // product first uses it.
+        bundles.Container(TestDataContainers.Data);
+        foreach ((string path, ContentReferenceInfo entry) in TestDataContainers.Entries(TestDataContainers.Data))
+        {
+            if (selectedPublicationRoots is { Count: > 0 }
+                && !selectedPublicationRoots.Any(selected => path.StartsWith(selected + "/", StringComparison.Ordinal) || string.Equals(path, selected, StringComparison.Ordinal))
+                && !IsGlobalContentMetadata(path) && path != InstalledContent.DescriptionPath)
+                continue;
+            if (excludedRoot is not null && path.StartsWith(excludedRoot + "/", StringComparison.Ordinal)) continue;
+            string file = Path.Combine(contentRoot, path);
+            bundles.AddEntry(TestDataContainers.Data, path, entry.Sha256, entry.ByteLength, () => TestContentFiles.Read(file));
+        }
+
+        if (selectedPublicationRoots is not { Count: > 0 } && TestDataContainers.Exists(TestDataContainers.Music))
+        {
+            bundles.Container(TestDataContainers.Music);
+            foreach ((string path, ContentReferenceInfo entry) in TestDataContainers.Entries(TestDataContainers.Music))
+                bundles.AddEntry(TestDataContainers.Music, path, entry.Sha256, entry.ByteLength, () => TestDataContainers.Read(TestDataContainers.Music, path));
         }
 
         return new ProductContent(eager.ToArray(), bundles);
@@ -223,9 +247,9 @@ internal static class TestSessions
     internal static JsonObject CompleteDungeonSidecar(string root, string publicationRoot)
     {
         string contentRoot = Path.Combine(root, "content");
-        JsonObject site = JsonNode.Parse(File.ReadAllBytes(Path.Combine(contentRoot, publicationRoot, "media/dungeon/manifest.json")))!.AsObject();
+        JsonObject site = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(contentRoot, publicationRoot, "media/dungeon/manifest.json")))!.AsObject();
         if (site["shared"] is not JsonObject selection) return site;
-        JsonObject shared = JsonNode.Parse(File.ReadAllBytes(Path.Combine(contentRoot, DaggerfallWorldMedia.Root, "media/dungeon/manifest.json")))!.AsObject();
+        JsonObject shared = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(contentRoot, DaggerfallWorldMedia.Root, "media/dungeon/manifest.json")))!.AsObject();
         JsonArray Join(JsonArray own, JsonArray product, string family, string key)
         {
             HashSet<string> admitted = [.. selection[family]!.AsArray().Select(id => id!.GetValue<string>())];
@@ -240,10 +264,6 @@ internal static class TestSessions
         site["shared"] = null;
         return site;
     }
-
-    /// <summary>The one audio bundle every site's clips are opened through: the world media publication's.</summary>
-    internal static (string Root, string Bundle) SharedAudioBundle => (DaggerfallWorldMedia.AudioRoot, DaggerfallWorldMedia.AudioBundleId);
-    internal static (string Root, string Bundle) WorldBlocksBundle => (DaggerfallWorldBlocks.Root, DaggerfallWorldBlocks.BundleId);
 
     /// <summary>The content paths of the classic media group's artifacts, which the site closures reference.</summary>
     private static IReadOnlyList<string> ClassicGroupArtifacts(string root)
@@ -377,13 +397,13 @@ internal static class TestSessions
         foreach (string identity in new[] { DaggerfallUiArt.InventoryPath, DaggerfallUiArt.CharacterInventoryPath, DaggerfallUiArt.PaperDollInventoryPath })
         {
             string inventoryPath = Path.Combine(root, "content", identity);
-            byte[] inventory = File.ReadAllBytes(inventoryPath);
+            byte[] inventory = TestContentFiles.ReadCopy(inventoryPath);
             yield return (identity, inventory);
             using JsonDocument document = JsonDocument.Parse(inventory);
             foreach (JsonElement artifact in document.RootElement.GetProperty("artifacts").EnumerateArray())
             {
                 string path = artifact.GetProperty("path").GetString()!;
-                yield return (path, File.ReadAllBytes(Path.Combine(root, "content", path)));
+                yield return (path, TestContentFiles.ReadCopy(Path.Combine(root, "content", path)));
             }
         }
     }
@@ -540,7 +560,7 @@ internal static class TestSessions
     /// <summary>A session composition under the <c>daggerfall.contact</c> bundle, with its compiled variant's owners.</summary>
     internal static DaggerfallSessionComposition ContactComposition(DaggerfallSiteProfile inputs)
     {
-        ResolvedGameComposition resolved = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.contact"),
+        ResolvedGameComposition resolved = Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.contact"),
             [.. WorldRpg.Rulesets.Daggerfall.Variants.DaggerfallVariants.All.Select(variant => variant.Manifest)]).RequireComposition();
         return new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults, resolved.Identity)
         {
@@ -625,7 +645,7 @@ internal static class TestSessions
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        JsonObject profile = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!.AsObject();
+        JsonObject profile = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!.AsObject();
         JsonObject placement = profile["placements"]!.AsArray().Select(value => value!.AsObject())
             .Single(value => value["entityId"]!.GetValue<long>() == placedEntityId);
         DaggerfallActorDefinition actor = definitions.RequireActor(new DaggerfallActorId(placement["actor"]!.GetValue<string>()));
@@ -661,7 +681,7 @@ internal static class TestSessions
     /// <summary>The default tuning payload with one test mutation applied.</summary>
     internal static byte[] MutatedTuning(string repositoryRoot, Action<JsonObject> mutate)
     {
-        JsonObject tuning = JsonNode.Parse(File.ReadAllText(Path.Combine(repositoryRoot, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")))!.AsObject();
+        JsonObject tuning = JsonNode.Parse(TestContentFiles.ReadText(Path.Combine(repositoryRoot, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")))!.AsObject();
         mutate(tuning);
         return Encoding.UTF8.GetBytes(tuning.ToJsonString());
     }
@@ -708,7 +728,7 @@ internal sealed class ConditionSessionFixture : IDisposable
         string root = TestData.RepositoryRoot;
         definitions = TestPayload.Definitions;
         inputs = ReadInputs(root);
-        identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+        identity = Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);

@@ -51,7 +51,7 @@ public sealed class QuestCorpusIntegrationTests
                 // match does not make an invalid current-place binding silently succeed.
                 Assert.Contains("meetingplace/local", error.Message);
                 var definitions = TestPayload.Definitions;
-                var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+                var blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
                 var town = definitions.Locations.Records.First(site => site.Exterior?.Buildings.Values.Any(building => building.Source.BuildingType == 0
                     && blocks.QuestMarkers.TryGetValue(new(building.Source.Id.SourceKey, building.Source.Id.Index), out var markers) && markers.Count > 0) == true);
                 var sites = new World.DaggerfallSiteContext(definitions.Locations, town.Id, null, []);

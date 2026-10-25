@@ -100,10 +100,10 @@ public sealed class TuningProfile
 public sealed class ResolvedGameComposition
 {
     internal ResolvedGameComposition(GameBundle bundle, IEnumerable<ContentPack> packs, TuningProfile tuning, IEnumerable<ResolvedRulesVariant> variants,
-        ProductContent content)
+        ProductContent content, IEnumerable<InstalledContent> installed)
     {
         Bundle = bundle; ContentPacks = Freeze(packs); Tuning = tuning; Variants = Freeze(variants);
-        Content = content;
+        Content = content; Installed = Freeze(installed);
         Identity = new ResolvedCompositionIdentity(Bundle, ContentPacks, Tuning, Variants);
     }
     public GameBundle Bundle { get; }
@@ -116,6 +116,8 @@ public sealed class ResolvedGameComposition
     public ResolvedCompositionIdentity Identity { get; }
     /// <summary>The original immutable Engine content snapshot selected by this composition.</summary>
     public ProductContent Content { get; }
+    /// <summary>The containers installed beside the product that the composition resolved over, in the host's order.</summary>
+    public IReadOnlyList<InstalledContent> Installed { get; }
     public ContentPack RequireContentPack(ContentPackId id) => ContentPacks.SingleOrDefault(pack => pack.Id == id) ?? throw new InvalidOperationException($"Resolved composition does not contain content pack '{id.Value}'.");
     private static IReadOnlyList<T> Freeze<T>(IEnumerable<T> values) => Array.AsReadOnly(values.ToArray());
 }
@@ -162,6 +164,10 @@ public static class CompositionDiagnosticNames
     public const string VariantRulesetMismatch = "variant.ruleset-mismatch";
     public const string VariantSeamCollision = "variant.seam-collision";
     public const string DuplicateVariantManifest = "variant.duplicate-manifest";
+    /// <summary>A content pack the bundle names that no content source describes.</summary>
+    public const string MissingContentPack = "content-pack.missing";
+    /// <summary>A content pack whose payload no content source holds.</summary>
+    public const string MissingPayload = "content-pack.payload-missing";
 }
 public sealed class GameCompositionResolution
 {
@@ -186,22 +192,37 @@ public static class GameCompositionResolver
     public static GameCompositionResolution Resolve(ProductContent content, GameBundleId requestedBundle) =>
         Resolve(content, requestedBundle, []);
 
+    /// <summary>Resolves a bundle against admitted product content alone.</summary>
+    public static GameCompositionResolution Resolve(ProductContent content, GameBundleId requestedBundle, IReadOnlyList<RulesVariantManifest> compiledVariants) =>
+        Resolve(content, requestedBundle, compiledVariants, []);
+
     /// <summary>
-    /// Resolves a bundle against admitted content and the compiled rules variants the product composes.
-    /// An unknown variant, a variant for another ruleset, or two variants claiming one seam is an error;
-    /// each selected variant's tuning profile and content packs resolve as the bundle's own do.
+    /// Resolves a bundle against admitted content, the containers installed beside the product, and the compiled
+    /// rules variants the product composes. An unknown variant, a variant for another ruleset, or two variants
+    /// claiming one seam is an error; each selected variant's tuning profile and content packs resolve as the
+    /// bundle's own do.
     /// </summary>
-    public static GameCompositionResolution Resolve(ProductContent content, GameBundleId requestedBundle, IReadOnlyList<RulesVariantManifest> compiledVariants)
+    /// <remarks>
+    /// Product content is read first and the installed containers after it, in order: a content pack a
+    /// container's description carries is indexed with the product's own descriptors, and a payload is read from
+    /// the product's content or else from the first container that holds it. A pack two sources both describe is
+    /// a duplicate, as within one source.
+    /// </remarks>
+    public static GameCompositionResolution Resolve(ProductContent content, GameBundleId requestedBundle, IReadOnlyList<RulesVariantManifest> compiledVariants,
+        IReadOnlyList<InstalledContent> installed)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(compiledVariants);
+        ArgumentNullException.ThrowIfNull(installed);
         List<CompositionDiagnostic> diagnostics = [];
         SortedDictionary<string, byte> files = IndexFiles(content, diagnostics);
+        ContentSources sources = new(content, files, installed);
         if (!Identifier(requestedBundle.Value)) Error(diagnostics, $"Requested bundle id '{requestedBundle.Value}' is invalid.");
         Dictionary<GameBundleId, GameBundleDescriptor> bundles = [];
         Dictionary<ContentPackId, ContentPackDescriptor> packs = [];
         Dictionary<TuningProfileId, TuningDescriptor> tunings = [];
         foreach (string path in files.Keys) ReadDescriptor(path, content.ReadBytes(path), bundles, packs, tunings, diagnostics);
+        foreach (InstalledContent container in installed) ReadInstalledPacks(container, packs, diagnostics);
         if (!bundles.TryGetValue(requestedBundle, out GameBundleDescriptor? selected))
         {
             Error(diagnostics, $"Requested game bundle '{requestedBundle.Value}' was not admitted.");
@@ -209,19 +230,19 @@ public static class GameCompositionResolver
         }
         List<ContentPack> ordered = [];
         Dictionary<ContentPackId, VisitState> visits = [];
-        foreach (ContentPackReference reference in selected.ContentPacks) ResolvePack(reference, selected.Ruleset, packs, files, visits, ordered, diagnostics, content);
+        foreach (ContentPackReference reference in selected.ContentPacks) ResolvePack(reference, selected.Ruleset, packs, sources, visits, ordered, diagnostics);
         TuningProfile? tuning = ResolveTuning(selected.Tuning.Id, selected.Ruleset, tunings, files, diagnostics, content);
         List<ResolvedRulesVariant> variants = [];
         foreach (RulesVariantManifest manifest in SelectVariants(selected, compiledVariants, diagnostics))
         {
             // A variant's own packs join the bundle's after them; one the bundle already selects is not added twice.
-            foreach (ContentPackId pack in manifest.ContentPacks) ResolvePack(new(pack), selected.Ruleset, packs, files, visits, ordered, diagnostics, content);
+            foreach (ContentPackId pack in manifest.ContentPacks) ResolvePack(new(pack), selected.Ruleset, packs, sources, visits, ordered, diagnostics);
             if (ResolveTuning(manifest.Tuning, selected.Ruleset, tunings, files, diagnostics, content) is TuningProfile variantTuning)
                 variants.Add(new(manifest, variantTuning));
         }
         if (diagnostics.Any(diagnostic => diagnostic.Code == "error") || tuning is null) return new(null, diagnostics);
         GameBundle bundle = new(selected.Id, selected.Ruleset, Freeze(selected.ContentPacks), selected.Tuning, Freeze(selected.Variants), selected.Title);
-        return new(new ResolvedGameComposition(bundle, ordered, tuning, variants, content), diagnostics);
+        return new(new ResolvedGameComposition(bundle, ordered, tuning, variants, content, installed), diagnostics);
     }
 
     /// <summary>
@@ -353,16 +374,45 @@ public static class GameCompositionResolver
         return result;
     }
 
-    private static void ResolvePack(ContentPackReference reference, RulesetId ruleset, IReadOnlyDictionary<ContentPackId, ContentPackDescriptor> descriptors, IReadOnlyDictionary<string, byte> files, Dictionary<ContentPackId, VisitState> visits, List<ContentPack> ordered, List<CompositionDiagnostic> diagnostics, ProductContent content)
+    /// <summary>Indexes the content packs one installed container's description carries.</summary>
+    private static void ReadInstalledPacks(InstalledContent container, Dictionary<ContentPackId, ContentPackDescriptor> packs, List<CompositionDiagnostic> diagnostics)
     {
-        if (!descriptors.TryGetValue(reference.Id, out ContentPackDescriptor? descriptor)) { Error(diagnostics, $"Content pack '{reference.Id.Value}' is missing."); return; }
+        InstalledContentDescription? description;
+        try { description = container.Description; }
+        catch (InvalidDataException exception) { Error(diagnostics, exception.Message); return; }
+        foreach (JsonElement element in description?.ContentPacks ?? [])
+        {
+            try
+            {
+                if (String(element, "kind") != PackKind) throw new InvalidOperationException($"'kind' is not '{PackKind}'.");
+                ContentPackDescriptor pack = Pack(element);
+                if (!packs.TryAdd(pack.Id, pack)) Error(diagnostics, $"Duplicate content pack '{pack.Id.Value}' (also described by '{container.Name}').");
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or FormatException or KeyNotFoundException)
+            { Error(diagnostics, $"Invalid content pack described by '{container.Name}': {exception.Message}"); }
+        }
+    }
+
+    private static void ResolvePack(ContentPackReference reference, RulesetId ruleset, IReadOnlyDictionary<ContentPackId, ContentPackDescriptor> descriptors, ContentSources sources, Dictionary<ContentPackId, VisitState> visits, List<ContentPack> ordered, List<CompositionDiagnostic> diagnostics)
+    {
+        if (!descriptors.TryGetValue(reference.Id, out ContentPackDescriptor? descriptor)) { Error(diagnostics, $"Content pack '{reference.Id.Value}' is missing.", CompositionDiagnosticNames.MissingContentPack); return; }
         if (descriptor.Ruleset != ruleset) { Error(diagnostics, $"Content pack '{reference.Id.Value}' belongs to ruleset '{descriptor.Ruleset.Value}', not '{ruleset.Value}'."); return; }
         if (visits.TryGetValue(reference.Id, out VisitState state)) { if (state == VisitState.Visiting) Error(diagnostics, $"Content pack dependency cycle includes '{reference.Id.Value}'."); return; }
         visits[reference.Id] = VisitState.Visiting;
-        foreach (ContentPackReference dependency in descriptor.Dependencies) ResolvePack(dependency, ruleset, descriptors, files, visits, ordered, diagnostics, content);
+        foreach (ContentPackReference dependency in descriptor.Dependencies) ResolvePack(dependency, ruleset, descriptors, sources, visits, ordered, diagnostics);
         visits[reference.Id] = VisitState.Done;
-        if (!files.ContainsKey(descriptor.PayloadPath)) { Error(diagnostics, $"Content pack '{reference.Id.Value}' payload '{descriptor.PayloadPath}' is missing."); return; }
-        ordered.Add(new(descriptor, content.ReadBytes(descriptor.PayloadPath)));
+        if (sources.Read(descriptor.PayloadPath) is not { } payload) { Error(diagnostics, $"Content pack '{reference.Id.Value}' payload '{descriptor.PayloadPath}' is missing.", CompositionDiagnosticNames.MissingPayload); return; }
+        ordered.Add(new(descriptor, payload));
+    }
+
+    /// <summary>The product's content and then each installed container, as one place a payload is read from.</summary>
+    private sealed class ContentSources(ProductContent content, IReadOnlyDictionary<string, byte> files, IReadOnlyList<InstalledContent> installed)
+    {
+        public ReadOnlyMemory<byte>? Read(string path)
+        {
+            if (files.ContainsKey(path)) return content.ReadBytes(path);
+            return installed.FirstOrDefault(container => container.Contains(path)) is { } holder ? holder.Container.ReadBytes(path) : null;
+        }
     }
 
     private static TuningProfile? ResolveTuning(TuningProfileId id, RulesetId ruleset, IReadOnlyDictionary<TuningProfileId, TuningDescriptor> descriptors, IReadOnlyDictionary<string, byte> files, List<CompositionDiagnostic> diagnostics, ProductContent content)

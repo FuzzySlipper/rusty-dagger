@@ -142,7 +142,7 @@ public sealed class DaggerfallBuildingNameServiceTests
         string root = TestData.RepositoryRoot;
         return (
             TestPayload.Definitions,
-            DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json"))));
+            DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json"))));
     }
 
     private class RecordingLcg : DispatchProxy

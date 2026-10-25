@@ -1,10 +1,11 @@
 using System.Runtime.CompilerServices;
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatalog
+public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatalog, IInstalledContentRuleset
 {
     private readonly IReadOnlyList<DaggerfallRulesVariant> _variants;
     private readonly ConditionalWeakTable<ResolvedGameComposition, DaggerfallAdmittedContent> _admittedContent = [];
@@ -52,6 +53,45 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
     public RulesetId Id => Identity;
 
     public IReadOnlyList<RulesVariantManifest> CompiledVariants => [.. _variants.Select(variant => variant.Manifest)];
+
+    /// <summary>The import command a developer runs in the repository root to produce the containers.</summary>
+    private const string ImportCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound";
+
+    /// <summary>
+    /// The containers the player's own Daggerfall files are converted into: the data every game reads, and the
+    /// optional score, whose tracks are read by name.
+    /// </summary>
+    public IReadOnlyList<InstalledContentRequirement> InstalledContent { get; } =
+    [
+        new(DaggerfallData.DataContainerName, "the Daggerfall data", Required: true,
+            DevelopmentStep: $"With the game's ARENA2 folder at local/arena2, run `{ImportCommand}` in the repository root.",
+            ReleaseStep: "Choose Import in the launcher and select your Daggerfall installation's ARENA2 folder."),
+        new(DaggerfallMusicBundle.ContainerName, "the Daggerfall music", Required: false,
+            DevelopmentStep: $"Run `{ImportCommand}` with a folder of <track>.<ext> recordings, such as the Daggerfall Unity song pack.",
+            ReleaseStep: "Choose Import in the launcher and select a folder of the game's music recordings."),
+    ];
+
+    /// <summary>
+    /// Whether the data container was imported by the importer this ruleset was built with: content another
+    /// importer revision wrote may lack, or shape differently, what this build reads.
+    /// </summary>
+    public string? CheckInstalledContent(InstalledContent content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        if (content.Name != DaggerfallData.DataContainerName) return null;
+        InstalledContentDescription? description;
+        try { description = content.Description; }
+        catch (InvalidDataException exception) { return exception.Message; }
+        if (description is null) return $"{content.Name} carries no description of the import that produced it.";
+        return description.Revision == DaggerfallImporterRevision.Value
+            ? null
+            : $"{content.Name} was imported by importer revision {Short(description.Revision)}, and this build reads revision {Short(DaggerfallImporterRevision.Value)}.";
+
+        static string Short(string revision) => revision.Length > 12 ? revision[..12] : revision;
+    }
+
+    /// <summary>The entry screen that states why no Daggerfall game can be played, with nothing to play.</summary>
+    public IGameSession CreateUnavailableSession(GameUnavailableContext context) => new DaggerfallUnavailableSession(context);
 
     public IGameSession CreateSession(GameSessionContext context)
         => CreateSessionCore(context);
@@ -108,7 +148,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
                     && pack.Role != NewGameStartRole)
                     throw new InvalidOperationException($"Content pack '{pack.Id.Value}' declares role '{pack.Role.Value}', which the Daggerfall ruleset does not interpret.");
             }
-            DaggerfallData data = new(selected.Content);
+            DaggerfallData data = DaggerfallData.For(selected);
             DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
                 RequireSingle(selected, roles, BaseRole).Payload, RequireSingle(selected, roles, ImportedRole).Payload);
             ContentPack[] startPacks = [.. roles[NewGameStartRole]];
@@ -130,15 +170,13 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             Lazy<DaggerfallProductMedia> productMedia = new(() => DaggerfallSiteContent.ReadProductMedia(data, worldMedia.Value, definitions));
             Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(data, worldMedia.Value));
             DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(data), () => productMedia.Value, () => meshes.Value);
-            // Every resolved profile names its classic images and music cues against the published manifests,
-            // and an interior names its building against the block catalog: each is joined when the profile is
-            // resolved, before a transition touches the source, so the publication it disagrees with is named.
+            // Every resolved profile names its classic images against the published manifests, and an interior
+            // names its building against the block catalog: each is joined when the profile is resolved, before
+            // a transition touches the source, so the publication it disagrees with is named.
             HashSet<NormalizedClassicPresentation> joinedPresentations = new(ReferenceEqualityComparer.Instance);
-            HashSet<IReadOnlyList<NormalizedMusicCue>> joinedMusic = new(ReferenceEqualityComparer.Instance);
             void Join(DaggerfallSiteProfile site)
             {
                 if (joinedPresentations.Add(site.ClassicPresentation)) _ = DaggerfallPublishedClassicMedia.Read(data, site.ClassicPresentation);
-                if (joinedMusic.Add(site.Music)) _ = DaggerfallMusicBundle.Admit(data, site.Music);
                 site.InteriorBuilding?.ValidateAgainst(blocks);
             }
 
@@ -176,7 +214,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             if (missingNewGameQuests.Length != 0)
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' admits no quest source for the new-game quests {string.Join(", ", missingNewGameQuests.Select(file => $"'{file}'"))}.");
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(data, inputs.ClassicPresentation);
-            DaggerfallMusicBundle? music = DaggerfallMusicBundle.Admit(data, inputs.Music);
+            DaggerfallMusicBundle? music = DaggerfallMusicBundle.For(selected);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
             return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, questReceipts, disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(data, profiles), data, music);
         });

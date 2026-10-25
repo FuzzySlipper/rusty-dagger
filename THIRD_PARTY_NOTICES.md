@@ -5,16 +5,15 @@
 The Daggerfall ruleset's content is derived from the game data of *The Elder Scrolls II: Daggerfall*
 (Bethesda Softworks). This repository does not contain or redistribute that data, or any file
 converted from it. The operator supplies their own copy of the game's `ARENA2` directory as
-`local/arena2`, and `scripts/regenerate-content.sh` converts it into the ignored generated content
-under `content/` on their machine. See [content scope](docs/coverage/content-scope.md) for what is
-generated and what is authored.
+`local/arena2`, and the import command converts it into the data container
+`local/daggerfall-data.rpak` on their machine (ignored by Git). See
+[content scope](docs/coverage/content-scope.md) for what is generated and what is authored.
 
 ## Music (not redistributed)
 
-The score is published from an operator-supplied folder of Ogg Vorbis song files named by the
-classic song identifiers, `local/Sound` (the donor installation's song folder). It is not part of
-this repository and is not redistributed; `scripts/regenerate-content.sh` publishes it into the
-ignored generated content.
+The score is packed from an operator-supplied folder of recordings named by the classic song
+identifiers (`<track>.<ext>`, such as the donor installation's song folder `local/Sound`) into
+`local/music.rpak`. It is not part of this repository and is not redistributed.
 
 ## Daggerfall Unity
 

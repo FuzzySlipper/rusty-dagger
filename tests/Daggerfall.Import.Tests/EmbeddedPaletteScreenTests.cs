@@ -53,7 +53,6 @@ public sealed class EmbeddedPaletteScreenTests
     [InlineData("TITL00I0.IMG", "screen-title")]
     public void PublishesTheScreenInItsOwnPaletteColours(string fileName, string artifact)
     {
-        string root = TestData.RepositoryRoot;
         byte[] screen = ReadArena2(fileName);
         Assert.True(ImgDecoder.TryReadEmbeddedPalette(screen, fileName, out Arena2Palette? palette, out string reason), reason);
 
@@ -61,7 +60,7 @@ public sealed class EmbeddedPaletteScreenTests
         // the palette entry its index names, which is four times the raw channel. Pairing the canvas with
         // another palette, or dropping the scaling, changes every colour and fails here.
         DeterministicPngImage published = DeterministicPngReader.ReadRgba8(
-            File.ReadAllBytes(Path.Combine(root, "content", "worldrpg", "media", "ui", artifact + ".png")), artifact);
+            ImportedContent.Read($"worldrpg/media/ui/{artifact}.png"), artifact);
         IndexedImg canvas = ImgDecoder.DecodeHeaderless(screen.AsSpan(0, 320 * 200), fileName);
         Assert.Equal((320, 200), (published.Width, published.Height));
         Assert.Equal((canvas.Width, canvas.Height), (published.Width, published.Height));

@@ -27,7 +27,7 @@ public sealed class DaggerfallContactVariantTests
 {
     private const long Player = DaggerfallActorIdentity.PlayerEntityId;
     private static DaggerfallRulesVariant Contact => DaggerfallVariants.All.Single(variant => variant.Manifest.Id == DaggerfallVariants.Contact);
-    private static DaggerfallContactTuning Tuning => DaggerfallContactTuning.Read(File.ReadAllBytes(TuningPath));
+    private static DaggerfallContactTuning Tuning => DaggerfallContactTuning.Read(TestContentFiles.ReadCopy(TuningPath));
     private static string TuningPath => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/variant-tuning-payloads/daggerfall.contact.json");
 
     [Fact]
@@ -36,8 +36,8 @@ public sealed class DaggerfallContactVariantTests
         ProductContent content = TestSessions.FullContent(TestData.RepositoryRoot);
         RulesVariantManifest[] compiled = [.. DaggerfallVariants.All.Select(variant => variant.Manifest)];
 
-        ResolvedGameComposition contact = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.contact"), compiled).RequireComposition();
-        ResolvedGameComposition classic = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.classic"), compiled).RequireComposition();
+        ResolvedGameComposition contact = TestSessions.Resolve(content, new GameBundleId("daggerfall.contact"), compiled).RequireComposition();
+        ResolvedGameComposition classic = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic"), compiled).RequireComposition();
 
         Assert.Equal([DaggerfallVariants.Contact], contact.Identity.Variants);
         Assert.Empty(classic.Identity.Variants);
@@ -541,8 +541,8 @@ public sealed class DaggerfallContactVariantTests
     /// <summary>The seam context a variant's owners are built from, with the repository's contact tuning.</summary>
     internal static DaggerfallSeamContext Context(DaggerfallRulesVariant variant, DaggerfallSeamInputs inputs)
     {
-        byte[] tuning = File.ReadAllBytes(TuningPath);
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(Content(
+        byte[] tuning = TestContentFiles.ReadCopy(TuningPath);
+        ResolvedGameComposition composition = TestSessions.Resolve(Content(
             ("worldrpg/bundles/test.bundle.json", Encoding.UTF8.GetBytes($$"""{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"daggerfall","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"},"variants":["{{variant.Manifest.Id.Value}}"]}""")),
             ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"daggerfall","role":"daggerfall.base","dependencies":[],"payload":"payload/base.json"}"""u8.ToArray()),
             ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"daggerfall","payload":"payload/tuning.json"}"""u8.ToArray()),

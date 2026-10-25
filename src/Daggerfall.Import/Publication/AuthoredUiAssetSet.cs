@@ -14,6 +14,12 @@ public static class AuthoredUiAssetSet
     /// <summary>The label the manifest is published under.</summary>
     public const string ManifestLabel = "ui-authored-assets.json";
 
+    /// <summary>
+    /// The group-relative directory the authored images are published under. It is product content: the
+    /// tracked originals live there, and the classic media group lists them without writing them.
+    /// </summary>
+    public const string RelativeRoot = "media/ui/authored";
+
     private static readonly JsonSerializerOptions Options = new(PublishedJson.SectionRead);
 
     /// <summary>
@@ -67,7 +73,7 @@ public static class AuthoredUiAssetSet
 
             assets.Add(new ClassicAuthoredUiAsset(
                 asset.Id,
-                $"media/ui/authored/{asset.File}",
+                $"{RelativeRoot}/{asset.File}",
                 $"ui-original/{asset.SourceFile}",
                 bytes,
                 asset.Generator,

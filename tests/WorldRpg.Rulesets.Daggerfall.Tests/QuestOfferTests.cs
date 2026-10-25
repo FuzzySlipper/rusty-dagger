@@ -40,7 +40,7 @@ public sealed class QuestOfferTests
     public void Real_provider_offer_preserves_selected_resources_through_encoded_restore_and_acceptance(int faction)
     {
         using var f = new SanguineRoseSessionTests.Fixture(random: SummonRandom.Create(), prepareComposition: c => c with {
-            Blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) });
+            Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) });
         var s = f.Session;
         long giver = Provider(s, faction);
         var npc = s.State.Npcs.Require(giver);
@@ -73,7 +73,7 @@ public sealed class QuestOfferTests
     public void Ordinary_work_dialogue_prepares_an_offer_and_refusal_admits_no_quest()
     {
         using var f = new SanguineRoseSessionTests.Fixture(random: FirstWorkOffer(), prepareComposition: c => c with {
-            Blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) });
+            Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) });
         long giver = Provider(f.Session, 510);
         string text = f.Session.OfferQuestWork(giver);
         Assert.Equal("K0C00Y02.txt", f.Session.State.Quests.PendingOffer!.Quest.SourceFile);
@@ -100,7 +100,7 @@ public sealed class QuestOfferTests
     public void Offer_expires_when_its_provider_is_unavailable()
     {
         using var f = new SanguineRoseSessionTests.Fixture(random: FirstWorkOffer(), prepareComposition: c => c with {
-            Blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) });
+            Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) });
         long giver = Provider(f.Session, 510);
         f.Session.OfferQuestWork(giver);
         string id = f.Session.State.Quests.PendingOffer!.Quest.InstanceId;

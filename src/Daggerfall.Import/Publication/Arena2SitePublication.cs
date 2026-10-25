@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Daggerfall.Import.Arena2;
-using Daggerfall.Import.Audio;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 
@@ -9,12 +8,10 @@ namespace Daggerfall.Import.Publication;
 /// <summary>What a site closure publishes beyond its own spatial selection.</summary>
 /// <param name="RuntimeActorResources">The actor media every site carries because the runtime may spawn any of them there.</param>
 /// <param name="ClassicMedia">The classic media profile: authored UI art and any classic sprite overlays.</param>
-/// <param name="Music">The published music cues the site names.</param>
 /// <param name="DungeonOverlays">Authored overlays that apply to the site's dungeon sprites.</param>
 public sealed record Arena2SiteMedia(
     IReadOnlyList<string> RuntimeActorResources,
     Arena2ClassicMediaProfile ClassicMedia,
-    IReadOnlyList<ClassicMusicRecord> Music,
     IReadOnlyList<AuthoredMediaOverlay> DungeonOverlays)
 {
     /// <summary>Normalized faction and NPC flats available to quest admission at this site.</summary>
@@ -228,7 +225,7 @@ public static class Arena2SitePublication
                 TextureLeafConsumer = textureLeafConsumer,
             });
         Arena2ClassicMediaPublication classicMedia = Arena2ClassicMediaPublication.Create(
-            sources.ClassicMediaInputs with { Music = media.Music },
+            sources.ClassicMediaInputs,
             media.ClassicMedia,
             new Arena2ClassicMediaPublicationOptions(MaximumSourceBytes: Arena2SiteSources.MaximumIndividualSourceBytes),
             worldVisuals);

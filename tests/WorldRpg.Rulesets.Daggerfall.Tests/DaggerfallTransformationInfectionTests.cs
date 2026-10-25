@@ -236,8 +236,8 @@ public sealed class DaggerfallTransformationInfectionTests
         internal Fixture(bool videos, DaggerfallCinematicPresentationTests.Harness? media = null, bool twoSites = false)
         {
             _media = media;
-            if (twoSites) Destination = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)), File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
-            Composition = new(TestPayload.Definitions, ReadInputs(TestData.RepositoryRoot), DaggerfallTuning.Defaults) { VideosEnabled = videos, Data = media is null ? null : new DaggerfallData(media.Content), Profiles = new DaggerfallSiteProfiles(Destination is null ? [ReadInputs(TestData.RepositoryRoot)] : [ReadInputs(TestData.RepositoryRoot), Destination]) };
+            if (twoSites) Destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)), TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
+            Composition = new(TestPayload.Definitions, ReadInputs(TestData.RepositoryRoot), DaggerfallTuning.Defaults) { VideosEnabled = videos, Data = media is null ? null : TestSessions.Data(media.Content), Profiles = new DaggerfallSiteProfiles(Destination is null ? [ReadInputs(TestData.RepositoryRoot)] : [ReadInputs(TestData.RepositoryRoot), Destination]) };
             Session = DaggerfallSession.StartNew(Engine(), Composition);
         }
         private IEngineContext Engine()

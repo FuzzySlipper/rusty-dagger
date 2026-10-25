@@ -32,8 +32,8 @@ public sealed class ExteriorSpatialAdmissionTests(ITestOutputHelper output)
 
         Dictionary<string, ReadOnlyMemory<byte>> files = new(StringComparer.Ordinal)
         {
-            [exterior.SpatialArtifact.Path] = File.ReadAllBytes(Path.Combine(root, "content", exterior.SpatialArtifact.Path)),
-            [exterior.StaticMesh.Path] = File.ReadAllBytes(Path.Combine(root, "content", exterior.StaticMesh.Path)),
+            [exterior.SpatialArtifact.Path] = TestContentFiles.ReadCopy(Path.Combine(root, "content", exterior.SpatialArtifact.Path)),
+            [exterior.StaticMesh.Path] = TestContentFiles.ReadCopy(Path.Combine(root, "content", exterior.StaticMesh.Path)),
         };
         Assert.True(files[exterior.SpatialArtifact.Path].Span.StartsWith("RSPATIAL"u8));
         Assert.True(files[exterior.StaticMesh.Path].Span.StartsWith("RSTATMSH"u8));

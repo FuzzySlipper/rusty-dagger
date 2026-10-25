@@ -284,7 +284,7 @@ public sealed class DungeonSpellFlightSessionTests
                 SourcePosition: player - Vector3.UnitZ * 60f,
                 RawIndex: soundIndex);
             DaggerfallSiteProfile inputs = WithAction(source, Action);
-            ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(
+            ResolvedCompositionIdentity identity = TestSessions.Resolve(
                 FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
             DaggerfallSessionComposition selected = new(definitions, inputs, DaggerfallTuning.Defaults, identity);
             composition = useDefaultEffects
@@ -341,7 +341,6 @@ public sealed class DungeonSpellFlightSessionTests
             [.. source.DungeonActions, action],
             source.DungeonActionModels,
             source.InteriorBuilding,
-            source.Music,
             source.QuestMarkers,
             source.BillboardSprites);
 

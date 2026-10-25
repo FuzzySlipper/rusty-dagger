@@ -306,7 +306,7 @@ public sealed class SessionCollisionResidencyTests
                 template.Materials, new Dictionary<long, NormalizedActorSprite>(), template.MobileSprites,
                 template.Audio, template.ClassicPresentation, site, [], kind, logicalId, [],
                 template.Anchors.Values.ToArray(), template.Lights, template.GroundContainerSprite, null, [], [], null,
-                template.Music, template.QuestMarkers, template.BillboardSprites, [],
+                template.QuestMarkers, template.BillboardSprites, [],
                 template.WaterVolumes, template.TerrainTextures, []);
     }
 

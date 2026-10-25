@@ -8,16 +8,16 @@ namespace Daggerfall.Import.Tool.Commands;
 /// beside the site closures rather than copied into each of them.
 /// </summary>
 /// <remarks>
-/// It reads the imported payload for the actors and flats the runtime may materialize anywhere and the
-/// published music manifest for the cues every site names, so it runs after both; the classic media group is
-/// read so the classic images it already publishes are referenced rather than published again. The site
+/// It reads the imported payload for the actors and flats the runtime may materialize anywhere, so it runs
+/// after the payload's sections; the classic media group is read so the classic images it already publishes
+/// are referenced rather than published again. The site
 /// commands then reference this publication with <c>--shared</c>.
 /// </remarks>
 internal static class WorldMediaCommand
 {
     public static ToolCommand Command { get; } = new("world-media",
         [Options.Arena2, CommandOption.Staged(SiteInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldMedia), AuthoredUi.Manifest, AuthoredUi.Originals, Options.Inventory, Options.Pack,
-            CommandOption.Staged(SiteInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-media.sources.json"), SiteInputs.MusicManifest, SiteInputs.ClassicGroup], Run);
+            CommandOption.Staged(SiteInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-media.sources.json"), SiteInputs.ClassicGroup], Run);
 
     private static int Run(CommandArguments args)
     {

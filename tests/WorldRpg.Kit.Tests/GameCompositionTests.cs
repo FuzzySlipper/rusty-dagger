@@ -32,6 +32,95 @@ public sealed class GameCompositionTests
         Assert.Equal("world", Encoding.UTF8.GetString(composition.Content.ReadBytes("payload/world.json").Span));
     }
 
+    [Fact]
+    public void A_pack_an_installed_container_describes_resolves_with_its_payload_read_from_the_container()
+    {
+        string directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "kit-installed-" + Guid.NewGuid().ToString("N"))).FullName;
+        try
+        {
+            string staged = Directory.CreateDirectory(Path.Combine(directory, "staged")).FullName;
+            Write(staged, InstalledContent.DescriptionPath, """
+                {"kind":"worldrpg.data-container","importerRevision":"rev-1","contentPacks":[
+                  {"kind":"worldrpg.content-pack","id":"test.imported","ruleset":"test","role":"test.content","dependencies":[{"id":"test.base"}],"payload":"payload/imported.json"}]}
+                """);
+            Write(staged, "payload/imported.json", "imported");
+            string container = Path.Combine(directory, "data.rpak");
+            ProductContent content = Content(
+                ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.imported"}],"tuning":{"id":"test.tuning"}}"""),
+                ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/base.json"}"""),
+                ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
+                ("payload/base.json", "base"),
+                ("payload/tuning.json", "tuning"));
+            using Rusty.Engine.Testing.EngineTestHost host = Rusty.Engine.Testing.EngineTestHost.Create(new Rusty.Engine.Testing.EngineTestHostOptions());
+
+            host.Call(engine =>
+            {
+                ProductContentBundle.PackContainer(engine.Content, staged, container, compress: false);
+                using ProductContentBundle opened = ProductContentBundle.OpenContainer(engine.Content, container);
+                InstalledContent installed = new("data.rpak", opened);
+
+                // Without the container the pack it describes is missing, named so a host can say what to install.
+                GameCompositionResolution alone = GameCompositionResolver.Resolve(content, new GameBundleId("test.bundle"), []);
+                Assert.Contains(alone.Diagnostics, diagnostic => diagnostic.Name == CompositionDiagnosticNames.MissingContentPack);
+
+                ResolvedGameComposition composition = GameCompositionResolver.Resolve(content, new GameBundleId("test.bundle"), [], [installed]).RequireComposition();
+                Assert.Equal(["test.base", "test.imported"], composition.ContentPacks.Select(pack => pack.Id.Value));
+                Assert.Equal("imported", Encoding.UTF8.GetString(composition.RequireContentPack(new("test.imported")).Payload.Span));
+                Assert.Equal("base", Encoding.UTF8.GetString(composition.RequireContentPack(new("test.base")).Payload.Span));
+                Assert.Same(installed, Assert.Single(composition.Installed));
+                Assert.Equal("rev-1", installed.Description!.Revision);
+            });
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void A_pack_both_the_product_and_an_installed_container_describe_is_a_duplicate()
+    {
+        string directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "kit-installed-" + Guid.NewGuid().ToString("N"))).FullName;
+        try
+        {
+            string staged = Directory.CreateDirectory(Path.Combine(directory, "staged")).FullName;
+            Write(staged, InstalledContent.DescriptionPath, """
+                {"kind":"worldrpg.data-container","importerRevision":"rev-1","contentPacks":[
+                  {"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/base.json"}]}
+                """);
+            string container = Path.Combine(directory, "data.rpak");
+            ProductContent content = Content(
+                ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"}}"""),
+                ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/base.json"}"""),
+                ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
+                ("payload/base.json", "base"),
+                ("payload/tuning.json", "tuning"));
+            using Rusty.Engine.Testing.EngineTestHost host = Rusty.Engine.Testing.EngineTestHost.Create(new Rusty.Engine.Testing.EngineTestHostOptions());
+
+            host.Call(engine =>
+            {
+                ProductContentBundle.PackContainer(engine.Content, staged, container, compress: false);
+                using ProductContentBundle opened = ProductContentBundle.OpenContainer(engine.Content, container);
+
+                GameCompositionResolution resolution = GameCompositionResolver.Resolve(content, new GameBundleId("test.bundle"), [], [new InstalledContent("data.rpak", opened)]);
+
+                Assert.False(resolution.IsResolved);
+                Assert.Contains(resolution.Diagnostics, diagnostic => diagnostic.Message.Contains("Duplicate content pack 'test.base' (also described by 'data.rpak')", StringComparison.Ordinal));
+            });
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    private static void Write(string root, string path, string text)
+    {
+        string file = Path.Combine(root, path);
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        File.WriteAllText(file, text);
+    }
+
     [Theory]
     [InlineData("missing", "Content pack 'test.missing' is missing.")]
     [InlineData("cycle", "Content pack dependency cycle includes 'test.base'.")]

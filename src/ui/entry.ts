@@ -58,8 +58,15 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   const saved = document.createElement('ol'); saved.className = 'dagger-entry-saves dagger-save-slots-list dagger-frame'; saved.hidden = true;
   saved.setAttribute('aria-label', 'Saved games');
   buttons.append(resume, begin, create, load);
+  // When no game can be played (the Daggerfall data is not imported, unreadable or stale), the title says
+  // why and what fixes it, in place of everything that would start one.
+  const unavailable = document.createElement('section'); unavailable.className = 'dagger-entry-unavailable dagger-frame';
+  unavailable.dataset.testid = 'entry-unavailable'; unavailable.setAttribute('role', 'alert'); unavailable.hidden = true;
+  const unavailableTitle = document.createElement('h2');
+  const unavailableProblems = document.createElement('ul');
+  unavailable.append(unavailableTitle, unavailableProblems);
   // The outcome of a choice sits above the controls, so a long one never covers them.
-  actions.append(outcome, saved, bundle, buttons);
+  actions.append(unavailable, outcome, saved, bundle, buttons);
   root.append(actions);
   let slots: readonly SaveSlotEntry[] = [];
   let listed = false;
@@ -78,6 +85,7 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   let mode: string | null = null;
   let pickScreens: readonly string[] = [];
   let bundles: BundleProjection | null = null;
+  let blocked: { readonly title: string; readonly problems: readonly string[] } | null = null;
 
   const draw = (): void => {
     root.hidden = !title;
@@ -88,15 +96,23 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     (creating ? root : creationHome).append(creation);
     creation.classList.toggle('dagger-entry-creation', creating);
     creation.classList.toggle('dagger-frame', creating);
-    begin.hidden = creating;
+    unavailable.hidden = blocked === null;
+    if (blocked !== null) {
+      const shown = blocked;
+      redraw(unavailable, JSON.stringify(shown), () => {
+        unavailableTitle.textContent = shown.title;
+        unavailableProblems.replaceChildren(...shown.problems.map(problem => { const item = document.createElement('li'); item.textContent = problem; return item; }));
+      });
+    }
+    begin.hidden = creating || blocked !== null;
     // While creating, what blocks Start is shown beside it; the title's outcome plate stays for title choices.
     outcome.hidden = creating;
-    create.hidden = creating;
-    resume.hidden = creating || slots.length === 0;
-    load.hidden = creating || slots.length === 0;
+    create.hidden = creating || blocked !== null;
+    resume.hidden = creating || blocked !== null || slots.length === 0;
+    load.hidden = creating || blocked !== null || slots.length === 0;
     if (load.hidden) { saved.hidden = true; load.setAttribute('aria-expanded', 'false'); }
     redraw(saved, JSON.stringify(slots), () => saved.replaceChildren(...slots.map(entry => slotRow(entry, false))));
-    const hideBundle = creating || bundles === null || bundles.options.length < 2;
+    const hideBundle = creating || blocked !== null || bundles === null || bundles.options.length < 2;
     if (hideBundle && !bundle.hidden && bundle.contains(document.activeElement)) bundleStep = document.activeElement?.getAttribute('aria-label') ?? null;
     bundle.hidden = hideBundle;
     if (bundles !== null) {
@@ -135,13 +151,14 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
       title = value.mode === TITLE_MODE;
       // The title asks for the saved games each time it appears, so Continue names the newest.
       if (title && !wasTitle) { listed = false; }
-      if (title && !listed) { listed = true; send({ action: 'save-slots' }); }
+      if (title && !listed && !value.unavailable) { listed = true; send({ action: 'save-slots' }); }
       // The Host lists newest first.
       if (isSaveSlots(value.saveSlots)) slots = value.saveSlots.entries;
       mode = title && value.character?.creationAvailable && value.character.creation ? value.character.creation.editing
         ? value.character.creation.mode ?? null : value.character.creation.summary ? 'character-pick' : null : null;
       pickScreens = value.pickScreens ?? [];
       bundles = isBundles(value.bundles) ? value.bundles : null;
+      blocked = value.unavailable ? { title: value.unavailable.title, problems: value.unavailable.problems } : null;
       outcome.textContent = value.lastOutcome;
       draw();
     },

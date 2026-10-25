@@ -95,17 +95,18 @@ public sealed class QuestBlockVariantTests
     {
         string root = TestData.RepositoryRoot;
         ProductContent mediaContent = FullContent(root);
-        var media = DaggerfallWorldMedia.Read(new DaggerfallData(mediaContent));
-        var product = new Lazy<DaggerfallProductMedia>(() => DaggerfallSiteContent.ReadProductMedia(new DaggerfallData(mediaContent), media, definitions));
-        var meshes = new Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>>(() => DaggerfallLocationAssembly.ReadMeshIndex(new DaggerfallData(mediaContent), media));
+        var media = DaggerfallWorldMedia.Read(TestSessions.Data(mediaContent));
+        var product = new Lazy<DaggerfallProductMedia>(() => DaggerfallSiteContent.ReadProductMedia(TestSessions.Data(mediaContent), media, definitions));
+        var meshes = new Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>>(() => DaggerfallLocationAssembly.ReadMeshIndex(TestSessions.Data(mediaContent), media));
         string directory = Path.Combine(root, "content", DaggerfallWorldBlocks.Root);
-        var index = JsonNode.Parse(File.ReadAllBytes(Path.Combine(directory, "blocks.json")))!.AsObject();
+        var index = JsonNode.Parse(TestContentFiles.Read(Path.Combine(directory, "blocks.json")))!.AsObject();
         var variants = new JsonArray();
         var service = new BundleContentFake();
-        foreach (string path in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+        service.Container(DaggerfallData.DataContainerName);
+        foreach (string path in TestContentFiles.AllFiles(directory))
         {
             string relative = Path.GetRelativePath(directory, path).Replace('\\', '/');
-            if (relative != "blocks.json") service.AddFile(DaggerfallWorldBlocks.BundleId, relative, path);
+            if (relative != "blocks.json") service.AddFile(DaggerfallData.DataContainerName, $"{DaggerfallWorldBlocks.Root}/{relative}", path);
         }
         foreach (var original in index["blocks"]!.AsArray().Where(value => value!["sourceKey"]!.GetValue<string>() == source
             && (building is null || value!["kind"]!.GetValue<string>() == "rmbExterior" || value!["buildingIndex"]?.GetValue<int>() == building)))
@@ -113,7 +114,7 @@ public sealed class QuestBlockVariantTests
             {
                 var entry = original!.DeepClone().AsObject();
                 string originalPath = entry["document"]!.GetValue<string>();
-                var block = JsonNode.Parse(File.ReadAllBytes(Path.Combine(directory, originalPath)))!.AsObject();
+                var block = JsonNode.Parse(TestContentFiles.Read(Path.Combine(directory, originalPath)))!.AsObject();
                 block["lights"]!.AsArray().Add(new JsonObject { ["id"] = $"light/{source.ToLowerInvariant().Replace('.', '-')}/variant-light", ["position"] = new JsonObject { ["x"] = 1, ["y"] = 2, ["z"] = -1 },
                     ["range"] = 10, ["intensity"] = intensity, ["color"] = new JsonObject { ["x"] = 1, ["y"] = 1, ["z"] = 1 } });
                 string path = $"variants/{name}/{originalPath}";
@@ -121,11 +122,11 @@ public sealed class QuestBlockVariantTests
                 if (building is null) entry["variant"] = name;
                 else entry["buildingVariants"] = new JsonArray(new JsonObject { ["building"] = building, ["variant"] = name });
                 variants.Add(entry);
-                service.Add(DaggerfallWorldBlocks.BundleId, path, Encoding.UTF8.GetBytes(block.ToJsonString()));
+                service.Add(DaggerfallData.DataContainerName, $"{DaggerfallWorldBlocks.Root}/{path}", Encoding.UTF8.GetBytes(block.ToJsonString()));
             }
         index["variants"] = variants;
-        service.Add(DaggerfallWorldBlocks.BundleId, "blocks.json", Encoding.UTF8.GetBytes(index.ToJsonString()));
-        var assembly = new DaggerfallLocationAssembly(definitions, new DaggerfallWorldBlocks(new DaggerfallData(new ProductContent(Array.Empty<ProductContentFile>(), service))), () => product.Value, () => meshes.Value);
+        service.Add(DaggerfallData.DataContainerName, $"{DaggerfallWorldBlocks.Root}/blocks.json", Encoding.UTF8.GetBytes(index.ToJsonString()));
+        var assembly = new DaggerfallLocationAssembly(definitions, new DaggerfallWorldBlocks(TestSessions.Data(new ProductContent(Array.Empty<ProductContentFile>(), service))), () => product.Value, () => meshes.Value);
         return DaggerfallSiteProfiles.Resolve(authored.Select(DaggerfallAuthoredSite.Of), assembly, null);
     }
 

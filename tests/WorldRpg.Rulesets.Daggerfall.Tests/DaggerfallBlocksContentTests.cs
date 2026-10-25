@@ -10,7 +10,7 @@ public sealed class DaggerfallBlocksContentTests
     {
         string payload = Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json");
 
-        DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(payload));
+        DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(payload));
 
         DaggerfallRmbBuildingSource wall = blocks.RmbBuildings[new DaggerfallRmbBuildingId("WALLAA03.RMB", 0)];
         Assert.Equal(23, wall.BuildingType);

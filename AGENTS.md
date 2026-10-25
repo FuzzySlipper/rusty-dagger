@@ -77,14 +77,18 @@ encouraged where they make gameplay ownership and contribution discoverable.
 
 Keep the game's own files and assets out of Git: never commit the Arena2
 directory, the music, or media extracted from them (images, sprites, textures,
-audio, video, including as base64 inside JSON). The bulk generated output is not
-committed either, because it is reproducible: Git tracks only pack, bundle and
-tuning descriptors, hand-authored payloads (the authored `daggerfall.base` and
-the site payloads), tuning payloads and the importer's inputs under `data/`.
-Everything derived from the operator's `local/arena2`, the donor checkout and
-`local/Sound` (the paths in `scripts/generated-content-paths.txt`, all ignored,
-including the `daggerfall.imported` payload) is rebuilt on checkout by one
-command, `scripts/regenerate-content.sh`.
+audio, video, including as base64 inside JSON). The derived output is not
+committed either, because it is reproducible: `content/` holds only tracked,
+authored files (pack, bundle and tuning descriptors, the authored
+`daggerfall.base` and site payloads, tuning payloads and the authored UI art),
+and `data/` the importer's inputs. Everything derived from the operator's
+`local/arena2`, the donor checkout and a music folder lives in two content
+containers in the ignored `local/`, `daggerfall-data.rpak` (with the derived
+packs' descriptors in its `worldrpg/data-container.json`) and the optional
+`music.rpak`, built on checkout by one cross-platform command,
+`dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound`.
+The product opens them beside itself (in `local/` under `rusty dev`, beside
+`product.rpak` in a release); never write derived files into `content/`.
 
 Small facts that trace back to the game are not sensitive. Identifiers, names,
 record and template numbers, counts, short text excerpts and JSON describing

@@ -33,7 +33,7 @@ public sealed class HudSnapshotContractTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity));
         session.ApplyProductMode(ProductMode.Playing);
 
@@ -86,8 +86,8 @@ public sealed class HudSnapshotContractTests
             File.WriteAllText(path, published);
         }
 
-        Assert.True(File.Exists(path), $"{HudSnapshotFixture} is missing; run this test with DAGGER_WRITE_UI_FIXTURE=1 to write it.");
-        Assert.Equal(File.ReadAllText(path), published);
+        Assert.True(TestContentFiles.Exists(path), $"{HudSnapshotFixture} is missing; run this test with DAGGER_WRITE_UI_FIXTURE=1 to write it.");
+        Assert.Equal(TestContentFiles.ReadText(path), published);
     }
 
     /// <summary>

@@ -383,7 +383,7 @@ public static class CharacterMediaPublisher
         }
 
         // The index is the one inventory shape every media group writes, so one reader resolves the classic,
-        // character and music groups alike; the character facts ride beside the shared entry keys.
+        // character and paper-doll groups alike; the character facts ride beside the shared entry keys.
         return ArtifactInventory.Write(
             IndexGenerator,
             entries.Select(entry =>

@@ -57,12 +57,12 @@ public sealed class DaggerfallDungeonActionModelContentTests
         [
             new ProductContentFile(Encoding.UTF8.GetBytes(visualPath), visual),
         ];
-        AdmittedFiles files = AdmittedFiles.From(new DaggerfallData(new ProductContent(contentFiles)));
+        AdmittedFiles files = AdmittedFiles.From(TestSessions.Data(new ProductContent(contentFiles)));
         Dictionary<string, ContentSha256> artifacts = new(StringComparer.Ordinal) { [visualPath] = hash };
         NormalizedMaterial[] materials = [new(7, "worldrpg/materials/stone.png", hash, "material/stone")];
         DaggerfallContentDiagnostics diagnostics = new();
         // The fixture closure carries its own visual; content without the world media publication reads as none.
-        using DaggerfallWorldMedia product = DaggerfallWorldMedia.Read(new DaggerfallData(new ProductContent(contentFiles)));
+        using DaggerfallWorldMedia product = DaggerfallWorldMedia.Read(TestSessions.Data(new ProductContent(contentFiles)));
 
         DaggerfallDungeonActionModelDefinition model = Assert.Single(DaggerfallSiteContent.ReadNormalizedActionModels(
             normalized,
@@ -94,9 +94,9 @@ public sealed class DaggerfallDungeonActionModelContentTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = GeneratedContent(root);
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(content),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
-        using JsonDocument normalized = JsonDocument.Parse(File.ReadAllBytes(
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(content),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        using JsonDocument normalized = JsonDocument.Parse(TestContentFiles.ReadCopy(
             Path.Combine(root, "content/worldrpg/imports/privateers-hold/normalized.json")));
         JsonElement world = normalized.RootElement.GetProperty("world");
         HashSet<string> dynamicMeshIds = world.GetProperty("actionModels").EnumerateArray()
@@ -120,10 +120,10 @@ public sealed class DaggerfallDungeonActionModelContentTests
     private static ProductContent GeneratedContent(string root)
     {
         string contentRoot = Path.Combine(root, "content");
-        ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports"), "*", SearchOption.AllDirectories)
+        ProductContentFile[] files = TestContentFiles.AllFiles(Path.Combine(contentRoot, "worldrpg/imports"))
             .Select(path => new ProductContentFile(
                 Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')),
-                File.ReadAllBytes(path)))
+                TestContentFiles.ReadCopy(path)))
             .Concat(ClassicGroupFiles(root))
             .ToArray();
         return new ProductContent(files);

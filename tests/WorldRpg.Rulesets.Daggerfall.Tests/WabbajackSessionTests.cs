@@ -143,8 +143,8 @@ public sealed class WabbajackSessionTests
         f.Session.ResolveExplicitMelee(new(1, dynamic, 1, 10000, .125));
         var first = f.Session.State.Actors.Get(f.Target).Pose;
         var second = f.Session.State.Actors.Get(dynamic).Pose;
-        var destination = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)),
-            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
+        var destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
+            TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
         var profiles = new DaggerfallSiteProfiles([f.Inputs, destination]);
         f.Session.AdmitSiteProfiles(profiles);
         Assert.True(f.Session.TryTransitionTo(destination.ProfileKey));
@@ -187,7 +187,7 @@ public sealed class WabbajackSessionTests
         {
             _draw = draw;
             var definitions = TestPayload.Definitions;
-            var identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+            var identity = TestSessions.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
             Composition = new(definitions, Inputs, DaggerfallTuning.Defaults, identity);
             var engine = Engine();
             Session = DaggerfallSession.StartNew(engine.Context, Composition);
@@ -205,8 +205,8 @@ public sealed class WabbajackSessionTests
         {
             List<string> releases = [];
             ContentFake content = new(releases); PopulateContent(content, Inputs);
-            var castle = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)),
-                File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
+            var castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
+                TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
             PopulateContent(content, castle);
             if (additional is not null) PopulateContent(content, additional);
             var spatial = SpatialFake.Create((additional ?? Inputs).SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;

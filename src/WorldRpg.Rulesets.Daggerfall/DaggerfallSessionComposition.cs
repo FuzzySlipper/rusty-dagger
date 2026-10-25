@@ -29,7 +29,7 @@ internal sealed record DaggerfallSessionComposition(
 
     internal DaggerfallSkyMedia? Sky { get; init; }
 
-    /// <summary>The derived content the composition reads; the cinematics play from it, and null composes none.</summary>
+    /// <summary>The derived content the composition reads; the cinematics and the UI art come from it, and null composes neither.</summary>
     internal DaggerfallData? Data { get; init; }
 
     /// <summary>Whether admitted cinematic video plays; a composition choice, never inferred from absent content.</summary>
@@ -42,7 +42,7 @@ internal sealed record DaggerfallSessionComposition(
 
     internal DaggerfallDisabledQuestSelection? DisabledQuestSelection { get; init; }
 
-    /// <summary>The product-wide music bundle; null composes a silent session.</summary>
+    /// <summary>The score read by name from the music container; null composes a silent session.</summary>
     internal DaggerfallMusicBundle? Music { get; init; }
 
     /// <summary>The compiled effect catalog; null composes the ruleset's own disease and poison families.</summary>

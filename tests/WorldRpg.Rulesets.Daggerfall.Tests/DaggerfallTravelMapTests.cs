@@ -19,7 +19,7 @@ public sealed class DaggerfallTravelMapTests
     public void Every_image_the_travel_map_draws_is_published_map_art_of_the_size_it_lays_out()
     {
         string root = TestData.RepositoryRoot;
-        using JsonDocument inventory = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)));
+        using JsonDocument inventory = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)));
         Dictionary<string, string> paths = inventory.RootElement.GetProperty("artifacts").EnumerateArray()
             .Where(artifact => artifact.TryGetProperty("mediaId", out JsonElement id) && id.GetString()!.StartsWith("map.", StringComparison.Ordinal))
             .ToDictionary(artifact => artifact.GetProperty("mediaId").GetString()!, artifact => artifact.GetProperty("path").GetString()!);
@@ -33,7 +33,7 @@ public sealed class DaggerfallTravelMapTests
         foreach (DaggerfallTravelMapImage image in images)
         {
             Assert.True(paths.TryGetValue(image.MediaId, out string? path), $"{image.MediaId} is not published map art");
-            byte[] header = File.ReadAllBytes(Path.Combine(root, "content", path!)).AsSpan(0, 24).ToArray();
+            byte[] header = TestContentFiles.ReadCopy(Path.Combine(root, "content", path!)).AsSpan(0, 24).ToArray();
             Assert.Equal((image.Width, image.Height), (BinaryPrimitives.ReadInt32BigEndian(header.AsSpan(16)), BinaryPrimitives.ReadInt32BigEndian(header.AsSpan(20))));
         }
         // The world view draws the whole world map inside its canvas.

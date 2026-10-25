@@ -20,11 +20,6 @@ namespace Daggerfall.Import.Tool.Commands;
 /// The run works in the repository root, and the steps are given repository-relative paths: the commands
 /// record their arguments in what they publish, so the same inputs give the same bytes on any machine.
 /// </para>
-/// <para>
-/// Until the product reads the containers, <c>--publish-loose</c> also copies the staged content into
-/// <c>content/</c> and the records into <c>import-records/</c>, which is the tree
-/// <c>scripts/regenerate-content.sh</c> regenerates.
-/// </para>
 /// </remarks>
 internal static class ImportCommand
 {
@@ -32,7 +27,7 @@ internal static class ImportCommand
     private const string DefaultDonor = "/home/research/daggerfall-unity";
     private const string Inventory = ImportLayout.Inventory;
     private const string UiAssets = "data/ui-authored-assets.json";
-    private const string UiOriginal = "data/ui-original";
+    private const string UiOriginal = AuthoredUi.ProductDirectory;
     private const string Authored = "content/worldrpg/payloads/daggerfall.base.json";
 
     private static readonly string[] Arena2Files =
@@ -60,7 +55,7 @@ internal static class ImportCommand
         CommandOption.Optional("--arena2", "DIR"), CommandOption.Optional("--donor", "DIR"), CommandOption.Optional("--music", "DIR"),
         CommandOption.Optional("--sprite-authoring", "DIR"), CommandOption.Optional("--block-variants", "FILE"),
         CommandOption.Optional("--repository", "DIR"), CommandOption.Optional("--only", "STEP[,STEP...]"),
-        CommandOption.Switch("--compress"), CommandOption.Switch("--publish-loose"),
+        CommandOption.Switch("--compress"),
     ], Run);
 
     /// <summary>One import step: the label <c>--only</c> names it by, and the tool command it runs.</summary>
@@ -88,7 +83,6 @@ internal static class ImportCommand
             string[] unknown = [.. only.Where(label => !steps.Any(step => step.Label == label)).Order(StringComparer.Ordinal)];
             if (unknown.Length != 0)
                 throw args.Invalid($"--only names no step [{string.Join(", ", unknown)}]; the steps are [{string.Join(", ", steps.Select(step => step.Label))}].");
-            if (args.Switch("--publish-loose")) throw args.Invalid("--publish-loose publishes a whole run, so it cannot be combined with --only.");
         }
 
         string[] missing = [.. MissingInputs(inputs, repository)];
@@ -101,7 +95,7 @@ internal static class ImportCommand
         long started = Environment.TickCount64;
         if (only is null)
         {
-            foreach (string directory in new[] { ImportLayout.Staging, ImportLayout.Records, ImportLayout.MusicPublication, ImportLayout.MusicTracks })
+            foreach (string directory in new[] { ImportLayout.Staging, ImportLayout.Records, ImportLayout.MusicTracks })
                 if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
         }
 
@@ -113,7 +107,6 @@ internal static class ImportCommand
         }
 
         DataContainers.Pack(args.Switch("--compress"));
-        if (args.Switch("--publish-loose")) PublishLoose();
         Console.WriteLine($"import: finished in {(Environment.TickCount64 - started) / 1000}s");
         return 0;
     }
@@ -134,17 +127,13 @@ internal static class ImportCommand
         const string importRecords = ImportLayout.ImportRecords;
         const string worldMedia = ImportLayout.WorldMedia;
         const string classicGroup = ImportLayout.ClassicGroup;
-        string? musicManifest = inputs.Music is null ? null : ImportLayout.MusicManifest;
         List<Step> steps = [];
         void Add(string label, params string[] arguments) => steps.Add(new(label, arguments));
 
-        // 1. Product-wide media. The music container's tracks are staged by the naming scheme, and the
-        //    transitional cue publication the site closures still name is written from those staged tracks.
-        if (inputs.Music is { } music)
-        {
-            Add("music-tracks", "music-tracks", "--music", music, "--out", ImportLayout.MusicTracks);
-            Add("music-media", "music-media", "--out", ImportLayout.MusicPublication, "--sound", ImportLayout.MusicTracks, "--update");
-        }
+        // 1. Product-wide media. The music container's tracks are staged by the naming scheme; nothing in the
+        //    data container names them, so it is the same whichever recordings were supplied. The classic media
+        //    group's inventory lists the authored UI art, whose bytes are the product's own tracked content.
+        if (inputs.Music is { } music) Add("music-tracks", "music-tracks", "--music", music, "--out", ImportLayout.MusicTracks);
 
         Add("classic-media", "classic-media", "--arena2", arena2, "--out", staging, "--group", "worldrpg",
             "--ui-authored-assets", UiAssets, "--ui-original", UiOriginal, "--update");
@@ -195,10 +184,9 @@ internal static class ImportCommand
 
         // 4. The product-wide world media every site closure references: every mesh, material texture, billboard
         //    and actor atlas, terrain texture, the classic sidecar and its audio clips, published once.
-        string[] cues = musicManifest is null ? [] : ["--music-manifest", musicManifest];
-        Add("world-media", ["world-media", "--arena2", arena2, "--ui-authored-assets", UiAssets, "--ui-original", UiOriginal, "--inventory", Inventory,
-            "--pack", imported, .. cues, "--classic-group", classicGroup, "--out", worldMedia,
-            "--source-manifest", $"{records}/world-media.sources.json"]);
+        Add("world-media", "world-media", "--arena2", arena2, "--ui-authored-assets", UiAssets, "--ui-original", UiOriginal, "--inventory", Inventory,
+            "--pack", imported, "--classic-group", classicGroup, "--out", worldMedia,
+            "--source-manifest", $"{records}/world-media.sources.json");
 
         // 5. The per-block world publication: every RMB exterior, building interior and RDB block a location
         //    places, normalized in its own frame, its static meshes placing the world media publication's meshes.
@@ -209,7 +197,7 @@ internal static class ImportCommand
         // 6. Site closures. Each writes only what is its own: every body and shared sidecar entry is referenced
         //    from the world media publication above. Its source manifest goes to the import records.
         string[] common = ["--arena2", arena2, "--ui-authored-assets", UiAssets, "--ui-original", UiOriginal, "--inventory", Inventory,
-            "--pack", imported, .. cues, "--shared", worldMedia, "--classic-group", classicGroup];
+            "--pack", imported, "--shared", worldMedia, "--classic-group", classicGroup];
         string[] Overlay(string site) => inputs.SpriteAuthoring is { } root && File.Exists(Path.Combine(repository, root, "sprites", site + ".json"))
             ? ["--sprite-authoring", root, "--sprite-overlay", $"sprites/{site}.json"]
             : [];
@@ -296,46 +284,6 @@ internal static class ImportCommand
         foreach (string file in new[] { Inventory, UiAssets, Authored }.Where(file => !IsFile(file)))
             yield return $"tracked file '{file}'";
         if (!IsDirectory(UiOriginal)) yield return $"tracked directory '{UiOriginal}'";
-    }
-
-    /// <summary>
-    /// Copies the staged run into the loose tree the product reads until it opens the containers: the staged
-    /// content and the music publication into <c>content/</c>, the records into <c>import-records/</c>. The
-    /// generated paths are cleared first, as <c>scripts/generated-content-paths.txt</c> lists them.
-    /// </summary>
-    private static void PublishLoose()
-    {
-        foreach (string entry in File.ReadLines("scripts/generated-content-paths.txt").Select(line => line.Trim())
-                     .Where(line => line.Length != 0 && !line.StartsWith('#')).Select(line => line.Trim('/')))
-        {
-            string directory = Path.GetDirectoryName(entry)!;
-            string name = Path.GetFileName(entry);
-            if (Directory.Exists(entry)) Directory.Delete(entry, recursive: true);
-            else if (Directory.Exists(directory))
-                foreach (string file in Directory.EnumerateFiles(directory, name)) File.Delete(file);
-        }
-
-        long files = CopyTree(ImportLayout.Staging, "content", skip: ImportLayout.DescriptorPath)
-            + CopyTree(ImportLayout.MusicPublication, "content")
-            + CopyTree(ImportLayout.Records, "import-records");
-        Console.WriteLine($"import: published {files} files into the loose tree under content/ and import-records/");
-    }
-
-    private static long CopyTree(string source, string target, string? skip = null)
-    {
-        if (!Directory.Exists(source)) return 0;
-        long count = 0;
-        foreach (string file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
-        {
-            string relative = Path.GetRelativePath(source, file).Replace('\\', '/');
-            if (relative == skip) continue;
-            string destination = Path.Combine(target, relative);
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.Copy(file, destination, overwrite: true);
-            count++;
-        }
-
-        return count;
     }
 
     /// <summary>

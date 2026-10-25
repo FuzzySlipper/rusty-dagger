@@ -303,7 +303,8 @@ internal class EngineContextFake : DispatchProxy
 
         private AudioClip OpenClipFromContent(AudioClipFromContentRequest request)
         {
-            bool music = TestContentReferences.PathOf(request.Content)?.StartsWith(WorldRpg.Rulesets.Daggerfall.Content.DaggerfallMusicBundle.LogicalRoot + "/", StringComparison.Ordinal) == true;
+            // A score track sits at the music container's root; every derived artifact sits below worldrpg/.
+            bool music = TestContentReferences.PathOf(request.Content) is { } path && !path.Contains('/', StringComparison.Ordinal);
             OpenedContentClips++;
             if (music) OpenedMusicClips++;
             return new AudioClip(new AudioClipHandle(1), () =>

@@ -8,10 +8,11 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// group's generated inventory.
 /// </summary>
 /// <remarks>
-/// The bytes are read from admitted content by name; the identity is the pack's media id; placement is
-/// the publication's (<c>worldrpg/media/...</c>) and is stated by the inventory the publication
-/// generated rather than by a hand-kept list here. Nothing about this path stages a copy beside the
-/// UI, so a republished artifact reaches the DOM by being republished.
+/// The bytes are read by name from the derived content (<see cref="DaggerfallData"/>): the generated art from
+/// the data container, the authored UI kit from the product's own tracked content at the same paths. The
+/// identity is the pack's media id; placement is the publication's (<c>worldrpg/media/...</c>) and is stated
+/// by the inventory the publication generated rather than by a hand-kept list here. Nothing about this path
+/// stages a copy beside the UI, so a republished artifact reaches the DOM by being republished.
 /// </remarks>
 internal sealed class DaggerfallUiArt
 {
@@ -46,22 +47,16 @@ internal sealed class DaggerfallUiArt
     /// </summary>
     internal const string AuthoredPathSegment = "/media/ui/authored/";
 
-    /// <summary>
-    /// The largest slice one admitted read serves - the Engine refuses a larger request - so an
-    /// artifact bigger than this is read in chunks and joined here.
-    /// </summary>
-    private const uint MaximumReadBytes = 1024 * 1024;
-
     /// <summary>The paper doll's worn-item images, read only when the doll first draws one.</summary>
     internal const string PaperDollInventoryPath = "worldrpg/media/character/paper-doll/paper-doll-inventory.json";
 
-    private readonly IContentService? _content;
+    private readonly DaggerfallData? _content;
     private readonly Dictionary<string, InventoryEntry> _inventory = new(StringComparer.Ordinal);
     private Dictionary<string, InventoryEntry>? _paperDoll;
     private readonly HashSet<string> _delivered = new(StringComparer.Ordinal);
     private readonly List<DaggerfallUiArtImage> _demanded = [];
 
-    private DaggerfallUiArt(IReadOnlyList<DaggerfallUiArtImage> images, IReadOnlyList<string> pickScreens, IContentService content, Dictionary<string, InventoryEntry> inventory)
+    private DaggerfallUiArt(IReadOnlyList<DaggerfallUiArtImage> images, IReadOnlyList<string> pickScreens, DaggerfallData content, Dictionary<string, InventoryEntry> inventory)
         : this(images, pickScreens)
     {
         _content = content;
@@ -95,8 +90,8 @@ internal sealed class DaggerfallUiArt
         ArgumentNullException.ThrowIfNull(ids);
         foreach (string id in ids)
         {
-            if (_delivered.Contains(id)) continue;
-            if (_content is null) throw new InvalidOperationException($"UI art '{id}' was demanded from art that reads no content.");
+            // Art composed without derived content draws nothing, so what a projection demands of it is nothing either.
+            if (_delivered.Contains(id) || _content is null) continue;
             if (!_inventory.TryGetValue(id, out InventoryEntry entry))
             {
                 _paperDoll ??= ReadInventory(_content, PaperDollInventoryPath);
@@ -108,6 +103,12 @@ internal sealed class DaggerfallUiArt
             _delivered.Add(id);
         }
     }
+
+    /// <summary>
+    /// The art of a session composed without derived content, which draws no image; a product composition
+    /// always carries its derived content.
+    /// </summary>
+    internal static DaggerfallUiArt None => new([], []);
 
     /// <summary>Publication-stable UI-art identity used by a reconnecting DOM to request the current image block.</summary>
     internal string Revision { get; }
@@ -127,7 +128,7 @@ internal sealed class DaggerfallUiArt
     /// inventory describes; the message names the artifact so the producer/consumer disagreement is
     /// visible rather than a blank image at runtime.
     /// </exception>
-    internal static DaggerfallUiArt Read(IContentService content, IEnumerable<string> itemIcons, IEnumerable<string>? characterIcons = null, IEnumerable<string>? panelArt = null)
+    internal static DaggerfallUiArt Read(DaggerfallData content, IEnumerable<string> itemIcons, IEnumerable<string>? characterIcons = null, IEnumerable<string>? panelArt = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(itemIcons);
@@ -160,7 +161,7 @@ internal sealed class DaggerfallUiArt
     }
 
     /// <summary>Reads the generated inventory by name and indexes it by the media identity it states.</summary>
-    private static Dictionary<string, InventoryEntry> ReadInventory(IContentService content, string inventoryPath)
+    private static Dictionary<string, InventoryEntry> ReadInventory(DaggerfallData content, string inventoryPath)
     {
         byte[] bytes = ReadAdmittedFile(content, inventoryPath);
         Dictionary<string, InventoryEntry> entries = new(StringComparer.Ordinal);
@@ -222,14 +223,14 @@ internal sealed class DaggerfallUiArt
     }
 
     /// <summary>Reads one published artifact by the name the inventory states, and refuses a length that disagrees with it.</summary>
-    private static byte[] ReadArtifact(IContentService content, string mediaId, InventoryEntry entry)
+    private static byte[] ReadArtifact(DaggerfallData content, string mediaId, InventoryEntry entry)
     {
         byte[] bytes;
         try
         {
             bytes = ReadAdmittedFile(content, entry.Path);
         }
-        catch (Exception exception) when (exception is InvalidOperationException or EngineCallException)
+        catch (Exception exception) when (exception is InvalidOperationException or FileNotFoundException or EngineCallException)
         {
             throw new InvalidOperationException($"Published UI art '{mediaId}' could not be read from admitted content at '{entry.Path}': {exception.Message}", exception);
         }
@@ -242,39 +243,8 @@ internal sealed class DaggerfallUiArt
         return bytes;
     }
 
-    /// <summary>Reads one admitted file by name. Its bounded reference read supplies the byte length.</summary>
-    private static byte[] ReadAdmittedFile(IContentService content, string path)
-    {
-        using ContentReference reference = content.OpenReference(new ContentOpenRequest(path));
-        ReadOnlyMemory<ContentReferenceInfo> info = content.ReadReferenceInfo(reference);
-        if (info.Length != 1)
-        {
-            throw new InvalidOperationException($"Admitted content returned no readable reference for '{path}'.");
-        }
-
-        ulong length = info.Span[0].ByteLength;
-        if (length is 0 or > int.MaxValue)
-        {
-            throw new InvalidOperationException($"Admitted content '{path}' is {length} bytes, which is not a readable published artifact.");
-        }
-
-        byte[] bytes = new byte[checked((int)length)];
-        ulong offset = 0;
-        while (offset < length)
-        {
-            uint take = (uint)Math.Min(MaximumReadBytes, length - offset);
-            ReadOnlyMemory<byte> chunk = content.ReadBytes(new ContentReadBytesRequest(reference, offset, take));
-            if (chunk.IsEmpty)
-            {
-                throw new InvalidOperationException($"Admitted content '{path}' returned no bytes at offset {offset} of its {length}.");
-            }
-
-            chunk.CopyTo(bytes.AsMemory(checked((int)offset)));
-            offset += (ulong)chunk.Length;
-        }
-
-        return bytes;
-    }
+    /// <summary>Reads one published file by name.</summary>
+    private static byte[] ReadAdmittedFile(DaggerfallData content, string path) => content.ReadBytes(path).ToArray();
 
     private readonly record struct InventoryEntry(string Path, long ByteLength, string? Slot, DaggerfallUiArtDisplay? Display);
 }

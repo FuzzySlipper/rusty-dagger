@@ -445,9 +445,10 @@ recipe:
 
 Button, tab and slot states are derived from one base image, so their slices
 line up. The script needs the LAN GPU hosts, so it is an operator tool, not a
-step of `scripts/regenerate-content.sh`. Its output is committed:
+step of the import. Its output is committed:
 
-- the processed originals in `data/ui-original/`;
+- the processed originals in `content/worldrpg/media/ui/authored/`, which are
+  product content the ruleset reads in place;
 - their entries in `data/ui-authored-assets.json`, whose prompt is the exact
   generation prompt.
 
@@ -456,8 +457,11 @@ step of `scripts/regenerate-content.sh`. Its output is committed:
    metadata, derived states) to `scripts/ui-art-kit.py`.
 2. Run `generate` for that source, pick a seed, then run `process` and
    `manifest`.
-3. Run `scripts/regenerate-content.sh`, which publishes the asset under
-   `media/ui/authored/`.
+3. Run the import (`dotnet run --project src/Daggerfall.Import.Tool -- import
+   --music local/Sound`). The classic media inventory in the data container
+   then lists the asset at `worldrpg/media/ui/authored/` with its digest and
+   display metadata. The import does not copy the file; it refuses an original
+   it would resample, because the product reads the tracked file.
 
 `DaggerfallUiArt` delivers every image under that path in the HUD
 projection's `uiArt`, with no list to update. `art.image(id)` returns its

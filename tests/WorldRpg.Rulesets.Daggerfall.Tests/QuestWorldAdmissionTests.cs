@@ -655,7 +655,7 @@ public sealed class QuestWorldAdmissionTests
     internal static DaggerfallSiteProfile WithMarker(DaggerfallSiteProfile source)
     {
         var site = TestPayload.Definitions.Locations.Records.Single(value => value.Id == source.Site);
-        var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        var blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
         var block = site.DungeonBlocks.First(value => blocks.QuestMarkers.TryGetValue(new(value.SourceKey, null), out var markers)
             && markers.Any(marker => marker.Kind == DaggerfallSiteMarkerKind.QuestSpawn));
         var marker = blocks.QuestMarkers[new(block.SourceKey, null)].First(value => value.Kind == DaggerfallSiteMarkerKind.QuestSpawn)
@@ -663,7 +663,7 @@ public sealed class QuestWorldAdmissionTests
         return new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites,
         source.Audio, source.ClassicPresentation, source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId,
         source.Portals, source.Anchors.Values.ToArray(), source.Lights, source.GroundContainerSprite, source.DungeonMap,
-        source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, source.Music, 
+        source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, 
         [marker], source.BillboardSprites);
     }
 }

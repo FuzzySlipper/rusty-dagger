@@ -16,11 +16,11 @@ public sealed class NativePursuitNavigationTests
     {
         string root = TestData.RepositoryRoot;
         var inputs = ReadInputs(root);
-        var tuning = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root,
+        var tuning = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root,
             "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
         Dictionary<string, ReadOnlyMemory<byte>> files = new()
         {
-            [inputs.SpatialArtifact.Path] = File.ReadAllBytes(Path.Combine(root, "content", inputs.SpatialArtifact.Path)),
+            [inputs.SpatialArtifact.Path] = TestContentFiles.ReadCopy(Path.Combine(root, "content", inputs.SpatialArtifact.Path)),
         };
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
         host.Call(engine =>

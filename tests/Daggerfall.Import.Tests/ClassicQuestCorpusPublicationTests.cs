@@ -10,9 +10,8 @@ public sealed class ClassicQuestCorpusPublicationTests
     [GeneratedContentFact]
     public void Publishes_every_retained_category_with_exact_membership_and_stable_fingerprints()
     {
-        string root = TestData.RepositoryRoot;
-        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.imported.json")));
-        using JsonDocument records = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "import-records/daggerfall.import-records.json")));
+        using JsonDocument payload = JsonDocument.Parse(ImportedContent.Read("worldrpg/payloads/daggerfall.imported.json"));
+        using JsonDocument records = JsonDocument.Parse(ImportedContent.Record("daggerfall.import-records.json"));
         DaggerfallQuestCatalog catalog = Section<DaggerfallQuestCatalog>(payload, "questCatalog");
         DaggerfallQuestPack sources = Section<DaggerfallQuestPack>(payload, "questSources");
         DaggerfallQuestOriginalSourceSet originals = Section<DaggerfallQuestOriginalSourceSet>(records, "questOriginalSources");
@@ -22,16 +21,15 @@ public sealed class ClassicQuestCorpusPublicationTests
             DaggerfallClassicQuestCorpus first = ClassicQuestCorpusPublication.Create(specification.Id, catalog, sources, originals);
             DaggerfallClassicQuestCorpus second = ClassicQuestCorpusPublication.Create(specification.Id, catalog, sources, originals);
             Assert.Equal(first.Fingerprint, second.Fingerprint);
-            Assert.Equal(ClassicQuestCorpusPublication.Serialize(first), File.ReadAllBytes(Path.Combine(root, $"content/worldrpg/payloads/daggerfall.quests.{specification.Id}.json")));
+            Assert.Equal(ClassicQuestCorpusPublication.Serialize(first), ImportedContent.Read($"worldrpg/payloads/daggerfall.quests.{specification.Id}.json"));
         }
     }
 
     [GeneratedContentFact]
     public void Each_task_selection_preserves_its_source_backed_categories_and_disabled_disposition()
     {
-        string root = TestData.RepositoryRoot;
-        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.imported.json")));
-        using JsonDocument records = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "import-records/daggerfall.import-records.json")));
+        using JsonDocument payload = JsonDocument.Parse(ImportedContent.Read("worldrpg/payloads/daggerfall.imported.json"));
+        using JsonDocument records = JsonDocument.Parse(ImportedContent.Record("daggerfall.import-records.json"));
         DaggerfallQuestCatalog catalog = Section<DaggerfallQuestCatalog>(payload, "questCatalog");
         DaggerfallQuestPack sources = Section<DaggerfallQuestPack>(payload, "questSources");
         DaggerfallQuestOriginalSourceSet originals = Section<DaggerfallQuestOriginalSourceSet>(records, "questOriginalSources");

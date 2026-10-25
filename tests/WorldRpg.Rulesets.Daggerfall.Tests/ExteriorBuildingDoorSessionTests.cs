@@ -25,7 +25,7 @@ public sealed class ExteriorBuildingDoorSessionTests
     private static readonly DaggerfallSiteBuildingId MagesGuild = new(3, 4, 0);   // MAGEAA14, quality 7
 
     private static readonly SharedFixture<DaggerfallBlocksSnapshot> Blocks = new(() =>
-        DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))));
+        DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))));
 
     private static readonly SharedFixture<(DaggerfallSiteProfile Exterior, DaggerfallSiteProfile[] Interiors)> Profiles = new(() =>
     {

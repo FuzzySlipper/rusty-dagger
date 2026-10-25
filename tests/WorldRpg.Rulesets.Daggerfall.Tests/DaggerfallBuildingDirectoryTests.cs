@@ -66,7 +66,7 @@ public sealed class DaggerfallBuildingDirectoryTests
             Buildings = new Dictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> { [invalid.Id] = invalid },
         } };
         DaggerfallLocationSet locations = TestPayload.Definitions.Locations with { Records = [broken] };
-        DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
         string error = Assert.Throws<InvalidOperationException>(() => blocks.AdmitLocations(locations)).Message;
         Assert.Contains(site.Id.ToString(), error);
         Assert.Contains(invalid.Id.ToString(), error);
@@ -97,7 +97,7 @@ public sealed class DaggerfallBuildingDirectoryTests
         EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, appearance);
         DaggerfallSiteContext sites = new(TestPayload.Definitions.Locations);
         sites.AdmitBuildingNames(engine.Context.Random, TestPayload.Definitions,
-            DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))));
+            DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))));
         var site = sites.Records.First(site => site.Exterior!.Buildings.Values.Any(building => building.Source.BuildingType == 23));
         var wall = sites.BuildingsAt(site.Id).First(building => building.Source.BuildingType == 23);
         Assert.Equal("City Wall", sites.RequireBuilding(site.Id, wall.Id).Name);
@@ -131,7 +131,7 @@ public sealed class DaggerfallBuildingDirectoryTests
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, appearance);
         return DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults)
         {
-            Blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json"))),
+            Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json"))),
         });
     }
 }

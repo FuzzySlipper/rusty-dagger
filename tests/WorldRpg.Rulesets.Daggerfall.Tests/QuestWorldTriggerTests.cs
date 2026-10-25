@@ -94,7 +94,7 @@ public sealed class QuestWorldTriggerTests
     {
         var definitions = TestPayload.Definitions;
         string root = TestData.RepositoryRoot;
-        var profile = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(root)), File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.charing-exterior.json")), definitions);
+        var profile = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)), TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.charing-exterior.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, profile);
         var spatial = SpatialFake.Create(profile.SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;

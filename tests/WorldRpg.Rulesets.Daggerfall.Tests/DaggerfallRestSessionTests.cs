@@ -26,7 +26,7 @@ public sealed class DaggerfallRestSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(new DaggerfallData(DaggerfallSkyMediaTests.Fixture().Content));
+        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
         foreach (bool wilderness in new[] { false, true })
         {
             List<string> releases = [];
@@ -93,7 +93,7 @@ public sealed class DaggerfallRestSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile inputs = ExteriorContentAt(source, source.ProfileKey.Site, "rest-selected-encounter");
-        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(new DaggerfallData(DaggerfallSkyMediaTests.Fixture().Content));
+        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -152,7 +152,7 @@ public sealed class DaggerfallRestSessionTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service,
             new AppearanceFake(releases), random: RandomMaximum.Create());
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root),
+        ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root),
             new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
             new(definitions, inputs, DaggerfallTuning.Defaults, identity) {Sky = sky}, DaggerfallSavePayload.Encode(saved));
@@ -176,7 +176,7 @@ public sealed class DaggerfallRestSessionTests
             """));
         DaggerfallDefinitions definitions = TestPayload.WithQuestSections(root.AsObject());
         DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
-        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(new DaggerfallData(DaggerfallSkyMediaTests.Fixture().Content));
+        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -213,7 +213,7 @@ public sealed class DaggerfallRestSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = ReadInputs(root);
-        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(new DaggerfallData(DaggerfallSkyMediaTests.Fixture().Content));
+        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -275,7 +275,7 @@ public sealed class DaggerfallRestSessionTests
         PopulateTerrainContent(resumedContent, inputs);
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using (DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
             new(definitions, inputs, DaggerfallTuning.Defaults, identity) {Sky = sky}, DaggerfallSavePayload.Encode(restedSave)))
         {
@@ -388,10 +388,10 @@ public sealed class DaggerfallRestSessionTests
             Spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
             Spatial.KeepPosition = true;
             _engine = EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
-            ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot),
+            ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(TestData.RepositoryRoot),
                 new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
             _inputs = new(TestPayload.Definitions, exterior, DaggerfallTuning.Defaults, identity)
-                { Sky = DaggerfallSkyMedia.Read(new DaggerfallData(DaggerfallSkyMediaTests.Fixture().Content)) };
+                { Sky = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content)) };
             Session = DaggerfallSession.StartNew(_engine.Context, _inputs);
             if (wilderness)
                 Session.State.PlayerControl.MoveTo(new WorldPoint(DaggerfallExteriorCellResidency.CellSize * (DaggerfallExteriorCellResidency.StreamingRadius + 1) + 1, Session.State.PlayerControl.Position!.Value.Y, 1).ToVector());
@@ -424,7 +424,6 @@ public sealed class DaggerfallRestSessionTests
         [],
         [],
         null,
-        source.Music,
         source.QuestMarkers,
         source.BillboardSprites,
         [],

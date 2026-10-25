@@ -50,13 +50,13 @@ public sealed class DaggerfallCinematicsContentTests
         foreach (DaggerfallCinematicDefinition source in published)
         {
             DaggerfallCinematicArtifact artifact = source.Artifact!;
-            byte[] bytes = File.ReadAllBytes(Path.Combine(content, artifact.Path));
+            byte[] bytes = TestContentFiles.ReadCopy(Path.Combine(content, artifact.Path));
             Assert.Equal(artifact.ByteLength, bytes.LongLength);
             Assert.Equal(artifact.Sha256, Convert.ToHexString(SHA256.HashData(bytes)), ignoreCase: true);
             Assert.Equal("video/webm", artifact.MimeType);
             Assert.True(artifact.FrameCount > 0 && artifact.DurationSeconds > 0);
         }
-        string[] actual = Directory.GetFiles(Path.Combine(content, "worldrpg/media/cinematics"), "*", SearchOption.AllDirectories)
+        string[] actual = TestContentFiles.AllFiles(Path.Combine(content, "worldrpg/media/cinematics"))
             .Select(path => Path.GetRelativePath(content, path).Replace(Path.DirectorySeparatorChar, '/')).Order().ToArray();
         Assert.Equal(published.Select(value => value.Artifact!.Path).Order(), actual);
     }

@@ -10,7 +10,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaedricSummoningTests
 {
     internal static DaggerfallDisabledQuestSelection Selection() => DaggerfallDisabledQuestSelection.From(
-        DaggerfallClassicQuestCorpusContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.quests.disabled.json")), TestPayload.Definitions));
+        DaggerfallClassicQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.quests.disabled.json")), TestPayload.Definitions));
 
     [Fact]
     public void All_sixteen_published_summoning_quests_are_runnable_and_missing_script_is_unavailable()
@@ -143,7 +143,7 @@ public sealed class DaedricSummoningTests
 
     private static DaggerfallSessionComposition Composition(DaggerfallSessionComposition composition)=>composition with
     { DisabledQuestSelection=Selection(), VideosEnabled=false,
-      Blocks=DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot,"content/worldrpg/payloads/daggerfall.blocks.json"))) };
+      Blocks=DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot,"content/worldrpg/payloads/daggerfall.blocks.json"))) };
 
     private static DaggerfallQuestInstanceSave Prepare(SanguineRoseSessionTests.Fixture f,DaggerfallSummoningResult result)
     {

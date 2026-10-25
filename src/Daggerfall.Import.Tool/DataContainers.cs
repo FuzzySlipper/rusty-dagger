@@ -9,25 +9,18 @@ namespace Daggerfall.Import.Tool;
 
 /// <summary>
 /// Where the import writes, relative to the repository root: the staging tree the data container is packed
-/// from, the import records, the transitional loose music publication, the music container's tracks, and the
-/// two containers.
+/// from, the import records, the music container's tracks, and the two containers.
 /// </summary>
 /// <remarks>
 /// The commands record the paths they were given in what they publish, so these stay relative and use
 /// <c>/</c>: the same import on another machine, or on Windows, records the same strings. Paths inside the
 /// staging tree are the content-root-relative paths the product names (<c>worldrpg/imports/...</c>,
-/// <c>worldrpg/payloads/...</c>), so a manifest reads the same from the container as from a loose tree.
+/// <c>worldrpg/payloads/...</c>), so a manifest reads the same from the container as from the staging tree.
 /// </remarks>
 internal static class ImportLayout
 {
     public const string Staging = "local/import/staging";
     public const string Records = "local/import/records";
-
-    /// <summary>
-    /// The music publication the site closures still name their cues from, and the loose tree reads, until the
-    /// product reads the music container by its naming scheme. It is not packed.
-    /// </summary>
-    public const string MusicPublication = "local/import/music-publication";
 
     /// <summary>The music container's files: one recording per track at the root, by the naming scheme.</summary>
     public const string MusicTracks = "local/import/music";
@@ -55,9 +48,6 @@ internal static class ImportLayout
 
     /// <summary>The per-block world publication.</summary>
     public const string WorldBlocks = $"{Staging}/worldrpg/imports/world-blocks";
-
-    /// <summary>The music cue manifest the site closures name their cues from, while they still do.</summary>
-    public const string MusicManifest = $"{MusicPublication}/worldrpg/media/music/manifest.json";
 
     public const string DataContainer = "local/daggerfall-data.rpak";
     public const string MusicContainer = "local/music.rpak";

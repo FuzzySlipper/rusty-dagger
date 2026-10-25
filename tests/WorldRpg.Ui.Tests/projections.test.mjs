@@ -3086,7 +3086,8 @@ test('city map selection sends the actual location and placed building identity 
 
 test('character draft screens consume the published mode art and every pick part with semantic actions', async () => {
   const { MODE_SCREENS, screenForMode } = await import(pathToFileURL(join(output, 'screens.js')));
-  const inventory = JSON.parse(await readFile(new URL('../../content/worldrpg/media/classic-media-inventory.json', import.meta.url), 'utf8'));
+  // The inventory is derived content: read from the staging tree the import packed the data container from.
+  const inventory = JSON.parse(await readFile(new URL('../../local/import/staging/worldrpg/media/classic-media-inventory.json', import.meta.url), 'utf8'));
   for (const mode of ['character-generation', 'character-pick']) {
     const id = screenForMode(mode);
     assert.ok(MODE_SCREENS.some(row => row.mode === mode && row.screen === id));
@@ -3098,7 +3099,7 @@ test('character draft screens consume the published mode art and every pick part
     const ids = ['screen.title', 'screen.character-generation', 'screen.pick.02'];
     const images = await Promise.all(ids.map(async id => {
       const artifact = inventory.artifacts.find(artifact => artifact.mediaId === id);
-      const bytes = await readFile(new URL('../../content/' + artifact.path, import.meta.url));
+      const bytes = await readFile(new URL('../../local/import/staging/' + artifact.path, import.meta.url));
       return { id, image: 'data:image/png;base64,' + bytes.toString('base64') };
     }));
     // A second admitted pick part exercises the binding set, using actual artifact bytes.

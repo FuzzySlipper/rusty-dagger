@@ -10,9 +10,8 @@ public sealed class NamedQuestCorpusPublicationTests
     [GeneratedContentFact]
     public void Publishes_exact_named_selections_with_display_names_and_source_provenance()
     {
-        string root = TestData.RepositoryRoot;
-        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.imported.json")));
-        using JsonDocument records = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "import-records/daggerfall.import-records.json")));
+        using JsonDocument payload = JsonDocument.Parse(ImportedContent.Read("worldrpg/payloads/daggerfall.imported.json"));
+        using JsonDocument records = JsonDocument.Parse(ImportedContent.Record("daggerfall.import-records.json"));
         DaggerfallQuestPack sources = JsonSerializer.Deserialize<DaggerfallQuestPack>(payload.RootElement.GetProperty("questSources"), PublishedJson.SectionRead)!;
         DaggerfallQuestOriginalSourceSet originals = JsonSerializer.Deserialize<DaggerfallQuestOriginalSourceSet>(records.RootElement.GetProperty("questOriginalSources"), PublishedJson.SectionRead)!;
         foreach ((string id, int count) in new[] { ("story-early", 20), ("story-late", 16), ("cures", 2) })
@@ -20,7 +19,7 @@ public sealed class NamedQuestCorpusPublicationTests
             DaggerfallNamedQuestCorpus corpus = NamedQuestCorpusPublication.Create(id, sources, originals);
             Assert.Equal(count, corpus.Quests.Count);
             Assert.Equal(NamedQuestCorpusPublication.Selections[id], corpus.Quests.Select(quest => quest.Name));
-            Assert.Equal(NamedQuestCorpusPublication.Serialize(corpus), File.ReadAllBytes(Path.Combine(root, $"content/worldrpg/payloads/daggerfall.quests.{id}.json")));
+            Assert.Equal(NamedQuestCorpusPublication.Serialize(corpus), ImportedContent.Read($"worldrpg/payloads/daggerfall.quests.{id}.json"));
             foreach (DaggerfallNamedQuestReceipt quest in corpus.Quests)
             {
                 Assert.Equal(sources.Quests.Single(source => source.Name == quest.Name).DisplayName, quest.DisplayName);

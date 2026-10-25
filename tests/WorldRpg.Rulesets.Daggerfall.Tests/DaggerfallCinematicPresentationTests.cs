@@ -10,14 +10,15 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallCinematicPresentationTests
 {
     [Fact]
-    public void Normal_bundle_reference_is_released_after_play_and_completion_releases_playback()
+    public void Normal_reference_is_released_after_play_and_completion_releases_playback()
     {
         Harness state = new();
         using DaggerfallCinematicPresentation presentation = state.Presentation;
         presentation.Play("ANIM0011.VID");
         Assert.Equal("anim0011.webm", Assert.Single(state.Paths));
         Assert.Equal(1, state.ReferencesReleased);
-        Assert.Equal(1, state.BundlesReleased);
+        // The data container stays open for the product's life; only the reference a play retained is released.
+        Assert.Equal(0, state.BundlesReleased);
         Assert.Equal("ANIM0011.VID", presentation.ActiveSource);
         state.Facts.Add(new(VideoRealizationFactKind.Completed, 1, new(1), VideoFailureCode.None));
         presentation.Poll();
@@ -56,7 +57,8 @@ public sealed class DaggerfallCinematicPresentationTests
         state.FailPlay = true;
         Assert.Throws<InvalidOperationException>(() => state.Presentation.Play("ANIM0011.VID"));
         Assert.Equal(1, state.ReferencesReleased);
-        Assert.Equal(1, state.BundlesReleased);
+        // The data container stays open for the product's life; only the reference a play retained is released.
+        Assert.Equal(0, state.BundlesReleased);
         Assert.Null(state.Presentation.ActiveSource);
     }
 
@@ -130,12 +132,11 @@ public sealed class DaggerfallCinematicPresentationTests
             });
             IContentService content = Proxy.Create<IContentService>((method, args) => method switch
             {
-                nameof(IContentService.ListBundles) => (ReadOnlyMemory<ContentBundleInfo>)new[] { new ContentBundleInfo(DaggerfallCinematicPresentation.BundleId, 1, 1) },
-                nameof(IContentService.OpenBundle) => OpenBundle((ContentBundleOpenRequest)args![0]!),
+                nameof(IContentService.OpenContainer) => OpenContainer((ContentContainerOpenRequest)args![0]!),
                 nameof(IContentService.ReadBundleIdentity) => TestSessions.Digest(System.Text.Encoding.UTF8.GetBytes("anim0000.webm\nanim0011.webm\ndag2.webm")),
                 nameof(IContentService.ReadBundleFiles) => (ReadOnlyMemory<ContentReferenceInfo>)Enumerable.Range(0, 16)
-                    .Select(index => new ContentReferenceInfo($"anim{index:0000}.webm", default, 1))
-                    .Append(new("dag2.webm", default, 1)).ToArray(),
+                    .Select(index => new ContentReferenceInfo($"{DaggerfallCinematicPresentation.Root}/anim{index:0000}.webm", default, 1))
+                    .Append(new($"{DaggerfallCinematicPresentation.Root}/dag2.webm", default, 1)).ToArray(),
                 nameof(IContentService.OpenBundleReference) => OpenReference((ContentBundleReferenceRequest)args![0]!),
                 _ => throw new NotSupportedException(method),
             });
@@ -156,17 +157,18 @@ public sealed class DaggerfallCinematicPresentationTests
             Video = video;
             Content = new ProductContent(Array.Empty<ProductContentFile>(), content);
             Catalog = catalog;
-            Presentation = new(engine, new DaggerfallData(Content), Catalog);
+            Presentation = new(engine, TestSessions.Data(Content), Catalog);
         }
 
-        private ContentBundle OpenBundle(ContentBundleOpenRequest request)
+        private ContentBundle OpenContainer(ContentContainerOpenRequest request)
         {
-            Assert.Equal(DaggerfallCinematicPresentation.BundleId, request.Id);
+            Assert.Equal(DaggerfallData.DataContainerName, request.Path);
             return new(new ContentBundleHandle(1), () => BundlesReleased++);
         }
         private ContentReference OpenReference(ContentBundleReferenceRequest request)
         {
-            Paths.Add(request.Path);
+            // Recorded below the cinematics root, as the presentation names them.
+            Paths.Add(request.Path[(DaggerfallCinematicPresentation.Root.Length + 1)..]);
             return new(new ContentReferenceHandle(1), () => ReferencesReleased++);
         }
         private object? Stop() { Stops++; return null; }

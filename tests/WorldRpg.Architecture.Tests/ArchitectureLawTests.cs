@@ -105,18 +105,19 @@ public sealed class ArchitectureLawTests
     }
 
     [Fact]
-    public void Git_ignores_every_path_the_content_regeneration_writes()
+    public void Every_file_under_content_is_tracked()
     {
-        // Arena2-derived content is never committed. Git cannot include another ignore file, so
-        // .gitignore carries a copy of the regeneration script's list; a path added to the list and not
-        // to the copy would be picked up by the next `git add`.
-        string[] Entries(string file) => [.. File.ReadLines(Path.Combine(RepositoryRoot, file))
-            .Select(line => line.Trim())
-            .Where(line => line.Length != 0 && !line.StartsWith('#'))];
-
-        string[] generated = Entries("scripts/generated-content-paths.txt");
-        Assert.NotEmpty(generated);
-        Assert.Empty(generated.Except(Entries(".gitignore"), StringComparer.Ordinal));
+        // The product's content/ tree holds only tracked, authored files; everything derived from the player's
+        // Daggerfall files lives in the data containers under local/. A file there that Git does not track (an
+        // ignored or untracked one) is derived content that would be staged with the product, or authored
+        // content that is not committed.
+        if (!Directory.Exists(Path.Combine(RepositoryRoot, ".git")) && !File.Exists(Path.Combine(RepositoryRoot, ".git"))) return;
+        using System.Diagnostics.Process git = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("git", ["-C", RepositoryRoot, "ls-files", "--others", "--", "content"])
+            { RedirectStandardOutput = true, UseShellExecute = false })!;
+        string untracked = git.StandardOutput.ReadToEnd();
+        git.WaitForExit();
+        Assert.Equal(0, git.ExitCode);
+        Assert.True(untracked.Length == 0, $"content/ holds files Git does not track:{Environment.NewLine}{string.Join(Environment.NewLine, untracked.Split('\n').Take(20))}");
     }
 
     [Fact]
@@ -137,11 +138,10 @@ public sealed class ArchitectureLawTests
     }
 
     /// <summary>
-    /// The Daggerfall ruleset reaches the content the import tool derives without naming where it is staged:
-    /// a reader goes through <c>DaggerfallData</c>, the one owner that knows which roots are Engine bundles,
-    /// and a renderer or audio owner hands the Engine a reference it resolved by path and digest. The
-    /// path-based Engine opens see only the eager snapshot, so a call to one would stop working once the
-    /// content is served from anywhere else.
+    /// The Daggerfall ruleset reaches the content the import tool derives without naming where it is kept: a
+    /// reader goes through <c>DaggerfallData</c>, the one owner of the data container, and a renderer or audio
+    /// owner hands the Engine a reference it resolved by path and digest. The path-based Engine opens see only
+    /// the product's own content, so a call to one would not find what the container carries.
     /// </summary>
     [Fact]
     public void Daggerfall_ruleset_opens_derived_content_by_reference_and_through_one_owner()
@@ -156,8 +156,7 @@ public sealed class ArchitectureLawTests
         (string Label, string Pattern, string Owner)[] ownedOpens =
         [
             ("bundle opened outside DaggerfallData", @"\.OpenBundle\s*\(", "DaggerfallData.cs"),
-            // The UI art still reads its inventories and images by path through the Engine content service.
-            ("content opened by bare path", @"\bContentOpenRequest\b", "DaggerfallUiArt.cs"),
+            ("content opened by bare path", @"\bContentOpenRequest\b", "DaggerfallData.cs"),
         ];
 
         foreach (string project in new[] { "WorldRpg.Rulesets.Daggerfall", "WorldRpg.Rulesets.Daggerfall.Variants" })

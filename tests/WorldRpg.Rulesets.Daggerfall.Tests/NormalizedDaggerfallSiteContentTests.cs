@@ -29,7 +29,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
         Assert.Equal(content.Files.Length - 1, remaining.Length);
 
         var error = Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(
-            new DaggerfallData(new ProductContent(remaining)),
+            TestSessions.Data(new ProductContent(remaining)),
             TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
             TestPayload.Definitions));
 
@@ -41,7 +41,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
     [Fact]
     public void Required_file_accessor_distinguishes_a_missing_file_from_an_empty_file()
     {
-        var files = AdmittedFiles.From(new DaggerfallData(new ProductContent(new ProductContentFile[] {
+        var files = AdmittedFiles.From(TestSessions.Data(new ProductContent(new ProductContentFile[] {
             new(Encoding.UTF8.GetBytes("empty.json"), ReadOnlyMemory<byte>.Empty) })));
         Assert.True(files.GetExactlyOne("empty.json").IsEmpty);
         var error = Assert.Throws<DaggerfallContentException>(() => files.GetExactlyOne("missing.json"));
@@ -53,8 +53,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.charing-interior-1-1-0.json")), definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.charing-interior-1-1-0.json")), definitions);
         Assert.Equal(new DaggerfallInteriorBuilding(1, 1, new("RESIAL05.RMB", 0), 18, 0), inputs.InteriorBuilding! with { EntryFrame = null });
         // The publication also carries the exterior frame that matches a building arrival to its interior door.
         Assert.NotEmpty(inputs.InteriorBuilding.EntryFrame!.Doors);
@@ -65,9 +65,9 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
-        using JsonDocument extracted = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/normalized.json")));
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        using JsonDocument extracted = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/imports/privateers-hold/normalized.json")));
 
         // Compare against independent import output: the migration's rat/skeleton-only
         // payload passed media validation while silently omitting other fixed enemies.
@@ -90,8 +90,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
         NormalizedClassicPresentation classic = inputs.ClassicPresentation;
         Assert.Equal(12, classic.Weapons.Count);
         Assert.Equal("weapon.longblade", classic.CompatibleItemVisuals["iron-longsword"]);
@@ -121,9 +121,9 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)), payload, definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)), payload, definitions);
 
         Assert.Equal("worldrpg/imports/privateers-hold/spatial/privateer-s-hold/collision-navigation.rspatial", inputs.SpatialArtifact.Path);
         Assert.Equal("worldrpg/imports/privateers-hold/spatial/privateer-s-hold/static-mesh.rstatmsh", inputs.StaticMesh.Path);
@@ -144,8 +144,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
     public void Exposes_the_published_arrow_world_visual_with_its_own_mesh_and_textures()
     {
         string root = TestData.RepositoryRoot;
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), TestPayload.Definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), TestPayload.Definitions);
 
         // The donor draws a flying arrow from ARCH3D mesh 99800; the site publishes that mesh, the
         // textures its planes select, and the record both were decoded from. Loading at all is the
@@ -161,7 +161,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
 
         // The published mesh selects two textures, and the artifact states the same two slots.
         using EngineBinaryContent.StaticMesh artifact = EngineBinaryContent.ReadStaticMesh(
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/shared/geometry/mesh-99800.rstatmsh")));
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/imports/shared/geometry/mesh-99800.rstatmsh")));
         Assert.Equal(2, artifact.Root.GetProperty("materialSlots").GetArrayLength());
 
         // The visual's textures travel with the visual rather than through the site's static-mesh
@@ -177,8 +177,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
     public void Every_published_site_carries_the_published_arrow_world_visual(string payload)
     {
         string root = TestData.RepositoryRoot;
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads", payload)), TestPayload.Definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads", payload)), TestPayload.Definitions);
 
         // The arrow is the ruleset's own projectile art rather than a site's placement, so every site
         // the bundle admits publishes the same visual; a site that quietly lost it would draw nothing.
@@ -194,38 +194,38 @@ public sealed class NormalizedDaggerfallSiteContentTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(
-            new DaggerfallData(ContentWithMutatedClassicVisual(root, visual => visual["contentDigest"] = new string('0', 64))),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
+            TestSessions.Data(ContentWithMutatedClassicVisual(root, visual => visual["contentDigest"] = new string('0', 64))),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
             definitions));
 
         // A descriptor whose texture identity is not the one the site published cannot be drawn either:
         // the missing media is named rather than silently left untextured.
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(
-            new DaggerfallData(ContentWithMutatedClassicVisual(root, visual =>
+            TestSessions.Data(ContentWithMutatedClassicVisual(root, visual =>
                 ((JsonArray)visual["materials"]!)[0]!["contentDigest"] = new string('1', 64))),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
             definitions));
 
         // A second texture stated for a slot is a sidecar that no longer describes the published mesh;
         // it is reported rather than dropped. The extra entry keeps valid bytes and its own material
         // identity, so the repeated slot is the only failure.
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(
-            new DaggerfallData(ContentWithMutatedClassicVisual(root, visual =>
+            TestSessions.Data(ContentWithMutatedClassicVisual(root, visual =>
             {
                 JsonArray materials = (JsonArray)visual["materials"]!;
                 JsonObject surplus = (JsonObject)materials[0]!.DeepClone();
                 surplus["materialResourceId"] = "material/texture-1-121-surplus";
                 materials.Add(surplus);
             })),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
             definitions));
 
         // The same for a texture the descriptor names but the import manifest does not admit: the site
         // must not draw a missile with bytes nobody published.
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(
-            new DaggerfallData(ContentWithMutatedClassicVisual(root, visual =>
+            TestSessions.Data(ContentWithMutatedClassicVisual(root, visual =>
                 ((JsonArray)visual["materials"]!)[0]!["relativePath"] = "media/world-visuals/texture-9-9.png")),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
             definitions));
     }
 
@@ -236,11 +236,11 @@ public sealed class NormalizedDaggerfallSiteContentTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         const string classicRelativePath = "worldrpg/imports/shared/media/classic/manifest.json";
         string contentRoot = Path.Combine(root, "content");
-        ProductContentFile[] files = Directory.GetFiles(contentRoot, "*", SearchOption.AllDirectories)
+        ProductContentFile[] files = TestContentFiles.AllFiles(contentRoot)
             .Select(path =>
             {
                 string relative = Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/');
-                byte[] bytes = File.ReadAllBytes(path);
+                byte[] bytes = TestContentFiles.ReadCopy(path);
                 if (StringComparer.Ordinal.Equals(relative, classicRelativePath))
                 {
                     JsonObject manifest = JsonNode.Parse(bytes)!.AsObject();
@@ -255,8 +255,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
         // Every published sidecar states the section, so its absence means the sidecar predates the
         // visual the site is supposed to carry. Reporting it beats loading a site that draws nothing.
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(
-            new DaggerfallData(new ProductContent(files)),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
+            TestSessions.Data(new ProductContent(files)),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")),
             definitions));
     }
 
@@ -265,11 +265,11 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string contentRoot = Path.Combine(root, "content");
         const string classicRelativePath = "worldrpg/imports/shared/media/classic/manifest.json";
-        ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports"), "*", SearchOption.AllDirectories)
+        ProductContentFile[] files = TestContentFiles.AllFiles(Path.Combine(contentRoot, "worldrpg/imports"))
             .Select(path =>
             {
                 string relative = Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/');
-                byte[] bytes = File.ReadAllBytes(path);
+                byte[] bytes = TestContentFiles.ReadCopy(path);
                 if (StringComparer.Ordinal.Equals(relative, classicRelativePath))
                 {
                     JsonObject manifest = JsonNode.Parse(bytes)!.AsObject();
@@ -289,8 +289,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
 
         Assert.NotNull(inputs.GroundContainerSprite);
         NormalizedBillboardSprite visual = inputs.GroundContainerSprite!;
@@ -308,8 +308,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
 
         NormalizedActorSprite mobile = inputs.MobileSprites[30];
         Assert.Equal([0, 1, 2, 3, -1, 4, 5], Assert.Single(mobile.AttackSequences).SourceFrames);
@@ -325,8 +325,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
 
-        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
         DaggerfallSiteProfiles profiles = new([destination]);
 
         Assert.Equal(new DaggerfallSiteId(17, 9), destination.Site);
@@ -365,8 +365,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
 
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
 
         Assert.Equal(58, inputs.Doors.Count);
         DaggerfallRdbDoorDefinition first = Assert.Single(inputs.Doors, door => door.Id == new DaggerfallRdbDoorId("B0000003.RDB", 1, 0, 0));
@@ -384,8 +384,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
         using JsonDocument media = JsonDocument.Parse(CompleteDungeonSidecar(root, "worldrpg/imports/privateers-hold").ToJsonString());
 
         JsonElement actor = media.RootElement.GetProperty("actors").EnumerateArray().Single(value => value.GetProperty("mobileId").GetInt32() == 0);
@@ -408,7 +408,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
         ProductContent content = GeneratedContent(root);
         ProductContentFile[] changed = content.Files.ToArray();
         int index = Array.FindIndex(changed, file => Encoding.UTF8.GetString(file.Path.Span).EndsWith("collision-navigation.rspatial", StringComparison.Ordinal));
@@ -417,7 +417,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
         bytes[0] ^= 1;
         changed[index] = new ProductContentFile(changed[index].Path, bytes);
 
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(new ProductContent(changed)), payload, definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(new ProductContent(changed)), payload, definitions);
         Assert.Equal("worldrpg/imports/privateers-hold/spatial/privateer-s-hold/collision-navigation.rspatial", inputs.SpatialArtifact.Path);
     }
 
@@ -426,10 +426,10 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        string payload = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        string payload = TestContentFiles.ReadText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
         DaggerfallContentException exception = Assert.Throws<DaggerfallContentException>(() =>
-            DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)), Encoding.UTF8.GetBytes(payload.Replace("\"actor\": \"skeletal-warrior\"", "\"actor\": \"missing-actor\"", StringComparison.Ordinal)), definitions));
+            DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)), Encoding.UTF8.GetBytes(payload.Replace("\"actor\": \"skeletal-warrior\"", "\"actor\": \"missing-actor\"", StringComparison.Ordinal)), definitions));
 
         Assert.Contains("missing actor 'missing-actor'", exception.Message, StringComparison.Ordinal);
     }
@@ -439,10 +439,10 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        string payload = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        string payload = TestContentFiles.ReadText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
         DaggerfallContentException exception = Assert.Throws<DaggerfallContentException>(() =>
-            DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)), Encoding.UTF8.GetBytes(payload.Replace("\"ruleset\": \"daggerfall\"", "\"ruleset\": \"daggerfall\", \"ruleset\": \"daggerfall\"", StringComparison.Ordinal)), definitions));
+            DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)), Encoding.UTF8.GetBytes(payload.Replace("\"ruleset\": \"daggerfall\"", "\"ruleset\": \"daggerfall\", \"ruleset\": \"daggerfall\"", StringComparison.Ordinal)), definitions));
 
         Assert.Contains("repeats property 'ruleset'", exception.Message, StringComparison.Ordinal);
     }
@@ -452,10 +452,10 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        string payload = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"))
+        string payload = TestContentFiles.ReadText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"))
             .Replace("\"weapon.dagger.steel\"", "\"effect.blood.0\"", StringComparison.Ordinal);
 
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(GeneratedContent(root)), Encoding.UTF8.GetBytes(payload), definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)), Encoding.UTF8.GetBytes(payload), definitions));
     }
 
     [Fact]
@@ -463,11 +463,11 @@ public sealed class NormalizedDaggerfallSiteContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        string payload = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        string payload = TestContentFiles.ReadText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(
-            new DaggerfallData(GeneratedContent(root)), Encoding.UTF8.GetBytes(payload.Replace("\"itemId\": \"iron-dagger\"", "\"itemId\": \"iron-longsword\"", StringComparison.Ordinal)), definitions));
+            TestSessions.Data(GeneratedContent(root)), Encoding.UTF8.GetBytes(payload.Replace("\"itemId\": \"iron-dagger\"", "\"itemId\": \"iron-longsword\"", StringComparison.Ordinal)), definitions));
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(
-            new DaggerfallData(GeneratedContent(root)), Encoding.UTF8.GetBytes(payload.Replace("weapon.unarmed", "weapon.missing", StringComparison.Ordinal)), definitions));
+            TestSessions.Data(GeneratedContent(root)), Encoding.UTF8.GetBytes(payload.Replace("weapon.unarmed", "weapon.missing", StringComparison.Ordinal)), definitions));
     }
 
     /// <summary>
@@ -492,8 +492,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
             return Encoding.UTF8.GetBytes(world.ToJsonString());
         });
 
-        DaggerfallSiteProfile exterior = DaggerfallSiteContent.Read(new DaggerfallData(content),
-            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.charing-exterior.json")), TestPayload.Definitions);
+        DaggerfallSiteProfile exterior = DaggerfallSiteContent.Read(TestSessions.Data(content),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.charing-exterior.json")), TestPayload.Definitions);
 
         Assert.True(DaggerfallSiteContent.TryDoorIdentity(Assert.IsType<string>(turned), out DaggerfallRdbDoorId id));
         DaggerfallRdbDoorDefinition admitted = Assert.Single(exterior.Doors, door => door.Id == id);
@@ -506,11 +506,11 @@ public sealed class NormalizedDaggerfallSiteContentTests
     private static ProductContent GeneratedContent(string root, Func<string, byte[], byte[]>? mutate = null)
     {
         string contentRoot = Path.Combine(root, "content");
-        ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports"), "*", SearchOption.AllDirectories)
+        ProductContentFile[] files = TestContentFiles.AllFiles(Path.Combine(contentRoot, "worldrpg/imports"))
             .Select(path =>
             {
                 string relative = Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/');
-                byte[] bytes = File.ReadAllBytes(path);
+                byte[] bytes = TestContentFiles.ReadCopy(path);
                 return new ProductContentFile(Encoding.UTF8.GetBytes(relative), mutate is null ? bytes : mutate(relative, bytes));
             })
             .Concat(ClassicGroupFiles(root))

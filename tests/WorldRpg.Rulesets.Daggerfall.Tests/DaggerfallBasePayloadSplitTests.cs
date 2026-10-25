@@ -38,8 +38,8 @@ public sealed class DaggerfallBasePayloadSplitTests
     public void The_tracked_authored_payload_and_the_imported_payload_share_no_section()
     {
         string payloads = Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads");
-        using JsonDocument authored = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(payloads, "daggerfall.base.json")));
-        using JsonDocument imported = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(payloads, "daggerfall.imported.json")));
+        using JsonDocument authored = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(payloads, "daggerfall.base.json")));
+        using JsonDocument imported = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(payloads, "daggerfall.imported.json")));
 
         Assert.Equal(
             ["ruleset", "enemyRanged", "vocabulary", "armorValuesByMaterial", "actors", "items", "equipmentSlots", "actions", "lootTables", "hudResources", "donorErrata", "encounters", "assembledSites", "newGame", "enemySpells", "dialogueWorldRules", "questJournalTitles"],

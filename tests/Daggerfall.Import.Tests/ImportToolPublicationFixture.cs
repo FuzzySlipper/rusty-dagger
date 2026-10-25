@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using Daggerfall.Import.Arena2;
-using Daggerfall.Import.Audio;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
@@ -26,14 +25,10 @@ internal sealed partial class ImportToolFixture
                 var text = DaggerfallTextBuilder.BuildAll(Source("TEXT.RSC"), Label("TEXT.RSC"), Source("NAMEGEN.DAT"), Label("NAMEGEN.DAT"), Source("RUMOR.DAT"), Label("RUMOR.DAT"),
                     Source(BioDatReader.FileName), Label(BioDatReader.FileName), questionnaires, Source("BIOG00I0.IMG"), books, Rows, "en");
                 Section("text", text.Item1); Section("names", text.Item2); Section("rumors", text.Item3); Section("biographies", text.Item4); Section("books", text.Item5); break;
-            case "music-media":
-                var music = ClassicMusicPublication.Create(ClassicMusicCatalogue.All, ClassicMusicCatalogue.All.Select(cue => new ClassicMusicSource(cue, File.ReadAllBytes(Repo("local/Sound/" + cue.SourceFile)))).ToArray());
-                string musicRoot = At("output/" + ClassicMusicPublication.Group);
-                Artifacts(musicRoot, music.Artifacts);
-                result.Add(Path.Combine(musicRoot, "media/music/music-inventory.json"), ArtifactInventory.Write(ClassicMusicPublication.Generator, music.Artifacts.Select(artifact => ArtifactInventory.Entry($"{ClassicMusicPublication.Group}/{artifact.RelativePath}", artifact.Bytes.Span, artifact.MediaId)))); break;
             case "classic-media":
                 var classic = ClassicMediaGroup.Create(Arena2SiteSources.ForClassicMedia(Arena2).ClassicMediaInputs, ClassicProfile());
-                Artifacts(At("output/worldrpg"), classic.Artifacts);
+                // The inventory lists the authored UI art, which the command does not write: it is tracked product content.
+                Artifacts(At("output/worldrpg"), classic.GeneratedArtifacts);
                 result.Add(At("output/worldrpg/" + ClassicMediaGroup.InventoryRelativePath), classic.WriteInventory("worldrpg", Directory.EnumerateFiles(Arena2).Select(Path.GetFileName).OfType<string>())); break;
             case "sky-media":
                 var day = Enumerable.Range(0, SkyFileDecoder.FileCount)
@@ -88,8 +83,15 @@ internal sealed partial class ImportToolFixture
                 var manifest = ImportPublicationManifestSerializer.Deserialize(File.ReadAllBytes(Path.Combine(Publication, ImportPublicationManifestSerializer.ManifestRelativePath)));
                 result.Add(At("report.json"), SourceManifestSerializer.Serialize(SourceManifestPublication.ForPublication(manifest.Sources.Select(source => source.Path), Arena2, Path.GetFileName(Inventory), File.ReadAllBytes(Inventory)))); break;
             case "source-coverage":
-                var files = new[] { "content/worldrpg", "import-records" }.SelectMany(folder => Directory.EnumerateFiles(Repo(folder), "*.json", SearchOption.AllDirectories)).ToArray();
-                var inputs = SourceCoverageInputReader.Read(TestData.RepositoryRoot, files, Rows);
+                // The staging tree's files replace the repository content's at the same path; records keep their own label.
+                Dictionary<string, string> content = new(StringComparer.Ordinal);
+                foreach (string root in new[] { Repo("content"), ImportedContent.Staged("") })
+                    foreach (string file in Directory.EnumerateFiles(Path.Combine(root, "worldrpg"), "*.json", SearchOption.AllDirectories))
+                        content["content/" + Path.GetRelativePath(root, file).Replace('\\', '/')] = file;
+                var inputs = SourceCoverageInputReader.Read([
+                    .. content.Select(pair => new SourceCoverageArtifact(pair.Key, pair.Value)),
+                    .. Directory.EnumerateFiles(TestData.ImportRecords, "*.json", SearchOption.AllDirectories)
+                        .Select(file => new SourceCoverageArtifact("import-records/" + Path.GetRelativePath(TestData.ImportRecords, file).Replace('\\', '/'), file))], Rows);
                 var imported = inputs.Consumers.Where(c => !c.ContextOnly && c.SourcePath.StartsWith("arena2/", StringComparison.Ordinal)).Select(c => c.SourcePath["arena2/".Length..]).Distinct().ToArray();
                 var request = new SourceManifestRequest("arena2", "data/content-source-manifest.csv", Arena2, imported, [], Rows.Where(row => row.Disposition == "excluded").Select(row => row.PathOrPattern.StartsWith("arena2/", StringComparison.Ordinal) ? row.PathOrPattern["arena2/".Length..] : row.PathOrPattern).ToArray());
                 var coverage = SourceCoverageReconciler.Build(SourceManifestBuilder.Scan(request, File.ReadAllBytes(Inventory)), inputs.Consumers, inputs.Quests, inputs.Unsupported, Rows);
@@ -98,7 +100,7 @@ internal sealed partial class ImportToolFixture
             case "sprite-overlay-write": result.Add(At("writer-authoring/sprites/test.json"), File.ReadAllBytes(OverlayFile)); break;
             case "write":
             case "rmb-spatial":
-                var siteMedia = new Arena2SiteMedia(Arena2SitePublication.RuntimeActorResources(File.ReadAllText(Pack)), ClassicProfile(), [], [])
+                var siteMedia = new Arena2SiteMedia(Arena2SitePublication.RuntimeActorResources(File.ReadAllText(Pack)), ClassicProfile(), [])
                 {
                     RuntimeNpcResources = Arena2SitePublication.RuntimeNpcResources(File.ReadAllText(Pack)),
                     RuntimeNatureResources = Arena2SitePublication.RuntimeNatureResources(),
@@ -114,7 +116,7 @@ internal sealed partial class ImportToolFixture
         }
     }
 
-    private Arena2ClassicMediaProfile ClassicProfile() => AuthoredUiAssetSet.Read(File.ReadAllBytes(Repo("data/ui-authored-assets.json")), file => File.ReadAllBytes(Repo("data/ui-original/" + file)));
+    private Arena2ClassicMediaProfile ClassicProfile() => AuthoredUiAssetSet.Read(File.ReadAllBytes(Repo("data/ui-authored-assets.json")), file => File.ReadAllBytes(Path.Combine(AuthoredUiArt, file)));
 
     private void ExpectedQuestSections(Dictionary<string, string> sections, Dictionary<string, string> records)
     {

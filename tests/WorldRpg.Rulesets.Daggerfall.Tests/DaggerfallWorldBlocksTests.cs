@@ -20,9 +20,9 @@ public sealed class DaggerfallWorldBlocksTests
     {
         ProductContent content = StagedContent(TestData.RepositoryRoot, out BundleContentFake bundles);
         Assert.False(content.TryReadFile($"{DaggerfallWorldBlocks.Root}/{DaggerfallWorldBlocks.IndexPath}", out _));
-        DaggerfallWorldBlocks blocks = new(new DaggerfallData(content));
+        DaggerfallWorldBlocks blocks = new(TestSessions.Data(content));
         Assert.False(blocks.IndexRead);
-        Assert.Empty(bundles.OpenedBundles);
+        Assert.Empty(bundles.ReadFiles);
 
         DaggerfallWorldBlockKey exterior = new(DaggerfallWorldBlockKind.RmbExterior, "ARMRAL00.RMB");
         DaggerfallWorldBlockKey interior = new(DaggerfallWorldBlockKind.RmbInterior, "MAGEAA14.RMB", 0);
@@ -30,10 +30,9 @@ public sealed class DaggerfallWorldBlocksTests
         IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> read = blocks.Read([exterior, interior, dungeon]);
 
         Assert.True(blocks.IndexRead);
-        Assert.Equal([DaggerfallWorldBlocks.BundleId], bundles.OpenedBundles);
         Assert.Equal(
             [DaggerfallWorldBlocks.IndexPath, "rmb/armral00-rmb/exterior.json", "rmb/mageaa14-rmb/interior-0.json", "rdb/b0000000-rdb.json"],
-            bundles.ReadFiles.Select(file => file.Path));
+            bundles.ReadFiles.Select(file => file.Path[(DaggerfallWorldBlocks.Root.Length + 1)..]).Distinct());
 
         DaggerfallWorldBlockDocument armorer = read[exterior];
         Assert.Equal("rmb/armral00-rmb/exterior", armorer.PublishedKey);
@@ -71,13 +70,14 @@ public sealed class DaggerfallWorldBlocksTests
     public void Names_a_missing_block_and_a_malformed_document()
     {
         BundleContentFake service = new();
-        service.Add(DaggerfallWorldBlocks.BundleId, DaggerfallWorldBlocks.IndexPath, Encoding.UTF8.GetBytes("""
+        service.Container(DaggerfallData.DataContainerName);
+        service.Add(DaggerfallData.DataContainerName, $"{DaggerfallWorldBlocks.Root}/{DaggerfallWorldBlocks.IndexPath}", Encoding.UTF8.GetBytes("""
             {"blocks":[{"key":"rdb/b0000000-rdb","kind":"rdb","sourceKey":"B0000000.RDB","buildingIndex":null,"document":"rdb/b0000000-rdb.json","spatial":null}]}
             """));
-        service.Add(DaggerfallWorldBlocks.BundleId, "rdb/b0000000-rdb.json", Encoding.UTF8.GetBytes("""
+        service.Add(DaggerfallData.DataContainerName, $"{DaggerfallWorldBlocks.Root}/rdb/b0000000-rdb.json", Encoding.UTF8.GetBytes("""
             {"key":"rdb/b0000000-rdb","kind":"rdb","sourceKey":"B0000000.RDB","buildingIndex":null,"models":[{"id":"model/b0000000-rdb/0"}],"doors":[],"buildings":[],"randomEnemies":[]}
             """));
-        DaggerfallWorldBlocks blocks = new(new DaggerfallData(new ProductContent(Array.Empty<ProductContentFile>(), service)));
+        DaggerfallWorldBlocks blocks = new(TestSessions.Data(new ProductContent(Array.Empty<ProductContentFile>(), service)));
 
         DaggerfallContentException missing = Assert.Throws<DaggerfallContentException>(() =>
             blocks.Read([new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.Rdb, "B0000099.RDB")]));

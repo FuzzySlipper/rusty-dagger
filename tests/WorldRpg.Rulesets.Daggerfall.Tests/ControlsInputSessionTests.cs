@@ -81,11 +81,11 @@ public sealed class ControlsInputSessionTests
     public void The_pads_mapping_is_tuning_and_every_payload_agrees_with_the_ruleset_defaults()
     {
         string root = TestData.RepositoryRoot;
-        ControllerInputTuning loaded = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json"))).ControllerInput;
+        ControllerInputTuning loaded = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json"))).ControllerInput;
 
         AssertSamePad(DaggerfallTuning.Defaults.ControllerInput, loaded);
         foreach (string payload in Directory.GetFiles(Path.Combine(root, "content/worldrpg/tuning-payloads"), "*.json"))
-            AssertSamePad(loaded, DaggerfallTuning.Read(File.ReadAllBytes(payload)).ControllerInput);
+            AssertSamePad(loaded, DaggerfallTuning.Read(TestContentFiles.ReadCopy(payload)).ControllerInput);
 
         // The values the payloads name, so a payload edit that silently changed the layout fails here
         // rather than in a playtest: the shell delivers left stick 0/1, right stick 2/3, positive down.
@@ -124,7 +124,7 @@ public sealed class ControlsInputSessionTests
         ];
         foreach (string payload in new[] { "daggerfall.defaults.json" })
         {
-            DaggerfallTuning tuning = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/tuning-payloads", payload)));
+            DaggerfallTuning tuning = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/tuning-payloads", payload)));
             Assert.NotEmpty(tuning.ControllerInput.Actions);
             foreach (ControllerActionBinding binding in tuning.ControllerInput.Actions)
                 Assert.Contains(binding.Action.Value, declared);
@@ -232,7 +232,7 @@ public sealed class ControlsInputSessionTests
         // button of the same name opens. There is no DOM harness in this repository, so the agreement
         // is pinned where the DOM spells it: as the data-action of a button in the DOM's own source.
         Assert.Equal(["inventory", "character", "menu", "inventory", "spells"], requested);
-        string dom = File.ReadAllText(Path.Combine(root, "src/ui/shell.ts"));
+        string dom = TestContentFiles.ReadText(Path.Combine(root, "src/ui/shell.ts"));
         Assert.All(requested, panel => Assert.Contains($"data-action=\"{panel}\"", dom, StringComparison.Ordinal));
     }
 
@@ -268,7 +268,7 @@ public sealed class ControlsInputSessionTests
         // staged Host the fact skips and names the build rather than passing without reading it; the
         // gate stages the Host before this suite, so there the guard always reads the manifest.
         string manifest = Path.Combine(root, StagedProductFactAttribute.ManifestPath);
-        using JsonDocument product = JsonDocument.Parse(File.ReadAllBytes(manifest));
+        using JsonDocument product = JsonDocument.Parse(TestContentFiles.ReadCopy(manifest));
         string[] triggers = [.. product.RootElement.GetProperty("input").GetProperty("mappings").EnumerateArray()
             .Select(mapping => mapping.GetProperty("trigger").GetString() ?? string.Empty)];
         Assert.NotEmpty(triggers);

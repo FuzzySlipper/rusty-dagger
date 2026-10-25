@@ -16,6 +16,13 @@
     <RustyEngineProductDefaultWorldLights>disabled</RustyEngineProductDefaultWorldLights>
     <RustyEngineProductUiRoot>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(BaseIntermediateOutputPath)', 'product-ui'))</RustyEngineProductUiRoot>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
+    <!-- The containers converted from the player's Daggerfall files (daggerfall-data.rpak, music.rpak) are
+         installed beside the product: in a release beside product.rpak, under rusty dev in the repository's
+         local/ directory, where the import command writes them. -->
+    <RustyEngineProductInstalledContent>../../local</RustyEngineProductInstalledContent>
+    <!-- rusty dev stages with RustyEngineProductContentSource; the Host words its next steps for that loop
+         (HostBuild.DevelopmentLoop) and warns rather than refuses stale imported data there. -->
+    <DefineConstants Condition="'$(RustyEngineProductContentSource)' == 'true'">$(DefineConstants);WORLDRPG_DEVELOPMENT_LOOP</DefineConstants>
     <RustyEngineProductUiEntry>main.js</RustyEngineProductUiEntry>
     <!-- TypeScript builds only the product-owned DOM companion. The runtime
          pack provides the browser shell, renderer, and transport. The SDK
@@ -77,32 +84,8 @@
     <RustyEngineProductInputMapping Include="move.left.key-a" Intent="move.left" Trigger="key:key-a:held" />
     <RustyEngineProductInputMapping Include="move.backward.key-s" Intent="move.backward" Trigger="key:key-s:held" />
     <RustyEngineProductInputMapping Include="move.right.key-d" Intent="move.right" Trigger="key:key-d:held" />
-    <!-- The score is one product-wide bundle: its manifest sits above the root and stays eager while the
-         cue bodies are opened on the first cue, exactly as the world media's effect clips below are. -->
-    <RustyEngineContentBundle Include="daggerfall.music" Root="worldrpg/media/music/clips" />
-    <RustyEngineContentBundle Include="daggerfall.sky" Root="worldrpg/media/sky/resources" />
-    <RustyEngineContentBundle Include="daggerfall.cinematics" Root="worldrpg/media/cinematics" />
-    <!-- The audio clips every site names are published once, in the product-wide world media publication
-         the site closures reference; its sidecar stays eager and the clip bodies open on the first cue. -->
-    <RustyEngineContentBundle Include="daggerfall.world-audio" Root="worldrpg/imports/shared/media/audio/clips" />
-    <!-- The per-block world publication: every placed RMB exterior, building interior and RDB block. Nothing
-         reads it at startup; the ruleset opens it to read the blocks a location places when that location is
-         first needed, and to place their collision and navigation. -->
-    <RustyEngineContentBundle Include="daggerfall.world-blocks" Root="worldrpg/imports/world-blocks" />
   </ItemGroup>
 
-  <!-- Content derived from the operator's Arena2 files is not tracked; scripts/regenerate-content.sh
-       writes it. Every bundle root declared above is generated, so a missing one means the tree was
-       never regenerated (or the run did not finish). Staging would otherwise publish a product whose
-       composition fails at session start, so it stops here with the command named. -->
-  <Target Name="RequireRegeneratedContent" BeforeTargets="StageRustyEngineProductAssets">
-    <ItemGroup>
-      <_WorldRpgMissingGeneratedRoot Include="@(RustyEngineContentBundle->'%(Root)')"
-                                     Condition="!Exists('$(RustyEngineProductContentRoot)/%(RustyEngineContentBundle.Root)')" />
-    </ItemGroup>
-    <Error Condition="'@(_WorldRpgMissingGeneratedRoot)' != ''"
-           Text="The generated content is absent from $(RustyEngineProductContentRoot) (missing: @(_WorldRpgMissingGeneratedRoot, ', ')). It is derived from your Daggerfall files and is not tracked: supply local/arena2 (and local/Sound), then run scripts/regenerate-content.sh." />
-  </Target>
 
   <ItemGroup>
     <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json;$(MSBuildThisFileDirectory)../../tsconfig.base.json;$(RustyEngineProductUiTypes)" />

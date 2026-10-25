@@ -28,7 +28,7 @@ follow the same authored/generated ownership rules as other site packs.
 ## Evidence and boundaries
 
 The companion CSV's **file-row disposition** is reconciled against the source
-closure of `content/worldrpg/imports/privateers-hold/import-manifest.json`.
+closure of `worldrpg/imports/privateers-hold/import-manifest.json` (in `local/import/staging/` and the data container).
 `imported` means that publication names the source; `unused` means the supplied
 source is outside that closure. Neither means that every record in the source is
 implemented, or that other publications cannot use it. Family rows retain their
@@ -38,10 +38,9 @@ manifest file to write and `--inventory data/content-source-manifest.csv --updat
 then run `plan` with that inventory to check drift. The reconciler changes only file
 dispositions; historical scope notes and source counts remain inventory evidence.
 
-The regeneration command also writes `import-records/source-coverage.json`. To refresh
-only that report, run `source-coverage --arena2 local/arena2 --inventory
-data/content-source-manifest.csv --repository . --output import-records/source-coverage.json`
-through the import tool. It joins all published producer citations, raw block/model
+The import also writes `local/import/records/source-coverage.json`. To refresh only that report, run
+`source-coverage --arena2 local/arena2` through the import tool in the repository root (its other options
+default to the staging tree and records). It joins all published producer citations, raw block/model
 ledgers and original-quest comparisons with corpus receipts. Family citations, offline
 record evidence and normalized pack references remain distinct. Pending, unused,
 duplicate, malformed, source-gap and unsupported dispositions remain visible; a
@@ -65,10 +64,10 @@ record relationships and classic semantics; their Unity bootstrap, singleton, se
 and distribution topology is excluded by the coverage plan. Donor consultation is evidence for
 the proposed records, not permission to move donor ownership into Rusty Dagger.
 
-Current Rusty Dagger content is under `content/worldrpg/` and `src/Daggerfall.Import/`. The
+Current Rusty Dagger content is under `content/worldrpg/`, the data container and `src/Daggerfall.Import/`. The
 published baseline is the `daggerfall.base` pack plus one `daggerfall.privateers-hold` pack.
 The current import manifest is
-`content/worldrpg/imports/privateers-hold/import-manifest.json` (68 source inputs and 189
+`worldrpg/imports/privateers-hold/import-manifest.json` (68 source inputs and 189
 artifacts); its selected source list is deliberately narrow. The current base payload has 45
 actor definitions and 31 item definitions. Privateer’s Hold has 42 placements and one
 normalized dungeon world. Its normalized dungeon media has 81 materials, 33 billboards and 7
@@ -309,15 +308,16 @@ The planning expansion is therefore finite and record-oriented:
 
 The game's files, the media extracted from them and the bulk generated payloads are not committed
 and not redistributed; small derived facts (identifiers, names, numbers, short text, record JSON)
-in tests, fixtures and documents are fine (`AGENTS.md`). Git tracks
-only descriptors, hand-authored payloads, tuning and the importer's own inputs; everything derived
-from the operator's files is regenerated on each checkout by one command,
-`scripts/regenerate-content.sh`. The work is the import tool's `import` command, which runs on Linux and
-Windows without bash. It reads `local/arena2` (or `--arena2`/`DAGGER_ARENA2`), the
-Daggerfall Unity checkout (`--donor`/`DAGGER_DONOR_ROOT`), an optional music folder (`--music`; the script
-passes `local/Sound`, or `--sound`) and FFmpeg, names every input that is absent before writing anything,
-clears its staging tree, and runs the import tool's commands in their dependency order: music and classic
-media, the imported payload's sections with the block document and the import records, the quest corpus
+in tests, fixtures and documents are fine (`AGENTS.md`). Git tracks `content/` (descriptors,
+hand-authored payloads, tuning and the authored UI art under `worldrpg/media/ui/authored/`) and the
+importer's own inputs under `data/`; an architecture law fails a run that finds an untracked file under
+`content/`. Everything derived from the operator's files is built on each checkout by one cross-platform
+command, the import tool's `import`
+(`dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound`). It reads `local/arena2`
+(or `--arena2`/`DAGGER_ARENA2`), the Daggerfall Unity checkout (`--donor`/`DAGGER_DONOR_ROOT`), an
+optional music folder (`--music`) and FFmpeg, names every input that is absent before writing anything,
+clears its staging tree, and runs the import tool's commands in their dependency order: classic media,
+the imported payload's sections with the block document and the import records, the quest corpus
 payloads, the product-wide world media publication, the per-block world publication, the site closures,
 then the source coverage. It writes into `local/import/staging/` (at the content-root-relative paths the
 product names) and `local/import/records/`, describes the run in `worldrpg/data-container.json` (the
@@ -327,38 +327,40 @@ recording per track at its root, named `<track>.<ext>` by the classic track iden
 Engine's audio opens, beside its own `worldrpg/data-container.json` (the importer revision, no packs).
 `--only STEP,...` reruns named steps over the existing staging tree and repacks. Each command's staging and
 record options default to the paths the import gives them, so a command run alone from the repository root
-(`locations --arena2 local/arena2 --update`) updates the staging tree, and `pack` repacks it. Until the product opens the containers, the script adds
-`--publish-loose`, which copies the staged run into `content/` and `import-records/`. Two runs at the same
-importer source and FFmpeg build write
-identical bytes. A clone that has not run it builds and runs the content-free suites, but staging
-the product (`rusty dev`, `rusty build`, `StageRustyEngineCoreClrProduct`) stops with a message
-naming the script, `scripts/verify.sh` skips the ruleset suite and staging with the reason printed,
-and the content-dependent tests report themselves skipped.
+(`locations --arena2 local/arena2 --update`) updates the staging tree, and `pack` repacks it. Two runs at the
+same importer source and FFmpeg build write identical bytes.
 
-Generated, listed in `.gitignore` syntax in `scripts/generated-content-paths.txt` (which `.gitignore`
-copies; an architecture law keeps the copy complete, and the script fails a run that leaves a
-generated file Git would pick up):
+The product opens both containers beside itself (`local/` under `rusty dev`, the directory of
+`product.rpak` in a release) and resolves the derived packs over them. Without the data container, with a
+damaged one, or (in a release) with one another importer revision wrote, the entry screen states the
+problem and the step that fixes it and offers nothing to play; under `rusty dev` a stale container is a
+warning and play continues. A clone that has not imported builds, stages and runs the content-free suites;
+`scripts/verify.sh` skips the ruleset suite with the reason printed and refuses `--play`, and the
+content-dependent tests report themselves skipped.
 
-- `content/worldrpg/imports/shared/` — the product-wide world media publication (`world-media`):
+Generated, by its path in the data container (`local/daggerfall-data.rpak`) unless noted:
+
+- `worldrpg/imports/shared/` — the product-wide world media publication (`world-media`):
   every mesh the classic mesh archive serves, a material texture and a billboard atlas for every
   usable record of every supplied texture leaf, actor media for every mobile the imported `mobiles`
   catalog lets the runtime spawn, the runtime terrain textures, the classic sidecar with its audio
-  clips (the Host's `daggerfall.world-audio` bundle) and missile world visuals, and its own
+  clips (below `worldrpg/imports/shared/media/audio/clips`) and missile world visuals, and its own
   `import-manifest.json`. It is published once and scales to any number of closures.
-- `content/worldrpg/imports/**` (other directories) — the Privateer's Hold, Castle Necromoghan,
+- `worldrpg/imports/**` (other directories) — the Privateer's Hold, Castle Necromoghan,
   cemetery, tomb, ship and Charing exterior/interior closures (`write`, `rmb-spatial`, with
   `--shared` naming the world media publication). Each carries only what is its own: the normalized
   document, spatial and resource artifacts, its geometry index and a dungeon sidecar that binds its
   material slots and names the product-wide entries it admits.
-- `content/worldrpg/media/**` — classic media, character media, the paper doll's worn-item images,
-  music and cinematics (`classic-media`, `character-presentation`, `paper-doll-media`, `music-media`,
-  `cinematic-media`). The classic group carries no audio; the world media publication and the site
+- `worldrpg/media/**` — classic media, character media, the paper doll's worn-item images, the sky
+  and cinematics (`classic-media`, `character-presentation`, `paper-doll-media`, `sky-media`,
+  `cinematic-media`). The classic inventory lists the authored UI kit too, whose images are tracked
+  product content at the same paths. The classic group carries no audio; the world media publication and the site
   closures reference its images. `paper-doll-media` writes `media/character/paper-doll/`: every
   TEXTURE record a worn-item template reaches (by gender and body morphology, every variant, a cloak's
   interior, a one-handed weapon's right-hand record) in every dye it can be drawn in, with mask index
   0xFF transparent and a separate mask image where a record has one, plus every record of the male and
   female artifact archives (TEXTURE.432/433), undyed, which artifacts are drawn from.
-- `content/worldrpg/payloads/daggerfall.imported.json` — the `daggerfall.imported` pack's payload:
+- `worldrpg/payloads/daggerfall.imported.json` — the `daggerfall.imported` pack's payload:
   `catalogs`, `itemTemplateLedger`, `characterPresentation`, `locations`, `magic`, `mobiles`, `text`,
   `names`, `rumors`, `biographies`, `books`, `climate`, `politic`, `factions`, `terrain`,
   `itemTemplates`, `paperDoll`, `questTables`, `questCatalog`, `questSources`, `cinematics` and `buildingNames`.
@@ -379,20 +381,19 @@ generated file Git would pick up):
   The `magic` section includes `enchantmentSettings`: the retained item-maker families transcribed
   in the importer from the donor effect classes, with costs, display/text keys, parameter variants
   and source-class provenance. Runtime enchantment consumers resolve this loaded catalog.
-- `content/worldrpg/payloads/daggerfall.blocks.json` (`blocks --buildings`: the type, faction and
+- `worldrpg/payloads/daggerfall.blocks.json` (`blocks --buildings`: the type, faction and
   name seed of every RMB building slot, which is all the `daggerfall.blocks` pack's runtime reader
-  needs) and `content/worldrpg/payloads/daggerfall.quests.*.json` (`fighters-quest-corpus`,
+  needs) and `worldrpg/payloads/daggerfall.quests.*.json` (`fighters-quest-corpus`,
   `classic-quest-corpora`).
-- `import-records/` — importer records nothing at runtime reads, kept outside the runtime content
-  root: `daggerfall.import-records.json` (the mesh inventory `geometry` and the original quest-source
+- `local/import/records/` (not packed) — importer records nothing at runtime reads, kept outside the
+  data container: `daggerfall.import-records.json` (the mesh inventory `geometry` and the original quest-source
   selections `questOriginalSources` the quest corpus payloads are built from),
   `daggerfall.blocks.json` (`blocks --document`: the complete block document, which `geometry` reads
   for mesh use sites), `sites/SITE.sources.json` (each site closure's source manifest: the supplied
   corpus scanned against the documented inventory, written by `write` and `rmb-spatial` through
   `--source-manifest`), `world-media.sources.json` (the same for the world media publication) and
   `world-blocks.sources.json` (the same for the per-block world publication).
-- `content/worldrpg/imports/world-blocks/` — the per-block world publication (`world-blocks`), which the
-  Host declares as the `daggerfall.world-blocks` content bundle: normalized facts for every RMB exterior
+- `worldrpg/imports/world-blocks/` — the per-block world publication (`world-blocks`): normalized facts for every RMB exterior
   (658), every building interior those blocks declare (4,521) and every RDB block (187) a location places,
   each in its own frame. A block document (`rmb/BLOCK/exterior.json`, `rmb/BLOCK/interior-N.json`,
   `rdb/BLOCK.json`) places the world media publication's meshes by `geometry/mesh-N` id and states the
@@ -413,9 +414,9 @@ generated file Git would pick up):
   location places. Identities are the site closures' with the grid position left out (`door/BLOCK-rmb/N`
   where a site says `door/BLOCK-rmb/X/Y/N`), and a location supplies its position, climate, texture
   table, start block and dungeon type. The site closures' normalizers read each block through the same
-  block-level content. Hundreds of megabytes in thousands of files, the bundle is never staged into the
-  eager content snapshot: the ruleset opens it, reads the index and the documents of the blocks one
-  location places when that location is first needed, and closes it again.
+  block-level content. Hundreds of megabytes in thousands of files, nothing of it is read at startup: the
+  ruleset reads the index and the documents of the blocks one location places when that location is
+  first needed.
 
 The base definitions come from two packs. `daggerfall.base` is authored and tracked: its payload
 `content/worldrpg/payloads/daggerfall.base.json` carries `ruleset`, `vocabulary`,
@@ -438,14 +439,14 @@ Authored and tracked: the pack, bundle and tuning descriptors (`content/worldrpg
 `content/worldrpg/bundles/`, `content/worldrpg/tuning/`), the tuning payloads
 (`content/worldrpg/tuning-payloads/`), the authored base payload, the site payloads
 (`content/worldrpg/payloads/daggerfall.{privateers-hold,castle-necromoghan,charing-exterior,charing-interior-1-1-0}.json`
-and the other site payloads beside them) and the importer's tracked inputs. A site payload states the profile id
+and the other site payloads beside them), the authored UI art (`content/worldrpg/media/ui/authored/`) and the importer's tracked inputs. A site payload states the profile id
 it overrides (`world.profile`, for example `17/4/exterior` or `17/4/interior-3-4-0`) and the ruleset
 uses its closure for that id only. Its `world.transitions` are its portals; a closure states its source exits
 there (the door planes the per-block publication types), with `normal` naming the side of the plane it is used
 from and `arrivalAnchor` naming the destination landing used when there is no entrance to return through. A
 portal with a `normal` is a Kit surface target: interaction sights it just off its plane, from that side only. Every other location profile is assembled from the per-block
-publication when first needed. The tracked importer inputs are the source inventory, `data/ui-authored-assets.json` with
-`data/ui-original/` (original art). No sprite overlay is tracked; `--sprite-authoring DIR` applies an
+publication when first needed. The tracked importer inputs are the source inventory and `data/ui-authored-assets.json`,
+which describes the authored UI art the importer lists in the classic inventory. No sprite overlay is tracked; `--sprite-authoring DIR` applies an
 operator's `sprites/SITE.json` overlays to the dungeon sites. Third-party origins are in
 `THIRD_PARTY_NOTICES.md`.
 
