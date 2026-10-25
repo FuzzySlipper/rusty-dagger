@@ -155,7 +155,10 @@ public sealed class DaggerfallCinematicPresentationTests
                 foreach (string source in new[] { "ANIM0002.VID", "ANIM0004.VID", "ANIM0012.VID" }) definitions.Add(source, Published(source));
             DaggerfallCinematicSet catalog = new(definitions);
             Video = video;
-            Content = new ProductContent(Array.Empty<ProductContentFile>(), content);
+            // The published UI art sits beside the cinematics, as in the product, so a session composed over this
+            // content also draws its art.
+            Content = new ProductContent(TestSessions.PublishedUiArt(TestData.RepositoryRoot)
+                .Select(file => new ProductContentFile(System.Text.Encoding.UTF8.GetBytes(file.Path), file.Bytes)).ToArray(), content);
             Catalog = catalog;
             Presentation = new(engine, TestSessions.Data(Content), Catalog);
         }

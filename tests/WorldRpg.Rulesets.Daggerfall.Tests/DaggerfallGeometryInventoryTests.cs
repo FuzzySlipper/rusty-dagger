@@ -111,8 +111,8 @@ public sealed class DaggerfallGeometryInventoryTests
     /// <summary>The mesh inventory from the import records, beside the block document whose use sites it joins.</summary>
     private static JsonDocument Pack()
     {
-        using JsonDocument records = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "import-records", "daggerfall.import-records.json")));
-        string blocks = TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot, "import-records", "daggerfall.blocks.json"));
+        using JsonDocument records = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(TestData.ImportRecords, "daggerfall.import-records.json")));
+        string blocks = TestContentFiles.ReadText(Path.Combine(TestData.ImportRecords, "daggerfall.blocks.json"));
         return JsonDocument.Parse($"{{\"geometry\":{records.RootElement.GetProperty("geometry").GetRawText()},\"blocks\":{blocks}}}");
     }
 }

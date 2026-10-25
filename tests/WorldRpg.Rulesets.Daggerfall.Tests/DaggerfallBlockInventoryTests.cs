@@ -196,7 +196,7 @@ public sealed class DaggerfallBlockInventoryTests
     {
         string payloads = Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads");
         using JsonDocument imported = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(payloads, "daggerfall.imported.json")));
-        string blocks = TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot, "import-records", "daggerfall.blocks.json"));
+        string blocks = TestContentFiles.ReadText(Path.Combine(TestData.ImportRecords, "daggerfall.blocks.json"));
         return JsonDocument.Parse($"{{\"blocks\":{blocks},\"locations\":{imported.RootElement.GetProperty("locations").GetRawText()}}}");
     }
 }
