@@ -271,21 +271,28 @@ failure report says why ("Load failed: …"); the player stays where they were.
 
 A phase may hand work to something running beside the update and wait for it.
 The phase then stays on the screen, asked once per update, until the work is
-done. A journey's or entrance's terrain collision works this way: each staged
-phase gives the Engine the terrain window it admits as one deferred batch, to
-bake off the update. The window is held until the phase's own synchronous
-collision and content calls are done, so none of them waits on the bake. The
-arriving player is stood on the ground only once it is live, and the next phase
-runs only then. A refused batch fails the work and says so. The world then
-stays held, as in a held mode: each update hands the Engine the window again off
-the update, and play resumes once it is live and the player stands on it.
+done. A journey's or entrance's collision works this way. Each staged phase
+holds the terrain window it admits and the towns it places (the town it arrives
+in and its neighbours in the window) until the phase's own synchronous collision
+and content calls are done, so none of them waits. It then gives them to the
+Engine as two deferred batches, the towns' placements and the window, which the
+Engine prepares off the update: it bakes the window's collision and composes
+the towns' collision and navigation. A dungeon's or a building's placement is
+small and is still made at once. The arriving player is stood on the ground, and
+actors placed with the arrival are settled on the floor, only once both batches
+are live, and the next phase runs only then. A refused batch fails the work and
+says so. The world then stays held, as in a held mode: each update hands the
+Engine what it refused again off the update, and play resumes once it is live
+and the player stands on it. So does a change that fails with its rollback's
+collision still being prepared.
 
 The state travels in the session's snapshot as `loading`: title, phase label,
 step, steps and `fraction`. The fraction is the share of phases finished, plus
-the measured share of a waiting phase: for the terrain bake, the batches the
-Engine has finished and the baking batch's instances baked of those planned.
-Work of one phase measures nothing, and neither does a bake whose batch is still
-being validated. Then the fraction is null and the bar is a moving band with the
+the measured share of a waiting phase: the batches the Engine has finished, plus
+the share of the batch it is preparing (the towns' navigation cells composed of
+those planned, or the window's instances baked of those planned). Work of one
+phase measures nothing, and neither does a batch the Engine is still validating
+or parsing. Then the fraction is null and the bar is a moving band with the
 phase label, never a made-up percentage.
 
 The screen is a modal dialog above every surface, kit-skinned (frame, title plate,

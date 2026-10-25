@@ -654,10 +654,16 @@ public sealed class SpatialMovementSystem : IDisposable
     /// call and retains no content handles. Stable placement IDs belong to the product cell/profile
     /// owner and therefore survive unload/re-admission and origin rebases.
     /// </summary>
+    /// <param name="deferred">
+    /// Have the Engine parse, bake and compose the placements off the update: the receipt's <c>DeferredBatch</c> names
+    /// the batch, which <c>ReadCollisionResidency</c> follows until it is live. The references are read before the
+    /// call returns, so their sources need be open only for the call either way.
+    /// </param>
     public SpatialContentArtifactResidencyReceipt ApplyContentArtifactResidency(
         IEnumerable<SpatialContentArtifactPlacement> placements,
         IEnumerable<ulong> removals,
-        ulong navigationGridId)
+        ulong navigationGridId,
+        bool deferred = false)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
         ArgumentNullException.ThrowIfNull(placements);
@@ -695,7 +701,8 @@ public sealed class SpatialMovementSystem : IDisposable
                 removed,
                 navigationGridId,
                 _tuning.NavigationChunkSize,
-                _tuning.NavigationMaximumStepCells));
+                _tuning.NavigationMaximumStepCells,
+                deferred));
         }
         finally
         {

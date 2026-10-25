@@ -612,11 +612,33 @@ internal sealed class DaggerfallActorRoster
 /// </summary>
 internal sealed class DaggerfallActorGrounding(ISpatialService spatialService, SpatialMovementSystem spatial, float probeLift, double probeDistance)
 {
+    private readonly List<ActorState> _awaitingFloor = [];
+
+    /// <summary>
+    /// Whether the floor under newly placed actors may still be on its way: a staged site change has collision held or
+    /// being prepared. Such actors are settled by <see cref="GroundAwaiting"/> once it is live.
+    /// </summary>
+    internal Func<bool> FloorPending { get; set; } = static () => false;
+
     internal void Ground(ActorState actor)
     {
+        if (FloorPending())
+        {
+            _awaitingFloor.Add(actor);
+            return;
+        }
         // RDB marker heights are probe origins, not floor contacts. Unlike DFU's centered
         // capsule, our navigation pose is the sprite's base.
         actor.ApplyPose(new ActorPose(GroundPosition(actor.Position), actor.HeadingYawRadians));
+    }
+
+    /// <summary>Settles the actors placed while their floor was pending, those of them still live.</summary>
+    internal void GroundAwaiting(Func<ActorState, bool> live)
+    {
+        ActorState[] awaiting = [.. _awaitingFloor];
+        _awaitingFloor.Clear();
+        foreach (ActorState actor in awaiting)
+            if (live(actor)) Ground(actor);
     }
 
     /// <summary>
