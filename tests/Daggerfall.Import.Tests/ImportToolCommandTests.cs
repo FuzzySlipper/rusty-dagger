@@ -15,7 +15,13 @@ internal sealed class ImportToolDataTheoryAttribute : TheoryAttribute
 internal sealed class ImportToolDataFactAttribute : FactAttribute
 {
     public ImportToolDataFactAttribute() => Skip = MissingInputs();
-    internal static string? MissingInputs() => TestData.MissingGeneratedContent() ?? TestData.MissingCorpus([]) ?? TestData.MissingDonor([]);
+    internal static string? MissingInputs() => TestData.MissingGeneratedContent() ?? MissingStaging() ?? TestData.MissingCorpus([]) ?? TestData.MissingDonor([]);
+
+    // The commands read publications from disk, so these tests read the staging tree an import leaves beside the
+    // containers; a machine given only the containers and the records has no staging tree to give them.
+    private static string? MissingStaging() => Directory.Exists(ImportedContent.Staged(""))
+        ? null
+        : $"the import's staging tree (local/import/staging) is absent; run `{TestData.RegenerationCommand}` with local/arena2 supplied.";
 }
 
 /// <summary>Exercises the actual compiled dispatch, parser, commands and file publications.</summary>
