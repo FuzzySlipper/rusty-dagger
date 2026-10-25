@@ -148,7 +148,8 @@ internal sealed class BundleContentFake : IContentService
             ? (measured = (Digest(bytes), checked((ulong)bytes.Length))).Value
             : DiskDigests.GetOrAdd(diskPath!, path =>
             {
-                using FileStream stream = File.OpenRead(path);
+                // A derived file is not on disk: its bytes are the data container's.
+                using Stream stream = File.Exists(path) ? File.OpenRead(path) : new MemoryStream(TestContentFiles.Read(path), writable: false);
                 byte[] hash = System.Security.Cryptography.SHA256.HashData(stream);
                 return (new ContentSha256(
                     System.Buffers.Binary.BinaryPrimitives.ReadUInt64BigEndian(hash.AsSpan(0, 8)),

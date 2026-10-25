@@ -66,7 +66,7 @@ public sealed class DaggerfallReferenceCatalogTests
         // resolution, so this drives the real composition: the payload the bundle names
         // is read and validated where the ruleset builds its definitions, and a payload
         // whose catalogs do not hold together fails there rather than at first use.
-        ResolvedGameComposition composition = GameCompositionResolver
+        ResolvedGameComposition composition = TestSessions
             .Resolve(Content(null), new GameBundleId("daggerfall.classic"))
             .RequireComposition();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
@@ -74,7 +74,7 @@ public sealed class DaggerfallReferenceCatalogTests
             composition.RequireContentPack(new ContentPackId("daggerfall.imported")).Payload);
         Assert.Equal(19, definitions.Catalogs.Careers.Count);
 
-        ResolvedGameComposition broken = GameCompositionResolver
+        ResolvedGameComposition broken = TestSessions
             .Resolve(Content(root => root["catalogs"]!["careers"]!.AsArray()[0]!["primarySkills"]!.AsArray()[0] = "not-a-skill"), new GameBundleId("daggerfall.classic"))
             .RequireComposition();
         ReadOnlyMemory<byte> authoredPayload = broken.RequireContentPack(new ContentPackId("daggerfall.base")).Payload;
@@ -83,31 +83,20 @@ public sealed class DaggerfallReferenceCatalogTests
         Assert.Contains("not-a-skill", error.Message, StringComparison.Ordinal);
     }
 
-    private static ProductContent Content(Action<JsonObject>? change)
-    {
-        string contentRoot = Path.Combine(TestData.RepositoryRoot, "content");
-        ProductContentFile[] files = [.. TestContentFiles.AllFiles(Path.Combine(contentRoot, "worldrpg"))
-            .Select(path =>
+    private static ProductContent Content(Action<JsonObject>? change) => change is null
+        ? TestSessions.FullContent(TestData.RepositoryRoot)
+        : TestSessions.FullContentWithEntry(TestData.RepositoryRoot, "worldrpg/payloads/daggerfall.imported.json", bytes =>
+        {
+            // This fixture only changes catalogs, so only that section is parsed and only its bytes are
+            // replaced; the rest of the imported payload keeps its published form.
+            JsonObject pack = new()
             {
-                byte[] bytes = TestContentFiles.ReadCopy(path);
-                if (path.EndsWith("daggerfall.imported.json", StringComparison.Ordinal) && change is not null)
-                {
-                    // This fixture only changes catalogs, so only that section is parsed and only its
-                    // bytes are replaced; the rest of the imported payload keeps its published form.
-                    JsonObject pack = new()
-                    {
-                        ["catalogs"] = JsonNode.Parse((TestSessions.TopLevelSection(bytes, "catalogs")
-                            ?? throw new InvalidOperationException("The imported payload publishes no catalogs section.")).Span),
-                    };
-                    change(pack);
-                    bytes = TestSessions.ReplaceTopLevelSection(bytes, "catalogs",
-                        pack["catalogs"]!.ToJsonString(PublishedJson.SectionCompact));
-                }
-
-                return new ProductContentFile(System.Text.Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), bytes);
-            })];
-        return new ProductContent(files);
-    }
+                ["catalogs"] = JsonNode.Parse((TestSessions.TopLevelSection(bytes, "catalogs")
+                    ?? throw new InvalidOperationException("The imported payload publishes no catalogs section.")).Span),
+            };
+            change(pack);
+            return TestSessions.ReplaceTopLevelSection(bytes, "catalogs", pack["catalogs"]!.ToJsonString(PublishedJson.SectionCompact));
+        });
 
     [Theory]
     [InlineData("duplicate career id")]

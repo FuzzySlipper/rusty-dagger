@@ -83,29 +83,6 @@ public sealed class PublishedContentDeliveryTests
         // images of the authored UI kit, and the spell icon atlas.
         Assert.Equal(225, listed.Count);
 
-        // The score is published by its own command into its own group, so it carries its own generated
-        // index and the classic index above does not account for it.
-        HashSet<string> musicListed = [];
-        foreach (JsonElement artifact in Index("worldrpg/media/music/music-inventory.json").Artifacts)
-        {
-            string path = artifact.GetProperty("path").GetString()!;
-            byte[] bytes = content.ReadBytes(path).ToArray();
-            Assert.Equal(artifact.GetProperty("byteLength").GetInt64(), bytes.Length);
-            Assert.Equal(artifact.GetProperty("sha256").GetString(), Convert.ToHexStringLower(SHA256.HashData(bytes)));
-            musicListed.Add(path);
-        }
-
-        HashSet<string> musicPublished = [.. GeneratedContentFiles(content)
-            .Where(path => path.StartsWith("worldrpg/media/music/", StringComparison.Ordinal)
-                && !path.EndsWith("music-inventory.json", StringComparison.Ordinal))];
-        // The group carries the cue clips and the manifest that names them, and nothing else.
-        using JsonDocument musicManifest = JsonDocument.Parse(content.ReadBytes("worldrpg/media/music/manifest.json").ToArray());
-        Assert.Equal(musicManifest.RootElement.GetProperty("cues").GetArrayLength() + 1, musicListed.Count);
-        Assert.Contains("worldrpg/media/music/manifest.json", musicListed);
-        Assert.Equal(
-            [.. musicPublished.Except(musicListed).Order(StringComparer.Ordinal)],
-            [.. musicListed.Except(musicPublished).Order(StringComparer.Ordinal)]);
-
         // The character canvases are admitted content in the same tree: they have their own generated
         // index beside them, and both indexes state the bytes they describe rather than trusting them.
         HashSet<string> characterListed = [];

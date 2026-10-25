@@ -34,7 +34,7 @@ public sealed class HudSnapshotContractTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
-        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity) { Data = TestSessions.DataOf(content) });
         session.ApplyProductMode(ProductMode.Playing);
 
         DaggerfallSiteRecord site = session.Site.ActiveSite ?? throw new InvalidOperationException("The fixture session has no admitted site.");

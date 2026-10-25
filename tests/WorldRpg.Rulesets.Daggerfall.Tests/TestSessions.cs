@@ -161,6 +161,10 @@ internal static class TestSessions
     /// <summary>The full content with one root left out of the data container, as an import that lacks it would pack it.</summary>
     internal static ProductContent FullContentWithout(string root, string missingRoot) => ContentWithContainers(root, out _, excludedRoot: missingRoot);
 
+    /// <summary>The full content with one data container entry's bytes rewritten, as an import that published them so would pack them.</summary>
+    internal static ProductContent FullContentWithEntry(string root, string path, Func<byte[], byte[]> rewrite) =>
+        ContentWithContainers(root, out _, rewritten: (path, rewrite));
+
     /// <summary>The derived content a test reads through the containers its content installs, as a composition does.</summary>
     internal static DaggerfallData Data(ProductContent content) => new(content, TryOpen(content, DaggerfallData.DataContainerName));
 
@@ -192,7 +196,7 @@ internal static class TestSessions
     }
 
     private static ProductContent ContentWithContainers(string root, out BundleContentFake bundles, IReadOnlyCollection<string>? selectedPublicationRoots = null,
-        string? excludedRoot = null)
+        string? excludedRoot = null, (string Path, Func<byte[], byte[]> Rewrite)? rewritten = null)
     {
         string contentRoot = Path.Combine(root, "content");
         bundles = new();
@@ -216,6 +220,11 @@ internal static class TestSessions
                 && !IsGlobalContentMetadata(path) && path != InstalledContent.DescriptionPath)
                 continue;
             if (excludedRoot is not null && path.StartsWith(excludedRoot + "/", StringComparison.Ordinal)) continue;
+            if (rewritten is { } edit && edit.Path == path)
+            {
+                bundles.Add(TestDataContainers.Data, path, edit.Rewrite(TestContentFiles.ReadCopy(Path.Combine(contentRoot, path))));
+                continue;
+            }
             string file = Path.Combine(contentRoot, path);
             bundles.AddEntry(TestDataContainers.Data, path, entry.Sha256, entry.ByteLength, () => TestContentFiles.Read(file));
         }

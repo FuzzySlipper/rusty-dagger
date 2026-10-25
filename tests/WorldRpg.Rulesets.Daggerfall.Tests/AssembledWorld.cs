@@ -204,7 +204,7 @@ internal sealed class AssembledWorldRun : IDisposable
         Dictionary<string, ReadOnlyMemory<byte>> files = new(StringComparer.Ordinal);
         foreach ((string path, byte[] bytes) in ContentPaths(world, destination, building)) files.Add(path, bytes);
         files[DaggerfallSkyMedia.ManifestPath] = TestContentFiles.ReadCopy(Path.Combine(root, DaggerfallSkyMedia.ManifestPath));
-        foreach (string file in Directory.EnumerateFiles(Path.Combine(root, DaggerfallSkyMedia.LogicalRoot), "*", SearchOption.AllDirectories))
+        foreach (string file in TestContentFiles.AllFiles(Path.Combine(root, DaggerfallSkyMedia.LogicalRoot)))
             files[Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/')] = TestContentFiles.ReadCopy(file);
         return files;
     }
