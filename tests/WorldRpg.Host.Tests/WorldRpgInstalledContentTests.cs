@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Testing;
 using WorldRpg.Kit;
@@ -79,6 +80,30 @@ public sealed class WorldRpgInstalledContentTests : IDisposable
         });
     }
 
+    [Theory]
+    [InlineData(InstalledContent.DescriptionPath)]
+    [InlineData("payload/imported.json")]
+    [InlineData(InstalledRuleset.SessionReadPath)]
+    public void A_container_entry_found_damaged_after_it_opens_is_named_as_unreadable(string damaged)
+    {
+        // The Engine checks the header and inventory when a container opens and decompresses an entry only when
+        // it is read, so a damaged compressed entry is found by the description check, by composition reading
+        // the selected pack, or by the session reading its data.
+        Pack(Data, CurrentRevision, describesPack: true, compress: true);
+        DamageEntry(Data, damaged);
+        InstalledRuleset ruleset = new(Data, Music);
+
+        _host.Call(engine =>
+        {
+            using WorldRpgProduct product = Product(engine, ruleset);
+
+            string problem = Assert.Single(ruleset.Unavailable!.Problems);
+            Assert.StartsWith("The test data (", problem, StringComparison.Ordinal);
+            Assert.Contains("cannot be read, so it is damaged or incomplete", problem, StringComparison.Ordinal);
+            Assert.EndsWith(InstalledRuleset.ReleaseStep, problem, StringComparison.Ordinal);
+        });
+    }
+
     [Fact]
     public void A_stale_container_blocks_play_outside_the_development_loop()
     {
@@ -113,15 +138,34 @@ public sealed class WorldRpgInstalledContentTests : IDisposable
         });
     }
 
-    private void Pack(string container, string revision, bool describesPack)
+    private void Pack(string container, string revision, bool describesPack, bool compress = false)
     {
         string staged = Directory.CreateDirectory(Path.Combine(_root, "staged-" + Guid.NewGuid().ToString("N"))).FullName;
         string packs = describesPack
             ? """{"kind":"worldrpg.content-pack","id":"test.imported","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/imported.json"}"""
             : string.Empty;
-        Write(staged, InstalledContent.DescriptionPath, $$"""{"kind":"worldrpg.data-container","importerRevision":"{{revision}}","contentPacks":[{{packs}}]}""");
-        Write(staged, "payload/imported.json", "imported");
-        _host.Call(engine => ProductContentBundle.PackContainer(engine.Content, staged, container, compress: false));
+        // Padding lets every entry compress, so that each is stored as zstd when the pack is compressed.
+        string padding = compress ? new(' ', 4096) : string.Empty;
+        Write(staged, InstalledContent.DescriptionPath, $$"""{"kind":"worldrpg.data-container","importerRevision":"{{revision}}","contentPacks":[{{packs}}]}{{padding}}""");
+        Write(staged, "payload/imported.json", "imported" + padding);
+        Write(staged, InstalledRuleset.SessionReadPath, "detail" + padding);
+        _host.Call(engine => ProductContentBundle.PackContainer(engine.Content, staged, container, compress));
+    }
+
+    /// <summary>
+    /// Breaks one compressed entry's zstd frame while the container's header and inventory stay valid: the
+    /// header's first two fields after the magic are the inventory's offset and length.
+    /// </summary>
+    private static void DamageEntry(string container, string path)
+    {
+        byte[] bytes = System.IO.File.ReadAllBytes(container);
+        int offset = checked((int)BitConverter.ToUInt64(bytes, 8));
+        int length = checked((int)BitConverter.ToUInt64(bytes, 16));
+        using JsonDocument inventory = JsonDocument.Parse(bytes.AsMemory(offset, length));
+        JsonElement entry = inventory.RootElement.GetProperty("entries").EnumerateArray().Single(candidate => candidate.GetProperty("path").GetString() == path);
+        Assert.True(entry.TryGetProperty("zstdLength", out _), $"'{path}' must be stored compressed for a damaged frame to be found on read.");
+        "XXXX"u8.CopyTo(bytes.AsSpan(checked((int)entry.GetProperty("offset").GetUInt64())));
+        System.IO.File.WriteAllBytes(container, bytes);
     }
 
     private static WorldRpgProduct Product(IEngineContext engine, InstalledRuleset ruleset) =>
@@ -154,6 +198,9 @@ public sealed class WorldRpgInstalledContentTests : IDisposable
     {
         internal const string ReleaseStep = "Import the test data.";
 
+        /// <summary>The entry the session reads from the required container as it is created.</summary>
+        internal const string SessionReadPath = "payload/detail.json";
+
         public RulesetId Id => new("test");
 
         internal List<ResolvedGameComposition> Composed { get; } = [];
@@ -180,6 +227,8 @@ public sealed class WorldRpgInstalledContentTests : IDisposable
         public IGameSession CreateSession(GameSessionContext context)
         {
             Composed.Add(context.Composition);
+            foreach (InstalledContent installed in context.Composition.Installed)
+                if (installed.Contains(SessionReadPath)) installed.Container.ReadBytes(SessionReadPath);
             return new QuietSession();
         }
     }

@@ -3086,24 +3086,16 @@ test('city map selection sends the actual location and placed building identity 
 
 test('character draft screens consume the published mode art and every pick part with semantic actions', async () => {
   const { MODE_SCREENS, screenForMode } = await import(pathToFileURL(join(output, 'screens.js')));
-  // The inventory is derived content: read from the staging tree the import packed the data container from.
-  const inventory = JSON.parse(await readFile(new URL('../../local/import/staging/worldrpg/media/classic-media-inventory.json', import.meta.url), 'utf8'));
+  // Which published screen each mode shows is checked against the data container by the ruleset suite
+  // (PublishedContentDeliveryTests); this test drives the DOM with fixture images standing in for them.
   for (const mode of ['character-generation', 'character-pick']) {
     const id = screenForMode(mode);
     assert.ok(MODE_SCREENS.some(row => row.mode === mode && row.screen === id));
-    assert.ok(inventory.artifacts.some(artifact => artifact.mediaId === id), `${mode} must name a published artifact`);
   }
-  assert.deepEqual(inventory.artifacts.filter(artifact => artifact.slot === 'pick').map(artifact => artifact.mediaId), ['screen.pick.02']);
   const f = fixture();
   try {
-    const ids = ['screen.title', 'screen.character-generation', 'screen.pick.02'];
-    const images = await Promise.all(ids.map(async id => {
-      const artifact = inventory.artifacts.find(artifact => artifact.mediaId === id);
-      const bytes = await readFile(new URL('../../local/import/staging/' + artifact.path, import.meta.url));
-      return { id, image: 'data:image/png;base64,' + bytes.toString('base64') };
-    }));
-    // A second admitted pick part exercises the binding set, using actual artifact bytes.
-    images.push({ id: 'screen.pick.background', image: images[2].image });
+    const ids = ['screen.title', 'screen.character-generation', 'screen.pick.02', 'screen.pick.background'];
+    const images = ids.map((id, index) => ({ id, image: 'data:image/png;base64,' + Buffer.from(`fixture-${index}-${id}`).toString('base64') }));
     const art = { revision: 'character-screen-fixture', images };
     const character = { name: 'Nameless', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [], grantedSkills: [], creationAvailable: true };
     const creation = { editing: true, mode: 'character-pick', classQuestionsAvailable: true, classQuiz: null, blocked: ['Enter a name.', 'Roll a background.'],

@@ -107,41 +107,74 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             // composition's own findings do.
             if (problems.Count == 0) problems.Add($"No game can be composed: {error.Message} {NextStep(installedRuleset.InstalledContent.First(requirement => requirement.Required))}");
         }
+        catch (Exception error) when (installedRuleset is not null && Unreadable(installedRuleset, error) is { } problem)
+        {
+            problems.Add(problem);
+        }
 
         if (installedRuleset is not null && selection is not null)
             foreach (InstalledContent installed in _installed)
-                if (installedRuleset.CheckInstalledContent(installed) is { } stale)
-                {
-                    InstalledContentRequirement requirement = installedRuleset.InstalledContent.First(candidate => candidate.Name == installed.Name);
-                    // Under the development loop the importer and the product are built from the same tree, so
-                    // stale data is a warning to import again and play continues; a release refuses it.
-                    if (HostBuild.DevelopmentLoop) _bundleNotice = $"{stale} Play continues under the development loop. {NextStep(requirement)}";
-                    else problems.Add($"{stale} {NextStep(requirement)}");
-                }
+            {
+                InstalledContentRequirement requirement = installedRuleset.InstalledContent.First(candidate => candidate.Name == installed.Name);
+                string? stale;
+                try { stale = installedRuleset.CheckInstalledContent(installed); }
+                catch (Exception error) when (Unreadable(installedRuleset, error) is { } problem) { problems.Add(problem); continue; }
+                if (stale is null) continue;
+                // Under the development loop the importer and the product are built from the same tree, so
+                // stale data is a warning to import again and play continues; a release refuses it.
+                if (HostBuild.DevelopmentLoop) _bundleNotice = $"{stale} Play continues under the development loop. {NextStep(requirement)}";
+                else problems.Add($"{stale} {NextStep(requirement)}");
+            }
 
-        if (problems.Count != 0 && installedRuleset is not null)
+        if (problems.Count == 0)
         {
-            _session = installedRuleset.CreateUnavailableSession(new GameUnavailableContext(context.Engine, problems));
-            try { _session.PublishInitial(); }
-            catch { _session.Dispose(); DisposeInstalled(); throw; }
-            return;
+            (ResolvedGameComposition composition, IGameRuleset selected) = selection ?? throw new InvalidOperationException("No game was composed.");
+            if (StartGame(composition, selected, installedRuleset, problems) is { } session)
+            {
+                _session = session;
+                return;
+            }
         }
 
-        (ResolvedGameComposition composition, IGameRuleset selected) = selection ?? throw new InvalidOperationException("No game was composed.");
+        // A container read fails only once the game starts reading it, so a session that met a damaged one
+        // while it was created is set aside like a game that never composed.
+        _session = installedRuleset!.CreateUnavailableSession(new GameUnavailableContext(context.Engine, problems));
+        try { _session.PublishInitial(); }
+        catch { _session.Dispose(); DisposeInstalled(); throw; }
+    }
+
+    /// <summary>
+    /// Creates and publishes the composed game's session, or returns null when a container it read turned out to
+    /// be damaged, with that problem added: the product then shows why rather than failing to start.
+    /// </summary>
+    private IGameSession? StartGame(ResolvedGameComposition composition, IGameRuleset selected, IInstalledContentRuleset? installedRuleset, List<string> problems)
+    {
         _composition = composition;
         _ruleset = selected;
         _compositionIdentity = composition.Identity;
-        _session = selected.CreateSession(SessionContext(composition));
+        IGameSession? session = null;
         try
         {
-            ApplyPlayerPreferences(_session);
+            session = _session = selected.CreateSession(SessionContext(composition));
+            ApplyPlayerPreferences(session);
             RefreshSaveSlots();
-            OfferBundles(_session);
-            _session.PublishInitial();
+            OfferBundles(session);
+            session.PublishInitial();
+            return session;
+        }
+        catch (Exception error) when (installedRuleset is not null && Unreadable(installedRuleset, error) is { } problem)
+        {
+            session?.Dispose();
+            _session = null!;
+            _composition = null;
+            _ruleset = null;
+            _compositionIdentity = null;
+            problems.Add(problem);
+            return null;
         }
         catch
         {
-            _session.Dispose();
+            session?.Dispose();
             DisposeInstalled();
             throw;
         }
@@ -172,14 +205,36 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
                 if (absent && !requirement.Required) continue;
                 problems.Add(absent
                     ? $"{Capitalized(requirement.Title)} is not imported ({error.Message}). {NextStep(requirement)}"
-                    : $"{Capitalized(requirement.Title)} ({requirement.Name}) cannot be read, so it is damaged or incomplete: {error.Message}. Import it again. {NextStep(requirement)}");
+                    : Damaged(requirement, error));
             }
         }
 
         return (installed, problems);
-
-        static string Capitalized(string text) => text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];
     }
+
+    /// <summary>
+    /// The problem a container read failure states, or null when the failure is not one: the Engine checks a
+    /// container's header and inventory when it is opened and each entry's bytes when they are read, so a damaged
+    /// entry is found by whichever startup read reaches it first. The container is the one the failure names.
+    /// </summary>
+    private static string? Unreadable(IInstalledContentRuleset ruleset, Exception error)
+    {
+        for (Exception? cause = error; cause is not null; cause = cause.InnerException)
+        {
+            if (cause is not EngineCallException call || !call.Diagnostics.ToArray().Any(diagnostic => diagnostic.Code.StartsWith("PRODUCT_CONTAINER_", StringComparison.Ordinal)))
+                continue;
+            InstalledContentRequirement requirement = ruleset.InstalledContent.FirstOrDefault(candidate => call.Message.Contains(candidate.Name, StringComparison.Ordinal))
+                ?? ruleset.InstalledContent.First(candidate => candidate.Required);
+            return Damaged(requirement, call);
+        }
+
+        return null;
+    }
+
+    private static string Damaged(InstalledContentRequirement requirement, EngineCallException error) =>
+        $"{Capitalized(requirement.Title)} ({requirement.Name}) cannot be read, so it is damaged or incomplete: {error.Message}. Import it again. {NextStep(requirement)}";
+
+    private static string Capitalized(string text) => text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];
 
     /// <summary>What produces a container, worded for where the product runs.</summary>
     private static string NextStep(InstalledContentRequirement requirement) => HostBuild.DevelopmentLoop ? requirement.DevelopmentStep : requirement.ReleaseStep;
