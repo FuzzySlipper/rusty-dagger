@@ -118,19 +118,24 @@ dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 # green, and a field added to an import record broke the tool the same way. A verification script that
 # only compiles reports on a tree that no longer runs.
 #
-# The import suite tests the importer against the corpus, so its result changes only when something it runs
-# changes: the importer revision's inputs, the suite's own sources and the Engine pin, the corpus, the donor
-# checkout, or the imported data it reads. A green run leaves a stamp of those on this machine, and a later run
-# that finds the same stamp skips its 15 to 20 minutes; --import runs it anyway. The ruleset suite always runs,
-# and its contract tests read what the importer wrote.
-import_stamp=local/import/records/import-suite.stamp
+# The import suite tests the importer against the corpus, so its result changes only when something it reads
+# changes: the importer revision's inputs, the product's tracked content (the authored base payload and the UI
+# art among it), the suite's own sources and the Engine pin, the corpus, the donor checkout, or the imported data
+# (the data container, the staging tree and the records). A green run leaves a stamp of those on this machine,
+# and a later run that finds the same stamp skips its 15 to 20 minutes; --import runs it anyway. The ruleset suite
+# always runs, and its contract tests read what the importer wrote. The stamp lives outside local/import, whose
+# records directory is what says an import has run.
+import_stamp=local/verify/import-suite.stamp
 import_inputs() {
-  find src/Daggerfall.Import src/Daggerfall.Import.Tool src/WorldRpg.SpriteAuthoring data content/worldrpg/media/ui/authored \
+  find src/Daggerfall.Import src/Daggerfall.Import.Tool src/WorldRpg.SpriteAuthoring data content \
       tests/Daggerfall.Import.Tests tests/Shared tests/SharedEngine \( -name bin -o -name obj \) -prune -o -type f -print \
     | LC_ALL=C sort | xargs sha256sum
   sha256sum src/ImporterRevision.targets tests/Directory.Build.props Directory.Build.props
-  # The corpus and the data container by name, size and modification time; the donor by its commit.
+  # The corpus and the imported data by name, size and modification time; the donor by its commit.
   for path in "$arena2_root"/* local/daggerfall-data.rpak; do [[ -e "$path" ]] && stat -c '%n %s %Y' "$path"; done
+  for path in local/import/staging local/import/records; do
+    [[ -d "$path" ]] && find "$path" -type f -printf '%p %s %T@\n' | LC_ALL=C sort
+  done
   git -C "$donor_root" rev-parse HEAD 2>/dev/null || true
 }
 import_key=$(import_inputs | sha256sum | cut -d' ' -f1)
@@ -140,7 +145,8 @@ if [[ "$import" == false && -f "$import_stamp" && "$(cat "$import_stamp")" == "$
 else
   rm -f "$import_stamp"
   dotnet test tests/Daggerfall.Import.Tests/Daggerfall.Import.Tests.csproj
-  if [[ -d local/import/records ]]; then echo "$import_key" > "$import_stamp"; fi
+  mkdir -p "$(dirname "$import_stamp")"
+  echo "$import_key" > "$import_stamp"
 fi
 if [[ ${#generated_missing[@]} -eq 0 ]]; then
   dotnet test tests/WorldRpg.Rulesets.Daggerfall.Tests/WorldRpg.Rulesets.Daggerfall.Tests.csproj
