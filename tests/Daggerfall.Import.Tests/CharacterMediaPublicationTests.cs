@@ -252,11 +252,11 @@ public sealed class CharacterMediaPublicationTests
 
     /// <summary>
     /// The whole pass over the real corpus: every readable canvas becomes an artifact, the formats this
-    /// repository cannot read are named with their files, and the committed index is byte-for-byte what
-    /// the pass regenerates - so an index that drifted from the corpus cannot stay committed.
+    /// repository cannot read are named with their files, and the index the data container carries is
+    /// byte-for-byte what the pass regenerates - so an index that drifted from the corpus cannot ship.
     /// </summary>
     [CorpusAndGeneratedContentFact]
-    public void PublishesEveryReadableCanvasAndRegeneratesTheCommittedIndex()
+    public void PublishesEveryReadableCanvasAndRegeneratesTheDeliveredIndex()
     {
         (Dictionary<string, ReadOnlyMemory<byte>> sourceBytes, Dictionary<string, Arena2Palette> palettes) = Corpus();
         List<(string Path, ReadOnlyMemory<byte> Bytes)> sources = [.. sourceBytes.Select(entry => (entry.Key, entry.Value))];
@@ -306,20 +306,19 @@ public sealed class CharacterMediaPublicationTests
             faces[(60 * 64 * 64)..(61 * 64 * 64)],
             palettes[CharacterMediaReferences.ArtPalette]);
 
-        // The committed index is the pass's own output, regenerated for the same consumer the committed
+        // The delivered index is the pass's own output, regenerated for the same consumer the delivered
         // pack names and under the same content group, so an index that drifted from the corpus, from its
-        // producer, or from the group naming cannot stay committed.
+        // producer, or from the group naming cannot ship.
         CharacterMediaReferenceSet boundSet = CharacterMediaReferences.WithBoundFiles(
             set,
             CharacterMediaReferences.FilesBoundByCharacterSheet(inventory),
             CharacterMediaReferences.CharacterSheetConsumer);
-        string committed = Path.Combine(TestData.RepositoryRoot, "content/worldrpg/media/character/character-media-inventory.json");
         byte[] regenerated = CharacterMediaPublisher.WriteIndex(pass, boundSet, "worldrpg");
 
         // Every field of every entry, not a sampled handful: a hand-edited byte length, dimension, family,
         // source file or palette fact has to fail here rather than pass on the fields that did not move.
         using JsonDocument published = JsonDocument.Parse(regenerated);
-        using JsonDocument delivered = JsonDocument.Parse(File.ReadAllBytes(committed));
+        using JsonDocument delivered = JsonDocument.Parse(ImportedContent.Read("worldrpg/media/character/character-media-inventory.json"));
         JsonElement[] written = [.. published.RootElement.GetProperty("artifacts").EnumerateArray()];
         JsonElement[] shipped = [.. delivered.RootElement.GetProperty("artifacts").EnumerateArray()];
         Assert.Equal(written.Length, shipped.Length);

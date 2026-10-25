@@ -87,20 +87,20 @@ public sealed class ProductModeSessionTests
     }
 
     [Fact]
-    public void Enabled_production_opening_refuses_to_begin_when_its_admitted_cinematic_bundle_is_missing()
+    public void Enabled_production_opening_refuses_to_begin_when_the_data_container_lacks_its_cinematics()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake engineContent = new(releases);
-        // This ordinary Engine fixture deliberately excludes the cinematic bundle. Unlike the explicit
-        // no-video fixture used by unrelated gameplay tests, production ruleset startup must surface it.
+        // This ordinary Engine fixture deliberately leaves the cinematics out of the data container. Unlike the
+        // explicit no-video fixture used by unrelated gameplay tests, production ruleset startup must surface it.
         PopulateContent(engineContent, inputs);
         EngineContextFake engine = EngineContextFake.Create(engineContent,
             SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         CapturingDaggerfallRuleset ruleset = new(videosEnabled: true);
-        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContentWithout(root, DaggerfallCinematicPresentation.Root), input), ruleset, new GameBundleId("daggerfall.classic"));
 
         product.Start();
         NewGameSessionTests.Commit(ruleset.RequireSession());
@@ -123,8 +123,8 @@ public sealed class ProductModeSessionTests
         VideoRecorder video = VideoRecorder.Create();
         EngineContextFake engine = EngineContextFake.Create(engineContent, spatial.Service, new AppearanceFake(releases), video: video.Service);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
-        // The one ordinary product entry: the Host's default bundle over the committed content, staged as
-        // the Host declares it (the cinematics included), and the built-in ruleset with its videos on.
+        // The one ordinary product entry: the Host's default bundle over the committed content with the
+        // containers installed beside it (the cinematics included), and the built-in ruleset with its videos on.
         ProductContent staged = StagedContent(root, out BundleContentFake bundles);
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, staged, input));
 
@@ -151,8 +151,8 @@ public sealed class ProductModeSessionTests
             Assert.Equal(ProductMode.Title, product.Mode);
         }
         Assert.Equal(
-            [("daggerfall.cinematics", "anim0000.webm"), ("daggerfall.cinematics", "anim0011.webm"), ("daggerfall.cinematics", "dag2.webm")],
-            bundles.OpenedReferences.Where(reference => reference.Bundle == "daggerfall.cinematics"));
+            [.. new[] { "anim0000.webm", "anim0011.webm", "dag2.webm" }.Select(file => (DaggerfallData.DataContainerName, $"{DaggerfallCinematicPresentation.Root}/{file}"))],
+            bundles.OpenedReferences.Where(reference => reference.Path.StartsWith(DaggerfallCinematicPresentation.Root + "/", StringComparison.Ordinal)));
 
         video.Complete(video.Played[^1]);
         product.Update(new ProductUpdate(OuterUpdate(++step), []));
@@ -167,8 +167,8 @@ public sealed class ProductModeSessionTests
         Assert.Contains("daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'.", engine.PublishedDiagnostics);
         Assert.Single(engine.StartedAudioVoices);
         Assert.Equal(0, engine.ReleasedAudioVoices);
-        // The cue's body came out of the staged music bundle, which is how the Engine serves it.
-        Assert.Contains(bundles.OpenedReferences, reference => reference.Bundle == "daggerfall.music");
+        // The cue's body came out of the music container installed beside the product.
+        Assert.Contains(bundles.OpenedReferences, reference => reference.Bundle == DaggerfallMusicBundle.ContainerName);
     }
 
     [Fact]
@@ -309,7 +309,7 @@ public sealed class ProductModeSessionTests
         PopulateContent(resumedContent, inputs);
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), saved);
         Assert.Equal(committed.Biography, resumed.State.Character.Background!.Biography);
         Assert.Equal(committed.Modifiers, resumed.State.Character.Background!.Modifiers);

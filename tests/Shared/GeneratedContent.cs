@@ -4,17 +4,18 @@ using Xunit.Sdk;
 
 namespace WorldRpg.Tests.Support;
 
-// Content derived from the operator's Arena2 files is not tracked: scripts/regenerate-content.sh writes
-// it from local/arena2. A test that reads it skips at discovery with that command named, instead of
-// failing on an I/O error in a clone that has not been regenerated.
+// Content derived from the operator's Arena2 files is not tracked: the import command packs it from
+// local/arena2 into local/daggerfall-data.rpak, with its records in local/import/records. A test that reads
+// it skips at discovery with that command named, instead of failing on an I/O error in a clone that has not
+// imported.
 
-/// <summary>A fact that reads content scripts/regenerate-content.sh generates.</summary>
+/// <summary>A fact that reads content a real import produced.</summary>
 internal sealed class GeneratedContentFactAttribute : FactAttribute
 {
     public GeneratedContentFactAttribute() => Skip = TestData.MissingGeneratedContent();
 }
 
-/// <summary>A theory that reads content scripts/regenerate-content.sh generates.</summary>
+/// <summary>A theory that reads content a real import produced.</summary>
 internal sealed class GeneratedContentTheoryAttribute : TheoryAttribute
 {
     public GeneratedContentTheoryAttribute() => Skip = TestData.MissingGeneratedContent();

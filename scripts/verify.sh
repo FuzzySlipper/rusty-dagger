@@ -36,27 +36,22 @@ donor_root=${DAGGER_DONOR_ROOT:-/home/research/daggerfall-unity}
 corpora="Arena2 corpus $arena2_root: $([[ -d "$arena2_root" ]] && echo present || echo absent); donor checkout $donor_root: $([[ -d "$donor_root" ]] && echo present || echo absent)"
 echo "corpora: $corpora"
 
-# The Arena2-derived content is not tracked; scripts/regenerate-content.sh writes every path
-# scripts/generated-content-paths.txt lists. Without it the product cannot be staged or played and the
-# ruleset suite has nothing to read, so those steps are skipped with the reason printed, and the import
-# suite skips the facts that read it.
+# The Arena2-derived content is not tracked: the import command packs it into local/daggerfall-data.rpak,
+# with its import records in local/import/records (and the score in local/music.rpak). Without it the product
+# still stages and states why it cannot be played, the suites that read it skip with the reason printed, and
+# --play, which plays it, is refused.
+import_command="dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound"
 generated_missing=()
-while IFS= read -r entry; do
-  [[ -z "$entry" || "$entry" == \#* ]] && continue
-  path=${entry#/}
-  if [[ "$path" == *\** ]]; then
-    compgen -G "$path" >/dev/null || generated_missing+=("$path")
-  else
-    [[ -e "$path" ]] || generated_missing+=("$path")
-  fi
-done < scripts/generated-content-paths.txt
+for path in local/daggerfall-data.rpak local/import/records; do
+  [[ -e "$path" ]] || generated_missing+=("$path")
+done
 if [[ ${#generated_missing[@]} -eq 0 ]]; then
   generated="present"
 else
-  generated="absent (${generated_missing[*]}); run scripts/regenerate-content.sh with local/arena2 supplied"
+  generated="absent (${generated_missing[*]}); run \`$import_command\` with local/arena2 supplied"
 fi
 echo "generated content: $generated"
-skip() { echo "skipped $1: generated content is absent; run scripts/regenerate-content.sh"; }
+skip() { echo "skipped $1: the data container is absent; run \`$import_command\`"; }
 
 # A green run is only worth keeping if it names what it ran on. The record is a git note on the
 # exact commit, so it cannot drift from the tree it describes; a run over uncommitted changes would
@@ -88,8 +83,8 @@ if [[ "$record" == true ]]; then
   exit 0
 fi
 
-if [[ ${#generated_missing[@]} -ne 0 ]] && [[ "$play" == true || "$aot" == true ]]; then
-  echo "--play and --aot stage the product, which needs the generated content: run scripts/regenerate-content.sh first." >&2
+if [[ ${#generated_missing[@]} -ne 0 ]] && [[ "$play" == true ]]; then
+  echo "--play plays the product, which needs the data container: run \`$import_command\` first." >&2
   exit 2
 fi
 
@@ -99,13 +94,7 @@ npm ci
 # then restores and stages the host through rusty, which supplies the pair's
 # SDK feed; the later dotnet commands find the restored package.
 rusty install
-if [[ ${#generated_missing[@]} -eq 0 ]]; then
-  rusty build --project src/WorldRpg.Host/WorldRpg.Host.csproj
-else
-  # rusty build stages the product, which refuses a content root without the generated content.
-  skip "rusty build (product staging)"
-  dotnet restore src/WorldRpg.Host/WorldRpg.Host.csproj
-fi
+rusty build --project src/WorldRpg.Host/WorldRpg.Host.csproj
 pair_version=$(sed -n 's|.*<RustyEnginePackageVersion>\([^<]*\)</RustyEnginePackageVersion>.*|\1|p' Directory.Build.props)
 dotnet restore tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 dotnet build src/WorldRpg.Host/WorldRpg.Host.csproj --configuration Release --no-restore
@@ -129,7 +118,7 @@ dotnet test tests/Daggerfall.Import.Tests/Daggerfall.Import.Tests.csproj
 if [[ ${#generated_missing[@]} -eq 0 ]]; then
   dotnet test tests/WorldRpg.Rulesets.Daggerfall.Tests/WorldRpg.Rulesets.Daggerfall.Tests.csproj
 else
-  skip "suite tests/WorldRpg.Rulesets.Daggerfall.Tests (its facts read the generated site closures and payloads)"
+  skip "suite tests/WorldRpg.Rulesets.Daggerfall.Tests (its facts read the data container's site closures and payloads)"
 fi
 dotnet test tests/WorldRpg.Rulesets.Canary.Tests/WorldRpg.Rulesets.Canary.Tests.csproj
 dotnet test tests/WorldRpg.Kit.Tests/WorldRpg.Kit.Tests.csproj
@@ -139,11 +128,7 @@ dotnet test tests/WorldRpg.Host.Tests/WorldRpg.Host.Tests.csproj
 # project no longer compiled, and since nothing ran the project the rot was invisible. It is a product
 # in this repository, so its suite is part of the tree that must run.
 dotnet test tests/WorldRpg.SpriteWorkbench.Tests/WorldRpg.SpriteWorkbench.Tests.csproj
-if [[ ${#generated_missing[@]} -eq 0 ]]; then
-  dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
-else
-  skip "CoreCLR staging"
-fi
+dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
 
 # Every suite above proves its Engine-facing paths against fakes that do not enforce the Engine's
 # ownership rules; a render resource released under a live owner passed them all while the real
@@ -159,6 +144,6 @@ if [[ "$aot" == true ]]; then
 elif [[ ${#generated_missing[@]} -eq 0 ]]; then
   echo "Verified Engine pair ${pair_version}: CoreCLR. Use --aot for the NativeAOT fidelity publish."
 else
-  echo "Verified Engine pair ${pair_version}: builds and content-free suites only; the product was not staged because the generated content is absent."
+  echo "Verified Engine pair ${pair_version}: builds, staging and content-free suites only; the data container is absent."
 fi
 

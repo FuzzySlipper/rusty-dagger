@@ -70,7 +70,7 @@ public sealed class TransitionDoorSightTests
         Assert.NotEmpty(profile.Portals);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = new Dictionary<string, ReadOnlyMemory<byte>>
         {
-            [profile.SpatialArtifact.Path] = File.ReadAllBytes(Path.Combine(root, "content", profile.SpatialArtifact.Path)),
+            [profile.SpatialArtifact.Path] = TestContentFiles.ReadCopy(Path.Combine(root, "content", profile.SpatialArtifact.Path)),
         } });
         host.Call(engine =>
         {

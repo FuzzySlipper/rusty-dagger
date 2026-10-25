@@ -131,7 +131,7 @@ public sealed class HostSaveSlotTests
         using WorldRpgSaveSlots reopened = new(resumedEngine.Context, "worldrpg.saves");
         (GameSaveEnvelope? envelope, WorldRpgSlotLoadDiagnostic? diagnostic) = reopened.LoadSlot("slot-1", "daggerfall", []);
         Assert.Null(diagnostic);
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition();
+        ResolvedGameComposition composition = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition();
         using IGameSession resumed = resumedRuleset.CreateSession(new GameSessionContext(resumedEngine.Context, composition), envelope!.Payload);
         DaggerfallSession restoredSession = resumedRuleset.RequireSession();
         PlayerActorState restoredPlayer = restoredSession.State.Actors.Player;
@@ -298,7 +298,7 @@ public sealed class HostSaveSlotTests
             using WorldRpgSaveSlots slots = new(engine.Context, "worldrpg.saves");
             slots.SaveSlot("slot-1", "Forged", new GameSaveEnvelope(DaggerfallSavePayload.Encode(rejected), []), PersistenceRevisionGuard.Absent);
             CapturingDaggerfallRuleset ruleset = new();
-            ResolvedGameComposition composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition();
+            ResolvedGameComposition composition = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition();
 
             // Resolution refuses the save before any session state or Engine resource exists.
             GameSaveEnvelope envelope = slots.LoadSlot("slot-1", "daggerfall", []).Envelope!;

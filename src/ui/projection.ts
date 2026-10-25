@@ -55,6 +55,8 @@ export interface DaggerHud {
   readonly uiArtDemanded?: UiArt | null;
   readonly panelRequest?: PanelRequest | null;
   readonly saveSlots?: SaveSlotProjection;
+  /** Why no game can be played, with the step that fixes each problem; the entry screen then offers nothing to play. */
+  readonly unavailable?: { readonly title: string; readonly problems: readonly string[] } | null;
   /** The games the entry screen offers while a new game can still choose one; absent or null otherwise. */
   readonly bundles?: BundleProjection | null;
   readonly controls?: ControlsProjection;

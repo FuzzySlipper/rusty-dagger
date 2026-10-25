@@ -26,7 +26,7 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal(22, definitions.LootTables.Count);
         Assert.Equal(12, definitions.ArmorValuesByMaterial.Count);
         Assert.NotEmpty(definitions.RequireActor(new DaggerfallActorId("player")).Loadout);
-        string expectedFingerprint = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/daggerfall.base.semantic.sha256")).Trim();
+        string expectedFingerprint = TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot, "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/daggerfall.base.semantic.sha256")).Trim();
         // The fixture records the pack's semantic content, so it moves when the pack's meaning moves: the
         // archer gaining a ranged policy and the actions carrying their own reach are exactly that.
         string observedFingerprint = DaggerfallBaseContent.Fingerprint(definitions);
@@ -307,7 +307,7 @@ public sealed class DaggerfallCatalogContentTests
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
-            string expectedFingerprint = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/daggerfall.base.semantic.sha256")).Trim();
+            string expectedFingerprint = TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot, "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/daggerfall.base.semantic.sha256")).Trim();
             Assert.Equal(expectedFingerprint, DaggerfallBaseContent.Fingerprint(definitions));
         }
         finally { CultureInfo.CurrentCulture = original; }

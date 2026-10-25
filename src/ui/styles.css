@@ -294,6 +294,11 @@
 /* What a title choice came to (a load that failed, a game that could not start), on a stone plate. */
 .dagger-entry-outcome { margin: 0; max-width: min(48rem, 90vw); padding: .5rem .875rem; color: var(--ink); background: rgb(10 10 8 / .85); border: 1px solid var(--brass); border-left-width: .25rem; font-size: .9rem; }
 .dagger-entry-outcome:empty { display: none; }
+/* The title's notice when no game can be played: what is wrong and the step that fixes it. */
+.dagger-entry-unavailable { max-width: min(48rem, 90vw); padding: .75rem 1rem; color: var(--ink); background: rgb(10 10 8 / .9); border: 1px solid var(--brass); border-left-width: .25rem; }
+.dagger-entry-unavailable h2 { margin: 0 0 .5rem; font-size: 1.1rem; }
+.dagger-entry-unavailable ul { margin: 0; padding-left: 1.25rem; font-size: .9rem; }
+.dagger-entry-unavailable li + li { margin-top: .5rem; }
 
 .dagger-character-art { display: flex; align-items: flex-start; gap: 1rem; }
 .dagger-character-art img { image-rendering: pixelated; max-height: 16.25rem; min-height: 5rem; width: auto; }

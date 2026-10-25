@@ -10,7 +10,6 @@ internal readonly record struct DaggerfallSkySelection(string First, string Seco
 /// <summary>The normalized product-wide sky and precipitation resource catalog.</summary>
 internal sealed class DaggerfallSkyMedia
 {
-    internal const string BundleId = "daggerfall.sky";
     internal const string LogicalRoot = "worldrpg/media/sky/resources";
     internal const string ManifestPath = "worldrpg/media/sky/manifest.json";
     private readonly DaggerfallData _content;

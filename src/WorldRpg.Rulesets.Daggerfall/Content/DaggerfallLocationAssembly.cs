@@ -526,7 +526,6 @@ internal sealed partial class DaggerfallLocationAssembly
                 actions,
                 actionModels,
                 ReadInterior(normalized),
-                _media.Music,
                 DaggerfallQuestMarkerContent.ReadWorld(normalized, diagnostics),
                 _media.BillboardSprites,
                 DaggerfallStaticNpcPlacement.Read(normalized, _media.BillboardSprites, owner._definitions, key.Site, diagnostics),

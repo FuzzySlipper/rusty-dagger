@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Daggerfall.Import.Arena2;
-using Daggerfall.Import.Audio;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
@@ -33,11 +32,14 @@ internal sealed partial class ImportToolFixture : IDisposable
     private int RmbRegion => Interior ? 17 : 0;
     private string RmbLocation => Interior ? "Charing" : "Caarcun Manor";
     private string Authored => At("authored.json");
-    private string Publication => Repo("content/worldrpg/imports/privateers-hold");
-    // The site closures reference the product-wide world media and the classic media group they were written against.
-    private string Shared => Repo("content/worldrpg/imports/shared");
-    private string ClassicGroup => Repo("content/worldrpg");
-    private ProductWorldMedia ProductMedia => ProductWorldMedia.Read(Shared, ClassicGroup);
+    // The commands read publications from disk, so they are given the staging tree the data container was packed
+    // from. The site closures reference the product-wide world media and the classic media group they were written
+    // against, and the authored UI art the group lists is the product's tracked content.
+    private string Publication => ImportedContent.Staged("worldrpg/imports/privateers-hold");
+    private string Shared => ImportedContent.Staged("worldrpg/imports/shared");
+    private string ClassicGroup => ImportedContent.Staged("worldrpg");
+    private string AuthoredUiArt => Repo(global::Daggerfall.Import.Tool.AuthoredUi.ProductDirectory);
+    private ProductWorldMedia ProductMedia => ProductWorldMedia.Read(Shared, ClassicGroup, AuthoredUiArt);
     internal string OverlayFile => At("authoring/sprites/test.json");
     private SpritePublicationSnapshot Sprites => SpritePublicationReader.Read(Publication, ProductMedia);
     private IReadOnlyList<SourceInventoryRow> Rows => SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Inventory));
@@ -45,10 +47,10 @@ internal sealed partial class ImportToolFixture : IDisposable
     internal ImportToolFixture()
     {
         Directory.CreateDirectory(Root);
-        Copy("content/worldrpg/payloads/daggerfall.imported.json", Pack);
-        Copy("import-records/daggerfall.import-records.json", Records);
-        Copy("import-records/daggerfall.blocks.json", At("blocks.json"));
-        Copy("content/worldrpg/payloads/daggerfall.blocks.json", At("buildings.json"));
+        File.WriteAllBytes(Pack, ImportedContent.Read("worldrpg/payloads/daggerfall.imported.json"));
+        File.Copy(ImportedContent.RecordPath("daggerfall.import-records.json"), Records);
+        File.Copy(ImportedContent.RecordPath("daggerfall.blocks.json"), At("blocks.json"));
+        File.WriteAllBytes(At("buildings.json"), ImportedContent.Read("worldrpg/payloads/daggerfall.blocks.json"));
         Copy("content/worldrpg/payloads/daggerfall.base.json", Authored);
         Copy("data/content-source-manifest.csv", Inventory);
         var sprites = Sprites;
@@ -113,12 +115,12 @@ internal sealed partial class ImportToolFixture : IDisposable
             ["--region"] = name == "rmb-spatial" ? RmbRegion.ToString(System.Globalization.CultureInfo.InvariantCulture) : "17",
             ["--location"] = name == "rmb-spatial" ? RmbLocation : "Privateer's Hold",
             ["--source-manifest"] = At("site.sources.json"), ["--profile"] = Interior ? "interior" : "exterior",
-            ["--ui-authored-assets"] = Repo("data/ui-authored-assets.json"), ["--ui-original"] = Repo("data/ui-original"),
+            ["--ui-authored-assets"] = Repo("data/ui-authored-assets.json"), ["--ui-original"] = AuthoredUiArt,
             ["--authoring"] = name == "sprite-overlay-write" ? At("writer-authoring") : At("authoring"),
             ["--overlay"] = "sprites/test.json", ["--input"] = OverlayFile, ["--id"] = Sprites.Catalog.Entries.First().Id,
             ["--shared"] = Shared, ["--classic-group"] = ClassicGroup,
-            // Coverage reads the repository's generated tree over its content, with its import records.
-            ["--content"] = Repo("content"), ["--import-records"] = Repo("import-records"),
+            // Coverage reads the import's staging tree over the repository's content, with its import records.
+            ["--content"] = ImportedContent.Staged(""), ["--import-records"] = TestData.ImportRecords,
         };
         if (name == "internal-strings") values["--label"] = PublishedSourcePath.Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv");
         List<string> args = [name];
@@ -126,7 +128,6 @@ internal sealed partial class ImportToolFixture : IDisposable
         foreach (var option in global::Daggerfall.Import.Tool.Program.Commands[name].Options.Where(option => option.IsRequired || option.Default is not null))
             args.AddRange([option.Name, values[option.Name]]);
         // Exercise nonempty source sets and all real artifact writers, rather than no-op success paths.
-        if (name == "music-media") args.AddRange(["--sound", Repo("local/Sound"), "--require-all"]);
         if (name == "classic-media") args.AddRange(["--ui-authored-assets", values["--ui-authored-assets"], "--ui-original", values["--ui-original"]]);
         if (name == "cinematic-media" && CinematicKind == DaggerfallCinematicKind.Flc) args.AddRange(["--kind", "flc"]);
         if (name == "rmb-spatial" && Interior) args.AddRange(["--block-x", "1", "--block-y", "1", "--building", "0"]);

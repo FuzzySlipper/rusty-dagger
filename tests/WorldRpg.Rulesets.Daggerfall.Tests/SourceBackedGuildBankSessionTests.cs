@@ -358,12 +358,12 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
     {
         string root = TestData.RepositoryRoot;
         ProductContent content = FullContent(root);
-        ResolvedGameComposition resolved = GameCompositionResolver.Resolve(content,
+        ResolvedGameComposition resolved = TestSessions.Resolve(content,
             new GameBundleId("daggerfall.classic")).RequireComposition();
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile[] sites = [.. resolved.ContentPacks
             .Where(pack => pack.Role == new ContentPackRoleId(SiteRole))
-            .Select(pack => DaggerfallSiteContent.Read(new DaggerfallData(content), pack.Payload, definitions))];
+            .Select(pack => DaggerfallSiteContent.Read(TestSessions.Data(content), pack.Payload, definitions))];
         DaggerfallSiteProfiles profiles = new(sites);
         DaggerfallSiteProfile bank = SourceProfile(sites, "BANKAL01.RMB", 1, 5, 17, 3, 0);
         DaggerfallSiteProfile knightly = SourceProfile(sites, "KDRAAL01.RMB", 3, 2, 14, 11, 368);

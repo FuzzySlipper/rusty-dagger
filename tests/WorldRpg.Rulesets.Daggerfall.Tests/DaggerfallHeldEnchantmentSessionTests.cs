@@ -36,7 +36,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile inputs = ExteriorContentAt(source, source.ProfileKey.Site,
             "held-enchantment-rest");
-        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(new DaggerfallData(FullContent(root)));
+        DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(TestSessions.Data(FullContent(root)));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -87,7 +87,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service,
             new AppearanceFake(releases), random: RandomMaximum.Create());
-        ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root),
+        ResolvedCompositionIdentity composition = TestSessions.Resolve(FullContent(root),
             new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
             new(definitions, inputs, DaggerfallTuning.Defaults, composition) { Sky = sky }, saved);
@@ -126,7 +126,6 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         [],
         [],
         null,
-        source.Music,
         source.QuestMarkers,
         source.BillboardSprites,
         [],

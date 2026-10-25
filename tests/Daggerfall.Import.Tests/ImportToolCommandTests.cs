@@ -15,9 +15,7 @@ internal sealed class ImportToolDataTheoryAttribute : TheoryAttribute
 internal sealed class ImportToolDataFactAttribute : FactAttribute
 {
     public ImportToolDataFactAttribute() => Skip = MissingInputs();
-    internal static string? MissingInputs() => TestData.MissingGeneratedContent() ?? TestData.MissingCorpus([])
-        ?? TestData.MissingDonor([]) ?? (Directory.Exists(Path.Combine(TestData.RepositoryRoot, "local/Sound"))
-            ? null : "Operator music folder local/Sound is absent; supply the donor songs to exercise publication.");
+    internal static string? MissingInputs() => TestData.MissingGeneratedContent() ?? TestData.MissingCorpus([]) ?? TestData.MissingDonor([]);
 }
 
 /// <summary>Exercises the actual compiled dispatch, parser, commands and file publications.</summary>
@@ -81,7 +79,6 @@ public sealed class ImportToolCommandTests
     [InlineData("cinematic-media", "--kind", "unknown")]
     [InlineData("rmb-spatial", "--profile", "unknown")]
     [InlineData("write", "--region", "-1")]
-    [InlineData("music-media", "--require-all", "")]
     public void Invalid_command_choices_exit_one_with_usage_before_any_publication(string name, string option, string value)
     {
         var command = ToolProgram.Commands[name];

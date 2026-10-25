@@ -10,9 +10,8 @@ public sealed class FightersGuildQuestCorpusPublicationTests
     [GeneratedContentFact]
     public void Publishes_the_exact_twenty_records_with_per_source_provenance_and_a_stable_fingerprint()
     {
-        string root = TestData.RepositoryRoot;
-        using JsonDocument basePayload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.imported.json")));
-        using JsonDocument records = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "import-records/daggerfall.import-records.json")));
+        using JsonDocument basePayload = JsonDocument.Parse(ImportedContent.Read("worldrpg/payloads/daggerfall.imported.json"));
+        using JsonDocument records = JsonDocument.Parse(ImportedContent.Record("daggerfall.import-records.json"));
         DaggerfallFightersGuildQuestCorpus first = FightersGuildQuestCorpusPublication.Create(
             Section<DaggerfallQuestCatalog>(basePayload, "questCatalog"),
             Section<DaggerfallQuestPack>(basePayload, "questSources"),
@@ -35,7 +34,7 @@ public sealed class FightersGuildQuestCorpusPublicationTests
         });
         Assert.Equal(first.Fingerprint, second.Fingerprint);
         Assert.Equal(FightersGuildQuestCorpusPublication.Serialize(first), FightersGuildQuestCorpusPublication.Serialize(second));
-        Assert.Equal(FightersGuildQuestCorpusPublication.Serialize(first), File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")));
+        Assert.Equal(FightersGuildQuestCorpusPublication.Serialize(first), ImportedContent.Read("worldrpg/payloads/daggerfall.quests.fighters.json"));
     }
 
     private static T Section<T>(JsonDocument document, string name) =>

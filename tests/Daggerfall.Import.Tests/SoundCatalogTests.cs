@@ -166,12 +166,12 @@ public sealed class SoundCatalogTests
             // A site closure delivers that same artifact under its closure-relative name, below the
             // clips root its audio bundle declares: the samples come from the same archive ordinal
             // whichever closure cuts them.
-            Assert.Equal(artifact.Bytes.ToArray(), File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "imports", "shared", resource.RelativePath)));
+            Assert.Equal(artifact.Bytes.ToArray(), ImportedContent.Read("worldrpg/imports/shared/" + resource.RelativePath));
         }
 
         // The product-wide group carries neither clips nor a catalog of them: each site stages and opens
         // its own clips, and nothing at runtime reads the catalog.
-        Assert.False(Directory.Exists(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "media", "audio")));
+        Assert.DoesNotContain(TestDataContainers.Entries(TestDataContainers.Data).Keys, path => path.StartsWith("worldrpg/media/audio/", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -238,8 +238,7 @@ public sealed class SoundCatalogTests
     [GeneratedContentFact]
     public void Every_quest_sound_resolves_its_numeric_id_in_the_shared_publication()
     {
-        using var payload = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot,
-            "content/worldrpg/payloads/daggerfall.imported.json")));
+        using var payload = System.Text.Json.JsonDocument.Parse(ImportedContent.Read("worldrpg/payloads/daggerfall.imported.json"));
         var root = payload.RootElement;
         var sounds = root.GetProperty("questTables").GetProperty("sounds").GetProperty("rows").EnumerateArray()
             .ToDictionary(row => row.GetProperty("name").GetString()!, row => row.GetProperty("id").GetUInt32(), StringComparer.OrdinalIgnoreCase);

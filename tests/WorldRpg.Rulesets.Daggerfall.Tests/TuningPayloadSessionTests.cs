@@ -13,7 +13,7 @@ public sealed class TuningPayloadSessionTests
     public void Strike_enchantment_values_load_from_tuning_and_reject_invalid_ranges()
     {
         string root = TestData.RepositoryRoot;
-        var loaded = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root,
+        var loaded = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root,
             "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
         Assert.Equal(new DaggerfallStrikeEnchantmentTuning(5, 2.25), loaded.StrikeEnchantments);
         var adjusted = DaggerfallTuning.Read(MutatedTuning(root, tuning =>
@@ -30,7 +30,7 @@ public sealed class TuningPayloadSessionTests
     public void Music_playlist_tuning_defaults_to_standard_and_requires_a_boolean()
     {
         string root = TestData.RepositoryRoot;
-        Assert.False(DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root,
+        Assert.False(DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root,
             "content/worldrpg/tuning-payloads/daggerfall.defaults.json"))).Music.AlternatePlaylists);
         Assert.True(DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["music"]!["alternatePlaylists"] = true)).Music.AlternatePlaylists);
         Assert.Throws<InvalidOperationException>(() => DaggerfallTuning.Read(MutatedTuning(root,
@@ -41,7 +41,7 @@ public sealed class TuningPayloadSessionTests
     public void Daggerfall_tuning_exposes_its_controller_values_in_loaded_payloads()
     {
         string root = TestData.RepositoryRoot;
-        DaggerfallTuning tuning = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
+        DaggerfallTuning tuning = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
         CharacterControllerTuning controller = Assert.IsType<CharacterControllerTuning>(tuning.Spatial.CharacterController);
 
         Assert.Equal(3.5f, controller.ForwardSpeed);
@@ -78,7 +78,7 @@ public sealed class TuningPayloadSessionTests
     {
         string root = TestData.RepositoryRoot;
         string path = Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json");
-        using JsonDocument profile = JsonDocument.Parse(File.ReadAllBytes(path));
+        using JsonDocument profile = JsonDocument.Parse(TestContentFiles.ReadCopy(path));
         Dictionary<string, object?> mutated = [];
         foreach (JsonProperty property in profile.RootElement.EnumerateObject())
         {
@@ -98,7 +98,7 @@ public sealed class TuningPayloadSessionTests
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallTuning.Read(Encoding.UTF8.GetBytes(obsolete)));
         Assert.Contains("attackReach", error.Message, StringComparison.Ordinal);
         // The shipped profile does not carry it, so the refusal is the shape's and not the payload's.
-        Assert.DoesNotContain("attackReach", File.ReadAllText(path), StringComparison.Ordinal);
+        Assert.DoesNotContain("attackReach", TestContentFiles.ReadText(path), StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -110,7 +110,7 @@ public sealed class TuningPayloadSessionTests
     public void The_default_payload_carries_property_transport_and_progression_tuning()
     {
         string root = TestData.RepositoryRoot;
-        DaggerfallTuning loaded = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
+        DaggerfallTuning loaded = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
 
         Assert.Equal(DaggerfallTuning.Defaults.Progression, loaded.Progression);
         Assert.Equal(DaggerfallTuning.Defaults.Property, loaded.Property);

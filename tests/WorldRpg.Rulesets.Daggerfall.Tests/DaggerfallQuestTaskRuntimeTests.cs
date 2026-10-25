@@ -26,7 +26,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
             TestSessions.PopulateContent(content, inputs);
             return EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
         }
-        var identity = GameCompositionResolver.Resolve(TestSessions.FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+        var identity = TestSessions.Resolve(TestSessions.FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         DaggerfallSessionComposition composition = new(definitions, inputs, DaggerfallTuning.Defaults, identity);
         RulesetSavePayload save;
         ulong itemId;

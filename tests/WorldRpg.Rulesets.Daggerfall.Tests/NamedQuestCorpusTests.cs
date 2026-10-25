@@ -34,7 +34,7 @@ public sealed class NamedQuestCorpusTests
             Assert.True(DaggerfallQuestInstances.IsProtectedMainQuest(name + ".txt"));
     }
 
-    internal static byte[] Payload(string id) => File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, $"content/worldrpg/payloads/daggerfall.quests.{id}.json"));
+    internal static byte[] Payload(string id) => TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, $"content/worldrpg/payloads/daggerfall.quests.{id}.json"));
 
     [Fact]
     public void Product_exclusion_is_one_exact_command_in_one_source_and_retains_provenance()

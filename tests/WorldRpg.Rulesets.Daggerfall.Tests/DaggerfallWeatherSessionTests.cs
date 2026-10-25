@@ -69,7 +69,7 @@ public sealed class DaggerfallWeatherSessionTests
             source.Materials, source.ActorSprites, source.MobileSprites, source.Audio, source.ClassicPresentation,
             source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId, source.Portals,
             source.Anchors.Values.ToArray(), source.Lights, source.GroundContainerSprite, source.DungeonMap,
-            source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, source.Music,
+            source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding,
             source.QuestMarkers, source.BillboardSprites) {AmbientZones = zones};
 
     [Fact]
@@ -81,7 +81,7 @@ public sealed class DaggerfallWeatherSessionTests
         var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
         var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
         var mediaFixture = DaggerfallSkyMediaTests.Fixture();
-        var media = DaggerfallSkyMedia.Read(new DaggerfallData(mediaFixture.Content));
+        var media = DaggerfallSkyMedia.Read(TestSessions.Data(mediaFixture.Content));
         var rainOdds = Enumerable.Range(0,24).Select(_ => new[]{0,0,0,0,100,0,0}).ToArray();
         var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = rainOdds}};
         var composition = new DaggerfallSessionComposition(definitions, exterior, tuning)

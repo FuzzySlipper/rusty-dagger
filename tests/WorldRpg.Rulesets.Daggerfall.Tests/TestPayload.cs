@@ -4,7 +4,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
 /// The one parsed copy of the base definitions that facts share. They are read from two payloads: the
-/// authored daggerfall.base payload and the imported payload scripts/regenerate-content.sh generates.
+/// authored daggerfall.base payload and the imported payload a real import packed into the data container.
 /// Reading them parses a 75 MiB document, so parsing it inside every fact — as the suite used to,
 /// hundreds of times per run — cost far more than the assertions did. The parsed value is immutable once
 /// read, which is what makes sharing it across parallel test classes safe; a fact that deliberately reads
@@ -14,7 +14,7 @@ internal static class TestPayload
 {
     private static readonly SharedFixture<DaggerfallDefinitions> Shared = new(() => DaggerfallBaseContent.Read(CombinedBytes));
     private static readonly SharedFixture<byte[]> Combined = new(() => DaggerfallBaseContent.Combine(
-        File.ReadAllBytes(PayloadPath("daggerfall.base.json")), File.ReadAllBytes(PayloadPath("daggerfall.imported.json"))));
+        TestContentFiles.Read(PayloadPath("daggerfall.base.json")), TestContentFiles.Read(PayloadPath("daggerfall.imported.json"))));
 
     /// <summary>The parsed base definitions.</summary>
     internal static DaggerfallDefinitions Definitions => Shared.Value;

@@ -489,7 +489,7 @@ public sealed class PublishedContentDeliveryTests
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
-        JsonElement classic = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/shared/media/classic/manifest.json"))).RootElement;
+        JsonElement classic = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/shared/media/classic/manifest.json"))).RootElement;
         Dictionary<string, string> packPaths = [];
         foreach (JsonElement resource in classic.GetProperty("media").GetProperty("resources").EnumerateArray())
             packPaths[resource.GetProperty("id").GetString()!] = resource.GetProperty("relativePath").GetString()!;
@@ -525,16 +525,16 @@ public sealed class PublishedContentDeliveryTests
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
             content.ReadBytes("worldrpg/payloads/daggerfall.base.json"), content.ReadBytes("worldrpg/payloads/daggerfall.imported.json"));
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
-            new DaggerfallData(content),
+            TestSessions.Data(content),
             content.ReadBytes("worldrpg/payloads/daggerfall.privateers-hold.json"),
             definitions);
         DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(
-            new DaggerfallData(content),
+            TestSessions.Data(content),
             content.ReadBytes("worldrpg/payloads/daggerfall.castle-necromoghan.json"),
             definitions);
 
-        DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(new DaggerfallData(content), inputs.ClassicPresentation);
-        DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(new DaggerfallData(content), castle.ClassicPresentation);
+        DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(TestSessions.Data(content), inputs.ClassicPresentation);
+        DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(TestSessions.Data(content), castle.ClassicPresentation);
 
         Assert.Equal(225, media.Paths.Count);
         JsonElement inventory = JsonDocument.Parse(content.ReadBytes(DaggerfallUiArt.InventoryPath).ToArray()).RootElement;
@@ -554,7 +554,7 @@ public sealed class PublishedContentDeliveryTests
         ProductContent content = AdmittedContent();
         // A site closure carries no classic sidecar of its own unless an overlay changed it, so this is
         // the record every site's session reads its clips from.
-        Assert.False(File.Exists(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
+        Assert.False(TestContentFiles.Exists(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
         JsonElement manifest = JsonDocument.Parse(content.ReadBytes("worldrpg/imports/shared/media/classic/manifest.json").ToArray()).RootElement;
 
         // Each cue states the archive ordinal it was cut from and names a descriptor the world media
@@ -569,7 +569,7 @@ public sealed class PublishedContentDeliveryTests
             Assert.Equal("audio", resource.GetProperty("kind").GetString());
             string path = resource.GetProperty("relativePath").GetString()!;
             Assert.StartsWith("media/audio/clips/", path, StringComparison.Ordinal);
-            Assert.True(File.Exists(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/shared", path)), path);
+            Assert.True(TestContentFiles.Exists(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/shared", path)), path);
         });
         Assert.Equal(admitted.Length, resources.Values.Count(resource => resource.GetProperty("kind").GetString() == "audio"));
 
@@ -603,7 +603,7 @@ public sealed class PublishedContentDeliveryTests
     public void Published_ui_slots_name_admitted_media_and_retain_their_source_digest()
     {
         string root = TestData.RepositoryRoot;
-        JsonElement inventory = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/classic-media-inventory.json"))).RootElement;
+        JsonElement inventory = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/media/classic-media-inventory.json"))).RootElement;
 
         // A slot is what a consumer binds, so the published inventory has to name one for every UI
         // image the pack carries, together with the media identity and the bytes it was decoded to.
@@ -662,8 +662,8 @@ public sealed class PublishedContentDeliveryTests
             foreach ((string path, string sha256, _, _, _) in parts)
             {
                 string file = Path.Combine(root, "content", path);
-                Assert.True(File.Exists(file), $"Published UI slot '{slot}' names '{path}', which is not part of the delivered content.");
-                Assert.Equal(sha256, Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(file))));
+                Assert.True(TestContentFiles.Exists(file), $"Published UI slot '{slot}' names '{path}', which is not part of the delivered content.");
+                Assert.Equal(sha256, Convert.ToHexStringLower(SHA256.HashData(TestContentFiles.ReadCopy(file))));
             }
         }
 
@@ -677,7 +677,7 @@ public sealed class PublishedContentDeliveryTests
     [CorpusFact]
     public void Published_ui_slot_sources_hash_to_the_recorded_corpus_bytes()
     {
-        JsonElement inventory = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/media/classic-media-inventory.json"))).RootElement;
+        JsonElement inventory = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/media/classic-media-inventory.json"))).RootElement;
         int checkedSources = 0;
         foreach (JsonElement artifact in inventory.GetProperty("artifacts").EnumerateArray())
         {
@@ -685,8 +685,8 @@ public sealed class PublishedContentDeliveryTests
             JsonElement source = artifact.GetProperty("source");
             string sourcePath = source.GetProperty("path").GetString()!;
             string input = TestData.Corpus(sourcePath["arena2/".Length..]);
-            Assert.True(File.Exists(input), $"Published UI slot '{slot.GetString()}' names missing source '{sourcePath}'.");
-            Assert.Equal(source.GetProperty("sha256").GetString(), Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(input))));
+            Assert.True(TestContentFiles.Exists(input), $"Published UI slot '{slot.GetString()}' names missing source '{sourcePath}'.");
+            Assert.Equal(source.GetProperty("sha256").GetString(), Convert.ToHexStringLower(SHA256.HashData(TestContentFiles.ReadCopy(input))));
             checkedSources++;
         }
 
@@ -717,7 +717,7 @@ public sealed class PublishedContentDeliveryTests
     [Fact]
     public void The_dom_mode_screen_table_names_published_screens_for_published_modes()
     {
-        string source = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "src/ui/screens.ts"));
+        string source = TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot, "src/ui/screens.ts"));
         // The mode is written as the shared constant in one entry and as a literal in the other, so both
         // spellings are read: the point is the pair, not how the client spells the mode in the table.
         (string Mode, string Screen)[] table =
@@ -781,7 +781,7 @@ public sealed class PublishedContentDeliveryTests
 
         // The entry surface shows the character step while a draft is being edited, falling back to
         // title otherwise. Its displayed mode and selected artifact follow that same choice.
-        string consumer = File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "src/ui/entry.ts"));
+        string consumer = TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot, "src/ui/entry.ts"));
         Assert.Contains("=== TITLE_MODE", consumer, StringComparison.Ordinal);
         Assert.Contains("root.dataset.mode = mode ?? TITLE_MODE", consumer, StringComparison.Ordinal);
         Assert.Contains("screenForMode(mode ?? TITLE_MODE)", consumer, StringComparison.Ordinal);
@@ -803,10 +803,10 @@ public sealed class PublishedContentDeliveryTests
     {
         string contentRoot = Path.Combine(TestData.RepositoryRoot, "content");
         string selected = Path.Combine(contentRoot, "worldrpg");
-        ProductContentFile[] files = [.. Directory.GetFiles(selected, "*", SearchOption.AllDirectories)
+        ProductContentFile[] files = [.. TestContentFiles.AllFiles(selected)
             .Select(path => new ProductContentFile(
                 Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')),
-                File.ReadAllBytes(path)))];
+                TestContentFiles.ReadCopy(path)))];
         return new ProductContent(files);
     }
 

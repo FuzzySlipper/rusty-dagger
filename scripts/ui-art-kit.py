@@ -5,9 +5,10 @@
     scripts/ui-art-kit.py process  [--pick SOURCE=SEED ...]
     scripts/ui-art-kit.py manifest
 
-This is an operator tool, not part of scripts/regenerate-content.sh: it needs the LAN GPU hosts. Its output is
-the processed originals in data/ui-original/ (committed) and their entries in data/ui-authored-assets.json;
-regenerate-content.sh then publishes those as usual. The recipe (Den document rusty-dagger/ui-art-recipe):
+This is an operator tool, not a step of the import: it needs the LAN GPU hosts. Its output is the processed
+originals in content/worldrpg/media/ui/authored/ (committed product content the ruleset reads in place) and their
+entries in data/ui-authored-assets.json; the import then lists them in the classic media inventory. The recipe
+(Den document rusty-dagger/ui-art-recipe):
 
 1. Generate: Krea 2 turbo (krea2_turbo_fp8_scaled, qwen3vl_4b_fp8_scaled, qwen_image_vae; 8 steps, cfg 1, euler,
    simple) with the Retro Dark Fantasy Illustration LoRA (Civitai model 1041229, version 3358183, installed on
@@ -40,7 +41,7 @@ from PIL import Image, ImageFilter
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PIPELINE = os.environ.get("ASSET_PIPELINE", "/home/agent/dev/asset-pipeline")
 RAW = os.environ.get("RAW", os.path.join(ROOT, "local", "ui-art-kit"))
-ORIGINALS = os.path.join(ROOT, "data", "ui-original")
+ORIGINALS = os.path.join(ROOT, "content", "worldrpg", "media", "ui", "authored")
 MANIFEST = os.path.join(ROOT, "data", "ui-authored-assets.json")
 HOSTS = {"den-m5": "http://192.168.1.24:8188", "den-nimo": "http://192.168.1.23:8188"}
 REFINER_HOST = "den-m5"

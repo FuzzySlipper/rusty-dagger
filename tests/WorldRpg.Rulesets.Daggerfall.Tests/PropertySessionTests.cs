@@ -433,8 +433,8 @@ public sealed class PropertySessionTests
             if (automaticQuest) definitions = QuestPlaceAllocationTests.Definitions();
             string root = TestData.RepositoryRoot;
             var content = FullContent(root); var source = ReadInputs(root);
-            identity = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
-            blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json")));
+            identity = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+            blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json")));
             var site = definitions.Locations.Records.First(value => value.Kind == DaggerfallSiteKind.TownCity
                 && value.Exterior is { PortTownAndUnknown: > 0 } exterior
                 && exterior.Buildings.Values.Any(building => building.Source.BuildingType == 1 && building.ModelRadius > 0)
@@ -484,7 +484,7 @@ public sealed class PropertySessionTests
             spatial.KeepPosition = true;
             var engine = EngineContextFake.Create(content, spatial.Service,
                 new AppearanceFake(releases), random: LodgingRandom.Create());
-            DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)));
+            DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)));
             DaggerfallSessionComposition composition = new(definitions, Land, DaggerfallTuning.Defaults, identity)
                 { Profiles = profiles, Blocks = blocks, Sky = sky };
             return saved is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, saved);

@@ -271,10 +271,10 @@ public sealed class SanguineRoseSessionTests
                 inputs.MobileSprites.Where(entry => entry.Key != 27).ToDictionary(), inputs.Audio, inputs.ClassicPresentation,
                 inputs.Site, inputs.Doors, inputs.ProfileKind, inputs.ProfileKey.LogicalId, inputs.Portals, inputs.Anchors.Values.ToArray(),
                 inputs.Lights, inputs.GroundContainerSprite, inputs.DungeonMap, inputs.DungeonActions, inputs.DungeonActionModels,
-                inputs.InteriorBuilding, inputs.Music, inputs.QuestMarkers, inputs.BillboardSprites);
-            Castle = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)),
-                File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
-            var identity = GameCompositionResolver.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+                inputs.InteriorBuilding, inputs.QuestMarkers, inputs.BillboardSprites);
+            Castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
+                TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
+            var identity = TestSessions.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
             Composition = new(definitions ?? TestPayload.Definitions, Inputs, DaggerfallTuning.Defaults, identity);
             if (prepareComposition is not null) Composition = prepareComposition(Composition);
             (Engine, Spatial, Perception, Appearance) = CreateEngine();

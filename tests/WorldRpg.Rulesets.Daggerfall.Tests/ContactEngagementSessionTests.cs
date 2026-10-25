@@ -47,7 +47,7 @@ public sealed class ContactEngagementSessionTests
     }
 
     private static Variants.DaggerfallContactTuning ContactTuning => Variants.DaggerfallContactTuning.Read(
-        File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/variant-tuning-payloads/daggerfall.contact.json")));
+        TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/variant-tuning-payloads/daggerfall.contact.json")));
 
     private static double Reach()
     {

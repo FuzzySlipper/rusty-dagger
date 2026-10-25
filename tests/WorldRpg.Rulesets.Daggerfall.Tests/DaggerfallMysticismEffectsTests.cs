@@ -278,7 +278,7 @@ public sealed class DaggerfallMysticismEffectsTests
         internal Fixture(bool twoSites = false)
         {
             var source = ReadInputs(TestData.RepositoryRoot);
-            if (twoSites) Destination = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)), File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
+            if (twoSites) Destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)), TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
             Composition = new(TestPayload.Definitions, source, DaggerfallTuning.Defaults) { Profiles = new DaggerfallSiteProfiles(Destination is null ? [source] : [source, Destination]) };
             Session = DaggerfallSession.StartNew(Engine().Context, Composition);
         }

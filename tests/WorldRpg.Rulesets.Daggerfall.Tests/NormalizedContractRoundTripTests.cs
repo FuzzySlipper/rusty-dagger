@@ -89,7 +89,7 @@ public sealed class NormalizedContractRoundTripTests
             if (section != "locations") rewrittenSections[section] = rewritten.ToJsonString(PublishedJson.SectionCompact);
         }
 
-        byte[] authored = File.ReadAllBytes(PayloadPath("daggerfall.base.json"));
+        byte[] authored = TestContentFiles.ReadCopy(PayloadPath("daggerfall.base.json"));
         // Re-serializing the complete JsonNode would expand the generated locations value beyond
         // Utf8JsonWriter's single raw-value envelope. Preserve that source section and replace the
         // other records without reserializing unrelated published data.
@@ -106,8 +106,8 @@ public sealed class NormalizedContractRoundTripTests
     [DonorFact("Assets/Scripts/Utility/EnemyBasics.cs")]
     public void Mobile_loot_inputs_the_importer_writes_read_back_through_the_ruleset()
     {
-        string enemyBasics = File.ReadAllText(TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs"));
-        byte[] authored = File.ReadAllBytes(PayloadPath("daggerfall.base.json"));
+        string enemyBasics = TestContentFiles.ReadText(TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs"));
+        byte[] authored = TestContentFiles.ReadCopy(PayloadPath("daggerfall.base.json"));
         global::Daggerfall.Import.Arena2.Arena2MobileCatalogPublication publication = global::Daggerfall.Import.Arena2.Arena2MobileCatalogDocument.Build(
             enemyBasics, Encoding.UTF8.GetString(authored), "donor/EnemyBasics.cs");
         string mobiles = JsonNode.Parse(publication.Json)!.ToJsonString(PublishedJson.SectionCompact);
@@ -144,7 +144,7 @@ public sealed class NormalizedContractRoundTripTests
         RoundTrip<DungeonMediaManifestSidecar>(Path.Combine(closure, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath));
         RoundTrip<CanonicalImportManifest>(Path.Combine(closure, ImportPublicationManifestSerializer.ManifestRelativePath));
         // Without an authored overlay a site presents the product-wide classic sidecar rather than a copy.
-        Assert.False(File.Exists(Path.Combine(closure, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath)));
+        Assert.False(TestContentFiles.Exists(Path.Combine(closure, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath)));
     }
 
     [Fact]
@@ -161,9 +161,9 @@ public sealed class NormalizedContractRoundTripTests
     {
         string payload = PayloadPath("daggerfall.blocks.json");
         RoundTrip<DaggerfallBlockBuildingSet>(payload);
-        DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(payload));
+        DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(payload));
         Assert.Equal(
-            JsonNode.Parse(File.ReadAllBytes(payload))!["buildings"]!.AsArray().Count,
+            JsonNode.Parse(TestContentFiles.ReadCopy(payload))!["buildings"]!.AsArray().Count,
             blocks.RmbBuildings.Count);
     }
 
@@ -173,7 +173,7 @@ public sealed class NormalizedContractRoundTripTests
     /// </summary>
     private static void RoundTrip<T>(string path)
     {
-        JsonNode published = JsonNode.Parse(File.ReadAllBytes(path))!;
+        JsonNode published = JsonNode.Parse(TestContentFiles.ReadCopy(path))!;
         T value = published.Deserialize<T>(PublishedJson.SectionRead)
             ?? throw new InvalidOperationException($"'{path}' read as null.");
         Assert.True(
@@ -181,11 +181,11 @@ public sealed class NormalizedContractRoundTripTests
             $"The importer's {typeof(T).Name} does not rewrite '{path}' unchanged.");
     }
 
-    private static JsonObject ReadImported() => JsonNode.Parse(File.ReadAllBytes(PayloadPath("daggerfall.imported.json")))!.AsObject();
+    private static JsonObject ReadImported() => JsonNode.Parse(TestContentFiles.ReadCopy(PayloadPath("daggerfall.imported.json")))!.AsObject();
 
     private static byte[] RewriteImportedPayload(IReadOnlyDictionary<string, string> replacements) =>
         Encoding.UTF8.GetBytes(TopLevelJsonSectionRewriter.ReplaceOrAppend(
-            File.ReadAllText(PayloadPath("daggerfall.imported.json")), replacements));
+            TestContentFiles.ReadText(PayloadPath("daggerfall.imported.json")), replacements));
 
     private static string PayloadPath(string file) => Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads", file);
 }

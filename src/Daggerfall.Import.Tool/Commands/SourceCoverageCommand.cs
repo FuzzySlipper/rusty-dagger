@@ -9,9 +9,9 @@ namespace Daggerfall.Import.Tool.Commands;
 /// <remarks>
 /// The product sees the repository's tracked <c>content/</c> with the import's generated content over it, so the
 /// generated root (<c>--content</c>, by default the import's staging tree) is read over <c>content/</c>: a file
-/// it holds replaces the repository's file at the same path. A loose generated tree is read by naming
-/// <c>content</c> itself, with <c>--import-records import-records</c>. Every artifact is reported by its
-/// repository path (<c>content/worldrpg/...</c>, <c>import-records/...</c>) wherever it was read from.
+/// it holds replaces the repository's file at the same path. Every artifact is reported under one label
+/// wherever it was read from: <c>content/</c> and its content-root-relative path for what the product sees,
+/// <c>import-records/</c> and its record-relative path for what only the importer keeps.
 /// </remarks>
 internal static class SourceCoverageCommand
 {

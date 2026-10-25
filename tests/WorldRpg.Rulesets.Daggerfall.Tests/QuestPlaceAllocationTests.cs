@@ -22,7 +22,7 @@ public sealed class QuestPlaceAllocationTests
     public void Ordinary_start_selects_an_actual_house_claim_and_retains_selected_text_across_restore()
     {
         DaggerfallDefinitions definitions = Definitions();
-        var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        var blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
         var site = definitions.Locations.Records.First(site => site.Exterior?.Buildings.Values.Count(building =>
             building.Source.BuildingType is >= 17 and <= 20 && HasMarkers(building)) >= 2);
         var houses = site.Exterior!.Buildings.Values.Where(building => building.Source.BuildingType is >= 17 and <= 20
@@ -83,7 +83,7 @@ public sealed class QuestPlaceAllocationTests
     public void Only_house_one_to_four_receive_a_generated_residence_name(int type, string tableName, bool residence)
     {
         var definitions = TestPayload.Definitions;
-        var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        var blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
         bool Eligible(DaggerfallSiteBuildingSource value) => value.Source.BuildingType == 17 && value.Source.FactionId == 0
             && blocks.QuestMarkers.TryGetValue(new(value.Source.Id.SourceKey, value.Source.Id.Index), out var markers) && markers.Count > 0;
         var original = definitions.Locations.Records.First(site => site.Exterior?.Buildings.Values.Any(Eligible) == true);
@@ -108,7 +108,7 @@ public sealed class QuestPlaceAllocationTests
     public void Owned_active_and_marker_free_buildings_are_ineligible_without_a_substitute(bool markersAvailable, bool owned, bool claimed)
     {
         DaggerfallDefinitions definitions = Definitions();
-        var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        var blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
         bool HasMarkers(DaggerfallSiteBuildingSource value) => value.Source.BuildingType == 17 && value.Source.FactionId is not (42 or 108)
             && blocks.QuestMarkers.TryGetValue(new(value.Source.Id.SourceKey, value.Source.Id.Index), out var markers) && markers.Count > 0;
         var source = definitions.Locations.Records.First(site => site.Exterior?.Buildings.Values.Any(HasMarkers) == true);
@@ -140,7 +140,7 @@ public sealed class QuestPlaceAllocationTests
     public void Remote_exact_type_preserves_the_donor_maps_header_filter(bool inHeader)
     {
         var definitions = TestPayload.Definitions;
-        var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        var blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
         bool Eligible(DaggerfallSiteBuildingSource building) => building.Source.BuildingType == 15
             && building.Source.FactionId is not (42 or 108) && blocks.QuestMarkers.TryGetValue(new(building.Source.Id.SourceKey, building.Source.Id.Index), out var markers) && markers.Count > 0;
         var original = definitions.Locations.Records.First(site => site.Index > 0 && site.Kind == DaggerfallSiteKind.TownCity

@@ -10,6 +10,12 @@ namespace Daggerfall.Import.Publication;
 /// clips, and the generated inventory that indexes them.
 /// </summary>
 /// <remarks>
+/// <para>
+/// The authored UI images are the product's own tracked content under the same group-relative paths, so the
+/// inventory lists them with their digests and display facts while the group writes only what it generates.
+/// An authored original the publication would resample is refused, since the product reads the tracked file.
+/// </para>
+/// <para>
 /// The group publishes no audio. The product-wide world media publication carries the clips every site's
 /// classic sidecar maps, under the one audio bundle the Host declares for it, and the session opens clips
 /// only from that bundle, so copies of the same WAV bodies here would be bytes nothing opens. The images
@@ -17,6 +23,7 @@ namespace Daggerfall.Import.Publication;
 /// rather than copied into them.
 /// The sound catalog is built from the same publication as an importer-side disposition report of the
 /// numeric archive; nothing at runtime reads it, so it is reported by the command rather than published.
+/// </para>
 /// </remarks>
 public sealed class ClassicMediaGroup
 {
@@ -38,8 +45,18 @@ public sealed class ClassicMediaGroup
     /// <summary>The disposition of every clip of the numeric archive, which the group reports and does not publish.</summary>
     public DaggerfallSoundCatalog SoundCatalog { get; }
 
-    /// <summary>Every group-relative artifact the group publishes: the publication's artifacts without its audio clips.</summary>
+    /// <summary>
+    /// Every group-relative artifact the group's inventory lists: the publication's artifacts without its audio
+    /// clips, the authored UI images among them.
+    /// </summary>
     public IReadOnlyList<ImportPublicationArtifact> Artifacts { get; }
+
+    /// <summary>The artifacts the group writes: every listed one but the authored UI images, which are tracked product content.</summary>
+    public IReadOnlyList<ImportPublicationArtifact> GeneratedArtifacts => [.. Artifacts.Where(artifact => !IsAuthoredUi(artifact.RelativePath))];
+
+    /// <summary>Whether a group-relative path names an authored UI image, which the product carries itself.</summary>
+    public static bool IsAuthoredUi(string relativePath) =>
+        relativePath.StartsWith(AuthoredUiAssetSet.RelativeRoot + "/", StringComparison.Ordinal);
 
     /// <summary>
     /// Builds the classic media and its sound catalog. The catalog's admitted entries are the
@@ -51,6 +68,16 @@ public sealed class ClassicMediaGroup
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(profile);
         Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(inputs, profile);
+        // The inventory states the tracked file's digest, so the published bytes must be that file's.
+        foreach (ClassicAuthoredUiAsset asset in profile.AuthoredUiAssets ?? [])
+        {
+            if (!publication.Artifacts.Single(artifact => artifact.RelativePath == asset.RelativePath).Bytes.Span.SequenceEqual(asset.PngBytes))
+            {
+                throw new InvalidOperationException(
+                    $"Authored UI asset '{asset.Id}' would be published resampled, but the product reads the tracked original '{asset.SourceLabel}' itself; supply the original at its published size.");
+            }
+        }
+
         DaggerfallSoundCatalog catalog = DaggerfallSoundCatalogBuilder.Build(
             SoundArchive.Parse(inputs.DaggerSound, Arena2ClassicMediaPublication.DaggerSoundSourcePath),
             publication.SoundAdmissions);

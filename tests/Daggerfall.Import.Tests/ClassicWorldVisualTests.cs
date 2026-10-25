@@ -73,11 +73,10 @@ public sealed class ClassicWorldVisualTests
         // Both records are virtual solid-colour records (TEXTURE.000's record is a palette index,
         // TEXTURE.001's is index + 128), so the published PNG must be exactly the palette colour of its
         // record. This pins the decode: a wrong frame, the wrong palette or a transparent alpha fails.
-        string root = TestData.RepositoryRoot;
         byte[] palette = File.ReadAllBytes(TestData.Corpus("PAL.PAL"));
         foreach (ClassicWorldVisualTexture texture in visual.Materials)
         {
-            byte[] png = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/shared", texture.RelativePath));
+            byte[] png = ImportedContent.Read("worldrpg/imports/shared/" + texture.RelativePath);
             Assert.Equal(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(png)), texture.ContentDigest.Value);
             Assert.Equal(png.LongLength, texture.ByteLength);
 
@@ -174,9 +173,7 @@ public sealed class ClassicWorldVisualTests
 
     private static ClassicWorldVisualManifest PublishedArrowDescriptor()
     {
-        string root = TestData.RepositoryRoot;
-        using JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(
-            Path.Combine(root, "content/worldrpg/imports/shared/media/classic/manifest.json")));
+        using JsonDocument manifest = JsonDocument.Parse(ImportedContent.Read("worldrpg/imports/shared/media/classic/manifest.json"));
         return Assert.Single(manifest.RootElement.GetProperty("worldVisuals").Deserialize<List<ClassicWorldVisualManifest>>(PublishedJson.SectionRead)!);
     }
 

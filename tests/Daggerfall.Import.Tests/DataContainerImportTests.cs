@@ -48,10 +48,11 @@ public sealed class DataContainerImportTests : IDisposable
     }
 
     [Fact]
-    public void The_track_list_is_every_track_the_catalogue_plays_once()
+    public void The_track_list_names_each_classic_track_once_in_ordinal_order()
     {
-        Assert.Equal(ClassicMusicCatalogue.All.Select(cue => cue.Track).Distinct().Order(StringComparer.Ordinal), ClassicMusicTracks.All);
-        Assert.All(ClassicMusicTracks.All, track => Assert.StartsWith("song_", track, StringComparison.Ordinal));
+        Assert.Equal(ClassicMusicTracks.All.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal), ClassicMusicTracks.All);
+        Assert.All(ClassicMusicTracks.All, track => Assert.Matches("^song_[a-z0-9_]+$", track));
+        Assert.Equal(97, ClassicMusicTracks.All.Count);
     }
 
     [Fact]
@@ -127,13 +128,12 @@ public sealed class DataContainerImportTests : IDisposable
             CommandArguments.Parse(step.Arguments, command!);
         }
 
-        // Each step writes into the staging tree or the records, never into the repository's content.
+        // Each step writes into the staging tree or the records, never into the repository's content: what it names
+        // there is the authored base payload and the authored UI art, both read.
         Assert.All(steps.SelectMany(step => step.Arguments).Where(argument => argument.StartsWith("content/", StringComparison.Ordinal)),
-            argument => Assert.Equal("content/worldrpg/payloads/daggerfall.base.json", argument));
-        Assert.Equal(["music-tracks", "music-media", "classic-media"], steps.Take(3).Select(step => step.Label));
-        Assert.Equal(ImportLayout.MusicTracks, steps[1].Arguments[steps[1].Arguments.ToList().IndexOf("--sound") + 1]);
+            argument => Assert.Contains(argument, new[] { "content/worldrpg/payloads/daggerfall.base.json", AuthoredUi.ProductDirectory }));
+        Assert.Equal(["music-tracks", "classic-media"], steps.Take(2).Select(step => step.Label));
         Assert.Equal("source-coverage", steps[^1].Label);
-        Assert.Contains("--music-manifest", steps.Single(step => step.Label == "charing-exterior").Arguments);
         Assert.Contains("variants.json", steps.Single(step => step.Label == "world-blocks").Arguments);
     }
 
@@ -171,48 +171,18 @@ public sealed class DataContainerImportTests : IDisposable
     }
 
     [Fact]
-    public void A_music_folder_of_other_formats_stages_its_tracks_and_publishes_a_cue_manifest_naming_none()
+    public void The_data_container_steps_are_the_same_whichever_music_was_supplied()
     {
-        string music = Directory.CreateDirectory(Path.Combine(root, "Sound")).FullName;
-        File.WriteAllBytes(Path.Combine(music, "song_dungeon.mp3"), [1, 2, 3]);
-        File.WriteAllBytes(Path.Combine(music, "SONG_04.FLAC"), [4, 5]);
-        string tracks = Path.Combine(root, "tracks");
-        string publication = Path.Combine(root, "music-publication");
+        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/arena2", "/donor", null, null, null), root);
+        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/arena2", "/donor", "local/Sound", null, null), root);
 
-        // The import's own sequence: stage the tracks, then publish the transitional cues from the staged tracks.
-        Assert.Equal(0, Program.Commands["music-tracks"].Invoke(["music-tracks", "--music", music, "--out", tracks]));
-        Assert.Equal(0, Program.Commands["music-media"].Invoke(["music-media", "--out", publication, "--sound", tracks, "--update"]));
-
-        Assert.Equal(["song_04.flac", "song_dungeon.mp3"], Directory.EnumerateFiles(tracks).Select(Path.GetFileName).Order(StringComparer.Ordinal));
-        string manifest = Path.Combine(publication, ClassicMusicPublication.Group, ClassicMusicPublication.ManifestRelativePath);
-        Assert.Empty(ClassicMusicPublication.Read(File.ReadAllBytes(manifest)).Cues);
-        // The world media and site commands read that manifest and name no cue.
-        Assert.Empty(SiteInputs.MusicRecords(manifest));
-    }
-
-    [Fact]
-    public void An_upper_case_ogg_recording_is_published_as_its_cue_once_staged()
-    {
-        string music = Directory.CreateDirectory(Path.Combine(root, "Sound")).FullName;
-        File.WriteAllBytes(Path.Combine(music, "SONG_DUNGEON.OGG"), [1, 2, 3]);
-        string tracks = Path.Combine(root, "tracks");
-        string publication = Path.Combine(root, "music-publication");
-
-        Program.Commands["music-tracks"].Invoke(["music-tracks", "--music", music, "--out", tracks]);
-        Program.Commands["music-media"].Invoke(["music-media", "--out", publication, "--sound", tracks, "--update"]);
-
-        ClassicMusicRecord cue = Assert.Single(ClassicMusicPublication.Read(File.ReadAllBytes(
-            Path.Combine(publication, ClassicMusicPublication.Group, ClassicMusicPublication.ManifestRelativePath))).Cues);
-        Assert.Equal("song_dungeon", cue.Track);
-    }
-
-    [Fact]
-    public void Without_music_no_cue_is_named_and_no_tracks_are_staged()
-    {
-        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(new("local/arena2", "/donor", null, null, null), root);
-
-        Assert.DoesNotContain(steps, step => step.Label is "music-media" or "music-tracks");
-        Assert.DoesNotContain(steps, step => step.Arguments.Contains("--music-manifest"));
+        // Only the music container's own step reads the music folder; no other step names it or what it staged.
+        Assert.DoesNotContain(without, step => step.Label == "music-tracks");
+        ImportCommand.Step tracks = Assert.Single(with, step => step.Label == "music-tracks");
+        Assert.Equal(["music-tracks", "--music", "local/Sound", "--out", ImportLayout.MusicTracks], tracks.Arguments);
+        Assert.Equal(
+            without.Select(step => string.Join('\u001f', [step.Label, .. step.Arguments])),
+            with.Where(step => step != tracks).Select(step => string.Join('\u001f', [step.Label, .. step.Arguments])));
     }
 
     [Fact]
@@ -226,25 +196,24 @@ public sealed class DataContainerImportTests : IDisposable
     }
 
     [Fact]
-    public void The_derived_pack_descriptors_are_the_tracked_ones_they_replace()
+    public void Every_pack_a_tracked_bundle_selects_is_either_tracked_or_derived_and_derived_payloads_are_payloads()
     {
-        string packs = Path.Combine(TestData.RepositoryRoot, "content/worldrpg/content-packs");
-        foreach (JsonObject pack in DataContainers.DerivedPacks())
-        {
-            string id = (string)pack["id"]!;
-            JsonNode tracked = JsonNode.Parse(File.ReadAllText(Path.Combine(packs, id + ".pack.json")))!;
-            Assert.True(JsonNode.DeepEquals(tracked, pack), $"the generated descriptor of '{id}' differs from the tracked one");
-        }
+        // The derived packs' descriptors travel only in the data container, so a tracked descriptor of the same
+        // pack would be a second statement of it.
+        string content = Path.Combine(TestData.RepositoryRoot, "content/worldrpg");
+        HashSet<string> tracked = [.. Directory.EnumerateFiles(Path.Combine(content, "content-packs"), "*.pack.json")
+            .Select(file => (string)JsonNode.Parse(File.ReadAllText(file))!["id"]!)];
+        HashSet<string> derived = [.. DataContainers.DerivedPacks().Select(pack => (string)pack["id"]!)];
+        Assert.Empty(tracked.Intersect(derived));
 
-        // Every tracked descriptor whose payload the import writes is one of them.
-        string[] derived = [.. DataContainers.DerivedPacks().Select(pack => (string)pack["id"]!)];
-        foreach (string file in Directory.EnumerateFiles(packs, "*.pack.json"))
-        {
-            string payload = (string)JsonNode.Parse(File.ReadAllText(file))!["payload"]!;
-            bool generated = payload is "worldrpg/payloads/daggerfall.imported.json" or "worldrpg/payloads/daggerfall.blocks.json"
-                || payload.StartsWith("worldrpg/payloads/daggerfall.quests.", StringComparison.Ordinal);
-            Assert.Equal(generated, derived.Contains(Path.GetFileName(file)[..^".pack.json".Length]));
-        }
+        string[] selected = [.. Directory.EnumerateFiles(Path.Combine(content, "bundles"), "*.bundle.json")
+            .SelectMany(file => JsonNode.Parse(File.ReadAllText(file))!["contentPacks"]!.AsArray().Select(pack => (string)pack!["id"]!))
+            .Distinct(StringComparer.Ordinal)];
+        Assert.NotEmpty(selected);
+        Assert.All(selected, id => Assert.True(tracked.Contains(id) || derived.Contains(id), $"bundle-selected pack '{id}' is neither tracked nor derived"));
+        Assert.Contains("daggerfall.imported", selected);
+
+        Assert.All(DataContainers.DerivedPacks(), pack => Assert.StartsWith("worldrpg/payloads/", (string)pack["payload"]!, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -339,6 +308,35 @@ public sealed class DataContainerImportTests : IDisposable
             Assert.All(score.Entries.ToArray().Where(entry => entry.Path != ImportLayout.DescriptorPath),
                 entry => Assert.Contains(Path.GetFileNameWithoutExtension(entry.Path), ClassicMusicTracks.All));
         });
+    }
+
+    [ImportedDataContainerFact]
+    public void The_imported_data_container_lists_the_authored_ui_art_it_leaves_to_the_product_and_names_no_music()
+    {
+        IReadOnlyDictionary<string, ContentReferenceInfo> entries = TestDataContainers.Entries(TestDataContainers.Data);
+        Assert.DoesNotContain(entries.Keys, path => path.StartsWith("worldrpg/media/ui/authored/", StringComparison.Ordinal));
+
+        // The classic media inventory names every tracked original by the product's content path, with its own digest.
+        string tracked = Path.Combine(TestData.RepositoryRoot, AuthoredUi.ProductDirectory);
+        JsonNode[] authored = [.. JsonNode.Parse(TestDataContainers.Read(TestDataContainers.Data, "worldrpg/media/classic-media-inventory.json"))!["artifacts"]!.AsArray()
+            .Select(entry => entry!).Where(entry => ((string)entry["path"]!).StartsWith("worldrpg/media/ui/authored/", StringComparison.Ordinal))];
+        Assert.Equal(
+            Directory.EnumerateFiles(tracked, "*.png").Select(file => "worldrpg/media/ui/authored/" + Path.GetFileName(file)).Order(StringComparer.Ordinal),
+            authored.Select(entry => (string)entry["path"]!).Order(StringComparer.Ordinal));
+        foreach (JsonNode entry in authored)
+        {
+            byte[] bytes = File.ReadAllBytes(Path.Combine(tracked, Path.GetFileName((string)entry["path"]!)));
+            Assert.Equal(bytes.LongLength, (long)entry["byteLength"]!);
+            Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(bytes)), (string)entry["sha256"]!);
+        }
+
+        Assert.Contains(authored, entry => entry["display"] is not null);
+
+        // No classic sidecar names music: the data container is the same whichever recordings were supplied.
+        string[] sidecars = [.. entries.Keys.Where(path => path.StartsWith("worldrpg/imports/", StringComparison.Ordinal)
+            && path.EndsWith("/" + Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, StringComparison.Ordinal))];
+        Assert.Contains("worldrpg/imports/shared/" + Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, sidecars);
+        Assert.All(sidecars, path => Assert.False(JsonNode.Parse(TestDataContainers.Read(TestDataContainers.Data, path))!.AsObject().ContainsKey("music"), path));
     }
 
     private static void Write(string directory, string path, ReadOnlySpan<byte> bytes)

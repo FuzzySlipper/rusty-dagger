@@ -258,7 +258,7 @@ internal class SpatialFake : DispatchProxy
         colliders.Instances.Clear();
         foreach ((ulong instance, ulong asset) in nextInstances) colliders.Instances.Add(instance, asset);
         ulong before = colliders.Revision++;
-        return new CollisionReplaceReceipt(before, colliders.Revision, (ulong)colliders.Assets.Count, (ulong)colliders.Instances.Count, 0);
+        return new CollisionReplaceReceipt(before, colliders.Revision, (ulong)colliders.Assets.Count, (ulong)colliders.Instances.Count, 0, 0);
     }
 
     private static CollisionResidencyRequest SnapshotCollisionResidency(CollisionResidencyRequest request) => new(

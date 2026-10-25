@@ -92,7 +92,7 @@ public sealed class DaggerfallQuestOriginalSourceTests
     [GeneratedContentFact]
     public void Base_payload_publishes_the_complete_original_source_selection()
     {
-        using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "import-records/daggerfall.import-records.json")));
+        using JsonDocument document = JsonDocument.Parse(ImportedContent.Record("daggerfall.import-records.json"));
         JsonElement quests = document.RootElement.GetProperty("questOriginalSources").GetProperty("quests");
 
         Assert.Equal(307, quests.GetArrayLength());

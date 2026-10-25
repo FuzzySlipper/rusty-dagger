@@ -80,7 +80,7 @@ public sealed class PropertyCrimeSessionTests
         var profile = ReadProfile(root, FullContent(root), TestPayload.Definitions, "daggerfall.charing-interior-1-1-0.json");
         using var host = EngineTestHost.Create(new EngineTestHostOptions { Content = new Dictionary<string, ReadOnlyMemory<byte>>
         {
-            [profile.SpatialArtifact.Path] = File.ReadAllBytes(Path.Combine(root, "content", profile.SpatialArtifact.Path)),
+            [profile.SpatialArtifact.Path] = TestContentFiles.ReadCopy(Path.Combine(root, "content", profile.SpatialArtifact.Path)),
         } });
         host.Call(engine =>
         {
@@ -119,7 +119,7 @@ public sealed class PropertyCrimeSessionTests
             _caught = caught;
             var profile = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), TestPayload.Definitions, "daggerfall.charing-interior-1-1-0.json");
             Assert.NotEmpty(profile.PropertyContainers);
-            _composition = new(TestPayload.Definitions, profile, DaggerfallTuning.Defaults) { Profiles = new([profile]), Blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) };
+            _composition = new(TestPayload.Definitions, profile, DaggerfallTuning.Defaults) { Profiles = new([profile]), Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) };
             Session = DaggerfallSession.StartNew(Engine(), _composition);
         }
         private IEngineContext Engine()

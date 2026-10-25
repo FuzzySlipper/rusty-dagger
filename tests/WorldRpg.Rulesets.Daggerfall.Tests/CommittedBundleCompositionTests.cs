@@ -25,7 +25,7 @@ public sealed class CommittedBundleCompositionTests
         TheoryData<string> bundles = [];
         foreach (string path in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/bundles"), "*.bundle.json").Order(StringComparer.Ordinal))
         {
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(path));
+            using JsonDocument document = JsonDocument.Parse(TestContentFiles.ReadCopy(path));
             bundles.Add(document.RootElement.GetProperty("id").GetString()!);
         }
         return bundles;
@@ -42,13 +42,13 @@ public sealed class CommittedBundleCompositionTests
     public void Every_committed_bundle_creates_a_session_through_the_real_ruleset(string bundleId)
     {
         string root = TestData.RepositoryRoot;
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId(bundleId), CompiledVariants).RequireComposition();
+        ResolvedGameComposition composition = TestSessions.Resolve(FullContent(root), new GameBundleId(bundleId), CompiledVariants).RequireComposition();
         // A bundle's new-game start pack, when it selects one, names its start site over the base definition.
         string startPack = composition.ContentPacks.SingleOrDefault(pack => pack.Role.Value == NewGameStartRole) is { } startOverride
             ? JsonDocument.Parse(startOverride.Payload).RootElement.GetProperty("startSite").GetString()!
             : TestPayload.Definitions.NewGame.StartSitePack;
         ContentPack startSite = composition.ContentPacks.Single(pack => pack.Id.Value == startPack && pack.Role.Value == SiteRole);
-        DaggerfallSiteProfile start = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(root)), startSite.Payload, TestPayload.Definitions);
+        DaggerfallSiteProfile start = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)), startSite.Payload, TestPayload.Definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, start);
@@ -79,20 +79,13 @@ public sealed class CommittedBundleCompositionTests
     }
 
     /// <summary>
-    /// Every site's audio bodies are published once, in the world media publication, and opened through
-    /// its one bundle; the SDK stages only the bundles the Host declares, so the Host must declare that
-    /// bundle at the root the ruleset strips, and no site payload names a bundle of its own.
+    /// Every site's audio bodies are published once, in the world media publication, and opened from the data
+    /// container below its audio root, so no site payload names an audio bundle of its own.
     /// </summary>
     [Fact]
-    public void The_host_stages_the_world_media_audio_bundle_and_no_site_names_its_own()
+    public void No_site_payload_names_an_audio_bundle_of_its_own()
     {
         string root = TestData.RepositoryRoot;
-        Dictionary<string, string> declared = XDocument.Load(Path.Combine(root, "src/WorldRpg.Host/WorldRpg.Host.csproj"))
-            .Descendants("RustyEngineContentBundle")
-            .ToDictionary(item => item.Attribute("Include")!.Value, item => item.Attribute("Root")!.Value, StringComparer.Ordinal);
-
-        Assert.True(declared.TryGetValue(DaggerfallWorldMedia.AudioBundleId, out string? stagedRoot), $"The Host does not declare the world media audio bundle '{DaggerfallWorldMedia.AudioBundleId}'.");
-        Assert.Equal(DaggerfallWorldMedia.AudioRoot, stagedRoot);
         string[] sitePayloads = [.. Directory.GetFiles(Path.Combine(root, "content/worldrpg/payloads"), "daggerfall.*.json")
             .Where(path => TopLevelSection(TestContentFiles.Read(path), "world") is not null)];
         Assert.NotEmpty(sitePayloads);
@@ -104,44 +97,31 @@ public sealed class CommittedBundleCompositionTests
     }
 
     /// <summary>
-    /// The Host stages exactly the bundles the default composition opens. Each named bundle the
-    /// ruleset opens by id, the world media audio bundle every site's clips open through included, is a
-    /// Host item at the root its reader strips; every clip a selected site names is a file under that root; and
-    /// every Host item is one of those, so the Host stages no bundle nothing opens.
+    /// The data container carries every root the default composition opens as a whole (the sky, the cinematics,
+    /// the world audio and the per-block world), and every clip a selected site names is a file below the world
+    /// media audio root in it.
     /// </summary>
     [Fact]
-    public void The_host_stages_exactly_the_bundles_the_default_composition_opens()
+    public void The_data_container_carries_every_root_the_default_composition_opens()
     {
         string root = TestData.RepositoryRoot;
-        Dictionary<string, string> declared = XDocument.Load(Path.Combine(root, "src/WorldRpg.Host/WorldRpg.Host.csproj"))
-            .Descendants("RustyEngineContentBundle")
-            .ToDictionary(item => item.Attribute("Include")!.Value, item => item.Attribute("Root")!.Value, StringComparer.Ordinal);
-        Dictionary<string, string> opened = new(StringComparer.Ordinal)
-        {
-            [DaggerfallMusicBundle.BundleId] = DaggerfallMusicBundle.LogicalRoot,
-            [DaggerfallSkyMedia.BundleId] = DaggerfallSkyMedia.LogicalRoot,
-            [DaggerfallCinematicPresentation.BundleId] = DaggerfallCinematicPresentation.Root.TrimEnd('/'),
-            [DaggerfallWorldMedia.AudioBundleId] = DaggerfallWorldMedia.AudioRoot,
-            [DaggerfallWorldBlocks.BundleId] = DaggerfallWorldBlocks.Root,
-        };
+        IReadOnlyCollection<string> carried = [.. TestDataContainers.Entries(TestDataContainers.Data).Keys];
+        string[] opened = [DaggerfallSkyMedia.LogicalRoot, DaggerfallCinematicPresentation.Root, DaggerfallWorldMedia.AudioRoot, DaggerfallWorldBlocks.Root];
+        Assert.All(opened, prefix => Assert.Contains(carried, path => path.StartsWith(prefix + "/", StringComparison.Ordinal)));
         ProductContent content = FullContent(root);
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();
+        ResolvedGameComposition composition = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();
+        HashSet<string> entries = [.. carried];
         List<string> missingClips = [];
         foreach (ContentPack pack in composition.ContentPacks.Where(pack => pack.Role.Value == SiteRole))
         {
-            DaggerfallSiteProfile site = DaggerfallSiteContent.Read(new DaggerfallData(content), pack.Payload, TestPayload.Definitions);
+            DaggerfallSiteProfile site = DaggerfallSiteContent.Read(TestSessions.Data(content), pack.Payload, TestPayload.Definitions);
             string clips = DaggerfallWorldMedia.AudioRoot;
             Assert.NotEmpty(site.Audio);
             missingClips.AddRange(site.Audio
-                .Where(clip => !clip.Path.StartsWith(clips + "/", StringComparison.Ordinal) || !File.Exists(Path.Combine(root, "content", clip.Path)))
+                .Where(clip => !clip.Path.StartsWith(clips + "/", StringComparison.Ordinal) || !entries.Contains(clip.Path))
                 .Select(clip => $"{pack.Id.Value}: {clip.Id} -> {clip.Path}"));
         }
         Assert.Empty(missingClips);
-
-        Assert.Equal(
-            opened.OrderBy(entry => entry.Key, StringComparer.Ordinal).ToArray(),
-            declared.OrderBy(entry => entry.Key, StringComparer.Ordinal).ToArray());
-        Assert.All(declared.Values, staged => Assert.True(Directory.Exists(Path.Combine(root, "content", staged)), $"Staged bundle root '{staged}' was not generated."));
     }
 
     /// <summary>
@@ -160,16 +140,19 @@ public sealed class CommittedBundleCompositionTests
         HashSet<string> selected = [];
         foreach (string bundleId in CommittedBundles().Cast<object[]>().Select(row => (string)row[0]))
         {
-            ResolvedGameComposition resolved = GameCompositionResolver.Resolve(content, new GameBundleId(bundleId), CompiledVariants).RequireComposition();
+            ResolvedGameComposition resolved = TestSessions.Resolve(content, new GameBundleId(bundleId), CompiledVariants).RequireComposition();
             foreach (ContentPack pack in resolved.ContentPacks) selected.Add(pack.Id.Value);
         }
+        // Every pack a source describes: the tracked descriptors and the derived packs the data container carries.
         string[] committed = [.. Directory.GetFiles(Path.Combine(root, "content/worldrpg/content-packs"), "*.pack.json")
-            .Select(path => JsonDocument.Parse(File.ReadAllBytes(path)).RootElement.GetProperty("id").GetString()!)
+            .Select(path => JsonDocument.Parse(TestContentFiles.ReadCopy(path)).RootElement.GetProperty("id").GetString()!)
+            .Concat(TestSessions.Installed(content).SelectMany(installed => installed.Description?.ContentPacks ?? [])
+                .Select(pack => pack.GetProperty("id").GetString()!))
             .Order(StringComparer.Ordinal)];
         Assert.Equal<IEnumerable<string>>(committed, selected.Order(StringComparer.Ordinal));
 
         DaggerfallNewGameDefinition newGame = TestPayload.Definitions.NewGame;
-        ResolvedGameComposition classic = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();
+        ResolvedGameComposition classic = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();
         Assert.Contains(classic.ContentPacks, pack => pack.Id.Value == newGame.StartSitePack && pack.Role.Value == SiteRole);
         Assert.NotEmpty(newGame.Quests);
 
@@ -196,7 +179,7 @@ public sealed class CommittedBundleCompositionTests
     [Fact]
     public void Admission_refuses_a_pack_role_the_ruleset_does_not_interpret()
     {
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => CreateWithPackRole("daggerfall.quests.mages", "daggerfall.unknown"));
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => CreateWithPackRole("daggerfall.castle-necromoghan", "daggerfall.unknown"));
 
         Assert.Contains("declares role 'daggerfall.unknown'", error.Message, StringComparison.Ordinal);
     }
@@ -213,7 +196,7 @@ public sealed class CommittedBundleCompositionTests
     public void An_unknown_corpus_id_is_admitted_from_what_its_payload_states()
     {
         string root = TestData.RepositoryRoot;
-        JsonObject payload = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.mages.json")))!.AsObject();
+        JsonObject payload = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.mages.json")))!.AsObject();
         payload["id"] = "a-corpus-no-code-names";
 
         IReadOnlyList<DaggerfallClassicQuestCorpusReceipt> receipts = DaggerfallClassicQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions);
@@ -262,7 +245,7 @@ public sealed class CommittedBundleCompositionTests
         ProductContentFile[] files = [.. full.Files.ToArray().Select(file => Encoding.UTF8.GetString(file.Path.Span) == bundlePath
             ? new ProductContentFile(file.Path.ToArray(), Encoding.UTF8.GetBytes(bundle.ToJsonString()))
             : file)];
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(new ProductContent(files, bundles), new GameBundleId("daggerfall.classic")).RequireComposition();
+        ResolvedGameComposition composition = TestSessions.Resolve(new ProductContent(files, bundles), new GameBundleId("daggerfall.classic")).RequireComposition();
         DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -283,7 +266,7 @@ public sealed class CommittedBundleCompositionTests
         ProductContentFile[] files = [.. full.Files.ToArray().Select(file => Encoding.UTF8.GetString(file.Path.Span) == manifestPath
             ? new ProductContentFile(file.Path.ToArray(), Encoding.UTF8.GetBytes(manifest.ToJsonString()))
             : file)];
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(new ProductContent(files, bundles), new GameBundleId("daggerfall.classic")).RequireComposition();
+        ResolvedGameComposition composition = TestSessions.Resolve(new ProductContent(files, bundles), new GameBundleId("daggerfall.classic")).RequireComposition();
         DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);

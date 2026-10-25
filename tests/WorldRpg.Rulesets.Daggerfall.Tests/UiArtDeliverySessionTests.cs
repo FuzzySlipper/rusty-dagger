@@ -30,7 +30,7 @@ public sealed class UiArtDeliverySessionTests
         PopulateContent(content, inputs);
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
 
-        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content) });
         session.PublishInitial();
         Dictionary<string, object?> hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
         Dictionary<string, object?> art = Assert.IsType<Dictionary<string, object?>>(hud["uiArt"]);
@@ -64,7 +64,7 @@ public sealed class UiArtDeliverySessionTests
 
         // The bytes are the published artifacts, read from admitted content by their content name.
         Assert.Equal(
-            $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/ui/screen-death.png")))}",
+            $"data:image/png;base64,{Convert.ToBase64String(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/media/ui/screen-death.png")))}",
             images["screen.death"]);
         // Every supplied screen arrives byte for byte from the artifact the inventory names, so a screen
         // published from the wrong file - or from a re-encode that lost its palette - fails here rather
@@ -79,7 +79,7 @@ public sealed class UiArtDeliverySessionTests
         })
         {
             Assert.Equal(
-                $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content", "worldrpg", "media", "ui", $"{file}.png")))}",
+                $"data:image/png;base64,{Convert.ToBase64String(TestContentFiles.Read(Path.Combine(root, "content", "worldrpg", "media", "ui", $"{file}.png")))}",
                 images[id]);
         }
         // The set is exactly what this presentation draws - the screens it shows plus the icons the
@@ -117,30 +117,30 @@ public sealed class UiArtDeliverySessionTests
 
         // The travel map's canvases arrive byte for byte from the published map artifacts.
         Assert.Equal(
-            $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/maps/map-trav0i00.png")))}",
+            $"data:image/png;base64,{Convert.ToBase64String(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/media/maps/map-trav0i00.png")))}",
             images["map.trav0i00"]);
         Assert.Equal(
-            $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/maps/map-fmap0i17.png")))}",
+            $"data:image/png;base64,{Convert.ToBase64String(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/media/maps/map-fmap0i17.png")))}",
             images["map.fmap0i17"]);
 
         // One icon byte for byte, from the path the inventory states, so a wrong file under a right
         // identity cannot pass on a prefix check.
-        using JsonDocument inventory = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)));
+        using JsonDocument inventory = JsonDocument.Parse(TestContentFiles.Read(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)));
         string iconPath = inventory.RootElement.GetProperty("artifacts").EnumerateArray()
             .Where(artifact => artifact.TryGetProperty("mediaId", out JsonElement mediaId) && mediaId.GetString() == "inventory.icon.iron-dagger")
             .Single()
             .GetProperty("path").GetString()!;
         Assert.Equal(
-            $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content", iconPath)))}",
+            $"data:image/png;base64,{Convert.ToBase64String(TestContentFiles.Read(Path.Combine(root, "content", iconPath)))}",
             images["inventory.icon.iron-dagger"]);
 
         // Every escort portrait arrives from its character inventory artifact, with the same bytes
         // as the published canvas rather than a name or a data-URL prefix alone.
-        using JsonDocument characters = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content", DaggerfallUiArt.CharacterInventoryPath)));
+        using JsonDocument characters = JsonDocument.Parse(TestContentFiles.Read(Path.Combine(root, "content", DaggerfallUiArt.CharacterInventoryPath)));
         Dictionary<string, string> characterPaths = characters.RootElement.GetProperty("artifacts").EnumerateArray()
             .ToDictionary(artifact => artifact.GetProperty("mediaId").GetString()!, artifact => artifact.GetProperty("path").GetString()!);
         Assert.All(portraits, id => Assert.Equal(
-            $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content", characterPaths[id])))}", images[id]));
+            $"data:image/png;base64,{Convert.ToBase64String(TestContentFiles.Read(Path.Combine(root, "content", characterPaths[id])))}", images[id]));
     }
 
     /// <summary>
@@ -158,7 +158,7 @@ public sealed class UiArtDeliverySessionTests
         DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
-        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content) });
         session.PublishInitial();
         Dictionary<string, object?> hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
         Dictionary<string, object?> art = Assert.IsType<Dictionary<string, object?>>(hud["uiArt"]);
@@ -176,7 +176,7 @@ public sealed class UiArtDeliverySessionTests
         {
             // Comments are prose rather than names the DOM draws (`window.confirm` in a doc block), so only
             // code is scanned; a block comment and a whole-line comment are the two shapes the client writes.
-            string code = Regex.Replace(File.ReadAllText(path), @"/\*[\s\S]*?\*/|^\s*//[^\n]*", "", RegexOptions.Multiline);
+            string code = Regex.Replace(TestContentFiles.ReadText(path), @"/\*[\s\S]*?\*/|^\s*//[^\n]*", "", RegexOptions.Multiline);
             foreach (Match literal in Regex.Matches(code, @"['""`](?<id>[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+)['""`]"))
             {
                 string id = literal.Groups["id"].Value;
@@ -200,7 +200,7 @@ public sealed class UiArtDeliverySessionTests
         string[] files = [.. Directory.GetFiles(Path.Combine(root, "src/ui"), "*.*")
             .Where(path => path.EndsWith(".ts", StringComparison.Ordinal) || path.EndsWith(".css", StringComparison.Ordinal))
             .Where(path => !path.EndsWith(".d.ts", StringComparison.Ordinal))
-            .SelectMany(path => Regex.Matches(File.ReadAllText(path), @"[\w./-]+\.(?:png|jpe?g|gif|webp|bmp|svg|wav|ogg|mp3|mp4|webm)\b", RegexOptions.IgnoreCase)
+            .SelectMany(path => Regex.Matches(TestContentFiles.ReadText(path), @"[\w./-]+\.(?:png|jpe?g|gif|webp|bmp|svg|wav|ogg|mp3|mp4|webm)\b", RegexOptions.IgnoreCase)
                 .Select(match => $"{Path.GetFileName(path)}: {match.Value}"))];
         Assert.Empty(files);
     }
@@ -214,7 +214,7 @@ public sealed class UiArtDeliverySessionTests
         PopulateContent(content, inputs);
         var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
-        using var session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+        using var session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content) });
         session.ApplyProductMode(WorldRpg.Kit.ProductMode.Title);
         ulong step = 0;
         Send("{\"action\":\"character-begin\"}");
@@ -228,7 +228,7 @@ public sealed class UiArtDeliverySessionTests
         var images = Assert.IsType<object?[]>(art["images"]).Cast<Dictionary<string, object?>>()
             .ToDictionary(image => (string)image["id"]!, image => (string)image["image"]!);
         foreach (var (id, file) in new[] { ("screen.character-generation", "screen-character-generation"), ("screen.pick.02", "screen-pick-02") })
-            Assert.Equal("data:image/png;base64," + Convert.ToBase64String(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/media/ui", file + ".png"))), images[id]);
+            Assert.Equal("data:image/png;base64," + Convert.ToBase64String(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/media/ui", file + ".png"))), images[id]);
         Assert.Equal(new[] { "screen.pick.02" }, Assert.IsType<object?[]>(hud["pickScreens"]).Cast<string>());
         for (int index = 0; index < 10; index++)
         {
@@ -276,7 +276,7 @@ public sealed class UiArtDeliverySessionTests
         var inputs = ReadInputs(TestData.RepositoryRoot);
         ContentFake content = new([]);
         PopulateContent(content, inputs);
-        var inventory = JsonNode.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", DaggerfallUiArt.InventoryPath)))!;
+        var inventory = JsonNode.Parse(TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content", DaggerfallUiArt.InventoryPath)))!;
         var artifacts = inventory["artifacts"]!.AsArray();
         var pick = artifacts.Select(node => node!.AsObject()).Single(node => (string?)node["mediaId"] == "screen.pick.02");
         // The operator corpus has one pick. A second admitted part exercises set consumption with
@@ -285,7 +285,7 @@ public sealed class UiArtDeliverySessionTests
         second["mediaId"] = "screen.pick.background";
         artifacts.Add(second);
         content.Add(DaggerfallUiArt.InventoryPath, Encoding.UTF8.GetBytes(inventory.ToJsonString()));
-        var art = DaggerfallUiArt.Read(content, [.. inputs.ClassicPresentation.InventoryIcons.Values]);
+        var art = DaggerfallUiArt.Read(TestSessions.DataOf(content), [.. inputs.ClassicPresentation.InventoryIcons.Values]);
         Assert.Equal(new[] { "screen.pick.02", "screen.pick.background" }, art.PickScreens);
         Assert.Equal(art.Images.Single(image => image.Id == "screen.pick.02").Image,
             art.Images.Single(image => image.Id == "screen.pick.background").Image);
@@ -302,13 +302,13 @@ public sealed class UiArtDeliverySessionTests
 
         ContentFake original = new(releases);
         PopulateContent(original, inputs);
-        DaggerfallUiArt baseline = DaggerfallUiArt.Read(original, icons);
+        DaggerfallUiArt baseline = DaggerfallUiArt.Read(TestSessions.DataOf(original), icons);
 
-        JsonNode inventory = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)))!;
+        JsonNode inventory = JsonNode.Parse(TestContentFiles.Read(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)))!;
         JsonObject screen = inventory["artifacts"]!.AsArray().Select(node => node!.AsObject())
             .Single(artifact => (string?)artifact["mediaId"] == "screen.death");
         string path = (string)screen["path"]!;
-        byte[] edited = File.ReadAllBytes(Path.Combine(root, "content", path));
+        byte[] edited = [.. TestContentFiles.Read(Path.Combine(root, "content", path))];
         edited[^1] ^= 0xFF;
 
         // The current admitted bytes are what the DOM receives. Runtime does not derive a cache key
@@ -319,7 +319,7 @@ public sealed class UiArtDeliverySessionTests
         screen["byteLength"] = edited.Length;
         screen["sha256"] = Convert.ToHexStringLower(SHA256.HashData(edited));
         republished.Add(DaggerfallUiArt.InventoryPath, Encoding.UTF8.GetBytes(inventory.ToJsonString()));
-        DaggerfallUiArt changedArt = DaggerfallUiArt.Read(republished, icons);
+        DaggerfallUiArt changedArt = DaggerfallUiArt.Read(TestSessions.DataOf(republished), icons);
         Assert.NotEqual(baseline.Revision, changedArt.Revision);
         Assert.NotEqual(
             baseline.Images.Single(image => image.Id == "screen.death").Image,
@@ -332,16 +332,16 @@ public sealed class UiArtDeliverySessionTests
         stale.Add(path, edited);
         Assert.NotEqual(
             baseline.Images.Single(image => image.Id == "screen.death").Image,
-            DaggerfallUiArt.Read(stale, icons).Images.Single(image => image.Id == "screen.death").Image);
+            DaggerfallUiArt.Read(TestSessions.DataOf(stale), icons).Images.Single(image => image.Id == "screen.death").Image);
     }
 
     [Fact]
-    public void Art_larger_than_one_admitted_read_is_joined_from_bounded_chunks()
+    public void Art_larger_than_one_engine_read_is_delivered_whole()
     {
         List<string> releases = [];
         ContentFake content = new(releases);
-        // An artifact past the Engine's per-read bound: the reader has to ask more than once and the
-        // bytes it publishes have to be the whole artifact, not the first slice.
+        // An artifact past the Engine's one-megabyte reference read: the bytes the art publishes have to be the
+        // whole artifact, not the first slice.
         byte[] large = new byte[(1024 * 1024) + 7];
         for (int index = 0; index < large.Length; index++) large[index] = (byte)(index % 251);
         byte[] chrome = [1, 2, 3, 4];
@@ -366,7 +366,7 @@ public sealed class UiArtDeliverySessionTests
         foreach (string name in supplied)
         {
             string path = $"worldrpg/media/ui/{name}.png";
-            byte[] bytes = File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "media", "ui", $"{name}.png"));
+            byte[] bytes = TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "media", "ui", $"{name}.png"));
             published[name] = (path, bytes);
             content.Add(path, bytes);
         }
@@ -387,7 +387,7 @@ public sealed class UiArtDeliverySessionTests
                 Entry("spell.icons", published["spell-icons"].Path, published["spell-icons"].Bytes)),
         }.ToJsonString()));
 
-        DaggerfallUiArt art = DaggerfallUiArt.Read(content, []);
+        DaggerfallUiArt art = DaggerfallUiArt.Read(TestSessions.DataOf(content), []);
         Assert.Equal($"data:image/png;base64,{Convert.ToBase64String(large)}", art.Images.Single(image => image.Id == "screen.death").Image);
         // Every authored image under the kit path is delivered without being named here, and carries how
         // its author said it is drawn.
@@ -398,9 +398,6 @@ public sealed class UiArtDeliverySessionTests
         Assert.Equal([24, 24, 24, 24], drawn.Slice);
         Assert.Null(drawn.Hotspot);
         Assert.Null(art.Images.Single(image => image.Id == "ui.stone.title.v2").Display);
-        Assert.Equal(2, content.Reads(Screen));
-        Assert.Equal(1, content.Reads(Chrome));
-        Assert.Equal(1, content.Reads(Skin));
 
         static JsonObject Entry(string mediaId, string path, byte[] bytes, JsonObject? display = null) => new()
         {
@@ -424,7 +421,7 @@ public sealed class UiArtDeliverySessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
 
-        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content) });
         session.PublishInitial();
         Dictionary<string, object?> first = Assert.IsType<Dictionary<string, object?>>(engine.Published());
         string revision = Assert.IsType<string>(first["uiArtRevision"]);
@@ -472,7 +469,7 @@ public sealed class UiArtDeliverySessionTests
 
         // A group whose inventory no longer describes the death screen must refuse to start rather
         // than run with a blank screen, and the refusal has to name what was looked for and where.
-        JsonNode inventory = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)))!;
+        JsonNode inventory = JsonNode.Parse(TestContentFiles.Read(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)))!;
         JsonArray artifacts = inventory["artifacts"]!.AsArray();
         for (int index = artifacts.Count - 1; index >= 0; index--)
         {
@@ -481,7 +478,7 @@ public sealed class UiArtDeliverySessionTests
 
         content.Add(DaggerfallUiArt.InventoryPath, Encoding.UTF8.GetBytes(inventory.ToJsonString()));
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
-            () => DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)));
+            () => DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content) }));
         Assert.Contains("screen.death", failure.Message, StringComparison.Ordinal);
         Assert.Contains(DaggerfallUiArt.InventoryPath, failure.Message, StringComparison.Ordinal);
     }
@@ -489,7 +486,7 @@ public sealed class UiArtDeliverySessionTests
     /// <summary>The authored kit identities the published inventory states, by the path the publication gives them.</summary>
     private static string[] AuthoredKit(string root)
     {
-        using JsonDocument inventory = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)));
+        using JsonDocument inventory = JsonDocument.Parse(TestContentFiles.Read(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)));
         return [.. inventory.RootElement.GetProperty("artifacts").EnumerateArray()
             .Where(artifact => artifact.TryGetProperty("mediaId", out _)
                 && artifact.GetProperty("path").GetString()!.Contains(DaggerfallUiArt.AuthoredPathSegment, StringComparison.Ordinal))

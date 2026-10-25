@@ -94,7 +94,7 @@ public sealed class StoryQuestSessionTests
     public void A_controller_button_skips_a_playing_cinematic_as_a_key_does()
     {
         var media = new DaggerfallCinematicPresentationTests.Harness();
-        using var fixture = SourceBackedGuildBankSessionFixture.Create(configure: composition => composition with { Data = new DaggerfallData(media.Content) });
+        using var fixture = SourceBackedGuildBankSessionFixture.Create(configure: composition => composition with { Data = TestSessions.Data(media.Content) });
         fixture.Random = SummonRandom.Create();
         var recorder = VideoRecorder.Create(); fixture.Video = recorder.Service;
         using var game = fixture.Start(fixture.ExteriorProfile);
@@ -127,7 +127,7 @@ public sealed class StoryQuestSessionTests
     public void Each_source_ending_waits_for_finish_or_skip_and_survives_restore(string recipient, int video, bool skip)
     {
         var media = new DaggerfallCinematicPresentationTests.Harness();
-        using var fixture = SourceBackedGuildBankSessionFixture.Create(configure: composition => composition with { Data = new DaggerfallData(media.Content) });
+        using var fixture = SourceBackedGuildBankSessionFixture.Create(configure: composition => composition with { Data = TestSessions.Data(media.Content) });
         fixture.Random = SummonRandom.Create();
         var recorder = VideoRecorder.Create(); fixture.Video = recorder.Service;
         using var game = fixture.Start(fixture.ExteriorProfile);

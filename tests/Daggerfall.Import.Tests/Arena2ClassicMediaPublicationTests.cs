@@ -3,6 +3,7 @@ using System.IO.Compression;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
+using Daggerfall.Import.Publication;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -182,6 +183,30 @@ public sealed class Arena2ClassicMediaPublicationTests
                     SolidPng(64, 64, [90, 90, 96, 255]), "generator", "prompt", invalid))));
             Assert.Contains("ui.stone.bad.v2", failure.Message, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public void TheClassicMediaGroupListsTheAuthoredUiArtWithoutWritingItAndRefusesAnOriginalItWouldResample()
+    {
+        byte[] original = SolidPng(64, 64, [90, 90, 96, 255]);
+        ClassicMediaGroup group = ClassicMediaGroup.Create(CreateInputs(), AuthoredProfile(
+            new ClassicAuthoredUiAsset("ui.stone.window.v2", "media/ui/authored/ui-stone-window-v2.png", "ui-original/ui-stone-window-v2.png", original, "generator", "prompt")));
+
+        // The tracked original is the product's own content: listed with its digest, never written by the group.
+        Assert.Equal(original, group.Artifacts.Single(artifact => artifact.RelativePath == "media/ui/authored/ui-stone-window-v2.png").Bytes.ToArray());
+        Assert.Equal(group.Artifacts.Count - 1, group.GeneratedArtifacts.Count);
+        Assert.DoesNotContain(group.GeneratedArtifacts, artifact => ClassicMediaGroup.IsAuthoredUi(artifact.RelativePath));
+        System.Text.Json.Nodes.JsonNode entry = Assert.Single(System.Text.Json.Nodes.JsonNode.Parse(group.WriteInventory("worldrpg", []))!["artifacts"]!.AsArray(),
+            entry => (string)entry!["path"]! == "worldrpg/media/ui/authored/ui-stone-window-v2.png")!;
+        Assert.Equal(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(original)), (string)entry["sha256"]!);
+
+        // An original past the publication bound would be listed with the resampled bytes' digest, which the
+        // tracked file the product reads does not have.
+        InvalidOperationException resampled = Assert.Throws<InvalidOperationException>(() => ClassicMediaGroup.Create(CreateInputs(), AuthoredProfile(
+            new ClassicAuthoredUiAsset("ui.stone.window.v2", "media/ui/authored/ui-stone-window-v2.png", "ui-original/ui-stone-window-v2.png",
+                SolidPng(512, 512, [90, 90, 96, 255]), "generator", "prompt"))));
+        Assert.Contains("ui.stone.window.v2", resampled.Message, StringComparison.Ordinal);
+        Assert.Contains("published size", resampled.Message, StringComparison.Ordinal);
     }
 
     [Fact]

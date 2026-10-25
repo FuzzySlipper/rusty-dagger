@@ -135,11 +135,11 @@ public sealed class QuestWorldActionTests
     public void Authored_site_variant_fields_use_normal_content_admission_and_missing_entries_fall_back()
     {
         string root = TestData.RepositoryRoot;
-        var payload = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!;
+        var payload = JsonNode.Parse(TestContentFiles.ReadText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!;
         var original = ReadInputs(root);
         payload["world"]!["variant"] = "authored";
         payload["world"]!["variantOf"] = original.ProfileKey.LogicalId;
-        var variant = DaggerfallSiteContent.Read(new DaggerfallData(ImportContent(root)), System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions);
+        var variant = DaggerfallSiteContent.Read(TestSessions.Data(ImportContent(root)), System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions);
         var catalog = new DaggerfallSiteProfiles([original, variant]);
         var session = catalog.ForSession([new(original.Site!.Value.Region, original.Site.Value.Index, "authored")]);
         Assert.Equal("authored", session.Require(original.ProfileKey).VariantName);
@@ -159,7 +159,7 @@ public sealed class QuestWorldActionTests
     internal static DaggerfallSiteProfile Variant(DaggerfallSiteProfile source, IReadOnlyList<DaggerfallSiteMarker>? markers = null) => new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites,
         source.Audio, source.ClassicPresentation, source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId,
         source.Portals, source.Anchors.Values.ToArray(), [new("variant-light", new(1, 2, 3), 8, 17, Vector3.One)], source.GroundContainerSprite, source.DungeonMap,
-        source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, source.Music, markers ?? source.QuestMarkers, source.BillboardSprites,
+        source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, markers ?? source.QuestMarkers, source.BillboardSprites,
         source.StaticNpcs, source.WaterVolumes, source.TerrainTextures, source.Population)
         { VariantName = "lit", VariantBaseLogicalId = source.ProfileKey.LogicalId, AmbientZones = source.AmbientZones, PropertyContainers = source.PropertyContainers };
     private static void Drop(SanguineRoseSessionTests.Fixture f, ulong entity) => f.Submit(new { action = "inventory-drop", revision = f.Engine.PublishedNested("inventory", "revision"), item = $"unique:{entity}", amount = 1 });

@@ -9,4 +9,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Shared/**/*.cs" LinkBase="Shared" />
     <Using Include="WorldRpg.Tests.Support" />
   </ItemGroup>
+  <!-- The real data containers, read through the Engine's test host, for the suites that reference the Engine. -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'WorldRpg.Rulesets.Canary.Tests' and '$(MSBuildProjectName)' != 'WorldRpg.Architecture.Tests'">
+    <Compile Include="$(MSBuildThisFileDirectory)SharedEngine/**/*.cs" LinkBase="SharedEngine" />
+  </ItemGroup>
 </Project>

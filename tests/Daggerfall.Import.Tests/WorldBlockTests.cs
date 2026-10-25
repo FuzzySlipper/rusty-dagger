@@ -496,9 +496,9 @@ public sealed class WorldBlockTests
     [CorpusAndGeneratedContentFact("BLOCKS.BSA")]
     public void The_world_block_publication_covers_the_block_archive()
     {
-        string root = Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "imports", "world-blocks");
+        const string root = "worldrpg/imports/world-blocks/";
         DaggerfallWorldBlockIndex index = JsonSerializer.Deserialize<DaggerfallWorldBlockIndex>(
-            File.ReadAllBytes(Path.Combine(root, Arena2WorldBlocksPublication.IndexRelativePath)), PublishedJson.SectionRead)!;
+            ImportedContent.Read(root + Arena2WorldBlocksPublication.IndexRelativePath), PublishedJson.SectionRead)!;
         BsaArchive blocks = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("BLOCKS.BSA")), "arena2/BLOCKS.BSA");
         string[] rmb = [.. blocks.Records.Select(record => record.Name).OfType<string>().Where(name => name.EndsWith(".RMB", StringComparison.Ordinal))];
         string[] rdb = [.. blocks.Records.Select(record => record.Name).OfType<string>().Where(name => name.EndsWith(".RDB", StringComparison.Ordinal))];
@@ -524,11 +524,11 @@ public sealed class WorldBlockTests
         Assert.Equal(index.Counts.RmbExterior + index.Counts.RmbInterior + index.Counts.Rdb, index.Blocks.Count);
         foreach (DaggerfallWorldBlockEntry entry in index.Blocks.Where((_, ordinal) => ordinal % 97 == 0))
         {
-            DaggerfallWorldBlock block = JsonSerializer.Deserialize<DaggerfallWorldBlock>(File.ReadAllBytes(Path.Combine(root, entry.Document)), PublishedJson.SectionRead)!;
+            DaggerfallWorldBlock block = JsonSerializer.Deserialize<DaggerfallWorldBlock>(ImportedContent.Read(root + entry.Document), PublishedJson.SectionRead)!;
             Assert.Equal((entry.Key, entry.Kind, entry.SourceKey, entry.BuildingIndex), (block.Key, block.Kind, block.SourceKey, block.BuildingIndex));
             Assert.Equal(entry.Spatial, block.Spatial?.RelativePath);
             if (block.Spatial is { } spatial)
-                Assert.Equal(spatial.ContentDigest, ContentDigest.Compute(File.ReadAllBytes(Path.Combine(root, spatial.RelativePath))));
+                Assert.Equal(spatial.ContentDigest, ContentDigest.Compute(ImportedContent.Read(root + spatial.RelativePath)));
         }
     }
 
@@ -539,8 +539,8 @@ public sealed class WorldBlockTests
     [CorpusAndGeneratedContentFact("MAPS.BSA")]
     public void The_published_charing_closure_is_assembled_from_the_published_blocks()
     {
-        string blocksRoot = Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "imports", "world-blocks");
-        using JsonDocument closure = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "imports", "charing", "exterior", "normalized.json")));
+        const string blocksRoot = "worldrpg/imports/world-blocks/";
+        using JsonDocument closure = JsonDocument.Parse(ImportedContent.Read("worldrpg/imports/charing/exterior/normalized.json"));
         MapsExteriorLayout charing = MapsDecoder.DecodeExteriorLayout(BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("MAPS.BSA")), "arena2/MAPS.BSA"), 17, "Charing");
         Dictionary<string, DaggerfallWorldBlock> blocks = new(StringComparer.Ordinal);
         List<(string Id, NormalizedVector3 Position, int? Building, int Lock)> doors = [];
@@ -550,7 +550,7 @@ public sealed class WorldBlockTests
         {
             if (!blocks.TryGetValue(name, out DaggerfallWorldBlock? block))
                 blocks.Add(name, block = JsonSerializer.Deserialize<DaggerfallWorldBlock>(
-                    File.ReadAllBytes(Path.Combine(blocksRoot, $"{WorldBlockNormalizer.RmbExteriorKey(name)}.json")), PublishedJson.SectionRead)!);
+                    ImportedContent.Read($"{blocksRoot}{WorldBlockNormalizer.RmbExteriorKey(name)}.json"), PublishedJson.SectionRead)!);
             NormalizedVector3 origin = new(x * RmbBlockSide, 0F, -(y * RmbBlockSide));
             string scope = $"door/{PublishedIds.Slug(name)}-rmb/";
             doors.AddRange(block.Doors.Select(door => ($"{scope}{x}/{y}/{door.Id[scope.Length..]}", Add(door.Position, origin), door.BuildingIndex, door.StartingLockValue)));

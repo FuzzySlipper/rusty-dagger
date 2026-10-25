@@ -17,14 +17,14 @@ public sealed class AssembledSiteSessionTests
 
     /// <summary>
     /// Composing the shipped bundle reads only the new-game start site's closure: no other authored site is
-    /// parsed and the per-block publication is never opened until a location needs it.
+    /// parsed and nothing of the per-block publication is read until a location needs it.
     /// </summary>
     [Fact]
-    public void Composition_reads_only_the_start_site_and_never_opens_the_block_publication()
+    public void Composition_reads_only_the_start_site_and_never_reads_the_block_publication()
     {
         string root = TestData.RepositoryRoot;
         ProductContent staged = StagedContent(root, out BundleContentFake bundles);
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(staged, new GameBundleId("daggerfall.classic")).RequireComposition();
+        ResolvedGameComposition composition = TestSessions.Resolve(staged, new GameBundleId("daggerfall.classic")).RequireComposition();
         DaggerfallSiteProfile start = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -37,16 +37,16 @@ public sealed class AssembledSiteSessionTests
         DaggerfallSiteProfiles profiles = session.Sites.RequireProfiles();
         Assert.Equal(16, profiles.AuthoredKeys.Count);
         Assert.Equal([start.ProfileKey], profiles.AuthoredKeys.Where(profiles.IsResolved));
-        Assert.DoesNotContain(DaggerfallWorldBlocks.BundleId, bundles.OpenedBundles);
+        Assert.DoesNotContain(bundles.ReadFiles, file => file.Path.StartsWith(DaggerfallWorldBlocks.Root + "/", StringComparison.Ordinal));
         Assert.False(profiles.IsResolved(DaggerfallWorldProfileIds.Exterior(Charing)));
 
         // Asking for a profile no pack overrides assembles it then, from the blocks it places alone.
         DaggerfallWorldProfileKey interior = UnpublishedCharingInterior(profiles);
         DaggerfallSiteProfile assembled = profiles.Require(interior);
         Assert.Equal(interior, assembled.ProfileKey);
-        Assert.Contains(DaggerfallWorldBlocks.BundleId, bundles.OpenedBundles);
         Assert.Equal([DaggerfallWorldBlocks.IndexPath, $"rmb/{assembled.InteriorBuilding!.Building.SourceKey.ToLowerInvariant().Replace('.', '-')}/interior-{interior.LogicalId.Split('-')[^1]}.json"],
-            bundles.ReadFiles.Where(file => file.Bundle == DaggerfallWorldBlocks.BundleId).Select(file => file.Path));
+            bundles.ReadFiles.Where(file => file.Path.StartsWith(DaggerfallWorldBlocks.Root + "/", StringComparison.Ordinal))
+                .Select(file => file.Path[(DaggerfallWorldBlocks.Root.Length + 1)..]).Distinct());
         // An authored pack still overrides its explicit id.
         Assert.StartsWith("worldrpg/imports/charing/interior-3-4-0/", profiles.Require(DaggerfallWorldProfileIds.Interior(Charing, new(3, 4, 0))).SpatialArtifact.Path, StringComparison.Ordinal);
     }
@@ -63,10 +63,10 @@ public sealed class AssembledSiteSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent full = FullContent(root);
-        DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(new DaggerfallData(full));
-        Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(new DaggerfallData(full), media, definitions));
-        Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(new DaggerfallData(full), media));
-        DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(new DaggerfallData(full)), () => product.Value, () => meshes.Value);
+        DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(TestSessions.Data(full));
+        Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(TestSessions.Data(full), media, definitions));
+        Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(TestSessions.Data(full), media));
+        DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(TestSessions.Data(full)), () => product.Value, () => meshes.Value);
         DaggerfallSiteProfiles profiles = DaggerfallSiteProfiles.Resolve([DaggerfallAuthoredSite.Of(source)], assembly, null);
         DaggerfallWorldProfileKey interior = UnpublishedCharingInterior(profiles);
         DaggerfallWorldProfileKey dungeon = definitions.Locations.Records

@@ -12,6 +12,10 @@ namespace Daggerfall.Import.Publication;
 /// relative path vocabulary, so a site names a shared artifact by exactly the path it would have written.
 /// </summary>
 /// <remarks>
+/// The classic media group's authored UI images are the product's own tracked content: the group's inventory
+/// lists them, and their bodies are read from the tracked authored directory rather than the group root.
+/// </remarks>
+/// <remarks>
 /// A site closure keeps what is its own: the normalized document, the spatial artifacts, the geometry index,
 /// its material-slot bindings and any sidecar entry that differs from the product-wide one (an authored
 /// overlay). Every other artifact must be one the product-wide media carries with the same bytes: a body the
@@ -30,6 +34,7 @@ public sealed class ProductWorldMedia
 
     private readonly string? sharedDirectory;
     private readonly string? classicGroupRoot;
+    private readonly string? authoredUiDirectory;
     private readonly IReadOnlyDictionary<string, NormalizedMediaDescriptor> descriptors;
     private readonly IReadOnlyDictionary<string, DungeonBillboardMediaManifest> billboards;
     private readonly IReadOnlyDictionary<string, DungeonActorMediaManifest> actors;
@@ -40,7 +45,8 @@ public sealed class ProductWorldMedia
         DungeonMediaManifestSidecar dungeon,
         ClassicMediaManifestSidecar classic,
         string? sharedDirectory,
-        string? classicGroupRoot)
+        string? classicGroupRoot,
+        string? authoredUiDirectory)
     {
         manifest.Validate();
         if (dungeon.Shared is not null || dungeon.Materials.Count != 0)
@@ -61,6 +67,7 @@ public sealed class ProductWorldMedia
         Classic = classic;
         this.sharedDirectory = sharedDirectory;
         this.classicGroupRoot = classicGroupRoot;
+        this.authoredUiDirectory = authoredUiDirectory;
         descriptors = dungeon.Media.Resources.ToDictionary(resource => resource.Id, StringComparer.Ordinal);
         billboards = dungeon.Billboards.ToDictionary(billboard => billboard.SpriteResourceId, StringComparer.Ordinal);
         actors = dungeon.Actors.ToDictionary(actor => actor.ActorResourceId, StringComparer.Ordinal);
@@ -82,20 +89,23 @@ public sealed class ProductWorldMedia
     public ClassicMediaManifestSidecar Classic { get; }
 
     /// <summary>
-    /// Reads the product-wide media from disk: the world media publication directory and the classic media
-    /// group root (the directory its inventory's paths are relative to the parent of).
+    /// Reads the product-wide media from disk: the world media publication directory, the classic media
+    /// group root (the directory its inventory's paths are relative to the parent of), and the tracked
+    /// directory holding the authored UI images the group's inventory lists without carrying.
     /// </summary>
-    public static ProductWorldMedia Read(string sharedDirectory, string classicGroupRoot)
+    public static ProductWorldMedia Read(string sharedDirectory, string classicGroupRoot, string authoredUiDirectory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sharedDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(classicGroupRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(authoredUiDirectory);
         string shared = Path.GetFullPath(sharedDirectory);
         string group = Path.GetFullPath(classicGroupRoot);
         CanonicalImportManifest manifest = ImportPublicationManifestSerializer.Deserialize(
             ReadFile(shared, ImportPublicationManifestSerializer.ManifestRelativePath, "the world media publication (run the world-media command first)"));
         byte[] dungeon = ReadVerified(shared, manifest, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath);
         byte[] classic = ReadVerified(shared, manifest, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath);
-        return new(manifest, ReadClassicGroup(group), Deserialize<DungeonMediaManifestSidecar>(dungeon), Deserialize<ClassicMediaManifestSidecar>(classic), shared, group);
+        return new(manifest, ReadClassicGroup(group), Deserialize<DungeonMediaManifestSidecar>(dungeon), Deserialize<ClassicMediaManifestSidecar>(classic), shared, group,
+            Path.GetFullPath(authoredUiDirectory));
     }
 
     /// <summary>Builds the product-wide media from an in-memory world media plan and a classic group listing.</summary>
@@ -109,6 +119,7 @@ public sealed class ProductWorldMedia
             classicGroup,
             Deserialize<DungeonMediaManifestSidecar>(artifacts[Arena2MediaBundlePublication.DungeonMediaManifestRelativePath].Bytes.Span),
             Deserialize<ClassicMediaManifestSidecar>(artifacts[Arena2MediaBundlePublication.ClassicMediaManifestRelativePath].Bytes.Span),
+            null,
             null,
             null);
     }
@@ -166,6 +177,11 @@ public sealed class ProductWorldMedia
         if (SharedArtifacts.ContainsKey(relativePath) && sharedDirectory is not null)
         {
             return ReadFile(sharedDirectory, relativePath, "the world media publication");
+        }
+
+        if (ClassicGroupArtifacts.ContainsKey(relativePath) && ClassicMediaGroup.IsAuthoredUi(relativePath) && authoredUiDirectory is not null)
+        {
+            return ReadFile(authoredUiDirectory, relativePath[(AuthoredUiAssetSet.RelativeRoot.Length + 1)..], "the tracked authored UI art");
         }
 
         if (ClassicGroupArtifacts.ContainsKey(relativePath) && classicGroupRoot is not null)

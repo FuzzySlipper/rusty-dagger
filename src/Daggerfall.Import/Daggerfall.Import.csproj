@@ -19,5 +19,5 @@
     <ImporterRevisionNamespace>Daggerfall.Import</ImporterRevisionNamespace>
     <ImporterRevisionClass>ImporterBuild</ImporterRevisionClass>
   </PropertyGroup>
-  <Import Project="ImporterRevision.targets" />
+  <Import Project="../ImporterRevision.targets" />
 </Project>

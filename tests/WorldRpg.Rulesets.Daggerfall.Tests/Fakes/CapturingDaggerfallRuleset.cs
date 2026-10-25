@@ -5,7 +5,7 @@ using Xunit;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>Delegates every session to the compiled Daggerfall ruleset while exposing the real session a test created.</summary>
-internal sealed class CapturingDaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatalog
+internal sealed class CapturingDaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatalog, IInstalledContentRuleset
 {
     // Ordinary integration tests exercise gameplay and persistence, not the Engine video runtime.
     // They name disabled videos explicitly so a missing fake Video service cannot masquerade as a
@@ -16,6 +16,17 @@ internal sealed class CapturingDaggerfallRuleset : ISaveableGameRuleset, IRulesV
     public IReadOnlyList<RulesVariantManifest> CompiledVariants => _inner.CompiledVariants;
     internal DaggerfallSession? Session { get; private set; }
     public RulesetId Id => _inner.Id;
+
+    /// <summary>The containers the real ruleset reads, which the Host opens for these tests as it does for the product.</summary>
+    public IReadOnlyList<InstalledContentRequirement> InstalledContent => _inner.InstalledContent;
+
+    /// <summary>
+    /// Every container counts as current here: these facts exercise gameplay over whatever import the checkout
+    /// holds, and an importer edit since that import is the Host's stale-data case, which its own tests cover.
+    /// </summary>
+    public string? CheckInstalledContent(InstalledContent content) => null;
+
+    public IGameSession CreateUnavailableSession(GameUnavailableContext context) => _inner.CreateUnavailableSession(context);
 
     public IGameSession CreateSession(GameSessionContext context) => Capture(_inner.CreateSession(context));
     public IGameSession CreateSession(GameSessionContext context, RulesetSavePayload saved) => Capture(_inner.CreateSession(context, saved));

@@ -75,7 +75,7 @@ public sealed class QuestDestinationCoverageTests(ITestOutputHelper output)
     public void A_remote_house_reached_through_the_retry_fallback_is_a_covered_destination()
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
         DaggerfallSiteRecord farmstead = definitions.Locations.Records.Single(site => site.Region == 17 && site.Name == "The Ashwing Farmstead");
         DaggerfallSiteRecord manor = definitions.Locations.Records.Single(site => site.Region == 17 && site.Name == "Hearthfield Manor");
         DaggerfallSiteContext sites = new(definitions.Locations, farmstead.Id, null, []);

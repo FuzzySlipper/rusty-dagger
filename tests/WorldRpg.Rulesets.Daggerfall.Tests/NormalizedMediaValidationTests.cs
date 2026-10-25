@@ -17,20 +17,20 @@ public sealed class NormalizedMediaValidationTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        byte[] scenario = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        byte[] scenario = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
         ProductContent withImportedPreference = MutateDungeonMedia(root, media => media["actors"]!.AsArray()
             .Single(value => value!["mobileId"]!.GetValue<int>() == 15)!["preferredRestState"] = "idle");
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(new DaggerfallData(withImportedPreference), scenario, definitions);
+        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(withImportedPreference), scenario, definitions);
         Assert.Equal("idle", SpriteFor(inputs, "skeletal-warrior").PreferredRestState);
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(
-            new DaggerfallData(MutateDungeonMedia(root, media => media["actors"]!.AsArray().Single(value => value!["mobileId"]!.GetValue<int>() == 15)!["preferredRestState"] = "missingState")),
+            TestSessions.Data(MutateDungeonMedia(root, media => media["actors"]!.AsArray().Single(value => value!["mobileId"]!.GetValue<int>() == 15)!["preferredRestState"] = "missingState")),
             scenario,
             definitions));
 
         DaggerfallDefinitions unknownAuthoredState = DaggerfallBaseContent.Read(TestPayload.Replaced(("\"preferredRestState\": \"ratIdle\"", "\"preferredRestState\": \"missingState\"")));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(ImportContent(root)), scenario, unknownAuthoredState));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(ImportContent(root)), scenario, unknownAuthoredState));
     }
 
     [Fact]
@@ -38,11 +38,11 @@ public sealed class NormalizedMediaValidationTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["frames"]!.AsArray()[0]!["orientation"] = 8)), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["playback"]!["loops"] = "true")), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateDungeonMedia(root, media =>
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["frames"]!.AsArray()[0]!["orientation"] = 8)), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["playback"]!["loops"] = "true")), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateDungeonMedia(root, media =>
         {
             JsonArray frames = FirstActorState(media, "primaryAttack")["frames"]!.AsArray();
             JsonNode frame = frames.Last(value => value!["orientation"]!.GetValue<int>() == 7)!;
@@ -85,14 +85,14 @@ public sealed class NormalizedMediaValidationTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media =>
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media =>
         {
             JsonArray audio = media["audio"]!.AsArray();
             audio.Single(value => value!["clip"]!.GetValue<string>() == "hit2")!.AsObject()["clip"] = "hit3";
         })), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media =>
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media =>
         {
             JsonArray audio = media["audio"]!.AsArray();
             audio.Remove(audio.Single(value => value!["clip"]!.GetValue<string>() == "hit2"));
@@ -104,25 +104,25 @@ public sealed class NormalizedMediaValidationTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[0]!["frameStart"] = -1)), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[1]!["frameStart"] = -1)), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[0]!["frameCount"] = int.MaxValue)), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media => WeaponResource(media)["frames"]!.AsArray()[0]!["frameIndex"] = 4)), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media =>
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[0]!["frameStart"] = -1)), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[1]!["frameStart"] = -1)), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[0]!["frameCount"] = int.MaxValue)), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => WeaponResource(media)["frames"]!.AsArray()[0]!["frameIndex"] = 4)), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media =>
         {
             JsonObject frame = WeaponResource(media)["frames"]!.AsArray()[0]!.AsObject();
             frame["x"] = 1;
             frame["width"] = int.MaxValue;
         })), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media => media["effects"]!.AsArray()[0]!["sourceRecordOrdinal"] = 3)), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media => media["effects"]!.AsArray()[0]!["timing"]!["framesPerSecond"] = 12)), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media => EffectResource(media, "effect.blood.0")["frames"]!.AsArray()[0]!["frameIndex"] = 1)), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media => WeaponResource(media)["byteLength"] = 1)), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media => WeaponResource(media)["mimeType"] = "")), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media => WeaponResource(media)["sourceWidth"] = -1)), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media => WeaponResource(media)["relativePath"] = "../weapon.png")), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => media["effects"]!.AsArray()[0]!["sourceRecordOrdinal"] = 3)), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => media["effects"]!.AsArray()[0]!["timing"]!["framesPerSecond"] = 12)), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => EffectResource(media, "effect.blood.0")["frames"]!.AsArray()[0]!["frameIndex"] = 1)), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => WeaponResource(media)["byteLength"] = 1)), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => WeaponResource(media)["mimeType"] = "")), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => WeaponResource(media)["sourceWidth"] = -1)), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => WeaponResource(media)["relativePath"] = "../weapon.png")), payload, definitions));
     }
 
     [Fact]
@@ -130,16 +130,16 @@ public sealed class NormalizedMediaValidationTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
         // A melee strike shorter than the melee hit frame: every strike can play a melee swing.
-        DaggerfallContentException melee = Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media =>
+        DaggerfallContentException melee = Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media =>
             WeaponAction(media, "weapon.dagger.steel", "strikeUp")["sequence"] = new JsonArray(26, 27))), payload, definitions));
         Assert.Contains(melee.Diagnostics, message => message.Contains("'weapon.dagger.steel' strike 'strikeUp' plays 2 frames", StringComparison.Ordinal)
             && message.Contains($"melee hit frame {DaggerfallFormulaPolicy.MeleeWeaponHitFrame}", StringComparison.Ordinal));
 
         // The bow's loosing strike shorter than the bow hit frame: the arrow would never leave.
-        DaggerfallContentException bow = Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, media =>
+        DaggerfallContentException bow = Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media =>
             WeaponAction(media, "weapon.bow", "strikeDown")["sequence"] = new JsonArray(0, 1, 2, 3, 4))), payload, definitions));
         Assert.Contains(bow.Diagnostics, message => message.Contains("Bow 'iron-short-bow' selects classic weapon 'weapon.bow', whose 'strikeDown' plays 5 frames", StringComparison.Ordinal)
             && message.Contains($"bow hit frame {DaggerfallFormulaPolicy.BowWeaponHitFrame}", StringComparison.Ordinal));
@@ -147,7 +147,7 @@ public sealed class NormalizedMediaValidationTests
         // The bow's up strike is shorter than the bow hit frame, as published, and is admitted: a bow
         // never plays it.
         Assert.Equal(4, WeaponAction(ClassicMedia(root), "weapon.bow", "strikeUp")["frameCount"]!.GetValue<int>());
-        _ = DaggerfallSiteContent.Read(new DaggerfallData(MutateClassicMedia(root, _ => { })), payload, definitions);
+        _ = DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, _ => { })), payload, definitions);
     }
 
     private static JsonObject WeaponAction(JsonObject media, string resource, string action) => media["weaponMedia"]!.AsArray()
@@ -156,7 +156,7 @@ public sealed class NormalizedMediaValidationTests
         .Select(value => value!.AsObject())
         .Single(value => value["action"]!.GetValue<string>() == action);
 
-    private static JsonObject ClassicMedia(string repositoryRoot) => JsonNode.Parse(File.ReadAllBytes(
+    private static JsonObject ClassicMedia(string repositoryRoot) => JsonNode.Parse(TestContentFiles.ReadCopy(
         Path.Combine(repositoryRoot, "content", DaggerfallWorldMedia.Root, "media/classic/manifest.json")))!.AsObject();
 
     private static JsonObject FirstActorState(JsonObject media, string name) => media["actors"]!.AsArray()
@@ -183,21 +183,21 @@ public sealed class NormalizedMediaValidationTests
     /// <summary>Privateer's Hold carrying its own copy of the product-wide classic sidecar, mutated.</summary>
     private static ProductContent MutateClassicMedia(string repositoryRoot, Action<JsonObject> mutate) =>
         WithOwnSidecar(repositoryRoot, "media/classic/manifest.json",
-            JsonNode.Parse(File.ReadAllBytes(Path.Combine(repositoryRoot, "content", DaggerfallWorldMedia.Root, "media/classic/manifest.json")))!.AsObject(), mutate);
+            JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(repositoryRoot, "content", DaggerfallWorldMedia.Root, "media/classic/manifest.json")))!.AsObject(), mutate);
 
     private static ProductContent WithOwnSidecar(string repositoryRoot, string relativePath, JsonObject sidecar, Action<JsonObject> mutate)
     {
         const string site = "worldrpg/imports/privateers-hold";
         string contentRoot = Path.Combine(repositoryRoot, "content");
-        List<ProductContentFile> files = [.. Directory.GetFiles(Path.Combine(contentRoot, site), "*", SearchOption.AllDirectories)
+        List<ProductContentFile> files = [.. TestContentFiles.AllFiles(Path.Combine(contentRoot, site))
             .Select(path => Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/'))
             .Where(path => path != $"{site}/{relativePath}" && path != $"{site}/import-manifest.json")
-            .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(path), File.ReadAllBytes(Path.Combine(contentRoot, path))))];
+            .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(path), TestContentFiles.ReadCopy(Path.Combine(contentRoot, path))))];
         mutate(sidecar);
         byte[] sidecarBytes = Encoding.UTF8.GetBytes(sidecar.ToJsonString());
         files.Add(new ProductContentFile(Encoding.UTF8.GetBytes($"{site}/{relativePath}"), sidecarBytes));
 
-        JsonObject imports = JsonNode.Parse(File.ReadAllBytes(Path.Combine(contentRoot, site, "import-manifest.json")))!.AsObject();
+        JsonObject imports = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(contentRoot, site, "import-manifest.json")))!.AsObject();
         JsonArray artifacts = imports["artifacts"]!.AsArray();
         JsonObject? artifact = artifacts.Select(value => value!.AsObject()).SingleOrDefault(value => value["relativePath"]!.GetValue<string>() == relativePath);
         if (artifact is null)

@@ -15,7 +15,7 @@ internal sealed class StagedProductFactAttribute : FactAttribute
 
     public StagedProductFactAttribute()
     {
-        if (!File.Exists(Path.Combine(TestData.RepositoryRoot, ManifestPath)))
+        if (!TestContentFiles.Exists(Path.Combine(TestData.RepositoryRoot, ManifestPath)))
             Skip = $"The staged product manifest '{ManifestPath}' is absent; run `rusty build --project src/WorldRpg.Host/WorldRpg.Host.csproj` to stage it.";
     }
 }

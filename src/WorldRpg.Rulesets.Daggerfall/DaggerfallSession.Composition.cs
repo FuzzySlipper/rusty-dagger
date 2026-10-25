@@ -98,11 +98,15 @@ internal sealed partial class DaggerfallSession
             _loading = composition.Loading;
             _newGameInitialized = saved is not null;
             _tuning = tuning;
-            // The score's clips are named by the site's cue list and carried by the product-wide music
-            // bundle, so the resolver the director asks is this session's own: it keeps the Engine
-            // resource alive for as long as the session plays that track and releases it on disposal.
+            // The score's tracks are read by name from the music container, so the resolver the director asks is
+            // this session's own: it keeps the Engine resource alive for as long as the session plays that track
+            // and releases it on disposal.
             _musicBundle = music;
-            if (music is not null) _music = new DaggerfallMusicDirector(engine.Audio, ResolveMusicClip, ReportMusicRetired, tuning.Music.AlternatePlaylists);
+            if (music is not null)
+            {
+                _music = new DaggerfallMusicDirector(engine.Audio, ResolveMusicClip, ReportMusicRetired, tuning.Music.AlternatePlaylists);
+                ReportMissingTracks(music);
+            }
             _random = engine.Random;
             tuning = tuning.Validate();
             _definitions = definitions;
@@ -657,13 +661,13 @@ internal sealed partial class DaggerfallSession
             _characterUi.UseGuildMembership(State.GuildMembership, () => checked((int)_time.Calendar.DayNumber));
             _characterUi.UseLegalStanding(() => _site.Region, region => State.Crime.BanishedRegions.Contains(region));
             _characterUi.UseItemPresentation(_inventoryUi);
-            // The DOM's art comes from admitted content by media identity, so a session reads the
+            // The DOM's art comes from the derived content by media identity, so a session reads the
             // published closure once and publishes it to the UI that draws it.
             _hud = new DaggerfallHudProjection(
                 engine.Ui,
                 definitions.HudResources,
                 composition.Identity,
-                DaggerfallUiArt.Read(engine.Content, composition.StartSite.ClassicPresentation.InventoryIcons.Values,
+                composition.Data is not { } data ? DaggerfallUiArt.None : DaggerfallUiArt.Read(data, composition.StartSite.ClassicPresentation.InventoryIcons.Values,
                     _definitions.CharacterPresentation.Races.Values.SelectMany(race => race.Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head)).Select(layer => layer.MediaId)
                     // The race's background is the inventory's paper-doll backdrop.
                     .Concat(_definitions.CharacterPresentation.Races.Values.Select(race => race.Background.MediaId))

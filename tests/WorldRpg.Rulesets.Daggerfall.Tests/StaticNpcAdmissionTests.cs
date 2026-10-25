@@ -349,7 +349,7 @@ public sealed class StaticNpcAdmissionTests
             source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites, source.Audio,
             source.ClassicPresentation, source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId,
             source.Portals, source.Anchors.Values.ToArray(), source.Lights, source.GroundContainerSprite,
-            source.DungeonMap, source.DungeonActions, source.DungeonActionModels, building, source.Music,
+            source.DungeonMap, source.DungeonActions, source.DungeonActionModels, building,
             source.QuestMarkers, billboards, placements, source.WaterVolumes, source.TerrainTextures, source.Population);
     }
 }

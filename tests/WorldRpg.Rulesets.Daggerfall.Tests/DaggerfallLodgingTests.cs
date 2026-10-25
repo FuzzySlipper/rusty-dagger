@@ -231,7 +231,7 @@ public sealed class DaggerfallLodgingTests
         {
             string root = TestData.RepositoryRoot;
             DaggerfallSiteProfile source = ReadInputs(root);
-            blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json")));
+            blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json")));
             var candidates = definitions.Locations.Records.SelectMany(site => site.Exterior!.Buildings.Values
                 .Where(building => building.Source.BuildingType == 15)
                 .Select(building => (site.Id, Building: building))).Take(2).ToArray();
@@ -239,8 +239,8 @@ public sealed class DaggerfallLodgingTests
             Other = Profile(candidates[1].Id, candidates[1].Building, "lodging-other", DaggerfallWorldProfileKind.Interior);
             Exterior = Profile(candidates[0].Id, null, "lodging-exterior", DaggerfallWorldProfileKind.Exterior);
             profiles = new([Interior, Other, Exterior]);
-            identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
-            sky = DaggerfallSkyMedia.Read(new DaggerfallData(DaggerfallSkyMediaTests.Fixture().Content));
+            identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+            sky = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
             Session = Create(null);
             DaggerfallSiteProfile Profile(DaggerfallSiteId site, DaggerfallSiteBuildingSource? building, string name, DaggerfallWorldProfileKind kind) => new(
                 new ProjectFacts(new WorldPoint(1, 1, 1), new Dictionary<long, AuthoredActor>()), source.Geometry,

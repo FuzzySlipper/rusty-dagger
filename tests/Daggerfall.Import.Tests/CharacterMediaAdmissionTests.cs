@@ -22,7 +22,7 @@ public sealed class CharacterMediaAdmissionTests
         Dictionary<string, long?> admitted = AdmittedSourceFiles();
         Assert.NotEmpty(admitted);
 
-        using JsonDocument pack = JsonDocument.Parse(File.ReadAllBytes(PackPath()));
+        using JsonDocument pack = JsonDocument.Parse(ImportedContent.Read("worldrpg/payloads/daggerfall.imported.json"));
         JsonElement section = pack.RootElement.GetProperty("characterPresentation");
         List<string> published = [.. section.GetProperty("files").EnumerateArray()
             .Select(file => file.GetProperty("path").GetString()!)
@@ -73,6 +73,4 @@ public sealed class CharacterMediaAdmissionTests
         || name.EndsWith(".IMG", StringComparison.OrdinalIgnoreCase);
 
     private static string ManifestPath() => Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv");
-
-    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.imported.json");
 }

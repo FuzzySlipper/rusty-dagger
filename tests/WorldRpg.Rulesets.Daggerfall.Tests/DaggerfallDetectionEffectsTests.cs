@@ -177,7 +177,7 @@ public sealed class DaggerfallDetectionEffectsTests
         {
             _random = random ?? RandomMaximum.Create();
             var source = ReadInputs(TestData.RepositoryRoot);
-            if (twoSites) Destination = DaggerfallSiteContent.Read(new DaggerfallData(FullContent(TestData.RepositoryRoot)), File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
+            if (twoSites) Destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)), TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
             Composition = new(TestPayload.Definitions, source, DaggerfallTuning.Defaults) { Profiles = new DaggerfallSiteProfiles(Destination is null ? [source] : [source, Destination]) };
             Perception.Responder = request => Receipt(request.Targets.ToArray().Select(target => new PerceptionPair(request.Observers.Span[0].Entity,
                 target.Entity, Vector3.Distance(request.Observers.Span[0].Origin, target.Center), 1, PerceptionPairKind.Occluded, 0)).ToArray());

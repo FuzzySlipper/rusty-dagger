@@ -15,7 +15,7 @@ internal static class SpriteOverlays
     public static readonly CommandOption ClassicGroup = CommandOption.Optional("--classic-group", "CLASSIC_GROUP_DIR");
 
     /// <summary>The options a sprite command that reads a publication takes.</summary>
-    public static IReadOnlyList<CommandOption> PublicationOptions => [Publication, Shared, ClassicGroup];
+    public static IReadOnlyList<CommandOption> PublicationOptions => [Publication, Shared, ClassicGroup, AuthoredUi.Originals];
 
     private const int MaximumOverlayBytes = 1024 * 1024;
 
@@ -30,8 +30,9 @@ internal static class SpriteOverlays
 
     /// <summary>
     /// Reads the publication a sprite command names. A site closure written against the product-wide world
-    /// media is read with it (<c>--shared</c> and <c>--classic-group</c>, supplied together); the world media
-    /// publication itself, or a closure that carries everything, is read alone.
+    /// media is read with it (<c>--shared</c> and <c>--classic-group</c>, supplied together, with the tracked
+    /// authored UI art the classic group lists); the world media publication itself, or a closure that carries
+    /// everything, is read alone.
     /// </summary>
     public static SpritePublicationSnapshot ReadPublication(CommandArguments args)
     {
@@ -41,7 +42,7 @@ internal static class SpriteOverlays
         }
 
         return args.Has(Shared.Name)
-            ? SpritePublicationReader.Read(PublicationDirectory(args), ProductWorldMedia.Read(args[Shared.Name], args[ClassicGroup.Name]))
+            ? SpritePublicationReader.Read(PublicationDirectory(args), ProductWorldMedia.Read(args[Shared.Name], args[ClassicGroup.Name], args[AuthoredUi.Originals.Name]))
             : SpritePublicationReader.Read(PublicationDirectory(args));
     }
 

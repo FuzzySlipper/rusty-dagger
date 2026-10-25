@@ -9,8 +9,7 @@ internal sealed record DaggerfallCinematicResult(string Source, VideoRealization
 internal sealed class DaggerfallCinematicPresentation(IEngineContext engine, DaggerfallData content,
     DaggerfallCinematicSet catalog) : IDisposable
 {
-    internal const string BundleId = "daggerfall.cinematics";
-    /// <summary>The logical content root the Host stages as this bundle; artifact paths name files below it.</summary>
+    /// <summary>The cinematics' root in the data container; artifact paths name files below it.</summary>
     internal const string Root = "worldrpg/media/cinematics";
     private (string Source, VideoPlaybackHandle Handle)? _active;
     private ulong _lastFact;

@@ -196,7 +196,7 @@ public sealed class ExteriorOriginSessionTests
         spatial.KeepPosition = true;
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted,
+        ResolvedCompositionIdentity identity = TestSessions.Resolve(admitted,
             new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         RulesetSavePayload save;
         long actorId;
@@ -560,7 +560,7 @@ public sealed class ExteriorOriginSessionTests
         PopulateContent(resumedContent, interior);
         SpatialFake resumedSpatial = SpatialFake.Create(interior.SpatialArtifact.Sha256, resumedReleases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
-        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
+        ResolvedCompositionIdentity identity = TestSessions.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
             new(definitions, exterior, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save);
         Assert.True(restored.TryTransitionTo(exterior.ProfileKey));

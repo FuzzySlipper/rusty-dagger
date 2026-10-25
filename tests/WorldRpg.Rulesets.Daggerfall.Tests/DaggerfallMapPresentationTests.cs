@@ -89,7 +89,7 @@ public sealed class DaggerfallMapPresentationTests
     {
         using var session = FreshSession();
         var sites = session.Site;
-        var blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        var blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
         sites.AdmitBuildingNames(MapRandom.Create(), TestPayload.Definitions, blocks);
         var city = sites.Records.Single(site => site.Name == "Charing");
         sites.Enter(city.Id);
@@ -124,7 +124,7 @@ public sealed class DaggerfallMapPresentationTests
             new AppearanceFake(releases), random: MapRandom.Create());
         var composition = new DaggerfallSessionComposition(definitions, profile, DaggerfallTuning.Defaults)
         {
-            Blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json"))),
+            Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json"))),
             Profiles = new([profile]),
         };
         using var session = DaggerfallSession.StartNew(engine.Context, composition);
@@ -157,7 +157,7 @@ public sealed class DaggerfallMapPresentationTests
     [Fact]
     public void Malformed_published_map_is_refused_instead_of_showing_wrong_footprints()
     {
-        var payload = JsonNode.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")))!;
+        var payload = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")))!;
         payload["maps"]![0]!["footprints"]![0]!["minX"] = -1;
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBlocksContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
     }

@@ -25,9 +25,7 @@ dotnet run --project src/Daggerfall.Import.Tool -- quests \
   --arena2 local/arena2 \
   --quest-text /home/research/daggerfall-unity/Assets/StreamingAssets/Quests \
   --tables /home/research/daggerfall-unity/Assets/StreamingAssets/Tables \
-  --pack content/worldrpg/payloads/daggerfall.imported.json \
-  --records import-records/daggerfall.import-records.json \
-  --inventory data/content-source-manifest.csv --update
+  --update
 ```
 
 Omit `--update` to inspect without writing. Each table keeps its logical source
@@ -115,7 +113,7 @@ leaving it; variant actions do not start a second scene update loop.
 
 Block variants are normalized content, including their matching collision and
 navigation artifacts. Pass an authored descriptor to `world-blocks --variants FILE`
-or `scripts/regenerate-content.sh --block-variants FILE`. Its `variants` array
+or `import --block-variants FILE`. Its `variants` array
 contains entries with a `document` path, an optional block `variant` name, and
 optional `buildingVariants` entries (`building` index and `variant` name). Paths
 are relative to the descriptor. Each document is a complete normalized block of

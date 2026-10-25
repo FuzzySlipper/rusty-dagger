@@ -67,6 +67,22 @@ internal sealed partial class DaggerfallSession
         }
     }
 
+    /// <summary>
+    /// Warns once that the music container carries no recording of some tracks the playlists name; their
+    /// contexts play their other tracks, and a context with none stays silent.
+    /// </summary>
+    private void ReportMissingTracks(DaggerfallMusicBundle music)
+    {
+        if (music.MissingTracks.Count == 0) return;
+        _engine.Diagnostics.Publish(new DiagnosticsPublishRequest(
+            DiagnosticsSeverity.Warning,
+            DiagnosticsDisposition.Accepted,
+            "daggerfall.music",
+            "tracks.missing",
+            $"{DaggerfallMusicBundle.ContainerName} carries no recording of {music.MissingTracks.Count} of the {DaggerfallMusicBundle.PlaylistTracks.Count} tracks the playlists name: {string.Join(", ", music.MissingTracks)}.",
+            string.Empty));
+    }
+
     /// <summary>Records that a cue started, and for which admitted context the session chose it.</summary>
     private void ReportMusicStarted(string track, DaggerfallMusicContext context) =>
         Report("cue.started", $"Music cue '{track}' started for context '{context}'.");

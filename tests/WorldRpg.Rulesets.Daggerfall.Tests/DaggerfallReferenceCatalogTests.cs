@@ -86,10 +86,10 @@ public sealed class DaggerfallReferenceCatalogTests
     private static ProductContent Content(Action<JsonObject>? change)
     {
         string contentRoot = Path.Combine(TestData.RepositoryRoot, "content");
-        ProductContentFile[] files = [.. Directory.GetFiles(Path.Combine(contentRoot, "worldrpg"), "*", SearchOption.AllDirectories)
+        ProductContentFile[] files = [.. TestContentFiles.AllFiles(Path.Combine(contentRoot, "worldrpg"))
             .Select(path =>
             {
-                byte[] bytes = File.ReadAllBytes(path);
+                byte[] bytes = TestContentFiles.ReadCopy(path);
                 if (path.EndsWith("daggerfall.imported.json", StringComparison.Ordinal) && change is not null)
                 {
                     // This fixture only changes catalogs, so only that section is parsed and only its

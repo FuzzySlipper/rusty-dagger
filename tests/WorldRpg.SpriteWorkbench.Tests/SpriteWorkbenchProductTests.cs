@@ -1093,7 +1093,7 @@ public sealed class SpriteWorkbenchProductTests
                 audio.Select((clip, index) => new ClassicAudioManifest(clip.Id, clip.Id, index, checked((uint)index), SoundArchive.SampleRate)).ToArray(), [], [], new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray()),
                 [new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray())],
                 [],
-                Enumerable.Range(0, 62).Select(region => new ClassicMapRegionManifest(region, [])).ToArray(), [], [], []);
+                Enumerable.Range(0, 62).Select(region => new ClassicMapRegionManifest(region, [])).ToArray(), [], []);
             byte[] dungeonBytes = Serialize(dungeon);
             byte[] classicBytes = Serialize(classic);
             ImportProvenance provenance = new("daggerfall-import", "test-revision", [new("arena2/test", ContentDigest.Compute("source"u8), 6)]);

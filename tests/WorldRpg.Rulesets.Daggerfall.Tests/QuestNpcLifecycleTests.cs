@@ -113,7 +113,7 @@ public sealed class QuestNpcLifecycleTests
         var appearance = new AppearanceFake(releases);
         var engine = EngineContextFake.Create(contentService, spatial.Service, appearance, perception.Service);
         var composition = new DaggerfallSessionComposition(definitions, profile, DaggerfallTuning.Defaults)
-            { Blocks = DaggerfallBlocksContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json"))) };
+            { Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json"))) };
         using var session = DaggerfallSession.StartNew(engine.Context, composition);
         long target = session.State.Npcs.All.Single(value => value.Appearance.FactionId == named.P3).DurableId;
         long other = session.State.Npcs.All.Single(value => value.Appearance.FactionId == 60).DurableId;

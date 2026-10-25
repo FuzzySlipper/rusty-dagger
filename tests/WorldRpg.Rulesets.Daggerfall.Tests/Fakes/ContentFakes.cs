@@ -103,11 +103,12 @@ internal sealed class ContentFake : IContentService
     }
     internal int ResolveCalls { get; private set; }
 }
-/// <summary>Build-declared bundles for full-product tests; bodies stay outside the eager snapshot.</summary>
+/// <summary>Bundles and installed containers for full-product tests; bodies stay outside the eager snapshot.</summary>
 /// <remarks>
-/// A file is either held in memory or read from the checkout when first used, as the Engine reads a staged
-/// bundle file; a disk-backed file's digest is measured once per test run. While a bundle is open its files
-/// also resolve by their content path (its root and bundle path), as the Engine resolves a retained reference.
+/// A file is held in memory, read from the checkout, or read from a real container when first used, as the
+/// Engine reads a bundle or container file; a disk-backed file's digest is measured once per test run. While a
+/// bundle or container is open its files also resolve by their content path (its root and path, or for a
+/// container its own path), as the Engine resolves a retained reference.
 /// </remarks>
 internal sealed class BundleContentFake : IContentService
 {
@@ -116,8 +117,14 @@ internal sealed class BundleContentFake : IContentService
     public void PackContainer(ContentContainerPackRequest request) =>
         throw new NotSupportedException("This fake does not pack installed content containers.");
 
-    public ContentBundle OpenContainer(ContentContainerOpenRequest request) =>
-        throw new NotSupportedException("This fake does not admit installed content containers.");
+    /// <summary>Opens a declared container by the name the product opens it by, as an ordinary bundle.</summary>
+    public ContentBundle OpenContainer(ContentContainerOpenRequest request)
+    {
+        if (!containers.Contains(request.Path))
+            throw new EngineCallException("content", "open_container", 1,
+                new[] { new EngineDiagnostic("PRODUCT_SOURCE_IO", $"No test container is installed as '{request.Path}'.", "test") });
+        return OpenBundle(new ContentBundleOpenRequest(request.Path));
+    }
     public ContentSha256 ReadBundleIdentity(ContentBundle bundle)
     {
         // Identity reflects the fake's admitted entries; it is not a container-format test.
@@ -130,14 +137,15 @@ internal sealed class BundleContentFake : IContentService
     public PortableAssetReadoutResult ReadPortableAsset(PortableAsset asset) => throw new NotSupportedException();
     public ContentReference OpenPortableAssetMember(PortableAssetMemberRequest request) => throw new NotSupportedException();
 
-    private sealed class BundleFile(byte[]? bytes, string? diskPath)
+    private sealed class BundleFile(byte[]? bytes, string? diskPath, Func<byte[]>? read = null, (ContentSha256 Digest, ulong Length)? known = null)
     {
-        internal byte[] Read() => bytes ?? TestContentFiles.ReadUncached(diskPath!);
+        internal byte[] Read() => bytes ?? read?.Invoke() ?? TestContentFiles.ReadUncached(diskPath!);
 
-        private (ContentSha256 Digest, ulong Length)? measured;
+        private (ContentSha256 Digest, ulong Length)? measured = known;
 
-        internal (ContentSha256 Digest, ulong Length) Identity() => bytes is not null
-            ? measured ??= (Digest(bytes), checked((ulong)bytes.Length))
+        internal (ContentSha256 Digest, ulong Length) Identity() => measured is { } identity ? identity
+            : bytes is not null
+            ? (measured = (Digest(bytes), checked((ulong)bytes.Length))).Value
             : DiskDigests.GetOrAdd(diskPath!, path =>
             {
                 using FileStream stream = File.OpenRead(path);
@@ -156,6 +164,7 @@ internal sealed class BundleContentFake : IContentService
     /// <summary>The bundle name the eager snapshot's references carry; no declared bundle has an empty id.</summary>
     private const string EagerSnapshot = "";
     private readonly Dictionary<string, string> roots = new(StringComparer.Ordinal);
+    private readonly HashSet<string> containers = new(StringComparer.Ordinal);
     private readonly Dictionary<ulong, string> openedBundles = [];
     private readonly Dictionary<ulong, (string Bundle, string Path)> references = [];
     private ulong nextHandle = 1;
@@ -179,6 +188,24 @@ internal sealed class BundleContentFake : IContentService
 
     /// <summary>Names the content root a declared bundle's files resolve under while it is open.</summary>
     internal void Root(string bundle, string root) => roots[bundle] = root;
+
+    /// <summary>
+    /// Declares an installed container by its file name: the product opens it with <c>OpenContainer</c>, and its
+    /// files resolve by their own paths while it is open.
+    /// </summary>
+    internal void Container(string name)
+    {
+        containers.Add(name);
+        roots[name] = string.Empty;
+        _ = Files(name);
+    }
+
+    /// <summary>The installed containers declared, by file name.</summary>
+    internal IReadOnlyCollection<string> Containers => containers;
+
+    /// <summary>Declares a container file whose identity is known and whose body is read when the product uses it.</summary>
+    internal void AddEntry(string container, string path, ContentSha256 digest, ulong length, Func<byte[]> read) =>
+        Files(container).Add(path, new(null, null, read, (digest, length)));
 
     private Dictionary<string, BundleFile> Files(string bundle)
     {
@@ -224,7 +251,7 @@ internal sealed class BundleContentFake : IContentService
     {
         ulong handle = nextHandle++;
         references.Add(handle, (bundle, path));
-        string contentPath = bundle == EagerSnapshot ? path : roots.TryGetValue(bundle, out string? root) ? $"{root}/{path}" : path;
+        string contentPath = bundle == EagerSnapshot ? path : roots.TryGetValue(bundle, out string? root) && root.Length != 0 ? $"{root}/{path}" : path;
         return TestContentReferences.Named(new(new ContentReferenceHandle(handle), () => references.Remove(handle)), contentPath);
     }
 
@@ -246,9 +273,9 @@ internal sealed class BundleContentFake : IContentService
 
         foreach (string bundle in openedBundles.Values.Distinct(StringComparer.Ordinal))
         {
-            if (!roots.TryGetValue(bundle, out string? root) || !request.Path.StartsWith(root + "/", StringComparison.Ordinal)) continue;
-            string path = request.Path[(root.Length + 1)..];
-            if (!files[bundle].TryGetValue(path, out BundleFile? file)) break;
+            if (!roots.TryGetValue(bundle, out string? root) || (root.Length != 0 && !request.Path.StartsWith(root + "/", StringComparison.Ordinal))) continue;
+            string path = root.Length == 0 ? request.Path : request.Path[(root.Length + 1)..];
+            if (!files[bundle].TryGetValue(path, out BundleFile? file)) { if (root.Length == 0) continue; break; }
             if (file.Identity().Digest != request.Sha256) throw new InvalidOperationException($"Test bundle file '{request.Path}' has another digest.");
             OpenedReferences.Add((bundle, path));
             return Reference(bundle, path);
