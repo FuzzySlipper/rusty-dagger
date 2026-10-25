@@ -649,7 +649,7 @@ public sealed class QuestWorldAdmissionTests
                 {"kind":"variable","firstLine":99,"lines":["variable _stop_"],"global":null}
                 """));
         }
-        return noAmbientRumors ? DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject())) : TestPayload.WithQuestSections(root.AsObject());
+        return noAmbientRumors ? DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()), TestPayload.Data) : TestPayload.WithQuestSections(root.AsObject());
     }
 
     internal static DaggerfallSiteProfile WithMarker(DaggerfallSiteProfile source)
