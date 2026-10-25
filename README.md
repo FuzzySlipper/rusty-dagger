@@ -302,6 +302,10 @@ complete), and stages the CoreCLR product. Options:
   once the game reaches ordinary play with no error or
   terminal diagnostic (about four minutes, most of it the opening cinematics);
 - `--aot` also runs the NativeAOT fidelity publish;
+- `--import` runs the import suite even when nothing it runs (the importer revision's
+  inputs, its own sources, the Engine pin, the corpus, the donor checkout or the data
+  container) changed since its last green run on this machine, which it otherwise skips
+  with the reason printed;
 - `--record` attaches the green run's summary to `HEAD` as a git note in
   `refs/notes/verify` and pushes it; read it with
   `git log --notes=verify` after `git fetch origin refs/notes/verify:refs/notes/verify`.
