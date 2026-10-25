@@ -54,8 +54,9 @@ public sealed class DaggerfallTerrainTests
         Assert.Equal(2501168, terrain.CellBase);
         Assert.Equal(47, terrain.CellStride);
         Assert.Equal(22, terrain.Prefix.Count);
-        // Samples round-trip byte-exact through the published span.
-        byte[] samples = Convert.FromBase64String(terrain.Samples);
+        // Samples are published byte-exact as the raw file the section names.
+        Assert.Equal(DaggerfallTerrain.SamplesPath, terrain.Samples);
+        byte[] samples = terrain.SampleBytes;
         Assert.Equal(12500000, samples.Length);
         WoodsFile woods = WoodsReader.Read(bytes, "arena2/WOODS.WLD");
         Assert.Equal(woods.Cells[158 * 1000 + 109].Samples, samples.AsSpan((158 * 1000 + 109) * 25, 25).ToArray());

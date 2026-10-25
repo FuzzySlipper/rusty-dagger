@@ -150,7 +150,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             }
             DaggerfallData data = DaggerfallData.For(selected);
             DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
-                RequireSingle(selected, roles, BaseRole).Payload, RequireSingle(selected, roles, ImportedRole).Payload);
+                RequireSingle(selected, roles, BaseRole).Payload, RequireSingle(selected, roles, ImportedRole).Payload, data);
             ContentPack[] startPacks = [.. roles[NewGameStartRole]];
             if (startPacks.Length > 1)
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects {startPacks.Length} '{NewGameStartRole.Value}' content packs; a new game starts in one place.");

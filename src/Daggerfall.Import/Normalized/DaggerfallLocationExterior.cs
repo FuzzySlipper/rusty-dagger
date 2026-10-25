@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Daggerfall.Import.Arena2;
 
 namespace Daggerfall.Import.Normalized;
@@ -99,19 +100,33 @@ public sealed record DaggerfallLocationExterior(
     /// <summary>Normalized sentinel for a frame tile left to generated terrain texturing.</summary>
     public const byte GeneratedTerrainBitfield = 0xFE;
 
-    /// <summary>Placed building facts specialized for this location, in donor traversal order.</summary>
+    /// <summary>
+    /// Placed building facts specialized for this location, in donor traversal order. Published in the location's
+    /// detail record (<see cref="DaggerfallLocationDetails"/>), not in the locations section.
+    /// </summary>
+    [JsonIgnore]
     public IReadOnlyList<DaggerfallLocationBuilding> Buildings { get; init; } = [];
     /// <summary>
     /// Source ground tiles in row-major 128-by-128 terrain order. Each byte is the donor FLD
     /// tile bitfield: records use bits 0..5, rotation is bit 6, and flip is bit 7. The reserved
     /// 0xFE byte means the donor left that tile for generated terrain texturing; record zero is a
-    /// valid authored source tile. byte[] is intentional:
-    /// System.Text.Json writes it as one base64 logical grid instead of retaining thousands of
-    /// per-tile objects for every corpus location.
+    /// valid authored source tile. Published as the location's raw ground file
+    /// (<see cref="DaggerfallLocationDetails"/>), not in the locations section.
     /// </summary>
+    [JsonIgnore]
     public byte[] GroundTiles { get; init; } = [];
-    /// <summary>Raw MAPPITEM building references, distinct from named-building policy assignment.</summary>
+    /// <summary>
+    /// Raw MAPPITEM building references, distinct from named-building policy assignment. Published in the
+    /// location's detail record, not in the locations section.
+    /// </summary>
+    [JsonIgnore]
     public IReadOnlyList<DaggerfallLocationBuildingReference> BuildingReferences { get; init; } = [];
+
+    /// <summary>
+    /// The distinct building types the MAPPITEM references name, ascending: the quest place header filter asks
+    /// whether a location lists a type, so the index answers it without reading the location's detail.
+    /// </summary>
+    public IReadOnlyList<int> BuildingTypes { get; init; } = [];
     public byte PortTownAndUnknown { get; init; }
 
     /// <summary>Recoverable exhausted city-pool placements; their donor zero values remain published.</summary>

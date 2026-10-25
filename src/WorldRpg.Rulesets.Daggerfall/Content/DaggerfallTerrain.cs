@@ -1,12 +1,37 @@
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
-/// <summary>The normalized wilderness terrain, loaded from the pack alone.</summary>
-/// <param name="Width">The heightmap width.</param>
-/// <param name="Height">The heightmap height.</param>
-/// <param name="Heightmap">The row-major heightmap bytes.</param>
-/// <param name="Samples">The 25 elevation samples of every cell in row-major cell order.</param>
-internal sealed record DaggerfallTerrainSet(int Width, int Height, byte[] Heightmap, byte[] Samples)
+/// <summary>
+/// The normalized wilderness terrain: the row-major heightmap, and the 25 elevation samples of every cell, which
+/// are the bulk of it and are read when first asked for.
+/// </summary>
+internal sealed class DaggerfallTerrainSet
 {
+    private readonly Lazy<byte[]> _samples;
+
+    internal DaggerfallTerrainSet(int width, int height, byte[] heightmap, byte[] samples)
+        : this(width, height, heightmap, () => samples)
+    {
+    }
+
+    /// <summary>A terrain whose cell samples are read the first time a sample is asked for.</summary>
+    internal DaggerfallTerrainSet(int width, int height, byte[] heightmap, Func<byte[]> samples)
+    {
+        Width = width;
+        Height = height;
+        Heightmap = heightmap ?? throw new ArgumentNullException(nameof(heightmap));
+        ArgumentNullException.ThrowIfNull(samples);
+        _samples = new(samples, LazyThreadSafetyMode.ExecutionAndPublication);
+    }
+
+    internal int Width { get; }
+
+    internal int Height { get; }
+
+    internal byte[] Heightmap { get; }
+
+    /// <summary>Every cell's 25 elevation samples in row-major cell order.</summary>
+    internal byte[] Samples => _samples.Value;
+
     /// <summary>
     /// Reads one heightmap value: the elevation the source states for the map pixel. Coordinates
     /// past the map clamp to its edge, the way the donor reads: a sample past the wilderness is

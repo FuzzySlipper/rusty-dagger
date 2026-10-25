@@ -226,7 +226,10 @@ internal static class TestSessions
                 continue;
             }
             string file = Path.Combine(contentRoot, path);
-            bundles.AddEntry(TestDataContainers.Data, path, entry.Sha256, entry.ByteLength, () => TestContentFiles.Read(file));
+            // A JSON body is read by many fixtures and kept; a binary one (a spatial artifact, an image, a ground
+            // grid) is read afresh each time the product opens it, so the suite does not keep every one it touched.
+            bool kept = path.EndsWith(".json", StringComparison.Ordinal);
+            bundles.AddEntry(TestDataContainers.Data, path, entry.Sha256, entry.ByteLength, () => kept ? TestContentFiles.Read(file) : TestContentFiles.ReadUncached(file));
         }
 
         if (selectedPublicationRoots is not { Count: > 0 } && TestDataContainers.Exists(TestDataContainers.Music))

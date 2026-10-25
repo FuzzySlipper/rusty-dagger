@@ -41,18 +41,17 @@ internal sealed class DaggerfallBlocksSnapshot(
     internal IReadOnlyDictionary<DaggerfallBlockQuestMarkerKey, IReadOnlyList<DaggerfallSiteMarker>> QuestMarkers { get; } =
         new ReadOnlyDictionary<DaggerfallBlockQuestMarkerKey, IReadOnlyList<DaggerfallSiteMarker>>((questMarkers ?? new Dictionary<DaggerfallBlockQuestMarkerKey, IReadOnlyList<DaggerfallSiteMarker>>()).ToDictionary());
 
-    /// <summary>Joins location placements to their source catalog once at selected-content admission.</summary>
+    /// <summary>
+    /// Joins location placements to their source catalog once at selected-content admission: every block a location
+    /// places has a city map. That each placed block's buildings are in the catalog is the import's check (its
+    /// world-blocks step), since a location's buildings are its detail, read only when the location is used.
+    /// </summary>
     internal void AdmitLocations(DaggerfallLocationSet locations)
     {
+        if (Maps.Count == 0) return;
         foreach (DaggerfallSiteRecord site in locations.Records)
-        {
-            if (Maps.Count > 0)
-                foreach (DaggerfallSiteBlock block in site.Exterior?.Blocks ?? [])
-                    if (!Maps.ContainsKey(block.SourceName)) throw new InvalidOperationException($"Site '{site.Id}' names unpublished RMB map '{block.SourceName}'.");
-            foreach (DaggerfallSiteBuildingSource building in site.Exterior?.Buildings.Values ?? [])
-                if (!RmbBuildings.ContainsKey(building.Source.Id))
-                    throw new InvalidOperationException($"Site '{site.Id}' building '{building.Id}' names unpublished RMB source '{building.Source.Id}'.");
-        }
+            foreach (DaggerfallSiteBlock block in site.Exterior?.Blocks ?? [])
+                if (!Maps.ContainsKey(block.SourceName)) throw new InvalidOperationException($"Site '{site.Id}' names unpublished RMB map '{block.SourceName}'.");
     }
 }
 

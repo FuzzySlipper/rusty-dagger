@@ -52,6 +52,42 @@ public sealed class AssembledSiteSessionTests
     }
 
     /// <summary>
+    /// A location's buildings, building references and ground are its published detail, read from the data
+    /// container when that location is first asked for them: composing and starting a game reads none of the other
+    /// locations' details, and a location asked for its buildings reads its own record and nothing else.
+    /// </summary>
+    [Fact]
+    public void An_unused_location_s_detail_is_never_read()
+    {
+        string root = TestData.RepositoryRoot;
+        ProductContent staged = StagedContent(root, out BundleContentFake bundles);
+        ResolvedGameComposition composition = TestSessions.Resolve(staged, new GameBundleId("daggerfall.classic")).RequireComposition();
+        DaggerfallSiteProfile start = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, start);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(start.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+
+        using IGameSession created = new DaggerfallRuleset(videosEnabled: false).CreateSession(new GameSessionContext(engine.Context, composition));
+        DaggerfallSession session = Assert.IsType<DaggerfallSession>(created);
+        string[] Details() => [.. bundles.ReadFiles.Select(file => file.Path).Where(path => path.StartsWith("worldrpg/locations/", StringComparison.Ordinal)).Distinct().Order(StringComparer.Ordinal)];
+        string[] started = Details();
+        // At most the start location's own detail is read to start the game.
+        DaggerfallSiteId home = start.Site ?? throw new InvalidOperationException("The start site names no location.");
+        Assert.All(started, path => Assert.StartsWith($"worldrpg/locations/{home.Region}/{home.Index}.", path, StringComparison.Ordinal));
+
+        DaggerfallSiteRecord charing = session.Site.Require(Charing);
+        Assert.NotEmpty(charing.Exterior!.Buildings);
+        Assert.Equal([.. started, "worldrpg/locations/17/4.json"], Details().Order(StringComparer.Ordinal));
+        Assert.False(charing.Exterior.GroundTiles.IsEmpty);
+        Assert.Equal([.. started, "worldrpg/locations/17/4.ground", "worldrpg/locations/17/4.json"], Details().Order(StringComparer.Ordinal));
+        // Asked again, the location answers from what it read.
+        Assert.NotEmpty(charing.Exterior.BuildingReferences);
+        Assert.Equal(started.Length + 2, Details().Length);
+        Assert.Equal(started.Length + 2, bundles.ReadFiles.Count(file => file.Path.StartsWith("worldrpg/locations/", StringComparison.Ordinal)));
+    }
+
+    /// <summary>
     /// A session enters an assembled building interior and an assembled dungeon, and a save taken inside
     /// each restores there: the active profile, the inactive sites' detached state, the action graphs and
     /// the dungeon discovery all key on the generated profile ids.

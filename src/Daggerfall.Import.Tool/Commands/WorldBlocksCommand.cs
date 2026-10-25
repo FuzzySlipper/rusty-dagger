@@ -13,13 +13,15 @@ namespace Daggerfall.Import.Tool.Commands;
 /// <remarks>
 /// It reads the catalog's locations for the blocks the world places, so it runs after the locations command,
 /// and the world media publication its models' meshes are placements of, so it runs after world-media. Every
-/// mesh a model names must be one that publication carries.
+/// mesh a model names must be one that publication carries, and every building and city map of a placed block
+/// one the block building catalog (the blocks command's) carries.
 /// </remarks>
 internal static class WorldBlocksCommand
 {
     public static ToolCommand Command { get; } = new("world-blocks",
         [Options.Arena2, Options.Pack, SiteInputs.Shared, CommandOption.Staged(SiteInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldBlocks), Options.Inventory,
-            CommandOption.Staged(SiteInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-blocks.sources.json"), CommandOption.Optional("--variants", "FILE")], Run);
+            CommandOption.Staged(SiteInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-blocks.sources.json"), CommandOption.Optional("--variants", "FILE"),
+            CommandOption.Staged("--buildings", "PAYLOAD.json", ImportLayout.BuildingsPayload)], Run);
 
     private static int Run(CommandArguments args)
     {
@@ -30,8 +32,10 @@ internal static class WorldBlocksCommand
             .. Directory.EnumerateFiles(arena2, "TEXTURE.*").Select(path => Source(arena2, Path.GetFileName(path))),
         ]);
         DaggerfallLocations locations = PayloadFiles.ReadSection<DaggerfallLocations>(args[Options.Pack.Name], "locations");
+        DaggerfallBlockBuildingSet catalog = JsonSerializer.Deserialize<DaggerfallBlockBuildingSet>(File.ReadAllBytes(args["--buildings"]), PublishedJson.SectionRead)
+            ?? throw new InvalidOperationException($"The block building catalog '{args["--buildings"]}' is empty.");
         WorldBlocksPublication publication = Arena2WorldBlocksPublication.Create(sources, locations, Arena2SitePublication.WorldMediaImporterId,
-            line => Console.WriteLine($"world blocks: {line} ({clock.Elapsed.TotalSeconds:F0}s)"));
+            line => Console.WriteLine($"world blocks: {line} ({clock.Elapsed.TotalSeconds:F0}s)"), catalog);
         if (args.Optional("--variants") is { } variants) publication = WorldBlockVariantPublication.Append(publication, variants);
         RequireSharedMeshes(publication, args[SiteInputs.Shared.Name]);
         ImportPublicationPlan plan = publication.Plan.WithInvocation(SiteInputs.Invocation(args, publication.Plan.Manifest.AuthoredOverlays));

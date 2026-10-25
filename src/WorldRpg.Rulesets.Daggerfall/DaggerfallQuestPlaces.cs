@@ -36,7 +36,7 @@ internal sealed class DaggerfallQuestPlaceAllocator(
 
     /// <summary>The MAPS header filter: a typed request needs the location to list that building type.</summary>
     internal static bool HeaderAdmits(DaggerfallSiteRecord site, int type, int wildcard) => type == -1 && wildcard is 0 or 1
-        || site.Exterior?.BuildingReferences.Any(reference => reference.BuildingType == type) == true;
+        || site.Exterior?.BuildingTypes.Contains(type) == true;
 
     /// <summary>The dungeon-type condition of a remote dungeon request; -1 is any ordinary dungeon type.</summary>
     internal static bool DungeonMatches(DaggerfallSiteRecord site, int type) => IsDungeon(site.Kind)

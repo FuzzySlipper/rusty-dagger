@@ -163,7 +163,12 @@ internal sealed partial class ImportToolFixture : IDisposable
         void Section<T>(string id, T value) => sections.Add(id, JsonSerializer.Serialize(value, PublishedJson.Section));
         switch (name)
         {
-            case "locations": Section("locations", DaggerfallLocationBuilder.Build(BsaArchive.Parse(Source("MAPS.BSA"), Label("MAPS.BSA")), BsaArchive.Parse(Source("BLOCKS.BSA"), Label("BLOCKS.BSA")), BsaArchive.Parse(Source("ARCH3D.BSA"), Label("ARCH3D.BSA")), PakDecoder.Decode(Source("CLIMATE.PAK"), Label("CLIMATE.PAK")))); break;
+            case "locations":
+                DaggerfallLocations locations = DaggerfallLocationBuilder.Build(BsaArchive.Parse(Source("MAPS.BSA"), Label("MAPS.BSA")), BsaArchive.Parse(Source("BLOCKS.BSA"), Label("BLOCKS.BSA")), BsaArchive.Parse(Source("ARCH3D.BSA"), Label("ARCH3D.BSA")), PakDecoder.Decode(Source("CLIMATE.PAK"), Label("CLIMATE.PAK")));
+                Section("locations", locations);
+                // Each exterior's detail record and ground file are written under the content root beside the section.
+                foreach ((string path, byte[] bytes) in DaggerfallLocationDetails.Files(locations)) result.Add(At(Path.Combine("output", path.Replace('/', Path.DirectorySeparatorChar))), bytes);
+                break;
             case "magic-catalog": sections.Add("magic", Arena2MagicCatalogDocument.Build(Source("SPELLS.STD"), Source("MAGIC.DEF"), Label("SPELLS.STD"), Label("MAGIC.DEF"), Arena2MagicEffectCostTable.Read(File.ReadAllText(Donor("Assets/Scripts/Game/Formulas/FormulaHelper.cs")))).Json); break;
             case "mobile-catalog": sections.Add("mobiles", Arena2MobileCatalogDocument.Build(File.ReadAllText(Donor("Assets/Scripts/Utility/EnemyBasics.cs")), File.ReadAllText(Authored), PublishedSourcePath.Donor("Assets/Scripts/Utility/EnemyBasics.cs"), MonsterArchiveInventory.Enumerate(Source("MONSTER.BSA"), "MONSTER.BSA")).Json); break;
             case "internal-strings": Section("text", DaggerfallInternalStringsBuilder.Merge(Read<DaggerfallText>(Pack, "text"), File.ReadAllBytes(Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv")), PublishedSourcePath.Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv"), "en")); break;
@@ -174,7 +179,11 @@ internal sealed partial class ImportToolFixture : IDisposable
                 DaggerfallFactionsBuilder.Build(File.ReadAllText(Path.Combine(Arena2, "FACTION.TXT")), Label("FACTION.TXT"), Source("FACTION.TXT"), Rows),
                 File.ReadAllBytes(Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv")),
                 PublishedSourcePath.Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv"))); break;
-            case "terrain": Section("terrain", DaggerfallTerrainBuilder.Build(Source("WOODS.WLD"), Label("WOODS.WLD"), Rows)); break;
+            case "terrain":
+                DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(Source("WOODS.WLD"), Label("WOODS.WLD"), Rows);
+                Section("terrain", terrain);
+                result.Add(At(Path.Combine("output", terrain.Samples.Replace('/', Path.DirectorySeparatorChar))), terrain.SampleBytes);
+                break;
             case "building-name-inputs": Section("buildingNames", DaggerfallBuildingNameInputsBuilder.Build(File.ReadAllBytes(Donor("Assets/Scripts/API/MapsFile.cs")), PublishedSourcePath.Donor("Assets/Scripts/API/MapsFile.cs"))); break;
             case "blocks":
                 var blocks = DaggerfallBlocksBuilder.Build(Source("BLOCKS.BSA"), Label("BLOCKS.BSA"), Rows);

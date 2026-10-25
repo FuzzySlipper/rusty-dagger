@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Security.Cryptography;
@@ -19,43 +20,18 @@ internal static partial class DaggerfallBaseContent
     private const int MaximumAuthoredArmor = 1_000;
     private const int MaximumAuthoredLootGold = 1_000_000;
 
-    /// <summary>Reads the authored and imported base payloads as one set of sections.</summary>
-    internal static DaggerfallDefinitions Read(ReadOnlyMemory<byte> authored, ReadOnlyMemory<byte> imported) =>
-        Read(Combine(authored, imported));
-
     /// <summary>
-    /// Joins the authored and imported payloads' root sections into one root, keeping each section's
-    /// bytes. Every section has one owner: a section both payloads carry is refused rather than resolved
-    /// by precedence, because either copy winning would silently discard the other.
+    /// Reads the authored and imported base payloads as one set of sections, parsed once where they lie, and the
+    /// published location details and terrain samples from <paramref name="data"/> when they are first used.
     /// </summary>
-    internal static byte[] Combine(ReadOnlyMemory<byte> authored, ReadOnlyMemory<byte> imported)
+    internal static DaggerfallDefinitions Read(ReadOnlyMemory<byte> authored, ReadOnlyMemory<byte> imported, DaggerfallData? data)
     {
         DaggerfallContentDiagnostics diagnostics = new();
+        ReadOnlySequence<byte> joined = Join(authored, imported, diagnostics);
         try
         {
-            using JsonDocument authoredDocument = JsonDocument.Parse(authored);
-            using JsonDocument importedDocument = JsonDocument.Parse(imported);
-            JsonElement authoredRoot = Object(authoredDocument.RootElement, "authored base payload", diagnostics);
-            JsonElement importedRoot = Object(importedDocument.RootElement, "imported base payload", diagnostics);
-            diagnostics.ThrowIfAny();
-            HashSet<string> authoredSections = [.. authoredRoot.EnumerateObject().Select(property => property.Name)];
-            foreach (JsonProperty section in importedRoot.EnumerateObject().Where(section => authoredSections.Contains(section.Name)))
-                diagnostics.Add($"Section '{section.Name}' is in both the authored and the imported base payload; each section has one owner.");
-            diagnostics.ThrowIfAny();
-            System.Buffers.ArrayBufferWriter<byte> buffer = new(authored.Length + imported.Length + 16);
-            using (Utf8JsonWriter writer = new(buffer, new JsonWriterOptions { Indented = true }))
-            {
-                writer.WriteStartObject();
-                foreach (JsonProperty section in authoredRoot.EnumerateObject().Concat(importedRoot.EnumerateObject()))
-                {
-                    writer.WritePropertyName(section.Name);
-                    // The section's own UTF-8 bytes: a string copy of the imported sections would cost
-                    // twice their size again for every admission.
-                    writer.WriteRawValue(System.Runtime.InteropServices.JsonMarshal.GetRawUtf8Value(section.Value), skipInputValidation: true);
-                }
-                writer.WriteEndObject();
-            }
-            return buffer.WrittenSpan.ToArray();
+            using JsonDocument document = JsonDocument.Parse(joined);
+            return Read(document, data, diagnostics);
         }
         catch (JsonException exception)
         {
@@ -64,12 +40,112 @@ internal static partial class DaggerfallBaseContent
         }
     }
 
-    internal static DaggerfallDefinitions Read(ReadOnlyMemory<byte> payload)
+    /// <summary>The authored and imported payloads joined into one root as <see cref="Read(ReadOnlyMemory{byte}, ReadOnlyMemory{byte}, DaggerfallData?)"/> reads them.</summary>
+    internal static byte[] Combine(ReadOnlyMemory<byte> authored, ReadOnlyMemory<byte> imported) =>
+        Join(authored, imported, new DaggerfallContentDiagnostics()).ToArray();
+
+    /// <summary>
+    /// Joins the authored and imported payloads' root sections into one root without copying either: the authored
+    /// object up to its closing brace, a comma, then the imported object after its opening brace. Every section has
+    /// one owner: a section both payloads carry is refused rather than resolved by precedence, because either copy
+    /// winning would silently discard the other.
+    /// </summary>
+    private static ReadOnlySequence<byte> Join(ReadOnlyMemory<byte> authored, ReadOnlyMemory<byte> imported, DaggerfallContentDiagnostics diagnostics)
+    {
+        authored = Trimmed(authored);
+        imported = Trimmed(imported);
+        try
+        {
+            string[] authoredSections = SectionNames(authored, "authored base payload", diagnostics);
+            string[] importedSections = SectionNames(imported, "imported base payload", diagnostics);
+            diagnostics.ThrowIfAny();
+            foreach (string section in importedSections.Intersect(authoredSections, StringComparer.Ordinal))
+                diagnostics.Add($"Section '{section}' is in both the authored and the imported base payload; each section has one owner.");
+            diagnostics.ThrowIfAny();
+            if (importedSections.Length == 0) return new ReadOnlySequence<byte>(authored);
+            if (authoredSections.Length == 0) return new ReadOnlySequence<byte>(imported);
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add($"Base payload is not valid JSON: {exception.Message}");
+            throw diagnostics.Exception();
+        }
+
+        PayloadSegment first = new(authored[..^1], 0);
+        PayloadSegment last = first.Append(","u8.ToArray()).Append(imported[1..]);
+        return new ReadOnlySequence<byte>(first, 0, last, last.Memory.Length);
+
+        static ReadOnlyMemory<byte> Trimmed(ReadOnlyMemory<byte> payload)
+        {
+            ReadOnlySpan<byte> span = payload.Span;
+            int start = span.StartsWith((ReadOnlySpan<byte>)[0xEF, 0xBB, 0xBF]) ? 3 : 0;
+            while (start < span.Length && span[start] is (byte)' ' or (byte)'\t' or (byte)'\r' or (byte)'\n') start++;
+            int end = span.Length;
+            while (end > start && span[end - 1] is (byte)' ' or (byte)'\t' or (byte)'\r' or (byte)'\n') end--;
+            return payload[start..end];
+        }
+    }
+
+    /// <summary>A payload's top-level section names, read without materializing the sections.</summary>
+    private static string[] SectionNames(ReadOnlyMemory<byte> payload, string what, DaggerfallContentDiagnostics diagnostics)
+    {
+        Utf8JsonReader reader = new(payload.Span);
+        if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+        {
+            diagnostics.Add($"The {what} must be a JSON object.");
+            return [];
+        }
+
+        List<string> names = [];
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            names.Add(reader.GetString()!);
+            reader.Read();
+            reader.Skip();
+        }
+
+        if (reader.TokenType != JsonTokenType.EndObject || reader.Read())
+            diagnostics.Add($"The {what} is not one JSON object.");
+        return [.. names];
+    }
+
+    /// <summary>One piece of a joined payload.</summary>
+    private sealed class PayloadSegment : ReadOnlySequenceSegment<byte>
+    {
+        internal PayloadSegment(ReadOnlyMemory<byte> memory, long runningIndex)
+        {
+            Memory = memory;
+            RunningIndex = runningIndex;
+        }
+
+        internal PayloadSegment Append(ReadOnlyMemory<byte> memory)
+        {
+            PayloadSegment next = new(memory, RunningIndex + Memory.Length);
+            Next = next;
+            return next;
+        }
+    }
+
+    /// <summary>Reads one payload carrying every section, and the published location details and terrain samples from <paramref name="data"/>.</summary>
+    internal static DaggerfallDefinitions Read(ReadOnlyMemory<byte> payload, DaggerfallData? data = null)
     {
         DaggerfallContentDiagnostics diagnostics = new();
         try
         {
             using JsonDocument document = JsonDocument.Parse(payload);
+            return Read(document, data, diagnostics);
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add($"Base payload is not valid JSON: {exception.Message}");
+            throw diagnostics.Exception();
+        }
+    }
+
+    private static DaggerfallDefinitions Read(JsonDocument document, DaggerfallData? data, DaggerfallContentDiagnostics diagnostics)
+    {
+        try
+        {
             JsonElement root = Object(document.RootElement, "root", diagnostics);
             RejectDuplicateProperties(root, "root", diagnostics);
             if (Text(root, "ruleset", diagnostics) != DaggerfallRuleset.Identity.Value) diagnostics.Add("Base payload must identify ruleset 'daggerfall'.");
@@ -91,12 +167,12 @@ internal static partial class DaggerfallBaseContent
             DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, diagnostics);
             DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
             DaggerfallEnemySpells enemySpells = ReadEnemySpells(root, mobiles, magic, diagnostics);
-            DaggerfallLocationSet locations = ReadLocations(root, diagnostics);
+            DaggerfallLocationSet locations = ReadLocations(root, data, diagnostics);
             (DaggerfallTextSet text, DaggerfallNameTablesSet names, DaggerfallRumorCatalogSet rumors, DaggerfallDialogueWorldRules dialogueWorldRules, DaggerfallBiographiesSet biographies, DaggerfallBooksSet books) = ReadTextAndKeyedSections(root, diagnostics);
             DaggerfallBuildingNameInputs buildingNames = ReadBuildingNameInputs(root, locations.Regions, diagnostics);
             DaggerfallWorldGridsSet grids = ReadWorldGrids(root, diagnostics);
             DaggerfallFactionsSet factions = ReadFactions(root, locations.Regions, diagnostics);
-            DaggerfallTerrainSet terrain = ReadTerrain(root, diagnostics);
+            DaggerfallTerrainSet terrain = ReadTerrain(root, data, diagnostics);
             DaggerfallItemTemplateSet itemTemplatesCatalog = ReadItemTemplates(root, diagnostics);
             foreach (var recipe in magic.PotionRecipes.Values) recipe.Validate(itemTemplatesCatalog);
             DaggerfallQuestSourceSet questSources = ReadQuestSources(root, diagnostics);
@@ -585,13 +661,22 @@ internal static partial class DaggerfallBaseContent
     /// and name, a non-negative map, a dungeon that names a location the section carries and lists
     /// blocks, and a gap that names what it could not read.
     /// </remarks>
-    private static DaggerfallLocationSet ReadLocations(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    /// <summary>
+    /// Reads the location catalog: every location's identity, map pixel, kind and exterior footprint and blocks.
+    /// Each exterior's buildings, building references and ground are its published detail, read from the data
+    /// container below the section's <c>details</c> root when the location is first used; with no data container
+    /// the catalog is still read, and asking a location for its detail says the container was not given.
+    /// </summary>
+    private static DaggerfallLocationSet ReadLocations(JsonElement root, DaggerfallData? data, DaggerfallContentDiagnostics diagnostics)
     {
         if (!root.TryGetProperty("locations", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload must publish a locations section.");
             return new DaggerfallLocationSet([], [], 0, 0, 0);
         }
+
+        string detailsRoot = Text(section, "details", diagnostics);
+        DaggerfallSiteDetails? details = data is null || detailsRoot.Length == 0 ? null : new DaggerfallSiteDetails(data, detailsRoot);
 
         List<DaggerfallSiteRecord> records = [];
         HashSet<(int Region, int Index)> keys = [];
@@ -631,7 +716,7 @@ internal static partial class DaggerfallBaseContent
             // section is still readable, but a site consumer would answer from a kind nobody published.
             if (DaggerfallSiteKinds.TryResolve(locationType, out DaggerfallSiteKind kind))
             {
-                DaggerfallSiteExterior? exterior = ReadSiteExterior(location, region, index, longitude, latitude, diagnostics);
+                DaggerfallSiteExterior? exterior = ReadSiteExterior(location, region, index, longitude, latitude, details, diagnostics);
                 records.Add(new DaggerfallSiteRecord(new DaggerfallSiteId(region, index), name, mapId,
                     longitude, latitude, dungeonType, kind, discovered, exterior) { Climate = climate });
             }
@@ -773,11 +858,20 @@ internal static partial class DaggerfallBaseContent
             }
         }
 
+        // Each exterior's detail is read when it is used, so its presence is what is checked here: a container
+        // that lacks one is named now, not when a quest or a walk first reaches that location.
+        if (details is not null)
+        {
+            string[] missing = [.. details.Missing(records.Where(record => record.Exterior is not null).Select(record => record.Id))];
+            if (missing.Length != 0)
+                diagnostics.Add($"{data!.Source} lacks {missing.Length} location detail files, for example '{string.Join("', '", missing.Take(3))}'; import the Daggerfall data again.");
+        }
+
         return new DaggerfallLocationSet([.. keys], [.. records], dungeons, gaps, regions);
     }
 
     private static DaggerfallSiteExterior? ReadSiteExterior(JsonElement location, int region, int index,
-        int longitude, int latitude, DaggerfallContentDiagnostics diagnostics)
+        int longitude, int latitude, DaggerfallSiteDetails? details, DaggerfallContentDiagnostics diagnostics)
     {
         if (!location.TryGetProperty("exterior", out JsonElement value)) return null;
         JsonElement exterior = Object(value, $"location {region}/{index} exterior", diagnostics);
@@ -809,13 +903,30 @@ internal static partial class DaggerfallBaseContent
             SourceLocationId = sourceLocationId,
             PortTownAndUnknown = port,
             Blocks = ReadSiteBlocks(exterior, width, height, diagnostics),
-            GroundTiles = ReadSiteGroundTiles(exterior, diagnostics),
-            Buildings = ReadSiteBuildings(exterior, region, index, width, height, diagnostics),
-            BuildingReferences = ReadBuildingReferences(exterior, diagnostics),
+            BuildingTypes = ReadBuildingTypes(exterior, region, index, diagnostics),
+            Detail = new DaggerfallSiteDetailSource(details, new DaggerfallSiteId(region, index), width, height),
         };
     }
 
-    private static IReadOnlyList<DaggerfallSiteBuildingReference> ReadBuildingReferences(JsonElement exterior, DaggerfallContentDiagnostics diagnostics)
+    private static IReadOnlyList<int> ReadBuildingTypes(JsonElement exterior, int region, int index, DaggerfallContentDiagnostics diagnostics)
+    {
+        List<int> types = [];
+        foreach (JsonElement value in Array(exterior, "buildingTypes", diagnostics))
+        {
+            if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out int type) || type is < 0 or > byte.MaxValue)
+            {
+                diagnostics.Add($"Location {region}/{index} names a building type that is not a source byte.");
+                continue;
+            }
+
+            types.Add(type);
+        }
+
+        return types.AsReadOnly();
+    }
+
+    /// <summary>A location's MAPPITEM building references, from its detail record.</summary>
+    internal static IReadOnlyList<DaggerfallSiteBuildingReference> ReadBuildingReferences(JsonElement exterior, DaggerfallContentDiagnostics diagnostics)
     {
         // Authored sites need not publish MAPS fixed-building references.
         if (!exterior.TryGetProperty("buildingReferences", out _)) return [];
@@ -847,54 +958,8 @@ internal static partial class DaggerfallBaseContent
         return blocks.AsReadOnly();
     }
 
-    private static DaggerfallGroundTileGrid ReadSiteGroundTiles(JsonElement exterior, DaggerfallContentDiagnostics diagnostics)
-    {
-        // The normalized importer publishes the complete FLD frame as one compact logical grid.
-        // An absent section remains valid for authored sites that intentionally have no source FLD.
-        if (!exterior.TryGetProperty("groundTiles", out JsonElement section)) return DaggerfallGroundTileGrid.Empty;
-        if (section.ValueKind != JsonValueKind.String)
-        {
-            diagnostics.Add("Location exterior groundTiles must be a base64 logical grid.");
-            return DaggerfallGroundTileGrid.Empty;
-        }
-
-        byte[] grid;
-        try
-        {
-            grid = Convert.FromBase64String(section.GetString() ?? string.Empty);
-        }
-        catch (FormatException)
-        {
-            diagnostics.Add("Location exterior groundTiles is not valid base64.");
-            return DaggerfallGroundTileGrid.Empty;
-        }
-
-        const int expected = DaggerfallGroundTileGrid.CellCount;
-        if (grid.Length != expected)
-        {
-            diagnostics.Add($"Location exterior groundTiles carries {grid.Length} bytes instead of the donor 128-by-128 logical grid.");
-            return DaggerfallGroundTileGrid.Empty;
-        }
-        foreach (byte bitfield in grid)
-        {
-            if (bitfield != DaggerfallGroundTileGrid.GeneratedTerrainBitfield && (bitfield & 0x3F) >= 56)
-            {
-                diagnostics.Add($"Location exterior groundTiles carries unsupported texture record {bitfield & 0x3F}.");
-                return DaggerfallGroundTileGrid.Empty;
-            }
-        }
-        try
-        {
-            return DaggerfallGroundTileGrid.FromBytes(grid, "published exterior");
-        }
-        catch (InvalidOperationException exception)
-        {
-            diagnostics.Add(exception.Message);
-            return DaggerfallGroundTileGrid.Empty;
-        }
-    }
-
-    private static IReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> ReadSiteBuildings(JsonElement exterior, int region, int index,
+    /// <summary>A location's placed buildings, from its detail record.</summary>
+    internal static IReadOnlyDictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> ReadSiteBuildings(JsonElement exterior, int region, int index,
         int width, int height, DaggerfallContentDiagnostics diagnostics)
     {
         List<DaggerfallSiteBuildingSource> result = [];
@@ -2415,43 +2480,37 @@ internal static partial class DaggerfallBaseContent
     /// way the grids do; the cell samples travel as one base-64 span. Every heightmap byte the
     /// rows carry is data, so a row count or tiling miss is a refusal rather than a partial map.
     /// </summary>
-    private static DaggerfallTerrainSet ReadTerrain(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    /// <summary>
+    /// Reads the wilderness terrain: the heightmap from the section, and the cell samples from the raw file the
+    /// section names in the data container, read when a terrain surface first needs them.
+    /// </summary>
+    private static DaggerfallTerrainSet ReadTerrain(JsonElement root, DaggerfallData? data, DaggerfallContentDiagnostics diagnostics)
     {
+        const int Width = 1000, Height = 500, CellSamples = 25;
         if (!root.TryGetProperty("terrain", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload publishes no terrain section; terrain lookups resolve to nothing until it is republished.");
             return new DaggerfallTerrainSet(0, 0, [], []);
         }
 
-        byte[] heightmap = ReadGridCells(section, "heightmap", 1000, 500, "terrain heightmap", diagnostics);
-        if (heightmap.Length != 500000)
+        byte[] heightmap = ReadGridCells(section, "heightmap", Width, Height, "terrain heightmap", diagnostics);
+        if (heightmap.Length != Width * Height)
         {
             diagnostics.Add($"The published terrain heightmap carries {heightmap.Length} bytes for a 1000 by 500 map.");
         }
 
-        byte[] samples = [];
-        if (section.TryGetProperty("samples", out JsonElement encoded) && encoded.ValueKind == JsonValueKind.String)
+        string path = Text(section, "samples", diagnostics);
+        if (data is not null && path.Length != 0 && !data.Contains(path))
+            diagnostics.Add($"The published terrain names its samples at '{path}', which {data.Source} does not carry.");
+        return new DaggerfallTerrainSet(Width, Height, heightmap, () =>
         {
-            try
-            {
-                samples = Convert.FromBase64String(encoded.GetString() ?? string.Empty);
-            }
-            catch (FormatException)
-            {
-                diagnostics.Add("The published terrain samples are not base-64.");
-            }
-        }
-        else
-        {
-            diagnostics.Add("The published terrain carries no samples.");
-        }
-
-        if (samples.Length != 12500000)
-        {
-            diagnostics.Add($"The published terrain carries {samples.Length} sample bytes for 500000 cells of 25.");
-        }
-
-        return new DaggerfallTerrainSet(1000, 500, heightmap, samples);
+            if (data is null)
+                throw new InvalidOperationException($"The terrain samples are read from '{path}' in {DaggerfallData.DataContainerName}, and this terrain was read without it.");
+            byte[] samples = data.ReadBytes(path).ToArray();
+            return samples.Length == Width * Height * CellSamples
+                ? samples
+                : throw new DaggerfallContentException([$"The published terrain samples at '{path}' carry {samples.Length} bytes for {Width * Height} cells of {CellSamples}."]);
+        });
     }
 
     /// <summary>

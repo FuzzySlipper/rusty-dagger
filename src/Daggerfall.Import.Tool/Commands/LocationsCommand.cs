@@ -6,11 +6,12 @@ namespace Daggerfall.Import.Tool.Commands;
 /// <summary>
 /// Reads every region's locations and dungeons from MAPS.BSA, joins each MAPPITEM to its RMB/FLD facts from
 /// BLOCKS.BSA, reads each location's climate from CLIMATE.PAK (and its dungeon's classic texture table from that
-/// climate), and writes the complete location contract into the imported payload when asked.
+/// climate), and writes the location contract when asked: the locations section of the imported payload, and each
+/// exterior location's detail record and ground file under the content root (<see cref="DaggerfallLocationDetails"/>).
 /// </summary>
 internal static class LocationsCommand
 {
-    public static ToolCommand Command { get; } = new("locations", [Options.Arena2, Options.Pack, Options.Update], Run);
+    public static ToolCommand Command { get; } = new("locations", [Options.Arena2, Options.Pack, Options.ContentRoot, Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {
@@ -31,6 +32,18 @@ internal static class LocationsCommand
             Console.WriteLine($"  warning: location {location.Region}/{location.Index}: {string.Join("; ", location.Exterior!.MissingCityBuildings)}");
 
         if (!args.Switch("--update")) return Options.ReportOnly("these locations");
+        // The directory holds only what this run writes, so a location a later corpus no longer carries leaves no detail behind.
+        string root = Path.GetFullPath(args[Options.ContentRoot.Name]);
+        string details = Path.Combine(root, locations.Details);
+        if (Directory.Exists(details)) Directory.Delete(details, recursive: true);
+        int files = 0;
+        foreach ((string path, byte[] bytes) in DaggerfallLocationDetails.Files(locations))
+        {
+            PayloadFiles.WriteFile(Path.Combine(root, path), bytes);
+            files++;
+        }
+
+        Console.WriteLine($"locations: {files} detail and ground files written under {details}");
         PayloadFiles.WriteSection(args["--pack"], "locations", locations);
         return 0;
     }
