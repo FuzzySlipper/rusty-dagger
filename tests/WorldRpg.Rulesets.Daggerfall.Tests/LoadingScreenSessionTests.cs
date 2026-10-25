@@ -14,7 +14,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>
 /// A session given the host's loading screen acknowledges the player's slow world changes on it in the update that
 /// accepts them, before any slow work: a dungeon's entrance and a journey each publish their first phase with the
-/// player still where they were, run one phase per later update, and clear once the player has arrived.
+/// player still where they were, run one phase per later update, and clear once the player has arrived. The arrival's
+/// terrain bakes off the update under the screen, which measures it, and the player stands on it only once it is live.
 /// </summary>
 public sealed class LoadingScreenSessionTests
 {
@@ -126,6 +127,90 @@ public sealed class LoadingScreenSessionTests
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
         run.Step();
         Assert.Null(loading.Current);
+    }
+
+    [Fact]
+    public void A_journeys_ground_bakes_off_the_update_under_the_screen_and_the_player_is_stood_only_once_it_is_live()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallSiteRecord destination = world.Unpublished(_ => true);
+        using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold, loadingScreen: true);
+        DaggerfallSession session = run.Session;
+        LoadingScreen loading = run.Loading!;
+        SpatialFake spatial = run.Spatial;
+        string title = $"Travelling to {destination.Name}", arriving = $"Arriving at {destination.Name}";
+        // The terrain window's instances, and whether each downward floor probe (a stand) found them live.
+        bool WindowLive() => spatial.ResidentCollisionInstances.Keys.Any(id => id >> 56 == 0xD7);
+        List<bool> probes = [];
+        spatial.FloorHit = request =>
+        {
+            if (request.Direction.Y < 0) probes.Add(WindowLive());
+            return default;
+        };
+        spatial.HoldDeferredCollision = true;
+
+        run.AcceptJourney(destination);
+        run.Step();
+        run.Step();
+        int waited = spatial.SynchronousWaitsOnDeferred;
+        probes.Clear();
+        run.Step();
+
+        // Arrived: the destination is the session's, its window is handed to the Engine as one deferred batch, and
+        // nothing the arrival did afterwards waited on it. The batch still validates, so the bar moves unmeasured.
+        Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
+        Assert.Equal(1, spatial.PendingDeferredBatches);
+        Assert.True(spatial.CollisionResidencyRequests.Last(request => request.Deferred).Instances.Length > 0);
+        Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);
+        Assert.False(WindowLive());
+        Assert.Equal(new LoadingState(title, arriving, 2, 3, null), loading.Current);
+        Assert.Null(run.PublishedLoading()!["fraction"]);
+        // Not stood: there is no ground under the player yet.
+        Assert.Empty(probes);
+
+        // Baking: the bar counts the share of the window baked within the arrival's third.
+        spatial.DeferredBake = (12, 48);
+        run.Step();
+        Assert.Equal(new LoadingState(title, arriving, 2, 3, (2d + .25d) / 3d), loading.Current);
+        Assert.Equal((2d + .25d) / 3d, run.PublishedLoading()!["fraction"]);
+        Assert.Empty(probes);
+
+        // Live: the arrival is stood on it, and the screen keeps its full bar for one update before play resumes.
+        spatial.HoldDeferredCollision = false;
+        run.Step();
+        Assert.True(WindowLive());
+        Assert.NotEmpty(probes);
+        Assert.All(probes, Assert.True);
+        Assert.Equal(new LoadingState(title, arriving, 3, 3, 1d), loading.Current);
+        run.Step();
+        Assert.Null(loading.Current);
+        Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);
+    }
+
+    [Fact]
+    public void A_journeys_ground_the_Engine_refuses_fails_the_arrival_and_the_next_update_admits_it_again()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallSiteRecord destination = world.Unpublished(_ => true);
+        using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold, loadingScreen: true);
+        DaggerfallSession session = run.Session;
+        SpatialFake spatial = run.Spatial;
+        bool WindowLive() => spatial.ResidentCollisionInstances.Keys.Any(id => id >> 56 == 0xD7);
+        spatial.RefuseDeferredCollision = true;
+
+        run.AcceptJourney(destination);
+        run.FinishLoading();
+
+        // The screen cleared on the refusal and says why; the player is at the destination with no ground under them.
+        Assert.Null(run.Loading!.Current);
+        Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
+        Assert.Contains("the Engine refused its collision", session.Presentation.LastOutcome);
+        Assert.False(WindowLive());
+
+        // Play's next update admits the refused window again, at once.
+        run.Step();
+        Assert.True(WindowLive());
+        Assert.False(spatial.CollisionResidencyRequests[^1].Deferred);
     }
 
     /// <summary>The Engine's random service drawing every value at its lowest, keyed and classic alike.</summary>

@@ -269,10 +269,23 @@ stays up for one more update, so the first frame of the loaded world is drawn
 before play shows. A phase that throws clears the screen, and the work's own
 failure report says why ("Load failed: …"); the player stays where they were.
 
+A phase may hand work to something running beside the update and wait for it.
+The phase then stays on the screen, asked once per update, until the work is
+done. A journey's or entrance's terrain collision works this way: each staged
+phase gives the Engine the terrain window it admits as one deferred batch, to
+bake off the update. The window is held until the phase's own synchronous
+collision and content calls are done, so none of them waits on the bake. The
+arriving player is stood on the ground only once it is live, and the next phase
+runs only then. A refused batch fails the work and says so. The next update of
+play admits the refused cells again at once.
+
 The state travels in the session's snapshot as `loading`: title, phase label,
-step, steps and `fraction`. The fraction is the share of phases finished. Work of
-one phase measures nothing, so its fraction is null and the bar is a moving band
-with the phase label, never a made-up percentage.
+step, steps and `fraction`. The fraction is the share of phases finished, plus
+the measured share of a waiting phase: for the terrain bake, the batches the
+Engine has finished and the baking batch's instances baked of those planned.
+Work of one phase measures nothing, and neither does a bake whose batch is still
+being validated. Then the fraction is null and the bar is a moving band with the
+phase label, never a made-up percentage.
 
 The screen is a modal dialog above every surface, kit-skinned (frame, title plate,
 panel bar). It holds focus and the cursor, and every key and pad press, Escape

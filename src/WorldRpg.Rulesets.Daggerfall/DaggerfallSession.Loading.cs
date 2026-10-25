@@ -31,10 +31,19 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession
     /// Stages slow work on the loading screen. Held movement is dropped as the screen goes up: the keys that
     /// were down belong to the place being left. A phase that throws reports why; the player stays where they were.
     /// </summary>
+    /// <remarks>
+    /// Each phase hands the terrain collision it admits to the Engine to bake off the update, and holds the screen,
+    /// showing the bake's progress, until that collision is live; an arrival is stood on the ground only then, and
+    /// the next phase runs only then, so its own synchronous collision changes never wait on the bake. A refused
+    /// bake fails the work as a throwing phase does.
+    /// </remarks>
     private void StageWorldChange(string title, IReadOnlyList<LoadingPhase> phases, Func<Exception, string> failure)
     {
         _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();
-        _ = _loading!.Start(title, phases, error => Presentation.SetOutcome(failure(error)));
+        _ = _loading!.Start(title,
+            [.. phases.Select(phase => new LoadingPhase(phase.Label, () => _sites.DeferCollision(phase.Run), _sites.AwaitArrivalCollision))],
+            // The arrival has happened by the time its ground is refused, so the work's own failure wording does not fit.
+            error => Presentation.SetOutcome(error is DaggerfallArrivalCollisionRefusedException ? error.Message : failure(error)));
     }
 
     /// <summary>
