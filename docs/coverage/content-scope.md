@@ -321,7 +321,7 @@ the imported payload's sections with the block document and the import records, 
 payloads, the product-wide world media publication, the per-block world publication, the site closures,
 then the source coverage. It writes into `local/import/staging/` (at the content-root-relative paths the
 product names) and `local/import/records/`, describes the run in `worldrpg/data-container.json` (the
-importer revision, a hash over the importer's sources and `data/`, and the derived packs' descriptors), and
+importer revision, a hash over the importer's sources, `data/` and the authored UI originals, and the derived packs' descriptors), and
 packs `local/daggerfall-data.rpak` from the staging tree and, with music, `local/music.rpak`: one
 recording per track at its root, named `<track>.<ext>` by the classic track identifier, in any format the
 Engine's audio opens, beside its own `worldrpg/data-container.json` (the importer revision, no packs).

@@ -377,7 +377,8 @@ public sealed class UiArtDeliverySessionTests
                 Entry("screen.death", Screen, large),
                 Entry("window.character-sheet.chrome", Chrome, chrome),
                 Entry("ui.stone.texture.v2", Skin, skin),
-                Entry("ui.stone.title.v2", Titlebar, titlebar),
+                // The import recorded a different original: the product's own tracked file is what is delivered.
+                Entry("ui.stone.title.v2", Titlebar, [.. titlebar, 0]),
                 Entry("ui.stone.slot.v2", Slot, slot, new JsonObject { ["scale"] = 0.5, ["slice"] = new JsonArray(24, 24, 24, 24) }),
                 Entry("screen.character-generation", published["screen-character-generation"].Path, published["screen-character-generation"].Bytes),
                 Entry("screen.pick.02", published["screen-pick-02"].Path, published["screen-pick-02"].Bytes),
@@ -398,6 +399,11 @@ public sealed class UiArtDeliverySessionTests
         Assert.Equal([24, 24, 24, 24], drawn.Slice);
         Assert.Null(drawn.Hotspot);
         Assert.Null(art.Images.Single(image => image.Id == "ui.stone.title.v2").Display);
+        Assert.Equal($"data:image/png;base64,{Convert.ToBase64String(titlebar)}", art.Images.Single(image => image.Id == "ui.stone.title.v2").Image);
+        // A derived artifact whose bytes disagree with the inventory the import wrote beside it is still refused.
+        content.Add(Chrome, [.. chrome, 5]);
+        Assert.Contains("where the inventory states 4",
+            Assert.Throws<InvalidOperationException>(() => DaggerfallUiArt.Read(TestSessions.DataOf(content), [])).Message, StringComparison.Ordinal);
 
         static JsonObject Entry(string mediaId, string path, byte[] bytes, JsonObject? display = null) => new()
         {

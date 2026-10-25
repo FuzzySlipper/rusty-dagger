@@ -235,7 +235,10 @@ internal sealed class DaggerfallUiArt
             throw new InvalidOperationException($"Published UI art '{mediaId}' could not be read from admitted content at '{entry.Path}': {exception.Message}", exception);
         }
 
-        if (bytes.LongLength != entry.ByteLength)
+        // An authored original is the product's own tracked file, so its bytes are the authority and the length the
+        // import recorded is not checked against them: a changed original makes the data container stale (it is an
+        // importer revision input) and the product says so, rather than failing here.
+        if (bytes.LongLength != entry.ByteLength && !entry.Path.Contains(AuthoredPathSegment, StringComparison.Ordinal))
         {
             throw new InvalidOperationException($"Published UI art '{mediaId}' at '{entry.Path}' is {bytes.LongLength} bytes where the inventory states {entry.ByteLength}.");
         }

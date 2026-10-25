@@ -7,7 +7,8 @@
        A project sets ImporterRevisionNamespace and ImporterRevisionClass (and ImporterRevisionModifier when the
        class is not public) and declares the partial class; this target adds the constant
        `StampedRevision` to it. The hash covers every file under src/Daggerfall.Import, src/Daggerfall.Import.Tool,
-       src/WorldRpg.SpriteAuthoring and data, except build output, by path and content with CRLF read as LF, so
+       src/WorldRpg.SpriteAuthoring and data, and the authored UI originals the import reads from the product's
+       content (content/worldrpg/media/ui/authored), except build output, by path and content with CRLF read as LF, so
        a Windows checkout of the same commit names the same revision. The generated file is rewritten only when
        the value changes, so an unchanged revision does not recompile. -->
   <UsingTask TaskName="ComputeImporterRevision" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
@@ -55,7 +56,7 @@
       <ImporterRevisionModifier Condition="'$(ImporterRevisionModifier)' == ''">public</ImporterRevisionModifier>
     </PropertyGroup>
     <ItemGroup>
-      <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/src/Daggerfall.Import/**;$(_ImporterRepositoryRoot)/src/Daggerfall.Import.Tool/**;$(_ImporterRepositoryRoot)/src/WorldRpg.SpriteAuthoring/**;$(_ImporterRepositoryRoot)/data/**"
+      <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/src/Daggerfall.Import/**;$(_ImporterRepositoryRoot)/src/Daggerfall.Import.Tool/**;$(_ImporterRepositoryRoot)/src/WorldRpg.SpriteAuthoring/**;$(_ImporterRepositoryRoot)/data/**;$(_ImporterRepositoryRoot)/content/worldrpg/media/ui/authored/**"
                               Exclude="$(_ImporterRepositoryRoot)/src/*/bin/**;$(_ImporterRepositoryRoot)/src/*/obj/**" />
     </ItemGroup>
     <ComputeImporterRevision Root="$(_ImporterRepositoryRoot)" Files="@(_ImporterRevisionInput)">
