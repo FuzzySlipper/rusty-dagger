@@ -3,6 +3,7 @@ using Rusty.Engine;
 using Rusty.Engine.Entities;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
@@ -100,6 +101,10 @@ internal sealed class DaggerfallSiteLifecycle
     private DaggerfallExteriorCellId? _locationCell;
     private bool _admittingInitialResidency;
     private bool _retired;
+    // A staged site change holds its terrain window to hand it over deferred, and stands the arriving player only
+    // once that collision is live.
+    private bool _deferringCollision;
+    private bool _arrivalStandPending;
     // The Engine composes placed artifacts on the local frame current when the first one was placed,
     // and moves that grid with every origin commit. A new game first places at origin zero; a restore
     // commits the saved origin before placing anything, so placements are expressed against this.
@@ -429,6 +434,12 @@ internal sealed class DaggerfallSiteLifecycle
     /// </summary>
     internal void StandArrivingPlayer()
     {
+        // The terrain this arrival would stand on is still to be baked: stand once it is live (AwaitArrivalCollision).
+        if (_exteriorResidency is { HoldsBatch: true })
+        {
+            _arrivalStandPending = true;
+            return;
+        }
         PlayerControlState player = _state.PlayerControl;
         WorldPoint arrival = player.Position ?? throw new InvalidOperationException("An arrival requires a player position.");
         WorldPoint start = arrival;
@@ -440,6 +451,57 @@ internal sealed class DaggerfallSiteLifecycle
         }
         WorldPoint standing = _spatial.StandingPosition(start, CharacterEnvironment(player.Motion), settle);
         if (standing != arrival) _host.RelocatePlayer(standing, player.YawRadians, player.PitchRadians);
+    }
+
+    /// <summary>
+    /// Runs a staged site change with its terrain window baked off the update. The window is held while the change
+    /// makes its own synchronous collision and content calls, which would otherwise wait for its bake, then handed
+    /// to the Engine as one deferred batch; an arrival inside the change is stood once <see cref="AwaitArrivalCollision"/>
+    /// finds that batch live. Play does not resume meanwhile: the loading screen holds the updates.
+    /// </summary>
+    internal void DeferCollision(Action change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        if (_deferringCollision) throw new InvalidOperationException("A site change is already deferring its collision.");
+        _deferringCollision = true;
+        bool changed = false;
+        try
+        {
+            change();
+            changed = true;
+        }
+        finally
+        {
+            _deferringCollision = false;
+            // A failed change's rollback has applied its own window; whatever is still held matches what the window
+            // records, so the Engine is given it either way.
+            _ = _exteriorResidency?.ReleaseHeld();
+            if (!changed) _arrivalStandPending = false;
+        }
+    }
+
+    /// <summary>
+    /// How far the collision a <see cref="DeferCollision"/> change handed off has come; once it is live, stands the
+    /// arriving player on it and reports done. A refused batch fails the arrival: the Engine kept none of it, and
+    /// the next window update admits those cells again at once.
+    /// </summary>
+    internal LoadingProgress AwaitArrivalCollision()
+    {
+        DaggerfallExteriorAdmission admission = _exteriorResidency?.ReadAdmission() ?? DaggerfallExteriorAdmission.Live;
+        switch (admission.State)
+        {
+            case DaggerfallExteriorAdmissionState.Refused:
+                _arrivalStandPending = false;
+                throw new DaggerfallArrivalCollisionRefusedException();
+            case DaggerfallExteriorAdmissionState.Baking:
+                return admission.Fraction is { } fraction ? LoadingProgress.Measured(fraction) : LoadingProgress.Unmeasured;
+        }
+        if (_arrivalStandPending)
+        {
+            _arrivalStandPending = false;
+            StandArrivingPlayer();
+        }
+        return LoadingProgress.Finished;
     }
 
     /// <summary>
@@ -1052,7 +1114,7 @@ internal sealed class DaggerfallSiteLifecycle
     private DaggerfallExteriorCellResidencyUpdate AdmitExteriorWindow(DaggerfallExteriorCellId center, DaggerfallExteriorWorldOrigin origin)
     {
         DaggerfallExteriorCellResidency residency = EnsureExteriorResidency();
-        DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin);
+        DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin, hold: _deferringCollision);
         _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
         ReconcileExteriorTerrainAppearance(residency);
         UpdateExteriorLocation(center);
@@ -1605,6 +1667,8 @@ internal sealed class DaggerfallSiteLifecycle
         _ = DaggerfallExteriorSessionOrigin.Shift(position, Vector3.Zero);
         if (_exteriorResidency is not { IsInitialized: true })
             throw new InvalidOperationException("An origin commit requires admitted exterior residency; otherwise world coordinates would detach from their cell.");
+        // The commit installs pending batches and moves them with the rest; a held one would miss the move.
+        _ = _exteriorResidency.ReleaseHeld();
         EntityStore store = _state.Actors.Store;
         EntityId[] roots = [.. _state.Actors.All.Select(actor => actor.Actor.Entity),
             .. store.Query<DaggerfallNpcBody>().Select(entry => entry.Entity)];
@@ -1923,3 +1987,10 @@ internal sealed class DaggerfallSiteLifecycle
         _state.PlayerControl.Motion = _state.PlayerControl.Motion.Rebased(localDelta);
     }
 }
+
+/// <summary>
+/// The Engine refused the arrival's terrain collision, so the player arrived on ground that is not solid yet. The
+/// Engine kept none of the batch and its host log names why; the window admits those cells again on the next update.
+/// </summary>
+internal sealed class DaggerfallArrivalCollisionRefusedException()
+    : InvalidOperationException("The ground here could not be made solid: the Engine refused its collision, and its log says why.");

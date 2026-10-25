@@ -205,6 +205,101 @@ public sealed class DaggerfallExteriorCellResidencyTests
         Assert.Empty(restoreRequest.RemovedInstances.ToArray());
     }
 
+    [Fact]
+    public void A_held_window_reaches_the_Engine_only_when_released_and_then_as_one_deferred_batch()
+    {
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
+        using SpatialSession session = new(new SpatialSessionHandle(51), static () => { });
+        DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
+
+        DaggerfallExteriorCellResidencyUpdate update = residency.Update(new(10, 10), DaggerfallExteriorWorldOrigin.At(new(10, 10)), hold: true);
+
+        // The window records its cells at once, but nothing reaches the Engine until the change hands it over.
+        Assert.True(update.Applied);
+        Assert.Equal(49, residency.ResidentCells.Count);
+        Assert.True(residency.HoldsBatch);
+        Assert.Empty(spatial.Requests);
+
+        CollisionReplaceReceipt receipt = residency.ReleaseHeld()!.Value;
+        CollisionResidencyRequest request = Assert.Single(spatial.Requests);
+        Assert.True(request.Deferred);
+        Assert.Equal(49, request.Instances.Length);
+        Assert.Equal(1UL, receipt.DeferredBatch);
+        Assert.False(residency.HoldsBatch);
+        Assert.Null(residency.ReleaseHeld());
+    }
+
+    [Fact]
+    public void A_synchronous_change_releases_a_held_window_first_so_the_Engine_keeps_the_products_order()
+    {
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
+        using SpatialSession session = new(new SpatialSessionHandle(52), static () => { });
+        DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(new(10, 10));
+        residency.Update(new(10, 10), origin, hold: true);
+
+        // A second window change while one is held is not held: the first goes deferred, then this one at once.
+        residency.Update(new(11, 10), origin, hold: true);
+        Assert.Equal([true, false], spatial.Requests.Select(request => request.Deferred));
+        Assert.False(residency.HoldsBatch);
+
+        residency.Update(new(12, 10), origin, hold: true);
+        residency.Clear();
+        Assert.Equal([true, false, true, false], spatial.Requests.Select(request => request.Deferred));
+        Assert.Equal(7, spatial.Requests[^1].RemovedInstances.Length - 42);
+    }
+
+    [Fact]
+    public void The_deferred_window_reads_as_validating_then_by_its_baked_share_then_live()
+    {
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
+        using SpatialSession session = new(new SpatialSessionHandle(53), static () => { });
+        DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
+        // One batch already pending ahead of the window's when it is made.
+        spatial.Readout = new CollisionResidencyReadout(4, 1, 0, 0, 0, 9);
+        residency.Update(new(10, 10), DaggerfallExteriorWorldOrigin.At(new(10, 10)), hold: true);
+        ulong batch = residency.ReleaseHeld()!.Value.DeferredBatch;
+
+        // Both pending, the one ahead still validating: nothing measures it yet.
+        spatial.Readout = new CollisionResidencyReadout(4, 2, 0, 0, 0, 9);
+        Assert.Equal(new DaggerfallExteriorAdmission(DaggerfallExteriorAdmissionState.Baking), residency.ReadAdmission());
+        // The one ahead half baked: a quarter of the two.
+        spatial.Readout = new CollisionResidencyReadout(4, 2, 10, 20, 0, 9);
+        Assert.Equal(new DaggerfallExteriorAdmission(DaggerfallExteriorAdmissionState.Baking, .25d), residency.ReadAdmission());
+        // That one done and the window's 49 instances 7 baked.
+        spatial.Readout = new CollisionResidencyReadout(5, 1, 7, 49, 0, 10);
+        Assert.Equal(new DaggerfallExteriorAdmission(DaggerfallExteriorAdmissionState.Baking, (1d + (7d / 49d)) / 2d), residency.ReadAdmission());
+        // Every batch up to the window's is done.
+        spatial.Readout = new CollisionResidencyReadout(batch, 0, 0, 0, 0, 11);
+        Assert.Equal(DaggerfallExteriorAdmission.Live, residency.ReadAdmission());
+        // Nothing is deferred now, so the Engine is not asked again.
+        spatial.Readout = default;
+        Assert.Equal(DaggerfallExteriorAdmission.Live, residency.ReadAdmission());
+    }
+
+    [Fact]
+    public void A_refused_window_batch_returns_the_window_to_its_cells_before_it_so_the_next_update_admits_them_again()
+    {
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
+        using SpatialSession session = new(new SpatialSessionHandle(54), static () => { });
+        DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(new(10, 10));
+        residency.Update(new(10, 10), origin);
+        spatial.Readout = new CollisionResidencyReadout(0, 0, 0, 0, 2, 3);
+        residency.Update(new(11, 10), origin, hold: true);
+        ulong batch = residency.ReleaseHeld()!.Value.DeferredBatch;
+
+        spatial.Readout = new CollisionResidencyReadout(batch, 0, 0, 0, 3, 3);
+        Assert.Equal(DaggerfallExteriorAdmissionState.Refused, residency.ReadAdmission().State);
+        Assert.Contains(new DaggerfallExteriorCellId(7, 10), residency.ResidentCells);
+        Assert.DoesNotContain(new DaggerfallExteriorCellId(14, 10), residency.ResidentCells);
+
+        // The Engine kept the old column and lacks the new one: the next update moves the window again, at once.
+        DaggerfallExteriorCellResidencyUpdate retry = residency.Update(new(11, 10), origin);
+        Assert.Equal((7, 7), (retry.AddedCellCount, retry.RemovedCellCount));
+        Assert.False(spatial.Requests[^1].Deferred);
+    }
+
     private static DaggerfallExteriorCellResidency Create(
         ISpatialService spatial,
         SpatialSession session) => new(

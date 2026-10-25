@@ -6,7 +6,8 @@ namespace WorldRpg.Kit.Tests;
 
 /// <summary>
 /// The loading screen acknowledges slow work before running any of it, runs one phase per update it is given,
-/// keeps its full bar for one more update, then clears; a failing phase clears it and reaches the work's handler.
+/// holds a phase that handed work off until that work is done, keeps its full bar for one more update, then
+/// clears; a failing phase clears it and reaches the work's handler.
 /// </summary>
 public sealed class LoadingScreenTests
 {
@@ -89,6 +90,61 @@ public sealed class LoadingScreenTests
         Assert.Equal(["one", "two"], ran);
         Assert.Throws<ArgumentException>(() => LoadingScreen.RunNow([new("Bad", () => throw new ArgumentException("bad")), new("Never", () => ran.Add("never"))]));
         Assert.DoesNotContain("never", ran);
+    }
+
+    [Fact]
+    public void A_phase_that_handed_work_off_holds_the_screen_with_its_measured_progress_until_the_work_is_done()
+    {
+        LoadingScreen screen = new(() => { });
+        List<string> ran = [];
+        Queue<LoadingProgress> asked = new([LoadingProgress.Unmeasured, LoadingProgress.Measured(.25), LoadingProgress.Finished]);
+        screen.Start("Travelling to Daggerfall", [
+            new("Arriving at Daggerfall", () => ran.Add("arrive"), () => asked.Dequeue()),
+            new("Settling in", () => ran.Add("settle")),
+        ], _ => throw new InvalidOperationException("No phase fails here."));
+
+        // The phase runs once and is asked straight after; its work is not yet measurable.
+        Assert.True(screen.Advance());
+        Assert.Equal(["arrive"], ran);
+        Assert.Equal(new LoadingState("Travelling to Daggerfall", "Arriving at Daggerfall", 0, 2, null), screen.Current);
+        Assert.Null(Written(screen)!["fraction"]);
+
+        // Each later update asks again without running it again, and the bar counts the measured share of the phase.
+        Assert.True(screen.Advance());
+        Assert.Equal(["arrive"], ran);
+        Assert.Equal(new LoadingState("Travelling to Daggerfall", "Arriving at Daggerfall", 0, 2, .125d), screen.Current);
+
+        // Done: the next phase shows, and runs on the update after.
+        Assert.True(screen.Advance());
+        Assert.Equal(new LoadingState("Travelling to Daggerfall", "Settling in", 1, 2, .5d), screen.Current);
+        Assert.True(screen.Advance());
+        Assert.Equal(["arrive", "settle"], ran);
+        Assert.Empty(asked);
+    }
+
+    [Fact]
+    public void A_phase_whose_work_is_done_straight_away_spends_no_extra_update_and_one_that_fails_reaches_the_handler()
+    {
+        LoadingScreen screen = new(() => { });
+        Exception? reported = null;
+        screen.Start("Entering the hold", [
+            new("Entering the hold", () => { }, () => LoadingProgress.Finished),
+            new("Settling in", () => { }, () => throw new InvalidOperationException("The ground was refused.")),
+        ], error => reported = error);
+        Assert.True(screen.Advance());
+        Assert.Equal("Settling in", screen.Current!.Label);
+
+        Assert.True(screen.Advance());
+        Assert.Null(screen.Current);
+        Assert.Equal("The ground was refused.", reported!.Message);
+    }
+
+    [Fact]
+    public void Running_at_once_refuses_a_phase_whose_handed_off_work_would_need_later_updates()
+    {
+        LoadingScreen.RunNow([new("Arriving", () => { }, () => LoadingProgress.Finished)]);
+        Assert.Throws<InvalidOperationException>(() =>
+            LoadingScreen.RunNow([new("Arriving", () => { }, () => LoadingProgress.Unmeasured)]));
     }
 
     /// <summary>The <c>loading</c> value the screen writes into a projection, decoded; null when nothing is loading.</summary>

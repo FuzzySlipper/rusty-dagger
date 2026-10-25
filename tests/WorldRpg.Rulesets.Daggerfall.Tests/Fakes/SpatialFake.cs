@@ -44,6 +44,19 @@ internal class SpatialFake : DispatchProxy
     internal List<SpatialTriggerSetActiveRequest> TriggerLifecycleRequests { get; } = [];
     /// <summary>Every residency delta the product applied, in order, including one the fake refused.</summary>
     internal List<CollisionResidencyRequest> CollisionResidencyRequests { get; } = [];
+    /// <summary>
+    /// Keeps deferred batches baking, as reads report them, until <see cref="InstallDeferredCollision"/>; otherwise
+    /// the first read or synchronous change after a deferred batch installs it, as a bake finished by then would.
+    /// </summary>
+    internal bool HoldDeferredCollision { get; set; }
+    /// <summary>What a read reports of the baking batch while batches are held: instances baked, of those planned.</summary>
+    internal (ulong Baked, ulong Planned) DeferredBake { get; set; }
+    /// <summary>Refuses each deferred batch when it would install, as the Engine refuses one it cannot validate.</summary>
+    internal bool RefuseDeferredCollision { get; set; }
+    /// <summary>The deferred batches made in the most recent session and not yet installed or refused.</summary>
+    internal int PendingDeferredBatches => CurrentSession.Deferred.Count;
+    /// <summary>How many synchronous collision or content changes found deferred batches pending and had to wait for them.</summary>
+    internal int SynchronousWaitsOnDeferred { get; private set; }
     /// <summary>The collision assets resident in the most recently created spatial session.</summary>
     internal IReadOnlyCollection<ulong> ResidentCollisionAssets => CurrentSession.Assets;
     /// <summary>The collision instances resident in the most recently created session, each with the asset it uses.</summary>
@@ -99,6 +112,7 @@ internal class SpatialFake : DispatchProxy
         nameof(ISpatialService.ReplaceContentArtifact) => Replace((SpatialContentArtifactReplaceRequest)arguments![0]!),
         nameof(ISpatialService.ApplyContentArtifactResidency) => ApplyContentResidency((SpatialContentArtifactResidencyRequest)arguments![0]!),
         nameof(ISpatialService.ApplyCollisionResidency) => ApplyCollisionResidency((CollisionResidencyRequest)arguments![0]!),
+        nameof(ISpatialService.ReadCollisionResidency) => ReadCollisionResidency((CollisionResidencyReadRequest)arguments![0]!),
         nameof(ISpatialService.ReadContentArtifact) => Read(),
         nameof(ISpatialService.ProposeCharacterStep) => Step((CharacterStepRequest)arguments![0]!),
         // These general session tests have no authored trigger contact. Action trigger
@@ -204,6 +218,7 @@ internal class SpatialFake : DispatchProxy
     private SpatialContentArtifactResidencyReceipt ApplyContentResidency(SpatialContentArtifactResidencyRequest request)
     {
         ContentResidencyRequests.Add(request);
+        WaitForDeferred(Live(request.Session));
         // Keep the historical counter as a count of accepted/attempted static world admissions so
         // the existing transition tests continue to assert one Engine admission per profile change.
         ReplaceCalls++;
@@ -218,6 +233,10 @@ internal class SpatialFake : DispatchProxy
     /// local to that slice; an identity may appear once per delta; every retained instance must name a
     /// resident asset. A delta that breaks any of these is refused whole and changes nothing.
     /// </summary>
+    /// <remarks>
+    /// A deferred delta is copied and queued under the next batch number, and the receipt names it with the counts
+    /// live now; a synchronous one installs every queued batch first.
+    /// </remarks>
     private CollisionReplaceReceipt ApplyCollisionResidency(CollisionResidencyRequest request)
     {
         // Engine consumes the request at admission. Keep the receipt's memory independent of
@@ -225,6 +244,55 @@ internal class SpatialFake : DispatchProxy
         request = SnapshotCollisionResidency(request);
         CollisionResidencyRequests.Add(request);
         SessionColliders colliders = Live(request.Session);
+        if (request.Deferred)
+        {
+            colliders.Deferred.Enqueue((++colliders.LastBatch, request));
+            return new CollisionReplaceReceipt(colliders.Revision, colliders.Revision, (ulong)colliders.Assets.Count,
+                (ulong)colliders.Instances.Count, 0, colliders.LastBatch);
+        }
+        WaitForDeferred(colliders);
+        return Admit(colliders, request);
+    }
+
+    /// <summary>A synchronous change installs pending deferred batches first, which in the Engine blocks the update on their bake.</summary>
+    private void WaitForDeferred(SessionColliders colliders)
+    {
+        if (colliders.Deferred.Count != 0) SynchronousWaitsOnDeferred++;
+        InstallDeferred(colliders);
+    }
+
+    /// <summary>Installs the queued deferred batches in order; one the fake would refuse, or told to refuse, is counted refused.</summary>
+    private void InstallDeferred(SessionColliders colliders)
+    {
+        while (colliders.Deferred.TryDequeue(out (ulong Batch, CollisionResidencyRequest Request) deferred))
+        {
+            try
+            {
+                if (RefuseDeferredCollision) throw new InvalidOperationException("Refused deferred collision.");
+                _ = Admit(colliders, deferred.Request);
+            }
+            catch (InvalidOperationException)
+            {
+                colliders.RefusedBatches++;
+            }
+            colliders.CompletedBatch = deferred.Batch;
+        }
+    }
+
+    /// <summary>Installs whatever a bake finished by now would have, unless held; then reports the session's batches.</summary>
+    internal void InstallDeferredCollision() => InstallDeferred(CurrentSession);
+
+    private CollisionResidencyReadout ReadCollisionResidency(CollisionResidencyReadRequest request)
+    {
+        SessionColliders colliders = Live(request.Session);
+        if (!HoldDeferredCollision) InstallDeferred(colliders);
+        (ulong baked, ulong planned) = colliders.Deferred.Count == 0 ? default : DeferredBake;
+        return new CollisionResidencyReadout(colliders.CompletedBatch, (uint)colliders.Deferred.Count, baked, planned,
+            colliders.RefusedBatches, colliders.Revision);
+    }
+
+    private static CollisionReplaceReceipt Admit(SessionColliders colliders, CollisionResidencyRequest request)
+    {
         HashSet<ulong> nextAssets = [.. colliders.Assets];
         foreach (ulong removed in request.RemovedAssets.Span) nextAssets.Remove(removed);
         HashSet<ulong> admitted = [];
@@ -268,7 +336,8 @@ internal class SpatialFake : DispatchProxy
         request.Triangles.ToArray(),
         request.Instances.ToArray(),
         request.RemovedAssets.ToArray(),
-        request.RemovedInstances.ToArray());
+        request.RemovedInstances.ToArray(),
+        request.Deferred);
 
     private SessionColliders Live(SpatialSession session)
     {
@@ -302,6 +371,10 @@ internal class SpatialFake : DispatchProxy
         internal HashSet<ulong> Assets { get; } = [];
         internal Dictionary<ulong, ulong> Instances { get; } = [];
         internal ulong Revision { get; set; }
+        internal Queue<(ulong Batch, CollisionResidencyRequest Request)> Deferred { get; } = [];
+        internal ulong LastBatch { get; set; }
+        internal ulong CompletedBatch { get; set; }
+        internal ulong RefusedBatches { get; set; }
         internal bool Released { get; set; }
         internal (int Assets, int Instances)? LeftAtRelease { get; set; }
     }

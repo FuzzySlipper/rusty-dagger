@@ -114,11 +114,39 @@ internal readonly record struct DaggerfallExteriorCellResidencyUpdate(
     bool Applied,
     CollisionReplaceReceipt EngineReceipt);
 
+/// <summary>How far the window's collision handed to the Engine to bake off the update has come.</summary>
+internal enum DaggerfallExteriorAdmissionState
+{
+    /// <summary>Nothing is baking: the window's collision is live.</summary>
+    Live,
+    /// <summary>The batch is validating or baking.</summary>
+    Baking,
+    /// <summary>The Engine refused the batch, so none of it is live; the host log names why.</summary>
+    Refused,
+}
+
+/// <summary>One reading of the window's deferred collision.</summary>
+/// <param name="Fraction">
+/// While baking, the share done: batches the Engine finished ahead of and including this one, plus the share of
+/// the baking batch's instances baked. Null while the baking batch still validates (0 of 0 planned).
+/// </param>
+internal readonly record struct DaggerfallExteriorAdmission(DaggerfallExteriorAdmissionState State, double? Fraction = null)
+{
+    internal static DaggerfallExteriorAdmission Live => new(DaggerfallExteriorAdmissionState.Live, 1d);
+}
+
 /// <summary>
 /// Selects and incrementally admits the donor's seven-by-seven exterior cell
 /// window. Product map-pixel identity stays global while Engine collision
 /// instances use the current local origin frame.
 /// </summary>
+/// <remarks>
+/// A staged site change admits its window <em>held</em>: the batch is kept until the change's own synchronous
+/// collision and content calls are done, then handed to the Engine to bake off the update as one deferred batch
+/// (<see cref="ReleaseHeld"/>), and <see cref="ReadAdmission"/> says when it is live. A synchronous change the Engine
+/// receives while that batch is pending waits for it, so every other residency call here releases a held batch
+/// first and keeps the Engine's order the product's.
+/// </remarks>
 internal sealed class DaggerfallExteriorCellResidency
 {
     internal const int StreamingRadius = 3;
@@ -141,6 +169,16 @@ internal sealed class DaggerfallExteriorCellResidency
     private DaggerfallExteriorCellId _center;
     private DaggerfallExteriorWorldOrigin _origin;
     private bool _initialized;
+    // A held window batch, with the cells resident before it, which a refusal returns to.
+    private (CollisionResidencyRequest Request, HashSet<DaggerfallExteriorCellId> ResidentBefore)? _held;
+    private DeferredBatch? _deferred;
+
+    /// <summary>
+    /// The window batch the Engine is baking: its number, how many batches were ahead of it when it was made, the
+    /// refusals counted before it, and the cells resident before it.
+    /// </summary>
+    private sealed record DeferredBatch(ulong Batch, uint Ahead, ulong RefusedBefore,
+        HashSet<DaggerfallExteriorCellId> ResidentBefore);
 
     internal DaggerfallExteriorCellResidency(
         ISpatialService spatial,
@@ -178,6 +216,9 @@ internal sealed class DaggerfallExteriorCellResidency
         .ThenBy(cell => cell.X)
         .ToArray();
 
+    /// <summary>Whether a window batch is held for <see cref="ReleaseHeld"/>.</summary>
+    internal bool HoldsBatch => _held is not null;
+
     /// <summary>Updates the window while keeping the current map-pixel origin.</summary>
     internal DaggerfallExteriorCellResidencyUpdate Update(DaggerfallExteriorCellId center)
     {
@@ -194,9 +235,14 @@ internal sealed class DaggerfallExteriorCellResidency
     /// their new local translations; Engine WorldOrigin rebases retained
     /// colliders through its own safe prepare/commit API.
     /// </summary>
+    /// <param name="hold">
+    /// Keep the batch for <see cref="ReleaseHeld"/> instead of applying it now. Only one batch is held: a second, or
+    /// one that moves resident cells to a new origin, releases the held one and applies at once.
+    /// </param>
     internal DaggerfallExteriorCellResidencyUpdate Update(
         DaggerfallExteriorCellId center,
-        DaggerfallExteriorWorldOrigin origin)
+        DaggerfallExteriorWorldOrigin origin,
+        bool hold = false)
     {
         _bounds.Require(center, nameof(center));
         ValidateOrigin(origin);
@@ -242,14 +288,19 @@ internal sealed class DaggerfallExteriorCellResidency
         CollisionReplaceReceipt receipt = default;
         if (applied)
         {
-            receipt = _spatial.ApplyCollisionResidency(new CollisionResidencyRequest(
+            CollisionResidencyRequest request = new(
                 _session,
                 assets.ToArray(),
                 vertices.ToArray(),
                 triangles.ToArray(),
                 instances.ToArray(),
                 removedAssets,
-                removedInstances));
+                removedInstances);
+            // A held batch moving resident cells would be planned in a frame the Engine may have left by its release.
+            if (hold && _held is null && !originChanged)
+                _held = (request, [.. _resident]);
+            else
+                receipt = Apply(request);
         }
 
         foreach (DaggerfallExteriorCellId cell in removals)
@@ -283,6 +334,9 @@ internal sealed class DaggerfallExteriorCellResidency
     {
         if (!_initialized)
             throw new InvalidOperationException("A rebased origin requires initialized exterior residency.");
+        // Its translations name the frame the commit just left, and the Engine has not seen it to rebase it.
+        if (_held is not null)
+            throw new InvalidOperationException("A held exterior batch must be released before the Engine origin moves.");
         ValidateOrigin(origin);
         _origin = origin;
     }
@@ -306,7 +360,7 @@ internal sealed class DaggerfallExteriorCellResidency
         var triangles = new List<Triangle>(surface.Triangles.Length);
         assets.Add(AppendAsset(cell, surface, vertices, triangles));
         StaticMeshInstance instance = Instance(cell, _origin);
-        CollisionReplaceReceipt receipt = _spatial.ApplyCollisionResidency(new CollisionResidencyRequest(
+        CollisionReplaceReceipt receipt = Apply(new CollisionResidencyRequest(
             _session,
             assets.ToArray(),
             vertices.ToArray(),
@@ -344,7 +398,7 @@ internal sealed class DaggerfallExteriorCellResidency
             .ToList();
         ulong[] removedAssets = cells.Select(AssetId).ToArray();
         ulong[] removedInstances = cells.Select(InstanceId).ToArray();
-        CollisionReplaceReceipt receipt = _spatial.ApplyCollisionResidency(new CollisionResidencyRequest(
+        CollisionReplaceReceipt receipt = Apply(new CollisionResidencyRequest(
             _session,
             ReadOnlyMemory<StaticMeshAsset>.Empty,
             ReadOnlyMemory<Vector3>.Empty,
@@ -366,6 +420,57 @@ internal sealed class DaggerfallExteriorCellResidency
             receipt);
     }
 
+    /// <summary>
+    /// Hands a held batch to the Engine to validate, bake and install off the update; nothing when none is held.
+    /// The receipt names the batch, and <see cref="ReadAdmission"/> follows it until it is live.
+    /// </summary>
+    internal CollisionReplaceReceipt? ReleaseHeld()
+    {
+        if (_held is not { } held) return null;
+        _held = null;
+        CollisionResidencyReadout before = _spatial.ReadCollisionResidency(new CollisionResidencyReadRequest(_session));
+        CollisionResidencyRequest request = held.Request;
+        CollisionReplaceReceipt receipt = _spatial.ApplyCollisionResidency(new CollisionResidencyRequest(
+            request.Session, request.Assets, request.Vertices, request.Triangles, request.Instances,
+            request.RemovedAssets, request.RemovedInstances, Deferred: true));
+        // A batch the Engine applied before returning is already live.
+        _deferred = receipt.DeferredBatch == 0
+            ? null
+            : new DeferredBatch(receipt.DeferredBatch, before.PendingBatches, before.RefusedBatches, held.ResidentBefore);
+        return receipt;
+    }
+
+    /// <summary>
+    /// Reads how far the window's deferred batch has come. A refusal changed nothing in the Engine, so the window
+    /// returns to the cells resident before it: the next window update admits the refused cells again.
+    /// </summary>
+    internal DaggerfallExteriorAdmission ReadAdmission()
+    {
+        if (_held is not null)
+            throw new InvalidOperationException("A held exterior batch has not been handed to the Engine.");
+        if (_deferred is not { } batch) return DaggerfallExteriorAdmission.Live;
+        CollisionResidencyReadout readout = _spatial.ReadCollisionResidency(new CollisionResidencyReadRequest(_session));
+        if (readout.RefusedBatches > batch.RefusedBefore)
+        {
+            // This window's batch is the session's only deferred one, so a new refusal is its own.
+            _deferred = null;
+            _resident.Clear();
+            _resident.UnionWith(batch.ResidentBefore);
+            return new(DaggerfallExteriorAdmissionState.Refused);
+        }
+        if (readout.CompletedBatch >= batch.Batch)
+        {
+            _deferred = null;
+            return DaggerfallExteriorAdmission.Live;
+        }
+        if (readout.PlannedInstances == 0) return new(DaggerfallExteriorAdmissionState.Baking);
+        // The batches ahead of this one when it was made, and this one: those no longer pending are done.
+        double total = batch.Ahead + 1d;
+        double done = total - Math.Min(readout.PendingBatches, total);
+        return new(DaggerfallExteriorAdmissionState.Baking,
+            (done + ((double)readout.BakedInstances / readout.PlannedInstances)) / total);
+    }
+
     /// <summary>Captures the window and its anchor with the Engine origin cell the caller read.</summary>
     internal DaggerfallExteriorCellResidencySave Capture(WorldOriginReadout engineOrigin)
     {
@@ -383,6 +488,13 @@ internal sealed class DaggerfallExteriorCellResidency
     {
         ValidateOrigin(save.WorldOrigin);
         return Update(save.Center, save.WorldOrigin);
+    }
+
+    /// <summary>Applies a change at once, after any held batch, so the Engine receives them in the product's order.</summary>
+    private CollisionReplaceReceipt Apply(CollisionResidencyRequest request)
+    {
+        _ = ReleaseHeld();
+        return _spatial.ApplyCollisionResidency(request);
     }
 
     internal static ulong AssetId(DaggerfallExteriorCellId cell) =>
