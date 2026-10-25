@@ -188,7 +188,7 @@ public sealed class LoadingScreenSessionTests
     }
 
     [Fact]
-    public void A_journeys_ground_the_Engine_refuses_fails_the_arrival_and_the_next_update_admits_it_again()
+    public void A_journeys_ground_the_Engine_refuses_fails_the_arrival_and_holds_the_world_until_it_is_live_and_stood_on()
     {
         AssembledWorld world = Shared.Value;
         DaggerfallSiteRecord destination = world.Unpublished(_ => true);
@@ -196,6 +196,12 @@ public sealed class LoadingScreenSessionTests
         DaggerfallSession session = run.Session;
         SpatialFake spatial = run.Spatial;
         bool WindowLive() => spatial.ResidentCollisionInstances.Keys.Any(id => id >> 56 == 0xD7);
+        List<bool> probes = [];
+        spatial.FloorHit = request =>
+        {
+            if (request.Direction.Y < 0) probes.Add(WindowLive());
+            return default;
+        };
         spatial.RefuseDeferredCollision = true;
 
         run.AcceptJourney(destination);
@@ -206,11 +212,38 @@ public sealed class LoadingScreenSessionTests
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
         Assert.Contains("the Engine refused its collision", session.Presentation.LastOutcome);
         Assert.False(WindowLive());
+        Assert.Empty(probes);
 
-        // Play's next update admits the refused window again, at once.
+        // The world is held: the window goes to the Engine again off the update, and nobody steps meanwhile, even
+        // while that batch is refused in turn.
+        int steps = spatial.StepCalls, waited = spatial.SynchronousWaitsOnDeferred;
+        spatial.HoldDeferredCollision = true;
+        run.Step();
+        Assert.Equal(1, spatial.PendingDeferredBatches);
+        Assert.True(spatial.CollisionResidencyRequests[^1].Deferred);
+        run.Step();
+        Assert.Equal(steps, spatial.StepCalls);
+        Assert.False(WindowLive());
+        Assert.Empty(probes);
+        Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);
+        spatial.HoldDeferredCollision = false;
+        run.Step();
+        Assert.Equal(steps, spatial.StepCalls);
+        Assert.False(WindowLive());
+
+        // Admitted again: the arrival is stood on the live ground, and play takes its first step in that update.
+        spatial.RefuseDeferredCollision = false;
+        List<(bool Live, bool Stood)> stepped = [];
+        spatial.StepResult = (_, receipt) =>
+        {
+            stepped.Add((WindowLive(), probes.Count > 0));
+            return receipt;
+        };
         run.Step();
         Assert.True(WindowLive());
-        Assert.False(spatial.CollisionResidencyRequests[^1].Deferred);
+        Assert.All(probes, Assert.True);
+        Assert.NotEmpty(stepped);
+        Assert.All(stepped, step => Assert.Equal((true, true), step));
     }
 
     /// <summary>The Engine's random service drawing every value at its lowest, keyed and classic alike.</summary>

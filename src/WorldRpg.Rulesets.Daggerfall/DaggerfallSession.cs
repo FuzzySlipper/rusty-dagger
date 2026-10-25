@@ -424,7 +424,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         }
         if (_mode == ProductMode.Playing) Infections.Poll(_openingCinematics.IsActive);
         ReconcileSummoningFoes();
-        bool playing = _mode == ProductMode.Playing && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !LegalModalOpen && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null;
+        // An arrival whose ground the Engine refused holds the world, like a held mode, until that ground is live
+        // and the player stands on it: nothing would hold anyone up meanwhile.
+        bool groundless = _mode == ProductMode.Playing && !_sites.RecoverArrivalGround();
+        bool playing = _mode == ProductMode.Playing && !groundless && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !LegalModalOpen && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null;
         bool modal = _mode == ProductMode.Modal || Summoning.PendingOffer || State.Quests.PendingOffer is not null || LegalModalOpen || _pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null;
         DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
             : playing ? DaggerfallUiPhases.Playing

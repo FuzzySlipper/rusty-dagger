@@ -276,8 +276,9 @@ phase gives the Engine the terrain window it admits as one deferred batch, to
 bake off the update. The window is held until the phase's own synchronous
 collision and content calls are done, so none of them waits on the bake. The
 arriving player is stood on the ground only once it is live, and the next phase
-runs only then. A refused batch fails the work and says so. The next update of
-play admits the refused cells again at once.
+runs only then. A refused batch fails the work and says so. The world then
+stays held, as in a held mode: each update hands the Engine the window again off
+the update, and play resumes once it is live and the player stands on it.
 
 The state travels in the session's snapshot as `loading`: title, phase label,
 step, steps and `fraction`. The fraction is the share of phases finished, plus

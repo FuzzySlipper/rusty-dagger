@@ -440,6 +440,9 @@ internal sealed class DaggerfallExteriorCellResidency
         return receipt;
     }
 
+    /// <summary>Whether a window batch handed to the Engine is still to be read live or refused.</summary>
+    internal bool AwaitsBatch => _deferred is not null;
+
     /// <summary>
     /// Reads how far the window's deferred batch has come. A refusal changed nothing in the Engine, so the window
     /// returns to the cells resident before it: the next window update admits the refused cells again.
